@@ -213,7 +213,10 @@ export function redirectToAuthSpaJoinTenant(
     );
     return;
   }
-
+  localStorage.setItem(
+    LOCAL_STORAGE_KEYS.REDIRECT_TO,
+    `${window.location.pathname}${window.location.search}`,
+  );
   const targetUrl = redirectUrl ?? window.location.href;
   const joinUrl = `${config.authUrl()}/join?tenant=${encodeURIComponent(resolvedTenant)}&redirect-to=${encodeURIComponent(
     targetUrl,

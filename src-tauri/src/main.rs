@@ -2171,11 +2171,17 @@ async fn open_external_url(app: AppHandle, url: String) -> Result<(), String> {
 }
 
 fn main() {
-    // Dev-checkout overrides first: src-tauri/.env.local, then .env.production.
-    // The path is compile-time CARGO_MANIFEST_DIR, so installed builds have
-    // neither and skip straight on. Loaded before anything reads env; dotenvy
-    // never overrides already-set vars, so shell env > .env.local >
-    // .env.production > .env. Keys documented in src-tauri/.env.example.
+    // Dev-checkout overrides first: src-tauri/.env.local, then .env.production,
+    // read via the compile-time CARGO_MANIFEST_DIR path. Loaded before anything
+    // reads env; dotenvy never overrides already-set vars, so shell env >
+    // .env.local > .env.production > .env. Keys documented in .env.example.
+    // Debug builds only: a RELEASE binary built on a dev machine kept reading
+    // the checkout's .env.local through that absolute path, so a DMG built
+    // here opened the developer's localhost (and hung on "Loading…" with no
+    // dev server up) while the same DMG from CI went to production. Release
+    // builds behave the same everywhere: shell env, then the bundled/cwd
+    // `.env` below, then the compiled-in default.
+    #[cfg(debug_assertions)]
     for f in [".env.local", ".env.production"] {
         let _ = dotenvy::from_path(std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join(f));
     }

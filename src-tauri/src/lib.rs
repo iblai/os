@@ -10,6 +10,9 @@ mod cua_driver_mcp;
 // the same arrangement as `foundry_manager` below.
 #[allow(dead_code)]
 mod local_llm;
+// Only the phone asks; desktop builds carry the module unused.
+#[cfg_attr(not(any(target_os = "ios", target_os = "android")), allow(dead_code))]
+mod local_network;
 #[cfg(not(any(target_os = "ios", target_os = "android")))]
 mod nav_guard;
 // Gated exactly like `opencode_acp`, which is its only consumer here: Code uses
@@ -114,15 +117,12 @@ fn get_app_url() -> String {
         return url.to_string();
     }
 
-    // Mobile platforms: .org for debug, .app for release
+    // Mobile release default: the same production host the desktop apps use
+    // (os.ibl.ai). A debug build with no TAURI_DEV_URL baked in has nothing
+    // sensible to fall back to, so it lands on production too rather than a
+    // stale LAN address.
     #[cfg(any(target_os = "ios", target_os = "android"))]
-    {
-        #[cfg(debug_assertions)]
-        return "http://192.168.1.46:3001".to_string();
-
-        #[cfg(not(debug_assertions))]
-        return "https://mentorai.iblai.app".to_string();
-    }
+    return "https://os.ibl.ai".to_string();
 
     // Desktop default app URL (override with TAURI_DEV_URL) — same for debug and release
     #[cfg(not(any(target_os = "ios", target_os = "android")))]
@@ -654,7 +654,9 @@ fn handle_deep_link_url(app_handle: &AppHandle, raw_url: &str) {
 
     // Handle both custom URI schemes and Universal Links (https with our domain)
     let is_custom_scheme = scheme == "iblai-mentor" || scheme == "ai.ibl.mentorai";
-    let is_universal_link = scheme == "https" && host == "mentorai.iblai.app";
+    // Both production hosts are in the associated-domains entitlement.
+    let is_universal_link =
+        scheme == "https" && (host == "os.ibl.ai" || host == "mentorai.iblai.app");
     println!(
         "[ibl.ai] is_custom_scheme: {}, is_universal_link: {}",
         is_custom_scheme, is_universal_link
@@ -2273,11 +2275,17 @@ fn url_monitor_script_offline() -> String {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    // Dev-checkout overrides first: src-tauri/.env.local, then .env.production.
-    // The path is compile-time CARGO_MANIFEST_DIR, so installed builds have
-    // neither and skip straight on. Loaded before anything reads env; dotenvy
-    // never overrides already-set vars, so shell env > .env.local >
-    // .env.production > .env. Keys documented in src-tauri/.env.example.
+    // Dev-checkout overrides first: src-tauri/.env.local, then .env.production,
+    // read via the compile-time CARGO_MANIFEST_DIR path. Loaded before anything
+    // reads env; dotenvy never overrides already-set vars, so shell env >
+    // .env.local > .env.production > .env. Keys documented in .env.example.
+    // Debug builds only: a RELEASE binary built on a dev machine kept reading
+    // the checkout's .env.local through that absolute path, so a DMG built
+    // here opened the developer's localhost (and hung on "Loading…" with no
+    // dev server up) while the same DMG from CI went to production. Release
+    // builds behave the same everywhere: shell env, then the bundled/cwd
+    // `.env` below, then the compiled-in default.
+    #[cfg(debug_assertions)]
     for f in [".env.local", ".env.production"] {
         let _ = dotenvy::from_path(std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join(f));
     }
@@ -2424,9 +2432,22 @@ pub fn run() {
                         }
                         // Phone Code: pairing + per-chat session map storage.
                         remote_code_client::init(dir.clone());
+                        local_network::init(dir.clone());
+                        // A turn the last run left mid-flight (the app was
+                        // force-quit or killed) is stopped on the desktop.
+                        tauri::async_runtime::spawn(remote_code_client::abort_abandoned_turns());
                     }
                     Err(e) => eprintln!("[LocalLLM] no app data dir: {e}"),
                 }
+                // Ask for Local Network access at first open (iOS prompts
+                // once), so the first pairing scan is not the first thing
+                // to hit the prompt. Off the main thread; nothing waits on
+                // it. A beat after launch so the window is up to host the
+                // prompt.
+                std::thread::spawn(|| {
+                    std::thread::sleep(std::time::Duration::from_secs(2));
+                    local_network::ensure(local_network::LAUNCH_WINDOW);
+                });
             }
 
             // =====================
@@ -3166,6 +3187,8 @@ pub fn run() {
         remote_code_client::set_opencode_workspace,
         remote_code_client::new_opencode_workspace,
         remote_code_client::remote_code_list_workspaces,
+        local_network::local_network_status,
+        local_network::open_app_settings,
     ]);
 
     builder
@@ -3179,6 +3202,17 @@ pub fn run() {
             #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
             if let tauri::RunEvent::Exit = _event {
                 remote_code::shutdown_sync();
+            }
+            // Phone back in the foreground: the OS reclaims a suspended
+            // app's sockets, so a Code turn streaming from the desktop
+            // reconnects and catches up (see remote_code_client).
+            #[cfg(any(target_os = "ios", target_os = "android"))]
+            if let tauri::RunEvent::WindowEvent {
+                event: tauri::WindowEvent::Resumed,
+                ..
+            } = _event
+            {
+                remote_code_client::app_resumed();
             }
         });
 }

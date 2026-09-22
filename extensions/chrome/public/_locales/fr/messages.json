@@ -1,0 +1,97 @@
+{
+  "actionBack": {
+    "message": "Revenir en arrière"
+  },
+  "actionClick": {
+    "message": "Cliquer sur"
+  },
+  "actionNavigate": {
+    "message": "Ouvrir"
+  },
+  "actionReadPage": {
+    "message": "Lire la page"
+  },
+  "actionScroll": {
+    "message": "Faire défiler"
+  },
+  "actionSelect": {
+    "message": "Sélectionner dans"
+  },
+  "actionTitle": {
+    "message": "Ouvrir ibl.ai"
+  },
+  "actionType": {
+    "message": "Saisir dans"
+  },
+  "actionWait": {
+    "message": "Attendre"
+  },
+  "appDescription": {
+    "message": "Discutez avec vos agents ibl.ai depuis un panneau latéral de Chrome, sur n’importe quelle page, et laissez-les naviguer pour vous."
+  },
+  "appName": {
+    "message": "ibl.ai"
+  },
+  "declined": {
+    "message": "Refusé."
+  },
+  "errorAccess": {
+    "message": "Votre session n’est plus valide. Reconnectez-vous."
+  },
+  "errorCredits": {
+    "message": "Crédits insuffisants sur cette plateforme."
+  },
+  "errorGeneric": {
+    "message": "Une erreur est survenue : $MESSAGE$",
+    "placeholders": {
+      "message": {
+        "content": "$1"
+      }
+    }
+  },
+  "errorRunInProgress": {
+    "message": "Une exécution est déjà en cours."
+  },
+  "errorWorkerGone": {
+    "message": "L’extension a cessé de répondre, l’exécution s’est donc arrêtée. Réessayez."
+  },
+  "hostBlocked": {
+    "message": "$HOST$ n’est pas une page http ou https, elle ne peut donc pas être pilotée.",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
+  "noActiveTab": {
+    "message": "$URL$ ne peut pas être piloté — seules les pages http et https le peuvent. Passez à la page sur laquelle vous voulez qu’il travaille.",
+    "placeholders": {
+      "url": {
+        "content": "$1"
+      }
+    }
+  },
+  "noModels": {
+    "message": "Aucun modèle n’est disponible sur cette plateforme."
+  },
+  "refused": {
+    "message": "Refusé : $REASON$",
+    "placeholders": {
+      "reason": {
+        "content": "$1"
+      }
+    }
+  },
+  "signIn": {
+    "message": "Se connecter"
+  },
+  "signInFailed": {
+    "message": "La connexion a échoué. Réessayez."
+  },
+  "stepLimit": {
+    "message": "Arrêté après le nombre maximal d’étapes."
+  },
+  "tokenLimit": {
+    "message": "Arrêté : l’exécution a épuisé son budget de jetons."
+  }
+}

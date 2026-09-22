@@ -287,6 +287,33 @@ and a Finder-launched app cannot read `src-tauri/.env.local` under
 `~/Documents` without a permission grant, so it would load production — where
 the prompt does not exist yet — and nothing would happen.
 
+## iOS version and build number (App Store Connect)
+
+iOS has its own version line on App Store Connect (last approved `1.1.19`; it
+can never go backwards, so the desktop's `0.95.x` in `tauri.conf.json` cannot
+be reused). It lives in the iOS-only overlay `src-tauri/tauri.ios.conf.json`,
+which Tauri merges over `tauri.conf.json` for iOS builds:
+
+```json
+{ "version": "1.1.20", "bundle": { "iOS": { "bundleVersion": "2" } } }
+```
+
+- `version` → `CFBundleShortVersionString` (marketing version). Bump per release.
+- `bundle.iOS.bundleVersion` → `CFBundleVersion`, a plain counter. App Store
+  Connect rejects a repeated build number for the same version, so bump it for
+  **every** upload (`3`, `4`, …) and reset it to `1` on a new version.
+  Note: `cargo tauri ios build --export-method app-store-connect` exports with
+  Xcode's `manageAppVersionAndBuildNumber`, which asks App Store Connect and
+  auto-raises the **exported IPA's** build number past any it already holds
+  (the archive keeps the repo's value). So an upload may carry a higher build
+  than the overlay; after uploading, set `bundleVersion` to that number so the
+  repo and the store stay in step.
+
+`cargo tauri ios build` rewrites `gen/apple/ibl-ai-os_iOS/Info.plist` from the
+overlay; if you archive from Xcode (Product > Archive) instead, keep the two
+plist values in step by hand. The overlay must stay comment-free: Tauri's config
+schema rejects unknown keys.
+
 ## Things to know
 
 - **Users on pre-updater builds (0.95.19 and older) have no updater.** They

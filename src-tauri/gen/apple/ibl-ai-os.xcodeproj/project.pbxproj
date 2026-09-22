@@ -7,19 +7,19 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		0A11E5EACCE1E4A700000001 /* Accelerate.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0A11E5EACCE1E4A700000002 /* Accelerate.framework */; };
 		0B12AC1C979EF13E8C7DA70B /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F170601A6F39AD89D9B8D45C /* Security.framework */; };
 		0C44612881265C872F9BC954 /* main.mm in Sources */ = {isa = PBXBuildFile; fileRef = 01DD5326020038D98382F4D6 /* main.mm */; };
 		1616F677CBA800557AD79686 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D01E1F21D7C65096DD8F44FD /* UIKit.framework */; };
-		4CC5A62371BA382C95D146C8 /* libapp.a in Resources */ = {isa = PBXBuildFile; fileRef = 5BCCB488F86B549D13F4F970 /* libapp.a */; };
 		5D4E47E8097C657103F2B215 /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E58D8E5A66D812FBE71D95C5 /* Metal.framework */; };
 		71DEA7B1F8EE8F49AC4A0F35 /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 17AA255698C9F9BFFEF3A8D5 /* QuartzCore.framework */; };
 		797D7B101C6962F60AB9997F /* assets in Resources */ = {isa = PBXBuildFile; fileRef = AD334AF54F50061743732938 /* assets */; };
 		9D36CDD4A7484839B36A0D43 /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E2FEC487735927A76CD5B596 /* CoreGraphics.framework */; };
+		9E9D046BA16028E9424F3DFE /* Accelerate.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 643ACE2410AA615987BB3DD7 /* Accelerate.framework */; };
 		B867CC34E95B11F479A37F08 /* libapp.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 76BA59E47CB0FADF2B9BA8FD /* libapp.a */; };
 		BF2D129A0BD96C35E389CB63 /* WebKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 12B4043A1332554C95657574 /* WebKit.framework */; };
 		DDEE89B45EE2B6873129C4E0 /* MetalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 19CC12D5BCCCF48F335F9050 /* MetalKit.framework */; };
 		E1B0874924572A2AD17E1CA2 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13F38E2AED9B980B4CB40A1E /* Assets.xcassets */; };
+		F0B713B5010DA2BE893C5720 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = ED72BD481C0A2993F8B1F6CB /* PrivacyInfo.xcprivacy */; };
 		FC34CF86F03CE80602D475FF /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 8F4143BC23E2B81F3919EA56 /* LaunchScreen.storyboard */; };
 /* End PBXBuildFile section */
 
@@ -29,20 +29,26 @@
 		06FE56A7B4F1A588462D4596 /* opencode_proxy.rs */ = {isa = PBXFileReference; path = opencode_proxy.rs; sourceTree = "<group>"; };
 		0914C9AE0A7358614E9F0947 /* opencode_acp.rs */ = {isa = PBXFileReference; path = opencode_acp.rs; sourceTree = "<group>"; };
 		0A56C3BA4923CDCABEF3934E /* foundry_installer.rs */ = {isa = PBXFileReference; path = foundry_installer.rs; sourceTree = "<group>"; };
+		10553340C083E5E6873DAA3F /* local_network.rs */ = {isa = PBXFileReference; path = local_network.rs; sourceTree = "<group>"; };
 		12236236D53A1D85FFCF4049 /* ibl-ai-os_iOS.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = "ibl-ai-os_iOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		124200EF7C04A9ADD2BAF87C /* model_manager.rs */ = {isa = PBXFileReference; path = model_manager.rs; sourceTree = "<group>"; };
-		0A11E5EACCE1E4A700000002 /* Accelerate.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Accelerate.framework; path = System/Library/Frameworks/Accelerate.framework; sourceTree = SDKROOT; };
 		12B4043A1332554C95657574 /* WebKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WebKit.framework; path = System/Library/Frameworks/WebKit.framework; sourceTree = SDKROOT; };
 		13F38E2AED9B980B4CB40A1E /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		17AA255698C9F9BFFEF3A8D5 /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = System/Library/Frameworks/QuartzCore.framework; sourceTree = SDKROOT; };
 		19CC12D5BCCCF48F335F9050 /* MetalKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MetalKit.framework; path = System/Library/Frameworks/MetalKit.framework; sourceTree = SDKROOT; };
 		36C983BC62ED3E7D214A649A /* opencode_installer.rs */ = {isa = PBXFileReference; path = opencode_installer.rs; sourceTree = "<group>"; };
+		39751A94EBAAD8B03F9C69C0 /* remote_code_client.rs */ = {isa = PBXFileReference; path = remote_code_client.rs; sourceTree = "<group>"; };
+		3E314DBB0125EC2781965CBB /* local_llm.rs */ = {isa = PBXFileReference; path = local_llm.rs; sourceTree = "<group>"; };
 		43FBF1D0E72EC89B9A91CB69 /* main.rs */ = {isa = PBXFileReference; path = main.rs; sourceTree = "<group>"; };
 		59DA4705E22AADC994D5E687 /* lib.rs */ = {isa = PBXFileReference; path = lib.rs; sourceTree = "<group>"; };
 		5BCCB488F86B549D13F4F970 /* libapp.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libapp.a; sourceTree = "<group>"; };
 		61D551F8B61B72843C297132 /* opencode_build_prompt.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = opencode_build_prompt.txt; sourceTree = "<group>"; };
+		643ACE2410AA615987BB3DD7 /* Accelerate.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Accelerate.framework; path = System/Library/Frameworks/Accelerate.framework; sourceTree = SDKROOT; };
 		76BA59E47CB0FADF2B9BA8FD /* libapp.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libapp.a; sourceTree = "<group>"; };
+		792D558A7587B910179B2688 /* remote_code.rs */ = {isa = PBXFileReference; path = remote_code.rs; sourceTree = "<group>"; };
 		7C129D932F0284B366094696 /* mcp_bridge_installer.rs */ = {isa = PBXFileReference; path = mcp_bridge_installer.rs; sourceTree = "<group>"; };
+		84D4C608B7E6886574C8687C /* app_update.rs */ = {isa = PBXFileReference; path = app_update.rs; sourceTree = "<group>"; };
+		8702F14D0F5F2BEE6D91D0A6 /* nav_guard.rs */ = {isa = PBXFileReference; path = nav_guard.rs; sourceTree = "<group>"; };
 		892AB11436B265D48C370312 /* bindings.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = bindings.h; sourceTree = "<group>"; };
 		8F4143BC23E2B81F3919EA56 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
 		97D5F26BA2F6A6B152B668D7 /* cua_driver_mcp.rs */ = {isa = PBXFileReference; path = cua_driver_mcp.rs; sourceTree = "<group>"; };
@@ -57,8 +63,10 @@
 		E2FEC487735927A76CD5B596 /* CoreGraphics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreGraphics.framework; path = System/Library/Frameworks/CoreGraphics.framework; sourceTree = SDKROOT; };
 		E58D8E5A66D812FBE71D95C5 /* Metal.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Metal.framework; path = System/Library/Frameworks/Metal.framework; sourceTree = SDKROOT; };
 		EA5A6F7FDB1A1B0D5E6F8B22 /* foundry_manager.rs */ = {isa = PBXFileReference; path = foundry_manager.rs; sourceTree = "<group>"; };
+		ED72BD481C0A2993F8B1F6CB /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		F170601A6F39AD89D9B8D45C /* Security.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Security.framework; path = System/Library/Frameworks/Security.framework; sourceTree = SDKROOT; };
 		F4BA08F2F28D1C6BE1AC82A0 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		FE99EAC198E1AA46F7C905BD /* libapp.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libapp.a; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -67,7 +75,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				B867CC34E95B11F479A37F08 /* libapp.a in Frameworks */,
-				0A11E5EACCE1E4A700000001 /* Accelerate.framework in Frameworks */,
+				9E9D046BA16028E9424F3DFE /* Accelerate.framework in Frameworks */,
 				9D36CDD4A7484839B36A0D43 /* CoreGraphics.framework in Frameworks */,
 				5D4E47E8097C657103F2B215 /* Metal.framework in Frameworks */,
 				DDEE89B45EE2B6873129C4E0 /* MetalKit.framework in Frameworks */,
@@ -84,7 +92,7 @@
 		09B302929453D7B27AADFE1C /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
-				0A11E5EACCE1E4A700000002 /* Accelerate.framework */,
+				643ACE2410AA615987BB3DD7 /* Accelerate.framework */,
 				E2FEC487735927A76CD5B596 /* CoreGraphics.framework */,
 				76BA59E47CB0FADF2B9BA8FD /* libapp.a */,
 				E58D8E5A66D812FBE71D95C5 /* Metal.framework */,
@@ -105,6 +113,14 @@
 			path = bindings;
 			sourceTree = "<group>";
 		};
+		41CDAB517347CDA200BFA42C /* release */ = {
+			isa = PBXGroup;
+			children = (
+				FE99EAC198E1AA46F7C905BD /* libapp.a */,
+			);
+			path = release;
+			sourceTree = "<group>";
+		};
 		5BF01BD3E71BB6B9F65DA890 /* debug */ = {
 			isa = PBXGroup;
 			children = (
@@ -116,15 +132,19 @@
 		634339791682E057B7A4664C /* src */ = {
 			isa = PBXGroup;
 			children = (
+				84D4C608B7E6886574C8687C /* app_update.rs */,
 				A9943612C63C56D6721D1274 /* cua_driver_installer.rs */,
 				97D5F26BA2F6A6B152B668D7 /* cua_driver_mcp.rs */,
 				0A56C3BA4923CDCABEF3934E /* foundry_installer.rs */,
 				EA5A6F7FDB1A1B0D5E6F8B22 /* foundry_manager.rs */,
 				59DA4705E22AADC994D5E687 /* lib.rs */,
+				3E314DBB0125EC2781965CBB /* local_llm.rs */,
+				10553340C083E5E6873DAA3F /* local_network.rs */,
 				43FBF1D0E72EC89B9A91CB69 /* main.rs */,
 				7C129D932F0284B366094696 /* mcp_bridge_installer.rs */,
 				C66C4944F7FF91C98078AADC /* mcp_bridge_manager.rs */,
 				124200EF7C04A9ADD2BAF87C /* model_manager.rs */,
+				8702F14D0F5F2BEE6D91D0A6 /* nav_guard.rs */,
 				03890FD47ACABAA9BCD7F4BC /* oauth.rs */,
 				D3EE3AA8A70C42520E41C6CD /* offline_server.rs */,
 				BEA8664DE1A5A5D9045FC760 /* ollama_installer.rs */,
@@ -132,6 +152,8 @@
 				61D551F8B61B72843C297132 /* opencode_build_prompt.txt */,
 				36C983BC62ED3E7D214A649A /* opencode_installer.rs */,
 				06FE56A7B4F1A588462D4596 /* opencode_proxy.rs */,
+				39751A94EBAAD8B03F9C69C0 /* remote_code_client.rs */,
+				792D558A7587B910179B2688 /* remote_code.rs */,
 				9C46EFA76B3E98FB80A591D8 /* web_cache.rs */,
 			);
 			name = src;
@@ -142,6 +164,7 @@
 			isa = PBXGroup;
 			children = (
 				5BF01BD3E71BB6B9F65DA890 /* debug */,
+				41CDAB517347CDA200BFA42C /* release */,
 			);
 			path = arm64;
 			sourceTree = "<group>";
@@ -199,11 +222,12 @@
 			children = (
 				A399C28CF92BF11034159205 /* ibl-ai-os_iOS.entitlements */,
 				F4BA08F2F28D1C6BE1AC82A0 /* Info.plist */,
+				ED72BD481C0A2993F8B1F6CB /* PrivacyInfo.xcprivacy */,
 			);
 			path = "ibl-ai-os_iOS";
 			sourceTree = "<group>";
 		};
-		"TEMP_809AA92A-0F83-47EF-8836-E31D08624B6A" /* x86_64 */ = {
+		"TEMP_CF8C305A-4726-4291-89D9-28E7368F74BF" /* x86_64 */ = {
 			isa = PBXGroup;
 			children = (
 			);
@@ -273,8 +297,8 @@
 			files = (
 				E1B0874924572A2AD17E1CA2 /* Assets.xcassets in Resources */,
 				FC34CF86F03CE80602D475FF /* LaunchScreen.storyboard in Resources */,
+				F0B713B5010DA2BE893C5720 /* PrivacyInfo.xcprivacy in Resources */,
 				797D7B101C6962F60AB9997F /* assets in Resources */,
-				4CC5A62371BA382C95D146C8 /* libapp.a in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -300,7 +324,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "cargo tauri ios xcode-script -v --platform ${PLATFORM_DISPLAY_NAME:?} --sdk-root ${SDKROOT:?} --framework-search-paths \"${FRAMEWORK_SEARCH_PATHS:?}\" --header-search-paths \"${HEADER_SEARCH_PATHS:?}\" --gcc-preprocessor-definitions \"${GCC_PREPROCESSOR_DEFINITIONS:-}\" --configuration ${CONFIGURATION:?} ${FORCE_COLOR} ${ARCHS:?}";
+			shellScript = "\"$SRCROOT/build-rust.sh\"";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -399,7 +423,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 14.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -488,7 +512,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 14.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
