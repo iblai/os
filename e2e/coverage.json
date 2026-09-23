@@ -2,14 +2,14 @@
   "version": 2,
   "lastUpdated": "2026-09-23",
   "summary": {
-    "totalCheckpoints": 752,
-    "coveredCheckpoints": 709,
+    "totalCheckpoints": 764,
+    "coveredCheckpoints": 721,
     "deprecatedCheckpoints": 17,
     "notReproducibleCheckpoints": 15,
     "pendingCheckpoints": 11,
     "percent": 100,
-    "totalJourneys": 78,
-    "activeJourneys": 77
+    "totalJourneys": 79,
+    "activeJourneys": 78
   },
   "journeys": [
     {
@@ -231,7 +231,16 @@
       "spec": "05-mentor-discovery-explore-page.spec.ts",
       "sourceFiles": [
         "app/platform/[tenantKey]/[mentorId]/explore/page.tsx",
-        "app/platform/[tenantKey]/explore/page.tsx"
+        "app/platform/[tenantKey]/explore/page.tsx",
+        "app/platform/[tenantKey]/[mentorId]/explore/_components/explore-page-content.tsx",
+        "app/platform/[tenantKey]/[mentorId]/explore/_components/mentor-categories.tsx",
+        "app/platform/[tenantKey]/[mentorId]/explore/_components/section.tsx",
+        "app/platform/[tenantKey]/[mentorId]/explore/_components/mentor-card-with-star.tsx",
+        "app/platform/[tenantKey]/[mentorId]/explore/_components/custom-mentors-section.tsx",
+        "app/platform/[tenantKey]/[mentorId]/explore/_components/default-mentors-section.tsx",
+        "app/platform/[tenantKey]/[mentorId]/explore/_components/featured-mentors-section.tsx",
+        "app/platform/[tenantKey]/[mentorId]/explore/_components/starred-mentors-section.tsx",
+        "app/platform/[tenantKey]/[mentorId]/explore/_components/empty-state.tsx"
       ],
       "checkpoints": [
         {
@@ -297,6 +306,21 @@
         {
           "id": "exp-13",
           "description": "Star/unstar a mentor updates the Favorites section",
+          "status": "covered"
+        },
+        {
+          "id": "exp-14",
+          "description": "Header Create Agent button opens the create dialog for admins",
+          "status": "covered"
+        },
+        {
+          "id": "exp-15",
+          "description": "Clear search button empties the search box",
+          "status": "covered"
+        },
+        {
+          "id": "exp-16",
+          "description": "Featured filter toggles on and off with a single click",
           "status": "covered"
         }
       ]
@@ -1033,7 +1057,8 @@
         "app/platform/[tenantKey]/[mentorId]/notifications/page.tsx",
         "app/platform/[tenantKey]/[mentorId]/notifications/[notificationId]/page.tsx",
         "app/platform/[tenantKey]/notifications/page.tsx",
-        "app/platform/[tenantKey]/notifications/[notificationId]/page.tsx"
+        "app/platform/[tenantKey]/notifications/[notificationId]/page.tsx",
+        "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx"
       ],
       "checkpoints": [
         {
@@ -1064,6 +1089,11 @@
         {
           "id": "notif-06",
           "description": "Alerts tab auto-opens when inbox is empty",
+          "status": "covered"
+        },
+        {
+          "id": "notif-07",
+          "description": "Navbar drops the chat-only chrome (LLM Model Selector, on-device model badge, privacy chip) on the notifications inbox \u2014 tenant-scoped, per-agent and single-notification routes alike; an inbox is not a chat surface",
           "status": "covered"
         }
       ]
@@ -4737,6 +4767,65 @@
         {
           "id": "du-08",
           "description": "Admin uploads an Excel (.xlsx) file via the Add Resources modal and the file row appears in the dataset list",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "tenant-analytics",
+      "name": "Tenant-wide Analytics",
+      "spec": "76-tenant-analytics.spec.ts",
+      "sourceFiles": [
+        "app/platform/[tenantKey]/analytics/page.tsx",
+        "app/platform/[tenantKey]/analytics/users/page.tsx",
+        "app/platform/[tenantKey]/analytics/topics/page.tsx",
+        "app/platform/[tenantKey]/analytics/transcripts/page.tsx",
+        "app/platform/[tenantKey]/analytics/memory/page.tsx",
+        "app/platform/[tenantKey]/analytics/financial/page.tsx",
+        "app/platform/[tenantKey]/analytics/audit/page.tsx",
+        "app/platform/[tenantKey]/analytics/reports/page.tsx",
+        "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx",
+        "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "tanl-01",
+          "description": "Tenant-wide analytics overview (/platform/{tenantKey}/analytics, no agent segment) renders the tab strip inside the platform shell \u2014 the sidebar proves the layout supplies the shell itself",
+          "status": "covered"
+        },
+        {
+          "id": "tanl-02",
+          "description": "Clicking a tab from the tenant-wide overview routes to /platform/{tenantKey}/analytics/{tab} and never reintroduces an agent id",
+          "status": "covered"
+        },
+        {
+          "id": "tanl-03",
+          "description": "Tenant-wide Users, Topics, Transcripts and Costs tabs are reachable by direct URL",
+          "status": "covered"
+        },
+        {
+          "id": "tanl-04",
+          "description": "Tenant-wide Memory page loads with no agent scope (the tab opens on global / all-agent memories)",
+          "status": "covered"
+        },
+        {
+          "id": "tanl-05",
+          "description": "Tenant-wide Data Reports page loads and shows the Data Reports tab",
+          "status": "covered"
+        },
+        {
+          "id": "tanl-06",
+          "description": "Tenant-wide Audit page loads \u2014 with no agent to check `view_audit_logs` against, the API is the authority and the container renders its own no-permission card on a 403",
+          "status": "covered"
+        },
+        {
+          "id": "tanl-07",
+          "description": "Sidebar Analytics entry opens the tenant-wide section whether or not an agent is in the URL \u2014 the per-agent section is reached from the navbar agent dropdown instead",
+          "status": "covered"
+        },
+        {
+          "id": "tanl-08",
+          "description": "Navbar on the tenant-wide section drops the chat-only chrome (LLM Model Selector, agent dropdown, privacy chip) and shows the \"Analytics\" section title instead; the per-agent analytics page keeps full parity (Journey 65)",
           "status": "covered"
         }
       ]

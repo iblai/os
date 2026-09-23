@@ -8,7 +8,11 @@ import {
 } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
-import { ExplorePageContent } from '../explore-page-content';
+import {
+  ExplorePageContent,
+  OWN_AGENTS_SCAN_LIMIT,
+  isAgentCreatedBy,
+} from '../explore-page-content';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import {
   useExplorePageContext,
@@ -25,11 +29,21 @@ vi.mock('@/hooks/use-user', () => ({
 }));
 
 const mockNavigateToMentor = vi.fn();
+const mockOpenCreateMentorModal = vi.fn();
 vi.mock('@/hooks/user-navigate', () => ({
   useNavigate: () => ({
     navigateToMentor: mockNavigateToMentor,
-    openCreateMentorModal: vi.fn(),
+    openCreateMentorModal: mockOpenCreateMentorModal,
   }),
+}));
+
+let mockHasPermission = true;
+vi.mock('@/hoc/withPermissions', () => ({
+  WithPermissions: ({
+    children,
+  }: {
+    children: (props: { hasPermission: boolean }) => React.ReactNode;
+  }) => children({ hasPermission: mockHasPermission }),
 }));
 
 const mockIsLoggedIn = vi.fn();
@@ -63,15 +77,15 @@ vi.mock('@/lib/config', () => ({
 
 // Mock data-layer hooks
 const mockUseGetAiSearchMentorsQuery = vi.fn();
-const mockUseGetPersonnalizedMentorsQuery = vi.fn();
+const mockUseGetSearchGlobalQuery = vi.fn();
 const mockStarMentor = vi.fn();
 const mockUnstarMentor = vi.fn();
 
 vi.mock('@iblai/iblai-js/data-layer', () => ({
   useGetAiSearchMentorsQuery: (...args: unknown[]) =>
     mockUseGetAiSearchMentorsQuery(...args),
-  useGetPersonnalizedMentorsQuery: (...args: unknown[]) =>
-    mockUseGetPersonnalizedMentorsQuery(...args),
+  useGetSearchGlobalQuery: (...args: unknown[]) =>
+    mockUseGetSearchGlobalQuery(...args),
   useStarMentorMutation: () => [mockStarMentor, { isLoading: false }],
   useUnstarMentorMutation: () => [mockUnstarMentor, { isLoading: false }],
 }));
@@ -109,13 +123,18 @@ vi.mock('../mentor-categories', () => ({
   MentorCategories: ({
     onFiltersChange,
     onCreatedByChange,
+    includeMeToCreatedByFilter,
   }: {
     onFiltersChange?: (filters: unknown) => void;
     onCreatedByChange?: (
       createdBy: 'me' | 'my-organization' | 'community' | null,
     ) => void;
+    includeMeToCreatedByFilter?: boolean;
   }) => (
-    <div data-testid="mentor-categories">
+    <div
+      data-testid="mentor-categories"
+      data-include-me={String(!!includeMeToCreatedByFilter)}
+    >
       <button
         data-testid="change-filter-btn"
         onClick={() =>
@@ -173,6 +192,12 @@ describe('ExplorePageContent', () => {
     { id: '2', name: 'Mentor 2' },
   ];
 
+  // Shape of a `GET /api/search/global/?content=agents` result
+  const agentResult = (createdBy: string | null, type = 'agent') => ({
+    type,
+    data: { id: 1, name: 'Agent', created_by: createdBy },
+  });
+
   const renderComponent = () => {
     return render(
       <TooltipProvider>
@@ -201,11 +226,14 @@ describe('ExplorePageContent', () => {
       isLoading: false,
     });
 
-    mockUseGetPersonnalizedMentorsQuery.mockReturnValue({
-      data: { results: mockMentors },
+    mockUseGetSearchGlobalQuery.mockReturnValue({
+      data: {
+        results: [agentResult('someone-else'), agentResult('test-user')],
+      },
       isFetching: false,
       isLoading: false,
     });
+    mockHasPermission = true;
 
     mockStarMentor.mockReturnValue({ unwrap: vi.fn().mockResolvedValue({}) });
     mockUnstarMentor.mockReturnValue({ unwrap: vi.fn().mockResolvedValue({}) });
@@ -708,7 +736,84 @@ describe('ExplorePageContent', () => {
       const searchInput = screen.getByRole('textbox', {
         name: /Search agents/i,
       });
-      expect(searchInput).toHaveAttribute('placeholder', 'Search');
+      expect(searchInput).toHaveAttribute('placeholder', 'Search agents');
+    });
+
+    it('shows a clear button only once there is a query, and it empties the search', async () => {
+      const user = userEvent.setup();
+      renderComponent();
+
+      expect(
+        screen.queryByRole('button', { name: 'Clear search' }),
+      ).not.toBeInTheDocument();
+
+      const searchInput = screen.getByRole('textbox', {
+        name: /Search agents/i,
+      });
+      await user.type(searchInput, 'math');
+      await user.click(screen.getByRole('button', { name: 'Clear search' }));
+
+      expect(searchInput).toHaveValue('');
+      expect(
+        screen.queryByRole('button', { name: 'Clear search' }),
+      ).not.toBeInTheDocument();
+    });
+
+    it('clears the search with Escape', async () => {
+      const user = userEvent.setup();
+      renderComponent();
+
+      const searchInput = screen.getByRole('textbox', {
+        name: /Search agents/i,
+      });
+      await user.type(searchInput, 'math{Escape}');
+
+      expect(searchInput).toHaveValue('');
+    });
+  });
+
+  describe('Page header', () => {
+    it('titles the page and keeps the description in the h1', () => {
+      renderComponent();
+
+      const heading = screen.getByRole('heading', { level: 1 });
+      expect(heading).toHaveTextContent('Explore agents');
+      expect(heading).toHaveTextContent(/Discover and create agents/i);
+    });
+
+    it('offers Create Agent to users allowed to create agents', async () => {
+      const user = userEvent.setup();
+      renderComponent();
+
+      await user.click(
+        screen.getByRole('button', { name: 'Create new agent' }),
+      );
+
+      expect(mockOpenCreateMentorModal).toHaveBeenCalled();
+    });
+
+    it('hides Create Agent from users without the create permission', () => {
+      mockHasPermission = false;
+      renderComponent();
+
+      expect(
+        screen.queryByRole('button', { name: 'Create new agent' }),
+      ).not.toBeInTheDocument();
+    });
+
+    it('sends signed-out users to sign in instead of opening the create modal', async () => {
+      const user = userEvent.setup();
+      mockIsLoggedIn.mockReturnValue(false);
+      renderComponent();
+
+      await user.click(
+        screen.getByRole('button', { name: 'Create new agent' }),
+      );
+
+      expect(mockRedirectToAuthSpaJoinTenant).toHaveBeenCalledWith(
+        'test-tenant',
+      );
+      expect(mockOpenCreateMentorModal).not.toHaveBeenCalled();
     });
   });
 
@@ -790,31 +895,6 @@ describe('ExplorePageContent', () => {
       await waitFor(() => {
         expect(capturedContextValue!.filters.categories).toBe('Test');
       });
-    });
-  });
-
-  describe('Custom mentors check for Me filter', () => {
-    it('checks for custom mentors to show Me in filter', () => {
-      mockUseGetPersonnalizedMentorsQuery.mockReturnValue({
-        data: { results: [{ id: '1', name: 'Custom Mentor' }] },
-        isFetching: false,
-      });
-
-      renderComponent();
-
-      // The query should be called to check for custom mentors
-      expect(mockUseGetPersonnalizedMentorsQuery).toHaveBeenCalled();
-    });
-
-    it('passes skip true when username is null', () => {
-      mockUseUsername.mockReturnValue(null);
-
-      renderComponent();
-
-      expect(mockUseGetPersonnalizedMentorsQuery).toHaveBeenCalledWith(
-        expect.anything(),
-        expect.objectContaining({ skip: true }),
-      );
     });
   });
 
@@ -1237,39 +1317,114 @@ describe('ExplorePageContent', () => {
     });
   });
 
-  describe('hasCustomMentors', () => {
-    it('determines hasCustomMentors as true when custom mentors exist', () => {
-      mockUseGetPersonnalizedMentorsQuery.mockReturnValue({
-        data: { results: [{ id: '1', name: 'Custom Mentor' }] },
-        isFetching: false,
-      });
+  describe('Created By: Me availability (global search)', () => {
+    const includeMe = () =>
+      screen.getByTestId('mentor-categories').getAttribute('data-include-me');
 
+    it("scans one page of the tenant's agents via global search", () => {
       renderComponent();
 
-      // This is implicitly tested through the MentorCategories receiving includeMeToCreatedByFilter
-      expect(mockUseGetPersonnalizedMentorsQuery).toHaveBeenCalled();
+      expect(mockUseGetSearchGlobalQuery).toHaveBeenCalledWith(
+        [
+          {
+            content: ['agents'],
+            tenant: 'test-tenant',
+            limit: OWN_AGENTS_SCAN_LIMIT,
+            returnFacet: false,
+          },
+        ],
+        { skip: false },
+      );
     });
 
-    it('determines hasCustomMentors as false when no custom mentors', () => {
-      mockUseGetPersonnalizedMentorsQuery.mockReturnValue({
-        data: { results: [] },
-        isFetching: false,
-      });
+    it('skips the scan when there is no username', () => {
+      mockUseUsername.mockReturnValue(null);
 
       renderComponent();
 
-      expect(mockUseGetPersonnalizedMentorsQuery).toHaveBeenCalled();
+      expect(mockUseGetSearchGlobalQuery).toHaveBeenCalledWith(
+        expect.anything(),
+        { skip: true },
+      );
+      expect(includeMe()).toBe('false');
     });
 
-    it('determines hasCustomMentors as false when results is undefined', () => {
-      mockUseGetPersonnalizedMentorsQuery.mockReturnValue({
-        data: {},
+    it('skips the scan when there is no tenant key', () => {
+      render(
+        <TooltipProvider>
+          <ExplorePageContent tenantKey="" />
+        </TooltipProvider>,
+      );
+
+      expect(mockUseGetSearchGlobalQuery).toHaveBeenCalledWith(
+        expect.anything(),
+        { skip: true },
+      );
+    });
+
+    it('offers Me when the user created one of the agents', () => {
+      renderComponent();
+
+      expect(includeMe()).toBe('true');
+    });
+
+    it('does not offer Me when every agent was created by someone else', () => {
+      mockUseGetSearchGlobalQuery.mockReturnValue({
+        data: { results: [agentResult('someone-else'), agentResult(null)] },
         isFetching: false,
       });
 
       renderComponent();
 
-      expect(mockUseGetPersonnalizedMentorsQuery).toHaveBeenCalled();
+      expect(includeMe()).toBe('false');
+    });
+
+    it('does not offer Me while the scan has no results yet', () => {
+      mockUseGetSearchGlobalQuery.mockReturnValue({
+        data: undefined,
+        isFetching: true,
+      });
+
+      renderComponent();
+
+      expect(includeMe()).toBe('false');
+    });
+
+    it('does not rescan while the user types a search', async () => {
+      const user = userEvent.setup();
+      renderComponent();
+
+      await user.type(
+        screen.getByRole('textbox', { name: /Search agents/i }),
+        'math',
+      );
+
+      // Every render asks for the same page, so RTK Query serves it from
+      // cache and the "Me" option can't flicker away mid-search.
+      const args = mockUseGetSearchGlobalQuery.mock.calls.map((c) => c[0]);
+      expect(new Set(args.map((a) => JSON.stringify(a))).size).toBe(1);
+    });
+  });
+
+  describe('isAgentCreatedBy', () => {
+    it('matches an agent result created by the user', () => {
+      expect(isAgentCreatedBy(agentResult('test-user'), 'test-user')).toBe(
+        true,
+      );
+    });
+
+    it("rejects another user's agent", () => {
+      expect(isAgentCreatedBy(agentResult('other'), 'test-user')).toBe(false);
+    });
+
+    it('rejects non-agent results even with a matching creator', () => {
+      expect(
+        isAgentCreatedBy(agentResult('test-user', 'course'), 'test-user'),
+      ).toBe(false);
+    });
+
+    it('rejects results without data', () => {
+      expect(isAgentCreatedBy({ type: 'agent' }, 'test-user')).toBe(false);
     });
   });
 
