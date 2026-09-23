@@ -140,6 +140,10 @@ export function SettingsTab() {
         label: t('highlightFeaturedLabel'),
         tooltip: t('highlightFeaturedTooltip'),
       },
+      showExploreMentors: {
+        label: t('showAdditionalAgentsLabel'),
+        tooltip: t('showAdditionalAgentsTooltip'),
+      },
       showAttachment: {
         label: t('enableFileAttachmentsLabel'),
         tooltip: t('enableFileAttachmentsTooltip'),
