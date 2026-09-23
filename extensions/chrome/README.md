@@ -9,8 +9,9 @@ nothing else — no tabs, no settings row, nothing above it.
   theme. The active tab's text is fed to it as context.
 - **Cowork** is a mode of that chat, not a second surface. It is the same pill as
   on the desktop app; here the driver is the extension's **service worker**, which
-  reads the page as a numbered list of elements, decides one action, performs it,
-  and repeats until it answers. Model calls go through the platform's
+  reads the page — every frame of it and every open shadow root, so an embedded
+  chat, editor or widget is seen too — as one numbered list of elements, decides
+  one action, performs it, and repeats until it answers. Model calls go through the platform's
   OpenAI-compatible endpoint with your own session; nothing else leaves the
   browser.
 
@@ -69,7 +70,9 @@ off and that is remembered; the pill's panel is also where you switch it back on
 
 What the agent can do: click, type (never into password or payment fields — it
 asks you to type those), select, scroll, open a URL, go back, read the page
-again, wait. **Approvals** in the Cowork panel decides whether it checks with
+again, wait. Controls inside iframes (Gmail's Chat, an embedded editor) and open
+shadow roots are numbered like the page's own, and an action lands in the frame
+its element lives in. **Approvals** in the Cowork panel decides whether it checks with
 you first: _Automatic_ (the default) acts without asking, _Ask Me_ raises an
 approve/deny card before a submit, a payment, a send or a delete. Neither mode
 lets it type into a password or payment field — that is refused outright, in the

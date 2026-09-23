@@ -10,6 +10,8 @@ export interface SettleOptions {
   navMs?: number;
   quietMs?: number;
   capMs?: number;
+  /** The frame the action touched, watched along with the page (frame 0). */
+  frameId?: number;
 }
 
 /**
@@ -21,7 +23,13 @@ export async function settle(
   tabId: number,
   options: SettleOptions = {},
 ): Promise<void> {
-  const { graceMs = 300, navMs = 10000, quietMs = 500, capMs = 3000 } = options;
+  const {
+    graceMs = 300,
+    navMs = 10000,
+    quietMs = 500,
+    capMs = 3000,
+    frameId = 0,
+  } = options;
   const started = Date.now();
   let navigating = false;
   for (;;) {
@@ -33,12 +41,15 @@ export async function settle(
     await sleep(100);
   }
   try {
+    // Chrome resolves once every listed frame has: the page and, for an action
+    // inside an iframe, that frame. Not allFrames — one animated ad frame would
+    // push every action to capMs.
     await chrome.scripting.executeScript({
-      target: { tabId },
+      target: { tabId, frameIds: frameId ? [0, frameId] : [0] },
       func: waitForQuiet,
       args: [quietMs, capMs],
     });
   } catch {
-    // The frame was replaced mid-injection; the snapshot that follows re-reads it.
+    // A frame was replaced or removed mid-injection; the snapshot that follows re-reads the page.
   }
 }
