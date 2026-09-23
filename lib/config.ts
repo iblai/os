@@ -53,6 +53,19 @@ const env = {
     process.env.NEXT_PUBLIC_ENABLE_SUPPORT_PHONE,
   NEXT_PUBLIC_ENABLE_GRADEBOOK_TAB:
     process.env.NEXT_PUBLIC_ENABLE_GRADEBOOK_TAB,
+  NEXT_PUBLIC_BASE_PATH: process.env.NEXT_PUBLIC_BASE_PATH,
+  NEXT_PUBLIC_TTS_IBLAI_MODE: process.env.NEXT_PUBLIC_TTS_IBLAI_MODE,
+  NEXT_PUBLIC_TTS_KOKORO_MODEL: process.env.NEXT_PUBLIC_TTS_KOKORO_MODEL,
+  NEXT_PUBLIC_TTS_KOKORO_MODEL_HOST:
+    process.env.NEXT_PUBLIC_TTS_KOKORO_MODEL_HOST,
+  NEXT_PUBLIC_TTS_KOKORO_MODEL_REVISION:
+    process.env.NEXT_PUBLIC_TTS_KOKORO_MODEL_REVISION,
+  NEXT_PUBLIC_TTS_KOKORO_DTYPE: process.env.NEXT_PUBLIC_TTS_KOKORO_DTYPE,
+  NEXT_PUBLIC_TTS_KOKORO_DEVICE: process.env.NEXT_PUBLIC_TTS_KOKORO_DEVICE,
+  NEXT_PUBLIC_TTS_KOKORO_VOICE: process.env.NEXT_PUBLIC_TTS_KOKORO_VOICE,
+  NEXT_PUBLIC_TTS_KOKORO_SPEED: process.env.NEXT_PUBLIC_TTS_KOKORO_SPEED,
+  NEXT_PUBLIC_TTS_KOKORO_WASM_PATH:
+    process.env.NEXT_PUBLIC_TTS_KOKORO_WASM_PATH,
 };
 
 const runtimeEnv = () =>
@@ -170,4 +183,17 @@ export const config = {
     getEnv('NEXT_PUBLIC_ENABLE_SUPPORT_PHONE', 'false') === 'true',
   enableGradebookTab: () =>
     getEnv('NEXT_PUBLIC_ENABLE_GRADEBOOK_TAB', 'false') === 'true',
+  basePath: () => getEnv('NEXT_PUBLIC_BASE_PATH'),
+  // The TTS knobs are returned raw: `lib/tts/config.ts` validates each one
+  // against what kokoro-js accepts and owns the defaults, so a default here
+  // would be a second copy of a model id, a pinned sha or a dtype table.
+  ttsIblaiMode: () => getEnv('NEXT_PUBLIC_TTS_IBLAI_MODE'),
+  ttsKokoroModel: () => getEnv('NEXT_PUBLIC_TTS_KOKORO_MODEL'),
+  ttsKokoroModelHost: () => getEnv('NEXT_PUBLIC_TTS_KOKORO_MODEL_HOST'),
+  ttsKokoroModelRevision: () => getEnv('NEXT_PUBLIC_TTS_KOKORO_MODEL_REVISION'),
+  ttsKokoroDtype: () => getEnv('NEXT_PUBLIC_TTS_KOKORO_DTYPE'),
+  ttsKokoroDevice: () => getEnv('NEXT_PUBLIC_TTS_KOKORO_DEVICE'),
+  ttsKokoroVoice: () => getEnv('NEXT_PUBLIC_TTS_KOKORO_VOICE'),
+  ttsKokoroSpeed: () => getEnv('NEXT_PUBLIC_TTS_KOKORO_SPEED'),
+  ttsKokoroWasmPath: () => getEnv('NEXT_PUBLIC_TTS_KOKORO_WASM_PATH'),
 };

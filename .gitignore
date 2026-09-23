@@ -12,6 +12,11 @@ dist/
 build/
 *.tsbuildinfo
 
+# ONNX Runtime WASM binaries for the on-device TTS voice. Staged out of
+# node_modules by scripts/copy-ort-assets.sh on every dev/build run; the .wasm
+# alone is ~21 MB, so it is generated, never committed.
+/public/ort/
+
 # testing
 coverage/
 test-results/
