@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.155.1](https://github.com/iblai/os/compare/v0.155.0...v0.155.1) (2026-09-23)
+
+### Bug Fixes
+
+* **chrome-ext:** see and drive elements inside iframes and open shadow roots (1.1.1) ([026fb06](https://github.com/iblai/os/commit/026fb06a8f09c3fef433b92cc6cb24fd35a12cf3))
+
 ## [0.155.0](https://github.com/iblai/os/compare/v0.154.0...v0.155.0) (2026-09-23)
 
 ### Features
