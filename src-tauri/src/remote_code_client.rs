@@ -14,11 +14,12 @@
 //! host (the tests stand up a fake opencode server); the commands are only
 //! registered on mobile.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Mutex, OnceLock};
 
-use futures_util::StreamExt;
+use futures_util::{StreamExt, TryStreamExt};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use tauri::command;
@@ -40,6 +41,29 @@ const MODE_MANUAL: &str = "manual";
 
 /// Hard cap on one turn; a phone must never hold an SSE stream forever.
 const TURN_TIMEOUT_SECS: u64 = 30 * 60;
+
+/// opencode's `/event` stream sends a `server.heartbeat` every 10 s, so a
+/// stream that delivered NOTHING for this long is dead even when the socket
+/// has not said so. A phone waking from the lock screen holds exactly such
+/// a connection: the network dropped it while the app was suspended and no
+/// FIN ever arrives, so a plain read would hang until the turn deadline.
+const STREAM_STALL_SECS: u64 = 30;
+/// How long a turn keeps trying to get its event stream back before giving
+/// up — consecutive failures only; a successful reopen resets it. Wi-Fi
+/// takes a few seconds to re-associate after an unlock, so this must cover
+/// more than one attempt.
+const RECONNECT_WINDOW_SECS: u64 = 120;
+
+/// Bumped every time the app comes back to the foreground (mobile
+/// `WindowEvent::Resumed`). A turn whose stream predates the current epoch
+/// was suspended mid-turn: iOS/Android reclaim a suspended app's sockets, so
+/// it reconnects at once instead of waiting for the dead socket to time out.
+static FOREGROUND_EPOCH: AtomicU64 = AtomicU64::new(0);
+
+/// Called from the app's run loop on every foreground transition.
+pub fn app_resumed() {
+    FOREGROUND_EPOCH.fetch_add(1, Ordering::SeqCst);
+}
 
 #[derive(Serialize, Deserialize, Default, Clone)]
 struct HostConfig {
@@ -82,6 +106,73 @@ struct HostConfig {
     /// mentor is what makes a chosen folder survive that.
     #[serde(default)]
     mentor_directories: HashMap<String, String>,
+    /// Server session → project directory ("" = the server default) of
+    /// every turn this app has running right now. Written when a turn
+    /// starts and removed when it ends, so an entry still here at the next
+    /// launch means the app died mid-turn (force-quit from the app
+    /// switcher, or killed) — see [`abort_abandoned_turns`].
+    #[serde(default)]
+    in_flight: HashMap<String, String>,
+}
+
+/// A turn's entry in the config's `in_flight` map, held for the turn's
+/// lifetime: dropping it — on any exit from the turn, errors included —
+/// removes the entry.
+struct InFlight(String);
+
+impl InFlight {
+    fn mark(remote: &str, dir: Option<&str>) -> Self {
+        let mut cfg = read_config();
+        cfg.in_flight
+            .insert(remote.to_string(), dir.unwrap_or("").to_string());
+        let _ = write_config(&cfg);
+        Self(remote.to_string())
+    }
+}
+
+impl Drop for InFlight {
+    fn drop(&mut self) {
+        let mut cfg = read_config();
+        if cfg.in_flight.remove(&self.0).is_some() {
+            let _ = write_config(&cfg);
+        }
+    }
+}
+
+/// Stop, on the desktop, every turn the previous run of this app left
+/// running: the app was force-quit or killed mid-turn, so nobody sees the
+/// agent's output any more and nobody can answer its permissions — better
+/// to end it than to let it work on unwatched. A turn the desktop already
+/// finished is simply forgotten. Best-effort: the desktop may be away.
+///
+/// A suspended app (lock screen, app switcher) is NOT this case: its turn
+/// reconnects and catches up when the app returns (see `run_turn_inner`).
+pub async fn abort_abandoned_turns() {
+    let cfg = read_config();
+    if cfg.in_flight.is_empty() {
+        return;
+    }
+    let abandoned = cfg.in_flight.clone();
+    if let (Some(base), Some(pw)) = (cfg.url.as_deref(), cfg.password.as_deref()) {
+        for (remote, dir) in &abandoned {
+            let dir = (!dir.is_empty()).then_some(dir.as_str());
+            let status = get_json(base, pw, &scoped("/session/status", dir)).await;
+            if matches!(
+                classify_probe(status, remote),
+                ProbeVerdict::Busy | ProbeVerdict::Retry
+            ) {
+                println!("[RemoteCode] stopping turn {remote}, abandoned when the app was closed");
+                let _ = post_json(base, pw, &format!("/session/{remote}/abort"), &json!({})).await;
+            }
+        }
+    }
+    // Forget only what was handled: a turn started while the desktop was
+    // being asked is this run's, and stays recorded.
+    let mut cfg = read_config();
+    for remote in abandoned.keys() {
+        cfg.in_flight.remove(remote);
+    }
+    let _ = write_config(&cfg);
 }
 
 /// Coalesces streamed token deltas so the webview re-renders at a bounded
@@ -148,6 +239,28 @@ impl TokenCoalescer {
 
     pub(crate) fn full_content(&self) -> &str {
         &self.full
+    }
+
+    /// Adopt the authoritative full text (re-read from the desktop after a
+    /// dropped stream). Returns the delta to emit: the unseen suffix when
+    /// what we streamed is a prefix of it, else the whole text — and nothing
+    /// when there is nothing new. Pending text is folded in either way.
+    pub(crate) fn catch_up_to(&mut self, full: &str) -> Option<String> {
+        if full == self.full {
+            return self.take_pending();
+        }
+        let delta = match full.strip_prefix(self.full.as_str()) {
+            Some(suffix) => {
+                let mut d = std::mem::take(&mut self.pending);
+                d.push_str(suffix);
+                d
+            }
+            None => full.to_string(),
+        };
+        self.full = full.to_string();
+        self.pending.clear();
+        self.last_flush = Some(std::time::Instant::now());
+        Some(delta)
     }
 
     fn take_pending(&mut self) -> Option<String> {
@@ -231,10 +344,19 @@ fn http() -> &'static reqwest::Client {
 }
 
 async fn get_json(base: &str, pw: &str, path: &str) -> Result<Value, String> {
+    get_json_within(base, pw, path, std::time::Duration::from_secs(20)).await
+}
+
+async fn get_json_within(
+    base: &str,
+    pw: &str,
+    path: &str,
+    cap: std::time::Duration,
+) -> Result<Value, String> {
     let resp = http()
         .get(format!("{}{}", base.trim_end_matches('/'), path))
         .basic_auth("opencode", Some(pw))
-        .timeout(std::time::Duration::from_secs(20))
+        .timeout(cap)
         .send()
         .await
         .map_err(|e| format!("could not reach the desktop: {e}"))?;
@@ -280,8 +402,82 @@ fn companion_of(url: &str) -> Option<String> {
     Some(format!("{base}:{p}"))
 }
 
-/// Pair with a desktop: verify the URL + password actually answer, then
-/// persist them. Returns the desktop-side workspace directory for display.
+/// How long a pairing keeps probing before it reports failure. Long enough
+/// to read iOS's "find and connect to devices on your local network" prompt
+/// and tap Allow — see [`first_answering`].
+const PAIR_WINDOW_SECS: u64 = 25;
+/// Cap on ONE probe request. Candidates race, and a SYN toward an address
+/// the phone cannot reach (a VPN or container bridge the desktop also
+/// advertises) would otherwise hold every round for the full connect timeout.
+const PAIR_PROBE_SECS: u64 = 4;
+/// Pause between rounds of probes.
+const PAIR_RETRY_MS: u64 = 750;
+
+/// A `get_json` error that came back from a desktop that WAS reached (an
+/// HTTP status, e.g. 401 for a wrong password) rather than from the network
+/// — retrying it cannot change anything.
+fn reached_desktop(err: &str) -> bool {
+    err.starts_with("desktop returned")
+}
+
+/// Probe every candidate address at once and keep probing until one answers
+/// the password, one refuses it, or the window runs out. Returns the address
+/// that answered with its `/path` reply.
+///
+/// Why a window and not one attempt: iOS raises its Local Network permission
+/// prompt on the FIRST socket an app opens toward the local network, and
+/// that socket fails at once (no route to host) — it does not wait for the
+/// answer; every socket opened while the prompt is up fails the same way.
+/// A single probe therefore lost to the prompt on every first scan: the
+/// error was on screen before the user could tap Allow, and only the next
+/// scan (permission now granted) got through. Probing again every
+/// [`PAIR_RETRY_MS`] means the scan that raised the prompt is the scan that
+/// pairs, the moment Allow is tapped.
+async fn first_answering(candidates: &[String], pw: &str) -> Result<(String, Value), String> {
+    if candidates.is_empty() {
+        return Err("no address to connect to".to_string());
+    }
+    let started = std::time::Instant::now();
+    let window = std::time::Duration::from_secs(PAIR_WINDOW_SECS);
+    let mut last_error = "no address to connect to".to_string();
+    loop {
+        let mut probes: futures_util::stream::FuturesUnordered<_> = candidates
+            .iter()
+            .map(|c| async move {
+                let r = get_json_within(
+                    c,
+                    pw,
+                    "/path",
+                    std::time::Duration::from_secs(PAIR_PROBE_SECS),
+                )
+                .await;
+                (c.clone(), r)
+            })
+            .collect();
+        let mut refused = None;
+        while let Some((url, result)) = probes.next().await {
+            match result {
+                Ok(path) => return Ok((url, path)),
+                Err(e) if reached_desktop(&e) => refused = Some(e),
+                Err(e) => last_error = e,
+            }
+        }
+        // The desktop answered and said no: the network path works, so
+        // the password is what is wrong. Nothing to wait for.
+        if let Some(e) = refused {
+            return Err(e);
+        }
+        if started.elapsed() >= window {
+            return Err(last_error);
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(PAIR_RETRY_MS)).await;
+    }
+}
+
+/// Pair with a desktop: verify that the address (or one of the other
+/// addresses the same desktop advertises) answers the password, then
+/// persist the pairing. Returns the desktop-side workspace directory for
+/// display.
 #[command]
 pub async fn remote_code_set_host(
     url: String,
@@ -289,10 +485,25 @@ pub async fn remote_code_set_host(
     mgmt: Option<Vec<String>>,
     urls: Option<Vec<String>>,
 ) -> Result<Value, String> {
-    let url = normalize_url(&url);
-    let path = get_json(&url, &password, "/path")
-        .await
-        .map_err(|e| format!("connection failed: {e}"))?;
+    // The scanned address first, then every other one the QR carried: a
+    // desktop with several interfaces advertises one address each, and
+    // whichever the phone can actually reach is the one to pair with.
+    let mut candidates = vec![normalize_url(&url)];
+    for u in urls.iter().flatten().map(|u| normalize_url(u)) {
+        if !u.is_empty() && !candidates.contains(&u) {
+            candidates.push(u);
+        }
+    }
+    candidates.retain(|c| !c.is_empty());
+    let (url, path) = first_answering(&candidates, &password).await.map_err(|e| {
+        let hint = if cfg!(target_os = "ios") && !reached_desktop(&e) {
+            " If iOS asked about your local network and you chose Don't Allow, \
+                 turn on Local Network for ibl.ai in Settings and try again."
+        } else {
+            ""
+        };
+        format!("connection failed: {e}.{hint}")
+    })?;
     let directory = path
         .get("directory")
         .and_then(|d| d.as_str())
@@ -1125,6 +1336,291 @@ async fn run_turn(
     result
 }
 
+/// The desktop's SSE `/event` stream as raw chunks.
+type EventStream = futures_util::stream::BoxStream<'static, Result<Vec<u8>, reqwest::Error>>;
+
+/// Subscribe to the desktop's event stream, scoped to the turn's project
+/// directory (see [`scoped`]).
+async fn open_event_stream(base: &str, pw: &str, dir: Option<&str>) -> Result<EventStream, String> {
+    let events = http()
+        .get(format!(
+            "{}{}",
+            base.trim_end_matches('/'),
+            scoped("/event", dir)
+        ))
+        .basic_auth("opencode", Some(pw))
+        .send()
+        .await
+        .map_err(|e| format!("could not open the desktop event stream: {e}"))?;
+    if !events.status().is_success() {
+        return Err(format!("desktop event stream returned {}", events.status()));
+    }
+    Ok(events.bytes_stream().map_ok(|b| b.to_vec()).boxed())
+}
+
+/// Reopen the event stream, retrying with backoff for up to
+/// [`RECONNECT_WINDOW_SECS`]. The desktop runs the turn whether or not
+/// anyone is listening, so losing the stream is never a reason to fail the
+/// turn — only failing to get it back is.
+async fn reconnect_event_stream(
+    base: &str,
+    pw: &str,
+    dir: Option<&str>,
+    why: &str,
+) -> Result<EventStream, String> {
+    println!("[RemoteCode] {why}; reconnecting the desktop event stream");
+    let started = std::time::Instant::now();
+    let window = std::time::Duration::from_secs(RECONNECT_WINDOW_SECS);
+    let mut delay = std::time::Duration::from_millis(500);
+    loop {
+        match open_event_stream(base, pw, dir).await {
+            Ok(stream) => {
+                println!(
+                    "[RemoteCode] event stream back after {:?}",
+                    started.elapsed()
+                );
+                return Ok(stream);
+            }
+            Err(e) if started.elapsed() < window => {
+                println!("[RemoteCode] reconnect failed ({e}); retrying in {delay:?}");
+                tokio::time::sleep(delay).await;
+                delay = (delay * 2).min(std::time::Duration::from_secs(5));
+            }
+            Err(e) => {
+                return Err(format!(
+                    "lost the connection to the desktop ({why}) and could not get it back: {e}"
+                ))
+            }
+        }
+    }
+}
+
+/// What a reconnected turn found on the desktop.
+enum CatchUp {
+    /// Still running: keep streaming from the new stream.
+    Streaming,
+    /// Ended while the stream was down (done already emitted), or parked on
+    /// the agent's question — which ends the turn the same way.
+    Finished,
+}
+
+/// The parts of this turn's reply as the desktop has them: the assistant
+/// messages answering the LAST user message, in order.
+async fn turn_reply_parts(base: &str, pw: &str, remote: &str, dir: Option<&str>) -> Vec<Value> {
+    // `limit` returns the NEWEST n messages (ascending). The full history of
+    // a long chat can be megabytes of tool output, so start small and widen
+    // only while the page has not reached back to the user message that
+    // opened this turn (opencode adds an assistant message per step, so a
+    // long build has many). No limit at all = everything, the last resort.
+    let base_path = scoped(&format!("/session/{remote}/message"), dir);
+    for limit in [Some(16), Some(64), Some(256), None] {
+        let path = match limit {
+            Some(n) if base_path.contains('?') => format!("{base_path}&limit={n}"),
+            Some(n) => format!("{base_path}?limit={n}"),
+            None => base_path.clone(),
+        };
+        let Ok(Value::Array(messages)) = get_json(base, pw, &path).await else {
+            return Vec::new();
+        };
+        let last_user = messages
+            .iter()
+            .rposition(|m| m["info"]["role"].as_str() == Some("user"));
+        match last_user {
+            None if limit.is_some() && messages.len() >= limit.unwrap_or(0) => continue,
+            None => return Vec::new(),
+            Some(i) => {
+                return messages[i + 1..]
+                    .iter()
+                    .filter(|m| m["info"]["role"].as_str() == Some("assistant"))
+                    .flat_map(|m| m["parts"].as_array().cloned().unwrap_or_default())
+                    .collect()
+            }
+        }
+    }
+    Vec::new()
+}
+
+/// After a reconnect, reconcile the turn with what the desktop did while the
+/// stream was down: text, reasoning and tool parts are re-read from the
+/// session's messages and whatever is new is emitted; permissions still
+/// waiting on the user are re-announced (the card dedupes by id); then the
+/// server's own status decides whether the turn is still running, parked
+/// on a question, or finished — in which case done is emitted here, because
+/// the `session.idle` that would have said so is gone with the old stream.
+#[allow(clippy::too_many_arguments)]
+async fn catch_up(
+    sink: &dyn EventSink,
+    generation_id: &str,
+    session_id: &str,
+    base: &str,
+    pw: &str,
+    remote: &str,
+    dir: Option<&str>,
+    auto_mode: bool,
+    text: &mut TokenCoalescer,
+    reasoning: &mut TokenCoalescer,
+    seen_tools: &mut HashMap<String, bool>,
+    awaiting_permissions: &mut HashSet<String>,
+) -> Result<CatchUp, String> {
+    let parts = turn_reply_parts(base, pw, remote, dir).await;
+    let mut server_text = String::new();
+    let mut server_reasoning = String::new();
+    let mut tools = Vec::new();
+    for part in &parts {
+        match part["type"].as_str() {
+            Some("text") => server_text.push_str(part["text"].as_str().unwrap_or("")),
+            Some("reasoning") => server_reasoning.push_str(part["text"].as_str().unwrap_or("")),
+            Some("tool") => tools.push(part.clone()),
+            _ => {}
+        }
+    }
+    // Text: the desktop's copy is authoritative. The frontend renders
+    // `full_content`, so one event carrying it repairs whatever the stream
+    // dropped; `token` is the part it has not seen, when that is knowable.
+    if let Some(batch) = reasoning.catch_up_to(&server_reasoning) {
+        sink.emit(
+            "opencode:reasoning",
+            json!({ "generation_id": generation_id, "delta": batch }),
+        );
+    }
+    if let Some(batch) = text.catch_up_to(&server_text) {
+        sink.emit(
+            "ollama:token",
+            json!({
+                "generation_id": generation_id,
+                "token": batch,
+                "full_content": text.full_content(),
+            }),
+        );
+    }
+    for part in &tools {
+        let call_id = part["callID"].as_str().unwrap_or("");
+        if call_id.is_empty() {
+            continue;
+        }
+        let first = !seen_tools.contains_key(call_id);
+        seen_tools.insert(call_id.to_string(), true);
+        let state = part.get("state").cloned().unwrap_or(Value::Null);
+        let status = state["status"].as_str().unwrap_or("running");
+        sink.emit(
+            "opencode:tool_call",
+            json!({
+                "generation_id": generation_id,
+                "update": {
+                    "sessionUpdate": if first { "tool_call" } else { "tool_call_update" },
+                    "toolCallId": call_id,
+                    "title": part["tool"].as_str().unwrap_or("tool"),
+                    "kind": part["tool"].as_str().unwrap_or("tool"),
+                    "status": acp_status(status),
+                    "rawInput": capped_output(state.get("input").cloned().unwrap_or(Value::Null)),
+                    "content": capped_output(state.get("output").cloned().unwrap_or(Value::Null)),
+                },
+            }),
+        );
+    }
+
+    // Permissions asked while we were away. Auto mode answers them the way
+    // the streaming path would have; manual mode puts them back on screen.
+    awaiting_permissions.clear();
+    if let Ok(Value::Array(pending)) = get_json(base, pw, &scoped("/permission", dir)).await {
+        for req in pending
+            .iter()
+            .filter(|r| r["sessionID"].as_str() == Some(remote))
+        {
+            let per_id = req["id"].as_str().unwrap_or("").to_string();
+            if per_id.is_empty() {
+                continue;
+            }
+            if auto_mode {
+                let _ = post_json(
+                    base,
+                    pw,
+                    &format!("/session/{remote}/permissions/{per_id}"),
+                    &json!({ "response": "once" }),
+                )
+                .await;
+                continue;
+            }
+            PENDING_PERMISSIONS
+                .lock()
+                .expect("permissions lock")
+                .get_or_insert_with(HashMap::new)
+                .insert(per_id.clone(), remote.to_string());
+            awaiting_permissions.insert(per_id.clone());
+            let patterns = req["patterns"]
+                .as_array()
+                .map(|a| {
+                    a.iter()
+                        .filter_map(|v| v.as_str())
+                        .collect::<Vec<_>>()
+                        .join(" ")
+                })
+                .unwrap_or_default();
+            let permission = req["permission"].as_str().unwrap_or("tool");
+            sink.emit(
+                "opencode:permission_request",
+                json!({
+                    "generation_id": generation_id,
+                    "session_id": session_id,
+                    "request_id": per_id,
+                    "title": permission,
+                    "kind": permission,
+                    "command": if patterns.is_empty() { Value::Null } else { json!(patterns) },
+                    "allow_option_id": "allow",
+                    "reject_option_id": "reject",
+                    "options": [
+                        { "optionId": "allow", "name": "Allow", "kind": "allow_once" },
+                        { "optionId": "reject", "name": "Reject", "kind": "reject_once" },
+                    ],
+                }),
+            );
+        }
+    }
+    if !awaiting_permissions.is_empty() {
+        return Ok(CatchUp::Streaming);
+    }
+
+    // Parked on a question: same exit as the `question.asked` event.
+    if pending_question(base, pw, remote, dir).await.is_some() {
+        flush_stream_buffers(sink, generation_id, text, reasoning);
+        sink.emit(
+            "ollama:done",
+            json!({
+                "generation_id": generation_id,
+                "full_content": text.full_content(),
+                "stop_reason": Value::Null,
+            }),
+        );
+        return Ok(CatchUp::Finished);
+    }
+
+    match classify_probe(
+        get_json(base, pw, &scoped("/session/status", dir)).await,
+        remote,
+    ) {
+        ProbeVerdict::Idle => {
+            if text.full_content().is_empty() && seen_tools.is_empty() {
+                return Err(
+                    "The desktop went idle without producing a reply — try again.".to_string(),
+                );
+            }
+            flush_stream_buffers(sink, generation_id, text, reasoning);
+            sink.emit(
+                "ollama:done",
+                json!({
+                    "generation_id": generation_id,
+                    "full_content": text.full_content(),
+                    "stop_reason": Value::Null,
+                }),
+            );
+            Ok(CatchUp::Finished)
+        }
+        // Busy, retrying, or unreachable: keep streaming — the quiet-stream
+        // probes and the turn deadline still end a genuinely dead turn.
+        _ => Ok(CatchUp::Streaming),
+    }
+}
+
 #[allow(clippy::too_many_arguments)]
 async fn run_turn_inner(
     sink: &dyn EventSink,
@@ -1146,24 +1642,13 @@ async fn run_turn_inner(
     let turn_dir = ensure_directory(session_id, tenant, mentor).await;
     let remote = ensure_session(&base, &pw, session_id, tenant, mentor, new_chat_key).await?;
     println!("[RemoteCode] session {remote} ready (dir={turn_dir:?}); prompting");
+    let _in_flight = InFlight::mark(&remote, turn_dir.as_deref());
     let model = prompt_model(model)?;
 
     // Subscribe BEFORE prompting or the first deltas race past us — and
     // scoped to the session's project directory, or its events never appear.
-    let events = http()
-        .get(format!(
-            "{}{}",
-            base.trim_end_matches('/'),
-            scoped("/event", turn_dir.as_deref())
-        ))
-        .basic_auth("opencode", Some(&pw))
-        .send()
-        .await
-        .map_err(|e| format!("could not open the desktop event stream: {e}"))?;
-    if !events.status().is_success() {
-        return Err(format!("desktop event stream returned {}", events.status()));
-    }
-    let mut stream = events.bytes_stream();
+    let mut stream = open_event_stream(&base, &pw, turn_dir.as_deref()).await?;
+    let mut stream_epoch = FOREGROUND_EPOCH.load(Ordering::SeqCst);
 
     // A session parked on the agent's own question (see `pending_question`)
     // takes the typed message AS the answer: a new prompt would queue behind
@@ -1237,8 +1722,7 @@ async fn run_turn_inner(
     let mut seen_tools: HashMap<String, bool> = HashMap::new();
     // Permissions this turn is waiting on the user for: while non-empty, a
     // session.idle only means "paused for approval", never "done".
-    let mut awaiting_permissions: std::collections::HashSet<String> =
-        std::collections::HashSet::new();
+    let mut awaiting_permissions: HashSet<String> = HashSet::new();
 
     let deadline = std::time::Instant::now() + std::time::Duration::from_secs(TURN_TIMEOUT_SECS);
     // Consecutive quiet-period probes that found the session in "retry" —
@@ -1252,8 +1736,51 @@ async fn run_turn_inner(
     // how a dead turn once spun for minutes with no error.
     let mut last_ours = std::time::Instant::now();
     let mut last_probe = std::time::Instant::now();
+    // Anything at all from the stream — heartbeats included — for the
+    // stall detector (see STREAM_STALL_SECS).
+    let mut last_bytes = std::time::Instant::now();
+    // Why the stream must be replaced, when the socket itself said so.
+    let mut lost: Option<String> = None;
 
     loop {
+        // The stream is gone (or cannot be trusted: the app was suspended
+        // and came back): get it back and catch up. Before the deadline
+        // check on purpose — a turn that FINISHED during a long lock must
+        // complete cleanly, not time out.
+        if lost.is_none() {
+            if FOREGROUND_EPOCH.load(Ordering::SeqCst) != stream_epoch {
+                lost = Some("app returned to the foreground".to_string());
+            } else if last_bytes.elapsed() >= std::time::Duration::from_secs(STREAM_STALL_SECS) {
+                lost = Some(format!("no heartbeat for {STREAM_STALL_SECS}s"));
+            }
+        }
+        if let Some(why) = lost.take() {
+            stream = reconnect_event_stream(&base, &pw, turn_dir.as_deref(), &why).await?;
+            stream_epoch = FOREGROUND_EPOCH.load(Ordering::SeqCst);
+            last_bytes = std::time::Instant::now();
+            match catch_up(
+                sink,
+                generation_id,
+                session_id,
+                &base,
+                &pw,
+                &remote,
+                turn_dir.as_deref(),
+                auto_mode,
+                &mut text,
+                &mut reasoning,
+                &mut seen_tools,
+                &mut awaiting_permissions,
+            )
+            .await?
+            {
+                CatchUp::Finished => return Ok(()),
+                CatchUp::Streaming => {
+                    last_ours = std::time::Instant::now();
+                    last_probe = std::time::Instant::now();
+                }
+            }
+        }
         if std::time::Instant::now() >= deadline {
             return Err("turn timed out".to_string());
         }
@@ -1320,8 +1847,22 @@ async fn run_turn_inner(
                 continue;
             }
         };
-        let Some(chunk) = next else { break };
-        let chunk = chunk.map_err(|e| format!("event stream broke: {e}"))?;
+        // A broken or ended stream is not the end of the turn: the desktop
+        // is still running it. Loop back to reconnect and catch up — the
+        // lock screen and app switcher on a phone drop this socket every
+        // time, and the turn used to die with "event stream broke".
+        let chunk = match next {
+            Some(Ok(chunk)) => chunk,
+            Some(Err(e)) => {
+                lost = Some(format!("event stream broke: {e}"));
+                continue;
+            }
+            None => {
+                lost = Some("event stream ended before the turn finished".to_string());
+                continue;
+            }
+        };
+        last_bytes = std::time::Instant::now();
         buffer.extend_from_slice(&chunk);
         // SSE: events separated by newlines; each data line is one JSON event.
         while let Some(pos) = buffer.iter().position(|&b| b == b'\n') {
@@ -1591,7 +2132,6 @@ async fn run_turn_inner(
             }
         }
     }
-    Err("the desktop event stream ended before the turn finished".to_string())
 }
 
 #[cfg(test)]
@@ -2665,5 +3205,472 @@ mod tests {
         let events = sink.0.lock().unwrap().clone();
         assert_eq!(events.last().unwrap().0, "ollama:done");
         assert_eq!(events.last().unwrap().1["stop_reason"], "aborted");
+    }
+
+    #[test]
+    fn catch_up_to_emits_only_the_unseen_suffix() {
+        let mut c = TokenCoalescer::new();
+        // Nothing streamed, nothing on the desktop: nothing to say.
+        assert_eq!(c.catch_up_to(""), None);
+        // Held-back tail plus what the desktop has beyond it: one delta.
+        let _ = c.push("Hel"); // first push flushes
+        assert_eq!(c.push("lo"), None); // inside the window: pending
+        assert_eq!(c.catch_up_to("Hello world").as_deref(), Some("lo world"));
+        assert_eq!(c.full_content(), "Hello world");
+        assert_eq!(c.catch_up_to("Hello world"), None);
+        // The desktop's copy diverged: adopt it whole.
+        assert_eq!(c.catch_up_to("Other").as_deref(), Some("Other"));
+        assert_eq!(c.full_content(), "Other");
+    }
+
+    /// The iOS Local Network prompt: the first sockets an app opens toward
+    /// the LAN fail outright while the prompt is up, and only after the
+    /// user taps Allow do they connect. Modelled here as a desktop that is
+    /// not listening for the first 1.5 s: the ONE scan must still pair.
+    #[tokio::test(flavor = "multi_thread")]
+    async fn pairing_keeps_probing_until_the_desktop_answers() {
+        let _guard = CONFIG_TEST_LOCK.lock().await;
+        // Reserve a port, then free it: nothing answers there until the
+        // desktop "appears".
+        let probe = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let addr = probe.local_addr().unwrap();
+        drop(probe);
+        tokio::spawn(async move {
+            tokio::time::sleep(std::time::Duration::from_millis(1500)).await;
+            let app = Router::new().route(
+                "/path",
+                get(|| async { Json(json!({ "directory": "/late/phone" })) }),
+            );
+            let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
+            axum::serve(listener, app).await.unwrap();
+        });
+        test_config("");
+        let started = std::time::Instant::now();
+        let out = remote_code_set_host(format!("http://{addr}"), "pw".into(), None, None)
+            .await
+            .expect("the scan that raised the prompt is the scan that pairs");
+        assert_eq!(out["directory"], "/late/phone");
+        assert!(
+            started.elapsed() >= std::time::Duration::from_millis(1200),
+            "must have waited for the desktop"
+        );
+        assert!(started.elapsed() < std::time::Duration::from_secs(PAIR_WINDOW_SECS));
+        assert_eq!(
+            read_config().url.as_deref(),
+            Some(format!("http://{addr}").as_str())
+        );
+    }
+
+    /// A QR carries one address per desktop interface; the phone can reach
+    /// only some of them. All are probed at once and whichever answers is
+    /// the one paired with — the dead one stays as an alternate.
+    #[tokio::test(flavor = "multi_thread")]
+    async fn pairing_pairs_with_whichever_advertised_address_answers() {
+        let _guard = CONFIG_TEST_LOCK.lock().await;
+        let dead = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let dead_url = format!("http://{}", dead.local_addr().unwrap());
+        drop(dead);
+        let app = Router::new().route(
+            "/path",
+            get(|| async { Json(json!({ "directory": "/live/phone" })) }),
+        );
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let live_url = format!("http://{}", listener.local_addr().unwrap());
+        tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
+        test_config("");
+        let started = std::time::Instant::now();
+        let out = remote_code_set_host(
+            dead_url.clone(),
+            "pw".into(),
+            None,
+            Some(vec![dead_url.clone(), live_url.clone()]),
+        )
+        .await
+        .expect("the reachable address pairs");
+        assert_eq!(out["url"], live_url);
+        assert!(
+            started.elapsed() < std::time::Duration::from_secs(3),
+            "candidates race; the dead one must not hold the pairing"
+        );
+        let cfg = read_config();
+        assert_eq!(cfg.url.as_deref(), Some(live_url.as_str()));
+        assert_eq!(cfg.alt_urls, vec![dead_url]);
+    }
+
+    /// A desktop that answers and says no (wrong password) is not a network
+    /// problem: no point holding the user for the whole probe window.
+    #[tokio::test(flavor = "multi_thread")]
+    async fn a_refused_password_fails_the_pairing_at_once() {
+        let _guard = CONFIG_TEST_LOCK.lock().await;
+        let app = Router::new().route(
+            "/path",
+            get(|| async { (axum::http::StatusCode::UNAUTHORIZED, "nope") }),
+        );
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
+        test_config("");
+        let started = std::time::Instant::now();
+        let err = remote_code_set_host(format!("http://{addr}"), "bad".into(), None, None)
+            .await
+            .expect_err("a 401 is a failure");
+        assert!(err.contains("401"), "got: {err}");
+        assert!(started.elapsed() < std::time::Duration::from_secs(3));
+        assert_eq!(
+            read_config().url.as_deref().unwrap_or(""),
+            "",
+            "nothing is persisted"
+        );
+    }
+
+    /// One turn server: `/event` serves `first` and then ENDS the stream
+    /// (what the phone sees after the OS reclaimed its socket), and serves
+    /// `second` to every later subscriber. `messages` is the desktop's copy
+    /// of the reply for the catch-up; `status` answers `/session/status`
+    /// per call, last value repeating.
+    fn dropped_stream_server(
+        first: Vec<Value>,
+        second: Vec<Value>,
+        messages: Value,
+        status: Vec<&'static str>,
+    ) -> (Router, Arc<std::sync::atomic::AtomicUsize>) {
+        let subs = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let subs_route = subs.clone();
+        let status_calls = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let app = Router::new()
+            .route(
+                "/session",
+                post(|| async { Json(json!({ "id": "ses_r" })) }),
+            )
+            .route("/question", get(|| async { Json(json!([])) }))
+            .route("/permission", get(|| async { Json(json!([])) }))
+            .route(
+                "/session/{sid}/message",
+                get(move || {
+                    let messages = messages.clone();
+                    async move { Json(messages) }
+                }),
+            )
+            .route(
+                "/session/status",
+                get(move || {
+                    let calls = status_calls.clone();
+                    let status = status.clone();
+                    async move {
+                        let n = calls.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                        let state = status[n.min(status.len() - 1)];
+                        Json(json!({ "ses_r": { "type": state } }))
+                    }
+                }),
+            )
+            .route(
+                "/session/{sid}/prompt_async",
+                post(|| async { Json(json!({})) }),
+            )
+            .route(
+                "/event",
+                get(move || {
+                    let subs = subs_route.clone();
+                    let first = first.clone();
+                    let second = second.clone();
+                    async move {
+                        let n = subs.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                        let events: Vec<Result<Event, std::convert::Infallible>> =
+                            if n == 0 { first } else { second }
+                                .into_iter()
+                                .map(|v| Ok(Event::default().data(v.to_string())))
+                                .collect();
+                        if n == 0 {
+                            // Ends: the socket is gone.
+                            Sse::new(tokio_stream::iter(events).boxed())
+                        } else {
+                            Sse::new(
+                                tokio_stream::iter(events)
+                                    .chain(tokio_stream::pending())
+                                    .boxed(),
+                            )
+                        }
+                    }
+                }),
+            );
+        (app, subs)
+    }
+
+    fn delta(text: &str) -> Value {
+        json!({ "type": "message.part.delta", "properties": {
+            "sessionID": "ses_r", "messageID": "m1", "partID": "px",
+            "field": "text", "delta": text } })
+    }
+
+    fn reply_messages(text: &str, tool: Option<Value>) -> Value {
+        let mut parts = vec![json!({ "id": "px", "type": "text", "text": text })];
+        parts.extend(tool);
+        json!([
+            { "info": { "id": "m0", "role": "user" }, "parts": [] },
+            { "info": { "id": "m1", "role": "assistant", "parentID": "m0" }, "parts": parts }
+        ])
+    }
+
+    async fn run_dropped_stream_turn(
+        app: Router,
+        chat: &str,
+    ) -> (Result<(), String>, Vec<(String, Value)>) {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
+        test_config(&format!("http://{addr}"));
+        let sink = Arc::new(VecSink(Mutex::new(Vec::new())));
+        let result = tokio::time::timeout(
+            std::time::Duration::from_secs(20),
+            run_turn(
+                sink.as_ref(),
+                chat,
+                &[json!({ "role": "user", "content": "build it" })],
+                "gen-r",
+                None,
+                None,
+                None,
+                None,
+            ),
+        )
+        .await
+        .expect("the turn must end, not hang");
+        let events = sink.0.lock().unwrap().clone();
+        (result, events)
+    }
+
+    /// The phone locks mid-turn: iOS drops the SSE socket. The desktop is
+    /// still working, so the turn resubscribes, catches up, and finishes
+    /// from the new stream — instead of dying with "event stream broke".
+    #[tokio::test(flavor = "multi_thread")]
+    async fn a_dropped_event_stream_is_reconnected_and_the_turn_continues() {
+        let _guard = CONFIG_TEST_LOCK.lock().await;
+        let (app, subs) = dropped_stream_server(
+            vec![
+                json!({ "type": "server.connected", "properties": {} }),
+                delta("Hello"),
+            ],
+            vec![
+                delta(" world"),
+                json!({ "type": "session.idle", "properties": { "sessionID": "ses_r" } }),
+            ],
+            reply_messages("Hello", None),
+            // Busy at catch-up, idle when the real end arrives.
+            vec!["working", "idle"],
+        );
+        let (result, events) = run_dropped_stream_turn(app, "chat-r1").await;
+        result.expect("a dropped stream is not a failed turn");
+        assert_eq!(subs.load(std::sync::atomic::Ordering::SeqCst), 2);
+        let names: Vec<&str> = events.iter().map(|(n, _)| n.as_str()).collect();
+        assert!(!names.contains(&"ollama:error"), "got: {events:?}");
+        assert_eq!(names.iter().filter(|n| **n == "ollama:done").count(), 1);
+        assert_eq!(events.last().unwrap().1["full_content"], "Hello world");
+    }
+
+    /// Locked for longer than the turn took: by the time the phone is back
+    /// the desktop is idle with the finished reply. The catch-up renders
+    /// the rest of the reply and its tool calls from the desktop's copy and
+    /// ends the turn — no `session.idle` will ever arrive for it.
+    #[tokio::test(flavor = "multi_thread")]
+    async fn a_turn_that_finished_while_the_stream_was_down_completes_from_the_desktop_copy() {
+        let _guard = CONFIG_TEST_LOCK.lock().await;
+        let (app, subs) = dropped_stream_server(
+            vec![
+                json!({ "type": "server.connected", "properties": {} }),
+                delta("Hel"),
+            ],
+            vec![],
+            reply_messages(
+                "Hello world",
+                Some(
+                    json!({ "id": "pt", "type": "tool", "callID": "call9", "tool": "bash",
+                    "state": { "status": "completed", "input": { "command": "ls" }, "output": "ok" } }),
+                ),
+            ),
+            vec!["idle"],
+        );
+        let (result, events) = run_dropped_stream_turn(app, "chat-r2").await;
+        result.expect("the finished turn completes cleanly");
+        assert_eq!(subs.load(std::sync::atomic::Ordering::SeqCst), 2);
+        let names: Vec<&str> = events.iter().map(|(n, _)| n.as_str()).collect();
+        assert_eq!(names.iter().filter(|n| **n == "ollama:done").count(), 1);
+        let tool = events
+            .iter()
+            .find(|(n, _)| n == "opencode:tool_call")
+            .expect("the tool call made while away is shown");
+        assert_eq!(tool.1["update"]["toolCallId"], "call9");
+        assert_eq!(tool.1["update"]["status"], "completed");
+        let token = events
+            .iter()
+            .filter(|(n, _)| n == "ollama:token")
+            .last()
+            .expect("the rest of the reply is emitted");
+        assert_eq!(token.1["token"], "lo world");
+        assert_eq!(token.1["full_content"], "Hello world");
+        assert_eq!(events.last().unwrap().1["full_content"], "Hello world");
+    }
+
+    /// Coming back to the foreground reconnects at once — the OS reclaims a
+    /// suspended app's sockets without a FIN, so a stream that LOOKS open
+    /// cannot be trusted.
+    #[tokio::test(flavor = "multi_thread")]
+    async fn a_foreground_return_reconnects_the_stream() {
+        let _guard = CONFIG_TEST_LOCK.lock().await;
+        let subs = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let subs_route = subs.clone();
+        let status_calls = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let app = Router::new()
+            .route("/session", post(|| async { Json(json!({ "id": "ses_r" })) }))
+            .route("/question", get(|| async { Json(json!([])) }))
+            .route("/permission", get(|| async { Json(json!([])) }))
+            .route(
+                "/session/{sid}/message",
+                get(|| async { Json(reply_messages("", None)) }),
+            )
+            .route(
+                "/session/status",
+                get(move || {
+                    let calls = status_calls.clone();
+                    async move {
+                        let n = calls.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                        let state = if n == 0 { "working" } else { "idle" };
+                        Json(json!({ "ses_r": { "type": state } }))
+                    }
+                }),
+            )
+            .route(
+                "/session/{sid}/prompt_async",
+                post(|| async { Json(json!({})) }),
+            )
+            .route(
+                "/event",
+                get(move || {
+                    let subs = subs_route.clone();
+                    async move {
+                        let n = subs.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                        if n == 0 {
+                            // Alive and heartbeating: nothing says it is stale.
+                            let beats = tokio_stream::wrappers::IntervalStream::new(
+                                tokio::time::interval(std::time::Duration::from_millis(100)),
+                            )
+                            .map(|_| {
+                                Ok::<_, std::convert::Infallible>(Event::default().data(
+                                    json!({ "type": "server.heartbeat", "properties": {} })
+                                        .to_string(),
+                                ))
+                            });
+                            Sse::new(beats.boxed())
+                        } else {
+                            let events: Vec<Result<Event, std::convert::Infallible>> = vec![
+                                delta("Back"),
+                                json!({ "type": "session.idle", "properties": { "sessionID": "ses_r" } }),
+                            ]
+                            .into_iter()
+                            .map(|v| Ok(Event::default().data(v.to_string())))
+                            .collect();
+                            Sse::new(
+                                tokio_stream::iter(events)
+                                    .chain(tokio_stream::pending())
+                                    .boxed(),
+                            )
+                        }
+                    }
+                }),
+            );
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
+        test_config(&format!("http://{addr}"));
+        let sink = Arc::new(VecSink(Mutex::new(Vec::new())));
+        let turn = {
+            let sink = sink.clone();
+            tokio::spawn(async move {
+                run_turn(
+                    sink.as_ref(),
+                    "chat-r3",
+                    &[json!({ "role": "user", "content": "build it" })],
+                    "gen-r",
+                    None,
+                    None,
+                    None,
+                    None,
+                )
+                .await
+            })
+        };
+        // Wait for the first subscription to be live, then "unlock".
+        while subs.load(std::sync::atomic::Ordering::SeqCst) == 0 {
+            tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+        assert_eq!(subs.load(std::sync::atomic::Ordering::SeqCst), 1);
+        app_resumed();
+        tokio::time::timeout(std::time::Duration::from_secs(10), turn)
+            .await
+            .expect("the turn must end")
+            .unwrap()
+            .expect("a foreground return is not a failed turn");
+        assert_eq!(subs.load(std::sync::atomic::Ordering::SeqCst), 2);
+        let events = sink.0.lock().unwrap().clone();
+        assert_eq!(events.last().unwrap().0, "ollama:done");
+        assert_eq!(events.last().unwrap().1["full_content"], "Back");
+    }
+
+    /// The app force-quit mid-turn (no Suspended/Resumed — the process is
+    /// gone): the next launch must stop the abandoned turn on the desktop,
+    /// leave a finished one alone, and forget both.
+    #[tokio::test(flavor = "multi_thread")]
+    async fn turns_abandoned_by_a_killed_app_are_stopped_on_the_next_launch() {
+        let _guard = CONFIG_TEST_LOCK.lock().await;
+        let aborted: Arc<Mutex<Vec<String>>> = Arc::new(Mutex::new(Vec::new()));
+        let aborted_route = aborted.clone();
+        let app = Router::new()
+            .route(
+                "/session/status",
+                get(|| async {
+                    Json(json!({ "ses_busy": { "type": "busy" }, "ses_done": { "type": "idle" } }))
+                }),
+            )
+            .route(
+                "/session/{sid}/abort",
+                post(
+                    move |axum::extract::Path(sid): axum::extract::Path<String>| {
+                        let aborted = aborted_route.clone();
+                        async move {
+                            aborted.lock().unwrap().push(sid);
+                            Json(json!({}))
+                        }
+                    },
+                ),
+            );
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
+        test_config(&format!("http://{addr}"));
+        let mut cfg = read_config();
+        cfg.in_flight.insert("ses_busy".into(), String::new());
+        cfg.in_flight.insert("ses_done".into(), "/w/x".into());
+        write_config(&cfg).unwrap();
+
+        abort_abandoned_turns().await;
+
+        assert_eq!(*aborted.lock().unwrap(), vec!["ses_busy".to_string()]);
+        assert!(read_config().in_flight.is_empty(), "forgotten either way");
+    }
+
+    /// A running turn is recorded for as long as it runs — and only that
+    /// long, whichever way it ends.
+    #[tokio::test]
+    async fn a_turn_is_in_flight_exactly_while_it_runs() {
+        let _guard = CONFIG_TEST_LOCK.lock().await;
+        test_config("http://127.0.0.1:1");
+        {
+            let _marker = InFlight::mark("ses_1", Some("/w/a"));
+            assert_eq!(
+                read_config().in_flight.get("ses_1").map(String::as_str),
+                Some("/w/a")
+            );
+        }
+        assert!(read_config().in_flight.is_empty());
     }
 }

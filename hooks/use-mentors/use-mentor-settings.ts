@@ -25,6 +25,12 @@ type Props = {
   tenantKey?: string;
 };
 
+// Field-level RBAC returns unreadable settings as "" (not null/undefined) for
+// logged-in non-owners, so `??` alone would let a redacted value shadow the
+// public one. Only a real boolean counts.
+const asBoolean = (value: unknown) =>
+  typeof value === 'boolean' ? value : undefined;
+
 export function useMentorSettings({
   mentorId: mentorIdFromProps,
   tenantKey: tenantKeyFromProps,
@@ -303,10 +309,21 @@ export function useMentorSettings({
       // call UI in chat. Exists in the API response but not the published type;
       // defaults to false so the verbose UI stays hidden when unset.
       showReasoning:
-        (effectiveSettings as { show_reasoning?: boolean } | undefined)
-          ?.show_reasoning ??
-        (effectivePublicSettings as { show_reasoning?: boolean } | undefined)
-          ?.show_reasoning ??
+        asBoolean(
+          (effectiveSettings as { show_reasoning?: boolean } | undefined)
+            ?.show_reasoning,
+        ) ??
+        asBoolean(
+          (effectivePublicSettings as { show_reasoning?: boolean } | undefined)
+            ?.show_reasoning,
+        ) ??
+        false,
+
+      // show_explore_mentors gates the "additional agents" (Explore) section on the
+      // welcome screen. Off by default so the section stays hidden when unset.
+      showExploreMentors:
+        asBoolean(effectiveSettings?.show_explore_mentors) ??
+        asBoolean(effectivePublicSettings?.show_explore_mentors) ??
         false,
     },
   };

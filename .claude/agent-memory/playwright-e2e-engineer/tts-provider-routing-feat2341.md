@@ -4,7 +4,7 @@ description: How Journey 76 (on-device Kokoro TTS provider routing, issue #2341)
 type: project
 ---
 
-`e2e/journeys/76-tts-provider-routing.spec.ts` covers `lib/tts/iblai-routing.ts`'s
+`e2e/journeys/77-tts-provider-routing.spec.ts` covers `lib/tts/iblai-routing.ts`'s
 `decide()` arbiter for the `iblai` (Kokoro) voice provider: per-utterance choice between
 the cloud `/tts/` endpoint and an on-device WebGPU model, with a background cache warm-up
 and mobile/iOS/tablet always staying on cloud.

@@ -42,12 +42,15 @@ SKIP_COVERAGE_FILES=(
   "[sessionId]/[tenantKey]/[mentorId]/page.tsx"
   "[sessionId]/page.tsx"
   "[sessionId]/share-chat-redirect-content.tsx"
-  # Third-party vendored bundle and the chrome extension scripts (service
-  # worker + side-panel host: chrome.* APIs, shadow-DOM postMessage glue) are
-  # not unit-testable in the app's vitest/jsdom environment.
-  "extensions/chrome/background.js"
-  "extensions/chrome/panel.js"
-  "extensions/chrome/vendor/agent-ai.umd.js"
+  # Third-party vendored bundle, the chrome extension's service worker, its
+  # React mount and its Vite config: no logic of their own. Everything under
+  # extensions/chrome/src is unit-tested against a chrome.* stub.
+  "extensions/chrome/src/background.ts"
+  "extensions/chrome/public/vendor/agent-ai.umd.js"
+  "extensions/chrome/src/main.tsx"
+  "extensions/chrome/vite.config.ts"
+  # Matching is a substring test, so the worker's config needs its own entry.
+  "extensions/chrome/vite.worker.config.ts"
   # i18n/locale runtime glue (server-only request config, cookie helpers).
   "i18n/config.ts"
   "i18n/request.ts"

@@ -1,6 +1,6 @@
 {
   "name": "ibl-web-nextjs-mentor-spa",
-  "version": "0.149.1",
+  "version": "0.154.0",
   "private": false,
   "packageManager": "pnpm@10.11.1",
   "engines": {
@@ -12,7 +12,9 @@
     "start": "PORT=${PORT:-3000} node server-wrapper.js",
     "lint": "next lint --fix && pnpm typecheck",
     "lint:check": "next lint && pnpm typecheck",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc -p extensions/chrome/tsconfig.json",
+    "ext:build": "vite build --config extensions/chrome/vite.config.ts && vite build --config extensions/chrome/vite.worker.config.ts",
+    "ext:watch": "vite build --watch --config extensions/chrome/vite.config.ts",
     "format": "prettier . --write",
     "format:check": "prettier . --check",
     "format-lint": "npm run format && npm run lint",
@@ -43,7 +45,7 @@
   },
   "dependencies": {
     "@iblai/iblai-api": "4.166.0-ai",
-    "@iblai/iblai-js": "2.12.0",
+    "@iblai/iblai-js": "2.17.0",
     "@iblai/iblai-web-mentor": "1.3.4",
     "@livekit/components-react": "2.8.1",
     "@livekit/components-styles": "1.1.4",
@@ -158,9 +160,10 @@
     "use-debounce": "10.0.4",
     "vaul": "1.1.2",
     "write-excel-file": "4.0.7",
-    "zod": "3.24.2"
+    "zod": "3.25.76"
   },
   "devDependencies": {
+    "@ai-sdk/openai-compatible": "3.0.5",
     "@axe-core/playwright": "4.10.2",
     "@commitlint/cli": "20.5.0",
     "@commitlint/config-conventional": "20.5.0",
@@ -172,6 +175,7 @@
     "@testing-library/jest-dom": "6.6.3",
     "@testing-library/react": "16.3.0",
     "@testing-library/user-event": "14.6.1",
+    "@types/chrome": "0.2.9",
     "@types/file-saver": "2.0.7",
     "@types/hast": "3.0.5",
     "@types/mdast": "4.0.4",
@@ -190,6 +194,7 @@
     "@wdio/mocha-framework": "9.30.0",
     "@wdio/spec-reporter": "9.29.1",
     "@wdio/types": "9.29.1",
+    "ai": "7.0.17",
     "autoprefixer": "10.4.27",
     "cross-env": "7.0.3",
     "dotenv": "16.4.7",
@@ -210,6 +215,7 @@
     "tsx": "4.23.1",
     "turbo": "2.9.14",
     "typescript": "5.9.3",
+    "vite": "8.1.3",
     "vite-tsconfig-paths": "5.1.4",
     "vitest": "3.2.6",
     "vitest-axe": "0.1.0",

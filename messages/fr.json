@@ -510,7 +510,13 @@
     "coworkConsentConfirm": "Continuer",
     "coworkNeedsAccessibility": "Cowork a besoin de l’accès Accessibilité pour contrôler votre ordinateur. Accordez-le dans Réglages Système › Confidentialité et sécurité › Accessibilité, puis redémarrez l’app et réactivez Cowork.",
     "coworkNeedsScreenRecording": "Cowork a besoin de l’accès Enregistrement de l’écran pour lire vos fenêtres. Accordez-le dans Réglages Système › Confidentialité et sécurité › Enregistrement de l’écran, puis redémarrez l’app et réactivez Cowork.",
-    "skills": "Compétences"
+    "skills": "Compétences",
+    "coworkNeedsSession": "Connectez-vous d’abord : Cowork a besoin de votre session de plateforme pour joindre le modèle.",
+    "coworkTabNote": "Lit cet onglet et agit dessus à votre place — jamais dans les champs de mot de passe ou de paiement. Ce qu’il lit est envoyé à ibl.ai pour déterminer l’étape suivante.",
+    "coworkApprovalsLabel": "Approbations",
+    "coworkApprovalsManual": "Me demander",
+    "coworkApprovalsAuto": "Automatique",
+    "coworkApprovalsAutoHint": "Cowork clique, saisit et soumet des formulaires sans demander. À utiliser uniquement sur des sites de confiance."
   },
   "chatInputFormMemoryMenu": {
     "yourMemory": "Votre mémoire",
@@ -738,7 +744,22 @@
     "agentUpdatedError": "Échec de la mise à jour de l'agent",
     "userAgreementUpdatedSuccess": "Accord utilisateur mis à jour avec succès",
     "userAgreementUpdatedError": "Échec de la mise à jour de l'accord utilisateur",
-    "userAgreementToggledSuccess": "Accord utilisateur {status} avec succès"
+    "userAgreementToggledSuccess": "Accord utilisateur {status} avec succès",
+    "viewAgreements": "Voir les acceptations"
+  },
+  "disclaimersTabAgreements": {
+    "title": "Acceptations",
+    "dialogDescription": "Utilisateurs ayant accepté l'Accord utilisateur de cet agent.",
+    "totalAgreements": "{count} acceptations au total",
+    "searchPlaceholder": "Rechercher par nom d'utilisateur",
+    "searchAriaLabel": "Rechercher les acceptations par nom d'utilisateur",
+    "columnUser": "Utilisateur",
+    "columnAgreedAt": "Accepté le",
+    "summaryDescription": "Consultez les utilisateurs ayant accepté l'Accord utilisateur de cet agent. Chaque entrée indique le nom et l'e-mail de l'utilisateur ainsi que la date de son acceptation. Les utilisateurs qui ne l'ont pas encore accepté n'apparaissent pas. La recherche correspond au nom d'utilisateur exact.",
+    "empty": "Aucune acceptation pour le moment",
+    "emptyDescription": "Les utilisateurs qui acceptent l'Accord utilisateur apparaîtront ici avec l'heure de leur acceptation.",
+    "noMatches": "Aucun utilisateur ne correspond à votre recherche",
+    "noMatchesDescription": "La recherche correspond au nom d'utilisateur exact : essayez le nom d'utilisateur complet."
   },
   "editMentorModalIndex": {
     "dialogDescription": "Modifier les paramètres de l'agent, les invites, les outils, la sécurité, le flux, l'historique, les ensembles de données et les clés API",
@@ -2091,6 +2112,9 @@
     "highlightFeaturedLabel": "Mettre en avant dans les listings",
     "highlightFeaturedInfoAriaLabel": "Plus d'infos sur la mise en avant dans les listings",
     "highlightFeaturedTooltip": "Mettez cet agent en avant pour le faire ressortir dans les listings.",
+    "showAdditionalAgentsLabel": "Afficher les agents supplémentaires",
+    "showAdditionalAgentsInfoAriaLabel": "Plus d'infos sur l'affichage des agents supplémentaires",
+    "showAdditionalAgentsTooltip": "Affiche la section des agents supplémentaires sur l'écran d'accueil de cet agent.",
     "enableLtiLabel": "Activer les lancements LTI",
     "enableLtiInfoAriaLabel": "Plus d'infos sur l'activation des lancements LTI",
     "enableLtiTooltip": "Permet à cet agent d'être accessible via des lancements LTI. Décocher cette option supprimera immédiatement l'accès pour tous les utilisateurs ayant lancé cet agent via LTI.",
@@ -2396,6 +2420,10 @@
     "hostPasswordLabel": "Mot de passe",
     "connect": "Se connecter",
     "connecting": "Connexion…",
+    "localNetworkHint": "Si votre téléphone demande à trouver des appareils sur votre réseau local, touchez Autoriser.",
+    "localNetworkChecking": "Vérification de l’accès au réseau local…",
+    "localNetworkDenied": "L’accès au réseau local est désactivé pour ibl.ai, donc Code ne peut pas joindre votre ordinateur. Activez-le dans Réglages, puis revenez ici.",
+    "openSettings": "Ouvrir les Réglages",
     "disconnect": "Se déconnecter",
     "phoneAccess": "Accès depuis le téléphone",
     "phoneAccessEnable": "Activer",

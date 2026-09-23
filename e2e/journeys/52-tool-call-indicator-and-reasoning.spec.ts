@@ -7,7 +7,7 @@ import { MentorTracker } from '../utils/mentor-cleanup';
 import type { ChatPage } from '../page-objects/chat.page';
 
 // Generous timeout for LLM streaming responses
-const STREAMING_TIMEOUT = 120_000;
+const STREAMING_TIMEOUT = 300_000;
 
 const NO_TOOL_CALL_FRAMES_REASON =
   'backend delivered no tool_call frames after stream completed (tool-call indicator absent) — skipping';
@@ -37,6 +37,9 @@ async function skipIfNoToolCallFrames(
 }
 
 test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
+  // Web-search turns on ibl.ai Fast run past the 120s default.
+  test.describe.configure({ timeout: 420_000 });
+
   const tracker52 = new MentorTracker();
 
   test.beforeEach(async ({ page }) => {
@@ -61,11 +64,6 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
     // Enable verbose reasoning gates the tool-call indicator — enable it first.
     await editMentorPage.open('Settings');
     await editMentorPage.settings.setVerboseReasoning(true);
-    // New mentors default to a provider without working credentials in this
-    // tenant, so the agent never responds. Pin the LLM to gpt-5, the model
-    // confirmed to stream responses (and tool calls) here.
-    await editMentorPage.navigateToTab('LLM');
-    await editMentorPage.llm.selectProviderAndModel('OpenAI', 'gpt-5');
     await editMentorPage.navigateToTab('Tools');
     await editMentorPage.tools.enableTool('Web Search');
     await editMentorPage.close();
@@ -160,11 +158,6 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
     // Enable verbose reasoning gates the tool-call indicator — enable it first.
     await editMentorPage.open('Settings');
     await editMentorPage.settings.setVerboseReasoning(true);
-    // New mentors default to a provider without working credentials in this
-    // tenant, so the agent never responds. Pin the LLM to gpt-5, the model
-    // confirmed to stream responses (and tool calls) here.
-    await editMentorPage.navigateToTab('LLM');
-    await editMentorPage.llm.selectProviderAndModel('OpenAI', 'gpt-5');
     await editMentorPage.navigateToTab('Tools');
     await editMentorPage.tools.enableTool('Web Search');
     await editMentorPage.close();
@@ -197,7 +190,7 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
     // Expanded content shows the friendly tool name
     const lastAIMessage = chatPage.aiMessages.last();
     await expect(
-      lastAIMessage.getByText(/searching the web/i).first(),
+      lastAIMessage.getByText(/searching the web|web search/i).first(),
     ).toBeVisible({
       timeout: 5_000,
     });
@@ -241,11 +234,6 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
     // Enable verbose reasoning gates the tool-call indicator — enable it first.
     await editMentorPage.open('Settings');
     await editMentorPage.settings.setVerboseReasoning(true);
-    // New mentors default to a provider without working credentials in this
-    // tenant, so the agent never responds. Pin the LLM to gpt-5, the model
-    // confirmed to stream responses (and tool calls) here.
-    await editMentorPage.navigateToTab('LLM');
-    await editMentorPage.llm.selectProviderAndModel('OpenAI', 'gpt-5');
     await editMentorPage.navigateToTab('Tools');
     await editMentorPage.tools.enableTool('Web Search');
     await editMentorPage.close();
@@ -265,10 +253,12 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
       .getByRole('button', { name: /used \d+ tools?/i });
     await skipIfNoToolCallFrames(chatPage, toolCallTrigger, STREAMING_TIMEOUT);
 
-    // Header should show "Used 1 tool" since all calls are web_search_call
-    await expect(toolCallTrigger).toContainText('Used 1 tool', {
+    await expect(toolCallTrigger).toContainText(/used \d+ tools?/i, {
       timeout: 10_000,
     });
+    const headerCount = Number(
+      (await toolCallTrigger.textContent())?.match(/used (\d+) tool/i)?.[1],
+    );
 
     // Expand to verify individual tool call entries exist
     await toolCallTrigger.click();
@@ -276,11 +266,20 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
       timeout: 5_000,
     });
 
-    // At least one "Searching the web" entry should be visible
+    // At least one web-search entry should be visible (label depends on the provider's tool name)
     const lastAIMessage = chatPage.aiMessages.last();
     await expect(
-      lastAIMessage.getByText(/searching the web/i).first(),
+      lastAIMessage.getByText(/searching the web|web search/i).first(),
     ).toBeVisible({ timeout: 5_000 });
+
+    // The header counts distinct tool types, not calls: the multi-part prompt
+    // produces several search calls under one (or a few) tool names.
+    const toolNames = await lastAIMessage
+      .locator('div.border-l-2.border-gray-300 span.font-medium')
+      .allTextContents();
+    const uniqueTypes = new Set(toolNames.map((n) => n.trim())).size;
+    expect(toolNames.length).toBeGreaterThanOrEqual(uniqueTypes);
+    expect(headerCount).toBe(uniqueTypes);
   });
 
   // ────────────────────────────────────────────────────────────────
@@ -343,11 +342,6 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
     // Enable verbose reasoning gates the tool-call indicator — enable it first.
     await editMentorPage.open('Settings');
     await editMentorPage.settings.setVerboseReasoning(true);
-    // New mentors default to a provider without working credentials in this
-    // tenant, so the agent never responds. Pin the LLM to gpt-5, the model
-    // confirmed to stream responses (and tool calls) here.
-    await editMentorPage.navigateToTab('LLM');
-    await editMentorPage.llm.selectProviderAndModel('OpenAI', 'gpt-5');
     await editMentorPage.navigateToTab('Tools');
     await editMentorPage.tools.enableTool('Web Search');
     await editMentorPage.close();
@@ -377,7 +371,7 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
   });
 
   // ────────────────────────────────────────────────────────────────
-  // Test 2.1 - 2.3: Reasoning Section with gpt-5 Model
+  // Test 2.1 - 2.3: Reasoning Section
   // ────────────────────────────────────────────────────────────────
   test('Reasoning Section Renders and Auto-Collapses to Thought After Streaming', async ({
     page,
@@ -390,12 +384,9 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
     );
     tracker52.add((await getPlatformContext(page)).mentorId);
 
-    // Enable verbose reasoning gates the reasoning section — enable it, then set the
-    // LLM to gpt-5 via the LLM tab page object.
+    // Enable verbose reasoning gates the reasoning section — enable it first.
     await editMentorPage.open('Settings');
     await editMentorPage.settings.setVerboseReasoning(true);
-    await editMentorPage.navigateToTab('LLM');
-    await editMentorPage.llm.selectProviderAndModel('OpenAI', 'gpt-5');
     await editMentorPage.close();
 
     // Send a question that triggers reasoning
@@ -494,11 +485,6 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
     // reasoning tokens, rather than the section being hidden by the toggle.
     await editMentorPage.open('Settings');
     await editMentorPage.settings.setVerboseReasoning(true);
-    // Use gpt-4o — a non-reasoning model that still streams a response — so the
-    // assertion checks that no reasoning section appears for a model that emits
-    // no reasoning tokens (not merely that the agent failed to respond).
-    await editMentorPage.navigateToTab('LLM');
-    await editMentorPage.llm.selectProviderAndModel('OpenAI', 'gpt-4o');
     await editMentorPage.close();
 
     await chatPage.sendMessage('Explain the theory of relativity in detail');
@@ -520,7 +506,7 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
         timeout: 5_000,
       });
       console.warn(
-        'Reasoning section appeared for a default model — may indicate gpt-5 is configured as default',
+        "Reasoning section appeared for the mentor's pinned default model — may indicate it produces reasoning tokens",
       );
     } catch {
       // Expected: no reasoning section
@@ -546,10 +532,6 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
     await editMentorPage.open('Settings');
     await editMentorPage.settings.setVerboseReasoning(true);
 
-    // Set LLM to gpt-5
-    await editMentorPage.navigateToTab('LLM');
-    await editMentorPage.llm.selectProviderAndModel('OpenAI', 'gpt-5');
-
     // Enable Web Search
     await editMentorPage.navigateToTab('Tools');
     await editMentorPage.tools.enableTool('Web Search');
@@ -560,7 +542,7 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
 
     // Send a question requiring both reasoning and web search. Explicitly
     // invoking the web search tool with a current-information question forces a
-    // real tool call (a soft "use web search" hint lets gpt-5 answer from
+    // real tool call (a soft "use web search" hint lets the model answer from
     // memory and skip the tool), while "think step by step" exercises reasoning.
     await chatPage.sendMessage(
       'using the web search tool, think step by step, then tell me when the next f1 race is.',
@@ -650,9 +632,6 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
     expect(await editMentorPage.settings.isVerboseReasoningEnabled()).toBe(
       false,
     );
-    // Pin to gpt-5 so the agent actually streams a response (and runs the tool).
-    await editMentorPage.navigateToTab('LLM');
-    await editMentorPage.llm.selectProviderAndModel('OpenAI', 'gpt-5');
     await editMentorPage.navigateToTab('Tools');
     await editMentorPage.tools.enableTool('Web Search');
     await editMentorPage.close();

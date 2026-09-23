@@ -155,7 +155,7 @@ Self-hoster checklist:
 
 ## 8. Chrome extension (side panel)
 
-Point `extensions/chrome/panel.html`'s `mentorurl` at your web app, bump `extensions/chrome/manifest.json`'s `version`, and the `release-chrome-extension.yml` workflow publishes to the Chrome Web Store (needs the `CHROME_*` repo secrets configured — see the workflow header).
+Point the panel at your web app with `VITE_MENTOR_URL` in `extensions/chrome/.env.local` (copy `extensions/chrome/.env.example`; unset it and the build uses `https://os.ibl.ai`). The build writes that host's origin into the manifest's `frame-src`/`child-src` for you. If your platform's streaming host is not under `*.iblai.app` / `*.ibl.ai`, add it to the manifest's `connect-src` by hand. The panel is built with `pnpm ext:build` into `extensions/chrome/dist` (load that directory unpacked). Bump `extensions/chrome/public/manifest.json`'s `version` and the `release-chrome-extension.yml` workflow installs, builds, zips `dist/` and publishes to the Chrome Web Store (needs the `CHROME_*` repo secrets configured — see the workflow header).
 
 ---
 
@@ -169,6 +169,6 @@ Point `extensions/chrome/panel.html`'s `mentorurl` at your web app, bump `extens
 | **Linux**      | `TAURI_DEV_URL`                                  | `cargo tauri build`               | ⚠️ Build from source only         |
 | **iOS**        | `TAURI_DEV_URL` + Team ID                        | `make tauri-ios-build`            | ⚠️ Manual Xcode → App Store       |
 | **Android**    | `TAURI_DEV_URL` + keystore                       | `make tauri-android-build[-aab]`  | ⚠️ Manual → Play Console          |
-| **Chrome ext** | `panel.html` `mentorurl`                         | manifest version bump             | ⚠️ CI (needs `CHROME_*` secrets)  |
+| **Chrome ext** | `VITE_MENTOR_URL` (build-time `.env.local`)      | `pnpm ext:build` + manifest bump  | ⚠️ CI (needs `CHROME_*` secrets)  |
 
 **One-line rule:** deploy the web app at your domain, then rebuild each native shell with `TAURI_DEV_URL=https://your-domain` and your own signing credentials.
