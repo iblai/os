@@ -14,6 +14,8 @@ When adding a new page or modifying an existing user flow:
 3. Mark the checkpoint `[x]` once the test is in the suite and passing
 4. The pre-push hook and CI workflow will block pushes with uncovered routes
 
+**LLM pin (issue #2534):** every mentor created via `CreateMentorPage.createWithName()` / `openAndCreate()` is pinned to `ibl.ai Fast` (`llm_provider: iblai`, `llm_name: iblai-fast`) right after creation, instead of the backend's `iblai-pro` default. Pro routes each message to whatever provider it judges best, which made chat-driving tests depend on shared third-party provider quota (see journey 52's prior OpenAI pins). Specs that chat on a tenant's pre-existing default mentor rather than a test-created one are not covered by this pin; where the flow can't create its own mentor (anonymous/non-admin sessions, a freshly-provisioned signup tenant), see that journey's own notes below.
+
 ---
 
 ## Journey 1: Authentication (4 checkpoints) — `journeys/01-authentication.spec.ts`
