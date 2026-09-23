@@ -1,15 +1,15 @@
 {
   "version": 2,
-  "lastUpdated": "2026-09-21",
+  "lastUpdated": "2026-09-23",
   "summary": {
-    "totalCheckpoints": 746,
-    "coveredCheckpoints": 703,
+    "totalCheckpoints": 752,
+    "coveredCheckpoints": 709,
     "deprecatedCheckpoints": 17,
     "notReproducibleCheckpoints": 15,
     "pendingCheckpoints": 11,
     "percent": 100,
-    "totalJourneys": 77,
-    "activeJourneys": 76
+    "totalJourneys": 78,
+    "activeJourneys": 77
   },
   "journeys": [
     {
@@ -4734,6 +4734,49 @@
         {
           "id": "du-08",
           "description": "Admin uploads an Excel (.xlsx) file via the Add Resources modal and the file row appears in the dataset list",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "show-additional-agents-toggle",
+      "name": "Show Additional Agents Toggle",
+      "spec": "76-show-additional-agents-toggle.spec.ts",
+      "sourceFiles": [
+        "components/modals/edit-mentor-modal/settings-tab.tsx",
+        "components/welcome-chat-new.tsx",
+        "components/welcome-chat/explore-mentors.tsx",
+        "hooks/use-mentors/use-mentor-settings.ts"
+      ],
+      "checkpoints": [
+        {
+          "id": "sem-01",
+          "description": "Admin sees the \"Show additional agents\" switch under Settings > Capabilities > Advanced, with the right label, data-testid, and tooltip info button",
+          "status": "covered"
+        },
+        {
+          "id": "sem-02",
+          "description": "Toggling the switch ON and saving PUTs show_explore_mentors=true and the value persists across closing and reopening the Edit Agent dialog",
+          "status": "covered"
+        },
+        {
+          "id": "sem-03",
+          "description": "Toggling the switch OFF and saving PUTs show_explore_mentors=false and the value persists across closing and reopening the Edit Agent dialog",
+          "status": "covered"
+        },
+        {
+          "id": "sem-04",
+          "description": "With the setting ON, the admin's own welcome screen shows the \"Explore Agents\" section",
+          "status": "covered"
+        },
+        {
+          "id": "sem-05",
+          "description": "With the setting ON, a non-admin non-owner viewer of the same agent also sees the \"Explore Agents\" section (regression guard for the field-level-RBAC redacted-empty-string bug in use-mentor-settings.ts)",
+          "status": "covered"
+        },
+        {
+          "id": "sem-06",
+          "description": "With the setting OFF, the welcome screen hides the \"Explore Agents\" section",
           "status": "covered"
         }
       ]

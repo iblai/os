@@ -16,6 +16,7 @@ import { ProjectLandingPage } from '@iblai/iblai-js/web-containers';
 import { useUserIsStudent } from '@/hooks/use-user';
 import { useNavigate } from '@/hooks/user-navigate';
 import { useAccessingPublicRoute } from '@/hooks/use-anonymous-mentor';
+import { useMentorSettings } from '@/hooks/use-mentors/use-mentor-settings';
 
 type Props = {
   mentorName: string;
@@ -96,6 +97,9 @@ export function WelcomeChatNew({
   const userIsStudent = useUserIsStudent();
   const isPublicRoute = useAccessingPublicRoute();
   const { navigateToProject } = useNavigate();
+  const {
+    data: { showExploreMentors },
+  } = useMentorSettings();
 
   const { data: project } = useGetUserProjectDetailsQuery(
     {
@@ -248,9 +252,11 @@ export function WelcomeChatNew({
         </div>
 
         {/* Explore Mentors */}
-        <div className="mb-12">
-          <ExploreMentors />
-        </div>
+        {showExploreMentors && (
+          <div className="mb-12">
+            <ExploreMentors />
+          </div>
+        )}
 
         {/* Tools Section */}
         {/*
