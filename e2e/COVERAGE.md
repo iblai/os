@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-09-21 | 746 checkpoints (703 covered, 11 pending/fixme, 15 not-reproducible in default env, 17 deprecated) | 77 journeys (76 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-09-23 | 752 checkpoints (709 covered, 11 pending/fixme, 15 not-reproducible in default env, 17 deprecated) | 78 journeys (77 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -1800,3 +1800,18 @@ Uploads a real fixture file for each of the 8 local file-upload resource types a
 - [x] DU-75.6: Admin uploads a Video file (`.mp4`) — `IMG_4019` row appears in dataset list
 - [x] DU-75.7: Admin uploads an Image file (`.png`) — `acessibility png` row appears in dataset list
 - [x] DU-75.8: Admin uploads an Excel (`.xlsx`) file — `test-data.xlsx` row appears in dataset list
+
+---
+
+## Journey 76: Show Additional Agents Toggle (6 checkpoints) — `journeys/76-show-additional-agents-toggle.spec.ts`
+
+**Source files:** `components/modals/edit-mentor-modal/settings-tab.tsx`, `components/welcome-chat-new.tsx`, `components/welcome-chat/explore-mentors.tsx`, `hooks/use-mentors/use-mentor-settings.ts`
+
+Covers issue #2544: a new `show_explore_mentors` mentor setting, exposed as a "Show additional agents" switch (`data-testid="settings-show-explore-mentors-switch"`) in the Edit Agent modal's Settings tab → Capabilities sub-tab → Advanced section. It gates the OS-specific "Explore Agents" section that renders on an agent's own (non-project) welcome screen. Note: the issue asks for the backend default to be `false` for new agents; as of this writing the backend actually defaults it to `true` in this environment, so every checkpoint below explicitly drives the toggle to a known state first rather than asserting a specific out-of-the-box default. sem-05 is a regression guard for a real bug found in manual QA: `use-mentor-settings.ts` used to read `effectiveSettings?.show_explore_mentors ?? effectivePublicSettings?.show_explore_mentors ?? false`, but field-level RBAC returns an unreadable field as `""` (not `null`/`undefined`) for a logged-in non-owner's `/settings/` GET — `"" ?? x` short-circuits to `""`, so non-owner viewers never saw the section even when the owner had it ON; the fix (`asBoolean`) only treats a real boolean as present. The project landing page's own "mentors in this project" list is a separate, SDK-owned feature that hard-codes its own `showExploreMentors` prop and never reads this setting — confirmed by reading `components/welcome-chat-new.tsx`'s `projectId` branch directly, so it is documented here rather than covered by a browser test. Journey 15's sw-06 checkpoint (home-page Explore section) was also fixed alongside this journey: it used to silently no-op ("not in explore-mentors state") whenever the ambient default mentor happened to have the section off; it now seeds its own throw-away mentor with the toggle explicitly ON so the checkpoint is deterministic.
+
+- [x] sem-01: Admin sees the "Show additional agents" switch under Settings > Capabilities > Advanced, with the right label, data-testid, and tooltip info button
+- [x] sem-02: Toggling the switch ON and saving PUTs `show_explore_mentors=true`; the value persists across closing and reopening the Edit Agent dialog
+- [x] sem-03: Toggling the switch OFF and saving PUTs `show_explore_mentors=false`; the value persists across closing and reopening the Edit Agent dialog
+- [x] sem-04: With the setting ON, the admin's own welcome screen shows the "Explore Agents" section
+- [x] sem-05: With the setting ON, a non-admin non-owner viewer of the same agent also sees the "Explore Agents" section (RBAC-redaction regression guard)
+- [x] sem-06: With the setting OFF, the welcome screen hides the "Explore Agents" section
