@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { FrameSnapshot } from '../page-scripts';
 import { settle, sleep } from '../settle';
 import {
   MAX_WAIT_MS,
@@ -6,6 +7,7 @@ import {
   createBrowserTools,
   describeItem,
   hostOf,
+  mergeFrames,
   needsConfirm,
   type BrowserToolsContext,
   type LogEntry,
@@ -165,7 +167,7 @@ describe('createBrowserTools', () => {
     );
     expect(result).toContain('--- text ---');
     expect(onClick).toHaveBeenCalledTimes(1);
-    expect(settle).toHaveBeenCalledWith(7);
+    expect(settle).toHaveBeenCalledWith(7, { frameId: 0 });
     expect(ctx.confirm).not.toHaveBeenCalled();
     expect(ctx.log).toHaveBeenLastCalledWith({
       tool: 'click',
@@ -431,5 +433,117 @@ describe('createBrowserTools', () => {
     await vi.waitFor(() => expect(actCalls()).toHaveLength(2));
     await second;
     expect(ctx.log).toHaveBeenCalledTimes(2);
+  });
+
+  // An embedded chat (Gmail's, say) is its own document: the page's own
+  // querySelectorAll never sees it, and an action must run in that frame.
+  it("lists elements inside subframes after the page's own and acts in their frame", async () => {
+    const original =
+      chromeStub.stub.scripting.executeScript.getMockImplementation()!;
+    const chat: FrameSnapshot = {
+      url: 'https://chat.acme.com/frame',
+      title: 'Chat',
+      items: [
+        {
+          n: 1,
+          role: 'textbox',
+          name: 'Message',
+          state: 'empty',
+          submit: false,
+          password: false,
+        },
+        {
+          n: 2,
+          role: 'button',
+          name: 'Add reaction',
+          state: '',
+          submit: false,
+          password: false,
+        },
+      ],
+      excerpt: 'hi from chat',
+    };
+    chromeStub.stub.scripting.executeScript.mockImplementation(
+      async (injection) => {
+        const { func, target } = injection as {
+          func: { name: string };
+          target: { frameIds?: number[] };
+        };
+        if (func.name === 'snapshotPage')
+          return [...(await original(injection)), { frameId: 5, result: chat }];
+        // Frame 5 is not the jsdom document; what matters is where the call went.
+        if (func.name === 'actOnPage' && target.frameIds?.[0] === 5)
+          return [{ frameId: 5, result: { ok: true } }];
+        return original(injection);
+      },
+    );
+    const page = await current.snapshot();
+    expect(page.text).toContain('[9] textbox "Message" (empty)');
+    expect(page.text).toContain('[10] button "Add reaction"');
+    expect(page.text).toContain('Welcome.\n\nhi from chat');
+    const result = await run('type', { element: 9, text: 'hi' });
+    expect(result.startsWith('Typed into [9] textbox "Message".')).toBe(true);
+    expect(actCalls()).toHaveLength(1);
+    expect(actCalls()[0][0]).toMatchObject({
+      target: { tabId: 7, frameIds: [5] },
+      args: [1, 'type', 'hi', false],
+    });
+    expect(settle).toHaveBeenLastCalledWith(7, { frameId: 5 });
+    expect(document.querySelector<HTMLInputElement>('#email')!.value).toBe('');
+  });
+
+  it('orders frames page-first then by id, keeps a page with no items, skips subframes with nothing to act on', () => {
+    const frame = (overrides: Partial<FrameSnapshot>): FrameSnapshot => ({
+      url: 'https://x/',
+      title: 'X',
+      items: [],
+      excerpt: '',
+      ...overrides,
+    });
+    const button = (n: number, name: string) => ({
+      n,
+      role: 'button',
+      name,
+      state: '',
+      submit: false,
+      password: false,
+    });
+    const { snapshot, targets } = mergeFrames([
+      {
+        frameId: 5,
+        result: frame({
+          url: 'https://x/five',
+          items: [button(1, 'Five'), button(2, 'Six')],
+          excerpt: 'five',
+        }),
+      },
+      { frameId: 0, result: frame({ title: 'Page', excerpt: 'page' }) },
+      { frameId: 3, result: frame({ excerpt: 'hidden junk' }) },
+      { frameId: 9 },
+    ]);
+    expect(snapshot.items.map((item) => `${item.n}:${item.name}`)).toEqual([
+      '1:Five',
+      '2:Six',
+    ]);
+    expect(targets.get(2)).toEqual({ frameId: 5, n: 2 });
+    expect(snapshot.text).toBe(
+      'https://x/  "Page"\n[1] button "Five"\n[2] button "Six"\n--- text ---\npage\n\nfive',
+    );
+  });
+
+  it('fails loudly when the page returns no snapshot', async () => {
+    expect(() => mergeFrames([])).toThrow('The page returned no snapshot.');
+    expect(() =>
+      mergeFrames([
+        {
+          frameId: 4,
+          result: { url: 'https://x/', title: 'X', items: [], excerpt: '' },
+        },
+      ]),
+    ).toThrow('The page returned no snapshot.');
+    chromeStub.stub.scripting.executeScript.mockResolvedValueOnce([]);
+    expect(await run('read_page', {})).toBe(
+      'Error: The page returned no snapshot.',
+    );
   });
 });

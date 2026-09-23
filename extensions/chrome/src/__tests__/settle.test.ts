@@ -27,10 +27,27 @@ describe('settle', () => {
     expect(chromeStub.stub.tabs.get.mock.calls.length).toBeGreaterThanOrEqual(
       3,
     );
-    const [{ func, args }] = chromeStub.stub.scripting.executeScript.mock
-      .calls[0] as [{ func: { name: string }; args: unknown[] }];
+    const [{ func, args, target }] = chromeStub.stub.scripting.executeScript
+      .mock.calls[0] as [
+      { func: { name: string }; args: unknown[]; target: unknown },
+    ];
     expect(func.name).toBe('waitForQuiet');
     expect(args).toEqual([10, 100]);
+    expect(target).toEqual({ tabId: 7, frameIds: [0] });
+  });
+
+  it('watches the acted frame as well as the page', async () => {
+    const promise = settle(7, {
+      graceMs: 0,
+      quietMs: 10,
+      capMs: 50,
+      frameId: 5,
+    });
+    await vi.advanceTimersByTimeAsync(100);
+    await promise;
+    const [{ target }] = chromeStub.stub.scripting.executeScript.mock
+      .calls[0] as [{ target: unknown }];
+    expect(target).toEqual({ tabId: 7, frameIds: [0, 5] });
   });
 
   it('follows a navigation from loading to complete', async () => {
