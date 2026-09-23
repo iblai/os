@@ -744,7 +744,22 @@
     "agentUpdatedError": "更新智能体失败",
     "userAgreementUpdatedSuccess": "用户协议更新成功",
     "userAgreementUpdatedError": "更新用户协议失败",
-    "userAgreementToggledSuccess": "用户协议已{status}成功"
+    "userAgreementToggledSuccess": "用户协议已{status}成功",
+    "viewAgreements": "查看同意记录"
+  },
+  "disclaimersTabAgreements": {
+    "title": "同意记录",
+    "dialogDescription": "已接受此智能体用户协议的用户。",
+    "totalAgreements": "共 {count} 条同意记录",
+    "searchPlaceholder": "按用户名搜索",
+    "searchAriaLabel": "按用户名搜索同意记录",
+    "columnUser": "用户",
+    "columnAgreedAt": "同意时间",
+    "summaryDescription": "查看已接受此智能体用户协议的用户。每条记录显示用户的姓名、邮箱和同意时间。尚未接受的用户不会列出。搜索需与用户名完全匹配。",
+    "empty": "尚无同意记录",
+    "emptyDescription": "接受用户协议的用户将与其同意时间一起显示在此处。",
+    "noMatches": "没有匹配的用户",
+    "noMatchesDescription": "搜索需与用户名完全匹配，请尝试输入完整的用户名。"
   },
   "editMentorModalIndex": {
     "dialogDescription": "编辑代理设置、提示词、工具、安全、流程、历史记录、数据集和 API 密钥",
@@ -2105,8 +2120,9 @@
     "highlightFeaturedLabel": "在精选列表中突出显示",
     "highlightFeaturedInfoAriaLabel": "关于在精选列表中突出显示的更多信息",
     "highlightFeaturedTooltip": "将此智能体设为精选，使其在列表中突出显示。",
-    "showExploreMentorsLabel": "显示其他智能体",
-    "showExploreMentorsTooltip": "让用户在使用此智能体时发现其他智能体。",
+    "showAdditionalAgentsLabel": "显示其他智能体",
+    "showAdditionalAgentsInfoAriaLabel": "关于显示其他智能体的更多信息",
+    "showAdditionalAgentsTooltip": "在此智能体的欢迎界面上显示“其他智能体”部分。",
     "enableLtiLabel": "启用 LTI 启动",
     "enableLtiInfoAriaLabel": "关于启用 LTI 启动的更多信息",
     "enableLtiTooltip": "启用后，此智能体可通过 LTI 启动访问。取消选择将立即撤销所有通过 LTI 启动访问此智能体的用户的访问权限。",

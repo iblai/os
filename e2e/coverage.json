@@ -1,15 +1,15 @@
 {
   "version": 2,
-  "lastUpdated": "2026-09-21",
+  "lastUpdated": "2026-09-23",
   "summary": {
-    "totalCheckpoints": 753,
-    "coveredCheckpoints": 710,
+    "totalCheckpoints": 764,
+    "coveredCheckpoints": 721,
     "deprecatedCheckpoints": 17,
     "notReproducibleCheckpoints": 15,
     "pendingCheckpoints": 11,
     "percent": 100,
-    "totalJourneys": 78,
-    "activeJourneys": 77
+    "totalJourneys": 79,
+    "activeJourneys": 78
   },
   "journeys": [
     {
@@ -1499,6 +1499,7 @@
         "components/modals/edit-mentor-modal/tabs/disclaimers-tab/index.tsx",
         "components/modals/edit-mentor-modal/tabs/disclaimers-tab/edit-disclaimer-modal.tsx",
         "components/modals/edit-mentor-modal/tabs/disclaimers-tab/edit-user-agreement-modal.tsx",
+        "components/modals/edit-mentor-modal/tabs/disclaimers-tab/agreements-modal.tsx",
         "components/modals/disclaimer-modal.tsx",
         "hooks/use-user-agreement.ts",
         "constants/disclaimer.ts"
@@ -1572,6 +1573,31 @@
         {
           "id": "disc-14",
           "description": "User Agreement Edit modal opens with the correct title",
+          "status": "covered"
+        },
+        {
+          "id": "disc-15",
+          "description": "View Agreements button appears/disappears in step with the User Agreement switch",
+          "status": "covered"
+        },
+        {
+          "id": "disc-16",
+          "description": "Agreements dialog shows a 0-count empty state when nobody has agreed yet, and Escape closes only the dialog",
+          "status": "covered"
+        },
+        {
+          "id": "disc-17",
+          "description": "Agreements dialog lists the non-admin who accepted, with a hoverable agreed-at tooltip",
+          "status": "covered"
+        },
+        {
+          "id": "disc-18",
+          "description": "Agreements dialog search filters by exact username, including the no-match state",
+          "status": "covered"
+        },
+        {
+          "id": "disc-19",
+          "description": "Non-admin has no menu path to the Edit Agent modal, so never sees the View Agreements button",
           "status": "covered"
         }
       ]
@@ -4800,6 +4826,49 @@
         {
           "id": "tanl-08",
           "description": "Navbar on the tenant-wide section drops the chat-only chrome (LLM Model Selector, agent dropdown, privacy chip) and shows the \"Analytics\" section title instead; the per-agent analytics page keeps full parity (Journey 65)",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "show-additional-agents-toggle",
+      "name": "Show Additional Agents Toggle",
+      "spec": "76-show-additional-agents-toggle.spec.ts",
+      "sourceFiles": [
+        "components/modals/edit-mentor-modal/settings-tab.tsx",
+        "components/welcome-chat-new.tsx",
+        "components/welcome-chat/explore-mentors.tsx",
+        "hooks/use-mentors/use-mentor-settings.ts"
+      ],
+      "checkpoints": [
+        {
+          "id": "sem-01",
+          "description": "Admin sees the \"Show additional agents\" switch under Settings > Capabilities > Advanced, with the right label, data-testid, and tooltip info button",
+          "status": "covered"
+        },
+        {
+          "id": "sem-02",
+          "description": "Toggling the switch ON and saving PUTs show_explore_mentors=true and the value persists across closing and reopening the Edit Agent dialog",
+          "status": "covered"
+        },
+        {
+          "id": "sem-03",
+          "description": "Toggling the switch OFF and saving PUTs show_explore_mentors=false and the value persists across closing and reopening the Edit Agent dialog",
+          "status": "covered"
+        },
+        {
+          "id": "sem-04",
+          "description": "With the setting ON, the admin's own welcome screen shows the \"Explore Agents\" section",
+          "status": "covered"
+        },
+        {
+          "id": "sem-05",
+          "description": "With the setting ON, a non-admin non-owner viewer of the same agent also sees the \"Explore Agents\" section (regression guard for the field-level-RBAC redacted-empty-string bug in use-mentor-settings.ts)",
+          "status": "covered"
+        },
+        {
+          "id": "sem-06",
+          "description": "With the setting OFF, the welcome screen hides the \"Explore Agents\" section",
           "status": "covered"
         }
       ]

@@ -84,6 +84,15 @@ export const NEW_MENTOR_DESCRIPTION = process.env.NEW_MENTOR_DESCRIPTION || '';
 export const IBL_MENTOR_DISABLED_TABS =
   process.env.IBL_MENTOR_DISABLED_TABS || '';
 
+// LLM every test-created mentor is pinned to (issue #2534): a fixed model
+// keeps chat-driving specs from depending on a Pro-routed provider's shared
+// quota/rate limits. `E2E_LLM_NAME` and `E2E_LLM_DISPLAY_NAME` must refer to
+// the same catalogue entry.
+export const E2E_LLM_PROVIDER = process.env.E2E_LLM_PROVIDER || 'iblai';
+export const E2E_LLM_NAME = process.env.E2E_LLM_NAME || 'iblai-fast';
+export const E2E_LLM_DISPLAY_NAME =
+  process.env.E2E_LLM_DISPLAY_NAME || 'ibl.ai Fast';
+
 // ── External service URLs ────────────────────────────────────────────────────
 
 export const EMBED_URL =

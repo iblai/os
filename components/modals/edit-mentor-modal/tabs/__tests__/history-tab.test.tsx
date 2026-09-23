@@ -628,4 +628,88 @@ describe('HistoryTab', () => {
       expect.objectContaining({ userId: 'anonymous' }),
     );
   });
+
+  // ==========================================================================
+  // Attachments (human_files / ai_files)
+  // ==========================================================================
+  const attachmentConversation = {
+    ...baseConversation,
+    id: 'conv-files',
+    messages: [
+      {
+        human: 'What is in this image?',
+        ai: 'Here is the chart you asked for.',
+        human_files: ['https://files.test/uploaded.png'],
+        ai_files: [
+          {
+            url: 'https://files.test/chart.pdf',
+            content_type: 'application/pdf',
+          },
+        ],
+      },
+    ],
+  };
+
+  it('renders the uploaded image and the generated file in the detail pane', () => {
+    mockUseHistoryWithPagination.mockReturnValue(
+      defaultHistory({ chatHistory: { results: [attachmentConversation] } }),
+    );
+    render(<HistoryTab />);
+    fireEvent.click(screen.getByText('What is in this image?'));
+
+    expect(
+      screen.getByRole('img', { name: 'uploaded.png' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('chart.pdf')).toBeInTheDocument();
+  });
+
+  it('titles a file-only turn with the attachment name instead of the fallback', () => {
+    mockUseHistoryWithPagination.mockReturnValue(
+      defaultHistory({
+        chatHistory: {
+          results: [
+            {
+              ...attachmentConversation,
+              id: 'conv-file-only',
+              messages: [
+                {
+                  human: '',
+                  ai: 'I see a diagram.',
+                  human_files: ['https://files.test/diagram.png'],
+                },
+              ],
+            },
+          ],
+        },
+      }),
+    );
+    render(<HistoryTab />);
+    expect(screen.getByText('diagram.png')).toBeInTheDocument();
+    expect(screen.queryByText('Conversation')).not.toBeInTheDocument();
+  });
+
+  it('renders no attachment markup when the file arrays are empty', () => {
+    mockUseHistoryWithPagination.mockReturnValue(
+      defaultHistory({
+        chatHistory: {
+          results: [
+            {
+              ...baseConversation,
+              messages: [
+                {
+                  human: 'Hello there mentor',
+                  ai: 'Hi, how can I help?',
+                  human_files: [],
+                  ai_files: [],
+                },
+              ],
+            },
+          ],
+        },
+      }),
+    );
+    render(<HistoryTab />);
+    fireEvent.click(screen.getByText('Hello there mentor'));
+    expect(screen.queryByTestId('history-attachments')).not.toBeInTheDocument();
+  });
 });

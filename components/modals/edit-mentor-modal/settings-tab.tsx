@@ -141,8 +141,8 @@ export function SettingsTab() {
         tooltip: t('highlightFeaturedTooltip'),
       },
       showExploreMentors: {
-        label: t('showExploreMentorsLabel'),
-        tooltip: t('showExploreMentorsTooltip'),
+        label: t('showAdditionalAgentsLabel'),
+        tooltip: t('showAdditionalAgentsTooltip'),
       },
       showAttachment: {
         label: t('enableFileAttachmentsLabel'),
