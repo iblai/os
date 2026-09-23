@@ -172,6 +172,22 @@ export class LlmTab {
       `[data-model="${modelKey}"]`,
     );
     await expect(modelButton).toBeVisible({ timeout: 10_000 });
+
+    // The SDK disables the active model's row (llm-provider-modal.tsx), so
+    // re-selecting the current model can never click through.
+    const alreadyActive = await modelButton.evaluate(
+      (el) =>
+        (el as HTMLButtonElement).disabled &&
+        el.classList.contains('border-blue-500'),
+    );
+    if (alreadyActive) {
+      await this.page.keyboard.press('Escape');
+      await expect(this.llmSelectionDialog).not.toBeVisible({
+        timeout: 10_000,
+      });
+      return;
+    }
+
     await modelButton.click();
 
     // The selection is persisted via the edit-mentor mutation and confirmed

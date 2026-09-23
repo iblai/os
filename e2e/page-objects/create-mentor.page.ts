@@ -6,8 +6,11 @@ import {
   isVisibleWithin,
 } from '../utils/resilient';
 import { SidebarPage } from './sidebar.page';
+import { NavbarPage } from './navbar.page';
+import { EditMentorPage } from './edit-mentor/edit-mentor.page';
 import { observeDmBase } from '../utils/dm-api';
 import { registerMentor } from '../utils/resource-tracker';
+import { E2E_LLM_DISPLAY_NAME, E2E_LLM_NAME } from '../fixtures/test-data';
 
 export class CreateMentorPage {
   readonly page: Page;
@@ -174,7 +177,26 @@ export class CreateMentorPage {
     );
     await waitForPageReady(this.page);
     await registerMentor(this.page, mentorName);
+    await this.pinLlm();
     return mentorName;
+  }
+
+  /**
+   * Pin the mentor to the suite-wide default LLM (issue #2534) so
+   * chat-driving tests don't depend on the backend's `iblai-pro` default,
+   * which routes each message to whatever model it judges best and shares
+   * quota with provider-specific tests (e.g. journey 52's OpenAI pins).
+   * No-op if the navbar already shows the target model.
+   */
+  private async pinLlm(): Promise<void> {
+    const navbarPage = new NavbarPage(this.page);
+    const currentLlmLabel = await navbarPage.getLlmNameText();
+    if (currentLlmLabel?.trim() === E2E_LLM_DISPLAY_NAME) return;
+
+    const editMentorPage = new EditMentorPage(this.page);
+    await editMentorPage.open('LLM');
+    await editMentorPage.llm.selectProviderAndModel('ibl.ai', E2E_LLM_NAME);
+    await editMentorPage.close();
   }
 
   /**

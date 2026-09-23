@@ -31,6 +31,16 @@ export class SettingsTab {
   readonly useFunctionCallingForRagToggle: Locator;
   /** "Enable file attachments" toggle (Capabilities sub-tab, feat/1902) */
   readonly allowFileAttachmentsToggle: Locator;
+  /**
+   * "Show additional agents" toggle (Capabilities sub-tab, Advanced section
+   * — issue #2544). Persists `show_explore_mentors`, which gates the OS
+   * "Explore Agents" section on this agent's own (non-project) welcome
+   * screen. Resolved via `data-testid`, like the RAG toggle, so the locator
+   * survives label rewrites in the host.
+   */
+  readonly showExploreMentorsToggle: Locator;
+  /** The "More info" tooltip trigger next to the toggle above. */
+  readonly showExploreMentorsInfoButton: Locator;
 
   /**
    * Capabilities sub-tab (issue #2476). The Embed tab's old "Show
@@ -152,6 +162,14 @@ export class SettingsTab {
     // Capabilities sub-tab. Labelled "Enable file attachments" (feat/1902).
     this.allowFileAttachmentsToggle = dialog.getByRole('switch', {
       name: /enable file attachments/i,
+    });
+    // Capabilities sub-tab, Advanced section (issue #2544). Labelled "Show
+    // additional agents"; persists `show_explore_mentors`.
+    this.showExploreMentorsToggle = dialog.getByTestId(
+      'settings-show-explore-mentors-switch',
+    );
+    this.showExploreMentorsInfoButton = dialog.getByRole('button', {
+      name: 'More info about show additional agents',
     });
     // Capabilities sub-tab (issue #2476, @iblai/iblai-js 2.10.2). Resolved by
     // `data-testid` — this whole banner/matrix block is SDK-rendered and has
@@ -576,6 +594,50 @@ export class SettingsTab {
       ).toBeVisible({ timeout: 30_000 });
       await this.page.waitForTimeout(500);
     }
+  }
+
+  /** Whether the "Show additional agents" toggle is currently on (issue #2544). */
+  async isShowExploreMentorsEnabled(): Promise<boolean> {
+    await this.selectSubTab('Capabilities');
+    await expect(this.showExploreMentorsToggle).toBeVisible({
+      timeout: 10_000,
+    });
+    return (
+      (await this.showExploreMentorsToggle
+        .getAttribute('aria-checked')
+        .catch(() => 'false')) === 'true'
+    );
+  }
+
+  /**
+   * Sets the "Show additional agents" toggle to the desired state and saves
+   * the form (issue #2544). Always clicks Save — mirroring
+   * `setPromptCaching`/`setVerboseReasoning` — so callers observing the
+   * resulting settings PUT via `page.waitForRequest` reliably see one fire,
+   * even when the toggle was already at `target`.
+   */
+  async setShowExploreMentors(target: boolean): Promise<void> {
+    await this.selectSubTab('Capabilities');
+    await expect(this.showExploreMentorsToggle).toBeVisible({
+      timeout: 10_000,
+    });
+    const isChecked =
+      (await this.showExploreMentorsToggle.getAttribute('aria-checked')) ===
+      'true';
+    if (isChecked !== target) {
+      await this.showExploreMentorsToggle.click();
+      await expect(this.showExploreMentorsToggle).toHaveAttribute(
+        'aria-checked',
+        String(target),
+        { timeout: 10_000 },
+      );
+    }
+    await expect(this.saveButton).toBeEnabled({ timeout: 10_000 });
+    await this.saveButton.click();
+    await expect(
+      this.page.getByText(/agent updated successfully/i).first(),
+    ).toBeVisible({ timeout: 30_000 });
+    await this.page.waitForTimeout(500);
   }
 
   /**

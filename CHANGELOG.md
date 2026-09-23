@@ -1,46 +1,78 @@
 # Changelog
 
+## [0.154.0](https://github.com/iblai/os/compare/v0.153.0...v0.154.0) (2026-09-23)
+
+### Features
+
+* **agents:** expose showExploreMentors from useMentorSettings ([48abaeb](https://github.com/iblai/os/commit/48abaebff51be7627841d7fdd2130bacf06a5fc3))
+* **agents:** show the Explore Agents section only when enabled ([8e290dc](https://github.com/iblai/os/commit/8e290dc5f5c5de4798b21063f1b1a2812f3d8e8d))
+* **settings:** adopt iblai-js 2.17.0 and label Show additional agents ([f9e5b03](https://github.com/iblai/os/commit/f9e5b03520157d8cf9cec37ab624f4b38378446a))
+
+### Bug Fixes
+
+* **agents:** read show_reasoning RBAC-safely for non-owners ([ded719e](https://github.com/iblai/os/commit/ded719e6f9038bdb28b5502521e6ea8f0eb5d5a2))
+* **settings:** title-case the Highlight In Featured Listings label ([22cb77d](https://github.com/iblai/os/commit/22cb77db108c316d5bec6a9fadd2bb2fdda5da8e))
+
+### Documentation
+
+* **e2e:** record journey 76 in coverage ([17c726c](https://github.com/iblai/os/commit/17c726c3ff59e1e11a3c427904f0defde99ccb36))
+* **e2e:** record the LLM pin in the coverage conventions ([ea51d82](https://github.com/iblai/os/commit/ea51d82b69b5edfbd4222ef8dbb89e8d2c767dfa))
+
+### Styles
+
+* apply prettier to CHANGELOG.md ([1304a6f](https://github.com/iblai/os/commit/1304a6fda030125fa21b349f6bdd918d2c507a29))
+
+### Tests
+
+* **e2e:** add the suite-wide LLM constants ([df2d438](https://github.com/iblai/os/commit/df2d438f16c2a38353be5b88b163f5518b9cf2c6))
+* **e2e:** cover the Show additional agents toggle (journey 76) ([1ce1ce0](https://github.com/iblai/os/commit/1ce1ce014c0ec3a6bf52800f041e139aef61741f))
+* **e2e:** drop journey 52's OpenAI pins and widen its budgets ([72e863b](https://github.com/iblai/os/commit/72e863b44219bdcecedef94059828fc2aa579218))
+* **e2e:** make selectProviderAndModel a no-op on the active model ([bf3644e](https://github.com/iblai/os/commit/bf3644e836b5439fb4990817960b390ac8a59abc))
+* **e2e:** make sw-06 seed its own agent instead of silently passing ([117a964](https://github.com/iblai/os/commit/117a964ea27f1bffca131ea0da5dc24dec923c81))
+* **e2e:** pin every mentor created by a test to ibl.ai Fast ([8385a4d](https://github.com/iblai/os/commit/8385a4d2fe44a70aa813819462aa1df348c29e39))
+* **e2e:** route the remaining chat tests through a pinned mentor ([0cbb54a](https://github.com/iblai/os/commit/0cbb54ac8c69028fd71f806dd729f2f347dbd1a5))
+
 ## [0.153.0](https://github.com/iblai/os/compare/v0.152.0...v0.153.0) (2026-09-22)
 
 ### Features
 
-* **history:** add attachment renderer for chat-history messages ([0b18990](https://github.com/iblai/os/commit/0b18990443793f61478fdfa5620286f0149ace49))
+- **history:** add attachment renderer for chat-history messages ([0b18990](https://github.com/iblai/os/commit/0b18990443793f61478fdfa5620286f0149ace49))
 
 ### Bug Fixes
 
-* **history:** render uploaded files and images in the history tab ([66e516b](https://github.com/iblai/os/commit/66e516bd2120786ca6dc0a86888a9195ca3e05f6))
+- **history:** render uploaded files and images in the history tab ([66e516b](https://github.com/iblai/os/commit/66e516bd2120786ca6dc0a86888a9195ca3e05f6))
 
 ### Chores
 
-* **format:** apply prettier to CHANGELOG and pr-gate workflow ([c3c0416](https://github.com/iblai/os/commit/c3c041681e7831de1986e40b84cdba1f7059d9b3))
+- **format:** apply prettier to CHANGELOG and pr-gate workflow ([c3c0416](https://github.com/iblai/os/commit/c3c041681e7831de1986e40b84cdba1f7059d9b3))
 
 ## [0.152.0](https://github.com/iblai/os/compare/v0.151.1...v0.152.0) (2026-09-22)
 
 ### Features
 
-* **mentor:** add AgreementsModal listing who accepted the user agreement ([2c51bde](https://github.com/iblai/os/commit/2c51bdee4ef19b223395aa64c1ddd670f489c8ce))
-* **mentor:** open the agreements list from the Disclaimers tab ([0dfded5](https://github.com/iblai/os/commit/0dfded5084a0fa723d0612a56ba19b88ab6a89de))
+- **mentor:** add AgreementsModal listing who accepted the user agreement ([2c51bde](https://github.com/iblai/os/commit/2c51bdee4ef19b223395aa64c1ddd670f489c8ce))
+- **mentor:** open the agreements list from the Disclaimers tab ([0dfded5](https://github.com/iblai/os/commit/0dfded5084a0fa723d0612a56ba19b88ab6a89de))
 
 ### Refactors
 
-* **mentor:** give the agreements dialog a short accessible description ([d385ca6](https://github.com/iblai/os/commit/d385ca69c84be849b59e8253dbfd74807aa4e710))
+- **mentor:** give the agreements dialog a short accessible description ([d385ca6](https://github.com/iblai/os/commit/d385ca69c84be849b59e8253dbfd74807aa4e710))
 
 ### Chores
 
-* **deps:** bump @iblai/iblai-js to 2.15.0 ([d16bc3a](https://github.com/iblai/os/commit/d16bc3a0a1203e1f89f6c0c423ddde14e1564e18)), closes [#2092](https://github.com/iblai/os/issues/2092)
+- **deps:** bump @iblai/iblai-js to 2.15.0 ([d16bc3a](https://github.com/iblai/os/commit/d16bc3a0a1203e1f89f6c0c423ddde14e1564e18)), closes [#2092](https://github.com/iblai/os/issues/2092)
 
 ### Documentation
 
-* **e2e:** register disc-15..disc-19 for the agreements dialog ([e92b667](https://github.com/iblai/os/commit/e92b667b5b5467989185294b10ebb933223b8f12))
+- **e2e:** register disc-15..disc-19 for the agreements dialog ([e92b667](https://github.com/iblai/os/commit/e92b667b5b5467989185294b10ebb933223b8f12))
 
 ### Styles
 
-* format CHANGELOG.md with prettier ([b5533a0](https://github.com/iblai/os/commit/b5533a0f8a2b0416ef500131545b10fd4c867976))
+- format CHANGELOG.md with prettier ([b5533a0](https://github.com/iblai/os/commit/b5533a0f8a2b0416ef500131545b10fd4c867976))
 
 ### Tests
 
-* **e2e:** cover the Disclaimers agreements dialog (journey 22-F) ([a26b629](https://github.com/iblai/os/commit/a26b629c50b1f8c68edd2c3d77c642544440775b))
-* **mentor:** cover the agreements modal and the View Agreements gating ([40342be](https://github.com/iblai/os/commit/40342be2a3a1da590d3f0bc26fd898df9caeb51c))
+- **e2e:** cover the Disclaimers agreements dialog (journey 22-F) ([a26b629](https://github.com/iblai/os/commit/a26b629c50b1f8c68edd2c3d77c642544440775b))
+- **mentor:** cover the agreements modal and the View Agreements gating ([40342be](https://github.com/iblai/os/commit/40342be2a3a1da590d3f0bc26fd898df9caeb51c))
 
 ## [0.151.1](https://github.com/iblai/os/compare/v0.151.0...v0.151.1) (2026-09-21)
 
