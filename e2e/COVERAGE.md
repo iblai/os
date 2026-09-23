@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-09-21 | 750 checkpoints (707 covered, 11 pending/fixme, 15 not-reproducible in default env, 17 deprecated) | 78 journeys (77 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-09-21 | 755 checkpoints (712 covered, 11 pending/fixme, 15 not-reproducible in default env, 17 deprecated) | 78 journeys (77 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -423,9 +423,9 @@ Driven by the shared paywall helpers in `@iblai/iblai-js/playwright`. All tests 
 
 ---
 
-## Journey 22: Disclaimers & User Agreement (14 checkpoints) — `journeys/22-disclaimers-and-user-agreement.spec.ts`
+## Journey 22: Disclaimers & User Agreement (19 checkpoints) — `journeys/22-disclaimers-and-user-agreement.spec.ts`
 
-**Source files:** `components/modals/edit-mentor-modal/tabs/disclaimers-tab/index.tsx`, `components/modals/edit-mentor-modal/tabs/disclaimers-tab/edit-user-agreement-modal.tsx`, `components/modals/edit-mentor-modal/tabs/disclaimers-tab/edit-disclaimer-modal.tsx`, `components/modals/disclaimer-modal.tsx`, `hooks/use-user-agreement.ts`, `constants/disclaimer.ts`
+**Source files:** `components/modals/edit-mentor-modal/tabs/disclaimers-tab/index.tsx`, `components/modals/edit-mentor-modal/tabs/disclaimers-tab/edit-user-agreement-modal.tsx`, `components/modals/edit-mentor-modal/tabs/disclaimers-tab/edit-disclaimer-modal.tsx`, `components/modals/edit-mentor-modal/tabs/disclaimers-tab/agreements-modal.tsx`, `components/modals/disclaimer-modal.tsx`, `hooks/use-user-agreement.ts`, `constants/disclaimer.ts`
 
 - [x] Admin enables User Agreement toggle and sees Active status _(creates fresh mentor; skips if non-admin)_
 - [x] Admin disables User Agreement toggle and sees Inactive status _(creates fresh mentor; skips if non-admin)_
@@ -441,6 +441,11 @@ Driven by the shared paywall helpers in `@iblai/iblai-js/playwright`. All tests 
 - [x] Disclaimers tab shows both User Agreement and Advisory sections with correct controls _(creates fresh mentor; skips if non-admin)_
 - [x] Advisory Edit modal opens with correct title, textarea, and Cancel/Save buttons _(creates fresh mentor; skips if non-admin)_
 - [x] User Agreement Edit modal opens with correct title, textarea, and Cancel/Save buttons _(creates fresh mentor; skips if non-admin)_
+- [x] View Agreements button appears/disappears in step with the User Agreement switch, in both directions _(#2507; creates fresh mentor; skips if non-admin)_
+- [x] Agreements dialog shows a 0-count empty state when nobody has agreed yet; Escape closes only the agreements dialog, not the Edit Agent modal _(#2507; creates fresh mentor; skips if non-admin)_
+- [x] Agreements dialog lists the non-admin who accepted the User Agreement, with a hoverable agreed-at tooltip showing the absolute time _(#2507; creates fresh mentor; uses non-admin browser context)_
+- [x] Agreements dialog search filters by exact username, including the "no users match" state _(#2507; creates fresh mentor; uses non-admin browser context)_
+- [x] Non-admin has no menu path to the Edit Agent modal at all, so never sees the View Agreements button _(#2507; uses non-admin browser context)_
 
 ---
 

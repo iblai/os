@@ -1,23 +1,71 @@
 # Changelog
 
+## [0.153.0](https://github.com/iblai/os/compare/v0.152.0...v0.153.0) (2026-09-22)
+
+### Features
+
+* **history:** add attachment renderer for chat-history messages ([0b18990](https://github.com/iblai/os/commit/0b18990443793f61478fdfa5620286f0149ace49))
+
+### Bug Fixes
+
+* **history:** render uploaded files and images in the history tab ([66e516b](https://github.com/iblai/os/commit/66e516bd2120786ca6dc0a86888a9195ca3e05f6))
+
+### Chores
+
+* **format:** apply prettier to CHANGELOG and pr-gate workflow ([c3c0416](https://github.com/iblai/os/commit/c3c041681e7831de1986e40b84cdba1f7059d9b3))
+
+## [0.152.0](https://github.com/iblai/os/compare/v0.151.1...v0.152.0) (2026-09-22)
+
+### Features
+
+* **mentor:** add AgreementsModal listing who accepted the user agreement ([2c51bde](https://github.com/iblai/os/commit/2c51bdee4ef19b223395aa64c1ddd670f489c8ce))
+* **mentor:** open the agreements list from the Disclaimers tab ([0dfded5](https://github.com/iblai/os/commit/0dfded5084a0fa723d0612a56ba19b88ab6a89de))
+
+### Refactors
+
+* **mentor:** give the agreements dialog a short accessible description ([d385ca6](https://github.com/iblai/os/commit/d385ca69c84be849b59e8253dbfd74807aa4e710))
+
+### Chores
+
+* **deps:** bump @iblai/iblai-js to 2.15.0 ([d16bc3a](https://github.com/iblai/os/commit/d16bc3a0a1203e1f89f6c0c423ddde14e1564e18)), closes [#2092](https://github.com/iblai/os/issues/2092)
+
+### Documentation
+
+* **e2e:** register disc-15..disc-19 for the agreements dialog ([e92b667](https://github.com/iblai/os/commit/e92b667b5b5467989185294b10ebb933223b8f12))
+
+### Styles
+
+* format CHANGELOG.md with prettier ([b5533a0](https://github.com/iblai/os/commit/b5533a0f8a2b0416ef500131545b10fd4c867976))
+
+### Tests
+
+* **e2e:** cover the Disclaimers agreements dialog (journey 22-F) ([a26b629](https://github.com/iblai/os/commit/a26b629c50b1f8c68edd2c3d77c642544440775b))
+* **mentor:** cover the agreements modal and the View Agreements gating ([40342be](https://github.com/iblai/os/commit/40342be2a3a1da590d3f0bc26fd898df9caeb51c))
+
+## [0.151.1](https://github.com/iblai/os/compare/v0.151.0...v0.151.1) (2026-09-21)
+
+### Bug Fixes
+
+- **auth:** save current location as redirect-to before join-tenant ([42d62ec](https://github.com/iblai/os/commit/42d62ec36277bc8c9a8c85224dfb13e0d8c57afd))
+
 ## [0.151.0](https://github.com/iblai/os/compare/v0.150.2...v0.151.0) (2026-09-18)
 
 ### Features
 
-* drive the browser from Cowork in the Chrome extension side panel (1.1.0) ([16d36ce](https://github.com/iblai/os/commit/16d36cefddb167d146450a3e7161b981c1ed897d))
+- drive the browser from Cowork in the Chrome extension side panel (1.1.0) ([16d36ce](https://github.com/iblai/os/commit/16d36cefddb167d146450a3e7161b981c1ed897d))
 
 ### Bug Fixes
 
-* refuse every password and payment field, not just unprefixed autocomplete tokens ([ada9a51](https://github.com/iblai/os/commit/ada9a51242ac6e2de106905d2467c0455f65f66d))
+- refuse every password and payment field, not just unprefixed autocomplete tokens ([ada9a51](https://github.com/iblai/os/commit/ada9a51242ac6e2de106905d2467c0455f65f66d))
 
 ### Chores
 
-* **tauri:** release app-v0.95.22 ([8c94a9f](https://github.com/iblai/os/commit/8c94a9f0506a45d1d3050cd598ca9c5827615887))
-* update ext build command ([6256855](https://github.com/iblai/os/commit/6256855a063c9a6cea8c478820493186b93e8c99))
+- **tauri:** release app-v0.95.22 ([8c94a9f](https://github.com/iblai/os/commit/8c94a9f0506a45d1d3050cd598ca9c5827615887))
+- update ext build command ([6256855](https://github.com/iblai/os/commit/6256855a063c9a6cea8c478820493186b93e8c99))
 
 ### Tests
 
-* cover the extension's own permission answer and the card's server snapshot ([b8f955a](https://github.com/iblai/os/commit/b8f955abf164f8268f56026cf5ee5a88bf59bf02))
+- cover the extension's own permission answer and the card's server snapshot ([b8f955a](https://github.com/iblai/os/commit/b8f955abf164f8268f56026cf5ee5a88bf59bf02))
 
 ## [0.150.2](https://github.com/iblai/os/compare/v0.150.1...v0.150.2) (2026-09-17)
 

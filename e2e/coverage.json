@@ -2,8 +2,8 @@
   "version": 2,
   "lastUpdated": "2026-09-21",
   "summary": {
-    "totalCheckpoints": 750,
-    "coveredCheckpoints": 707,
+    "totalCheckpoints": 755,
+    "coveredCheckpoints": 712,
     "deprecatedCheckpoints": 17,
     "notReproducibleCheckpoints": 15,
     "pendingCheckpoints": 11,
@@ -1475,6 +1475,7 @@
         "components/modals/edit-mentor-modal/tabs/disclaimers-tab/index.tsx",
         "components/modals/edit-mentor-modal/tabs/disclaimers-tab/edit-disclaimer-modal.tsx",
         "components/modals/edit-mentor-modal/tabs/disclaimers-tab/edit-user-agreement-modal.tsx",
+        "components/modals/edit-mentor-modal/tabs/disclaimers-tab/agreements-modal.tsx",
         "components/modals/disclaimer-modal.tsx",
         "hooks/use-user-agreement.ts",
         "constants/disclaimer.ts"
@@ -1548,6 +1549,31 @@
         {
           "id": "disc-14",
           "description": "User Agreement Edit modal opens with the correct title",
+          "status": "covered"
+        },
+        {
+          "id": "disc-15",
+          "description": "View Agreements button appears/disappears in step with the User Agreement switch",
+          "status": "covered"
+        },
+        {
+          "id": "disc-16",
+          "description": "Agreements dialog shows a 0-count empty state when nobody has agreed yet, and Escape closes only the dialog",
+          "status": "covered"
+        },
+        {
+          "id": "disc-17",
+          "description": "Agreements dialog lists the non-admin who accepted, with a hoverable agreed-at tooltip",
+          "status": "covered"
+        },
+        {
+          "id": "disc-18",
+          "description": "Agreements dialog search filters by exact username, including the no-match state",
+          "status": "covered"
+        },
+        {
+          "id": "disc-19",
+          "description": "Non-admin has no menu path to the Edit Agent modal, so never sees the View Agreements button",
           "status": "covered"
         }
       ]
