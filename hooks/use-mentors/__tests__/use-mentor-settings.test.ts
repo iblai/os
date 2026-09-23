@@ -255,6 +255,21 @@ describe('useMentorSettings', () => {
       expect(result.current.data.showReasoning).toBe(false);
     });
 
+    it('should ignore an RBAC-redacted "" show_reasoning and use the public value', () => {
+      mockUseGetMentorSettingsQuery.mockReturnValue({
+        data: { ...mockMentorSettings, show_reasoning: '' },
+        isLoading: false,
+      });
+      mockUseGetMentorPublicSettingsQuery.mockReturnValue({
+        data: { ...mockPublicSettings, show_reasoning: true },
+        isLoading: false,
+      });
+
+      const { result } = renderHook(() => useMentorSettings());
+
+      expect(result.current.data.showReasoning).toBe(true);
+    });
+
     it('should fall back to public settings show_explore_mentors when absent from mentor settings', () => {
       const mentorWithoutExplore = { ...mockMentorSettings };
       delete (mentorWithoutExplore as { show_explore_mentors?: boolean })

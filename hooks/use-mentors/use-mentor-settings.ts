@@ -300,10 +300,14 @@ export function useMentorSettings({
       // call UI in chat. Exists in the API response but not the published type;
       // defaults to false so the verbose UI stays hidden when unset.
       showReasoning:
-        (effectiveSettings as { show_reasoning?: boolean } | undefined)
-          ?.show_reasoning ??
-        (effectivePublicSettings as { show_reasoning?: boolean } | undefined)
-          ?.show_reasoning ??
+        asBoolean(
+          (effectiveSettings as { show_reasoning?: boolean } | undefined)
+            ?.show_reasoning,
+        ) ??
+        asBoolean(
+          (effectivePublicSettings as { show_reasoning?: boolean } | undefined)
+            ?.show_reasoning,
+        ) ??
         false,
 
       // show_explore_mentors gates the "additional agents" (Explore) section on the
