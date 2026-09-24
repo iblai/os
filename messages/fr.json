@@ -1853,7 +1853,8 @@
     "hideConversationMemory": "Masquer la mémoire de conversation",
     "showConversationMemory": "Afficher la mémoire de conversation",
     "noConversationMemory": "Aucune mémoire de conversation disponible.",
-    "selectConversationPrompt": "Sélectionnez une conversation pour afficher les détails."
+    "selectConversationPrompt": "Sélectionnez une conversation pour afficher les détails.",
+    "documentsChip": "Documents · {count}"
   },
   "tabsLlmTab": {
     "infoBox": "C'est le cerveau de votre agent — le modèle d'IA qui alimente chaque réponse. Les modèles plus grands raisonnent mieux sur les questions complexes ; les plus légers sont plus rapides et moins coûteux. Pas sûr ? Le modèle par défaut est un excellent choix polyvalent.",
@@ -2097,6 +2098,8 @@
     "highlightFeaturedLabel": "Mettre en avant dans les listings",
     "highlightFeaturedInfoAriaLabel": "Plus d'infos sur la mise en avant dans les listings",
     "highlightFeaturedTooltip": "Mettez cet agent en avant pour le faire ressortir dans les listings.",
+    "showExploreMentorsLabel": "Afficher les agents supplémentaires",
+    "showExploreMentorsTooltip": "Affiche la section des agents supplémentaires sur l'écran d'accueil de cet agent.",
     "enableLtiLabel": "Activer les lancements LTI",
     "enableLtiInfoAriaLabel": "Plus d'infos sur l'activation des lancements LTI",
     "enableLtiTooltip": "Permet à cet agent d'être accessible via des lancements LTI. Décocher cette option supprimera immédiatement l'accès pour tous les utilisateurs ayant lancé cet agent via LTI.",

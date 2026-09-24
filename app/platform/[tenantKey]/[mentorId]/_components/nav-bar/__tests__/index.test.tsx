@@ -442,6 +442,49 @@ let lastCreditBalanceProps: any = null;
 let mockLocalEnabled = false;
 let mockLocalModelId: string | null = null;
 vi.mock('@iblai/iblai-js/web-containers', () => ({
+  // The SDK's catalogue hooks, driven by the same mocked `useGetLlmsQuery`
+  // rows the data-layer mock serves (provider logo + model label).
+  useLlmProviderCatalogue: ({ org, userId, mentorId }: any) => {
+    // Same query and skip rule as the real hook, so the subscription
+    // assertions below still hold.
+    const { data } = mockUseGetLlmsQuery(
+      { org: org ?? '', userId: userId ?? '', mentorId: mentorId ?? '' },
+      { skip: !org || !userId || !mentorId },
+    );
+    const rows: any[] = Array.isArray(data) ? data : [];
+    return (key?: string | null, model?: string | null) => {
+      const row =
+        rows.find((r) => r?.name === key) ??
+        (model
+          ? rows.find((r) =>
+              r?.chat_models?.some((m: any) => m?.llm_name === model),
+            )
+          : undefined);
+      return {
+        logo: row?.logo || null,
+        displayName: row?.display_name?.trim() || row?.name || (key ?? ''),
+      };
+    };
+  },
+  useLlmDisplayName: ({ llmName, llmConfig, org, userId, mentorId }: any) => {
+    const fromConfig = llmConfig?.display_name?.trim();
+    const skip =
+      Boolean(fromConfig) || !llmName || !org || !userId || !mentorId;
+    const { data } = mockUseGetLlmsQuery(
+      { org: org ?? '', userId: userId ?? '', mentorId: mentorId ?? '' },
+      { skip },
+    );
+    if (fromConfig) return fromConfig;
+    for (const provider of Array.isArray(data) ? data : []) {
+      const match = provider?.chat_models?.find(
+        (m: any) => m?.llm_name === llmName,
+      );
+      if (match?.display_name?.trim()) return match.display_name.trim();
+    }
+    return (llmName ?? '').toLowerCase().replace(/[^a-z0-9]/g, '') === 'iblai'
+      ? 'ibl.ai'
+      : (llmName ?? '');
+  },
   // The toggle now ships from the SDK; tests don't exercise its internals,
   // so a marker-only stub is enough — it also blocks the SDK's transitive
   // axios chain from being pulled into the test's module graph. The marker

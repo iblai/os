@@ -556,64 +556,14 @@ const PROVIDER_NAME_BY_ALIAS: Record<string, string> = {
  * `getProviderName('Meta') === 'llama'`, `getProviderName('Google') === 'google'`.
  * Unknown providers return their normalized (lowercased, alphanumeric-only) form.
  * This is the single source of truth for provider identity (dedup/merge).
- * Provider display names and logos are backend-owned; see
- * `hooks/use-llm-provider-details.ts`.
+ * Provider display names and logos are backend-owned; see the SDK's
+ * `useLlmProviderCatalogue`.
  */
 export function getProviderName(llmProvider: string): string {
   const normalized = (llmProvider ?? '')
     .toLowerCase()
     .replace(/[^a-z0-9]/g, '');
   return PROVIDER_NAME_BY_ALIAS[normalized] ?? normalized;
-}
-
-// Model wire keys whose raw form is not presentable, keyed the same way as
-// PROVIDER_NAME_BY_ALIAS (lowercased, alphanumerics only).
-const IBL_AI_DISPLAY_NAME = 'ibl.ai';
-
-const MODEL_DISPLAY_NAME_BY_KEY: Record<string, string> = {
-  iblai: IBL_AI_DISPLAY_NAME,
-};
-
-/**
- * The label to show for a mentor's selected model.
- *
- * The LLM picker gets a `display_name` per model straight from the API, but
- * mentor settings persist only `llm_name` — a wire key — so surfaces that read
- * from settings (the nav bar badge, the mentors table) have no label to fall
- * back on and would render `iblai`. Most keys are already presentable
- * (`gpt-4.1`), so this maps only the ones that are not and passes everything
- * else through untouched.
- */
-export function getLLMModelDisplayName(llmName?: string | null): string {
-  const raw = llmName ?? '';
-  const normalized = raw.toLowerCase().replace(/[^a-z0-9]/g, '');
-
-  // ibl.ai keys are the brand followed by an optional variant -- `iblai`,
-  // `iblai-pro`, `iblai-fast`, `IBL AI Pro`. Mentor settings persist only the
-  // wire key, so the nav-bar badge has to rebuild the label the model picker
-  // gets from the API (`ibl.ai Pro`) rather than collapsing every variant onto
-  // a bare `ibl.ai`, which would disagree with the picker.
-  const brand = /^(iblai|ibl)(.*)$/.exec(normalized);
-  const leadsWithBrand =
-    brand &&
-    (brand[1] === 'iblai' ||
-      raw
-        .toLowerCase()
-        .split(/[^a-z0-9]+/)
-        .filter(Boolean)[0] === 'ibl');
-  if (leadsWithBrand) {
-    const variant = brand[2];
-    if (!variant) return IBL_AI_DISPLAY_NAME;
-    // `ai` is part of the brand when the key spells it out (`ibl-ai-pro`).
-    const suffix =
-      variant.startsWith('ai') && brand[1] === 'ibl'
-        ? variant.slice(2)
-        : variant;
-    if (!suffix) return IBL_AI_DISPLAY_NAME;
-    return `${IBL_AI_DISPLAY_NAME} ${suffix.charAt(0).toUpperCase()}${suffix.slice(1)}`;
-  }
-
-  return MODEL_DISPLAY_NAME_BY_KEY[normalized] ?? raw;
 }
 
 export function sendMessageToParentWebsite(payload: unknown) {

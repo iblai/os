@@ -1853,7 +1853,8 @@
     "hideConversationMemory": "Ocultar memoria de conversación",
     "showConversationMemory": "Mostrar memoria de conversación",
     "noConversationMemory": "No hay memoria de conversación disponible.",
-    "selectConversationPrompt": "Seleccione una conversación para ver los detalles."
+    "selectConversationPrompt": "Seleccione una conversación para ver los detalles.",
+    "documentsChip": "Documentos · {count}"
   },
   "tabsLlmTab": {
     "infoBox": "Este es el cerebro de tu agente: el modelo de IA que impulsa cada respuesta. Los modelos más grandes razonan mejor las preguntas complejas; los más ligeros son más rápidos y cuestan menos. ¿No estás seguro? El predeterminado es una opción versátil y confiable.",
@@ -2097,6 +2098,8 @@
     "highlightFeaturedLabel": "Destacar en listados destacados",
     "highlightFeaturedInfoAriaLabel": "Más información sobre destacar en listados destacados",
     "highlightFeaturedTooltip": "Destaque este agente para resaltarlo en los listados.",
+    "showExploreMentorsLabel": "Mostrar agentes adicionales",
+    "showExploreMentorsTooltip": "Muestra la sección de agentes adicionales en la pantalla de bienvenida de este agente.",
     "enableLtiLabel": "Habilitar lanzamientos LTI",
     "enableLtiInfoAriaLabel": "Más información sobre habilitar lanzamientos LTI",
     "enableLtiTooltip": "Habilita que este agente sea accesible mediante lanzamientos LTI. Deseleccionar esto eliminará inmediatamente el acceso para todos los usuarios que hayan accedido mediante LTI.",

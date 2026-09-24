@@ -1853,7 +1853,8 @@
     "hideConversationMemory": "隐藏对话记忆",
     "showConversationMemory": "显示对话记忆",
     "noConversationMemory": "暂无对话记忆。",
-    "selectConversationPrompt": "选择对话以查看详情。"
+    "selectConversationPrompt": "选择对话以查看详情。",
+    "documentsChip": "文档 · {count}"
   },
   "tabsLlmTab": {
     "infoBox": "这是您智能体的大脑——为每次回复提供动力的 AI 模型。更大的模型在处理复杂问题时推理能力更强；更轻量的模型则更快、成本更低。不确定？默认模型是可靠的全能之选。",
@@ -2097,6 +2098,8 @@
     "highlightFeaturedLabel": "在精选列表中突出显示",
     "highlightFeaturedInfoAriaLabel": "关于在精选列表中突出显示的更多信息",
     "highlightFeaturedTooltip": "将此智能体设为精选，使其在列表中突出显示。",
+    "showExploreMentorsLabel": "显示其他智能体",
+    "showExploreMentorsTooltip": "在此智能体的欢迎界面上显示“其他智能体”部分。",
     "enableLtiLabel": "启用 LTI 启动",
     "enableLtiInfoAriaLabel": "关于启用 LTI 启动的更多信息",
     "enableLtiTooltip": "启用后，此智能体可通过 LTI 启动访问。取消选择将立即撤销所有通过 LTI 启动访问此智能体的用户的访问权限。",

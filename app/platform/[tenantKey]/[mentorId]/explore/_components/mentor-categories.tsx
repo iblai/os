@@ -14,7 +14,7 @@ import { ChevronDown, Check } from 'lucide-react';
 import { MentorFacet } from '@iblai/iblai-api';
 import { ExplorePageFilters } from './explore-page-context';
 import { useUsername } from '@/hooks/use-user';
-import { useLlmProviderCatalogue } from '@/hooks/use-llm-provider-details';
+import { useLlmProviderCatalogue } from '@iblai/iblai-js/web-containers';
 import { TenantKeyMentorIdParams } from '@/lib/types';
 
 interface MentorCategoriesProps {

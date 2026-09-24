@@ -1853,7 +1853,8 @@
     "hideConversationMemory": "Hide Conversation Memory",
     "showConversationMemory": "Show Conversation Memory",
     "noConversationMemory": "No conversation memory available.",
-    "selectConversationPrompt": "Select a conversation to view details."
+    "selectConversationPrompt": "Select a conversation to view details.",
+    "documentsChip": "Documents · {count}"
   },
   "tabsLlmTab": {
     "infoBox": "This is the brain behind your agent — the AI model that powers every reply. Bigger models reason better on tricky questions; lighter ones are faster and cost less. Not sure? The default is a solid all-rounder.",
@@ -2097,6 +2098,8 @@
     "highlightFeaturedLabel": "Highlight in featured listings",
     "highlightFeaturedInfoAriaLabel": "More info about highlight in featured listings",
     "highlightFeaturedTooltip": "Feature this agent to highlight it in listings.",
+    "showExploreMentorsLabel": "Show additional agents",
+    "showExploreMentorsTooltip": "Shows the additional agents section on this agent's welcome screen.",
     "enableLtiLabel": "Enable LTI launches",
     "enableLtiInfoAriaLabel": "More info about enable LTI launches",
     "enableLtiTooltip": "Enables this agent to be accessible via LTI launches. Unselecting this will immediately remove access for any users that have launched this via LTI.",

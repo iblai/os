@@ -80,8 +80,10 @@ import {
   selectSelectedMentor,
 } from '@/features/analytics/slice';
 import { useMentorSettings } from '@/hooks/use-mentors/use-mentor-settings';
-import { useLlmDisplayName } from '@/hooks/use-llm-display-name';
-import { useLlmProviderCatalogue } from '@/hooks/use-llm-provider-details';
+import {
+  useLlmDisplayName,
+  useLlmProviderCatalogue,
+} from '@iblai/iblai-js/web-containers';
 import { config } from '@/lib/config';
 import { MentorVisibilityEnum } from '@iblai/iblai-api';
 import { toast } from 'sonner';
