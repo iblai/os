@@ -1134,7 +1134,7 @@ describe('HistoryTab', () => {
       ).toBeGreaterThanOrEqual(1);
     });
 
-    it('shows turn attachments as chat file cards and lets file references open via them', () => {
+    it('shows turn attachments with the history attachments UI and lends them to the details panel', () => {
       const attachment = {
         id: 812,
         name: 'transcript-test-2537.png',
@@ -1181,14 +1181,14 @@ describe('HistoryTab', () => {
         }),
       );
       render(<HistoryTab />);
-      fireEvent.click(screen.getByText('Conversation'));
+      // A file-only turn is titled by its attachment.
+      fireEvent.click(screen.getByText('transcript-test-2537.png'));
 
       const preview = screen.getByLabelText('Conversation preview');
-      // The human turn's attachment, as a chat file card with its presigned URL.
-      const cards = within(preview).getAllByTestId('transcript-file-cards');
-      expect(cards[0]).toHaveTextContent(
-        'transcript-test-2537.png:https://files.test/signed/transcript-test-2537.png',
-      );
+      // The human turn's attachment, rendered by the history attachments UI.
+      expect(
+        within(preview).getByRole('img', { name: 'transcript-test-2537.png' }),
+      ).toBeInTheDocument();
       // The panel gets the attachments too, so file references resolve to
       // the same URL (the resolution itself is covered by the SDK tests).
       expect(
@@ -1211,5 +1211,89 @@ describe('HistoryTab', () => {
         screen.queryByRole('button', { name: 'Show Details' }),
       ).not.toBeInTheDocument();
     });
+  });
+
+  // ==========================================================================
+  // Attachments (human_files / ai_files)
+  // ==========================================================================
+  const attachmentConversation = {
+    ...baseConversation,
+    id: 'conv-files',
+    messages: [
+      {
+        human: 'What is in this image?',
+        ai: 'Here is the chart you asked for.',
+        human_files: ['https://files.test/uploaded.png'],
+        ai_files: [
+          {
+            url: 'https://files.test/chart.pdf',
+            content_type: 'application/pdf',
+          },
+        ],
+      },
+    ],
+  };
+
+  it('renders the uploaded image and the generated file in the detail pane', () => {
+    mockUseHistoryWithPagination.mockReturnValue(
+      defaultHistory({ chatHistory: { results: [attachmentConversation] } }),
+    );
+    render(<HistoryTab />);
+    fireEvent.click(screen.getByText('What is in this image?'));
+
+    expect(
+      screen.getByRole('img', { name: 'uploaded.png' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('chart.pdf')).toBeInTheDocument();
+  });
+
+  it('titles a file-only turn with the attachment name instead of the fallback', () => {
+    mockUseHistoryWithPagination.mockReturnValue(
+      defaultHistory({
+        chatHistory: {
+          results: [
+            {
+              ...attachmentConversation,
+              id: 'conv-file-only',
+              messages: [
+                {
+                  human: '',
+                  ai: 'I see a diagram.',
+                  human_files: ['https://files.test/diagram.png'],
+                },
+              ],
+            },
+          ],
+        },
+      }),
+    );
+    render(<HistoryTab />);
+    expect(screen.getByText('diagram.png')).toBeInTheDocument();
+    expect(screen.queryByText('Conversation')).not.toBeInTheDocument();
+  });
+
+  it('renders no attachment markup when the file arrays are empty', () => {
+    mockUseHistoryWithPagination.mockReturnValue(
+      defaultHistory({
+        chatHistory: {
+          results: [
+            {
+              ...baseConversation,
+              messages: [
+                {
+                  human: 'Hello there mentor',
+                  ai: 'Hi, how can I help?',
+                  human_files: [],
+                  ai_files: [],
+                },
+              ],
+            },
+          ],
+        },
+      }),
+    );
+    render(<HistoryTab />);
+    fireEvent.click(screen.getByText('Hello there mentor'));
+    expect(screen.queryByTestId('history-attachments')).not.toBeInTheDocument();
   });
 });

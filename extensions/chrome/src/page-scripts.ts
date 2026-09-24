@@ -5,7 +5,11 @@
 // page-scripts.test.ts re-evaluates every export in an empty scope to enforce it.
 //
 // The isolated world's globalThis persists for the life of the document and is
-// wiped by a navigation — exactly the lifetime of an element number.
+// wiped by a navigation — exactly the lifetime of an element number. Every FRAME
+// of the tab is its own document with its own world: a snapshot numbers the
+// frame's elements from 1 and keeps the map here, while the worker (tools.ts)
+// runs snapshotPage in every frame, renumbers the merged list for the model and
+// sends each action back to the element's own frame with the frame's number.
 
 export interface SnapshotItem {
   n: number;
@@ -16,12 +20,13 @@ export interface SnapshotItem {
   password: boolean;
 }
 
-export interface Snapshot {
+/** One frame's view of itself; the worker merges the frames into what the model reads. */
+export interface FrameSnapshot {
   url: string;
   title: string;
   items: SnapshotItem[];
-  /** What the model reads: URL and title, one line per item, a text excerpt. */
-  text: string;
+  /** The frame's main text, collapsed and capped at `textChars`. */
+  excerpt: string;
 }
 
 export interface ActResult {
@@ -36,7 +41,14 @@ export function extractPageContent(): {
   text: string;
 } {
   const body = document.body;
-  const text = body ? body.innerText || body.textContent || '' : '';
+  // A display:none iframe's document has no layout, and innerText on an element
+  // that is not being rendered returns its whole textContent (HTML spec), so a
+  // hidden helper frame would feed its markup's text as if it were on screen.
+  const rendered =
+    !body ||
+    typeof body.checkVisibility !== 'function' ||
+    body.checkVisibility();
+  const text = body && rendered ? body.innerText || body.textContent || '' : '';
   return {
     title: document.title,
     href: location.href,
@@ -44,7 +56,10 @@ export function extractPageContent(): {
   };
 }
 
-export function snapshotPage(maxItems: number, textChars: number): Snapshot {
+export function snapshotPage(
+  maxItems: number,
+  textChars: number,
+): FrameSnapshot {
   const SELECTOR = [
     'a[href]',
     'button',
@@ -90,9 +105,11 @@ export function snapshotPage(maxItems: number, textChars: number): Snapshot {
     if (aria && aria.trim()) return collapse(aria, 80);
     const labelledBy = el.getAttribute('aria-labelledby');
     if (labelledBy) {
+      // Ids are scoped to the element's own tree: a shadow root's or the document's.
+      const scope = el.getRootNode() as Document | ShadowRoot;
       const text = labelledBy
         .split(/\s+/)
-        .map((id) => textOf(document.getElementById(id)))
+        .map((id) => textOf(scope.getElementById(id)))
         .join(' ');
       if (text.trim()) return collapse(text, 80);
     }
@@ -188,9 +205,23 @@ export function snapshotPage(maxItems: number, textChars: number): Snapshot {
     return parts.join(', ');
   };
 
+  // Open shadow roots hold real controls (web-component apps, embedded widgets)
+  // that querySelectorAll never enters: walk into each one in tree order, a
+  // host's shadow content right after the host. Closed roots stay closed, and
+  // `closest('[aria-hidden]')` below stops at the shadow boundary, so an
+  // aria-hidden host still exposes its shadow content.
+  const collect = (root: ParentNode, out: Element[]): void => {
+    for (const el of Array.from(root.querySelectorAll('*'))) {
+      if (el.matches(SELECTOR)) out.push(el);
+      if (el.shadowRoot) collect(el.shadowRoot, out);
+    }
+  };
+  const candidates: Element[] = [];
+  collect(document, candidates);
+
   const map = new Map<number, Element>();
   const items: SnapshotItem[] = [];
-  for (const el of Array.from(document.querySelectorAll(SELECTOR))) {
+  for (const el of candidates) {
     if (items.length >= maxItems) break;
     if (el instanceof HTMLInputElement && el.type === 'hidden') continue;
     if (!visible(el) || el.closest('[aria-hidden="true"]')) continue;
@@ -209,14 +240,14 @@ export function snapshotPage(maxItems: number, textChars: number): Snapshot {
   }
   (globalThis as { __agentMap?: Map<number, Element> }).__agentMap = map;
 
+  // What innerText makes of shadow content is Chrome's call, not ours.
   const main = document.querySelector('main') || document.body;
-  const excerpt = collapse(textOf(main), textChars);
-  const lines = items.map(
-    (item) =>
-      `[${item.n}] ${item.role} "${item.name}"${item.state ? ` (${item.state})` : ''}`,
-  );
-  const text = `${location.href}  "${document.title}"\n${lines.join('\n')}\n--- text ---\n${excerpt}`;
-  return { url: location.href, title: document.title, items, text };
+  return {
+    url: location.href,
+    title: document.title,
+    items,
+    excerpt: collapse(textOf(main), textChars),
+  };
 }
 
 export function actOnPage(

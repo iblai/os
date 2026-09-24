@@ -1,4 +1,7 @@
+import type { Page } from '@playwright/test';
 import { test, expect } from '../fixtures/mentor-test';
+import type { EditMentorPage } from '../page-objects/edit-mentor/edit-mentor.page';
+import type { ChatPage } from '../page-objects/chat.page';
 import {
   navigateToMentorApp,
   checkAdminStatus,
@@ -19,6 +22,11 @@ import { MentorTracker } from '../utils/mentor-cleanup';
 //   disc-04  Admin can edit Advisory text
 //   disc-07  Full end-to-end: enable, set Anyone, non-admin must accept before chat
 //   disc-08  Toggle User Agreement on/off affects chat modal appearance
+//   disc-15  View Agreements button appears/disappears with the User Agreement switch
+//   disc-16  Agreements dialog shows the empty state when nobody has agreed yet
+//   disc-17  Agreements dialog lists a row for a non-admin who accepted, with a hoverable tooltip
+//   disc-18  Agreements dialog search filters by exact username
+//   disc-19  Non-admin has no UI path to the View Agreements button
 
 // ─── A. Admin — User Agreement Toggle ────────────────────────────────────────
 
@@ -793,5 +801,219 @@ test.describe('Journey 22-E: Tab Layout', () => {
 
   test.afterAll(async ({ browser }, testInfo) => {
     await trackerE.deleteAll(browser, testInfo);
+  });
+});
+
+// ─── F. Agreements List (#2507) ───────────────────────────────────────────────
+//
+// "View Agreements" button + the agreements list dialog it opens, showing
+// which users have agreed to the mentor's User Agreement disclaimer.
+
+// Shared by disc-17/disc-18: the admin (already on the Disclaimers tab of a
+// fresh mentor) enables the User Agreement and opens the mentor to Anyone,
+// then the non-admin hits the agreement on their first message and accepts
+// it. Returns the non-admin's platform username -- the identifier the backend
+// records on the agreement and the row's data-username carries.
+async function acceptUserAgreementAsNonAdmin({
+  page,
+  editMentorPage,
+  nonadminPage,
+  nonadminChatPage,
+}: {
+  page: Page;
+  editMentorPage: EditMentorPage;
+  nonadminPage: Page;
+  nonadminChatPage: ChatPage;
+}): Promise<string> {
+  await editMentorPage.disclaimers.enableUserAgreement();
+  await editMentorPage.navigateToTab('Settings');
+  await waitForPageReady(page);
+  await editMentorPage.settings.setVisibilityAnyone();
+  await editMentorPage.close();
+
+  await nonadminPage.goto(page.url(), {
+    waitUntil: 'domcontentloaded',
+    timeout: 60_000,
+  });
+  await safeWaitForURL(nonadminPage, (url) => url.href.includes('/platform/'), {
+    timeout: 120_000,
+  });
+  await waitForPageReady(nonadminPage);
+  await expect(nonadminChatPage.chatInput).toBeVisible({ timeout: 15_000 });
+  await nonadminChatPage.chatInput.fill('hello');
+  await expect(nonadminChatPage.sendButton).toBeEnabled({ timeout: 10_000 });
+  await nonadminChatPage.sendButton.click();
+
+  const agreementModal = nonadminPage
+    .getByRole('dialog')
+    .filter({ hasText: 'User Agreement' });
+  await expect(agreementModal).toBeVisible({ timeout: 15_000 });
+  await agreementModal.getByRole('button', { name: 'I Accept' }).click();
+  await expect(agreementModal).toBeHidden({ timeout: 10_000 });
+
+  const username = await nonadminPage.evaluate(
+    () =>
+      JSON.parse(window.localStorage.getItem('userData') ?? '{}')
+        .user_nicename as string | undefined,
+  );
+  expect(username).toBeTruthy();
+  return username!;
+}
+
+test.describe('Journey 22-F: Agreements list', () => {
+  const trackerF = new MentorTracker();
+
+  test.beforeEach(async ({ page, createMentorPage, editMentorPage }) => {
+    await navigateToMentorApp(page);
+    const isAdmin = await checkAdminStatus(page);
+    if (!isAdmin) {
+      test.skip(true, 'Disclaimers requires admin access');
+      return;
+    }
+    await createMentorPage.openAndCreate();
+    const { mentorId } = await getPlatformContext(page);
+    trackerF.add(mentorId);
+    await editMentorPage.open('Disclaimers');
+    await waitForPageReady(page);
+  });
+
+  // disc-15: the button tracks the User Agreement switch in both directions.
+  test('admin goes to disclaimers tab and sees the View Agreements button track the User Agreement switch', async ({
+    editMentorPage,
+  }) => {
+    const { disclaimers } = editMentorPage;
+
+    await expect(disclaimers.userAgreementSwitch).toBeVisible({
+      timeout: 10_000,
+    });
+    await expect(disclaimers.viewAgreementsButton).not.toBeVisible();
+
+    await disclaimers.enableUserAgreement();
+    await expect(disclaimers.viewAgreementsButton).toBeVisible({
+      timeout: 10_000,
+    });
+
+    await disclaimers.disableUserAgreement();
+    await expect(disclaimers.viewAgreementsButton).not.toBeVisible({
+      timeout: 10_000,
+    });
+
+    await editMentorPage.close();
+  });
+
+  // disc-16: nobody has agreed yet -- summary shows 0 and the empty state
+  // renders; closing the dialog leaves the Edit Agent modal open.
+  test('admin opens the agreements dialog on a freshly-enabled agreement and sees the empty state', async ({
+    editMentorPage,
+  }) => {
+    const { disclaimers } = editMentorPage;
+    await disclaimers.enableUserAgreement();
+    await disclaimers.openAgreements();
+
+    await expect(disclaimers.agreementsCount).toHaveText('0 Total Agreements', {
+      timeout: 10_000,
+    });
+    await expect(disclaimers.agreementsBanner).toBeVisible();
+    await expect(disclaimers.agreementsEmpty).toContainText(
+      'No agreements yet',
+    );
+
+    await disclaimers.closeAgreements();
+    await expect(editMentorPage.dialog).toBeVisible();
+    await editMentorPage.close();
+  });
+
+  // disc-17: the admin's dialog lists the non-admin who accepted, with a
+  // hoverable agreed-at tooltip.
+  test('admin sees the non-admin who accepted the User Agreement listed with a hoverable agreed-at tooltip', async ({
+    page,
+    editMentorPage,
+    nonadminPage,
+    nonadminChatPage,
+  }) => {
+    const username = await acceptUserAgreementAsNonAdmin({
+      page,
+      editMentorPage,
+      nonadminPage,
+      nonadminChatPage,
+    });
+
+    await editMentorPage.open('Disclaimers');
+    await waitForPageReady(page);
+    const { disclaimers } = editMentorPage;
+    await disclaimers.openAgreements();
+
+    await expect(disclaimers.agreementsCount).toHaveText('1 Total Agreements', {
+      timeout: 15_000,
+    });
+    const row = disclaimers.agreementRow(username);
+    await expect(row).toBeVisible({ timeout: 10_000 });
+
+    await row.getByText(/ago$/).hover();
+    await expect(page.getByRole('tooltip')).toBeVisible({ timeout: 5_000 });
+
+    await disclaimers.closeAgreements();
+    await editMentorPage.close();
+  });
+
+  // disc-18: search matches the exact username only.
+  test('admin searches the agreements list by exact username', async ({
+    page,
+    editMentorPage,
+    nonadminPage,
+    nonadminChatPage,
+  }) => {
+    const username = await acceptUserAgreementAsNonAdmin({
+      page,
+      editMentorPage,
+      nonadminPage,
+      nonadminChatPage,
+    });
+
+    await editMentorPage.open('Disclaimers');
+    await waitForPageReady(page);
+    const { disclaimers } = editMentorPage;
+    await disclaimers.openAgreements();
+    const row = disclaimers.agreementRow(username);
+    await expect(row).toBeVisible({ timeout: 15_000 });
+
+    await disclaimers.agreementsSearch.fill(username);
+    await expect(row).toBeVisible({ timeout: 10_000 });
+
+    await disclaimers.agreementsSearch.fill('zzzz-no-such-user');
+    await expect(disclaimers.agreementsEmpty).toContainText(
+      'No users match your search',
+      { timeout: 10_000 },
+    );
+    await expect(row).not.toBeVisible();
+
+    await disclaimers.agreementsSearch.fill('');
+    await expect(row).toBeVisible({ timeout: 10_000 });
+
+    await disclaimers.closeAgreements();
+    await editMentorPage.close();
+  });
+
+  test.afterAll(async ({ browser }, testInfo) => {
+    await trackerF.deleteAll(browser, testInfo);
+  });
+});
+
+test.describe('Journey 22-F: Agreements list — Non-Admin', () => {
+  test('non-admin user has no menu path to the Edit Agent modal, so never sees the View Agreements button', async ({
+    nonadminPage,
+    nonadminNavbarPage,
+  }) => {
+    await navigateToMentorApp(nonadminPage);
+    const isAdmin = await checkAdminStatus(nonadminPage);
+    if (isAdmin) {
+      test.skip(true, 'This test requires a non-admin user');
+      return;
+    }
+
+    await nonadminNavbarPage.openMentorDropdown();
+    await expect(
+      nonadminPage.getByRole('menuitem', { name: 'Settings', exact: true }),
+    ).not.toBeVisible({ timeout: 5_000 });
   });
 });

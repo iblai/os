@@ -118,11 +118,23 @@ export async function readActiveTab(): Promise<PageContent | null> {
   // Can't script the browser's own pages, the web store, or extension pages.
   if (!tab?.id || !tab.url || UNSCRIPTABLE.test(tab.url)) return null;
   try {
-    const [injection] = await chrome.scripting.executeScript({
-      target: { tabId: tab.id },
-      func: extractPageContent,
-    });
-    return (injection?.result as PageContent | undefined) ?? null;
+    // Every frame the extension can reach: an embedded chat or editor is its
+    // own document, invisible from the page's. Frame 0 is the page; Chrome
+    // returns the rest in no particular order.
+    const frames = (
+      await chrome.scripting.executeScript({
+        target: { tabId: tab.id, allFrames: true },
+        func: extractPageContent,
+      })
+    ).sort((a, b) => a.frameId - b.frameId);
+    const page = frames[0]?.frameId === 0 ? frames[0].result : undefined;
+    if (!page) return null;
+    const text = frames
+      .map((frame) => frame.result?.text ?? '')
+      .filter(Boolean)
+      .join('\n\n')
+      .slice(0, 100000);
+    return { title: page.title, href: page.href, text };
   } catch (err) {
     console.warn('[ibl.ai panel] cannot read tab content:', err);
     return null;

@@ -119,18 +119,19 @@ describe('FeaturedMentorsSection', () => {
       expect(container.firstChild).toBeNull();
     });
 
-    it('renders when fetching with no data', () => {
+    it('renders nothing while the first page is still loading', () => {
       mockUseGetAiSearchMentorsQuery.mockReturnValue({
-        data: { results: [], next: null },
+        data: undefined,
         isFetching: true,
       });
 
-      // The component renders when fetching (even with empty results) because
-      // it only returns null when not fetching AND results are empty
-      renderWithContext();
+      // Used to render a "No featured agents available" card mid-fetch, telling
+      // users there were none before the answer arrived.
+      const { container } = renderWithContext();
+      expect(container.firstChild).toBeNull();
       expect(
-        screen.getByRole('heading', { name: /^Featured$/i, level: 2 }),
-      ).toBeInTheDocument();
+        screen.queryByText(/No featured agents available/i),
+      ).not.toBeInTheDocument();
     });
   });
 
@@ -336,7 +337,7 @@ describe('FeaturedMentorsSection', () => {
         name: /^Featured$/i,
         level: 2,
       });
-      expect(heading).toHaveAttribute('aria-level', '2');
+      expect(heading.tagName).toBe('H2');
     });
   });
 });

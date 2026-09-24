@@ -3,7 +3,7 @@ import dynamic from 'next/dynamic';
 import { useParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 
-import { Edit, Info } from 'lucide-react';
+import { Edit, Info, Users } from 'lucide-react';
 import {
   useEditMentorMutation,
   useGetDisclaimersQuery,
@@ -38,6 +38,14 @@ const EditDisclaimerModal = dynamic(
   },
 );
 
+const AgreementsModal = dynamic(
+  () =>
+    import('./agreements-modal').then((mod) => ({
+      default: mod.AgreementsModal,
+    })),
+  { ssr: false },
+);
+
 const EditUserAgreementModal = dynamic(
   () =>
     import('./edit-user-agreement-modal').then(
@@ -63,6 +71,8 @@ export function DisclaimersTab() {
   const [isEditDisclaimerModalOpen, setIsEditDisclaimerModalOpen] =
     React.useState(false);
   const [isEditUserAgreementModalOpen, setIsEditUserAgreementModalOpen] =
+    React.useState(false);
+  const [isAgreementsModalOpen, setIsAgreementsModalOpen] =
     React.useState(false);
 
   const { data: mentorSettings } = useGetMentorSettingsQuery(
@@ -233,6 +243,29 @@ export function DisclaimersTab() {
         >
           {t('infoBox')}
         </div>
+
+        {/* View Agreements Button */}
+        <WithPermissions
+          rbacResource={`/mentors/${mentorSettings?.mentor_id}/#view_disclaimers`}
+        >
+          {({ hasPermission }) =>
+            hasPermission &&
+            userAgreementRecord &&
+            userAgreement.active && (
+              <div className="flex justify-end">
+                <Button
+                  onClick={() => setIsAgreementsModalOpen(true)}
+                  className="bg-gradient-to-r from-[#2563EB] to-[#93C5FD] text-white hover:opacity-90"
+                  data-testid="view-agreements-button"
+                >
+                  <Users className="mr-2 h-4 w-4" />
+                  {t('viewAgreements')}
+                </Button>
+              </div>
+            )
+          }
+        </WithPermissions>
+
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
           {/* User Agreement */}
           <WithPermissions
@@ -414,6 +447,17 @@ export function DisclaimersTab() {
         onCancel={() => setIsEditUserAgreementModalOpen(false)}
         isSaving={isUserAgreementDisabled}
       />
+
+      {userAgreementRecord && (
+        <AgreementsModal
+          open={isAgreementsModalOpen}
+          onOpenChange={setIsAgreementsModalOpen}
+          org={tenantKey}
+          userId={username ?? ''}
+          mentorId={mentorId}
+          disclaimerId={userAgreementRecord.id}
+        />
+      )}
     </>
   );
 }

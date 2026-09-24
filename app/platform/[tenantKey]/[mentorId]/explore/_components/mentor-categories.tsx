@@ -10,12 +10,47 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { ChevronDown, Check } from 'lucide-react';
+import { Bot, ChevronDown, Check, Sparkles } from 'lucide-react';
 import { MentorFacet } from '@iblai/iblai-api';
 import { ExplorePageFilters } from './explore-page-context';
-import { useUsername } from '@/hooks/use-user';
+import { useIsAdmin, useUsername } from '@/hooks/use-user';
 import { useLlmProviderCatalogue } from '@iblai/iblai-js/web-containers';
+import { useCredentialsSchemaLogos } from '@/hooks/use-llm-provider-details';
 import { TenantKeyMentorIdParams } from '@/lib/types';
+
+/**
+ * A provider's logo at icon size, or a neutral bot glyph when there is none
+ * or it fails to load. A plain <img> because logo hosts are backend-owned and
+ * not all of them are in next.config's image patterns.
+ */
+function ProviderLogo({ src }: { src: string | null }) {
+  // Remember which URL failed, so a new src (another provider) gets a try.
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
+
+  if (!src || failedSrc === src) {
+    return (
+      <span
+        className="flex h-4 w-4 shrink-0 items-center justify-center text-gray-400"
+        data-testid="llm-provider-logo-fallback"
+        aria-hidden="true"
+      >
+        <Bot className="h-3.5 w-3.5" />
+      </span>
+    );
+  }
+
+  return (
+    <img
+      src={src}
+      alt=""
+      aria-hidden="true"
+      loading="lazy"
+      onError={() => setFailedSrc(src)}
+      className="h-4 w-4 shrink-0 rounded-sm object-contain"
+      data-testid="llm-provider-logo"
+    />
+  );
+}
 
 interface MentorCategoriesProps {
   facets?: Record<string, MentorFacet>;
@@ -45,8 +80,7 @@ export function MentorCategories({
     'me' | 'my-organization' | 'community' | ''
   >('');
   const t = useTranslations('exploreMentorCategories');
-  // The facet terms are raw provider keys; their labels come from the backend
-  // LLM catalogue.
+  // LLM provider labels come from the backend LLM catalogue.
   const { tenantKey, mentorId } = useParams<TenantKeyMentorIdParams>();
   const username = useUsername();
   const resolveLlmProvider = useLlmProviderCatalogue({
@@ -54,6 +88,17 @@ export function MentorCategories({
     userId: username,
     mentorId,
   });
+  // Facet terms are provider display names, which the credentials schema
+  // matches on; the catalogue's logo is the fallback for everyone the schema
+  // (admin-only) is closed to.
+  const isAdmin = useIsAdmin();
+  const logoFromCredentialsSchema = useCredentialsSchemaLogos({
+    org: tenantKey,
+    enabled: !!username && isAdmin,
+  });
+  const llmProviderLogo = (llmProvider: string) =>
+    logoFromCredentialsSchema(llmProvider) ??
+    resolveLlmProvider(llmProvider).logo;
 
   // Extract facet options from API response
   const categories = facets?.categories?.terms
@@ -62,8 +107,16 @@ export function MentorCategories({
   const subjects = facets?.subjects?.terms
     ? Object.keys(facets.subjects.terms)
     : [];
+  // Alphabetical by the label shown, ignoring case so "ibl.ai" and "xAI"
+  // don't sink below every capitalised name.
   const llmProviders = facets?.llm_providers?.terms
-    ? Object.keys(facets.llm_providers.terms)
+    ? Object.keys(facets.llm_providers.terms).sort((a, b) =>
+        resolveLlmProvider(a).displayName.localeCompare(
+          resolveLlmProvider(b).displayName,
+          undefined,
+          { sensitivity: 'base' },
+        ),
+      )
     : [];
   const types = facets?.types?.terms ? Object.keys(facets.types.terms) : [];
 
@@ -144,6 +197,10 @@ export function MentorCategories({
     });
   };
 
+  const selectedCreatedByLabel = createdByOptions.find(
+    (opt) => opt.value === selectedCreatedBy,
+  )?.label;
+
   const handleCreatedBySelect = (
     createdBy: 'me' | 'my-organization' | 'community',
     event?: React.MouseEvent,
@@ -182,45 +239,30 @@ export function MentorCategories({
   // Shared handler to prevent default dropdown behavior
   const preventDefaultSelect = (e: Event) => e.preventDefault();
 
+  const triggerClassName = (active: boolean) =>
+    `flex h-9 shrink-0 items-center gap-1.5 rounded-full border px-3.5 text-sm font-medium transition-colors duration-150 ${
+      active
+        ? 'border-[#38A1E5] bg-[#EAF4FC] text-[#1F6FA8] hover:bg-[#DDEEFB]'
+        : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50'
+    }`;
+
   return (
-    <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
-      {/* Promotion Dropdown */}
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="ghost"
-            size="sm"
-            type="button"
-            className={`flex h-8 items-center gap-2 rounded-lg px-3 transition-all duration-200 ${
-              selectedFeatured
-                ? 'border border-[#38A1E5] bg-[#38A1E5] text-white hover:bg-[#2E8BD1]'
-                : 'border border-gray-200 hover:border-[#D0E0FF] hover:bg-[#F5F8FF]'
-            }`}
-            aria-haspopup="menu"
-          >
-            <span>{t('promotion')}</span>
-            <ChevronDown className="h-3 w-3" aria-hidden="true" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent
-          align="start"
-          className="z-[80] w-48"
-          role="menu"
-          aria-label={t('promotion')}
-        >
-          <DropdownMenuItem
-            onSelect={preventDefaultSelect}
-            onClick={(e) => handleFeaturedSelect('true', e)}
-            className={`flex cursor-pointer items-center justify-between ${selectedFeatured === 'true' ? 'bg-[#F5F8FF] text-[#38A1E5]' : ''}`}
-            role="menuitem"
-          >
-            <div className="flex items-center gap-2">
-              {selectedFeatured === 'true' && <Check className="h-4 w-4" />}
-              <span>{t('featured')}</span>
-            </div>
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+    <div
+      className="scrollbar-hide -mx-1 flex items-center gap-2 overflow-x-auto [mask-image:linear-gradient(to_right,black_calc(100%-2.5rem),transparent)] px-1 py-0.5 pr-8 text-sm text-gray-600 md:flex-wrap md:overflow-visible md:[mask-image:none] md:pr-1"
+      style={{ scrollbarWidth: 'none' }}
+    >
+      {/* Featured toggle: the only promotion there is, so one click */}
+      <Button
+        variant="ghost"
+        size="sm"
+        type="button"
+        aria-pressed={selectedFeatured === 'true'}
+        onClick={(e) => handleFeaturedSelect('true', e)}
+        className={triggerClassName(selectedFeatured === 'true')}
+      >
+        <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
+        <span>{t('featured')}</span>
+      </Button>
 
       {/* Category Dropdown */}
       {categories.length > 0 && (
@@ -230,15 +272,14 @@ export function MentorCategories({
               variant="ghost"
               size="sm"
               type="button"
-              className={`flex h-8 items-center gap-2 rounded-lg px-3 transition-all duration-200 ${
-                selectedCategory
-                  ? 'border border-[#38A1E5] bg-[#38A1E5] text-white hover:bg-[#2E8BD1]'
-                  : 'border border-gray-200 hover:border-[#D0E0FF] hover:bg-[#F5F8FF]'
-              }`}
+              className={triggerClassName(!!selectedCategory)}
               aria-haspopup="menu"
             >
               <span>{selectedCategory || t('category')}</span>
-              <ChevronDown className="h-3 w-3" aria-hidden="true" />
+              <ChevronDown
+                className="h-3.5 w-3.5 opacity-60"
+                aria-hidden="true"
+              />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent
@@ -284,15 +325,14 @@ export function MentorCategories({
               variant="ghost"
               size="sm"
               type="button"
-              className={`flex h-8 items-center gap-2 rounded-lg px-3 transition-all duration-200 ${
-                selectedSubject
-                  ? 'border border-[#38A1E5] bg-[#38A1E5] text-white hover:bg-[#2E8BD1]'
-                  : 'border border-gray-200 hover:border-[#D0E0FF] hover:bg-[#F5F8FF]'
-              }`}
+              className={triggerClassName(!!selectedSubject)}
               aria-haspopup="menu"
             >
               <span>{selectedSubject || t('subject')}</span>
-              <ChevronDown className="h-3 w-3" aria-hidden="true" />
+              <ChevronDown
+                className="h-3.5 w-3.5 opacity-60"
+                aria-hidden="true"
+              />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent
@@ -334,15 +374,14 @@ export function MentorCategories({
               variant="ghost"
               size="sm"
               type="button"
-              className={`flex h-8 items-center gap-2 rounded-lg px-3 transition-all duration-200 ${
-                selectedType
-                  ? 'border border-[#38A1E5] bg-[#38A1E5] text-white hover:bg-[#2E8BD1]'
-                  : 'border border-gray-200 hover:border-[#D0E0FF] hover:bg-[#F5F8FF]'
-              }`}
+              className={triggerClassName(!!selectedType)}
               aria-haspopup="menu"
             >
               <span>{selectedType || t('type')}</span>
-              <ChevronDown className="h-3 w-3" aria-hidden="true" />
+              <ChevronDown
+                className="h-3.5 w-3.5 opacity-60"
+                aria-hidden="true"
+              />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent
@@ -377,19 +416,21 @@ export function MentorCategories({
               variant="ghost"
               size="sm"
               type="button"
-              className={`flex h-8 items-center gap-2 rounded-lg px-3 transition-all duration-200 ${
-                selectedLlmProvider
-                  ? 'border border-[#38A1E5] bg-[#38A1E5] text-white hover:bg-[#2E8BD1]'
-                  : 'border border-gray-200 hover:border-[#D0E0FF] hover:bg-[#F5F8FF]'
-              }`}
+              className={triggerClassName(!!selectedLlmProvider)}
               aria-haspopup="menu"
             >
+              {selectedLlmProvider && (
+                <ProviderLogo src={llmProviderLogo(selectedLlmProvider)} />
+              )}
               <span>
                 {selectedLlmProvider
                   ? resolveLlmProvider(selectedLlmProvider).displayName
                   : t('llmProvider')}
               </span>
-              <ChevronDown className="h-3 w-3" aria-hidden="true" />
+              <ChevronDown
+                className="h-3.5 w-3.5 opacity-60"
+                aria-hidden="true"
+              />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent
@@ -410,12 +451,15 @@ export function MentorCategories({
                 }`}
                 role="menuitem"
               >
-                <div className="flex items-center gap-2">
-                  {selectedLlmProvider === llmProvider && (
-                    <Check className="h-4 w-4" />
-                  )}
-                  <span>{resolveLlmProvider(llmProvider).displayName}</span>
+                <div className="flex min-w-0 items-center gap-2">
+                  <ProviderLogo src={llmProviderLogo(llmProvider)} />
+                  <span className="truncate">
+                    {resolveLlmProvider(llmProvider).displayName}
+                  </span>
                 </div>
+                {selectedLlmProvider === llmProvider && (
+                  <Check className="h-4 w-4 shrink-0" />
+                )}
                 {/* {facets?.llm_providers?.terms[llmProvider] && (
                   <span className="text-xs text-gray-400">
                     ({facets.llm_providers.terms[llmProvider]})
@@ -435,18 +479,18 @@ export function MentorCategories({
               variant="ghost"
               size="sm"
               type="button"
-              className={`flex h-8 items-center gap-2 rounded-lg px-3 transition-all duration-200 ${
-                selectedCreatedBy
-                  ? 'border border-[#38A1E5] bg-[#38A1E5] text-white hover:bg-[#2E8BD1]'
-                  : 'border border-gray-200 hover:border-[#D0E0FF] hover:bg-[#F5F8FF]'
-              }`}
+              className={triggerClassName(!!selectedCreatedBy)}
               aria-haspopup="menu"
             >
               <span>
-                {createdByOptions.find((opt) => opt.value === selectedCreatedBy)
-                  ?.label || t('createdBy')}
+                {selectedCreatedByLabel
+                  ? `${t('createdBy')}: ${selectedCreatedByLabel}`
+                  : t('createdBy')}
               </span>
-              <ChevronDown className="h-3 w-3" aria-hidden="true" />
+              <ChevronDown
+                className="h-3.5 w-3.5 opacity-60"
+                aria-hidden="true"
+              />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent
@@ -481,12 +525,12 @@ export function MentorCategories({
 
       {hasActiveFilters && (
         <>
-          <span className="text-gray-300">|</span>
+          <span className="h-5 w-px shrink-0 bg-gray-200" aria-hidden="true" />
           <Button
             variant="ghost"
             size="sm"
             onClick={handleClearAll}
-            className="h-8 px-3 text-gray-600 hover:bg-gray-100 hover:text-gray-800"
+            className="h-9 shrink-0 rounded-full px-3 text-sm font-medium text-[#1F6FA8] hover:bg-[#EAF4FC] hover:text-[#1F6FA8]"
             aria-label={t('clearAll')}
             role="button"
           >

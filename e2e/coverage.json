@@ -1,15 +1,15 @@
 {
   "version": 2,
-  "lastUpdated": "2026-09-14",
+  "lastUpdated": "2026-09-23",
   "summary": {
-    "totalCheckpoints": 741,
-    "coveredCheckpoints": 698,
+    "totalCheckpoints": 764,
+    "coveredCheckpoints": 721,
     "deprecatedCheckpoints": 17,
     "notReproducibleCheckpoints": 15,
     "pendingCheckpoints": 11,
     "percent": 100,
-    "totalJourneys": 77,
-    "activeJourneys": 76
+    "totalJourneys": 79,
+    "activeJourneys": 78
   },
   "journeys": [
     {
@@ -231,7 +231,16 @@
       "spec": "05-mentor-discovery-explore-page.spec.ts",
       "sourceFiles": [
         "app/platform/[tenantKey]/[mentorId]/explore/page.tsx",
-        "app/platform/[tenantKey]/explore/page.tsx"
+        "app/platform/[tenantKey]/explore/page.tsx",
+        "app/platform/[tenantKey]/[mentorId]/explore/_components/explore-page-content.tsx",
+        "app/platform/[tenantKey]/[mentorId]/explore/_components/mentor-categories.tsx",
+        "app/platform/[tenantKey]/[mentorId]/explore/_components/section.tsx",
+        "app/platform/[tenantKey]/[mentorId]/explore/_components/mentor-card-with-star.tsx",
+        "app/platform/[tenantKey]/[mentorId]/explore/_components/custom-mentors-section.tsx",
+        "app/platform/[tenantKey]/[mentorId]/explore/_components/default-mentors-section.tsx",
+        "app/platform/[tenantKey]/[mentorId]/explore/_components/featured-mentors-section.tsx",
+        "app/platform/[tenantKey]/[mentorId]/explore/_components/starred-mentors-section.tsx",
+        "app/platform/[tenantKey]/[mentorId]/explore/_components/empty-state.tsx"
       ],
       "checkpoints": [
         {
@@ -297,6 +306,21 @@
         {
           "id": "exp-13",
           "description": "Star/unstar a mentor updates the Favorites section",
+          "status": "covered"
+        },
+        {
+          "id": "exp-14",
+          "description": "Header Create Agent button opens the create dialog for admins",
+          "status": "covered"
+        },
+        {
+          "id": "exp-15",
+          "description": "Clear search button empties the search box",
+          "status": "covered"
+        },
+        {
+          "id": "exp-16",
+          "description": "Featured filter toggles on and off with a single click",
           "status": "covered"
         }
       ]
@@ -1031,7 +1055,8 @@
         "app/platform/[tenantKey]/[mentorId]/notifications/page.tsx",
         "app/platform/[tenantKey]/[mentorId]/notifications/[notificationId]/page.tsx",
         "app/platform/[tenantKey]/notifications/page.tsx",
-        "app/platform/[tenantKey]/notifications/[notificationId]/page.tsx"
+        "app/platform/[tenantKey]/notifications/[notificationId]/page.tsx",
+        "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx"
       ],
       "checkpoints": [
         {
@@ -1062,6 +1087,11 @@
         {
           "id": "notif-06",
           "description": "Alerts tab auto-opens when inbox is empty",
+          "status": "covered"
+        },
+        {
+          "id": "notif-07",
+          "description": "Navbar drops the chat-only chrome (LLM Model Selector, on-device model badge, privacy chip) on the notifications inbox \u2014 tenant-scoped, per-agent and single-notification routes alike; an inbox is not a chat surface",
           "status": "covered"
         }
       ]
@@ -1467,6 +1497,7 @@
         "components/modals/edit-mentor-modal/tabs/disclaimers-tab/index.tsx",
         "components/modals/edit-mentor-modal/tabs/disclaimers-tab/edit-disclaimer-modal.tsx",
         "components/modals/edit-mentor-modal/tabs/disclaimers-tab/edit-user-agreement-modal.tsx",
+        "components/modals/edit-mentor-modal/tabs/disclaimers-tab/agreements-modal.tsx",
         "components/modals/disclaimer-modal.tsx",
         "hooks/use-user-agreement.ts",
         "constants/disclaimer.ts"
@@ -1540,6 +1571,31 @@
         {
           "id": "disc-14",
           "description": "User Agreement Edit modal opens with the correct title",
+          "status": "covered"
+        },
+        {
+          "id": "disc-15",
+          "description": "View Agreements button appears/disappears in step with the User Agreement switch",
+          "status": "covered"
+        },
+        {
+          "id": "disc-16",
+          "description": "Agreements dialog shows a 0-count empty state when nobody has agreed yet, and Escape closes only the dialog",
+          "status": "covered"
+        },
+        {
+          "id": "disc-17",
+          "description": "Agreements dialog lists the non-admin who accepted, with a hoverable agreed-at tooltip",
+          "status": "covered"
+        },
+        {
+          "id": "disc-18",
+          "description": "Agreements dialog search filters by exact username, including the no-match state",
+          "status": "covered"
+        },
+        {
+          "id": "disc-19",
+          "description": "Non-admin has no menu path to the Edit Agent modal, so never sees the View Agreements button",
           "status": "covered"
         }
       ]
@@ -4715,6 +4771,108 @@
         {
           "id": "du-08",
           "description": "Admin uploads an Excel (.xlsx) file via the Add Resources modal and the file row appears in the dataset list",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "tenant-analytics",
+      "name": "Tenant-wide Analytics",
+      "spec": "76-tenant-analytics.spec.ts",
+      "sourceFiles": [
+        "app/platform/[tenantKey]/analytics/page.tsx",
+        "app/platform/[tenantKey]/analytics/users/page.tsx",
+        "app/platform/[tenantKey]/analytics/topics/page.tsx",
+        "app/platform/[tenantKey]/analytics/transcripts/page.tsx",
+        "app/platform/[tenantKey]/analytics/memory/page.tsx",
+        "app/platform/[tenantKey]/analytics/financial/page.tsx",
+        "app/platform/[tenantKey]/analytics/audit/page.tsx",
+        "app/platform/[tenantKey]/analytics/reports/page.tsx",
+        "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx",
+        "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "tanl-01",
+          "description": "Tenant-wide analytics overview (/platform/{tenantKey}/analytics, no agent segment) renders the tab strip inside the platform shell \u2014 the sidebar proves the layout supplies the shell itself",
+          "status": "covered"
+        },
+        {
+          "id": "tanl-02",
+          "description": "Clicking a tab from the tenant-wide overview routes to /platform/{tenantKey}/analytics/{tab} and never reintroduces an agent id",
+          "status": "covered"
+        },
+        {
+          "id": "tanl-03",
+          "description": "Tenant-wide Users, Topics, Transcripts and Costs tabs are reachable by direct URL",
+          "status": "covered"
+        },
+        {
+          "id": "tanl-04",
+          "description": "Tenant-wide Memory page loads with no agent scope (the tab opens on global / all-agent memories)",
+          "status": "covered"
+        },
+        {
+          "id": "tanl-05",
+          "description": "Tenant-wide Data Reports page loads and shows the Data Reports tab",
+          "status": "covered"
+        },
+        {
+          "id": "tanl-06",
+          "description": "Tenant-wide Audit page loads \u2014 with no agent to check `view_audit_logs` against, the API is the authority and the container renders its own no-permission card on a 403",
+          "status": "covered"
+        },
+        {
+          "id": "tanl-07",
+          "description": "Sidebar Analytics entry opens the tenant-wide section whether or not an agent is in the URL \u2014 the per-agent section is reached from the navbar agent dropdown instead",
+          "status": "covered"
+        },
+        {
+          "id": "tanl-08",
+          "description": "Navbar on the tenant-wide section drops the chat-only chrome (LLM Model Selector, agent dropdown, privacy chip) and shows the \"Analytics\" section title instead; the per-agent analytics page keeps full parity (Journey 65)",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "show-additional-agents-toggle",
+      "name": "Show Additional Agents Toggle",
+      "spec": "76-show-additional-agents-toggle.spec.ts",
+      "sourceFiles": [
+        "components/modals/edit-mentor-modal/settings-tab.tsx",
+        "components/welcome-chat-new.tsx",
+        "components/welcome-chat/explore-mentors.tsx",
+        "hooks/use-mentors/use-mentor-settings.ts"
+      ],
+      "checkpoints": [
+        {
+          "id": "sem-01",
+          "description": "Admin sees the \"Show additional agents\" switch under Settings > Capabilities > Advanced, with the right label, data-testid, and tooltip info button",
+          "status": "covered"
+        },
+        {
+          "id": "sem-02",
+          "description": "Toggling the switch ON and saving PUTs show_explore_mentors=true and the value persists across closing and reopening the Edit Agent dialog",
+          "status": "covered"
+        },
+        {
+          "id": "sem-03",
+          "description": "Toggling the switch OFF and saving PUTs show_explore_mentors=false and the value persists across closing and reopening the Edit Agent dialog",
+          "status": "covered"
+        },
+        {
+          "id": "sem-04",
+          "description": "With the setting ON, the admin's own welcome screen shows the \"Explore Agents\" section",
+          "status": "covered"
+        },
+        {
+          "id": "sem-05",
+          "description": "With the setting ON, a non-admin non-owner viewer of the same agent also sees the \"Explore Agents\" section (regression guard for the field-level-RBAC redacted-empty-string bug in use-mentor-settings.ts)",
+          "status": "covered"
+        },
+        {
+          "id": "sem-06",
+          "description": "With the setting OFF, the welcome screen hides the \"Explore Agents\" section",
           "status": "covered"
         }
       ]

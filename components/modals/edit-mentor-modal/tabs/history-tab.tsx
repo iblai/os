@@ -58,7 +58,6 @@ import {
   resolveUserIdentity,
   RetrievedDocumentsButton,
   summarizeTranscriptTurns,
-  TranscriptFileCards,
   TranscriptRollupBadges,
   TranscriptTurnDetails,
   UserProfileLink,
@@ -68,6 +67,11 @@ import { useParams } from 'next/navigation';
 import { useUsername } from '@/hooks/use-user';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { ANONYMOUS_USERNAME } from '@/lib/constants';
+import {
+  HistoryAttachments,
+  normalizeHistoryFiles,
+  type HistoryFile,
+} from './history-attachments';
 
 /**
  * One human/AI exchange. On this admin surface the backend also attaches the
@@ -76,13 +80,17 @@ import { ANONYMOUS_USERNAME } from '@/lib/constants';
  */
 type ConversationMessage = TranscriptMessage;
 
-/** A turn's attachments in the shape the chat's file cards take. */
-const attachmentCards = (files: TranscriptMessage['human_files']) =>
-  (files ?? []).map((file) => ({
-    name: file.name,
-    contentType: file.content_type,
-    url: file.url,
-  }));
+/**
+ * A turn's attachments as `HistoryAttachments` takes them: a bare URL stays a
+ * string (older records carry those), a file record becomes a plain object
+ * (`TranscriptFile` is an interface, `HistoryFile` a record).
+ */
+const historyFiles = (
+  files: TranscriptMessage['human_files'],
+): HistoryFile[] | undefined =>
+  files?.map(
+    (file): HistoryFile => (typeof file === 'string' ? file : { ...file }),
+  );
 
 interface Conversation {
   id: string;
@@ -562,9 +570,16 @@ export function HistoryTab() {
                         addSuffix: true,
                       },
                     );
+                    // A turn can be an upload with no text, in which case the
+                    // attachment name is the only meaningful title we have.
+                    const firstAttachmentName = normalizeHistoryFiles(
+                      historyFiles(firstMessage?.human_files),
+                    )[0]?.fileName;
                     const title = firstMessage?.human
                       ? textTruncate(firstMessage.human, 50)
-                      : t('conversationFallbackTitle');
+                      : firstAttachmentName
+                        ? textTruncate(firstAttachmentName, 50)
+                        : t('conversationFallbackTitle');
                     const preview = firstMessage?.ai
                       ? textTruncate(firstMessage.ai, 60)
                       : t('noResponseAvailable');
@@ -701,8 +716,9 @@ export function HistoryTab() {
                               <p className="mt-1 text-sm whitespace-pre-line text-gray-500">
                                 {message.human}
                               </p>
-                              <TranscriptFileCards
-                                files={attachmentCards(message.human_files)}
+                              <HistoryAttachments
+                                files={historyFiles(message.human_files)}
+                                idPrefix={`detail-human-${index}`}
                               />
                             </div>
                           </div>
@@ -720,8 +736,9 @@ export function HistoryTab() {
                               <div className="mt-1 text-sm text-gray-500">
                                 <Markdown>{message.ai}</Markdown>
                               </div>
-                              <TranscriptFileCards
-                                files={attachmentCards(message.ai_files)}
+                              <HistoryAttachments
+                                files={historyFiles(message.ai_files)}
+                                idPrefix={`detail-ai-${index}`}
                               />
                               <TranscriptTurnDetails turn={message} />
                             </div>
@@ -848,8 +865,9 @@ export function HistoryTab() {
                         <p className="mt-1 text-sm whitespace-pre-line text-gray-900">
                           {message.human}
                         </p>
-                        <TranscriptFileCards
-                          files={attachmentCards(message.human_files)}
+                        <HistoryAttachments
+                          files={historyFiles(message.human_files)}
+                          idPrefix={`preview-human-${index}`}
                         />
                       </div>
                     </div>
@@ -867,8 +885,9 @@ export function HistoryTab() {
                         <div className="mt-1 text-sm text-gray-900">
                           <Markdown>{message.ai}</Markdown>
                         </div>
-                        <TranscriptFileCards
-                          files={attachmentCards(message.ai_files)}
+                        <HistoryAttachments
+                          files={historyFiles(message.ai_files)}
+                          idPrefix={`preview-ai-${index}`}
                         />
                         <TranscriptTurnDetails turn={message} />
                       </div>

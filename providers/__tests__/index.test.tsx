@@ -1056,6 +1056,42 @@ describe('Providers', () => {
     });
   });
 
+  // ── tenant-wide analytics short-circuits in MentorProvider callbacks ──
+
+  describe('tenant-wide analytics MentorProvider callbacks', () => {
+    it('does not redirect to a default agent on the tenant analytics overview', () => {
+      mockPathname = '/platform/test-tenant/analytics';
+      renderProviders();
+
+      (capturedMentorProviderProps.redirectToMentor as Function)('t', 'm');
+      (capturedMentorProviderProps.redirectToNoMentorsPage as Function)();
+
+      expect(mockPush).not.toHaveBeenCalled();
+      expect(capturedMentorProviderProps.requestedMentorId).toBeUndefined();
+    });
+
+    it('does not redirect on a tenant analytics tab', () => {
+      mockPathname = '/platform/test-tenant/analytics/users';
+      renderProviders();
+
+      (capturedMentorProviderProps.redirectToMentor as Function)('t', 'm');
+
+      expect(mockPush).not.toHaveBeenCalled();
+    });
+
+    it('still runs the mentor check on the per-agent analytics section', () => {
+      mockPathname = '/platform/test-tenant/mentor-123/analytics';
+      renderProviders();
+
+      (capturedMentorProviderProps.redirectToMentor as Function)(
+        'test-tenant',
+        'mentor-123',
+      );
+
+      expect(mockPush).toHaveBeenCalledWith('/platform/test-tenant/mentor-123');
+    });
+  });
+
   // ── onLoadPlatformPermissions ─────────────────────────────────────────
 
   describe('onLoadPlatformPermissions', () => {
