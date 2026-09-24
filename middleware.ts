@@ -65,8 +65,8 @@ const GOOGLE = [
   'https://apis.google.com',
   'https://*.googleapis.com',
   'https://accounts.google.com',
-  // DNS-over-HTTPS. The Domains panel in Settings → Advanced resolves a sign-in
-  // domain's CNAME straight from the browser (the SDK's custom-domain
+  // DNS-over-HTTPS. The Domains panel (sidebar → Advanced → Domains) resolves
+  // a sign-in domain's CNAME straight from the browser (the SDK's custom-domain
   // container), so it is a fetch connection like the GitHub one below. Without
   // it the lookup is refused before it leaves the page and every sign-in domain
   // reads as unverified, pointing the admin at a registrar record that is
