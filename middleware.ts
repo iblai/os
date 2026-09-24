@@ -78,6 +78,12 @@ const GITHUB = ['https://api.github.com'];
 // <bucket>.s3.amazonaws.com. Regional endpoints (<bucket>.s3.<region>.amazonaws.com)
 // would need that region added.
 const AWS_S3 = ['https://*.s3.amazonaws.com'];
+// Microsoft Clarity analytics (see app/layout.tsx). The tag script loads under
+// script-src (nonce + strict-dynamic), but Clarity's runtime beacons session
+// data to *.clarity.ms (and c.bing.com), which the browser treats as fetch/
+// beacon connections — so they must be in connect-src or all telemetry is
+// blocked. connect-src only; nothing here is framed.
+const CLARITY = ['https://*.clarity.ms', 'https://c.bing.com'];
 // Customer/partner institution domains served from the institution's own host
 // (SSO / LMS / API endpoints). Override via CSP_PARTNER_HOSTS (comma/space-
 // separated); defaults to Syracuse when unset. Read at request time (like
@@ -165,6 +171,7 @@ function buildCsp(nonce: string): string {
       ...STRIPE,
       ...GITHUB,
       ...AWS_S3,
+      ...CLARITY,
       ...assetCdn,
       ...partners,
       ...partnerWs,

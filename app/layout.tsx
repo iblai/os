@@ -113,6 +113,17 @@ export default async function RootLayout({
         </div>
         <ConsoleSetup />
         <Script src="/env.js" strategy="afterInteractive" />
+        {/* Microsoft Clarity analytics. Rendered via next/script so it carries
+            the CSP nonce; the loader injects https://www.clarity.ms/tag/<id>
+            (allowed by script-src's nonce + strict-dynamic) and Clarity's runtime
+            reports to *.clarity.ms (allowed in connect-src — see middleware.ts). */}
+        <Script id="ms-clarity" strategy="afterInteractive">
+          {`(function(c,l,a,r,i,t,y){
+              c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+              t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+              y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+          })(window, document, "clarity", "script", "ymg0i1svzp");`}
+        </Script>
         <NextIntlClientProvider locale={locale} messages={messages}>
           <StoreProvider>
             <ChunkErrorRecovery />
