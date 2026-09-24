@@ -744,7 +744,22 @@
     "agentUpdatedError": "Échec de la mise à jour de l'agent",
     "userAgreementUpdatedSuccess": "Accord utilisateur mis à jour avec succès",
     "userAgreementUpdatedError": "Échec de la mise à jour de l'accord utilisateur",
-    "userAgreementToggledSuccess": "Accord utilisateur {status} avec succès"
+    "userAgreementToggledSuccess": "Accord utilisateur {status} avec succès",
+    "viewAgreements": "Voir les acceptations"
+  },
+  "disclaimersTabAgreements": {
+    "title": "Acceptations",
+    "dialogDescription": "Utilisateurs ayant accepté l'Accord utilisateur de cet agent.",
+    "totalAgreements": "{count} acceptations au total",
+    "searchPlaceholder": "Rechercher par nom d'utilisateur",
+    "searchAriaLabel": "Rechercher les acceptations par nom d'utilisateur",
+    "columnUser": "Utilisateur",
+    "columnAgreedAt": "Accepté le",
+    "summaryDescription": "Consultez les utilisateurs ayant accepté l'Accord utilisateur de cet agent. Chaque entrée indique le nom et l'e-mail de l'utilisateur ainsi que la date de son acceptation. Les utilisateurs qui ne l'ont pas encore accepté n'apparaissent pas. La recherche correspond au nom d'utilisateur exact.",
+    "empty": "Aucune acceptation pour le moment",
+    "emptyDescription": "Les utilisateurs qui acceptent l'Accord utilisateur apparaîtront ici avec l'heure de leur acceptation.",
+    "noMatches": "Aucun utilisateur ne correspond à votre recherche",
+    "noMatchesDescription": "La recherche correspond au nom d'utilisateur exact : essayez le nom d'utilisateur complet."
   },
   "editMentorModalIndex": {
     "dialogDescription": "Modifier les paramètres de l'agent, les invites, les outils, la sécurité, le flux, l'historique, les ensembles de données et les clés API",
@@ -765,20 +780,17 @@
     "seeMore": "Voir plus"
   },
   "exploreCustomMentorsSection": {
-    "sectionHeading": "Personnalisé",
-    "listAriaLabel": "Agents personnalisés",
-    "loadMoreAriaLabel": "Charger plus d'agents personnalisés",
+    "sectionHeading": "Mes agents",
+    "listAriaLabel": "Mes agents",
+    "loadMoreAriaLabel": "Charger plus de mes agents",
     "loadingMore": "Chargement en cours",
     "seeMore": "Voir plus",
     "createAgentAriaLabel": "Créer un agent personnalisé",
     "createAgentHeading": "Créer un agent personnalisé",
-    "createAgentDescription": "Créez votre propre agent personnalisé adapté à vos besoins d'apprentissage spécifiques",
-    "getStartedToday": "Commencez dès aujourd'hui"
+    "createAgentDescription": "Créez votre propre agent personnalisé adapté à vos besoins d'apprentissage spécifiques"
   },
   "exploreDefaultMentorsSection": {
     "loadingAgents": "Chargement des agents...",
-    "createAgentAriaLabel": "Créer un nouvel agent",
-    "createAgentButton": "Créer un agent",
     "allAgentsListAriaLabel": "Tous les agents",
     "exploreAgentAriaLabel": "Explorer l'agent : {name}",
     "loadMoreAriaLabel": "Charger plus d'agents",
@@ -789,27 +801,30 @@
     "llmProviderTitle": "Agents {provider}",
     "llmProviderSubtext": "Explorez les agents propulsés par {provider}.",
     "allAgentsTitle": "Tous les agents",
-    "allAgentsSubtext": "Explorez les agents et les assistants d'apprentissage spécialisés."
+    "allAgentsSubtext": "Explorez les agents et les assistants d'apprentissage spécialisés.",
+    "searchResultsTitle": "Résultats pour « {query} »",
+    "searchResultsSubtext": "{count, plural, =0 {Aucun agent ne correspond à votre recherche.} one {# agent correspond à votre recherche.} other {# agents correspondent à votre recherche.}}",
+    "emptyStateHint": "Essayez un autre terme de recherche ou effacez vos filtres."
   },
   "exploreExplorePageContent": {
     "skipToMainContent": "Passer au contenu principal",
     "agentExplorationPage": "Page d'exploration des agents",
     "discoverAndCreateAgents": "Découvrez et créez des agents qui combinent expertise thématique, ressources et compétences",
     "searchAgentsLabel": "Rechercher des agents",
-    "searchPlaceholder": "Rechercher",
-    "searchAgentsInputLabel": "Rechercher des agents"
+    "searchPlaceholder": "Rechercher des agents",
+    "searchAgentsInputLabel": "Rechercher des agents",
+    "pageTitle": "Explorer les agents",
+    "clearSearch": "Effacer la recherche",
+    "createAgentButton": "Créer un agent",
+    "createAgentAriaLabel": "Créer un nouvel agent"
   },
   "exploreFeaturedMentorsSection": {
     "heading": "À la une",
     "loadMoreAriaLabel": "Charger plus d'agents en vedette",
     "loadingMore": "Chargement en cours",
-    "seeMore": "Voir plus",
-    "emptyStateTitle": "Agents en vedette",
-    "emptyStateDescription": "Découvrez des agents sélectionnés recommandés par notre communauté",
-    "emptyStateNoAgents": "Aucun agent en vedette disponible"
+    "seeMore": "Voir plus"
   },
   "exploreMentorCategories": {
-    "promotion": "Promotion",
     "featured": "À la une",
     "category": "Catégorie",
     "subject": "Sujet",
@@ -834,9 +849,17 @@
     "loadingMore": "Chargement en cours",
     "seeMore": "Voir plus",
     "addToFavoritesCardAriaLabel": "Ajouter aux favoris - Inscrivez-vous pour marquer des agents",
-    "addToFavoritesTitle": "Ajouter aux favoris",
     "addToFavoritesDescription": "Marquez vos agents favoris pour y accéder rapidement ici",
     "noFavoritesYet": "Aucun favori pour l'instant"
+  },
+  "exploreSection": {
+    "countAriaLabel": "{count, plural, one {# agent} other {# agents}}"
+  },
+  "exploreMentorCard": {
+    "featured": "À la une",
+    "addToFavorites": "Ajouter aux favoris",
+    "removeFromFavorites": "Retirer des favoris",
+    "updatedOn": "Mis à jour le {date}"
   },
   "flaggedPromptsDeleteModerationLogModal": {
     "title": "Supprimer le journal de modération",
@@ -2097,6 +2120,9 @@
     "highlightFeaturedLabel": "Mettre en avant dans les listings",
     "highlightFeaturedInfoAriaLabel": "Plus d'infos sur la mise en avant dans les listings",
     "highlightFeaturedTooltip": "Mettez cet agent en avant pour le faire ressortir dans les listings.",
+    "showAdditionalAgentsLabel": "Afficher les agents supplémentaires",
+    "showAdditionalAgentsInfoAriaLabel": "Plus d'infos sur l'affichage des agents supplémentaires",
+    "showAdditionalAgentsTooltip": "Affiche la section des agents supplémentaires sur l'écran d'accueil de cet agent.",
     "enableLtiLabel": "Activer les lancements LTI",
     "enableLtiInfoAriaLabel": "Plus d'infos sur l'activation des lancements LTI",
     "enableLtiTooltip": "Permet à cet agent d'être accessible via des lancements LTI. Décocher cette option supprimera immédiatement l'accès pour tous les utilisateurs ayant lancé cet agent via LTI.",

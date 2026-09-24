@@ -744,7 +744,22 @@
     "agentUpdatedError": "更新智能体失败",
     "userAgreementUpdatedSuccess": "用户协议更新成功",
     "userAgreementUpdatedError": "更新用户协议失败",
-    "userAgreementToggledSuccess": "用户协议已{status}成功"
+    "userAgreementToggledSuccess": "用户协议已{status}成功",
+    "viewAgreements": "查看同意记录"
+  },
+  "disclaimersTabAgreements": {
+    "title": "同意记录",
+    "dialogDescription": "已接受此智能体用户协议的用户。",
+    "totalAgreements": "共 {count} 条同意记录",
+    "searchPlaceholder": "按用户名搜索",
+    "searchAriaLabel": "按用户名搜索同意记录",
+    "columnUser": "用户",
+    "columnAgreedAt": "同意时间",
+    "summaryDescription": "查看已接受此智能体用户协议的用户。每条记录显示用户的姓名、邮箱和同意时间。尚未接受的用户不会列出。搜索需与用户名完全匹配。",
+    "empty": "尚无同意记录",
+    "emptyDescription": "接受用户协议的用户将与其同意时间一起显示在此处。",
+    "noMatches": "没有匹配的用户",
+    "noMatchesDescription": "搜索需与用户名完全匹配，请尝试输入完整的用户名。"
   },
   "editMentorModalIndex": {
     "dialogDescription": "编辑代理设置、提示词、工具、安全、流程、历史记录、数据集和 API 密钥",
@@ -765,20 +780,17 @@
     "seeMore": "查看更多"
   },
   "exploreCustomMentorsSection": {
-    "sectionHeading": "自定义",
-    "listAriaLabel": "自定义智能体",
-    "loadMoreAriaLabel": "加载更多自定义智能体",
+    "sectionHeading": "我的智能体",
+    "listAriaLabel": "我的智能体",
+    "loadMoreAriaLabel": "加载更多我的智能体",
     "loadingMore": "加载中",
     "seeMore": "查看更多",
     "createAgentAriaLabel": "创建自定义智能体",
     "createAgentHeading": "创建自定义智能体",
-    "createAgentDescription": "构建专属于您学习需求的自定义智能体",
-    "getStartedToday": "立即开始"
+    "createAgentDescription": "构建专属于您学习需求的自定义智能体"
   },
   "exploreDefaultMentorsSection": {
     "loadingAgents": "正在加载智能体...",
-    "createAgentAriaLabel": "创建新智能体",
-    "createAgentButton": "创建智能体",
     "allAgentsListAriaLabel": "所有智能体",
     "exploreAgentAriaLabel": "探索智能体：{name}",
     "loadMoreAriaLabel": "加载更多智能体",
@@ -789,27 +801,30 @@
     "llmProviderTitle": "{provider} 智能体",
     "llmProviderSubtext": "探索由 {provider} 驱动的智能体。",
     "allAgentsTitle": "所有智能体",
-    "allAgentsSubtext": "探索智能体及专业学习助手。"
+    "allAgentsSubtext": "探索智能体及专业学习助手。",
+    "searchResultsTitle": "“{query}”的搜索结果",
+    "searchResultsSubtext": "{count, plural, =0 {没有符合搜索条件的智能体。} other {共有 # 个智能体符合搜索条件。}}",
+    "emptyStateHint": "请尝试其他搜索词或清除筛选条件。"
   },
   "exploreExplorePageContent": {
     "skipToMainContent": "跳转到主要内容",
     "agentExplorationPage": "代理探索页面",
     "discoverAndCreateAgents": "探索和创建结合学科专业知识、资源与技能的代理",
     "searchAgentsLabel": "搜索代理",
-    "searchPlaceholder": "搜索",
-    "searchAgentsInputLabel": "搜索代理"
+    "searchPlaceholder": "搜索智能体",
+    "searchAgentsInputLabel": "搜索代理",
+    "pageTitle": "探索智能体",
+    "clearSearch": "清除搜索",
+    "createAgentButton": "创建智能体",
+    "createAgentAriaLabel": "创建新智能体"
   },
   "exploreFeaturedMentorsSection": {
     "heading": "精选",
     "loadMoreAriaLabel": "加载更多精选智能体",
     "loadingMore": "加载更多",
-    "seeMore": "查看更多",
-    "emptyStateTitle": "精选智能体",
-    "emptyStateDescription": "探索由我们社区推荐的精心挑选的智能体",
-    "emptyStateNoAgents": "暂无精选智能体"
+    "seeMore": "查看更多"
   },
   "exploreMentorCategories": {
-    "promotion": "推广",
     "featured": "精选",
     "category": "分类",
     "subject": "主题",
@@ -834,9 +849,17 @@
     "loadingMore": "加载更多",
     "seeMore": "查看更多",
     "addToFavoritesCardAriaLabel": "添加到收藏夹 - 注册后即可收藏助手",
-    "addToFavoritesTitle": "添加到收藏夹",
     "addToFavoritesDescription": "收藏您喜爱的助手，以便在此快速访问",
     "noFavoritesYet": "暂无收藏"
+  },
+  "exploreSection": {
+    "countAriaLabel": "{count, plural, other {# 个智能体}}"
+  },
+  "exploreMentorCard": {
+    "featured": "精选",
+    "addToFavorites": "添加到收藏夹",
+    "removeFromFavorites": "从收藏夹中移除",
+    "updatedOn": "更新于 {date}"
   },
   "flaggedPromptsDeleteModerationLogModal": {
     "title": "删除审核日志",
@@ -2097,6 +2120,9 @@
     "highlightFeaturedLabel": "在精选列表中突出显示",
     "highlightFeaturedInfoAriaLabel": "关于在精选列表中突出显示的更多信息",
     "highlightFeaturedTooltip": "将此智能体设为精选，使其在列表中突出显示。",
+    "showAdditionalAgentsLabel": "显示其他智能体",
+    "showAdditionalAgentsInfoAriaLabel": "关于显示其他智能体的更多信息",
+    "showAdditionalAgentsTooltip": "在此智能体的欢迎界面上显示“其他智能体”部分。",
     "enableLtiLabel": "启用 LTI 启动",
     "enableLtiInfoAriaLabel": "关于启用 LTI 启动的更多信息",
     "enableLtiTooltip": "启用后，此智能体可通过 LTI 启动访问。取消选择将立即撤销所有通过 LTI 启动访问此智能体的用户的访问权限。",

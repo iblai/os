@@ -281,4 +281,57 @@ test.describe('Journey 5: Mentor Discovery — Explore Page — Admin', () => {
       timeout: 10_000,
     });
   });
+
+  test('admin goes to explore page and opens the create dialog from the header Create Agent button', async ({
+    page,
+    explorePage,
+    createMentorPage,
+  }) => {
+    const isAdmin = await checkAdminStatus(page);
+    test.fail(!isAdmin, 'Agent creation requires admin access');
+    await expect(explorePage.headerCreateAgentButton).toBeVisible({
+      timeout: 30_000,
+    });
+    await explorePage.headerCreateAgentButton.click();
+    await expect(createMentorPage.dialog).toBeVisible({ timeout: 30_000 });
+    await page.keyboard.press('Escape');
+    await expect(createMentorPage.dialog).toBeHidden({ timeout: 10_000 });
+  });
+
+  test('admin goes to explore page and clears a search with the clear button', async ({
+    explorePage,
+  }) => {
+    await expect(explorePage.pageTitle).toBeVisible({ timeout: 120_000 });
+    await expect(explorePage.clearSearchButton).toHaveCount(0);
+
+    await explorePage.search('zzqx-no-such-agent');
+    await expect(explorePage.clearSearchButton).toBeVisible();
+    await explorePage.clearSearchButton.click();
+
+    await expect(explorePage.searchInput).toHaveValue('');
+    await expect(explorePage.clearSearchButton).toHaveCount(0);
+  });
+
+  test('admin goes to explore page and toggles the Featured filter on and off', async ({
+    explorePage,
+  }) => {
+    await expect(explorePage.featuredToggle).toBeVisible({ timeout: 120_000 });
+    await expect(explorePage.featuredToggle).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
+
+    await explorePage.featuredToggle.click();
+    await expect(explorePage.featuredToggle).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    await expect(explorePage.clearFiltersButton).toBeVisible();
+
+    await explorePage.featuredToggle.click();
+    await expect(explorePage.featuredToggle).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
+  });
 });

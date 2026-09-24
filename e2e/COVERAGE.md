@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-09-14 | 741 checkpoints (698 covered, 11 pending/fixme, 15 not-reproducible in default env, 17 deprecated) | 77 journeys (76 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-09-23 | 764 checkpoints (721 covered, 11 pending/fixme, 15 not-reproducible in default env, 17 deprecated) | 79 journeys (78 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -13,6 +13,8 @@ When adding a new page or modifying an existing user flow:
 2. Write Playwright tests for each checkpoint
 3. Mark the checkpoint `[x]` once the test is in the suite and passing
 4. The pre-push hook and CI workflow will block pushes with uncovered routes
+
+**LLM pin (issue #2534):** every mentor created via `CreateMentorPage.createWithName()` / `openAndCreate()` is pinned to `ibl.ai Fast` (`llm_provider: iblai`, `llm_name: iblai-fast`) right after creation, instead of the backend's `iblai-pro` default. Pro routes each message to whatever provider it judges best, which made chat-driving tests depend on shared third-party provider quota (see journey 52's prior OpenAI pins). Specs that chat on a tenant's pre-existing default mentor rather than a test-created one are not covered by this pin; where the flow can't create its own mentor (anonymous/non-admin sessions, a freshly-provisioned signup tenant), see that journey's own notes below.
 
 ---
 
@@ -77,11 +79,11 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 5: Mentor Discovery — Explore Page (13 checkpoints) — `journeys/05-mentor-discovery-explore-page.spec.ts`
+## Journey 5: Mentor Discovery — Explore Page (16 checkpoints) — `journeys/05-mentor-discovery-explore-page.spec.ts`
 
-**Source files:** `app/platform/[tenantKey]/[mentorId]/explore/page.tsx`, `app/platform/[tenantKey]/[mentorId]/explore/_components/explore-page-content.tsx`, `app/platform/[tenantKey]/[mentorId]/explore/_components/search-section.tsx`
+**Source files:** `app/platform/[tenantKey]/[mentorId]/explore/page.tsx`, `app/platform/[tenantKey]/[mentorId]/explore/_components/explore-page-content.tsx`, `app/platform/[tenantKey]/[mentorId]/explore/_components/search-section.tsx`, `app/platform/[tenantKey]/[mentorId]/explore/_components/mentor-categories.tsx`, `app/platform/[tenantKey]/[mentorId]/explore/_components/section.tsx`, `app/platform/[tenantKey]/[mentorId]/explore/_components/mentor-card-with-star.tsx`, `app/platform/[tenantKey]/[mentorId]/explore/_components/custom-mentors-section.tsx`, `app/platform/[tenantKey]/[mentorId]/explore/_components/default-mentors-section.tsx`, `app/platform/[tenantKey]/[mentorId]/explore/_components/featured-mentors-section.tsx`, `app/platform/[tenantKey]/[mentorId]/explore/_components/starred-mentors-section.tsx`, `app/platform/[tenantKey]/[mentorId]/explore/_components/empty-state.tsx`
 
-- [x] Explore page title ("All Mentors") and description are visible
+- [x] Explore page title ("Explore agents") and description are visible
 - [x] Mentor cards display correct information
 - [x] Search input filters the mentor list
 - [x] "See more" button loads additional mentors
@@ -94,6 +96,9 @@ When adding a new page or modifying an existing user flow:
 - [x] Clicking a mentor card navigates to that mentor and allows chatting
 - [x] Custom mentor creation button is visible for admins
 - [x] Star/unstar a mentor updates the Favorites section
+- [x] Header "Create Agent" button opens the create dialog for admins
+- [x] Clear search button empties the search box
+- [x] "Featured" filter toggles on and off with a single click
 
 ---
 
@@ -300,7 +305,7 @@ The **download-chat** checkpoints (sh-07 … sh-10, issue #2464) cover the "Down
 
 ---
 
-## Journey 17: Notifications (6 checkpoints) — `journeys/17-notifications.spec.ts`
+## Journey 17: Notifications (7 checkpoints) — `journeys/17-notifications.spec.ts`
 
 **Source files:** `app/platform/[tenantKey]/[mentorId]/notifications/page.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`
 
@@ -310,6 +315,7 @@ The **download-chat** checkpoints (sh-07 … sh-10, issue #2464) cover the "Down
 - [x] "Mark all as read" button is visible on the notifications page
 - [x] Alerts tab exposes proactive fields with proper accessible ARIA attributes
 - [x] Alerts tab auto-opens when inbox is empty
+- [x] notif-07: Navbar drops the chat-only chrome (LLM Model Selector, on-device model badge, privacy chip) on the notifications inbox — tenant-scoped, per-agent and single-notification routes alike; an inbox is not a chat surface
 
 ---
 
@@ -422,9 +428,9 @@ Driven by the shared paywall helpers in `@iblai/iblai-js/playwright`. All tests 
 
 ---
 
-## Journey 22: Disclaimers & User Agreement (14 checkpoints) — `journeys/22-disclaimers-and-user-agreement.spec.ts`
+## Journey 22: Disclaimers & User Agreement (19 checkpoints) — `journeys/22-disclaimers-and-user-agreement.spec.ts`
 
-**Source files:** `components/modals/edit-mentor-modal/tabs/disclaimers-tab/index.tsx`, `components/modals/edit-mentor-modal/tabs/disclaimers-tab/edit-user-agreement-modal.tsx`, `components/modals/edit-mentor-modal/tabs/disclaimers-tab/edit-disclaimer-modal.tsx`, `components/modals/disclaimer-modal.tsx`, `hooks/use-user-agreement.ts`, `constants/disclaimer.ts`
+**Source files:** `components/modals/edit-mentor-modal/tabs/disclaimers-tab/index.tsx`, `components/modals/edit-mentor-modal/tabs/disclaimers-tab/edit-user-agreement-modal.tsx`, `components/modals/edit-mentor-modal/tabs/disclaimers-tab/edit-disclaimer-modal.tsx`, `components/modals/edit-mentor-modal/tabs/disclaimers-tab/agreements-modal.tsx`, `components/modals/disclaimer-modal.tsx`, `hooks/use-user-agreement.ts`, `constants/disclaimer.ts`
 
 - [x] Admin enables User Agreement toggle and sees Active status _(creates fresh mentor; skips if non-admin)_
 - [x] Admin disables User Agreement toggle and sees Inactive status _(creates fresh mentor; skips if non-admin)_
@@ -440,6 +446,11 @@ Driven by the shared paywall helpers in `@iblai/iblai-js/playwright`. All tests 
 - [x] Disclaimers tab shows both User Agreement and Advisory sections with correct controls _(creates fresh mentor; skips if non-admin)_
 - [x] Advisory Edit modal opens with correct title, textarea, and Cancel/Save buttons _(creates fresh mentor; skips if non-admin)_
 - [x] User Agreement Edit modal opens with correct title, textarea, and Cancel/Save buttons _(creates fresh mentor; skips if non-admin)_
+- [x] View Agreements button appears/disappears in step with the User Agreement switch, in both directions _(#2507; creates fresh mentor; skips if non-admin)_
+- [x] Agreements dialog shows a 0-count empty state when nobody has agreed yet; Escape closes only the agreements dialog, not the Edit Agent modal _(#2507; creates fresh mentor; skips if non-admin)_
+- [x] Agreements dialog lists the non-admin who accepted the User Agreement, with a hoverable agreed-at tooltip showing the absolute time _(#2507; creates fresh mentor; uses non-admin browser context)_
+- [x] Agreements dialog search filters by exact username, including the "no users match" state _(#2507; creates fresh mentor; uses non-admin browser context)_
+- [x] Non-admin has no menu path to the Edit Agent modal at all, so never sees the View Agreements button _(#2507; uses non-admin browser context)_
 
 ---
 
@@ -1795,3 +1806,39 @@ Uploads a real fixture file for each of the 8 local file-upload resource types a
 - [x] DU-75.6: Admin uploads a Video file (`.mp4`) — `IMG_4019` row appears in dataset list
 - [x] DU-75.7: Admin uploads an Image file (`.png`) — `acessibility png` row appears in dataset list
 - [x] DU-75.8: Admin uploads an Excel (`.xlsx`) file — `test-data.xlsx` row appears in dataset list
+
+---
+
+## Journey 76: Tenant-wide Analytics (8 checkpoints) — `journeys/76-tenant-analytics.spec.ts`
+
+**Source files:** `app/platform/[tenantKey]/analytics/page.tsx`, `app/platform/[tenantKey]/analytics/users/page.tsx`, `app/platform/[tenantKey]/analytics/topics/page.tsx`, `app/platform/[tenantKey]/analytics/transcripts/page.tsx`, `app/platform/[tenantKey]/analytics/memory/page.tsx`, `app/platform/[tenantKey]/analytics/financial/page.tsx`, `app/platform/[tenantKey]/analytics/audit/page.tsx`, `app/platform/[tenantKey]/analytics/reports/page.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`
+
+The Journey 18 section mounted directly under the tenant — no agent in the URL,
+so the containers report on the whole tenant (they drop the `mentor_unique_id`
+filter when the mentor id is empty). The sidebar already links here whenever no
+agent is selected; the tests deep-link, since the fixtures start on an agent
+route.
+
+- [x] tanl-01: Tenant-wide overview (`/platform/{tenantKey}/analytics`) renders the tab strip inside the platform shell — the sidebar proves the layout supplies the shell itself
+- [x] tanl-02: Clicking a tab from the tenant-wide overview routes to `/platform/{tenantKey}/analytics/{tab}` and never reintroduces an agent id
+- [x] tanl-03: Tenant-wide Users, Topics, Transcripts and Costs tabs are reachable by direct URL
+- [x] tanl-04: Tenant-wide Memory page loads with no agent scope (the tab opens on global / all-agent memories)
+- [x] tanl-05: Tenant-wide Data Reports page loads and shows the Data Reports tab
+- [x] tanl-06: Tenant-wide Audit page loads — with no agent to check `view_audit_logs` against, the API is the authority and the container renders its own no-permission card on a 403
+- [x] tanl-07: Sidebar Analytics entry opens the tenant-wide section whether or not an agent is in the URL — the per-agent section is reached from the navbar agent dropdown instead
+- [x] tanl-08: Navbar on the tenant-wide section drops the chat-only chrome (LLM Model Selector, agent dropdown, privacy chip) and shows the "Analytics" section title instead; the per-agent analytics page keeps full parity (Journey 65)
+
+---
+
+## Journey 76: Show Additional Agents Toggle (6 checkpoints) — `journeys/76-show-additional-agents-toggle.spec.ts`
+
+**Source files:** `components/modals/edit-mentor-modal/settings-tab.tsx`, `components/welcome-chat-new.tsx`, `components/welcome-chat/explore-mentors.tsx`, `hooks/use-mentors/use-mentor-settings.ts`
+
+Covers issue #2544: a new `show_explore_mentors` mentor setting, exposed as a "Show additional agents" switch (`data-testid="settings-show-explore-mentors-switch"`) in the Edit Agent modal's Settings tab → Capabilities sub-tab → Advanced section. It gates the OS-specific "Explore Agents" section that renders on an agent's own (non-project) welcome screen. Note: the issue asks for the backend default to be `false` for new agents; as of this writing the backend actually defaults it to `true` in this environment, so every checkpoint below explicitly drives the toggle to a known state first rather than asserting a specific out-of-the-box default. sem-05 is a regression guard for a real bug found in manual QA: `use-mentor-settings.ts` used to read `effectiveSettings?.show_explore_mentors ?? effectivePublicSettings?.show_explore_mentors ?? false`, but field-level RBAC returns an unreadable field as `""` (not `null`/`undefined`) for a logged-in non-owner's `/settings/` GET — `"" ?? x` short-circuits to `""`, so non-owner viewers never saw the section even when the owner had it ON; the fix (`asBoolean`) only treats a real boolean as present. The project landing page's own "mentors in this project" list is a separate, SDK-owned feature that hard-codes its own `showExploreMentors` prop and never reads this setting — confirmed by reading `components/welcome-chat-new.tsx`'s `projectId` branch directly, so it is documented here rather than covered by a browser test. Journey 15's sw-06 checkpoint (home-page Explore section) was also fixed alongside this journey: it used to silently no-op ("not in explore-mentors state") whenever the ambient default mentor happened to have the section off; it now seeds its own throw-away mentor with the toggle explicitly ON so the checkpoint is deterministic.
+
+- [x] sem-01: Admin sees the "Show additional agents" switch under Settings > Capabilities > Advanced, with the right label, data-testid, and tooltip info button
+- [x] sem-02: Toggling the switch ON and saving PUTs `show_explore_mentors=true`; the value persists across closing and reopening the Edit Agent dialog
+- [x] sem-03: Toggling the switch OFF and saving PUTs `show_explore_mentors=false`; the value persists across closing and reopening the Edit Agent dialog
+- [x] sem-04: With the setting ON, the admin's own welcome screen shows the "Explore Agents" section
+- [x] sem-05: With the setting ON, a non-admin non-owner viewer of the same agent also sees the "Explore Agents" section (RBAC-redaction regression guard)
+- [x] sem-06: With the setting OFF, the welcome screen hides the "Explore Agents" section

@@ -3,19 +3,21 @@
 import React from 'react';
 import { useTranslations } from 'next-intl';
 import { useDebounce } from 'use-debounce';
-import { Search, Loader2 } from 'lucide-react';
+import { Search, Loader2, Plus, X } from 'lucide-react';
 
 import { useUsername } from '@/hooks/use-user';
 import {
   useGetAiSearchMentorsQuery,
   useStarMentorMutation,
   useUnstarMentorMutation,
-  useGetPersonnalizedMentorsQuery,
+  useGetSearchGlobalQuery,
 } from '@iblai/iblai-js/data-layer';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useNavigate } from '@/hooks/user-navigate';
 import { useTenantMetadata } from '@iblai/iblai-js/web-utils';
 import { isLoggedIn, redirectToAuthSpaJoinTenant } from '@/lib/utils';
+import { WithPermissions } from '@/hoc/withPermissions';
 
 import { MentorCategories } from './mentor-categories';
 import {
@@ -28,7 +30,23 @@ import { FeaturedMentorsSection } from './featured-mentors-section';
 import { CustomMentorsSection } from './custom-mentors-section';
 import { DefaultMentorsSection } from './default-mentors-section';
 import { config } from '@/lib/config';
-import { CUSTOM_MENTORS_LIMIT } from './explore-page-context';
+
+const CREATE_MENTOR_RBAC_RESOURCE = '/mentors/#create';
+
+// Global search has no creator filter, so one page of the tenant's agents is
+// scanned for one the user created. Users whose own agents all sit beyond
+// this page won't get the "Created by: Me" option.
+export const OWN_AGENTS_SCAN_LIMIT = 100;
+
+/** True when a global-search result is an agent created by `username`. */
+export function isAgentCreatedBy(
+  item: Record<string, unknown>,
+  username: string,
+): boolean {
+  if (item.type !== 'agent') return false;
+  const data = item.data as { created_by?: unknown } | undefined;
+  return data?.created_by === username;
+}
 
 interface ExplorePageContentProps {
   tenantKey: string;
@@ -50,7 +68,7 @@ export function ExplorePageContent({ tenantKey }: ExplorePageContentProps) {
   );
 
   const username = useUsername();
-  const { navigateToMentor } = useNavigate();
+  const { navigateToMentor, openCreateMentorModal } = useNavigate();
 
   const { metadata } = useTenantMetadata({ org: tenantKey });
 
@@ -116,25 +134,39 @@ export function ExplorePageContent({ tenantKey }: ExplorePageContentProps) {
     },
   );
 
-  //check if there are custom mentors
-  const { data: customMentorsData } = useGetPersonnalizedMentorsQuery(
-    {
-      platform_key: tenantKey,
-      username: username || undefined,
-      limit: CUSTOM_MENTORS_LIMIT,
-      category: filters.categories || undefined,
-      llm: filters.llm_providers || undefined,
-      query: debouncedSearch || undefined,
-      include_main_public_mentors: includeMainPublicMentors,
-    },
+  // Whether the user has created any agent here, which decides if "Me" is
+  // offered under "Created By". Independent of search and filters so the
+  // option doesn't vanish (or strand an active "Me" filter) while typing.
+  const { data: tenantAgentsData } = useGetSearchGlobalQuery(
+    [
+      {
+        content: ['agents'],
+        tenant: tenantKey,
+        limit: OWN_AGENTS_SCAN_LIMIT,
+        returnFacet: false,
+      },
+    ],
     {
       skip: !username || !tenantKey,
     },
   );
 
-  const hasCustomMentors =
-    Array.isArray(customMentorsData?.results) &&
-    customMentorsData.results.length > 0;
+  const hasCustomMentors = React.useMemo(
+    () =>
+      !!username &&
+      (tenantAgentsData?.results ?? []).some((item) =>
+        isAgentCreatedBy(item, username),
+      ),
+    [tenantAgentsData, username],
+  );
+
+  const handleCreateMentor = React.useCallback(() => {
+    if (!isLoggedIn()) {
+      redirectToAuthSpaJoinTenant(tenantKey);
+      return;
+    }
+    openCreateMentorModal();
+  }, [openCreateMentorModal, tenantKey]);
 
   // Star/Unstar mutations
   const [starMentor] = useStarMentorMutation();
@@ -242,81 +274,100 @@ export function ExplorePageContent({ tenantKey }: ExplorePageContentProps) {
           id="main-content"
           aria-label={t('agentExplorationPage')}
         >
-          <div className="mx-auto max-w-[920px] px-3 py-6 md:px-6 md:py-8">
-            <div className="mb-6 text-center">
-              <div className="mx-auto w-full">
-                <h1 className="mb-6 text-lg leading-relaxed font-medium text-gray-600 md:text-xl">
+          <div className="mx-auto w-full max-w-6xl px-4 pt-6 pb-32 md:px-6 md:pt-10">
+            <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+              <h1 className="min-w-0">
+                <span className="block text-2xl font-semibold tracking-tight text-gray-900 md:text-3xl">
+                  {t('pageTitle')}
+                </span>
+                <span className="mt-1.5 block max-w-2xl text-sm leading-relaxed font-normal text-gray-600 md:text-base">
                   {t('discoverAndCreateAgents')}
-                </h1>
-              </div>
+                </span>
+              </h1>
+              <WithPermissions rbacResource={CREATE_MENTOR_RBAC_RESOURCE}>
+                {({ hasPermission }) =>
+                  hasPermission ? (
+                    <Button
+                      onClick={handleCreateMentor}
+                      aria-label={t('createAgentAriaLabel')}
+                      className="h-10 shrink-0 gap-1.5 self-start rounded-lg bg-[#1C77B8] px-4 text-white shadow-sm hover:bg-[#1F6FA8] sm:self-auto"
+                    >
+                      <Plus className="h-4 w-4" aria-hidden="true" />
+                      {t('createAgentButton')}
+                    </Button>
+                  ) : null
+                }
+              </WithPermissions>
+            </header>
 
-              <div className="mb-6 w-full">
-                <div className="relative">
-                  <label htmlFor="mentor-search" className="sr-only">
-                    {t('searchAgentsLabel')}
-                  </label>
-                  {searchQuery &&
-                  (starredMentorsLoading ||
-                    customMentorsLoading ||
-                    featuredMentorsLoading ||
-                    defaultMentorsLoading) ? (
-                    <Loader2
-                      className="absolute top-1/2 left-4 h-5 w-5 -translate-y-1/2 transform animate-spin text-[#38A1E5]"
-                      aria-hidden="true"
-                    />
-                  ) : (
-                    <Search
-                      className="absolute top-1/2 left-4 h-5 w-5 -translate-y-1/2 transform text-gray-400"
-                      aria-hidden="true"
-                    />
-                  )}
-                  <Input
-                    id="mentor-search"
-                    placeholder={t('searchPlaceholder')}
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full rounded-lg border-gray-300 py-3 pr-4 pl-12 text-base focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
-                    aria-label={t('searchAgentsInputLabel')}
-                  />
-                </div>
-              </div>
+            <div className="relative">
+              <label htmlFor="mentor-search" className="sr-only">
+                {t('searchAgentsLabel')}
+              </label>
+              {searchQuery &&
+              (starredMentorsLoading ||
+                customMentorsLoading ||
+                featuredMentorsLoading ||
+                defaultMentorsLoading) ? (
+                <Loader2
+                  className="absolute top-1/2 left-4 h-5 w-5 -translate-y-1/2 transform animate-spin text-[#38A1E5]"
+                  aria-hidden="true"
+                />
+              ) : (
+                <Search
+                  className="absolute top-1/2 left-4 h-5 w-5 -translate-y-1/2 transform text-gray-400"
+                  aria-hidden="true"
+                />
+              )}
+              <Input
+                id="mentor-search"
+                placeholder={t('searchPlaceholder')}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape' && searchQuery) {
+                    e.preventDefault();
+                    setSearchQuery('');
+                  }
+                }}
+                className="h-12 w-full rounded-xl border-gray-200 bg-white pr-12 pl-12 text-base shadow-sm transition-shadow placeholder:text-gray-400 focus-visible:border-[#38A1E5] focus-visible:ring-4 focus-visible:ring-[#38A1E5]/15 md:text-base"
+                aria-label={t('searchAgentsInputLabel')}
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="absolute top-1/2 right-2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 focus-visible:ring-2 focus-visible:ring-[#38A1E5] focus-visible:outline-none"
+                  aria-label={t('clearSearch')}
+                >
+                  <X className="h-4 w-4" aria-hidden="true" />
+                </button>
+              )}
             </div>
 
-            <div className="mx-auto max-w-6xl">
-              <div className="sticky top-0 z-10 mb-6 flex justify-start bg-white py-2">
-                <MentorCategories
-                  facets={facets}
-                  showCreatedByFilter={
-                    metadata?.mentor_include_community_mentors !== false
-                  }
-                  onFiltersChange={handleFiltersChange}
-                  onCreatedByChange={handleCreatedByChange}
-                  includeMeToCreatedByFilter={hasCustomMentors}
-                />
-              </div>
-              <div className="mb-6 border-b border-gray-200"></div>
+            <div className="sticky top-0 z-10 -mx-4 mt-3 mb-8 border-b border-gray-100 bg-white/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-white/80 md:-mx-6 md:px-6">
+              <MentorCategories
+                facets={facets}
+                showCreatedByFilter={
+                  metadata?.mentor_include_community_mentors !== false
+                }
+                onFiltersChange={handleFiltersChange}
+                onCreatedByChange={handleCreatedByChange}
+                includeMeToCreatedByFilter={hasCustomMentors}
+              />
             </div>
 
             {showOnlyCustomMentors ? (
-              <div className="mx-auto max-w-[920px] pb-32">
-                <CustomMentorsSection />
-              </div>
+              <CustomMentorsSection />
             ) : isSearching ? (
-              <div className="mx-auto max-w-[920px] pb-32">
+              <DefaultMentorsSection />
+            ) : (
+              <div className="space-y-10">
+                <StarredMentorsSection />
+                <FeaturedMentorsSection />
+                <CustomMentorsSection />
                 <DefaultMentorsSection />
               </div>
-            ) : (
-              <>
-                <div className="mx-auto mb-8 max-w-[920px] space-y-8">
-                  <StarredMentorsSection />
-                  <FeaturedMentorsSection />
-                  <CustomMentorsSection />
-                </div>
-
-                <div className="mx-auto max-w-[920px] pb-32">
-                  <DefaultMentorsSection />
-                </div>
-              </>
             )}
           </div>
         </div>

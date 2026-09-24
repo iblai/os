@@ -744,7 +744,22 @@
     "agentUpdatedError": "Failed to update agent",
     "userAgreementUpdatedSuccess": "User agreement updated successfully",
     "userAgreementUpdatedError": "Failed to update user agreement",
-    "userAgreementToggledSuccess": "User agreement {status} successfully"
+    "userAgreementToggledSuccess": "User agreement {status} successfully",
+    "viewAgreements": "View Agreements"
+  },
+  "disclaimersTabAgreements": {
+    "title": "Agreements",
+    "dialogDescription": "Users who have accepted this agent's User Agreement.",
+    "totalAgreements": "{count} Total Agreements",
+    "searchPlaceholder": "Search by username",
+    "searchAriaLabel": "Search agreements by username",
+    "columnUser": "User",
+    "columnAgreedAt": "Agreed at",
+    "summaryDescription": "Review the users who have accepted this agent's User Agreement. Each entry shows the user's name, email and when they agreed. Users who haven't accepted yet aren't listed. Search matches the exact username.",
+    "empty": "No agreements yet",
+    "emptyDescription": "Users who accept the User Agreement will appear here with the time they agreed.",
+    "noMatches": "No users match your search",
+    "noMatchesDescription": "Search matches the exact username — try the full username."
   },
   "editMentorModalIndex": {
     "dialogDescription": "Edit Agent settings, prompts, tools, safety, flow, history, datasets, and API keys",
@@ -765,20 +780,17 @@
     "seeMore": "See more"
   },
   "exploreCustomMentorsSection": {
-    "sectionHeading": "Custom",
-    "listAriaLabel": "Custom agents",
-    "loadMoreAriaLabel": "Load more custom agents",
+    "sectionHeading": "My agents",
+    "listAriaLabel": "My agents",
+    "loadMoreAriaLabel": "Load more of my agents",
     "loadingMore": "Loading more",
     "seeMore": "See more",
     "createAgentAriaLabel": "Create Custom Agent",
     "createAgentHeading": "Create Custom Agent",
-    "createAgentDescription": "Build your own custom agent tailored to your specific learning needs",
-    "getStartedToday": "Get started today"
+    "createAgentDescription": "Build your own custom agent tailored to your specific learning needs"
   },
   "exploreDefaultMentorsSection": {
     "loadingAgents": "Loading agents...",
-    "createAgentAriaLabel": "Create new agent",
-    "createAgentButton": "Create Agent",
     "allAgentsListAriaLabel": "All agents",
     "exploreAgentAriaLabel": "Explore agent: {name}",
     "loadMoreAriaLabel": "Load more agents",
@@ -789,27 +801,30 @@
     "llmProviderTitle": "{provider} Agents",
     "llmProviderSubtext": "Explore agents powered by {provider}.",
     "allAgentsTitle": "All Agents",
-    "allAgentsSubtext": "Explore agents and specialized learning assistants."
+    "allAgentsSubtext": "Explore agents and specialized learning assistants.",
+    "searchResultsTitle": "Results for “{query}”",
+    "searchResultsSubtext": "{count, plural, =0 {No agents match your search.} one {# agent matches your search.} other {# agents match your search.}}",
+    "emptyStateHint": "Try a different search term or clear your filters."
   },
   "exploreExplorePageContent": {
     "skipToMainContent": "Skip to main content",
     "agentExplorationPage": "Agent exploration page",
     "discoverAndCreateAgents": "Discover and create agents that combine subject expertise, resources, and skills",
     "searchAgentsLabel": "Search agents",
-    "searchPlaceholder": "Search",
-    "searchAgentsInputLabel": "Search agents"
+    "searchPlaceholder": "Search agents",
+    "searchAgentsInputLabel": "Search agents",
+    "pageTitle": "Explore agents",
+    "clearSearch": "Clear search",
+    "createAgentButton": "Create Agent",
+    "createAgentAriaLabel": "Create new agent"
   },
   "exploreFeaturedMentorsSection": {
     "heading": "Featured",
     "loadMoreAriaLabel": "Load more featured agents",
     "loadingMore": "Loading more",
-    "seeMore": "See more",
-    "emptyStateTitle": "Featured Agents",
-    "emptyStateDescription": "Discover handpicked agents recommended by our community",
-    "emptyStateNoAgents": "No featured agents available"
+    "seeMore": "See more"
   },
   "exploreMentorCategories": {
-    "promotion": "Promotion",
     "featured": "Featured",
     "category": "Category",
     "subject": "Subject",
@@ -834,9 +849,17 @@
     "loadingMore": "Loading more",
     "seeMore": "See more",
     "addToFavoritesCardAriaLabel": "Add to Favorites - Sign up to star agents",
-    "addToFavoritesTitle": "Add to Favorites",
     "addToFavoritesDescription": "Star your favorite agents to quickly access them here",
     "noFavoritesYet": "No favorites yet"
+  },
+  "exploreSection": {
+    "countAriaLabel": "{count, plural, one {# agent} other {# agents}}"
+  },
+  "exploreMentorCard": {
+    "featured": "Featured",
+    "addToFavorites": "Add to favorites",
+    "removeFromFavorites": "Remove from favorites",
+    "updatedOn": "Updated on {date}"
   },
   "flaggedPromptsDeleteModerationLogModal": {
     "title": "Delete Moderation Log",
@@ -2094,9 +2117,12 @@
     "selectWhoCanChat": "Select who can chat",
     "anyoneOption": "Anyone",
     "authenticatedUsersOption": "Authenticated Users",
-    "highlightFeaturedLabel": "Highlight in featured listings",
+    "highlightFeaturedLabel": "Highlight In Featured Listings",
     "highlightFeaturedInfoAriaLabel": "More info about highlight in featured listings",
     "highlightFeaturedTooltip": "Feature this agent to highlight it in listings.",
+    "showAdditionalAgentsLabel": "Show additional agents",
+    "showAdditionalAgentsInfoAriaLabel": "More info about show additional agents",
+    "showAdditionalAgentsTooltip": "Shows the additional agents section on this agent's welcome screen.",
     "enableLtiLabel": "Enable LTI launches",
     "enableLtiInfoAriaLabel": "More info about enable LTI launches",
     "enableLtiTooltip": "Enables this agent to be accessible via LTI launches. Unselecting this will immediately remove access for any users that have launched this via LTI.",

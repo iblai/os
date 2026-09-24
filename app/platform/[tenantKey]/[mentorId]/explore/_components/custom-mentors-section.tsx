@@ -6,13 +6,17 @@ import { useTranslations } from 'next-intl';
 
 import { useGetPersonnalizedMentorsQuery } from '@iblai/iblai-js/data-layer';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { Spinner } from '@/components/spinner';
 import {
   CUSTOM_MENTORS_LIMIT,
   useExplorePageContext,
 } from './explore-page-context';
 import { MentorCardWithStar } from './mentor-card-with-star';
+import {
+  MENTOR_GRID_CLASSNAME,
+  MentorGridSkeleton,
+  SectionHeader,
+} from './section';
 import { WithPermissions } from '@/hoc/withPermissions';
 import { useNavigate } from '@/hooks/user-navigate';
 import { isLoggedIn, redirectToAuthSpaJoinTenant } from '@/lib/utils';
@@ -26,6 +30,41 @@ interface MentorWithProfile {
   description?: string;
   updated_at?: string | null;
   metadata?: any;
+}
+
+function CreateAgentTile({
+  onClick,
+  wide = false,
+}: {
+  onClick: () => void;
+  wide?: boolean;
+}) {
+  const t = useTranslations('exploreCustomMentorsSection');
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={t('createAgentAriaLabel')}
+      className={`group flex h-full w-full rounded-xl border-2 border-dashed border-[#38A1E5]/35 bg-[#F5F8FF]/60 p-4 transition-colors hover:border-[#38A1E5] hover:bg-[#F5F8FF] focus-visible:ring-2 focus-visible:ring-[#38A1E5] focus-visible:ring-offset-2 focus-visible:outline-none ${
+        wide
+          ? 'items-center gap-4 text-left'
+          : 'min-h-[148px] flex-col items-center justify-center gap-2 text-center'
+      }`}
+    >
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-[#38A1E5] shadow-sm ring-1 ring-[#D0E0FF] transition-transform group-hover:scale-105 motion-reduce:transition-none">
+        <Plus className="h-5 w-5" aria-hidden="true" />
+      </span>
+      <span className="min-w-0">
+        <span className="block text-sm font-semibold text-gray-900">
+          {t('createAgentHeading')}
+        </span>
+        <span className="mt-0.5 block text-sm text-gray-600">
+          {t('createAgentDescription')}
+        </span>
+      </span>
+    </button>
+  );
 }
 
 export function CustomMentorsSection() {
@@ -42,6 +81,7 @@ export function CustomMentorsSection() {
   const [numberOfCustomMentors, setNumberOfCustomMentors] =
     React.useState(CUSTOM_MENTORS_LIMIT);
   const { openCreateMentorModal } = useNavigate();
+  const headingId = React.useId();
 
   // Reset pagination when filters or search change
   React.useEffect(() => {
@@ -58,6 +98,7 @@ export function CustomMentorsSection() {
         llm: filters.llm_providers || undefined,
         types: filters.types || undefined,
         subjects: filters.subjects || undefined,
+        featured: filters.is_featured === 'true' ? true : undefined,
         query: debouncedSearch || undefined,
         include_main_public_mentors: includeMainPublicMentors,
       },
@@ -83,143 +124,88 @@ export function CustomMentorsSection() {
     openCreateMentorModal();
   }, [openCreateMentorModal, tenantKey]);
 
+  const header = (
+    <SectionHeader
+      id={headingId}
+      title={t('sectionHeading')}
+      count={customMentorsData?.count}
+    />
+  );
+
+  if (!customMentorsData && customMentorsFetching) {
+    return (
+      <section aria-labelledby={headingId}>
+        {header}
+        <MentorGridSkeleton count={3} />
+      </section>
+    );
+  }
+
+  // Nothing of their own yet: the section is only worth showing to people who
+  // can create an agent, as the way to make their first one.
+  if (customMentors.length === 0) {
+    return (
+      <WithPermissions rbacResource={CREATE_MENTOR_RBAC_RESOURCE}>
+        {({ hasPermission }) =>
+          hasPermission ? (
+            <section aria-labelledby={headingId}>
+              {header}
+              <CreateAgentTile onClick={handleCreateMentor} wide />
+            </section>
+          ) : null
+        }
+      </WithPermissions>
+    );
+  }
+
   return (
-    <div>
-      <h2
-        className="mb-4 text-lg font-medium text-gray-900"
-        role="heading"
-        aria-level={2}
+    <section aria-labelledby={headingId}>
+      {header}
+      <div
+        className={MENTOR_GRID_CLASSNAME}
+        data-testid="custom-mentors-card-list"
+        role="list"
+        aria-label={t('listAriaLabel')}
       >
-        {t('sectionHeading')}
-      </h2>
-      {customMentors.length > 0 ? (
-        <>
-          <div
-            className="grid grid-cols-1 gap-6 md:grid-cols-2"
-            data-testid="custom-mentors-card-list"
-            role="list"
-            aria-label={t('listAriaLabel')}
-          >
-            {customMentors.map((mentor) => (
-              <div key={mentor.id} role="listitem">
-                <MentorCardWithStar mentor={mentor} />
-              </div>
-            ))}
+        {customMentors.map((mentor) => (
+          <div key={mentor.id} role="listitem">
+            <MentorCardWithStar mentor={mentor} />
           </div>
-          {customMentorsData?.next && (
-            <div className="mt-6 flex justify-center">
-              <Button
-                variant="outline"
-                onClick={() =>
-                  setNumberOfCustomMentors(
-                    numberOfCustomMentors + CUSTOM_MENTORS_LIMIT,
-                  )
-                }
-                disabled={customMentorsFetching}
-                aria-label={t('loadMoreAriaLabel')}
-              >
-                {customMentorsFetching ? (
-                  <div className="flex items-center gap-2">
-                    <Spinner className="h-4 w-4" aria-hidden="true" />
-                    <span>{t('loadingMore')}</span>
-                  </div>
-                ) : (
-                  t('seeMore')
-                )}
-              </Button>
-            </div>
-          )}
-          <WithPermissions rbacResource={CREATE_MENTOR_RBAC_RESOURCE}>
-            {(hasPermission) =>
-              hasPermission ? (
-                <div className="mt-6">
-                  <Card
-                    className="cursor-pointer border border-[#D0E0FF] bg-[#F5F8FF] transition-shadow duration-200 hover:shadow-md"
-                    onClick={handleCreateMentor}
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        handleCreateMentor();
-                      }
-                    }}
-                    aria-label={t('createAgentAriaLabel')}
-                  >
-                    <CardContent className="p-6">
-                      <div className="flex items-start gap-4">
-                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-[#D0E0FF]">
-                          <Plus className="h-6 w-6 text-[#38A1E5]" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <h3
-                            className="mb-2 text-sm font-medium text-gray-900"
-                            role="heading"
-                            aria-level={3}
-                          >
-                            {t('createAgentHeading')}
-                          </h3>
-                          <p className="mb-3 text-sm leading-relaxed text-gray-600">
-                            {t('createAgentDescription')}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            {t('getStartedToday')}
-                          </p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              ) : null
-            }
-          </WithPermissions>
-        </>
-      ) : (
+        ))}
         <WithPermissions rbacResource={CREATE_MENTOR_RBAC_RESOURCE}>
-          {(hasPermission) =>
+          {({ hasPermission }) =>
             hasPermission ? (
-              <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-                <Card
-                  className="cursor-pointer border border-[#D0E0FF] bg-[#F5F8FF] transition-shadow duration-200 hover:shadow-md md:col-span-2 lg:col-span-3"
-                  onClick={handleCreateMentor}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      handleCreateMentor();
-                    }
-                  }}
-                  aria-label={t('createAgentAriaLabel')}
-                >
-                  <CardContent className="p-6">
-                    <div className="flex items-start gap-4">
-                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-[#D0E0FF]">
-                        <Plus className="h-6 w-6 text-[#38A1E5]" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <h3
-                          className="mb-2 text-sm font-medium text-gray-900"
-                          role="heading"
-                          aria-level={3}
-                        >
-                          {t('createAgentHeading')}
-                        </h3>
-                        <p className="mb-3 text-sm leading-relaxed text-gray-600">
-                          {t('createAgentDescription')}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          {t('getStartedToday')}
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+              <div role="listitem">
+                <CreateAgentTile onClick={handleCreateMentor} />
               </div>
             ) : null
           }
         </WithPermissions>
+      </div>
+      {customMentorsData?.next && (
+        <div className="mt-6 flex justify-center">
+          <Button
+            variant="outline"
+            className="rounded-full px-5"
+            onClick={() =>
+              setNumberOfCustomMentors(
+                numberOfCustomMentors + CUSTOM_MENTORS_LIMIT,
+              )
+            }
+            disabled={customMentorsFetching}
+            aria-label={t('loadMoreAriaLabel')}
+          >
+            {customMentorsFetching ? (
+              <div className="flex items-center gap-2">
+                <Spinner className="h-4 w-4" aria-hidden="true" />
+                <span>{t('loadingMore')}</span>
+              </div>
+            ) : (
+              t('seeMore')
+            )}
+          </Button>
+        </div>
       )}
-    </div>
+    </section>
   );
 }
