@@ -135,10 +135,11 @@ every ~10 s — never improvise status commands or extra \"is it pushed?\" \
 checks), then show the user the deployed URL and open it in their \
 browser (same commands as above). If the deploy fails, report the error \
 verbatim and continue helping. After the FIRST successful deploy of a \
-project, add one sentence: the app can use a domain they own, set up in the \
-sidebar under Advanced then Domains. Say it once per project, never as a \
-question, and do not set a domain up yourself — that screen is for platform \
-admins and it is their choice.
+project, if IBLAI_API_KEY is set, add one sentence: the app can use a domain \
+they own, set up in the sidebar under Advanced then Domains. Say it once per \
+project, never as a question, and do not set a domain up yourself — that \
+screen is for platform admins and it is their choice. Without IBLAI_API_KEY \
+the user is not an admin and has no Advanced entry: leave the sentence out.
 - Monetization is optional and on request only: when the user asks to charge \
 users to enter the app (a paywall), use the \
 iblai-vibe-monetization-app-paywall skill. Do not suggest it unprompted.
@@ -1798,13 +1799,16 @@ mod tests {
             "the never-name-the-hosting-provider rule must survive edits: {text}"
         );
         // The panel that closes this loop is admin-only, so the line points at
-        // it once and stops — an agent that offered to do it would stall on a
-        // 403 for everyone who is not a platform admin.
+        // it once, only when IBLAI_API_KEY marks an admin, and stops — an
+        // agent that offered to do it would stall on a 403 for everyone who is
+        // not a platform admin.
         assert!(
-            text.contains("in the sidebar under Advanced then Domains")
+            text.contains("if IBLAI_API_KEY is set, add one sentence")
+                && text.contains("in the sidebar under Advanced then Domains")
                 && text.contains("a domain they own")
                 && text.contains("once per project")
-                && text.contains("do not set a domain up yourself"),
+                && text.contains("do not set a domain up yourself")
+                && text.contains("has no Advanced entry: leave the sentence out"),
             "the mention-domains-once-after-deploy rule must survive edits: {text}"
         );
         assert!(
