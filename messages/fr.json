@@ -1876,7 +1876,8 @@
     "hideConversationMemory": "Masquer la mémoire de conversation",
     "showConversationMemory": "Afficher la mémoire de conversation",
     "noConversationMemory": "Aucune mémoire de conversation disponible.",
-    "selectConversationPrompt": "Sélectionnez une conversation pour afficher les détails."
+    "selectConversationPrompt": "Sélectionnez une conversation pour afficher les détails.",
+    "documentsChip": "Documents · {count}"
   },
   "tabsLlmTab": {
     "infoBox": "C'est le cerveau de votre agent — le modèle d'IA qui alimente chaque réponse. Les modèles plus grands raisonnent mieux sur les questions complexes ; les plus légers sont plus rapides et moins coûteux. Pas sûr ? Le modèle par défaut est un excellent choix polyvalent.",

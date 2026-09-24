@@ -1876,7 +1876,8 @@
     "hideConversationMemory": "Ocultar memoria de conversación",
     "showConversationMemory": "Mostrar memoria de conversación",
     "noConversationMemory": "No hay memoria de conversación disponible.",
-    "selectConversationPrompt": "Seleccione una conversación para ver los detalles."
+    "selectConversationPrompt": "Seleccione una conversación para ver los detalles.",
+    "documentsChip": "Documentos · {count}"
   },
   "tabsLlmTab": {
     "infoBox": "Este es el cerebro de tu agente: el modelo de IA que impulsa cada respuesta. Los modelos más grandes razonan mejor las preguntas complejas; los más ligeros son más rápidos y cuestan menos. ¿No estás seguro? El predeterminado es una opción versátil y confiable.",

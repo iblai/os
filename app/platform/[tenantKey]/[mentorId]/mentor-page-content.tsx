@@ -10,7 +10,7 @@ import {
 } from '@iblai/iblai-js/web-utils';
 
 import ErrorBoundary from '@/components/error-boundary';
-import { DocumentSidebar } from '@/components/document-sidebar';
+import { DocumentSidebar } from '@iblai/iblai-js/web-containers';
 
 import './page.css';
 import { Chat } from '@/components/chat';
