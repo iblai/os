@@ -154,6 +154,38 @@ describe('readActiveTab', () => {
       text: expect.stringContaining('Hello page'),
     });
   });
+
+  it("feeds every frame's text, page first, and skips frames with none", async () => {
+    document.body.innerHTML = '<p>Hello page</p>';
+    document.title = 'Page';
+    const original =
+      chromeStub.stub.scripting.executeScript.getMockImplementation()!;
+    chromeStub.stub.scripting.executeScript.mockImplementationOnce(
+      async (injection) => [
+        {
+          frameId: 4,
+          result: {
+            title: 'Chat',
+            href: 'https://chat.acme.com/frame',
+            text: 'hi from chat',
+          },
+        },
+        {
+          frameId: 2,
+          result: { title: 'Pixel', href: 'https://ads.example/px', text: '' },
+        },
+        ...(await original(injection)),
+      ],
+    );
+    const content = await readActiveTab();
+    expect(content).toMatchObject({ title: 'Page', href: location.href });
+    expect(content!.text).toMatch(/Hello page\n\nhi from chat$/);
+  });
+
+  it('returns null when the page answered with no frames', async () => {
+    chromeStub.stub.scripting.executeScript.mockResolvedValueOnce([]);
+    await expect(readActiveTab()).resolves.toBeNull();
+  });
 });
 
 describe('startContextFeed', () => {

@@ -1,5 +1,35 @@
 # Changelog
 
+## [0.155.1](https://github.com/iblai/os/compare/v0.155.0...v0.155.1) (2026-09-23)
+
+### Bug Fixes
+
+* **chrome-ext:** see and drive elements inside iframes and open shadow roots (1.1.1) ([026fb06](https://github.com/iblai/os/commit/026fb06a8f09c3fef433b92cc6cb24fd35a12cf3))
+
+## [0.155.0](https://github.com/iblai/os/compare/v0.154.0...v0.155.0) (2026-09-23)
+
+### Features
+
+* analytics platform scope button implementation > test coverage ([77ac0a6](https://github.com/iblai/os/commit/77ac0a63abc363809bc17211523bcdbe7b6cd064))
+* analytics platform scope button implementation implemented ([8981bb8](https://github.com/iblai/os/commit/8981bb83dca15e52096e3e315c7e00d8240b9959))
+* analytics platform scope button implementation on progress ([bbd107e](https://github.com/iblai/os/commit/bbd107e785db26094fb5191a39a867230b6651eb))
+* analytics platform scope implementation ([c45e4ca](https://github.com/iblai/os/commit/c45e4ca0a6761d172d126a99baa47e3feb47103f))
+* analytics platform scope implementation ([086ae54](https://github.com/iblai/os/commit/086ae5473c5ef11b5bd2ed9518c0f7feccceb0c9))
+* analytics platform scope redirection optimized to use navigation hook ([23cbaff](https://github.com/iblai/os/commit/23cbaffabcf1373b616a56928c993be53c63707b))
+* analytics platform scope redirection optimized with skipping from provider mentor check ([463264a](https://github.com/iblai/os/commit/463264acdc070778ee3f47b9159eb917ec85bd71))
+* analytics update > iblai-js bump ([317710d](https://github.com/iblai/os/commit/317710d24d6229dcf613efe7cbc21a0e47a67baa))
+* explore UI revamp ([b4014b1](https://github.com/iblai/os/commit/b4014b1a7230a9a3daf3717e0cd08a6ea003ed2d))
+* explore ui revamp > test coverage ([3192dee](https://github.com/iblai/os/commit/3192dee94c1a20c7465ba6a12acbea4a3e6fd922))
+* explore ui revamp > test coverage ([4af5093](https://github.com/iblai/os/commit/4af5093c43ae9e63d9743ddc67fd317430c147f1))
+
+### Bug Fixes
+
+* **test:** unblock pre-push hook (worktree collection, Sentry mock types, layout coverage) ([c8e8cad](https://github.com/iblai/os/commit/c8e8cad3278ffd86cd54b65f09f58dad4333eb5d))
+
+### Chores
+
+* release 2.9.10 ([e358aec](https://github.com/iblai/os/commit/e358aece858f8fac0bd05fbe4b88033d73a6bc20))
+
 ## [0.154.0](https://github.com/iblai/os/compare/v0.153.0...v0.154.0) (2026-09-23)
 
 ### Features

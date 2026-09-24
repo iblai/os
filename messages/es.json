@@ -775,20 +775,17 @@
     "seeMore": "Ver más"
   },
   "exploreCustomMentorsSection": {
-    "sectionHeading": "Personalizado",
-    "listAriaLabel": "Agentes personalizados",
-    "loadMoreAriaLabel": "Cargar más agentes personalizados",
+    "sectionHeading": "Mis agentes",
+    "listAriaLabel": "Mis agentes",
+    "loadMoreAriaLabel": "Cargar más de mis agentes",
     "loadingMore": "Cargando más",
     "seeMore": "Ver más",
     "createAgentAriaLabel": "Crear agente personalizado",
     "createAgentHeading": "Crear agente personalizado",
-    "createAgentDescription": "Crea tu propio agente personalizado adaptado a tus necesidades de aprendizaje específicas",
-    "getStartedToday": "Empieza hoy"
+    "createAgentDescription": "Crea tu propio agente personalizado adaptado a tus necesidades de aprendizaje específicas"
   },
   "exploreDefaultMentorsSection": {
     "loadingAgents": "Cargando agentes...",
-    "createAgentAriaLabel": "Crear nuevo agente",
-    "createAgentButton": "Crear agente",
     "allAgentsListAriaLabel": "Todos los agentes",
     "exploreAgentAriaLabel": "Explorar agente: {name}",
     "loadMoreAriaLabel": "Cargar más agentes",
@@ -799,27 +796,30 @@
     "llmProviderTitle": "Agentes {provider}",
     "llmProviderSubtext": "Explora agentes impulsados por {provider}.",
     "allAgentsTitle": "Todos los agentes",
-    "allAgentsSubtext": "Explora agentes y asistentes de aprendizaje especializados."
+    "allAgentsSubtext": "Explora agentes y asistentes de aprendizaje especializados.",
+    "searchResultsTitle": "Resultados para “{query}”",
+    "searchResultsSubtext": "{count, plural, =0 {Ningún agente coincide con tu búsqueda.} one {# agente coincide con tu búsqueda.} other {# agentes coinciden con tu búsqueda.}}",
+    "emptyStateHint": "Prueba con otro término de búsqueda o borra los filtros."
   },
   "exploreExplorePageContent": {
     "skipToMainContent": "Saltar al contenido principal",
     "agentExplorationPage": "Página de exploración de agentes",
     "discoverAndCreateAgents": "Descubre y crea agentes que combinan experiencia temática, recursos y habilidades",
     "searchAgentsLabel": "Buscar agentes",
-    "searchPlaceholder": "Buscar",
-    "searchAgentsInputLabel": "Buscar agentes"
+    "searchPlaceholder": "Buscar agentes",
+    "searchAgentsInputLabel": "Buscar agentes",
+    "pageTitle": "Explorar agentes",
+    "clearSearch": "Borrar búsqueda",
+    "createAgentButton": "Crear agente",
+    "createAgentAriaLabel": "Crear nuevo agente"
   },
   "exploreFeaturedMentorsSection": {
     "heading": "Destacados",
     "loadMoreAriaLabel": "Cargar más agentes destacados",
     "loadingMore": "Cargando más",
-    "seeMore": "Ver más",
-    "emptyStateTitle": "Agentes destacados",
-    "emptyStateDescription": "Descubre agentes seleccionados recomendados por nuestra comunidad",
-    "emptyStateNoAgents": "No hay agentes destacados disponibles"
+    "seeMore": "Ver más"
   },
   "exploreMentorCategories": {
-    "promotion": "Promoción",
     "featured": "Destacado",
     "category": "Categoría",
     "subject": "Tema",
@@ -844,9 +844,17 @@
     "loadingMore": "Cargando más",
     "seeMore": "Ver más",
     "addToFavoritesCardAriaLabel": "Agregar a favoritos - Regístrese para marcar agentes",
-    "addToFavoritesTitle": "Agregar a favoritos",
     "addToFavoritesDescription": "Marca tus agentes favoritos para acceder a ellos rápidamente aquí",
     "noFavoritesYet": "Aún no hay favoritos"
+  },
+  "exploreSection": {
+    "countAriaLabel": "{count, plural, one {# agente} other {# agentes}}"
+  },
+  "exploreMentorCard": {
+    "featured": "Destacado",
+    "addToFavorites": "Añadir a favoritos",
+    "removeFromFavorites": "Quitar de favoritos",
+    "updatedOn": "Actualizado el {date}"
   },
   "flaggedPromptsDeleteModerationLogModal": {
     "title": "Eliminar registro de moderación",

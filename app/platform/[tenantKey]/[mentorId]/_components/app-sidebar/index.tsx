@@ -687,12 +687,13 @@ export function AppSidebar() {
     ],
   );
 
+  // Always the tenant-wide section, even with an agent in the URL: analytics
+  // now opens on the whole platform and the navbar's agent picker narrows it
+  // from there, so the sidebar has one destination instead of two.
   const analyticsBasePath = React.useMemo(() => {
     if (!tenantKey) return null;
-    return mentorId
-      ? `/platform/${tenantKey}/${mentorId}/analytics`
-      : `/platform/${tenantKey}/analytics`;
-  }, [tenantKey, mentorId]);
+    return `/platform/${tenantKey}/analytics`;
+  }, [tenantKey]);
 
   const analyticsMenu = React.useMemo<NavMenuConfig>(() => {
     const base = analyticsBasePath ?? '/analytics';

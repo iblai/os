@@ -17,37 +17,6 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
     mockUseGetAiSearchMentorsQuery(...args),
 }));
 
-// Mock useNavigate hook
-const mockOpenCreateMentorModal = vi.fn();
-vi.mock('@/hooks/user-navigate', () => ({
-  useNavigate: () => ({
-    openCreateMentorModal: mockOpenCreateMentorModal,
-  }),
-}));
-
-// Mock isLoggedIn from @/lib/utils
-const mockIsLoggedIn = vi.fn(() => true);
-const mockRedirectToAuthSpaJoinTenant = vi.fn();
-vi.mock('@/lib/utils', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/utils')>();
-  return {
-    ...actual,
-    isLoggedIn: () => mockIsLoggedIn(),
-    redirectToAuthSpaJoinTenant: (...args: unknown[]) =>
-      mockRedirectToAuthSpaJoinTenant(...args),
-  };
-});
-
-// Mock WithPermissions HOC
-vi.mock('@/hoc/withPermissions', () => ({
-  WithPermissions: ({
-    children,
-  }: {
-    children: (hasPermission: boolean) => React.ReactNode;
-    rbacResource: string;
-  }) => children(true),
-}));
-
 // Mock UI components
 vi.mock('@/components/ui/button', () => ({
   Button: ({ children, onClick, disabled, className, ...props }: any) => (
@@ -79,7 +48,12 @@ vi.mock('../mentor-card-with-star', () => ({
 
 // Mock EmptyState component
 vi.mock('../empty-state', () => ({
-  EmptyState: () => <div data-testid="empty-state">No mentors found</div>,
+  EmptyState: ({ hint }: { hint?: string }) => (
+    <div data-testid="empty-state">
+      No mentors found
+      {hint && <p>{hint}</p>}
+    </div>
+  ),
 }));
 
 /**
@@ -150,14 +124,11 @@ describe('DefaultMentorsSection', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockIsLoggedIn.mockReturnValue(true);
-    mockRedirectToAuthSpaJoinTenant.mockClear();
     mockUseGetAiSearchMentorsQuery.mockReturnValue({
       data: { results: mockMentors, next: null },
       isLoading: false,
       isFetching: false,
     });
-    mockIsLoggedIn.mockReturnValue(true);
   });
 
   describe('Basic rendering', () => {
@@ -193,12 +164,12 @@ describe('DefaultMentorsSection', () => {
       expect(screen.getAllByRole('listitem')).toHaveLength(2);
     });
 
-    it('renders Create Mentor button when user has permission', () => {
+    it('leaves agent creation to the page header', () => {
       renderWithContext();
 
       expect(
-        screen.getByRole('button', { name: /Create new agent/i }),
-      ).toBeInTheDocument();
+        screen.queryByRole('button', { name: /Create new agent/i }),
+      ).not.toBeInTheDocument();
     });
   });
 
@@ -319,6 +290,40 @@ describe('DefaultMentorsSection', () => {
       renderWithContext();
 
       expect(screen.getByTestId('empty-state')).toBeInTheDocument();
+      expect(
+        screen.getByText('Try a different search term or clear your filters.'),
+      ).toBeInTheDocument();
+    });
+  });
+
+  describe('Search results header', () => {
+    it('titles the list with the query and the match count while searching', () => {
+      mockUseGetAiSearchMentorsQuery.mockReturnValue({
+        data: { results: mockMentors, next: null, count: 2 },
+        isLoading: false,
+        isFetching: false,
+      });
+
+      renderWithContext({ debouncedSearch: 'math', isSearching: true });
+
+      expect(
+        screen.getByRole('heading', { name: 'Results for “math”', level: 2 }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText('2 agents match your search.'),
+      ).toBeInTheDocument();
+    });
+
+    it('shows the total agent count next to the heading when browsing', () => {
+      mockUseGetAiSearchMentorsQuery.mockReturnValue({
+        data: { results: mockMentors, next: null, count: 89 },
+        isLoading: false,
+        isFetching: false,
+      });
+
+      renderWithContext();
+
+      expect(screen.getByText('89 agents')).toBeInTheDocument();
     });
   });
 
@@ -329,7 +334,7 @@ describe('DefaultMentorsSection', () => {
       expect(mockUseGetAiSearchMentorsQuery).toHaveBeenCalledWith(
         expect.objectContaining({
           platform_key: 'test-tenant',
-          limit: 8,
+          limit: 12,
           include_main_public_mentors: false,
         }),
         expect.objectContaining({
@@ -371,6 +376,31 @@ describe('DefaultMentorsSection', () => {
       );
     });
 
+    it('passes featured when the Featured filter is on', () => {
+      renderWithContext({
+        filters: {
+          categories: null,
+          subjects: null,
+          llm_providers: null,
+          types: null,
+          is_featured: 'true',
+        },
+      });
+
+      expect(mockUseGetAiSearchMentorsQuery).toHaveBeenLastCalledWith(
+        expect.objectContaining({ featured: true }),
+        expect.anything(),
+      );
+    });
+
+    it('does not pass featured when the Featured filter is off', () => {
+      renderWithContext();
+
+      expect(
+        mockUseGetAiSearchMentorsQuery.mock.calls.at(-1)?.[0]?.featured,
+      ).toBeUndefined();
+    });
+
     it('skips query when tenantKey is not available', () => {
       renderWithContext({ tenantKey: '' });
 
@@ -380,37 +410,6 @@ describe('DefaultMentorsSection', () => {
           skip: true,
         }),
       );
-    });
-  });
-
-  describe('Create Mentor functionality', () => {
-    it('calls openCreateMentorModal when Create Mentor button is clicked', async () => {
-      const user = userEvent.setup();
-      renderWithContext();
-
-      const createButton = screen.getByRole('button', {
-        name: /Create new agent/i,
-      });
-      await user.click(createButton);
-
-      expect(mockOpenCreateMentorModal).toHaveBeenCalled();
-    });
-
-    it('redirects to auth when not logged in and Create Mentor button is clicked', async () => {
-      const user = userEvent.setup();
-      mockIsLoggedIn.mockReturnValue(false);
-
-      renderWithContext();
-
-      const createButton = screen.getByRole('button', {
-        name: /Create new agent/i,
-      });
-      await user.click(createButton);
-
-      expect(mockRedirectToAuthSpaJoinTenant).toHaveBeenCalledWith(
-        'test-tenant',
-      );
-      expect(mockOpenCreateMentorModal).not.toHaveBeenCalled();
     });
   });
 
@@ -461,7 +460,7 @@ describe('DefaultMentorsSection', () => {
       await waitFor(() => {
         expect(mockUseGetAiSearchMentorsQuery).toHaveBeenLastCalledWith(
           expect.objectContaining({
-            limit: 16, // 8 + 8
+            limit: 24, // 12 + 12
           }),
           expect.anything(),
         );
@@ -520,7 +519,7 @@ describe('DefaultMentorsSection', () => {
 
       expect(mockUseGetAiSearchMentorsQuery).toHaveBeenLastCalledWith(
         expect.objectContaining({
-          limit: 8,
+          limit: 12,
         }),
         expect.anything(),
       );
@@ -531,8 +530,11 @@ describe('DefaultMentorsSection', () => {
     it('has proper heading structure', () => {
       renderWithContext();
 
-      const heading = screen.getByRole('heading', { name: /All Agents/i });
-      expect(heading).toHaveAttribute('aria-level', '2');
+      const heading = screen.getByRole('heading', {
+        name: /All Agents/i,
+        level: 2,
+      });
+      expect(heading.tagName).toBe('H2');
     });
 
     it('loading state has proper aria-live', () => {

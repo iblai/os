@@ -9,18 +9,20 @@ import { Spinner } from '@/components/spinner';
 import { useExplorePageContext } from './explore-page-context';
 import { MentorCardWithStar } from './mentor-card-with-star';
 import { EmptyState } from './empty-state';
-import { WithPermissions } from '@/hoc/withPermissions';
-import { useNavigate } from '@/hooks/user-navigate';
-import { isLoggedIn, redirectToAuthSpaJoinTenant } from '@/lib/utils';
+import {
+  MENTOR_GRID_CLASSNAME,
+  MentorGridSkeleton,
+  SectionHeader,
+} from './section';
 
-const DEFAULT_MENTORS_LIMIT = 8;
-const CREATE_MENTOR_RBAC_RESOURCE = '/mentors/#create';
+export const DEFAULT_MENTORS_LIMIT = 12;
 
 export function DefaultMentorsSection() {
   const t = useTranslations('exploreDefaultMentorsSection');
   const {
     tenantKey,
     debouncedSearch,
+    isSearching,
     filters,
     includeMainPublicMentors,
     setDefaultMentorsLoading,
@@ -29,7 +31,7 @@ export function DefaultMentorsSection() {
   const [numberOfMentors, setNumberOfMentors] = React.useState(
     DEFAULT_MENTORS_LIMIT,
   );
-  const { openCreateMentorModal } = useNavigate();
+  const headingId = React.useId();
 
   // Reset pagination when filters or search change
   React.useEffect(() => {
@@ -49,6 +51,7 @@ export function DefaultMentorsSection() {
       llm: filters.llm_providers || undefined,
       types: filters.types || undefined,
       subjects: filters.subjects || undefined,
+      featured: filters.is_featured === 'true' ? true : undefined,
       include_main_public_mentors: includeMainPublicMentors,
     },
     {
@@ -67,6 +70,12 @@ export function DefaultMentorsSection() {
   }, [mentors?.results]);
 
   const getDynamicTitleAndSubtext = () => {
+    if (isSearching) {
+      return {
+        title: t('searchResultsTitle', { query: debouncedSearch }),
+        subtext: t('searchResultsSubtext', { count: mentors?.count ?? 0 }),
+      };
+    }
     if (filters.subjects) {
       return {
         title: filters.subjects,
@@ -95,64 +104,36 @@ export function DefaultMentorsSection() {
     };
   };
 
-  const handleCreateMentor = React.useCallback(() => {
-    if (!isLoggedIn()) {
-      redirectToAuthSpaJoinTenant(tenantKey);
-      return;
-    }
-    openCreateMentorModal();
-  }, [openCreateMentorModal, tenantKey]);
-
   const { title, subtext } = getDynamicTitleAndSubtext();
 
   if (isLoading) {
+    // The heading is known before the data, so render it now rather than
+    // letting it push the grid down when the first page lands.
     return (
-      <div role="status" aria-live="polite">
-        <Spinner className="h-60" />
-        <span className="sr-only">{t('loadingAgents')}</span>
-      </div>
+      <section aria-labelledby={headingId}>
+        <SectionHeader id={headingId} title={title} description={subtext} />
+        <MentorGridSkeleton count={6} label={t('loadingAgents')} />
+      </section>
     );
   }
 
   if (bothEmpty) {
-    return <EmptyState />;
+    return <EmptyState hint={t('emptyStateHint')} />;
   }
 
   return (
-    <div>
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h2
-            className="text-lg font-medium text-gray-900"
-            role="heading"
-            aria-level={2}
-          >
-            {title}
-          </h2>
-          <p className="text-sm text-gray-600">{subtext}</p>
-        </div>
-
-        <WithPermissions rbacResource={CREATE_MENTOR_RBAC_RESOURCE}>
-          {(hasPermission) => (
-            <>
-              {hasPermission && (
-                <Button
-                  className="rounded-lg bg-gradient-to-r from-[#38A1E5] to-[#7284FF] px-6 py-2 text-white hover:from-[#2E8BD1] hover:to-[#5F6FE8]"
-                  onClick={handleCreateMentor}
-                  aria-label={t('createAgentAriaLabel')}
-                >
-                  {t('createAgentButton')}
-                </Button>
-              )}
-            </>
-          )}
-        </WithPermissions>
-      </div>
+    <section aria-labelledby={headingId}>
+      <SectionHeader
+        id={headingId}
+        title={title}
+        description={subtext}
+        count={isSearching ? undefined : mentors?.count}
+      />
 
       {allMentorsToShow && allMentorsToShow.length > 0 ? (
         <>
           <div
-            className="grid grid-cols-1 gap-6 md:grid-cols-2"
+            className={MENTOR_GRID_CLASSNAME}
             data-testid="all-mentors-card-list"
             role="list"
             aria-label={t('allAgentsListAriaLabel')}
@@ -168,9 +149,10 @@ export function DefaultMentorsSection() {
             ))}
           </div>
           {mentors?.next && (
-            <div className="mt-6 flex justify-center">
+            <div className="mt-8 flex justify-center">
               <Button
                 variant="outline"
+                className="rounded-full px-5"
                 onClick={() =>
                   setNumberOfMentors(numberOfMentors + DEFAULT_MENTORS_LIMIT)
                 }
@@ -191,8 +173,8 @@ export function DefaultMentorsSection() {
           )}
         </>
       ) : (
-        <EmptyState />
+        <EmptyState hint={t('emptyStateHint')} />
       )}
-    </div>
+    </section>
   );
 }

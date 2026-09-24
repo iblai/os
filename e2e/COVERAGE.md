@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-09-23 | 752 checkpoints (709 covered, 11 pending/fixme, 15 not-reproducible in default env, 17 deprecated) | 78 journeys (77 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-09-23 | 764 checkpoints (721 covered, 11 pending/fixme, 15 not-reproducible in default env, 17 deprecated) | 79 journeys (78 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -79,11 +79,11 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 5: Mentor Discovery — Explore Page (13 checkpoints) — `journeys/05-mentor-discovery-explore-page.spec.ts`
+## Journey 5: Mentor Discovery — Explore Page (16 checkpoints) — `journeys/05-mentor-discovery-explore-page.spec.ts`
 
-**Source files:** `app/platform/[tenantKey]/[mentorId]/explore/page.tsx`, `app/platform/[tenantKey]/[mentorId]/explore/_components/explore-page-content.tsx`, `app/platform/[tenantKey]/[mentorId]/explore/_components/search-section.tsx`
+**Source files:** `app/platform/[tenantKey]/[mentorId]/explore/page.tsx`, `app/platform/[tenantKey]/[mentorId]/explore/_components/explore-page-content.tsx`, `app/platform/[tenantKey]/[mentorId]/explore/_components/search-section.tsx`, `app/platform/[tenantKey]/[mentorId]/explore/_components/mentor-categories.tsx`, `app/platform/[tenantKey]/[mentorId]/explore/_components/section.tsx`, `app/platform/[tenantKey]/[mentorId]/explore/_components/mentor-card-with-star.tsx`, `app/platform/[tenantKey]/[mentorId]/explore/_components/custom-mentors-section.tsx`, `app/platform/[tenantKey]/[mentorId]/explore/_components/default-mentors-section.tsx`, `app/platform/[tenantKey]/[mentorId]/explore/_components/featured-mentors-section.tsx`, `app/platform/[tenantKey]/[mentorId]/explore/_components/starred-mentors-section.tsx`, `app/platform/[tenantKey]/[mentorId]/explore/_components/empty-state.tsx`
 
-- [x] Explore page title ("All Mentors") and description are visible
+- [x] Explore page title ("Explore agents") and description are visible
 - [x] Mentor cards display correct information
 - [x] Search input filters the mentor list
 - [x] "See more" button loads additional mentors
@@ -96,6 +96,9 @@ When adding a new page or modifying an existing user flow:
 - [x] Clicking a mentor card navigates to that mentor and allows chatting
 - [x] Custom mentor creation button is visible for admins
 - [x] Star/unstar a mentor updates the Favorites section
+- [x] Header "Create Agent" button opens the create dialog for admins
+- [x] Clear search button empties the search box
+- [x] "Featured" filter toggles on and off with a single click
 
 ---
 
@@ -302,7 +305,7 @@ The **download-chat** checkpoints (sh-07 … sh-10, issue #2464) cover the "Down
 
 ---
 
-## Journey 17: Notifications (6 checkpoints) — `journeys/17-notifications.spec.ts`
+## Journey 17: Notifications (7 checkpoints) — `journeys/17-notifications.spec.ts`
 
 **Source files:** `app/platform/[tenantKey]/[mentorId]/notifications/page.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`
 
@@ -312,6 +315,7 @@ The **download-chat** checkpoints (sh-07 … sh-10, issue #2464) cover the "Down
 - [x] "Mark all as read" button is visible on the notifications page
 - [x] Alerts tab exposes proactive fields with proper accessible ARIA attributes
 - [x] Alerts tab auto-opens when inbox is empty
+- [x] notif-07: Navbar drops the chat-only chrome (LLM Model Selector, on-device model badge, privacy chip) on the notifications inbox — tenant-scoped, per-agent and single-notification routes alike; an inbox is not a chat surface
 
 ---
 
@@ -1802,6 +1806,27 @@ Uploads a real fixture file for each of the 8 local file-upload resource types a
 - [x] DU-75.6: Admin uploads a Video file (`.mp4`) — `IMG_4019` row appears in dataset list
 - [x] DU-75.7: Admin uploads an Image file (`.png`) — `acessibility png` row appears in dataset list
 - [x] DU-75.8: Admin uploads an Excel (`.xlsx`) file — `test-data.xlsx` row appears in dataset list
+
+---
+
+## Journey 76: Tenant-wide Analytics (8 checkpoints) — `journeys/76-tenant-analytics.spec.ts`
+
+**Source files:** `app/platform/[tenantKey]/analytics/page.tsx`, `app/platform/[tenantKey]/analytics/users/page.tsx`, `app/platform/[tenantKey]/analytics/topics/page.tsx`, `app/platform/[tenantKey]/analytics/transcripts/page.tsx`, `app/platform/[tenantKey]/analytics/memory/page.tsx`, `app/platform/[tenantKey]/analytics/financial/page.tsx`, `app/platform/[tenantKey]/analytics/audit/page.tsx`, `app/platform/[tenantKey]/analytics/reports/page.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`
+
+The Journey 18 section mounted directly under the tenant — no agent in the URL,
+so the containers report on the whole tenant (they drop the `mentor_unique_id`
+filter when the mentor id is empty). The sidebar already links here whenever no
+agent is selected; the tests deep-link, since the fixtures start on an agent
+route.
+
+- [x] tanl-01: Tenant-wide overview (`/platform/{tenantKey}/analytics`) renders the tab strip inside the platform shell — the sidebar proves the layout supplies the shell itself
+- [x] tanl-02: Clicking a tab from the tenant-wide overview routes to `/platform/{tenantKey}/analytics/{tab}` and never reintroduces an agent id
+- [x] tanl-03: Tenant-wide Users, Topics, Transcripts and Costs tabs are reachable by direct URL
+- [x] tanl-04: Tenant-wide Memory page loads with no agent scope (the tab opens on global / all-agent memories)
+- [x] tanl-05: Tenant-wide Data Reports page loads and shows the Data Reports tab
+- [x] tanl-06: Tenant-wide Audit page loads — with no agent to check `view_audit_logs` against, the API is the authority and the container renders its own no-permission card on a 403
+- [x] tanl-07: Sidebar Analytics entry opens the tenant-wide section whether or not an agent is in the URL — the per-agent section is reached from the navbar agent dropdown instead
+- [x] tanl-08: Navbar on the tenant-wide section drops the chat-only chrome (LLM Model Selector, agent dropdown, privacy chip) and shows the "Analytics" section title instead; the per-agent analytics page keeps full parity (Journey 65)
 
 ---
 
