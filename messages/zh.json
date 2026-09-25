@@ -2189,15 +2189,6 @@
     "description": "此基础智能体可发现并遵循的可复用操作手册。",
     "infoBox": "智能体技能是可附加到基础智能体的可复用操作手册——针对单一任务的书面指令（可附带参考文件），例如在网上调研主题或审查代码。智能体只在相关时才会阅读技能，因此你可以为它添加多种能力而不会让每次对话变得臃肿。在聊天中输入 / 即可查看此智能体的技能并选择一个来启动。"
   },
-  "tabsToolsTab": {
-    "infoBox": "为您的智能体赋予“双手”。工具让它能够超越单纯的聊天——查找信息、调用 API、触发操作——从而真正为用户完成工作。",
-    "heading": "工具",
-    "subheading": "为您的智能体配置工具和集成。",
-    "moreInfoAbout": "关于 {name} 的更多信息",
-    "switchAriaLabel": "{name} {state}",
-    "enabled": "已启用",
-    "disabled": "已禁用"
-  },
   "topTrialBannerTopTrialBanner": {
     "defaultBannerText": "升级以创建您自己的智能体。无需信用卡 😎",
     "upgradeAriaLabel": "升级",

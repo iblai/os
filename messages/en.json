@@ -2189,15 +2189,6 @@
     "description": "Reusable playbooks this Base Agent can discover and follow.",
     "infoBox": "Agent Skills are reusable playbooks you can attach to a Base Agent — written instructions (plus optional reference files) for one job, like researching a topic on the web or reviewing code. The agent reads a skill only when it's relevant, so you can give it many capabilities without bloating every conversation. In chat, type / to see this agent's skills and pick one to start it."
   },
-  "tabsToolsTab": {
-    "infoBox": "Give your agent hands. Tools let it do things beyond chatting — look something up, call an API, trigger an action — so it can actually get work done for people.",
-    "heading": "Tools",
-    "subheading": "Configure tools and integrations for your agent.",
-    "moreInfoAbout": "More info about {name}",
-    "switchAriaLabel": "{name} {state}",
-    "enabled": "enabled",
-    "disabled": "disabled"
-  },
   "topTrialBannerTopTrialBanner": {
     "defaultBannerText": "Upgrade to create your own agents. No credit card required 😎",
     "upgradeAriaLabel": "Upgrade",
