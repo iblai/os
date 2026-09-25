@@ -1,15 +1,15 @@
 {
   "version": 2,
-  "lastUpdated": "2026-09-23",
+  "lastUpdated": "2026-09-25",
   "summary": {
-    "totalCheckpoints": 764,
-    "coveredCheckpoints": 721,
+    "totalCheckpoints": 771,
+    "coveredCheckpoints": 726,
     "deprecatedCheckpoints": 17,
-    "notReproducibleCheckpoints": 15,
+    "notReproducibleCheckpoints": 17,
     "pendingCheckpoints": 11,
     "percent": 100,
-    "totalJourneys": 79,
-    "activeJourneys": 78
+    "totalJourneys": 80,
+    "activeJourneys": 79
   },
   "journeys": [
     {
@@ -359,7 +359,7 @@
         },
         {
           "id": "mgmt-04",
-          "description": "Admin can toggle tools on/off",
+          "description": "Admin sees the Tools tab render with at least one tool (light smoke check on the shared account mentor; real toggle-on/off + persistence + a11y coverage moved to journey 77's tools-01..05 on disposable per-test mentors, to avoid mutating tool_slugs on a mentor other tests/suites share)",
           "status": "covered"
         },
         {
@@ -439,7 +439,7 @@
         },
         {
           "id": "mgmt-20",
-          "description": "Issue #2502: LLM tab provider card labels and logos are backend-owned \u2014 captures the live mentor-llms GET response and asserts every rendered card's label equals display_name ?? name, and its logo <img src> equals the backend logo URL (or the llm-provider-logo-placeholder testid renders when logo is null)",
+          "description": "Issue #2502: LLM tab provider card labels and logos are backend-owned — captures the live mentor-llms GET response and asserts every rendered card's label equals display_name ?? name, and its logo <img src> equals the backend logo URL (or the llm-provider-logo-placeholder testid renders when logo is null)",
           "status": "covered"
         },
         {
@@ -1093,7 +1093,7 @@
         },
         {
           "id": "notif-07",
-          "description": "Navbar drops the chat-only chrome (LLM Model Selector, on-device model badge, privacy chip) on the notifications inbox \u2014 tenant-scoped, per-agent and single-notification routes alike; an inbox is not a chat surface",
+          "description": "Navbar drops the chat-only chrome (LLM Model Selector, on-device model badge, privacy chip) on the notifications inbox — tenant-scoped, per-agent and single-notification routes alike; an inbox is not a chat surface",
           "status": "covered"
         }
       ]
@@ -2921,7 +2921,7 @@
         },
         {
           "id": "claw-17",
-          "description": "Issue #2502: on a Claw-connected mentor, opening the agent's \"Select Provider\" picker and choosing a provider opens the \"LLM Selection\" model picker ON TOP while the provider picker stays MOUNTED underneath (the PR description's stated fix \u2014 previously it unmounted). The provider dialog is marked aria-hidden by Radix while the model picker is on top, so the assertion uses a `getByRole('dialog', { includeHidden: true })` locator and `toBeAttached()` to prove it is still mounted rather than a plain `toBeVisible()` (which would incorrectly resolve to 0 elements). Escape on the model picker reveals the still-mounted provider picker again (now visible, no longer aria-hidden); a second Escape closes it. Skips gracefully if no connectable OpenClaw instance or no LLM providers are available.",
+          "description": "Issue #2502: on a Claw-connected mentor, opening the agent's \"Select Provider\" picker and choosing a provider opens the \"LLM Selection\" model picker ON TOP while the provider picker stays MOUNTED underneath (the PR description's stated fix — previously it unmounted). The provider dialog is marked aria-hidden by Radix while the model picker is on top, so the assertion uses a `getByRole('dialog', { includeHidden: true })` locator and `toBeAttached()` to prove it is still mounted rather than a plain `toBeVisible()` (which would incorrectly resolve to 0 elements). Escape on the model picker reveals the still-mounted provider picker again (now visible, no longer aria-hidden); a second Escape closes it. Skips gracefully if no connectable OpenClaw instance or no LLM providers are available.",
           "status": "covered"
         }
       ]
@@ -4790,7 +4790,7 @@
       "checkpoints": [
         {
           "id": "tanl-01",
-          "description": "Tenant-wide analytics overview (/platform/{tenantKey}/analytics, no agent segment) renders the tab strip inside the platform shell \u2014 the sidebar proves the layout supplies the shell itself",
+          "description": "Tenant-wide analytics overview (/platform/{tenantKey}/analytics, no agent segment) renders the tab strip inside the platform shell — the sidebar proves the layout supplies the shell itself",
           "status": "covered"
         },
         {
@@ -4815,12 +4815,12 @@
         },
         {
           "id": "tanl-06",
-          "description": "Tenant-wide Audit page loads \u2014 with no agent to check `view_audit_logs` against, the API is the authority and the container renders its own no-permission card on a 403",
+          "description": "Tenant-wide Audit page loads — with no agent to check `view_audit_logs` against, the API is the authority and the container renders its own no-permission card on a 403",
           "status": "covered"
         },
         {
           "id": "tanl-07",
-          "description": "Sidebar Analytics entry opens the tenant-wide section whether or not an agent is in the URL \u2014 the per-agent section is reached from the navbar agent dropdown instead",
+          "description": "Sidebar Analytics entry opens the tenant-wide section whether or not an agent is in the URL — the per-agent section is reached from the navbar agent dropdown instead",
           "status": "covered"
         },
         {
@@ -4870,6 +4870,49 @@
           "id": "sem-06",
           "description": "With the setting OFF, the welcome screen hides the \"Explore Agents\" section",
           "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "mentor-tools-tab",
+      "name": "Mentor Tools Tab",
+      "spec": "77-mentor-tools-tab.spec.ts",
+      "sourceFiles": ["components/modals/edit-mentor-modal/tabs/tools-tab.tsx"],
+      "checkpoints": [
+        {
+          "id": "tools-01",
+          "description": "Admin opens the Tools tab and sees the header, description, and the tools-info-box copy",
+          "status": "covered"
+        },
+        {
+          "id": "tools-02",
+          "description": "Admin toggles a tool on (aria-checked + success toast) and it persists across a close + full page reload + reopen; toggling it back off persists the same way; skips gracefully on an empty tenant tool catalogue",
+          "status": "covered"
+        },
+        {
+          "id": "tools-03",
+          "description": "A tool's info icon exposes \"More info about {name}\" and its tooltip shows the description on both hover and keyboard focus",
+          "status": "covered"
+        },
+        {
+          "id": "tools-04",
+          "description": "A tool switch's accessible name flips between \"{name} disabled\" and \"{name} enabled\" as it is toggled",
+          "status": "covered"
+        },
+        {
+          "id": "tools-05",
+          "description": "Non-admin does not see the Tools tab in the Edit Mentor modal (dropdown has no Settings item; falls back to a direct tab-absence check)",
+          "status": "covered"
+        },
+        {
+          "id": "tools-06",
+          "description": "Read-only mentor_tools field permission (WithFormPermissions) disables every tool switch; not reproducible in this environment — NEXT_PUBLIC_ENABLE_RBAC is unset (defaults false) and no fixture seeds a permissions.field.mentor_tools write:false response",
+          "status": "not-reproducible"
+        },
+        {
+          "id": "tools-07",
+          "description": "Tools tab copy renders correctly in a non-English locale (e.g. es); not reproducible — no journey in this repo has an established, reliable mechanism to switch the live app locale and assert on translated text",
+          "status": "not-reproducible"
         }
       ]
     }

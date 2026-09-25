@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-09-23 | 764 checkpoints (721 covered, 11 pending/fixme, 15 not-reproducible in default env, 17 deprecated) | 79 journeys (78 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-09-25 | 771 checkpoints (726 covered, 11 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 80 journeys (79 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -111,7 +111,7 @@ _Note: the LLM tab is served by the SDK's `AgentLLMTab`; `components/modals/edit
 - [x] Admin can update mentor profile (name, description, category, visibility), save, and close
 - [x] Non-admin does not see the Settings or Tools menu items
 - [x] Admin can change LLM provider and select a model
-- [x] Admin can toggle tools on/off in the Tools tab
+- [x] Admin sees the Tools tab render with at least one tool _(light smoke check only, on the shared account mentor — real toggle-on/off, reload-persistence, tooltip and a11y coverage moved to Journey 77 on disposable per-test mentors, to avoid mutating `tool_slugs` on a mentor other tests/suites share)_
 - [x] Admin can apply custom CSS via the Advanced CSS editor (embed preview reflects change)
 - [x] Admin can reset custom CSS back to default
 - [x] Admin can apply valid custom JavaScript; invalid JS shows warnings
@@ -1842,3 +1842,19 @@ Covers issue #2544: a new `show_explore_mentors` mentor setting, exposed as a "S
 - [x] sem-04: With the setting ON, the admin's own welcome screen shows the "Explore Agents" section
 - [x] sem-05: With the setting ON, a non-admin non-owner viewer of the same agent also sees the "Explore Agents" section (RBAC-redaction regression guard)
 - [x] sem-06: With the setting OFF, the welcome screen hides the "Explore Agents" section
+
+---
+
+## Journey 77: Mentor Tools Tab (7 checkpoints, 2 not-reproducible) — `journeys/77-mentor-tools-tab.spec.ts`
+
+**Source files:** `components/modals/edit-mentor-modal/tabs/tools-tab.tsx`
+
+The Tools tab was just moved onto the SDK: OS's `ToolsTab` wrapper now returns `null` until `tenantKey`/`agentId`/`username` are known, then renders the SDK's `AgentToolsTab` (`@iblai/iblai-js/web-containers/next`) inside an `AgentSettingsProvider`, passing no `labels` override — all copy (header, the new `data-testid="tools-info-box"` info box, per-tool info-icon/switch aria-labels, toggle toasts) comes straight from the SDK's i18n catalog. Toggling a tool mutates the mentor's `tool_slugs` — the same field Journey 6's mgmt-04 smoke test and the Grader tab's capability toggle (Journey 66) both touch — so, mirroring Journeys 47 and 66, this journey runs serially in one worker and every test gets its own freshly-created, disposable mentor (tracked and deleted via `MentorTracker` in `afterAll`), pinned to the cheap ibl.ai model. Checkpoints needing an existing tool row skip gracefully (not a failure) when the tenant's tool catalogue is empty.
+
+- [x] tools-01: Admin opens the Tools tab and sees the header, description, and the `tools-info-box` copy
+- [x] tools-02: Admin toggles a tool on (`aria-checked` flips + "Agent updated successfully" toast) and it persists across a close + full page reload + reopen; toggling it back off persists the same way
+- [x] tools-03: A tool's info icon exposes `aria-label="More info about {name}"` and its Radix tooltip shows the tool's description on both hover and keyboard focus
+- [x] tools-04: A tool switch's accessible name flips between `"{name} disabled"` and `"{name} enabled"` as it is toggled
+- [x] tools-05: Non-admin does not see the Tools tab in the Edit Mentor modal
+- [ ] _(not-reproducible — RBAC off in default env)_ Read-only `mentor_tools` field permission (`WithFormPermissions`) disables every tool switch — `NEXT_PUBLIC_ENABLE_RBAC` is unset in this env (defaults `false`) and no fixture seeds a `permissions.field.mentor_tools` `write: false` response
+- [ ] _(not-reproducible — no e2e locale-switch mechanism)_ Tools tab copy renders correctly in a non-English locale (e.g. es) — no journey in this repo has an established, reliable way to switch the live app locale and assert on translated text (`ProfilePage.languageSelector`, Journey 4, only checks the selector is visible)
