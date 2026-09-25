@@ -1,9 +1,9 @@
 {
   "version": 2,
-  "lastUpdated": "2026-09-24",
+  "lastUpdated": "2026-09-25",
   "summary": {
-    "totalCheckpoints": 766,
-    "coveredCheckpoints": 723,
+    "totalCheckpoints": 768,
+    "coveredCheckpoints": 725,
     "deprecatedCheckpoints": 17,
     "notReproducibleCheckpoints": 15,
     "pendingCheckpoints": 11,
