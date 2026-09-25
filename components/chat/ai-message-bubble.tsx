@@ -29,7 +29,7 @@ import { useAppSelector } from '@/lib/hooks';
 import { MessagePreview } from './chat-messages/message-preview';
 import type { CanvasOpenPayload } from './chat-messages/types';
 import { ReasoningSection } from './reasoning-section';
-import { ToolCallIndicator } from './tool-call-indicator';
+import { ToolCallIndicator } from '@iblai/iblai-js/web-containers';
 import {
   CodePermissionCards,
   useCodePermissionRequests,

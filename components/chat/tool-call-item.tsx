@@ -13,7 +13,7 @@ import {
   getFriendlyToolName,
   getQueryLabel,
   formatResult,
-} from './tool-call-utils';
+} from '@iblai/iblai-js/web-containers';
 
 interface ToolCallItemProps {
   toolCall: ToolCallInfo;

@@ -1,9 +1,9 @@
 {
   "version": 2,
-  "lastUpdated": "2026-09-23",
+  "lastUpdated": "2026-09-25",
   "summary": {
-    "totalCheckpoints": 764,
-    "coveredCheckpoints": 721,
+    "totalCheckpoints": 768,
+    "coveredCheckpoints": 725,
     "deprecatedCheckpoints": 17,
     "notReproducibleCheckpoints": 15,
     "pendingCheckpoints": 11,
@@ -336,8 +336,6 @@
         "hooks/use-mentors.ts",
         "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx",
         "components/modals/edit-mentor-modal/llm-tab.tsx",
-        "hooks/use-llm-display-name.ts",
-        "hooks/use-llm-provider-details.ts",
         "lib/utils.ts",
         "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx"
       ],
@@ -439,7 +437,7 @@
         },
         {
           "id": "mgmt-20",
-          "description": "Issue #2502: LLM tab provider card labels and logos are backend-owned \u2014 captures the live mentor-llms GET response and asserts every rendered card's label equals display_name ?? name, and its logo <img src> equals the backend logo URL (or the llm-provider-logo-placeholder testid renders when logo is null)",
+          "description": "Issue #2502: LLM tab provider card labels and logos are backend-owned — captures the live mentor-llms GET response and asserts every rendered card's label equals display_name ?? name, and its logo <img src> equals the backend logo URL (or the llm-provider-logo-placeholder testid renders when logo is null)",
           "status": "covered"
         },
         {
@@ -1633,6 +1631,16 @@
         {
           "id": "hist-05",
           "description": "Chat history can be exported",
+          "status": "covered"
+        },
+        {
+          "id": "hist-06",
+          "description": "Every conversation row labels its owner via the shared identity rule (a real full name first, else email → username → 'Anonymous'); an owner with a platform profile is a 'View profile for …' link that opens the shared Profile viewer (same modal as Management → Users) without selecting the row, and closes on Escape",
+          "status": "covered"
+        },
+        {
+          "id": "hist-07",
+          "description": "Rows whose turns carry retrieved documents / tool calls show 'Documents · N' / 'Tools · N' chips with N > 0 (never an empty chip container); a Documents chip opens the chat's 'Retrieved Documents' dialog listing what the conversation retrieved (closes on Escape); the transcript offers a 'Show Details' per-turn panel (retrieved documents / tool calls / metadata / request context) only for turns with extended data, and no panel at all otherwise",
           "status": "covered"
         }
       ]
@@ -2921,7 +2929,7 @@
         },
         {
           "id": "claw-17",
-          "description": "Issue #2502: on a Claw-connected mentor, opening the agent's \"Select Provider\" picker and choosing a provider opens the \"LLM Selection\" model picker ON TOP while the provider picker stays MOUNTED underneath (the PR description's stated fix \u2014 previously it unmounted). The provider dialog is marked aria-hidden by Radix while the model picker is on top, so the assertion uses a `getByRole('dialog', { includeHidden: true })` locator and `toBeAttached()` to prove it is still mounted rather than a plain `toBeVisible()` (which would incorrectly resolve to 0 elements). Escape on the model picker reveals the still-mounted provider picker again (now visible, no longer aria-hidden); a second Escape closes it. Skips gracefully if no connectable OpenClaw instance or no LLM providers are available.",
+          "description": "Issue #2502: on a Claw-connected mentor, opening the agent's \"Select Provider\" picker and choosing a provider opens the \"LLM Selection\" model picker ON TOP while the provider picker stays MOUNTED underneath (the PR description's stated fix — previously it unmounted). The provider dialog is marked aria-hidden by Radix while the model picker is on top, so the assertion uses a `getByRole('dialog', { includeHidden: true })` locator and `toBeAttached()` to prove it is still mounted rather than a plain `toBeVisible()` (which would incorrectly resolve to 0 elements). Escape on the model picker reveals the still-mounted provider picker again (now visible, no longer aria-hidden); a second Escape closes it. Skips gracefully if no connectable OpenClaw instance or no LLM providers are available.",
           "status": "covered"
         }
       ]
@@ -3378,9 +3386,7 @@
       "name": "Tool Call Indicator & Reasoning Section",
       "spec": "52-tool-call-indicator-and-reasoning.spec.ts",
       "sourceFiles": [
-        "components/chat/tool-call-indicator.tsx",
         "components/chat/tool-call-item.tsx",
-        "components/chat/tool-call-utils.ts",
         "components/chat/reasoning-section.tsx",
         "components/chat/ai-message-bubble.tsx",
         "components/chat/chat-messages/index.tsx",
@@ -4264,7 +4270,6 @@
       "sourceFiles": [
         "components/chat/agent-todo-list.tsx",
         "components/chat/ai-message-bubble.tsx",
-        "components/chat/tool-call-indicator.tsx",
         "app/globals.css"
       ],
       "checkpoints": [
@@ -4549,9 +4554,10 @@
         "components/chat/chat-messages/index.tsx",
         "components/chat/index.tsx",
         "components/chat/reasoning-section.tsx",
-        "components/chat/tool-call-indicator.tsx",
         "lib/constants.ts",
-        "app/globals.css"
+        "app/globals.css",
+        "components/markdown.tsx",
+        "components/chat/chat-messages/message-preview.tsx"
       ],
       "checkpoints": [
         {
@@ -4597,6 +4603,16 @@
         {
           "id": "awi-09",
           "description": "Exactly one avatar/name/timestamp agent message frame is ever on screen per turn (never two stacked), including across a write_todos turn where AgentTodoList also renders",
+          "status": "covered"
+        },
+        {
+          "id": "awi-10",
+          "description": "Issue #2400: a reply interrupted by tool calls renders each step as its own paragraph (no glued 'com.The'/'yet.The') and the email autolinker stops at the domain instead of swallowing the following sentence into the mailto link; the tool-call chip still counts unique tool names",
+          "status": "covered"
+        },
+        {
+          "id": "awi-11",
+          "description": "Issue #2400 control: the same text chunks joined with no tool_call frame between them concatenate byte-for-byte (no inserted paragraph break) — proves the fix is scoped to tool-call boundaries only, not applied everywhere",
           "status": "covered"
         }
       ]

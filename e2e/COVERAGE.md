@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-09-23 | 764 checkpoints (721 covered, 11 pending/fixme, 15 not-reproducible in default env, 17 deprecated) | 79 journeys (78 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-09-25 | 768 checkpoints (725 covered, 11 pending/fixme, 15 not-reproducible in default env, 17 deprecated) | 79 journeys (78 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -106,7 +106,7 @@ When adding a new page or modifying an existing user flow:
 
 **Source files:** `components/modals/create-mentor-modal.tsx`, `components/modals/edit-mentor-modal/index.tsx`, `components/modals/edit-mentor-modal/tabs/settings-tab.tsx`, `components/modals/edit-mentor-modal/llm-tab.tsx`, `components/modals/edit-mentor-modal/tabs/tools-tab.tsx`, `components/modals/edit-mentor-modal/tabs/prompts-tab.tsx`, `components/modals/settings-modal.tsx`, `hooks/use-mentors.ts`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`, `lib/utils.ts`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`
 
-_Note: the LLM tab is served by the SDK's `AgentLLMTab`; `components/modals/edit-mentor-modal/llm-tab.tsx` is the thin wrapper over it, and `hooks/use-llm-display-name.ts` resolves the model label the nav-bar badge shows (see also Journey 28)._
+_Note: the LLM tab is served by the SDK's `AgentLLMTab`; `components/modals/edit-mentor-modal/llm-tab.tsx` is the thin wrapper over it, and resolves the model label the nav-bar badge shows (see also Journey 28)._
 
 - [x] Admin can update mentor profile (name, description, category, visibility), save, and close
 - [x] Non-admin does not see the Settings or Tools menu items
@@ -454,7 +454,7 @@ Driven by the shared paywall helpers in `@iblai/iblai-js/playwright`. All tests 
 
 ---
 
-## Journey 23: Mentor History Tab (5 checkpoints) — `journeys/23-mentor-history-tab.spec.ts`
+## Journey 23: Mentor History Tab (7 checkpoints) — `journeys/23-mentor-history-tab.spec.ts`
 
 **Source files:** `components/modals/edit-mentor-modal/tabs/history-tab.tsx`, `hooks/use-history.ts`, `hooks/use-history/use-export-chat-history.ts`
 
@@ -463,6 +463,8 @@ Driven by the shared paywall helpers in `@iblai/iblai-js/playwright`. All tests 
 - [x] Sentiment and topic filters narrow the conversation list
 - [x] Individual conversation can be expanded to view the full transcript
 - [x] Export button triggers a file download
+- [x] Every row labels its owner (a real full name first, else email → username → "Anonymous"); a linked owner opens the shared Profile viewer without selecting the row
+- [x] "Documents · N" / "Tools · N" chips and the per-turn "Show Details" panel appear only where the conversation carries extended data; a Documents chip opens the chat's "Retrieved Documents" dialog
 
 ---
 
@@ -1053,7 +1055,7 @@ Covers the "Enable prompt caching" toggle added to the Capabilities sub-tab of t
 
 ## Journey 52: Tool Call Indicator & Reasoning Section (8 checkpoints) — `journeys/52-tool-call-indicator-and-reasoning.spec.ts`
 
-**Source files:** `components/chat/tool-call-indicator.tsx`, `components/chat/tool-call-item.tsx`, `components/chat/tool-call-utils.ts`, `components/chat/reasoning-section.tsx`, `components/chat/ai-message-bubble.tsx`, `components/chat/chat-messages/index.tsx`, `components/chat/index.tsx`, `hooks/use-mentors/use-mentor-settings.ts`
+**Source files:** `components/chat/tool-call-item.tsx`, `components/chat/reasoning-section.tsx`, `components/chat/ai-message-bubble.tsx`, `components/chat/chat-messages/index.tsx`, `components/chat/index.tsx`, `hooks/use-mentors/use-mentor-settings.ts`
 
 - [x] Web Search tool pill appears during streaming with tool name and pulse animation
 - [x] Tool call pill is expandable and shows query detail
@@ -1439,7 +1441,7 @@ surfaces:
 
 ## Journey 68: Agent Task List (11 checkpoints) — `journeys/68-agent-todo-list.spec.ts`
 
-**Source files:** `components/chat/agent-todo-list.tsx`, `components/chat/ai-message-bubble.tsx`, `components/chat/tool-call-indicator.tsx`, `app/globals.css`
+**Source files:** `components/chat/agent-todo-list.tsx`, `components/chat/ai-message-bubble.tsx`, `app/globals.css`
 
 Issue #2216 — a Base Agent plans multi-step work with the deep-agent `write_todos`
 tool. Every call streams a FULL REPLACEMENT todo list, rendered as a collapsible
@@ -1724,9 +1726,9 @@ instead.
 - [x] shc-06: READ-ONLY — the nav-bar "More options → Help" dropdown item resolves `support_url || help_center_url || default` computed from a live GET of tenant metadata, or is absent when `show_help` is false
 - [x] ~~shc-07: The nav-bar "More options → Help" dropdown item falls back to tenant `help_center_url` when `support_url` is absent~~ _(deprecated in #uat-9 — same precedence chain proven by hooks/**tests**/use-help-center.test.ts; shc-06 still verifies the support_url-present path live)_
 
-## Journey 73: Agent Working Indicator (9 checkpoints) — `journeys/73-agent-working-indicator.spec.ts`
+## Journey 73: Agent Working Indicator (11 checkpoints) — `journeys/73-agent-working-indicator.spec.ts`
 
-**Source files:** `components/chat/working-indicator.tsx`, `components/chat/ai-message-frame.tsx`, `components/chat/ai-message-bubble.tsx`, `components/chat/chat-messages/index.tsx`, `components/chat/index.tsx`, `components/chat/reasoning-section.tsx`, `components/chat/tool-call-indicator.tsx`, `lib/constants.ts`, `app/globals.css`
+**Source files:** `components/chat/working-indicator.tsx`, `components/chat/ai-message-frame.tsx`, `components/chat/ai-message-bubble.tsx`, `components/chat/chat-messages/index.tsx`, `components/chat/index.tsx`, `components/chat/reasoning-section.tsx`, `lib/constants.ts`, `app/globals.css`, `components/markdown.tsx`, `components/chat/chat-messages/message-preview.tsx`
 
 Issue #2217 — a persistent "agent is working" indicator in chat, replacing a
 placeholder that used to vanish for good the instant any token rendered.
@@ -1761,6 +1763,20 @@ The "verbose reasoning" (`show_reasoning`) mentor setting is toggled via
 shared default mentor's real settings — unlike Journey 52, this spec creates
 no mentor and therefore needs no `MentorTracker`/cleanup.
 
+Checkpoints 10-11 cover [iblai-platform#2400](https://github.com/iblai/iblai-platform/issues/2400)
+("OS / SDK | Missing Spaces in LLM Texts"): when a tool call interrupts a
+reply, the backend streams the step text as separate `data` frames around the
+`tool_call`/`tool_call.end` pair with no whitespace at the boundary. Before
+the fix, `@iblai/web-utils`'s `use-chat-v2.ts` appended the chunks raw, so
+the bubble rendered the steps glued together (e.g.
+`"...jaden@ibleducation.com.The compose window..."`) and the GFM email
+autolinker (`components/markdown.tsx`, Streamdown/remark-gfm) swallowed the
+glued `.The` into the mailto link. The fix inserts a `"\n\n"` separator
+before the next non-empty answer chunk whenever a `tool_call` frame was seen
+since the last chunk and neither side already has whitespace, reusing this
+journey's `mockChatWebSocket()` infrastructure to script the exact frame
+sequence from the reporter's real trace.
+
 - [x] awi-01: The working indicator appears on send and survives the first answer token — proven by catching a >15s stall mid-stream and watching the reassurance line reappear (an unmounted component could not do that)
 - [x] awi-02: With verbose reasoning off, no disclosure rows render at all — the shimmer alone carries the whole turn through thinking, a tool call, and into writing
 - [x] awi-03: With verbose reasoning on, the reasoning and tool-call rows take over liveness via their own bouncing dots (`isActive`) and the shimmer stands down for exactly the phase a visible row already states — exactly one element conveys progress at any instant
@@ -1770,6 +1786,8 @@ no mentor and therefore needs no `MentorTracker`/cleanup.
 - [x] awi-07: An error frame with no `eos` clears the working indicator — the original hang bug
 - [x] awi-08: An `eos` frame for a different `session_id` than the session in view is ignored and does not clear the indicator (background-session scoping)
 - [x] awi-09: Exactly one avatar/name/timestamp agent message frame is ever on screen per turn, including across a `write_todos` turn where `AgentTodoList` also renders
+- [x] awi-10: Issue #2400 — a reply interrupted by tool calls renders each step as its own paragraph (no glued `com.The`/`yet.The`) and the email autolinker stops at the domain instead of swallowing the following sentence into the mailto link; the tool-call chip still counts unique tool names
+- [x] awi-11: Issue #2400 control — the same text chunks joined with no `tool_call` frame between them concatenate byte-for-byte (no inserted paragraph break), proving the fix is scoped to tool-call boundaries only
 
 ---
 

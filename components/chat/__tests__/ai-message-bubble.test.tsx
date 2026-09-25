@@ -41,6 +41,21 @@ let mockChatPrivacyMode: 'normal' | 'anonymized' | 'disabled' = 'normal';
 let mockChatPrivacyReady = true;
 
 vi.mock('@iblai/iblai-js/web-containers', () => ({
+  ToolCallIndicator: ({
+    toolCalls,
+    isActive,
+    ...rest
+  }: {
+    toolCalls: unknown[];
+    isActive?: boolean;
+  }) => (
+    <div
+      data-testid="tool-call-indicator"
+      data-tool-calls-count={toolCalls.length}
+      data-active={String(!!isActive)}
+      data-extra-props={Object.keys(rest).join(',')}
+    />
+  ),
   useChatPrivacy: () => ({
     effective: {
       mode: mockChatPrivacyMode,
@@ -174,24 +189,6 @@ vi.mock('@/components/chat/reasoning-section', () => ({
     >
       {reasoningContent}
     </div>
-  ),
-}));
-
-vi.mock('@/components/chat/tool-call-indicator', () => ({
-  ToolCallIndicator: ({
-    toolCalls,
-    isActive,
-    ...rest
-  }: {
-    toolCalls: unknown[];
-    isActive?: boolean;
-  }) => (
-    <div
-      data-testid="tool-call-indicator"
-      data-tool-calls-count={toolCalls.length}
-      data-active={String(!!isActive)}
-      data-extra-props={Object.keys(rest).join(',')}
-    />
   ),
 }));
 

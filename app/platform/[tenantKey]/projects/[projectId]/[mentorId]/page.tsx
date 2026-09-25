@@ -8,7 +8,7 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 
 import { ProjectPageParams } from '@/lib/types';
 import ErrorBoundary from '@/components/error-boundary';
-import { DocumentSidebar } from '@/components/document-sidebar';
+import { DocumentSidebar } from '@iblai/iblai-js/web-containers';
 import {
   chatActions,
   selectSessionId,

@@ -1876,7 +1876,8 @@
     "hideConversationMemory": "Hide Conversation Memory",
     "showConversationMemory": "Show Conversation Memory",
     "noConversationMemory": "No conversation memory available.",
-    "selectConversationPrompt": "Select a conversation to view details."
+    "selectConversationPrompt": "Select a conversation to view details.",
+    "documentsChip": "Documents · {count}"
   },
   "tabsLlmTab": {
     "infoBox": "This is the brain behind your agent — the AI model that powers every reply. Bigger models reason better on tricky questions; lighter ones are faster and cost less. Not sure? The default is a solid all-rounder.",
