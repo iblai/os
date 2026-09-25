@@ -13,7 +13,7 @@ import {
   useGetMentorSettingsQuery,
   useGetToolsQuery,
 } from '@iblai/iblai-js/data-layer';
-import { useToggleTools } from '@/hooks/use-tools/use-toggle-tools';
+import { useToggleTools } from '@iblai/iblai-js/web-containers/next';
 import { useUsername } from '@/hooks/use-user';
 
 // Mock Redux
@@ -46,7 +46,10 @@ vi.mock('@/hooks/use-user', () => ({
 
 // Mock tools hooks
 const mockToggleTools = vi.fn();
-vi.mock('@/hooks/use-tools/use-toggle-tools', () => ({
+vi.mock('@iblai/iblai-js/web-containers/next', async (importOriginal) => ({
+  ...(await importOriginal<
+    typeof import('@iblai/iblai-js/web-containers/next')
+  >()),
   useToggleTools: vi.fn(() => ({
     toggleTools: mockToggleTools,
     isLoading: false,
