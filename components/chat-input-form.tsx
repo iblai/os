@@ -18,7 +18,7 @@ import { cn, hasCoarsePointer, isLoggedIn } from '@/lib/utils';
 import { extractFilesFromClipboard } from '@/lib/clipboard';
 import useVoiceChat from '@/hooks/use-voice-chat';
 import { VoiceChatButton } from './chat-input-form/voice-chat-button';
-import { RetrievedDocumentsButton } from './retrieved-documents-button';
+import { RetrievedDocumentsButton } from '@iblai/iblai-js/web-containers';
 import dynamic from 'next/dynamic';
 import { useEmbedMode } from '@/hooks/use-embed-mode';
 import { StopStreamingButton } from './chat/stop-streaming-button';

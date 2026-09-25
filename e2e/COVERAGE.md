@@ -106,7 +106,7 @@ When adding a new page or modifying an existing user flow:
 
 **Source files:** `components/modals/create-mentor-modal.tsx`, `components/modals/edit-mentor-modal/index.tsx`, `components/modals/edit-mentor-modal/tabs/settings-tab.tsx`, `components/modals/edit-mentor-modal/llm-tab.tsx`, `components/modals/edit-mentor-modal/tabs/tools-tab.tsx`, `components/modals/edit-mentor-modal/tabs/prompts-tab.tsx`, `components/modals/settings-modal.tsx`, `hooks/use-mentors.ts`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`, `lib/utils.ts`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`
 
-_Note: the LLM tab is served by the SDK's `AgentLLMTab`; `components/modals/edit-mentor-modal/llm-tab.tsx` is the thin wrapper over it, and `hooks/use-llm-display-name.ts` resolves the model label the nav-bar badge shows (see also Journey 28)._
+_Note: the LLM tab is served by the SDK's `AgentLLMTab`; `components/modals/edit-mentor-modal/llm-tab.tsx` is the thin wrapper over it, and resolves the model label the nav-bar badge shows (see also Journey 28)._
 
 - [x] Admin can update mentor profile (name, description, category, visibility), save, and close
 - [x] Non-admin does not see the Settings or Tools menu items
@@ -454,7 +454,7 @@ Driven by the shared paywall helpers in `@iblai/iblai-js/playwright`. All tests 
 
 ---
 
-## Journey 23: Mentor History Tab (5 checkpoints) — `journeys/23-mentor-history-tab.spec.ts`
+## Journey 23: Mentor History Tab (7 checkpoints) — `journeys/23-mentor-history-tab.spec.ts`
 
 **Source files:** `components/modals/edit-mentor-modal/tabs/history-tab.tsx`, `hooks/use-history.ts`, `hooks/use-history/use-export-chat-history.ts`
 
@@ -463,6 +463,8 @@ Driven by the shared paywall helpers in `@iblai/iblai-js/playwright`. All tests 
 - [x] Sentiment and topic filters narrow the conversation list
 - [x] Individual conversation can be expanded to view the full transcript
 - [x] Export button triggers a file download
+- [x] Every row labels its owner (a real full name first, else email → username → "Anonymous"); a linked owner opens the shared Profile viewer without selecting the row
+- [x] "Documents · N" / "Tools · N" chips and the per-turn "Show Details" panel appear only where the conversation carries extended data; a Documents chip opens the chat's "Retrieved Documents" dialog
 
 ---
 
@@ -1053,7 +1055,7 @@ Covers the "Enable prompt caching" toggle added to the Capabilities sub-tab of t
 
 ## Journey 52: Tool Call Indicator & Reasoning Section (8 checkpoints) — `journeys/52-tool-call-indicator-and-reasoning.spec.ts`
 
-**Source files:** `components/chat/tool-call-indicator.tsx`, `components/chat/tool-call-item.tsx`, `components/chat/tool-call-utils.ts`, `components/chat/reasoning-section.tsx`, `components/chat/ai-message-bubble.tsx`, `components/chat/chat-messages/index.tsx`, `components/chat/index.tsx`, `hooks/use-mentors/use-mentor-settings.ts`
+**Source files:** `components/chat/tool-call-item.tsx`, `components/chat/reasoning-section.tsx`, `components/chat/ai-message-bubble.tsx`, `components/chat/chat-messages/index.tsx`, `components/chat/index.tsx`, `hooks/use-mentors/use-mentor-settings.ts`
 
 - [x] Web Search tool pill appears during streaming with tool name and pulse animation
 - [x] Tool call pill is expandable and shows query detail
@@ -1439,7 +1441,7 @@ surfaces:
 
 ## Journey 68: Agent Task List (11 checkpoints) — `journeys/68-agent-todo-list.spec.ts`
 
-**Source files:** `components/chat/agent-todo-list.tsx`, `components/chat/ai-message-bubble.tsx`, `components/chat/tool-call-indicator.tsx`, `app/globals.css`
+**Source files:** `components/chat/agent-todo-list.tsx`, `components/chat/ai-message-bubble.tsx`, `app/globals.css`
 
 Issue #2216 — a Base Agent plans multi-step work with the deep-agent `write_todos`
 tool. Every call streams a FULL REPLACEMENT todo list, rendered as a collapsible
@@ -1726,7 +1728,7 @@ instead.
 
 ## Journey 73: Agent Working Indicator (11 checkpoints) — `journeys/73-agent-working-indicator.spec.ts`
 
-**Source files:** `components/chat/working-indicator.tsx`, `components/chat/ai-message-frame.tsx`, `components/chat/ai-message-bubble.tsx`, `components/chat/chat-messages/index.tsx`, `components/chat/index.tsx`, `components/chat/reasoning-section.tsx`, `components/chat/tool-call-indicator.tsx`, `lib/constants.ts`, `app/globals.css`, `components/markdown.tsx`, `components/chat/chat-messages/message-preview.tsx`
+**Source files:** `components/chat/working-indicator.tsx`, `components/chat/ai-message-frame.tsx`, `components/chat/ai-message-bubble.tsx`, `components/chat/chat-messages/index.tsx`, `components/chat/index.tsx`, `components/chat/reasoning-section.tsx`, `lib/constants.ts`, `app/globals.css`, `components/markdown.tsx`, `components/chat/chat-messages/message-preview.tsx`
 
 Issue #2217 — a persistent "agent is working" indicator in chat, replacing a
 placeholder that used to vanish for good the instant any token rendered.

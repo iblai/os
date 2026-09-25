@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.155.2](https://github.com/iblai/os/compare/v0.155.1...v0.155.2) (2026-09-24)
+
+### Bug Fixes
+
+- **mentor:** adding fixes for the history and analytics transcript ([cb31932](https://github.com/iblai/os/commit/cb319322d4cb737c15271114ea950b2a0a7492b5))
+
 ## [0.155.1](https://github.com/iblai/os/compare/v0.155.0...v0.155.1) (2026-09-23)
 
 ### Bug Fixes

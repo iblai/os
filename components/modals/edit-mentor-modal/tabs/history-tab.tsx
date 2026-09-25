@@ -51,7 +51,18 @@ import {
   useGetMentorPublicSettingsQuery,
   useGetMentorSummariesQuery,
   useGetConversationMemoriesQuery,
+  type TranscriptMessage,
 } from '@iblai/iblai-js/data-layer';
+import {
+  conversationDocuments,
+  resolveUserIdentity,
+  RetrievedDocumentsButton,
+  summarizeTranscriptTurns,
+  TranscriptRollupBadges,
+  TranscriptTurnDetails,
+  UserProfileLink,
+} from '@iblai/iblai-js/web-containers';
+import { config } from '@/lib/config';
 import { useParams } from 'next/navigation';
 import { useUsername } from '@/hooks/use-user';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -62,19 +73,34 @@ import {
   type HistoryFile,
 } from './history-attachments';
 
+/**
+ * One human/AI exchange. On this admin surface the backend also attaches the
+ * extended per-turn context (retrieved documents, tool calls, metadata,
+ * request context); any of it may be null or empty.
+ */
+type ConversationMessage = TranscriptMessage;
+
+/**
+ * A turn's attachments as `HistoryAttachments` takes them: a bare URL stays a
+ * string (older records carry those), a file record becomes a plain object
+ * (`TranscriptFile` is an interface, `HistoryFile` a record).
+ */
+const historyFiles = (
+  files: TranscriptMessage['human_files'],
+): HistoryFile[] | undefined =>
+  files?.map(
+    (file): HistoryFile => (typeof file === 'string' ? file : { ...file }),
+  );
+
 interface Conversation {
   id: string;
-  messages: Array<{
-    human: string;
-    ai: string;
-    human_files?: HistoryFile[];
-    ai_files?: HistoryFile[];
-  }>;
+  messages: ConversationMessage[];
   topics: Array<{ name: string }>;
   sentiment: string;
   mentor: string;
   student: string;
   email: string;
+  user_full_name?: string | null;
   model: string;
   rating: number;
   platform: string;
@@ -91,6 +117,8 @@ interface Conversation {
 
 export function HistoryTab() {
   const t = useTranslations('tabsHistoryTab');
+  // The profile dialog the owner links open; 'lms' / 'skills' add the Gradebook tab.
+  const currentSPA = config.iblPlatform() || 'mentor';
   const [selectedConversation, setSelectedConversation] =
     React.useState<Conversation | null>(null);
   const [isConversationPreviewModalOpen, setIsConversationPreviewModalOpen] =
@@ -174,6 +202,18 @@ export function HistoryTab() {
   // Use mentor summaries data for rating and tags
   const averageRating = mentorSummaries?.rating || 0;
   const topicTags = mentorSummaries?.tags || [];
+
+  // Who a conversation belongs to: a real full name first, else email → username → Anonymous,
+  // decided in one place (the SDK's shared identity helper).
+  const identityOptions = { anonymousLabel: t('anonymous') };
+  const selectedOwner = resolveUserIdentity(
+    selectedConversation,
+    identityOptions,
+  );
+  const previewOwner = resolveUserIdentity(
+    previewConversationContent,
+    identityOptions,
+  );
 
   return (
     <div className="flex h-full flex-col">
@@ -516,10 +556,14 @@ export function HistoryTab() {
                     const conversation = _conversation as Conversation;
                     const messages = conversation.messages;
                     const firstMessage = messages[0];
-                    const name =
-                      conversation.lti_email ||
-                      conversation.email ||
-                      t('anonymous');
+                    const owner = resolveUserIdentity(
+                      conversation,
+                      identityOptions,
+                    );
+                    // The chip counts what the dialog lists: every document the
+                    // turns carry, as the backend reports them.
+                    const documents = conversationDocuments(messages);
+                    const rollup = summarizeTranscriptTurns(messages);
                     const timeAgo = formatDistanceToNow(
                       new Date(conversation.inserted_at),
                       {
@@ -529,7 +573,7 @@ export function HistoryTab() {
                     // A turn can be an upload with no text, in which case the
                     // attachment name is the only meaningful title we have.
                     const firstAttachmentName = normalizeHistoryFiles(
-                      firstMessage?.human_files,
+                      historyFiles(firstMessage?.human_files),
                     )[0]?.fileName;
                     const title = firstMessage?.human
                       ? textTruncate(firstMessage.human, 50)
@@ -556,9 +600,14 @@ export function HistoryTab() {
                             <span className="text-sm text-gray-600">
                               {timeAgo}
                             </span>
-                            <span className="max-w-[100px] truncate text-sm text-gray-900 sm:max-w-[200px]">
-                              {name}
-                            </span>
+                            <UserProfileLink
+                              tenantKey={tenantKey}
+                              username={owner.profileUsername}
+                              display={owner.label}
+                              currentSPA={currentSPA}
+                              testId="history-conversation-owner"
+                              className="max-w-[100px] text-sm text-gray-900 sm:max-w-[200px]"
+                            />
                           </div>
                           <div className="font-medium text-gray-900">
                             {title}
@@ -566,6 +615,26 @@ export function HistoryTab() {
                           <p className="line-clamp-1 text-sm text-gray-600">
                             {preview}
                           </p>
+                          {(rollup.documentsCount > 0 ||
+                            rollup.toolCallsCount > 0) && (
+                            <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                              {rollup.documentsCount > 0 && (
+                                // The chat's documents dialog, as a chip: one
+                                // click shows what the conversation retrieved.
+                                <RetrievedDocumentsButton
+                                  documents={documents}
+                                  label={t('documentsChip', {
+                                    count: rollup.documentsCount,
+                                  })}
+                                  className="h-6 gap-1 rounded-md border-transparent bg-blue-50 px-2 text-xs font-normal text-blue-700 hover:bg-blue-100 [&_svg]:h-3 [&_svg]:w-3"
+                                />
+                              )}
+                              <TranscriptRollupBadges
+                                documentsCount={0}
+                                toolCallsCount={rollup.toolCallsCount}
+                              />
+                            </div>
+                          )}
                         </div>
                         <div className="flex items-center gap-2 text-sm text-gray-600">
                           <ChevronRight className="h-4 w-4" />
@@ -609,6 +678,20 @@ export function HistoryTab() {
                           "MMM dd, yyyy 'at' h:mm a",
                         )}
                       </span>
+                      {/* The conversation's retrieved documents, as the chat
+                          offers them (hidden when the session has none). */}
+                      <RetrievedDocumentsButton
+                        sessionId={selectedConversation.id}
+                        documents={
+                          conversationDocuments(selectedConversation.messages)
+                            .length > 0
+                            ? conversationDocuments(
+                                selectedConversation.messages,
+                              )
+                            : undefined
+                        }
+                        className="mt-2"
+                      />
                     </div>
 
                     <div className="space-y-6">
@@ -617,27 +700,24 @@ export function HistoryTab() {
                           <div className="flex items-start gap-3">
                             <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-blue-100">
                               <span className="text-sm font-medium text-blue-600">
-                                {
-                                  (
-                                    selectedConversation.lti_email ||
-                                    selectedConversation.email
-                                  )
-                                    ?.charAt(0)
-                                    ?.toUpperCase() || 'A' //A for Anonymous
-                                }
+                                {selectedOwner.initial}
                               </span>
                             </div>
                             <div className="flex-1">
                               <div className="font-medium text-gray-700">
-                                {selectedConversation.lti_email ||
-                                  selectedConversation.email ||
-                                  t('anonymous')}
+                                <UserProfileLink
+                                  tenantKey={tenantKey}
+                                  username={selectedOwner.profileUsername}
+                                  display={selectedOwner.label}
+                                  currentSPA={currentSPA}
+                                  testId="history-preview-owner"
+                                />
                               </div>
                               <p className="mt-1 text-sm whitespace-pre-line text-gray-500">
                                 {message.human}
                               </p>
                               <HistoryAttachments
-                                files={message.human_files}
+                                files={historyFiles(message.human_files)}
                                 idPrefix={`detail-human-${index}`}
                               />
                             </div>
@@ -657,9 +737,10 @@ export function HistoryTab() {
                                 <Markdown>{message.ai}</Markdown>
                               </div>
                               <HistoryAttachments
-                                files={message.ai_files}
+                                files={historyFiles(message.ai_files)}
                                 idPrefix={`detail-ai-${index}`}
                               />
+                              <TranscriptTurnDetails turn={message} />
                             </div>
                           </div>
                         </div>
@@ -751,33 +832,41 @@ export function HistoryTab() {
                     "MMM dd, yyyy 'at' h:mm a",
                   )}
                 </div>
+                <RetrievedDocumentsButton
+                  sessionId={previewConversationContent.id}
+                  documents={
+                    conversationDocuments(previewConversationContent.messages)
+                      .length > 0
+                      ? conversationDocuments(
+                          previewConversationContent.messages,
+                        )
+                      : undefined
+                  }
+                />
 
                 {previewConversationContent.messages.map((message, index) => (
                   <div key={index} className="space-y-4">
                     <div className="flex items-start gap-3">
                       <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-blue-100">
                         <span className="text-sm font-medium text-blue-600">
-                          {
-                            (
-                              previewConversationContent.lti_email ||
-                              previewConversationContent.email
-                            )
-                              ?.charAt(0)
-                              ?.toUpperCase() || 'A' //A for Anonymous
-                          }
+                          {previewOwner.initial}
                         </span>
                       </div>
                       <div className="overflow-x-hidden">
                         <div className="truncate font-medium text-gray-900">
-                          {previewConversationContent.lti_email ||
-                            previewConversationContent.email ||
-                            t('anonymous')}
+                          <UserProfileLink
+                            tenantKey={tenantKey}
+                            username={previewOwner.profileUsername}
+                            display={previewOwner.label}
+                            currentSPA={currentSPA}
+                            testId="history-preview-owner"
+                          />
                         </div>
                         <p className="mt-1 text-sm whitespace-pre-line text-gray-900">
                           {message.human}
                         </p>
                         <HistoryAttachments
-                          files={message.human_files}
+                          files={historyFiles(message.human_files)}
                           idPrefix={`preview-human-${index}`}
                         />
                       </div>
@@ -797,9 +886,10 @@ export function HistoryTab() {
                           <Markdown>{message.ai}</Markdown>
                         </div>
                         <HistoryAttachments
-                          files={message.ai_files}
+                          files={historyFiles(message.ai_files)}
                           idPrefix={`preview-ai-${index}`}
                         />
+                        <TranscriptTurnDetails turn={message} />
                       </div>
                     </div>
                   </div>
