@@ -1,9 +1,9 @@
 {
   "version": 2,
-  "lastUpdated": "2026-09-23",
+  "lastUpdated": "2026-09-25",
   "summary": {
-    "totalCheckpoints": 764,
-    "coveredCheckpoints": 721,
+    "totalCheckpoints": 768,
+    "coveredCheckpoints": 725,
     "deprecatedCheckpoints": 17,
     "notReproducibleCheckpoints": 15,
     "pendingCheckpoints": 11,
@@ -4555,7 +4555,9 @@
         "components/chat/index.tsx",
         "components/chat/reasoning-section.tsx",
         "lib/constants.ts",
-        "app/globals.css"
+        "app/globals.css",
+        "components/markdown.tsx",
+        "components/chat/chat-messages/message-preview.tsx"
       ],
       "checkpoints": [
         {
@@ -4601,6 +4603,16 @@
         {
           "id": "awi-09",
           "description": "Exactly one avatar/name/timestamp agent message frame is ever on screen per turn (never two stacked), including across a write_todos turn where AgentTodoList also renders",
+          "status": "covered"
+        },
+        {
+          "id": "awi-10",
+          "description": "Issue #2400: a reply interrupted by tool calls renders each step as its own paragraph (no glued 'com.The'/'yet.The') and the email autolinker stops at the domain instead of swallowing the following sentence into the mailto link; the tool-call chip still counts unique tool names",
+          "status": "covered"
+        },
+        {
+          "id": "awi-11",
+          "description": "Issue #2400 control: the same text chunks joined with no tool_call frame between them concatenate byte-for-byte (no inserted paragraph break) — proves the fix is scoped to tool-call boundaries only, not applied everywhere",
           "status": "covered"
         }
       ]
