@@ -39,6 +39,7 @@ use model_manager::{
 };
 use offline_server::{get_server_url, start_offline_server_with_signal};
 use ollama_installer::download_and_install_ollama;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use tauri::{command, AppHandle, Emitter, Listener, Manager, Window};
 use tokio::sync::RwLock;
@@ -258,6 +259,40 @@ use web_cache::{CacheStats, PrecacheResult, WebCache};
 // Global web cache instance
 static WEB_CACHE: std::sync::OnceLock<Arc<RwLock<Option<WebCache>>>> = std::sync::OnceLock::new();
 
+// Live connectivity state for the desktop shell. Seeded by the boot network
+// check and kept current by `set_cache_online_status` (driven from the webview's
+// online/offline events). The `on_navigation` guard reads it: online, real
+// remote origins may navigate; offline, a full-page navigation to one is
+// redirected to the offline server instead of loading a server we can't reach.
+static APP_ONLINE: AtomicBool = AtomicBool::new(true);
+
+/// If `url` targets exactly `origin` (scheme+host+port), return the offline
+/// server URL for the same path, else `None`. The boundary guard (empty rest or
+/// rest starting with `/`) is deliberate: `https://os.ibl.ai` matches but
+/// `https://os.ibl.ai.evil.com` must not.
+fn offline_rewrite_for_origin(url: &str, origin: &str) -> Option<String> {
+    if let Some(rest) = url.strip_prefix(origin) {
+        if rest.is_empty() {
+            return Some(format!("{}/", get_server_url()));
+        }
+        if rest.starts_with('/') {
+            return Some(format!("{}{}", get_server_url(), rest));
+        }
+    }
+    None
+}
+
+/// Real remote app origins whose *page* navigations must be pinned to the
+/// offline server when there is no network. Returns the offline-server URL for
+/// the same path when `url` targets one of them, otherwise `None`. The caller
+/// also checks the configured app origin (e.g. localhost:3000 in dev) via
+/// [`offline_rewrite_for_origin`].
+fn offline_rewrite_target(url: &str) -> Option<String> {
+    ["https://os.ibl.ai", "https://mentorai.iblai.app"]
+        .into_iter()
+        .find_map(|origin| offline_rewrite_for_origin(url, origin))
+}
+
 // Global storage for last mentor route (persists across origins)
 static LAST_MENTOR_ROUTE: std::sync::OnceLock<Arc<RwLock<Option<String>>>> =
     std::sync::OnceLock::new();
@@ -279,7 +314,10 @@ fn get_app_url() -> String {
         return url;
     }
 
-    // Default app URL (override with TAURI_APP_URL) — same for debug and release
+    // Default app URL (override with TAURI_APP_URL) — same for debug and release,
+    // so the dev origin matches production and per-origin state (auth, local-model
+    // selection) is preserved. Set TAURI_APP_URL=http://localhost:3000 to develop
+    // against the local Next dev server.
     #[cfg(debug_assertions)]
     return "https://os.ibl.ai".to_string();
 
@@ -287,7 +325,10 @@ fn get_app_url() -> String {
     return "https://os.ibl.ai".to_string();
 }
 
-// Fallback internet connectivity check using multiple reliable services
+// Fallback internet connectivity check using multiple reliable services.
+// Retained for reference / possible reuse; the boot + poller checks now key on
+// app-origin reachability (offline-first), so this is not currently wired in.
+#[allow(dead_code)]
 fn check_internet_fallback() -> bool {
     println!("[ibl.ai] Running fallback internet connectivity check...");
 
@@ -836,6 +877,9 @@ async fn cancel_model_download(app: AppHandle) -> Result<(), String> {
 /// Set the online/offline status for the web cache
 #[command]
 async fn set_cache_online_status(is_online: bool) -> Result<(), String> {
+    // Keep the navigation guard's view of connectivity current so a network
+    // drop mid-session (not just at boot) starts pinning navigations offline.
+    APP_ONLINE.store(is_online, Ordering::Relaxed);
     let cache_lock = get_web_cache().read().await;
     if let Some(cache) = cache_lock.as_ref() {
         cache.set_online(is_online).await;
@@ -1435,6 +1479,9 @@ const URL_MONITOR_SCRIPT_ONLINE: &str = r#"
     window.__TAURI_OFFLINE_MODE__ = false;
     localStorage.setItem('tauri_offline_mode', 'false');
 
+    // The local cache server — requests that fail on the network fall back here.
+    var OFFLINE_SERVER = '__OFFLINE_SERVER_URL__';
+
     // Intercept fetch to cache API responses for offline use (GET and POST)
     var originalFetch = window.fetch;
     window.fetch = function(input, init) {
@@ -1442,44 +1489,41 @@ const URL_MONITOR_SCRIPT_ONLINE: &str = r#"
         var method = (init && init.method) ? init.method.toUpperCase() : 'GET';
         var requestBody = (init && init.body) ? init.body : null;
 
-        var isApiCall = url.includes('/api/') && (
-            url.includes('manager.iblai') ||
-            url.includes('learn.iblai') ||
-            url.includes('ai-mentor') ||
-            url.includes('custom-domains') ||
-            url.includes('mentor') ||
-            url.includes('tenant') ||
-            url.includes('ibl/users') ||
-            url.includes('rbac')
-        );
-
-        // Also cache JavaScript and CSS chunks for offline use
-        var isAsset = url.includes('/_next/static/') || url.includes('/static/');
-
-        // Check if this is an image URL (common image hosts and formats)
-        var isImage = url.match(/\.(jpg|jpeg|png|gif|webp|svg|ico|bmp)(\?|$)/i) ||
-                     url.includes('gravatar.com') ||
-                     url.includes('.s3.') ||
-                     url.includes('s3.amazonaws.com') ||
-                     url.includes('cloudfront.net') ||
-                     url.includes('/_next/image');
-
-        // Cache API calls (GET and POST), static assets (GET only), and images (GET only)
-        var shouldCache = (isApiCall && (method === 'GET' || method === 'POST')) ||
-                         (isAsset && method === 'GET') ||
-                         (isImage && method === 'GET');
+        // Cache-EVERYTHING: cache every GET response (HTML, JS, CSS, JSON, XHR,
+        // fonts, images, media) plus POST API responses, so the whole app can be
+        // rebuilt from cache offline. Best-effort — cross-origin opaque
+        // responses can't be read and are skipped silently below.
+        var isApiCall = url.indexOf('/api/') !== -1;
+        var shouldCache = method === 'GET' || (isApiCall && method === 'POST');
 
         return originalFetch.apply(this, arguments).then(function(response) {
             // Cache successful API responses (both GET and POST)
             if (shouldCache && response.ok) {
+                var contentType = response.headers.get('Content-Type') || 'application/json';
+                var ct = contentType.toLowerCase();
+
+                // Never buffer a live stream (SSE) — it would never resolve.
+                if (ct.indexOf('text/event-stream') !== -1) {
+                    return response;
+                }
+
                 // Clone the response so we can read the body
                 var clonedResponse = response.clone();
-                var contentType = response.headers.get('Content-Type') || 'application/json';
 
-                // For images, use arrayBuffer and convert to base64
-                // For text content (JSON, HTML, JS, CSS), use text()
-                var isImageContent = contentType.startsWith('image/') || isImage;
-                var bodyPromise = isImageContent ?
+                // Binary bodies (images, fonts, media, wasm, octet-stream) are
+                // read as base64; text bodies (HTML/JS/CSS/JSON/SVG/XML) as text.
+                var isBinaryContent =
+                    ct.indexOf('image/') === 0 ||
+                    ct.indexOf('font/') === 0 ||
+                    ct.indexOf('audio/') === 0 ||
+                    ct.indexOf('video/') === 0 ||
+                    ct.indexOf('application/octet-stream') === 0 ||
+                    ct.indexOf('application/wasm') === 0 ||
+                    ct.indexOf('application/font') !== -1 ||
+                    ct.indexOf('woff') !== -1 ||
+                    ct.indexOf('ttf') !== -1 ||
+                    ct.indexOf('otf') !== -1;
+                var bodyPromise = isBinaryContent ?
                     clonedResponse.arrayBuffer().then(function(buffer) {
                         // Convert ArrayBuffer to base64
                         var bytes = new Uint8Array(buffer);
@@ -1499,7 +1543,7 @@ const URL_MONITOR_SCRIPT_ONLINE: &str = r#"
                             body: body,
                             contentType: contentType,
                             method: method,
-                            isBase64: isImageContent
+                            isBase64: isBinaryContent
                         };
 
                         // For POST requests, include the request body for cache key generation
@@ -1531,10 +1575,23 @@ const URL_MONITOR_SCRIPT_ONLINE: &str = r#"
                 });
             }
             return response;
+        }).catch(function(err) {
+            // Network-first, cache-fallback: when a request fails (offline), retry
+            // it against the local cache server so the app keeps working —
+            // including data fetches for a route the user just navigated to.
+            try {
+                if (url.indexOf(OFFLINE_SERVER) === 0) throw err; // already the cache server
+                var u = new URL(url, window.location.origin);
+                var fallbackUrl = OFFLINE_SERVER + u.pathname + u.search;
+                console.log('[MentorRouteMonitor] Network failed, serving from cache:', url, '->', fallbackUrl);
+                return originalFetch(fallbackUrl, init);
+            } catch (e) {
+                throw err;
+            }
         });
     };
 
-    console.log('[MentorRouteMonitor] Fetch interceptor installed for API caching (GET + POST)');
+    console.log('[MentorRouteMonitor] Fetch interceptor installed (cache-everything + offline fallback)');
 
     // Cache the current page HTML and assets for offline use
     // Wait for the page to fully load and render before caching
@@ -1699,8 +1756,12 @@ const URL_MONITOR_SCRIPT_OFFLINE: &str = r#"
 
     var OFFLINE_SERVER = '__OFFLINE_SERVER_URL__';
 
-    // Override __ENV__ to route API calls through our offline server
+    // Override __ENV__ to route API calls through our offline server.
+    // config derives dm/axd/lms from NEXT_PUBLIC_API_BASE_URL (`${base}/dm` etc.),
+    // so that is the key that actually matters now; the individual *_URL keys are
+    // kept for older code paths / belt-and-suspenders.
     window.__ENV__ = window.__ENV__ || {};
+    window.__ENV__.NEXT_PUBLIC_API_BASE_URL = OFFLINE_SERVER;
     window.__ENV__.NEXT_PUBLIC_DM_URL = OFFLINE_SERVER;
     window.__ENV__.NEXT_PUBLIC_AXD_URL = OFFLINE_SERVER;
     window.__ENV__.NEXT_PUBLIC_LMS_URL = OFFLINE_SERVER;
@@ -1858,6 +1919,12 @@ const URL_MONITOR_SCRIPT_OFFLINE: &str = r#"
 /// port, so a fallback port reaches the webview instead of a stale 3457.
 fn url_monitor_script_offline() -> String {
     URL_MONITOR_SCRIPT_OFFLINE.replace("__OFFLINE_SERVER_URL__", &offline_server::get_server_url())
+}
+
+/// [`URL_MONITOR_SCRIPT_ONLINE`] with the cache server's real URL patched in, so
+/// failed (offline) requests can fall back to it.
+fn url_monitor_script_online() -> String {
+    URL_MONITOR_SCRIPT_ONLINE.replace("__OFFLINE_SERVER_URL__", &offline_server::get_server_url())
 }
 
 /// Helper function to send streaming chat request to Foundry Local (OpenAI-compatible API)
@@ -2397,8 +2464,17 @@ fn main() {
                 println!("[ibl.ai] TAURI_FORCE_ONLINE is set, skipping network check");
             }
 
-            // Quick network check - try app URL, then fallback to known services
+            // Connectivity check — offline-FIRST semantics: "online" means the
+            // app's own origin is reachable, NOT "the internet is up". A general
+            // internet probe would wrongly report online when only the app
+            // server (or the local dev server at :3000) is down, which would
+            // defeat serve-from-cache. TAURI_FORCE_OFFLINE / TAURI_FORCE_ONLINE
+            // override for deterministic testing.
             let check_network = || -> bool {
+                if std::env::var("TAURI_FORCE_OFFLINE").is_ok() {
+                    println!("[ibl.ai] TAURI_FORCE_OFFLINE set -> OFFLINE");
+                    return false;
+                }
                 if force_online {
                     return true;
                 }
@@ -2410,46 +2486,78 @@ fn main() {
                 {
                     Ok(c) => c,
                     Err(e) => {
-                        println!(
-                            "[ibl.ai] Failed to create HTTP client: {}, trying fallback",
-                            e
-                        );
-                        return check_internet_fallback();
+                        println!("[ibl.ai] Failed to create HTTP client: {} -> OFFLINE", e);
+                        return false;
                     }
                 };
 
-                // Try HEAD request to app URL
-                println!("[ibl.ai] Checking connectivity to {}...", app_url);
+                println!("[ibl.ai] Checking reachability of {}...", app_url);
                 match client.head(&app_url).send() {
                     Ok(response) => {
                         let status = response.status();
                         let is_ok = status.is_success() || status.is_redirection();
-                        println!(
-                            "[ibl.ai] App URL check: {} - {}",
-                            status,
-                            if is_ok { "ONLINE" } else { "trying fallback" }
-                        );
-
-                        if is_ok {
-                            true
-                        } else {
-                            // App URL failed, try fallback
-                            check_internet_fallback()
-                        }
+                        println!("[ibl.ai] App origin check: {} - {}", status, if is_ok { "ONLINE" } else { "OFFLINE" });
+                        is_ok
                     }
                     Err(e) => {
-                        println!("[ibl.ai] App URL check failed: {}, trying fallback", e);
-                        check_internet_fallback()
+                        println!("[ibl.ai] App origin unreachable: {} -> OFFLINE", e);
+                        false
                     }
                 }
             };
 
             let is_online = check_network();
+            // Seed the live connectivity flag the navigation guard reads.
+            APP_ONLINE.store(is_online, Ordering::Relaxed);
 
             println!(
                 "[ibl.ai] Network check result: is_online = {} (app_url: {})",
                 is_online, app_url
             );
+
+            // Background connectivity poller. WKWebView's online/offline events
+            // are unreliable, so the navigation guard cannot depend on JS to
+            // learn the network dropped. Poll the app origin's reachability and
+            // keep APP_ONLINE current (offline-FIRST: only the app origin
+            // matters). Debounced — two consecutive failures before flipping to
+            // offline — so a single blip doesn't flap the UI.
+            {
+                let poll_url = app_url.clone();
+                std::thread::spawn(move || {
+                    let client = reqwest::blocking::Client::builder()
+                        .timeout(std::time::Duration::from_secs(2))
+                        .connect_timeout(std::time::Duration::from_secs(1))
+                        .build()
+                        .ok();
+                    let mut consecutive_fail: u32 = 0;
+                    loop {
+                        std::thread::sleep(std::time::Duration::from_secs(3));
+                        let reachable = if std::env::var("TAURI_FORCE_OFFLINE").is_ok() {
+                            false
+                        } else if std::env::var("TAURI_FORCE_ONLINE").is_ok() {
+                            true
+                        } else if let Some(c) = client.as_ref() {
+                            c.head(&poll_url)
+                                .send()
+                                .map(|r| r.status().is_success() || r.status().is_redirection())
+                                .unwrap_or(false)
+                        } else {
+                            false
+                        };
+                        if reachable {
+                            consecutive_fail = 0;
+                            if !APP_ONLINE.swap(true, Ordering::Relaxed) {
+                                println!("[ibl.ai] Connectivity: back ONLINE ({})", poll_url);
+                            }
+                        } else {
+                            consecutive_fail += 1;
+                            if consecutive_fail >= 2 && APP_ONLINE.swap(false, Ordering::Relaxed) {
+                                println!("[ibl.ai] Connectivity: now OFFLINE ({})", poll_url);
+                            }
+                        }
+                    }
+                });
+            }
 
             // Determine initial URL
             let initial_url = if is_online {
@@ -2457,12 +2565,13 @@ fn main() {
                 println!("[ibl.ai] ONLINE MODE: Loading from {}", app_url);
                 tauri::WebviewUrl::External(app_url.parse().unwrap())
             } else {
-                // Offline - use tauri://localhost to allow IPC access
-                // The offline shell will be served from the bundled assets
-                // API calls will be routed to the offline HTTP server via fetch intercept
-                println!("[ibl.ai] OFFLINE MODE: Using tauri://localhost for IPC access");
+                // Offline - load the local cache server DIRECTLY so everything
+                // is served from cache (HTML, JS, CSS, XHR, images). Loading it
+                // as an External URL (rather than the bundled offline-shell)
+                // means offline works identically in dev (localhost) and in a
+                // release build, and matches the lib.rs twin.
+                println!("[ibl.ai] OFFLINE MODE: serving from cache server");
 
-                // Store the last route for the initialization script to use
                 let rt = tokio::runtime::Runtime::new().unwrap();
                 let last_route = rt.block_on(async {
                     let storage = get_last_route_storage();
@@ -2477,29 +2586,31 @@ fn main() {
                 let saved_route = last_route.or_else(|| {
                     std::fs::read_to_string(&route_file)
                         .ok()
-                        .map(|r| {
-                            let trimmed = r.trim().to_string();
-                            println!("[ibl.ai] Found saved route: {}", trimmed);
-                            trimmed
-                        })
+                        .map(|r| r.trim().to_string())
                         .filter(|r| !r.is_empty())
                 });
 
-                if let Some(route) = saved_route {
-                    println!("[ibl.ai] Will restore route: {}", route);
-                    // Store the route in memory for the init script to access
-                    // The init script will read this and navigate to it
-                } else {
-                    println!("[ibl.ai] No saved route, will load root");
-                }
-
-                tauri::WebviewUrl::App("index.html".into())
+                // Read the port the offline server actually bound (3457 when
+                // free, any free port otherwise) rather than hardcoding.
+                let base = offline_server::get_server_url();
+                let offline_url = match saved_route {
+                    Some(route) => {
+                        println!("[ibl.ai] Will restore route: {}", route);
+                        format!("{}{}", base, route)
+                    }
+                    None => {
+                        println!("[ibl.ai] No saved route, loading cache root");
+                        base
+                    }
+                };
+                println!("[ibl.ai] Offline URL: {}", offline_url);
+                tauri::WebviewUrl::External(offline_url.parse().unwrap())
             };
 
             // Create main window with appropriate URL monitoring script
             let init_script = if is_online {
                 println!("[ibl.ai] Using ONLINE initialization script");
-                URL_MONITOR_SCRIPT_ONLINE.to_string()
+                url_monitor_script_online()
             } else {
                 println!("[ibl.ai] Using OFFLINE initialization script");
                 // Resolved here, not baked in: the offline server has already
@@ -2543,6 +2654,9 @@ fn main() {
 
             // Clone app handle for use in on_navigation closure
             let app_handle = app.handle().clone();
+            // The configured app origin (e.g. https://os.ibl.ai or
+            // http://localhost:3000) — pinned to the cache server when offline.
+            let app_origin_for_nav = app_url.clone();
 
             let window = tauri::WebviewWindowBuilder::new(app, "main", initial_url.clone())
                 .title("ibl.ai")
@@ -2587,6 +2701,39 @@ fn main() {
                             }
                             return false; // Block the deep-link navigation; redirect runs via eval
                         }
+                    }
+
+                    // Offline: keep the user in cached content. A full-page
+                    // navigation to a real remote app origin — a stray absolute
+                    // <a href>, or a window.location redirect fired by rapid
+                    // clicks — would otherwise leave the cached bundle for a
+                    // server we can't reach. Redirect it to the same path on the
+                    // offline server, and block any other remote origin outright.
+                    if !APP_ONLINE.load(Ordering::Relaxed) {
+                        // Pin the known prod origins AND the configured app
+                        // origin (localhost:3000 in dev) to the cache server.
+                        let offline_server_url = offline_server::get_server_url();
+                        let target = offline_rewrite_target(url_str).or_else(|| {
+                            offline_rewrite_for_origin(url_str, &app_origin_for_nav)
+                        });
+                        if let Some(target) = target {
+                            println!("[ibl.ai] Offline: redirecting {} -> {}", url_str, target);
+                            if let Some(main_win) = app_handle.get_webview_window("main") {
+                                let _ = main_win
+                                    .eval(&format!("window.location.href = '{}';", target));
+                            }
+                            return false;
+                        }
+                        // The cache server itself + custom schemes may navigate.
+                        let is_local = url_str.starts_with(&offline_server_url)
+                            || url_str.starts_with("tauri://")
+                            || url_str.starts_with("asset://")
+                            || url_str.starts_with("mentor://");
+                        if !is_local {
+                            println!("[ibl.ai] Offline: blocked navigation to {}", url_str);
+                            return false;
+                        }
+                        return true;
                     }
 
                     // Allow navigation within the app's domains and localhost —
@@ -2886,4 +3033,80 @@ fn main() {
                 remote_code::shutdown_sync();
             }
         });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Offline navigations to the real app origins are rewritten to the same
+    /// path on the offline server, so a stray hard-nav lands on cached content
+    /// instead of a server we can't reach. Regression test for the multi-click
+    /// "it actually navigates" bug.
+    #[test]
+    fn offline_rewrite_target_maps_app_origins_to_offline_server() {
+        let base = get_server_url();
+        assert_eq!(
+            offline_rewrite_target("https://os.ibl.ai/platform/foo/bar"),
+            Some(format!("{}/platform/foo/bar", base))
+        );
+        assert_eq!(
+            offline_rewrite_target("https://mentorai.iblai.app/x?q=1#h"),
+            Some(format!("{}/x?q=1#h", base))
+        );
+        // A bare origin maps to the offline server root.
+        assert_eq!(
+            offline_rewrite_target("https://os.ibl.ai"),
+            Some(format!("{}/", base))
+        );
+    }
+
+    /// Local origins, custom schemes and — critically — look-alike domains are
+    /// left alone (a look-alike must never be treated as the app origin).
+    #[test]
+    fn offline_rewrite_target_ignores_local_and_lookalike_origins() {
+        assert_eq!(
+            offline_rewrite_target("http://127.0.0.1:3457/platform/x/y"),
+            None
+        );
+        assert_eq!(offline_rewrite_target("tauri://localhost/index.html"), None);
+        assert_eq!(
+            offline_rewrite_target("https://accounts.google.com/o/oauth2"),
+            None
+        );
+        // The trailing-boundary guard: a look-alike domain must not match.
+        assert_eq!(
+            offline_rewrite_target("https://os.ibl.ai.evil.com/steal"),
+            None
+        );
+        assert_eq!(
+            offline_rewrite_target("https://mentorai.iblai.app.evil.com/x"),
+            None
+        );
+    }
+
+    /// The configured app origin (e.g. the localhost:3000 dev server) is also
+    /// pinned to the cache server when offline, with the same boundary guard.
+    #[test]
+    fn offline_rewrite_for_origin_pins_the_configured_app_origin() {
+        let base = get_server_url();
+        let origin = "http://localhost:3000";
+        assert_eq!(
+            offline_rewrite_for_origin("http://localhost:3000/platform/a/b", origin),
+            Some(format!("{}/platform/a/b", base))
+        );
+        assert_eq!(
+            offline_rewrite_for_origin("http://localhost:3000", origin),
+            Some(format!("{}/", base))
+        );
+        // A different port / look-alike must not match the origin.
+        assert_eq!(
+            offline_rewrite_for_origin("http://localhost:30001/x", origin),
+            None
+        );
+        assert_eq!(
+            offline_rewrite_for_origin("https://os.ibl.ai/x", origin),
+            None
+        );
+    }
 }

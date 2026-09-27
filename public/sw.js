@@ -7,7 +7,7 @@
  * - Tauri detection via custom header or message from app
  */
 
-const CACHE_VERSION = 'v13';
+const CACHE_VERSION = 'v14';
 const CACHE_NAME = `mentor-cache-${CACHE_VERSION}`;
 
 // Track if we're running in Tauri (set via message from app)
@@ -122,7 +122,9 @@ function getOfflineFallback(request) {
     );
   }
 
-  // Page/navigation
+  // Page/navigation. In-app navigation is blocked client-side while offline
+  // (OfflineNavigationGuard), so this only fires for a full-page load of an
+  // uncached route — show a minimal offline notice rather than a dead app.
   if (
     request.mode === 'navigate' ||
     (request.headers.get('accept') || '').includes('text/html')
@@ -136,16 +138,16 @@ function getOfflineFallback(request) {
           <style>
             body { font-family: system-ui; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; background: #f5f5f5; }
             .container { text-align: center; padding: 2rem; }
-            h1 { font-size: 2rem; margin-bottom: 1rem; }
+            h1 { font-size: 1.5rem; margin-bottom: 1rem; }
             p { color: #666; margin-bottom: 1.5rem; }
             button { background: linear-gradient(to right, #2563EB, #93C5FD); color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 0.5rem; cursor: pointer; }
           </style>
         </head>
         <body>
           <div class="container">
-            <h1>You're Offline</h1>
-            <p>Please check your internet connection.</p>
-            <button onclick="window.location.reload()">Try Again</button>
+            <h1>You're offline</h1>
+            <p>This page isn't available offline yet. Reconnect to load it.</p>
+            <button onclick="window.location.reload()">Try again</button>
           </div>
         </body>
       </html>`,

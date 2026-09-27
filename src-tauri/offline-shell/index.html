@@ -209,13 +209,16 @@
           setStatus('Loading offline mode...');
 
           console.log('[Shell] Waiting for offline server to be ready...');
-          var serverReady = await waitForOfflineServer(10);
+          // Be tolerant of a slow cold start (~15s) before giving up.
+          var serverReady = await waitForOfflineServer(30);
           console.log('[Shell] Offline server ready:', serverReady);
 
-          if (serverReady) {
-            var targetPath = lastRoute || '/';
-            var targetUrl = OFFLINE_SERVER_URL + targetPath;
+          // Always aim at the last cached mentor home; the server falls back to
+          // the cached main page when the exact route isn't cached.
+          var targetPath = lastRoute || '/';
+          var targetUrl = OFFLINE_SERVER_URL + targetPath;
 
+          if (serverReady) {
             console.log('[Shell] Redirecting to offline server:', targetUrl);
             setStatus('Loading from cache...');
 
@@ -223,11 +226,30 @@
             // The server will handle all URL rewriting and webpack configuration
             window.location.replace(targetUrl);
           } else {
-            // Server not ready, show error
-            setStatus('Offline server not available');
-            document.querySelector('p:not(.status)').textContent =
-              'Unable to load offline. Please connect to the internet first to cache the app.';
-            document.querySelector('.spinner').style.display = 'none';
+            // Server not ready yet — offer a real retry instead of a dead end,
+            // so a flaky/slow probe doesn't strand the user on an error screen.
+            setStatus('Offline server is starting…');
+            var msg = document.querySelector('p:not(.status)');
+            if (msg) {
+              msg.textContent =
+                "Getting your offline home ready. If this doesn't clear, tap Retry.";
+            }
+            var spinner = document.querySelector('.spinner');
+            if (spinner) spinner.style.display = 'none';
+            if (!document.getElementById('shell-retry')) {
+              var btn = document.createElement('button');
+              btn.id = 'shell-retry';
+              btn.textContent = 'Retry';
+              btn.style.cssText =
+                'margin-top:1rem;background:#2563EB;color:#fff;border:none;padding:0.6rem 1.4rem;border-radius:0.5rem;cursor:pointer;font-size:1rem;';
+              btn.onclick = function () {
+                if (spinner) spinner.style.display = '';
+                if (msg) msg.textContent = '';
+                btn.remove();
+                init();
+              };
+              (msg ? msg.parentNode : document.body).appendChild(btn);
+            }
           }
         }
       }

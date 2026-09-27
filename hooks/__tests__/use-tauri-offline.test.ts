@@ -450,22 +450,77 @@ describe('isOfflineServerOrigin', () => {
     });
   });
 
-  it('should return true for localhost:3456', () => {
+  it('should return true for localhost:3457', () => {
     Object.defineProperty(window, 'location', {
-      value: { origin: 'http://localhost:3456' },
+      value: { origin: 'http://localhost:3457' },
       writable: true,
     });
 
     expect(isOfflineServerOrigin()).toBe(true);
   });
 
-  it('should return true for 127.0.0.1:3456', () => {
+  it('should return true for 127.0.0.1:3457', () => {
+    Object.defineProperty(window, 'location', {
+      value: { origin: 'http://127.0.0.1:3457' },
+      writable: true,
+    });
+
+    expect(isOfflineServerOrigin()).toBe(true);
+  });
+
+  it('should return false for the old hardcoded port 3456', () => {
     Object.defineProperty(window, 'location', {
       value: { origin: 'http://127.0.0.1:3456' },
       writable: true,
     });
 
+    expect(isOfflineServerOrigin()).toBe(false);
+  });
+
+  it('should return true for a fallback port matching the injected server URL', () => {
+    Object.defineProperty(window, 'location', {
+      value: { origin: 'http://127.0.0.1:49222' },
+      writable: true,
+    });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (window as any).__ENV__ = {
+      NEXT_PUBLIC_API_BASE_URL: 'http://127.0.0.1:49222',
+    };
+
     expect(isOfflineServerOrigin()).toBe(true);
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    delete (window as any).__ENV__;
+  });
+
+  it('should return false for a loopback origin that does not match the injected server URL', () => {
+    Object.defineProperty(window, 'location', {
+      value: { origin: 'http://127.0.0.1:3000' },
+      writable: true,
+    });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (window as any).__ENV__ = {
+      NEXT_PUBLIC_API_BASE_URL: 'https://api.iblai.app',
+    };
+
+    expect(isOfflineServerOrigin()).toBe(false);
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    delete (window as any).__ENV__;
+  });
+
+  it('should not throw on a malformed injected server URL', () => {
+    Object.defineProperty(window, 'location', {
+      value: { origin: 'http://127.0.0.1:5000' },
+      writable: true,
+    });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (window as any).__ENV__ = { NEXT_PUBLIC_API_BASE_URL: 'not-a-url' };
+
+    expect(isOfflineServerOrigin()).toBe(false);
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    delete (window as any).__ENV__;
   });
 
   it('should return false for other origins', () => {
@@ -497,7 +552,7 @@ describe('isTauriOfflineMode', () => {
 
   it('should return true when on offline server origin', () => {
     Object.defineProperty(window, 'location', {
-      value: { origin: 'http://localhost:3456' },
+      value: { origin: 'http://localhost:3457' },
       writable: true,
     });
 

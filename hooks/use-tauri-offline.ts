@@ -211,16 +211,50 @@ async function triggerPrecache(route: string): Promise<void> {
 }
 
 /**
- * Check if we're being served from the offline server (localhost:3456)
+ * Check if we're being served from the offline server (127.0.0.1:3457).
  * This is the most reliable way to detect offline mode, as it works even before
- * Tauri initialization scripts run or localStorage is restored
+ * Tauri initialization scripts run or localStorage is restored.
+ *
+ * The offline server prefers port 3457 but falls back to any free port when
+ * 3457 is taken (see src-tauri/src/offline_server.rs), so we also match the
+ * current origin against the server URL the offline init script records on
+ * window.__ENV__ — otherwise a fallback port would defeat this check.
  */
 export function isOfflineServerOrigin(): boolean {
   if (typeof window === 'undefined') return false;
   const origin = window.location.origin;
-  return (
-    origin === 'http://127.0.0.1:3456' || origin === 'http://localhost:3456'
-  );
+
+  // Preferred port — the common case.
+  if (
+    origin === 'http://127.0.0.1:3457' ||
+    origin === 'http://localhost:3457'
+  ) {
+    return true;
+  }
+
+  // Fallback port: the offline init script points the API base at the real
+  // offline-server URL, so a loopback origin that matches it is offline too.
+  try {
+    const injected = (
+      window as {
+        __ENV__?: { NEXT_PUBLIC_API_BASE_URL?: string };
+      }
+    ).__ENV__?.NEXT_PUBLIC_API_BASE_URL;
+    if (injected) {
+      const injectedOrigin = new URL(injected).origin;
+      if (
+        injectedOrigin === origin &&
+        (injectedOrigin.startsWith('http://127.0.0.1:') ||
+          injectedOrigin.startsWith('http://localhost:'))
+      ) {
+        return true;
+      }
+    }
+  } catch {
+    // Malformed injected value — fall through to "not offline server".
+  }
+
+  return false;
 }
 
 /**
