@@ -175,6 +175,19 @@ describe('CSP middleware', () => {
     expect(directive('frame-src')).not.toContain('https://api.github.com');
   });
 
+  it('allows Microsoft Clarity telemetry hosts in connect-src', () => {
+    const csp = cspOf(middleware(req())) ?? '';
+    const directive = (name: string) =>
+      csp
+        .split(';')
+        .map((d) => d.trim())
+        .find((d) => d.startsWith(`${name} `));
+    // Clarity's runtime beacons session data to *.clarity.ms (and c.bing.com);
+    // without these in connect-src the browser blocks all Clarity telemetry.
+    expect(directive('connect-src')).toContain('https://*.clarity.ms');
+    expect(directive('connect-src')).toContain('https://c.bing.com');
+  });
+
   it('allows blob: in frame-src (binary-artifact PDF preview iframe)', () => {
     const csp = cspOf(middleware(req())) ?? '';
     const frameSrc = csp
