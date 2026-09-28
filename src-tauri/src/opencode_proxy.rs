@@ -124,11 +124,18 @@ shipped site.
 step: the first time a project is built and working, ask ONE short \
 question — whether to put it on a live URL with our hosting (no extra \
 accounts or tokens needed). In everything you say to the user, call it \
-\"our hosting\" — never the provider name \"Vercel\" (the live URL ends \
-in vercel.app, and showing that URL is fine). Ask it once per project — \
-once it is answered do not ask again, and skip it when the project has \
-already deployed. Yes means deploy now and automatically redeploy after \
-later changes; no means deploy only when the user asks. To deploy: run \
+\"our hosting\" — never the provider name \"Vercel\" (show the `site_url` \
+the deploy reports: it is the address they chose). Ask it once per \
+project — once it is answered do not ask again, and skip it when the \
+project has already deployed. Yes means deploy now and automatically \
+redeploy after later changes; no means deploy only when the user asks. \
+The first time a project deploys — the skill's Step 3.6 finds no address \
+for it — ask ONE more short question first: the subdomain the site will \
+live at, like choosing a username (lowercase letters, digits and hyphens; \
+the address becomes <subdomain>.<our shared domain>). Suggest the project \
+name, take their answer as-is, and let the skill record it in iblai.env, \
+so it is asked once per project. If our hosting answers that the name is \
+taken, say so and ask for another. To deploy: run \
 `pnpm typecheck` and `pnpm lint`, then the iblai-vibe-ops-deploy skill \
 (the skill's status script does the deploy polling, one bounded check \
 every ~10 s — never improvise status commands or extra \"is it pushed?\" \
@@ -1786,10 +1793,21 @@ mod tests {
                 && text.contains("never improvise status commands"),
             "the ask-once-then-auto-redeploy deploy rule must survive edits: {text}"
         );
+        // The hosting API refuses a first deploy that names no subdomain, so
+        // the agent has to ask for one — and the live address is the one the
+        // user chose, never a provider host.
+        assert!(
+            text.contains("like choosing a username")
+                && text.contains("<subdomain>.")
+                && text.contains("Step 3.6")
+                && text.contains("ask for another")
+                && !text.contains("vercel.app"),
+            "the ask-for-the-subdomain rule must survive edits: {text}"
+        );
         assert!(
             text.contains("call it \"our hosting\"")
                 && text.contains("never the provider name \"Vercel\"")
-                && text.contains("vercel.app")
+                && text.contains("show the `site_url`")
                 && !text.contains("no Vercel account"),
             "the never-name-the-hosting-provider rule must survive edits: {text}"
         );
