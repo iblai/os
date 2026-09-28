@@ -1,10 +1,10 @@
 {
   "version": 1,
-  "lastUpdated": "2026-09-03",
+  "lastUpdated": "2026-09-29",
   "summary": {
-    "totalCheckpoints": 39,
-    "coveredCheckpoints": 20,
-    "pendingCheckpoints": 19,
+    "totalCheckpoints": 49,
+    "coveredCheckpoints": 22,
+    "pendingCheckpoints": 27,
     "deprecatedCheckpoints": 0,
     "notReproducibleCheckpoints": 0,
     "percent": 100,
@@ -109,7 +109,9 @@
         "components/chat/code-permission-card.tsx",
         "hooks/use-opencode-skill-sync.ts",
         "hooks/use-opencode-learner.ts",
-        "components/chat/ai-message-bubble.tsx"
+        "components/chat/ai-message-bubble.tsx",
+        "hooks/use-opencode-auth-required.tsx",
+        "src-tauri/src/code_agent_installer.rs"
       ],
       "checkpoints": [
         {
@@ -250,6 +252,56 @@
         {
           "id": "code-28",
           "description": "Text the agent emits before a tool call lands in the thinking section, never the reply bubble; the visible reply is what follows the last tool call",
+          "status": "pending"
+        },
+        {
+          "id": "code-29",
+          "description": "check_code_agent_status answers for Codex and Claude Code (installed / supported / sign_in_supported / signed_in, null when the probe can't tell) and refuses an unknown backend",
+          "status": "covered"
+        },
+        {
+          "id": "code-30",
+          "description": "install_code_agent installs the pinned Node runtime and each agent's ACP adapter (live), streaming progress on model:installation-log with source code-agent; status then reports installed with node_version and adapter_version",
+          "status": "pending"
+        },
+        {
+          "id": "code-31",
+          "description": "code_agent_sign_in for Claude Code refuses with the run-claude-in-a-terminal guidance instead of opening a browser (the app reuses the CLI login)",
+          "status": "covered"
+        },
+        {
+          "id": "code-32",
+          "description": "The Code popover's Agent choice (ibl.ai / Codex / Claude Code) routes turns through the model key (codex/default, claude/default), keeps the mentor-LLM and on-device writers off it, restores the platform model on switching back, and stays hidden on phones and on desktop builds without the agent commands",
+          "status": "pending"
+        },
+        {
+          "id": "code-33",
+          "description": "The popover shows the selected agent's one quiet status line: Install with live progress, Codex's Sign in with ChatGPT, Claude Code's run-claude hint with Check Again, the account once signed in, and the reason where it can't run",
+          "status": "pending"
+        },
+        {
+          "id": "code-34",
+          "description": "Sign in with ChatGPT completes Codex's browser login and the status then names the account",
+          "status": "pending"
+        },
+        {
+          "id": "code-35",
+          "description": "A turn on a signed-out agent raises one sign-in toast (Codex: Sign in with ChatGPT action; Claude Code: run claude in a terminal) and no generic chat error toast",
+          "status": "pending"
+        },
+        {
+          "id": "code-36",
+          "description": "A Code turn on Codex streams into the same bubble (reply, thinking, tool calls, permission card) with the ibl.ai guidance delivered as developer_instructions and Codex's own mode following the Approvals toggle (read-only for Ask Me, full access for Automatic)",
+          "status": "pending"
+        },
+        {
+          "id": "code-37",
+          "description": "A Code turn on Claude Code streams into the same bubble with the ibl.ai guidance appended via systemPrompt.append and the session pinned to Claude's default mode",
+          "status": "pending"
+        },
+        {
+          "id": "code-38",
+          "description": "On launch the desktop installs the managed Node and both agents' ACP adapters by itself in the background (a pin bump reaches every desktop on its next launch); the Code popover shows an installing agent with a spinner and refuses the choice until it is ready while ibl.ai keeps working, and a failed install shows its reason with Install to retry",
           "status": "pending"
         }
       ]

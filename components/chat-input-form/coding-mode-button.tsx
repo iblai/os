@@ -52,6 +52,46 @@ const LOCAL_LLM_MODEL_KEY = 'ibl_local_llm_model';
  * or it will happily point at a cloud model while the rest of the app is local.
  */
 const LOCAL_LLM_ENABLED_KEY = 'ibl_local_llm_enabled';
+/**
+ * Which agent runs Code turns. Per machine on purpose (installs and CLI logins
+ * are local), so it is never synced to DM. Rust routes on the model key this
+ * choice writes: `codex/default` / `claude/default`, or the platform model.
+ */
+const AGENT_KEY = 'ibl_coding_mode_agent';
+
+type CodeAgent = 'opencode' | 'codex' | 'claude';
+const AGENTS: CodeAgent[] = ['opencode', 'codex', 'claude'];
+/** Brand names, not translated — and never "opencode" in the UI. */
+const AGENT_LABELS: Record<CodeAgent, string> = {
+  opencode: 'ibl.ai',
+  codex: 'Codex',
+  claude: 'Claude Code',
+};
+
+/** The two agents the desktop installs (never `opencode`, which is built in). */
+const isAgent = (v: unknown): v is 'codex' | 'claude' =>
+  v === 'codex' || v === 'claude';
+
+function readAgent(): CodeAgent {
+  const v =
+    typeof window === 'undefined' ? null : localStorage.getItem(AGENT_KEY);
+  return isAgent(v) ? v : 'opencode';
+}
+
+/** `check_code_agent_status`; `signed_in` null = the probe couldn't tell. */
+interface CodeAgentStatus {
+  installed: boolean;
+  supported: boolean;
+  /** Whether the app can run the agent's own sign-in (Codex: yes; Claude: only when its CLI login works headless). */
+  sign_in_supported?: boolean;
+  signed_in?: boolean | null;
+  account?: string | null;
+  reason?: string | null;
+  /** An install is in flight (the desktop's own at launch, or Install); the choice is refused meanwhile. */
+  installing?: boolean;
+  /** Why the last install failed, shown with Install to retry. */
+  error?: string | null;
+}
 
 /**
  * Whether Code asks before each operation (`manual`) or approves them all
@@ -130,9 +170,10 @@ async function resolveCodingModel(
 }
 
 /**
- * Code (agentic coding via opencode) control — the on/off toggle plus, on
- * desktop, the workspace folder selector and the phone-access host, and, on
- * Tauri mobile, the pairing form for connecting to that host. The SDK chat
+ * Code (agentic coding via opencode, Codex or Claude Code — the model key's
+ * value picks the agent) control — the on/off toggle plus, on desktop, the
+ * agent choice, the workspace folder selector and the phone-access host, and,
+ * on Tauri mobile, the pairing form for connecting to that host. The SDK chat
  * transport reads `ibl_coding_mode_enabled` / `ibl_coding_mode_model` (and, on
  * mobile, `ibl_remote_code_ready`) from localStorage.
  *
@@ -232,16 +273,35 @@ export function CodingModeButton({
   const llmProvider = mentorSettings?.llmProvider;
   const llmName = mentorSettings?.llmName;
 
+  // Which agent runs Code turns. `agentStatus` stays empty until the backend
+  // answers `check_code_agent_status`: the WebView runs the deployed web app,
+  // so an older desktop binary without the agent commands must simply never
+  // show the choice (the same rule Phone Access uses).
+  const [agent, setAgent] = useState<CodeAgent>(readAgent);
+  const [agentStatus, setAgentStatus] = useState<
+    Partial<Record<CodeAgent, CodeAgentStatus>>
+  >({});
+  // One install or sign-in at a time (they share the managed runtime).
+  const [agentBusy, setAgentBusy] = useState<CodeAgent | null>(null);
+  // The installer's last line per agent — the launch-time install streams
+  // too, and the user can switch selection while two run back to back.
+  const [agentLog, setAgentLog] = useState<Partial<Record<CodeAgent, string>>>(
+    {},
+  );
+
   // An on-device model is active. Code supports these via Ollama / Foundry Local, but
   // only when the model can actually call tools. Kept in state and re-read on storage
-  // changes — the user can flip Local Models while the app is open.
-  const [isLocal, setIsLocal] = useState(readLocalMode);
+  // changes — the user can flip Local Models while the app is open. Codex and
+  // Claude Code bring their own model, so the on-device path is off while one
+  // of them is chosen.
+  const [localMode, setLocalMode] = useState(readLocalMode);
+  const isLocal = localMode && agent === 'opencode';
   const [local, setLocal] = useState<LocalModelCheck | null>(null);
   const [localModelId, setLocalModelId] = useState('');
 
   useEffect(() => {
     const sync = () => {
-      setIsLocal(readLocalMode());
+      setLocalMode(readLocalMode());
       setLocalModelId(localStorage.getItem(LOCAL_LLM_MODEL_KEY) || '');
     };
     sync();
@@ -763,7 +823,14 @@ export function CodingModeButton({
   // Cloud: keep Code's model matched to the top-left mentor LLM (validated) whenever
   // it changes, while Code is on or the popover is open.
   useEffect(() => {
-    if (isLocal || (!enabled && !isOpen) || !llmProvider || !llmName) return;
+    if (
+      isLocal ||
+      agent !== 'opencode' ||
+      (!enabled && !isOpen) ||
+      !llmProvider ||
+      !llmName
+    )
+      return;
     let cancelled = false;
     void (async () => {
       const { model, matched } = await resolveCodingModel(llmProvider, llmName);
@@ -775,7 +842,7 @@ export function CodingModeButton({
     return () => {
       cancelled = true;
     };
-  }, [isLocal, enabled, isOpen, llmProvider, llmName]);
+  }, [isLocal, agent, enabled, isOpen, llmProvider, llmName]);
 
   // Detect environments where Code can't run, once. The sandboxed (Mac App Store)
   // build and unsupported platforms (Windows) hide it entirely; a Linux host
@@ -826,16 +893,21 @@ export function CodingModeButton({
     localStorage.setItem(ENABLED_KEY, 'true');
     window.dispatchEvent(new Event('local-storage'));
     setEnabled(true);
-    if (isLocal && local?.spec) {
-      localStorage.setItem(MODEL_KEY, local.spec);
-    } else if (!isLocal && llmProvider && llmName) {
-      localStorage.setItem(MODEL_KEY, `${llmProvider}/${llmName}`);
-    }
+    seedModel(agent);
     // Prep opencode in the background so the first turn is ready (best-effort),
     // and mint the platform key now rather than at first spawn.
     callTauri('install_opencode').catch(() => {});
     prewarmPlatformKey();
-  }, [sandboxed, blocked, mobile, isLocal, local?.spec, llmProvider, llmName]);
+  }, [
+    sandboxed,
+    blocked,
+    mobile,
+    isLocal,
+    agent,
+    local?.spec,
+    llmProvider,
+    llmName,
+  ]);
 
   // Native folder picker → persist via set_opencode_workspace (which mkdir -p's +
   // git init's the folder).
@@ -930,6 +1002,109 @@ export function CodingModeButton({
     }
   };
 
+  /**
+   * Seed the model key with what the choice implies: an agent's own default,
+   * else the EXACT on-device spec / mentor LLM (no substitution, so the send
+   * path never runs a model nobody picked).
+   */
+  const seedModel = (a: CodeAgent) => {
+    const spec =
+      a !== 'opencode'
+        ? `${a}/default`
+        : localMode
+          ? local?.spec
+          : llmProvider && llmName
+            ? `${llmProvider}/${llmName}`
+            : '';
+    if (spec) localStorage.setItem(MODEL_KEY, spec);
+  };
+
+  const chooseAgent = (next: CodeAgent) => {
+    setAgent(next);
+    localStorage.setItem(AGENT_KEY, next);
+    // Never leave turns on an agent while the platform model is still
+    // unknown: clear first, then seed what is known right now.
+    localStorage.removeItem(MODEL_KEY);
+    seedModel(next);
+    window.dispatchEvent(new Event('local-storage'));
+  };
+
+  const checkAgent = async (a: CodeAgent) => {
+    try {
+      const st = await callTauri<CodeAgentStatus>('check_code_agent_status', {
+        backend: a,
+      });
+      if (st) setAgentStatus((prev) => ({ ...prev, [a]: st }));
+    } catch {
+      /* older desktop build: the choice stays hidden */
+    }
+  };
+
+  // Both agents on every open (cheap local checks; the sign-in probe runs
+  // only when installed). No polling: while the popover is open the desktop
+  // pushes what changes — installer progress lines (the launch-time install
+  // included) and one `code-agent:changed` per finished install, which
+  // re-reads that agent; install, sign-in and Check Again re-read their own.
+  useEffect(() => {
+    if (!isOpen || mobile || sandboxed !== false) return;
+    void checkAgent('codex');
+    void checkAgent('claude');
+    let disposed = false;
+    const unlisten: Array<() => void> = [];
+    void (async () => {
+      const { listen } = await import('@tauri-apps/api/event');
+      const offLog = await listen<{
+        message?: string;
+        source?: string;
+        backend?: string;
+      }>('model:installation-log', (e) => {
+        const b = e.payload?.backend;
+        if (e.payload?.source !== 'code-agent' || !isAgent(b)) return;
+        setAgentLog((prev) => ({ ...prev, [b]: e.payload.message ?? '' }));
+      });
+      const offChanged = await listen<{ backend?: string }>(
+        'code-agent:changed',
+        (e) => {
+          const b = e.payload?.backend;
+          if (!isAgent(b)) return;
+          setAgentLog((prev) => ({ ...prev, [b]: '' }));
+          void checkAgent(b);
+        },
+      );
+      if (disposed) {
+        offLog();
+        offChanged();
+        return;
+      }
+      unlisten.push(offLog, offChanged);
+    })();
+    return () => {
+      disposed = true;
+      unlisten.forEach((off) => off());
+    };
+  }, [isOpen, mobile, sandboxed]);
+
+  /**
+   * Install (the managed runtime + adapter — the retry after a failed
+   * launch-time install) or the agent's browser sign-in (minutes). Progress
+   * arrives through the popover's own listener above.
+   */
+  const runAgentCommand = async (
+    cmd: 'install_code_agent' | 'code_agent_sign_in',
+  ) => {
+    const a = agent;
+    setAgentBusy(a);
+    try {
+      await callTauri(cmd, { backend: a });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : String(e));
+    } finally {
+      setAgentLog((prev) => ({ ...prev, [a]: '' }));
+      setAgentBusy(null);
+      void checkAgent(a);
+    }
+  };
+
   const toggle = async (next: boolean) => {
     if (blocked) return; // can't enable Code while a local model is active
     if (next) setEngaged(true);
@@ -941,11 +1116,7 @@ export function CodingModeButton({
     if (!next) return;
     // Seed the model with the EXACT current selection (no default) so the send path
     // never substitutes; the resolve effects then flag whether it's actually usable.
-    if (isLocal && local?.spec) {
-      localStorage.setItem(MODEL_KEY, local.spec);
-    } else if (!isLocal && llmProvider && llmName) {
-      localStorage.setItem(MODEL_KEY, `${llmProvider}/${llmName}`);
-    }
+    seedModel(agent);
     // Mobile: the workspace, the opencode install, and the platform key all
     // live on the paired desktop — none of the desktop prep below applies
     // (the folder picker in particular would just fail on a phone).
@@ -982,6 +1153,40 @@ export function CodingModeButton({
   // The pill's spinner covers SKILLS loading (mentor sync + vibe fetch), never
   // the opencode binary install — skills are what the next turn would miss.
   const skillsLoading = enabled && skillSync?.state === 'syncing';
+
+  // The selected agent's status line. `undefined` for ibl.ai (no line), else
+  // what the agent still needs: install, sign-in (or the terminal hint), or
+  // nothing (ready). Only an agent whose CLI login works headless gets a
+  // sign-in button; the others show how to sign in outside the app.
+  const agentSt = agentStatus[agent];
+  const agentWorking = agentBusy === agent || !!agentSt?.installing;
+  const agentNext =
+    !agentSt?.supported || (agentSt.installed && agentSt.signed_in !== false)
+      ? null
+      : !agentSt.installed
+        ? {
+            text: agentWorking
+              ? agentLog[agent] || t('agentInstalling')
+              : agentSt.error || t('agentNotInstalled'),
+            // Nothing to click while the desktop installs it by itself: the
+            // line just follows the progress. Install is the retry.
+            label: agentSt.installing ? null : t('agentInstall'),
+            run: () => runAgentCommand('install_code_agent'),
+          }
+        : agentSt.sign_in_supported
+          ? {
+              text: agentWorking ? t('agentSigningIn') : t('agentSignedOut'),
+              label:
+                agent === 'claude' ? t('agentSignInClaude') : t('agentSignIn'),
+              run: () => runAgentCommand('code_agent_sign_in'),
+            }
+          : {
+              text: t.rich('agentClaudeSignIn', {
+                code: (chunks) => <code className="font-mono">{chunks}</code>,
+              }),
+              label: t('agentCheckAgain'),
+              run: () => checkAgent(agent),
+            };
 
   // Hidden where opencode can never be spawned: the sandboxed Mac App Store build
   // and unsupported platforms (Windows). (Desktop-only gating happens in the parent,
@@ -1115,7 +1320,7 @@ export function CodingModeButton({
                 <div className="mt-1 text-amber-600">{local.reason}</div>
               )}
             </div>
-          ) : resolvedModel && !modelMatched ? (
+          ) : agent === 'opencode' && resolvedModel && !modelMatched ? (
             <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-2.5 text-xs text-amber-700">
               <span className="font-mono">{resolvedModel}</span>{' '}
               {t('modelUnavailable')}
@@ -1161,6 +1366,88 @@ export function CodingModeButton({
             >
               {t('permissionModeAutoHint')}
             </p>
+          )}
+
+          {/* Agent: the same quiet segmented control as Approvals, and only
+            once the backend has answered for at least one agent (never on
+            phones, never on a desktop build without the commands). */}
+          {(agentStatus.codex || agentStatus.claude) && (
+            <>
+              <div className="mt-3 flex items-center justify-between gap-2">
+                <span className="text-xs font-medium text-gray-600">
+                  {t('agentLabel')}
+                </span>
+                <div
+                  role="radiogroup"
+                  aria-label={t('agentLabel')}
+                  className="flex items-center gap-0.5 rounded-md border border-gray-200 p-0.5"
+                >
+                  {/* An agent the desktop is still installing (it does that
+                      by itself at launch) spins and can't be chosen; ibl.ai
+                      and any finished agent stay selectable. */}
+                  {AGENTS.map((a) => (
+                    <button
+                      key={a}
+                      type="button"
+                      role="radio"
+                      aria-checked={agent === a}
+                      aria-busy={agentStatus[a]?.installing || undefined}
+                      disabled={agentStatus[a]?.installing}
+                      onClick={() => chooseAgent(a)}
+                      className={`inline-flex h-6 items-center gap-1 rounded px-2 text-[11px] transition-colors disabled:cursor-default ${
+                        agent === a
+                          ? 'bg-gray-100 text-gray-900'
+                          : 'text-gray-500 hover:text-gray-700'
+                      }`}
+                    >
+                      {agentStatus[a]?.installing && (
+                        <Loader2
+                          aria-hidden
+                          className="h-3 w-3 shrink-0 animate-spin"
+                        />
+                      )}
+                      {AGENT_LABELS[a]}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {agentSt && (
+                <div
+                  data-testid="code-agent-status"
+                  className="mt-1 flex items-center justify-between gap-2 text-[11px] text-gray-400"
+                >
+                  {!agentSt.supported ? (
+                    <span>{agentSt.reason || t('agentUnsupported')}</span>
+                  ) : agentNext ? (
+                    <>
+                      <span className="min-w-0">{agentNext.text}</span>
+                      {agentNext.label && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          type="button"
+                          className="h-6 shrink-0 px-2 text-[11px]"
+                          disabled={agentBusy !== null}
+                          onClick={() => void agentNext.run()}
+                        >
+                          {agentNext.label}
+                        </Button>
+                      )}
+                    </>
+                  ) : (
+                    <span className="flex min-w-0 items-center gap-1.5">
+                      <span
+                        aria-hidden
+                        className="h-1.5 w-1.5 shrink-0 rounded-full bg-gray-300"
+                      />
+                      <span className="truncate">
+                        {agentSt.account || t('agentReady')}
+                      </span>
+                    </span>
+                  )}
+                </div>
+              )}
+            </>
           )}
 
           {mobile ? (

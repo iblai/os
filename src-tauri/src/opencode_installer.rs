@@ -151,7 +151,10 @@ fn target_asset() -> Result<(&'static str, &'static str, &'static str), String> 
 }
 
 /// Extract a `.tar.gz` (tar) or `.zip` (unzip on macOS, bsdtar elsewhere).
-fn extract(archive: &Path, dir: &Path) -> Result<(), String> {
+///
+/// `pub(crate)`: the code-agent installer unpacks its Node tarball through this
+/// same extractor.
+pub(crate) fn extract(archive: &Path, dir: &Path) -> Result<(), String> {
     let a = archive.to_string_lossy().to_string();
     let d = dir.to_string_lossy().to_string();
     let mut cmd = if a.ends_with(".tar.gz") {

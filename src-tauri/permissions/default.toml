@@ -42,6 +42,9 @@ permissions = [
     "allow-check-opencode-status",
     "allow-check-code-local-model",
     "allow-set-opencode-learner",
+    "allow-check-code-agent-status",
+    "allow-install-code-agent",
+    "allow-code-agent-sign-in",
     "allow-remote-code-status",
     "allow-remote-code-enable",
     "allow-remote-code-disable",
@@ -275,6 +278,24 @@ identifier = "allow-check-opencode-status"
 description = "Enables checking opencode readiness (installed/version/config/workspace)"
 [permission.commands]
 allow = ["check_opencode_status"]
+
+[[permission]]
+identifier = "allow-check-code-agent-status"
+description = "Enables checking a subscription code agent's readiness (installed / signed in) — Codex or Claude Code"
+[permission.commands]
+allow = ["check_code_agent_status"]
+
+[[permission]]
+identifier = "allow-install-code-agent"
+description = "Enables installing the managed Node runtime and a subscription code agent's ACP adapter"
+[permission.commands]
+allow = ["install_code_agent"]
+
+[[permission]]
+identifier = "allow-code-agent-sign-in"
+description = "Enables starting a subscription code agent's browser sign-in (ChatGPT for Codex)"
+[permission.commands]
+allow = ["code_agent_sign_in"]
 
 [[permission]]
 identifier = "allow-check-code-local-model"

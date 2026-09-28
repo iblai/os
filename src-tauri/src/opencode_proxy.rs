@@ -39,6 +39,8 @@ use axum::Router;
 use sha2::{Digest, Sha256};
 use tokio::sync::{Mutex, RwLock};
 
+use crate::opencode_acp::Backend;
+
 /// System-prompt guidance for the coding agent. Composed with the identity
 /// bullets ([`guidance_with_identity`]) and written at every spawn as the
 /// per-session `AGENTS.md` beside the session's opencode.json — opencode
@@ -782,13 +784,52 @@ the domain.\n"
     out
 }
 
-/// The full ibl.ai guidance for one session: [`IBLAI_INSTRUCTIONS`] plus the
-/// [`identity_lines`], resolved from the process-global learner/domain state.
-/// Spawn writes it as the per-session AGENTS.md that opencode folds into the
-/// system prompt on every model call — so identity is captured at spawn time,
-/// and a login that lands mid-session takes effect on the next spawn, not the
-/// next call.
-pub(crate) async fn guidance_with_identity(tenant: &str) -> String {
+/// The three lines of [`IBLAI_INSTRUCTIONS`] that are false or meaningless
+/// for the subscription agents, and their replacements. Anchors are exact
+/// substrings of the authored text; the rest of the guidance is byte-identical
+/// across all three agents.
+const INFERENCE_OPENCODE: &str = "your own inference already runs through the session's \
+metered, learner-attributed proxy, and going around it is not allowed.";
+const INFERENCE_SUBSCRIPTION: &str = "your own model calls run on your own subscription, \
+and IBLAI_API_KEY is for platform APIs and the software you build only.";
+const SKILLS_OPENCODE: &str = "you MUST invoke that skill (via the skill tool) before";
+const SKILLS_CODEX: &str = "you MUST use that skill (it is one of the skills listed by \
+/skills — open its SKILL.md and follow it) before";
+const TOOLS_OPENCODE: &str = "For searching, prefer the Glob and Grep tools, and run \
+independent tool calls (especially file reads) in parallel.";
+const TOOLS_CODEX: &str = "For searching, prefer `rg` and `fd` from the shell, and batch \
+independent reads into as few commands as possible.";
+
+/// Per-agent wording for one authored text: opencode's lines about its
+/// metered proxy, its skill tool and its Glob/Grep tools are swapped for the
+/// agents that have none of those. A missing anchor is a hard error, never a
+/// silent no-op — the guard test pins every anchor against the text.
+fn substitute_for(backend: Backend, text: &str) -> Result<String, String> {
+    let swaps: &[(&str, &str)] = match backend {
+        Backend::Opencode => &[],
+        Backend::Claude => &[(INFERENCE_OPENCODE, INFERENCE_SUBSCRIPTION)],
+        Backend::Codex => &[
+            (INFERENCE_OPENCODE, INFERENCE_SUBSCRIPTION),
+            (SKILLS_OPENCODE, SKILLS_CODEX),
+            (TOOLS_OPENCODE, TOOLS_CODEX),
+        ],
+    };
+    let mut out = text.to_string();
+    for (anchor, replacement) in swaps {
+        if !out.contains(anchor) {
+            return Err(format!(
+                "ibl.ai guidance anchor missing for {}: {anchor:?}",
+                backend.id()
+            ));
+        }
+        out = out.replace(anchor, replacement);
+    }
+    Ok(out)
+}
+
+/// `base` plus the [`identity_lines`], resolved from the process-global
+/// learner/domain state.
+async fn compose_guidance(base: &str, tenant: &str) -> String {
     let learner = learner_username().await;
     let email = learner_email_address().await;
     // The ONE domain everything derives from and the auth SPA URL (the sole
@@ -798,7 +839,7 @@ pub(crate) async fn guidance_with_identity(tenant: &str) -> String {
     let domain = platform_base_domain().await;
     let auth = auth_url_value().await;
     format!(
-        "{IBLAI_INSTRUCTIONS}{}",
+        "{base}{}",
         identity_lines(
             learner.as_deref(),
             (!tenant.is_empty()).then_some(tenant),
@@ -807,6 +848,22 @@ pub(crate) async fn guidance_with_identity(tenant: &str) -> String {
             Some(auth.as_str()),
         )
     )
+}
+
+/// The full ibl.ai guidance for one session on `backend`: [`IBLAI_INSTRUCTIONS`]
+/// with that agent's [`substitute_for`] wording, plus the [`identity_lines`].
+/// Identity is captured at spawn time — a login that lands mid-session takes
+/// effect on the next spawn, not the next call.
+pub(crate) async fn guidance_for(backend: Backend, tenant: &str) -> Result<String, String> {
+    let base = substitute_for(backend, IBLAI_INSTRUCTIONS)?;
+    Ok(compose_guidance(&base, tenant).await)
+}
+
+/// The opencode guidance: what spawn writes as the per-session AGENTS.md that
+/// opencode folds into the system prompt on every model call (and what the
+/// phone-Code serve path writes for its process).
+pub(crate) async fn guidance_with_identity(tenant: &str) -> String {
+    compose_guidance(IBLAI_INSTRUCTIONS, tenant).await
 }
 
 /// Read the throwaway secret from `Authorization: Bearer <secret>` (what an
@@ -1858,5 +1915,51 @@ must survive edits: {text}"
             text.contains("deployment-hash") && text.contains("skip the deploy"),
             "the deploy-dedupe rule must survive edits: {text}"
         );
+    }
+
+    /// One authored text, three lines swapped per agent: the metered-proxy
+    /// sentence is false for both subscription agents, and Codex has neither a
+    /// skill tool nor Glob/Grep tools. Every other line is byte-identical, and
+    /// each anchor must keep matching the text or the swap fails loudly.
+    #[test]
+    fn each_agent_gets_its_own_wording() {
+        let base = IBLAI_INSTRUCTIONS;
+        assert_eq!(substitute_for(Backend::Opencode, base).unwrap(), base);
+
+        let claude = substitute_for(Backend::Claude, base).unwrap();
+        let codex = substitute_for(Backend::Codex, base).unwrap();
+        for text in [&claude, &codex] {
+            assert!(
+                !text.contains("metered, learner-attributed proxy"),
+                "{text}"
+            );
+            assert!(text.contains("run on your own subscription"), "{text}");
+            assert!(
+                text.contains("never for your own model calls"),
+                "the built-apps-only key rule survives the swap: {text}"
+            );
+        }
+        assert!(claude.contains("via the skill tool") && claude.contains("Glob and Grep"));
+        assert!(!codex.contains("via the skill tool") && !codex.contains("Glob and Grep"));
+        assert!(
+            codex.contains("/skills") && codex.contains("`rg` and `fd`"),
+            "{codex}"
+        );
+
+        // Exactly the swapped lines differ — one for Claude, three for Codex.
+        let differing = |variant: &str| {
+            base.lines()
+                .zip(variant.lines())
+                .filter(|(a, b)| a != b)
+                .count()
+        };
+        assert_eq!(base.lines().count(), claude.lines().count());
+        assert_eq!(base.lines().count(), codex.lines().count());
+        assert_eq!(differing(&claude), 1);
+        assert_eq!(differing(&codex), 3);
+
+        // A text without the anchor is refused, never silently passed through.
+        let err = substitute_for(Backend::Codex, "# nothing here\n").unwrap_err();
+        assert!(err.contains("anchor missing for codex"), "{err}");
     }
 }
