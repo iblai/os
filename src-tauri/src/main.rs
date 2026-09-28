@@ -10,6 +10,8 @@ mod foundry_manager;
 // consults; the engine inside is cfg-gated so this compiles on desktop like lib.rs.
 #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
 mod code_agent_installer;
+#[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+mod code_agent_models;
 #[allow(dead_code)]
 mod local_llm;
 mod mcp_bridge_installer;
@@ -2886,6 +2888,8 @@ fn main() {
             code_agent_installer::check_code_agent_status,
             code_agent_installer::install_code_agent,
             code_agent_installer::code_agent_sign_in,
+            code_agent_models::list_code_agent_models,
+            code_agent_models::set_code_agent_model,
             remote_code::remote_code_status,
             remote_code::remote_code_enable,
             remote_code::remote_code_disable,

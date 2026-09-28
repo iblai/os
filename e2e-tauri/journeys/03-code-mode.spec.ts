@@ -735,5 +735,53 @@ describe('Journey 3: Code Mode (opencode)', () => {
          an_installing_or_failed_agent_reports_its_phase plus the stale_agents
          asserts in readiness_distinguishes_missing_stale_and_current */
     });
+
+    it('code-39: list_code_agent_models answers each agent’s models with its default, or refuses naming install / sign-in', async () => {
+      for (const backend of ['codex', 'claude'] as const) {
+        const st = await invokeCmd<CodeAgentStatus>('check_code_agent_status', {
+          backend,
+        });
+        if (st.installed && st.signed_in) {
+          const list = await invokeCmd<{
+            models: { id: string; name: string }[];
+            default: string | null;
+            selected: string | null;
+          }>('list_code_agent_models', { backend });
+          expect(list.models.length).toBeGreaterThan(0);
+          expect(
+            list.models.every(
+              (m) => typeof m.id === 'string' && typeof m.name === 'string',
+            ),
+          ).toBe(true);
+          expect(typeof list.default).toBe('string');
+        } else {
+          // Not installed or signed out: the refusal names the fix.
+          expect(
+            await invokeExpectingFailure('list_code_agent_models', { backend }),
+          ).toMatch(/install|sign-in|signed in/i);
+        }
+      }
+      expect(
+        await invokeExpectingFailure('list_code_agent_models', {
+          backend: 'gemini',
+        }),
+      ).toMatch(/unknown code agent/);
+    });
+
+    it.skip('code-40: the top-left model picker lists the agent’s models while Code runs on Codex / Claude Code and saves the pick per machine', () => {
+      /* pending — needs an authenticated UI session (like code-14/23/24);
+         covered meanwhile by the nav-bar Vitest cases (shows the agent model
+         picker instead of the LLM selector, keeps the LLM selector…) and
+         agent-model-selector.test.tsx (lists the agent’s models…, choosing a
+         model saves it…, a refused pick toasts…, shows a failure inline…) */
+    });
+
+    it.skip('code-41: a Code turn runs on the picked model — the handshake applies it with session/set_config_option right after the mode pin, and a refused model fails the turn naming the picker', () => {
+      /* pending — needs a signed-in ChatGPT / Claude subscription; covered
+         meanwhile by the Rust a_scripted_agent_reports_its_models_and_takes_the_saved_one
+         (opencode_acp.rs), an_unknown_model_is_refused_before_it_is_saved and
+         the_model_choice_lists_the_agents_offer_with_default_and_selection
+         (code_agent_models.rs) */
+    });
   });
 });

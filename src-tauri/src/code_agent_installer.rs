@@ -82,7 +82,7 @@ fn adapter_package(backend: Backend) -> &'static str {
     }
 }
 
-fn display_name(backend: Backend) -> &'static str {
+pub(crate) fn display_name(backend: Backend) -> &'static str {
     match backend {
         Backend::Codex => "Codex",
         Backend::Claude => "Claude Code",

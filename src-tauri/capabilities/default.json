@@ -52,6 +52,8 @@
     "allow-check-code-agent-status",
     "allow-install-code-agent",
     "allow-code-agent-sign-in",
+    "allow-list-code-agent-models",
+    "allow-set-code-agent-model",
     "core:webview:allow-internal-toggle-devtools",
     "core:default",
     "core:event:default",

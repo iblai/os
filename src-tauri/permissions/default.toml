@@ -45,6 +45,8 @@ permissions = [
     "allow-check-code-agent-status",
     "allow-install-code-agent",
     "allow-code-agent-sign-in",
+    "allow-list-code-agent-models",
+    "allow-set-code-agent-model",
     "allow-remote-code-status",
     "allow-remote-code-enable",
     "allow-remote-code-disable",
@@ -296,6 +298,18 @@ identifier = "allow-code-agent-sign-in"
 description = "Enables starting a subscription code agent's browser sign-in (ChatGPT for Codex)"
 [permission.commands]
 allow = ["code_agent_sign_in"]
+
+[[permission]]
+identifier = "allow-list-code-agent-models"
+description = "Enables listing the models a subscription code agent offers (cached from its ACP session, or a short probe)"
+[permission.commands]
+allow = ["list_code_agent_models"]
+
+[[permission]]
+identifier = "allow-set-code-agent-model"
+description = "Enables choosing the model a subscription code agent runs on this machine"
+[permission.commands]
+allow = ["set_code_agent_model"]
 
 [[permission]]
 identifier = "allow-check-code-local-model"

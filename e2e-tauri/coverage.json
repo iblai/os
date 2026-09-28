@@ -2,9 +2,9 @@
   "version": 1,
   "lastUpdated": "2026-09-29",
   "summary": {
-    "totalCheckpoints": 49,
-    "coveredCheckpoints": 22,
-    "pendingCheckpoints": 27,
+    "totalCheckpoints": 52,
+    "coveredCheckpoints": 23,
+    "pendingCheckpoints": 29,
     "deprecatedCheckpoints": 0,
     "notReproducibleCheckpoints": 0,
     "percent": 100,
@@ -111,7 +111,10 @@
         "hooks/use-opencode-learner.ts",
         "components/chat/ai-message-bubble.tsx",
         "hooks/use-opencode-auth-required.tsx",
-        "src-tauri/src/code_agent_installer.rs"
+        "src-tauri/src/code_agent_installer.rs",
+        "src-tauri/src/code_agent_models.rs",
+        "components/chat-input-form/code-agents.ts",
+        "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/agent-model-selector.tsx"
       ],
       "checkpoints": [
         {
@@ -302,6 +305,21 @@
         {
           "id": "code-38",
           "description": "On launch the desktop installs the managed Node and both agents' ACP adapters by itself in the background (a pin bump reaches every desktop on its next launch); the Code popover shows an installing agent with a spinner and refuses the choice until it is ready while ibl.ai keeps working, and a failed install shows its reason with Install to retry",
+          "status": "pending"
+        },
+        {
+          "id": "code-39",
+          "description": "list_code_agent_models answers each agent's models (id, name, description) with the agent's own default and the saved pick, or refuses naming install / sign-in; an unknown backend is refused",
+          "status": "covered"
+        },
+        {
+          "id": "code-40",
+          "description": "The top-left model picker lists the agent's models while Code runs on Codex / Claude Code (in place of the mentor's LLM selector and the on-device badge), saves the pick per machine, shows Default with the agent's own default, and shows a failure inline with Retry",
+          "status": "pending"
+        },
+        {
+          "id": "code-41",
+          "description": "A Code turn runs on the picked model: the handshake applies it with session/set_config_option right after the mode pin, a live session takes a new pick without a respawn, and a model the agent refuses fails the turn naming the picker",
           "status": "pending"
         }
       ]

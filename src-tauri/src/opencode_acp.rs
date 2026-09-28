@@ -199,6 +199,45 @@ pub async fn get_opencode_permission_mode() -> Result<Option<String>, String> {
     Ok(saved_permission_mode())
 }
 
+/// Every live session of one backend — the targets of a setting pushed mid-session.
+async fn live_sessions(backend: Backend) -> Vec<Arc<Session>> {
+    registry()
+        .lock()
+        .await
+        .values()
+        .filter(|s| s.backend == backend)
+        .cloned()
+        .collect()
+}
+
+/// Apply a session config option (the `model`) to every live session of the
+/// backend, so a pick in the top-left reaches a running chat without a
+/// respawn and with its conversation intact. The first refusal is the error
+/// — the caller must not save what a live session rejected.
+pub(crate) async fn push_config_option(
+    backend: Backend,
+    config_id: &str,
+    value: String,
+) -> Result<(), String> {
+    let name = crate::code_agent_installer::display_name(backend);
+    for s in live_sessions(backend).await {
+        let req = s.request(
+            "session/set_config_option",
+            json!({ "sessionId": s.acp_session_id, "configId": config_id, "value": value }),
+        );
+        match tokio::time::timeout(Duration::from_secs(10), req).await {
+            Ok(Ok(_)) => {}
+            Ok(Err(e)) => return Err(format!("{name} refused {config_id} = {value}: {e}")),
+            Err(_) => {
+                return Err(format!(
+                    "{name} did not answer the {config_id} change within 10s."
+                ))
+            }
+        }
+    }
+    Ok(())
+}
+
 /// Record the approval mode and apply it to running sessions immediately.
 #[command]
 pub async fn set_opencode_permission_mode(mode: String) -> Result<(), String> {
@@ -219,14 +258,7 @@ pub async fn set_opencode_permission_mode(mode: String) -> Result<(), String> {
     // Codex carries its own approval mode (see `codex_mode`): repoint every live
     // Codex session so the flip applies mid-session. opencode and Claude need
     // nothing — they are governed by how this app answers their requests.
-    let live: Vec<Arc<Session>> = registry()
-        .lock()
-        .await
-        .values()
-        .filter(|s| s.backend == Backend::Codex)
-        .cloned()
-        .collect();
-    for s in live {
+    for s in live_sessions(Backend::Codex).await {
         let mode = codex_mode(auto);
         tokio::spawn(async move {
             let req = s.request(
@@ -2541,6 +2573,151 @@ struct AgentLaunch {
     session: Value,
 }
 
+/// Stdio, PATH and the launch's own env for an agent process — shared by a
+/// chat session and a model probe. No provider credential or routing
+/// override reaches any agent; then this backend's own env on top.
+fn wire_agent_command(cmd: &mut Command, launch: &AgentLaunch, workspace: &Path, backend: Backend) {
+    cmd.arg(&launch.program)
+        .args(&launch.args)
+        .current_dir(workspace)
+        .stdin(std::process::Stdio::piped())
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
+        .kill_on_drop(true);
+    strip_agent_env(cmd);
+    let path = if backend == Backend::Opencode {
+        augmented_path()
+    } else {
+        crate::code_agent_installer::agent_path()
+    };
+    cmd.env("PATH", path);
+    for (key, value) in &launch.env {
+        cmd.env(key, value);
+    }
+}
+
+/// How long a model probe may take: the adapters spawn the vendor binary and
+/// ask it for its models (Claude's takes a few seconds).
+const PROBE_TIMEOUT: Duration = Duration::from_secs(30);
+
+/// A short session against the agent just to read its `configOptions` — the
+/// way to list models before any chat has run one (ACP lists them per session
+/// only). Same launch, sandbox and login checks as a chat session, a scratch
+/// workspace under the agent's own data dir instead of a chat's (never /tmp,
+/// which the sandbox masks), no guidance, no skills; the process is killed
+/// right after the handshake. The workspace path is FIXED per agent: the
+/// agents index sessions by cwd (`~/.claude/projects/<encoded cwd>`), so a
+/// fresh path per probe would leave one entry per probe behind. One probe at
+/// a time per process, so a cleanup never pulls the workspace from under
+/// another probe.
+pub(crate) async fn probe_config_options(backend: Backend) -> Result<Value, String> {
+    if backend == Backend::Opencode {
+        return Err("opencode has no agent model list.".to_string());
+    }
+    crate::code_agent_installer::agent_ready(backend)?;
+    let home = home_dir().unwrap_or_default();
+    if !backend.own().iter().any(|rel| home.join(rel).is_dir()) {
+        return Err(format!("{AUTH_REQUIRED}: {}", backend.sign_in_hint()));
+    }
+    static PROBE: OnceLock<Mutex<()>> = OnceLock::new();
+    let _one_at_a_time = PROBE.get_or_init(|| Mutex::new(())).lock().await;
+    let nonce = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_nanos())
+        .unwrap_or(0);
+    let key = format!("probe-{}-{}-{nonce}", backend.id(), std::process::id());
+    let scratch = iblai_data_dir()
+        .join("acp")
+        .join(backend.id())
+        .join("probe");
+    let ws = scratch.join("ws");
+    let skills = scratch.join("skills");
+    let cfg = config_home(&key);
+    for d in [&ws, &skills, &cfg] {
+        std::fs::create_dir_all(d).map_err(|e| format!("probe dir failed: {e}"))?;
+    }
+    let result = tokio::time::timeout(PROBE_TIMEOUT, probe_in(backend, &key, &ws, &skills, &cfg))
+        .await
+        .unwrap_or_else(|_| {
+            Err(format!(
+                "{} did not answer within {}s.",
+                crate::code_agent_installer::display_name(backend),
+                PROBE_TIMEOUT.as_secs()
+            ))
+        });
+    let _ = std::fs::remove_dir_all(&scratch);
+    let _ = std::fs::remove_dir_all(&cfg);
+    result
+}
+
+async fn probe_in(
+    backend: Backend,
+    key: &str,
+    ws: &Path,
+    skills: &Path,
+    cfg: &Path,
+) -> Result<Value, String> {
+    let launch = agent_launch(backend, ws, skills, cfg, "", false);
+    let mut cmd = sandboxed_command(key, ws, backend)?;
+    wire_agent_command(&mut cmd, &launch, ws, backend);
+    let mut child = cmd
+        .spawn()
+        .map_err(|e| format!("failed to launch the {} agent: {e}", backend.id()))?;
+    let stdin = Arc::new(Mutex::new(child.stdin.take().ok_or("no stdin")?));
+    let stdout = child.stdout.take().ok_or("no stdout")?;
+    if let Some(stderr) = child.stderr.take() {
+        let tag = backend.id();
+        tokio::spawn(async move {
+            let mut lines = BufReader::new(stderr).lines();
+            while let Ok(Some(l)) = lines.next_line().await {
+                eprintln!("[{tag} probe] {l}");
+            }
+        });
+    }
+    // Responses only: a probe has no turn, so updates and requests are noise.
+    let pending: Arc<Mutex<HashMap<i64, oneshot::Sender<Value>>>> =
+        Arc::new(Mutex::new(HashMap::new()));
+    let routed = pending.clone();
+    tokio::spawn(async move {
+        let mut lines = BufReader::new(stdout).lines();
+        while let Ok(Some(line)) = lines.next_line().await {
+            if let Ok(v) = serde_json::from_str::<Value>(&line) {
+                route_response(&routed, &v).await;
+            }
+        }
+    });
+    let session = Session {
+        child: Mutex::new(child),
+        stdin,
+        next_id: AtomicI64::new(1),
+        pending,
+        acp_session_id: String::new(),
+        requested_model: None,
+        backend,
+        proxy_secret: None,
+        turn: Arc::new(Mutex::new(TurnState {
+            generation_id: String::new(),
+            full_content: String::new(),
+            pending_delta: String::new(),
+            last_narration: String::new(),
+            last_emit: Instant::now(),
+        })),
+        last_used: Mutex::new(Instant::now()),
+        active_turns: AtomicUsize::new(0),
+        closing: AtomicBool::new(false),
+        context_fresh: AtomicBool::new(false),
+    };
+    let hs = handshake(&session, &launch.session, None, None, None).await;
+    session.closing.store(true, Ordering::SeqCst);
+    let _ = session.child.lock().await.start_kill();
+    hs?.config_options.ok_or_else(|| {
+        format!(
+            "{} reported no config options.",
+            crate::code_agent_installer::display_name(backend)
+        )
+    })
+}
+
 /// The `session/new` params per backend. Codex and Claude get the per-spawn
 /// skills view as an additional directory (each scans its own subdir of it);
 /// Claude also takes the ibl.ai guidance as `_meta.systemPrompt.append`, which
@@ -2919,25 +3096,7 @@ async fn spawn_session(
         auto,
     );
     let mut cmd = sandboxed_command(session_id, workspace, backend)?;
-    cmd.arg(&launch.program)
-        .args(&launch.args)
-        .current_dir(workspace)
-        .stdin(std::process::Stdio::piped())
-        .stdout(std::process::Stdio::piped())
-        .stderr(std::process::Stdio::piped())
-        .kill_on_drop(true);
-    // No provider credential or routing override reaches any agent; then this
-    // backend's own env on top.
-    strip_agent_env(&mut cmd);
-    let path = if backend == Backend::Opencode {
-        augmented_path()
-    } else {
-        crate::code_agent_installer::agent_path()
-    };
-    cmd.env("PATH", path);
-    for (key, value) in &launch.env {
-        cmd.env(key, value);
-    }
+    wire_agent_command(&mut cmd, &launch, workspace, backend);
 
     // Attribution/config for the agent's shell. The vibe skills read these
     // instead of asking the user who/where they are.
@@ -3020,14 +3179,30 @@ async fn spawn_session(
         context_fresh: AtomicBool::new(false),
     };
 
-    let (acp_session_id, loaded) = handshake(
+    // The model saved in the top-left picker is applied by the handshake right
+    // after the mode pin; opencode's model rides in its config instead.
+    let saved_model = if backend == Backend::Opencode {
+        None
+    } else {
+        crate::code_agent_models::saved(backend)
+    };
+    let hs = handshake(
         &session,
         &launch.session,
         resume.as_deref(),
         session_mode(backend, auto),
+        saved_model.as_deref(),
     )
     .await?;
-    session.acp_session_id = acp_session_id;
+    // The agent's model list for the picker; a fresh session's opening
+    // snapshot also names the agent's own default.
+    if backend != Backend::Opencode {
+        if let Some(opts) = &hs.config_options {
+            crate::code_agent_models::remember(backend, opts, !hs.loaded);
+        }
+    }
+    let loaded = hs.loaded;
+    session.acp_session_id = hs.id;
     // A brand-new ACP session has no conversation memory — the first prompt on it
     // may need the frontend's transcript prepended.
     session.context_fresh.store(!loaded, Ordering::SeqCst);
@@ -3044,12 +3219,24 @@ async fn spawn_session(
 /// `session/new` params; a load sends the same object plus the `sessionId`,
 /// so Claude's guidance and both agents' skills view apply on resume too.
 /// Returns the ACP session id and whether it was loaded (vs created).
+/// What a handshake established: the ACP session id, whether it came from a
+/// `session/load`, and the agent's `configOptions` as the new/load response
+/// reported them — BEFORE any saved model was applied, so a fresh session's
+/// snapshot names the agent's own default model.
+#[derive(Debug)]
+struct Handshake {
+    id: String,
+    loaded: bool,
+    config_options: Option<Value>,
+}
+
 async fn handshake(
     session: &Session,
     new_params: &Value,
     resume: Option<&str>,
     mode: Option<&str>,
-) -> Result<(String, bool), String> {
+    model: Option<&str>,
+) -> Result<Handshake, String> {
     // 1) initialize — we advertise NO fs/terminal capabilities so the agent uses
     //    its own built-in file/shell tools directly on the workspace.
     let init = session
@@ -3074,12 +3261,14 @@ async fn handshake(
     //    our teardown deletes. The load's history replay streams as
     //    `session/update` with no turn in flight, so `handle_update` drops it.
     let mut acp_session_id: Option<String> = None;
+    let mut config_options: Option<Value> = None;
     if can_load {
         if let Some(prev) = resume {
             let mut load = new_params.clone();
             load["sessionId"] = json!(prev);
-            if session.request("session/load", load).await.is_ok() {
+            if let Ok(res) = session.request("session/load", load).await {
                 acp_session_id = Some(prev.to_string());
+                config_options = res.get("configOptions").filter(|c| c.is_array()).cloned();
             }
         }
     }
@@ -3089,6 +3278,10 @@ async fn handshake(
         Some(id) => id,
         None => {
             let new_res = session.request("session/new", new_params.clone()).await?;
+            config_options = new_res
+                .get("configOptions")
+                .filter(|c| c.is_array())
+                .cloned();
             new_res
                 .get("sessionId")
                 .and_then(|s| s.as_str())
@@ -3105,7 +3298,32 @@ async fn handshake(
             )
             .await?;
     }
-    Ok((id, loaded))
+    // 5) The model saved in the top-left picker. A refusal (the agent no
+    //    longer offers it) fails the spawn and names the picker — never a
+    //    silent fall-back to whatever the agent would have picked.
+    if let Some(model) = model {
+        session
+            .request(
+                "session/set_config_option",
+                json!({
+                    "sessionId": id,
+                    "configId": crate::code_agent_models::MODEL_CONFIG_ID,
+                    "value": model,
+                }),
+            )
+            .await
+            .map_err(|e| {
+                format!(
+                    "{} rejected the model {model}: {e} — pick another one in the top-left.",
+                    crate::code_agent_installer::display_name(session.backend)
+                )
+            })?;
+    }
+    Ok(Handshake {
+        id,
+        loaded,
+        config_options,
+    })
 }
 
 /// Get an existing live session or spawn one.
@@ -5596,9 +5814,12 @@ mod tests {
         })
     }
 
-    /// Answers `initialize` (loadSession: true), `session/new`, `session/load`
-    /// and `session/set_mode` with canned results and `session/prompt` with
-    /// ACP's `authRequired` error, logging every request line to `$LOG`.
+    /// Answers `initialize` (loadSession: true), `session/new` and
+    /// `session/load` (both with a Codex-shaped `model` config option),
+    /// `session/set_mode` and `session/set_config_option` (accepting only
+    /// `gpt-5.3-codex`, ACP's invalid-params error otherwise) with canned
+    /// results and `session/prompt` with ACP's `authRequired` error, logging
+    /// every request line to `$LOG`.
     #[cfg(unix)]
     const STUB_AGENT: &str = r#"
 while IFS= read -r l; do
@@ -5608,8 +5829,16 @@ while IFS= read -r l; do
     *'"session/prompt"'*)
       printf '{"jsonrpc":"2.0","id":%s,"error":{"code":-32000,"message":"Authentication required"}}\n' "$id"
       continue ;;
+    *'"session/set_config_option"'*)
+      case "$l" in
+        *'"value":"gpt-5.3-codex"'*) r='{"configOptions":[{"id":"model","category":"model","type":"select","currentValue":"gpt-5.3-codex","options":[{"value":"gpt-5.2","name":"5.2"},{"value":"gpt-5.3-codex","name":"5.3 Codex"}]}]}' ;;
+        *)
+          printf '{"jsonrpc":"2.0","id":%s,"error":{"code":-32602,"message":"Invalid params"}}\n' "$id"
+          continue ;;
+      esac ;;
     *'"initialize"'*) r='{"protocolVersion":1,"agentCapabilities":{"loadSession":true}}' ;;
-    *'"session/new"'*) r='{"sessionId":"acp-stub"}' ;;
+    *'"session/new"'*) r='{"sessionId":"acp-stub","configOptions":[{"id":"model","name":"Model","category":"model","type":"select","currentValue":"gpt-5.2","options":[{"value":"gpt-5.2","name":"5.2","description":"Default"},{"value":"gpt-5.3-codex","name":"5.3 Codex","description":"Coding"}]}]}' ;;
+    *'"session/load"'*) r='{"configOptions":[{"id":"model","category":"model","type":"select","currentValue":"gpt-5.3-codex","options":[{"value":"gpt-5.2","name":"5.2"},{"value":"gpt-5.3-codex","name":"5.3 Codex"}]}]}' ;;
     *) r='{}' ;;
   esac
   printf '{"jsonrpc":"2.0","id":%s,"result":%s}\n' "$id" "$r"
@@ -5637,9 +5866,16 @@ done
         let log = scratch.join("claude.log");
         let session = piped_agent(&script, &log, Backend::Claude);
         let params = session_params(Backend::Claude, &ws, &skills, "GUIDE");
-        let (id, loaded) = handshake(&session, &params, Some("prev-session"), Some("default"))
-            .await
-            .unwrap();
+        let hs = handshake(
+            &session,
+            &params,
+            Some("prev-session"),
+            Some("default"),
+            None,
+        )
+        .await
+        .unwrap();
+        let (id, loaded) = (hs.id, hs.loaded);
         assert_eq!((id.as_str(), loaded), ("prev-session", true));
         let err = session
             .request("session/prompt", json!({ "sessionId": id, "prompt": [] }))
@@ -5689,9 +5925,10 @@ done
         let log = scratch.join("codex.log");
         let session = piped_agent(&script, &log, Backend::Codex);
         let params = session_params(Backend::Codex, &ws, &skills, "GUIDE");
-        let (id, loaded) = handshake(&session, &params, None, Some("read-only"))
+        let hs = handshake(&session, &params, None, Some("read-only"), None)
             .await
             .unwrap();
+        let (id, loaded) = (hs.id, hs.loaded);
         assert_eq!((id.as_str(), loaded), ("acp-stub", false));
         let seen = std::fs::read_to_string(&log).unwrap();
         let lines: Vec<Value> = seen
@@ -5715,7 +5952,10 @@ done
         let log = scratch.join("opencode.log");
         let session = piped_agent(&script, &log, Backend::Opencode);
         let params = session_params(Backend::Opencode, &ws, &skills, "GUIDE");
-        let (_, loaded) = handshake(&session, &params, None, None).await.unwrap();
+        let loaded = handshake(&session, &params, None, None, None)
+            .await
+            .unwrap()
+            .loaded;
         assert!(!loaded);
         let seen = std::fs::read_to_string(&log).unwrap();
         let lines: Vec<Value> = seen
@@ -5730,6 +5970,133 @@ done
         let _ = session.child.lock().await.start_kill();
 
         let _ = std::fs::remove_dir_all(&scratch);
+    }
+
+    /// The model plumbing against the scripted agent: the opening snapshot's
+    /// `configOptions` come back untouched (they name the agent's own default),
+    /// a saved model is applied right after the mode pin, one the agent no
+    /// longer offers fails the spawn loudly naming the picker, a load's
+    /// snapshot is the resumed session's, and no saved model means no
+    /// `session/set_config_option` at all.
+    #[tokio::test]
+    #[cfg(unix)]
+    async fn a_scripted_agent_reports_its_models_and_takes_the_saved_one() {
+        fn seen(log: &Path) -> (Vec<Value>, Vec<String>) {
+            let lines: Vec<Value> = std::fs::read_to_string(log)
+                .unwrap()
+                .lines()
+                .map(|l| serde_json::from_str(l).unwrap())
+                .collect();
+            let methods = lines
+                .iter()
+                .map(|v| v["method"].as_str().unwrap().to_string())
+                .collect();
+            (lines, methods)
+        }
+        let scratch =
+            std::env::temp_dir().join(format!("opencode-stub-models-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&scratch);
+        std::fs::create_dir_all(&scratch).unwrap();
+        let script = scratch.join("agent.sh");
+        std::fs::write(&script, STUB_AGENT).unwrap();
+        let ws = scratch.join("ws");
+        let skills = scratch.join("cfg/agent-skills");
+        let params = session_params(Backend::Codex, &ws, &skills, "GUIDE");
+
+        let log = scratch.join("saved.log");
+        let session = piped_agent(&script, &log, Backend::Codex);
+        let hs = handshake(
+            &session,
+            &params,
+            None,
+            Some("read-only"),
+            Some("gpt-5.3-codex"),
+        )
+        .await
+        .unwrap();
+        assert_eq!((hs.id.as_str(), hs.loaded), ("acp-stub", false));
+        let opts = hs.config_options.expect("the opening snapshot");
+        assert_eq!(opts[0]["id"], json!("model"));
+        assert_eq!(
+            opts[0]["currentValue"],
+            json!("gpt-5.2"),
+            "pre-push: the agent's own default"
+        );
+        let (lines, methods) = seen(&log);
+        assert_eq!(
+            methods,
+            [
+                "initialize",
+                "session/new",
+                "session/set_mode",
+                "session/set_config_option"
+            ]
+        );
+        assert_eq!(
+            lines[3]["params"],
+            json!({ "sessionId": "acp-stub", "configId": "model", "value": "gpt-5.3-codex" })
+        );
+        let _ = session.child.lock().await.start_kill();
+
+        let log = scratch.join("stale.log");
+        let session = piped_agent(&script, &log, Backend::Codex);
+        let err = handshake(&session, &params, None, None, Some("gpt-9"))
+            .await
+            .unwrap_err();
+        assert!(
+            err.contains("Codex rejected the model gpt-9") && err.contains("top-left"),
+            "{err}"
+        );
+        let _ = session.child.lock().await.start_kill();
+
+        let log = scratch.join("resume.log");
+        let session = piped_agent(&script, &log, Backend::Claude);
+        let hs = handshake(&session, &params, Some("prev-session"), None, None)
+            .await
+            .unwrap();
+        assert!(hs.loaded);
+        assert_eq!(
+            hs.config_options.unwrap()[0]["currentValue"],
+            json!("gpt-5.3-codex"),
+            "a load's snapshot is the resumed session's"
+        );
+        let (_, methods) = seen(&log);
+        assert_eq!(methods, ["initialize", "session/load"]);
+        let _ = session.child.lock().await.start_kill();
+
+        let _ = std::fs::remove_dir_all(&scratch);
+    }
+
+    /// The real pins list their models through the probe — needs the managed
+    /// Node + adapters and a signed-in agent (a signed-out one is skipped
+    /// with its hint): `cargo test code_agent_pins_list_models -- --ignored --nocapture`.
+    #[tokio::test]
+    #[ignore]
+    #[cfg(unix)]
+    async fn code_agent_pins_list_models() {
+        for backend in [Backend::Codex, Backend::Claude] {
+            match probe_config_options(backend).await {
+                Ok(opts) => {
+                    let model = opts
+                        .as_array()
+                        .unwrap()
+                        .iter()
+                        .find(|o| o["id"] == json!("model"))
+                        .expect("a model option");
+                    let n = model["options"].as_array().map(|a| a.len()).unwrap_or(0);
+                    println!(
+                        "{backend:?}: default {} — {n} models",
+                        model["currentValue"]
+                    );
+                    for o in model["options"].as_array().unwrap() {
+                        println!("  {} = {} ({})", o["value"], o["name"], o["description"]);
+                    }
+                    assert!(n > 0);
+                }
+                Err(e) if e.starts_with(AUTH_REQUIRED) => println!("{backend:?}: skipped — {e}"),
+                Err(e) => panic!("{backend:?}: {e}"),
+            }
+        }
     }
 
     /// The real pins accept our handshake: with the managed Node and adapters
@@ -5825,13 +6192,14 @@ done
                     &launch.session,
                     None,
                     session_mode(backend, false),
+                    None,
                 ),
             )
             .await
             .expect("handshake must answer within two minutes");
             println!("{backend:?}: {result:?}");
             match result {
-                Ok((id, loaded)) => assert!(!id.is_empty() && !loaded),
+                Ok(hs) => assert!(!hs.id.is_empty() && !hs.loaded),
                 Err(e) => assert!(
                     e.starts_with(AUTH_REQUIRED),
                     "{backend:?} rejected our params: {e}"

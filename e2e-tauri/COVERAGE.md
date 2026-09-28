@@ -1,6 +1,6 @@
 # Tauri Desktop E2E Coverage — Journey Checklist
 
-> Last updated: 2026-09-29 | 49 checkpoints (22 covered, 27 pending) | 3 journeys | 100% of reproducible checkpoints covered | Driver: WebdriverIO + tauri-driver
+> Last updated: 2026-09-29 | 52 checkpoints (23 covered, 29 pending) | 3 journeys | 100% of reproducible checkpoints covered | Driver: WebdriverIO + tauri-driver
 
 This is the desktop counterpart to the web `e2e/COVERAGE.md`. It tracks only what
 is exercised by driving the **built desktop binary** through `tauri-driver` (see
@@ -97,7 +97,7 @@ two vendored release workflows and are exercised by real releases.
 
 ---
 
-## Journey 3: Code Mode (opencode) (38 checkpoints: 15 covered, 23 pending) — `journeys/03-code-mode.spec.ts`
+## Journey 3: Code Mode (opencode) (41 checkpoints: 16 covered, 25 pending) — `journeys/03-code-mode.spec.ts`
 
 > **Partly covered.** The installer and per-chat state (code-01…07) run against
 > the REAL compiled binary through the live Tauri IPC bridge (`window.__TAURI__`):
@@ -142,7 +142,12 @@ two vendored release workflows and are exercised by real releases.
 > and is covered meanwhile by the coding-mode-button Vitest cases (an installing
 > agent spins and refuses the choice, a launch-time install followed to its end,
 > a failed launch-time install with Install to retry) and by the Rust
-> `an_installing_or_failed_agent_reports_its_phase`.
+> `an_installing_or_failed_agent_reports_its_phase`. The agents' model lists
+> (code-39) run against the real command; the top-left picker (code-40) and a
+> turn on the picked model (code-41) need a UI session or a signed-in
+> subscription and are covered meanwhile by the nav-bar and
+> agent-model-selector Vitest suites and the Rust
+> `a_scripted_agent_reports_its_models_and_takes_the_saved_one`.
 >
 > Requires network access for the opencode + vibe downloads (and, for code-30 by
 > hand, the Node + adapter downloads). No Ollama, no credentials.
@@ -187,3 +192,6 @@ two vendored release workflows and are exercised by real releases.
 - [ ] `code-36` A Code turn on Codex streams into the same bubble (reply, thinking, tool calls, permission card) with the ibl.ai guidance delivered as `developer_instructions` and Codex's own mode following the Approvals toggle (read-only for Ask Me, full access for Automatic) _(needs a signed-in ChatGPT subscription; covered meanwhile by the Rust `each_backend_carries_guidance_and_skills_its_own_way`, `the_os_approval_mode_drives_codex_s_own_mode`, `permission_answers_pick_the_exact_once_kinds` and `each_agent_gets_its_own_wording` in `opencode_proxy.rs`)_
 - [ ] `code-37` A Code turn on Claude Code streams into the same bubble with the ibl.ai guidance appended via `systemPrompt.append` and the session pinned to Claude's default mode _(needs a signed-in Claude subscription; covered meanwhile by the Rust `each_backend_carries_guidance_and_skills_its_own_way`, `a_scripted_agent_gets_our_session_params_and_a_signed_out_prompt_fails_loudly` and `each_backend_sees_only_its_own_login`)_
 - [ ] `code-38` On launch the desktop installs the managed Node and both agents' ACP adapters by itself in the background (a pin bump reaches every desktop on its next launch); the Code popover shows an installing agent with a spinner and refuses the choice until it is ready while ibl.ai keeps working, and a failed install shows its reason with Install to retry _(the same ~700 MB download as code-30; covered meanwhile by the coding-mode-button Vitest cases `shows an installing agent with a spinner…`, `follows a launch-time install to its end…`, `shows why a launch-time install failed…` and the Rust `an_installing_or_failed_agent_reports_its_phase` plus the `stale_agents` asserts in `readiness_distinguishes_missing_stale_and_current`)_
+- [x] `code-39` `list_code_agent_models` answers each agent's models (id, name, description) with the agent's own default and the saved pick, or refuses naming install / sign-in; an unknown backend is refused
+- [ ] `code-40` The top-left model picker lists the agent's models while Code runs on Codex / Claude Code (in place of the mentor's LLM selector and the on-device badge), saves the pick per machine, shows Default with the agent's own default, and shows a failure inline with Retry _(needs an authenticated UI session like code-14/23/24; covered meanwhile by the nav-bar Vitest cases `shows the agent model picker instead of the LLM selector`, `keeps the LLM selector…` and `agent-model-selector.test.tsx`)_
+- [ ] `code-41` A Code turn runs on the picked model: the handshake applies it with `session/set_config_option` right after the mode pin, a live session takes a new pick without a respawn, and a model the agent refuses fails the turn naming the picker _(needs a signed-in ChatGPT / Claude subscription; covered meanwhile by the Rust `a_scripted_agent_reports_its_models_and_takes_the_saved_one`, `an_unknown_model_is_refused_before_it_is_saved` and `the_model_choice_lists_the_agents_offer_with_default_and_selection`)_

@@ -36,8 +36,16 @@ import { config } from '@/lib/config';
 import { getUserOS } from '@/lib/utils';
 import { isTauriMobile } from '@/types/tauri';
 import type { OpencodeSkillSync } from '@/hooks/use-opencode-skill-sync';
+import {
+  AGENTS,
+  AGENT_KEY,
+  AGENT_LABELS,
+  ENABLED_KEY,
+  isAgent,
+  readAgent,
+  type CodeAgent,
+} from './code-agents';
 
-const ENABLED_KEY = 'ibl_coding_mode_enabled';
 const MODEL_KEY = 'ibl_coding_mode_model';
 const FOLDER_CHOSEN_KEY = 'ibl_coding_mode_folder_chosen';
 /** Mentor the composer is bound to — written by useOpencodeSkillSync. */
@@ -52,32 +60,6 @@ const LOCAL_LLM_MODEL_KEY = 'ibl_local_llm_model';
  * or it will happily point at a cloud model while the rest of the app is local.
  */
 const LOCAL_LLM_ENABLED_KEY = 'ibl_local_llm_enabled';
-/**
- * Which agent runs Code turns. Per machine on purpose (installs and CLI logins
- * are local), so it is never synced to DM. Rust routes on the model key this
- * choice writes: `codex/default` / `claude/default`, or the platform model.
- */
-const AGENT_KEY = 'ibl_coding_mode_agent';
-
-type CodeAgent = 'opencode' | 'codex' | 'claude';
-const AGENTS: CodeAgent[] = ['opencode', 'codex', 'claude'];
-/** Brand names, not translated — and never "opencode" in the UI. */
-const AGENT_LABELS: Record<CodeAgent, string> = {
-  opencode: 'ibl.ai',
-  codex: 'Codex',
-  claude: 'Claude Code',
-};
-
-/** The two agents the desktop installs (never `opencode`, which is built in). */
-const isAgent = (v: unknown): v is 'codex' | 'claude' =>
-  v === 'codex' || v === 'claude';
-
-function readAgent(): CodeAgent {
-  const v =
-    typeof window === 'undefined' ? null : localStorage.getItem(AGENT_KEY);
-  return isAgent(v) ? v : 'opencode';
-}
-
 /** `check_code_agent_status`; `signed_in` null = the probe couldn't tell. */
 interface CodeAgentStatus {
   installed: boolean;
