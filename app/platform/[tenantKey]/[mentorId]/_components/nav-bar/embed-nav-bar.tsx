@@ -190,8 +190,9 @@ export function EmbedNavBar({
           )}
 
           {/* Host opt-in (agent-ai `showuserprofile` → `show-user-profile=true`):
-              the full user-profile menu, shown just before the help items. */}
-          {showUserProfile && <UserProfile />}
+              the user-profile menu, shown just before the help items. `embed`
+              hides logout + the instructor/learner switch in this surface. */}
+          {showUserProfile && <UserProfile embed />}
 
           {chatMode === 'default' ? (
             <DropdownMenu>
