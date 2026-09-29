@@ -218,9 +218,14 @@ const useEmbedTab = () => {
       formValues.is_context_aware = true;
     }
 
+    // The form keys `is_context_aware` / `auto_open` feed the snippet builder,
+    // but the backend fields are `embed_is_context_aware` /
+    // `embed_open_by_default`; it silently drops the raw keys (#2592).
+    const { is_context_aware, auto_open, ...settingsValues } = formValues;
+
     // Update mentor settings
     const valid_values = Object.fromEntries(
-      Object.entries(formValues).filter(
+      Object.entries(settingsValues).filter(
         ([key, value]) =>
           !(SETTINGS_OWNED_FIELDS as readonly string[]).includes(key) &&
           (value !== '' || key === 'custom_css'),
@@ -277,6 +282,8 @@ const useEmbedTab = () => {
       formData: {
         ...valid_values,
         metadata: { safety_disclaimer: valid_values.safety_disclaimer },
+        embed_is_context_aware: is_context_aware,
+        embed_open_by_default: auto_open,
         embed_icon_selection_data,
         // Only include the image key when we have a new File to upload so an
         // unchanged (already-persisted) image is left untouched by the backend.
@@ -444,6 +451,15 @@ const useEmbedTab = () => {
       strip_page_content_html:
         (mentorSettings as { strip_page_content_html?: boolean } | undefined)
           ?.strip_page_content_html ?? false,
+      // Form keys differ from the backend fields (#2592); map on load.
+      is_context_aware:
+        mentorSettings?.embed_is_context_aware ??
+        mentorPublicSettings?.embed_is_context_aware ??
+        false,
+      auto_open:
+        mentorSettings?.embed_open_by_default ??
+        mentorPublicSettings?.embed_open_by_default ??
+        false,
     },
     onSubmit: async ({ value }) => {
       const syncResult = await syncEmbedSettings();
