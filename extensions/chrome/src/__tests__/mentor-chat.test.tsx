@@ -6,31 +6,37 @@ import {
   removeWidgetSpinner,
   startContextFeed,
   watchAndInstallSession,
+  watchTenantSwitch,
 } from '../mentor-frame';
 import { MENTOR_URL } from '../settings';
 import { installChromeStub } from './chrome.stub';
 
 vi.mock('../mentor-frame', () => ({
   watchAndInstallSession: vi.fn(),
+  watchTenantSwitch: vi.fn(),
   startContextFeed: vi.fn(),
   removeWidgetSpinner: vi.fn(),
 }));
 vi.mock('../browse-bridge', () => ({ startBrowseBridge: vi.fn() }));
 
 const stopInstall = vi.fn();
+const stopTenantSwitch = vi.fn();
 const stopFeed = vi.fn();
 const stopBridge = vi.fn();
 
 beforeEach(() => {
   installChromeStub();
   vi.mocked(watchAndInstallSession).mockClear();
+  vi.mocked(watchTenantSwitch).mockClear();
   vi.mocked(removeWidgetSpinner).mockClear();
   vi.mocked(startContextFeed).mockClear();
   vi.mocked(startBrowseBridge).mockClear();
   vi.mocked(watchAndInstallSession).mockReturnValue(stopInstall);
+  vi.mocked(watchTenantSwitch).mockReturnValue(stopTenantSwitch);
   vi.mocked(startContextFeed).mockReturnValue(stopFeed);
   vi.mocked(startBrowseBridge).mockReturnValue(stopBridge);
   stopInstall.mockClear();
+  stopTenantSwitch.mockClear();
   stopFeed.mockClear();
   stopBridge.mockClear();
 });
@@ -49,10 +55,12 @@ describe('MentorChat', () => {
     expect(element.hasAttribute('authrelyonhost')).toBe(true);
     expect(removeWidgetSpinner).toHaveBeenCalledWith(element);
     expect(watchAndInstallSession).toHaveBeenCalledWith(element);
+    expect(watchTenantSwitch).toHaveBeenCalledWith(element);
     expect(startContextFeed).toHaveBeenCalledWith(element);
     expect(startBrowseBridge).toHaveBeenCalledWith(element);
     unmount();
     expect(stopInstall).toHaveBeenCalledTimes(1);
+    expect(stopTenantSwitch).toHaveBeenCalledTimes(1);
     expect(stopFeed).toHaveBeenCalledTimes(1);
     expect(stopBridge).toHaveBeenCalledTimes(1);
   });

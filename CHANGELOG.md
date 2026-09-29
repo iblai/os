@@ -1,5 +1,72 @@
 # Changelog
 
+## [0.158.2](https://github.com/iblai/os/compare/v0.158.1...v0.158.2) (2026-09-29)
+
+### Bug Fixes
+
+- **ext:** switch tenants via /login/complete so the target tenant is honored ([4ba13d4](https://github.com/iblai/os/commit/4ba13d4f3051c307aad30661ee9df65b72b5ff55))
+
+## [0.158.1](https://github.com/iblai/os/compare/v0.158.0...v0.158.1) (2026-09-29)
+
+### Refactors
+
+- **edit-mentor:** add a thin Disclaimers tab wrapper over the SDK AgentDisclaimersTab ([de49e1b](https://github.com/iblai/os/commit/de49e1bf5b51d07a2262d357f70286299b8d6b52))
+- **edit-mentor:** mount the SDK-backed Disclaimers tab and delete the in-repo monolith ([e65eabe](https://github.com/iblai/os/commit/e65eabed63ab984e9b5ef7067acd2c1a2673387a))
+
+### Chores
+
+- **deps:** bump @iblai/iblai-js to 2.21.0 ([b2c4ed2](https://github.com/iblai/os/commit/b2c4ed2487664f681ed69a52d21dfd60f33649a5)), closes [#2102](https://github.com/iblai/os/issues/2102)
+- **deps:** bump @iblai/iblai-js to 2.25.0 ([a6f48b5](https://github.com/iblai/os/commit/a6f48b589c138a632613ed35d88284ee33c6e5e3))
+- **edit-mentor:** retarget e2e coverage to the wrapper and drop unused disclaimer aria strings ([ff438d2](https://github.com/iblai/os/commit/ff438d20186af6fc7ebc0d283b472426033130aa))
+
+### Styles
+
+- format CHANGELOG.md with prettier ([4a3b0d1](https://github.com/iblai/os/commit/4a3b0d18c7de1708287beabf5016bf383115429e))
+
+## [0.158.0](https://github.com/iblai/os/compare/v0.157.0...v0.158.0) (2026-09-29)
+
+### Features
+
+- **embed:** switch tenant via the host auth flow in embeds ([158df5c](https://github.com/iblai/os/commit/158df5cd436d4f63fd64126aadccf7859535ad28))
+
+## [0.157.0](https://github.com/iblai/os/compare/v0.156.0...v0.157.0) (2026-09-29)
+
+### Features
+
+- **embed:** hide logout and instructor switch in the embedded user profile ([06779a4](https://github.com/iblai/os/commit/06779a47f6121b7121704022e4f0b6d13a5d507f))
+
+## [0.156.0](https://github.com/iblai/os/compare/v0.155.3...v0.156.0) (2026-09-29)
+
+### Features
+
+- **embed:** show the user profile in the embed navbar when the host opts in ([4ff9d75](https://github.com/iblai/os/commit/4ff9d7531c3b29d07df96105a5afe61cff8f7008))
+
+## [0.155.3](https://github.com/iblai/os/compare/v0.155.2...v0.155.3) (2026-09-25)
+
+### Chores
+
+- **deps:** bump @iblai/iblai-js to 2.21.0 ([8488b35](https://github.com/iblai/os/commit/8488b359d10a7f2060e05df60ee786ecca8189c7)), closes [iblai/ibl-web-frontend#2105](https://github.com/iblai/ibl-web-frontend/issues/2105)
+- **deps:** pin @iblai/iblai-js to 2.19.1 ([3490975](https://github.com/iblai/os/commit/349097519083f182df93b6f5ffa4c12517671305)), closes [#2400](https://github.com/iblai/os/issues/2400)
+
+### Documentation
+
+- **e2e:** correct coverage totals to 768 checkpoints ([4a6106a](https://github.com/iblai/os/commit/4a6106aa29d50a01fdea0cddd2cc17621e53e01a))
+- **e2e:** record journey 73 tool-call paragraph checkpoints in coverage ([ba1fafd](https://github.com/iblai/os/commit/ba1fafd24afe4389ce968b9a607d2bd7f4cab9cb))
+
+### Styles
+
+- apply prettier to CHANGELOG ([7e38bf1](https://github.com/iblai/os/commit/7e38bf105d00b52fa3b8839d6d12c88ec2a5e8e0))
+
+### Tests
+
+- **e2e:** pin paragraph break across tool-call text blocks in journey 73 ([bcb9771](https://github.com/iblai/os/commit/bcb977142cd6c8bcf8085713f52b005afc7ced72))
+
+## [0.155.2](https://github.com/iblai/os/compare/v0.155.1...v0.155.2) (2026-09-24)
+
+### Bug Fixes
+
+- **mentor:** adding fixes for the history and analytics transcript ([cb31932](https://github.com/iblai/os/commit/cb319322d4cb737c15271114ea950b2a0a7492b5))
+
 ## [0.155.1](https://github.com/iblai/os/compare/v0.155.0...v0.155.1) (2026-09-23)
 
 ### Bug Fixes

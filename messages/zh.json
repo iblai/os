@@ -700,17 +700,12 @@
     "heading": "免责声明",
     "subheading": "为您的智能体配置免责声明设置。",
     "userAgreementTitle": "用户协议",
-    "userAgreementInfoAriaLabel": "关于用户协议的更多信息",
     "userAgreementTooltip": "控制用户协议",
     "active": "已启用",
     "inactive": "已禁用",
-    "userAgreementSwitchAriaLabel": "用户协议{status}",
-    "userAgreementContentAriaLabel": "用户协议内容",
     "editButton": "编辑",
     "advisoryTitle": "建议",
-    "advisoryInfoAriaLabel": "关于建议的更多信息",
     "advisoryTooltip": "控制建议",
-    "advisoryContentAriaLabel": "建议内容",
     "agentUpdatedSuccess": "智能体更新成功",
     "agentUpdatedError": "更新智能体失败",
     "userAgreementUpdatedSuccess": "用户协议更新成功",
@@ -1831,7 +1826,8 @@
     "hideConversationMemory": "隐藏对话记忆",
     "showConversationMemory": "显示对话记忆",
     "noConversationMemory": "暂无对话记忆。",
-    "selectConversationPrompt": "选择对话以查看详情。"
+    "selectConversationPrompt": "选择对话以查看详情。",
+    "documentsChip": "文档 · {count}"
   },
   "tabsLlmTab": {
     "infoBox": "这是您智能体的大脑——为每次回复提供动力的 AI 模型。更大的模型在处理复杂问题时推理能力更强；更轻量的模型则更快、成本更低。不确定？默认模型是可靠的全能之选。",

@@ -39,10 +39,39 @@ export function storeSessionFromRedirect(responseUrl: string): void {
   );
 }
 
-export async function signIn(): Promise<void> {
+// Build the auth SPA URL for the interactive first sign-in.
+function loginUrl(redirectUri: string): string {
+  return `${AUTH_URL}/login?redirect-to=${encodeURIComponent(redirectUri)}`;
+}
+
+// Build the auth SPA URL for a tenant SWITCH. This mirrors the web tenant switch
+// (SDK `handleTenantSwitch`), which hits `/login/complete` — NOT `/login` — with
+// the target `tenant`, a `redirect-to`, and the preserved edX JWT as `token`.
+// The distinction matters: `/login` is the interactive login page, and with an
+// existing auth session it just returns the CURRENT tenant, ignoring `?tenant=`
+// (which is why switching used to land back on the same tenant). `/login/complete`
+// is the token-exchange endpoint that USES the JWT to mint the requested tenant's
+// tokens and returns them in the redirect `data`.
+function switchTenantUrl(redirectUri: string, tenant: string): string {
+  const params = new URLSearchParams({
+    tenant,
+    'redirect-to': redirectUri,
+  });
+  // The edX JWT is tenant-independent and is what authorises minting the new
+  // tenant's tokens without a fresh interactive login.
+  const jwt = localStorage.getItem('edx_jwt_token');
+  if (jwt) params.set('token', jwt);
+  return `${AUTH_URL}/login/complete?${params.toString()}`;
+}
+
+// `tenant` switches the session to a different platform (see switchTenantUrl).
+// Omitted on first sign-in, where the interactive login picks the user's default.
+export async function signIn(tenant?: string): Promise<void> {
   // Chrome intercepts navigations to this URL and hands the full URL back to us.
   const redirectUri = chrome.identity.getRedirectURL(); // https://<id>.chromiumapp.org/
-  const authUrl = `${AUTH_URL}/login?redirect-to=${encodeURIComponent(redirectUri)}`;
+  const authUrl = tenant
+    ? switchTenantUrl(redirectUri, tenant)
+    : loginUrl(redirectUri);
   const responseUrl = await chrome.identity.launchWebAuthFlow({
     url: authUrl,
     interactive: true,

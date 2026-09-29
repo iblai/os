@@ -27,14 +27,22 @@ const mockUseLlmProviderCatalogue = vi.fn();
 const mockResolveLlmProvider = vi.fn<
   (key?: string | null) => { logo: string | null; displayName: string }
 >((key) => ({ logo: null, displayName: key ?? '' }));
+vi.mock('@iblai/iblai-js/web-containers', async () => {
+  const actual = await vi.importActual<
+    typeof import('@iblai/iblai-js/web-containers')
+  >('@iblai/iblai-js/web-containers');
+  return {
+    ...actual,
+    useLlmProviderCatalogue: (...args: unknown[]) =>
+      mockUseLlmProviderCatalogue(...args),
+  };
+});
 // Logos come from the tenant's credentials schema, keyed by display name.
 const mockUseCredentialsSchemaLogos = vi.fn();
 const mockLogoFromCredentialsSchema = vi.fn<
   (displayName?: string | null) => string | null
 >(() => null);
 vi.mock('@/hooks/use-llm-provider-details', () => ({
-  useLlmProviderCatalogue: (...args: unknown[]) =>
-    mockUseLlmProviderCatalogue(...args),
   useCredentialsSchemaLogos: (...args: unknown[]) =>
     mockUseCredentialsSchemaLogos(...args),
 }));

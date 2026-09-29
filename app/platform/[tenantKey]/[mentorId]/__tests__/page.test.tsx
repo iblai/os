@@ -19,9 +19,15 @@ vi.mock('@/components/error-boundary', () => ({
   default: ({ children }: any) => <div>{children}</div>,
 }));
 
-vi.mock('@/components/document-sidebar', () => ({
-  DocumentSidebar: () => <div data-testid="document-sidebar" />,
-}));
+vi.mock('@iblai/iblai-js/web-containers', async () => {
+  const actual = await vi.importActual<
+    typeof import('@iblai/iblai-js/web-containers')
+  >('@iblai/iblai-js/web-containers');
+  return {
+    ...actual,
+    DocumentSidebar: () => <div data-testid="document-sidebar" />,
+  };
+});
 
 vi.mock('@/components/chat', () => ({
   Chat: () => <div data-testid="chat" />,
