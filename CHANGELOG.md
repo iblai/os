@@ -1,5 +1,31 @@
 # Changelog
 
+## [0.155.3](https://github.com/iblai/os/compare/v0.155.2...v0.155.3) (2026-09-25)
+
+### Chores
+
+- **deps:** bump @iblai/iblai-js to 2.21.0 ([8488b35](https://github.com/iblai/os/commit/8488b359d10a7f2060e05df60ee786ecca8189c7)), closes [iblai/ibl-web-frontend#2105](https://github.com/iblai/ibl-web-frontend/issues/2105)
+- **deps:** pin @iblai/iblai-js to 2.19.1 ([3490975](https://github.com/iblai/os/commit/349097519083f182df93b6f5ffa4c12517671305)), closes [#2400](https://github.com/iblai/os/issues/2400)
+
+### Documentation
+
+- **e2e:** correct coverage totals to 768 checkpoints ([4a6106a](https://github.com/iblai/os/commit/4a6106aa29d50a01fdea0cddd2cc17621e53e01a))
+- **e2e:** record journey 73 tool-call paragraph checkpoints in coverage ([ba1fafd](https://github.com/iblai/os/commit/ba1fafd24afe4389ce968b9a607d2bd7f4cab9cb))
+
+### Styles
+
+- apply prettier to CHANGELOG ([7e38bf1](https://github.com/iblai/os/commit/7e38bf105d00b52fa3b8839d6d12c88ec2a5e8e0))
+
+### Tests
+
+- **e2e:** pin paragraph break across tool-call text blocks in journey 73 ([bcb9771](https://github.com/iblai/os/commit/bcb977142cd6c8bcf8085713f52b005afc7ced72))
+
+## [0.155.2](https://github.com/iblai/os/compare/v0.155.1...v0.155.2) (2026-09-24)
+
+### Bug Fixes
+
+- **mentor:** adding fixes for the history and analytics transcript ([cb31932](https://github.com/iblai/os/commit/cb319322d4cb737c15271114ea950b2a0a7492b5))
+
 ## [0.155.1](https://github.com/iblai/os/compare/v0.155.0...v0.155.1) (2026-09-23)
 
 ### Bug Fixes

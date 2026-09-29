@@ -14,10 +14,8 @@ import { Bot, ChevronDown, Check, Sparkles } from 'lucide-react';
 import { MentorFacet } from '@iblai/iblai-api';
 import { ExplorePageFilters } from './explore-page-context';
 import { useIsAdmin, useUsername } from '@/hooks/use-user';
-import {
-  useCredentialsSchemaLogos,
-  useLlmProviderCatalogue,
-} from '@/hooks/use-llm-provider-details';
+import { useLlmProviderCatalogue } from '@iblai/iblai-js/web-containers';
+import { useCredentialsSchemaLogos } from '@/hooks/use-llm-provider-details';
 import { TenantKeyMentorIdParams } from '@/lib/types';
 
 /**

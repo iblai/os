@@ -56,10 +56,16 @@ const mockUseLlmProviderCatalogue = vi.fn();
 const mockResolveLlmProvider = vi.fn<
   (key?: string | null) => { logo: string | null; displayName: string }
 >((key) => ({ logo: null, displayName: key ?? '' }));
-vi.mock('@/hooks/use-llm-provider-details', () => ({
-  useLlmProviderCatalogue: (...args: unknown[]) =>
-    mockUseLlmProviderCatalogue(...args),
-}));
+vi.mock('@iblai/iblai-js/web-containers', async () => {
+  const actual = await vi.importActual<
+    typeof import('@iblai/iblai-js/web-containers')
+  >('@iblai/iblai-js/web-containers');
+  return {
+    ...actual,
+    useLlmProviderCatalogue: (...args: unknown[]) =>
+      mockUseLlmProviderCatalogue(...args),
+  };
+});
 
 // Controllable RBAC check — drives whether a non-admin can edit the
 // agents they created (the "Student Mentor Creation" capability).
