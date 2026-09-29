@@ -62,6 +62,16 @@ describe('signIn / ensureSignedIn', () => {
     expect(dmToken()).toBe('dm');
   });
 
+  it('passes the target tenant to the auth flow when switching', async () => {
+    await signIn('beta');
+    const [{ url }] = chromeStub.stub.identity.launchWebAuthFlow.mock
+      .calls[0] as unknown as [{ url: string }];
+    expect(url).toBe(
+      'https://login.iblai.app/login?redirect-to=https%3A%2F%2Fabc.chromiumapp.org%2F&tenant=beta',
+    );
+    expect(isAuthed()).toBe(true);
+  });
+
   it('is a no-op when a session exists', async () => {
     localStorage.setItem('axd_token', 'x');
     await expect(ensureSignedIn()).resolves.toBe(true);

@@ -39,10 +39,16 @@ export function storeSessionFromRedirect(responseUrl: string): void {
   );
 }
 
-export async function signIn(): Promise<void> {
+// `tenant` switches the session to a different platform: the auth app mints that
+// tenant's tokens and returns them in the redirect `data`, exactly the way the
+// web tenant switch does (`auth_url/login?tenant=<key>`). Omitted on first
+// sign-in, where the user's default tenant is used.
+export async function signIn(tenant?: string): Promise<void> {
   // Chrome intercepts navigations to this URL and hands the full URL back to us.
   const redirectUri = chrome.identity.getRedirectURL(); // https://<id>.chromiumapp.org/
-  const authUrl = `${AUTH_URL}/login?redirect-to=${encodeURIComponent(redirectUri)}`;
+  const authUrl =
+    `${AUTH_URL}/login?redirect-to=${encodeURIComponent(redirectUri)}` +
+    (tenant ? `&tenant=${encodeURIComponent(tenant)}` : '');
   const responseUrl = await chrome.identity.launchWebAuthFlow({
     url: authUrl,
     interactive: true,
