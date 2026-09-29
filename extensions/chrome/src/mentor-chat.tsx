@@ -4,6 +4,7 @@ import {
   removeWidgetSpinner,
   startContextFeed,
   watchAndInstallSession,
+  watchTenantSwitch,
 } from './mentor-frame';
 import { MENTOR_URL } from './settings';
 
@@ -23,10 +24,12 @@ export function MentorChat() {
     // iframe.
     removeWidgetSpinner(host);
     const stopInstall = watchAndInstallSession(host);
+    const stopTenantSwitch = watchTenantSwitch(host);
     const stopFeed = startContextFeed(host);
     const stopBridge = startBrowseBridge(host);
     return () => {
       stopInstall();
+      stopTenantSwitch();
       stopFeed();
       stopBridge();
     };

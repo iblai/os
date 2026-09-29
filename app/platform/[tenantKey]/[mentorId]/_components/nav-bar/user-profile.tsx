@@ -272,6 +272,19 @@ export function UserProfile({ embed = false }: { embed?: boolean } = {}) {
   };
 
   const handleTenantChange = (newTenantKey: string) => {
+    // In an embed the host owns auth (e.g. the browser extension runs the auth
+    // SPA's login flow via chrome.identity). We can't redirect the storage-
+    // partitioned iframe to the auth app the way the web switch does, so hand
+    // the switch up to the parent — the `{ tenantSwitch }` message `<agent-ai>`
+    // already listens for. The host mints the new tenant's tokens and
+    // re-installs the session. Mirrors notifyParentOnEmbedClose.
+    if (embed) {
+      window.parent?.postMessage(
+        { tenantSwitch: true, tenant: newTenantKey },
+        '*',
+      );
+      return;
+    }
     handleTenantSwitch(newTenantKey);
   };
 
