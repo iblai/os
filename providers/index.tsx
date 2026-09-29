@@ -576,7 +576,16 @@ export default function Providers({ children }: { children: React.ReactNode }) {
         token={searchParams.get('token') ?? undefined}
         storageService={LocalStorageService.getInstance()}
         enableStorageSync={
-          !showingSharedChat && !isTauriOffline && !searchParams.get('token')
+          !showingSharedChat &&
+          !isTauriOffline &&
+          !searchParams.get('token') &&
+          // Never in an embed. The embed owns its session in localStorage
+          // (installed via /sso-login-complete); the shared base-domain cookies
+          // belong to the HOST. Cross-SPA sync here reads the host's stale
+          // cookies back over a freshly-installed session — e.g. after a tenant
+          // switch it reverts the embed to the previous tenant's tokens. This
+          // mirrors the write-side guard in saveUserObjectToLocalStorage.
+          !isInIframe()
         }
         fallback={
           isPreviewMode ? null : (
