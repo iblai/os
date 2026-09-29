@@ -4,6 +4,7 @@ import {
   installSession,
   mentorIframe,
   readActiveTab,
+  refreshHostAuthCache,
   removeWidgetSpinner,
   startContextFeed,
   watchAndInstallSession,
@@ -183,6 +184,30 @@ describe('watchTenantSwitch', () => {
     stop();
   });
 
+  it('refreshes agent-ai cached host auth so its re-broadcast cannot revert the switch', async () => {
+    const { host, iframe } = makeHost(
+      'https://os.ibl.ai/platform/acme/bot?embed=true&mode=anonymous',
+    );
+    // Simulate agent-ai's stale mount-time cache (a different/old session).
+    (host as unknown as { iblData: string }).iblData = JSON.stringify({
+      axd_token: 'stale-old',
+      tenant: 'old',
+    });
+    const stop = watchTenantSwitch(host);
+    window.dispatchEvent(
+      new MessageEvent('message', {
+        data: { tenantSwitch: true, tenant: 'beta' },
+      }),
+    );
+    await vi.waitFor(() => expect(iframe.src).toContain('/sso-login-complete'));
+    const cached = JSON.parse((host as unknown as { iblData: string }).iblData);
+    // Cache now mirrors the freshly-installed session, not the stale old one.
+    expect(cached.axd_token).toBe(localStorage.getItem('axd_token'));
+    expect(cached.tenant).toBe(localStorage.getItem('tenant'));
+    expect(cached.axd_token).not.toBe('stale-old');
+    stop();
+  });
+
   it('ignores messages that are not a tenant switch', async () => {
     const { host, iframe } = makeHost();
     const before = iframe.src;
@@ -194,6 +219,24 @@ describe('watchTenantSwitch', () => {
     expect(chromeStub.stub.identity.launchWebAuthFlow).not.toHaveBeenCalled();
     expect(iframe.src).toBe(before);
     stop();
+  });
+});
+
+describe('refreshHostAuthCache', () => {
+  it('writes the current session into agent-ai iblData in its expected shape', () => {
+    const { host } = makeHost();
+    localStorage.setItem('axd_token', 'A');
+    localStorage.setItem('tenant', 'beta');
+    localStorage.setItem('current_tenant', '{"key":"beta"}');
+    refreshHostAuthCache(host);
+    const cached = JSON.parse((host as unknown as { iblData: string }).iblData);
+    expect(cached).toMatchObject({
+      axd_token: 'A',
+      tenant: 'beta',
+      current_tenant: '{"key":"beta"}',
+    });
+    // Missing keys are present as null (the shape agent-ai rebuilds from).
+    expect(cached).toHaveProperty('edx_jwt_token');
   });
 });
 

@@ -108,6 +108,33 @@ export function embedRedirectPath(host: Element): string {
   return qs ? `/?${qs}` : '/';
 }
 
+// `<agent-ai authrelyonhost>` caches the host session as its `iblData` field the
+// first time it mounts, and RE-BROADCASTS that copy to the iframe on every
+// `ready`/`loaded` the mentor app posts. After a tenant switch that cached copy
+// is the OLD tenant, so it overwrites the session we just installed and the panel
+// snaps back — while a fresh panel open (agent-ai re-reads localStorage) shows the
+// new tenant correctly. Overwrite the cache with the CURRENT session (the shape
+// agent-ai itself builds) so the re-broadcast matches what /sso-login-complete
+// installs and the app sees no change instead of reverting.
+const HOST_AUTH_CACHE_KEYS = [
+  'axd_token',
+  'dm_token',
+  'tenants',
+  'tenant',
+  'current_tenant',
+  'userData',
+  'edx_jwt_token',
+  'axd_token_expires',
+  'dm_token_expires',
+];
+
+export function refreshHostAuthCache(host: Element): void {
+  const payload: Record<string, string | null> = {};
+  for (const key of HOST_AUTH_CACHE_KEYS)
+    payload[key] = localStorage.getItem(key);
+  (host as unknown as { iblData: string }).iblData = JSON.stringify(payload);
+}
+
 // ---- Tenant switch -----------------------------------------------------------
 // The mentor app (in the iframe) posts `{ tenantSwitch: true, tenant: <key> }`
 // when the user picks a different tenant in the profile menu (the SDK's
@@ -139,6 +166,9 @@ export function watchTenantSwitch(host: Element): () => void {
       // The auth app issues the target tenant's tokens and returns them in the
       // redirect `data`, which signIn() stores in this page's localStorage.
       await signIn(data.tenant);
+      // Point agent-ai's cached host auth at the NEW session BEFORE it re-mounts
+      // the iframe, so its authrelyonhost re-broadcast can't revert the switch.
+      refreshHostAuthCache(host);
       installSession(host, redirectPath);
     } catch (err) {
       console.warn('[ibl.ai panel] tenant switch failed:', err);
