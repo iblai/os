@@ -21,7 +21,6 @@ vi.mock('@/lib/config', () => ({
 // `allow_anonymous` is no longer an embed-form field (#2476); the hook reads it
 // from the persisted mentor settings and passes it in alongside the form values.
 const settings: EmbedFormValues & { allow_anonymous: boolean } = {
-  custom_css: '',
   description: '',
   website_url: '',
   mode: 'default',
