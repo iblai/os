@@ -21,7 +21,7 @@
 
 ### Features
 
-* **embed:** switch tenant via the host auth flow in embeds ([158df5c](https://github.com/iblai/os/commit/158df5cd436d4f63fd64126aadccf7859535ad28))
+- **embed:** switch tenant via the host auth flow in embeds ([158df5c](https://github.com/iblai/os/commit/158df5cd436d4f63fd64126aadccf7859535ad28))
 
 ## [0.157.0](https://github.com/iblai/os/compare/v0.156.0...v0.157.0) (2026-09-29)
 
