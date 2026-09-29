@@ -220,6 +220,17 @@ export function ChatInputForm({
   const [fileAddedNotification, setFileAddedNotification] = useState<
     string | null
   >(null);
+  const notificationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+  useEffect(
+    () => () => {
+      if (notificationTimerRef.current) {
+        clearTimeout(notificationTimerRef.current);
+      }
+    },
+    [],
+  );
   const [isCameraDialogOpen, setIsCameraDialogOpen] = useState(false);
   const fileUploadInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -752,8 +763,11 @@ export function ChatInputForm({
     // Upload files (validation happens inside the hook)
     await uploadFiles(files);
 
-    // Hide notification after upload completes
-    setTimeout(() => {
+    // Hide notification after upload completes; cleared on unmount.
+    if (notificationTimerRef.current) {
+      clearTimeout(notificationTimerRef.current);
+    }
+    notificationTimerRef.current = setTimeout(() => {
       setFileAddedNotification(null);
     }, 3000);
   };

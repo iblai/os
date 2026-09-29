@@ -1325,6 +1325,90 @@ describe('ChatInputForm', () => {
       expect(screen.queryByText(/Uploading 1 file/i)).not.toBeInTheDocument();
       vi.useRealTimers();
     });
+
+    it('cancels the notification timer on unmount', async () => {
+      vi.useFakeTimers();
+      const { useChatFileUpload } = await import(
+        '@/hooks/use-chat-file-upload'
+      );
+      (useChatFileUpload as any).mockReturnValue({
+        uploadFiles: vi.fn().mockResolvedValue(undefined),
+        retryUpload: vi.fn(),
+      });
+
+      const { container, unmount } = renderWithRedux(
+        <ChatInputForm {...defaultProps} />,
+      );
+      const fileInput = container.querySelector(
+        'input[type="file"]',
+      ) as HTMLInputElement;
+      Object.defineProperty(fileInput, 'files', {
+        value: [new File(['x'], 'test.pdf', { type: 'application/pdf' })],
+        writable: false,
+      });
+      const setTimeoutSpy = vi.spyOn(globalThis, 'setTimeout');
+      const clearTimeoutSpy = vi.spyOn(globalThis, 'clearTimeout');
+      fireEvent.change(fileInput);
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      const hideCall = setTimeoutSpy.mock.calls.findIndex(
+        ([, delay]) => delay === 3000,
+      );
+      expect(hideCall).toBeGreaterThanOrEqual(0);
+      const hideTimerId = setTimeoutSpy.mock.results[hideCall].value;
+
+      // A hide timer that outlives the component fires after the test
+      // environment is torn down ("window is not defined").
+      unmount();
+
+      expect(clearTimeoutSpy).toHaveBeenCalledWith(hideTimerId);
+      setTimeoutSpy.mockRestore();
+      clearTimeoutSpy.mockRestore();
+      vi.useRealTimers();
+    });
+
+    it('restarts the hide timer when another upload finishes first', async () => {
+      vi.useFakeTimers();
+      const { useChatFileUpload } = await import(
+        '@/hooks/use-chat-file-upload'
+      );
+      (useChatFileUpload as any).mockReturnValue({
+        uploadFiles: vi.fn().mockResolvedValue(undefined),
+        retryUpload: vi.fn(),
+      });
+      const { container } = renderWithRedux(
+        <ChatInputForm {...defaultProps} />,
+      );
+      const fileInput = container.querySelector(
+        'input[type="file"]',
+      ) as HTMLInputElement;
+      const upload = async (name: string) => {
+        Object.defineProperty(fileInput, 'files', {
+          value: [new File(['x'], name, { type: 'application/pdf' })],
+          configurable: true,
+        });
+        fireEvent.change(fileInput);
+        await act(async () => {
+          await Promise.resolve();
+        });
+      };
+      const setTimeoutSpy = vi.spyOn(globalThis, 'setTimeout');
+      const clearTimeoutSpy = vi.spyOn(globalThis, 'clearTimeout');
+
+      await upload('a.pdf');
+      const firstHide = setTimeoutSpy.mock.calls.findIndex(
+        ([, delay]) => delay === 3000,
+      );
+      const firstTimerId = setTimeoutSpy.mock.results[firstHide].value;
+      await upload('b.pdf');
+
+      expect(clearTimeoutSpy).toHaveBeenCalledWith(firstTimerId);
+      setTimeoutSpy.mockRestore();
+      clearTimeoutSpy.mockRestore();
+      vi.useRealTimers();
+    });
   });
 
   describe('voice transcript insertion', () => {
