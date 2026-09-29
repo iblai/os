@@ -15,6 +15,7 @@ declare module 'react' {
         theme?: 'dark' | 'light';
         component?: string;
         authrelyonhost?: string;
+        showuserprofile?: string;
       };
     }
   }

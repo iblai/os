@@ -44,6 +44,7 @@ export function MentorChat() {
       theme="light"
       component="chat"
       authrelyonhost=""
+      showuserprofile=""
     />
   );
 }
