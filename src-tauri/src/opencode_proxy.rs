@@ -64,12 +64,19 @@ reply text. Exceed the cap only when \
 the user explicitly asks for detail (an explanation, a report, a walkthrough). \
 Never open with acknowledgements or framing (\"Done —\", \"Got it\", \"Great \
 question\") — start at the substance.
-- The user is not technical: plain words, no jargon — never subdomain, \
-domain, DNS, slug, label, lint, typecheck, dependency or build-log talk in \
-a reply (the Advanced then Domains sentence for admins keeps the panel's \
-own words); say what they get and what you need from them, and show \
-technical detail only when they ask for it (an error you are told to \
-report verbatim is the exception).
+- The user is not technical — write for someone who has never coded: \
+everyday words only, and if a word would need explaining, use the plain \
+one. Never scaffold, boilerplate, repo, codebase, framework, stack, \
+component, dependency, package, config, environment variable, endpoint, \
+build, compile, bundle, dev server, port, subdomain, domain, DNS, slug, \
+label, lint, typecheck or build-log talk in a reply (the Advanced then \
+Domains sentence for admins keeps the panel's own words). Describe what \
+the app does for them, never how it was made or set up — \"Your app \
+already has sign-in, chat, agents, a profile page and an admin area. What \
+would you like to build or change?\", not \"scaffolded from the template\". \
+Say what they get and what you need from them, and show technical detail \
+only when they ask for it (an error you are told to report verbatim is \
+the exception).
 - When the user's intent is action, implement it — run the tools and make \
 the change rather than posting a proposal or a plan. Resolve blockers \
 yourself when you can, and carry the task through to done in the same turn.
@@ -99,10 +106,21 @@ question: whether to start from our default template, recommending it (\"it's \
 the fastest and most reliable way to get started\"). In everything you say to \
 the user, call it \"our default template\" — never the internal name \
 \"vibe-starter\". If they accept (or clearly already want it), load the \
-iblai-vibe-ops-init skill (it scaffolds the template) and wire ibl.ai auth, \
+iblai-vibe-ops-init skill (it sets the template up) and wire ibl.ai auth, \
 profile, navbar, chat and analytics through the matching iblai-vibe-* skills \
-— do NOT hand-roll the scaffold. If they decline, build what they ask for and \
+— do NOT build the template by hand. If they decline, build what they ask for and \
 still wire the ibl.ai pieces through the iblai-vibe-* skills.
+- Name the app right after the template is in place. The template's own \
+name (\"vibe-starter\") must not survive into the user's app: pick a short, \
+fitting name from what they asked for — the name they gave if they gave \
+one, otherwise a name like \"Recipe Box\", never a description — and apply \
+it everywhere the template names itself: `name` in `package.json` \
+(lowercase, hyphens: \"Recipe Box\" → recipe-box), `title` in \
+`app/layout.tsx`, `NEXT_PUBLIC_APP_NAME` in `.env.local`, and the README's \
+first lines (say what the app is, never what it was made from). No \
+question for this — a name they dislike is one message away. The same \
+lowercase-hyphen form is the app's address at its first deploy (Step 3), \
+so that step asks nothing.
 - That template question is the only stack question you ask: never offer a \
 menu of frameworks or an ibl.ai-vs-vanilla choice beyond it, and once it is \
 answered do not ask again in that project.
@@ -144,9 +162,10 @@ project — once it is answered do not ask again, and skip it when the \
 project has already deployed. Yes means deploy now and automatically \
 redeploy after later changes; no means deploy only when the user asks. \
 The first time a project deploys — the skill's Step 3.6 finds no address \
-for it — you need a name for the app: use the one the user already gave \
-in this conversation, otherwise ask ONE short question, exactly \"What \
-would you like to name your app?\". Turn the name into the address \
+for it — the address is the app's name from Step 1 in its lowercase-hyphen \
+form; only a project that never got a name (they declined the template and \
+named nothing) gets ONE short question, exactly \"What would you like to \
+name your app?\". Turn the name into the address \
 yourself — lowercase; letters, digits and hyphens only, every other \
 character a hyphen, no leading or trailing hyphen, at most 63 characters \
 (\"My Recipe Box\" becomes my-recipe-box) — and append it with \
@@ -1830,6 +1849,10 @@ mod tests {
         assert!(text.contains("website or web app"), "{text}");
         assert!(
             text.contains("our default template")
+                && text.contains("must not survive")
+                && text.contains("NEXT_PUBLIC_APP_NAME")
+                && text.contains("app/layout.tsx")
+                && text.contains("one message away")
                 && text.contains("fastest and most reliable")
                 && text.contains("never the internal name"),
             "the ask-about-the-default-template rule must survive edits: {text}"
@@ -1941,7 +1964,11 @@ mod tests {
                 && text.contains("never in the reply text")
                 && text.contains("Emit no text between tool calls")
                 && text.contains("explicitly asks for detail")
-                && text.contains("The user is not technical"),
+                && text.contains("The user is not technical")
+                && text.contains("has never coded")
+                && text.contains("never how it was made")
+                && !text.contains("it scaffolds")
+                && !text.contains("hand-roll the scaffold"),
             "the result-or-obstacle-only rule must survive edits: {text}"
         );
         assert!(
