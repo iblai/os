@@ -31,8 +31,10 @@ import { useUsername } from '@/hooks/use-user';
 import { ANONYMOUS_USERNAME } from '@/lib/constants';
 import { useAppDispatch } from '@/lib/hooks';
 
+// No `custom_css` here: the Advanced CSS editor (embed-tab.tsx) owns and saves
+// it. A form copy was never updated by that editor, so Create Embed wrote the
+// stale value back over whatever the editor had just saved.
 export interface EmbedFormValues {
-  custom_css: string;
   description: string;
   website_url: string;
   mode: ChatMode;
@@ -84,7 +86,6 @@ export interface CustomFloatingBubbleConfig {
 }
 
 const defaultEmbedFormValues: EmbedFormValues = {
-  custom_css: '',
   description: '',
   website_url: '',
   mode: 'default',
@@ -228,7 +229,7 @@ const useEmbedTab = () => {
       Object.entries(settingsValues).filter(
         ([key, value]) =>
           !(SETTINGS_OWNED_FIELDS as readonly string[]).includes(key) &&
-          (value !== '' || key === 'custom_css'),
+          value !== '',
       ),
     );
 
@@ -417,7 +418,6 @@ const useEmbedTab = () => {
       ...defaultEmbedFormValues,
       slug: mentorId,
       generateShareableLink: false,
-      custom_css: mentorPublicSettings?.custom_css ?? '',
       // `show_catalogue` is exposed by the backend but not yet reflected in the
       // published MentorSettingsPublic type — read it via a narrow cast.
       show_catalogue:
