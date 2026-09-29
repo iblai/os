@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-09-25 | 771 checkpoints (726 covered, 11 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 80 journeys (79 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-09-29 | 780 checkpoints (735 covered, 11 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 81 journeys (80 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -1858,3 +1858,21 @@ The Tools tab was just moved onto the SDK: OS's `ToolsTab` wrapper now returns `
 - [x] tools-05: Non-admin does not see the Tools tab in the Edit Mentor modal
 - [ ] _(not-reproducible — RBAC off in default env)_ Read-only `mentor_tools` field permission (`WithFormPermissions`) disables every tool switch — `NEXT_PUBLIC_ENABLE_RBAC` is unset in this env (defaults `false`) and no fixture seeds a `permissions.field.mentor_tools` `write: false` response
 - [ ] _(not-reproducible — no e2e locale-switch mechanism)_ Tools tab copy renders correctly in a non-English locale (e.g. es) — no journey in this repo has an established, reliable way to switch the live app locale and assert on translated text (`ProfilePage.languageSelector`, Journey 4, only checks the selector is visible)
+
+---
+
+## Journey 78: Mentor API Tab (9 checkpoints) — `journeys/78-mentor-api-tab.spec.ts`
+
+**Source files:** `components/modals/edit-mentor-modal/tabs/api-tab.tsx`
+
+The API tab is rendered by the SDK's `AgentApiTab` (`@iblai/iblai-js/web-containers/next`) via OS's thin wrapper, passing no `labels` override — all copy (header, `data-testid="api-info-box"` info box + disclaimers, table columns, Create/Delete/reveal dialogs) comes straight from the SDK's i18n catalog. Top priority for this journey: the expiration date picker (calendar) had a real, user-visible bug where opening the popover and clicking a day fell through to the Create dialog's own overlay and closed the whole dialog instead of picking the date — fixed in the SDK's `ui/popover.tsx` via `pointer-events-auto`. `ApiTab.pickAnyEnabledDay()` asserts the Create dialog is still open immediately after the click, so a regression here fails loudly. API keys are TENANT-scoped (`platform_key`), not agent-scoped — deleting the disposable mentor each test creates never removes them, so every test explicitly tracks and deletes the exact key name(s) it creates (UI or API-seeded via `ApiTab.uniqueName()`, prefix `e2e-apikey-`), and a worker-scoped fixture (`apiKeyResidueReaped`, `utils/api-key-residue.ts`) reaps any stale residue older than 2h — mirrors `lti-residue.ts`'s tenant-scoped pattern. The tenant already carries real, foreign API keys (a few real ones plus ~20 manually created `pagination-test-*` keys); nothing here ever touches a key it didn't create itself. Because every test mutates the same tenant-wide key list, the file runs serially in one worker (mirrors Journeys 47/66/77), and every test still creates its own fresh, disposable mentor via `createMentorPage.openAndCreate()` (auto-tracked + auto-pinned to the cheap ibl.ai model — no manual `MentorTracker` needed) to keep the isolation story uniform with the rest of the Edit Agent modal journeys, even though the keys under test aren't mentor-scoped.
+
+- [x] api-01: Admin opens the API tab and sees the header, description, info box (with disclaimer text), and Create New button
+- [x] api-02 _(calendar regression guard — top priority)_: Admin opens Create, opens the expiration date calendar, navigates to the next month, and picks a day — the Create dialog stays open and the trigger shows the picked PPP date; submitting shows the success toast + reveal dialog, and the new row's EXPIRES cell shows that exact date
+- [x] api-03: Creating an API key without picking an expiration date leaves its EXPIRES cell showing "N/A"
+- [x] api-04: Create dialog validates the API key name (required / letters-numbers-hyphens-underscores only) and keeps Submit disabled until the name is valid
+- [x] api-05: The reveal ("API Key") dialog's copy button flips its accessible name from "Copy API key" to "Copied" once clicked
+- [x] api-06: Pagination appears once more than 10 keys exist (bulk-seeded via the API), page 2's rows differ from page 1's, and creating a key through the UI returns the view to page 1
+- [x] api-07 _(mocked dataset)_: Deleting the only remaining row on a paginated page (page > 1) steps the view back a page and the pagination control disappears once everything fits on one page — exercised against a mocked (`page.route`) dataset, since the real tenant's true last page is always foreign, protected data (verified live: the backend ignores any client-supplied `created` timestamp and always server-stamps "now", so a test-created key can never sort to the tail without deleting real data)
+- [x] api-08: Admin deletes an API key via the UI — the confirmation dialog names the key by name, and confirming removes its row
+- [x] api-09: Non-admin does not see the API tab in the Edit Mentor modal
