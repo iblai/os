@@ -911,6 +911,40 @@ describe('useEmbedTab', () => {
     });
   });
 
+  // The Advanced CSS editor saves custom_css on its own. The embed PUT used to
+  // carry the CSS the mentor had at mount, so clearing it in the editor and
+  // then clicking Create Embed wrote the old CSS back.
+  describe('custom_css is owned by the Advanced CSS editor', () => {
+    it('does not expose it as an embed form field', () => {
+      const { result } = renderHook(() => useEmbedTab());
+
+      expect(result.current.form.state.values).not.toHaveProperty('custom_css');
+    });
+
+    it('does not resurrect the CSS the mentor had at mount', async () => {
+      vi.mocked(dataLayer.useGetMentorPublicSettingsQuery).mockReturnValue({
+        data: {
+          ...basePublicSettings,
+          allow_anonymous: true,
+          custom_css: '.stale { color: red; }',
+        },
+      } as any);
+      mockUpdateMentorSettingsFn.mockResolvedValueOnce({
+        data: { success: true },
+      });
+
+      const { result } = renderHook(() => useEmbedTab());
+
+      await act(async () => {
+        await result.current.syncEmbedSettings();
+      });
+
+      const { formData } = mockUpdateMentorSettingsFn.mock.calls[0][0];
+      expect(formData).not.toHaveProperty('custom_css');
+      expect(JSON.stringify(formData)).not.toContain('.stale');
+    });
+  });
+
   describe('removeCustomImage', () => {
     const previewDataUrl =
       'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
