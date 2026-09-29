@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.156.0](https://github.com/iblai/os/compare/v0.155.3...v0.156.0) (2026-09-29)
+
+### Features
+
+* **embed:** show the user profile in the embed navbar when the host opts in ([4ff9d75](https://github.com/iblai/os/commit/4ff9d7531c3b29d07df96105a5afe61cff8f7008))
+
 ## [0.155.3](https://github.com/iblai/os/compare/v0.155.2...v0.155.3) (2026-09-25)
 
 ### Chores
