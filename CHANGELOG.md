@@ -4,63 +4,63 @@
 
 ### Bug Fixes
 
-* **chrome-ext:** see and drive elements inside iframes and open shadow roots (1.1.1) ([026fb06](https://github.com/iblai/os/commit/026fb06a8f09c3fef433b92cc6cb24fd35a12cf3))
+- **chrome-ext:** see and drive elements inside iframes and open shadow roots (1.1.1) ([026fb06](https://github.com/iblai/os/commit/026fb06a8f09c3fef433b92cc6cb24fd35a12cf3))
 
 ## [0.155.0](https://github.com/iblai/os/compare/v0.154.0...v0.155.0) (2026-09-23)
 
 ### Features
 
-* analytics platform scope button implementation > test coverage ([77ac0a6](https://github.com/iblai/os/commit/77ac0a63abc363809bc17211523bcdbe7b6cd064))
-* analytics platform scope button implementation implemented ([8981bb8](https://github.com/iblai/os/commit/8981bb83dca15e52096e3e315c7e00d8240b9959))
-* analytics platform scope button implementation on progress ([bbd107e](https://github.com/iblai/os/commit/bbd107e785db26094fb5191a39a867230b6651eb))
-* analytics platform scope implementation ([c45e4ca](https://github.com/iblai/os/commit/c45e4ca0a6761d172d126a99baa47e3feb47103f))
-* analytics platform scope implementation ([086ae54](https://github.com/iblai/os/commit/086ae5473c5ef11b5bd2ed9518c0f7feccceb0c9))
-* analytics platform scope redirection optimized to use navigation hook ([23cbaff](https://github.com/iblai/os/commit/23cbaffabcf1373b616a56928c993be53c63707b))
-* analytics platform scope redirection optimized with skipping from provider mentor check ([463264a](https://github.com/iblai/os/commit/463264acdc070778ee3f47b9159eb917ec85bd71))
-* analytics update > iblai-js bump ([317710d](https://github.com/iblai/os/commit/317710d24d6229dcf613efe7cbc21a0e47a67baa))
-* explore UI revamp ([b4014b1](https://github.com/iblai/os/commit/b4014b1a7230a9a3daf3717e0cd08a6ea003ed2d))
-* explore ui revamp > test coverage ([3192dee](https://github.com/iblai/os/commit/3192dee94c1a20c7465ba6a12acbea4a3e6fd922))
-* explore ui revamp > test coverage ([4af5093](https://github.com/iblai/os/commit/4af5093c43ae9e63d9743ddc67fd317430c147f1))
+- analytics platform scope button implementation > test coverage ([77ac0a6](https://github.com/iblai/os/commit/77ac0a63abc363809bc17211523bcdbe7b6cd064))
+- analytics platform scope button implementation implemented ([8981bb8](https://github.com/iblai/os/commit/8981bb83dca15e52096e3e315c7e00d8240b9959))
+- analytics platform scope button implementation on progress ([bbd107e](https://github.com/iblai/os/commit/bbd107e785db26094fb5191a39a867230b6651eb))
+- analytics platform scope implementation ([c45e4ca](https://github.com/iblai/os/commit/c45e4ca0a6761d172d126a99baa47e3feb47103f))
+- analytics platform scope implementation ([086ae54](https://github.com/iblai/os/commit/086ae5473c5ef11b5bd2ed9518c0f7feccceb0c9))
+- analytics platform scope redirection optimized to use navigation hook ([23cbaff](https://github.com/iblai/os/commit/23cbaffabcf1373b616a56928c993be53c63707b))
+- analytics platform scope redirection optimized with skipping from provider mentor check ([463264a](https://github.com/iblai/os/commit/463264acdc070778ee3f47b9159eb917ec85bd71))
+- analytics update > iblai-js bump ([317710d](https://github.com/iblai/os/commit/317710d24d6229dcf613efe7cbc21a0e47a67baa))
+- explore UI revamp ([b4014b1](https://github.com/iblai/os/commit/b4014b1a7230a9a3daf3717e0cd08a6ea003ed2d))
+- explore ui revamp > test coverage ([3192dee](https://github.com/iblai/os/commit/3192dee94c1a20c7465ba6a12acbea4a3e6fd922))
+- explore ui revamp > test coverage ([4af5093](https://github.com/iblai/os/commit/4af5093c43ae9e63d9743ddc67fd317430c147f1))
 
 ### Bug Fixes
 
-* **test:** unblock pre-push hook (worktree collection, Sentry mock types, layout coverage) ([c8e8cad](https://github.com/iblai/os/commit/c8e8cad3278ffd86cd54b65f09f58dad4333eb5d))
+- **test:** unblock pre-push hook (worktree collection, Sentry mock types, layout coverage) ([c8e8cad](https://github.com/iblai/os/commit/c8e8cad3278ffd86cd54b65f09f58dad4333eb5d))
 
 ### Chores
 
-* release 2.9.10 ([e358aec](https://github.com/iblai/os/commit/e358aece858f8fac0bd05fbe4b88033d73a6bc20))
+- release 2.9.10 ([e358aec](https://github.com/iblai/os/commit/e358aece858f8fac0bd05fbe4b88033d73a6bc20))
 
 ## [0.154.0](https://github.com/iblai/os/compare/v0.153.0...v0.154.0) (2026-09-23)
 
 ### Features
 
-* **agents:** expose showExploreMentors from useMentorSettings ([48abaeb](https://github.com/iblai/os/commit/48abaebff51be7627841d7fdd2130bacf06a5fc3))
-* **agents:** show the Explore Agents section only when enabled ([8e290dc](https://github.com/iblai/os/commit/8e290dc5f5c5de4798b21063f1b1a2812f3d8e8d))
-* **settings:** adopt iblai-js 2.17.0 and label Show additional agents ([f9e5b03](https://github.com/iblai/os/commit/f9e5b03520157d8cf9cec37ab624f4b38378446a))
+- **agents:** expose showExploreMentors from useMentorSettings ([48abaeb](https://github.com/iblai/os/commit/48abaebff51be7627841d7fdd2130bacf06a5fc3))
+- **agents:** show the Explore Agents section only when enabled ([8e290dc](https://github.com/iblai/os/commit/8e290dc5f5c5de4798b21063f1b1a2812f3d8e8d))
+- **settings:** adopt iblai-js 2.17.0 and label Show additional agents ([f9e5b03](https://github.com/iblai/os/commit/f9e5b03520157d8cf9cec37ab624f4b38378446a))
 
 ### Bug Fixes
 
-* **agents:** read show_reasoning RBAC-safely for non-owners ([ded719e](https://github.com/iblai/os/commit/ded719e6f9038bdb28b5502521e6ea8f0eb5d5a2))
-* **settings:** title-case the Highlight In Featured Listings label ([22cb77d](https://github.com/iblai/os/commit/22cb77db108c316d5bec6a9fadd2bb2fdda5da8e))
+- **agents:** read show_reasoning RBAC-safely for non-owners ([ded719e](https://github.com/iblai/os/commit/ded719e6f9038bdb28b5502521e6ea8f0eb5d5a2))
+- **settings:** title-case the Highlight In Featured Listings label ([22cb77d](https://github.com/iblai/os/commit/22cb77db108c316d5bec6a9fadd2bb2fdda5da8e))
 
 ### Documentation
 
-* **e2e:** record journey 76 in coverage ([17c726c](https://github.com/iblai/os/commit/17c726c3ff59e1e11a3c427904f0defde99ccb36))
-* **e2e:** record the LLM pin in the coverage conventions ([ea51d82](https://github.com/iblai/os/commit/ea51d82b69b5edfbd4222ef8dbb89e8d2c767dfa))
+- **e2e:** record journey 76 in coverage ([17c726c](https://github.com/iblai/os/commit/17c726c3ff59e1e11a3c427904f0defde99ccb36))
+- **e2e:** record the LLM pin in the coverage conventions ([ea51d82](https://github.com/iblai/os/commit/ea51d82b69b5edfbd4222ef8dbb89e8d2c767dfa))
 
 ### Styles
 
-* apply prettier to CHANGELOG.md ([1304a6f](https://github.com/iblai/os/commit/1304a6fda030125fa21b349f6bdd918d2c507a29))
+- apply prettier to CHANGELOG.md ([1304a6f](https://github.com/iblai/os/commit/1304a6fda030125fa21b349f6bdd918d2c507a29))
 
 ### Tests
 
-* **e2e:** add the suite-wide LLM constants ([df2d438](https://github.com/iblai/os/commit/df2d438f16c2a38353be5b88b163f5518b9cf2c6))
-* **e2e:** cover the Show additional agents toggle (journey 76) ([1ce1ce0](https://github.com/iblai/os/commit/1ce1ce014c0ec3a6bf52800f041e139aef61741f))
-* **e2e:** drop journey 52's OpenAI pins and widen its budgets ([72e863b](https://github.com/iblai/os/commit/72e863b44219bdcecedef94059828fc2aa579218))
-* **e2e:** make selectProviderAndModel a no-op on the active model ([bf3644e](https://github.com/iblai/os/commit/bf3644e836b5439fb4990817960b390ac8a59abc))
-* **e2e:** make sw-06 seed its own agent instead of silently passing ([117a964](https://github.com/iblai/os/commit/117a964ea27f1bffca131ea0da5dc24dec923c81))
-* **e2e:** pin every mentor created by a test to ibl.ai Fast ([8385a4d](https://github.com/iblai/os/commit/8385a4d2fe44a70aa813819462aa1df348c29e39))
-* **e2e:** route the remaining chat tests through a pinned mentor ([0cbb54a](https://github.com/iblai/os/commit/0cbb54ac8c69028fd71f806dd729f2f347dbd1a5))
+- **e2e:** add the suite-wide LLM constants ([df2d438](https://github.com/iblai/os/commit/df2d438f16c2a38353be5b88b163f5518b9cf2c6))
+- **e2e:** cover the Show additional agents toggle (journey 76) ([1ce1ce0](https://github.com/iblai/os/commit/1ce1ce014c0ec3a6bf52800f041e139aef61741f))
+- **e2e:** drop journey 52's OpenAI pins and widen its budgets ([72e863b](https://github.com/iblai/os/commit/72e863b44219bdcecedef94059828fc2aa579218))
+- **e2e:** make selectProviderAndModel a no-op on the active model ([bf3644e](https://github.com/iblai/os/commit/bf3644e836b5439fb4990817960b390ac8a59abc))
+- **e2e:** make sw-06 seed its own agent instead of silently passing ([117a964](https://github.com/iblai/os/commit/117a964ea27f1bffca131ea0da5dc24dec923c81))
+- **e2e:** pin every mentor created by a test to ibl.ai Fast ([8385a4d](https://github.com/iblai/os/commit/8385a4d2fe44a70aa813819462aa1df348c29e39))
+- **e2e:** route the remaining chat tests through a pinned mentor ([0cbb54a](https://github.com/iblai/os/commit/0cbb54ac8c69028fd71f806dd729f2f347dbd1a5))
 
 ## [0.153.0](https://github.com/iblai/os/compare/v0.152.0...v0.153.0) (2026-09-22)
 
