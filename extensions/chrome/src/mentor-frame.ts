@@ -86,15 +86,38 @@ export function watchAndInstallSession(
   return () => clearInterval(timer);
 }
 
+// The app root to return to after a switch, carrying only the embed params from
+// the iframe's current URL. The old tenant's path is dropped (invalid under the
+// new tenant), and — critically — so are `data`, `redirect-path` and `tenant`: by
+// the time a switch fires the iframe URL is already an installed
+// `/sso-login-complete` result whose query still holds a full session `data`
+// blob (with a large JWT). Carrying that into the next redirect-path nests it
+// deeper each switch and eventually overflows the request line (HTTP 431).
+export function embedRedirectPath(host: Element): string {
+  const src = mentorIframe(host)?.getAttribute('src');
+  if (!src) return '/';
+  let url: URL;
+  try {
+    url = new URL(src);
+  } catch {
+    return '/';
+  }
+  const params = url.searchParams;
+  for (const key of ['data', 'redirect-path', 'tenant']) params.delete(key);
+  const qs = params.toString();
+  return qs ? `/?${qs}` : '/';
+}
+
 // ---- Tenant switch -----------------------------------------------------------
 // The mentor app (in the iframe) posts `{ tenantSwitch: true, tenant: <key> }`
-// when the user picks a different tenant in the profile menu. On a normal web
-// page the SDK redirects to the auth SPA to mint the new tenant's tokens; inside
-// the side panel the host owns auth, so we run the SAME auth round-trip the
-// initial sign-in uses — but with `?tenant=<key>`, so the auth app issues the new
-// tenant's tokens — then re-install the session via /sso-login-complete. We land
-// on the app root (embed params preserved) so the old tenant's path is dropped
-// and the app opens the newly selected tenant.
+// when the user picks a different tenant in the profile menu (the SDK's
+// `handleTenantSwitch` does this itself when it detects it's iframed). On a normal
+// web page the SDK redirects to the auth SPA to mint the new tenant's tokens;
+// inside the side panel the host owns auth, so we run the auth round-trip
+// ourselves via signIn(tenant) — which hits the SPA's /login/complete with the
+// target tenant + edX JWT — then re-install the session via /sso-login-complete,
+// landing on the app root (embed params preserved) so the app opens the newly
+// selected tenant.
 export function watchTenantSwitch(host: Element): () => void {
   let switching = false;
   const onMessage = async (event: MessageEvent) => {
@@ -108,17 +131,7 @@ export function watchTenantSwitch(host: Element): () => void {
       // The auth app issues the target tenant's tokens and returns them in the
       // redirect `data`, which signIn() stores in this page's localStorage.
       await signIn(data.tenant);
-      const iframe = mentorIframe(host);
-      const src = iframe?.getAttribute('src');
-      let search = '';
-      if (src) {
-        try {
-          search = new URL(src).search;
-        } catch {
-          // keep default
-        }
-      }
-      installSession(host, `/${search}`);
+      installSession(host, embedRedirectPath(host));
     } catch (err) {
       console.warn('[ibl.ai panel] tenant switch failed:', err);
     } finally {

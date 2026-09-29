@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  embedRedirectPath,
   installSession,
   mentorIframe,
   readActiveTab,
@@ -120,6 +121,30 @@ describe('watchTenantSwitch', () => {
     stop();
   });
 
+  it('strips the stale session data, redirect-path and tenant from the return path', async () => {
+    // By switch time the iframe is a previously-installed /sso-login-complete
+    // result whose query still holds a full `data` blob; it must not be carried
+    // into the next redirect-path (that nests + overflows the request line).
+    const { host, iframe } = makeHost(
+      'https://os.ibl.ai/?embed=true&mode=anonymous' +
+        '&data=%7B%22axd_token%22%3A%22stale%22%7D' +
+        '&redirect-path=%2Fplatform%2Facme%2Fbot&tenant=acme',
+    );
+    const stop = watchTenantSwitch(host);
+    window.dispatchEvent(
+      new MessageEvent('message', {
+        data: { tenantSwitch: true, tenant: 'beta' },
+      }),
+    );
+    await vi.waitFor(() => expect(iframe.src).toContain('/sso-login-complete'));
+    const routed = new URL(iframe.src);
+    // Only the embed params survive — no nested data / redirect-path / old tenant.
+    expect(routed.searchParams.get('redirect-path')).toBe(
+      '/?embed=true&mode=anonymous',
+    );
+    stop();
+  });
+
   it('ignores messages that are not a tenant switch', async () => {
     const { host, iframe } = makeHost();
     const before = iframe.src;
@@ -131,6 +156,26 @@ describe('watchTenantSwitch', () => {
     expect(chromeStub.stub.identity.launchWebAuthFlow).not.toHaveBeenCalled();
     expect(iframe.src).toBe(before);
     stop();
+  });
+});
+
+describe('embedRedirectPath', () => {
+  it('keeps embed params but drops auth/routing params', () => {
+    const { host } = makeHost(
+      'https://os.ibl.ai/?embed=true&data=x&redirect-path=/y&tenant=acme',
+    );
+    expect(embedRedirectPath(host)).toBe('/?embed=true');
+  });
+
+  it('returns root when there are no query params', () => {
+    const { host } = makeHost('https://os.ibl.ai/');
+    expect(embedRedirectPath(host)).toBe('/');
+  });
+
+  it('returns root when there is no iframe or the src is unparseable', () => {
+    expect(embedRedirectPath(document.createElement('agent-ai'))).toBe('/');
+    const { host } = makeHost(':::not-a-url');
+    expect(embedRedirectPath(host)).toBe('/');
   });
 });
 

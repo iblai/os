@@ -62,14 +62,26 @@ describe('signIn / ensureSignedIn', () => {
     expect(dmToken()).toBe('dm');
   });
 
-  it('passes the target tenant to the auth flow when switching', async () => {
+  it('switches tenants via /login/complete with the target tenant and edX JWT', async () => {
+    // The switch mirrors the web tenant switch: the edX JWT authorises minting
+    // the new tenant's tokens through the token-exchange endpoint.
+    localStorage.setItem('edx_jwt_token', 'jwt123');
     await signIn('beta');
     const [{ url }] = chromeStub.stub.identity.launchWebAuthFlow.mock
       .calls[0] as unknown as [{ url: string }];
     expect(url).toBe(
-      'https://login.iblai.app/login?redirect-to=https%3A%2F%2Fabc.chromiumapp.org%2F&tenant=beta',
+      'https://login.iblai.app/login/complete?tenant=beta&redirect-to=https%3A%2F%2Fabc.chromiumapp.org%2F&token=jwt123',
     );
     expect(isAuthed()).toBe(true);
+  });
+
+  it('omits the token param on switch when no edX JWT is stored', async () => {
+    await signIn('beta');
+    const [{ url }] = chromeStub.stub.identity.launchWebAuthFlow.mock
+      .calls[0] as unknown as [{ url: string }];
+    expect(url).toBe(
+      'https://login.iblai.app/login/complete?tenant=beta&redirect-to=https%3A%2F%2Fabc.chromiumapp.org%2F',
+    );
   });
 
   it('is a no-op when a session exists', async () => {
