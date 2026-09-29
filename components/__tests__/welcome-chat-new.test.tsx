@@ -30,6 +30,8 @@ const {
     showAppBanner: vi.fn(),
     baseWsUrl: vi.fn(),
     iblTemplateMentor: vi.fn(() => 'default-mentor'),
+    disabedDatasets: vi.fn(() => 'zip|courses'),
+    mentorTrainingMaximumFileSize: vi.fn(() => '25'),
   },
 }));
 
@@ -104,6 +106,12 @@ vi.mock('@iblai/iblai-js/web-containers', () => ({
       <div data-testid="session-id">{props.sessionId}</div>
       <div data-testid="project-show-explore-mentors">
         {String(props.showExploreMentors)}
+      </div>
+      <div data-testid="project-disabled-resource-types">
+        {JSON.stringify(props.disabledResourceTypes)}
+      </div>
+      <div data-testid="project-max-upload-size-mb">
+        {String(props.maxUploadSizeMb)}
       </div>
     </div>
   ),
@@ -1040,6 +1048,12 @@ describe('WelcomeChatNew', () => {
         'Test Project',
       );
       expect(screen.getByTestId('session-id')).toHaveTextContent('session-123');
+      expect(
+        screen.getByTestId('project-disabled-resource-types'),
+      ).toHaveTextContent('["zip","courses"]');
+      expect(
+        screen.getByTestId('project-max-upload-size-mb'),
+      ).toHaveTextContent('25');
     });
 
     it('should pass all props to WelcomeChat in embed mode', () => {
