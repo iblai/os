@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.158.3](https://github.com/iblai/os/compare/v0.158.2...v0.158.3) (2026-09-29)
+
+### Bug Fixes
+
+* **embed:** don't run cross-SPA storage sync in an iframe (reverted switches) ([caae732](https://github.com/iblai/os/commit/caae7326359efc58217a5f52e84c8e1114980b04))
+
 ## [0.158.2](https://github.com/iblai/os/compare/v0.158.1...v0.158.2) (2026-09-29)
 
 ### Bug Fixes
