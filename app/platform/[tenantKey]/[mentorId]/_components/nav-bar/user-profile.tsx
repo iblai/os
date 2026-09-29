@@ -40,7 +40,10 @@ import { useModelDownload } from '@/hooks/use-model-download';
 import { useLockedTenant } from '@/hooks/use-tenant-lock';
 import { LOCAL_LLM_CHANGED_EVENT } from '@/hooks/use-selected-local-model';
 
-export function UserProfile() {
+// `embed` = rendered inside the embedded mentor navbar. Embeds are a scoped,
+// host-owned surface, so the account-management affordances (logout, and the
+// instructor/learner mode switch) are hidden there.
+export function UserProfile({ embed = false }: { embed?: boolean } = {}) {
   const username = useUsername();
   // Tauri builds pinned to a tenant hide the switcher entirely.
   const lockedTenant = useLockedTenant();
@@ -316,8 +319,8 @@ export function UserProfile() {
         !lockedTenant
       }
       showHelpLink={true}
-      showLogoutButton={true}
-      showLearnerModeSwitch={userIsAdmin && tenantKey !== 'main'}
+      showLogoutButton={!embed}
+      showLearnerModeSwitch={!embed && userIsAdmin && tenantKey !== 'main'}
       // Customization
       helpCenterUrl={config.helpCenterUrl()}
       enableGravatarOnProfilePic={
