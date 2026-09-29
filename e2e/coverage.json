@@ -1,9 +1,9 @@
 {
   "version": 2,
-  "lastUpdated": "2026-09-25",
+  "lastUpdated": "2026-09-28",
   "summary": {
-    "totalCheckpoints": 768,
-    "coveredCheckpoints": 725,
+    "totalCheckpoints": 769,
+    "coveredCheckpoints": 726,
     "deprecatedCheckpoints": 17,
     "notReproducibleCheckpoints": 15,
     "pendingCheckpoints": 11,
@@ -2156,7 +2156,11 @@
       "id": "mobile-view",
       "name": "Mobile View",
       "spec": "31-mobile-view.spec.ts",
-      "sourceFiles": ["app/platform/[tenantKey]/[mentorId]/page.tsx"],
+      "sourceFiles": [
+        "app/platform/[tenantKey]/[mentorId]/page.tsx",
+        "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/user-profile.tsx",
+        "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/learner-mode-switch.tsx"
+      ],
       "checkpoints": [
         {
           "id": "mob-01",
@@ -2191,6 +2195,11 @@
         {
           "id": "mob-07",
           "description": "Dataset upload and untrain/delete flow works on mobile",
+          "status": "covered"
+        },
+        {
+          "id": "mob-08",
+          "description": "Admin on mobile sees Admin/User labels (not Instructor/Learner) on the profile dropdown's learner-mode row, and the label flips correctly when the switch is toggled (#2592)",
           "status": "covered"
         }
       ]
