@@ -174,6 +174,9 @@ describe('useEmbedTab', () => {
     vi.mocked(dataLayer.useGetMentorPublicSettingsQuery).mockReturnValue({
       data: { ...basePublicSettings },
     } as any);
+    vi.mocked(dataLayer.useGetMentorSettingsQuery).mockReturnValue({
+      data: { strip_page_content_html: false },
+    } as any);
   });
 
   describe('initialization', () => {
@@ -645,11 +648,124 @@ describe('useEmbedTab', () => {
       expect(mockUpdateMentorSettingsFn).toHaveBeenCalledWith(
         expect.objectContaining({
           formData: expect.objectContaining({
-            is_context_aware: true,
+            embed_is_context_aware: true,
             mode: 'advanced',
           }),
         }),
       );
+    });
+  });
+
+  // #2592: the form keys `is_context_aware` / `auto_open` are not backend
+  // fields. The PUT must carry `embed_is_context_aware` / `embed_open_by_default`
+  // and the form must load them back, or the toggles reset on refresh.
+  describe('context-aware / open-by-default persistence (#2592)', () => {
+    const lastFormData = () =>
+      mockUpdateMentorSettingsFn.mock.calls.at(-1)![0].formData as Record<
+        string,
+        unknown
+      >;
+
+    const saveWith = async (fields: Record<string, unknown>) => {
+      mockUpdateMentorSettingsFn.mockResolvedValueOnce({
+        data: { success: true },
+      });
+      setAllowAnonymous(true);
+      const { result } = renderHook(() => useEmbedTab());
+      await act(async () => {
+        for (const [key, value] of Object.entries(fields)) {
+          result.current.form.setFieldValue(key as any, value as any);
+        }
+      });
+      await act(async () => {
+        await result.current.syncEmbedSettings();
+      });
+      return lastFormData();
+    };
+
+    it('sends embed_is_context_aware=true when the toggle is on', async () => {
+      const formData = await saveWith({ is_context_aware: true });
+      expect(formData.embed_is_context_aware).toBe(true);
+    });
+
+    it('sends embed_is_context_aware=true in advanced mode even with the toggle off', async () => {
+      const formData = await saveWith({
+        mode: 'advanced',
+        is_context_aware: false,
+      });
+      expect(formData.embed_is_context_aware).toBe(true);
+    });
+
+    it('sends embed_open_by_default=true when the toggle is on', async () => {
+      const formData = await saveWith({ auto_open: true });
+      expect(formData.embed_open_by_default).toBe(true);
+    });
+
+    it('sends both backend fields as false when the toggles are off', async () => {
+      const formData = await saveWith({});
+      expect(formData.embed_is_context_aware).toBe(false);
+      expect(formData.embed_open_by_default).toBe(false);
+    });
+
+    it('never sends the raw is_context_aware / auto_open form keys', async () => {
+      const formData = await saveWith({
+        is_context_aware: true,
+        auto_open: true,
+      });
+      expect(formData).not.toHaveProperty('is_context_aware');
+      expect(formData).not.toHaveProperty('auto_open');
+    });
+
+    it('loads both toggles as true from the private settings', () => {
+      vi.mocked(dataLayer.useGetMentorSettingsQuery).mockReturnValueOnce({
+        data: { embed_is_context_aware: true, embed_open_by_default: true },
+      } as any);
+
+      const { result } = renderHook(() => useEmbedTab());
+
+      expect(result.current.form.getFieldValue('is_context_aware')).toBe(true);
+      expect(result.current.form.getFieldValue('auto_open')).toBe(true);
+    });
+
+    it('falls back to the public settings when the private settings are absent', () => {
+      vi.mocked(dataLayer.useGetMentorSettingsQuery).mockReturnValueOnce({
+        data: undefined,
+      } as any);
+      vi.mocked(dataLayer.useGetMentorPublicSettingsQuery).mockReturnValue({
+        data: {
+          ...basePublicSettings,
+          embed_is_context_aware: true,
+          embed_open_by_default: true,
+        },
+      } as any);
+
+      const { result } = renderHook(() => useEmbedTab());
+
+      expect(result.current.form.getFieldValue('is_context_aware')).toBe(true);
+      expect(result.current.form.getFieldValue('auto_open')).toBe(true);
+    });
+
+    it('defaults both toggles to false when the settings lack the fields', () => {
+      const { result } = renderHook(() => useEmbedTab());
+
+      expect(result.current.form.getFieldValue('is_context_aware')).toBe(false);
+      expect(result.current.form.getFieldValue('auto_open')).toBe(false);
+    });
+
+    it('hydrates the toggles when the settings arrive after mount', () => {
+      vi.mocked(dataLayer.useGetMentorSettingsQuery).mockReturnValue({
+        data: undefined,
+      } as any);
+      const { result, rerender } = renderHook(() => useEmbedTab());
+      expect(result.current.form.getFieldValue('is_context_aware')).toBe(false);
+
+      vi.mocked(dataLayer.useGetMentorSettingsQuery).mockReturnValue({
+        data: { embed_is_context_aware: true, embed_open_by_default: true },
+      } as any);
+      rerender();
+
+      expect(result.current.form.getFieldValue('is_context_aware')).toBe(true);
+      expect(result.current.form.getFieldValue('auto_open')).toBe(true);
     });
   });
 
@@ -1639,6 +1755,76 @@ describe('useEmbedTab', () => {
       });
 
       expect(result.current.focusEditCustomFloatingBubble).toBe(true);
+    });
+  });
+
+  describe('pre-existing fallbacks', () => {
+    it('queries with anonymous / empty userId when username is undefined', () => {
+      vi.mocked(userHooks.useUsername).mockReturnValueOnce(
+        undefined as unknown as string,
+      );
+      renderHook(() => useEmbedTab());
+
+      expect(dataLayer.useGetMentorPublicSettingsQuery).toHaveBeenCalledWith(
+        expect.objectContaining({ userId: 'anonymous' }),
+      );
+      expect(dataLayer.useGetMentorSettingsQuery).toHaveBeenCalledWith(
+        expect.objectContaining({ userId: '' }),
+        { skip: true },
+      );
+    });
+
+    it('hydrates starter_prompts=suggested_prompt from public settings', () => {
+      vi.mocked(dataLayer.useGetMentorPublicSettingsQuery).mockReturnValue({
+        data: { ...basePublicSettings, starter_prompts: 'suggested_prompt' },
+      } as any);
+      const { result } = renderHook(() => useEmbedTab());
+
+      expect(result.current.form.getFieldValue('starter_prompts')).toBe(
+        'suggested_prompt',
+      );
+    });
+
+    it('does not re-hydrate the bubble config for the same settings key', () => {
+      const { result, rerender } = renderHook(() => useEmbedTab());
+      act(() => result.current.updateConfig('title', 'Edited'));
+
+      vi.mocked(dataLayer.useGetMentorPublicSettingsQuery).mockReturnValue({
+        data: { ...basePublicSettings },
+      } as any);
+      rerender();
+
+      expect(result.current.customFloatingBubbleConfig.title).toBe('Edited');
+    });
+
+    it('falls back to a generic message when the settings PUT error has none', async () => {
+      mockUpdateMentorSettingsFn.mockResolvedValueOnce({ error: {} });
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+      setAllowAnonymous(true);
+      const { result } = renderHook(() => useEmbedTab());
+
+      await act(async () => {
+        await result.current.syncEmbedSettings();
+      });
+
+      expect(mockToastError).toHaveBeenCalledWith(
+        'An Unknown error occurred. Please try again',
+      );
+    });
+
+    it('falls back to a generic message when the token error has no url', async () => {
+      mockCreateRedirectTokenFn.mockResolvedValueOnce({ error: {} });
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+      const { result } = renderHook(() => useEmbedTab());
+
+      await act(async () => {
+        result.current.form.setFieldValue('website_url', 'https://example.com');
+      });
+      await act(async () => {
+        await result.current.createTokenHandler();
+      });
+
+      expect(result.current.createTokenError).toBe('Unknown error occurred');
     });
   });
 });
