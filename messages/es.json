@@ -581,9 +581,6 @@
     "settings": "Configuración",
     "language": "Idioma"
   },
-  "componentsAddResourceButton": {
-    "addResource": "Agregar recurso"
-  },
   "componentsAdvancedChartWithTooltip": {
     "monthlyRevenue": "Ingresos mensuales",
     "revenueLabel": "Ingresos"
@@ -596,11 +593,6 @@
     "areYouSure": "¿Estás seguro?",
     "cancel": "Cancelar",
     "continue": "Continuar"
-  },
-  "componentsDatasetTab": {
-    "dataset": "Conjunto de datos",
-    "addResource": "Agregar recurso",
-    "noResourcesAddedYet": "No se han agregado recursos aún"
   },
   "componentsFileUpload": {
     "dropFilesHere": "Suelta tus archivos aquí",
@@ -1565,34 +1557,6 @@
     "deletingButton": "Eliminando...",
     "toastDeleteSuccess": "Proyecto eliminado correctamente",
     "toastDeleteError": "Error al eliminar el proyecto"
-  },
-  "projectsMinimumMentorAlert": {
-    "cannotRemoveAgent": "No se puede eliminar el agente",
-    "minimumAgentWarning": "Un proyecto debe tener al menos un agente. Por favor, agregue otro agente antes de eliminar este.",
-    "cancel": "Cancelar"
-  },
-  "projectsProjectFilesModal": {
-    "projectFiles": "Archivos del proyecto",
-    "searchDatasetsPlaceholder": "Buscar conjuntos de datos...",
-    "addFiles": "Agregar archivos",
-    "columnName": "NOMBRE",
-    "columnType": "TIPO",
-    "columnTokens": "TOKENS",
-    "columnInterval": "INTERVALO",
-    "columnVisibility": "VISIBILIDAD",
-    "columnStatus": "ESTADO"
-  },
-  "projectsProjectInstructionsModal": {
-    "title": "Instrucciones",
-    "description": "Puedes pedirle al agente que se centre en ciertos temas, o que use un tono o formato específico para las respuestas.",
-    "placeholder": "Ej.: \"Consulta la documentación más reciente de JavaScript. Mantén las respuestas cortas y enfocadas.\"",
-    "cancelAriaLabel": "Cancelar edición de instrucciones",
-    "cancel": "Cancelar",
-    "saveAriaLabel": "Guardar instrucciones del proyecto",
-    "saving": "Guardando...",
-    "save": "Guardar",
-    "saveSuccess": "Instrucciones actualizadas correctamente",
-    "saveError": "Error al actualizar las instrucciones"
   },
   "projectsRenameProjectModal": {
     "title": "Renombrar proyecto",

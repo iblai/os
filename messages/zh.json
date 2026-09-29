@@ -581,9 +581,6 @@
     "settings": "设置",
     "language": "语言"
   },
-  "componentsAddResourceButton": {
-    "addResource": "添加资源"
-  },
   "componentsAdvancedChartWithTooltip": {
     "monthlyRevenue": "月度收入",
     "revenueLabel": "收入"
@@ -596,11 +593,6 @@
     "areYouSure": "您确定吗？",
     "cancel": "取消",
     "continue": "继续"
-  },
-  "componentsDatasetTab": {
-    "dataset": "数据集",
-    "addResource": "添加资源",
-    "noResourcesAddedYet": "尚未添加任何资源"
   },
   "componentsFileUpload": {
     "dropFilesHere": "将文件拖放到此处",
@@ -1565,34 +1557,6 @@
     "deletingButton": "正在删除...",
     "toastDeleteSuccess": "项目已成功删除",
     "toastDeleteError": "删除项目失败"
-  },
-  "projectsMinimumMentorAlert": {
-    "cannotRemoveAgent": "无法移除代理",
-    "minimumAgentWarning": "一个项目必须至少有一个代理。请在移除此代理之前添加另一个代理。",
-    "cancel": "取消"
-  },
-  "projectsProjectFilesModal": {
-    "projectFiles": "项目文件",
-    "searchDatasetsPlaceholder": "搜索数据集...",
-    "addFiles": "添加文件",
-    "columnName": "名称",
-    "columnType": "类型",
-    "columnTokens": "TOKENS",
-    "columnInterval": "间隔",
-    "columnVisibility": "可见性",
-    "columnStatus": "状态"
-  },
-  "projectsProjectInstructionsModal": {
-    "title": "说明",
-    "description": "您可以要求助手专注于某些主题，或要求其使用特定的语气或格式进行回答。",
-    "placeholder": "例如：“请参考最新的 JavaScript 文档。保持回答简洁且有针对性。”",
-    "cancelAriaLabel": "取消编辑说明",
-    "cancel": "取消",
-    "saveAriaLabel": "保存项目说明",
-    "saving": "保存中...",
-    "save": "保存",
-    "saveSuccess": "说明更新成功",
-    "saveError": "更新说明失败"
   },
   "projectsRenameProjectModal": {
     "title": "重命名项目",

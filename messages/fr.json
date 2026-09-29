@@ -581,9 +581,6 @@
     "settings": "Paramètres",
     "language": "Langue"
   },
-  "componentsAddResourceButton": {
-    "addResource": "Ajouter une ressource"
-  },
   "componentsAdvancedChartWithTooltip": {
     "monthlyRevenue": "Revenus mensuels",
     "revenueLabel": "Revenus"
@@ -596,11 +593,6 @@
     "areYouSure": "Êtes-vous sûr ?",
     "cancel": "Annuler",
     "continue": "Continuer"
-  },
-  "componentsDatasetTab": {
-    "dataset": "Ensemble de données",
-    "addResource": "Ajouter une ressource",
-    "noResourcesAddedYet": "Aucune ressource ajoutée pour l'instant"
   },
   "componentsFileUpload": {
     "dropFilesHere": "Déposez vos fichiers ici",
@@ -1565,34 +1557,6 @@
     "deletingButton": "Suppression en cours...",
     "toastDeleteSuccess": "Projet supprimé avec succès",
     "toastDeleteError": "Échec de la suppression du projet"
-  },
-  "projectsMinimumMentorAlert": {
-    "cannotRemoveAgent": "Impossible de supprimer l'agent",
-    "minimumAgentWarning": "Un projet doit avoir au moins un agent. Veuillez ajouter un autre agent avant de supprimer celui-ci.",
-    "cancel": "Annuler"
-  },
-  "projectsProjectFilesModal": {
-    "projectFiles": "Fichiers du projet",
-    "searchDatasetsPlaceholder": "Rechercher des jeux de données...",
-    "addFiles": "Ajouter des fichiers",
-    "columnName": "NOM",
-    "columnType": "TYPE",
-    "columnTokens": "TOKENS",
-    "columnInterval": "INTERVALLE",
-    "columnVisibility": "VISIBILITÉ",
-    "columnStatus": "STATUT"
-  },
-  "projectsProjectInstructionsModal": {
-    "title": "Instructions",
-    "description": "Vous pouvez demander à l'agent de se concentrer sur certains sujets, ou de répondre avec un certain ton ou format.",
-    "placeholder": "Ex. : \"Référencez la dernière documentation JavaScript. Gardez les réponses courtes et ciblées.\"",
-    "cancelAriaLabel": "Annuler la modification des instructions",
-    "cancel": "Annuler",
-    "saveAriaLabel": "Enregistrer les instructions du projet",
-    "saving": "Enregistrement...",
-    "save": "Enregistrer",
-    "saveSuccess": "Instructions mises à jour avec succès",
-    "saveError": "Échec de la mise à jour des instructions"
   },
   "projectsRenameProjectModal": {
     "title": "Renommer le projet",

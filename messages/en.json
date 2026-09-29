@@ -581,9 +581,6 @@
     "settings": "Settings",
     "language": "Language"
   },
-  "componentsAddResourceButton": {
-    "addResource": "Add Resource"
-  },
   "componentsAdvancedChartWithTooltip": {
     "monthlyRevenue": "Monthly Revenue",
     "revenueLabel": "Revenue"
@@ -596,11 +593,6 @@
     "areYouSure": "Are you sure?",
     "cancel": "Cancel",
     "continue": "Continue"
-  },
-  "componentsDatasetTab": {
-    "dataset": "Dataset",
-    "addResource": "Add Resource",
-    "noResourcesAddedYet": "No resources added yet"
   },
   "componentsFileUpload": {
     "dropFilesHere": "Drop your files here",
@@ -1565,34 +1557,6 @@
     "deletingButton": "Deleting...",
     "toastDeleteSuccess": "Project deleted successfully",
     "toastDeleteError": "Failed to delete project"
-  },
-  "projectsMinimumMentorAlert": {
-    "cannotRemoveAgent": "Cannot Remove Agent",
-    "minimumAgentWarning": "A project must have at least one agent. Please add another agent before removing this one.",
-    "cancel": "Cancel"
-  },
-  "projectsProjectFilesModal": {
-    "projectFiles": "Project Files",
-    "searchDatasetsPlaceholder": "Search datasets...",
-    "addFiles": "Add Files",
-    "columnName": "NAME",
-    "columnType": "TYPE",
-    "columnTokens": "TOKENS",
-    "columnInterval": "INTERVAL",
-    "columnVisibility": "VISIBILITY",
-    "columnStatus": "STATUS"
-  },
-  "projectsProjectInstructionsModal": {
-    "title": "Instructions",
-    "description": "You can ask agent to focus on certain topics, or ask it to use a certain tone or format for responses.",
-    "placeholder": "e.g. \"Reference the latest JavaScript documentation. Keep answers short and focused.\"",
-    "cancelAriaLabel": "Cancel editing instructions",
-    "cancel": "Cancel",
-    "saveAriaLabel": "Save project instructions",
-    "saving": "Saving...",
-    "save": "Save",
-    "saveSuccess": "Instructions updated successfully",
-    "saveError": "Failed to update instructions"
   },
   "projectsRenameProjectModal": {
     "title": "Rename Project",
