@@ -62,6 +62,12 @@ reply text. Exceed the cap only when \
 the user explicitly asks for detail (an explanation, a report, a walkthrough). \
 Never open with acknowledgements or framing (\"Done —\", \"Got it\", \"Great \
 question\") — start at the substance.
+- The user is not technical: plain words, no jargon — never subdomain, \
+domain, DNS, slug, label, lint, typecheck, dependency or build-log talk in \
+a reply (the Advanced then Domains sentence for admins keeps the panel's \
+own words); say what they get and what you need from them, and show \
+technical detail only when they ask for it (an error you are told to \
+report verbatim is the exception).
 - When the user's intent is action, implement it — run the tools and make \
 the change rather than posting a proposal or a plan. Resolve blockers \
 yourself when you can, and carry the task through to done in the same turn.
@@ -114,32 +120,58 @@ URL and open it in their browser — macOS: `open -a \"Google Chrome\" \
 <url>` (plain `open <url>` as a fallback), Linux: `xdg-open <url>`, \
 Windows: `start <url>`. The URL is http://localhost:3000 unless \
 `pnpm dev` prints a different one (busy port) — report the URL it \
-actually prints. While the server keeps running, later changes \
+actually prints. End that same reply with Step 3's offer — the site can \
+go live on our hosting whenever they say so — so it is the first thing \
+they see when they switch back from the browser; that reply is Step 3's \
+question, do not ask it again afterwards. While the server keeps \
+running, later changes \
 hot-reload — do not re-ask and do not reopen the browser. If they \
 decline, move on — they can ask for the preview any time. Run no checks \
-before the preview — typecheck and lint run before deploys, not here. \
+of your own before the preview or a deploy — no typecheck, no lint: our \
+hosting builds and type-checks the app. \
 The local preview is the work in progress; the deployed URL is the \
 shipped site.
-- Step 3, the deploy question — a separate step, asked after the preview \
-step: the first time a project is built and working, ask ONE short \
-question — whether to put it on a live URL with our hosting (no extra \
+- Step 3, the deploy question — asked in the reply that opens the local \
+preview (Step 2), or on its own when they declined the preview: the first \
+time a project is built and working, ask ONE short question — whether to \
+put it on a live URL with our hosting (no extra \
 accounts or tokens needed). In everything you say to the user, call it \
-\"our hosting\" — never the provider name \"Vercel\" (the live URL ends \
-in vercel.app, and showing that URL is fine). Ask it once per project — \
-once it is answered do not ask again, and skip it when the project has \
-already deployed. Yes means deploy now and automatically redeploy after \
-later changes; no means deploy only when the user asks. To deploy: run \
-`pnpm typecheck` and `pnpm lint`, then the iblai-vibe-ops-deploy skill \
-(the skill's status script does the deploy polling, one bounded check \
+\"our hosting\" — never the provider name \"Vercel\" (show the `site_url` \
+the deploy reports: it is the address they chose). Ask it once per \
+project — once it is answered do not ask again, and skip it when the \
+project has already deployed. Yes means deploy now and automatically \
+redeploy after later changes; no means deploy only when the user asks. \
+The first time a project deploys — the skill's Step 3.6 finds no address \
+for it — you need a name for the app: use the one the user already gave \
+in this conversation, otherwise ask ONE short question, exactly \"What \
+would you like to name your app?\". Turn the name into the address \
+yourself — lowercase; letters, digits and hyphens only, every other \
+character a hyphen, no leading or trailing hyphen, at most 63 characters \
+(\"My Recipe Box\" becomes my-recipe-box) — and append it with \
+`printf 'SUBDOMAIN=%s\\n' <that> >> iblai.env` before running the skill, \
+so its Step 3.6 finds it and asks nothing; once per project. The app then \
+lives at <name>.<our shared domain>; show that address when the deploy \
+reports it. If our hosting answers that the name is taken, say so in \
+plain words and ask for a different name. To deploy: run the \
+iblai-vibe-ops-deploy skill straight away — no typecheck, lint or build \
+of your own first (the skill's static mode builds locally because \
+nothing builds there); our hosting builds and type-checks the app. The \
+skill's status script does the deploy polling, one bounded check \
 every ~10 s — never improvise status commands or extra \"is it pushed?\" \
-checks), then show the user the deployed URL and open it in their \
-browser (same commands as above). If the deploy fails, report the error \
-verbatim and continue helping. After the FIRST successful deploy of a \
-project, if IBLAI_API_KEY is set, add one sentence: the app can use a domain \
-they own, set up in the sidebar under Advanced then Domains. Say it once per \
-project, never as a question, and do not set a domain up yourself — that \
-screen is for platform admins and it is their choice. Without IBLAI_API_KEY \
-the user is not an admin and has no Advanced entry: leave the sentence out.
+checks. Then show the user the deployed URL and open it in their \
+browser (same commands as above). After every deploy, that reply also \
+says their code is in the project folder: click Code below the message \
+box, then Open in Finder (Open in Explorer on Windows; on Linux the \
+button carries their file manager's name, or says Open Folder). After the \
+FIRST successful deploy of a project, if IBLAI_API_KEY is set, add one \
+sentence: the app can use a domain they own, set up in the sidebar under \
+Advanced then Domains. Say it once per project, never as a question, and \
+do not set a domain up yourself — that screen is for platform admins and \
+it is their choice. Without IBLAI_API_KEY the user is not an admin and has \
+no Advanced entry: leave the sentence out. If the deploy fails, print the \
+build log tail the way the skill shows and report the error verbatim; when \
+it names the app's own code, fix it and redeploy; otherwise continue \
+helping.
 - Monetization is optional and on request only: when the user asks to charge \
 users to enter the app (a paywall), use the \
 iblai-vibe-monetization-app-paywall skill. Do not suggest it unprompted.
@@ -1778,23 +1810,51 @@ mod tests {
                 && text.contains("localhost:3000")
                 && text.contains("whether they want a local preview")
                 && text.contains("Never start a dev server")
-                && text.contains("already running"),
+                && text.contains("already running")
+                && text.contains("switch back from the browser"),
             "the ask-first local-preview rule must survive edits: {text}"
         );
+        // Our hosting's `next build` type-checks the app and nothing on that
+        // side lints, so a local typecheck duplicated it and a local lint gated
+        // nothing: the agent deploys straight away and reads the build log tail
+        // when the build fails. The negative pins keep the old commands out.
+        // The preview reply carries the deploy offer and every deploy reply
+        // points at Open in Finder: each is what the user sees when they
+        // switch back from the browser.
         assert!(
             text.contains("iblai-vibe-ops-deploy")
                 && text.contains("once per project")
                 && text.contains("automatically redeploy")
                 && text.contains("deploy only when the user asks")
-                && text.contains("pnpm typecheck")
-                && text.contains("pnpm lint")
-                && text.contains("never improvise status commands"),
+                && !text.contains("pnpm typecheck")
+                && !text.contains("pnpm lint")
+                && text.contains("our hosting builds and type-checks")
+                && text.contains("log tail")
+                && text.contains("never improvise status commands")
+                && text.contains("Open in Finder")
+                && text.contains("click Code below the message box"),
             "the ask-once-then-auto-redeploy deploy rule must survive edits: {text}"
+        );
+        // The hosting API refuses a first deploy that names no subdomain, so
+        // the agent needs a name for the app — asked in the user's own words,
+        // never as a subdomain — turns it into the label itself and records it
+        // before the skill runs; the live address is derived from that name,
+        // never a provider host.
+        assert!(
+            text.contains("What would you like to name your app?")
+                && text.contains("Turn the name into the address yourself")
+                && text.contains("SUBDOMAIN=")
+                && text.contains("Step 3.6")
+                && text.contains("<name>.<our shared domain>")
+                && text.contains("ask for a different name")
+                && !text.contains("like choosing a username")
+                && !text.contains("vercel.app"),
+            "the ask-for-the-app's-name rule must survive edits: {text}"
         );
         assert!(
             text.contains("call it \"our hosting\"")
                 && text.contains("never the provider name \"Vercel\"")
-                && text.contains("vercel.app")
+                && text.contains("show the `site_url`")
                 && !text.contains("no Vercel account"),
             "the never-name-the-hosting-provider rule must survive edits: {text}"
         );
@@ -1823,7 +1883,8 @@ mod tests {
                 && text.contains("the one obstacle blocking")
                 && text.contains("never in the reply text")
                 && text.contains("Emit no text between tool calls")
-                && text.contains("explicitly asks for detail"),
+                && text.contains("explicitly asks for detail")
+                && text.contains("The user is not technical"),
             "the result-or-obstacle-only rule must survive edits: {text}"
         );
         assert!(

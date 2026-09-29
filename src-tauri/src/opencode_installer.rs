@@ -54,9 +54,10 @@ const CONFIG_TEMPLATE: &str = r#"{
 /// iblai/vibe — the public dev-toolkit skills repo, synced for Coding Mode.
 /// Every look resolves the LATEST GitHub Release and syncs to it — releases
 /// are what ship (the repo's release workflow cuts one on every landing),
-/// never the moving branch head, and no version is ever pinned here. There is
-/// deliberately NO freshness window: the app resolves latest at every launch
-/// (and on Code enable) and downloads only when the tag moved.
+/// never the moving branch head, and no version is ever pinned here — the one
+/// exception is the dev override `IBL_VIBE_SKILLS_TAG` (`vibe_tag_override`).
+/// There is deliberately NO freshness window: the app resolves latest at every
+/// launch (and on Code enable) and downloads only when the tag moved.
 ///
 /// github.com, not api.github.com: this URL's redirect names the tag, the
 /// probe shares the tarball's host (one reachability question), and the
@@ -355,6 +356,23 @@ async fn fetch_latest_vibe_tag() -> Option<String> {
     resolve_latest_tag(VIBE_LATEST_RELEASE_URL).await
 }
 
+/// A release tag to sync instead of latest — `IBL_VIBE_SKILLS_TAG` in the
+/// shell or, for dev builds, `src-tauri/.env.local`: the way to touch-test a
+/// vibe pre-release, which `releases/latest` never points at. The marker
+/// stores whatever tag was synced, so dropping the variable re-syncs to the
+/// real latest on the next look. A wrong tag fails the download loudly (bad
+/// status) and keeps the cached copy.
+fn vibe_tag_override() -> Option<String> {
+    vibe_tag_from(std::env::var("IBL_VIBE_SKILLS_TAG").ok().as_deref())
+}
+
+/// One path segment, trimmed; anything else is "no override" — a branch ref
+/// would build a tarball URL that does not exist.
+fn vibe_tag_from(value: Option<&str>) -> Option<String> {
+    let tag = value?.trim();
+    (!tag.is_empty() && !tag.contains('/')).then(|| tag.to_string())
+}
+
 /// Download the vibe tarball at `url` and swap its `skills/` over `dest`. The
 /// old copy survives any failure (extract to temp, rename with a backup).
 async fn download_vibe_skills(app: &AppHandle, dest: &Path, url: &str) -> Result<(), String> {
@@ -436,7 +454,16 @@ pub async fn ensure_vibe_skills(app: AppHandle) -> Result<serde_json::Value, Str
     let marker = vibe_sha_marker();
     let cached = dir_is_populated(&dir);
 
-    let latest = fetch_latest_vibe_tag().await;
+    let latest = match vibe_tag_override() {
+        Some(tag) => {
+            log(
+                &app,
+                &format!("vibe skills pinned to {tag} by IBL_VIBE_SKILLS_TAG"),
+            );
+            Some(tag)
+        }
+        None => fetch_latest_vibe_tag().await,
+    };
     if cached {
         match &latest {
             Some(latest_tag) => {
@@ -824,8 +851,37 @@ mod tests {
         assert!(dir_is_populated(&dir), "populated");
     }
 
+    /// A dev build can pin the sync to one release tag — the way a vibe
+    /// pre-release, which `releases/latest` never names, gets touch-tested.
+    /// Pure on the value, so no process-global env in a parallel test run.
+    #[test]
+    fn a_release_tag_can_be_pinned_for_a_touch_test() {
+        assert_eq!(
+            vibe_tag_from(Some("v2.11.0-rc.1")).as_deref(),
+            Some("v2.11.0-rc.1")
+        );
+        assert_eq!(
+            vibe_tag_from(Some(" v2.11.0-rc.1 ")).as_deref(),
+            Some("v2.11.0-rc.1"),
+            "whitespace from a dotenv line is trimmed"
+        );
+        assert_eq!(
+            vibe_tag_from(Some("")),
+            None,
+            "unset-by-emptiness is no override"
+        );
+        assert_eq!(vibe_tag_from(Some("   ")), None);
+        assert_eq!(vibe_tag_from(None), None);
+        assert_eq!(
+            vibe_tag_from(Some("refs/heads/main")),
+            None,
+            "a branch is not a tag: the tarball URL would not exist"
+        );
+    }
+
     /// Skills track whatever release is latest — the tag is read out of the
-    /// `releases/latest` redirect every time, never configured.
+    /// `releases/latest` redirect every time, never configured, unless
+    /// `IBL_VIBE_SKILLS_TAG` names one for a touch test.
     #[test]
     fn the_release_tag_is_read_from_the_redirect_never_configured() {
         assert_eq!(
