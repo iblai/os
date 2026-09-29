@@ -173,12 +173,6 @@ vi.mock('@/components/chat-input-form/voice-chat-button', () => ({
   ),
 }));
 
-vi.mock('@/components/retrieved-documents-button', () => ({
-  RetrievedDocumentsButton: () => (
-    <button data-testid="retrieved-docs-button">Docs</button>
-  ),
-}));
-
 vi.mock('@/hooks/use-embed-mode', () => ({
   useEmbedMode: vi.fn(() => mockEmbedMode),
 }));
@@ -296,6 +290,9 @@ vi.mock('@iblai/iblai-js/web-containers', async () => {
   const actual = await vi.importActual('@iblai/iblai-js/web-containers');
   return {
     ...actual,
+    RetrievedDocumentsButton: () => (
+      <button data-testid="retrieved-docs-button">Docs</button>
+    ),
     useChatPrivacy: () => ({ effective: undefined, isEffectiveReady: false }),
   };
 });

@@ -56,6 +56,11 @@ import { ChatPage } from '../page-objects/chat.page';
  * (`show_reasoning`) setting is toggled via `ChatPage.mockShowReasoning()` —
  * a REST route patch — rather than by mutating the mentor's real settings,
  * so parallel/subsequent runs against the same tenant are unaffected.
+ *
+ * Checkpoints 10-11 (issue #2400, "OS / SDK | Missing Spaces in LLM Texts")
+ * reuse the same `mockChatWebSocket()` infrastructure to prove a tool-call
+ * boundary mid-reply renders as a paragraph break rather than glued text —
+ * see the comment above those tests for the exact bug/fix.
  */
 test.describe('Journey 73: Agent Working Indicator', () => {
   test.describe.configure({ mode: 'serial' });
@@ -569,5 +574,174 @@ test.describe('Journey 73: Agent Working Indicator', () => {
 
     ws.send({ eos: true, session_id: sid });
     await expect(agentFrame).toHaveCount(1);
+  });
+
+  // ── Checkpoint 10 (+ 11 control): tool-call boundary text join — issue #2400 ──
+  //
+  // "OS / SDK | Missing Spaces in LLM Texts": when a tool call interrupts a
+  // reply, the backend streams the step text as separate `data` frames
+  // around the `tool_call`/`tool_call.end` pair with NO whitespace at the
+  // boundary (confirmed from real frames: `"."` -> tool_call -> `"I"`).
+  // Before the fix, `@iblai/web-utils`'s `use-chat-v2.ts` appended the
+  // chunks raw, so the live bubble rendered
+  // "...jaden@ibleducation.com.The compose window..." and the GFM email
+  // autolinker (wired via Streamdown/remark-gfm, `components/markdown.tsx`)
+  // swallowed the glued ".The" into the mailto link. The fix sets a
+  // `segmentBreakPending` ref on `tool_call` frames; the next non-empty
+  // answer chunk gets a "\n\n" prefix when neither side already has
+  // whitespace, so the step renders as its own paragraph instead.
+
+  test('a reply interrupted by tool calls renders each step as its own paragraph and the email autolink stops at the domain', async ({
+    page,
+    chatPage,
+  }) => {
+    await chatPage.mockShowReasoning();
+    const ws = await chatPage.mockChatWebSocket();
+    await gotoReadyChat(page, chatPage);
+    await chatPage.startNewChat();
+
+    const prompt = 'Send an email to jaden@ibleducation.com about the meeting.';
+    const sid = await sendAndCaptureSession(chatPage, ws, prompt);
+
+    ws.send({ generation_id: `e2e-gen-${Date.now()}`, session_id: sid });
+
+    const aiMessage = chatPage.getLastAiMessage();
+    const body = chatPage.getAiMessageBody(aiMessage);
+
+    ws.send({
+      data: `I'll click "Compose" to start a new email to jaden@ibleducation.com.`,
+      session_id: sid,
+    });
+    await expect(body).toContainText('jaden@ibleducation.com', {
+      timeout: 10_000,
+    });
+
+    ws.send({
+      type: 'tool_call',
+      value: {
+        id: 'c1',
+        name: 'click',
+        tool_input: {},
+        log: 'Invoking: `click`',
+      },
+      status_code: 200,
+      session_id: sid,
+    });
+    ws.send({
+      type: 'tool_call.end',
+      value: {
+        id: 'c1',
+        name: 'click',
+        tool_input: {},
+        log: 'Invoking: `click`',
+        result: 'ok',
+      },
+      status_code: 200,
+      session_id: sid,
+    });
+
+    ws.send({
+      data: "The compose window hasn't appeared yet.",
+      session_id: sid,
+    });
+    await expect(body).toContainText("hasn't appeared yet", {
+      timeout: 10_000,
+    });
+
+    ws.send({
+      type: 'tool_call',
+      value: {
+        id: 'w1',
+        name: 'wait',
+        tool_input: {},
+        log: 'Invoking: `wait`',
+      },
+      status_code: 200,
+      session_id: sid,
+    });
+
+    ws.send({
+      data: 'The email has been sent successfully!',
+      session_id: sid,
+    });
+    await expect(body).toContainText('sent successfully', {
+      timeout: 10_000,
+    });
+
+    ws.send({ data: '', eos: true, session_id: sid });
+    await expect(chatPage.getWorkingIndicator(aiMessage)).toHaveCount(0);
+
+    // Neither tool-call boundary glued the next sentence onto the previous
+    // one — this is the exact regression from the bug report.
+    const text = (await body.innerText()).trim();
+    expect(text).not.toContain('com.The');
+    expect(text).not.toContain('yet.The');
+    expect(text).toMatch(/com\.\s+The/);
+    expect(text).toMatch(/yet\.\s+The/);
+
+    // The inserted "\n\n" is a real paragraph break, not just whitespace
+    // inside one paragraph: one per tool-call boundary crossed.
+    await expect(body.locator('p')).toHaveCount(3);
+
+    // The email autolinker must stop at the domain, not swallow the
+    // "\n\nThe" that now follows it into the mailto link.
+    const emailLink = body.getByRole('link', {
+      name: 'jaden@ibleducation.com',
+      exact: true,
+    });
+    await expect(emailLink).toBeVisible();
+    await expect(emailLink).toHaveAttribute(
+      'href',
+      /^mailto:jaden@ibleducation\.com$/,
+    );
+
+    // The tool-call chip counts unique tool names ("click", "wait"), not
+    // frames.
+    await expect(chatPage.getToolCallTrigger(aiMessage)).toContainText(
+      'Used 2 tools',
+    );
+  });
+
+  test('the same text chunks joined with no tool call between them concatenate byte-for-byte — the fix is scoped to tool-call boundaries only', async ({
+    page,
+    chatPage,
+  }) => {
+    const ws = await chatPage.mockChatWebSocket();
+    await gotoReadyChat(page, chatPage);
+    await chatPage.startNewChat();
+
+    const prompt = 'Give me a three-sentence status update, no tools needed.';
+    const sid = await sendAndCaptureSession(chatPage, ws, prompt);
+
+    ws.send({ generation_id: `e2e-gen-${Date.now()}`, session_id: sid });
+
+    const aiMessage = chatPage.getLastAiMessage();
+    const body = chatPage.getAiMessageBody(aiMessage);
+
+    // Same three chunks as the checkpoint above, but with no `tool_call`
+    // frame ever seen in between — `segmentBreakPending` is never set, so
+    // nothing should insert a break.
+    ws.send({
+      data: `I'll click "Compose" to start a new email to jaden@ibleducation.com.`,
+      session_id: sid,
+    });
+    ws.send({
+      data: "The compose window hasn't appeared yet.",
+      session_id: sid,
+    });
+    ws.send({
+      data: 'The email has been sent successfully!',
+      session_id: sid,
+    });
+    await expect(body).toContainText('sent successfully', {
+      timeout: 10_000,
+    });
+
+    ws.send({ data: '', eos: true, session_id: sid });
+
+    const text = (await body.innerText()).trim();
+    expect(text).toContain('com.The');
+    expect(text).toContain('yet.The');
+    await expect(body.locator('p')).toHaveCount(1);
   });
 });
