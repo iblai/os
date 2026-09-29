@@ -157,35 +157,6 @@
     "languageFrenchFrance": "French (France)",
     "languageSpanish": "Spanish (Español)"
   },
-  "apiTabApiKeyModal": {
-    "dialogTitle": "API Key",
-    "dialogDescription": "Copy and paste the API key.",
-    "securityWarning": "Please copy your API key and store it in a secure location. For security reasons, this key will only be displayed once and cannot be retrieved again after you leave this page.",
-    "lostKeyWarning": "If you lose your API key, you'll need to generate a new one."
-  },
-  "apiTabCreateApiModal": {
-    "apiKeyNameRequired": "API Key name is required",
-    "apiKeyNameInvalidChars": "can only contain letters, numbers, and hyphens",
-    "apiKeyCreatedSuccess": "API Key created successfully",
-    "apiKeyCreatedError": "Failed to create API Key",
-    "dialogDescriptionSrOnly": "Create API Key",
-    "dialogTitle": "Create API Key",
-    "apiKeyNameLabel": "API Key Name",
-    "apiKeyNamePlaceholder": "API Key Name",
-    "expirationDateLabel": "Expiration Date",
-    "pickADate": "Pick a date",
-    "submitting": "Submitting...",
-    "submit": "Submit"
-  },
-  "apiTabDeleteApiModal": {
-    "title": "Delete API Key",
-    "confirmationMessage": "Are you sure you want to delete the API Key with the name <bold>{name}</bold>? This action cannot be undone.",
-    "cancel": "Cancel",
-    "delete": "Delete",
-    "deleting": "Deleting...",
-    "deleteSuccess": "API Key deleted successfully",
-    "deleteError": "Failed to delete API Key"
-  },
   "appSidebarIndex": {
     "addAgentToProjectFirst": "Add an agent to this project first.",
     "projects": "Projects",
@@ -1693,22 +1664,6 @@
     "deleting": "Deleting...",
     "deleteSuccess": "Agent deleted successfully",
     "deleteError": "Failed to delete agent"
-  },
-  "tabsApiTab": {
-    "infoBox": "Use this agent from your own apps. Create API keys here to call it programmatically and build it into your product or workflow.",
-    "apiHeading": "API",
-    "manageApiKeysDescription": "Manage API keys and integrations.",
-    "secretKeysListedBelow": "Your secret API keys are listed below. Please note that we do not display your secret API keys again after you generate them.",
-    "doNotShareApiKey": "Do not share your API key with others, or expose it in the browser or other client-side code. In order to protect the security of your account, IBL may also automatically rotate any API key that we've found has leaked publicly.",
-    "columnName": "NAME",
-    "columnCreated": "CREATED",
-    "columnExpires": "EXPIRES",
-    "columnActions": "Actions",
-    "noApiKeysFound": "No API keys found",
-    "noPermissionToViewApiKeys": "You do not have permission to view API keys",
-    "notAvailable": "N/A",
-    "deleteApiKey": "Delete API Key",
-    "createNew": "Create New"
   },
   "tabsAuditLogTab": {
     "infoBox": "Keep a paper trail. Review the log of who changed what and when for this agent — handy for troubleshooting and staying compliant.",
