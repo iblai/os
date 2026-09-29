@@ -4,24 +4,24 @@
 
 ### Bug Fixes
 
-* **ext:** switch tenants via /login/complete so the target tenant is honored ([4ba13d4](https://github.com/iblai/os/commit/4ba13d4f3051c307aad30661ee9df65b72b5ff55))
+- **ext:** switch tenants via /login/complete so the target tenant is honored ([4ba13d4](https://github.com/iblai/os/commit/4ba13d4f3051c307aad30661ee9df65b72b5ff55))
 
 ## [0.158.1](https://github.com/iblai/os/compare/v0.158.0...v0.158.1) (2026-09-29)
 
 ### Refactors
 
-* **edit-mentor:** add a thin Disclaimers tab wrapper over the SDK AgentDisclaimersTab ([de49e1b](https://github.com/iblai/os/commit/de49e1bf5b51d07a2262d357f70286299b8d6b52))
-* **edit-mentor:** mount the SDK-backed Disclaimers tab and delete the in-repo monolith ([e65eabe](https://github.com/iblai/os/commit/e65eabed63ab984e9b5ef7067acd2c1a2673387a))
+- **edit-mentor:** add a thin Disclaimers tab wrapper over the SDK AgentDisclaimersTab ([de49e1b](https://github.com/iblai/os/commit/de49e1bf5b51d07a2262d357f70286299b8d6b52))
+- **edit-mentor:** mount the SDK-backed Disclaimers tab and delete the in-repo monolith ([e65eabe](https://github.com/iblai/os/commit/e65eabed63ab984e9b5ef7067acd2c1a2673387a))
 
 ### Chores
 
-* **deps:** bump @iblai/iblai-js to 2.21.0 ([b2c4ed2](https://github.com/iblai/os/commit/b2c4ed2487664f681ed69a52d21dfd60f33649a5)), closes [#2102](https://github.com/iblai/os/issues/2102)
-* **deps:** bump @iblai/iblai-js to 2.25.0 ([a6f48b5](https://github.com/iblai/os/commit/a6f48b589c138a632613ed35d88284ee33c6e5e3))
-* **edit-mentor:** retarget e2e coverage to the wrapper and drop unused disclaimer aria strings ([ff438d2](https://github.com/iblai/os/commit/ff438d20186af6fc7ebc0d283b472426033130aa))
+- **deps:** bump @iblai/iblai-js to 2.21.0 ([b2c4ed2](https://github.com/iblai/os/commit/b2c4ed2487664f681ed69a52d21dfd60f33649a5)), closes [#2102](https://github.com/iblai/os/issues/2102)
+- **deps:** bump @iblai/iblai-js to 2.25.0 ([a6f48b5](https://github.com/iblai/os/commit/a6f48b589c138a632613ed35d88284ee33c6e5e3))
+- **edit-mentor:** retarget e2e coverage to the wrapper and drop unused disclaimer aria strings ([ff438d2](https://github.com/iblai/os/commit/ff438d20186af6fc7ebc0d283b472426033130aa))
 
 ### Styles
 
-* format CHANGELOG.md with prettier ([4a3b0d1](https://github.com/iblai/os/commit/4a3b0d18c7de1708287beabf5016bf383115429e))
+- format CHANGELOG.md with prettier ([4a3b0d1](https://github.com/iblai/os/commit/4a3b0d18c7de1708287beabf5016bf383115429e))
 
 ## [0.158.0](https://github.com/iblai/os/compare/v0.157.0...v0.158.0) (2026-09-29)
 

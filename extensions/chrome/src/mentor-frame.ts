@@ -128,10 +128,18 @@ export function watchTenantSwitch(host: Element): () => void {
     if (!data?.tenantSwitch || !data.tenant || switching) return;
     switching = true;
     try {
+      // Capture the return path from the CURRENT chat URL *before* the auth
+      // round-trip. signIn() is async (seconds), and the app may navigate the
+      // iframe meanwhile — often to a /sso-login-complete URL, from which
+      // embedRedirectPath would strip everything to a bare "/". Landing on "/"
+      // drops the embed params, so the app resolves the wrong tenant/route and
+      // re-requests the switch (a redirect loop). Snapshotting here keeps the
+      // real embed params (embed/mode/component/…) on the post-switch redirect.
+      const redirectPath = embedRedirectPath(host);
       // The auth app issues the target tenant's tokens and returns them in the
       // redirect `data`, which signIn() stores in this page's localStorage.
       await signIn(data.tenant);
-      installSession(host, embedRedirectPath(host));
+      installSession(host, redirectPath);
     } catch (err) {
       console.warn('[ibl.ai panel] tenant switch failed:', err);
     } finally {

@@ -9,7 +9,12 @@ import {
   watchAndInstallSession,
   watchTenantSwitch,
 } from '../mentor-frame';
-import { SESSION, installChromeStub, type ChromeStub } from './chrome.stub';
+import {
+  SESSION,
+  installChromeStub,
+  sessionRedirect,
+  type ChromeStub,
+} from './chrome.stub';
 
 let chromeStub: ChromeStub;
 
@@ -115,6 +120,39 @@ describe('watchTenantSwitch', () => {
     await vi.waitFor(() => expect(iframe.src).toContain('/sso-login-complete'));
     const routed = new URL(iframe.src);
     // Lands on root (embed params preserved), not the old tenant's path.
+    expect(routed.searchParams.get('redirect-path')).toBe(
+      '/?embed=true&mode=anonymous',
+    );
+    stop();
+  });
+
+  it('captures the return path BEFORE auth, so a mid-flight navigation cannot degrade it to bare /', async () => {
+    const { host, iframe } = makeHost(
+      'https://os.ibl.ai/platform/acme/bot?embed=true&mode=anonymous',
+    );
+    // Simulate the app navigating the iframe to a /sso-login-complete URL while
+    // the auth round-trip is in flight (its query has only data/redirect-path/
+    // tenant — everything embedRedirectPath would strip to "/").
+    chromeStub.stub.identity.launchWebAuthFlow.mockImplementationOnce(
+      async () => {
+        iframe.setAttribute(
+          'src',
+          'https://os.ibl.ai/sso-login-complete?data=x&redirect-path=%2F&tenant=old',
+        );
+        return sessionRedirect(SESSION);
+      },
+    );
+    const stop = watchTenantSwitch(host);
+    window.dispatchEvent(
+      new MessageEvent('message', {
+        data: { tenantSwitch: true, tenant: 'beta' },
+      }),
+    );
+    await vi.waitFor(() =>
+      expect(iframe.src).toContain('redirect-path=%2F%3Fembed'),
+    );
+    const routed = new URL(iframe.src);
+    // The captured pre-auth embed params win, not the mid-flight bare "/".
     expect(routed.searchParams.get('redirect-path')).toBe(
       '/?embed=true&mode=anonymous',
     );
