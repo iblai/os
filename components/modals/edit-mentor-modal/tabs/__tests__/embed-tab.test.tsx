@@ -83,6 +83,23 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
     mockEditMentor,
     { isLoading: mockEditMentorLoading() },
   ],
+  // Only reached when a test swaps in the REAL useEmbedTab hook (#2592).
+  useGetMentorPublicSettingsQuery: () => ({ data: undefined }),
+  useCreateRedirectTokenMutation: () => [vi.fn(), { isLoading: false }],
+  useEditMentorJsonMutation: () => [vi.fn()],
+  mentorApiSlice: { util: { invalidateTags: vi.fn() } },
+}));
+
+vi.mock('@/features/auth/api-slice', () => ({
+  useGetIntegratedSsoProvidersQuery: () => ({ data: [], isError: false }),
+}));
+
+vi.mock('@/features/utils', () => ({
+  getUserName: () => 'testuser',
+}));
+
+vi.mock('@/lib/hooks', () => ({
+  useAppDispatch: () => vi.fn(),
 }));
 
 vi.mock('@iblai/iblai-js/web-utils', () => ({
@@ -1344,5 +1361,68 @@ describe('EmbedTab', () => {
     expect(
       screen.queryByText('Please specify a valid Website URL'),
     ).not.toBeInTheDocument();
+  });
+});
+
+// #2592: drive the REAL useEmbedTab hook so the switches reflect what the
+// settings GET returns, not a hand-built form. Pre-fix both were hardcoded off.
+describe('EmbedTab context-aware / open-by-default hydration (#2592)', () => {
+  beforeEach(async () => {
+    cleanup();
+    vi.clearAllMocks();
+    const { default: realUseEmbedTab } = await vi.importActual<
+      typeof import('../../hooks/useEmbedTab')
+    >('../../hooks/useEmbedTab');
+    mockUseEmbedTab.mockImplementation(realUseEmbedTab);
+
+    mockUseParams.mockReturnValue({
+      tenantKey: 'test-tenant',
+      mentorId: 'test-mentor',
+    });
+    mockGetMentorId.mockReturnValue(null);
+    mockUseGetShareableLinkQuery.mockReturnValue({ data: undefined });
+    mockEditMentorLoading.mockReturnValue(false);
+    mockUseTenantMetadata.mockReturnValue({ metadata: undefined });
+    mockSupportEmail.mockReturnValue('support@ibl.ai');
+  });
+
+  afterEach(() => {
+    cleanup();
+  });
+
+  it('renders both switches checked when the saved settings are true', () => {
+    mockGetMentorSettingsQuery.mockReturnValue({
+      data: {
+        ...defaultMentorSettings,
+        embed_is_context_aware: true,
+        embed_open_by_default: true,
+      },
+      isLoading: false,
+    });
+
+    render(<EmbedTab />);
+
+    expect(
+      screen.getByRole('checkbox', { name: 'Context awareness enabled' }),
+    ).toBeChecked();
+    expect(
+      screen.getByRole('checkbox', { name: 'Open by default enabled' }),
+    ).toBeChecked();
+  });
+
+  it('renders both switches unchecked when the saved settings lack them', () => {
+    mockGetMentorSettingsQuery.mockReturnValue({
+      data: defaultMentorSettings,
+      isLoading: false,
+    });
+
+    render(<EmbedTab />);
+
+    expect(
+      screen.getByRole('checkbox', { name: 'Context awareness disabled' }),
+    ).not.toBeChecked();
+    expect(
+      screen.getByRole('checkbox', { name: 'Open by default disabled' }),
+    ).not.toBeChecked();
   });
 });
