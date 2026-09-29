@@ -199,6 +199,45 @@ pub async fn get_opencode_permission_mode() -> Result<Option<String>, String> {
     Ok(saved_permission_mode())
 }
 
+/// Every live session of one backend — the targets of a setting pushed mid-session.
+async fn live_sessions(backend: Backend) -> Vec<Arc<Session>> {
+    registry()
+        .lock()
+        .await
+        .values()
+        .filter(|s| s.backend == backend)
+        .cloned()
+        .collect()
+}
+
+/// Apply a session config option (the `model`) to every live session of the
+/// backend, so a pick in the top-left reaches a running chat without a
+/// respawn and with its conversation intact. The first refusal is the error
+/// — the caller must not save what a live session rejected.
+pub(crate) async fn push_config_option(
+    backend: Backend,
+    config_id: &str,
+    value: String,
+) -> Result<(), String> {
+    let name = crate::code_agent_installer::display_name(backend);
+    for s in live_sessions(backend).await {
+        let req = s.request(
+            "session/set_config_option",
+            json!({ "sessionId": s.acp_session_id, "configId": config_id, "value": value }),
+        );
+        match tokio::time::timeout(Duration::from_secs(10), req).await {
+            Ok(Ok(_)) => {}
+            Ok(Err(e)) => return Err(format!("{name} refused {config_id} = {value}: {e}")),
+            Err(_) => {
+                return Err(format!(
+                    "{name} did not answer the {config_id} change within 10s."
+                ))
+            }
+        }
+    }
+    Ok(())
+}
+
 /// Record the approval mode and apply it to running sessions immediately.
 #[command]
 pub async fn set_opencode_permission_mode(mode: String) -> Result<(), String> {
@@ -215,6 +254,23 @@ pub async fn set_opencode_permission_mode(mode: String) -> Result<(), String> {
     permission_auto().store(auto, Ordering::SeqCst);
     if auto {
         allow_all_pending().await;
+    }
+    // Codex carries its own approval mode (see `codex_mode`): repoint every live
+    // Codex session so the flip applies mid-session. opencode and Claude need
+    // nothing — they are governed by how this app answers their requests.
+    for s in live_sessions(Backend::Codex).await {
+        let mode = codex_mode(auto);
+        tokio::spawn(async move {
+            let req = s.request(
+                "session/set_mode",
+                json!({ "sessionId": s.acp_session_id, "modeId": mode }),
+            );
+            match tokio::time::timeout(Duration::from_secs(10), req).await {
+                Ok(Ok(_)) => {}
+                Ok(Err(e)) => eprintln!("[code-agent] session/set_mode {mode} failed: {e}"),
+                Err(_) => eprintln!("[code-agent] session/set_mode {mode} timed out"),
+            }
+        });
     }
     Ok(())
 }
@@ -282,6 +338,9 @@ struct Session {
     /// The compat model id this process was spawned for (e.g. "openai/gpt-5.5"); a
     /// change means the mentor's LLM switched → respawn with the new model.
     requested_model: Option<String>,
+    /// Which agent this process runs: opencode, Codex or Claude Code. Fixed at
+    /// spawn — switching agents changes `requested_model`, which respawns.
+    backend: Backend,
     /// Throwaway key this session uses against the loopback model proxy (cloud only).
     /// The real DM token lives in the proxy, keyed by this.
     proxy_secret: Option<String>,
@@ -307,6 +366,10 @@ struct Session {
 /// crash-retry keys on these, so they live as consts the check can't drift from.
 const CHILD_GONE: &str = "opencode closed before responding";
 const CHILD_WRITE_FAILED: &str = "failed writing to opencode";
+/// Prefix of the error a signed-out subscription agent produces (ACP
+/// `authRequired`, JSON-RPC `-32000`). Disjoint from the two crash prefixes on
+/// purpose: `should_retry` must never respawn a process for it.
+const AUTH_REQUIRED: &str = "agent sign-in required";
 
 impl Session {
     fn new_id(&self) -> i64 {
@@ -322,7 +385,7 @@ impl Session {
         write_line(&self.stdin, &msg).await?;
         let resp = rx.await.map_err(|_| format!("{CHILD_GONE} to {method}"))?;
         if let Some(err) = resp.get("error") {
-            return Err(format!("opencode error on {method}: {err}"));
+            return Err(rpc_error(method, err));
         }
         Ok(resp.get("result").cloned().unwrap_or(Value::Null))
     }
@@ -345,6 +408,72 @@ async fn write_line(stdin: &Arc<Mutex<ChildStdin>>, msg: &Value) -> Result<(), S
         .await
         .map_err(|e| format!("{CHILD_WRITE_FAILED}: {e}"))?;
     guard.flush().await.map_err(|e| e.to_string())
+}
+
+/// The error text for a JSON-RPC error response. ACP's `authRequired`
+/// (`-32000`) gets the [`AUTH_REQUIRED`] prefix so the turn can name the fix
+/// instead of echoing the adapter; every other code keeps the historical text.
+fn rpc_error(method: &str, err: &Value) -> String {
+    if err.get("code").and_then(|c| c.as_i64()) == Some(-32000) {
+        format!("{AUTH_REQUIRED} ({method}): {err}")
+    } else {
+        format!("opencode error on {method}: {err}")
+    }
+}
+
+/// The one-sentence hint for a sign-in failure on a subscription agent —
+/// `None` for opencode (it never authenticates) and for every other error.
+fn auth_hint(backend: Backend, err: &str) -> Option<&'static str> {
+    (backend != Backend::Opencode && err.starts_with(AUTH_REQUIRED)).then(|| backend.sign_in_hint())
+}
+
+/// Announce a signed-out agent (`opencode:auth_required`) and return its hint
+/// as the error text; any other error passes through untouched. Emitted
+/// BEFORE the caller's `ollama:error` — the frontend's generic error toast
+/// stays quiet only if the sign-in toast was raised first.
+fn surface_auth(app: &AppHandle, generation_id: &str, backend: Backend, err: String) -> String {
+    match auth_hint(backend, &err) {
+        Some(hint) => {
+            let _ = app.emit(
+                "opencode:auth_required",
+                json!({ "generation_id": generation_id, "backend": backend.id() }),
+            );
+            hint.to_string()
+        }
+        None => err,
+    }
+}
+
+/// Inherited environment the agents must never see: provider credentials and
+/// routing (`ANTHROPIC_API_KEY`, `CLAUDE_CODE_OAUTH_TOKEN`, `OPENAI_API_KEY`,
+/// `CODEX_API_KEY`, `ANTHROPIC_BASE_URL`, Bedrock/Vertex switches), the
+/// config-dir and binary overrides (`CLAUDE_CONFIG_DIR`, `CODEX_HOME`,
+/// `CODEX_PATH`, `CLAUDE_CODE_EXECUTABLE` — the sandbox binds `~/.claude` and
+/// `~/.codex`, so the adapters must agree on those paths), the adapters' own
+/// knobs, and `CLAUDECODE` (a dev build launched from a Claude Code terminal
+/// would otherwise trip the nested-session guard).
+const STRIPPED_ENV_PREFIXES: &[&str] = &["ANTHROPIC_", "CLAUDE_", "OPENAI_", "CODEX_"];
+const STRIPPED_ENV_NAMES: &[&str] = &["CLAUDECODE", "MODEL_PROVIDER", "DEFAULT_AUTH_REQUEST"];
+
+/// The subset of `keys` [`strip_agent_env`] removes — pure, so the test can
+/// feed it a fixed list.
+fn stripped_env(keys: impl Iterator<Item = std::ffi::OsString>) -> Vec<std::ffi::OsString> {
+    keys.filter(|k| {
+        let k = k.to_string_lossy();
+        STRIPPED_ENV_PREFIXES.iter().any(|p| k.starts_with(p))
+            || STRIPPED_ENV_NAMES.contains(&k.as_ref())
+    })
+    .collect()
+}
+
+/// Remove every inherited provider credential/routing variable from a child's
+/// environment. A remove list, not `env_clear`: the agents' shells need the
+/// desktop environment (DISPLAY/DBUS for the browser, locale, proxies, SSL
+/// bundles). Call it BEFORE the caller's own `env()`s — a later `env` wins.
+pub(crate) fn strip_agent_env(cmd: &mut Command) {
+    for key in stripped_env(std::env::vars_os().map(|(k, _)| k)) {
+        cmd.env_remove(key);
+    }
 }
 
 /// Build a tokio Command with a hidden console window on Windows.
@@ -592,6 +721,7 @@ const SECRET_DIRS: &[&str] = &[
     ".kube",
     ".docker",
     ".claude",
+    ".codex",
     ".config/gh",
     ".config/gcloud",
     ".config/op",
@@ -635,6 +765,7 @@ fn bwrap_args(
     workspace: &Path,
     config_home: &Path,
     tmpdir: Option<&Path>,
+    backend: Backend,
 ) -> Vec<String> {
     let mut args: Vec<String> = vec![
         "--ro-bind".into(),
@@ -668,17 +799,30 @@ fn bwrap_args(
             rw_targets.push(p);
         }
     }
+    // The agent's own login/state dir (`~/.codex`, `~/.claude`): read-write
+    // for THIS backend only — credential refresh and the transcripts that
+    // `session/load` reads back live there. Every other backend gets the
+    // usual mask below.
+    for rel in backend.own() {
+        rw_targets.push(home.join(rel));
+    }
     for target in &rw_targets {
         let p = target.to_string_lossy().into_owned();
         args.extend(["--bind-try".into(), p.clone(), p]);
     }
     for rel in SECRET_DIRS.iter().chain(SECRET_DIRS_LINUX) {
+        if backend.own().contains(rel) {
+            continue;
+        }
         let p = home.join(rel);
         if p.is_dir() {
             args.extend(["--tmpfs".into(), p.to_string_lossy().into_owned()]);
         }
     }
     for rel in SECRET_FILES {
+        if backend.visible().contains(rel) {
+            continue;
+        }
         let p = home.join(rel);
         if p.is_file() {
             args.extend([
@@ -687,6 +831,13 @@ fn bwrap_args(
                 p.to_string_lossy().into_owned(),
             ]);
         }
+    }
+    // The agent's CLI config, frozen read-only on top of its rw dir (see
+    // `Backend::frozen`). `--ro-bind-try` skips a missing source rather than
+    // creating a mount point for it, so this covers only what exists.
+    for rel in backend.frozen() {
+        let p = home.join(rel).to_string_lossy().into_owned();
+        args.extend(["--ro-bind-try".into(), p.clone(), p]);
     }
     // Killing the bwrap monitor (what `start_kill` hits) takes the sandboxed
     // opencode down with it, and both die if the app does.
@@ -737,7 +888,12 @@ fn sbpl_quote(p: &Path) -> String {
 /// the decoy `$HOME`: a toolchain the user doesn't have isn't symlinked in, so
 /// creating it lands in the throwaway decoy rather than the real home.
 #[cfg_attr(not(target_os = "macos"), allow(dead_code))]
-fn sandbox_profile_macos(home: &Path, workspace: &Path, config_home: &Path) -> String {
+fn sandbox_profile_macos(
+    home: &Path,
+    workspace: &Path,
+    config_home: &Path,
+    backend: Backend,
+) -> String {
     let mut p = String::from(
         "(version 1)\n(allow default)\n(deny file-write* (subpath \"/\"))\n(allow file-write*",
     );
@@ -763,6 +919,10 @@ fn sandbox_profile_macos(home: &Path, workspace: &Path, config_home: &Path) -> S
         .chain(WRITE_DIRS_CORE_MACOS)
         .chain(WRITE_DIRS_TOOLCHAIN)
         .chain(WRITE_DIRS_TOOLCHAIN_MACOS)
+        // This backend's own login dir, plus the Keychain both subscription
+        // agents may keep their login in (see `Backend::own_macos`).
+        .chain(backend.own())
+        .chain(backend.own_macos())
     {
         p.push_str("\n  (subpath ");
         p.push_str(&sbpl_quote(&home.join(rel)));
@@ -770,16 +930,34 @@ fn sandbox_profile_macos(home: &Path, workspace: &Path, config_home: &Path) -> S
     }
     p.push_str(")\n(deny file*");
     for rel in SECRET_DIRS.iter().chain(SECRET_DIRS_MACOS) {
+        if backend.own().contains(rel) || backend.own_macos().contains(rel) {
+            continue;
+        }
         p.push_str("\n  (subpath ");
         p.push_str(&sbpl_quote(&home.join(rel)));
         p.push(')');
     }
     for rel in SECRET_FILES {
+        if backend.visible().contains(rel) {
+            continue;
+        }
         p.push_str("\n  (literal ");
         p.push_str(&sbpl_quote(&home.join(rel)));
         p.push(')');
     }
     p.push_str(")\n");
+    // Last, so it wins over the allow above: the agent's CLI config stays
+    // read-only inside its otherwise writable login dir (`Backend::frozen`).
+    // Unlike the bwrap binds this also covers paths that don't exist yet.
+    if !backend.frozen().is_empty() {
+        p.push_str("(deny file-write*");
+        for rel in backend.frozen() {
+            p.push_str("\n  (subpath ");
+            p.push_str(&sbpl_quote(&home.join(rel)));
+            p.push(')');
+        }
+        p.push_str(")\n");
+    }
     p
 }
 
@@ -793,16 +971,23 @@ fn sandbox_profile_macos(home: &Path, workspace: &Path, config_home: &Path) -> S
 /// the existing close-time `remove_dir_all` cleans it up.
 #[cfg(unix)]
 #[cfg_attr(not(target_os = "macos"), allow(dead_code))]
-fn build_decoy_home(real_home: &Path, decoy: &Path) -> Result<(), String> {
+fn build_decoy_home(real_home: &Path, decoy: &Path, backend: Backend) -> Result<(), String> {
     // Rebuild from scratch on respawn (`remove_dir_all` deletes symlinks,
     // never their targets).
     let _ = std::fs::remove_dir_all(decoy);
+    // The backend's own login dir and state file are linked, not faked: the
+    // agent has to find its credentials and transcripts through the decoy.
     let secret_dirs: Vec<PathBuf> = SECRET_DIRS
         .iter()
         .chain(SECRET_DIRS_MACOS)
+        .filter(|rel| !backend.own().contains(rel) && !backend.own_macos().contains(rel))
         .map(PathBuf::from)
         .collect();
-    let secret_files: Vec<PathBuf> = SECRET_FILES.iter().map(PathBuf::from).collect();
+    let secret_files: Vec<PathBuf> = SECRET_FILES
+        .iter()
+        .filter(|rel| !backend.visible().contains(rel))
+        .map(PathBuf::from)
+        .collect();
     populate_decoy(real_home, decoy, Path::new(""), &secret_dirs, &secret_files)
 }
 
@@ -861,10 +1046,15 @@ pub fn sandbox_ready() -> bool {
     true
 }
 
-/// The sandboxed Command for a session's opencode spawn: the wrapper program
-/// plus its sandbox argv, ending with the opencode program name. The caller
-/// layers the ACP args, cwd, env and stdio on top unchanged.
-fn sandboxed_opencode_command(_session_id: &str, workspace: &Path) -> Result<Command, String> {
+/// The sandboxed Command for a session's agent spawn: the wrapper program plus
+/// its sandbox argv for `backend`, ending where the agent program goes. The
+/// caller appends the program and its args, then layers cwd, env and stdio on
+/// top.
+fn sandboxed_command(
+    _session_id: &str,
+    workspace: &Path,
+    backend: Backend,
+) -> Result<Command, String> {
     #[cfg(target_os = "linux")]
     {
         let home = home_dir().unwrap_or_default();
@@ -876,8 +1066,8 @@ fn sandboxed_opencode_command(_session_id: &str, workspace: &Path) -> Result<Com
             workspace,
             &config_home(_session_id),
             tmpdir.as_deref(),
+            backend,
         ));
-        cmd.arg(opencode_program());
         return Ok(cmd);
     }
     #[cfg(target_os = "macos")]
@@ -886,13 +1076,12 @@ fn sandboxed_opencode_command(_session_id: &str, workspace: &Path) -> Result<Com
         ensure_write_dirs(&home);
         // Named so `echo $HOME` doesn't give the game away.
         let fake_home = config_home(_session_id).join("code-mode-home");
-        build_decoy_home(&home, &fake_home)?;
+        build_decoy_home(&home, &fake_home, backend)?;
         let mut cmd = create_command("/usr/bin/sandbox-exec");
         cmd.args([
             "-p",
-            &sandbox_profile_macos(&home, workspace, &config_home(_session_id)),
+            &sandbox_profile_macos(&home, workspace, &config_home(_session_id), backend),
         ]);
-        cmd.arg(opencode_program());
         // The fake layer: $HOME-respecting tools see the fake home; the SBPL
         // denies above catch anything that resolves the real one.
         cmd.env("HOME", fake_home);
@@ -900,7 +1089,7 @@ fn sandboxed_opencode_command(_session_id: &str, workspace: &Path) -> Result<Com
     }
     #[cfg(target_os = "windows")]
     {
-        let _ = workspace;
+        let _ = (workspace, backend);
         Err("Code isn't available on Windows.".to_string())
     }
 }
@@ -1546,6 +1735,82 @@ fn apply_skills_config(
     }
 }
 
+/// Subdir of `config_home(session)` holding the per-spawn skills view the
+/// subscription agents read (see [`link_skills`]).
+const AGENT_SKILLS_DIR: &str = "agent-skills";
+
+/// Immediate subdirectories of `dir`, sorted, hidden entries skipped; empty
+/// when `dir` is missing.
+fn sorted_dirs(dir: &Path) -> Vec<PathBuf> {
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return Vec::new();
+    };
+    let mut out: Vec<PathBuf> = entries
+        .flatten()
+        .map(|e| e.path())
+        .filter(|p| {
+            p.is_dir()
+                && p.file_name()
+                    .map(|n| !n.to_string_lossy().starts_with('.'))
+                    .unwrap_or(false)
+        })
+        .collect();
+    out.sort();
+    out
+}
+
+/// Build the flattened skills view Codex and Claude read: `dest/<name>` → a
+/// symlink to every directory holding a `SKILL.md` within two levels of the
+/// vibe checkout (`<family>/<name>`, or a family that is itself a skill) and
+/// one level of the mentor staging. Mentor last, so an assigned skill wins a
+/// name clash — the same last-wins rule `apply_skills_config` relies on for
+/// opencode. Rebuilt from scratch on every spawn: `dest` lives under
+/// `config_home`, which teardown deletes (links only, never their targets).
+/// Missing roots contribute nothing rather than failing — no skills is a
+/// valid session. Returns how many skills the view holds.
+fn link_skills(dest: &Path, vibe_dir: &Path, mentor_dir: Option<&Path>) -> Result<usize, String> {
+    #[cfg(not(unix))]
+    {
+        let _ = (dest, vibe_dir, mentor_dir);
+        Err("Code isn't available on Windows.".to_string())
+    }
+    #[cfg(unix)]
+    {
+        let _ = std::fs::remove_dir_all(dest);
+        std::fs::create_dir_all(dest).map_err(|e| format!("skills view failed: {e}"))?;
+        let mut sources: Vec<PathBuf> = Vec::new();
+        for family in sorted_dirs(vibe_dir) {
+            if family.join("SKILL.md").is_file() {
+                sources.push(family);
+                continue;
+            }
+            for skill in sorted_dirs(&family) {
+                if skill.join("SKILL.md").is_file() {
+                    sources.push(skill);
+                }
+            }
+        }
+        if let Some(mentor) = mentor_dir {
+            for skill in sorted_dirs(mentor) {
+                if skill.join("SKILL.md").is_file() {
+                    sources.push(skill);
+                }
+            }
+        }
+        for src in sources {
+            let Some(name) = src.file_name() else {
+                continue;
+            };
+            let link = dest.join(name);
+            // A later source (the mentor's) replaces an earlier link of the same name.
+            let _ = std::fs::remove_file(&link);
+            std::os::unix::fs::symlink(&src, &link)
+                .map_err(|e| format!("skills view link failed ({}): {e}", link.display()))?;
+        }
+        Ok(std::fs::read_dir(dest).map(|r| r.count()).unwrap_or(0))
+    }
+}
+
 /// Write (or clear) the per-session ibl.ai guidance as the global-scope
 /// AGENTS.md beside the session's opencode.json. opencode checks
 /// `$XDG_CONFIG_HOME/opencode/AGENTS.md` for existence on every model call
@@ -1649,20 +1914,31 @@ fn prompt_with_history(messages: &[Value], latest: &str) -> String {
     )
 }
 
-/// Pick the option id of the first option whose ACP `kind` starts with `prefix`
-/// ("allow" / "reject").
-fn option_id(options: &Value, prefix: &str) -> Option<String> {
-    options
-        .as_array()?
-        .iter()
-        .find(|o| {
-            o.get("kind")
-                .and_then(|k| k.as_str())
-                .map(|k| k.starts_with(prefix))
-                .unwrap_or(false)
+/// The option id to answer a `session/request_permission` with: the option of
+/// exactly `kind` (`allow_once` / `reject_once`), else the first whose kind
+/// starts with `fallback_prefix` (opencode's shapes resolve identically either
+/// way). Exact first because the agents order their options freely: Codex lists
+/// `reject_always` ("block this host in future") BEFORE `decline`, so a prefix
+/// pick would store a permanent block on every Deny or timeout, and Claude's
+/// ExitPlanMode puts `allow_always` mode switches beside the plain `allow_once`.
+fn pick_option(options: &Value, kind: &str, fallback_prefix: &str) -> Option<String> {
+    fn kind_of(o: &Value) -> &str {
+        o.get("kind").and_then(|k| k.as_str()).unwrap_or("")
+    }
+    fn id_of(o: &Value) -> Option<String> {
+        o.get("optionId")
+            .and_then(|x| x.as_str())
+            .map(|s| s.to_string())
+    }
+    let list = options.as_array()?;
+    list.iter()
+        .find(|o| kind_of(o) == kind)
+        .and_then(id_of)
+        .or_else(|| {
+            list.iter()
+                .find(|o| kind_of(o).starts_with(fallback_prefix))
+                .and_then(id_of)
         })
-        .and_then(|o| o.get("optionId").and_then(|x| x.as_str()))
-        .map(|s| s.to_string())
 }
 
 /// The JSON-RPC result answering a `session/request_permission`.
@@ -1710,8 +1986,8 @@ async fn handle_permission_request(
 ) {
     let tool_call = params.get("toolCall").cloned().unwrap_or(Value::Null);
     let options = params.get("options").cloned().unwrap_or(Value::Null);
-    let allow = option_id(&options, "allow");
-    let reject = option_id(&options, "reject");
+    let allow = pick_option(&options, "allow_once", "allow");
+    let reject = pick_option(&options, "reject_once", "reject");
 
     // Auto mode answers without involving the user at all. A request that
     // somehow offers no allow option falls through to a card rather than being
@@ -1772,6 +2048,22 @@ async fn handle_permission_request(
     });
 }
 
+/// Deliver a JSON-RPC response to the request waiting on it. `true` when `v`
+/// was a response at all (matched or stale), so the caller skips the
+/// request/notification arms. Separate from the loop so the scripted-agent
+/// tests can drive a `Session` without a reader task.
+async fn route_response(pending: &Mutex<HashMap<i64, oneshot::Sender<Value>>>, v: &Value) -> bool {
+    if v.get("id").is_none() || (v.get("result").is_none() && v.get("error").is_none()) {
+        return false;
+    }
+    if let Some(id) = v.get("id").and_then(|i| i.as_i64()) {
+        if let Some(tx) = pending.lock().await.remove(&id) {
+            let _ = tx.send(v.clone());
+        }
+    }
+    true
+}
+
 /// Reader loop: routes agent responses to `pending`, prompts the user on permission
 /// requests, and translates `session/update` notifications into Tauri events.
 async fn reader_loop(
@@ -1793,12 +2085,7 @@ async fn reader_loop(
         };
 
         // Response to one of our requests.
-        if v.get("id").is_some() && (v.get("result").is_some() || v.get("error").is_some()) {
-            if let Some(id) = v.get("id").and_then(|i| i.as_i64()) {
-                if let Some(tx) = pending.lock().await.remove(&id) {
-                    let _ = tx.send(v);
-                }
-            }
+        if route_response(&pending, &v).await {
             continue;
         }
 
@@ -1934,6 +2221,124 @@ async fn handle_update(app: &AppHandle, v: &Value, turn: &Arc<Mutex<TurnState>>)
             );
         }
         _ => {}
+    }
+}
+
+/// Which agent a Code session runs on, picked by the model string the frontend
+/// writes into `ibl_coding_mode_model`: exactly `codex/default` or
+/// `claude/default` select the subscription agents; anything else — every
+/// ibl.ai compat id, `ollama/…`, `foundry/…` — is opencode as before. Exact
+/// strings, not a prefix: a platform provider could legitimately be named
+/// `claude`, and a mis-route would silently bill the wrong account.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub(crate) enum Backend {
+    Opencode,
+    Codex,
+    Claude,
+}
+
+impl Backend {
+    pub(crate) fn of(model: &str) -> Self {
+        match model {
+            "codex/default" => Backend::Codex,
+            "claude/default" => Backend::Claude,
+            _ => Backend::Opencode,
+        }
+    }
+
+    /// The agents a `backend` command argument may name. opencode is not one:
+    /// it has its own install and status commands.
+    pub(crate) fn agent(name: &str) -> Result<Self, String> {
+        match name {
+            "codex" => Ok(Backend::Codex),
+            "claude" => Ok(Backend::Claude),
+            other => Err(format!("unknown code agent: {other}")),
+        }
+    }
+
+    pub(crate) fn id(self) -> &'static str {
+        match self {
+            Backend::Opencode => "opencode",
+            Backend::Codex => "codex",
+            Backend::Claude => "claude",
+        }
+    }
+
+    /// Where each agent looks for skills inside an additional directory.
+    fn skills_subdir(self) -> &'static str {
+        match self {
+            Backend::Opencode => "",
+            Backend::Codex => ".agents/skills",
+            Backend::Claude => ".claude/skills",
+        }
+    }
+
+    /// The one-sentence error a signed-out turn surfaces.
+    pub(crate) fn sign_in_hint(self) -> &'static str {
+        match self {
+            Backend::Opencode => "",
+            Backend::Codex => {
+                "Codex isn't signed in — use Sign in with ChatGPT in the Code menu, then send again."
+            }
+            Backend::Claude => {
+                "Claude Code isn't signed in — run `claude` in a terminal and sign in with /login, then send again."
+            }
+        }
+    }
+
+    /// The agent's own login/state dir under `$HOME`, bound read-write for
+    /// this backend only (credential refresh, transcripts for `session/load`).
+    fn own(self) -> &'static [&'static str] {
+        match self {
+            Backend::Opencode => &[],
+            Backend::Codex => &[".codex"],
+            Backend::Claude => &[".claude"],
+        }
+    }
+
+    /// macOS: both subscription agents may keep their login in the Keychain.
+    fn own_macos(self) -> &'static [&'static str] {
+        match self {
+            Backend::Opencode => &[],
+            _ => &["Library/Keychains"],
+        }
+    }
+
+    /// Secret files this backend must READ (left unmasked) but never write
+    /// from inside: `~/.claude.json` holds the Claude CLI's state.
+    fn visible(self) -> &'static [&'static str] {
+        match self {
+            Backend::Claude => &[".claude.json"],
+            _ => &[],
+        }
+    }
+
+    /// CLI config the user's next UNSANDBOXED run of the same tool executes
+    /// or obeys — hooks, MCP servers, instructions, skills. Re-bound
+    /// read-only after the rw bind, so an agent cannot plant anything for
+    /// that run (the reasoning behind keeping `~/.local/bin` read-only).
+    fn frozen(self) -> &'static [&'static str] {
+        match self {
+            Backend::Opencode => &[],
+            Backend::Codex => &[
+                ".codex/config.toml",
+                ".codex/.env",
+                ".codex/AGENTS.md",
+                ".codex/rules",
+                ".codex/skills",
+                ".codex/prompts",
+            ],
+            Backend::Claude => &[
+                ".claude.json",
+                ".claude/settings.json",
+                ".claude/CLAUDE.md",
+                ".claude/commands",
+                ".claude/agents",
+                ".claude/skills",
+                ".claude/plugins",
+                ".claude/hooks",
+            ],
+        }
     }
 }
 
@@ -2133,6 +2538,253 @@ pub(crate) fn apply_opencode_model(
     std::fs::write(&path, out).map_err(|e| format!("failed writing opencode config: {e}"))
 }
 
+/// Codex's own approval mode for the OS setting. Ask Me → `read-only`: Codex's
+/// sandbox blocks every write and network command, so each becomes an
+/// escalation request the card can show — the closest match to opencode's
+/// ask-everything policy. Automatic → `agent-full-access`: no Codex sandbox
+/// and no requests; the OS sandbox is the boundary, exactly as for opencode.
+fn codex_mode(auto: bool) -> &'static str {
+    if auto {
+        "agent-full-access"
+    } else {
+        "read-only"
+    }
+}
+
+/// The ACP mode pinned right after `session/new` / `session/load`, or `None`
+/// (opencode has no modes). Claude otherwise starts in the user's own
+/// `permissions.defaultMode`; the OS approval toggle must be the only policy.
+fn session_mode(backend: Backend, auto: bool) -> Option<&'static str> {
+    match backend {
+        Backend::Opencode => None,
+        Backend::Codex => Some(codex_mode(auto)),
+        Backend::Claude => Some("default"),
+    }
+}
+
+/// Everything that differs between the agents at spawn time, as data so the
+/// tests can pin it without a process: program and argv, the env this backend
+/// needs on top of the shared `IBLAI_*` set, and the `session/new` params
+/// (which `session/load` reuses with a `sessionId`).
+struct AgentLaunch {
+    program: PathBuf,
+    args: Vec<String>,
+    env: Vec<(&'static str, String)>,
+    session: Value,
+}
+
+/// Stdio, PATH and the launch's own env for an agent process — shared by a
+/// chat session and a model probe. No provider credential or routing
+/// override reaches any agent; then this backend's own env on top.
+fn wire_agent_command(cmd: &mut Command, launch: &AgentLaunch, workspace: &Path, backend: Backend) {
+    cmd.arg(&launch.program)
+        .args(&launch.args)
+        .current_dir(workspace)
+        .stdin(std::process::Stdio::piped())
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
+        .kill_on_drop(true);
+    strip_agent_env(cmd);
+    let path = if backend == Backend::Opencode {
+        augmented_path()
+    } else {
+        crate::code_agent_installer::agent_path()
+    };
+    cmd.env("PATH", path);
+    for (key, value) in &launch.env {
+        cmd.env(key, value);
+    }
+}
+
+/// How long a model probe may take: the adapters spawn the vendor binary and
+/// ask it for its models (Claude's takes a few seconds).
+const PROBE_TIMEOUT: Duration = Duration::from_secs(30);
+
+/// A short session against the agent just to read its `configOptions` — the
+/// way to list models before any chat has run one (ACP lists them per session
+/// only). Same launch, sandbox and login checks as a chat session, a scratch
+/// workspace under the agent's own data dir instead of a chat's (never /tmp,
+/// which the sandbox masks), no guidance, no skills; the process is killed
+/// right after the handshake. The workspace path is FIXED per agent: the
+/// agents index sessions by cwd (`~/.claude/projects/<encoded cwd>`), so a
+/// fresh path per probe would leave one entry per probe behind. One probe at
+/// a time per process, so a cleanup never pulls the workspace from under
+/// another probe.
+pub(crate) async fn probe_config_options(backend: Backend) -> Result<Value, String> {
+    if backend == Backend::Opencode {
+        return Err("opencode has no agent model list.".to_string());
+    }
+    crate::code_agent_installer::agent_ready(backend)?;
+    let home = home_dir().unwrap_or_default();
+    if !backend.own().iter().any(|rel| home.join(rel).is_dir()) {
+        return Err(format!("{AUTH_REQUIRED}: {}", backend.sign_in_hint()));
+    }
+    static PROBE: OnceLock<Mutex<()>> = OnceLock::new();
+    let _one_at_a_time = PROBE.get_or_init(|| Mutex::new(())).lock().await;
+    let nonce = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_nanos())
+        .unwrap_or(0);
+    let key = format!("probe-{}-{}-{nonce}", backend.id(), std::process::id());
+    let scratch = iblai_data_dir()
+        .join("acp")
+        .join(backend.id())
+        .join("probe");
+    let ws = scratch.join("ws");
+    let skills = scratch.join("skills");
+    let cfg = config_home(&key);
+    for d in [&ws, &skills, &cfg] {
+        std::fs::create_dir_all(d).map_err(|e| format!("probe dir failed: {e}"))?;
+    }
+    let result = tokio::time::timeout(PROBE_TIMEOUT, probe_in(backend, &key, &ws, &skills, &cfg))
+        .await
+        .unwrap_or_else(|_| {
+            Err(format!(
+                "{} did not answer within {}s.",
+                crate::code_agent_installer::display_name(backend),
+                PROBE_TIMEOUT.as_secs()
+            ))
+        });
+    let _ = std::fs::remove_dir_all(&scratch);
+    let _ = std::fs::remove_dir_all(&cfg);
+    result
+}
+
+async fn probe_in(
+    backend: Backend,
+    key: &str,
+    ws: &Path,
+    skills: &Path,
+    cfg: &Path,
+) -> Result<Value, String> {
+    let launch = agent_launch(backend, ws, skills, cfg, "", false);
+    let mut cmd = sandboxed_command(key, ws, backend)?;
+    wire_agent_command(&mut cmd, &launch, ws, backend);
+    let mut child = cmd
+        .spawn()
+        .map_err(|e| format!("failed to launch the {} agent: {e}", backend.id()))?;
+    let stdin = Arc::new(Mutex::new(child.stdin.take().ok_or("no stdin")?));
+    let stdout = child.stdout.take().ok_or("no stdout")?;
+    if let Some(stderr) = child.stderr.take() {
+        let tag = backend.id();
+        tokio::spawn(async move {
+            let mut lines = BufReader::new(stderr).lines();
+            while let Ok(Some(l)) = lines.next_line().await {
+                eprintln!("[{tag} probe] {l}");
+            }
+        });
+    }
+    // Responses only: a probe has no turn, so updates and requests are noise.
+    let pending: Arc<Mutex<HashMap<i64, oneshot::Sender<Value>>>> =
+        Arc::new(Mutex::new(HashMap::new()));
+    let routed = pending.clone();
+    tokio::spawn(async move {
+        let mut lines = BufReader::new(stdout).lines();
+        while let Ok(Some(line)) = lines.next_line().await {
+            if let Ok(v) = serde_json::from_str::<Value>(&line) {
+                route_response(&routed, &v).await;
+            }
+        }
+    });
+    let session = Session {
+        child: Mutex::new(child),
+        stdin,
+        next_id: AtomicI64::new(1),
+        pending,
+        acp_session_id: String::new(),
+        requested_model: None,
+        backend,
+        proxy_secret: None,
+        turn: Arc::new(Mutex::new(TurnState {
+            generation_id: String::new(),
+            full_content: String::new(),
+            pending_delta: String::new(),
+            last_narration: String::new(),
+            last_emit: Instant::now(),
+        })),
+        last_used: Mutex::new(Instant::now()),
+        active_turns: AtomicUsize::new(0),
+        closing: AtomicBool::new(false),
+        context_fresh: AtomicBool::new(false),
+    };
+    let hs = handshake(&session, &launch.session, None, None, None).await;
+    session.closing.store(true, Ordering::SeqCst);
+    let _ = session.child.lock().await.start_kill();
+    hs?.config_options.ok_or_else(|| {
+        format!(
+            "{} reported no config options.",
+            crate::code_agent_installer::display_name(backend)
+        )
+    })
+}
+
+/// The `session/new` params per backend. Codex and Claude get the per-spawn
+/// skills view as an additional directory (each scans its own subdir of it);
+/// Claude also takes the ibl.ai guidance as `_meta.systemPrompt.append`, which
+/// the adapter folds into its Claude Code preset — appended, never replacing
+/// it. opencode's params are byte-identical to before.
+fn session_params(backend: Backend, workspace: &Path, skills_root: &Path, guidance: &str) -> Value {
+    let cwd = workspace.to_string_lossy();
+    match backend {
+        Backend::Opencode => json!({ "cwd": cwd, "mcpServers": [] }),
+        Backend::Codex => json!({
+            "cwd": cwd,
+            "mcpServers": [],
+            "additionalDirectories": [skills_root.to_string_lossy()],
+        }),
+        Backend::Claude => json!({
+            "cwd": cwd,
+            "mcpServers": [],
+            "additionalDirectories": [skills_root.to_string_lossy()],
+            "_meta": { "systemPrompt": { "append": guidance } },
+        }),
+    }
+}
+
+fn agent_launch(
+    backend: Backend,
+    workspace: &Path,
+    skills_root: &Path,
+    config_home: &Path,
+    guidance: &str,
+    auto: bool,
+) -> AgentLaunch {
+    let session = session_params(backend, workspace, skills_root, guidance);
+    let node_launch = |env: Vec<(&'static str, String)>| AgentLaunch {
+        program: crate::code_agent_installer::node_bin(),
+        args: vec![crate::code_agent_installer::adapter_entry(backend)
+            .to_string_lossy()
+            .into_owned()],
+        env,
+        session: session.clone(),
+    };
+    match backend {
+        Backend::Opencode => AgentLaunch {
+            program: PathBuf::from(opencode_program()),
+            args: ["acp", "--print-logs", "--log-level", "INFO"]
+                .iter()
+                .map(|s| s.to_string())
+                .collect(),
+            env: vec![(
+                "XDG_CONFIG_HOME",
+                config_home.to_string_lossy().into_owned(),
+            )],
+            session,
+        },
+        // The guidance rides Codex's real `developer_instructions` config key,
+        // merged by the adapter into every session's config overrides — the
+        // user's own `~/.codex/AGENTS.md` is never touched.
+        Backend::Codex => node_launch(vec![
+            (
+                "CODEX_CONFIG",
+                json!({ "developer_instructions": guidance }).to_string(),
+            ),
+            ("INITIAL_AGENT_MODE", codex_mode(auto).to_string()),
+        ]),
+        Backend::Claude => node_launch(Vec::new()),
+    }
+}
+
 /// Resolve the OpenAI-compatible base URL for an on-device runtime, starting Ollama
 /// if it isn't up yet.
 ///
@@ -2289,7 +2941,9 @@ fn foundry_result(model: &str, endpoint: Option<String>) -> Value {
     }
 }
 
-/// Spawn `opencode acp`, run the ACP handshake, and register the session.
+/// Spawn the chat's agent (`opencode acp`, or the Codex / Claude Code ACP
+/// adapter the model string selects — see [`Backend`]), run the ACP handshake,
+/// and register the session.
 ///
 /// `resume` carries the previous ACP session id after a mid-turn crash: when
 /// the agent advertises `loadSession`, the fresh process re-loads that session
@@ -2340,74 +2994,109 @@ async fn spawn_session(
         _ => return Err("no model selected for Code".to_string()),
     };
     let spec = parse_model_spec(&chosen_model);
+    let backend = Backend::of(&chosen_model);
 
-    // The ibl.ai guidance rides opencode's own instructions mechanism (the
-    // per-session AGENTS.md, re-read on every model call). It is composed for
-    // EVERY spawn — cloud and on-device alike, skills wired or not: the build
-    // prompt is a one-line suppressor stub, so this guidance is the agent's
-    // entire authored behavior and a session must never run without it.
-    let guidance = crate::opencode_proxy::guidance_with_identity(tenant).await;
+    // The subscription agents are refused up front rather than mid-handshake:
+    // a missing install or a never-signed-in CLI is a one-sentence answer, not
+    // a crash. (A stale login still surfaces from the prompt, see `rpc_error`.)
+    if backend != Backend::Opencode {
+        crate::code_agent_installer::agent_ready(backend)?;
+        let home = home_dir().unwrap_or_default();
+        if !backend.own().iter().any(|rel| home.join(rel).is_dir()) {
+            return Err(format!("{AUTH_REQUIRED}: {}", backend.sign_in_hint()));
+        }
+    }
 
-    // On-device runtimes talk straight to their own local endpoint. Cloud goes through
-    // the loopback proxy, which holds the real DM token — the agent only ever sees a
-    // throwaway per-session key, so `echo $IBL_AUTH_HEADER` has nothing to steal.
-    let (base_url, api_key, display_name, proxy_secret) = if spec.local {
-        let url = resolve_local_base_url(&spec).await?;
-        let name = if spec.provider == "ollama" {
-            "Ollama (on-device)"
+    // The ibl.ai guidance is composed for EVERY spawn — cloud and on-device
+    // alike, skills wired or not: it is the agent's entire authored behavior
+    // and a session must never run without it. opencode reads it as the
+    // per-session AGENTS.md (re-read on every model call); Codex takes it as
+    // developer instructions and Claude as a system-prompt append (both in
+    // `agent_launch`), each with its own wording where opencode's doesn't fit.
+    let guidance = crate::opencode_proxy::guidance_for(backend, tenant).await?;
+
+    // opencode's model provider: on-device runtimes talk straight to their own
+    // local endpoint; cloud goes through the loopback proxy, which holds the
+    // real DM token — the agent only ever sees a throwaway per-session key, so
+    // `echo $IBL_AUTH_HEADER` has nothing to steal. The subscription agents
+    // bring their own model access and skip all of it.
+    let proxy_secret = if backend == Backend::Opencode {
+        let (base_url, api_key, display_name, proxy_secret) = if spec.local {
+            let url = resolve_local_base_url(&spec).await?;
+            let name = if spec.provider == "ollama" {
+                "Ollama (on-device)"
+            } else {
+                "Foundry Local (on-device)"
+            };
+            (url, "local".to_string(), name, None)
         } else {
-            "Foundry Local (on-device)"
+            // Per-request `api_base` (future SDK plumbing) outranks; otherwise the
+            // host is composed from the one platform base domain the frontend (or
+            // a local dev override) delivered — `iblai.app` by default.
+            let api_base = match api_base.filter(|b| !b.trim().is_empty()) {
+                Some(b) => b,
+                None => default_api_base(&crate::opencode_proxy::platform_base_domain().await),
+            };
+            let upstream = format!(
+                "{}/api/ai-mentor/orgs/{}/v1",
+                api_base.trim_end_matches('/'),
+                tenant
+            );
+            let port = crate::opencode_proxy::ensure_started().await?;
+            // The proxy announces upstream 402s (insufficient credit) to the webview.
+            crate::opencode_proxy::set_app(app);
+            let secret = crate::opencode_proxy::new_secret();
+            crate::opencode_proxy::register(&secret, upstream, token.to_string()).await;
+            (
+                format!("http://127.0.0.1:{port}/v1"),
+                secret.clone(),
+                "ibl.ai",
+                Some(secret),
+            )
         };
-        (url, "local".to_string(), name, None)
+        apply_opencode_model(
+            session_id,
+            mentor.as_deref(),
+            &spec,
+            &base_url,
+            &api_key,
+            display_name,
+            Some(guidance.as_str()),
+        )?;
+        proxy_secret
     } else {
-        // Per-request `api_base` (future SDK plumbing) outranks; otherwise the
-        // host is composed from the one platform base domain the frontend (or
-        // a local dev override) delivered — `iblai.app` by default.
-        let api_base = match api_base.filter(|b| !b.trim().is_empty()) {
-            Some(b) => b,
-            None => default_api_base(&crate::opencode_proxy::platform_base_domain().await),
-        };
-        let upstream = format!(
-            "{}/api/ai-mentor/orgs/{}/v1",
-            api_base.trim_end_matches('/'),
-            tenant
-        );
-        let port = crate::opencode_proxy::ensure_started().await?;
-        // The proxy announces upstream 402s (insufficient credit) to the webview.
-        crate::opencode_proxy::set_app(app);
-        let secret = crate::opencode_proxy::new_secret();
-        crate::opencode_proxy::register(&secret, upstream, token.to_string()).await;
-        (
-            format!("http://127.0.0.1:{port}/v1"),
-            secret.clone(),
-            "ibl.ai",
-            Some(secret),
-        )
+        None
     };
-    apply_opencode_model(
-        session_id,
-        mentor.as_deref(),
-        &spec,
-        &base_url,
-        &api_key,
-        display_name,
-        Some(guidance.as_str()),
-    )?;
+
+    // The skills view the subscription agents read (`link_skills`): built
+    // after the sync wait above, so it never captures a half-written tree.
+    let skills_root = config_home(session_id).join(AGENT_SKILLS_DIR);
+    if backend != Backend::Opencode {
+        let mentor_dir = mentor.as_deref().map(mentor_skills_dir);
+        link_skills(
+            &skills_root.join(backend.skills_subdir()),
+            &vibe_skills_dir(),
+            mentor_dir.as_deref(),
+        )?;
+    }
 
     // Kernel confinement on top of the permission prompt in
     // `handle_permission_request`: the child spawns inside an OS sandbox — bwrap on
     // Linux, sandbox-exec + a decoy $HOME on macOS (see the sandbox section near
     // `bwrap_args`). `PATH` carries our managed `bin` dir so a downloaded opencode is
-    // found when the system has none.
-    let mut cmd = sandboxed_opencode_command(session_id, workspace)?;
-    cmd.args(["acp", "--print-logs", "--log-level", "INFO"])
-        .current_dir(workspace)
-        .env("PATH", augmented_path())
-        .env("XDG_CONFIG_HOME", config_home(session_id))
-        .stdin(std::process::Stdio::piped())
-        .stdout(std::process::Stdio::piped())
-        .stderr(std::process::Stdio::piped())
-        .kill_on_drop(true);
+    // found when the system has none; the subscription agents run our managed Node
+    // by absolute path with its `bin` dir prepended.
+    let auto = permission_auto().load(Ordering::SeqCst);
+    let launch = agent_launch(
+        backend,
+        workspace,
+        &skills_root,
+        &config_home(session_id),
+        &guidance,
+        auto,
+    );
+    let mut cmd = sandboxed_command(session_id, workspace, backend)?;
+    wire_agent_command(&mut cmd, &launch, workspace, backend);
 
     // Attribution/config for the agent's shell. The vibe skills read these
     // instead of asking the user who/where they are.
@@ -2432,23 +3121,24 @@ async fn spawn_session(
         cmd.env("IBLAI_API_KEY_EXPIRES_AT", expires_at.to_string());
     }
 
-    let mut child = cmd.spawn().map_err(|e| {
-        if cfg!(target_os = "linux") {
+    let mut child = cmd.spawn().map_err(|e| match backend {
+        Backend::Opencode if cfg!(target_os = "linux") => {
             format!("failed to launch the sandboxed `opencode acp` (is bubblewrap (bwrap) installed?): {e}")
-        } else {
-            format!("failed to launch `opencode acp` (is opencode installed?): {e}")
         }
+        Backend::Opencode => format!("failed to launch `opencode acp` (is opencode installed?): {e}"),
+        other => format!("failed to launch the {} agent: {e}", other.id()),
     })?;
 
     let stdin = Arc::new(Mutex::new(child.stdin.take().ok_or("no stdin")?));
     let stdout = child.stdout.take().ok_or("no stdout")?;
     let stderr = child.stderr.take().ok_or("no stderr")?;
 
-    // Log opencode stderr (never contains the token; it lives only in env).
+    // Log the agent's stderr (never contains the token; it lives only in env).
+    let tag = backend.id();
     tokio::spawn(async move {
         let mut lines = BufReader::new(stderr).lines();
         while let Ok(Some(l)) = lines.next_line().await {
-            eprintln!("[opencode] {l}");
+            eprintln!("[{tag}] {l}");
         }
     });
 
@@ -2480,6 +3170,7 @@ async fn spawn_session(
         pending,
         acp_session_id: String::new(),
         requested_model: model,
+        backend,
         proxy_secret,
         turn,
         last_used: Mutex::new(Instant::now()),
@@ -2488,8 +3179,66 @@ async fn spawn_session(
         context_fresh: AtomicBool::new(false),
     };
 
-    // 1) initialize — we advertise NO fs/terminal capabilities so opencode uses its
-    //    own built-in file/shell tools directly on the workspace.
+    // The model saved in the top-left picker is applied by the handshake right
+    // after the mode pin; opencode's model rides in its config instead.
+    let saved_model = if backend == Backend::Opencode {
+        None
+    } else {
+        crate::code_agent_models::saved(backend)
+    };
+    let hs = handshake(
+        &session,
+        &launch.session,
+        resume.as_deref(),
+        session_mode(backend, auto),
+        saved_model.as_deref(),
+    )
+    .await?;
+    // The agent's model list for the picker; a fresh session's opening
+    // snapshot also names the agent's own default.
+    if backend != Backend::Opencode {
+        if let Some(opts) = &hs.config_options {
+            crate::code_agent_models::remember(backend, opts, !hs.loaded);
+        }
+    }
+    let loaded = hs.loaded;
+    session.acp_session_id = hs.id;
+    // A brand-new ACP session has no conversation memory — the first prompt on it
+    // may need the frontend's transcript prepended.
+    session.context_fresh.store(!loaded, Ordering::SeqCst);
+    // The id outlives this process: a later spawn for the same chat loads it back.
+    remember_resume(session_id, &session.acp_session_id).await;
+
+    Ok(Arc::new(session))
+}
+
+/// The ACP handshake on a freshly spawned agent: `initialize`, then
+/// `session/load` of the remembered session when the agent can (falling back
+/// to `session/new` on any failure — context lost, the re-sent prompt still
+/// completes), then the backend's mode pin. `new_params` are the
+/// `session/new` params; a load sends the same object plus the `sessionId`,
+/// so Claude's guidance and both agents' skills view apply on resume too.
+/// Returns the ACP session id and whether it was loaded (vs created).
+/// What a handshake established: the ACP session id, whether it came from a
+/// `session/load`, and the agent's `configOptions` as the new/load response
+/// reported them — BEFORE any saved model was applied, so a fresh session's
+/// snapshot names the agent's own default model.
+#[derive(Debug)]
+struct Handshake {
+    id: String,
+    loaded: bool,
+    config_options: Option<Value>,
+}
+
+async fn handshake(
+    session: &Session,
+    new_params: &Value,
+    resume: Option<&str>,
+    mode: Option<&str>,
+    model: Option<&str>,
+) -> Result<Handshake, String> {
+    // 1) initialize — we advertise NO fs/terminal capabilities so the agent uses
+    //    its own built-in file/shell tools directly on the workspace.
     let init = session
         .request(
             "initialize",
@@ -2507,37 +3256,32 @@ async fn spawn_session(
         .unwrap_or(false);
 
     // 2) After a crash, resume the previous ACP session when the agent can —
-    //    opencode persists sessions under its (shared) data dir, which our
-    //    teardown never deletes. The load's history replay streams as
+    //    opencode persists sessions under its (shared) data dir, Codex under
+    //    `~/.codex/sessions`, Claude under `~/.claude/projects`; none of which
+    //    our teardown deletes. The load's history replay streams as
     //    `session/update` with no turn in flight, so `handle_update` drops it.
-    //    Any failure falls back to a fresh session: context lost, but the
-    //    re-sent prompt still completes.
     let mut acp_session_id: Option<String> = None;
+    let mut config_options: Option<Value> = None;
     if can_load {
-        if let Some(prev) = resume.as_deref() {
-            if session
-                .request(
-                    "session/load",
-                    json!({ "sessionId": prev, "cwd": workspace.to_string_lossy(), "mcpServers": [] }),
-                )
-                .await
-                .is_ok()
-            {
+        if let Some(prev) = resume {
+            let mut load = new_params.clone();
+            load["sessionId"] = json!(prev);
+            if let Ok(res) = session.request("session/load", load).await {
                 acp_session_id = Some(prev.to_string());
+                config_options = res.get("configOptions").filter(|c| c.is_array()).cloned();
             }
         }
     }
     // 3) …or session/new with the workspace cwd.
     let loaded = acp_session_id.is_some();
-    session.acp_session_id = match acp_session_id {
+    let id = match acp_session_id {
         Some(id) => id,
         None => {
-            let new_res = session
-                .request(
-                    "session/new",
-                    json!({ "cwd": workspace.to_string_lossy(), "mcpServers": [] }),
-                )
-                .await?;
+            let new_res = session.request("session/new", new_params.clone()).await?;
+            config_options = new_res
+                .get("configOptions")
+                .filter(|c| c.is_array())
+                .cloned();
             new_res
                 .get("sessionId")
                 .and_then(|s| s.as_str())
@@ -2545,13 +3289,41 @@ async fn spawn_session(
                 .to_string()
         }
     };
-    // A brand-new ACP session has no conversation memory — the first prompt on it
-    // may need the frontend's transcript prepended.
-    session.context_fresh.store(!loaded, Ordering::SeqCst);
-    // The id outlives this process: a later spawn for the same chat loads it back.
-    remember_resume(session_id, &session.acp_session_id).await;
-
-    Ok(Arc::new(session))
+    // 4) Pin the agent's own mode (see `session_mode`).
+    if let Some(mode) = mode {
+        session
+            .request(
+                "session/set_mode",
+                json!({ "sessionId": id, "modeId": mode }),
+            )
+            .await?;
+    }
+    // 5) The model saved in the top-left picker. A refusal (the agent no
+    //    longer offers it) fails the spawn and names the picker — never a
+    //    silent fall-back to whatever the agent would have picked.
+    if let Some(model) = model {
+        session
+            .request(
+                "session/set_config_option",
+                json!({
+                    "sessionId": id,
+                    "configId": crate::code_agent_models::MODEL_CONFIG_ID,
+                    "value": model,
+                }),
+            )
+            .await
+            .map_err(|e| {
+                format!(
+                    "{} rejected the model {model}: {e} — pick another one in the top-left.",
+                    crate::code_agent_installer::display_name(session.backend)
+                )
+            })?;
+    }
+    Ok(Handshake {
+        id,
+        loaded,
+        config_options,
+    })
 }
 
 /// Get an existing live session or spawn one.
@@ -2837,6 +3609,7 @@ pub async fn opencode_chat_stream(
     });
 
     let prompt_text = last_user_text(&messages).ok_or("no user message to send to opencode")?;
+    let backend = Backend::of(model.as_deref().unwrap_or(""));
 
     // An on-device turn can sit silent for minutes the first time: opencode refreshes
     // the models.dev registry into ~/.cache/opencode/models.json, and the runtime loads
@@ -2886,6 +3659,7 @@ pub async fn opencode_chat_stream(
             Ok(s) => s,
             Err(e) if attempt > 1 => {
                 // The recovery respawn itself failed — that IS the loud failure.
+                let e = surface_auth(&app, &generation_id, backend, e);
                 let _ = app.emit(
                     "ollama:error",
                     json!({ "generation_id": generation_id, "error": e }),
@@ -2893,8 +3667,9 @@ pub async fn opencode_chat_stream(
                 return Err(e);
             }
             // First spawn: keep today's invoke-rejection (a missing binary
-            // stays immediately loud in the UI's own error path).
-            Err(e) => return Err(e),
+            // stays immediately loud in the UI's own error path). A signed-out
+            // agent additionally announces itself so the UI can offer the fix.
+            Err(e) => return Err(surface_auth(&app, &generation_id, backend, e)),
         };
         // Replace (and thereby drop) the previous attempt's guard, if any.
         drop(turn_guard.take());
@@ -2968,11 +3743,18 @@ pub async fn opencode_chat_stream(
             // A JSON-RPC error from a live child, an intentional close, or a
             // spent retry budget — the crash-retry above already consumed the
             // recoverable case. A live child keeps its session (conversation
-            // state survives); a dead one was torn down by `reader_gone`.
+            // state survives); a dead one was torn down by `reader_gone`. The
+            // signed-out agent is the exception: its process is closed so the
+            // next turn (after the user signs in) starts fresh and `session/load`s.
+            let signed_out = auth_hint(backend, &e).is_some();
+            let e = surface_auth(&app, &generation_id, backend, e);
             let _ = app.emit(
                 "ollama:error",
                 json!({ "generation_id": generation_id, "error": e }),
             );
+            if signed_out {
+                close_session(&session_id).await;
+            }
             Err(e)
         }
     }
@@ -3239,6 +4021,7 @@ mod tests {
         let workspace = scratch.join("ws");
         let cfg_home = scratch.join("cfg");
         std::fs::create_dir_all(home.join(".ssh")).unwrap();
+        std::fs::create_dir_all(home.join(".codex")).unwrap();
         // An installed toolchain opts in; .bun and .nvm are deliberately absent.
         std::fs::create_dir_all(home.join(".cargo")).unwrap();
         std::fs::create_dir_all(home.join(".asdf")).unwrap();
@@ -3247,7 +4030,7 @@ mod tests {
         std::fs::create_dir_all(home.join(".gem")).unwrap();
         std::fs::write(home.join(".gem/credentials"), ":rubygems_api_key: k").unwrap();
 
-        let args = bwrap_args(&home, &workspace, &cfg_home, None);
+        let args = bwrap_args(&home, &workspace, &cfg_home, None, Backend::Opencode);
         let flat = args.join(" ");
 
         assert_eq!(&args[..3], &["--ro-bind", "/", "/"]);
@@ -3281,6 +4064,9 @@ mod tests {
         // Masks stack AFTER the rw binds and only for existing secrets.
         let ssh_mask = format!("--tmpfs {}", home.join(".ssh").display());
         assert!(flat.contains(&ssh_mask));
+        // Codex's login is a credential like any other for the opencode agent.
+        assert!(flat.contains(&format!("--tmpfs {}", home.join(".codex").display())));
+        assert!(!flat.contains("--ro-bind-try"), "opencode freezes nothing");
         assert!(flat.rfind(&ssh_mask).unwrap() > flat.rfind("--bind-try").unwrap());
         let netrc = home.join(".netrc");
         assert!(flat.contains(&format!("--ro-bind /dev/null {}", netrc.display())));
@@ -3298,8 +4084,14 @@ mod tests {
         assert_eq!(args.last().unwrap(), "--die-with-parent");
 
         // A custom $TMPDIR is bound too.
-        let with_tmp =
-            bwrap_args(&home, &workspace, &cfg_home, Some(Path::new("/custom/tmp"))).join(" ");
+        let with_tmp = bwrap_args(
+            &home,
+            &workspace,
+            &cfg_home,
+            Some(Path::new("/custom/tmp")),
+            Backend::Opencode,
+        )
+        .join(" ");
         assert!(with_tmp.contains("--bind-try /custom/tmp /custom/tmp"));
 
         let _ = std::fs::remove_dir_all(&scratch);
@@ -3326,7 +4118,7 @@ mod tests {
         std::fs::create_dir_all(real.join(".config/nvim")).unwrap();
         std::fs::create_dir_all(real.join("projects")).unwrap();
 
-        build_decoy_home(&real, &decoy).unwrap();
+        build_decoy_home(&real, &decoy, Backend::Opencode).unwrap();
 
         // Fake .ssh: a real empty dir, writable, host untouched.
         let ssh = decoy.join(".ssh");
@@ -3361,6 +4153,7 @@ mod tests {
             Path::new("/Users/dev"),
             Path::new("/Users/dev/proj"),
             Path::new("/Users/dev/.config/iblai/agents/sessions/k"),
+            Backend::Opencode,
         );
         assert!(p.starts_with("(version 1)\n(allow default)\n(deny file-write* (subpath \"/\"))"));
         assert!(p.contains("(allow file-write*"));
@@ -3373,6 +4166,7 @@ mod tests {
         assert!(p.contains("(subpath \"/Users/dev/.cargo\")"));
         assert!(p.contains("(deny file*"));
         assert!(p.contains("(subpath \"/Users/dev/.ssh\")"));
+        assert!(p.contains("(subpath \"/Users/dev/.codex\")"));
         assert!(p.contains("(subpath \"/Users/dev/Library/Keychains\")"));
         assert!(p.contains("(literal \"/Users/dev/.netrc\")"));
         assert!(p.contains("(literal \"/Users/dev/.cargo/credentials.toml\")"));
@@ -4093,6 +4887,7 @@ mod tests {
             pending: Arc::new(Mutex::new(HashMap::new())),
             acp_session_id: "acp-test".to_string(),
             requested_model: Some("m".to_string()),
+            backend: Backend::Opencode,
             proxy_secret: None,
             turn: Arc::new(Mutex::new(TurnState {
                 generation_id: String::new(),
@@ -4388,5 +5183,1030 @@ mod tests {
         assert!(!ts.in_flight(), "fresh spawn: replay must be droppable");
         ts.reset("g1".to_string());
         assert!(ts.in_flight());
+    }
+
+    // ---------- Codex / Claude Code backends ----------
+
+    /// Exact strings pick the subscription agents; every other model string —
+    /// ibl.ai compat ids (even ones naming `claude`), on-device specs, near
+    /// misses — is opencode. And a command's `backend` argument may only name
+    /// the two agents.
+    #[test]
+    fn the_model_string_picks_the_backend() {
+        assert_eq!(Backend::of("codex/default"), Backend::Codex);
+        assert_eq!(Backend::of("claude/default"), Backend::Claude);
+        for opencode in [
+            "openai/gpt-5.5",
+            "anthropic/claude-sonnet-5",
+            "claude/opus",
+            "claudex/x",
+            "codex",
+            "ollama/qwen3:latest",
+            "foundry/phi-4",
+            "",
+        ] {
+            assert_eq!(Backend::of(opencode), Backend::Opencode, "{opencode}");
+        }
+        assert_eq!(Backend::agent("codex").unwrap(), Backend::Codex);
+        assert_eq!(Backend::agent("claude").unwrap(), Backend::Claude);
+        assert!(Backend::agent("opencode").is_err());
+        assert!(Backend::agent("gemini").is_err());
+        assert_eq!(Backend::Codex.id(), "codex");
+        assert_eq!(Backend::Claude.id(), "claude");
+    }
+
+    /// The launch shapes: opencode byte-identical to before; Codex takes the
+    /// guidance as `developer_instructions` in `CODEX_CONFIG` and the OS
+    /// approval mode as its own; Claude takes the guidance as a system-prompt
+    /// APPEND (never a replacement — no `type` key) and no env; both get the
+    /// skills view as an additional directory.
+    #[test]
+    fn each_backend_carries_guidance_and_skills_its_own_way() {
+        let _lock = data_dir_lock();
+        let ws = Path::new("/tmp/ws");
+        let skills = Path::new("/tmp/cfg/agent-skills");
+        let cfg = Path::new("/tmp/cfg");
+
+        let oc = agent_launch(Backend::Opencode, ws, skills, cfg, "GUIDE", false);
+        assert_eq!(oc.program, PathBuf::from("opencode"));
+        assert_eq!(oc.args, ["acp", "--print-logs", "--log-level", "INFO"]);
+        assert_eq!(oc.env, vec![("XDG_CONFIG_HOME", "/tmp/cfg".to_string())]);
+        assert_eq!(oc.session, json!({ "cwd": "/tmp/ws", "mcpServers": [] }));
+        assert_eq!(session_mode(Backend::Opencode, false), None);
+
+        let codex = agent_launch(Backend::Codex, ws, skills, cfg, "GUIDE", false);
+        assert!(codex.program.ends_with("bin/node"), "{:?}", codex.program);
+        assert!(
+            codex.args[0].ends_with("@agentclientprotocol/codex-acp/dist/index.js"),
+            "{:?}",
+            codex.args
+        );
+        let config: Value = serde_json::from_str(
+            &codex
+                .env
+                .iter()
+                .find(|(k, _)| *k == "CODEX_CONFIG")
+                .unwrap()
+                .1,
+        )
+        .unwrap();
+        assert_eq!(config, json!({ "developer_instructions": "GUIDE" }));
+        assert_eq!(
+            codex
+                .env
+                .iter()
+                .find(|(k, _)| *k == "INITIAL_AGENT_MODE")
+                .unwrap()
+                .1,
+            "read-only"
+        );
+        assert_eq!(
+            codex.session,
+            json!({ "cwd": "/tmp/ws", "mcpServers": [], "additionalDirectories": ["/tmp/cfg/agent-skills"] })
+        );
+        assert_eq!(session_mode(Backend::Codex, false), Some("read-only"));
+        assert_eq!(
+            session_mode(Backend::Codex, true),
+            Some("agent-full-access")
+        );
+        let auto = agent_launch(Backend::Codex, ws, skills, cfg, "GUIDE", true);
+        assert_eq!(
+            auto.env
+                .iter()
+                .find(|(k, _)| *k == "INITIAL_AGENT_MODE")
+                .unwrap()
+                .1,
+            "agent-full-access"
+        );
+
+        let claude = agent_launch(Backend::Claude, ws, skills, cfg, "GUIDE", false);
+        assert!(claude.program.ends_with("bin/node"));
+        assert!(claude.args[0].ends_with("@agentclientprotocol/claude-agent-acp/dist/index.js"));
+        assert!(claude.env.is_empty(), "{:?}", claude.env);
+        assert_eq!(
+            claude.session["additionalDirectories"],
+            json!(["/tmp/cfg/agent-skills"])
+        );
+        assert_eq!(
+            claude.session["_meta"]["systemPrompt"]["append"],
+            json!("GUIDE")
+        );
+        assert!(
+            claude.session["_meta"]["systemPrompt"]
+                .get("type")
+                .is_none(),
+            "a `type` key would let the append replace the preset"
+        );
+        assert_eq!(session_mode(Backend::Claude, true), Some("default"));
+        assert_eq!(session_mode(Backend::Claude, false), Some("default"));
+    }
+
+    /// No provider credential, routing override or config-dir override reaches
+    /// any agent's environment; everything else is inherited.
+    #[test]
+    fn provider_credentials_never_reach_the_agent() {
+        let keys = [
+            "ANTHROPIC_API_KEY",
+            "ANTHROPIC_BASE_URL",
+            "CLAUDE_CODE_OAUTH_TOKEN",
+            "CLAUDE_CODE_USE_BEDROCK",
+            "CLAUDE_CONFIG_DIR",
+            "CLAUDE_CODE_EXECUTABLE",
+            "CLAUDECODE",
+            "OPENAI_API_KEY",
+            "OPENAI_BASE_URL",
+            "CODEX_API_KEY",
+            "CODEX_HOME",
+            "CODEX_PATH",
+            "MODEL_PROVIDER",
+            "DEFAULT_AUTH_REQUEST",
+            "PATH",
+            "HOME",
+            "LANG",
+            "DISPLAY",
+            "DBUS_SESSION_BUS_ADDRESS",
+            "IBLAI_API_KEY",
+            "IBLAI_USERNAME",
+            "XDG_CONFIG_HOME",
+        ];
+        let stripped: Vec<String> = stripped_env(keys.iter().map(std::ffi::OsString::from))
+            .into_iter()
+            .map(|k| k.to_string_lossy().into_owned())
+            .collect();
+        for gone in [
+            "ANTHROPIC_API_KEY",
+            "ANTHROPIC_BASE_URL",
+            "CLAUDE_CODE_OAUTH_TOKEN",
+            "CLAUDE_CODE_USE_BEDROCK",
+            "CLAUDE_CONFIG_DIR",
+            "CLAUDE_CODE_EXECUTABLE",
+            "CLAUDECODE",
+            "OPENAI_API_KEY",
+            "OPENAI_BASE_URL",
+            "CODEX_API_KEY",
+            "CODEX_HOME",
+            "CODEX_PATH",
+            "MODEL_PROVIDER",
+            "DEFAULT_AUTH_REQUEST",
+        ] {
+            assert!(
+                stripped.iter().any(|k| k == gone),
+                "{gone} must be stripped"
+            );
+        }
+        for kept in [
+            "PATH",
+            "HOME",
+            "LANG",
+            "DISPLAY",
+            "DBUS_SESSION_BUS_ADDRESS",
+            "IBLAI_API_KEY",
+            "IBLAI_USERNAME",
+            "XDG_CONFIG_HOME",
+        ] {
+            assert!(!stripped.iter().any(|k| k == kept), "{kept} must survive");
+        }
+    }
+
+    /// The exact-kind pick: Claude's ExitPlanMode lists `allow_always` mode
+    /// switches before its plain `allow_once`; Codex's network approval lists
+    /// `reject_always` ("block this host") before `decline`. opencode's shape
+    /// resolves as before, an allow_always-only list still falls back, and an
+    /// empty list answers nothing.
+    #[test]
+    fn permission_answers_pick_the_exact_once_kinds() {
+        let claude = json!([
+            { "optionId": "exit-plan-clear-auto", "kind": "allow_always", "name": "Yes, auto" },
+            { "optionId": "exit-plan-accept-edits", "kind": "allow_always", "name": "Yes, accept edits" },
+            { "optionId": "exit-plan-default", "kind": "allow_once", "name": "Yes, manually approve" },
+            { "optionId": "reject", "kind": "reject_once", "name": "No" }
+        ]);
+        assert_eq!(
+            pick_option(&claude, "allow_once", "allow").as_deref(),
+            Some("exit-plan-default")
+        );
+        assert_eq!(
+            pick_option(&claude, "reject_once", "reject").as_deref(),
+            Some("reject")
+        );
+
+        let codex = json!([
+            { "optionId": "allow", "kind": "allow_once", "name": "Yes" },
+            { "optionId": "reject_always", "kind": "reject_always", "name": "No, and block this host" },
+            { "optionId": "decline", "kind": "reject_once", "name": "No" }
+        ]);
+        assert_eq!(
+            pick_option(&codex, "reject_once", "reject").as_deref(),
+            Some("decline")
+        );
+        assert_eq!(
+            pick_option(&codex, "allow_once", "allow").as_deref(),
+            Some("allow")
+        );
+
+        let opencode = json!([
+            { "optionId": "once", "kind": "allow_once" },
+            { "optionId": "always", "kind": "allow_always" },
+            { "optionId": "no", "kind": "reject_once" }
+        ]);
+        assert_eq!(
+            pick_option(&opencode, "allow_once", "allow").as_deref(),
+            Some("once")
+        );
+        assert_eq!(
+            pick_option(&opencode, "reject_once", "reject").as_deref(),
+            Some("no")
+        );
+
+        let always_only = json!([{ "optionId": "always", "kind": "allow_always" }]);
+        assert_eq!(
+            pick_option(&always_only, "allow_once", "allow").as_deref(),
+            Some("always")
+        );
+        assert_eq!(pick_option(&always_only, "reject_once", "reject"), None);
+        assert_eq!(pick_option(&json!([]), "allow_once", "allow"), None);
+        assert_eq!(pick_option(&Value::Null, "allow_once", "allow"), None);
+    }
+
+    /// ACP's `authRequired` becomes the sign-in prefix, every other code keeps
+    /// the historical text, only the subscription agents get a hint, and the
+    /// prefix never reads as a crash to the retry logic.
+    #[test]
+    fn sign_in_errors_become_one_sentence_and_never_retry() {
+        let auth = rpc_error(
+            "session/prompt",
+            &json!({ "code": -32000, "message": "Authentication required" }),
+        );
+        assert!(auth.starts_with(AUTH_REQUIRED), "{auth}");
+        assert!(auth.contains("session/prompt"), "{auth}");
+        let other = rpc_error(
+            "session/new",
+            &json!({ "code": -32602, "message": "bad params" }),
+        );
+        assert!(
+            other.starts_with("opencode error on session/new"),
+            "{other}"
+        );
+        assert!(!other.starts_with(AUTH_REQUIRED));
+
+        assert_eq!(auth_hint(Backend::Opencode, &auth), None);
+        assert_eq!(auth_hint(Backend::Codex, &other), None);
+        let codex = auth_hint(Backend::Codex, &auth).unwrap();
+        assert!(codex.contains("Sign in with ChatGPT"), "{codex}");
+        let claude = auth_hint(Backend::Claude, &auth).unwrap();
+        assert!(
+            claude.contains("`claude`") && claude.contains("terminal"),
+            "{claude}"
+        );
+
+        assert!(
+            !should_retry(&auth, false, 1),
+            "a signed-out agent is not a crash"
+        );
+        assert!(should_retry(
+            &format!("{CHILD_GONE} to session/prompt"),
+            false,
+            1
+        ));
+    }
+
+    /// The OS approval toggle maps onto Codex's own modes — read-only for Ask
+    /// Me (every write and network command escalates into a card), full
+    /// access for Automatic — while opencode and Claude get nothing on a flip.
+    #[test]
+    fn the_os_approval_mode_drives_codex_s_own_mode() {
+        assert_eq!(codex_mode(false), "read-only");
+        assert_eq!(codex_mode(true), "agent-full-access");
+        assert_eq!(session_mode(Backend::Codex, false), Some("read-only"));
+        assert_eq!(
+            session_mode(Backend::Codex, true),
+            Some("agent-full-access")
+        );
+        assert_eq!(session_mode(Backend::Opencode, true), None);
+        assert_eq!(session_mode(Backend::Claude, true), Some("default"));
+    }
+
+    /// Each agent sees only its own login: its dir is bound read-write, the
+    /// other agent's stays masked, and the shared secrets stay masked for all.
+    /// Claude's `~/.claude.json` is readable (unmasked) for Claude only.
+    #[test]
+    fn each_backend_sees_only_its_own_login() {
+        let scratch =
+            std::env::temp_dir().join(format!("opencode-sbx-agents-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&scratch);
+        let home = scratch.join("home");
+        for dir in [".claude", ".codex", ".ssh"] {
+            std::fs::create_dir_all(home.join(dir)).unwrap();
+        }
+        std::fs::write(home.join(".claude.json"), "{}").unwrap();
+        std::fs::write(home.join(".claude/settings.json"), "{}").unwrap();
+        std::fs::write(home.join(".codex/config.toml"), "").unwrap();
+        let ws = scratch.join("ws");
+        let cfg = scratch.join("cfg");
+        let rw = |p: &Path| format!("--bind-try {} {}", p.display(), p.display());
+        let mask = |p: &Path| format!("--tmpfs {}", p.display());
+        let null = |p: &Path| format!("--ro-bind /dev/null {}", p.display());
+
+        let oc = bwrap_args(&home, &ws, &cfg, None, Backend::Opencode).join(" ");
+        assert!(oc.contains(&mask(&home.join(".claude"))));
+        assert!(oc.contains(&mask(&home.join(".codex"))));
+        assert!(oc.contains(&null(&home.join(".claude.json"))));
+        assert!(!oc.contains("--ro-bind-try"));
+
+        let codex = bwrap_args(&home, &ws, &cfg, None, Backend::Codex).join(" ");
+        assert!(codex.contains(&rw(&home.join(".codex"))), "{codex}");
+        assert!(!codex.contains(&mask(&home.join(".codex"))));
+        assert!(codex.contains(&mask(&home.join(".claude"))));
+        assert!(codex.contains(&null(&home.join(".claude.json"))));
+        assert!(codex.contains(&mask(&home.join(".ssh"))));
+
+        let claude = bwrap_args(&home, &ws, &cfg, None, Backend::Claude).join(" ");
+        assert!(claude.contains(&rw(&home.join(".claude"))), "{claude}");
+        assert!(!claude.contains(&mask(&home.join(".claude"))));
+        assert!(
+            !claude.contains(&null(&home.join(".claude.json"))),
+            "readable for Claude"
+        );
+        assert!(claude.contains(&mask(&home.join(".codex"))));
+        assert!(claude.contains(&mask(&home.join(".ssh"))));
+
+        let _ = std::fs::remove_dir_all(&scratch);
+    }
+
+    /// The agent's CLI config is frozen read-only AFTER its rw bind (later
+    /// mounts win in bwrap), so it cannot plant hooks or servers for the user's
+    /// next unsandboxed run; a missing file is skipped, not created; and the
+    /// monitor flag stays last.
+    #[test]
+    fn a_backend_cannot_rewrite_what_its_cli_runs_next() {
+        let scratch =
+            std::env::temp_dir().join(format!("opencode-sbx-frozen-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&scratch);
+        let home = scratch.join("home");
+        std::fs::create_dir_all(home.join(".claude")).unwrap();
+        std::fs::create_dir_all(home.join(".codex")).unwrap();
+        std::fs::write(home.join(".claude/settings.json"), "{}").unwrap();
+        std::fs::write(home.join(".codex/config.toml"), "").unwrap();
+        let ws = scratch.join("ws");
+        let cfg = scratch.join("cfg");
+
+        for (backend, own, frozen) in [
+            (Backend::Codex, ".codex", ".codex/config.toml"),
+            (Backend::Claude, ".claude", ".claude/settings.json"),
+        ] {
+            let args = bwrap_args(&home, &ws, &cfg, None, backend);
+            let flat = args.join(" ");
+            let own_path = home.join(own);
+            let frozen_path = home.join(frozen);
+            let rw = format!("--bind-try {} {}", own_path.display(), own_path.display());
+            let ro = format!(
+                "--ro-bind-try {} {}",
+                frozen_path.display(),
+                frozen_path.display()
+            );
+            assert!(flat.contains(&ro), "{backend:?}: {flat}");
+            assert!(
+                flat.find(&ro).unwrap() > flat.find(&rw).unwrap(),
+                "{backend:?}: the freeze must land after the rw bind"
+            );
+            // `try`: the absent ones are listed (bwrap skips a missing source
+            // rather than creating a mount point) and never as plain --ro-bind.
+            assert!(flat.contains("--ro-bind-try"));
+            assert!(!flat.contains(&format!(
+                "--ro-bind {}",
+                home.join(".claude/hooks").display()
+            )));
+            assert_eq!(args.last().unwrap(), "--die-with-parent");
+        }
+        let _ = std::fs::remove_dir_all(&scratch);
+    }
+
+    /// macOS: the profile re-allows writes only to the backend's own login dir
+    /// (and the Keychain both agents may use), keeps the other agent's dir in
+    /// the secrets deny, leaves Claude's state file readable for Claude, and
+    /// ends with the frozen-config deny so it wins over the allow.
+    #[test]
+    fn the_macos_profile_opens_only_the_backends_own_login() {
+        let home = Path::new("/Users/dev");
+        let profile = |b| {
+            sandbox_profile_macos(
+                home,
+                Path::new("/Users/dev/proj"),
+                Path::new("/Users/dev/.config/iblai/agents/sessions/k"),
+                b,
+            )
+        };
+        let deny_part = |p: &str| p[p.find("(deny file*").unwrap()..].to_string();
+
+        let claude = profile(Backend::Claude);
+        let allow = &claude[..claude.find("(deny file*").unwrap()];
+        assert!(
+            allow.contains("(subpath \"/Users/dev/.claude\")"),
+            "{claude}"
+        );
+        assert!(allow.contains("(subpath \"/Users/dev/Library/Keychains\")"));
+        let deny = deny_part(&claude);
+        assert!(!deny.contains("(subpath \"/Users/dev/.claude\")"), "{deny}");
+        assert!(deny.contains("(subpath \"/Users/dev/.codex\")"));
+        assert!(deny.contains("(subpath \"/Users/dev/.ssh\")"));
+        assert!(!deny.contains("(subpath \"/Users/dev/Library/Keychains\")"));
+        assert!(
+            !deny.contains("(literal \"/Users/dev/.claude.json\")"),
+            "readable for Claude"
+        );
+        let frozen = &claude[claude.rfind("(deny file-write*").unwrap()..];
+        assert!(
+            frozen.contains("(subpath \"/Users/dev/.claude/settings.json\")"),
+            "{frozen}"
+        );
+        assert!(frozen.contains("(subpath \"/Users/dev/.claude.json\")"));
+        assert!(claude.rfind("(deny file-write*").unwrap() > claude.find("(deny file*").unwrap());
+
+        let codex = profile(Backend::Codex);
+        let allow = &codex[..codex.find("(deny file*").unwrap()];
+        assert!(allow.contains("(subpath \"/Users/dev/.codex\")"));
+        let deny = deny_part(&codex);
+        assert!(!deny.contains("(subpath \"/Users/dev/.codex\")"));
+        assert!(deny.contains("(subpath \"/Users/dev/.claude\")"));
+        assert!(deny.contains("(literal \"/Users/dev/.claude.json\")"));
+        assert!(codex[codex.rfind("(deny file-write*").unwrap()..]
+            .contains("(subpath \"/Users/dev/.codex/config.toml\")"));
+
+        // opencode: both agents' dirs denied, nothing frozen.
+        let oc = profile(Backend::Opencode);
+        let deny = deny_part(&oc);
+        assert!(deny.contains("(subpath \"/Users/dev/.claude\")"));
+        assert!(deny.contains("(subpath \"/Users/dev/.codex\")"));
+        assert_eq!(
+            oc.matches("(deny file-write*").count(),
+            1,
+            "only the root deny"
+        );
+    }
+
+    /// The macOS decoy home links the backend's own login (and its readable
+    /// state file) instead of faking them, and fakes the other agent's.
+    #[test]
+    #[cfg(unix)]
+    fn the_decoy_home_links_the_backends_own_login() {
+        let scratch =
+            std::env::temp_dir().join(format!("opencode-sbx-decoy-agents-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&scratch);
+        let real = scratch.join("real");
+        std::fs::create_dir_all(real.join(".claude")).unwrap();
+        std::fs::write(real.join(".claude/.credentials.json"), "{}").unwrap();
+        std::fs::write(real.join(".claude.json"), "{}").unwrap();
+        std::fs::create_dir_all(real.join(".codex")).unwrap();
+        std::fs::write(real.join(".codex/auth.json"), "{}").unwrap();
+        std::fs::create_dir_all(real.join(".ssh")).unwrap();
+        std::fs::create_dir_all(real.join("Library/Keychains")).unwrap();
+
+        let claude = scratch.join("claude");
+        build_decoy_home(&real, &claude, Backend::Claude).unwrap();
+        assert!(claude.join(".claude").is_symlink(), "own dir linked");
+        assert!(
+            claude.join(".claude.json").is_symlink(),
+            "state file readable"
+        );
+        assert!(
+            claude.join(".codex").is_dir() && !claude.join(".codex").is_symlink(),
+            "other agent faked"
+        );
+        assert!(!claude.join(".codex/auth.json").exists());
+        assert!(claude.join(".ssh").is_dir() && !claude.join(".ssh").is_symlink());
+        assert!(
+            claude.join("Library").is_symlink(),
+            "no nested secret left under Library"
+        );
+
+        let codex = scratch.join("codex");
+        build_decoy_home(&real, &codex, Backend::Codex).unwrap();
+        assert!(codex.join(".codex").is_symlink());
+        assert!(codex.join(".claude").is_dir() && !codex.join(".claude").is_symlink());
+        assert!(
+            !codex.join(".claude.json").exists(),
+            "Claude's state file stays absent"
+        );
+
+        let oc = scratch.join("opencode");
+        build_decoy_home(&real, &oc, Backend::Opencode).unwrap();
+        assert!(oc.join(".claude").is_dir() && !oc.join(".claude").is_symlink());
+        assert!(oc.join(".codex").is_dir() && !oc.join(".codex").is_symlink());
+        assert!(oc.join("Library").is_dir() && !oc.join("Library").is_symlink());
+        assert!(
+            oc.join("Library/Keychains").is_dir() && !oc.join("Library/Keychains").is_symlink()
+        );
+
+        let _ = std::fs::remove_dir_all(&scratch);
+    }
+
+    /// The skills view: the two-level vibe tree and the flat mentor staging
+    /// flattened into one directory of links, mentor winning a name clash,
+    /// directories without a SKILL.md skipped, hidden entries skipped, a
+    /// rebuild dropping stale links, missing roots contributing nothing.
+    #[test]
+    #[cfg(unix)]
+    fn the_skills_view_flattens_vibe_and_lets_mentor_skills_win() {
+        let scratch =
+            std::env::temp_dir().join(format!("opencode-skills-view-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&scratch);
+        let vibe = scratch.join("vibe");
+        let mentor = scratch.join("mentor");
+        for (dir, skill) in [
+            ("ops/deploy", true),
+            ("ops/notes", false),
+            ("solo", true),
+            (".hidden/x", true),
+        ] {
+            std::fs::create_dir_all(vibe.join(dir)).unwrap();
+            if skill {
+                std::fs::write(vibe.join(dir).join("SKILL.md"), "vibe").unwrap();
+            }
+        }
+        for dir in ["deploy", "extra"] {
+            std::fs::create_dir_all(mentor.join(dir)).unwrap();
+            std::fs::write(mentor.join(dir).join("SKILL.md"), "mentor").unwrap();
+        }
+        let dest = scratch.join("view/.agents/skills");
+        std::fs::create_dir_all(dest.join("stale")).unwrap();
+
+        let n = link_skills(&dest, &vibe, Some(&mentor)).unwrap();
+        assert_eq!(n, 3, "deploy, solo, extra");
+        let mut names: Vec<String> = std::fs::read_dir(&dest)
+            .unwrap()
+            .flatten()
+            .map(|e| e.file_name().to_string_lossy().into_owned())
+            .collect();
+        names.sort();
+        assert_eq!(names, ["deploy", "extra", "solo"]);
+        assert!(dest.join("deploy").is_symlink());
+        assert_eq!(
+            std::fs::read_to_string(dest.join("deploy/SKILL.md")).unwrap(),
+            "mentor"
+        );
+        assert_eq!(
+            std::fs::read_to_string(dest.join("solo/SKILL.md")).unwrap(),
+            "vibe"
+        );
+        assert!(!dest.join("stale").exists(), "rebuilt from scratch");
+        assert!(!dest.join("x").exists(), "hidden families are skipped");
+        assert!(!dest.join("notes").exists(), "no SKILL.md, no skill");
+
+        // Vibe only, and nothing at all.
+        assert_eq!(link_skills(&dest, &vibe, None).unwrap(), 2);
+        assert_eq!(
+            link_skills(&dest, &scratch.join("missing"), None).unwrap(),
+            0
+        );
+        assert!(dest.is_dir());
+        // The links' targets are never touched by a rebuild.
+        assert!(mentor.join("deploy/SKILL.md").is_file());
+
+        let _ = std::fs::remove_dir_all(&scratch);
+    }
+
+    /// A `Session` over a scripted POSIX-sh agent, for the handshake tests: the
+    /// script logs every line it receives and answers with canned JSON.
+    #[cfg(unix)]
+    fn piped_agent(script: &Path, log: &Path, backend: Backend) -> Arc<Session> {
+        let mut child = Command::new("sh")
+            .arg(script)
+            .env("LOG", log)
+            .stdin(std::process::Stdio::piped())
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::null())
+            .kill_on_drop(true)
+            .spawn()
+            .unwrap();
+        let stdin = Arc::new(Mutex::new(child.stdin.take().unwrap()));
+        let stdout = child.stdout.take().unwrap();
+        let pending: Arc<Mutex<HashMap<i64, oneshot::Sender<Value>>>> =
+            Arc::new(Mutex::new(HashMap::new()));
+        let routed = pending.clone();
+        tokio::spawn(async move {
+            let mut lines = BufReader::new(stdout).lines();
+            while let Ok(Some(line)) = lines.next_line().await {
+                if let Ok(v) = serde_json::from_str::<Value>(&line) {
+                    route_response(&routed, &v).await;
+                }
+            }
+        });
+        Arc::new(Session {
+            child: Mutex::new(child),
+            stdin,
+            next_id: AtomicI64::new(1),
+            pending,
+            acp_session_id: String::new(),
+            requested_model: Some(format!("{}/default", backend.id())),
+            backend,
+            proxy_secret: None,
+            turn: Arc::new(Mutex::new(TurnState {
+                generation_id: String::new(),
+                full_content: String::new(),
+                pending_delta: String::new(),
+                last_narration: String::new(),
+                last_emit: Instant::now(),
+            })),
+            last_used: Mutex::new(Instant::now()),
+            active_turns: AtomicUsize::new(0),
+            closing: AtomicBool::new(false),
+            context_fresh: AtomicBool::new(false),
+        })
+    }
+
+    /// Answers `initialize` (loadSession: true), `session/new` and
+    /// `session/load` (both with a Codex-shaped `model` config option),
+    /// `session/set_mode` and `session/set_config_option` (accepting only
+    /// `gpt-5.3-codex`, ACP's invalid-params error otherwise) with canned
+    /// results and `session/prompt` with ACP's `authRequired` error, logging
+    /// every request line to `$LOG`.
+    #[cfg(unix)]
+    const STUB_AGENT: &str = r#"
+while IFS= read -r l; do
+  printf '%s\n' "$l" >> "$LOG"
+  id=$(printf '%s' "$l" | sed -n 's/.*"id":\([0-9][0-9]*\).*/\1/p')
+  case "$l" in
+    *'"session/prompt"'*)
+      printf '{"jsonrpc":"2.0","id":%s,"error":{"code":-32000,"message":"Authentication required"}}\n' "$id"
+      continue ;;
+    *'"session/set_config_option"'*)
+      case "$l" in
+        *'"value":"gpt-5.3-codex"'*) r='{"configOptions":[{"id":"model","category":"model","type":"select","currentValue":"gpt-5.3-codex","options":[{"value":"gpt-5.2","name":"5.2"},{"value":"gpt-5.3-codex","name":"5.3 Codex"}]}]}' ;;
+        *)
+          printf '{"jsonrpc":"2.0","id":%s,"error":{"code":-32602,"message":"Invalid params"}}\n' "$id"
+          continue ;;
+      esac ;;
+    *'"initialize"'*) r='{"protocolVersion":1,"agentCapabilities":{"loadSession":true}}' ;;
+    *'"session/new"'*) r='{"sessionId":"acp-stub","configOptions":[{"id":"model","name":"Model","category":"model","type":"select","currentValue":"gpt-5.2","options":[{"value":"gpt-5.2","name":"5.2","description":"Default"},{"value":"gpt-5.3-codex","name":"5.3 Codex","description":"Coding"}]}]}' ;;
+    *'"session/load"'*) r='{"configOptions":[{"id":"model","category":"model","type":"select","currentValue":"gpt-5.3-codex","options":[{"value":"gpt-5.2","name":"5.2"},{"value":"gpt-5.3-codex","name":"5.3 Codex"}]}]}' ;;
+    *) r='{}' ;;
+  esac
+  printf '{"jsonrpc":"2.0","id":%s,"result":%s}\n' "$id" "$r"
+done
+"#;
+
+    /// The wire contract against a scripted agent: Claude's load/new params
+    /// carry the guidance append and the skills view and are followed by the
+    /// `default` mode pin; Codex's carry no `_meta` and its own mode; a
+    /// signed-out `session/prompt` comes back as the non-retryable sign-in
+    /// error that maps to the agent's hint.
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn a_scripted_agent_gets_our_session_params_and_a_signed_out_prompt_fails_loudly() {
+        let scratch =
+            std::env::temp_dir().join(format!("opencode-stub-agent-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&scratch);
+        std::fs::create_dir_all(&scratch).unwrap();
+        let script = scratch.join("agent.sh");
+        std::fs::write(&script, STUB_AGENT).unwrap();
+        let ws = scratch.join("ws");
+        let skills = scratch.join("cfg/agent-skills");
+
+        // Claude, resuming: the load carries the same params plus the id.
+        let log = scratch.join("claude.log");
+        let session = piped_agent(&script, &log, Backend::Claude);
+        let params = session_params(Backend::Claude, &ws, &skills, "GUIDE");
+        let hs = handshake(
+            &session,
+            &params,
+            Some("prev-session"),
+            Some("default"),
+            None,
+        )
+        .await
+        .unwrap();
+        let (id, loaded) = (hs.id, hs.loaded);
+        assert_eq!((id.as_str(), loaded), ("prev-session", true));
+        let err = session
+            .request("session/prompt", json!({ "sessionId": id, "prompt": [] }))
+            .await
+            .unwrap_err();
+        assert!(err.starts_with(AUTH_REQUIRED), "{err}");
+        assert!(!should_retry(&err, false, 1));
+        assert!(auth_hint(Backend::Claude, &err)
+            .unwrap()
+            .contains("terminal"));
+        let seen = std::fs::read_to_string(&log).unwrap();
+        let lines: Vec<Value> = seen
+            .lines()
+            .map(|l| serde_json::from_str(l).unwrap())
+            .collect();
+        let methods: Vec<&str> = lines
+            .iter()
+            .map(|v| v["method"].as_str().unwrap())
+            .collect();
+        assert_eq!(
+            methods,
+            [
+                "initialize",
+                "session/load",
+                "session/set_mode",
+                "session/prompt"
+            ]
+        );
+        let load = &lines[1]["params"];
+        assert_eq!(load["sessionId"], json!("prev-session"));
+        assert_eq!(load["_meta"]["systemPrompt"]["append"], json!("GUIDE"));
+        assert_eq!(
+            load["additionalDirectories"],
+            json!([skills.to_string_lossy()])
+        );
+        assert_eq!(
+            lines[2]["params"],
+            json!({ "sessionId": "prev-session", "modeId": "default" })
+        );
+        assert_eq!(
+            lines[0]["params"]["clientCapabilities"],
+            json!({ "fs": { "readTextFile": false, "writeTextFile": false }, "terminal": false })
+        );
+        let _ = session.child.lock().await.start_kill();
+
+        // Codex, fresh: session/new without _meta, then its own mode.
+        let log = scratch.join("codex.log");
+        let session = piped_agent(&script, &log, Backend::Codex);
+        let params = session_params(Backend::Codex, &ws, &skills, "GUIDE");
+        let hs = handshake(&session, &params, None, Some("read-only"), None)
+            .await
+            .unwrap();
+        let (id, loaded) = (hs.id, hs.loaded);
+        assert_eq!((id.as_str(), loaded), ("acp-stub", false));
+        let seen = std::fs::read_to_string(&log).unwrap();
+        let lines: Vec<Value> = seen
+            .lines()
+            .map(|l| serde_json::from_str(l).unwrap())
+            .collect();
+        let methods: Vec<&str> = lines
+            .iter()
+            .map(|v| v["method"].as_str().unwrap())
+            .collect();
+        assert_eq!(methods, ["initialize", "session/new", "session/set_mode"]);
+        assert!(lines[1]["params"].get("_meta").is_none(), "{}", lines[1]);
+        assert_eq!(
+            lines[1]["params"]["additionalDirectories"],
+            json!([skills.to_string_lossy()])
+        );
+        assert_eq!(lines[2]["params"]["modeId"], json!("read-only"));
+        let _ = session.child.lock().await.start_kill();
+
+        // opencode: byte-identical to before — no additional dirs, no mode pin.
+        let log = scratch.join("opencode.log");
+        let session = piped_agent(&script, &log, Backend::Opencode);
+        let params = session_params(Backend::Opencode, &ws, &skills, "GUIDE");
+        let loaded = handshake(&session, &params, None, None, None)
+            .await
+            .unwrap()
+            .loaded;
+        assert!(!loaded);
+        let seen = std::fs::read_to_string(&log).unwrap();
+        let lines: Vec<Value> = seen
+            .lines()
+            .map(|l| serde_json::from_str(l).unwrap())
+            .collect();
+        assert_eq!(lines.len(), 2, "{seen}");
+        assert_eq!(
+            lines[1]["params"],
+            json!({ "cwd": ws.to_string_lossy(), "mcpServers": [] })
+        );
+        let _ = session.child.lock().await.start_kill();
+
+        let _ = std::fs::remove_dir_all(&scratch);
+    }
+
+    /// The model plumbing against the scripted agent: the opening snapshot's
+    /// `configOptions` come back untouched (they name the agent's own default),
+    /// a saved model is applied right after the mode pin, one the agent no
+    /// longer offers fails the spawn loudly naming the picker, a load's
+    /// snapshot is the resumed session's, and no saved model means no
+    /// `session/set_config_option` at all.
+    #[tokio::test]
+    #[cfg(unix)]
+    async fn a_scripted_agent_reports_its_models_and_takes_the_saved_one() {
+        fn seen(log: &Path) -> (Vec<Value>, Vec<String>) {
+            let lines: Vec<Value> = std::fs::read_to_string(log)
+                .unwrap()
+                .lines()
+                .map(|l| serde_json::from_str(l).unwrap())
+                .collect();
+            let methods = lines
+                .iter()
+                .map(|v| v["method"].as_str().unwrap().to_string())
+                .collect();
+            (lines, methods)
+        }
+        let scratch =
+            std::env::temp_dir().join(format!("opencode-stub-models-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&scratch);
+        std::fs::create_dir_all(&scratch).unwrap();
+        let script = scratch.join("agent.sh");
+        std::fs::write(&script, STUB_AGENT).unwrap();
+        let ws = scratch.join("ws");
+        let skills = scratch.join("cfg/agent-skills");
+        let params = session_params(Backend::Codex, &ws, &skills, "GUIDE");
+
+        let log = scratch.join("saved.log");
+        let session = piped_agent(&script, &log, Backend::Codex);
+        let hs = handshake(
+            &session,
+            &params,
+            None,
+            Some("read-only"),
+            Some("gpt-5.3-codex"),
+        )
+        .await
+        .unwrap();
+        assert_eq!((hs.id.as_str(), hs.loaded), ("acp-stub", false));
+        let opts = hs.config_options.expect("the opening snapshot");
+        assert_eq!(opts[0]["id"], json!("model"));
+        assert_eq!(
+            opts[0]["currentValue"],
+            json!("gpt-5.2"),
+            "pre-push: the agent's own default"
+        );
+        let (lines, methods) = seen(&log);
+        assert_eq!(
+            methods,
+            [
+                "initialize",
+                "session/new",
+                "session/set_mode",
+                "session/set_config_option"
+            ]
+        );
+        assert_eq!(
+            lines[3]["params"],
+            json!({ "sessionId": "acp-stub", "configId": "model", "value": "gpt-5.3-codex" })
+        );
+        let _ = session.child.lock().await.start_kill();
+
+        let log = scratch.join("stale.log");
+        let session = piped_agent(&script, &log, Backend::Codex);
+        let err = handshake(&session, &params, None, None, Some("gpt-9"))
+            .await
+            .unwrap_err();
+        assert!(
+            err.contains("Codex rejected the model gpt-9") && err.contains("top-left"),
+            "{err}"
+        );
+        let _ = session.child.lock().await.start_kill();
+
+        let log = scratch.join("resume.log");
+        let session = piped_agent(&script, &log, Backend::Claude);
+        let hs = handshake(&session, &params, Some("prev-session"), None, None)
+            .await
+            .unwrap();
+        assert!(hs.loaded);
+        assert_eq!(
+            hs.config_options.unwrap()[0]["currentValue"],
+            json!("gpt-5.3-codex"),
+            "a load's snapshot is the resumed session's"
+        );
+        let (_, methods) = seen(&log);
+        assert_eq!(methods, ["initialize", "session/load"]);
+        let _ = session.child.lock().await.start_kill();
+
+        let _ = std::fs::remove_dir_all(&scratch);
+    }
+
+    /// The real pins list their models through the probe — needs the managed
+    /// Node + adapters and a signed-in agent (a signed-out one is skipped
+    /// with its hint): `cargo test code_agent_pins_list_models -- --ignored --nocapture`.
+    #[tokio::test]
+    #[ignore]
+    #[cfg(unix)]
+    async fn code_agent_pins_list_models() {
+        for backend in [Backend::Codex, Backend::Claude] {
+            match probe_config_options(backend).await {
+                Ok(opts) => {
+                    let model = opts
+                        .as_array()
+                        .unwrap()
+                        .iter()
+                        .find(|o| o["id"] == json!("model"))
+                        .expect("a model option");
+                    let n = model["options"].as_array().map(|a| a.len()).unwrap_or(0);
+                    println!(
+                        "{backend:?}: default {} — {n} models",
+                        model["currentValue"]
+                    );
+                    for o in model["options"].as_array().unwrap() {
+                        println!("  {} = {} ({})", o["value"], o["name"], o["description"]);
+                    }
+                    assert!(n > 0);
+                }
+                Err(e) if e.starts_with(AUTH_REQUIRED) => println!("{backend:?}: skipped — {e}"),
+                Err(e) => panic!("{backend:?}: {e}"),
+            }
+        }
+    }
+
+    /// The real pins accept our handshake: with the managed Node and adapters
+    /// installed (installing them first when missing — ~700 MB), `initialize`
+    /// + `session/new` + the mode pin either succeed or fail ONLY with the
+    /// sign-in error, never with an invalid-params rejection of our shapes.
+    /// `cargo test code_agent_pins -- --ignored --nocapture`.
+    #[cfg(unix)]
+    #[tokio::test]
+    #[ignore]
+    async fn code_agent_pins_accept_our_handshake() {
+        let log = |m: &str| println!("[install] {m}");
+        for backend in [Backend::Codex, Backend::Claude] {
+            if crate::code_agent_installer::agent_ready(backend).is_err() {
+                crate::code_agent_installer::install_with(backend, &log)
+                    .await
+                    .unwrap();
+            }
+        }
+        let scratch = std::env::temp_dir().join(format!("code-agent-pins-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&scratch);
+        let ws = scratch.join("ws");
+        std::fs::create_dir_all(&ws).unwrap();
+        for backend in [Backend::Codex, Backend::Claude] {
+            let skills = scratch.join(format!("{}-skills", backend.id()));
+            link_skills(
+                &skills.join(backend.skills_subdir()),
+                &scratch.join("no-vibe"),
+                None,
+            )
+            .unwrap();
+            let launch = agent_launch(
+                backend,
+                &ws,
+                &skills,
+                &scratch,
+                "# ibl.ai guidance\n",
+                false,
+            );
+            let mut cmd = Command::new(&launch.program);
+            cmd.args(&launch.args)
+                .current_dir(&ws)
+                .env("PATH", crate::code_agent_installer::agent_path())
+                .stdin(std::process::Stdio::piped())
+                .stdout(std::process::Stdio::piped())
+                .stderr(std::process::Stdio::inherit())
+                .kill_on_drop(true);
+            strip_agent_env(&mut cmd);
+            for (k, v) in &launch.env {
+                cmd.env(k, v);
+            }
+            let mut child = cmd.spawn().unwrap();
+            let stdin = Arc::new(Mutex::new(child.stdin.take().unwrap()));
+            let stdout = child.stdout.take().unwrap();
+            let pending: Arc<Mutex<HashMap<i64, oneshot::Sender<Value>>>> =
+                Arc::new(Mutex::new(HashMap::new()));
+            let routed = pending.clone();
+            tokio::spawn(async move {
+                let mut lines = BufReader::new(stdout).lines();
+                while let Ok(Some(line)) = lines.next_line().await {
+                    if let Ok(v) = serde_json::from_str::<Value>(&line) {
+                        if !route_response(&routed, &v).await {
+                            println!("[{}] <- {line}", "agent");
+                        }
+                    }
+                }
+            });
+            let session = Session {
+                child: Mutex::new(child),
+                stdin,
+                next_id: AtomicI64::new(1),
+                pending,
+                acp_session_id: String::new(),
+                requested_model: Some(format!("{}/default", backend.id())),
+                backend,
+                proxy_secret: None,
+                turn: Arc::new(Mutex::new(TurnState {
+                    generation_id: String::new(),
+                    full_content: String::new(),
+                    pending_delta: String::new(),
+                    last_narration: String::new(),
+                    last_emit: Instant::now(),
+                })),
+                last_used: Mutex::new(Instant::now()),
+                active_turns: AtomicUsize::new(0),
+                closing: AtomicBool::new(false),
+                context_fresh: AtomicBool::new(false),
+            };
+            let result = tokio::time::timeout(
+                Duration::from_secs(120),
+                handshake(
+                    &session,
+                    &launch.session,
+                    None,
+                    session_mode(backend, false),
+                    None,
+                ),
+            )
+            .await
+            .expect("handshake must answer within two minutes");
+            println!("{backend:?}: {result:?}");
+            match result {
+                Ok(hs) => assert!(!hs.id.is_empty() && !hs.loaded),
+                Err(e) => assert!(
+                    e.starts_with(AUTH_REQUIRED),
+                    "{backend:?} rejected our params: {e}"
+                ),
+            }
+            let _ = session.child.lock().await.start_kill();
+        }
+        let _ = std::fs::remove_dir_all(&scratch);
     }
 }

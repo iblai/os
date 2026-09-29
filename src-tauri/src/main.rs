@@ -8,6 +8,10 @@ mod foundry_installer;
 mod foundry_manager;
 // Mobile-only catalog (`local_llm::resolve`) that `model_manager::required_space_gb`
 // consults; the engine inside is cfg-gated so this compiles on desktop like lib.rs.
+#[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+mod code_agent_installer;
+#[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+mod code_agent_models;
 #[allow(dead_code)]
 mod local_llm;
 mod mcp_bridge_installer;
@@ -2241,6 +2245,16 @@ fn main() {
                 opencode_installer::ensure_opencode_current(opencode_handle).await;
             });
 
+            // The subscription agents (Codex, Claude Code) install themselves in
+            // the background on every launch — a pinned Node plus the pinned
+            // adapters — so the Code popover only ever shows them loading, never
+            // a download the user has to start. Never blocks: ibl.ai turns run
+            // meanwhile, and a failure surfaces in the popover with a retry.
+            let agents_handle = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                code_agent_installer::ensure_agents_current(agents_handle).await;
+            });
+
             // Vibe skills track the latest GitHub release with no freshness
             // window — resolve-and-sync in the background on every launch, so
             // Coding Mode always starts from the newest published set (and a
@@ -2871,6 +2885,11 @@ fn main() {
             opencode_acp::check_code_local_model,
             opencode_acp::set_opencode_learner,
             opencode_acp::ensure_opencode_platform_key,
+            code_agent_installer::check_code_agent_status,
+            code_agent_installer::install_code_agent,
+            code_agent_installer::code_agent_sign_in,
+            code_agent_models::list_code_agent_models,
+            code_agent_models::set_code_agent_model,
             remote_code::remote_code_status,
             remote_code::remote_code_enable,
             remote_code::remote_code_disable,
