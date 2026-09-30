@@ -5,7 +5,7 @@ import { chatActions, selectActiveTab } from '@iblai/iblai-js/web-utils';
 import {
   addPermissionRequest,
   dropPermissionRequest,
-} from '@/components/chat/code-permission-card';
+} from '@iblai/iblai-js/web-containers/next';
 import { readCoworkApprovals } from '@/lib/cowork-approvals';
 import { useAppDispatch, useAppSelector } from '@/lib/hooks';
 
