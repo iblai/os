@@ -33,7 +33,9 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useChatMode } from '@/hooks/use-chat-mode';
 import { useShowCloseButton } from '@/hooks/use-show-close-button';
+import { useShowUserProfile } from '@/hooks/use-show-user-profile';
 import { useHelpCenter } from '@/hooks/use-help-center';
+import { UserProfile } from './user-profile';
 import { useUsername } from '@/hooks/use-user';
 import { cn, isLoggedIn } from '@/lib/utils';
 import { chatActions, clearFiles } from '@iblai/iblai-js/web-utils';
@@ -68,6 +70,7 @@ export function EmbedNavBar({
   const isIframed = useIsIframed();
   const chatMode = useChatMode();
   const showCloseButton = useShowCloseButton();
+  const showUserProfile = useShowUserProfile();
   const dispatch = useAppDispatch();
   const pathname = usePathname();
   const isWorkflowsPage = /\/workflows\/[^/]+\/?$/.test(pathname ?? '');
@@ -185,6 +188,11 @@ export function EmbedNavBar({
               className="inline-flex max-md:[&>span]:hidden"
             />
           )}
+
+          {/* Host opt-in (agent-ai `showuserprofile` → `show-user-profile=true`):
+              the user-profile menu, shown just before the help items. `embed`
+              hides logout + the instructor/learner switch in this surface. */}
+          {showUserProfile && <UserProfile embed />}
 
           {chatMode === 'default' ? (
             <DropdownMenu>

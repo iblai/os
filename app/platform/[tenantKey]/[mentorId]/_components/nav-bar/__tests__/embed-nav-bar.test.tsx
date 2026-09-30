@@ -15,6 +15,7 @@ let mockIsPreviewMode = false;
 let mockIsIframed = true;
 let mockChatMode: 'default' | 'advanced' = 'default';
 let mockShowCloseButton = true;
+let mockShowUserProfile = false;
 let mockUsername: string | null = 'testuser';
 let mockIsLoggedIn = true;
 let mockPathname = '/platform/tenant123/mentor123';
@@ -41,6 +42,15 @@ vi.mock('@/hooks/use-chat-mode', () => ({
 
 vi.mock('@/hooks/use-show-close-button', () => ({
   useShowCloseButton: () => mockShowCloseButton,
+}));
+
+vi.mock('@/hooks/use-show-user-profile', () => ({
+  useShowUserProfile: () => mockShowUserProfile,
+}));
+
+// Stub the full user-profile menu (the real one pulls in model-download/SDK).
+vi.mock('../user-profile', () => ({
+  UserProfile: () => <div data-testid="embed-user-profile">User Profile</div>,
 }));
 
 vi.mock('@/hooks/use-user', () => ({
@@ -146,6 +156,7 @@ describe('EmbedNavBar', () => {
     mockIsIframed = true;
     mockChatMode = 'default';
     mockShowCloseButton = true;
+    mockShowUserProfile = false;
     mockUsername = 'testuser';
     mockIsLoggedIn = true;
     mockPathname = '/platform/tenant123/mentor123';
@@ -285,6 +296,24 @@ describe('EmbedNavBar', () => {
         </Provider>,
       );
       expect(screen.getByLabelText('Close sidebar')).toBeInTheDocument();
+    });
+  });
+
+  // --------------------------------------------------------------------------
+  // User Profile (host opt-in via show-user-profile)
+  // --------------------------------------------------------------------------
+
+  describe('User Profile', () => {
+    it('does not render the user profile by default', () => {
+      mockShowUserProfile = false;
+      renderEmbedNavBar();
+      expect(screen.queryByTestId('embed-user-profile')).toBeNull();
+    });
+
+    it('renders the user profile when the host opts in', () => {
+      mockShowUserProfile = true;
+      renderEmbedNavBar();
+      expect(screen.getByTestId('embed-user-profile')).toBeInTheDocument();
     });
   });
 

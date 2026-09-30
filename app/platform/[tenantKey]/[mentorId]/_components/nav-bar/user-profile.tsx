@@ -40,7 +40,10 @@ import { useModelDownload } from '@/hooks/use-model-download';
 import { useLockedTenant } from '@/hooks/use-tenant-lock';
 import { LOCAL_LLM_CHANGED_EVENT } from '@/hooks/use-selected-local-model';
 
-export function UserProfile() {
+// `embed` = rendered inside the embedded mentor navbar. Embeds are a scoped,
+// host-owned surface, so the account-management affordances (logout, and the
+// instructor/learner mode switch) are hidden there.
+export function UserProfile({ embed = false }: { embed?: boolean } = {}) {
   const username = useUsername();
   // Tauri builds pinned to a tenant hide the switcher entirely.
   const lockedTenant = useLockedTenant();
@@ -269,6 +272,19 @@ export function UserProfile() {
   };
 
   const handleTenantChange = (newTenantKey: string) => {
+    // In an embed the host owns auth (e.g. the browser extension runs the auth
+    // SPA's login flow via chrome.identity). We can't redirect the storage-
+    // partitioned iframe to the auth app the way the web switch does, so hand
+    // the switch up to the parent — the `{ tenantSwitch }` message `<agent-ai>`
+    // already listens for. The host mints the new tenant's tokens and
+    // re-installs the session. Mirrors notifyParentOnEmbedClose.
+    if (embed) {
+      window.parent?.postMessage(
+        { tenantSwitch: true, tenant: newTenantKey },
+        '*',
+      );
+      return;
+    }
     handleTenantSwitch(newTenantKey);
   };
 
@@ -316,8 +332,8 @@ export function UserProfile() {
         !lockedTenant
       }
       showHelpLink={true}
-      showLogoutButton={true}
-      showLearnerModeSwitch={userIsAdmin && tenantKey !== 'main'}
+      showLogoutButton={!embed}
+      showLearnerModeSwitch={!embed && userIsAdmin && tenantKey !== 'main'}
       // Customization
       helpCenterUrl={config.helpCenterUrl()}
       enableGravatarOnProfilePic={

@@ -1,5 +1,78 @@
 # Changelog
 
+## [0.158.4](https://github.com/iblai/os/compare/v0.158.3...v0.158.4) (2026-09-29)
+
+### Bug Fixes
+
+- **mentor:** persist embed Context Aware and Open By Default toggles ([03b545a](https://github.com/iblai/os/commit/03b545a83f538bbb37a8a8af8d3b8c9fc8e29923))
+- **mentor:** stop Create Embed overwriting Advanced CSS ([05c982f](https://github.com/iblai/os/commit/05c982fa0041562848bb2cb04be422d155dfa3cd))
+
+### Chores
+
+- **deps:** bump @iblai/iblai-js to 2.23.1 ([fb474c6](https://github.com/iblai/os/commit/fb474c63afd369bc11844f4614f31b97fe1a1b11))
+- **deps:** bump @iblai/iblai-js to 2.26.0 ([f2e802b](https://github.com/iblai/os/commit/f2e802b7abd0b0ce0338c40063a9489434de230e))
+
+### Documentation
+
+- **e2e:** add mob-08 to coverage ([e04447f](https://github.com/iblai/os/commit/e04447fe98aa73a562dd90dceb806429e6b8653e))
+
+### Styles
+
+- prettier-format CHANGELOG bullets ([3578f5c](https://github.com/iblai/os/commit/3578f5cb6c3b33624a18dcf287593a8add49f4d1))
+
+### Tests
+
+- **e2e:** mobile profile dropdown shows Admin/User labels ([9d28389](https://github.com/iblai/os/commit/9d283894278b79f2b06e9eb66574ca836de0f552))
+- **mentor:** regression tests for Advanced CSS ownership ([7aebf3d](https://github.com/iblai/os/commit/7aebf3dd18f7f39e56ed11f73bb95dd26cc253fe))
+- **mentor:** regression tests for embed toggle persistence ([2ca81e8](https://github.com/iblai/os/commit/2ca81e87458858032ceec135913677ffc041b2f7))
+
+## [0.158.3](https://github.com/iblai/os/compare/v0.158.2...v0.158.3) (2026-09-29)
+
+### Bug Fixes
+
+- **embed:** don't run cross-SPA storage sync in an iframe (reverted switches) ([caae732](https://github.com/iblai/os/commit/caae7326359efc58217a5f52e84c8e1114980b04))
+
+## [0.158.2](https://github.com/iblai/os/compare/v0.158.1...v0.158.2) (2026-09-29)
+
+### Bug Fixes
+
+- **ext:** switch tenants via /login/complete so the target tenant is honored ([4ba13d4](https://github.com/iblai/os/commit/4ba13d4f3051c307aad30661ee9df65b72b5ff55))
+
+## [0.158.1](https://github.com/iblai/os/compare/v0.158.0...v0.158.1) (2026-09-29)
+
+### Refactors
+
+- **edit-mentor:** add a thin Disclaimers tab wrapper over the SDK AgentDisclaimersTab ([de49e1b](https://github.com/iblai/os/commit/de49e1bf5b51d07a2262d357f70286299b8d6b52))
+- **edit-mentor:** mount the SDK-backed Disclaimers tab and delete the in-repo monolith ([e65eabe](https://github.com/iblai/os/commit/e65eabed63ab984e9b5ef7067acd2c1a2673387a))
+
+### Chores
+
+- **deps:** bump @iblai/iblai-js to 2.21.0 ([b2c4ed2](https://github.com/iblai/os/commit/b2c4ed2487664f681ed69a52d21dfd60f33649a5)), closes [#2102](https://github.com/iblai/os/issues/2102)
+- **deps:** bump @iblai/iblai-js to 2.25.0 ([a6f48b5](https://github.com/iblai/os/commit/a6f48b589c138a632613ed35d88284ee33c6e5e3))
+- **edit-mentor:** retarget e2e coverage to the wrapper and drop unused disclaimer aria strings ([ff438d2](https://github.com/iblai/os/commit/ff438d20186af6fc7ebc0d283b472426033130aa))
+
+### Styles
+
+- format CHANGELOG.md with prettier ([4a3b0d1](https://github.com/iblai/os/commit/4a3b0d18c7de1708287beabf5016bf383115429e))
+
+## [0.158.0](https://github.com/iblai/os/compare/v0.157.0...v0.158.0) (2026-09-29)
+
+### Features
+
+- **embed:** switch tenant via the host auth flow in embeds ([158df5c](https://github.com/iblai/os/commit/158df5cd436d4f63fd64126aadccf7859535ad28))
+
+## [0.157.0](https://github.com/iblai/os/compare/v0.156.0...v0.157.0) (2026-09-29)
+
+### Features
+
+- **embed:** hide logout and instructor switch in the embedded user profile ([06779a4](https://github.com/iblai/os/commit/06779a47f6121b7121704022e4f0b6d13a5d507f))
+
+## [0.156.0](https://github.com/iblai/os/compare/v0.155.3...v0.156.0) (2026-09-29)
+
+### Features
+
+- **embed:** show the user profile in the embed navbar when the host opts in ([4ff9d75](https://github.com/iblai/os/commit/4ff9d7531c3b29d07df96105a5afe61cff8f7008))
+
 ## [0.155.3](https://github.com/iblai/os/compare/v0.155.2...v0.155.3) (2026-09-25)
 
 ### Chores

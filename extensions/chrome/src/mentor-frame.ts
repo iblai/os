@@ -1,7 +1,7 @@
 // Glue between the side panel and the mentor iframe inside <agent-ai> (ported
 // from the original panel.js).
 import { extractPageContent } from './page-scripts';
-import { isAuthed, sessionData } from './auth';
+import { isAuthed, sessionData, signIn } from './auth';
 
 export interface PageContent {
   title: string;
@@ -28,14 +28,19 @@ export function mentorIframe(host: Element): HTMLIFrameElement | null {
 //
 // Returns true once the iframe is routed through the installer (or already was),
 // so the poller knows to stop.
-export function installSession(host: Element): boolean {
+export function installSession(
+  host: Element,
+  redirectPathOverride?: string,
+): boolean {
   if (!isAuthed()) return false;
   const mentorUrl = (host.getAttribute('mentorurl') || '').replace(/\/+$/, '');
   const iframe = mentorIframe(host);
   const src = iframe?.getAttribute('src');
   if (!iframe || !mentorUrl || !src) return false; // widget iframe not mounted yet
-  if (src.includes('/sso-login-complete')) return true; // already routed
-  if (!src.startsWith(mentorUrl)) return false; // only rewrite the mentor iframe
+  // On first install, skip if already routed. A tenant switch passes an explicit
+  // redirect path and must re-route even from an existing /sso-login-complete URL.
+  if (!redirectPathOverride && src.includes('/sso-login-complete')) return true;
+  if (!redirectPathOverride && !src.startsWith(mentorUrl)) return false; // only rewrite the mentor iframe
 
   // Leave the iframe's `allow` policy alone: the widget already sets a superset,
   // and overwriting it here would revoke the features we don't re-list.
@@ -46,7 +51,8 @@ export function installSession(host: Element): boolean {
   // `searchParams.get('redirect-path')` (the `redirect-to` name only addresses
   // the localStorage fallback key, never the URL).
   const original = new URL(src);
-  const redirectPath = original.pathname + original.search;
+  const redirectPath =
+    redirectPathOverride ?? original.pathname + original.search;
   const session = sessionData();
   iframe.src =
     `${mentorUrl}/sso-login-complete` +
@@ -78,6 +84,62 @@ export function watchAndInstallSession(
     if (installSession(host) || ++attempts >= maxAttempts) clearInterval(timer);
   }, intervalMs);
   return () => clearInterval(timer);
+}
+
+// The app root to return to after a switch, carrying only the embed params from
+// the iframe's current URL. The old tenant's path is dropped (invalid under the
+// new tenant), and — critically — so are `data`, `redirect-path` and `tenant`: by
+// the time a switch fires the iframe URL is already an installed
+// `/sso-login-complete` result whose query still holds a full session `data`
+// blob (with a large JWT). Carrying that into the next redirect-path nests it
+// deeper each switch and eventually overflows the request line (HTTP 431).
+export function embedRedirectPath(host: Element): string {
+  const src = mentorIframe(host)?.getAttribute('src');
+  if (!src) return '/';
+  let url: URL;
+  try {
+    url = new URL(src);
+  } catch {
+    return '/';
+  }
+  const params = url.searchParams;
+  for (const key of ['data', 'redirect-path', 'tenant']) params.delete(key);
+  const qs = params.toString();
+  return qs ? `/?${qs}` : '/';
+}
+
+// ---- Tenant switch -----------------------------------------------------------
+// The mentor app (in the iframe) posts `{ tenantSwitch: true, tenant: <key> }`
+// when the user picks a different tenant in the profile menu (the SDK's
+// `handleTenantSwitch` does this itself when it detects it's iframed). On a normal
+// web page the SDK redirects to the auth SPA to mint the new tenant's tokens;
+// inside the side panel the host owns auth, so we run the auth round-trip
+// ourselves via signIn(tenant) — which hits the SPA's /login/complete with the
+// target tenant + edX JWT — then re-install the session via /sso-login-complete,
+// landing on the app root (embed params preserved) so the app opens the newly
+// selected tenant.
+export function watchTenantSwitch(host: Element): () => void {
+  let switching = false;
+  const onMessage = async (event: MessageEvent) => {
+    const data = event.data as {
+      tenantSwitch?: boolean;
+      tenant?: string;
+    } | null;
+    if (!data?.tenantSwitch || !data.tenant || switching) return;
+    switching = true;
+    try {
+      // The auth app issues the target tenant's tokens and returns them in the
+      // redirect `data`, which signIn() stores in this page's localStorage.
+      await signIn(data.tenant);
+      installSession(host, embedRedirectPath(host));
+    } catch (err) {
+      console.warn('[ibl.ai panel] tenant switch failed:', err);
+    } finally {
+      switching = false;
+    }
+  };
+  window.addEventListener('message', onMessage);
+  return () => window.removeEventListener('message', onMessage);
 }
 
 /**
