@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-09-25 | 768 checkpoints (725 covered, 11 pending/fixme, 15 not-reproducible in default env, 17 deprecated) | 79 journeys (78 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-09-25 | 781 checkpoints (738 covered, 11 pending/fixme, 15 not-reproducible in default env, 17 deprecated) | 80 journeys (79 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -1860,3 +1860,25 @@ Covers issue #2544: a new `show_explore_mentors` mentor setting, exposed as a "S
 - [x] sem-04: With the setting ON, the admin's own welcome screen shows the "Explore Agents" section
 - [x] sem-05: With the setting ON, a non-admin non-owner viewer of the same agent also sees the "Explore Agents" section (RBAC-redaction regression guard)
 - [x] sem-06: With the setting OFF, the welcome screen hides the "Explore Agents" section
+
+---
+
+## Journey 77: Virtual Machine Network Policies & Secrets (13 checkpoints) — `journeys/77-virtual-machine-network-and-secrets.spec.ts`
+
+**Source files:** `components/modals/edit-mentor-modal/tabs/sandbox-tab.tsx`
+
+An agent with Virtual Machine Shell turned on runs code in an isolated Linux VM with no network access by default. This journey covers the UI that lets an org admin decide what that VM can reach and which credentials it can use. Both surfaces are SDK-owned and reached through existing app entry points: the SDK `Account` rail of the User Profile dialog (More options → platform name, the route journey 38 takes to Advanced) lists an admin-only "Virtual Machine" entry hosting the SDK `VirtualMachineAdminTab` (Network policies / Secrets tables with their dialogs and the keyboard-driven `host:port` chip input) and, inside Edit Agent → Sandbox while the Virtual Machine Shell kind is active, the SDK `VirtualMachineNetworkSection` (egress-profile radio group, policy picker, secrets multi-select, billing notice) which mirrors every backend rule before saving. Policies and secrets are org-level records that the run-level residue teardown does not reap, so every record the file creates carries a per-run stamp and is deleted again through the API in `afterEach` (`e2e/utils/virtual-machine-api.ts`); the agent-side flows use a dedicated mentor and the file runs serially.
+
+- [x] vmn-01: Admin reaches the tenant Virtual Machine settings through the User Profile dialog (More options → platform name → the SDK Account rail's admin-only "Virtual Machine" entry), which hosts the SDK tab's info box and the Network policies / Secrets sub-tabs, each with its table and New button
+- [x] vmn-02: Admin creates a network policy through the SDK dialog — hosts are entered with the keyboard-driven chip input (Enter commits, Backspace removes the last chip, every chip has a labelled Remove button) and the client-side `host:port` check refuses a scheme/path entry and a reserved host inline via the `aria-live` line; saving shows "Network policy created" and the row lists the host
+- [x] vmn-03: Admin edits the policy — adding a host and removing the original shows the removed-hosts warning; saving shows "Network policy updated" and the row reflects the replaced host list
+- [x] vmn-04: Admin creates a VM secret from a pasted value — an IP literal is refused inline, the source is a choice between "Enter a value" and an integration credential, the value box is a password field, short and masked-looking values are rejected before any request; the row shows the "Stored value" source and never the value
+- [x] vmn-05: On edit the env var is read-only and the value box is blank with the "Leave blank to keep the current value" hint; the credential source offers the org's credentials (or the no-credentials notice) without showing a masked value; deleting confirms every agent using the secret loses it and removes the row
+- [x] vmn-06: Deleting a policy an agent still uses (bound under Custom) is refused with an error naming the agents; after the agent is moved off the policy the same delete succeeds
+- [x] vmn-07: With the Virtual Machine Shell kind selected, the Sandbox tab renders the Network access section with the billing notice ($1 per 10 minutes by default) and a labelled "Egress profile" radio group of the four options; a fresh agent defaults to No network with neither picker shown and Save disabled
+- [x] vmn-08: The secrets multi-select renders only under Public or Custom and the policy picker only under Custom
+- [x] vmn-09: Custom requires a policy — required message, Save disabled until one is chosen, the "Create policy" shortcut opens the SDK policy dialog in place, and picking a policy lists the hosts it allows
+- [x] vmn-10: Binding a secret whose host the policy lacks lists the gap, keeps Save disabled, and "Add these hosts to {policy} and save" patches the policy and saves the settings in one go
+- [x] vmn-11: The saved configuration (Custom, the policy, the bound secret) persists across closing and reopening the Edit Agent dialog
+- [x] vmn-12: Narrowing to No network with a secret bound opens the "Unbind secrets?" confirmation; confirming saves with the secrets unbound
+- [x] vmn-13: A non-admin never reaches the tenant Virtual Machine settings — the platform entry is missing from More options, or the tenant settings dialog it opens lists no Virtual Machine section (the SDK Account rail filters it on `isAdmin`)

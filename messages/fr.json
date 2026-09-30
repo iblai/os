@@ -1860,6 +1860,7 @@
     "sentimentPositive": "Positif",
     "sentimentNeutral": "Neutre",
     "sentimentNegative": "Négatif",
+    "userSentiment": "Sentiment de l'utilisateur",
     "filterBySentiment": "Filtrer par sentiment",
     "allTopics": "Tous les sujets",
     "filterByTopic": "Filtrer par sujet",

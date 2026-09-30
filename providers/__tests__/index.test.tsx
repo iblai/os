@@ -18,6 +18,13 @@ let mockPathname = '/';
 let mockSearchParams = new URLSearchParams();
 let mockRouter = { push: mockPush, replace: mockReplace };
 
+// AppProvider mounts the agent-settings launcher, which reads navigation and
+// user hooks this suite does not set up; it has its own tests.
+vi.mock('../agent-settings-launcher', () => ({
+  AgentSettingsLauncher: ({ children }: { children: React.ReactNode }) => (
+    <>{children}</>
+  ),
+}));
 vi.mock('next/navigation', () => ({
   useParams: () => mockParams,
   usePathname: () => mockPathname,

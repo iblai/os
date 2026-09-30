@@ -1296,4 +1296,52 @@ describe('HistoryTab', () => {
     fireEvent.click(screen.getByText('Hello there mentor'));
     expect(screen.queryByTestId('history-attachments')).not.toBeInTheDocument();
   });
+
+  // ==========================================================================
+  // Rows: the profile tab's date pattern and the Transcripts sentiment line
+  // ==========================================================================
+  describe('conversation rows', () => {
+    it('dates the row like the profile History tab and shows the sentiment line under the title', () => {
+      render(<HistoryTab />);
+      const list = screen.getByLabelText('Conversation list');
+      expect(
+        within(list).getByText(
+          /^[A-Z][a-z]{2} \d{1,2}, \d{4}, \d{1,2}:\d{2} [AP]M · .+ ago$/,
+        ),
+      ).toBeInTheDocument();
+      const chips = within(list).getByTestId('conversation-topics');
+      const mark = within(chips).getByTestId('conversation-sentiment');
+      expect(mark).toHaveAttribute('data-compact', 'true');
+      expect(mark).toHaveAttribute('data-sentiment', 'positive');
+      expect(mark).toHaveTextContent('Positive User Sentiment');
+      expect(chips.firstElementChild).toBe(mark);
+    });
+  });
+
+  describe('title and topics', () => {
+    it("prefers the backend's title over the first message, and shows the topics as chips", () => {
+      mockUseHistoryWithPagination.mockReturnValue(
+        defaultHistory({
+          chatHistory: {
+            results: [
+              {
+                ...baseConversation,
+                title: 'Everyday Analogy',
+                topics: [{ name: 'Biology' }],
+              },
+            ],
+          },
+        }),
+      );
+      render(<HistoryTab />);
+      const list = screen.getByLabelText('Conversation list');
+      expect(within(list).getByText('Everyday Analogy')).toBeInTheDocument();
+      expect(
+        within(list).queryByText('Hello there mentor'),
+      ).not.toBeInTheDocument();
+      expect(within(list).getByTestId('conversation-topics')).toHaveTextContent(
+        'Biology',
+      );
+    });
+  });
 });

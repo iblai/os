@@ -57,6 +57,12 @@ vi.mock('@iblai/iblai-js/web-containers', () => ({
   },
 }));
 
+// The launcher reads navigation and user hooks; AppProvider only mounts it.
+vi.mock('../agent-settings-launcher', () => ({
+  AgentSettingsLauncher: ({ children }: { children: React.ReactNode }) => (
+    <>{children}</>
+  ),
+}));
 vi.mock('../message-bridge-provider', () => ({
   MessageBridgeProvider: ({ children }: { children?: React.ReactNode }) => (
     <div data-testid="message-bridge-provider">{children}</div>

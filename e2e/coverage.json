@@ -2,14 +2,14 @@
   "version": 2,
   "lastUpdated": "2026-09-25",
   "summary": {
-    "totalCheckpoints": 768,
-    "coveredCheckpoints": 725,
+    "totalCheckpoints": 781,
+    "coveredCheckpoints": 738,
     "deprecatedCheckpoints": 17,
     "notReproducibleCheckpoints": 15,
     "pendingCheckpoints": 11,
     "percent": 100,
-    "totalJourneys": 79,
-    "activeJourneys": 78
+    "totalJourneys": 80,
+    "activeJourneys": 79
   },
   "journeys": [
     {
@@ -4885,6 +4885,81 @@
         {
           "id": "sem-06",
           "description": "With the setting OFF, the welcome screen hides the \"Explore Agents\" section",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "virtual-machine-network-and-secrets",
+      "name": "Virtual Machine Network Policies & Secrets",
+      "spec": "77-virtual-machine-network-and-secrets.spec.ts",
+      "sourceFiles": [
+        "components/modals/edit-mentor-modal/tabs/sandbox-tab.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "vmn-01",
+          "description": "Admin reaches the tenant Virtual Machine settings through the User Profile dialog (More options, then the platform name, then the SDK Account rail's admin-only \"Virtual Machine\" entry) which hosts the SDK VirtualMachineAdminTab: the info box plus the Network policies and Secrets sub-tabs, each hosting its table with a New button",
+          "status": "covered"
+        },
+        {
+          "id": "vmn-02",
+          "description": "Admin creates a network policy through the SDK dialog: hosts are entered with the keyboard-driven chip input (Enter commits, Backspace on an empty box removes the last chip, every chip has a labelled Remove button) and the client-side host:port check refuses a scheme/path entry and a reserved host inline via the aria-live line without adding a chip; saving shows the \"Network policy created\" toast and the new row lists the host",
+          "status": "covered"
+        },
+        {
+          "id": "vmn-03",
+          "description": "Admin edits the policy: adding a host and removing the original shows the removed-hosts warning (a secret sent to a removed host would stop working; the backend does not block the edit); saving shows \"Network policy updated\" and the row reflects the replaced host list",
+          "status": "covered"
+        },
+        {
+          "id": "vmn-04",
+          "description": "Admin creates a VM secret from a pasted value: an IP literal is refused inline (hostnames only), the source is a choice between \"Enter a value\" (default) and an integration credential, the value box is a password field, and values shorter than 8 characters or masked-looking (sk-****) are rejected before any request; saving shows \"VM secret created\" and the row shows name, hosts and the \"Stored value\" source, never the value",
+          "status": "covered"
+        },
+        {
+          "id": "vmn-05",
+          "description": "On edit the env var is read-only, the value box is blank with the \"Leave blank to keep the current value\" hint, and switching to the credential source offers the org's credentials (or the no-credentials notice) without ever showing a masked value; deleting confirms that every agent using the secret loses it, shows \"VM secret deleted\" and removes the row",
+          "status": "covered"
+        },
+        {
+          "id": "vmn-06",
+          "description": "Deleting a network policy an agent still uses (bound under the Custom profile) is refused: the delete dialog stays open with an error naming the agents that use it; after the agent is moved off the policy the same delete succeeds with \"Network policy deleted\" and the row disappears",
+          "status": "covered"
+        },
+        {
+          "id": "vmn-07",
+          "description": "With the Virtual Machine Shell kind selected on a dedicated agent, the Sandbox tab renders the Network access section: the billing notice ($1 per 10 minutes by default, prorated per second) and a labelled \"Egress profile\" radio group with the four labelled options (No network / Package registries / Public internet / Custom allowlist); a fresh agent defaults to No network, so neither picker renders and Save is disabled",
+          "status": "covered"
+        },
+        {
+          "id": "vmn-08",
+          "description": "The secrets multi-select renders only under Public or Custom (with one checkbox per org secret) and the policy picker only under Custom; neither renders under No network or Package registries",
+          "status": "covered"
+        },
+        {
+          "id": "vmn-09",
+          "description": "Custom requires a policy: the picker shows the \"The Custom profile needs a network policy.\" message and Save stays disabled until one is chosen; the \"Create policy\" shortcut opens the SDK network policy dialog in place; picking a policy lists the hosts it allows",
+          "status": "covered"
+        },
+        {
+          "id": "vmn-10",
+          "description": "Binding a secret whose host the chosen policy does not allow lists the gap (\"ENV needs host, which policy doesn't allow.\"), keeps Save disabled, and \"Add these hosts to {policy} and save\" patches the policy (\"Hosts added to {policy}\") and then saves the settings (\"Network settings saved\") in one go",
+          "status": "covered"
+        },
+        {
+          "id": "vmn-11",
+          "description": "The saved configuration persists across closing and reopening the Edit Agent dialog: Custom selected, the policy chosen (now also allowing the secret's host) and the secret still bound",
+          "status": "covered"
+        },
+        {
+          "id": "vmn-12",
+          "description": "Narrowing the profile to No network while a secret is bound opens the \"Unbind secrets?\" confirmation naming the secret count; confirming saves with the secrets unbound, and the reopened agent is on No network with the secret unchecked under Public",
+          "status": "covered"
+        },
+        {
+          "id": "vmn-13",
+          "description": "A non-admin never reaches the tenant Virtual Machine settings: the platform entry is missing from More options, or the tenant settings dialog it opens lists no Virtual Machine section (the SDK Account rail filters it on isAdmin)",
           "status": "covered"
         }
       ]
