@@ -157,35 +157,6 @@
     "languageFrenchFrance": "法语（法国）",
     "languageSpanish": "西班牙语（Español）"
   },
-  "apiTabApiKeyModal": {
-    "dialogTitle": "API 密钥",
-    "dialogDescription": "复制并粘贴 API 密钥。",
-    "securityWarning": "请复制您的 API 密钥并将其存储在安全的位置。出于安全原因，此密钥仅显示一次，离开此页面后将无法再次获取。",
-    "lostKeyWarning": "如果您丢失了 API 密钥，您需要重新生成一个。"
-  },
-  "apiTabCreateApiModal": {
-    "apiKeyNameRequired": "API 密钥名称为必填项",
-    "apiKeyNameInvalidChars": "只能包含字母、数字和连字符",
-    "apiKeyCreatedSuccess": "API 密钥创建成功",
-    "apiKeyCreatedError": "创建 API 密钥失败",
-    "dialogDescriptionSrOnly": "创建 API 密钥",
-    "dialogTitle": "创建 API 密钥",
-    "apiKeyNameLabel": "API 密钥名称",
-    "apiKeyNamePlaceholder": "API 密钥名称",
-    "expirationDateLabel": "到期日期",
-    "pickADate": "选择日期",
-    "submitting": "提交中...",
-    "submit": "提交"
-  },
-  "apiTabDeleteApiModal": {
-    "title": "删除 API 密钥",
-    "confirmationMessage": "您确定要删除名为 <bold>{name}</bold> 的 API 密钥吗？此操作无法撤销。",
-    "cancel": "取消",
-    "delete": "删除",
-    "deleting": "正在删除...",
-    "deleteSuccess": "API 密钥已成功删除",
-    "deleteError": "删除 API 密钥失败"
-  },
   "appSidebarIndex": {
     "addAgentToProjectFirst": "请先向此项目添加一个智能体。",
     "projects": "项目",
@@ -1536,22 +1507,6 @@
     "deleteSuccess": "智能体已成功删除",
     "deleteError": "删除智能体失败"
   },
-  "tabsApiTab": {
-    "infoBox": "在您自己的应用中使用该智能体。在此创建 API 密钥，以便通过编程方式调用它，并将其集成到您的产品或工作流程中。",
-    "apiHeading": "API",
-    "manageApiKeysDescription": "管理 API 密钥和集成。",
-    "secretKeysListedBelow": "您的私密 API 密钥列于下方。请注意，生成后我们将不再显示您的私密 API 密钥。",
-    "doNotShareApiKey": "请勿与他人共享您的 API 密钥，也不要在浏览器或其他客户端代码中暴露它。为保护您账户的安全，IBL 还可能自动轮换我们发现已公开泄露的 API 密钥。",
-    "columnName": "名称",
-    "columnCreated": "创建时间",
-    "columnExpires": "到期时间",
-    "columnActions": "操作",
-    "noApiKeysFound": "未找到 API 密钥",
-    "noPermissionToViewApiKeys": "您没有权限查看 API 密钥",
-    "notAvailable": "N/A",
-    "deleteApiKey": "删除 API 密钥",
-    "createNew": "新建"
-  },
   "tabsAuditLogTab": {
     "infoBox": "保留操作记录。查看该智能体的变更日志——谁在何时更改了什么——便于排查问题并保持合规。",
     "heading": "审计",
@@ -2031,15 +1986,6 @@
     "heading": "技能",
     "description": "此基础智能体可发现并遵循的可复用操作手册。",
     "infoBox": "智能体技能是可附加到基础智能体的可复用操作手册——针对单一任务的书面指令（可附带参考文件），例如在网上调研主题或审查代码。智能体只在相关时才会阅读技能，因此你可以为它添加多种能力而不会让每次对话变得臃肿。在聊天中输入 / 即可查看此智能体的技能并选择一个来启动。"
-  },
-  "tabsToolsTab": {
-    "infoBox": "为您的智能体赋予“双手”。工具让它能够超越单纯的聊天——查找信息、调用 API、触发操作——从而真正为用户完成工作。",
-    "heading": "工具",
-    "subheading": "为您的智能体配置工具和集成。",
-    "moreInfoAbout": "关于 {name} 的更多信息",
-    "switchAriaLabel": "{name} {state}",
-    "enabled": "已启用",
-    "disabled": "已禁用"
   },
   "topTrialBannerTopTrialBanner": {
     "defaultBannerText": "升级以创建您自己的智能体。无需信用卡 😎",

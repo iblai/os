@@ -2,14 +2,14 @@
   "version": 2,
   "lastUpdated": "2026-09-30",
   "summary": {
-    "totalCheckpoints": 782,
-    "coveredCheckpoints": 739,
+    "totalCheckpoints": 798,
+    "coveredCheckpoints": 753,
     "deprecatedCheckpoints": 17,
-    "notReproducibleCheckpoints": 15,
+    "notReproducibleCheckpoints": 17,
     "pendingCheckpoints": 11,
     "percent": 100,
-    "totalJourneys": 79,
-    "activeJourneys": 78
+    "totalJourneys": 81,
+    "activeJourneys": 80
   },
   "journeys": [
     {
@@ -357,7 +357,7 @@
         },
         {
           "id": "mgmt-04",
-          "description": "Admin can toggle tools on/off",
+          "description": "Admin sees the Tools tab render with at least one tool (light smoke check on the shared account mentor; real toggle-on/off + persistence + a11y coverage moved to journey 77's tools-01..05 on disposable per-test mentors, to avoid mutating tool_slugs on a mentor other tests/suites share)",
           "status": "covered"
         },
         {
@@ -4955,6 +4955,102 @@
         {
           "id": "sem-06",
           "description": "With the setting OFF, the welcome screen hides the \"Explore Agents\" section",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "mentor-tools-tab",
+      "name": "Mentor Tools Tab",
+      "spec": "77-mentor-tools-tab.spec.ts",
+      "sourceFiles": ["components/modals/edit-mentor-modal/tabs/tools-tab.tsx"],
+      "checkpoints": [
+        {
+          "id": "tools-01",
+          "description": "Admin opens the Tools tab and sees the header, description, and the tools-info-box copy",
+          "status": "covered"
+        },
+        {
+          "id": "tools-02",
+          "description": "Admin toggles a tool on (aria-checked + success toast) and it persists across a close + full page reload + reopen; toggling it back off persists the same way; skips gracefully on an empty tenant tool catalogue",
+          "status": "covered"
+        },
+        {
+          "id": "tools-03",
+          "description": "A tool's info icon exposes \"More info about {name}\" and its tooltip shows the description on both hover and keyboard focus",
+          "status": "covered"
+        },
+        {
+          "id": "tools-04",
+          "description": "A tool switch's accessible name flips between \"{name} disabled\" and \"{name} enabled\" as it is toggled",
+          "status": "covered"
+        },
+        {
+          "id": "tools-05",
+          "description": "Non-admin does not see the Tools tab in the Edit Mentor modal (dropdown has no Settings item; falls back to a direct tab-absence check)",
+          "status": "covered"
+        },
+        {
+          "id": "tools-06",
+          "description": "Read-only mentor_tools field permission (WithFormPermissions) disables every tool switch; not reproducible in this environment \u2014 NEXT_PUBLIC_ENABLE_RBAC is unset (defaults false) and no fixture seeds a permissions.field.mentor_tools write:false response",
+          "status": "not-reproducible"
+        },
+        {
+          "id": "tools-07",
+          "description": "Tools tab copy renders correctly in a non-English locale (e.g. es); not reproducible \u2014 no journey in this repo has an established, reliable mechanism to switch the live app locale and assert on translated text",
+          "status": "not-reproducible"
+        }
+      ]
+    },
+    {
+      "id": "mentor-api-tab",
+      "name": "Mentor API Tab",
+      "spec": "78-mentor-api-tab.spec.ts",
+      "sourceFiles": ["components/modals/edit-mentor-modal/tabs/api-tab.tsx"],
+      "checkpoints": [
+        {
+          "id": "api-01",
+          "description": "Admin opens the API tab and sees the header, description, info box (with disclaimer text), and Create New button",
+          "status": "covered"
+        },
+        {
+          "id": "api-02",
+          "description": "Admin opens Create, opens the expiration date calendar, navigates to the next month, and picks a day \u2014 the Create dialog stays open (regression guard for the popover click-through bug fixed via pointer-events-auto in the SDK's ui/popover.tsx) and the trigger shows the picked PPP date; submitting shows the success toast + reveal dialog, and the new row's EXPIRES cell shows that exact date",
+          "status": "covered"
+        },
+        {
+          "id": "api-03",
+          "description": "Creating an API key without picking an expiration date leaves its EXPIRES cell showing \"N/A\"",
+          "status": "covered"
+        },
+        {
+          "id": "api-04",
+          "description": "Create dialog validates the API key name (required / letters-numbers-hyphens-underscores only) and keeps Submit disabled until the name is valid",
+          "status": "covered"
+        },
+        {
+          "id": "api-05",
+          "description": "The reveal (\"API Key\") dialog's copy button flips its accessible name from \"Copy API key\" to \"Copied\" once clicked",
+          "status": "covered"
+        },
+        {
+          "id": "api-06",
+          "description": "Pagination appears once more than 10 keys exist (bulk-seeded via the API), page 2's rows differ from page 1's, and creating a key through the UI returns the view to page 1",
+          "status": "covered"
+        },
+        {
+          "id": "api-07",
+          "description": "Deleting the only remaining row on a paginated page (page > 1) steps the view back a page and the pagination control disappears once everything fits on one page \u2014 exercised against a mocked (page.route) dataset, since the real tenant's true last page is always foreign, protected data (verified live: the backend ignores any client-supplied `created` timestamp and always server-stamps \"now\", so a test-created key can never sort to the tail)",
+          "status": "covered"
+        },
+        {
+          "id": "api-08",
+          "description": "Admin deletes an API key via the UI: the confirmation dialog names the key by name, and confirming removes its row",
+          "status": "covered"
+        },
+        {
+          "id": "api-09",
+          "description": "Non-admin does not see the API tab in the Edit Mentor modal (Settings menu item itself is unreachable; falls back to a direct tab-absence check)",
           "status": "covered"
         }
       ]

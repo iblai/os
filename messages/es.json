@@ -157,35 +157,6 @@
     "languageFrenchFrance": "Francés (Francia)",
     "languageSpanish": "Español (Español)"
   },
-  "apiTabApiKeyModal": {
-    "dialogTitle": "Clave API",
-    "dialogDescription": "Copie y pegue la clave API.",
-    "securityWarning": "Por favor, copie su clave API y guárdela en un lugar seguro. Por razones de seguridad, esta clave solo se mostrará una vez y no podrá recuperarse después de abandonar esta página.",
-    "lostKeyWarning": "Si pierde su clave API, deberá generar una nueva."
-  },
-  "apiTabCreateApiModal": {
-    "apiKeyNameRequired": "El nombre de la clave API es obligatorio",
-    "apiKeyNameInvalidChars": "solo puede contener letras, números y guiones",
-    "apiKeyCreatedSuccess": "Clave API creada correctamente",
-    "apiKeyCreatedError": "Error al crear la clave API",
-    "dialogDescriptionSrOnly": "Crear clave API",
-    "dialogTitle": "Crear clave API",
-    "apiKeyNameLabel": "Nombre de la clave API",
-    "apiKeyNamePlaceholder": "Nombre de la clave API",
-    "expirationDateLabel": "Fecha de vencimiento",
-    "pickADate": "Seleccionar una fecha",
-    "submitting": "Enviando...",
-    "submit": "Enviar"
-  },
-  "apiTabDeleteApiModal": {
-    "title": "Eliminar clave API",
-    "confirmationMessage": "¿Estás seguro de que deseas eliminar la clave API con el nombre <bold>{name}</bold>? Esta acción no se puede deshacer.",
-    "cancel": "Cancelar",
-    "delete": "Eliminar",
-    "deleting": "Eliminando...",
-    "deleteSuccess": "Clave API eliminada correctamente",
-    "deleteError": "Error al eliminar la clave API"
-  },
   "appSidebarIndex": {
     "addAgentToProjectFirst": "Primero añade un agente a este proyecto.",
     "projects": "Proyectos",
@@ -1536,22 +1507,6 @@
     "deleteSuccess": "Agente eliminado correctamente",
     "deleteError": "Error al eliminar el agente"
   },
-  "tabsApiTab": {
-    "infoBox": "Usa este agente desde tus propias aplicaciones. Crea aquí claves de API para llamarlo mediante programación e integrarlo en tu producto o flujo de trabajo.",
-    "apiHeading": "API",
-    "manageApiKeysDescription": "Administrar claves API e integraciones.",
-    "secretKeysListedBelow": "Sus claves API secretas se muestran a continuación. Tenga en cuenta que no volvemos a mostrar sus claves API secretas después de que las genere.",
-    "doNotShareApiKey": "No comparta su clave API con otros ni la exponga en el navegador u otro código del lado del cliente. Para proteger la seguridad de su cuenta, IBL también puede rotar automáticamente cualquier clave API cuya filtración pública hayamos detectado.",
-    "columnName": "NOMBRE",
-    "columnCreated": "CREADA",
-    "columnExpires": "EXPIRA",
-    "columnActions": "Acciones",
-    "noApiKeysFound": "No se encontraron claves API",
-    "noPermissionToViewApiKeys": "No tiene permiso para ver las claves API",
-    "notAvailable": "N/A",
-    "deleteApiKey": "Eliminar clave API",
-    "createNew": "Crear nuevo"
-  },
   "tabsAuditLogTab": {
     "infoBox": "Mantén un registro. Consulta el historial de quién cambió qué y cuándo en este agente: útil para solucionar problemas y cumplir con la normativa.",
     "heading": "Auditoría",
@@ -2031,15 +1986,6 @@
     "heading": "Habilidades",
     "description": "Guías reutilizables que este Agente Base puede descubrir y seguir.",
     "infoBox": "Las Habilidades del Agente son guías reutilizables que puedes adjuntar a un Agente Base: instrucciones escritas (más archivos de referencia opcionales) para una tarea, como investigar un tema en la web o revisar código. El agente lee una habilidad solo cuando es relevante, así que puedes darle muchas capacidades sin sobrecargar cada conversación. En el chat, escribe / para ver las habilidades de este agente y elegir una para iniciarla."
-  },
-  "tabsToolsTab": {
-    "infoBox": "Dale manos a tu agente. Las herramientas le permiten hacer cosas más allá de conversar —buscar información, llamar a una API, activar una acción— para que realmente pueda hacer el trabajo por las personas.",
-    "heading": "Herramientas",
-    "subheading": "Configure las herramientas e integraciones para su agente.",
-    "moreInfoAbout": "Más información sobre {name}",
-    "switchAriaLabel": "{name} {state}",
-    "enabled": "habilitado",
-    "disabled": "deshabilitado"
   },
   "topTrialBannerTopTrialBanner": {
     "defaultBannerText": "Actualiza para crear tus propios agentes. No se requiere tarjeta de crédito 😎",
