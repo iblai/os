@@ -84,7 +84,10 @@ overrides:
   # GHSA-fph4-wmhf-6fwf (repeated hostname percent-decoding), GHSA-f65p-4m7j-42xc
   # (malformed IPv6 normalization) and GHSA-5jgf-p345-68v8 (skipped IDN
   # canonicalization). Reached through @commitlint/cli > @commitlint/load.
-  fast-uri: '>=4.1.3'
+  # Floor lifted 4.1.3 -> 4.1.5 for GHSA-hrr3-gc8f-f4qj and GHSA-jvvf-x445-j334
+  # (two more parsing issues in the same 4.1.x line). Same dev-only reach, via
+  # @commitlint/config-validator > ajv.
+  fast-uri: '>=4.1.5'
   # GHSA-mwp4-54f8-5fhr — Address4 decodes leading-zero octets as decimal, so an
   # address like 010.0.0.1 parses to an unintended host. Patched in 10.3.1.
   # Reached through @wdio/cli > @wdio/utils > @puppeteer/browsers > proxy-agent.
@@ -113,7 +116,14 @@ overrides:
   # Floor raised 5.0.8 -> 5.0.9 for GHSA-rgw5-rvv9-x895: unbounded intermediate
   # arrays still allow the DoS that CVE-2026-14257 was meant to stop, so 5.0.8 is
   # no longer sufficient. Same major, so the minimatch analysis above still holds.
-  brace-expansion: '>=5.0.9'
+  # Floor raised again 5.0.9 -> 5.0.12 for three stack-exhaustion DoS advisories
+  # in the 5.x line: GHSA-6j4f-fj2g-mc7p (uncontrolled recursion in
+  # parseCommaParts, patched 5.0.10), GHSA-qhr7-859c-m2p7 (recursion on nested
+  # brace groups, patched 5.0.11) and GHSA-q2hr-2g5m-vwhr (patched 5.0.12).
+  # Surfaced via @eslint/eslintrc > minimatch@3, i.e. the same forced 5.x
+  # resolution the minimatch analysis above already covers — nothing changes
+  # for the callable-default hazard, only the patch level moves.
+  brace-expansion: '>=5.0.12'
   # GHSA-mh99-v99m-4gvg is only fixed in brace-expansion >=5.0.8, but 5.x exports
   # an object ({ expand, EXPANSION_MAX* }) where minimatch@9 does
   # `import expand from 'brace-expansion'` and CALLS it — so pinning 5.x under
@@ -147,7 +157,7 @@ overrides:
   # Floor lifted to 0.35.4 for GHSA-rgj7-g3m4-5g8c (image decode overflow),
   # reached through next's optional sharp.
   sharp: '>=0.35.4'
-  brace-expansion@<=5.0.8: '>=5.0.9'
+  brace-expansion@<=5.0.8: '>=5.0.12'
   # serialize-javascript GHSA-5c6j-r48x-rmvq (RCE via RegExp.flags/Date, patched
   # 7.0.3) and GHSA-qj8w-gfj5-8c6v (CPU-exhaustion DoS, patched 7.0.5). Reached by
   # one path only: e2e-tauri's @wdio/mocha-framework > mocha > serialize-javascript.
