@@ -28,10 +28,10 @@
  *
  * If nothing sets it, the code's own hardcoded default (`'zip|courses'`,
  * mirrored in `CODE_DEFAULT_DISABLED` below) is what `lib/config.ts` falls
- * back to — that IS the correctly-determined value, not an unknown. This
- * helper only throws when it cannot even determine that much (e.g. the repo
- * root doesn't look like this repo at all), never as a way to signal
- * "assume disabled" — a caller must always get a real, reasoned answer.
+ * back to — that IS the correctly-determined value, not an unknown. The same
+ * applies in CI, where the Playwright image has no app source on disk (see
+ * `readDisabledIdsFromEnvFiles`). If the running app disagrees, the gated
+ * test's enabled/disabled assertion fails; it never passes on a guess.
  */
 
 import fs from 'fs';
@@ -108,34 +108,32 @@ function parseEnvFile(filePath: string): Record<string, string> {
 }
 
 /**
- * Reads `NEXT_PUBLIC_DISABLED_DATASETS` the way THIS worktree's Next.js build
- * resolved it, by walking the same env-file precedence Next.js uses. Sanity-
- * checks that `REPO_ROOT` actually looks like this repo before trusting an
- * "unset" result — a broken path resolution must fail loudly rather than
- * silently reporting "everything enabled".
+ * Reads `NEXT_PUBLIC_DISABLED_DATASETS` the way a local build of this checkout
+ * resolved it, by walking the same env-file precedence Next.js uses.
+ *
+ * The CI Playwright image (`e2e/Dockerfile`) ships only `e2e/` and its deps
+ * and tests a separately deployed app, so the app source is not on disk
+ * there. That is expected: a deployed image only receives this var at
+ * runtime through `window.__ENV__` (checked first by the caller), so without
+ * it `lib/config.ts`'s default is what the app enforces. A wrong expectation
+ * still cannot pass silently — every gated test asserts the button matches.
  */
 function readDisabledIdsFromEnvFiles(): string[] {
-  const sentinel = path.join(REPO_ROOT, 'lib', 'config.ts');
-  if (!fs.existsSync(sentinel)) {
-    throw new Error(
-      `[dataset-resource-gating] REPO_ROOT resolved to "${REPO_ROOT}", which ` +
-        'does not contain lib/config.ts — path resolution is broken. Refusing ' +
-        'to guess the expected disabled-resource-types value.',
-    );
-  }
-
-  for (const file of ENV_FILES_BY_PRECEDENCE) {
-    const filePath = path.join(REPO_ROOT, file);
-    if (!fs.existsSync(filePath)) continue;
-    const parsed = parseEnvFile(filePath);
-    const raw = parsed.NEXT_PUBLIC_DISABLED_DATASETS;
-    if (raw !== undefined && raw !== '') {
-      return raw.split('|').filter(Boolean);
+  const hasAppSource = fs.existsSync(path.join(REPO_ROOT, 'lib', 'config.ts'));
+  if (hasAppSource) {
+    for (const file of ENV_FILES_BY_PRECEDENCE) {
+      const filePath = path.join(REPO_ROOT, file);
+      if (!fs.existsSync(filePath)) continue;
+      const parsed = parseEnvFile(filePath);
+      const raw = parsed.NEXT_PUBLIC_DISABLED_DATASETS;
+      if (raw !== undefined && raw !== '') {
+        return raw.split('|').filter(Boolean);
+      }
     }
   }
 
-  // No env file sets it anywhere in the precedence chain — this IS the
-  // determined value: lib/config.ts's own hardcoded default applies.
+  // No env file sets it (or no app source here, as in CI): lib/config.ts's
+  // own hardcoded default applies.
   return CODE_DEFAULT_DISABLED.split('|').filter(Boolean);
 }
 
