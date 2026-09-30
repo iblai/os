@@ -27,7 +27,6 @@ import {
   clearCookies,
   handleLogout,
   handleTenantSwitch,
-  convertFromBytes,
   formatRelativeDate,
   getProviderName,
   sendMessageToParentWebsite,
@@ -40,6 +39,7 @@ import {
   isMobileOS,
   saveUserObjectToLocalStorage,
   maxDatasetFileSizeInMegaBytes,
+  disabledDatasetResourceTypes,
   formatDateToYYYYMMDD,
   formatDateToShortFormat,
   formatRelativeTime,
@@ -83,6 +83,7 @@ vi.mock('@/lib/config', () => ({
     authUrl: () => 'https://auth.example.com',
     iblPlatform: () => 'mentor',
     mentorTrainingMaximumFileSize: () => '60',
+    disabedDatasets: vi.fn(() => 'zip|courses'),
     stripeEnabled: vi.fn(() => 'true'),
   },
 }));
@@ -1040,46 +1041,6 @@ describe('clearCookies function', () => {
   });
 });
 
-describe('convertFromBytes function', () => {
-  it('should return 0 B for 0 bytes', () => {
-    expect(convertFromBytes(0)).toEqual({ value: 0, unit: 'B' });
-  });
-
-  it('should convert bytes to KB', () => {
-    expect(convertFromBytes(1024)).toEqual({ value: 1, unit: 'KB' });
-  });
-
-  it('should convert bytes to MB', () => {
-    expect(convertFromBytes(1024 * 1024)).toEqual({ value: 1, unit: 'MB' });
-  });
-
-  it('should convert bytes to GB', () => {
-    expect(convertFromBytes(1024 * 1024 * 1024)).toEqual({
-      value: 1,
-      unit: 'GB',
-    });
-  });
-
-  it('should convert bytes to TB', () => {
-    expect(convertFromBytes(1024 * 1024 * 1024 * 1024)).toEqual({
-      value: 1,
-      unit: 'TB',
-    });
-  });
-
-  it('should handle decimal values', () => {
-    const result = convertFromBytes(1536);
-    expect(result.value).toBe(1.5);
-    expect(result.unit).toBe('KB');
-  });
-
-  it('should round to 2 decimal places', () => {
-    const result = convertFromBytes(1234567);
-    expect(result.value).toBe(1.18);
-    expect(result.unit).toBe('MB');
-  });
-});
-
 describe('formatRelativeDate function', () => {
   it('should format today as time only', () => {
     const now = new Date();
@@ -1514,6 +1475,17 @@ describe('maxDatasetFileSizeInMegaBytes function', () => {
   it('should return numeric value', () => {
     const result = maxDatasetFileSizeInMegaBytes();
     expect(isNaN(result)).toBe(false);
+  });
+});
+
+describe('disabledDatasetResourceTypes function', () => {
+  it('splits the pipe-separated env value', () => {
+    expect(disabledDatasetResourceTypes()).toEqual(['zip', 'courses']);
+  });
+
+  it('returns an empty list when the env value is empty', () => {
+    vi.mocked(config.disabedDatasets).mockReturnValueOnce('');
+    expect(disabledDatasetResourceTypes()).toEqual([]);
   });
 });
 

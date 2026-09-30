@@ -16,7 +16,6 @@ import {
   EMBED_MESSAGE_TYPES,
   REDIRECT_PATH_LOCAL_STORAGE_KEY,
   CSS_CLASS_NAMES,
-  DROPBOX_EXTENSIONS,
 } from '../constants';
 
 describe('mentor constants', () => {
@@ -253,27 +252,6 @@ describe('mentor constants', () => {
       expect(CSS_CLASS_NAMES.APP_LAYOUT.WELCOME_CHAT_BUTTON).toBe(
         'chat-welcome-button',
       );
-    });
-  });
-
-  describe('DROPBOX_EXTENSIONS', () => {
-    it('should have all file extensions', () => {
-      expect(DROPBOX_EXTENSIONS).toContain('.ppt');
-      expect(DROPBOX_EXTENSIONS).toContain('.pptx');
-      expect(DROPBOX_EXTENSIONS).toContain('.pdf');
-      expect(DROPBOX_EXTENSIONS).toContain('.doc');
-      expect(DROPBOX_EXTENSIONS).toContain('.docx');
-      expect(DROPBOX_EXTENSIONS).toContain('.txt');
-      expect(DROPBOX_EXTENSIONS).toContain('.png');
-      expect(DROPBOX_EXTENSIONS).toContain('.jpeg');
-      expect(DROPBOX_EXTENSIONS).toContain('.mp3');
-      expect(DROPBOX_EXTENSIONS).toContain('.wav');
-      expect(DROPBOX_EXTENSIONS).toContain('.m4a');
-      expect(DROPBOX_EXTENSIONS).toContain('.jpg');
-    });
-
-    it('should have correct number of extensions', () => {
-      expect(DROPBOX_EXTENSIONS).toHaveLength(12);
     });
   });
 });

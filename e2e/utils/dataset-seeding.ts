@@ -105,13 +105,19 @@ export async function seedDatasetsForMentor(
   page: Page,
   mentorId: string,
   count: number,
+  options: { stamp?: string } = {},
 ): Promise<number> {
   const dmBase = await resolveDmApiBase(page);
   const ctx = await readApiContext(page);
   const trainUrl = `${documentsBaseUrl(dmBase, ctx)}/train/`;
   // Unique per run so repeat runs (and parallel workers) never collide on
   // a filename, and so a search for the stamp matches only this test's data.
-  const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  // Callers that need to delete exactly these documents afterward (e.g. when
+  // seeding onto a mentor they don't own outright, like a workflow's
+  // auto-provisioned entry mentor) can pass their own stamp and filter by it
+  // via `deleteDatasetDocumentsByStamp`.
+  const stamp =
+    options.stamp ?? `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
   const responses = await Promise.all(
     Array.from({ length: count }, (_, i) =>
@@ -231,4 +237,115 @@ export async function waitForDatasetsReady(
         'through the disabled window.',
     );
   }
+}
+
+/** A single row of the same list the Datasets tab paginates over. */
+export interface DatasetDocument {
+  id: string;
+  document_name?: string;
+  url?: string;
+  is_trained?: boolean;
+  training_status?: string;
+  document_type?: string;
+}
+
+/**
+ * Lists every document trained on `mentorId`, for tests that need to look up
+ * a just-created row's id/state deterministically (rather than guessing from
+ * the UI). Mirrors `waitForDatasetsReady`'s list call.
+ */
+export async function getDatasetDocuments(
+  page: Page,
+  mentorId: string,
+  { limit = 100 }: { limit?: number } = {},
+): Promise<DatasetDocument[]> {
+  const dmBase = await resolveDmApiBase(page);
+  const ctx = await readApiContext(page);
+  const listUrl =
+    `${documentsBaseUrl(dmBase, ctx)}/pathways/${encodeURIComponent(mentorId)}/` +
+    `?limit=${limit}&offset=0`;
+  const res = await page.request.get(listUrl, {
+    headers: { Authorization: `Token ${ctx.dmToken}` },
+    timeout: 20_000,
+  });
+  if (!res.ok()) {
+    throw new Error(
+      `[dataset-seeding] Failed to list documents for mentor ${mentorId}: ${res.status()}`,
+    );
+  }
+  const body = (await res.json()) as { results?: DatasetDocument[] };
+  return body.results ?? [];
+}
+
+/**
+ * Polls `getDatasetDocuments` until a document matching `predicate` exists
+ * AND is fully trained (`is_trained === true`, `training_status` not
+ * `pending`) — the state the row-action tests need before they can
+ * deterministically act on it (untrain, delete, schedule retrain, ...).
+ */
+export async function waitForMatchingDatasetTrained(
+  page: Page,
+  mentorId: string,
+  predicate: (doc: DatasetDocument) => boolean,
+  { timeout = 120_000 }: { timeout?: number } = {},
+): Promise<DatasetDocument> {
+  const deadline = Date.now() + timeout;
+  let lastSeen: DatasetDocument | undefined;
+  while (Date.now() < deadline) {
+    const docs = await getDatasetDocuments(page, mentorId);
+    const match = docs.find(predicate);
+    if (match) {
+      lastSeen = match;
+      if (match.is_trained && match.training_status !== 'pending') {
+        return match;
+      }
+    }
+    await page.waitForTimeout(2_000);
+  }
+  throw new Error(
+    `[dataset-seeding] Timed out waiting for a trained document matching the ` +
+      `predicate on mentor ${mentorId}` +
+      (lastSeen
+        ? ` (last seen: is_trained=${lastSeen.is_trained}, training_status=${lastSeen.training_status})`
+        : ' (no matching document ever appeared)'),
+  );
+}
+
+/**
+ * Deletes exactly the documents this test seeded (matched by the unique
+ * `stamp` embedded in `seedDatasetsForMentor`'s filenames), leaving anything
+ * else on `mentorId` untouched. Use this instead of deleting the mentor
+ * itself when seeding onto a mentor the test doesn't own outright — e.g. a
+ * workflow's auto-provisioned entry mentor (see journey 34's File Search
+ * checkpoint).
+ *
+ * @returns the number of documents deleted (2xx or already-gone 404 both count).
+ */
+export async function deleteDatasetDocumentsByStamp(
+  page: Page,
+  mentorId: string,
+  stamp: string,
+): Promise<number> {
+  const dmBase = await resolveDmApiBase(page);
+  const ctx = await readApiContext(page);
+  const docs = await getDatasetDocuments(page, mentorId, { limit: 200 });
+  const matches = docs.filter((d) => (d.document_name ?? '').includes(stamp));
+
+  let deleted = 0;
+  for (const doc of matches) {
+    const url = `${documentsBaseUrl(dmBase, ctx)}/${encodeURIComponent(doc.id)}/`;
+    try {
+      const res = await page.request.delete(url, {
+        headers: { Authorization: `Token ${ctx.dmToken}` },
+        timeout: 20_000,
+      });
+      if (res.ok() || res.status() === 404) deleted++;
+    } catch {
+      // best-effort — a failed delete here shouldn't fail the test
+    }
+  }
+  logger.info(
+    `[dataset-seeding] Deleted ${deleted}/${matches.length} stamped documents on mentor ${mentorId}`,
+  );
+  return deleted;
 }
