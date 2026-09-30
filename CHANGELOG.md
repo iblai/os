@@ -1,5 +1,41 @@
 # Changelog
 
+## [0.159.0](https://github.com/iblai/os/compare/v0.158.6...v0.159.0) (2026-09-30)
+
+### Features
+
+* **datasets:** render the SDK datasets tab with plain props only ([913f26c](https://github.com/iblai/os/commit/913f26c4efe59f0bf3e62f17b20e5fc178de52bc))
+
+### Bug Fixes
+
+* **chat:** clear the upload notification timer on unmount ([5dedda8](https://github.com/iblai/os/commit/5dedda87b64e28eb0d364d9ddf6b383e76e0be50))
+* **e2e:** resolve dataset gating without app source in CI ([e984d9f](https://github.com/iblai/os/commit/e984d9f3af417520edfe6e6373a039efae153200))
+
+### Reverts
+
+* **chat:** drop the OS chat-input-form timer fix ([f7fc5bb](https://github.com/iblai/os/commit/f7fc5bba0393e437dbf47e894e40fbbcd29c1eea)), closes [iblai-platform#2586](https://github.com/iblai/iblai-platform/issues/2586)
+* **icons:** keep OpenFolderIcon in svg-icons ([14d0b65](https://github.com/iblai/os/commit/14d0b65286e1b417b25bad84eba5266d5d1a9fe3)), closes [iblai-platform#2586](https://github.com/iblai/iblai-platform/issues/2586)
+
+### Chores
+
+* remove unused dataset and project components ([887aea9](https://github.com/iblai/os/commit/887aea9811aaaad348c853d938cfb21b0759e817))
+
+### Documentation
+
+* **e2e:** update dataset coverage map ([04e76ac](https://github.com/iblai/os/commit/04e76aca8894c786b3aaaa18b58ea91c1dcd0429))
+
+### Styles
+
+* format CHANGELOG with prettier ([ed83741](https://github.com/iblai/os/commit/ed83741efec0b1b25f757535abe78c8b88be1aa3))
+
+### Tests
+
+* **e2e:** cover every dataset resource type and row action ([07e2377](https://github.com/iblai/os/commit/07e23770078014a23b988df3145aeaeebb1c7d97))
+
+### Build
+
+* **deps:** bump @iblai/iblai-js to 2.24.0 ([cebc8c7](https://github.com/iblai/os/commit/cebc8c7e577b3c065f725467b4c3ad350c774a37)), closes [iblai-web-frontend#2108](https://github.com/iblai/iblai-web-frontend/issues/2108)
+
 ## [0.158.6](https://github.com/iblai/os/compare/v0.158.5...v0.158.6) (2026-09-30)
 
 ### Chores
