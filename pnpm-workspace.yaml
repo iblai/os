@@ -38,7 +38,10 @@ overrides:
   # GHSA-gqvv-2mrq-wpjv, GHSA-g6gw-c38x-mqfc and GHSA-crvj-82cr-hjcx (request
   # smuggling / header handling). Same reach: @iblai/mcp > MCP SDK.
   hono: '>=4.13.5'
-  axios: '>=1.16.0'
+  # Floor lifted to 1.20.0 for GHSA-c29m-xwm3-cm6r, GHSA-mghh-pgcx-3jjj,
+  # GHSA-x97p-jq2g-jp4f, GHSA-3pq3-5fj3-cg6v, GHSA-542g-h47m-68v8 and the other
+  # 1.x ReDoS / prototype-pollution / HTTP/2 advisories patched in 1.20.0.
+  axios: '>=1.20.0'
   prismjs: '>=1.30.0'
   # Floor raised 3.4.12 -> 3.4.13 for GHSA-55q2-fjhq-7xh7: IN_PLACE hook removal
   # leaves a detached subtree executable (XSS). Reached through
@@ -100,7 +103,9 @@ overrides:
   # Floor raised 5.0.8 -> 5.0.9 for GHSA-rgw5-rvv9-x895: unbounded intermediate
   # arrays still allow the DoS that CVE-2026-14257 was meant to stop, so 5.0.8 is
   # no longer sufficient. Same major, so the minimatch analysis above still holds.
-  brace-expansion: '>=5.0.9'
+  # Floor raised again to 5.0.11 for GHSA-qhr7-859c-m2p7 (nested brace groups) and
+  # GHSA-6j4f-fj2g-mc7p (parseCommaParts recursion). Still 5.x, same analysis.
+  brace-expansion: '>=5.0.11'
   # GHSA-mh99-v99m-4gvg is only fixed in brace-expansion >=5.0.8, but 5.x exports
   # an object ({ expand, EXPANSION_MAX* }) where minimatch@9 does
   # `import expand from 'brace-expansion'` and CALLS it — so pinning 5.x under
@@ -128,7 +133,7 @@ overrides:
   # Floor lifted to 0.35.4 for GHSA-rgj7-g3m4-5g8c (image decode overflow),
   # reached through next's optional sharp.
   sharp: '>=0.35.4'
-  brace-expansion@<=5.0.8: '>=5.0.9'
+  brace-expansion@<=5.0.8: '>=5.0.11'
   # serialize-javascript GHSA-5c6j-r48x-rmvq (RCE via RegExp.flags/Date, patched
   # 7.0.3) and GHSA-qj8w-gfj5-8c6v (CPU-exhaustion DoS, patched 7.0.5). Reached by
   # one path only: e2e-tauri's @wdio/mocha-framework > mocha > serialize-javascript.
