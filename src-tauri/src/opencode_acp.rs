@@ -3194,9 +3194,12 @@ async fn spawn_session(
         saved_model.as_deref(),
     )
     .await?;
-    // The agent's model list for the picker; a fresh session's opening
-    // snapshot also names the agent's own default.
-    if backend != Backend::Opencode {
+    // Claude's model list for the picker; a fresh session's opening snapshot
+    // also names the agent's own default. Codex's list is the CLI's catalog
+    // (`code_agent_models::codex_catalog`), named as OpenAI names it: the
+    // adapter's snapshot renames the same slugs ("6 Astra") and would make the
+    // picker flip between the two after the first run, so it is not kept.
+    if backend == Backend::Claude {
         if let Some(opts) = &hs.config_options {
             crate::code_agent_models::remember(backend, opts, !hs.loaded);
         }

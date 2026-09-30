@@ -615,7 +615,7 @@ pub async fn ensure_agents_current(app: AppHandle) {
 /// An unsandboxed run of the adapter's CLI passthrough: `cli <args>` for
 /// codex-acp (the bundled `codex`), `--cli <args>` for claude-agent-acp (the
 /// bundled `claude`). Real HOME, so it sees the user's own login state.
-fn agent_cli(backend: Backend, args: &[&str]) -> Command {
+pub(crate) fn agent_cli(backend: Backend, args: &[&str]) -> Command {
     let mut cmd = create_command(&node_bin());
     cmd.arg(adapter_entry(backend));
     match backend {

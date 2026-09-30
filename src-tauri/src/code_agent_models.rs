@@ -1,8 +1,11 @@
 //! The per-machine model choice for the subscription agents (Codex, Claude
 //! Code) and the model lists they offer. ACP lists models per session only
-//! (`configOptions` on `session/new`), so the lists are captured from every
-//! handshake — or from a short probe when nothing is cached yet — and kept
-//! per agent under the data dir. The choice lives in `settings.json` next to
+//! (`configOptions` on `session/new`), so Claude's list is captured from every
+//! handshake — or from a short probe when nothing is cached yet — while
+//! Codex's is the bundled CLI's `codex debug models` catalog (the one its
+//! app-server serves, listable signed out), fetched on every request so it is
+//! current at every app open; both are kept per agent under the data dir. The
+//! choice lives in `settings.json` next to
 //! the Approvals mode; the handshake applies it to every new session and
 //! `set_code_agent_model` pushes it to the live ones with
 //! `session/set_config_option`, so a pick reaches a running chat without a
@@ -12,11 +15,12 @@
 #![cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
 
 use std::path::PathBuf;
+use std::time::Duration;
 
 use serde_json::{json, Value};
 use tauri::command;
 
-use crate::code_agent_installer::display_name;
+use crate::code_agent_installer::{agent_cli, display_name};
 use crate::opencode_acp::{iblai_data_dir, read_settings, write_settings, Backend};
 
 /// `settings.json` key: `{ "codex": "<model id>", "claude": "<model id>" }`.
@@ -135,23 +139,96 @@ fn offered(cache: &Value, model: &str) -> bool {
         .unwrap_or(false)
 }
 
-/// The agent's models for the top-left picker: from the cache, else (or on
-/// `refresh`) from a probe session — which needs the agent installed and
-/// signed in, and says so otherwise.
+/// Codex's catalog (`codex debug models`) as the ACP `model` option: the
+/// models it lists, in its own order, named as it names them. The catalog
+/// carries no current value, so `default_model` stays null and the picker's
+/// Default row means "Codex's own choice".
+fn model_option_from_catalog(catalog: &Value) -> Result<Value, String> {
+    let mut models: Vec<&Value> = catalog
+        .get("models")
+        .and_then(|m| m.as_array())
+        .ok_or_else(|| "Codex's model list has no models.".to_string())?
+        .iter()
+        .filter(|m| {
+            m.get("visibility")
+                .and_then(|v| v.as_str())
+                .map_or(true, |v| v == "list")
+        })
+        .collect();
+    models.sort_by_key(|m| {
+        m.get("priority")
+            .and_then(|p| p.as_i64())
+            .unwrap_or(i64::MAX)
+    });
+    let options: Vec<Value> = models
+        .iter()
+        .filter_map(|m| {
+            let slug = m.get("slug")?.as_str()?;
+            Some(json!({
+                "value": slug,
+                "name": m.get("display_name").and_then(|n| n.as_str()).unwrap_or(slug),
+                "description": m.get("description").cloned().unwrap_or(Value::Null),
+            }))
+        })
+        .collect();
+    if options.is_empty() {
+        return Err("Codex lists no models.".to_string());
+    }
+    Ok(json!({
+        "id": MODEL_CONFIG_ID,
+        "name": "Model",
+        "category": "model",
+        "type": "select",
+        "options": options,
+    }))
+}
+
+/// `codex debug models` through the adapter's CLI passthrough — the bundled
+/// binary the session's app-server runs, so its slugs are what
+/// `session/set_config_option` takes. Lists signed out too, in well under a
+/// second; a probe session (Claude's way) needs a signed-in adapter.
+async fn codex_catalog() -> Result<Value, String> {
+    let output = tokio::time::timeout(
+        Duration::from_secs(20),
+        agent_cli(Backend::Codex, &["debug", "models"]).output(),
+    )
+    .await
+    .map_err(|_| "Codex took too long to list its models.".to_string())?
+    .map_err(|e| format!("Codex could not list its models: {e}"))?;
+    if !output.status.success() {
+        return Err(format!(
+            "Codex could not list its models: {}",
+            String::from_utf8_lossy(&output.stderr).trim()
+        ));
+    }
+    let catalog: Value = serde_json::from_slice(&output.stdout)
+        .map_err(|e| format!("Codex's model list is not JSON: {e}"))?;
+    Ok(json!([model_option_from_catalog(&catalog)?]))
+}
+
+/// The agent's models for the top-left picker. Codex's come from
+/// `codex debug models` on every request — a tenth of a second, and the
+/// catalog may have grown since the last look — so they are current at every
+/// app open; the cache only serves the pick's validation. Claude's come from
+/// the cache, else (or on `refresh`) from a probe session, which needs the
+/// agent installed and signed in, and says so otherwise.
 #[command]
 pub async fn list_code_agent_models(
     backend: String,
     refresh: Option<bool>,
 ) -> Result<Value, String> {
     let backend = Backend::agent(&backend)?;
-    let cache = match (cached(backend), refresh.unwrap_or(false)) {
-        (Some(c), false) => c,
-        _ => {
-            let options = crate::opencode_acp::probe_config_options(backend).await?;
-            remember(backend, &options, true);
-            cached(backend)
-                .ok_or_else(|| format!("{} reported no model option.", display_name(backend)))?
-        }
+    let fresh = |options: Value| {
+        remember(backend, &options, true);
+        cached(backend)
+            .ok_or_else(|| format!("{} reported no model option.", display_name(backend)))
+    };
+    let cache = match backend {
+        Backend::Codex => fresh(codex_catalog().await?)?,
+        _ => match (cached(backend), refresh.unwrap_or(false)) {
+            (Some(c), false) => c,
+            _ => fresh(crate::opencode_acp::probe_config_options(backend).await?)?,
+        },
     };
     Ok(model_choice(&cache, saved(backend).as_deref()))
 }
@@ -282,6 +359,81 @@ mod tests {
             None => std::env::remove_var("XDG_DATA_HOME"),
         }
         let _ = std::fs::remove_dir_all(&scratch);
+    }
+
+    /// `codex debug models` → the `model` option: hidden entries dropped, the
+    /// rest in priority order, named as the catalog names them; an empty or
+    /// missing list is an error, not an empty picker.
+    #[test]
+    fn a_codex_catalog_becomes_the_model_option() {
+        let catalog = json!({ "models": [
+            { "slug": "gpt-5.5", "display_name": "GPT-5.5", "description": "Older", "visibility": "list", "priority": 13 },
+            { "slug": "gpt-daybreak-red-latest", "display_name": "Daybreak Red", "visibility": "hide", "priority": 12 },
+            { "slug": "gpt-6-astra", "display_name": "GPT-6-Astra", "description": "Frontier", "visibility": "list", "priority": 2 },
+            { "slug": "gpt-6-sol", "display_name": "GPT-6-Sol", "visibility": "list", "priority": 3 },
+            { "slug": "unranked" }
+        ] });
+        let option = model_option_from_catalog(&catalog).unwrap();
+        assert_eq!(option["id"], json!(MODEL_CONFIG_ID));
+        let ids: Vec<&str> = option["options"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|o| o["value"].as_str().unwrap())
+            .collect();
+        assert_eq!(ids, ["gpt-6-astra", "gpt-6-sol", "gpt-5.5", "unranked"]);
+        assert_eq!(
+            option["options"][0],
+            json!({ "value": "gpt-6-astra", "name": "GPT-6-Astra", "description": "Frontier" })
+        );
+        assert_eq!(option["options"][1]["description"], Value::Null);
+        assert_eq!(
+            option["options"][3]["name"],
+            json!("unranked"),
+            "a nameless entry is named by its slug"
+        );
+        assert!(
+            option.get("currentValue").is_none(),
+            "the catalog names no default"
+        );
+
+        // The picker's view of it: every listed model, no default, the saved pick.
+        let cache = json!({ "options": [option], "default_model": Value::Null });
+        let choice = model_choice(&cache, Some("gpt-6-sol"));
+        assert_eq!(choice["models"].as_array().unwrap().len(), 4);
+        assert_eq!(choice["default"], Value::Null);
+        assert_eq!(choice["selected"], json!("gpt-6-sol"));
+        assert!(offered(&cache, "gpt-6-astra"));
+        assert!(
+            !offered(&cache, "gpt-daybreak-red-latest"),
+            "hidden models are not offered"
+        );
+
+        let err = model_option_from_catalog(&json!({ "models": [] })).unwrap_err();
+        assert_eq!(err, "Codex lists no models.");
+        let err = model_option_from_catalog(&json!({ "hidden": true })).unwrap_err();
+        assert_eq!(err, "Codex's model list has no models.");
+        let only_hidden = json!({ "models": [{ "slug": "x", "visibility": "hide" }] });
+        assert_eq!(
+            model_option_from_catalog(&only_hidden).unwrap_err(),
+            "Codex lists no models."
+        );
+    }
+
+    /// The real catalog through the managed install:
+    /// `cargo test codex_debug_models -- --ignored --nocapture`.
+    #[tokio::test]
+    #[ignore]
+    async fn codex_debug_models_lists_the_catalog() {
+        let options = codex_catalog().await.unwrap();
+        let option = model_option(&options).expect("a model option");
+        let models = option["options"].as_array().unwrap();
+        assert!(!models.is_empty());
+        for m in models {
+            assert!(!m["value"].as_str().unwrap_or("").is_empty(), "{m}");
+            assert!(!m["name"].as_str().unwrap_or("").is_empty(), "{m}");
+            println!("{} — {}", m["value"], m["name"]);
+        }
     }
 
     /// A pick the agent doesn't offer is refused before anything is saved; an
