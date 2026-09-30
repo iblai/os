@@ -1,15 +1,15 @@
 {
   "version": 2,
-  "lastUpdated": "2026-09-25",
+  "lastUpdated": "2026-09-28",
   "summary": {
-    "totalCheckpoints": 768,
-    "coveredCheckpoints": 725,
+    "totalCheckpoints": 778,
+    "coveredCheckpoints": 736,
     "deprecatedCheckpoints": 17,
     "notReproducibleCheckpoints": 15,
-    "pendingCheckpoints": 11,
+    "pendingCheckpoints": 10,
     "percent": 100,
-    "totalJourneys": 79,
-    "activeJourneys": 78
+    "totalJourneys": 81,
+    "activeJourneys": 80
   },
   "journeys": [
     {
@@ -92,8 +92,13 @@
         },
         {
           "id": "nav-08",
-          "description": "Clicking 'New Chat' once fires exactly ONE create-session POST (issue #1002 regression guard — duplicate eventBus listener caused two POSTs in the old code)",
-          "status": "pending"
+          "description": "Clicking 'New Chat' once fires exactly ONE create-session POST (issue #1002 regression guard — duplicate eventBus listener caused two POSTs in the old code); verified against the SDK Chat (issue #2586)",
+          "status": "covered"
+        },
+        {
+          "id": "nav-09",
+          "description": "A freshly created mentor's session lifecycle stays at exactly ONE session through its first message and through navigating away (Explore) and back (issue #2586 SDK Chat migration) — complements nav-08 by covering the mount-time auto-create path",
+          "status": "covered"
         }
       ]
     },
@@ -835,7 +840,7 @@
         },
         {
           "id": "emb-02",
-          "description": "Authenticated embed chat sends a message and receives AI response",
+          "description": "Authenticated embed chat sends a message and receives a response — runs against a real EMBED_URL when configured, otherwise (default) against the local second-origin embed harness (issue #2586) with the chat WebSocket mocked",
           "status": "covered"
         },
         {
@@ -1091,7 +1096,7 @@
         },
         {
           "id": "notif-07",
-          "description": "Navbar drops the chat-only chrome (LLM Model Selector, on-device model badge, privacy chip) on the notifications inbox \u2014 tenant-scoped, per-agent and single-notification routes alike; an inbox is not a chat surface",
+          "description": "Navbar drops the chat-only chrome (LLM Model Selector, on-device model badge, privacy chip) on the notifications inbox — tenant-scoped, per-agent and single-notification routes alike; an inbox is not a chat surface",
           "status": "covered"
         }
       ]
@@ -4806,7 +4811,7 @@
       "checkpoints": [
         {
           "id": "tanl-01",
-          "description": "Tenant-wide analytics overview (/platform/{tenantKey}/analytics, no agent segment) renders the tab strip inside the platform shell \u2014 the sidebar proves the layout supplies the shell itself",
+          "description": "Tenant-wide analytics overview (/platform/{tenantKey}/analytics, no agent segment) renders the tab strip inside the platform shell — the sidebar proves the layout supplies the shell itself",
           "status": "covered"
         },
         {
@@ -4831,12 +4836,12 @@
         },
         {
           "id": "tanl-06",
-          "description": "Tenant-wide Audit page loads \u2014 with no agent to check `view_audit_logs` against, the API is the authority and the container renders its own no-permission card on a 403",
+          "description": "Tenant-wide Audit page loads — with no agent to check `view_audit_logs` against, the API is the authority and the container renders its own no-permission card on a 403",
           "status": "covered"
         },
         {
           "id": "tanl-07",
-          "description": "Sidebar Analytics entry opens the tenant-wide section whether or not an agent is in the URL \u2014 the per-agent section is reached from the navbar agent dropdown instead",
+          "description": "Sidebar Analytics entry opens the tenant-wide section whether or not an agent is in the URL — the per-agent section is reached from the navbar agent dropdown instead",
           "status": "covered"
         },
         {
@@ -4885,6 +4890,73 @@
         {
           "id": "sem-06",
           "description": "With the setting OFF, the welcome screen hides the \"Explore Agents\" section",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "sdk-chat-migration-stage-1",
+      "name": "SDK Chat Migration — Stage 1",
+      "spec": "77-sdk-chat-migration-stage-1.spec.ts",
+      "sourceFiles": [
+        "components/chat/sdk-chat.tsx",
+        "app/platform/[tenantKey]/[mentorId]/mentor-page-content.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "scm-01",
+          "description": "The composer's Attach-file dropdown exposes the Upload File and Camera options",
+          "status": "covered"
+        },
+        {
+          "id": "scm-02",
+          "description": "Enabling/disabling the Web Search session tool flips the chip's aria-pressed state and PUTs the tools array to the session-update REST endpoint (tools are session-scoped, not resent on the WS frame)",
+          "status": "covered"
+        },
+        {
+          "id": "scm-03",
+          "description": "Attaching a file and sending carries the prompt, session id, and a file_references entry (file_id/file_key/file_name/content_type/file_size) in the outgoing WebSocket frame",
+          "status": "covered"
+        },
+        {
+          "id": "scm-04",
+          "description": "An attached file's chip visibly transitions from uploading (spinner) to done (no retry affordance, Remove enabled)",
+          "status": "covered"
+        },
+        {
+          "id": "scm-05",
+          "description": "A failed upload (mocked 500 on the presigned-URL request) drives the file chip to its error/retry affordance",
+          "status": "covered"
+        },
+        {
+          "id": "scm-06",
+          "description": "Clicking Stop mid-stream opens the dedicated stop-generation socket with the matching generation_id; once it replies, streaming ends and the composer re-enables, and a frame arriving on the paused main socket right after Stop never renders",
+          "status": "covered"
+        },
+        {
+          "id": "scm-07",
+          "description": "The server closing the WebSocket mid-stream (no eos/error frame) leaves the streaming state and re-enables the composer, and the user can send again on a freshly (re)opened socket",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "embed-second-origin-harness",
+      "name": "Embed Second-Origin Harness",
+      "spec": "78-embed-second-origin-harness.spec.ts",
+      "sourceFiles": [
+        "hooks/use-embed-mode.ts",
+        "components/chat/sdk-chat.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "ehh-01",
+          "description": "The second-origin embed test harness (127.0.0.1:4599) serves a visible placeholder page when no ?src= is given",
+          "status": "covered"
+        },
+        {
+          "id": "ehh-02",
+          "description": "The harness, loaded from a genuinely different origin than the mentor app, renders the embedded mentor chat inside its iframe (issue #2586; reusable scaffolding for issue #2590's origin-allowlist work)",
           "status": "covered"
         }
       ]

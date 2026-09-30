@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-09-25 | 768 checkpoints (725 covered, 11 pending/fixme, 15 not-reproducible in default env, 17 deprecated) | 79 journeys (78 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-09-28 | 778 checkpoints (736 covered, 10 pending/fixme, 15 not-reproducible in default env, 17 deprecated) | 81 journeys (80 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -29,7 +29,7 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 2: First-Time User Chat & Navigation (8 checkpoints) — `journeys/02-first-time-user-chat-and-navigation.spec.ts`
+## Journey 2: First-Time User Chat & Navigation (9 checkpoints) — `journeys/02-first-time-user-chat-and-navigation.spec.ts`
 
 **Source files:** `app/platform/[tenantKey]/[mentorId]/page.tsx`, `components/chat/index.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`, `components/welcome-chat.tsx`, `components/advanced-chat/ui-tags/default-tag.tsx`
 
@@ -40,7 +40,8 @@ When adding a new page or modifying an existing user flow:
 - [x] Sidebar can be toggled open and closed
 - [x] Help button opens the docs/help link in a new tab when the tenant's own metadata (observed from the app's own org-metadata GET, no `DM_URL` required) shows `show_help !== false`; the menu item is correctly absent when a tenant explicitly sets `show_help: false` (#uat-9)
 - [x] Suggested prompts authored with Markdown render via the Markdown component (issue #1179, fixme until a seeded mentor fixture is available)
-- [ ] NAV-08: Clicking "New Chat" once fires exactly ONE create-session POST (issue #1002 regression guard — parked as `test.fixme`; activate after verifying against the live backend)
+- [x] NAV-08: Clicking "New Chat" once fires exactly ONE create-session POST (issue #1002 regression guard — activated and verified against the SDK Chat, issue #2586)
+- [x] NAV-09: A freshly created mentor's session lifecycle stays at exactly ONE session through its first message and through navigating away (Explore) and back (issue #2586) — covers the mount-time auto-create path, complementing NAV-08's "New Chat" button coverage
 
 ---
 
@@ -246,7 +247,7 @@ The **download-chat** checkpoints (sh-07 … sh-10, issue #2464) cover the "Down
 **Source files:** `components/modals/edit-mentor-modal/tabs/embed-tab.tsx`, `components/modals/edit-mentor-modal/hooks/useEmbedTab.ts`, `components/modals/edit-mentor-modal/utils.ts`, `components/logo.tsx`, `hooks/use-mentors/use-mentor-settings.ts`, `hooks/use-embed-mode.ts`, `components/chat-input-form/voice-call-button.tsx`, `components/chat-input-form/voice-chat-button.tsx`, `components/chat-input-form/screen-sharing-button.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`
 
 - [x] ~~Non-anonymous embed with voice call, voice record, and attachment buttons renders correctly~~ _(deprecated in #2476 — the Embed tab's Show Attachment / Show Voice Record / Show Voice Call toggles were removed entirely; owned per-surface by Settings -> Capabilities now)_
-- [x] Authenticated flow in embed: user can send a message and receive an AI response
+- [x] Authenticated flow in embed: user can send a message and receive an AI response _(runs against a real `EMBED_URL` when configured, otherwise against the local second-origin embed harness — issue #2586 — with the chat WebSocket mocked)_
 - [x] Advanced anonymous embed (Anyone visibility, no context awareness) renders and allows chatting
 - [x] Advanced anonymous embed with context awareness sends message with injected context
 - [x] WCAG 2.4.3: pressing Escape inside embedded iframe closes the widget via postMessage
@@ -1860,3 +1861,32 @@ Covers issue #2544: a new `show_explore_mentors` mentor setting, exposed as a "S
 - [x] sem-04: With the setting ON, the admin's own welcome screen shows the "Explore Agents" section
 - [x] sem-05: With the setting ON, a non-admin non-owner viewer of the same agent also sees the "Explore Agents" section (RBAC-redaction regression guard)
 - [x] sem-06: With the setting OFF, the welcome screen hides the "Explore Agents" section
+
+---
+
+## Journey 77: SDK Chat Migration — Stage 1 (7 checkpoints) — `journeys/77-sdk-chat-migration-stage-1.spec.ts`
+
+**Source files:** `components/chat/sdk-chat.tsx`, `app/platform/[tenantKey]/[mentorId]/mentor-page-content.tsx`
+
+Covers issue #2586 Stage 1: the chat surface now renders the SDK `Chat` component (`@iblai/iblai-js/web-containers/next`) via `components/chat/sdk-chat.tsx`, instead of OS's own `components/chat/index.tsx` + `components/chat-input-form/*` (still present, but no longer rendered on this page). Live model replies are unavailable in this environment (the shared ibl.ai free-tier model new e2e agents use returns `TooManyRequestsResponseError: Rate limit exceeded`), so every test scripts the chat WebSocket via `ChatPage.mockChatWebSocket()` / the new `mockStopGenerationWebSocket()` rather than depending on a real reply — the same technique journeys 68/70/73 established. Frame shapes and endpoints were confirmed by reading `@iblai/web-utils`'s `use-chat-v2.ts` and `use-mentor-tools.ts` directly (source, not the bundled `dist/`): the outgoing WS frame is `{flow, session_id, token, prompt, file_references?, ...}` — session tools are NOT resent per message (session-scoped, read server-side from the `PUT .../sessions/{id}/` `{tools}` body instead); Stop opens a SEPARATE `wss://.../ws/langflow-stop-generation/` socket and only re-enables the composer once THAT socket replies; a mid-stream WS close (no eos/error frame) is handled the same way a real backend error surfaces, and does not require any `test.fixme`/skip to reproduce.
+
+Excludes issue #2536's session-recovery checkpoints — that fix has not yet been ported into the SDK Chat. Needed once it lands: (1) a dropped/expired session on reload falls back to a fresh session rather than showing a permanently broken composer; (2) an explicit "session expired" affordance (if any) is shown and actionable; (3) resuming after recovery does not resend or duplicate the last user message; (4) recovery does not clobber an unrelated, still-valid session for a different mentor tab.
+
+- [x] scm-01: The composer's Attach-file dropdown exposes the Upload File and Camera options
+- [x] scm-02: Enabling/disabling the Web Search session tool flips the chip's `aria-pressed` state and PUTs the tools array to the session-update REST endpoint
+- [x] scm-03: Attaching a file and sending carries the prompt, session id, and a `file_references` entry (file_id/file_key/file_name/content_type/file_size) in the outgoing WebSocket frame
+- [x] scm-04: An attached file's chip visibly transitions from uploading (spinner) to done (no retry affordance, Remove enabled)
+- [x] scm-05: A failed upload (mocked 500 on the presigned-URL request) drives the file chip to its error/retry affordance
+- [x] scm-06: Clicking Stop mid-stream opens the dedicated stop-generation socket with the matching `generation_id`; once it replies, streaming ends and the composer re-enables, and a frame arriving on the paused main socket right after Stop never renders
+- [x] scm-07: The server closing the WebSocket mid-stream leaves the streaming state and re-enables the composer, and the user can send again on a freshly (re)opened socket
+
+---
+
+## Journey 78: Embed Second-Origin Harness (2 checkpoints) — `journeys/78-embed-second-origin-harness.spec.ts`
+
+**Source files:** `hooks/use-embed-mode.ts`, `components/chat/sdk-chat.tsx`
+
+Covers issue #2586's test infrastructure: `e2e/utils/embed-harness-server.mjs`, a static page served on `127.0.0.1:4599` (a genuinely different origin than the mentor app) that iframes any URL passed via `?src=`, wired as a Playwright `webServer` entry. Built to un-skip journey 13's `EMBED_URL`-gated tests without depending on an external, personally-owned demo site — `EMBED_URL` is now optional and empty by default; when unset, embed specs fall back to this harness. Kept deliberately generic so issue #2590's origin-allowlist security work can reuse it unchanged.
+
+- [x] ehh-01: The harness serves a visible placeholder page when no `?src=` is given
+- [x] ehh-02: The harness, loaded from a genuinely different origin than the mentor app, renders the embedded mentor chat inside its iframe
