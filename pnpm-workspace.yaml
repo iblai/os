@@ -42,7 +42,13 @@ overrides:
   # GHSA-gqvv-2mrq-wpjv, GHSA-g6gw-c38x-mqfc and GHSA-crvj-82cr-hjcx (request
   # smuggling / header handling). Same reach: @iblai/mcp > MCP SDK.
   hono: '>=4.13.5'
-  axios: '>=1.16.0'
+  # Floor raised 1.16.0 -> 1.20.0 for seven high advisories fixed together in
+  # 1.20.0: GHSA-c29m-xwm3-cm6r (data: URL ReDoS), GHSA-mghh-pgcx-3jjj (proxy
+  # host ReDoS), GHSA-x97p-jq2g-jp4f (toFormData prototype pollution),
+  # GHSA-3pq3-5fj3-cg6v and GHSA-542g-h47m-68v8 (HTTP/2 adapter),
+  # GHSA-m8m8-qj5v-23w3 (createConnection gadget), GHSA-r4gj-5m52-g5wh
+  # (fetch adapter ignores maxRedirects: 0). Direct dependency, pinned to match.
+  axios: '>=1.20.0'
   prismjs: '>=1.30.0'
   # Floor raised 3.4.12 -> 3.4.13 for GHSA-55q2-fjhq-7xh7: IN_PLACE hook removal
   # leaves a detached subtree executable (XSS). Reached through
