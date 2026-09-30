@@ -108,6 +108,33 @@ export function embedRedirectPath(host: Element): string {
   return qs ? `/?${qs}` : '/';
 }
 
+// `<agent-ai authrelyonhost>` caches the host session as its `iblData` field the
+// first time it mounts, and RE-BROADCASTS that copy to the iframe on every
+// `ready`/`loaded` the mentor app posts. After a tenant switch that cached copy
+// is the OLD tenant, so it overwrites the session we just installed and the panel
+// snaps back — while a fresh panel open (agent-ai re-reads localStorage) shows the
+// new tenant correctly. Overwrite the cache with the CURRENT session (the shape
+// agent-ai itself builds) so the re-broadcast matches what /sso-login-complete
+// installs and the app sees no change instead of reverting.
+const HOST_AUTH_CACHE_KEYS = [
+  'axd_token',
+  'dm_token',
+  'tenants',
+  'tenant',
+  'current_tenant',
+  'userData',
+  'edx_jwt_token',
+  'axd_token_expires',
+  'dm_token_expires',
+];
+
+export function refreshHostAuthCache(host: Element): void {
+  const payload: Record<string, string | null> = {};
+  for (const key of HOST_AUTH_CACHE_KEYS)
+    payload[key] = localStorage.getItem(key);
+  (host as unknown as { iblData: string }).iblData = JSON.stringify(payload);
+}
+
 // ---- Tenant switch -----------------------------------------------------------
 // The mentor app (in the iframe) posts `{ tenantSwitch: true, tenant: <key> }`
 // when the user picks a different tenant in the profile menu (the SDK's
@@ -128,10 +155,21 @@ export function watchTenantSwitch(host: Element): () => void {
     if (!data?.tenantSwitch || !data.tenant || switching) return;
     switching = true;
     try {
+      // Capture the return path from the CURRENT chat URL *before* the auth
+      // round-trip. signIn() is async (seconds), and the app may navigate the
+      // iframe meanwhile — often to a /sso-login-complete URL, from which
+      // embedRedirectPath would strip everything to a bare "/". Landing on "/"
+      // drops the embed params, so the app resolves the wrong tenant/route and
+      // re-requests the switch (a redirect loop). Snapshotting here keeps the
+      // real embed params (embed/mode/component/…) on the post-switch redirect.
+      const redirectPath = embedRedirectPath(host);
       // The auth app issues the target tenant's tokens and returns them in the
       // redirect `data`, which signIn() stores in this page's localStorage.
       await signIn(data.tenant);
-      installSession(host, embedRedirectPath(host));
+      // Point agent-ai's cached host auth at the NEW session BEFORE it re-mounts
+      // the iframe, so its authrelyonhost re-broadcast can't revert the switch.
+      refreshHostAuthCache(host);
+      installSession(host, redirectPath);
     } catch (err) {
       console.warn('[ibl.ai panel] tenant switch failed:', err);
     } finally {
