@@ -1,5 +1,36 @@
 # Changelog
 
+## [0.159.1](https://github.com/iblai/os/compare/v0.159.0...v0.159.1) (2026-09-30)
+
+### Bug Fixes
+
+* **deps:** bump axios to 1.20.0 and lift the brace-expansion floor to 5.0.11 ([29d21e3](https://github.com/iblai/os/commit/29d21e342143d0f754c53078ff79bb43dfc851d0))
+* **deps:** lift the undici override past three new high advisories ([aa9b62d](https://github.com/iblai/os/commit/aa9b62d05c124a07ad1d13c4c1b849af1d0e01e0))
+
+### Refactors
+
+* **edit-mentor-modal:** render the SDK AgentApiTab from the API tab ([49b570b](https://github.com/iblai/os/commit/49b570ba2f5f8f924917bd138e0a2f4358497567))
+* **edit-mentor-modal:** render the SDK AgentToolsTab from the Tools tab ([ffa64cc](https://github.com/iblai/os/commit/ffa64cc61623c89075b9682790136abc716fa7ed))
+* **workflows:** toggle agent tools with the SDK useToggleTools hook ([94b0736](https://github.com/iblai/os/commit/94b07362eb04fe5a0e4aed583c91aeddc0c4c2f6))
+
+### Chores
+
+* **deps:** bump @iblai/iblai-js to 2.26.0 ([681251d](https://github.com/iblai/os/commit/681251deb24d8ef955e83a608265b792491aa712)), closes [#2111](https://github.com/iblai/os/issues/2111)
+* **i18n:** drop the API tab messages now owned by the SDK ([90295e4](https://github.com/iblai/os/commit/90295e4480fe04e7c20d5ec6a7e84dbc2e4bab51))
+* **i18n:** drop the tabsToolsTab messages now owned by the SDK ([14c2f89](https://github.com/iblai/os/commit/14c2f893491f24da19c51cbf93dd2dc755976a60))
+
+### Styles
+
+* prettier-format CHANGELOG.md ([34881a9](https://github.com/iblai/os/commit/34881a9e14539156282fb66b10330e715b333b54))
+
+### Tests
+
+* **e2e:** add agent API tab journey with an ApiTab page object and key residue reaper ([648b986](https://github.com/iblai/os/commit/648b98695560cd3412dc6cd04752f049b0deb0e5))
+* **e2e:** add agent Tools tab journey and harden the ToolsTab page object ([7ab7760](https://github.com/iblai/os/commit/7ab7760a0d1e92a37010c081b768ce435928427b))
+* **e2e:** read API tab row names in one snapshot ([6e33cc5](https://github.com/iblai/os/commit/6e33cc562b2cd1e3fd87eb7932ccf87283e206ad))
+* **e2e:** record API tab coverage for journey 78 ([d3813b8](https://github.com/iblai/os/commit/d3813b8b39493e92f33698e837d67dd6046fea7f))
+* **e2e:** record Tools tab coverage for journey 77 ([61d7bd1](https://github.com/iblai/os/commit/61d7bd13aef3a4a8f0e07142d6c40ed59dcff323))
+
 ## [0.159.0](https://github.com/iblai/os/compare/v0.158.6...v0.159.0) (2026-09-30)
 
 ### Features
