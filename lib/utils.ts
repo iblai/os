@@ -480,17 +480,6 @@ export const handleTenantSwitch = async (
   });
 };
 
-export function convertFromBytes(bytes: number) {
-  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-
-  if (bytes === 0) return { value: 0, unit: 'B' };
-
-  const i = Math.floor(Math.log(bytes) / Math.log(1024));
-  const value = parseFloat((bytes / Math.pow(1024, i)).toFixed(2));
-
-  return { value, unit: sizes[i] };
-}
-
 export function formatRelativeDate(date: string) {
   const dateObj = new Date(date);
 
@@ -1477,6 +1466,11 @@ export const maxDatasetFileSizeInMegaBytes = () => {
   const value = Number(config.mentorTrainingMaximumFileSize());
   return isNaN(value) ? 60 : value;
 };
+
+// Resource type ids (e.g. `zip`, `courses`) the Add Resources modal disables,
+// from the pipe-separated NEXT_PUBLIC_DISABLED_DATASETS.
+export const disabledDatasetResourceTypes = (): string[] =>
+  config.disabedDatasets().split('|').filter(Boolean);
 
 // Helper function to format date to dd-mm-yyyy
 export const formatDateToYYYYMMDD = (

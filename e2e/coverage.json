@@ -1,9 +1,9 @@
 {
   "version": 2,
-  "lastUpdated": "2026-09-29",
+  "lastUpdated": "2026-09-30",
   "summary": {
-    "totalCheckpoints": 785,
-    "coveredCheckpoints": 740,
+    "totalCheckpoints": 798,
+    "coveredCheckpoints": 753,
     "deprecatedCheckpoints": 17,
     "notReproducibleCheckpoints": 17,
     "pendingCheckpoints": 11,
@@ -1247,11 +1247,12 @@
       "name": "Dataset Management",
       "spec": "20-dataset-management.spec.ts",
       "sourceFiles": [
-        "components/modals/edit-mentor-modal/tabs/datasets-tab/index.tsx",
-        "components/modals/edit-mentor-modal/tabs/datasets-tab/resource-types.tsx",
         "components/modals/edit-mentor-modal/tabs/datasets-tab/agent-datasets-tab.tsx",
+        "components/workflows/node-config-panel.tsx",
         "hooks/user-navigate.ts",
-        "lib/constants.ts"
+        "lib/constants.ts",
+        "lib/config.ts",
+        "lib/utils.ts"
       ],
       "checkpoints": [
         {
@@ -1316,7 +1317,7 @@
         },
         {
           "id": "ds-13",
-          "description": "PDF file can be uploaded",
+          "description": "PDF file can be uploaded (exercised by journey 75's du-09 on a fresh mentor; the in-place placeholder here was a dead commented-out test prior to this change)",
           "status": "covered"
         },
         {
@@ -1382,6 +1383,26 @@
         {
           "id": "ds-26",
           "description": "Reloading the page while paginated restores datasetsPage and the active page (self-seeded multi-page mentor)",
+          "status": "covered"
+        },
+        {
+          "id": "ds-27",
+          "description": "Train-or-Delete modal shows the Train/Delete choice, description text, and (for an uploaded-file dataset) no User-Agent field, for a deterministically self-seeded untrained dataset",
+          "status": "covered"
+        },
+        {
+          "id": "ds-28",
+          "description": "Untraining a trained dataset fires the underlying PUT (train:false) immediately, before the auto-opened delete confirmation \u2014 verified via the network request (self-seeded)",
+          "status": "covered"
+        },
+        {
+          "id": "ds-29",
+          "description": "Retrain schedule interval is set via Weekly, persists across closing and reopening the modal, and can be cleared back to no schedule (self-seeded crawlable URL dataset \u2014 retrain scheduling is disabled for every uploaded-file type)",
+          "status": "covered"
+        },
+        {
+          "id": "ds-30",
+          "description": "Train-or-Delete modal's User-Agent field is present for a web-crawler dataset and absent for an uploaded-file dataset (self-seeded pair, same mentor)",
           "status": "covered"
         }
       ]
@@ -2388,6 +2409,11 @@
         {
           "id": "wf-15",
           "description": "Workflow can be published; active workflow can be deactivated back to Draft",
+          "status": "covered"
+        },
+        {
+          "id": "wf-16",
+          "description": "File Search node's dataset picker dialog: opening/searching/paging never touch datasetsPage/datasetsSearch URL params (syncToUrl=false, unlike the edit-mentor modal's Datasets tab); picking a row closes the dialog and shows the dataset name with a Change button; reopening highlights the previously selected row (self-seeded mentor)",
           "status": "covered"
         }
       ]
@@ -4719,10 +4745,8 @@
       "name": "Dataset Cloud Pickers",
       "spec": "74-dataset-cloud-pickers.spec.ts",
       "sourceFiles": [
-        "hooks/use-google-drive-picker.ts",
-        "hooks/use-one-drive-picker.ts",
-        "hooks/use-dropdox-picker.ts",
-        "components/modals/edit-mentor-modal/tabs/datasets-tab/add-resource-modal.tsx"
+        "components/workflows/node-config-panel.tsx",
+        "components/modals/edit-mentor-modal/tabs/datasets-tab/agent-datasets-tab.tsx"
       ],
       "checkpoints": [
         {
@@ -4747,8 +4771,8 @@
       "name": "Dataset Upload Types",
       "spec": "75-dataset-upload-types.spec.ts",
       "sourceFiles": [
-        "components/modals/edit-mentor-modal/tabs/datasets-tab/add-resource-modal.tsx",
-        "components/modals/edit-mentor-modal/tabs/datasets-tab/resource-types.tsx"
+        "components/modals/edit-mentor-modal/tabs/datasets-tab/agent-datasets-tab.tsx",
+        "e2e/utils/dataset-resource-gating.ts"
       ],
       "checkpoints": [
         {
@@ -4789,6 +4813,46 @@
         {
           "id": "du-08",
           "description": "Admin uploads an Excel (.xlsx) file via the Add Resources modal and the file row appears in the dataset list",
+          "status": "covered"
+        },
+        {
+          "id": "du-09",
+          "description": "Admin uploads a PDF file via the Add Resources modal and the file row appears in the dataset list",
+          "status": "covered"
+        },
+        {
+          "id": "du-10",
+          "description": "Admin submits a URL resource via the Add Resources modal and the row appears in the dataset list",
+          "status": "covered"
+        },
+        {
+          "id": "du-11",
+          "description": "Admin submits a YouTube resource via the Add Resources modal and the row appears in the dataset list",
+          "status": "covered"
+        },
+        {
+          "id": "du-12",
+          "description": "Admin submits a GitHub repo resource (URL + branch) via the Add Resources modal and the row appears in the dataset list",
+          "status": "covered"
+        },
+        {
+          "id": "du-13",
+          "description": "Admin submits a Web Crawler resource with a User-Agent filled in; the create request carries crawler_extra_headers with the value",
+          "status": "covered"
+        },
+        {
+          "id": "du-14",
+          "description": "Admin submits a Web Crawler resource with the User-Agent left blank; the create request omits crawler_extra_headers",
+          "status": "covered"
+        },
+        {
+          "id": "du-15",
+          "description": "ZIP resource button's enabled/disabled state matches NEXT_PUBLIC_DISABLED_DATASETS as resolved from the running build's env files (default: disabled) \u2014 full upload flow runs only when enabled",
+          "status": "covered"
+        },
+        {
+          "id": "du-16",
+          "description": "Course resource button's enabled/disabled state matches NEXT_PUBLIC_DISABLED_DATASETS as resolved from the running build's env files (default: disabled) \u2014 full upload flow runs only when enabled",
           "status": "covered"
         }
       ]
