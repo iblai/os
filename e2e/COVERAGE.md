@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-09-29 | 781 checkpoints (738 covered, 11 pending/fixme, 15 not-reproducible in default env, 17 deprecated) | 79 journeys (78 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin
+> Last updated: 2026-09-30 | 782 checkpoints (739 covered, 11 pending/fixme, 15 not-reproducible in default env, 17 deprecated) | 79 journeys (78 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin
 
 ## How This Works
 
@@ -607,9 +607,9 @@ The "Remember past conversations" (`enable_memory_component`) master toggle move
 
 ---
 
-## Journey 31: Mobile View (7 checkpoints) — `journeys/31-mobile-view.spec.ts`
+## Journey 31: Mobile View (8 checkpoints) — `journeys/31-mobile-view.spec.ts`
 
-**Source files:** `app/platform/[tenantKey]/[mentorId]/page.tsx`, `app/platform/[tenantKey]/[mentorId]/explore/page.tsx`, `components/modals/edit-mentor-modal/tabs/datasets-tab/agent-datasets-tab.tsx`
+**Source files:** `app/platform/[tenantKey]/[mentorId]/page.tsx`, `app/platform/[tenantKey]/[mentorId]/explore/page.tsx`, `components/modals/edit-mentor-modal/tabs/datasets-tab/agent-datasets-tab.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/user-profile.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/learner-mode-switch.tsx`
 
 - [x] Sidebar navigation displays correct menu items on mobile (Pixel 5 viewport)
 - [x] Mentor dropdown works correctly in mobile view
@@ -618,6 +618,7 @@ The "Remember past conversations" (`enable_memory_component`) master toggle move
 - [x] Explore page title, description, and tabs display correctly on mobile
 - [x] Search and mentor cards work correctly on mobile
 - [x] Dataset upload and untrain/delete flow works on mobile
+- [x] Admin on mobile sees Admin/User labels (not Instructor/Learner) on the profile dropdown's learner-mode row, and the label flips correctly when the switch is toggled (#2592)
 
 ---
 
