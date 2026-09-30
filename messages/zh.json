@@ -581,9 +581,6 @@
     "settings": "设置",
     "language": "语言"
   },
-  "componentsAddResourceButton": {
-    "addResource": "添加资源"
-  },
   "componentsAdvancedChartWithTooltip": {
     "monthlyRevenue": "月度收入",
     "revenueLabel": "收入"
@@ -596,11 +593,6 @@
     "areYouSure": "您确定吗？",
     "cancel": "取消",
     "continue": "继续"
-  },
-  "componentsDatasetTab": {
-    "dataset": "数据集",
-    "addResource": "添加资源",
-    "noResourcesAddedYet": "尚未添加任何资源"
   },
   "componentsFileUpload": {
     "dropFilesHere": "将文件拖放到此处",
@@ -649,64 +641,6 @@
     "currentVersion": "当前版本",
     "poweredBy": "技术支持来自",
     "inNewYork": "于纽约"
-  },
-  "datasetsTabAddResourceModal": {
-    "addResources": "添加资源",
-    "description": "添加知识以帮助您的智能体提供更相关的见解。拥有编辑权限的其他用户可以将这些来源重复用于更多主题。",
-    "googleDrivePickerError": "Google Drive 选择器错误",
-    "forceClosePicker": "强制关闭选择器",
-    "notConfigured": "未为此租户配置"
-  },
-  "datasetsTabDatasetItem": {
-    "trainingDocumentUpdatedSuccess": "训练文档更新成功",
-    "trainingDocumentUpdateFailed": "更新训练文档失败",
-    "scheduleRetrain": "安排重新训练",
-    "documentCannotBeRetrained": "此文档无法重新训练",
-    "scheduleAutomaticRetraining": "为此数据集安排自动重新训练",
-    "makePublic": "设为公开",
-    "makePrivate": "设为私有",
-    "inProgress": "进行中",
-    "disableTrainingForDocument": "禁用文档训练",
-    "enableTrainingForDocument": "启用文档训练"
-  },
-  "datasetsTabDeleteDatasetModal": {
-    "deleteSuccess": "训练文档已成功删除",
-    "deleteError": "删除训练文档失败",
-    "dialogTitle": "删除数据集",
-    "confirmationText": "您已成功取消训练数据集，是否要将其删除？此操作无法撤销。",
-    "cancelButton": "取消",
-    "deletingButton": "删除中...",
-    "deleteButton": "删除"
-  },
-  "datasetsTabIndex": {
-    "infoBox": "用您自己的资料训练智能体。上传文档、文件或链接，它就会依据这些内容作答——基于您的内容，而不是凭空猜测。",
-    "heading": "数据集",
-    "subheading": "管理训练数据集和知识来源。",
-    "searchPlaceholder": "搜索数据集...",
-    "addResource": "添加资源",
-    "columnName": "名称",
-    "columnType": "类型",
-    "columnTokens": "TOKENS",
-    "columnInterval": "间隔",
-    "columnVisibility": "可见性",
-    "columnStatus": "状态"
-  },
-  "datasetsTabRetrainScheduleModal": {
-    "toastSuccess": "重新训练间隔更新成功",
-    "toastError": "重新训练间隔更新失败",
-    "dialogTitle": "计划重新训练",
-    "dialogDescription": "为以下内容配置自动重新训练计划",
-    "retrainIntervalLabel": "重新训练间隔",
-    "presetDaily": "每天（1 天）",
-    "presetWeekly": "每周（7 天）",
-    "presetMonthly": "每月（30 天）",
-    "customIntervalLabel": "自定义间隔（天）",
-    "customIntervalPlaceholder": "输入天数",
-    "retrainIntervalHint": "数据集将每 {days} {unit}重新训练一次",
-    "dayUnit": "天",
-    "daysUnit": "天",
-    "cancelButton": "取消",
-    "submitButton": "计划重新训练"
   },
   "disclaimersTabEditDisclaimerModal": {
     "editAdvisory": "编辑公告",
@@ -1561,34 +1495,6 @@
     "toastDeleteSuccess": "项目已成功删除",
     "toastDeleteError": "删除项目失败"
   },
-  "projectsMinimumMentorAlert": {
-    "cannotRemoveAgent": "无法移除代理",
-    "minimumAgentWarning": "一个项目必须至少有一个代理。请在移除此代理之前添加另一个代理。",
-    "cancel": "取消"
-  },
-  "projectsProjectFilesModal": {
-    "projectFiles": "项目文件",
-    "searchDatasetsPlaceholder": "搜索数据集...",
-    "addFiles": "添加文件",
-    "columnName": "名称",
-    "columnType": "类型",
-    "columnTokens": "TOKENS",
-    "columnInterval": "间隔",
-    "columnVisibility": "可见性",
-    "columnStatus": "状态"
-  },
-  "projectsProjectInstructionsModal": {
-    "title": "说明",
-    "description": "您可以要求助手专注于某些主题，或要求其使用特定的语气或格式进行回答。",
-    "placeholder": "例如：“请参考最新的 JavaScript 文档。保持回答简洁且有针对性。”",
-    "cancelAriaLabel": "取消编辑说明",
-    "cancel": "取消",
-    "saveAriaLabel": "保存项目说明",
-    "saving": "保存中...",
-    "save": "保存",
-    "saveSuccess": "说明更新成功",
-    "saveError": "更新说明失败"
-  },
   "projectsRenameProjectModal": {
     "title": "重命名项目",
     "projectNameLabel": "项目名称",
@@ -1598,65 +1504,6 @@
     "renameButton": "重命名项目",
     "renameSuccess": "项目重命名成功",
     "renameError": "重命名项目失败"
-  },
-  "resourceModalGithubFileUploadModal": {
-    "failedToFetchBranches": "获取分支失败",
-    "unknownError": "发生未知错误",
-    "agentNotFound": "未找到代理",
-    "documentQueued": "文档已加入训练队列",
-    "errorAddingDocument": "添加训练文档时出错",
-    "githubRepoUrlPlaceholder": "Github 仓库 URL",
-    "selectBranchPlaceholder": "选择分支",
-    "submit": "提交"
-  },
-  "resourceModalLocalFileUploadModal": {
-    "fileNotFound": "未找到文件",
-    "documentQueued": "文档已加入训练队列",
-    "errorAddingDocument": "添加训练文档时出错",
-    "fileSizeExceeds": "文件大小超过 {value} {unit}",
-    "dragAndDrop": "将文件拖放到此处",
-    "or": "或",
-    "browseFiles": "浏览文件",
-    "maxFileSize": "最大文件大小：{value} {unit}",
-    "descriptionLabel": "描述（可选）",
-    "descriptionPlaceholder": "为此图片添加描述...",
-    "submitting": "提交中",
-    "submit": "提交"
-  },
-  "resourceModalUrlUploadModel": {
-    "documentQueuedForTraining": "文档已加入训练队列",
-    "errorAddingTrainingDocument": "添加训练文档时出错",
-    "invalidYouTubeUrl": "无效的 YouTube URL",
-    "invalidBlackboardUrl": "无效的 Blackboard URL",
-    "invalidUrl": "无效的 URL",
-    "urlPlaceholder": "URL",
-    "submitButton": "提交"
-  },
-  "resourceModalWebsiteCrawlModal": {
-    "title": "网络爬虫配置",
-    "description": "配置您的网络爬虫设置和 URL 模式",
-    "formAriaLabel": "网络爬虫配置表单",
-    "urlLabel": "URL",
-    "urlRequired": "URL 为必填项",
-    "invalidUrl": "无效的 URL",
-    "maxCrawlDepthLabel": "最大爬取深度",
-    "fieldRequired": "此字段为必填项",
-    "mustBeGreaterThanZero": "必须大于 0",
-    "mustBeLessThan10000": "必须小于 10000",
-    "maxPagesLimitLabel": "最大页面数限制",
-    "patternTypeLabel": "模式类型",
-    "selectPatternTypeAriaLabel": "选择模式类型",
-    "globPattern": "Glob 模式",
-    "regularExpression": "正则表达式",
-    "crawlerMatchPatternsLabel": "爬虫匹配模式",
-    "addPatternAriaLabel": "添加模式",
-    "patternHelpText": "按 Enter 键或点击加号按钮以添加模式",
-    "addedPatternsAriaLabel": "已添加的爬虫匹配模式",
-    "noPatternsAdded": "未添加任何模式",
-    "removePatternAriaLabel": "删除模式：{pattern}",
-    "submitting": "提交中...",
-    "submit": "提交",
-    "formBeingSubmitted": "表单正在提交"
   },
   "settingsTabCopyMentorModal": {
     "defaultCopyNamePrefix": "副本",

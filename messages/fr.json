@@ -581,9 +581,6 @@
     "settings": "Paramètres",
     "language": "Langue"
   },
-  "componentsAddResourceButton": {
-    "addResource": "Ajouter une ressource"
-  },
   "componentsAdvancedChartWithTooltip": {
     "monthlyRevenue": "Revenus mensuels",
     "revenueLabel": "Revenus"
@@ -596,11 +593,6 @@
     "areYouSure": "Êtes-vous sûr ?",
     "cancel": "Annuler",
     "continue": "Continuer"
-  },
-  "componentsDatasetTab": {
-    "dataset": "Ensemble de données",
-    "addResource": "Ajouter une ressource",
-    "noResourcesAddedYet": "Aucune ressource ajoutée pour l'instant"
   },
   "componentsFileUpload": {
     "dropFilesHere": "Déposez vos fichiers ici",
@@ -649,64 +641,6 @@
     "currentVersion": "Version actuelle",
     "poweredBy": "Propulsé par",
     "inNewYork": "à New York"
-  },
-  "datasetsTabAddResourceModal": {
-    "addResources": "Ajouter des ressources",
-    "description": "Ajoutez des connaissances pour aider votre agent à fournir des informations plus pertinentes. Les autres utilisateurs disposant d'un accès en modification peuvent réutiliser ces sources pour d'autres sujets.",
-    "googleDrivePickerError": "Erreur du sélecteur Google Drive",
-    "forceClosePicker": "Forcer la fermeture du sélecteur",
-    "notConfigured": "Non configuré pour ce locataire"
-  },
-  "datasetsTabDatasetItem": {
-    "trainingDocumentUpdatedSuccess": "Document d'entraînement mis à jour avec succès",
-    "trainingDocumentUpdateFailed": "Échec de la mise à jour du document d'entraînement",
-    "scheduleRetrain": "Planifier le réentraînement",
-    "documentCannotBeRetrained": "Ce document ne peut pas être réentraîné",
-    "scheduleAutomaticRetraining": "Planifier le réentraînement automatique pour ce jeu de données",
-    "makePublic": "Rendre public",
-    "makePrivate": "Rendre privé",
-    "inProgress": "En cours",
-    "disableTrainingForDocument": "Désactiver l'entraînement pour le document",
-    "enableTrainingForDocument": "Activer l'entraînement pour le document"
-  },
-  "datasetsTabDeleteDatasetModal": {
-    "deleteSuccess": "Document d'entraînement supprimé avec succès",
-    "deleteError": "Échec de la suppression du document d'entraînement",
-    "dialogTitle": "Supprimer le jeu de données",
-    "confirmationText": "Vous avez désappris un jeu de données avec succès, voulez-vous le supprimer ? Cette action est irréversible.",
-    "cancelButton": "Annuler",
-    "deletingButton": "Suppression...",
-    "deleteButton": "Supprimer"
-  },
-  "datasetsTabIndex": {
-    "infoBox": "Formez votre agent avec vos propres contenus. Importez des documents, des fichiers ou des liens, et il y puisera ses réponses — en s'appuyant sur votre contenu plutôt qu'en devinant.",
-    "heading": "Jeux de données",
-    "subheading": "Gérez les jeux de données d'entraînement et les sources de connaissances.",
-    "searchPlaceholder": "Rechercher des jeux de données...",
-    "addResource": "Ajouter une ressource",
-    "columnName": "NOM",
-    "columnType": "TYPE",
-    "columnTokens": "TOKENS",
-    "columnInterval": "INTERVALLE",
-    "columnVisibility": "VISIBILITÉ",
-    "columnStatus": "STATUT"
-  },
-  "datasetsTabRetrainScheduleModal": {
-    "toastSuccess": "Intervalle de ré-entraînement mis à jour avec succès",
-    "toastError": "Échec de la mise à jour de l'intervalle de ré-entraînement",
-    "dialogTitle": "Planifier le ré-entraînement",
-    "dialogDescription": "Configurer le calendrier de ré-entraînement automatique pour",
-    "retrainIntervalLabel": "Intervalle de ré-entraînement",
-    "presetDaily": "Quotidien (1 jour)",
-    "presetWeekly": "Hebdomadaire (7 jours)",
-    "presetMonthly": "Mensuel (30 jours)",
-    "customIntervalLabel": "Intervalle personnalisé (jours)",
-    "customIntervalPlaceholder": "Entrer le nombre de jours",
-    "retrainIntervalHint": "Le jeu de données sera ré-entraîné toutes les {days} {unit}",
-    "dayUnit": "jour",
-    "daysUnit": "jours",
-    "cancelButton": "Annuler",
-    "submitButton": "Planifier le ré-entraînement"
   },
   "disclaimersTabEditDisclaimerModal": {
     "editAdvisory": "Modifier l'avertissement",
@@ -1561,34 +1495,6 @@
     "toastDeleteSuccess": "Projet supprimé avec succès",
     "toastDeleteError": "Échec de la suppression du projet"
   },
-  "projectsMinimumMentorAlert": {
-    "cannotRemoveAgent": "Impossible de supprimer l'agent",
-    "minimumAgentWarning": "Un projet doit avoir au moins un agent. Veuillez ajouter un autre agent avant de supprimer celui-ci.",
-    "cancel": "Annuler"
-  },
-  "projectsProjectFilesModal": {
-    "projectFiles": "Fichiers du projet",
-    "searchDatasetsPlaceholder": "Rechercher des jeux de données...",
-    "addFiles": "Ajouter des fichiers",
-    "columnName": "NOM",
-    "columnType": "TYPE",
-    "columnTokens": "TOKENS",
-    "columnInterval": "INTERVALLE",
-    "columnVisibility": "VISIBILITÉ",
-    "columnStatus": "STATUT"
-  },
-  "projectsProjectInstructionsModal": {
-    "title": "Instructions",
-    "description": "Vous pouvez demander à l'agent de se concentrer sur certains sujets, ou de répondre avec un certain ton ou format.",
-    "placeholder": "Ex. : \"Référencez la dernière documentation JavaScript. Gardez les réponses courtes et ciblées.\"",
-    "cancelAriaLabel": "Annuler la modification des instructions",
-    "cancel": "Annuler",
-    "saveAriaLabel": "Enregistrer les instructions du projet",
-    "saving": "Enregistrement...",
-    "save": "Enregistrer",
-    "saveSuccess": "Instructions mises à jour avec succès",
-    "saveError": "Échec de la mise à jour des instructions"
-  },
   "projectsRenameProjectModal": {
     "title": "Renommer le projet",
     "projectNameLabel": "Nom du projet",
@@ -1598,65 +1504,6 @@
     "renameButton": "Renommer le projet",
     "renameSuccess": "Projet renommé avec succès",
     "renameError": "Échec du renommage du projet"
-  },
-  "resourceModalGithubFileUploadModal": {
-    "failedToFetchBranches": "Échec de la récupération des branches",
-    "unknownError": "Une erreur inconnue s'est produite",
-    "agentNotFound": "Agent introuvable",
-    "documentQueued": "Le document a été mis en file d'attente pour l'entraînement",
-    "errorAddingDocument": "Erreur lors de l'ajout du document d'entraînement",
-    "githubRepoUrlPlaceholder": "URL du dépôt Github",
-    "selectBranchPlaceholder": "Sélectionner une branche",
-    "submit": "Soumettre"
-  },
-  "resourceModalLocalFileUploadModal": {
-    "fileNotFound": "Fichier introuvable",
-    "documentQueued": "Le document a été mis en file d'attente pour l'entraînement",
-    "errorAddingDocument": "Erreur lors de l'ajout du document d'entraînement",
-    "fileSizeExceeds": "La taille du fichier dépasse {value} {unit}",
-    "dragAndDrop": "Glissez-déposez votre fichier ici",
-    "or": "ou",
-    "browseFiles": "Parcourir les fichiers",
-    "maxFileSize": "Taille maximale du fichier : {value} {unit}",
-    "descriptionLabel": "Description (facultative)",
-    "descriptionPlaceholder": "Ajoutez une description pour cette image...",
-    "submitting": "Envoi en cours",
-    "submit": "Soumettre"
-  },
-  "resourceModalUrlUploadModel": {
-    "documentQueuedForTraining": "Le document a été mis en file d'attente pour l'entraînement",
-    "errorAddingTrainingDocument": "Erreur lors de l'ajout du document d'entraînement",
-    "invalidYouTubeUrl": "URL YouTube invalide",
-    "invalidBlackboardUrl": "URL Blackboard invalide",
-    "invalidUrl": "URL invalide",
-    "urlPlaceholder": "URL",
-    "submitButton": "Soumettre"
-  },
-  "resourceModalWebsiteCrawlModal": {
-    "title": "Configuration du robot d'exploration web",
-    "description": "Configurez les paramètres de votre robot d'exploration web et les modèles d'URL",
-    "formAriaLabel": "Formulaire de configuration du robot d'exploration web",
-    "urlLabel": "URL",
-    "urlRequired": "L'URL est requise",
-    "invalidUrl": "URL invalide",
-    "maxCrawlDepthLabel": "Profondeur maximale d'exploration",
-    "fieldRequired": "Ce champ est obligatoire",
-    "mustBeGreaterThanZero": "Doit être supérieur à 0",
-    "mustBeLessThan10000": "Doit être inférieur à 10 000",
-    "maxPagesLimitLabel": "Limite maximale de pages",
-    "patternTypeLabel": "Type de modèle",
-    "selectPatternTypeAriaLabel": "Sélectionner le type de modèle",
-    "globPattern": "Modèle Glob",
-    "regularExpression": "Expression régulière",
-    "crawlerMatchPatternsLabel": "Modèles de correspondance du robot",
-    "addPatternAriaLabel": "Ajouter un modèle",
-    "patternHelpText": "Appuyez sur Entrée ou cliquez sur le bouton plus pour ajouter un modèle",
-    "addedPatternsAriaLabel": "Modèles de correspondance du robot ajoutés",
-    "noPatternsAdded": "Aucun modèle ajouté",
-    "removePatternAriaLabel": "Supprimer le modèle : {pattern}",
-    "submitting": "Envoi en cours...",
-    "submit": "Envoyer",
-    "formBeingSubmitted": "Le formulaire est en cours d'envoi"
   },
   "settingsTabCopyMentorModal": {
     "defaultCopyNamePrefix": "Copie de",

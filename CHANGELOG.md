@@ -1,42 +1,91 @@
 # Changelog
 
+## [0.159.0](https://github.com/iblai/os/compare/v0.158.6...v0.159.0) (2026-09-30)
+
+### Features
+
+* **datasets:** render the SDK datasets tab with plain props only ([913f26c](https://github.com/iblai/os/commit/913f26c4efe59f0bf3e62f17b20e5fc178de52bc))
+
+### Bug Fixes
+
+* **chat:** clear the upload notification timer on unmount ([5dedda8](https://github.com/iblai/os/commit/5dedda87b64e28eb0d364d9ddf6b383e76e0be50))
+* **e2e:** resolve dataset gating without app source in CI ([e984d9f](https://github.com/iblai/os/commit/e984d9f3af417520edfe6e6373a039efae153200))
+
+### Reverts
+
+* **chat:** drop the OS chat-input-form timer fix ([f7fc5bb](https://github.com/iblai/os/commit/f7fc5bba0393e437dbf47e894e40fbbcd29c1eea)), closes [iblai-platform#2586](https://github.com/iblai/iblai-platform/issues/2586)
+* **icons:** keep OpenFolderIcon in svg-icons ([14d0b65](https://github.com/iblai/os/commit/14d0b65286e1b417b25bad84eba5266d5d1a9fe3)), closes [iblai-platform#2586](https://github.com/iblai/iblai-platform/issues/2586)
+
+### Chores
+
+* remove unused dataset and project components ([887aea9](https://github.com/iblai/os/commit/887aea9811aaaad348c853d938cfb21b0759e817))
+
+### Documentation
+
+* **e2e:** update dataset coverage map ([04e76ac](https://github.com/iblai/os/commit/04e76aca8894c786b3aaaa18b58ea91c1dcd0429))
+
+### Styles
+
+* format CHANGELOG with prettier ([ed83741](https://github.com/iblai/os/commit/ed83741efec0b1b25f757535abe78c8b88be1aa3))
+
+### Tests
+
+* **e2e:** cover every dataset resource type and row action ([07e2377](https://github.com/iblai/os/commit/07e23770078014a23b988df3145aeaeebb1c7d97))
+
+### Build
+
+* **deps:** bump @iblai/iblai-js to 2.24.0 ([cebc8c7](https://github.com/iblai/os/commit/cebc8c7e577b3c065f725467b4c3ad350c774a37)), closes [iblai-web-frontend#2108](https://github.com/iblai/iblai-web-frontend/issues/2108)
+
+## [0.158.6](https://github.com/iblai/os/compare/v0.158.5...v0.158.6) (2026-09-30)
+
+### Chores
+
+* **ext:** bump Chrome extension to 1.1.2 to publish the tenant-switch fixes ([202c5b9](https://github.com/iblai/os/commit/202c5b91f85dee83b59904603312bdf1536c8099)), closes [#546](https://github.com/iblai/os/issues/546)
+
+## [0.158.5](https://github.com/iblai/os/compare/v0.158.4...v0.158.5) (2026-09-30)
+
+### Bug Fixes
+
+- **ext:** refresh agent-ai cached host auth on tenant switch (stop revert) ([98ba6ae](https://github.com/iblai/os/commit/98ba6aeea238c9a1a85eaf54da3e90aa64063945))
+- **ext:** snapshot tenant-switch redirect path before the async auth ([12728c8](https://github.com/iblai/os/commit/12728c8c9b67da43711faf909e220fb6a8ad9044))
+
 ## [0.158.4](https://github.com/iblai/os/compare/v0.158.3...v0.158.4) (2026-09-29)
 
 ### Bug Fixes
 
-* **mentor:** persist embed Context Aware and Open By Default toggles ([03b545a](https://github.com/iblai/os/commit/03b545a83f538bbb37a8a8af8d3b8c9fc8e29923))
-* **mentor:** stop Create Embed overwriting Advanced CSS ([05c982f](https://github.com/iblai/os/commit/05c982fa0041562848bb2cb04be422d155dfa3cd))
+- **mentor:** persist embed Context Aware and Open By Default toggles ([03b545a](https://github.com/iblai/os/commit/03b545a83f538bbb37a8a8af8d3b8c9fc8e29923))
+- **mentor:** stop Create Embed overwriting Advanced CSS ([05c982f](https://github.com/iblai/os/commit/05c982fa0041562848bb2cb04be422d155dfa3cd))
 
 ### Chores
 
-* **deps:** bump @iblai/iblai-js to 2.23.1 ([fb474c6](https://github.com/iblai/os/commit/fb474c63afd369bc11844f4614f31b97fe1a1b11))
-* **deps:** bump @iblai/iblai-js to 2.26.0 ([f2e802b](https://github.com/iblai/os/commit/f2e802b7abd0b0ce0338c40063a9489434de230e))
+- **deps:** bump @iblai/iblai-js to 2.23.1 ([fb474c6](https://github.com/iblai/os/commit/fb474c63afd369bc11844f4614f31b97fe1a1b11))
+- **deps:** bump @iblai/iblai-js to 2.26.0 ([f2e802b](https://github.com/iblai/os/commit/f2e802b7abd0b0ce0338c40063a9489434de230e))
 
 ### Documentation
 
-* **e2e:** add mob-08 to coverage ([e04447f](https://github.com/iblai/os/commit/e04447fe98aa73a562dd90dceb806429e6b8653e))
+- **e2e:** add mob-08 to coverage ([e04447f](https://github.com/iblai/os/commit/e04447fe98aa73a562dd90dceb806429e6b8653e))
 
 ### Styles
 
-* prettier-format CHANGELOG bullets ([3578f5c](https://github.com/iblai/os/commit/3578f5cb6c3b33624a18dcf287593a8add49f4d1))
+- prettier-format CHANGELOG bullets ([3578f5c](https://github.com/iblai/os/commit/3578f5cb6c3b33624a18dcf287593a8add49f4d1))
 
 ### Tests
 
-* **e2e:** mobile profile dropdown shows Admin/User labels ([9d28389](https://github.com/iblai/os/commit/9d283894278b79f2b06e9eb66574ca836de0f552))
-* **mentor:** regression tests for Advanced CSS ownership ([7aebf3d](https://github.com/iblai/os/commit/7aebf3dd18f7f39e56ed11f73bb95dd26cc253fe))
-* **mentor:** regression tests for embed toggle persistence ([2ca81e8](https://github.com/iblai/os/commit/2ca81e87458858032ceec135913677ffc041b2f7))
+- **e2e:** mobile profile dropdown shows Admin/User labels ([9d28389](https://github.com/iblai/os/commit/9d283894278b79f2b06e9eb66574ca836de0f552))
+- **mentor:** regression tests for Advanced CSS ownership ([7aebf3d](https://github.com/iblai/os/commit/7aebf3dd18f7f39e56ed11f73bb95dd26cc253fe))
+- **mentor:** regression tests for embed toggle persistence ([2ca81e8](https://github.com/iblai/os/commit/2ca81e87458858032ceec135913677ffc041b2f7))
 
 ## [0.158.3](https://github.com/iblai/os/compare/v0.158.2...v0.158.3) (2026-09-29)
 
 ### Bug Fixes
 
-* **embed:** don't run cross-SPA storage sync in an iframe (reverted switches) ([caae732](https://github.com/iblai/os/commit/caae7326359efc58217a5f52e84c8e1114980b04))
+- **embed:** don't run cross-SPA storage sync in an iframe (reverted switches) ([caae732](https://github.com/iblai/os/commit/caae7326359efc58217a5f52e84c8e1114980b04))
 
 ## [0.158.2](https://github.com/iblai/os/compare/v0.158.1...v0.158.2) (2026-09-29)
 
 ### Bug Fixes
 
-* **ext:** switch tenants via /login/complete so the target tenant is honored ([4ba13d4](https://github.com/iblai/os/commit/4ba13d4f3051c307aad30661ee9df65b72b5ff55))
+- **ext:** switch tenants via /login/complete so the target tenant is honored ([4ba13d4](https://github.com/iblai/os/commit/4ba13d4f3051c307aad30661ee9df65b72b5ff55))
 
 ## [0.158.1](https://github.com/iblai/os/compare/v0.158.0...v0.158.1) (2026-09-29)
 
