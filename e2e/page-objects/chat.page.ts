@@ -143,6 +143,12 @@ export class ChatPage {
   readonly downloadScopeMessageRadio: Locator;
   /** The dialog's single primary action button ("Download"). There is no Cancel — dismiss via Escape or the dialog's built-in close. */
   readonly downloadConfirmButton: Locator;
+  /**
+   * One rendered file-attachment chip (SDK `file-attachments-list.tsx`,
+   * `data-testid="attachment-chip"`). Use `.first()`/`.nth()` to disambiguate
+   * when more than one file is attached.
+   */
+  readonly attachmentChip: Locator;
 
   constructor(page: Page) {
     this.page = page;
@@ -246,6 +252,7 @@ export class ChatPage {
       name: 'Download',
       exact: true,
     });
+    this.attachmentChip = page.getByTestId('attachment-chip');
   }
 
   async sendMessage(text: string): Promise<void> {
@@ -938,40 +945,92 @@ export class ChatPage {
    * reads only the last `write_todos`-named entry), and `{eos: true}` ends
    * the turn.
    */
-  async mockChatWebSocket(): Promise<{
+  /**
+   * Shared implementation behind `mockChatWebSocket()` and
+   * `mockStopGenerationWebSocket()` — routes `urlPattern` via
+   * `page.routeWebSocket()` and exposes a small QUEUE-based controller: each
+   * `waitForClientMessage()` call resolves the next not-yet-consumed client
+   * frame (oldest first), so a test can observe several client sends in
+   * sequence (e.g. the turn-start prompt, then later the stop frame) rather
+   * than only ever the very first one — the original one-shot-Promise
+   * version silently dropped every message after the first.
+   */
+  private async mockWebSocketRoute(urlPattern: string): Promise<{
     waitForClientMessage: () => Promise<Record<string, unknown>>;
     send: (frame: Record<string, unknown>) => void;
+    close: () => void;
   }> {
     let capturedWs: WebSocketRoute | undefined;
-    let resolveMessage: ((msg: Record<string, unknown>) => void) | undefined;
-    const messagePromise = new Promise<Record<string, unknown>>((resolve) => {
-      resolveMessage = resolve;
-    });
+    const pendingMessages: Record<string, unknown>[] = [];
+    const pendingWaiters: Array<(msg: Record<string, unknown>) => void> = [];
 
-    await this.page.routeWebSocket('**/ws/langflow/**', (ws) => {
+    await this.page.routeWebSocket(urlPattern, (ws) => {
       capturedWs = ws;
       ws.onMessage((raw) => {
+        let parsed: Record<string, unknown>;
         try {
-          const parsed = JSON.parse(raw.toString());
-          resolveMessage?.(parsed);
+          parsed = JSON.parse(raw.toString());
         } catch {
           // Non-JSON frame from the page — not expected on this socket,
           // ignore rather than throw out of the WS event handler.
+          return;
         }
+        const waiter = pendingWaiters.shift();
+        if (waiter) waiter(parsed);
+        else pendingMessages.push(parsed);
       });
     });
 
     return {
-      waitForClientMessage: () => messagePromise,
+      waitForClientMessage: () =>
+        pendingMessages.length
+          ? Promise.resolve(pendingMessages.shift() as Record<string, unknown>)
+          : new Promise((resolve) => pendingWaiters.push(resolve)),
       send: (frame: Record<string, unknown>) => {
         if (!capturedWs) {
           throw new Error(
-            '[mockChatWebSocket] send() called before the page opened the mocked socket',
+            `[mockWebSocketRoute] send() called before the page opened the mocked socket (${urlPattern})`,
           );
         }
         capturedWs.send(JSON.stringify(frame));
       },
+      close: () => {
+        capturedWs?.close();
+      },
     };
+  }
+
+  async mockChatWebSocket(): Promise<{
+    waitForClientMessage: () => Promise<Record<string, unknown>>;
+    send: (frame: Record<string, unknown>) => void;
+    close: () => void;
+  }> {
+    return this.mockWebSocketRoute('**/ws/langflow/**');
+  }
+
+  /**
+   * Mocks the dedicated stop-generation socket
+   * (`wss://.../ws/langflow-stop-generation/`) — a SEPARATE connection opened
+   * fresh every time the Stop button is clicked (`stopGenerating()` in
+   * `@iblai/web-utils`'s `use-chat-v2.ts`), never the same socket as
+   * `mockChatWebSocket()`. On open the client sends
+   * `{generation_id, name, tenant, username, token}` (the `generation_id`
+   * must match whatever the mocked main socket's turn-start frame carried —
+   * that's the only id the stop handler recognises). Replying with ANY
+   * message (e.g. `{detail: 'Stopped'}`) is what actually flips the app out
+   * of the streaming state and re-enables the composer
+   * (`handleStopGenerationSocketMessage`) — clicking Stop alone only pauses
+   * the main socket (`isWebSocketPaused.current = true`, set synchronously,
+   * which is also why a frame sent on the main socket right after Stop is
+   * silently ignored even before this reply arrives). Must be registered
+   * before navigation, alongside `mockChatWebSocket()`.
+   */
+  async mockStopGenerationWebSocket(): Promise<{
+    waitForClientMessage: () => Promise<Record<string, unknown>>;
+    send: (frame: Record<string, unknown>) => void;
+    close: () => void;
+  }> {
+    return this.mockWebSocketRoute('**/ws/langflow-stop-generation/**');
   }
 
   /** Returns the agent task-list panel root within `scope` (default: page). */
@@ -1203,5 +1262,282 @@ export class ChatPage {
       stream.on('error', reject);
     });
     return Buffer.concat(chunks).toString('utf-8');
+  }
+
+  // ── SDK Chat migration (issue #2586, Stage 1 Tier 1) ────────────────────────
+  //
+  // The chat surface is now the SDK `Chat` component
+  // (`@iblai/iblai-js/web-containers/next`, wired via
+  // `components/chat/sdk-chat.tsx`) — the composer, attach menu, tool chips
+  // and WS transport below are all owned by that package now, not by OS's
+  // (now-unrendered-on-this-page) `components/chat-input-form/*`. Selectors
+  // and wire shapes here were confirmed by reading the SDK's own source
+  // directly (`upload-menu.tsx`, `file-attachments-list.tsx`,
+  // `web-search-button.tsx`, `use-chat-v2.ts`, `use-mentor-tools.ts` in
+  // `@iblai/web-containers`/`@iblai/web-utils`), not the bundled `dist/`.
+
+  /** The Attach-file dropdown's currently OPEN content (Radix `role="menu"`). */
+  private openAttachMenuContent(): Locator {
+    return this.page.locator('[role="menu"][data-state="open"]');
+  }
+
+  /**
+   * Returns an item inside the OPEN attach menu (`upload-menu.tsx`) — only
+   * "Upload File" and "Camera" are implemented; Google Drive/OneDrive/Website
+   * exist in source only as commented-out placeholders.
+   */
+  getAttachMenuItem(name: 'Upload File' | 'Camera'): Locator {
+    return this.openAttachMenuContent().getByRole('menuitem', {
+      name,
+      exact: true,
+    });
+  }
+
+  /** Opens the composer's "Attach file" dropdown and waits for its items to render. */
+  async openAttachMenu(): Promise<void> {
+    await expect(this.uploadButton).toBeVisible({ timeout: 15_000 });
+    await this.uploadButton.click();
+    await expect(
+      this.openAttachMenuContent().getByRole('menuitem').first(),
+    ).toBeVisible({ timeout: 10_000 });
+  }
+
+  /**
+   * Returns a composer tool-chip button by its exact accessible name (e.g.
+   * "Web Search", "Canvas", "Deep Research") — role-based and exact, not a
+   * `hasText` CSS match: a loose text match can also resolve an unrelated
+   * icon-only variant of the same tool elsewhere in the DOM (whose only text
+   * is a differently-worded `sr-only` label), and `.first()` over those two
+   * is DOM-order-dependent rather than a reliable pick. Most such chips
+   * reflect on/off state via `aria-pressed` — read THAT, never the class
+   * list (see `isCanvasToolActive`'s note: the inactive pill's hover class
+   * contains the active class as a substring).
+   */
+  getToolButton(name: string): Locator {
+    return this.page.getByRole('button', { name, exact: true });
+  }
+
+  /**
+   * Whether a named composer tool chip is currently active. Most chips
+   * (e.g. Canvas) expose `aria-pressed`; some (e.g. the rendered "Web
+   * Search" chip) carry no ARIA state attribute at all — confirmed by
+   * dumping the live DOM: the only observable difference between its
+   * off/on states is a trailing "clear" (`lucide-x`) icon appended ONLY
+   * while active (inactive: `border-gray-200`; active:
+   * `border-[#D0E0FF] bg-[#F5F8FF] text-[#38A1E5]` plus the `<svg
+   * class="...lucide-x...">`). Fall back to that icon's presence when
+   * `aria-pressed` is absent (`null`, not `"false"`).
+   */
+  async isToolActive(name: string): Promise<boolean> {
+    const button = this.getToolButton(name);
+    const pressed = await button.getAttribute('aria-pressed');
+    if (pressed !== null) return pressed === 'true';
+    return (await button.locator('svg.lucide-x').count()) > 0;
+  }
+
+  /**
+   * Drives a tool chip to `target` (active/inactive) and confirms the
+   * resulting state both lands AND holds. A single click on this chip has
+   * been observed (via network capture) to occasionally fire TWO rapid,
+   * opposite session-tools PUTs back to back — e.g.
+   * `{tools:["web-search"]}` immediately followed by `{tools:[]}` — which
+   * silently undoes the click a moment after the UI first reflects it. This
+   * reproduces regardless of where on the chip the click lands (tried both
+   * the bounding-box center and a fixed offset over the leading icon), so
+   * rather than chase the exact cause inside `OutsideButtons.tsx`, this
+   * retries the click until the state survives a short settle window.
+   */
+  private async setToolState(name: string, target: boolean): Promise<void> {
+    const button = this.getToolButton(name);
+    await expect(button).toBeVisible({ timeout: 15_000 });
+    await expect(async () => {
+      if ((await this.isToolActive(name)) !== target) {
+        await button.click();
+      }
+      expect(await this.isToolActive(name)).toBe(target);
+      await this.page.waitForTimeout(1_000);
+      expect(await this.isToolActive(name)).toBe(target);
+    }).toPass({ timeout: 20_000 });
+  }
+
+  /** Idempotently enables a named composer tool chip (no-op if already on and holding). */
+  async enableTool(name: string): Promise<void> {
+    await this.setToolState(name, true);
+  }
+
+  /** Idempotently disables a named composer tool chip (no-op if already off and holding). */
+  async disableTool(name: string): Promise<void> {
+    await this.setToolState(name, false);
+  }
+
+  /**
+   * Waits for the next PUT to the session-update endpoint whose body
+   * satisfies `bodyPredicate` — the REST call `useMentorTools`'s
+   * `updateSessionTools`/`setSessionTools` fire
+   * (`PUT .../ai-mentor/orgs/{org}/users/{user}/sessions/{session_id}/` with
+   * body `{tools: string[], enable_artifacts?: boolean}`) — and resolves
+   * with its parsed JSON body. `bodyPredicate` defaults to matching any body;
+   * pass one when OTHER PUTs to this same endpoint may be in flight around
+   * the same time (e.g. an unrelated session-metadata autosave that also
+   * happens to PUT a `tools` field) and only a specific tools list should
+   * resolve the wait — confirmed necessary in practice, not merely
+   * defensive. The request is observed, not intercepted: it proceeds to the
+   * real backend so the session's tool list stays consistent with whatever
+   * the (possibly mocked) chat WS turn reads server-side. Note enabled tools
+   * are NOT resent in the per-message WS frame (confirmed in
+   * `use-chat-v2.ts`'s `sendMessage`) — they're session-scoped, read back by
+   * the backend from this same PUT per `session_id`.
+   */
+  waitForSessionToolsUpdate(
+    timeout = 15_000,
+    bodyPredicate: (body: { tools?: string[] }) => boolean = () => true,
+  ): Promise<{ tools?: string[] }> {
+    return this.page
+      .waitForRequest(
+        (request) => {
+          if (request.method() !== 'PUT') return false;
+          if (
+            !/\/ai-mentor\/orgs\/[^/]+\/users\/[^/]+\/sessions\/[^/]+\/?$/.test(
+              new URL(request.url()).pathname,
+            )
+          ) {
+            return false;
+          }
+          try {
+            return bodyPredicate(request.postDataJSON());
+          } catch {
+            return false;
+          }
+        },
+        { timeout },
+      )
+      .then((request) => request.postDataJSON());
+  }
+
+  // ── File attachments (composer) ─────────────────────────────────────────
+
+  /** The chip's spinner overlay — visible only while `uploadStatus === 'uploading'`. */
+  getAttachmentSpinner(scope?: Locator): Locator {
+    return (scope ?? this.attachmentChip).locator('.animate-spin');
+  }
+
+  /** The chip's "Retry" button — visible only once `uploadStatus === 'error'`. */
+  getRetryFileButton(scope?: Locator): Locator {
+    return (scope ?? this.page).getByRole('button', {
+      name: 'Retry',
+      exact: true,
+    });
+  }
+
+  /** The chip's "Remove file" button — present in every state except mid-upload. */
+  getRemoveFileButton(scope?: Locator): Locator {
+    return (scope ?? this.page).getByRole('button', { name: 'Remove file' });
+  }
+
+  /**
+   * The hidden device-upload `<input type="file">` (`upload-menu.tsx`'s
+   * `fileUploadInputRef`). Excludes the sibling camera input, which carries
+   * `capture="environment"`.
+   */
+  getFileUploadInput(): Locator {
+    return this.page.locator('input[type="file"]:not([capture])');
+  }
+
+  /**
+   * Attaches `filePath` via the hidden upload input directly — equivalent to
+   * picking a file from `openAttachMenu()` → "Upload File" without needing to
+   * drive the native file-picker dialog. Pair with `mockFileUpload()`,
+   * registered first.
+   */
+  async attachFile(filePath: string): Promise<void> {
+    await this.getFileUploadInput().setInputFiles(filePath);
+  }
+
+  /**
+   * Mocks the two-step upload the composer performs for every attached file
+   * (`use-chat-file-upload.ts`): a presigned-URL POST
+   * (`.../chat/files/upload-url/`), then a direct PUT of the raw bytes to
+   * that URL (real S3 in production — never reached in tests). Must be
+   * registered before `attachFile()`.
+   *
+   * `outcome`:
+   *  - `'success'` (default): both legs succeed.
+   *  - `'upload-url-error'`: the presigned-URL POST 500s (S3 never
+   *    contacted) — drives the chip to its error/retry state.
+   *  - `'s3-error'`: the presigned-URL POST succeeds but the PUT 500s — same
+   *    observable chip state, different failing leg.
+   *
+   * `s3DelayMs` stalls the mocked PUT so the chip's transient "uploading"
+   * spinner is actually observable instead of resolving within one render
+   * tick.
+   */
+  async mockFileUpload(
+    outcome: 'success' | 'upload-url-error' | 's3-error' = 'success',
+    s3DelayMs = 1_000,
+  ): Promise<{ uploadUrl: string; fileId: string; fileKey: string }> {
+    // Must match the app's CSP `connect-src` allowlist — an arbitrary/invalid
+    // domain is blocked by the BROWSER before Playwright's route interception
+    // ever sees the request (confirmed via a CSP violation console error:
+    // "Refused to connect to '...' because it violates the following
+    // Content Security Policy directive"). `*.s3.amazonaws.com` is on the
+    // allowlist (real presigned upload URLs are S3), so this subdomain is
+    // never actually resolved/contacted — `page.route` fulfills it first.
+    const uploadUrl = `https://e2e-mock.s3.amazonaws.com/upload/${Date.now()}`;
+    const fileId = `e2e-file-id-${Date.now()}`;
+    const fileKey = `e2e-file-key-${Date.now()}`;
+
+    await this.page.route(
+      '**/api/ai-mentor/orgs/*/users/*/chat/files/upload-url/**',
+      async (route) => {
+        if (outcome === 'upload-url-error') {
+          await route.fulfill({
+            status: 500,
+            contentType: 'application/json',
+            body: JSON.stringify({ detail: 'e2e mock: upload-url failure' }),
+          });
+          return;
+        }
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            upload_url: uploadUrl,
+            file_id: fileId,
+            file_key: fileKey,
+          }),
+        });
+      },
+    );
+
+    await this.page.route(uploadUrl, async (route) => {
+      // The mocked upload URL is a different origin from the app, and the
+      // real upload sets a custom Content-Type header, so the browser issues
+      // a CORS preflight (OPTIONS) before the actual PUT — Playwright's
+      // interception happens at the network layer, but the BROWSER still
+      // enforces CORS on the (mocked) response, so both legs need explicit
+      // CORS headers or axios's PUT rejects with a network error regardless
+      // of the mocked status code.
+      const corsHeaders = {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'PUT, OPTIONS',
+        'Access-Control-Allow-Headers': '*',
+      };
+      if (route.request().method() === 'OPTIONS') {
+        await route.fulfill({ status: 204, headers: corsHeaders });
+        return;
+      }
+      if (s3DelayMs > 0) await new Promise((r) => setTimeout(r, s3DelayMs));
+      if (outcome === 's3-error') {
+        await route.fulfill({
+          status: 500,
+          headers: corsHeaders,
+          body: 'e2e mock: s3 put failure',
+        });
+        return;
+      }
+      await route.fulfill({ status: 200, headers: corsHeaders, body: '' });
+    });
+
+    return { uploadUrl, fileId, fileKey };
   }
 }
