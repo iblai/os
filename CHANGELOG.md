@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.158.6](https://github.com/iblai/os/compare/v0.158.5...v0.158.6) (2026-09-30)
+
+### Chores
+
+* **ext:** bump Chrome extension to 1.1.2 to publish the tenant-switch fixes ([202c5b9](https://github.com/iblai/os/commit/202c5b91f85dee83b59904603312bdf1536c8099)), closes [#546](https://github.com/iblai/os/issues/546)
+
 ## [0.158.5](https://github.com/iblai/os/compare/v0.158.4...v0.158.5) (2026-09-30)
 
 ### Bug Fixes
