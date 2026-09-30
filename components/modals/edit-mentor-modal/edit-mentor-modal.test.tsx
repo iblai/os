@@ -236,7 +236,7 @@ vi.mock('./tabs/memory-tab', () => ({
   MemoryTab: () => <div data-testid="memory-tab">Memory Tab</div>,
 }));
 
-vi.mock('./tabs/disclaimers-tab', () => ({
+vi.mock('./disclaimers-tab', () => ({
   DisclaimersTab: () => (
     <div data-testid="disclaimers-tab">Disclaimers Tab</div>
   ),

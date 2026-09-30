@@ -460,6 +460,9 @@ describe('Providers', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     resetState();
+    // clearAllMocks wipes call history but not implementations set via
+    // mockReturnValue, so restore the non-iframe default that most tests assume.
+    mockIsInIframe.mockReturnValue(false);
   });
 
   // ── basic rendering ─────────────────────────────────────────────────────
@@ -1862,6 +1865,15 @@ describe('Providers', () => {
     it('passes true for enableStorageSync in normal mode', () => {
       renderProviders();
       expect(capturedAuthProviderProps.enableStorageSync).toBe(true);
+    });
+
+    it('disables storage sync in an embed so stale host cookies cannot revert the session', () => {
+      // Cross-SPA cookie sync inside an iframe reads the host's shared cookies
+      // back over the embed's own localStorage session (e.g. reverting a tenant
+      // switch to the previous tenant).
+      mockIsInIframe.mockReturnValue(true);
+      renderProviders();
+      expect(capturedAuthProviderProps.enableStorageSync).toBe(false);
     });
   });
 

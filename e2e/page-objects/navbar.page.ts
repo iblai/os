@@ -27,6 +27,34 @@ export class NavbarPage {
    * robust — see journeys/42-suggested-prompts.spec.ts for the precedent.
    */
   readonly userModeSwitch: Locator;
+  /**
+   * The profile dropdown's open popover (Radix `role="menu"`). Scoping
+   * locators inside it is required for the mobile-only learner mode row
+   * below: it renders the SAME `LearnerModeSwitch` component (identical
+   * aria-label) as `userModeSwitch` above, just in a second place in the
+   * DOM — one copy sits directly in the navbar (visible only at `xl:` and
+   * up), the other inside this dropdown (visible only below `xl:`, via
+   * `xl:hidden` on its wrapper). An unscoped `getByLabel(/user mode/i)`
+   * matches both regardless of which is actually visible (Playwright's
+   * strict mode counts every match, not just visible ones), so callers on
+   * a sub-`xl` viewport must go through `mobileLearnerModeSwitch` /
+   * `mobileLearnerModeRow` once the dropdown is open, never the bare label
+   * query.
+   */
+  readonly profileDropdownMenu: Locator;
+  /**
+   * The learner-mode switch rendered inside the profile dropdown (mobile
+   * only, `xl:hidden`). Only present while the dropdown is open — call
+   * `openProfileDropdown()` first. There is exactly one `role="switch"` in
+   * this dropdown, so no further disambiguation is needed.
+   */
+  readonly mobileLearnerModeSwitch: Locator;
+  /**
+   * The dropdown menuitem row hosting `mobileLearnerModeSwitch`. Its text
+   * content is the row's label — "Admin"/"User" (issue #2592; previously
+   * "Instructor"/"Learner").
+   */
+  readonly mobileLearnerModeRow: Locator;
 
   constructor(page: Page) {
     this.page = page;
@@ -58,6 +86,18 @@ export class NavbarPage {
     this.llmNameSpan = this.llmModelSelectorButton.locator('span').first();
     this.navElement = page.locator('nav').first();
     this.userModeSwitch = page.getByLabel(/user mode/i);
+    this.profileDropdownMenu = page.getByRole('menu');
+    this.mobileLearnerModeSwitch = this.profileDropdownMenu.getByRole('switch');
+    // `.filter({ has })` re-runs the given locator's OWN selector chain
+    // relative to each candidate — so passing `mobileLearnerModeSwitch`
+    // (chained off `profileDropdownMenu`, i.e. "role=menu >> role=switch")
+    // would require a nested `role=menu` *inside* the menuitem, which never
+    // matches. The `has` locator must be a bare, single-hop query instead;
+    // `page.getByRole('switch')` becomes ":scope >> role=switch" once
+    // filtered, which correctly matches the switch as a plain descendant.
+    this.mobileLearnerModeRow = this.profileDropdownMenu
+      .getByRole('menuitem')
+      .filter({ has: page.getByRole('switch') });
   }
 
   /** Alias of `openMentorDropdown` — opens the "Selected agent" dropdown. */
@@ -183,6 +223,30 @@ export class NavbarPage {
     if (!(await this.isAdminModeActive())) {
       await this.toggleUserMode();
     }
+  }
+
+  /**
+   * Returns the trimmed label text of the mobile learner-mode row inside
+   * the (already-open) profile dropdown — "Admin" or "User". Throws if the
+   * dropdown isn't open or the row isn't rendered (requires an admin on a
+   * non-`main` tenant, viewed below the `xl` breakpoint).
+   */
+  async getMobileLearnerModeLabel(): Promise<string> {
+    await expect(this.mobileLearnerModeRow).toBeVisible({ timeout: 10_000 });
+    return (await this.mobileLearnerModeRow.textContent())?.trim() ?? '';
+  }
+
+  /**
+   * Clicks the learner-mode switch inside the (already-open) profile
+   * dropdown (mobile row). The dropdown may close as a side effect of the
+   * click reaching Radix's outside-interaction handling — callers should
+   * re-open it via `openProfileDropdown()` before asserting the new label.
+   */
+  async toggleMobileLearnerMode(): Promise<void> {
+    await expect(this.mobileLearnerModeSwitch).toBeVisible({
+      timeout: 10_000,
+    });
+    await this.mobileLearnerModeSwitch.click();
   }
 
   /**
