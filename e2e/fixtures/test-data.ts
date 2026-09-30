@@ -95,8 +95,15 @@ export const E2E_LLM_DISPLAY_NAME =
 
 // ── External service URLs ────────────────────────────────────────────────────
 
-export const EMBED_URL =
-  process.env.EMBED_URL || 'https://conradmugabe.vercel.app/';
+// Empty by default — no external embedding page is required for the suite to
+// run. When unset, embed specs fall back to `EMBED_HARNESS_URL` (issue
+// #2586): a local static page served from a genuinely different origin
+// (see `e2e/utils/embed-harness-server.mjs`, wired as a Playwright
+// `webServer`) that iframes any URL passed via `?src=`. Set EMBED_URL to a
+// real customer embedding page to additionally exercise the live path.
+export const EMBED_URL = process.env.EMBED_URL || '';
+export const EMBED_HARNESS_URL =
+  process.env.EMBED_HARNESS_URL || 'http://127.0.0.1:4599';
 export const EXTERNAL_STRIPE_PRICING_URL =
   process.env.EXTERNAL_STRIPE_PRICING_URL || '';
 export const ECOMMERCE_CREDIT_CLEANUP_TOKEN =

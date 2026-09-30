@@ -6,7 +6,7 @@ import {
   checkAdminStatus,
   getPlatformContext,
 } from '../utils/auth';
-import { EMBED_URL } from '../fixtures/test-data';
+import { EMBED_URL, EMBED_HARNESS_URL } from '../fixtures/test-data';
 import { waitForPageReady } from '../utils/resilient';
 import type { EditMentorPage } from '../page-objects/edit-mentor/edit-mentor.page';
 import { logger } from '@iblai/iblai-js/playwright';
@@ -107,33 +107,87 @@ test.describe('Journey 13: Shareable Links & Embed Integration', () => {
     },
   );
 
+  // emb-02: previously skipped by default (EMBED_URL had a hardcoded
+  // fallback to a personal external site, so it either ran against that
+  // fragile dependency or never at all). Issue #2586 replaced that default
+  // with the local second-origin harness (`e2e/utils/embed-harness-server.mjs`)
+  // so this runs, hermetically, on every run: EMBED_URL still takes priority
+  // when explicitly set (a real customer embedding page + a live model
+  // reply), otherwise the harness iframes OUR OWN mentor from a genuinely
+  // different origin with the chat WS mocked — a live model reply isn't
+  // available in this environment (see journey 77's header comment).
   test('admin goes to embed tab and an authenticated embed chat sends a message and receives a response', async ({
     page,
     editMentorPage,
+    chatPage,
   }) => {
-    if (!EMBED_URL) {
-      test.skip(true, 'Set EMBED_URL to enable embed integration test');
-      return;
-    }
     await editMentorPage.open('Embed');
     const embedCode = await editMentorPage.embed.getEmbedCode().catch(() => '');
     await editMentorPage.close();
 
     if (!embedCode) return;
 
-    await page.goto(EMBED_URL, {
-      waitUntil: 'domcontentloaded',
-      timeout: 30_000,
-    });
-    const iframe = page.frameLocator('iframe').first();
-    const chatInput = iframe.getByPlaceholder('Ask anything', { exact: true });
-    if (await chatInput.isVisible({ timeout: 15_000 }).catch(() => false)) {
-      await chatInput.fill('Hello from embed test');
-      await iframe.getByRole('button', { name: 'Send message' }).click();
-      await expect(
-        iframe.locator('.chat-ai-message-response').first(),
-      ).toBeVisible({ timeout: 60_000 });
+    const mentorUrl = page.url();
+
+    if (EMBED_URL) {
+      await page.goto(EMBED_URL, {
+        waitUntil: 'domcontentloaded',
+        timeout: 30_000,
+      });
+      const iframe = page.frameLocator('iframe').first();
+      const chatInput = iframe.getByPlaceholder('Ask anything', {
+        exact: true,
+      });
+      let chatInputVisible = false;
+      try {
+        await chatInput.waitFor({ state: 'visible', timeout: 15_000 });
+        chatInputVisible = true;
+      } catch {
+        chatInputVisible = false;
+      }
+      if (chatInputVisible) {
+        await chatInput.fill('Hello from embed test');
+        await iframe.getByRole('button', { name: 'Send message' }).click();
+        await expect(
+          iframe.locator('.chat-ai-message-response').first(),
+        ).toBeVisible({ timeout: 60_000 });
+      }
+      return;
     }
+
+    // Harness path (default): a genuinely cross-origin iframe embedding our
+    // own mentor. `page.routeWebSocket` is page-scoped, so registering it
+    // before navigating to the harness intercepts the socket the iframe
+    // opens on mount, even though the iframe itself is a different origin.
+    const ws = await chatPage.mockChatWebSocket();
+    await page.goto(
+      `${EMBED_HARNESS_URL}/?src=${encodeURIComponent(embedUrlFor(mentorUrl))}`,
+      { waitUntil: 'domcontentloaded', timeout: 30_000 },
+    );
+    const iframe = page.frameLocator('#embed-harness-iframe');
+    const chatInput = iframe.getByPlaceholder('Ask anything', {
+      exact: true,
+    });
+    await expect(chatInput).toBeVisible({ timeout: 20_000 });
+    await chatInput.fill('Hello from embed test');
+    await iframe.getByRole('button', { name: 'Send message' }).click();
+
+    const clientFrame = await ws.waitForClientMessage();
+    expect(clientFrame.prompt).toBe('Hello from embed test');
+    const sessionId = clientFrame.session_id;
+    ws.send({
+      generation_id: `e2e-embed-gen-${Date.now()}`,
+      session_id: sessionId,
+    });
+    ws.send({
+      data: 'Hello from the mocked embed reply',
+      session_id: sessionId,
+    });
+    ws.send({ eos: true, session_id: sessionId });
+
+    await expect(
+      iframe.locator('.chat-ai-message-response').first(),
+    ).toBeVisible({ timeout: 15_000 });
   });
 
   // fixme: embed visibility setting fails — Radix UI option locator issue
