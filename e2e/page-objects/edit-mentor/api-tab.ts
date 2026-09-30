@@ -135,15 +135,16 @@ export class ApiTab {
     });
   }
 
-  /** Every NAME cell's text on the currently-visible page, in row order. */
+  /**
+   * Every NAME cell's text on the currently-visible page, in row order.
+   * Read in one non-waiting snapshot: counting rows and then reading them one
+   * by one races a page change — if the table re-renders shorter mid-loop,
+   * textContent() auto-waits on a row that no longer exists and stalls any
+   * surrounding expect.poll until its timeout.
+   */
   async rowNames(): Promise<string[]> {
-    const count = await this.rows.count();
-    const names: string[] = [];
-    for (let i = 0; i < count; i++) {
-      const text = await this.rows.nth(i).locator('td').first().textContent();
-      names.push(text?.trim() ?? '');
-    }
-    return names;
+    const names = await this.rows.locator('td:first-child').allTextContents();
+    return names.map((name) => name.trim());
   }
 
   // ── Pagination ───────────────────────────────────────────────────────────
