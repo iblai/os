@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.158.5](https://github.com/iblai/os/compare/v0.158.4...v0.158.5) (2026-09-30)
+
+### Bug Fixes
+
+* **ext:** refresh agent-ai cached host auth on tenant switch (stop revert) ([98ba6ae](https://github.com/iblai/os/commit/98ba6aeea238c9a1a85eaf54da3e90aa64063945))
+* **ext:** snapshot tenant-switch redirect path before the async auth ([12728c8](https://github.com/iblai/os/commit/12728c8c9b67da43711faf909e220fb6a8ad9044))
+
 ## [0.158.4](https://github.com/iblai/os/compare/v0.158.3...v0.158.4) (2026-09-29)
 
 ### Bug Fixes
