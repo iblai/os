@@ -4,40 +4,40 @@
 
 ### Bug Fixes
 
-* **ext:** refresh agent-ai cached host auth on tenant switch (stop revert) ([98ba6ae](https://github.com/iblai/os/commit/98ba6aeea238c9a1a85eaf54da3e90aa64063945))
-* **ext:** snapshot tenant-switch redirect path before the async auth ([12728c8](https://github.com/iblai/os/commit/12728c8c9b67da43711faf909e220fb6a8ad9044))
+- **ext:** refresh agent-ai cached host auth on tenant switch (stop revert) ([98ba6ae](https://github.com/iblai/os/commit/98ba6aeea238c9a1a85eaf54da3e90aa64063945))
+- **ext:** snapshot tenant-switch redirect path before the async auth ([12728c8](https://github.com/iblai/os/commit/12728c8c9b67da43711faf909e220fb6a8ad9044))
 
 ## [0.158.4](https://github.com/iblai/os/compare/v0.158.3...v0.158.4) (2026-09-29)
 
 ### Bug Fixes
 
-* **mentor:** persist embed Context Aware and Open By Default toggles ([03b545a](https://github.com/iblai/os/commit/03b545a83f538bbb37a8a8af8d3b8c9fc8e29923))
-* **mentor:** stop Create Embed overwriting Advanced CSS ([05c982f](https://github.com/iblai/os/commit/05c982fa0041562848bb2cb04be422d155dfa3cd))
+- **mentor:** persist embed Context Aware and Open By Default toggles ([03b545a](https://github.com/iblai/os/commit/03b545a83f538bbb37a8a8af8d3b8c9fc8e29923))
+- **mentor:** stop Create Embed overwriting Advanced CSS ([05c982f](https://github.com/iblai/os/commit/05c982fa0041562848bb2cb04be422d155dfa3cd))
 
 ### Chores
 
-* **deps:** bump @iblai/iblai-js to 2.23.1 ([fb474c6](https://github.com/iblai/os/commit/fb474c63afd369bc11844f4614f31b97fe1a1b11))
-* **deps:** bump @iblai/iblai-js to 2.26.0 ([f2e802b](https://github.com/iblai/os/commit/f2e802b7abd0b0ce0338c40063a9489434de230e))
+- **deps:** bump @iblai/iblai-js to 2.23.1 ([fb474c6](https://github.com/iblai/os/commit/fb474c63afd369bc11844f4614f31b97fe1a1b11))
+- **deps:** bump @iblai/iblai-js to 2.26.0 ([f2e802b](https://github.com/iblai/os/commit/f2e802b7abd0b0ce0338c40063a9489434de230e))
 
 ### Documentation
 
-* **e2e:** add mob-08 to coverage ([e04447f](https://github.com/iblai/os/commit/e04447fe98aa73a562dd90dceb806429e6b8653e))
+- **e2e:** add mob-08 to coverage ([e04447f](https://github.com/iblai/os/commit/e04447fe98aa73a562dd90dceb806429e6b8653e))
 
 ### Styles
 
-* prettier-format CHANGELOG bullets ([3578f5c](https://github.com/iblai/os/commit/3578f5cb6c3b33624a18dcf287593a8add49f4d1))
+- prettier-format CHANGELOG bullets ([3578f5c](https://github.com/iblai/os/commit/3578f5cb6c3b33624a18dcf287593a8add49f4d1))
 
 ### Tests
 
-* **e2e:** mobile profile dropdown shows Admin/User labels ([9d28389](https://github.com/iblai/os/commit/9d283894278b79f2b06e9eb66574ca836de0f552))
-* **mentor:** regression tests for Advanced CSS ownership ([7aebf3d](https://github.com/iblai/os/commit/7aebf3dd18f7f39e56ed11f73bb95dd26cc253fe))
-* **mentor:** regression tests for embed toggle persistence ([2ca81e8](https://github.com/iblai/os/commit/2ca81e87458858032ceec135913677ffc041b2f7))
+- **e2e:** mobile profile dropdown shows Admin/User labels ([9d28389](https://github.com/iblai/os/commit/9d283894278b79f2b06e9eb66574ca836de0f552))
+- **mentor:** regression tests for Advanced CSS ownership ([7aebf3d](https://github.com/iblai/os/commit/7aebf3dd18f7f39e56ed11f73bb95dd26cc253fe))
+- **mentor:** regression tests for embed toggle persistence ([2ca81e8](https://github.com/iblai/os/commit/2ca81e87458858032ceec135913677ffc041b2f7))
 
 ## [0.158.3](https://github.com/iblai/os/compare/v0.158.2...v0.158.3) (2026-09-29)
 
 ### Bug Fixes
 
-* **embed:** don't run cross-SPA storage sync in an iframe (reverted switches) ([caae732](https://github.com/iblai/os/commit/caae7326359efc58217a5f52e84c8e1114980b04))
+- **embed:** don't run cross-SPA storage sync in an iframe (reverted switches) ([caae732](https://github.com/iblai/os/commit/caae7326359efc58217a5f52e84c8e1114980b04))
 
 ## [0.158.2](https://github.com/iblai/os/compare/v0.158.1...v0.158.2) (2026-09-29)
 
