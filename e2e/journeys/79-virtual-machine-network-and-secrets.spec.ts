@@ -9,7 +9,7 @@
  *   Tenant settings — the SDK `Account` rail of the User Profile dialog
  *     (More options → the platform name, as journey 38 reaches the Advanced
  *     tab) lists a "Virtual Machine" entry for admins that hosts the SDK
- *     `VirtualMachineAdminTab`: the **Network policies** table (named,
+ *     `VirtualMachineAdminTab`: the **Network Policies** table (named,
  *     reusable `host:port` allowlists) and the **VM secrets** table (keys
  *     the VM can use but never read). Both are managed through SDK dialogs
  *     whose hosts are entered with a keyboard-driven chip input. Nothing in
@@ -61,10 +61,7 @@ import {
   readPlatformName,
 } from '../page-objects/virtual-machine-admin.page';
 import { SandboxTab } from '../page-objects/edit-mentor/sandbox.tab';
-import {
-  VmNetworkSection,
-  VM_EGRESS_LABELS,
-} from '../page-objects/edit-mentor/vm-network.section';
+import { VmNetworkSection } from '../page-objects/edit-mentor/vm-network.section';
 
 /** Unique per-run suffix — a valid env-var fragment and a readable name. */
 function stamp(): string {
@@ -104,7 +101,7 @@ test.describe('Journey 79: Virtual Machine Network Policies & Secrets — admin 
 
   // ── vmn-01 ──────────────────────────────────────────────────────────────
 
-  test('admin reaches the tenant Virtual Machine settings through the User Profile dialog, which hosts the SDK tab with the Network policies and Secrets sections', async ({
+  test('admin reaches the tenant Virtual Machine settings through the User Profile dialog, which hosts the SDK tab with the Network Policies and Secrets sections', async ({
     page,
   }) => {
     const admin = new VirtualMachineAdminPage(page);
@@ -145,9 +142,7 @@ test.describe('Journey 79: Virtual Machine Network Policies & Secrets — admin 
     await admin.open();
     await admin.showPolicies();
     await admin.openNewPolicy();
-    await expect(
-      admin.policyDialog.getByRole('heading', { name: 'New network policy' }),
-    ).toBeVisible({ timeout: 5_000 });
+    await expect(admin.newPolicyDialog).toBeVisible({ timeout: 5_000 });
     await admin.policyNameInput.fill(name);
 
     // A scheme is not a host:port — the entry stays in the box and the
@@ -198,9 +193,7 @@ test.describe('Journey 79: Virtual Machine Network Policies & Secrets — admin 
     // sent to a removed host would stop working (the backend does not block
     // the edit), and the saved row reflects the replaced list.
     await admin.openEditPolicy(name);
-    await expect(
-      admin.policyDialog.getByRole('heading', { name: 'Edit network policy' }),
-    ).toBeVisible({ timeout: 5_000 });
+    await expect(admin.editPolicyDialog).toBeVisible({ timeout: 5_000 });
     await expect(admin.policyNameInput).toHaveValue(name);
     await expect(admin.hostChip(admin.policyHostsList, HOST_API)).toBeVisible();
     await admin.addHost(admin.policyHostsInput, HOST_AUTH);
@@ -237,9 +230,7 @@ test.describe('Journey 79: Virtual Machine Network Policies & Secrets — admin 
     await admin.open();
     await admin.showSecrets();
     await admin.openNewSecret();
-    await expect(
-      admin.secretDialog.getByRole('heading', { name: 'New VM secret' }),
-    ).toBeVisible({ timeout: 5_000 });
+    await expect(admin.newSecretDialog).toBeVisible({ timeout: 5_000 });
 
     await admin.secretNameInput.fill(name);
     await admin.secretEnvVarInput.fill(envVar);
@@ -253,7 +244,7 @@ test.describe('Journey 79: Virtual Machine Network Policies & Secrets — admin 
       { timeout: 5_000 },
     );
 
-    // The value source is a choice: "Enter a value" (default) or an existing
+    // The value source is a choice: "Enter a Value" (default) or an existing
     // integration credential. The value box is a password field.
     await expect(admin.secretSourceValueRadio).toHaveAttribute(
       'data-state',
@@ -289,16 +280,14 @@ test.describe('Journey 79: Virtual Machine Network Policies & Secrets — admin 
     await expect(row).toContainText(name);
     await expect(row).toContainText(HOST_FILES);
     // The table only says where the value comes from — never the value.
-    await expect(row).toContainText('Stored value');
+    await expect(row).toContainText('Stored Value');
     await expect(row).not.toContainText(`e2e-secret-value-${suffix}`);
 
     // Edit: env var is read-only, the value box is blank and says so, and
     // switching to a credential source offers the org's credentials (or
     // says there are none) without ever showing a masked value.
     await admin.openEditSecret(envVar);
-    await expect(
-      admin.secretDialog.getByRole('heading', { name: 'Edit VM secret' }),
-    ).toBeVisible({ timeout: 5_000 });
+    await expect(admin.editSecretDialog).toBeVisible({ timeout: 5_000 });
     await expect(admin.secretEnvVarInput).toHaveValue(envVar);
     await expect(admin.secretEnvVarInput).toBeDisabled();
     await expect(admin.secretValueInput).toHaveValue('');
@@ -324,6 +313,10 @@ test.describe('Journey 79: Virtual Machine Network Policies & Secrets — admin 
     await admin.secretDeleteConfirmButton.click();
     await admin.expectToast('VM secret deleted');
     await expect(admin.secretDeleteDialog).not.toBeVisible({ timeout: 10_000 });
+    // The table is rooted on the User Profile dialog, which Radix hides from
+    // the accessibility tree while a nested dialog is open — anchor on the
+    // section so the count below cannot pass just because nothing resolves.
+    await expect(admin.secretsSection).toBeVisible({ timeout: 10_000 });
     await expect(admin.secretRow(envVar)).toHaveCount(0, { timeout: 15_000 });
     secretsToDelete.delete(envVar);
 
@@ -390,6 +383,9 @@ test.describe('Journey 79: Virtual Machine Network Policies & Secrets — admin 
       await expect(admin.policyDeleteDialog).not.toBeVisible({
         timeout: 10_000,
       });
+      // Same anchor as the secrets table: prove the section is back in the
+      // accessibility tree before asserting the row is gone.
+      await expect(admin.policiesSection).toBeVisible({ timeout: 10_000 });
       await expect(admin.policyRow(name)).toHaveCount(0, { timeout: 15_000 });
       policiesToDelete.delete(name);
 
@@ -424,7 +420,7 @@ test.describe('Journey 79: Virtual Machine Network Policies & Secrets — agent 
 
   // ── vmn-07 … vmn-12 ─────────────────────────────────────────────────────
 
-  test('admin configures an agent VM network: labelled egress radio group + billing notice, policy picker only under Custom (required, with Create policy), secrets only under Public/Custom, uncovered hosts added to the policy on save, persistence, and narrowing that unbinds secrets after confirmation', async ({
+  test('admin configures an agent VM network: labelled egress radio group + billing notice, policy picker only under Custom (required, with Create Policy), secrets only under Public/Custom, uncovered hosts added to the policy on save, persistence, and narrowing that unbinds secrets after confirmation', async ({
     page,
     createMentorPage,
     editMentorPage,
@@ -475,28 +471,21 @@ test.describe('Journey 79: Virtual Machine Network Policies & Secrets — agent 
 
       // vmn-07: the section renders under the kind selector with the billing
       // notice and a labelled radio group of the four profiles; a fresh
-      // agent defaults to No network, so neither picker is shown.
+      // agent defaults to No Network, so neither picker is shown.
       let net = new VmNetworkSection(page, editMentorPage.dialog);
       await net.waitForLoaded();
       await expect(net.billingNotice).toBeVisible();
       await expect(net.billingNotice).toContainText('$1 per 10 minutes');
       await expect(net.egressGroup).toHaveAttribute('role', 'radiogroup');
-      await expect(
-        editMentorPage.dialog.getByRole('radiogroup', {
-          name: 'Egress profile',
-        }),
-      ).toBeVisible();
+      await expect(net.egressRadioGroup).toBeVisible();
       for (const profile of [
         'none',
         'registries',
         'public',
         'custom',
       ] as const) {
-        await expect(
-          editMentorPage.dialog.getByRole('radio', {
-            name: new RegExp(`^${escapeRegExp(VM_EGRESS_LABELS[profile])}`),
-          }),
-        ).toBeVisible();
+        // Resolved by role + its Title Case label inside the group.
+        await expect(net.egressRadio(profile)).toBeVisible();
       }
       await expect(net.egressOption('none')).toHaveAttribute(
         'data-state',
@@ -518,20 +507,15 @@ test.describe('Journey 79: Virtual Machine Network Policies & Secrets — agent 
       await expect(net.policyPicker).not.toBeVisible();
 
       // vmn-09: Custom requires a policy — the picker is shown and required,
-      // Save stays disabled, and the Create policy shortcut opens the SDK
+      // Save stays disabled, and the Create Policy shortcut opens the SDK
       // policy dialog in place.
       await net.selectEgress('custom');
       await expect(net.policyPicker).toBeVisible({ timeout: 10_000 });
       await expect(net.policyRequiredMessage).toBeVisible();
       await expect(net.saveButton).toBeDisabled();
       await net.createPolicyButton.click();
-      await expect(net.policyDialog).toBeVisible({ timeout: 10_000 });
-      await expect(
-        net.policyDialog.getByRole('heading', { name: 'New network policy' }),
-      ).toBeVisible();
-      await net.policyDialog
-        .getByRole('button', { name: 'Cancel', exact: true })
-        .click();
+      await expect(net.newPolicyDialog).toBeVisible({ timeout: 10_000 });
+      await net.policyDialogCancelButton.click();
       await expect(net.policyDialog).not.toBeVisible({ timeout: 10_000 });
       await net.selectPolicy(policyName);
       await expect(net.policyRequiredMessage).not.toBeVisible();
@@ -539,7 +523,7 @@ test.describe('Journey 79: Virtual Machine Network Policies & Secrets — agent 
       await expect(net.secretsPicker).toBeVisible();
 
       // vmn-10: binding a secret whose host the policy lacks lists the gap
-      // and blocks Save; "Add these hosts … and save" patches the policy and
+      // and blocks Save; "Add Hosts to … and Save" patches the policy and
       // then saves the settings in one go.
       await net.setSecret(envVar, true);
       await expect(net.uncoveredHosts).toBeVisible({ timeout: 10_000 });
@@ -571,14 +555,15 @@ test.describe('Journey 79: Virtual Machine Network Policies & Secrets — agent 
       expect(await net.isSecretChecked(envVar)).toBe(true);
       await expect(net.saveButton).toBeDisabled();
 
-      // vmn-12: narrowing to No network with a secret bound asks first and
-      // unbinds it in the same request; the reopened agent is on No network
+      // vmn-12: narrowing to No Network with a secret bound asks first and
+      // unbinds it in the same request; the reopened agent is on No Network
       // with nothing bound.
       await net.selectEgress('none');
       await expect(net.secretsPicker).not.toBeVisible();
       await net.save();
+      // Resolved by role + its "Unbind Secrets?" title, so being visible is
+      // the title assertion; the body names how many secrets get unbound.
       await expect(net.narrowConfirmDialog).toBeVisible({ timeout: 10_000 });
-      await expect(net.narrowConfirmDialog).toContainText('Unbind secrets?');
       await expect(net.narrowConfirmDialog).toContainText('1 secret');
       await net.narrowConfirmButton.click();
       await net.expectSavedToast();
@@ -617,7 +602,7 @@ test.describe('Journey 79: Virtual Machine Network Policies & Secrets — agent 
 test.describe('Journey 79: Virtual Machine Network Policies & Secrets — non-admin', () => {
   // ── vmn-13 ──────────────────────────────────────────────────────────────
 
-  test('non-admin never reaches the tenant Virtual Machine settings: the tenant entry is missing from More options, or its dialog lists no Virtual Machine section', async ({
+  test('non-admin never reaches the tenant Virtual Machine settings: the tenant entry is missing from More options, does nothing, or its dialog lists no Virtual Machine section', async ({
     nonadminPage,
   }) => {
     await navigateToMentorApp(nonadminPage);
@@ -627,12 +612,13 @@ test.describe('Journey 79: Virtual Machine Network Policies & Secrets — non-ad
     });
     await expect(moreOptions).toBeVisible({ timeout: 15_000 });
     await moreOptions.click();
-    const menu = nonadminPage.getByRole('menu').first();
+    const menu = nonadminPage.getByRole('menu', { name: 'More options' });
     await expect(menu).toBeVisible({ timeout: 5_000 });
 
     // The tenant entry is labelled with the platform name. A non-admin may
-    // not get it at all; if they do, the SDK Account rail it opens filters
-    // Virtual Machine on `isAdmin`, so the section is absent either way.
+    // not get it at all; if they do and it opens, the SDK Account rail
+    // filters Virtual Machine on `isAdmin`, so the section is absent either
+    // way.
     const tenantItem = menu.getByText(await readPlatformName(nonadminPage), {
       exact: true,
     });
@@ -646,21 +632,38 @@ test.describe('Journey 79: Virtual Machine Network Policies & Secrets — non-ad
     }
 
     await tenantItem.click();
-    const dialog = nonadminPage.getByRole('dialog', { name: 'User Profile' });
-    await expect(dialog).toBeVisible({ timeout: 15_000 });
-    // Whatever rail entries this non-admin holds (the SDK filters every
-    // tenant tab on `isAdmin`, except Management on its own permissions),
-    // Virtual Machine is never among them.
-    await expect(dialog.getByRole('button').first()).toBeVisible({
-      timeout: 10_000,
+    const dialog = nonadminPage.getByRole('dialog', {
+      name: 'User Profile',
+      exact: true,
     });
+    // The SDK tenant switcher opens the dialog only for a tenant admin or a
+    // user holding a management permission; for anyone else the click does
+    // nothing, which is itself "never reaches the settings".
+    const dialogOpened = await dialog
+      .waitFor({ state: 'visible', timeout: 5_000 })
+      .then(() => true)
+      .catch(() => false);
+    if (!dialogOpened) {
+      await expect(dialog).toHaveCount(0);
+      await nonadminPage.keyboard.press('Escape');
+      return;
+    }
+
+    // The dialog opened, so this non-admin holds a management permission:
+    // the rail lists Management for them (the SDK filters every other tenant
+    // entry on `isAdmin`). Wait for the rail itself — not just any button,
+    // the dialog's own Close button exists before the rail renders — then
+    // check Virtual Machine is not in it.
+    const rail = dialog.getByRole('navigation', {
+      name: 'Organization settings',
+      exact: true,
+    });
+    await expect(
+      rail.getByRole('button', { name: 'Management', exact: true }),
+    ).toBeVisible({ timeout: 10_000 });
     await expect(
       dialog.getByRole('button', { name: 'Virtual Machine', exact: true }),
     ).toHaveCount(0);
     await nonadminPage.keyboard.press('Escape');
   });
 });
-
-function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}

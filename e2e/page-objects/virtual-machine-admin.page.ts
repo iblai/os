@@ -9,22 +9,47 @@ import { Page, Locator, expect } from '@playwright/test';
  * the SDK `VirtualMachineAdminTab` (`@iblai/web-containers`), which hosts two
  * sub-tabs, each hidden when its list call answers 403:
  *
- *   - **Network policies** (`vm-network-policies-section`): a table of
+ *   - **Network Policies** (`vm-network-policies-section`): a table of
  *     named `host:port` allowlists with create / edit / delete through the
- *     SDK `NetworkPolicyDialog` (`network-policy-dialog`). Hosts are entered
+ *     SDK `NetworkPolicyDialog`. Hosts are entered
  *     through the SDK `HostPortChipInput`: type one entry and press Enter
  *     (or `,` / space, or paste a list); the client-side check explains a
  *     rejected entry in an `aria-live="polite"` line under the input and
  *     leaves it in the box instead of adding a chip. Backspace on an empty
  *     box removes the last chip; every chip has a "Remove {host}" button.
  *   - **Secrets** (`vm-secrets-section`): a table of VM secrets with the
- *     SDK `VmSecretDialog` (`vm-secret-dialog`). A value is never returned
- *     by any endpoint, so the dialog never prefills it — on edit the value
- *     box stays blank ("Leave blank to keep the current value") and the
- *     `env_var` box is read-only.
+ *     SDK `VmSecretDialog`. A value is never returned by any endpoint, so
+ *     the dialog never prefills it — on edit the value box stays blank
+ *     ("Leave blank to keep the current value") and the `env_var` box is
+ *     read-only.
  *
- * Every SDK dialog and alert portals to `document.body`, so those locators
- * are page-scoped; the sections themselves are scoped to the profile dialog.
+ * ── Dialog-first locators ────────────────────────────────────────────────
+ *
+ * Up to three layers are stacked here at once: the User Profile dialog, a
+ * policy / secret dialog on top of it, and (for deletes) a confirmation.
+ * They share field and button names ("Name", "Allowed Hosts", "Cancel",
+ * "Save Changes"), so nothing is looked up from the page by test id or
+ * label alone. Each layer is first resolved by its ARIA role AND its
+ * accessible name — the SDK `DialogTitle` — and every inner element is then
+ * queried from that dialog locator:
+ *
+ *   User Profile ─ `getByRole('dialog', { name: 'User Profile', exact: true })`
+ *   New / Edit Network Policy, New / Edit VM Secret
+ *   Delete Network Policy, Delete VM Secret
+ *
+ * All of them are plain Radix dialogs (role `dialog` — the confirmations are
+ * NOT `alertdialog`) that portal to `document.body`, so they are rooted on
+ * the page; the tables are rooted on the User Profile dialog.
+ *
+ * While a nested dialog is open, Radix hides the User Profile dialog from
+ * the accessibility tree, so anything rooted on `dialog` (rows, sections)
+ * resolves to nothing until the nested dialog has closed. Always wait for
+ * the nested dialog to be hidden before asserting on the tables — a
+ * `toHaveCount(0)` on a row would otherwise pass for the wrong reason.
+ *
+ * Copy is matched exactly as the SDK renders it: labels, titles and buttons
+ * are Title Case ("Environment Variable", "Allowed Hosts", "Stored Value"),
+ * toasts and sentences are sentence case ("VM secret created").
  */
 export class VirtualMachineAdminPage {
   readonly page: Page;
@@ -42,7 +67,12 @@ export class VirtualMachineAdminPage {
   // ── Network policies ─────────────────────────────────────────────────────
   readonly policiesSection: Locator;
   readonly newPolicyButton: Locator;
+  /** The policy form dialog in either mode ("New …" or "Edit Network Policy"). */
   readonly policyDialog: Locator;
+  /** The same dialog, resolved only while it is in create mode. */
+  readonly newPolicyDialog: Locator;
+  /** The same dialog, resolved only while it is in edit mode. */
+  readonly editPolicyDialog: Locator;
   readonly policyNameInput: Locator;
   readonly policyHostsInput: Locator;
   readonly policyHostsList: Locator;
@@ -61,7 +91,12 @@ export class VirtualMachineAdminPage {
   // ── VM secrets ───────────────────────────────────────────────────────────
   readonly secretsSection: Locator;
   readonly newSecretButton: Locator;
+  /** The secret form dialog in either mode ("New …" or "Edit VM Secret"). */
   readonly secretDialog: Locator;
+  /** The same dialog, resolved only while it is in create mode. */
+  readonly newSecretDialog: Locator;
+  /** The same dialog, resolved only while it is in edit mode. */
+  readonly editSecretDialog: Locator;
   readonly secretNameInput: Locator;
   readonly secretEnvVarInput: Locator;
   readonly secretHostsInput: Locator;
@@ -83,7 +118,10 @@ export class VirtualMachineAdminPage {
   constructor(page: Page) {
     this.page = page;
 
-    this.dialog = page.getByRole('dialog', { name: 'User Profile' });
+    this.dialog = page.getByRole('dialog', {
+      name: 'User Profile',
+      exact: true,
+    });
     this.virtualMachineTab = this.dialog.getByRole('button', {
       name: 'Virtual Machine',
       exact: true,
@@ -98,18 +136,30 @@ export class VirtualMachineAdminPage {
       'vm-network-policies-section',
     );
     this.newPolicyButton = this.dialog.getByTestId('vm-network-policy-new');
-    this.policyDialog = page.getByTestId('network-policy-dialog');
+    this.policyDialog = page.getByRole('dialog', {
+      name: /^(New|Edit) Network Policy$/,
+    });
+    this.newPolicyDialog = page.getByRole('dialog', {
+      name: 'New Network Policy',
+      exact: true,
+    });
+    this.editPolicyDialog = page.getByRole('dialog', {
+      name: 'Edit Network Policy',
+      exact: true,
+    });
     this.policyNameInput = this.policyDialog.getByLabel('Name', {
       exact: true,
     });
     const policyHosts = this.policyDialog.getByTestId('network-policy-hosts');
     this.policyHostsInput = policyHosts.getByRole('textbox');
     this.policyHostsList = policyHosts.getByRole('list', {
-      name: 'Allowed hosts',
+      name: 'Allowed Hosts',
+      exact: true,
     });
     this.policyHostsError = policyHosts.locator('p[aria-live="polite"]');
     this.policyDescriptionInput = this.policyDialog.getByLabel(
-      'Description (optional)',
+      'Description (Optional)',
+      { exact: true },
     );
     this.policySaveButton = this.policyDialog.getByTestId(
       'network-policy-save',
@@ -124,32 +174,46 @@ export class VirtualMachineAdminPage {
     this.policyRemovedHostsWarning = this.policyDialog.getByTestId(
       'network-policy-removed-hosts-warning',
     );
-    this.policyDeleteDialog = page.getByTestId(
-      'vm-network-policy-delete-dialog',
-    );
-    this.policyDeleteConfirmButton = page.getByTestId(
+    this.policyDeleteDialog = page.getByRole('dialog', {
+      name: 'Delete Network Policy',
+      exact: true,
+    });
+    this.policyDeleteConfirmButton = this.policyDeleteDialog.getByTestId(
       'vm-network-policy-delete-confirm',
     );
     this.policyDeleteCancelButton = this.policyDeleteDialog.getByRole(
       'button',
       { name: 'Cancel', exact: true },
     );
-    this.policyDeleteError = page.getByTestId('vm-network-policy-delete-error');
+    this.policyDeleteError = this.policyDeleteDialog.getByTestId(
+      'vm-network-policy-delete-error',
+    );
 
     this.secretsSection = this.dialog.getByTestId('vm-secrets-section');
     this.newSecretButton = this.dialog.getByTestId('vm-secret-new');
-    this.secretDialog = page.getByTestId('vm-secret-dialog');
+    this.secretDialog = page.getByRole('dialog', {
+      name: /^(New|Edit) VM Secret$/,
+    });
+    this.newSecretDialog = page.getByRole('dialog', {
+      name: 'New VM Secret',
+      exact: true,
+    });
+    this.editSecretDialog = page.getByRole('dialog', {
+      name: 'Edit VM Secret',
+      exact: true,
+    });
     this.secretNameInput = this.secretDialog.getByLabel('Name', {
       exact: true,
     });
     this.secretEnvVarInput = this.secretDialog.getByLabel(
-      'Environment variable',
+      'Environment Variable',
       { exact: true },
     );
     const secretHosts = this.secretDialog.getByTestId('vm-secret-hosts');
     this.secretHostsInput = secretHosts.getByRole('textbox');
     this.secretHostsList = secretHosts.getByRole('list', {
-      name: 'Allowed hosts',
+      name: 'Allowed Hosts',
+      exact: true,
     });
     this.secretHostsError = secretHosts.locator('p[aria-live="polite"]');
     this.secretSourceValueRadio = this.secretDialog.getByTestId(
@@ -176,11 +240,16 @@ export class VirtualMachineAdminPage {
     this.secretFormError = this.secretDialog.getByTestId(
       'vm-secret-form-error',
     );
-    this.secretDeleteDialog = page.getByTestId('vm-secret-delete-dialog');
-    this.secretDeleteConfirmButton = page.getByTestId(
+    this.secretDeleteDialog = page.getByRole('dialog', {
+      name: 'Delete VM Secret',
+      exact: true,
+    });
+    this.secretDeleteConfirmButton = this.secretDeleteDialog.getByTestId(
       'vm-secret-delete-confirm',
     );
-    this.secretDeleteError = page.getByTestId('vm-secret-delete-error');
+    this.secretDeleteError = this.secretDeleteDialog.getByTestId(
+      'vm-secret-delete-error',
+    );
   }
 
   // ── Dialog ───────────────────────────────────────────────────────────────
@@ -291,7 +360,7 @@ export class VirtualMachineAdminPage {
   async openNewPolicy(): Promise<void> {
     await expect(this.newPolicyButton).toBeVisible({ timeout: 10_000 });
     await this.newPolicyButton.click();
-    await expect(this.policyDialog).toBeVisible({ timeout: 10_000 });
+    await expect(this.newPolicyDialog).toBeVisible({ timeout: 10_000 });
   }
 
   async openEditPolicy(name: string): Promise<void> {
@@ -300,7 +369,7 @@ export class VirtualMachineAdminPage {
     await row
       .getByRole('button', { name: `Edit policy ${name}`, exact: true })
       .click();
-    await expect(this.policyDialog).toBeVisible({ timeout: 10_000 });
+    await expect(this.editPolicyDialog).toBeVisible({ timeout: 10_000 });
   }
 
   async openDeletePolicy(name: string): Promise<void> {
@@ -347,14 +416,14 @@ export class VirtualMachineAdminPage {
   async openNewSecret(): Promise<void> {
     await expect(this.newSecretButton).toBeVisible({ timeout: 10_000 });
     await this.newSecretButton.click();
-    await expect(this.secretDialog).toBeVisible({ timeout: 10_000 });
+    await expect(this.newSecretDialog).toBeVisible({ timeout: 10_000 });
   }
 
   async openEditSecret(envVar: string): Promise<void> {
     const row = this.secretRow(envVar);
     await expect(row).toBeVisible({ timeout: 15_000 });
     await row.getByTestId(`vm-secret-edit-${envVar}`).click();
-    await expect(this.secretDialog).toBeVisible({ timeout: 10_000 });
+    await expect(this.editSecretDialog).toBeVisible({ timeout: 10_000 });
   }
 
   async openDeleteSecret(envVar: string): Promise<void> {
@@ -364,7 +433,7 @@ export class VirtualMachineAdminPage {
     await expect(this.secretDeleteDialog).toBeVisible({ timeout: 10_000 });
   }
 
-  /** Creates a stored-value secret through the dialog (source "Enter a value"). */
+  /** Creates a stored-value secret through the dialog (source "Enter a Value"). */
   async createSecret(input: {
     name: string;
     envVar: string;

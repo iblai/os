@@ -5065,7 +5065,7 @@
       "checkpoints": [
         {
           "id": "vmn-01",
-          "description": "Admin reaches the tenant Virtual Machine settings through the User Profile dialog (More options, then the platform name, then the SDK Account rail's admin-only \"Virtual Machine\" entry) which hosts the SDK VirtualMachineAdminTab: the info box plus the Network policies and Secrets sub-tabs, each hosting its table with a New button",
+          "description": "Admin reaches the tenant Virtual Machine settings through the User Profile dialog (More options, then the platform name, then the SDK Account rail's admin-only \"Virtual Machine\" entry) which hosts the SDK VirtualMachineAdminTab: the info box plus the Network Policies and Secrets sub-tabs, each hosting its table with a New button",
           "status": "covered"
         },
         {
@@ -5080,7 +5080,7 @@
         },
         {
           "id": "vmn-04",
-          "description": "Admin creates a VM secret from a pasted value: an IP literal is refused inline (hostnames only), the source is a choice between \"Enter a value\" (default) and an integration credential, the value box is a password field, and values shorter than 8 characters or masked-looking (sk-****) are rejected before any request; saving shows \"VM secret created\" and the row shows name, hosts and the \"Stored value\" source, never the value",
+          "description": "Admin creates a VM secret from a pasted value: an IP literal is refused inline (hostnames only), the source is a choice between \"Enter a Value\" (default) and an integration credential, the value box is a password field, and values shorter than 8 characters or masked-looking (sk-****) are rejected before any request; saving shows \"VM secret created\" and the row shows name, hosts and the \"Stored Value\" source, never the value",
           "status": "covered"
         },
         {
@@ -5095,22 +5095,22 @@
         },
         {
           "id": "vmn-07",
-          "description": "With the Virtual Machine Shell kind selected on a dedicated agent, the Sandbox tab renders the Network access section: the billing notice ($1 per 10 minutes by default, prorated per second) and a labelled \"Egress profile\" radio group with the four labelled options (No network / Package registries / Public internet / Custom allowlist); a fresh agent defaults to No network, so neither picker renders and Save is disabled",
+          "description": "With the Virtual Machine Shell kind selected on a dedicated agent, the Sandbox tab renders the Network Access section: the billing notice ($1 per 10 minutes by default, prorated per second) and a labelled \"Egress Profile\" radio group with the four labelled options (No Network / Package Registries / Public Internet / Custom Allowlist); a fresh agent defaults to No Network, so neither picker renders and Save is disabled",
           "status": "covered"
         },
         {
           "id": "vmn-08",
-          "description": "The secrets multi-select renders only under Public or Custom (with one checkbox per org secret) and the policy picker only under Custom; neither renders under No network or Package registries",
+          "description": "The secrets multi-select renders only under Public or Custom (with one checkbox per org secret) and the policy picker only under Custom; neither renders under No Network or Package Registries",
           "status": "covered"
         },
         {
           "id": "vmn-09",
-          "description": "Custom requires a policy: the picker shows the \"The Custom profile needs a network policy.\" message and Save stays disabled until one is chosen; the \"Create policy\" shortcut opens the SDK network policy dialog in place; picking a policy lists the hosts it allows",
+          "description": "Custom requires a policy: the picker shows the \"The Custom profile needs a network policy.\" message and Save stays disabled until one is chosen; the \"Create Policy\" shortcut opens the SDK network policy dialog in place; picking a policy lists the hosts it allows",
           "status": "covered"
         },
         {
           "id": "vmn-10",
-          "description": "Binding a secret whose host the chosen policy does not allow lists the gap (\"ENV needs host, which policy doesn't allow.\"), keeps Save disabled, and \"Add these hosts to {policy} and save\" patches the policy (\"Hosts added to {policy}\") and then saves the settings (\"Network settings saved\") in one go",
+          "description": "Binding a secret whose host the chosen policy does not allow lists the gap (\"ENV needs host, which policy doesn't allow.\"), keeps Save disabled, and \"Add Hosts to {policy} and Save\" patches the policy (\"Hosts added to {policy}\") and then saves the settings (\"Network settings saved\") in one go",
           "status": "covered"
         },
         {
@@ -5120,12 +5120,12 @@
         },
         {
           "id": "vmn-12",
-          "description": "Narrowing the profile to No network while a secret is bound opens the \"Unbind secrets?\" confirmation naming the secret count; confirming saves with the secrets unbound, and the reopened agent is on No network with the secret unchecked under Public",
+          "description": "Narrowing the profile to No Network while a secret is bound opens the \"Unbind Secrets?\" confirmation naming the secret count; confirming saves with the secrets unbound, and the reopened agent is on No Network with the secret unchecked under Public",
           "status": "covered"
         },
         {
           "id": "vmn-13",
-          "description": "A non-admin never reaches the tenant Virtual Machine settings: the platform entry is missing from More options, or the tenant settings dialog it opens lists no Virtual Machine section (the SDK Account rail filters it on isAdmin)",
+          "description": "A non-admin never reaches the tenant Virtual Machine settings: the platform entry is missing from More options, does nothing when clicked, or the tenant settings dialog it opens lists no Virtual Machine section (the SDK Account rail filters it on isAdmin)",
           "status": "covered"
         }
       ]
