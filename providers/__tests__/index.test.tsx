@@ -242,6 +242,8 @@ let capturedIframeMessageHandler: {
 let pendingIframeMessages: Record<string, unknown>[] = [];
 
 vi.mock('@iblai/iblai-js/web-containers', () => ({
+  // AppProvider registers the app's markdown engine with the SDK canvas.
+  configureCanvasMarkdown: vi.fn(),
   sanitizeCss: (css: string) => css,
   useIframeMessageHandler: (opts: {
     handlers?: unknown;

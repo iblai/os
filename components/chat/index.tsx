@@ -51,7 +51,6 @@ import {
   useTenantMetadata as useTenantMetadataHook,
   CHAT_AREA_SIZE,
   FileReference,
-  TOOLS,
   use401TokenRefresh,
 } from '@iblai/iblai-js/web-utils';
 import {
@@ -111,7 +110,7 @@ import { wasRecent402 } from '@/hooks/use-opencode-402';
 
 /* istanbul ignore next -- @preserve dynamic import */
 const CanvasView = dynamic(
-  () => import('@/components/canvas/canvas-view').then((mod) => mod.CanvasView),
+  () => import('@iblai/iblai-js/web-containers').then((mod) => mod.CanvasView),
   {
     ssr: false,
   },
@@ -1179,7 +1178,10 @@ export function Chat({
     };
   }, []);
 
-  // Close canvas and disable canvas tool when session changes (e.g., when switching chats from sidebar)
+  // Close the canvas panel when the session changes (e.g., when switching chats
+  // from the sidebar). The canvas TOOL state is left alone: useMentorTools
+  // restores tools + canvas from the session being opened, and toggling it here
+  // would send an update that turns canvas off on that session.
   useEffect(() => {
     // Only close canvas if sessionId actually changed (not on initial mount)
     if (
@@ -1196,31 +1198,10 @@ export function Chat({
         });
         handleCloseCanvas();
       }
-
-      // Disable canvas tool if it's enabled when session changes
-      // This ensures canvas status is reset when switching chats or starting new chat
-      if (artifactsEnabled) {
-        console.log('[Chat] Session changed, disabling canvas tool', {
-          previousSessionId: prevSessionIdRef.current,
-          newSessionId: sessionId,
-        });
-        updateSessionTools(TOOLS.CANVAS).catch((error) => {
-          console.error(
-            '[Chat] Failed to disable canvas on session change:',
-            error,
-          );
-        });
-      }
     }
     // Update the ref to track the current sessionId
     prevSessionIdRef.current = sessionId;
-  }, [
-    sessionId,
-    isCanvasOpen,
-    artifactsEnabled,
-    handleCloseCanvas,
-    updateSessionTools,
-  ]);
+  }, [sessionId, isCanvasOpen, handleCloseCanvas]);
 
   // Listen for artifact update events from websocket (legacy format)
   useEffect(() => {
@@ -2060,6 +2041,8 @@ export function Chat({
               sessionId={sessionId}
               tenantKey={tenantKey}
               refreshTrigger={canvasRefreshTrigger}
+              activeTools={activeTools}
+              artifactsEnabled={artifactsEnabled}
               sendMessage={(text, options) => {
                 sendMessage(activeTab, text, options);
               }}

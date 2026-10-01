@@ -217,6 +217,58 @@ test.describe('Journey 23: Mentor History Tab', () => {
     await editMentorPage.close();
   });
 
+  // hist-08: a conversation that produced a canvas offers the chat's own
+  // "Open Canvas" card in the preview, and the card opens the chat's canvas
+  // read-only — document + Export only, nothing that edits it.
+  test('admin goes to history tab and opens a conversation canvas read-only where the conversation has one', async ({
+    page,
+    editMentorPage,
+  }) => {
+    const history = editMentorPage.history;
+    if (!(await history.hasConversations())) {
+      await editMentorPage.close();
+      return;
+    }
+
+    // Find a conversation with a canvas among the first rows of the page.
+    const rows = Math.min(await history.conversationRows.count(), 8);
+    let found = false;
+    for (let i = 0; i < rows && !found; i++) {
+      await history.conversationRows.nth(i).click();
+      found = await history.openCanvasButtons
+        .first()
+        .isVisible({ timeout: 4_000 })
+        .catch(() => false);
+    }
+    if (!found) {
+      // No canvas on these conversations: the preview shows no card at all.
+      await expect(history.canvasCards).toHaveCount(0);
+      await editMentorPage.close();
+      return;
+    }
+
+    await history.openCanvasButtons.first().click();
+    const canvas = history.canvasDialog;
+    await expect(canvas).toBeVisible({ timeout: 10_000 });
+    await expect(canvas.getByTestId('canvas-title')).toBeVisible({
+      timeout: 15_000,
+    });
+    // Export stays; the editing chrome does not.
+    await expect(
+      canvas.getByRole('button', { name: /^export$/i }).first(),
+    ).toBeVisible();
+    await expect(
+      canvas.getByRole('button', { name: /toggle bold/i }),
+    ).toHaveCount(0);
+    await expect(canvas.getByText(/previous version/i)).toHaveCount(0);
+    await expect(canvas.getByText(/click to rename/i)).toHaveCount(0);
+    await expect(canvas.locator('[contenteditable="true"]')).toHaveCount(0);
+
+    await page.keyboard.press('Escape');
+    await expect(canvas).toBeHidden({ timeout: 10_000 });
+    await editMentorPage.close();
+  });
+
   test('admin goes to history tab and clicks on Export to trigger a file download', async ({
     page,
     editMentorPage,

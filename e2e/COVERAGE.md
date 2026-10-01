@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-10-01 | 811 checkpoints (766 covered, 11 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 82 journeys (81 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-10-01 | 814 checkpoints (768 covered, 12 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 82 journeys (81 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -189,11 +189,11 @@ _Note: the LLM tab is served by the SDK's `AgentLLMTab`; `components/modals/edit
 
 ---
 
-## Journey 10: Canvas — AI Document Editor (15 checkpoints; 2 not-reproducible) — `journeys/10-canvas-ai-document-editor.spec.ts`
+## Journey 10: Canvas — AI Document Editor (16 checkpoints; 2 not-reproducible) — `journeys/10-canvas-ai-document-editor.spec.ts`
 
-**Source files:** `components/canvas/canvas-component.tsx`, `components/canvas/canvas-rich-text-editor.tsx`, `components/canvas/canvas-view.tsx`, `components/canvas/canvas-controls.tsx`, `components/canvas/canvas-export-handlers.tsx`, `components/canvas/binary-canvas-component.tsx`, `components/canvas/binary-artifact-utils.ts`, `components/chat/chat-messages/canvas-message-preview.tsx`, `components/chat/chat-messages/message-preview.tsx`, `components/chat/chat-messages/types.ts`, `components/chat/index.tsx`, `hooks/use-canvas-aware-send.ts`, `hooks/use-canvas-version-navigation.tsx`
+**Source files:** `lib/canvas-markdown-engine.ts` (the canvas itself — `CanvasView`, `CanvasComponent`, the rich-text editor, controls, export handlers, the binary viewer and `binary-artifact-utils` — lives in the SDK at `packages/web-containers/src/components/canvas/` and is imported from `@iblai/iblai-js/web-containers`; this app hands it the chat's markdown engine), `components/chat/chat-messages/canvas-message-preview.tsx`, `components/chat/chat-messages/message-preview.tsx`, `components/chat/chat-messages/types.ts`, `components/chat/index.tsx`, `hooks/use-canvas-aware-send.ts`
 
-Binary artifacts (pdf, xlsx, zip, …) are a read-only variant of the canvas artifact: the backend marks them with `is_binary`/`mime_type` and serves the bytes base64-encoded in `binary_content` from the artifact DETAIL endpoint only. The chat message chip always shows "Open Canvas" (disabled with a tooltip while the binary is still generating) — there is no separate "Download" chip variant; the binary canvas (`binary-canvas-component.tsx`) is view + a single header Export — no editing, formatting toolbar, AI controls, version menu, or rename — previews pdf/images/svg inline, shows friendly no-preview / malformed-file messages for everything else, and is never pinned to outgoing chat messages the way the text/code canvas is. **Journey 71** (`71-vm-sandbox-txt-file-canvas.spec.ts`) exercises the VM-sandbox file-sharing pipeline end-to-end against a live LLM — deliberately with a **.txt** file (reliable to produce in the VM with plain shell tooling), which is a TEXT artifact: it verifies the chip + text-canvas path and that text/binary routing picks the text path. The binary-specific surfaces (binary chip gating, pdf/image preview, non-previewable fallback, malformed-file preview-error, stream-end binary auto-open/takeover, no-pin behavior) stay unit-only (`binary-artifact-utils.test.ts`, `binary-canvas-component.test.tsx`, `canvas-view.test.tsx`, `canvas-message-preview.test.tsx`, `message-preview.test.tsx`) since no journey makes a live agent produce a real binary artifact.
+Binary artifacts (pdf, xlsx, zip, …) are a read-only variant of the canvas artifact: the backend marks them with `is_binary`/`mime_type` and serves the bytes base64-encoded in `binary_content` from the artifact DETAIL endpoint only. The chat message chip always shows "Open Canvas" (disabled with a tooltip while the binary is still generating) — there is no separate "Download" chip variant; the binary canvas (the SDK's `binary-canvas-component.tsx`) is view + a single header Export — no editing, formatting toolbar, AI controls, version menu, or rename — previews pdf/images/svg inline, shows friendly no-preview / malformed-file messages for everything else, and is never pinned to outgoing chat messages the way the text/code canvas is. **Journey 71** (`71-vm-sandbox-txt-file-canvas.spec.ts`) exercises the VM-sandbox file-sharing pipeline end-to-end against a live LLM — deliberately with a **.txt** file (reliable to produce in the VM with plain shell tooling), which is a TEXT artifact: it verifies the chip + text-canvas path and that text/binary routing picks the text path. The binary-specific surfaces (binary chip gating, pdf/image preview, non-previewable fallback, malformed-file preview-error, stream-end binary auto-open/takeover, no-pin behavior) stay unit-only (the SDK's `binary-artifact-utils.test.ts`, `binary-canvas-component.test.tsx` and `canvas-view.test.tsx`; this app's `canvas-message-preview.test.tsx` and `message-preview.test.tsx`) since no journey makes a live agent produce a real binary artifact.
 
 - [x] Canvas mode can be enabled and disabled via the toggle button
 - [x] AI can generate a business report document in the canvas
@@ -206,6 +206,7 @@ Binary artifacts (pdf, xlsx, zip, …) are a read-only variant of the canvas art
 - [x] Export dropdown shows PDF and Markdown options and triggers download
 - [x] Canvas panel can be closed; artifact card remains in chat and reopens canvas
 - [x] Follow-up chat message referencing canvas modifies the document content
+- [x] Opening the canvas for an agent artifact never sends a session update without `tools` — the canvas panel used to re-send `{ enable_artifacts: true }` alone, wiping the session's active tools (mcp, grading, …); canvas opened via the `artifact-stream-start` window event, no live LLM turn
 - [ ] _(not-reproducible)_ Chat message chip always offers "Open Canvas" for binaries (never "Download"), disabled with a 'hang tight' tooltip while generating — unit-covered in `canvas-message-preview.test.tsx` / `message-preview.test.tsx`; Journey 71 shares a .txt (text) file, so no journey produces a real binary artifact
 - [ ] _(not-reproducible)_ Read-only binary canvas renders the pdf preview with no editing affordances, and never the malformed-file preview-error state for a well-formed file — unit-covered in `binary-canvas-component.test.tsx` / `canvas-view.test.tsx` / `binary-artifact-utils.test.ts`; same live-binary dependency
 - [ ] _(not-reproducible)_ Binary-artifact stream/open orchestration in `components/chat/index.tsx`: no mid-stream auto-open, every binary type (displayable or not) auto-opens at stream end when no canvas is open — taking over a text canvas that opened mid-stream for the same artifact (binary content wins, extension re-resolved from the filename-style title) — and never pinned to outgoing messages; unit-only via `getBinaryStreamBehavior` / `resolveEffectiveFileExtension` in `binary-artifact-utils.test.ts`. Journey 71 exercises the TEXT stream path (chip + text-canvas auto-open) live
@@ -215,7 +216,7 @@ Binary artifacts (pdf, xlsx, zip, …) are a read-only variant of the canvas art
 
 ## Journey 11: Canvas — Embed (1 checkpoint) — `journeys/11-canvas-embed.spec.ts`
 
-**Source files:** `components/modals/edit-mentor-modal/tabs/embed-tab.tsx`, `components/canvas/canvas-view.tsx`
+**Source files:** `components/modals/edit-mentor-modal/tabs/embed-tab.tsx`, `lib/canvas-markdown-engine.ts` (the canvas itself — `CanvasView`, `CanvasComponent`, the rich-text editor, controls, export handlers, the binary viewer and `binary-artifact-utils` — lives in the SDK at `packages/web-containers/src/components/canvas/` and is imported from `@iblai/iblai-js/web-containers`; this app hands it the chat's markdown engine)
 
 - [x] Canvas embed within an external site displays correctly and allows chatting _(env-gated: requires CANVAS_URL, CANVAS_EMAIL, CANVAS_PASSWORD)_
 
@@ -460,7 +461,7 @@ Driven by the shared paywall helpers in `@iblai/iblai-js/playwright`. All tests 
 
 ---
 
-## Journey 23: Mentor History Tab (7 checkpoints) — `journeys/23-mentor-history-tab.spec.ts`
+## Journey 23: Mentor History Tab (8 checkpoints) — `journeys/23-mentor-history-tab.spec.ts`
 
 **Source files:** `components/modals/edit-mentor-modal/tabs/history-tab.tsx`, `hooks/use-history.ts`, `hooks/use-history/use-export-chat-history.ts`
 
@@ -471,6 +472,7 @@ Driven by the shared paywall helpers in `@iblai/iblai-js/playwright`. All tests 
 - [x] Export button triggers a file download
 - [x] Every row labels its owner (a real full name first, else email → username → "Anonymous"); a linked owner opens the shared Profile viewer without selecting the row
 - [x] "Documents · N" / "Tools · N" chips and the per-turn "Show Details" panel appear only where the conversation carries extended data; a Documents chip opens the chat's "Retrieved Documents" dialog
+- [x] A conversation that produced a canvas shows the chat's own "Open Canvas" card in the preview (none otherwise); the card opens the chat's canvas read-only in a dialog — title and Export only, no formatting toolbar, rename, version switch or editable content — which closes on Escape
 
 ---
 
@@ -1076,14 +1078,15 @@ Covers the "Enable prompt caching" toggle added to the Capabilities sub-tab of t
 
 ---
 
-## Journey 53: Recent Chats Refresh (2 checkpoints) — `journeys/53-recent-chats-refresh.spec.ts`
+## Journey 53: Recent Chats Refresh (3 checkpoints; 1 pending) — `journeys/53-recent-chats-refresh.spec.ts`
 
-**Source files:** `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`
+**Source files:** `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`, `components/chat/index.tsx`
 
 Regression guard for the `SidebarChatsSection` `useEffect` that calls `refetchRecent()` once streaming finishes on a brand-new chat (exactly 2 messages: user + first assistant reply). On `main` the effect was orphaned in an unrendered component; on `fix/1982` it lives inside the rendered `SidebarChatsSection`.
 
 - [x] rcr-01: New chat appears in the sidebar Recent list immediately after the first AI response finishes streaming — no page reload _(regression guard for issue #1982)_
 - [x] rcr-02: Clicking an existing Recent chat row loads the conversation in the chat panel _(regression guard for issue #1881: `handleSelectRow` must write `cachedSessionId[mentorId]` to localStorage so the message loader re-fires)_
+- [ ] rcr-03: Reopening a Recent chat restores that session's own options — a chat that had Canvas enabled shows the Canvas toggle active again after switching to a new chat with Canvas off and back; the chat no longer sends a session update turning canvas off on the chat being opened _(pending: needs an SDK build that includes the `useMentorTools` session restore)_
 
 ---
 
@@ -1660,7 +1663,7 @@ affected; only the internal preview could reach our storage.
 
 ## Journey 71: VM Sandbox File Artifact — Canvas Preview (2 checkpoints) — `journeys/71-vm-sandbox-txt-file-canvas.spec.ts`
 
-**Source files:** `components/canvas/binary-canvas-component.tsx`, `components/canvas/binary-artifact-utils.ts`, `components/canvas/canvas-view.tsx`, `components/chat/chat-messages/canvas-message-preview.tsx`, `components/chat/chat-messages/message-preview.tsx`, `components/chat/index.tsx`, `components/modals/edit-mentor-modal/tabs/sandbox-tab.tsx`
+**Source files:** `lib/canvas-markdown-engine.ts` (the canvas itself — `CanvasView`, `CanvasComponent`, the rich-text editor, controls, export handlers, the binary viewer and `binary-artifact-utils` — lives in the SDK at `packages/web-containers/src/components/canvas/` and is imported from `@iblai/iblai-js/web-containers`; this app hands it the chat's markdown engine), `components/chat/chat-messages/canvas-message-preview.tsx`, `components/chat/chat-messages/message-preview.tsx`, `components/chat/index.tsx`, `components/modals/edit-mentor-modal/tabs/sandbox-tab.tsx`
 
 LIVE-LLM coverage of the VM-sandbox file-sharing pipeline that Journey 10 (Canvas) and Journey 44 (CLAW Advanced Sandbox) can only reach at the unit-test / settings-toggle level. On a dedicated per-test mentor (selecting a sandbox kind is a destructive settings mutation — never run against the shared admin mentor, per the project's shared-mentor-isolation convention), this journey selects the "Virtual Machine Shell" sandbox kind via `SandboxTab.selectKind('virtual-machine')` (mutually exclusive with the other two kinds, and at least one kind is always active — see Journey 44), asks the agent over a real chat turn to create and share **hello.txt** with a known marker line, and verifies the agent replies with the file: the chat chip appears and the canvas shows the file's content. A .txt file was chosen deliberately over a binary format (pdf/xlsx) — the VM produces it reliably with plain shell tooling, so the journey verifies the sandbox→share_files→artifact pipeline without gambling on the LLM assembling valid binary bytes; since .txt is a TEXT artifact, the expected surface is the text canvas and the binary canvas is asserted absent (text/binary routing). The whole file runs in `test.describe.configure({ mode: 'serial' })` and uses `MentorTracker` + `afterAll` to delete its mentor, mirroring Journey 44's pattern. `test.slow()` accounts for VM boot + real generation time; the chip wait carries a multi-minute budget while unrelated assertions keep normal timeouts.
 

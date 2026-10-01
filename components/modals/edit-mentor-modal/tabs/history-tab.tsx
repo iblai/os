@@ -61,10 +61,12 @@ import {
   formatSessionDate,
   resolveUserIdentity,
   RetrievedDocumentsButton,
+  SessionCanvasCards,
   summarizeTranscriptTurns,
   TranscriptRollupBadges,
   TranscriptTurnDetails,
   UserProfileLink,
+  useSessionCanvases,
 } from '@iblai/iblai-js/web-containers';
 import { config } from '@/lib/config';
 import { useParams } from 'next/navigation';
@@ -222,6 +224,19 @@ export function HistoryTab() {
   // Who a conversation belongs to: a real full name first, else email → username → Anonymous,
   // decided in one place (the SDK's shared identity helper).
   const identityOptions = { anonymousLabel: t('anonymous') };
+  // The canvases the open conversation produced, under the replies that wrote them.
+  const selectedCanvases = useSessionCanvases({
+    org: tenantKey,
+    username: selectedConversation?.student,
+    sessionId: selectedConversation?.id,
+    turns: selectedConversation?.messages,
+  });
+  const previewCanvases = useSessionCanvases({
+    org: tenantKey,
+    username: previewConversationContent?.student,
+    sessionId: previewConversationContent?.id,
+    turns: previewConversationContent?.messages,
+  });
   const selectedOwner = resolveUserIdentity(
     selectedConversation,
     identityOptions,
@@ -734,7 +749,7 @@ export function HistoryTab() {
                                 {selectedOwner.initial}
                               </span>
                             </div>
-                            <div className="flex-1">
+                            <div className="min-w-0 flex-1 overflow-x-hidden">
                               <div className="font-medium text-gray-700">
                                 <UserProfileLink
                                   tenantKey={tenantKey}
@@ -760,13 +775,20 @@ export function HistoryTab() {
                                 {t('aiLabel')}
                               </span>
                             </div>
-                            <div className="flex-1">
+                            <div className="min-w-0 flex-1 overflow-x-hidden">
                               <div className="font-medium text-gray-700">
                                 {t('aiAgent')}
                               </div>
                               <div className="mt-1 text-sm text-gray-500">
                                 <Markdown>{message.ai}</Markdown>
                               </div>
+                              <SessionCanvasCards
+                                artifacts={selectedCanvases.forTurn(index)}
+                                org={tenantKey}
+                                username={selectedConversation.student}
+                                sessionId={selectedConversation.id}
+                                className="mt-2"
+                              />
                               <HistoryAttachments
                                 files={historyFiles(message.ai_files)}
                                 idPrefix={`detail-ai-${index}`}
@@ -918,6 +940,13 @@ export function HistoryTab() {
                         <div className="mt-1 text-sm text-gray-900">
                           <Markdown>{message.ai}</Markdown>
                         </div>
+                        <SessionCanvasCards
+                          artifacts={previewCanvases.forTurn(index)}
+                          org={tenantKey}
+                          username={previewConversationContent.student}
+                          sessionId={previewConversationContent.id}
+                          className="mt-2"
+                        />
                         <HistoryAttachments
                           files={historyFiles(message.ai_files)}
                           idPrefix={`preview-ai-${index}`}

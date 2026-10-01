@@ -31,6 +31,12 @@ export class HistoryTab {
   /** Per-turn "Show Details" / "Hide Details" toggles in the transcript. */
   readonly turnDetailsToggles: Locator;
   readonly turnDetailsPanels: Locator;
+  /** The chat's "Open Canvas" cards for the selected conversation's canvases
+   *  (absent when the conversation produced none). */
+  readonly canvasCards: Locator;
+  readonly openCanvasButtons: Locator;
+  /** The chat's canvas, read-only, in a dialog. */
+  readonly canvasDialog: Locator;
 
   constructor(page: Page, dialog: Locator) {
     this.page = page;
@@ -63,6 +69,9 @@ export class HistoryTab {
       name: /^(show|hide) details$/i,
     });
     this.turnDetailsPanels = dialog.getByTestId('transcript-turn-details');
+    this.canvasCards = dialog.getByTestId('canvas-message-preview');
+    this.openCanvasButtons = dialog.getByTestId('canvas-open-button');
+    this.canvasDialog = page.getByTestId('canvas-dialog');
     this.emptyState = dialog.getByText(/no conversations/i);
     this.nextButton = dialog.getByRole('button', { name: /next/i });
     this.exportButton = dialog.getByRole('button', { name: /export/i });
