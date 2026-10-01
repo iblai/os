@@ -458,8 +458,10 @@ fn surface_auth(app: &AppHandle, generation_id: &str, backend: Backend, err: Str
 /// config-dir and binary overrides (`CLAUDE_CONFIG_DIR`, `CODEX_HOME`,
 /// `CODEX_PATH`, `CLAUDE_CODE_EXECUTABLE` — the sandbox binds `~/.claude` and
 /// `~/.codex`, so the adapters must agree on those paths), the adapters' own
-/// knobs, and `CLAUDECODE` (a dev build launched from a Claude Code terminal
-/// would otherwise trip the nested-session guard).
+/// knobs, `CLAUDECODE` (a dev build launched from a Claude Code terminal
+/// would otherwise trip the nested-session guard), and npm's env config
+/// (`npm_config_*`, any case): pnpm 10 exports the repo's `.npmrc` to
+/// `pnpm tauri:dev`, `min-release-age=7` included, and the managed npm obeys it.
 const STRIPPED_ENV_PREFIXES: &[&str] = &["ANTHROPIC_", "CLAUDE_", "OPENAI_", "CODEX_"];
 const STRIPPED_ENV_NAMES: &[&str] = &["CLAUDECODE", "MODEL_PROVIDER", "DEFAULT_AUTH_REQUEST"];
 
@@ -470,6 +472,7 @@ fn stripped_env(keys: impl Iterator<Item = std::ffi::OsString>) -> Vec<std::ffi:
         let k = k.to_string_lossy();
         STRIPPED_ENV_PREFIXES.iter().any(|p| k.starts_with(p))
             || STRIPPED_ENV_NAMES.contains(&k.as_ref())
+            || k.to_ascii_lowercase().starts_with("npm_config_")
     })
     .collect()
 }
@@ -5417,6 +5420,9 @@ mod tests {
             "IBLAI_API_KEY",
             "IBLAI_USERNAME",
             "XDG_CONFIG_HOME",
+            "npm_config_min_release_age",
+            "NPM_CONFIG_REGISTRY",
+            "npm_lifecycle_event",
         ];
         let stripped: Vec<String> = stripped_env(keys.iter().map(std::ffi::OsString::from))
             .into_iter()
@@ -5437,6 +5443,8 @@ mod tests {
             "CODEX_PATH",
             "MODEL_PROVIDER",
             "DEFAULT_AUTH_REQUEST",
+            "npm_config_min_release_age",
+            "NPM_CONFIG_REGISTRY",
         ] {
             assert!(
                 stripped.iter().any(|k| k == gone),
@@ -5452,6 +5460,7 @@ mod tests {
             "IBLAI_API_KEY",
             "IBLAI_USERNAME",
             "XDG_CONFIG_HOME",
+            "npm_lifecycle_event",
         ] {
             assert!(!stripped.iter().any(|k| k == kept), "{kept} must survive");
         }

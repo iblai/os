@@ -484,6 +484,7 @@ async fn ensure_node(log: &(dyn Fn(&str) + Send + Sync)) -> Result<(), String> {
     std::fs::write(dir.join("blank_global_npmrc"), []).map_err(|e| e.to_string())?;
     let mut check = create_command(&node_bin());
     check.args(npm_args(None, "--version", &[]));
+    strip_agent_env(&mut check);
     match probe(check, PROBE_TIMEOUT).await {
         Some((true, out, _)) => log(&format!("Node {pin} ready (npm {})", out.trim())),
         other => return Err(format!("the managed npm failed its check: {other:?}")),
@@ -656,6 +657,22 @@ fn parse_claude_status(stdout: &str) -> (Option<bool>, Option<String>) {
     (Some(signed_in), if signed_in { account } else { None })
 }
 
+/// `jane@example.com` → `j********@example.com`, for screenshots: with
+/// `IBL_MASK_ACCOUNT_EMAIL` set the popover names the account without printing
+/// it. A fixed width, so the length leaks nothing either.
+fn mask_email(email: &str) -> String {
+    let (local, domain) = email.split_once('@').unwrap_or((email, ""));
+    let first: String = local.chars().take(1).collect();
+    match domain {
+        "" => format!("{first}********"),
+        _ => format!("{first}********@{domain}"),
+    }
+}
+
+fn mask_accounts() -> bool {
+    std::env::var_os("IBL_MASK_ACCOUNT_EMAIL").is_some_and(|v| !v.is_empty())
+}
+
 /// (signed in?, account label, reason) for the popover. `None` for signed-in
 /// means the probe could not tell.
 async fn sign_in_status(backend: Backend) -> (Option<bool>, Option<String>, Option<String>) {
@@ -687,7 +704,16 @@ async fn sign_in_status(backend: Backend) -> (Option<bool>, Option<String>, Opti
             .await
             {
                 Some((_, out, _)) => match parse_claude_status(&out) {
-                    (Some(true), account) => (Some(true), account, None),
+                    (Some(true), account) => {
+                        let account = account.map(|a| {
+                            if mask_accounts() && a.contains('@') {
+                                mask_email(&a)
+                            } else {
+                                a
+                            }
+                        });
+                        (Some(true), account, None)
+                    }
                     (Some(false), _) => {
                         (Some(false), None, Some(backend.sign_in_hint().to_string()))
                     }
@@ -1014,6 +1040,14 @@ b3c071cdf47aab867c3b2aa287257df12ec5d7c962bf922b32fd33226c4295fd  node-v24.21.0-
         }
     }
 
+    #[test]
+    fn mask_email_keeps_the_first_letter_and_the_domain() {
+        assert_eq!(mask_email("jane@example.com"), "j********@example.com");
+        assert_eq!(mask_email("x"), "x********");
+        assert_eq!(mask_email("@example.com"), "********@example.com");
+        assert_eq!(mask_email("ünal@x.io"), "ü********@x.io");
+    }
+
     /// The status of an installed agent carries the live sign-in probe:
     /// Codex's `cli login status` by exit code (its first non-empty line,
     /// stderr first, as the account; "Signed in" when it prints nothing),
@@ -1050,6 +1084,11 @@ esac"#,
         assert_eq!(st["account"], json!("me@example.com"));
         assert_eq!(st["adapter_version"], json!(CLAUDE_AGENT_ACP_VERSION));
         assert_eq!(st["reason"], Value::Null);
+        // `IBL_MASK_ACCOUNT_EMAIL` (screenshots): the same probe, the email masked.
+        std::env::set_var("IBL_MASK_ACCOUNT_EMAIL", "1");
+        let st = check_code_agent_status("claude".into()).await.unwrap();
+        std::env::remove_var("IBL_MASK_ACCOUNT_EMAIL");
+        assert_eq!(st["account"], json!("m********@example.com"));
 
         // Signed out: Codex by exit 1, Claude by its JSON.
         fake_node(
@@ -1237,7 +1276,7 @@ esac"#,
   --version) echo v24.21.0 ;;
   *npm-cli.js*" install "*)
     prefix=$(printf '%s' "$*" | sed -n 's/.*--prefix \([^ ]*\) .*/\1/p')
-    echo "npm $*" >> "$prefix/../npm.log"
+    echo "npm $* env:${npm_config_min_release_age-unset}" >> "$prefix/../npm.log"
     mkdir -p "$prefix/node_modules/@agentclientprotocol/codex-acp/dist"
     : > "$prefix/node_modules/@agentclientprotocol/codex-acp/dist/index.js"
     echo "added 20 packages" ;;
@@ -1245,12 +1284,13 @@ esac"#,
   *) echo "unexpected: $*" >&2; exit 64 ;;
 esac"#;
         fake_node(NPM_OK);
+        // The repo's `.npmrc` arrives as env under `pnpm tauri:dev`; npm must not see it.
+        std::env::set_var("npm_config_min_release_age", "7");
         let seen = std::sync::Mutex::new(Vec::<String>::new());
         let log = |m: &str| seen.lock().unwrap().push(m.to_string());
-        assert_eq!(
-            install_with(Backend::Codex, &log).await,
-            Ok(CODEX_ACP_VERSION.to_string())
-        );
+        let first = install_with(Backend::Codex, &log).await;
+        std::env::remove_var("npm_config_min_release_age");
+        assert_eq!(first, Ok(CODEX_ACP_VERSION.to_string()));
         assert_eq!(
             std::fs::read_to_string(marker(Backend::Codex)).unwrap(),
             CODEX_ACP_VERSION
@@ -1280,6 +1320,10 @@ esac"#;
             npm_line.contains("@agentclientprotocol/codex-acp@2.0.0")
                 && npm_line.contains("--save-exact"),
             "{npm_line}"
+        );
+        assert!(
+            npm_line.contains("env:unset"),
+            "npm config env leaked into the managed npm: {npm_line}"
         );
 
         // Already installed: nothing runs.
