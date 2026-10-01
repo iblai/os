@@ -3,9 +3,9 @@
   "lastUpdated": "2026-09-29",
   "summary": {
     "totalCheckpoints": 52,
-    "coveredCheckpoints": 23,
+    "coveredCheckpoints": 22,
     "pendingCheckpoints": 29,
-    "deprecatedCheckpoints": 0,
+    "deprecatedCheckpoints": 1,
     "notReproducibleCheckpoints": 0,
     "percent": 100,
     "totalJourneys": 3,
@@ -259,7 +259,7 @@
         },
         {
           "id": "code-29",
-          "description": "check_code_agent_status answers for Codex and Claude Code (installed / supported / sign_in_supported / signed_in, null when the probe can't tell) and refuses an unknown backend",
+          "description": "check_code_agent_status answers for Codex and Claude Code (installed / supported / signed_in, null when the probe can't tell) and refuses an unknown backend",
           "status": "covered"
         },
         {
@@ -270,7 +270,9 @@
         {
           "id": "code-31",
           "description": "code_agent_sign_in for Claude Code refuses with the run-claude-in-a-terminal guidance instead of opening a browser (the app reuses the CLI login)",
-          "status": "covered"
+          "status": "deprecated",
+          "deprecatedIn": "#531",
+          "deprecatedReason": "The in-app sign-in (code_agent_sign_in) was removed: Codex signs in in the ChatGPT app and Claude Code in a terminal, and the popover's line, the toast and the turn error say so."
         },
         {
           "id": "code-32",
@@ -279,17 +281,17 @@
         },
         {
           "id": "code-33",
-          "description": "The popover shows the selected agent's one quiet status line: Install with live progress, Codex's Sign in with ChatGPT, Claude Code's run-claude hint with Check Again, the account once signed in, and the reason where it can't run",
+          "description": "The popover shows the selected agent's one quiet status line: Install with live progress, the signed-out line saying where to sign in (Codex: the ChatGPT app; Claude Code: claude in a terminal) with Check Again, the account once signed in, and the reason where it can't run",
           "status": "pending"
         },
         {
           "id": "code-34",
-          "description": "Sign in with ChatGPT completes Codex's browser login and the status then names the account",
+          "description": "A Codex sign-in made in the ChatGPT app is picked up by Check Again and the status then names the account",
           "status": "pending"
         },
         {
           "id": "code-35",
-          "description": "A turn on a signed-out agent raises one sign-in toast (Codex: Sign in with ChatGPT action; Claude Code: run claude in a terminal) and no generic chat error toast",
+          "description": "A turn on a signed-out agent raises one sign-in toast saying where to sign in (Codex: the ChatGPT app; Claude Code: claude in a terminal) and no generic chat error toast",
           "status": "pending"
         },
         {

@@ -74,7 +74,11 @@ vi.mock('@iblai/iblai-js/web-containers/next', () => ({
   },
 }));
 
-/** `list_code_agent_models` shapes: Codex names a concrete default, Claude a "default" entry. */
+/**
+ * `list_code_agent_models` shapes. CODEX carries a concrete default — the
+ * shape of a Claude settings model; Codex's own catalog (`codex debug models`,
+ * CODEX_CATALOG) names none — and CLAUDE its "default" entry.
+ */
 const CODEX = {
   models: [
     { id: 'gpt-5.2', name: '5.2', description: 'Default model' },
@@ -91,6 +95,14 @@ const CLAUDE = {
   ],
   default: 'default',
   selected: 'claude-sonnet-4-6',
+};
+const CODEX_CATALOG = {
+  models: [
+    { id: 'gpt-6-sol', name: 'GPT-6-Sol', description: 'Frontier' },
+    { id: 'gpt-5.5', name: 'GPT-5.5', description: null },
+  ],
+  default: null,
+  selected: null,
 };
 
 function renderSelector(backend: 'codex' | 'claude' = 'codex') {
@@ -216,7 +228,9 @@ describe('AgentModelSelector', () => {
 
   it('a failed list shows on the button, and the click retries instead of opening', async () => {
     invoke.mockRejectedValueOnce(
-      new Error('agent sign-in required: Sign in with ChatGPT.'),
+      new Error(
+        "agent sign-in required: Codex isn't signed in — sign in to Codex in the ChatGPT app, then send again.",
+      ),
     );
     renderSelector();
     expect(
@@ -259,6 +273,138 @@ describe('AgentModelSelector', () => {
     expect(modal()).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'close' }));
     expect(modal()).not.toBeInTheDocument();
+  });
+
+  it('a plain-string failure shows the desktop’s sentence in the tooltip, and a retry that fails again stays retryable', async () => {
+    // Tauri rejects with the Rust `Err` string itself, not an Error.
+    invoke.mockRejectedValueOnce(
+      "Codex isn't installed — install it from the Code menu.",
+    );
+    renderSelector();
+    expect(
+      await screen.findByText('Codex · Couldn’t load models'),
+    ).toBeInTheDocument();
+    await userEvent.hover(trigger());
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(
+      "Codex isn't installed — install it from the Code menu.",
+    );
+    invoke.mockRejectedValueOnce('Codex could not list its models: boom');
+    await userEvent.click(trigger());
+    await waitFor(() =>
+      expect(invoke).toHaveBeenLastCalledWith('list_code_agent_models', {
+        backend: 'codex',
+        refresh: true,
+      }),
+    );
+    expect(
+      await screen.findByText('Codex · Couldn’t load models'),
+    ).toBeInTheDocument();
+    expect(trigger()).toBeEnabled();
+    expect(modal()).not.toBeInTheDocument();
+    invoke.mockResolvedValue(CODEX_CATALOG);
+    await userEvent.click(trigger());
+    expect(await screen.findByText('Codex · Default')).toBeInTheDocument();
+    expect(invoke).toHaveBeenCalledTimes(3);
+  });
+
+  it('Codex names no default: the Default row is bare, and an empty list is only that row', async () => {
+    invoke.mockResolvedValue(CODEX_CATALOG);
+    const first = renderSelector();
+    expect(await screen.findByText('Codex · Default')).toBeInTheDocument();
+    await userEvent.click(trigger());
+    expect(
+      dialog.props.llmProvider.chat_models.map((m: any) => m.display_name),
+    ).toEqual(['Default', 'GPT-6-Sol', 'GPT-5.5']);
+    first.unmount();
+    invoke.mockResolvedValue({ models: [], default: null, selected: null });
+    renderSelector();
+    expect(await screen.findByText('Codex · Default')).toBeInTheDocument();
+    await userEvent.click(trigger());
+    expect(
+      dialog.props.llmProvider.chat_models.map((m: any) => m.display_name),
+    ).toEqual(['Default']);
+  });
+
+  it('keeps a saved pick the agent no longer offers visible by its id', async () => {
+    invoke.mockResolvedValue({ ...CODEX_CATALOG, selected: 'gpt-retired' });
+    renderSelector();
+    expect(await screen.findByText('Codex · gpt-retired')).toBeInTheDocument();
+    await userEvent.click(trigger());
+    expect(modal()).toHaveAttribute('data-active', 'gpt-retired');
+  });
+
+  it('a Claude default entry without a description reads as plain Default', async () => {
+    invoke.mockResolvedValue({
+      ...CLAUDE,
+      models: [
+        { id: 'default', name: 'Default', description: null },
+        ...CLAUDE.models.slice(1),
+      ],
+      selected: null,
+    });
+    renderSelector('claude');
+    expect(
+      await screen.findByText('Claude Code · Default'),
+    ).toBeInTheDocument();
+    await userEvent.click(trigger());
+    expect(dialog.props.llmProvider.chat_models[0].display_name).toBe(
+      'Default',
+    );
+  });
+
+  it('a refused pick rejected as a plain string still toasts and reverts', async () => {
+    invoke.mockImplementation(async (cmd: string) => {
+      if (cmd === 'list_code_agent_models') return CODEX_CATALOG;
+      throw "Codex doesn't offer gpt-6-sol.";
+    });
+    renderSelector();
+    await userEvent.click(trigger());
+    await userEvent.click(screen.getByRole('button', { name: 'GPT-6-Sol' }));
+    await waitFor(() =>
+      expect(toastError).toHaveBeenCalledWith("Codex doesn't offer gpt-6-sol."),
+    );
+    expect(screen.getByText('Codex · Default')).toBeInTheDocument();
+    expect(modal()).toHaveAttribute('data-active', '__default__');
+  });
+
+  it('ignores the list of an agent it no longer shows', async () => {
+    let answerCodex: (models: unknown) => void = () => {};
+    invoke.mockImplementation((_cmd: string, args: { backend: string }) =>
+      args.backend === 'codex'
+        ? new Promise((resolve) => {
+            answerCodex = resolve;
+          })
+        : Promise.resolve(CLAUDE),
+    );
+    const { rerender } = render(
+      <TooltipProvider>
+        <AgentModelSelector backend="codex" />
+      </TooltipProvider>,
+    );
+    expect(screen.getByText('Codex · Loading models…')).toBeInTheDocument();
+    // Switch once Codex's request is in flight — not before: two concurrent
+    // dynamic imports of the Tauri module race under vitest's mocking (see
+    // `callTauri` in coding-mode-button.tsx), which is not what this tests.
+    await waitFor(() =>
+      expect(invoke).toHaveBeenCalledWith('list_code_agent_models', {
+        backend: 'codex',
+        refresh: false,
+      }),
+    );
+    rerender(
+      <TooltipProvider>
+        <AgentModelSelector backend="claude" />
+      </TooltipProvider>,
+    );
+    expect(
+      await screen.findByText('Claude Code · Sonnet 4.6'),
+    ).toBeInTheDocument();
+    // Codex's slow answer lands after the switch: it is not Claude's list.
+    await act(async () => {
+      answerCodex(CODEX_CATALOG);
+    });
+    expect(screen.getByText('Claude Code · Sonnet 4.6')).toBeInTheDocument();
+    expect(trigger()).toBeEnabled();
   });
 });
 

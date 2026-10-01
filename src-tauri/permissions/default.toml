@@ -44,7 +44,6 @@ permissions = [
     "allow-set-opencode-learner",
     "allow-check-code-agent-status",
     "allow-install-code-agent",
-    "allow-code-agent-sign-in",
     "allow-list-code-agent-models",
     "allow-set-code-agent-model",
     "allow-remote-code-status",
@@ -292,12 +291,6 @@ identifier = "allow-install-code-agent"
 description = "Enables installing the managed Node runtime and a subscription code agent's ACP adapter"
 [permission.commands]
 allow = ["install_code_agent"]
-
-[[permission]]
-identifier = "allow-code-agent-sign-in"
-description = "Enables starting a subscription code agent's browser sign-in (ChatGPT for Codex)"
-[permission.commands]
-allow = ["code_agent_sign_in"]
 
 [[permission]]
 identifier = "allow-list-code-agent-models"

@@ -3161,7 +3161,6 @@ pub fn run() {
         opencode_acp::ensure_opencode_platform_key,
         code_agent_installer::check_code_agent_status,
         code_agent_installer::install_code_agent,
-        code_agent_installer::code_agent_sign_in,
         code_agent_models::list_code_agent_models,
         code_agent_models::set_code_agent_model,
         app_update::check_app_update,

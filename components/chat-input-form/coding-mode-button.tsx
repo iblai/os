@@ -64,8 +64,6 @@ const LOCAL_LLM_ENABLED_KEY = 'ibl_local_llm_enabled';
 interface CodeAgentStatus {
   installed: boolean;
   supported: boolean;
-  /** Whether the app can run the agent's own sign-in (Codex: yes; Claude: only when its CLI login works headless). */
-  sign_in_supported?: boolean;
   signed_in?: boolean | null;
   account?: string | null;
   reason?: string | null;
@@ -1067,17 +1065,15 @@ export function CodingModeButton({
   }, [isOpen, mobile, sandboxed]);
 
   /**
-   * Install (the managed runtime + adapter — the retry after a failed
-   * launch-time install) or the agent's browser sign-in (minutes). Progress
-   * arrives through the popover's own listener above.
+   * Install the managed runtime + adapter — the retry after a failed
+   * launch-time install. Progress arrives through the popover's own listener
+   * above.
    */
-  const runAgentCommand = async (
-    cmd: 'install_code_agent' | 'code_agent_sign_in',
-  ) => {
+  const installAgent = async () => {
     const a = agent;
     setAgentBusy(a);
     try {
-      await callTauri(cmd, { backend: a });
+      await callTauri('install_code_agent', { backend: a });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : String(e));
     } finally {
@@ -1137,13 +1133,17 @@ export function CodingModeButton({
   const skillsLoading = enabled && skillSync?.state === 'syncing';
 
   // The selected agent's status line. `undefined` for ibl.ai (no line), else
-  // what the agent still needs: install, sign-in (or the terminal hint), or
-  // nothing (ready). Only an agent whose CLI login works headless gets a
-  // sign-in button; the others show how to sign in outside the app.
+  // what the agent still needs: install, its own sign-in (Codex in the ChatGPT
+  // app, Claude Code in a terminal — the app has none of its own), the reason
+  // the desktop couldn't check the sign-in (with Check Again — never "Ready"
+  // on a probe that crashed), or nothing (ready).
   const agentSt = agentStatus[agent];
   const agentWorking = agentBusy === agent || !!agentSt?.installing;
+  const signInUnknown =
+    !!agentSt?.installed && agentSt.signed_in == null && !!agentSt.reason;
   const agentNext =
-    !agentSt?.supported || (agentSt.installed && agentSt.signed_in !== false)
+    !agentSt?.supported ||
+    (agentSt.installed && agentSt.signed_in !== false && !signInUnknown)
       ? null
       : !agentSt.installed
         ? {
@@ -1153,22 +1153,24 @@ export function CodingModeButton({
             // Nothing to click while the desktop installs it by itself: the
             // line just follows the progress. Install is the retry.
             label: agentSt.installing ? null : t('agentInstall'),
-            run: () => runAgentCommand('install_code_agent'),
+            run: installAgent,
           }
-        : agentSt.sign_in_supported
-          ? {
-              text: agentWorking ? t('agentSigningIn') : t('agentSignedOut'),
-              label:
-                agent === 'claude' ? t('agentSignInClaude') : t('agentSignIn'),
-              run: () => runAgentCommand('code_agent_sign_in'),
-            }
-          : {
-              text: t.rich('agentClaudeSignIn', {
-                code: (chunks) => <code className="font-mono">{chunks}</code>,
-              }),
-              label: t('agentCheckAgain'),
-              run: () => checkAgent(agent),
-            };
+        : {
+            text: signInUnknown
+              ? agentSt.reason
+              : t.rich(
+                  agent === 'claude'
+                    ? 'agentSignedOutClaude'
+                    : 'agentSignedOutCodex',
+                  {
+                    code: (chunks) => (
+                      <code className="font-mono">{chunks}</code>
+                    ),
+                  },
+                ),
+            label: t('agentCheckAgain'),
+            run: () => checkAgent(agent),
+          };
 
   // Hidden where opencode can never be spawned: the sandboxed Mac App Store build
   // and unsupported platforms (Windows). (Desktop-only gating happens in the parent,

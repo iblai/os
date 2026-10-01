@@ -186,8 +186,11 @@ fn model_option_from_catalog(catalog: &Value) -> Result<Value, String> {
 /// `codex debug models` through the adapter's CLI passthrough — the bundled
 /// binary the session's app-server runs, so its slugs are what
 /// `session/set_config_option` takes. Lists signed out too, in well under a
-/// second; a probe session (Claude's way) needs a signed-in adapter.
+/// second; a probe session (Claude's way) needs a signed-in adapter. Refused
+/// with the install sentence while Codex isn't installed, as the probe is —
+/// never the raw error of a missing binary.
 async fn codex_catalog() -> Result<Value, String> {
+    crate::code_agent_installer::agent_ready(Backend::Codex)?;
     let output = tokio::time::timeout(
         Duration::from_secs(20),
         agent_cli(Backend::Codex, &["debug", "models"]).output(),
@@ -467,5 +470,131 @@ mod tests {
             None => std::env::remove_var("XDG_DATA_HOME"),
         }
         let _ = std::fs::remove_dir_all(&scratch);
+    }
+
+    /// Codex's list is the bundled CLI's catalog, fetched on every request:
+    /// hidden entries dropped, no default of its own, the saved pick shown;
+    /// and it fails loudly — the install sentence while Codex isn't
+    /// installed, the CLI's stderr when it exits non-zero, "not JSON" for
+    /// noise, "no models" for an empty catalog — leaving the last good cache
+    /// to back the pick's check.
+    #[tokio::test]
+    #[cfg(unix)]
+    async fn the_codex_list_comes_from_the_cli_and_fails_loudly_when_it_cannot() {
+        use crate::code_agent_installer::adapter_entry;
+        use crate::code_agent_installer::tests::{fake_node, stub_install};
+        let _scratch = crate::opencode_acp::ScratchDataDir::new("code-agent-list-codex");
+        let err = list_code_agent_models("codex".into(), None)
+            .await
+            .unwrap_err();
+        assert_eq!(
+            err,
+            "Codex isn't installed — install it from the Code menu."
+        );
+
+        fake_node(
+            r#"case "$*" in
+  *"cli debug models")
+    echo "run $*" >> "$(dirname "$1")/runs.log"
+    echo '{"models":[{"slug":"gpt-6-sol","display_name":"GPT-6-Sol","description":"Frontier","visibility":"list","priority":2},{"slug":"gpt-daybreak","visibility":"hide","priority":1},{"slug":"gpt-5.5","display_name":"GPT-5.5","visibility":"list","priority":9}]}' ;;
+  *) echo "unexpected: $*" >&2; exit 64 ;;
+esac"#,
+        );
+        stub_install(Backend::Codex);
+        let runs_log = adapter_entry(Backend::Codex)
+            .parent()
+            .unwrap()
+            .join("runs.log");
+        let runs = || {
+            std::fs::read_to_string(&runs_log)
+                .unwrap_or_default()
+                .lines()
+                .count()
+        };
+        let list = list_code_agent_models("codex".into(), None).await.unwrap();
+        assert_eq!(
+            list["models"],
+            json!([
+                { "id": "gpt-6-sol", "name": "GPT-6-Sol", "description": "Frontier" },
+                { "id": "gpt-5.5", "name": "GPT-5.5", "description": null }
+            ])
+        );
+        assert_eq!(list["default"], Value::Null);
+        assert_eq!(list["selected"], Value::Null);
+        assert!(cache_path(Backend::Codex).is_file());
+        save(Backend::Codex, Some("gpt-6-sol")).unwrap();
+        let list = list_code_agent_models("codex".into(), Some(false))
+            .await
+            .unwrap();
+        assert_eq!(list["selected"], json!("gpt-6-sol"));
+        assert_eq!(runs(), 2, "the CLI runs on every request, cache or not");
+
+        fake_node(r#"echo "codex: error: unrecognized subcommand 'debug'" >&2; exit 2"#);
+        let err = list_code_agent_models("codex".into(), None)
+            .await
+            .unwrap_err();
+        assert_eq!(
+            err,
+            "Codex could not list its models: codex: error: unrecognized subcommand 'debug'"
+        );
+        fake_node("echo 'Loading models…'");
+        let err = list_code_agent_models("codex".into(), None)
+            .await
+            .unwrap_err();
+        assert!(err.starts_with("Codex's model list is not JSON"), "{err}");
+        fake_node(r#"echo '{"models":[]}'"#);
+        assert_eq!(
+            list_code_agent_models("codex".into(), None)
+                .await
+                .unwrap_err(),
+            "Codex lists no models."
+        );
+        // The last good list still backs the pick's check.
+        assert!(offered(&cached(Backend::Codex).unwrap(), "gpt-6-sol"));
+        let err = set_code_agent_model("codex".into(), Some("gpt-9".into()))
+            .await
+            .unwrap_err();
+        assert!(err.contains("doesn't offer gpt-9"), "{err}");
+    }
+
+    /// Claude's list is served from the cache without touching the agent; a
+    /// refresh, or no cache, needs a probe session — refused with the install
+    /// sentence while Claude isn't installed; unknown agents and opencode are
+    /// refused by name.
+    #[tokio::test]
+    #[cfg(unix)]
+    async fn claudes_list_is_served_from_the_cache_and_needs_the_install_otherwise() {
+        let _scratch = crate::opencode_acp::ScratchDataDir::new("code-agent-list-claude");
+        let err = list_code_agent_models("claude".into(), None)
+            .await
+            .unwrap_err();
+        assert_eq!(
+            err,
+            "Claude Code isn't installed — install it from the Code menu."
+        );
+        remember(Backend::Claude, &claude_options(), true);
+        // No managed node exists here: a probe would fail to spawn.
+        let list = list_code_agent_models("claude".into(), None).await.unwrap();
+        assert_eq!(list["models"].as_array().unwrap().len(), 3);
+        assert_eq!(list["default"], json!("default"));
+        let err = list_code_agent_models("claude".into(), Some(true))
+            .await
+            .unwrap_err();
+        assert_eq!(
+            err, "Claude Code isn't installed — install it from the Code menu.",
+            "a refresh probes, and a probe needs the install"
+        );
+        assert_eq!(
+            list_code_agent_models("gemini".into(), None)
+                .await
+                .unwrap_err(),
+            "unknown code agent: gemini"
+        );
+        assert_eq!(
+            crate::opencode_acp::probe_config_options(Backend::Opencode)
+                .await
+                .unwrap_err(),
+            "opencode has no agent model list."
+        );
     }
 }

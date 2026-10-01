@@ -7,37 +7,31 @@ import {
 
 /**
  * A Code turn on a signed-out Codex / Claude Code must raise ONE quiet toast
- * naming the fix — Codex signs in right from the toast, Claude Code gets the
- * terminal hint — and raise the flag that keeps the chat's generic error toast
+ * naming where to sign in — Codex in the ChatGPT app, Claude Code in a
+ * terminal — and raise the flag that keeps the chat's generic error toast
  * quiet for the same failure.
  */
 
-const { listen, fireEvent, invoke, toastInfo, toastPromise, inTauri } =
-  vi.hoisted(() => {
-    let handler: ((evt: { payload: unknown }) => void) | undefined;
-    return {
-      listen: vi.fn(
-        async (_event: string, cb: (evt: { payload: unknown }) => void) => {
-          handler = cb;
-          return () => {
-            handler = undefined;
-          };
-        },
-      ),
-      fireEvent: (payload: unknown) => handler?.({ payload }),
-      invoke: vi.fn(async () => undefined),
-      toastInfo: vi.fn(),
-      toastPromise: vi.fn(),
-      inTauri: { current: true },
-    };
-  });
+const { listen, fireEvent, toastInfo, inTauri } = vi.hoisted(() => {
+  let handler: ((evt: { payload: unknown }) => void) | undefined;
+  return {
+    listen: vi.fn(
+      async (_event: string, cb: (evt: { payload: unknown }) => void) => {
+        handler = cb;
+        return () => {
+          handler = undefined;
+        };
+      },
+    ),
+    fireEvent: (payload: unknown) => handler?.({ payload }),
+    toastInfo: vi.fn(),
+    inTauri: { current: true },
+  };
+});
 
 vi.mock('@tauri-apps/api/event', () => ({
   listen: (...args: unknown[]) =>
     (listen as (...a: unknown[]) => unknown)(...args),
-}));
-vi.mock('@tauri-apps/api/core', () => ({
-  invoke: (...args: unknown[]) => invoke(...(args as [])),
 }));
 vi.mock('@/types/tauri', () => ({
   isTauriApp: () => inTauri.current,
@@ -45,7 +39,6 @@ vi.mock('@/types/tauri', () => ({
 vi.mock('sonner', () => ({
   toast: {
     info: (...args: unknown[]) => toastInfo(...args),
-    promise: (...args: unknown[]) => toastPromise(...args),
   },
 }));
 
@@ -71,7 +64,7 @@ describe('useOpencodeAuthRequired', () => {
     vi.restoreAllMocks();
   });
 
-  it('offers Codex sign-in with ChatGPT right from the toast', async () => {
+  it('points Codex users at the ChatGPT app, with no sign-in action', async () => {
     renderHook(() => useOpencodeAuthRequired());
     await waitFor(() =>
       expect(listen).toHaveBeenCalledWith(
@@ -87,24 +80,12 @@ describe('useOpencodeAuthRequired', () => {
       expect.objectContaining({ id: 'code-agent-auth' }),
     );
     const options = toastInfo.mock.calls[0][1] as ToastOptions;
-    expect(options.action?.label).toBe('Sign in with ChatGPT');
-
-    options.action?.onClick();
-    await waitFor(() =>
-      expect(invoke).toHaveBeenCalledWith('code_agent_sign_in', {
-        backend: 'codex',
-      }),
+    expect(options.action).toBeUndefined();
+    const { container } = render(<>{options.description}</>);
+    expect(container.textContent).toBe(
+      'Not signed in — sign in to Codex in the ChatGPT app.',
     );
-    expect(toastPromise).toHaveBeenCalledTimes(1);
-    const messages = toastPromise.mock.calls[0][1] as {
-      loading: string;
-      success: string;
-      error: (e: unknown) => string;
-    };
-    expect(messages.loading).toBe('Continue in your browser…');
-    expect(messages.success).toBe('Signed in — send your message again.');
-    expect(messages.error(new Error('timed out'))).toBe('timed out');
-    expect(messages.error('plain')).toBe('plain');
+    expect(container.querySelector('code')).toBeNull();
   });
 
   it('points Claude Code users at the terminal, with no sign-in action', async () => {
@@ -120,7 +101,9 @@ describe('useOpencodeAuthRequired', () => {
     const options = toastInfo.mock.calls[0][1] as ToastOptions;
     expect(options.action).toBeUndefined();
     const { container } = render(<>{options.description}</>);
-    expect(container.textContent).toBe('Run claude in a terminal to sign in.');
+    expect(container.textContent).toBe(
+      'Not signed in — run claude in a terminal.',
+    );
     expect(container.querySelector('code')?.textContent).toBe('claude');
   });
 

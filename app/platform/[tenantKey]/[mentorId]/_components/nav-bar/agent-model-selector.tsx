@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import Image from 'next/image';
@@ -66,24 +66,28 @@ export function AgentModelSelector({
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  // The latest request owns the state: a slow answer for the agent shown
+  // before a switch must not land as the current agent's list.
+  const seq = useRef(0);
 
   const load = useCallback(
     async (refresh = false) => {
+      const mine = ++seq.current;
       setLoading(true);
       setError(null);
       try {
         const { invoke } = await import('@tauri-apps/api/core');
-        setData(
-          await invoke<AgentModels>('list_code_agent_models', {
-            backend,
-            refresh,
-          }),
-        );
+        const models = await invoke<AgentModels>('list_code_agent_models', {
+          backend,
+          refresh,
+        });
+        if (mine === seq.current) setData(models);
       } catch (e) {
+        if (mine !== seq.current) return;
         setData(null);
         setError(e instanceof Error ? e.message : String(e));
       } finally {
-        setLoading(false);
+        if (mine === seq.current) setLoading(false);
       }
     },
     [backend],
@@ -113,11 +117,12 @@ export function AgentModelSelector({
   const current = data?.models.find((m) => m.id === data.selected);
   const defaultEntry = data?.models.find((m) => m.id === data.default);
   // What "Default" resolves to: Claude's own "default" entry describes the
-  // model it stands for; a concrete default (Codex, or a Claude settings
-  // model) is named by its entry.
+  // model it stands for (nothing to add when it doesn't); a concrete default
+  // (a Claude settings model) is named by its entry; Codex's catalog names
+  // none.
   const defaultName = defaultEntry
     ? defaultEntry.id === 'default'
-      ? defaultEntry.description || defaultEntry.name
+      ? defaultEntry.description || null
       : defaultEntry.name
     : null;
   const label =

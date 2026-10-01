@@ -203,14 +203,12 @@ const READY = {
   codex: {
     installed: true,
     supported: true,
-    sign_in_supported: true,
     signed_in: true,
     account: 'Logged in using ChatGPT',
   },
   claude: {
     installed: true,
     supported: true,
-    sign_in_supported: false,
     signed_in: true,
     account: 'me@example.com',
   },
@@ -2172,7 +2170,6 @@ describe('CodingModeButton', () => {
             ? {
                 installed: state.installed,
                 supported: true,
-                sign_in_supported: true,
                 signed_in: state.installed ? true : null,
                 account: state.installed ? 'Logged in using ChatGPT' : null,
               }
@@ -2235,7 +2232,7 @@ describe('CodingModeButton', () => {
     it('surfaces a failed agent install as a toast and re-enables Install', async () => {
       backend({
         agents: {
-          codex: { installed: false, supported: true, sign_in_supported: true },
+          codex: { installed: false, supported: true },
         },
       });
       extend({
@@ -2261,76 +2258,33 @@ describe('CodingModeButton', () => {
       );
     });
 
-    it('signs in to Codex with ChatGPT and then shows the account', async () => {
+    it('tells Codex users to sign in in the ChatGPT app and checks again on request', async () => {
       const state = { signedIn: false };
-      let finishLogin: () => void = () => {};
       extend({
         check_code_agent_status: (args) =>
           (args as { backend: string }).backend === 'codex'
             ? {
                 installed: true,
                 supported: true,
-                sign_in_supported: true,
                 signed_in: state.signedIn,
                 account: state.signedIn ? 'Logged in using ChatGPT' : null,
               }
             : READY.claude,
-        code_agent_sign_in: () =>
-          new Promise<void>((resolve) => {
-            finishLogin = () => {
-              state.signedIn = true;
-              resolve();
-            };
-          }),
       });
       localStorage.setItem('ibl_coding_mode_agent', 'codex');
       renderButton();
       await openPopover();
-      expect(await screen.findByText('Not signed in')).toBeInTheDocument();
-      const button = screen.getByRole('button', {
-        name: 'Sign in with ChatGPT',
-      });
-      await userEvent.click(button);
       expect(
-        await screen.findByText('Continue in your browser…'),
+        await screen.findByText(/sign in to Codex in the ChatGPT app/),
       ).toBeInTheDocument();
-      expect(button).toBeDisabled();
-      expect(invoke).toHaveBeenCalledWith('code_agent_sign_in', {
-        backend: 'codex',
-      });
-      act(() => finishLogin());
+      expect(screen.queryByRole('button', { name: /Sign in/ })).toBeNull();
+      state.signedIn = true;
+      await userEvent.click(
+        screen.getByRole('button', { name: 'Check Again' }),
+      );
       expect(
         await screen.findByText('Logged in using ChatGPT'),
       ).toBeInTheDocument();
-    });
-
-    it('surfaces a failed ChatGPT sign-in as a toast', async () => {
-      backend({
-        agents: {
-          codex: {
-            installed: true,
-            supported: true,
-            sign_in_supported: true,
-            signed_in: false,
-          },
-        },
-      });
-      extend({
-        code_agent_sign_in: () => {
-          throw new Error('Codex sign-in failed: timed out after 600s');
-        },
-      });
-      localStorage.setItem('ibl_coding_mode_agent', 'codex');
-      renderButton();
-      await openPopover();
-      await userEvent.click(
-        await screen.findByRole('button', { name: 'Sign in with ChatGPT' }),
-      );
-      await waitFor(() =>
-        expect(toastError).toHaveBeenCalledWith(
-          'Codex sign-in failed: timed out after 600s',
-        ),
-      );
     });
 
     it('tells Claude Code users to sign in from a terminal and checks again on request', async () => {
@@ -2341,7 +2295,6 @@ describe('CodingModeButton', () => {
             ? {
                 installed: true,
                 supported: true,
-                sign_in_supported: false,
                 signed_in: state.signedIn,
                 account: state.signedIn ? 'me@example.com' : null,
               }
@@ -2351,38 +2304,15 @@ describe('CodingModeButton', () => {
       renderButton();
       await openPopover();
       expect(
-        await screen.findByText(/in a terminal to sign in/),
+        await screen.findByText(/Not signed in — run/),
       ).toBeInTheDocument();
       expect(screen.getByText('claude').tagName).toBe('CODE');
-      expect(screen.queryByRole('button', { name: /ChatGPT/ })).toBeNull();
-      expect(
-        screen.queryByRole('button', { name: /Sign in with Claude/ }),
-      ).toBeNull();
+      expect(screen.queryByRole('button', { name: /Sign in/ })).toBeNull();
       state.signedIn = true;
       await userEvent.click(
         screen.getByRole('button', { name: 'Check Again' }),
       );
       expect(await screen.findByText('me@example.com')).toBeInTheDocument();
-    });
-
-    it('offers Sign in with Claude when the backend can drive that login itself', async () => {
-      backend({
-        agents: {
-          claude: {
-            installed: true,
-            supported: true,
-            sign_in_supported: true,
-            signed_in: false,
-          },
-        },
-      });
-      localStorage.setItem('ibl_coding_mode_agent', 'claude');
-      renderButton();
-      await openPopover();
-      expect(
-        await screen.findByRole('button', { name: 'Sign in with Claude' }),
-      ).toBeInTheDocument();
-      expect(screen.queryByText(/in a terminal to sign in/)).toBeNull();
     });
 
     it('shows an installing agent with a spinner, refuses the choice and keeps ibl.ai usable', async () => {
@@ -2391,7 +2321,6 @@ describe('CodingModeButton', () => {
           codex: {
             installed: false,
             supported: true,
-            sign_in_supported: true,
             installing: true,
           },
           claude: READY.claude,
@@ -2426,7 +2355,6 @@ describe('CodingModeButton', () => {
               : {
                   installed: false,
                   supported: true,
-                  sign_in_supported: true,
                   installing: true,
                 }
             : READY.claude,
@@ -2485,7 +2413,6 @@ describe('CodingModeButton', () => {
           codex: {
             installed: false,
             supported: true,
-            sign_in_supported: true,
             error: 'npm install of codex-acp failed: registry unreachable',
           },
         },
@@ -2525,6 +2452,165 @@ describe('CodingModeButton', () => {
         await screen.findByText('Code needs a 64-bit Linux or macOS'),
       ).toBeInTheDocument();
       expect(screen.queryByRole('button', { name: 'Install' })).toBeNull();
+    });
+
+    it('says an agent isn’t available on this computer when the desktop gives no reason', async () => {
+      backend({ agents: { codex: { installed: false, supported: false } } });
+      localStorage.setItem('ibl_coding_mode_agent', 'codex');
+      renderButton();
+      await openPopover();
+      expect(
+        await screen.findByText('Not available on this computer'),
+      ).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Install' })).toBeNull();
+    });
+
+    it('keeps the agent choice hidden and quiet when the status command rejects', async () => {
+      extend({
+        check_code_agent_status: () => {
+          // What Tauri says for a command an older desktop lacks: a plain string.
+          throw 'command check_code_agent_status not found';
+        },
+      });
+      renderButton();
+      await openPopover();
+      await waitFor(() =>
+        expect(invoke).toHaveBeenCalledWith('check_code_agent_status', {
+          backend: 'claude',
+        }),
+      );
+      expect(agentGroup()).toBeNull();
+      expect(toastError).not.toHaveBeenCalled();
+    });
+
+    it('surfaces the desktop’s plain-string rejection of Install as a toast', async () => {
+      // Tauri rejects with the Rust `Err` string itself, not an Error.
+      backend({
+        agents: {
+          codex: READY.codex,
+          claude: {
+            installed: false,
+            supported: true,
+          },
+        },
+      });
+      extend({
+        install_code_agent: () => {
+          throw 'npm install of @agentclientprotocol/claude-agent-acp@0.83.0 failed: exit Some(1): npm ERR! 404 Not Found';
+        },
+      });
+      localStorage.setItem('ibl_coding_mode_agent', 'claude');
+      renderButton();
+      await openPopover();
+      await userEvent.click(
+        await screen.findByRole('button', { name: 'Install' }),
+      );
+      await waitFor(() =>
+        expect(toastError).toHaveBeenCalledWith(
+          'npm install of @agentclientprotocol/claude-agent-acp@0.83.0 failed: exit Some(1): npm ERR! 404 Not Found',
+        ),
+      );
+      expect(screen.getByRole('button', { name: 'Install' })).toBeEnabled();
+    });
+
+    it('shows why the sign-in state couldn’t be checked, with Check Again', async () => {
+      const state = { known: false };
+      extend({
+        check_code_agent_status: (args) =>
+          (args as { backend: string }).backend === 'codex'
+            ? state.known
+              ? READY.codex
+              : {
+                  installed: true,
+                  supported: true,
+                  signed_in: null,
+                  account: null,
+                  reason: "Couldn't check the Codex sign-in state.",
+                }
+            : READY.claude,
+      });
+      localStorage.setItem('ibl_coding_mode_agent', 'codex');
+      renderButton();
+      await openPopover();
+      expect(
+        await screen.findByText("Couldn't check the Codex sign-in state."),
+      ).toBeInTheDocument();
+      expect(screen.queryByText('Ready')).toBeNull();
+      expect(screen.queryByText(/Not signed in/)).toBeNull();
+      state.known = true;
+      await userEvent.click(
+        screen.getByRole('button', { name: 'Check Again' }),
+      );
+      expect(
+        await screen.findByText('Logged in using ChatGPT'),
+      ).toBeInTheDocument();
+    });
+
+    it('offers Install for an agent installed at another pin', async () => {
+      backend({
+        agents: {
+          codex: {
+            installed: false,
+            supported: true,
+            reason:
+              'Codex needs an update (1.0.0 → 2.0.0) — install it again from the Code menu.',
+            error: null,
+          },
+        },
+      });
+      extend({ install_code_agent: () => undefined });
+      localStorage.setItem('ibl_coding_mode_agent', 'codex');
+      renderButton();
+      await openPopover();
+      expect(await screen.findByText('Not installed')).toBeInTheDocument();
+      await userEvent.click(screen.getByRole('button', { name: 'Install' }));
+      await waitFor(() =>
+        expect(invoke).toHaveBeenCalledWith('install_code_agent', {
+          backend: 'codex',
+        }),
+      );
+    });
+
+    it('follows a launch-time install into its failure and offers Install to retry', async () => {
+      const state = { failed: false };
+      extend({
+        check_code_agent_status: (args) =>
+          (args as { backend: string }).backend === 'codex'
+            ? {
+                installed: false,
+                supported: true,
+                installing: !state.failed,
+                error: state.failed
+                  ? 'npm install of @agentclientprotocol/codex-acp@2.0.0 failed: exit Some(1): npm ERR! 404 Not Found'
+                  : null,
+              }
+            : READY.claude,
+        install_code_agent: () => undefined,
+      });
+      localStorage.setItem('ibl_coding_mode_agent', 'codex');
+      renderButton();
+      await openPopover();
+      expect(await screen.findByText('Installing…')).toBeInTheDocument();
+      expect(screen.getByRole('radio', { name: 'Codex' })).toBeDisabled();
+      await waitFor(() =>
+        expect(eventHandlers['code-agent:changed']).toBeDefined(),
+      );
+      state.failed = true;
+      act(() => {
+        eventHandlers['code-agent:changed']?.({
+          payload: { backend: 'codex' },
+        });
+      });
+      expect(
+        await screen.findByText(/npm ERR! 404 Not Found/),
+      ).toBeInTheDocument();
+      expect(screen.getByRole('radio', { name: 'Codex' })).not.toBeDisabled();
+      await userEvent.click(screen.getByRole('button', { name: 'Install' }));
+      await waitFor(() =>
+        expect(invoke).toHaveBeenCalledWith('install_code_agent', {
+          backend: 'codex',
+        }),
+      );
     });
   });
 });

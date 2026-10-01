@@ -427,6 +427,14 @@ fn auth_hint(backend: Backend, err: &str) -> Option<&'static str> {
     (backend != Backend::Opencode && err.starts_with(AUTH_REQUIRED)).then(|| backend.sign_in_hint())
 }
 
+/// Has this agent's CLI ever signed in on this machine: its own state dir
+/// under `home` exists (`~/.codex`, `~/.claude`). The cheap pre-check before
+/// a spawn or a probe — a stale login still surfaces from the agent itself as
+/// `-32000`. opencode never signs in, so it never passes.
+fn login_dir_present(backend: Backend, home: &Path) -> bool {
+    backend.own().iter().any(|rel| home.join(rel).is_dir())
+}
+
 /// Announce a signed-out agent (`opencode:auth_required`) and return its hint
 /// as the error text; any other error passes through untouched. Emitted
 /// BEFORE the caller's `ollama:error` — the frontend's generic error toast
@@ -558,6 +566,45 @@ pub fn iblai_data_dir() -> PathBuf {
 pub(crate) fn data_dir_lock() -> std::sync::MutexGuard<'static, ()> {
     static L: std::sync::Mutex<()> = std::sync::Mutex::new(());
     L.lock().unwrap_or_else(|e| e.into_inner())
+}
+
+/// A test's own data dir: takes [`data_dir_lock`], points `XDG_DATA_HOME` at
+/// a fresh `temp_dir()/<tag>-<pid>`, and on drop — a panic included, unlike
+/// the restore-by-hand pattern — puts the env back and removes the dir. The
+/// lock is released last, after the restore.
+#[cfg(test)]
+pub(crate) struct ScratchDataDir {
+    _lock: std::sync::MutexGuard<'static, ()>,
+    prior: Option<std::ffi::OsString>,
+    pub(crate) path: PathBuf,
+}
+
+#[cfg(test)]
+impl ScratchDataDir {
+    pub(crate) fn new(tag: &str) -> Self {
+        let lock = data_dir_lock();
+        let path = std::env::temp_dir().join(format!("{tag}-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&path);
+        std::fs::create_dir_all(&path).unwrap();
+        let prior = std::env::var_os("XDG_DATA_HOME");
+        std::env::set_var("XDG_DATA_HOME", &path);
+        Self {
+            _lock: lock,
+            prior,
+            path,
+        }
+    }
+}
+
+#[cfg(test)]
+impl Drop for ScratchDataDir {
+    fn drop(&mut self) {
+        match self.prior.take() {
+            Some(v) => std::env::set_var("XDG_DATA_HOME", v),
+            None => std::env::remove_var("XDG_DATA_HOME"),
+        }
+        let _ = std::fs::remove_dir_all(&self.path);
+    }
 }
 
 /// Managed opencode binary: `~/.local/share/iblai/bin/opencode[.exe]`.
@@ -2064,6 +2111,27 @@ async fn route_response(pending: &Mutex<HashMap<i64, oneshot::Sender<Value>>>, v
     true
 }
 
+/// Route the agent's responses to `pending` until its stdout closes, then
+/// drop every waiting sender so an in-flight `request` fails with
+/// [`CHILD_GONE`] at once — an adapter that exits mid-handshake must not
+/// wait out its caller's deadline. Responses only: a probe has no turn, so
+/// updates and requests are noise. (A chat session's reader is
+/// [`reader_loop`], which also answers requests and frees the registry.)
+fn route_responses(
+    stdout: tokio::process::ChildStdout,
+    pending: Arc<Mutex<HashMap<i64, oneshot::Sender<Value>>>>,
+) {
+    tokio::spawn(async move {
+        let mut lines = BufReader::new(stdout).lines();
+        while let Ok(Some(line)) = lines.next_line().await {
+            if let Ok(v) = serde_json::from_str::<Value>(&line) {
+                route_response(&pending, &v).await;
+            }
+        }
+        pending.lock().await.clear();
+    });
+}
+
 /// Reader loop: routes agent responses to `pending`, prompts the user on permission
 /// requests, and translates `session/update` notifications into Tauri events.
 async fn reader_loop(
@@ -2278,7 +2346,7 @@ impl Backend {
         match self {
             Backend::Opencode => "",
             Backend::Codex => {
-                "Codex isn't signed in — use Sign in with ChatGPT in the Code menu, then send again."
+                "Codex isn't signed in — sign in to Codex in the ChatGPT app, then send again."
             }
             Backend::Claude => {
                 "Claude Code isn't signed in — run `claude` in a terminal and sign in with /login, then send again."
@@ -2615,8 +2683,7 @@ pub(crate) async fn probe_config_options(backend: Backend) -> Result<Value, Stri
         return Err("opencode has no agent model list.".to_string());
     }
     crate::code_agent_installer::agent_ready(backend)?;
-    let home = home_dir().unwrap_or_default();
-    if !backend.own().iter().any(|rel| home.join(rel).is_dir()) {
+    if !login_dir_present(backend, &home_dir().unwrap_or_default()) {
         return Err(format!("{AUTH_REQUIRED}: {}", backend.sign_in_hint()));
     }
     static PROBE: OnceLock<Mutex<()>> = OnceLock::new();
@@ -2674,18 +2741,9 @@ async fn probe_in(
             }
         });
     }
-    // Responses only: a probe has no turn, so updates and requests are noise.
     let pending: Arc<Mutex<HashMap<i64, oneshot::Sender<Value>>>> =
         Arc::new(Mutex::new(HashMap::new()));
-    let routed = pending.clone();
-    tokio::spawn(async move {
-        let mut lines = BufReader::new(stdout).lines();
-        while let Ok(Some(line)) = lines.next_line().await {
-            if let Ok(v) = serde_json::from_str::<Value>(&line) {
-                route_response(&routed, &v).await;
-            }
-        }
-    });
+    route_responses(stdout, pending.clone());
     let session = Session {
         child: Mutex::new(child),
         stdin,
@@ -3001,8 +3059,7 @@ async fn spawn_session(
     // a crash. (A stale login still surfaces from the prompt, see `rpc_error`.)
     if backend != Backend::Opencode {
         crate::code_agent_installer::agent_ready(backend)?;
-        let home = home_dir().unwrap_or_default();
-        if !backend.own().iter().any(|rel| home.join(rel).is_dir()) {
+        if !login_dir_present(backend, &home_dir().unwrap_or_default()) {
             return Err(format!("{AUTH_REQUIRED}: {}", backend.sign_in_hint()));
         }
     }
@@ -3186,7 +3243,8 @@ async fn spawn_session(
     } else {
         crate::code_agent_models::saved(backend)
     };
-    let hs = handshake(
+    let hs = timed_handshake(
+        HANDSHAKE_TIMEOUT,
         &session,
         &launch.session,
         resume.as_deref(),
@@ -3327,6 +3385,34 @@ async fn handshake(
         loaded,
         config_options,
     })
+}
+
+/// How long a freshly spawned agent may take over the whole handshake.
+/// Claude's adapter starts the native binary first and answers in a few
+/// seconds; an adapter that starts but never answers used to hang the turn
+/// forever, out of Stop's reach (a session is registered only after its
+/// handshake). The model probe keeps its own, shorter cap.
+const HANDSHAKE_TIMEOUT: Duration = Duration::from_secs(120);
+
+/// [`handshake`] under a deadline: past it the spawn fails with one sentence
+/// naming the agent, and the caller's dropped `Session` kills the child.
+async fn timed_handshake(
+    limit: Duration,
+    session: &Session,
+    new_params: &Value,
+    resume: Option<&str>,
+    mode: Option<&str>,
+    model: Option<&str>,
+) -> Result<Handshake, String> {
+    tokio::time::timeout(limit, handshake(session, new_params, resume, mode, model))
+        .await
+        .unwrap_or_else(|_| {
+            Err(format!(
+                "{} did not answer within {}s.",
+                crate::code_agent_installer::display_name(session.backend),
+                limit.as_secs()
+            ))
+        })
 }
 
 /// Get an existing live session or spawn one.
@@ -5455,7 +5541,7 @@ mod tests {
         assert_eq!(auth_hint(Backend::Opencode, &auth), None);
         assert_eq!(auth_hint(Backend::Codex, &other), None);
         let codex = auth_hint(Backend::Codex, &auth).unwrap();
-        assert!(codex.contains("Sign in with ChatGPT"), "{codex}");
+        assert!(codex.contains("ChatGPT app"), "{codex}");
         let claude = auth_hint(Backend::Claude, &auth).unwrap();
         assert!(
             claude.contains("`claude`") && claude.contains("terminal"),
@@ -5772,9 +5858,22 @@ mod tests {
     /// script logs every line it receives and answers with canned JSON.
     #[cfg(unix)]
     fn piped_agent(script: &Path, log: &Path, backend: Backend) -> Arc<Session> {
+        faulty_agent(script, log, backend, None)
+    }
+
+    /// `piped_agent` with a `FAULT` for [`FAULTY_AGENT`] to act on. The
+    /// reader is the production one, so a script that exits fails the
+    /// requests in flight instead of hanging the test.
+    fn faulty_agent(
+        script: &Path,
+        log: &Path,
+        backend: Backend,
+        fault: Option<&str>,
+    ) -> Arc<Session> {
         let mut child = Command::new("sh")
             .arg(script)
             .env("LOG", log)
+            .env("FAULT", fault.unwrap_or(""))
             .stdin(std::process::Stdio::piped())
             .stdout(std::process::Stdio::piped())
             .stderr(std::process::Stdio::null())
@@ -5782,18 +5881,9 @@ mod tests {
             .spawn()
             .unwrap();
         let stdin = Arc::new(Mutex::new(child.stdin.take().unwrap()));
-        let stdout = child.stdout.take().unwrap();
         let pending: Arc<Mutex<HashMap<i64, oneshot::Sender<Value>>>> =
             Arc::new(Mutex::new(HashMap::new()));
-        let routed = pending.clone();
-        tokio::spawn(async move {
-            let mut lines = BufReader::new(stdout).lines();
-            while let Ok(Some(line)) = lines.next_line().await {
-                if let Ok(v) = serde_json::from_str::<Value>(&line) {
-                    route_response(&routed, &v).await;
-                }
-            }
-        });
+        route_responses(child.stdout.take().unwrap(), pending.clone());
         Arc::new(Session {
             child: Mutex::new(child),
             stdin,
@@ -6211,5 +6301,209 @@ done
             let _ = session.child.lock().await.start_kill();
         }
         let _ = std::fs::remove_dir_all(&scratch);
+    }
+
+    /// A scripted agent that misbehaves as `$FAULT` says: `signed-out` (a
+    /// `-32000` on `session/new`, what codex-acp answers after its own auth
+    /// check), `init-error`, `no-id` (a `session/new` without a sessionId),
+    /// `load-fails` (`session/load` refused, `session/new` fine), `no-load`
+    /// (no `loadSession` capability), `mode-refused`, `dies` (exits on
+    /// `initialize`), `silent` (never answers). Requests are logged like
+    /// [`STUB_AGENT`]'s.
+    #[cfg(unix)]
+    const FAULTY_AGENT: &str = r#"
+while IFS= read -r l; do
+  printf '%s\n' "$l" >> "$LOG"
+  id=$(printf '%s' "$l" | sed -n 's/.*"id":\([0-9][0-9]*\).*/\1/p')
+  case "$l" in
+    *'"initialize"'*)
+      case "$FAULT" in
+        dies) exit 0 ;;
+        silent) continue ;;
+        init-error) printf '{"jsonrpc":"2.0","id":%s,"error":{"code":-32603,"message":"boom"}}\n' "$id"; continue ;;
+        no-load) r='{"protocolVersion":1,"agentCapabilities":{"loadSession":false}}' ;;
+        *) r='{"protocolVersion":1,"agentCapabilities":{"loadSession":true}}' ;;
+      esac ;;
+    *'"session/load"'*)
+      printf '{"jsonrpc":"2.0","id":%s,"error":{"code":-32602,"message":"unknown session"}}\n' "$id"; continue ;;
+    *'"session/new"'*)
+      case "$FAULT" in
+        signed-out) printf '{"jsonrpc":"2.0","id":%s,"error":{"code":-32000,"message":"Authentication required"}}\n' "$id"; continue ;;
+        no-id) r='{"configOptions":[]}' ;;
+        *) r='{"sessionId":"acp-stub"}' ;;
+      esac ;;
+    *'"session/set_mode"'*)
+      case "$FAULT" in
+        mode-refused) printf '{"jsonrpc":"2.0","id":%s,"error":{"code":-32602,"message":"no such mode"}}\n' "$id"; continue ;;
+        *) r='{}' ;;
+      esac ;;
+    *) r='{}' ;;
+  esac
+  printf '{"jsonrpc":"2.0","id":%s,"result":%s}\n' "$id" "$r"
+done
+"#;
+
+    /// The handshake against an agent that refuses or breaks: a signed-out
+    /// `session/new` is the non-retryable sign-in error with the agent's hint;
+    /// a failing `initialize` or mode pin and a `session/new` without an id
+    /// are loud; a refused `session/load`, or an agent that cannot load at
+    /// all, falls back to `session/new`; an adapter that exits mid-handshake
+    /// fails at once instead of waiting out the deadline; one that never
+    /// answers hits the deadline with one sentence naming the agent.
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn a_signed_out_or_broken_agent_fails_the_handshake_loudly() {
+        async fn attempt(
+            script: &Path,
+            log: &Path,
+            params: &Value,
+            fault: &str,
+            resume: Option<&str>,
+        ) -> Result<Handshake, String> {
+            let session = faulty_agent(script, log, Backend::Codex, Some(fault));
+            let out = tokio::time::timeout(
+                Duration::from_secs(5),
+                timed_handshake(
+                    Duration::from_millis(300),
+                    &session,
+                    params,
+                    resume,
+                    Some("read-only"),
+                    None,
+                ),
+            )
+            .await
+            .expect("the handshake must settle, not hang");
+            let _ = session.child.lock().await.start_kill();
+            out
+        }
+        fn methods(log: &Path) -> Vec<String> {
+            std::fs::read_to_string(log)
+                .unwrap()
+                .lines()
+                .map(|l| {
+                    serde_json::from_str::<Value>(l).unwrap()["method"]
+                        .as_str()
+                        .unwrap()
+                        .to_string()
+                })
+                .collect()
+        }
+        let scratch =
+            std::env::temp_dir().join(format!("opencode-faulty-agent-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&scratch);
+        std::fs::create_dir_all(&scratch).unwrap();
+        let script = scratch.join("agent.sh");
+        std::fs::write(&script, FAULTY_AGENT).unwrap();
+        let params = session_params(
+            Backend::Codex,
+            &scratch.join("ws"),
+            &scratch.join("cfg/agent-skills"),
+            "GUIDE",
+        );
+        let log = |name: &str| scratch.join(format!("{name}.log"));
+
+        let err = attempt(&script, &log("signed-out"), &params, "signed-out", None)
+            .await
+            .unwrap_err();
+        assert!(
+            err.starts_with(AUTH_REQUIRED) && err.contains("session/new"),
+            "{err}"
+        );
+        assert!(auth_hint(Backend::Codex, &err)
+            .unwrap()
+            .contains("ChatGPT app"));
+        assert!(!should_retry(&err, false, 1), "signed out is not a crash");
+
+        let err = attempt(&script, &log("init-error"), &params, "init-error", None)
+            .await
+            .unwrap_err();
+        assert!(
+            err.contains("initialize") && !err.starts_with(AUTH_REQUIRED),
+            "{err}"
+        );
+
+        let err = attempt(&script, &log("no-id"), &params, "no-id", None)
+            .await
+            .unwrap_err();
+        assert_eq!(err, "session/new returned no sessionId");
+
+        let hs = attempt(
+            &script,
+            &log("load-fails"),
+            &params,
+            "load-fails",
+            Some("prev-session"),
+        )
+        .await
+        .unwrap();
+        assert_eq!((hs.id.as_str(), hs.loaded), ("acp-stub", false));
+        assert_eq!(
+            methods(&log("load-fails")),
+            [
+                "initialize",
+                "session/load",
+                "session/new",
+                "session/set_mode"
+            ]
+        );
+
+        let hs = attempt(
+            &script,
+            &log("no-load"),
+            &params,
+            "no-load",
+            Some("prev-session"),
+        )
+        .await
+        .unwrap();
+        assert!(!hs.loaded);
+        assert_eq!(
+            methods(&log("no-load")),
+            ["initialize", "session/new", "session/set_mode"],
+            "no load is attempted on an agent that can't"
+        );
+
+        let err = attempt(&script, &log("mode-refused"), &params, "mode-refused", None)
+            .await
+            .unwrap_err();
+        assert!(err.contains("session/set_mode"), "{err}");
+
+        let err = attempt(&script, &log("dies"), &params, "dies", None)
+            .await
+            .unwrap_err();
+        assert!(
+            err.starts_with(CHILD_GONE),
+            "an adapter that exits fails at once, not at the deadline: {err}"
+        );
+
+        let err = attempt(&script, &log("silent"), &params, "silent", None)
+            .await
+            .unwrap_err();
+        assert_eq!(err, "Codex did not answer within 0s.");
+
+        let _ = std::fs::remove_dir_all(&scratch);
+    }
+
+    /// The pre-spawn "never signed in" check is the agent's own state dir
+    /// under the home — `~/.codex` for Codex, `~/.claude` for Claude — a
+    /// directory, not a stray file; opencode never has one.
+    #[test]
+    fn the_login_dir_decides_never_signed_in_per_agent() {
+        let home = std::env::temp_dir().join(format!("opencode-login-dir-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&home);
+        std::fs::create_dir_all(home.join(".codex")).unwrap();
+        assert!(login_dir_present(Backend::Codex, &home));
+        assert!(!login_dir_present(Backend::Claude, &home));
+        std::fs::write(home.join(".claude"), "not a dir").unwrap();
+        assert!(
+            !login_dir_present(Backend::Claude, &home),
+            "a file is not a login"
+        );
+        std::fs::remove_file(home.join(".claude")).unwrap();
+        std::fs::create_dir_all(home.join(".claude")).unwrap();
+        assert!(login_dir_present(Backend::Claude, &home));
+        assert!(!login_dir_present(Backend::Opencode, &home));
+        let _ = std::fs::remove_dir_all(&home);
     }
 }

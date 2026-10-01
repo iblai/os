@@ -44,20 +44,8 @@ const CLAUDE_AGENT_ACP_VERSION: &str = "0.83.0";
 const DOWNLOAD_TIMEOUT: Duration = Duration::from_secs(300);
 /// npm pulls a ~300 MB native agent per adapter.
 const NPM_INSTALL_TIMEOUT: Duration = Duration::from_secs(1800);
-/// A browser login the user may take their time over.
-const SIGN_IN_TIMEOUT: Duration = Duration::from_secs(600);
 /// One `--version` or sign-in-status probe.
 const PROBE_TIMEOUT: Duration = Duration::from_secs(20);
-
-/// Whether Claude Code can be signed in from the app the way Codex is
-/// (`--cli auth login --claudeai` driven with piped stdio). Spiked once during
-/// implementation: with no TTY the CLI does start — it prints the sign-in URL
-/// and "Paste code here if prompted >" — but it uses the pasted-code OAuth
-/// variant (`redirect_uri=…/oauth/code/callback`, `code=true`), so completing
-/// it needs the authorization code written to its stdin. That paste-back UI is
-/// not built, so the popover shows the terminal hint instead. Flip this once
-/// a `code_agent_sign_in_code` command feeds the code to the running login.
-const CLAUDE_IN_APP_LOGIN: bool = false;
 
 fn node_pin() -> String {
     std::env::var("IBL_NODE_VERSION").unwrap_or_else(|_| NODE_VERSION.to_string())
@@ -712,14 +700,6 @@ async fn sign_in_status(backend: Backend) -> (Option<bool>, Option<String>, Opti
     }
 }
 
-fn sign_in_supported(backend: Backend) -> bool {
-    match backend {
-        Backend::Codex => true,
-        Backend::Claude => CLAUDE_IN_APP_LOGIN,
-        Backend::Opencode => false,
-    }
-}
-
 /// One line for the Code popover's install/sign-in progress. Rides the
 /// existing `model:installation-log` channel; the frontend filters on `source`.
 fn log_line(app: &AppHandle, backend: Backend, message: &str) {
@@ -747,7 +727,6 @@ pub async fn check_code_agent_status(backend: String) -> Result<Value, String> {
     Ok(json!({
         "supported": supported,
         "installed": installed,
-        "sign_in_supported": sign_in_supported(backend),
         "node_version": installed.then(node_pin),
         "adapter_version": installed.then(|| adapter_pin(backend)),
         "signed_in": signed_in,
@@ -775,39 +754,34 @@ pub async fn install_code_agent(app: AppHandle, backend: String) -> Result<Strin
     install_tracked(&app, backend).await
 }
 
-/// Start the agent's own browser sign-in — Codex through the bundled `codex
-/// login`, which opens the browser itself and prints the URL on stderr (the
-/// log line reaches the popover if no browser opens). Resolves when the login
-/// lands. Claude Code refuses with its terminal hint while in-app login is off.
-#[command]
-pub async fn code_agent_sign_in(app: AppHandle, backend: String) -> Result<(), String> {
-    let backend = Backend::agent(&backend)?;
-    agent_ready(backend)?;
-    if !sign_in_supported(backend) {
-        return Err(backend.sign_in_hint().to_string());
-    }
-    static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
-    let Ok(_guard) = LOCK.get_or_init(|| Mutex::new(())).try_lock() else {
-        return Err("A sign-in is already running — finish it in your browser.".to_string());
-    };
-    let log = move |m: &str| log_line(&app, backend, m);
-    let args: &[&str] = match backend {
-        Backend::Codex => &["login"],
-        Backend::Claude => &["auth", "login", "--claudeai"],
-        Backend::Opencode => return Err("opencode has no sign-in".to_string()),
-    };
-    log(&format!(
-        "opening your browser to sign in to {}…",
-        display_name(backend)
-    ));
-    run_logged(agent_cli(backend, args), SIGN_IN_TIMEOUT, &log)
-        .await
-        .map_err(|e| format!("{} sign-in failed: {e}", display_name(backend)))
-}
-
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
+    use crate::opencode_acp::ScratchDataDir;
+
+    /// The managed `node` as a shell script under the scratch data dir — what
+    /// every Codex/Claude call runs (the version check, npm, the adapter's
+    /// smoke test and CLI passthroughs), so a test scripts each answer by
+    /// matching `"$*"`. Rewritten between phases rather than steered by env:
+    /// the agent env is stripped and the process env is shared.
+    #[cfg(unix)]
+    pub(crate) fn fake_node(script: &str) {
+        use std::os::unix::fs::PermissionsExt;
+        let bin = node_bin();
+        std::fs::create_dir_all(bin.parent().unwrap()).unwrap();
+        std::fs::write(&bin, format!("#!/bin/sh\n{script}\n")).unwrap();
+        std::fs::set_permissions(&bin, std::fs::Permissions::from_mode(0o755)).unwrap();
+    }
+
+    /// An adapter "installed" at the current pin: the marker and a stub
+    /// entry file, so the file checks pass once a fake node exists.
+    #[cfg(unix)]
+    pub(crate) fn stub_install(backend: Backend) {
+        let entry = adapter_entry(backend);
+        std::fs::create_dir_all(entry.parent().unwrap()).unwrap();
+        std::fs::write(&entry, "// stub").unwrap();
+        std::fs::write(marker(backend), adapter_pin(backend)).unwrap();
+    }
 
     /// The asset name follows nodejs.org's scheme and the checksum lookup
     /// matches the exact asset row, never the `.tar.xz` sibling.
@@ -1038,5 +1012,345 @@ b3c071cdf47aab867c3b2aa287257df12ec5d7c962bf922b32fd33226c4295fd  node-v24.21.0-
                 "the probe must answer, signed in or not"
             );
         }
+    }
+
+    /// The status of an installed agent carries the live sign-in probe:
+    /// Codex's `cli login status` by exit code (its first non-empty line,
+    /// stderr first, as the account; "Signed in" when it prints nothing),
+    /// Claude's `auth status --json` by the adapter's own rule; a probe that
+    /// prints no status JSON is "couldn't tell", never a verdict. The pins
+    /// ride along, and a failed install's error shows beside `installed`.
+    #[tokio::test]
+    #[cfg(unix)]
+    async fn the_status_of_an_installed_agent_reports_its_sign_in_state() {
+        let _scratch = ScratchDataDir::new("code-agent-status");
+        fake_node(
+            r#"case "$*" in
+  *"cli login status") echo 'Logged in using ChatGPT' ;;
+  *"--cli auth status --json") printf '{\n  "loggedIn": true,\n  "authMethod": "claude.ai",\n  "email": "me@example.com"\n}\n' ;;
+  *) echo "unexpected: $*" >&2; exit 64 ;;
+esac"#,
+        );
+        stub_install(Backend::Codex);
+        stub_install(Backend::Claude);
+        assert_eq!(agent_ready(Backend::Codex), Ok(()));
+
+        let st = check_code_agent_status("codex".into()).await.unwrap();
+        assert_eq!(st["installed"], json!(true));
+        assert_eq!(st["supported"], json!(true));
+        assert_eq!(st["signed_in"], json!(true));
+        assert_eq!(st["account"], json!("Logged in using ChatGPT"));
+        assert_eq!(st["reason"], Value::Null);
+        assert_eq!(st["node_version"], json!(NODE_VERSION));
+        assert_eq!(st["adapter_version"], json!(CODEX_ACP_VERSION));
+        assert_eq!(st["installing"], json!(false));
+        assert_eq!(st["error"], Value::Null);
+        let st = check_code_agent_status("claude".into()).await.unwrap();
+        assert_eq!(st["signed_in"], json!(true));
+        assert_eq!(st["account"], json!("me@example.com"));
+        assert_eq!(st["adapter_version"], json!(CLAUDE_AGENT_ACP_VERSION));
+        assert_eq!(st["reason"], Value::Null);
+
+        // Signed out: Codex by exit 1, Claude by its JSON.
+        fake_node(
+            r#"case "$*" in
+  *"cli login status") echo 'Not logged in'; exit 1 ;;
+  *"--cli auth status --json") echo '{"loggedIn": false, "apiProvider": "firstParty"}' ;;
+esac"#,
+        );
+        let st = check_code_agent_status("codex".into()).await.unwrap();
+        assert_eq!(
+            st["installed"],
+            json!(true),
+            "signed out is still installed"
+        );
+        assert_eq!(st["signed_in"], json!(false));
+        assert_eq!(st["account"], Value::Null);
+        assert_eq!(st["reason"], json!(Backend::Codex.sign_in_hint()));
+        let st = check_code_agent_status("claude".into()).await.unwrap();
+        assert_eq!(st["signed_in"], json!(false));
+        assert_eq!(st["reason"], json!(Backend::Claude.sign_in_hint()));
+
+        // Codex's stderr comes first in the label; Claude printing no status
+        // JSON (a crash, say) is "couldn't tell".
+        fake_node(
+            r#"case "$*" in
+  *"cli login status") echo 'warning: a newer codex is available' >&2; echo 'Logged in using ChatGPT' ;;
+  *"--cli auth status --json") echo 'Error: Cannot find module' >&2; exit 1 ;;
+esac"#,
+        );
+        let (signed_in, account, reason) = sign_in_status(Backend::Codex).await;
+        assert_eq!(
+            (signed_in, account.as_deref(), reason),
+            (
+                Some(true),
+                Some("warning: a newer codex is available"),
+                None
+            )
+        );
+        let (signed_in, account, reason) = sign_in_status(Backend::Claude).await;
+        assert_eq!((signed_in, account), (None, None));
+        assert_eq!(
+            reason.as_deref(),
+            Some("Couldn't check the Claude Code sign-in state.")
+        );
+        let st = check_code_agent_status("claude".into()).await.unwrap();
+        assert_eq!(st["signed_in"], Value::Null);
+        assert_eq!(
+            st["reason"],
+            json!("Couldn't check the Claude Code sign-in state.")
+        );
+
+        fake_node("exit 0");
+        let (signed_in, account, _) = sign_in_status(Backend::Codex).await;
+        assert_eq!(
+            (signed_in, account.as_deref()),
+            (Some(true), Some("Signed in"))
+        );
+
+        // A failed install left in the phase shows beside an installed agent.
+        set_phase(Backend::Codex, Phase::Failed("npm exploded".into()));
+        let st = check_code_agent_status("codex".into()).await.unwrap();
+        assert_eq!(st["installed"], json!(true));
+        assert_eq!(st["error"], json!("npm exploded"));
+        set_phase(Backend::Codex, Phase::Idle);
+    }
+
+    /// A probe that cannot run — the managed node not executable, a missing
+    /// program, a stall past its limit — answers "couldn't tell", never a
+    /// sign-in verdict; a live one hands back its exit status and both
+    /// streams, and a stalled one is killed rather than waited for.
+    #[tokio::test]
+    #[cfg(unix)]
+    async fn a_probe_that_cannot_run_reads_as_could_not_tell() {
+        use std::os::unix::fs::PermissionsExt;
+        let _scratch = ScratchDataDir::new("code-agent-probe");
+        fake_node("echo 'Logged in using ChatGPT'");
+        stub_install(Backend::Codex);
+        std::fs::set_permissions(node_bin(), std::fs::Permissions::from_mode(0o644)).unwrap();
+        let (signed_in, account, reason) = sign_in_status(Backend::Codex).await;
+        assert_eq!((signed_in, account), (None, None));
+        assert_eq!(
+            reason.as_deref(),
+            Some("Couldn't check the Codex sign-in state.")
+        );
+        let st = check_code_agent_status("codex".into()).await.unwrap();
+        assert_eq!(st["installed"], json!(true), "the files are there");
+        assert_eq!(st["signed_in"], Value::Null);
+        assert_eq!(
+            st["reason"],
+            json!("Couldn't check the Codex sign-in state.")
+        );
+
+        assert_eq!(
+            probe(Command::new("/nonexistent/node"), Duration::from_secs(1)).await,
+            None
+        );
+        let mut stalled = Command::new("sh");
+        stalled.args(["-c", "exec sleep 5"]);
+        let started = std::time::Instant::now();
+        assert_eq!(probe(stalled, Duration::from_millis(100)).await, None);
+        assert!(
+            started.elapsed() < Duration::from_secs(3),
+            "a stalled probe is killed, not waited for"
+        );
+        let mut live = Command::new("sh");
+        live.args(["-c", "echo out; echo err >&2; exit 3"]);
+        assert_eq!(
+            probe(live, Duration::from_secs(5)).await,
+            Some((false, "out\n".to_string(), "err\n".to_string()))
+        );
+    }
+
+    /// `run_logged`: every stdout and stderr line reaches the log and a
+    /// failure's text is the exit code plus the last lines (20 at most); a
+    /// stall past the limit kills the child and says so; a program that
+    /// cannot start says so.
+    #[tokio::test]
+    #[cfg(unix)]
+    async fn run_logged_streams_lines_and_reports_the_exit_code_tail_and_timeout() {
+        let seen = std::sync::Mutex::new(Vec::<String>::new());
+        let log = |m: &str| seen.lock().unwrap().push(m.to_string());
+        let mut cmd = Command::new("sh");
+        cmd.args(["-c", "echo a; echo b >&2; exit 2"]);
+        let err = run_logged(cmd, Duration::from_secs(5), &log)
+            .await
+            .unwrap_err();
+        let tail = err
+            .strip_prefix("exit Some(2): ")
+            .unwrap_or_else(|| panic!("{err}"));
+        // Two pipes, two readers: the lines' order is not fixed.
+        let mut lines: Vec<&str> = tail.lines().collect();
+        lines.sort_unstable();
+        assert_eq!(lines, ["a", "b"]);
+        let mut logged = seen.lock().unwrap().clone();
+        logged.sort_unstable();
+        assert_eq!(logged, ["a", "b"]);
+
+        seen.lock().unwrap().clear();
+        let mut cmd = Command::new("sh");
+        cmd.args(["-c", "seq 1 30; exit 1"]);
+        let err = run_logged(cmd, Duration::from_secs(5), &log)
+            .await
+            .unwrap_err();
+        let tail: Vec<&str> = err
+            .strip_prefix("exit Some(1): ")
+            .unwrap_or_else(|| panic!("{err}"))
+            .lines()
+            .collect();
+        assert_eq!(tail.len(), 20, "{err}");
+        assert_eq!((tail[0], tail[19]), ("11", "30"));
+        assert_eq!(seen.lock().unwrap().len(), 30, "the log got every line");
+
+        let mut cmd = Command::new("sh");
+        cmd.args(["-c", "exec sleep 5"]);
+        let started = std::time::Instant::now();
+        let err = run_logged(cmd, Duration::from_millis(100), &log)
+            .await
+            .unwrap_err();
+        assert!(err.starts_with("timed out after"), "{err}");
+        assert!(
+            started.elapsed() < Duration::from_secs(3),
+            "the stalled child is killed"
+        );
+
+        let err = run_logged(
+            Command::new("/nonexistent/node"),
+            Duration::from_secs(1),
+            &log,
+        )
+        .await
+        .unwrap_err();
+        assert!(err.starts_with("spawn failed:"), "{err}");
+    }
+
+    /// The install: the managed node passes its version check (no download),
+    /// npm installs the pinned adapter into its own prefix, the smoke test
+    /// must report the pin, and only then is the marker written. A second
+    /// install finds the work done and runs nothing. A failing npm or a
+    /// smoke test reporting another version leaves no marker and says why.
+    #[tokio::test]
+    #[cfg(unix)]
+    async fn installing_an_agent_runs_npm_then_the_smoke_test_and_only_then_writes_the_marker() {
+        let _scratch = ScratchDataDir::new("code-agent-install");
+        const NPM_OK: &str = r#"case "$*" in
+  --version) echo v24.21.0 ;;
+  *npm-cli.js*" install "*)
+    prefix=$(printf '%s' "$*" | sed -n 's/.*--prefix \([^ ]*\) .*/\1/p')
+    echo "npm $*" >> "$prefix/../npm.log"
+    mkdir -p "$prefix/node_modules/@agentclientprotocol/codex-acp/dist"
+    : > "$prefix/node_modules/@agentclientprotocol/codex-acp/dist/index.js"
+    echo "added 20 packages" ;;
+  *dist/index.js" --version") echo "@agentclientprotocol/codex-acp 2.0.0" ;;
+  *) echo "unexpected: $*" >&2; exit 64 ;;
+esac"#;
+        fake_node(NPM_OK);
+        let seen = std::sync::Mutex::new(Vec::<String>::new());
+        let log = |m: &str| seen.lock().unwrap().push(m.to_string());
+        assert_eq!(
+            install_with(Backend::Codex, &log).await,
+            Ok(CODEX_ACP_VERSION.to_string())
+        );
+        assert_eq!(
+            std::fs::read_to_string(marker(Backend::Codex)).unwrap(),
+            CODEX_ACP_VERSION
+        );
+        assert_eq!(agent_ready(Backend::Codex), Ok(()));
+        let lines = seen.lock().unwrap().join("\n");
+        assert!(
+            lines.contains("installing @agentclientprotocol/codex-acp@2.0.0 with npm…"),
+            "{lines}"
+        );
+        assert!(lines.contains("added 20 packages"), "{lines}");
+        assert!(lines.contains("Codex 2.0.0 ready"), "{lines}");
+        assert!(
+            !lines.contains("downloading"),
+            "the managed node passed its check: {lines}"
+        );
+        let npm_log = iblai_data_dir().join("acp").join("npm.log");
+        let runs = || {
+            std::fs::read_to_string(&npm_log)
+                .unwrap_or_default()
+                .lines()
+                .count()
+        };
+        assert_eq!(runs(), 1);
+        let npm_line = std::fs::read_to_string(&npm_log).unwrap();
+        assert!(
+            npm_line.contains("@agentclientprotocol/codex-acp@2.0.0")
+                && npm_line.contains("--save-exact"),
+            "{npm_line}"
+        );
+
+        // Already installed: nothing runs.
+        assert_eq!(
+            install_with(Backend::Codex, &log).await,
+            Ok(CODEX_ACP_VERSION.to_string())
+        );
+        assert_eq!(runs(), 1, "no second npm install");
+
+        // npm fails: no marker, the error names the package and npm's tail.
+        std::fs::remove_dir_all(agent_dir(Backend::Codex)).unwrap();
+        fake_node(
+            r#"case "$*" in
+  --version) echo v24.21.0 ;;
+  *npm-cli.js*" install "*) echo "npm ERR! code E404" >&2; echo "npm ERR! 404 Not Found" >&2; exit 1 ;;
+esac"#,
+        );
+        let err = install_with(Backend::Codex, &log).await.unwrap_err();
+        assert!(
+            err.starts_with(
+                "npm install of @agentclientprotocol/codex-acp@2.0.0 failed: exit Some(1):"
+            ),
+            "{err}"
+        );
+        assert!(err.contains("npm ERR! 404 Not Found"), "{err}");
+        assert!(!marker(Backend::Codex).exists());
+        assert!(agent_ready(Backend::Codex)
+            .unwrap_err()
+            .contains("isn't installed"));
+
+        // The smoke test reports another version: no marker either.
+        fake_node(&NPM_OK.replace("codex-acp 2.0.0", "codex-acp 1.9.0"));
+        let err = install_with(Backend::Codex, &log).await.unwrap_err();
+        assert!(err.contains("did not report version 2.0.0"), "{err}");
+        assert!(!marker(Backend::Codex).exists());
+    }
+
+    /// `agent_cli` is the whole CLI integration: the managed node on the
+    /// adapter's entry, `cli` for codex-acp and `--cli` for claude-agent-acp,
+    /// then the args, with the managed `bin` dir first on PATH.
+    #[test]
+    #[cfg(unix)]
+    fn agent_cli_runs_the_adapter_passthrough_on_the_managed_node() {
+        let _scratch = ScratchDataDir::new("code-agent-cli");
+        let argv = |backend: Backend, args: &[&str]| {
+            let cmd = agent_cli(backend, args);
+            let std = cmd.as_std();
+            let path = std
+                .get_envs()
+                .find(|(k, _)| *k == "PATH")
+                .and_then(|(_, v)| v.map(|v| v.to_string_lossy().into_owned()));
+            (
+                PathBuf::from(std.get_program()),
+                std.get_args()
+                    .map(|a| a.to_string_lossy().into_owned())
+                    .collect::<Vec<_>>(),
+                path,
+            )
+        };
+        let (program, args, path) = argv(Backend::Codex, &["login", "status"]);
+        assert_eq!(program, node_bin());
+        assert_eq!(args[0], adapter_entry(Backend::Codex).to_string_lossy());
+        assert_eq!(&args[1..], ["cli", "login", "status"]);
+        let managed_bin = node_bin().parent().unwrap().to_string_lossy().into_owned();
+        assert!(
+            path.as_deref().is_some_and(|p| p.starts_with(&managed_bin)),
+            "the managed bin dir leads PATH: {path:?}"
+        );
+        let (program, args, _) = argv(Backend::Claude, &["auth", "status", "--json"]);
+        assert_eq!(program, node_bin());
+        assert_eq!(args[0], adapter_entry(Backend::Claude).to_string_lossy());
+        assert_eq!(&args[1..], ["--cli", "auth", "status", "--json"]);
     }
 }

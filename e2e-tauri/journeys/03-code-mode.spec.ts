@@ -55,7 +55,6 @@ interface CodeAgentStatus {
   installing?: boolean;
   installed: boolean;
   supported: boolean;
-  sign_in_supported: boolean;
   signed_in?: boolean | null;
   account?: string | null;
   reason?: string | null;
@@ -624,11 +623,10 @@ describe('Journey 3: Code Mode (opencode)', () => {
   });
 
   // The subscription agents: Codex and Claude Code run next to opencode
-  // through their ACP adapters on a managed Node. The status and the Claude
-  // sign-in refusal are cheap real-command checks; everything that needs the
-  // ~700 MB install, a signed-in subscription or an authenticated UI session
-  // is a pending stub, covered meanwhile by the Rust and Vitest suites named
-  // in each one.
+  // through their ACP adapters on a managed Node. The status is the one cheap
+  // real-command check; everything that needs the ~700 MB install, a
+  // signed-in subscription or an authenticated UI session is a pending stub,
+  // covered meanwhile by the Rust and Vitest suites named in each one.
   describe('Codex / Claude Code agents', () => {
     it('code-29: check_code_agent_status answers for Codex and Claude Code and refuses an unknown backend', async () => {
       for (const backend of ['codex', 'claude'] as const) {
@@ -637,7 +635,6 @@ describe('Journey 3: Code Mode (opencode)', () => {
         });
         expect(typeof st.installed).toBe('boolean');
         expect(typeof st.supported).toBe('boolean');
-        expect(typeof st.sign_in_supported).toBe('boolean');
         // The launch-time install reports itself; a boolean, never absent.
         expect(typeof st.installing).toBe('boolean');
         // Linux under tauri-driver, outside the Mac App Store sandbox.
@@ -665,22 +662,11 @@ describe('Journey 3: Code Mode (opencode)', () => {
          and the pinning tests in code_agent_installer.rs */
     });
 
-    it('code-31: code_agent_sign_in for Claude Code refuses with the terminal guidance instead of opening a browser', async () => {
-      const st = await invokeCmd<CodeAgentStatus>('check_code_agent_status', {
-        backend: 'claude',
-      });
-      const error = await invokeExpectingFailure('code_agent_sign_in', {
-        backend: 'claude',
-      });
-      // Not installed: the install message comes first. Installed with the
-      // headless login off: the terminal hint. Either way, no browser opens.
-      expect(error).not.toBeNull();
-      if (st.installed && !st.sign_in_supported) {
-        expect(error).toMatch(/claude/);
-        expect(error).toMatch(/terminal/i);
-      } else if (!st.installed) {
-        expect(error).toMatch(/install/i);
-      }
+    it.skip('code-31: code_agent_sign_in for Claude Code refuses with the terminal guidance instead of opening a browser', () => {
+      /* deprecated in #531 — the in-app sign-in was removed: Codex signs in
+         in the ChatGPT app and Claude Code in a terminal, and the popover's
+         line says so; the signed-out status reason is pinned by the Rust
+         the_status_of_an_installed_agent_reports_its_sign_in_state */
     });
 
     it.skip('code-32: the Code popover’s Agent choice routes turns through the model key and keeps the other writers off it', () => {
@@ -693,15 +679,15 @@ describe('Journey 3: Code Mode (opencode)', () => {
 
     it.skip('code-33: the popover shows the selected agent’s one quiet status line', () => {
       /* pending — same authenticated-UI gap; covered meanwhile by the
-         coding-mode-button Vitest cases (installs a missing agent…, signs in
-         to Codex…, tells Claude Code users…, offers Sign in with Claude…,
-         shows why an agent can’t run…) */
+         coding-mode-button Vitest cases (installs a missing agent…, tells
+         Codex users…, tells Claude Code users…, shows why an agent can’t
+         run…) */
     });
 
-    it.skip('code-34: Sign in with ChatGPT completes Codex’s browser login and the status names the account', () => {
-      /* pending — needs a real ChatGPT account and a browser the harness
-         can't drive; covered meanwhile by the sign-in Vitest cases and the
-         Rust probe-parsing tests in code_agent_installer.rs */
+    it.skip('code-34: a Codex sign-in made in the ChatGPT app is picked up by Check Again and the status names the account', () => {
+      /* pending — needs a real ChatGPT account and the ChatGPT app the harness
+         can't drive; covered meanwhile by the tells Codex users… Vitest case
+         and the Rust probe-parsing tests in code_agent_installer.rs */
     });
 
     it.skip('code-35: a turn on a signed-out agent raises one sign-in toast and no generic chat error toast', () => {

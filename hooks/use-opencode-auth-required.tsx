@@ -27,9 +27,9 @@ export function wasRecentAuthRequired(): boolean {
 
 /**
  * Desktop only: a Code turn on a signed-out Codex / Claude Code raises ONE
- * quiet toast naming the fix — Codex signs in right from the toast (the
- * agent's own browser login), Claude Code gets the terminal hint. A fixed id
- * folds repeats into the same toast.
+ * quiet toast naming where to sign in — Codex in the ChatGPT app, Claude Code
+ * in a terminal (the app has no sign-in of its own). A fixed id folds repeats
+ * into the same toast.
  */
 export function useOpencodeAuthRequired() {
   const t = useTranslations('chatInputFormCodingModeButton');
@@ -41,34 +41,14 @@ export function useOpencodeAuthRequired() {
 
     const onAuthRequired = (backend?: string) => {
       lastAuthAt = Date.now();
-      if (backend === 'codex') {
-        toast.info(t('authRequiredCodex'), {
-          id: 'code-agent-auth',
-          duration: 10_000,
-          action: {
-            label: t('agentSignIn'),
-            onClick: () =>
-              toast.promise(
-                import('@tauri-apps/api/core').then(({ invoke }) =>
-                  invoke('code_agent_sign_in', { backend }),
-                ),
-                {
-                  loading: t('agentSigningIn'),
-                  success: t('authSignedIn'),
-                  error: (e: unknown) =>
-                    e instanceof Error ? e.message : String(e),
-                },
-              ),
-          },
-        });
-        return;
-      }
-      toast.info(t('authRequiredClaude'), {
+      const codex = backend === 'codex';
+      toast.info(t(codex ? 'authRequiredCodex' : 'authRequiredClaude'), {
         id: 'code-agent-auth',
         duration: 10_000,
-        description: t.rich('agentClaudeSignIn', {
-          code: (chunks) => <code className="font-mono">{chunks}</code>,
-        }),
+        description: t.rich(
+          codex ? 'agentSignedOutCodex' : 'agentSignedOutClaude',
+          { code: (chunks) => <code className="font-mono">{chunks}</code> },
+        ),
       });
     };
 
