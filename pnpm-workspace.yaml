@@ -8,7 +8,14 @@ onlyBuiltDependencies:
   - unrs-resolver
 overrides:
   vite: '>=7.3.2'
-  basic-ftp: '>=5.2.1'
+  # GHSA-c475-qrg2-pj4r — quadratic-time CPU DoS in Client.list()'s Unix
+  # directory-listing parser (RE_LINE backtracking), affecting <=6.2.0; 6.2.1 is
+  # the only patched release. Surfaced by `pnpm audit` (high), which blocks the
+  # audit gate. Dev-only reach: release-it > proxy-agent > pac-proxy-agent >
+  # get-uri > basic-ftp, so there is no production exposure. The previous floor
+  # ('>=5.2.1') already resolved to 6.0.1, so this stays inside the 6.x line;
+  # the upper bound keeps a future major from being pulled in unreviewed.
+  basic-ftp: '>=6.2.1 <7'
   follow-redirects: '>=1.16.0'
   defu: '>=6.1.5'
   lodash-es: '>=4.18.0'
