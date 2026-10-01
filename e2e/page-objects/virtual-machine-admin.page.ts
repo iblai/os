@@ -340,9 +340,84 @@ export class VirtualMachineAdminPage {
     return list.getByRole('button', { name: `Remove ${host}`, exact: true });
   }
 
+  // ── Paged tables ─────────────────────────────────────────────────────────
+
+  /**
+   * Brings `row` on screen when the table spans more than one page, and
+   * returns it either way so the caller's assertion decides the outcome.
+   *
+   * The policy and secret lists are org-wide, ordered by name, and grow with
+   * residue from other runs, so a freshly created, uniquely named row is not
+   * guaranteed to sit on the page currently shown. The SDK tables render
+   * every row today; this walk follows the shared SDK pagination control
+   * ("Go to previous page" / "Go to next page", as the LTI tables use) so the
+   * lookup keeps working the moment a table is paginated. With a single page
+   * the control is absent and this returns after the first check.
+   *
+   * The list refetches after every write, so the row first gets `graceMs` to
+   * appear on the current page. Only then does the walk rewind to the first
+   * page and step forward until the row shows or the last page is reached. A
+   * page turn is confirmed by the first row changing rather than by sleeping;
+   * if it does not change the walk stops there.
+   */
+  private async revealRow(
+    section: Locator,
+    row: Locator,
+    graceMs = 5_000,
+  ): Promise<Locator> {
+    const firstRow = section.locator('tbody tr').first();
+    const next = section.locator('[aria-label="Go to next page"]');
+    const previous = section.locator('[aria-label="Go to previous page"]');
+
+    const onScreen = async (timeout: number): Promise<boolean> =>
+      timeout > 0
+        ? row
+            .first()
+            .waitFor({ state: 'visible', timeout })
+            .then(
+              () => true,
+              () => false,
+            )
+        : row
+            .first()
+            .isVisible()
+            .catch(() => false);
+    const canUse = async (control: Locator): Promise<boolean> =>
+      (await control.isVisible().catch(() => false)) &&
+      (await control.getAttribute('aria-disabled').catch(() => 'true')) !==
+        'true';
+    const turn = async (control: Locator): Promise<boolean> => {
+      const before = await firstRow.textContent().catch(() => null);
+      await control.click();
+      if (before === null) return true;
+      return expect(firstRow)
+        .not.toHaveText(before, { timeout: 15_000 })
+        .then(
+          () => true,
+          () => false,
+        );
+    };
+
+    if (await onScreen(graceMs)) return row;
+    // Not on the current page: start over from the first one. The page cap
+    // is a runaway guard far above any real list.
+    for (let i = 0; i < 50 && (await canUse(previous)); i++) {
+      if (!(await turn(previous))) break;
+    }
+    for (let i = 0; i < 50; i++) {
+      if (await onScreen(0)) return row;
+      if (!(await canUse(next))) return row;
+      if (!(await turn(next))) return row;
+    }
+    return row;
+  }
+
   // ── Network policies ─────────────────────────────────────────────────────
 
-  /** Table row for the policy called `name` (exact match on the Name cell). */
+  /**
+   * Table row for the policy called `name` (exact match on the Name cell).
+   * Only sees the page currently shown — use `findPolicyRow` to act on it.
+   */
   policyRow(name: string): Locator {
     return this.policiesSection
       .locator('tr[data-testid^="vm-network-policy-row-"]')
@@ -357,6 +432,29 @@ export class VirtualMachineAdminPage {
     });
   }
 
+  /** The policy's row, brought on screen first if the table is paged. */
+  async findPolicyRow(name: string): Promise<Locator> {
+    await expect(this.policiesSection).toBeVisible({ timeout: 15_000 });
+    return this.revealRow(this.policiesSection, this.policyRow(name));
+  }
+
+  /**
+   * Asserts no page of the table lists the policy any more. Rooted on the
+   * section, which is only in the accessibility tree once every nested
+   * dialog has closed, so it cannot pass just because nothing resolves.
+   */
+  async expectPolicyRowGone(name: string, timeout = 20_000): Promise<void> {
+    await expect(this.policiesSection).toBeVisible({ timeout: 10_000 });
+    await expect(async () => {
+      const row = await this.revealRow(
+        this.policiesSection,
+        this.policyRow(name),
+        0,
+      );
+      expect(await row.count()).toBe(0);
+    }).toPass({ timeout });
+  }
+
   async openNewPolicy(): Promise<void> {
     await expect(this.newPolicyButton).toBeVisible({ timeout: 10_000 });
     await this.newPolicyButton.click();
@@ -364,7 +462,7 @@ export class VirtualMachineAdminPage {
   }
 
   async openEditPolicy(name: string): Promise<void> {
-    const row = this.policyRow(name);
+    const row = await this.findPolicyRow(name);
     await expect(row).toBeVisible({ timeout: 15_000 });
     await row
       .getByRole('button', { name: `Edit policy ${name}`, exact: true })
@@ -373,7 +471,7 @@ export class VirtualMachineAdminPage {
   }
 
   async openDeletePolicy(name: string): Promise<void> {
-    const row = this.policyRow(name);
+    const row = await this.findPolicyRow(name);
     await expect(row).toBeVisible({ timeout: 15_000 });
     await row
       .getByRole('button', { name: `Delete policy ${name}`, exact: true })
@@ -409,8 +507,28 @@ export class VirtualMachineAdminPage {
 
   // ── VM secrets ───────────────────────────────────────────────────────────
 
+  /** Only sees the page currently shown — use `findSecretRow` to act on it. */
   secretRow(envVar: string): Locator {
     return this.secretsSection.getByTestId(`vm-secret-row-${envVar}`);
+  }
+
+  /** The secret's row, brought on screen first if the table is paged. */
+  async findSecretRow(envVar: string): Promise<Locator> {
+    await expect(this.secretsSection).toBeVisible({ timeout: 15_000 });
+    return this.revealRow(this.secretsSection, this.secretRow(envVar));
+  }
+
+  /** Asserts no page of the table lists the secret any more. */
+  async expectSecretRowGone(envVar: string, timeout = 20_000): Promise<void> {
+    await expect(this.secretsSection).toBeVisible({ timeout: 10_000 });
+    await expect(async () => {
+      const row = await this.revealRow(
+        this.secretsSection,
+        this.secretRow(envVar),
+        0,
+      );
+      expect(await row.count()).toBe(0);
+    }).toPass({ timeout });
   }
 
   async openNewSecret(): Promise<void> {
@@ -420,14 +538,14 @@ export class VirtualMachineAdminPage {
   }
 
   async openEditSecret(envVar: string): Promise<void> {
-    const row = this.secretRow(envVar);
+    const row = await this.findSecretRow(envVar);
     await expect(row).toBeVisible({ timeout: 15_000 });
     await row.getByTestId(`vm-secret-edit-${envVar}`).click();
     await expect(this.editSecretDialog).toBeVisible({ timeout: 10_000 });
   }
 
   async openDeleteSecret(envVar: string): Promise<void> {
-    const row = this.secretRow(envVar);
+    const row = await this.findSecretRow(envVar);
     await expect(row).toBeVisible({ timeout: 15_000 });
     await row.getByTestId(`vm-secret-delete-${envVar}`).click();
     await expect(this.secretDeleteDialog).toBeVisible({ timeout: 10_000 });

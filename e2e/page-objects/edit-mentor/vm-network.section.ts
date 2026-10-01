@@ -228,14 +228,22 @@ export class VmNetworkSection {
   /** Clicks Save Changes; the caller asserts the outcome (toast / confirm / error). */
   async save(): Promise<void> {
     await expect(this.saveButton).toBeEnabled({ timeout: 10_000 });
+    // A "Network settings saved" toast left over from an earlier save in the
+    // same test would satisfy the caller's next toast assertion before this
+    // save has even been sent. Toasts dismiss themselves after a few seconds;
+    // wait that out so the next one seen belongs to this save.
+    await expect(this.savedToast).toHaveCount(0, { timeout: 15_000 });
     await this.saveButton.click();
   }
 
   /** The "Network settings saved" toast is the authoritative save signal. */
   async expectSavedToast(timeout = 30_000): Promise<void> {
-    await expect(
-      this.page.getByText('Network settings saved', { exact: true }).first(),
-    ).toBeVisible({ timeout });
+    await expect(this.savedToast.first()).toBeVisible({ timeout });
+  }
+
+  /** Every "Network settings saved" toast currently on the page. */
+  private get savedToast(): Locator {
+    return this.page.getByText('Network settings saved', { exact: true });
   }
 }
 

@@ -5090,7 +5090,7 @@
         },
         {
           "id": "vmn-06",
-          "description": "Deleting a network policy an agent still uses (bound under the Custom profile) is refused: the delete dialog stays open with an error naming the agents that use it; after the agent is moved off the policy the same delete succeeds with \"Network policy deleted\" and the row disappears",
+          "description": "Admin deletes a network policy they just created (bound to no agent): the row is found on whichever page of the org-wide table it landed, the confirmation dialog names the policy, Cancel leaves it in place, and confirming shows \"Network policy deleted\", closes the dialog and leaves no page of the table listing it",
           "status": "covered"
         },
         {

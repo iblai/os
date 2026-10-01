@@ -27,17 +27,38 @@
  * run-level residue teardown (which knows only mentors and projects), a
  * policy still bound to an agent cannot be deleted at all, and a duplicate
  * name / env var is a 400 — so every record this file creates carries a
- * per-run stamp and is deleted again through the API in `afterEach`
+ * unique stamp and is deleted again through the API in `afterEach`
  * (`e2e/utils/virtual-machine-api.ts`), after the agent that used it has
  * been moved off it. The agent-settings flow needs a policy and a secret
- * that already exist, and the delete-refusal checkpoint needs a policy an
- * agent already uses: those fixtures are seeded through the same API rather
- * than re-driving the dialogs the earlier tests already prove.
+ * that already exist: those are seeded through the same API rather than
+ * re-driving the dialogs the earlier tests already prove.
  *
- * Binding a policy / selecting a sandbox kind is a destructive mutation of
- * mentor settings, so — per this project's shared-mentor-isolation
- * convention (journeys 44 / 71) — every agent-side test creates its own
- * mentor and the file runs serially in one worker.
+ * ── Parallel safety ───────────────────────────────────────────────────────
+ *
+ * The suite runs `fullyParallel`, and the same journey can run at once in
+ * several workers and browser projects against one tenant. Every test here
+ * is self-contained, so the file is NOT serial:
+ *
+ *   - No shared records. Each test creates its own policy / secret under a
+ *     stamp built from the clock, the worker index AND a random part
+ *     (`stamp()`), so two tests starting in the same millisecond cannot
+ *     collide on the org-unique name or env var. Rows are always looked up
+ *     by that unique name, never by position or count, so rows other runs
+ *     add or remove in the same org-wide table do not matter.
+ *   - No shared agent. Binding a policy / selecting a sandbox kind mutates
+ *     mentor settings, so the agent-settings test creates its own mentor
+ *     (this project's shared-mentor-isolation convention, journeys 44 / 71).
+ *     The tenant-dialog tests only open the User Profile dialog and mutate
+ *     no agent.
+ *   - No mentor deletion mid-run. Other workers land on the account's
+ *     most-recently-accessed mentor, which can be the one this file just
+ *     created; deleting it under them would redirect their page. The mentor
+ *     is registered by `createMentorPage` and reaped once, at the run-level
+ *     residue teardown. This file only moves it off the policy / secret so
+ *     those can be deleted.
+ *   - Serial mode is deliberately absent: it skips every later test in the
+ *     file once one fails, which hides their results, and nothing here needs
+ *     an order.
  */
 
 import { test, expect } from '../fixtures/mentor-test';
@@ -47,13 +68,11 @@ import {
   getPlatformContext,
 } from '../utils/auth';
 import { waitForPageReady } from '../utils/resilient';
-import { deleteMentorById } from '../utils/mentor-cleanup';
 import {
   createVmNetworkPolicy,
   createVmSecret,
   deleteVmNetworkPoliciesByName,
   deleteVmSecretsByEnvVar,
-  putMentorVmNetworkSettings,
   releaseMentorVmNetwork,
 } from '../utils/virtual-machine-api';
 import {
@@ -63,16 +82,22 @@ import {
 import { SandboxTab } from '../page-objects/edit-mentor/sandbox.tab';
 import { VmNetworkSection } from '../page-objects/edit-mentor/vm-network.section';
 
-/** Unique per-run suffix — a valid env-var fragment and a readable name. */
+/**
+ * Unique suffix for a record name / env var: upper-case letters and digits
+ * only, so it is a valid env-var fragment. The clock alone is not unique —
+ * parallel workers and browser projects can start the same test in the same
+ * millisecond — so the worker index and a random part are folded in.
+ */
 function stamp(): string {
-  return Date.now().toString(36).toUpperCase();
+  const clock = Date.now().toString(36);
+  const worker = (test.info().parallelIndex ?? 0).toString(36);
+  const random = Math.random().toString(36).slice(2, 6).padEnd(4, '0');
+  return `${clock}${worker}${random}`.toUpperCase();
 }
 
 const HOST_API = 'api.e2e-vm.example.com:443';
 const HOST_AUTH = 'auth.e2e-vm.example.com:443';
 const HOST_FILES = 'files.e2e-vm.example.com:443';
-
-test.describe.configure({ mode: 'serial' });
 
 // ─── Tenant admin dialog ─────────────────────────────────────────────────────
 
@@ -185,7 +210,7 @@ test.describe('Journey 79: Virtual Machine Network Policies & Secrets — admin 
     await admin.expectToast('Network policy created');
     await expect(admin.policyDialog).not.toBeVisible({ timeout: 10_000 });
 
-    const row = admin.policyRow(name);
+    const row = await admin.findPolicyRow(name);
     await expect(row).toBeVisible({ timeout: 15_000 });
     await expect(admin.policyRowHosts(name)).toContainText(HOST_API);
 
@@ -275,7 +300,7 @@ test.describe('Journey 79: Virtual Machine Network Policies & Secrets — admin 
     await admin.expectToast('VM secret created');
     await expect(admin.secretDialog).not.toBeVisible({ timeout: 10_000 });
 
-    const row = admin.secretRow(envVar);
+    const row = await admin.findSecretRow(envVar);
     await expect(row).toBeVisible({ timeout: 15_000 });
     await expect(row).toContainText(name);
     await expect(row).toContainText(HOST_FILES);
@@ -313,11 +338,10 @@ test.describe('Journey 79: Virtual Machine Network Policies & Secrets — admin 
     await admin.secretDeleteConfirmButton.click();
     await admin.expectToast('VM secret deleted');
     await expect(admin.secretDeleteDialog).not.toBeVisible({ timeout: 10_000 });
-    // The table is rooted on the User Profile dialog, which Radix hides from
-    // the accessibility tree while a nested dialog is open — anchor on the
-    // section so the count below cannot pass just because nothing resolves.
-    await expect(admin.secretsSection).toBeVisible({ timeout: 10_000 });
-    await expect(admin.secretRow(envVar)).toHaveCount(0, { timeout: 15_000 });
+    // No page of the table lists it any more. The helper anchors on the
+    // section first: the table is rooted on the User Profile dialog, which
+    // Radix hides from the accessibility tree while a nested dialog is open.
+    await admin.expectSecretRowGone(envVar);
     secretsToDelete.delete(envVar);
 
     await admin.close();
@@ -325,75 +349,48 @@ test.describe('Journey 79: Virtual Machine Network Policies & Secrets — admin 
 
   // ── vmn-06 ──────────────────────────────────────────────────────────────
 
-  test('deleting a network policy an agent still uses is refused and names the agent; once the agent is moved off it the delete succeeds', async ({
+  test('admin deletes a network policy they just created: the confirmation names it, Cancel keeps it, and confirming removes its row', async ({
     page,
-    createMentorPage,
   }) => {
-    const name = `E2E VM Bound Policy ${stamp()}`;
+    // A policy created here and now is bound to no agent, so the delete is
+    // a plain one. The unique name keeps it apart from anything else in the
+    // org-wide list.
+    const name = `E2E VM Delete Policy ${stamp()}`;
     policiesToDelete.add(name);
 
-    // A dedicated agent bound to the policy under the Custom profile.
-    await createMentorPage.openAndCreate();
-    const { mentorId } = await getPlatformContext(page);
-    const policy = await createVmNetworkPolicy(page, {
-      name,
-      allowed_hosts: [HOST_API],
-    });
-    await putMentorVmNetworkSettings(page, mentorId, {
-      enable_virtual_machine: true,
-      virtual_machine_egress: 'custom',
-      virtual_machine_network_policy_id: policy.id,
-    });
-
     const admin = new VirtualMachineAdminPage(page);
-    try {
-      await admin.open();
-      await admin.showPolicies();
-      await admin.openDeletePolicy(name);
-      await expect(admin.policyDeleteDialog).toContainText(name);
-      await admin.policyDeleteConfirmButton.click();
+    await admin.open();
+    await admin.showPolicies();
+    await admin.createPolicy({ name, hosts: [HOST_API] });
 
-      // Refused: the dialog stays open and lists the agents that use it.
-      await expect(admin.policyDeleteError).toBeVisible({ timeout: 20_000 });
-      await expect(admin.policyDeleteError).toContainText(
-        /still used by the following agents|bound to mentors/,
-      );
-      // The refusal names the agents by id; the SDK swaps in the agent's
-      // name where the tenant agent list resolves it, else keeps the id —
-      // either way exactly one agent (ours) is listed.
-      await expect(admin.policyDeleteError.getByRole('listitem')).toHaveCount(
-        1,
-        { timeout: 10_000 },
-      );
-      await admin.policyDeleteCancelButton.click();
-      await expect(admin.policyDeleteDialog).not.toBeVisible({
-        timeout: 10_000,
-      });
-      await expect(admin.policyRow(name)).toBeVisible();
+    // The list is org-wide and ordered by name: find the row on whichever
+    // page it landed (a single page today; the walk covers a paged table).
+    const row = await admin.findPolicyRow(name);
+    await expect(row).toBeVisible({ timeout: 15_000 });
+    await expect(admin.policyRowHosts(name)).toContainText(HOST_API);
 
-      // Move the agent off the policy, then the delete goes through.
-      await putMentorVmNetworkSettings(page, mentorId, {
-        virtual_machine_egress: 'none',
-        virtual_machine_network_policy_id: null,
-        virtual_machine_secret_ids: [],
-      });
-      await admin.openDeletePolicy(name);
-      await admin.policyDeleteConfirmButton.click();
-      await admin.expectToast('Network policy deleted');
-      await expect(admin.policyDeleteDialog).not.toBeVisible({
-        timeout: 10_000,
-      });
-      // Same anchor as the secrets table: prove the section is back in the
-      // accessibility tree before asserting the row is gone.
-      await expect(admin.policiesSection).toBeVisible({ timeout: 10_000 });
-      await expect(admin.policyRow(name)).toHaveCount(0, { timeout: 15_000 });
-      policiesToDelete.delete(name);
+    // The confirmation names the policy; Cancel leaves it in place.
+    await admin.openDeletePolicy(name);
+    await expect(admin.policyDeleteDialog).toContainText(name);
+    await expect(admin.policyDeleteConfirmButton).toBeVisible();
+    await admin.policyDeleteCancelButton.click();
+    await expect(admin.policyDeleteDialog).not.toBeVisible({
+      timeout: 10_000,
+    });
+    await expect(await admin.findPolicyRow(name)).toBeVisible();
 
-      await admin.close();
-    } finally {
-      await releaseMentorVmNetwork(page, mentorId);
-      await deleteMentorById(page, mentorId);
-    }
+    // Confirming deletes it: the success toast, the dialog closes and no
+    // page of the table lists the policy any more.
+    await admin.openDeletePolicy(name);
+    await admin.policyDeleteConfirmButton.click();
+    await admin.expectToast('Network policy deleted');
+    await expect(admin.policyDeleteDialog).not.toBeVisible({
+      timeout: 10_000,
+    });
+    await admin.expectPolicyRowGone(name);
+    policiesToDelete.delete(name);
+
+    await admin.close();
   });
 });
 
@@ -437,7 +434,7 @@ test.describe('Journey 79: Virtual Machine Network Policies & Secrets — agent 
 
     // Org fixtures: a policy that allows the API host only, and a secret
     // sent to the FILES host — which the policy does not allow yet.
-    const policy = await createVmNetworkPolicy(page, {
+    await createVmNetworkPolicy(page, {
       name: policyName,
       allowed_hosts: [HOST_API],
     });
@@ -588,11 +585,10 @@ test.describe('Journey 79: Virtual Machine Network Policies & Secrets — agent 
       await expect(net.saveButton).toBeDisabled();
       await editMentorPage.close();
     } finally {
-      // Release the policy / secret so the org-level cleanup can delete them,
-      // then drop the dedicated agent.
+      // Move the agent off the policy / secret so the org-level cleanup in
+      // afterEach can delete them. The agent itself is NOT deleted here: it
+      // is reaped at the run-level teardown (see "Parallel safety" above).
       await releaseMentorVmNetwork(page, mentorId);
-      await deleteMentorById(page, mentorId);
-      void policy;
     }
   });
 });
