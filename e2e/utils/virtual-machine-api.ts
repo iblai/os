@@ -2,7 +2,7 @@
  * Direct DM API helpers for the Virtual Machine Shell network feature —
  * network policies, VM secrets and an agent's VM network settings.
  *
- * Journey 77 drives the UI for every checkpoint it covers, but it needs
+ * Journey 79 drives the UI for every checkpoint it covers, but it needs
  * fixtures the UI would be slow or circular to produce (a policy already
  * bound to an agent to prove a delete is refused, a secret whose host the
  * policy lacks) and it must leave no residue behind: a policy bound to an

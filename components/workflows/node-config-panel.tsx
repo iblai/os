@@ -45,7 +45,7 @@ import { AgentDatasetsTabWrapper } from '@/components/modals/edit-mentor-modal/t
 import WithFormPermissions from '@/hoc/withPermissions';
 import { pushModal, popModal } from '@/features/navigation/slice';
 import { useUsername } from '@/hooks/use-user';
-import { useToggleTools } from '@/hooks/use-tools/use-toggle-tools';
+import { useToggleTools } from '@iblai/iblai-js/web-containers/next';
 import { useAppDispatch } from '@/lib/hooks';
 import { McpTab } from '@/components/modals/edit-mentor-modal/tabs/mcp-tab';
 import type { MCPServer } from '@iblai/iblai-js/data-layer';

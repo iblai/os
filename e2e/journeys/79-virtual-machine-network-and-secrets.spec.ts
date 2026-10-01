@@ -1,5 +1,5 @@
 /**
- * Journey 77: Virtual Machine Network Policies & Secrets
+ * Journey 79: Virtual Machine Network Policies & Secrets
  *
  * An agent with Virtual Machine Shell turned on runs code in an isolated
  * Linux VM that has NO network access by default. This journey covers the
@@ -79,7 +79,7 @@ test.describe.configure({ mode: 'serial' });
 
 // ─── Tenant admin dialog ─────────────────────────────────────────────────────
 
-test.describe('Journey 77: Virtual Machine Network Policies & Secrets — admin dialog', () => {
+test.describe('Journey 79: Virtual Machine Network Policies & Secrets — admin dialog', () => {
   const policiesToDelete = new Set<string>();
   const secretsToDelete = new Set<string>();
 
@@ -185,7 +185,7 @@ test.describe('Journey 77: Virtual Machine Network Policies & Secrets — admin 
       admin.removeHostButton(admin.policyHostsList, HOST_API),
     ).toBeVisible({ timeout: 5_000 });
 
-    await admin.policyDescriptionInput.fill('Created by journey 77');
+    await admin.policyDescriptionInput.fill('Created by journey 79');
     await admin.policySaveButton.click();
     await admin.expectToast('Network policy created');
     await expect(admin.policyDialog).not.toBeVisible({ timeout: 10_000 });
@@ -403,7 +403,7 @@ test.describe('Journey 77: Virtual Machine Network Policies & Secrets — admin 
 
 // ─── Agent settings ──────────────────────────────────────────────────────────
 
-test.describe('Journey 77: Virtual Machine Network Policies & Secrets — agent settings', () => {
+test.describe('Journey 79: Virtual Machine Network Policies & Secrets — agent settings', () => {
   const policiesToDelete = new Set<string>();
   const secretsToDelete = new Set<string>();
 
@@ -614,7 +614,7 @@ test.describe('Journey 77: Virtual Machine Network Policies & Secrets — agent 
 
 // ─── Non-admin ───────────────────────────────────────────────────────────────
 
-test.describe('Journey 77: Virtual Machine Network Policies & Secrets — non-admin', () => {
+test.describe('Journey 79: Virtual Machine Network Policies & Secrets — non-admin', () => {
   // ── vmn-13 ──────────────────────────────────────────────────────────────
 
   test('non-admin never reaches the tenant Virtual Machine settings: the tenant entry is missing from More options, or its dialog lists no Virtual Machine section', async ({

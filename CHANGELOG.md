@@ -1,46 +1,77 @@
 # Changelog
 
+## [0.159.1](https://github.com/iblai/os/compare/v0.159.0...v0.159.1) (2026-09-30)
+
+### Bug Fixes
+
+* **deps:** bump axios to 1.20.0 and lift the brace-expansion floor to 5.0.11 ([29d21e3](https://github.com/iblai/os/commit/29d21e342143d0f754c53078ff79bb43dfc851d0))
+* **deps:** lift the undici override past three new high advisories ([aa9b62d](https://github.com/iblai/os/commit/aa9b62d05c124a07ad1d13c4c1b849af1d0e01e0))
+
+### Refactors
+
+* **edit-mentor-modal:** render the SDK AgentApiTab from the API tab ([49b570b](https://github.com/iblai/os/commit/49b570ba2f5f8f924917bd138e0a2f4358497567))
+* **edit-mentor-modal:** render the SDK AgentToolsTab from the Tools tab ([ffa64cc](https://github.com/iblai/os/commit/ffa64cc61623c89075b9682790136abc716fa7ed))
+* **workflows:** toggle agent tools with the SDK useToggleTools hook ([94b0736](https://github.com/iblai/os/commit/94b07362eb04fe5a0e4aed583c91aeddc0c4c2f6))
+
+### Chores
+
+* **deps:** bump @iblai/iblai-js to 2.26.0 ([681251d](https://github.com/iblai/os/commit/681251deb24d8ef955e83a608265b792491aa712)), closes [#2111](https://github.com/iblai/os/issues/2111)
+* **i18n:** drop the API tab messages now owned by the SDK ([90295e4](https://github.com/iblai/os/commit/90295e4480fe04e7c20d5ec6a7e84dbc2e4bab51))
+* **i18n:** drop the tabsToolsTab messages now owned by the SDK ([14c2f89](https://github.com/iblai/os/commit/14c2f893491f24da19c51cbf93dd2dc755976a60))
+
+### Styles
+
+* prettier-format CHANGELOG.md ([34881a9](https://github.com/iblai/os/commit/34881a9e14539156282fb66b10330e715b333b54))
+
+### Tests
+
+* **e2e:** add agent API tab journey with an ApiTab page object and key residue reaper ([648b986](https://github.com/iblai/os/commit/648b98695560cd3412dc6cd04752f049b0deb0e5))
+* **e2e:** add agent Tools tab journey and harden the ToolsTab page object ([7ab7760](https://github.com/iblai/os/commit/7ab7760a0d1e92a37010c081b768ce435928427b))
+* **e2e:** read API tab row names in one snapshot ([6e33cc5](https://github.com/iblai/os/commit/6e33cc562b2cd1e3fd87eb7932ccf87283e206ad))
+* **e2e:** record API tab coverage for journey 78 ([d3813b8](https://github.com/iblai/os/commit/d3813b8b39493e92f33698e837d67dd6046fea7f))
+* **e2e:** record Tools tab coverage for journey 77 ([61d7bd1](https://github.com/iblai/os/commit/61d7bd13aef3a4a8f0e07142d6c40ed59dcff323))
+
 ## [0.159.0](https://github.com/iblai/os/compare/v0.158.6...v0.159.0) (2026-09-30)
 
 ### Features
 
-* **datasets:** render the SDK datasets tab with plain props only ([913f26c](https://github.com/iblai/os/commit/913f26c4efe59f0bf3e62f17b20e5fc178de52bc))
+- **datasets:** render the SDK datasets tab with plain props only ([913f26c](https://github.com/iblai/os/commit/913f26c4efe59f0bf3e62f17b20e5fc178de52bc))
 
 ### Bug Fixes
 
-* **chat:** clear the upload notification timer on unmount ([5dedda8](https://github.com/iblai/os/commit/5dedda87b64e28eb0d364d9ddf6b383e76e0be50))
-* **e2e:** resolve dataset gating without app source in CI ([e984d9f](https://github.com/iblai/os/commit/e984d9f3af417520edfe6e6373a039efae153200))
+- **chat:** clear the upload notification timer on unmount ([5dedda8](https://github.com/iblai/os/commit/5dedda87b64e28eb0d364d9ddf6b383e76e0be50))
+- **e2e:** resolve dataset gating without app source in CI ([e984d9f](https://github.com/iblai/os/commit/e984d9f3af417520edfe6e6373a039efae153200))
 
 ### Reverts
 
-* **chat:** drop the OS chat-input-form timer fix ([f7fc5bb](https://github.com/iblai/os/commit/f7fc5bba0393e437dbf47e894e40fbbcd29c1eea)), closes [iblai-platform#2586](https://github.com/iblai/iblai-platform/issues/2586)
-* **icons:** keep OpenFolderIcon in svg-icons ([14d0b65](https://github.com/iblai/os/commit/14d0b65286e1b417b25bad84eba5266d5d1a9fe3)), closes [iblai-platform#2586](https://github.com/iblai/iblai-platform/issues/2586)
+- **chat:** drop the OS chat-input-form timer fix ([f7fc5bb](https://github.com/iblai/os/commit/f7fc5bba0393e437dbf47e894e40fbbcd29c1eea)), closes [iblai-platform#2586](https://github.com/iblai/iblai-platform/issues/2586)
+- **icons:** keep OpenFolderIcon in svg-icons ([14d0b65](https://github.com/iblai/os/commit/14d0b65286e1b417b25bad84eba5266d5d1a9fe3)), closes [iblai-platform#2586](https://github.com/iblai/iblai-platform/issues/2586)
 
 ### Chores
 
-* remove unused dataset and project components ([887aea9](https://github.com/iblai/os/commit/887aea9811aaaad348c853d938cfb21b0759e817))
+- remove unused dataset and project components ([887aea9](https://github.com/iblai/os/commit/887aea9811aaaad348c853d938cfb21b0759e817))
 
 ### Documentation
 
-* **e2e:** update dataset coverage map ([04e76ac](https://github.com/iblai/os/commit/04e76aca8894c786b3aaaa18b58ea91c1dcd0429))
+- **e2e:** update dataset coverage map ([04e76ac](https://github.com/iblai/os/commit/04e76aca8894c786b3aaaa18b58ea91c1dcd0429))
 
 ### Styles
 
-* format CHANGELOG with prettier ([ed83741](https://github.com/iblai/os/commit/ed83741efec0b1b25f757535abe78c8b88be1aa3))
+- format CHANGELOG with prettier ([ed83741](https://github.com/iblai/os/commit/ed83741efec0b1b25f757535abe78c8b88be1aa3))
 
 ### Tests
 
-* **e2e:** cover every dataset resource type and row action ([07e2377](https://github.com/iblai/os/commit/07e23770078014a23b988df3145aeaeebb1c7d97))
+- **e2e:** cover every dataset resource type and row action ([07e2377](https://github.com/iblai/os/commit/07e23770078014a23b988df3145aeaeebb1c7d97))
 
 ### Build
 
-* **deps:** bump @iblai/iblai-js to 2.24.0 ([cebc8c7](https://github.com/iblai/os/commit/cebc8c7e577b3c065f725467b4c3ad350c774a37)), closes [iblai-web-frontend#2108](https://github.com/iblai/iblai-web-frontend/issues/2108)
+- **deps:** bump @iblai/iblai-js to 2.24.0 ([cebc8c7](https://github.com/iblai/os/commit/cebc8c7e577b3c065f725467b4c3ad350c774a37)), closes [iblai-web-frontend#2108](https://github.com/iblai/iblai-web-frontend/issues/2108)
 
 ## [0.158.6](https://github.com/iblai/os/compare/v0.158.5...v0.158.6) (2026-09-30)
 
 ### Chores
 
-* **ext:** bump Chrome extension to 1.1.2 to publish the tenant-switch fixes ([202c5b9](https://github.com/iblai/os/commit/202c5b91f85dee83b59904603312bdf1536c8099)), closes [#546](https://github.com/iblai/os/issues/546)
+- **ext:** bump Chrome extension to 1.1.2 to publish the tenant-switch fixes ([202c5b9](https://github.com/iblai/os/commit/202c5b91f85dee83b59904603312bdf1536c8099)), closes [#546](https://github.com/iblai/os/issues/546)
 
 ## [0.158.5](https://github.com/iblai/os/compare/v0.158.4...v0.158.5) (2026-09-30)
 
