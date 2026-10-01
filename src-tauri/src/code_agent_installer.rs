@@ -657,15 +657,15 @@ fn parse_claude_status(stdout: &str) -> (Option<bool>, Option<String>) {
     (Some(signed_in), if signed_in { account } else { None })
 }
 
-/// `jane@example.com` → `j********@example.com`, for screenshots: with
+/// `jane@example.com` → `ja********@example.com`, for screenshots: with
 /// `IBL_MASK_ACCOUNT_EMAIL` set the popover names the account without printing
 /// it. A fixed width, so the length leaks nothing either.
 fn mask_email(email: &str) -> String {
     let (local, domain) = email.split_once('@').unwrap_or((email, ""));
-    let first: String = local.chars().take(1).collect();
+    let lead: String = local.chars().take(2).collect();
     match domain {
-        "" => format!("{first}********"),
-        _ => format!("{first}********@{domain}"),
+        "" => format!("{lead}********"),
+        _ => format!("{lead}********@{domain}"),
     }
 }
 
@@ -1041,11 +1041,11 @@ b3c071cdf47aab867c3b2aa287257df12ec5d7c962bf922b32fd33226c4295fd  node-v24.21.0-
     }
 
     #[test]
-    fn mask_email_keeps_the_first_letter_and_the_domain() {
-        assert_eq!(mask_email("jane@example.com"), "j********@example.com");
+    fn mask_email_keeps_the_first_two_letters_and_the_domain() {
+        assert_eq!(mask_email("jane@example.com"), "ja********@example.com");
         assert_eq!(mask_email("x"), "x********");
         assert_eq!(mask_email("@example.com"), "********@example.com");
-        assert_eq!(mask_email("ünal@x.io"), "ü********@x.io");
+        assert_eq!(mask_email("ünal@x.io"), "ün********@x.io");
     }
 
     /// The status of an installed agent carries the live sign-in probe:
@@ -1088,7 +1088,7 @@ esac"#,
         std::env::set_var("IBL_MASK_ACCOUNT_EMAIL", "1");
         let st = check_code_agent_status("claude".into()).await.unwrap();
         std::env::remove_var("IBL_MASK_ACCOUNT_EMAIL");
-        assert_eq!(st["account"], json!("m********@example.com"));
+        assert_eq!(st["account"], json!("me********@example.com"));
 
         // Signed out: Codex by exit 1, Claude by its JSON.
         fake_node(
