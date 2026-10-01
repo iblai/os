@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.159.2](https://github.com/iblai/os/compare/v0.159.1...v0.159.2) (2026-10-01)
+
+### Documentation
+
+* add "comment only when necessary" rule to CLAUDE.md/AGENTS.md ([49bfd43](https://github.com/iblai/os/commit/49bfd43c99c62a6abf8a30f9a2af16144185ab5e))
+
 ## [0.159.1](https://github.com/iblai/os/compare/v0.159.0...v0.159.1) (2026-09-30)
 
 ### Bug Fixes
