@@ -9,7 +9,6 @@ import {
   EditPromptModal,
   type SelectedPrompt,
   type SystemPrompt,
-  type SafetyPrompt,
 } from '../edit-prompt-modal';
 import { mentorApiSlice } from '@iblai/iblai-js/data-layer';
 import { PromptVisibilityEnum } from '@iblai/iblai-api';
@@ -113,13 +112,6 @@ const nonSystemPromptData: SelectedPrompt = {
   category: 'General',
   id: 1,
   promptVisibility: PromptVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
-};
-
-const safetyPromptData: SelectedPrompt = {
-  label: 'Safety Response',
-  isSystem: true,
-  name: 'safety_response' as SafetyPrompt,
-  prompt: 'This is a safety response',
 };
 
 // ============================================================================
@@ -295,28 +287,6 @@ describe('EditPromptModal', () => {
       const editor = screen.getByTestId('rich-text-editor');
       expect(editor).toBeInTheDocument();
       expect(editor).toHaveValue('This is a custom prompt');
-    });
-  });
-
-  describe('Rendering - Safety Prompt', () => {
-    it('renders safety prompt as system prompt', () => {
-      const store = createTestStore();
-
-      render(
-        <Provider store={store}>
-          <EditPromptModal
-            isOpen={true}
-            onClose={mockOnClose}
-            selectedPrompt={safetyPromptData}
-            handleSave={mockHandleSave}
-            isEditing={false}
-          />
-        </Provider>,
-      );
-
-      expect(screen.getByText('Edit Safety Response')).toBeInTheDocument();
-      expect(screen.queryByText('Category')).not.toBeInTheDocument();
-      expect(screen.queryByText('Visibility')).not.toBeInTheDocument();
     });
   });
 
@@ -877,17 +847,13 @@ describe('EditPromptModal', () => {
 
   describe('Different Prompt Types', () => {
     const promptTypes: Array<{
-      name: SystemPrompt | SafetyPrompt;
+      name: SystemPrompt;
       isSystem: boolean;
     }> = [
       { name: 'system_prompt', isSystem: true },
       { name: 'proactive_prompt', isSystem: true },
       { name: 'guided_prompt_instructions', isSystem: true },
       { name: 'study_mode_prompt', isSystem: true },
-      { name: 'moderation_response', isSystem: true },
-      { name: 'safety_response', isSystem: true },
-      { name: 'moderation_system_prompt', isSystem: true },
-      { name: 'safety_system_prompt', isSystem: true },
       { name: 'prompt', isSystem: false },
     ];
 
