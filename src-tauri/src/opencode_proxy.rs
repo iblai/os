@@ -39,6 +39,8 @@ use axum::Router;
 use sha2::{Digest, Sha256};
 use tokio::sync::{Mutex, RwLock};
 
+use crate::opencode_acp::Backend;
+
 /// System-prompt guidance for the coding agent. Composed with the identity
 /// bullets ([`guidance_with_identity`]) and written at every spawn as the
 /// per-session `AGENTS.md` beside the session's opencode.json — opencode
@@ -62,6 +64,19 @@ reply text. Exceed the cap only when \
 the user explicitly asks for detail (an explanation, a report, a walkthrough). \
 Never open with acknowledgements or framing (\"Done —\", \"Got it\", \"Great \
 question\") — start at the substance.
+- The user is not technical — write for someone who has never coded: \
+everyday words only, and if a word would need explaining, use the plain \
+one. Never scaffold, boilerplate, repo, codebase, framework, stack, \
+component, dependency, package, config, environment variable, endpoint, \
+build, compile, bundle, dev server, port, subdomain, domain, DNS, slug, \
+label, lint, typecheck or build-log talk in a reply (the Advanced then \
+Domains sentence for admins keeps the panel's own words). Describe what \
+the app does for them, never how it was made or set up — \"Your app \
+already has sign-in, chat, agents, a profile page and an admin area. What \
+would you like to build or change?\", not \"scaffolded from the template\". \
+Say what they get and what you need from them, and show technical detail \
+only when they ask for it (an error you are told to report verbatim is \
+the exception).
 - When the user's intent is action, implement it — run the tools and make \
 the change rather than posting a proposal or a plan. Resolve blockers \
 yourself when you can, and carry the task through to done in the same turn.
@@ -91,10 +106,21 @@ question: whether to start from our default template, recommending it (\"it's \
 the fastest and most reliable way to get started\"). In everything you say to \
 the user, call it \"our default template\" — never the internal name \
 \"vibe-starter\". If they accept (or clearly already want it), load the \
-iblai-vibe-ops-init skill (it scaffolds the template) and wire ibl.ai auth, \
+iblai-vibe-ops-init skill (it sets the template up) and wire ibl.ai auth, \
 profile, navbar, chat and analytics through the matching iblai-vibe-* skills \
-— do NOT hand-roll the scaffold. If they decline, build what they ask for and \
+— do NOT build the template by hand. If they decline, build what they ask for and \
 still wire the ibl.ai pieces through the iblai-vibe-* skills.
+- Name the app right after the template is in place. The template's own \
+name (\"vibe-starter\") must not survive into the user's app: pick a short, \
+fitting name from what they asked for — the name they gave if they gave \
+one, otherwise a name like \"Recipe Box\", never a description — and apply \
+it everywhere the template names itself: `name` in `package.json` \
+(lowercase, hyphens: \"Recipe Box\" → recipe-box), `title` in \
+`app/layout.tsx`, `NEXT_PUBLIC_APP_NAME` in `.env.local`, and the README's \
+first lines (say what the app is, never what it was made from). No \
+question for this — a name they dislike is one message away. The same \
+lowercase-hyphen form is the app's address at its first deploy (Step 3), \
+so that step asks nothing.
 - That template question is the only stack question you ask: never offer a \
 menu of frameworks or an ibl.ai-vs-vanilla choice beyond it, and once it is \
 answered do not ask again in that project.
@@ -114,27 +140,59 @@ URL and open it in their browser — macOS: `open -a \"Google Chrome\" \
 <url>` (plain `open <url>` as a fallback), Linux: `xdg-open <url>`, \
 Windows: `start <url>`. The URL is http://localhost:3000 unless \
 `pnpm dev` prints a different one (busy port) — report the URL it \
-actually prints. While the server keeps running, later changes \
+actually prints. End that same reply with Step 3's offer — the site can \
+go live on our hosting whenever they say so — so it is the first thing \
+they see when they switch back from the browser; that reply is Step 3's \
+question, do not ask it again afterwards. While the server keeps \
+running, later changes \
 hot-reload — do not re-ask and do not reopen the browser. If they \
 decline, move on — they can ask for the preview any time. Run no checks \
-before the preview — typecheck and lint run before deploys, not here. \
+of your own before the preview or a deploy — no typecheck, no lint: our \
+hosting builds and type-checks the app. \
 The local preview is the work in progress; the deployed URL is the \
 shipped site.
-- Step 3, the deploy question — a separate step, asked after the preview \
-step: the first time a project is built and working, ask ONE short \
-question — whether to put it on a live URL with our hosting (no extra \
+- Step 3, the deploy question — asked in the reply that opens the local \
+preview (Step 2), or on its own when they declined the preview: the first \
+time a project is built and working, ask ONE short question — whether to \
+put it on a live URL with our hosting (no extra \
 accounts or tokens needed). In everything you say to the user, call it \
-\"our hosting\" — never the provider name \"Vercel\" (the live URL ends \
-in vercel.app, and showing that URL is fine). Ask it once per project — \
-once it is answered do not ask again, and skip it when the project has \
-already deployed. Yes means deploy now and automatically redeploy after \
-later changes; no means deploy only when the user asks. To deploy: run \
-`pnpm typecheck` and `pnpm lint`, then the iblai-vibe-ops-deploy skill \
-(the skill's status script does the deploy polling, one bounded check \
+\"our hosting\" — never the provider name \"Vercel\" (show the `site_url` \
+the deploy reports: it is the address they chose). Ask it once per \
+project — once it is answered do not ask again, and skip it when the \
+project has already deployed. Yes means deploy now and automatically \
+redeploy after later changes; no means deploy only when the user asks. \
+The first time a project deploys — the skill's Step 3.6 finds no address \
+for it — the address is the app's name from Step 1 in its lowercase-hyphen \
+form; only a project that never got a name (they declined the template and \
+named nothing) gets ONE short question, exactly \"What would you like to \
+name your app?\". Turn the name into the address \
+yourself — lowercase; letters, digits and hyphens only, every other \
+character a hyphen, no leading or trailing hyphen, at most 63 characters \
+(\"My Recipe Box\" becomes my-recipe-box) — and append it with \
+`printf 'SUBDOMAIN=%s\\n' <that> >> iblai.env` before running the skill, \
+so its Step 3.6 finds it and asks nothing; once per project. The app then \
+lives at <name>.<our shared domain>; show that address when the deploy \
+reports it. If our hosting answers that the name is taken, say so in \
+plain words and ask for a different name. To deploy: run the \
+iblai-vibe-ops-deploy skill straight away — no typecheck, lint or build \
+of your own first (the skill's static mode builds locally because \
+nothing builds there); our hosting builds and type-checks the app. The \
+skill's status script does the deploy polling, one bounded check \
 every ~10 s — never improvise status commands or extra \"is it pushed?\" \
-checks), then show the user the deployed URL and open it in their \
-browser (same commands as above). If the deploy fails, report the error \
-verbatim and continue helping.
+checks. Then show the user the deployed URL and open it in their \
+browser (same commands as above). After every deploy, that reply also \
+says their code is in the project folder: click Code below the message \
+box, then Open in Finder (Open in Explorer on Windows; on Linux the \
+button carries their file manager's name, or says Open Folder). After the \
+FIRST successful deploy of a project, if IBLAI_API_KEY is set, add one \
+sentence: the app can use a domain they own, set up in the sidebar under \
+Advanced then Domains. Say it once per project, never as a question, and \
+do not set a domain up yourself — that screen is for platform admins and \
+it is their choice. Without IBLAI_API_KEY the user is not an admin and has \
+no Advanced entry: leave the sentence out. If the deploy fails, print the \
+build log tail the way the skill shows and report the error verbatim; when \
+it names the app's own code, fix it and redeploy; otherwise continue \
+helping.
 - Monetization is optional and on request only: when the user asks to charge \
 users to enter the app (a paywall), use the \
 iblai-vibe-monetization-app-paywall skill. Do not suggest it unprompted.
@@ -782,13 +840,52 @@ the domain.\n"
     out
 }
 
-/// The full ibl.ai guidance for one session: [`IBLAI_INSTRUCTIONS`] plus the
-/// [`identity_lines`], resolved from the process-global learner/domain state.
-/// Spawn writes it as the per-session AGENTS.md that opencode folds into the
-/// system prompt on every model call — so identity is captured at spawn time,
-/// and a login that lands mid-session takes effect on the next spawn, not the
-/// next call.
-pub(crate) async fn guidance_with_identity(tenant: &str) -> String {
+/// The three lines of [`IBLAI_INSTRUCTIONS`] that are false or meaningless
+/// for the subscription agents, and their replacements. Anchors are exact
+/// substrings of the authored text; the rest of the guidance is byte-identical
+/// across all three agents.
+const INFERENCE_OPENCODE: &str = "your own inference already runs through the session's \
+metered, learner-attributed proxy, and going around it is not allowed.";
+const INFERENCE_SUBSCRIPTION: &str = "your own model calls run on your own subscription, \
+and IBLAI_API_KEY is for platform APIs and the software you build only.";
+const SKILLS_OPENCODE: &str = "you MUST invoke that skill (via the skill tool) before";
+const SKILLS_CODEX: &str = "you MUST use that skill (it is one of the skills listed by \
+/skills — open its SKILL.md and follow it) before";
+const TOOLS_OPENCODE: &str = "For searching, prefer the Glob and Grep tools, and run \
+independent tool calls (especially file reads) in parallel.";
+const TOOLS_CODEX: &str = "For searching, prefer `rg` and `fd` from the shell, and batch \
+independent reads into as few commands as possible.";
+
+/// Per-agent wording for one authored text: opencode's lines about its
+/// metered proxy, its skill tool and its Glob/Grep tools are swapped for the
+/// agents that have none of those. A missing anchor is a hard error, never a
+/// silent no-op — the guard test pins every anchor against the text.
+fn substitute_for(backend: Backend, text: &str) -> Result<String, String> {
+    let swaps: &[(&str, &str)] = match backend {
+        Backend::Opencode => &[],
+        Backend::Claude => &[(INFERENCE_OPENCODE, INFERENCE_SUBSCRIPTION)],
+        Backend::Codex => &[
+            (INFERENCE_OPENCODE, INFERENCE_SUBSCRIPTION),
+            (SKILLS_OPENCODE, SKILLS_CODEX),
+            (TOOLS_OPENCODE, TOOLS_CODEX),
+        ],
+    };
+    let mut out = text.to_string();
+    for (anchor, replacement) in swaps {
+        if !out.contains(anchor) {
+            return Err(format!(
+                "ibl.ai guidance anchor missing for {}: {anchor:?}",
+                backend.id()
+            ));
+        }
+        out = out.replace(anchor, replacement);
+    }
+    Ok(out)
+}
+
+/// `base` plus the [`identity_lines`], resolved from the process-global
+/// learner/domain state.
+async fn compose_guidance(base: &str, tenant: &str) -> String {
     let learner = learner_username().await;
     let email = learner_email_address().await;
     // The ONE domain everything derives from and the auth SPA URL (the sole
@@ -798,7 +895,7 @@ pub(crate) async fn guidance_with_identity(tenant: &str) -> String {
     let domain = platform_base_domain().await;
     let auth = auth_url_value().await;
     format!(
-        "{IBLAI_INSTRUCTIONS}{}",
+        "{base}{}",
         identity_lines(
             learner.as_deref(),
             (!tenant.is_empty()).then_some(tenant),
@@ -807,6 +904,22 @@ pub(crate) async fn guidance_with_identity(tenant: &str) -> String {
             Some(auth.as_str()),
         )
     )
+}
+
+/// The full ibl.ai guidance for one session on `backend`: [`IBLAI_INSTRUCTIONS`]
+/// with that agent's [`substitute_for`] wording, plus the [`identity_lines`].
+/// Identity is captured at spawn time — a login that lands mid-session takes
+/// effect on the next spawn, not the next call.
+pub(crate) async fn guidance_for(backend: Backend, tenant: &str) -> Result<String, String> {
+    let base = substitute_for(backend, IBLAI_INSTRUCTIONS)?;
+    Ok(compose_guidance(&base, tenant).await)
+}
+
+/// The opencode guidance: what spawn writes as the per-session AGENTS.md that
+/// opencode folds into the system prompt on every model call (and what the
+/// phone-Code serve path writes for its process).
+pub(crate) async fn guidance_with_identity(tenant: &str) -> String {
+    compose_guidance(IBLAI_INSTRUCTIONS, tenant).await
 }
 
 /// Read the throwaway secret from `Authorization: Bearer <secret>` (what an
@@ -1736,6 +1849,10 @@ mod tests {
         assert!(text.contains("website or web app"), "{text}");
         assert!(
             text.contains("our default template")
+                && text.contains("must not survive")
+                && text.contains("NEXT_PUBLIC_APP_NAME")
+                && text.contains("app/layout.tsx")
+                && text.contains("one message away")
                 && text.contains("fastest and most reliable")
                 && text.contains("never the internal name"),
             "the ask-about-the-default-template rule must survive edits: {text}"
@@ -1773,25 +1890,66 @@ mod tests {
                 && text.contains("localhost:3000")
                 && text.contains("whether they want a local preview")
                 && text.contains("Never start a dev server")
-                && text.contains("already running"),
+                && text.contains("already running")
+                && text.contains("switch back from the browser"),
             "the ask-first local-preview rule must survive edits: {text}"
         );
+        // Our hosting's `next build` type-checks the app and nothing on that
+        // side lints, so a local typecheck duplicated it and a local lint gated
+        // nothing: the agent deploys straight away and reads the build log tail
+        // when the build fails. The negative pins keep the old commands out.
+        // The preview reply carries the deploy offer and every deploy reply
+        // points at Open in Finder: each is what the user sees when they
+        // switch back from the browser.
         assert!(
             text.contains("iblai-vibe-ops-deploy")
                 && text.contains("once per project")
                 && text.contains("automatically redeploy")
                 && text.contains("deploy only when the user asks")
-                && text.contains("pnpm typecheck")
-                && text.contains("pnpm lint")
-                && text.contains("never improvise status commands"),
+                && !text.contains("pnpm typecheck")
+                && !text.contains("pnpm lint")
+                && text.contains("our hosting builds and type-checks")
+                && text.contains("log tail")
+                && text.contains("never improvise status commands")
+                && text.contains("Open in Finder")
+                && text.contains("click Code below the message box"),
             "the ask-once-then-auto-redeploy deploy rule must survive edits: {text}"
+        );
+        // The hosting API refuses a first deploy that names no subdomain, so
+        // the agent needs a name for the app — asked in the user's own words,
+        // never as a subdomain — turns it into the label itself and records it
+        // before the skill runs; the live address is derived from that name,
+        // never a provider host.
+        assert!(
+            text.contains("What would you like to name your app?")
+                && text.contains("Turn the name into the address yourself")
+                && text.contains("SUBDOMAIN=")
+                && text.contains("Step 3.6")
+                && text.contains("<name>.<our shared domain>")
+                && text.contains("ask for a different name")
+                && !text.contains("like choosing a username")
+                && !text.contains("vercel.app"),
+            "the ask-for-the-app's-name rule must survive edits: {text}"
         );
         assert!(
             text.contains("call it \"our hosting\"")
                 && text.contains("never the provider name \"Vercel\"")
-                && text.contains("vercel.app")
+                && text.contains("show the `site_url`")
                 && !text.contains("no Vercel account"),
             "the never-name-the-hosting-provider rule must survive edits: {text}"
+        );
+        // The panel that closes this loop is admin-only, so the line points at
+        // it once, only when IBLAI_API_KEY marks an admin, and stops — an
+        // agent that offered to do it would stall on a 403 for everyone who is
+        // not a platform admin.
+        assert!(
+            text.contains("if IBLAI_API_KEY is set, add one sentence")
+                && text.contains("in the sidebar under Advanced then Domains")
+                && text.contains("a domain they own")
+                && text.contains("once per project")
+                && text.contains("do not set a domain up yourself")
+                && text.contains("has no Advanced entry: leave the sentence out"),
+            "the mention-domains-once-after-deploy rule must survive edits: {text}"
         );
         assert!(
             text.contains("iblai-vibe-monetization-app-paywall")
@@ -1805,7 +1963,12 @@ mod tests {
                 && text.contains("the one obstacle blocking")
                 && text.contains("never in the reply text")
                 && text.contains("Emit no text between tool calls")
-                && text.contains("explicitly asks for detail"),
+                && text.contains("explicitly asks for detail")
+                && text.contains("The user is not technical")
+                && text.contains("has never coded")
+                && text.contains("never how it was made")
+                && !text.contains("it scaffolds")
+                && !text.contains("hand-roll the scaffold"),
             "the result-or-obstacle-only rule must survive edits: {text}"
         );
         assert!(
@@ -1858,5 +2021,51 @@ must survive edits: {text}"
             text.contains("deployment-hash") && text.contains("skip the deploy"),
             "the deploy-dedupe rule must survive edits: {text}"
         );
+    }
+
+    /// One authored text, three lines swapped per agent: the metered-proxy
+    /// sentence is false for both subscription agents, and Codex has neither a
+    /// skill tool nor Glob/Grep tools. Every other line is byte-identical, and
+    /// each anchor must keep matching the text or the swap fails loudly.
+    #[test]
+    fn each_agent_gets_its_own_wording() {
+        let base = IBLAI_INSTRUCTIONS;
+        assert_eq!(substitute_for(Backend::Opencode, base).unwrap(), base);
+
+        let claude = substitute_for(Backend::Claude, base).unwrap();
+        let codex = substitute_for(Backend::Codex, base).unwrap();
+        for text in [&claude, &codex] {
+            assert!(
+                !text.contains("metered, learner-attributed proxy"),
+                "{text}"
+            );
+            assert!(text.contains("run on your own subscription"), "{text}");
+            assert!(
+                text.contains("never for your own model calls"),
+                "the built-apps-only key rule survives the swap: {text}"
+            );
+        }
+        assert!(claude.contains("via the skill tool") && claude.contains("Glob and Grep"));
+        assert!(!codex.contains("via the skill tool") && !codex.contains("Glob and Grep"));
+        assert!(
+            codex.contains("/skills") && codex.contains("`rg` and `fd`"),
+            "{codex}"
+        );
+
+        // Exactly the swapped lines differ — one for Claude, three for Codex.
+        let differing = |variant: &str| {
+            base.lines()
+                .zip(variant.lines())
+                .filter(|(a, b)| a != b)
+                .count()
+        };
+        assert_eq!(base.lines().count(), claude.lines().count());
+        assert_eq!(base.lines().count(), codex.lines().count());
+        assert_eq!(differing(&claude), 1);
+        assert_eq!(differing(&codex), 3);
+
+        // A text without the anchor is refused, never silently passed through.
+        let err = substitute_for(Backend::Codex, "# nothing here\n").unwrap_err();
+        assert!(err.contains("anchor missing for codex"), "{err}");
     }
 }

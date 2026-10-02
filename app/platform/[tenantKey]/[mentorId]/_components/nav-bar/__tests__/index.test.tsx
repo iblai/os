@@ -1,6 +1,7 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
+  act,
   render,
   screen,
   cleanup,
@@ -180,6 +181,12 @@ vi.mock('@/hooks/use-tauri-offline', () => ({
 
 vi.mock('@/types/tauri', () => ({
   isTauriApp: () => false,
+}));
+
+// The agent model picker asks the desktop for the agent's models.
+const { mockInvoke } = vi.hoisted(() => ({ mockInvoke: vi.fn() }));
+vi.mock('@tauri-apps/api/core', () => ({
+  invoke: (...args: unknown[]) => mockInvoke(...args),
 }));
 
 vi.mock('@/hooks/use-model-download', () => ({
@@ -574,6 +581,8 @@ vi.mock('@iblai/iblai-js/web-containers', () => ({
 }));
 
 vi.mock('@iblai/iblai-js/web-containers/next', () => ({
+  // The Code agent model picker's dialog; never opened in these cases.
+  LLMProviderModal: () => null,
   UserProfileModal: (props: any) =>
     props.isOpen ? (
       <div data-testid="user-profile-modal">
@@ -835,6 +844,126 @@ describe('NavBar', () => {
         { org: '', userId: 'testuser', mentorId: 'mentor456' },
         { skip: true },
       );
+    });
+
+    describe('while Code runs on a subscription agent', () => {
+      afterEach(() => {
+        localStorage.removeItem('ibl_coding_mode_enabled');
+        localStorage.removeItem('ibl_coding_mode_agent');
+        mockInvoke.mockReset();
+      });
+
+      it('shows the agent model picker instead of the LLM selector', async () => {
+        mockIsAdmin = true;
+        mockUserIsStudent = false;
+        mockPathname = '/platform/tenant123/mentor456';
+        localStorage.setItem('ibl_coding_mode_enabled', 'true');
+        localStorage.setItem('ibl_coding_mode_agent', 'codex');
+        mockInvoke.mockResolvedValue({
+          models: [{ id: 'gpt-5.2', name: '5.2', description: 'Default' }],
+          default: 'gpt-5.2',
+          selected: null,
+        });
+        const store = createTestStore();
+
+        render(
+          <Provider store={store}>
+            <NavBar />
+          </Provider>,
+        );
+
+        expect(await screen.findByText('Codex · Default')).toBeInTheDocument();
+        expect(mockInvoke).toHaveBeenCalledWith('list_code_agent_models', {
+          backend: 'codex',
+          refresh: false,
+        });
+        expect(
+          screen.queryByLabelText('LLM Model Selector'),
+        ).not.toBeInTheDocument();
+        expect(
+          screen.queryByTestId('local-model-indicator'),
+        ).not.toBeInTheDocument();
+      });
+
+      it('starts the agent picker over on a switch: never one agent’s models under the other’s name', async () => {
+        mockIsAdmin = true;
+        mockUserIsStudent = false;
+        mockPathname = '/platform/tenant123/mentor456';
+        localStorage.setItem('ibl_coding_mode_enabled', 'true');
+        localStorage.setItem('ibl_coding_mode_agent', 'codex');
+        // Claude's list never lands: the window a stale picker used to fill.
+        mockInvoke.mockImplementation(
+          async (_cmd: string, args?: { backend?: string }) =>
+            args?.backend === 'claude'
+              ? new Promise(() => {})
+              : {
+                  models: [{ id: 'gpt-5.3-codex', name: '5.3 Codex' }],
+                  default: null,
+                  selected: 'gpt-5.3-codex',
+                },
+        );
+        render(
+          <Provider store={createTestStore()}>
+            <NavBar />
+          </Provider>,
+        );
+        expect(
+          await screen.findByText('Codex · 5.3 Codex'),
+        ).toBeInTheDocument();
+
+        act(() => {
+          localStorage.setItem('ibl_coding_mode_agent', 'claude');
+          window.dispatchEvent(new Event('local-storage'));
+        });
+
+        const picker = await screen.findByTestId('code-agent-model-selector');
+        await waitFor(() =>
+          expect(picker).toHaveTextContent('Claude Code · Loading models…'),
+        );
+        expect(picker).toBeDisabled();
+        expect(screen.queryByText(/5\.3 Codex/)).not.toBeInTheDocument();
+      });
+
+      it('keeps the LLM selector while Code runs on ibl.ai', () => {
+        mockIsAdmin = true;
+        mockUserIsStudent = false;
+        mockPathname = '/platform/tenant123/mentor456';
+        localStorage.setItem('ibl_coding_mode_enabled', 'true');
+        localStorage.setItem('ibl_coding_mode_agent', 'opencode');
+        const store = createTestStore();
+
+        render(
+          <Provider store={store}>
+            <NavBar />
+          </Provider>,
+        );
+
+        expect(screen.getByLabelText('LLM Model Selector')).toBeInTheDocument();
+        expect(
+          screen.queryByTestId('code-agent-model-selector'),
+        ).not.toBeInTheDocument();
+        expect(mockInvoke).not.toHaveBeenCalled();
+      });
+
+      it('keeps the LLM selector while Code is off, even with an agent remembered', () => {
+        mockIsAdmin = true;
+        mockUserIsStudent = false;
+        mockPathname = '/platform/tenant123/mentor456';
+        localStorage.setItem('ibl_coding_mode_enabled', 'false');
+        localStorage.setItem('ibl_coding_mode_agent', 'claude');
+        const store = createTestStore();
+
+        render(
+          <Provider store={store}>
+            <NavBar />
+          </Provider>,
+        );
+
+        expect(screen.getByLabelText('LLM Model Selector')).toBeInTheDocument();
+        expect(
+          screen.queryByTestId('code-agent-model-selector'),
+        ).not.toBeInTheDocument();
+      });
     });
 
     it('shows the on-device model badge and hides the cloud selector when local mode is on', () => {

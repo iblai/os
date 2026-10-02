@@ -8,7 +8,9 @@ onlyBuiltDependencies:
   - unrs-resolver
 overrides:
   vite: '>=7.3.2'
-  basic-ftp: '>=5.2.1'
+  # GHSA-c475-qrg2-pj4r — quadratic CPU in the listing parser, patched in 6.2.1.
+  # Dev-only (release-it > proxy-agent > get-uri).
+  basic-ftp: '>=6.2.1'
   follow-redirects: '>=1.16.0'
   defu: '>=6.1.5'
   lodash-es: '>=4.18.0'
@@ -72,7 +74,9 @@ overrides:
   browserslist: '>=4.28.7'
   '@hono/node-server': '>=2.0.10'
   bytes: '>=1.11.1'
-  devalue: '>=5.8.1'
+  # GHSA-j22f-vq7h-c4qm, GHSA-mcm9-63f2-9j32, GHSA-x5rw-q4pp-hg5g, patched in
+  # 5.9.3; below 6 because @tanstack/react-form asks for ^5.
+  devalue: '>=5.9.3 <6'
   # GHSA-7p8r-x3mc-p8w7 — host confusion via backslash, patched in 4.1.2.
   # Floor lifted again to 4.1.3 for four more host-confusion/SSRF advisories in
   # the same line: GHSA-jqff-g426-hqxp (percent-encoded scheme normalization),
