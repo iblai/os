@@ -5054,6 +5054,77 @@
           "status": "covered"
         }
       ]
+    },
+    {
+      "id": "mentor-safety-tab",
+      "name": "Mentor Safety Tab",
+      "spec": "79-mentor-safety-tab.spec.ts",
+      "sourceFiles": [
+        "components/modals/edit-mentor-modal/tabs/safety-tab.tsx",
+        "components/modals/edit-mentor-modal/tabs/safety-tab/flagged-prompts/index.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "safety-01",
+          "description": "Admin opens the Safety tab and sees the header, description, all four cards (Moderation Prompt, Safety Prompt, Moderation Response, Safety Response) each with Edit and Copy, and the View Flagged Prompts button",
+          "status": "covered"
+        },
+        {
+          "id": "safety-02",
+          "description": "Admin toggles the Moderation Prompt switch (accessible name and Active/Inactive label flip) and the state persists across close + full reload + reopen",
+          "status": "covered"
+        },
+        {
+          "id": "safety-03",
+          "description": "Admin toggles the Safety Prompt switch (accessible name and Active/Inactive label flip) and the state persists across close + full reload + reopen",
+          "status": "covered"
+        },
+        {
+          "id": "safety-04",
+          "description": "Admin edits all four prompts/responses via their Edit dialogs (Save shows the Agent updated successfully toast); the new text shows in each card and persists after reload",
+          "status": "covered"
+        },
+        {
+          "id": "safety-05",
+          "description": "The Edit dialog opens pre-filled with the saved content, rejects an empty prompt (Prompt is required, Save disabled), and cancelling leaves the saved content untouched",
+          "status": "covered"
+        },
+        {
+          "id": "safety-06",
+          "description": "Each card's Copy button flips to Text copied to clipboard / Copied and then reverts",
+          "status": "covered"
+        },
+        {
+          "id": "safety-07",
+          "description": "The Moderation/Safety info icons are labelled (More info about ... prompt) and show their tooltip on hover and keyboard focus",
+          "status": "covered"
+        },
+        {
+          "id": "safety-08",
+          "description": "View Flagged Prompts opens the Flagged Prompts modal; with no logs (mocked) it shows 0 Total Flagged Prompts and the empty state",
+          "status": "covered"
+        },
+        {
+          "id": "safety-09",
+          "description": "Flagged Prompts modal (mocked 12 logs): summary count, 5 rows per page, row selection shows the detail pane, and next/numbered/previous pagination fetches the right pages",
+          "status": "covered"
+        },
+        {
+          "id": "safety-10",
+          "description": "Flagged Prompts modal: searching by user and filtering by type (Safety / Moderation) re-query the list with the right params and reset to page 1 (mocked)",
+          "status": "covered"
+        },
+        {
+          "id": "safety-11",
+          "description": "Flagged Prompts modal: Delete asks for confirmation, Cancel deletes nothing, confirming DELETEs the selected log, shows the success toast and clears the selection (mocked)",
+          "status": "covered"
+        },
+        {
+          "id": "safety-12",
+          "description": "Non-admin does not see the Safety tab in the Edit Mentor modal (Settings menu item itself is unreachable; falls back to a direct tab-absence check)",
+          "status": "covered"
+        }
+      ]
     }
   ]
 }
