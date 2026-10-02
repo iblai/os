@@ -89,6 +89,10 @@ import {
 } from '@/components/ui/dialog';
 import eventBus, { RemoteEvents } from '@/lib/eventBus';
 import Logo from '@/components/logo';
+import {
+  TOUR_TARGET,
+  type TourTargetId,
+} from '@/components/product-tour/tour-targets';
 
 const NAV_MUTED = '#5f5f61';
 const FLYOUT_TITLE_COLOR = '#646676';
@@ -296,12 +300,14 @@ function CollapsedNavFlyout({
   items,
   onIconClick,
   onItemSelect,
+  tourId,
 }: {
   icon: NavIcon;
   label: string;
   items: readonly NavMenuItem[];
   onIconClick?: () => void;
   onItemSelect?: (itemId: string) => boolean | void;
+  tourId?: TourTargetId;
 }) {
   const router = useRouter();
   const { onAfterNav } = useSidebarNavCallback();
@@ -311,6 +317,7 @@ function CollapsedNavFlyout({
         <button
           type="button"
           onClick={onIconClick}
+          data-tour={tourId}
           className="text-foreground inline-flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-[8px] transition-colors outline-none hover:bg-[#f0f0f0] focus-visible:ring-2 focus-visible:ring-[#c4c4c8] focus-visible:ring-offset-2 focus-visible:ring-offset-[#fafafa]"
           aria-label={label}
         >
@@ -372,6 +379,7 @@ function SidebarNavCollapsibleSection({
   onOpenChange,
   onCollapsedIconClick,
   onItemSelect,
+  tourId,
 }: {
   collapsed: boolean;
   menu: NavMenuConfig;
@@ -379,6 +387,7 @@ function SidebarNavCollapsibleSection({
   onOpenChange: (open: boolean) => void;
   onCollapsedIconClick?: () => void;
   onItemSelect?: (itemId: string) => boolean | void;
+  tourId?: TourTargetId;
 }) {
   const Icon = menu.icon;
 
@@ -390,6 +399,7 @@ function SidebarNavCollapsibleSection({
         items={menu.items}
         onIconClick={onCollapsedIconClick}
         onItemSelect={onItemSelect}
+        tourId={tourId}
       />
     );
   }
@@ -402,7 +412,7 @@ function SidebarNavCollapsibleSection({
   return (
     <Collapsible open={open} onOpenChange={onOpenChange} className="w-full">
       <CollapsibleTrigger asChild>
-        <button type="button" className={triggerClassName}>
+        <button type="button" data-tour={tourId} className={triggerClassName}>
           <Icon
             className="size-4 shrink-0"
             style={{ color: NAV_MUTED }}
@@ -1261,6 +1271,7 @@ export function AppSidebar() {
                   onOpenChange={handleNavSectionChange('agents')}
                   onItemSelect={handleAgentMenuSelect}
                   onCollapsedIconClick={() => expandFromRail('agents')}
+                  tourId={TOUR_TARGET.agents}
                 />
               )}
               {workflowsMenu.items.length > 0 && (
@@ -1361,6 +1372,7 @@ export function AppSidebar() {
                     open={openNavSection === 'agents'}
                     onOpenChange={handleNavSectionChange('agents')}
                     onItemSelect={handleAgentMenuSelect}
+                    tourId={TOUR_TARGET.agents}
                   />
                 )}
                 {workflowsMenu.items.length > 0 && (
@@ -1444,6 +1456,7 @@ export function AppSidebar() {
             (railCollapsed ? (
               <div
                 data-testid="sidebar-footer"
+                data-tour={TOUR_TARGET.account}
                 className="flex shrink-0 flex-col items-center gap-0.5 border-t border-[#e2e8f0] px-2 py-3"
               >
                 {footerActions.map((action) => {
@@ -1484,6 +1497,7 @@ export function AppSidebar() {
             ) : (
               <div
                 data-testid="sidebar-footer"
+                data-tour={TOUR_TARGET.account}
                 className="shrink-0 space-y-0.5 border-t border-[#e2e8f0] px-2 py-2"
               >
                 {footerActions.map((action) => {
