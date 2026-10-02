@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useTranslations } from 'next-intl';
-import { format, formatDistanceToNow } from 'date-fns';
+import { format } from 'date-fns';
 import {
   Calendar,
   Download,
@@ -55,12 +55,18 @@ import {
 } from '@iblai/iblai-js/data-layer';
 import {
   conversationDocuments,
+  ConversationSentiment,
+  conversationTitle,
+  ConversationTopics,
+  formatSessionDate,
   resolveUserIdentity,
   RetrievedDocumentsButton,
+  SessionCanvasCards,
   summarizeTranscriptTurns,
   TranscriptRollupBadges,
   TranscriptTurnDetails,
   UserProfileLink,
+  useSessionCanvases,
 } from '@iblai/iblai-js/web-containers';
 import { config } from '@/lib/config';
 import { useParams } from 'next/navigation';
@@ -94,6 +100,9 @@ const historyFiles = (
 
 interface Conversation {
   id: string;
+  /** The backend's generated title, when it sends one. */
+  title?: string | null;
+  first_user_message?: string | null;
   messages: ConversationMessage[];
   topics: Array<{ name: string }>;
   sentiment: string;
@@ -117,6 +126,15 @@ interface Conversation {
 
 export function HistoryTab() {
   const t = useTranslations('tabsHistoryTab');
+  const sentimentLabels = React.useMemo(
+    () => ({
+      positive: t('sentimentPositive'),
+      neutral: t('sentimentNeutral'),
+      negative: t('sentimentNegative'),
+      userSentiment: t('userSentiment'),
+    }),
+    [t],
+  );
   // The profile dialog the owner links open; 'lms' / 'skills' add the Gradebook tab.
   const currentSPA = config.iblPlatform() || 'mentor';
   const [selectedConversation, setSelectedConversation] =
@@ -206,6 +224,19 @@ export function HistoryTab() {
   // Who a conversation belongs to: a real full name first, else email → username → Anonymous,
   // decided in one place (the SDK's shared identity helper).
   const identityOptions = { anonymousLabel: t('anonymous') };
+  // The canvases the open conversation produced, under the replies that wrote them.
+  const selectedCanvases = useSessionCanvases({
+    org: tenantKey,
+    username: selectedConversation?.student,
+    sessionId: selectedConversation?.id,
+    turns: selectedConversation?.messages,
+  });
+  const previewCanvases = useSessionCanvases({
+    org: tenantKey,
+    username: previewConversationContent?.student,
+    sessionId: previewConversationContent?.id,
+    turns: previewConversationContent?.messages,
+  });
   const selectedOwner = resolveUserIdentity(
     selectedConversation,
     identityOptions,
@@ -564,22 +595,22 @@ export function HistoryTab() {
                     // turns carry, as the backend reports them.
                     const documents = conversationDocuments(messages);
                     const rollup = summarizeTranscriptTurns(messages);
-                    const timeAgo = formatDistanceToNow(
-                      new Date(conversation.inserted_at),
-                      {
-                        addSuffix: true,
-                      },
-                    );
+                    // The same date pattern as the profile History tab.
+                    const when = formatSessionDate(conversation.inserted_at);
                     // A turn can be an upload with no text, in which case the
                     // attachment name is the only meaningful title we have.
                     const firstAttachmentName = normalizeHistoryFiles(
                       historyFiles(firstMessage?.human_files),
                     )[0]?.fileName;
-                    const title = firstMessage?.human
-                      ? textTruncate(firstMessage.human, 50)
-                      : firstAttachmentName
-                        ? textTruncate(firstAttachmentName, 50)
-                        : t('conversationFallbackTitle');
+                    // title → first_user_message → first human turn (as everywhere),
+                    // then a file-only turn's attachment name, then the label.
+                    const title = textTruncate(
+                      conversationTitle(
+                        conversation,
+                        firstAttachmentName || t('conversationFallbackTitle'),
+                      ),
+                      50,
+                    );
                     const preview = firstMessage?.ai
                       ? textTruncate(firstMessage.ai, 60)
                       : t('noResponseAvailable');
@@ -598,7 +629,7 @@ export function HistoryTab() {
                         <div className="w-full">
                           <div className="mb-2 flex items-center justify-between">
                             <span className="text-sm text-gray-600">
-                              {timeAgo}
+                              {when}
                             </span>
                             <UserProfileLink
                               tenantKey={tenantKey}
@@ -612,6 +643,19 @@ export function HistoryTab() {
                           <div className="font-medium text-gray-900">
                             {title}
                           </div>
+                          {/* Under the title, as on the profile History tab: the sentiment
+                              thumb (explained on hover) leading the topic chips. */}
+                          <ConversationTopics
+                            topics={conversation.topics}
+                            className="mt-1"
+                            leading={
+                              <ConversationSentiment
+                                sentiment={conversation.sentiment}
+                                labels={sentimentLabels}
+                                compact
+                              />
+                            }
+                          />
                           <p className="line-clamp-1 text-sm text-gray-600">
                             {preview}
                           </p>
@@ -669,8 +713,10 @@ export function HistoryTab() {
                   <>
                     <div className="mb-4">
                       <h3 className="mb-1 text-base font-semibold text-gray-700">
-                        {selectedConversation.messages[0]?.human ||
-                          t('conversationFallbackTitle')}
+                        {conversationTitle(
+                          selectedConversation,
+                          t('conversationFallbackTitle'),
+                        )}
                       </h3>
                       <span className="text-sm text-gray-500">
                         {format(
@@ -703,7 +749,7 @@ export function HistoryTab() {
                                 {selectedOwner.initial}
                               </span>
                             </div>
-                            <div className="flex-1">
+                            <div className="min-w-0 flex-1 overflow-x-hidden">
                               <div className="font-medium text-gray-700">
                                 <UserProfileLink
                                   tenantKey={tenantKey}
@@ -729,13 +775,20 @@ export function HistoryTab() {
                                 {t('aiLabel')}
                               </span>
                             </div>
-                            <div className="flex-1">
+                            <div className="min-w-0 flex-1 overflow-x-hidden">
                               <div className="font-medium text-gray-700">
                                 {t('aiAgent')}
                               </div>
                               <div className="mt-1 text-sm text-gray-500">
                                 <Markdown>{message.ai}</Markdown>
                               </div>
+                              <SessionCanvasCards
+                                artifacts={selectedCanvases.forTurn(index)}
+                                org={tenantKey}
+                                username={selectedConversation.student}
+                                sessionId={selectedConversation.id}
+                                className="mt-2"
+                              />
                               <HistoryAttachments
                                 files={historyFiles(message.ai_files)}
                                 idPrefix={`detail-ai-${index}`}
@@ -818,8 +871,10 @@ export function HistoryTab() {
           <DialogHeader>
             <DialogTitle className="text-lg font-semibold text-gray-900">
               {previewConversationContent
-                ? previewConversationContent.messages[0]?.human ||
-                  t('conversationFallbackTitle')
+                ? conversationTitle(
+                    previewConversationContent,
+                    t('conversationFallbackTitle'),
+                  )
                 : t('conversationFallbackTitle')}
             </DialogTitle>
           </DialogHeader>
@@ -885,6 +940,13 @@ export function HistoryTab() {
                         <div className="mt-1 text-sm text-gray-900">
                           <Markdown>{message.ai}</Markdown>
                         </div>
+                        <SessionCanvasCards
+                          artifacts={previewCanvases.forTurn(index)}
+                          org={tenantKey}
+                          username={previewConversationContent.student}
+                          sessionId={previewConversationContent.id}
+                          className="mt-2"
+                        />
                         <HistoryAttachments
                           files={historyFiles(message.ai_files)}
                           idPrefix={`preview-ai-${index}`}

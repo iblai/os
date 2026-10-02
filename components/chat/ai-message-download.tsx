@@ -20,8 +20,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { sanitizeFilename } from '@/components/canvas/canvas-utils';
-import { downloadBlob } from '@/components/canvas/canvas-export-handlers';
+import { downloadBlob, sanitizeFilename } from '@iblai/iblai-js/web-containers';
 import type { Message } from '@iblai/iblai-js/web-utils';
 
 import { buildMessageTranscript, buildTranscript } from './chat-transcript';

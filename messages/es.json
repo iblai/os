@@ -1657,6 +1657,7 @@
     "sentimentPositive": "Positivo",
     "sentimentNeutral": "Neutral",
     "sentimentNegative": "Negativo",
+    "userSentiment": "Sentimiento del usuario",
     "filterBySentiment": "Filtrar por sentimiento",
     "allTopics": "Todos los temas",
     "filterByTopic": "Filtrar por tema",

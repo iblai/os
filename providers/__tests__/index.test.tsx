@@ -18,6 +18,13 @@ let mockPathname = '/';
 let mockSearchParams = new URLSearchParams();
 let mockRouter = { push: mockPush, replace: mockReplace };
 
+// AppProvider mounts the agent-settings launcher, which reads navigation and
+// user hooks this suite does not set up; it has its own tests.
+vi.mock('../agent-settings-launcher', () => ({
+  AgentSettingsLauncher: ({ children }: { children: React.ReactNode }) => (
+    <>{children}</>
+  ),
+}));
 vi.mock('next/navigation', () => ({
   useParams: () => mockParams,
   usePathname: () => mockPathname,
@@ -235,6 +242,8 @@ let capturedIframeMessageHandler: {
 let pendingIframeMessages: Record<string, unknown>[] = [];
 
 vi.mock('@iblai/iblai-js/web-containers', () => ({
+  // AppProvider registers the app's markdown engine with the SDK canvas.
+  configureCanvasMarkdown: vi.fn(),
   sanitizeCss: (css: string) => css,
   useIframeMessageHandler: (opts: {
     handlers?: unknown;

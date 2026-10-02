@@ -1657,6 +1657,7 @@
     "sentimentPositive": "积极",
     "sentimentNeutral": "中性",
     "sentimentNegative": "消极",
+    "userSentiment": "用户情绪",
     "filterBySentiment": "按情感筛选",
     "allTopics": "所有主题",
     "filterByTopic": "按主题筛选",

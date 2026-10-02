@@ -1,15 +1,15 @@
 {
   "version": 2,
-  "lastUpdated": "2026-09-30",
+  "lastUpdated": "2026-10-01",
   "summary": {
-    "totalCheckpoints": 798,
-    "coveredCheckpoints": 753,
+    "totalCheckpoints": 814,
+    "coveredCheckpoints": 768,
     "deprecatedCheckpoints": 17,
     "notReproducibleCheckpoints": 17,
-    "pendingCheckpoints": 11,
+    "pendingCheckpoints": 12,
     "percent": 100,
-    "totalJourneys": 81,
-    "activeJourneys": 80
+    "totalJourneys": 82,
+    "activeJourneys": 81
   },
   "journeys": [
     {
@@ -648,10 +648,7 @@
       "name": "Canvas \u2014 AI Document Editor",
       "spec": "10-canvas-ai-document-editor.spec.ts",
       "sourceFiles": [
-        "components/canvas/canvas-controls.tsx",
-        "components/canvas/canvas-view.tsx",
-        "components/canvas/binary-canvas-component.tsx",
-        "components/canvas/binary-artifact-utils.ts",
+        "lib/canvas-markdown-engine.ts",
         "components/chat/chat-messages/canvas-message-preview.tsx",
         "components/chat/chat-messages/message-preview.tsx",
         "components/chat/chat-messages/types.ts",
@@ -732,6 +729,11 @@
           "id": "cvs-15",
           "description": "Binary canvas preview paths beyond pdf: image/svg inline preview (data-testid=\"binary-canvas-image\"), the non-previewable-type fallback message for zip/xlsx/docx/\u2026 (data-testid=\"binary-canvas-fallback\"), the preview-error state for a malformed file (data-testid=\"binary-canvas-preview-error\", invalid SVG XML / non-PDF bytes / image decode failure), and the loading/error/retry states \u2014 unit-covered in binary-canvas-component.test.tsx, canvas-view.test.tsx, and binary-artifact-utils.test.ts; not e2e-reproducible because there is no deterministic way to make a live agent produce these specific shapes (Journey 71 shares a .txt file, which takes the text-canvas path and never reaches the binary canvas at all)",
           "status": "not-reproducible"
+        },
+        {
+          "id": "cvs-16",
+          "description": "Opening the canvas for an agent artifact never sends a session update (PUT sessions/{id}/) without `tools` — the canvas panel used to re-send `{ enable_artifacts: true }` alone, which wiped the session's active tools (mcp, grading, …); the canvas is opened deterministically via the `artifact-stream-start` window event, no live LLM turn needed",
+          "status": "covered"
         }
       ]
     },
@@ -1659,6 +1661,11 @@
         {
           "id": "hist-07",
           "description": "Rows whose turns carry retrieved documents / tool calls show 'Documents · N' / 'Tools · N' chips with N > 0 (never an empty chip container); a Documents chip opens the chat's 'Retrieved Documents' dialog listing what the conversation retrieved (closes on Escape); the transcript offers a 'Show Details' per-turn panel (retrieved documents / tool calls / metadata / request context) only for turns with extended data, and no panel at all otherwise",
+          "status": "covered"
+        },
+        {
+          "id": "hist-08",
+          "description": "A conversation that produced a canvas shows the chat's own 'Open Canvas' card in the preview (none otherwise); the card opens the chat's canvas read-only in a dialog — title and Export only, no formatting toolbar, rename, version switch or editable content — which closes on Escape",
           "status": "covered"
         }
       ]
@@ -3473,7 +3480,8 @@
       "name": "Recent Chats Refresh",
       "spec": "53-recent-chats-refresh.spec.ts",
       "sourceFiles": [
-        "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx"
+        "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx",
+        "components/chat/index.tsx"
       ],
       "checkpoints": [
         {
@@ -3485,6 +3493,12 @@
           "id": "rcr-02",
           "description": "Clicking an existing Recent chat row loads the conversation in the chat panel (regression guard for issue #1881: handleSelectRow must write cachedSessionId[mentorId] to localStorage so the message loader re-fires)",
           "status": "covered"
+        },
+        {
+          "id": "rcr-03",
+          "description": "Reopening a Recent chat restores that session's own options: a chat that had Canvas enabled shows the Canvas toggle active again (aria-pressed=true) after switching to a new chat with Canvas off and back. The SDK tools hook (useMentorTools) restores tools + canvas from the session detail (my-chat-history/{session_id}) and the chat no longer sends a session update turning canvas off on the chat being opened",
+          "status": "pending",
+          "note": "Needs an SDK build that includes the useMentorTools session restore (web-utils); red until the app picks that build up"
         }
       ]
     },
@@ -4497,10 +4511,7 @@
       "name": "VM Sandbox File Artifact \u2014 Canvas Preview",
       "spec": "71-vm-sandbox-txt-file-canvas.spec.ts",
       "sourceFiles": [
-        "components/canvas/binary-canvas-component.tsx",
-        "components/canvas/binary-artifact-utils.ts",
-        "components/canvas/canvas-view.tsx",
-        "components/canvas/canvas-component.tsx",
+        "lib/canvas-markdown-engine.ts",
         "components/chat/chat-messages/canvas-message-preview.tsx",
         "components/chat/chat-messages/message-preview.tsx",
         "components/chat/index.tsx",
@@ -5051,6 +5062,81 @@
         {
           "id": "api-09",
           "description": "Non-admin does not see the API tab in the Edit Mentor modal (Settings menu item itself is unreachable; falls back to a direct tab-absence check)",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "virtual-machine-network-and-secrets",
+      "name": "Virtual Machine Network Policies & Secrets",
+      "spec": "79-virtual-machine-network-and-secrets.spec.ts",
+      "sourceFiles": [
+        "components/modals/edit-mentor-modal/tabs/sandbox-tab.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "vmn-01",
+          "description": "Admin reaches the tenant Virtual Machine settings through the User Profile dialog (More options, then the platform name, then the SDK Account rail's admin-only \"Virtual Machine\" entry) which hosts the SDK VirtualMachineAdminTab: the info box plus the Network Policies and Secrets sub-tabs, each hosting its table with a New button",
+          "status": "covered"
+        },
+        {
+          "id": "vmn-02",
+          "description": "Admin creates a network policy through the SDK dialog: hosts are entered with the keyboard-driven chip input (Enter commits, Backspace on an empty box removes the last chip, every chip has a labelled Remove button) and the client-side host:port check refuses a scheme/path entry and a reserved host inline via the aria-live line without adding a chip; saving shows the \"Network policy created\" toast and the new row lists the host",
+          "status": "covered"
+        },
+        {
+          "id": "vmn-03",
+          "description": "Admin edits the policy: adding a host and removing the original shows the removed-hosts warning (a secret sent to a removed host would stop working; the backend does not block the edit); saving shows \"Network policy updated\" and the row reflects the replaced host list",
+          "status": "covered"
+        },
+        {
+          "id": "vmn-04",
+          "description": "Admin creates a VM secret from a pasted value: an IP literal is refused inline (hostnames only), the source is a choice between \"Enter a Value\" (default) and an integration credential, the value box is a password field, and values shorter than 8 characters or masked-looking (sk-****) are rejected before any request; saving shows \"VM secret created\" and the row shows name, hosts and the \"Stored Value\" source, never the value",
+          "status": "covered"
+        },
+        {
+          "id": "vmn-05",
+          "description": "On edit the env var is read-only, the value box is blank with the \"Leave blank to keep the current value\" hint, and switching to the credential source offers the org's credentials (or the no-credentials notice) without ever showing a masked value; deleting confirms that every agent using the secret loses it, shows \"VM secret deleted\" and removes the row",
+          "status": "covered"
+        },
+        {
+          "id": "vmn-06",
+          "description": "Admin deletes a network policy they just created (bound to no agent): the row is found on whichever page of the org-wide table it landed, the confirmation dialog names the policy, Cancel leaves it in place, and confirming shows \"Network policy deleted\", closes the dialog and leaves no page of the table listing it",
+          "status": "covered"
+        },
+        {
+          "id": "vmn-07",
+          "description": "With the Virtual Machine Shell kind selected on a dedicated agent, the Sandbox tab renders the Network Access section: the billing notice ($1 per 10 minutes by default, prorated per second) and a labelled \"Egress Profile\" radio group with the four labelled options (No Network / Package Registries / Public Internet / Custom Allowlist); a fresh agent defaults to No Network, so neither picker renders and Save is disabled",
+          "status": "covered"
+        },
+        {
+          "id": "vmn-08",
+          "description": "The secrets multi-select renders only under Public or Custom (with one checkbox per org secret) and the policy picker only under Custom; neither renders under No Network or Package Registries",
+          "status": "covered"
+        },
+        {
+          "id": "vmn-09",
+          "description": "Custom requires a policy: the picker shows the \"The Custom profile needs a network policy.\" message and Save stays disabled until one is chosen; the \"Create Policy\" shortcut opens the SDK network policy dialog in place; picking a policy lists the hosts it allows",
+          "status": "covered"
+        },
+        {
+          "id": "vmn-10",
+          "description": "Binding a secret whose host the chosen policy does not allow lists the gap (\"ENV needs host, which policy doesn't allow.\"), keeps Save disabled, and \"Add Hosts to {policy} and Save\" patches the policy (\"Hosts added to {policy}\") and then saves the settings (\"Network settings saved\") in one go",
+          "status": "covered"
+        },
+        {
+          "id": "vmn-11",
+          "description": "The saved configuration persists across closing and reopening the Edit Agent dialog: Custom selected, the policy chosen (now also allowing the secret's host) and the secret still bound",
+          "status": "covered"
+        },
+        {
+          "id": "vmn-12",
+          "description": "Narrowing the profile to No Network while a secret is bound opens the \"Unbind Secrets?\" confirmation naming the secret count; confirming saves with the secrets unbound, and the reopened agent is on No Network with the secret unchecked under Public",
+          "status": "covered"
+        },
+        {
+          "id": "vmn-13",
+          "description": "A non-admin never reaches the tenant Virtual Machine settings: the platform entry is missing from More options, does nothing when clicked, or the tenant settings dialog it opens lists no Virtual Machine section (the SDK Account rail filters it on isAdmin)",
           "status": "covered"
         }
       ]
