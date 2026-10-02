@@ -130,7 +130,9 @@ async function locateAvailableSkillRow(
     .getByTestId('available-skill-row')
     .filter({ hasText: skillName });
   const nav = section.getByRole('navigation');
-  const nextButton = nav.getByRole('link', { name: 'Go to next page' });
+  // The pagination anchors carry no href, so they expose no `link` role —
+  // match by aria-label / text instead of role.
+  const nextButton = nav.getByLabel('Go to next page');
 
   for (let pageNumber = 1; ; pageNumber++) {
     if (
@@ -149,7 +151,7 @@ async function locateAvailableSkillRow(
     if (!nextEnabled) break;
     await nextButton.click();
     await expect(
-      nav.getByRole('link', { name: String(pageNumber + 1), exact: true }),
+      nav.locator('a', { hasText: new RegExp(`^${pageNumber + 1}$`) }),
     ).toHaveAttribute('aria-current', 'page', { timeout: 10_000 });
     await expect(
       section
@@ -291,7 +293,7 @@ test.describe('Journey 67: Agent Skills — Edit Mentor Skills tab gating', () =
 
   // ── ags-01: Base Agent mentor — tab visible with the updated copy ────────
 
-  test('admin sees the Skills tab on a freshly-created (Base Agent) mentor, with the updated description and info box copy', async ({
+  test('admin sees the Skills tab on a freshly-created (Base Agent) mentor, with its heading and the "type /" hint', async ({
     page,
     createMentorPage,
     editMentorPage,
@@ -314,16 +316,13 @@ test.describe('Journey 67: Agent Skills — Edit Mentor Skills tab gating', () =
     // (or from the dialog-scoped SkillsTab locators built on it).
     const dialog = editMentorPage.dialog;
 
-    // Element-first readiness: the host copy rendering IS the wait.
-    await expect(editMentorPage.skills.description).toBeVisible({
-      timeout: 10_000,
-    });
-    await expect(editMentorPage.skills.infoBox).toContainText(
-      /Agent Skills are reusable playbooks/i,
-    );
-    await expect(editMentorPage.skills.infoBox).toContainText(
-      /type \/ to see this agent's skills/i,
-    );
+    // Element-first readiness: the tab heading rendering IS the wait. Only
+    // behaviour-shaped copy is pinned (heading + the "type /" hint) — the
+    // exact wording differs between the OS host and the SDK tab wrapper.
+    await expect(
+      dialog.getByRole('heading', { name: 'Skills', exact: true }),
+    ).toBeVisible({ timeout: 10_000 });
+    await expect(dialog.getByText(/type \//i).first()).toBeVisible();
     // The SDK skills section (Agent Skills / Available Skills sub-tabs)
     // mounted below the host copy.
     await verifySkillsTabVisible(page);
@@ -410,10 +409,8 @@ test.describe('Journey 67: Agent Skills — Edit Mentor Skills tab gating', () =
     await editMentorPage.open('Settings');
     await editMentorPage.navigateToTab('Skills');
 
-    // The host copy rendering is the readiness signal.
-    await expect(editMentorPage.skills.description).toBeVisible({
-      timeout: 10_000,
-    });
+    // The SDK section mounting is the readiness signal.
+    await verifySkillsTabVisible(page);
 
     await editMentorPage.close();
   });
@@ -654,6 +651,108 @@ test.describe('Journey 67: Agent Skills — skills section management', () => {
       await expect(row).toBeHidden({ timeout: 10_000 });
     } finally {
       // Best-effort final cleanup — if the flow broke before the delete.
+      if (created) {
+        try {
+          await locateAvailableSkillRow(page, skillName);
+          await deleteSkill(page, skillName);
+        } catch {
+          // Best-effort
+        }
+      }
+      await editMentorPage.close();
+    }
+  });
+  // ── ags-08: Fresh agent — empty state, and the full-admin affordances ────
+
+  test('fresh agent shows the empty Agent Skills state, and the admin can reach the catalog sub-tab with New Skill', async ({
+    page,
+    editMentorPage,
+  }) => {
+    try {
+      const section = page.getByTestId('agent-skills-content');
+      // Default sub-tab is Agent Skills; a new mentor has no assignments.
+      await expect(
+        page.getByText(/No skills enabled for this agent yet/i),
+      ).toBeVisible({ timeout: 10_000 });
+      await expect(section.getByTestId('agent-skill-row')).toHaveCount(0);
+
+      // Full grants: the Available Skills sub-tab exists and offers New Skill.
+      await switchToAvailableSkillsSubTab(page);
+      await expect(
+        editMentorPage.dialog.getByRole('button', { name: /New Skill/i }),
+      ).toBeVisible({ timeout: 10_000 });
+
+      // Back to Agent Skills: still the empty state (nothing was attached).
+      await switchToAgentSkillsSubTab(page);
+      await expect(
+        page.getByText(/No skills enabled for this agent yet/i),
+      ).toBeVisible({ timeout: 10_000 });
+    } finally {
+      await editMentorPage.close();
+    }
+  });
+
+  // ── ags-09: Attach + disable persists across closing/reopening the modal ──
+
+  test('an attached, disabled skill is still listed and still disabled after closing and reopening the modal', async ({
+    page,
+    editMentorPage,
+  }) => {
+    const ts = Date.now();
+    const skillName = `e2e-persist-skill-${ts}`;
+    const section = page.getByTestId('agent-skills-content');
+    const agentRow = section
+      .getByTestId('agent-skill-row')
+      .filter({ hasText: skillName });
+
+    let created = false;
+    let attached = false;
+
+    try {
+      await createSkill(page, {
+        name: skillName,
+        slug: `e2e_persist_skill_${ts}`,
+        description: `E2E persistence fixture created at ${ts}`,
+        version: '1.0.0',
+        instruction: `Instruction for ${skillName}`,
+      });
+      created = true;
+
+      await locateAvailableSkillRow(page, skillName);
+      await addSkillToAgent(page, skillName);
+      attached = true;
+
+      await switchToAgentSkillsSubTab(page);
+      await verifySkillVisible(page, skillName);
+      await disableSkill(page, skillName);
+      await expect(agentRow.getByRole('switch')).toHaveAttribute(
+        'aria-checked',
+        'false',
+        { timeout: 10_000 },
+      );
+
+      // Close and reopen: state must come from the server, not local state.
+      await editMentorPage.close();
+      await editMentorPage.open('Settings');
+      await editMentorPage.navigateToTab('Skills');
+      await verifySkillsTabVisible(page);
+      await switchToAgentSkillsSubTab(page);
+
+      await expect(agentRow).toBeVisible({ timeout: 15_000 });
+      await expect(agentRow.getByRole('switch')).toHaveAttribute(
+        'aria-checked',
+        'false',
+        { timeout: 10_000 },
+      );
+    } finally {
+      if (attached) {
+        try {
+          await switchToAgentSkillsSubTab(page);
+          await removeSkillFromAgent(page, skillName);
+        } catch {
+          // Best-effort
+        }
+      }
       if (created) {
         try {
           await locateAvailableSkillRow(page, skillName);

@@ -1368,7 +1368,7 @@ Because the toggle mutates the mentor's attached tools — the same fields Journ
 
 ---
 
-## Journey 67: Agent Skills (22 checkpoints) — `journeys/67-agent-skills.spec.ts`
+## Journey 67: Agent Skills (24 checkpoints) — `journeys/67-agent-skills.spec.ts`
 
 **Source files:** `hooks/use-mentor-segments.ts`, `components/modals/edit-mentor-modal/tabs/skills-tab.tsx`, `components/chat-input-form.tsx`, `components/auto-resize-text-area.tsx`
 
@@ -1421,13 +1421,15 @@ surfaces:
    `ChatPage.mockEffectiveSkills` for full determinism — the composer fetches
    eagerly on mount, so the mock must be registered before navigation.
 
-- [x] ags-01: Admin sees the Skills tab on a freshly-created (Base Agent) mentor, with the updated tab description ("Reusable playbooks this Base Agent can discover and follow.") and skills-info-box copy describing the `/` picker; Skills sits right after Prompts in the Configurations category — full RBAC grant set forced via `SkillsTab.grantAllSkillAssignmentPerms` so the both-sub-tabs assert is rollout-independent
+- [x] ags-01: Admin sees the Skills tab on a freshly-created (Base Agent) mentor, with its "Skills" heading and the "type /" hint (wording not pinned — differs between OS host and SDK wrapper); Skills sits right after Prompts in the Configurations category — full RBAC grant set forced via `SkillsTab.grantAllSkillAssignmentPerms` so the both-sub-tabs assert is rollout-independent
 - [x] ags-02: Skills tab is hidden when the mentor resolves to a non-base-agent type (`mentor_slug` is not a base-agent alias and `template_mentor` does not resolve to one either)
 - [x] ags-03: Skills tab stays visible when the mentor type cannot be determined (`template_mentor` is a numeric PK the frontend cannot read a slug from) — the gate fails OPEN rather than hiding the tab
 - [x] ags-04: Admin creates a platform skill, attaches it from the Available Skills sub-tab (`addSkillToAgent` — assignment created ENABLED), and its enable Switch round-trips off/on on the Agent Skills sub-tab (`aria-checked`); detach + delete on cleanup — dedicated mentor per test
 - [x] ags-05: Admin creates a new platform skill, locates it on the server-paged Available Skills sub-tab (paging until found — catalog ordering not guaranteed), edits its description, and deletes it (row disappears) — via the SDK's `createSkill`/`editSkill`/`deleteSkill` helpers, serial (platform-wide catalog)
 - [x] ags-06: NON-ADMIN — the Skills tab is absent from the Edit Mentor modal (the segment is ADMIN-only via userTypes in `MENTOR_SEGMENTS`)
 - [x] ags-07: View-only RBAC (`view_skill_assignments` granted, create/write/delete denied via the same permission-check mock) — the Agent Skills sub-tab renders with its empty state, while the Available Skills sub-tab and the New Skill button are absent from the DOM
+- [x] ags-08: Fresh agent with full RBAC grants — Agent Skills sub-tab shows the empty state, Available Skills sub-tab offers New Skill, switching back keeps the empty state
+- [x] ags-09: Persistence — a skill attached then disabled is still listed and still disabled after closing and reopening the Edit Agent modal
 - [x] slash-01: Mentor with no effective skills — chat composer stays a plain textbox (no combobox role) and typing "/" opens nothing
 - [x] slash-02: Mentor with skills — composer gets `role=combobox` wiring and "/" opens the picker listing only enabled skills as name stacked over `/slug` (column layout — full name, never truncated; geometry-asserted), no descriptions (assignment rows carry none; the platform-wide agent-skills catalog is never fetched from chat)
 - [x] slash-03: Typing after "/" filters the picker by both skill name and slug as the query narrows; no match closes the picker
