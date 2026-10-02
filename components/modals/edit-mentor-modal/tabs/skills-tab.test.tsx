@@ -4,187 +4,119 @@ import { render, screen, cleanup } from '@testing-library/react';
 
 import { SkillsTab } from './skills-tab';
 
-// ============================================================================
-// MOCKS
-// ============================================================================
-
 const mockUseParams = vi.fn();
 const mockGetMentorId = vi.fn();
-const mockAgentSkills = vi.fn();
+const mockUseUsername = vi.fn();
+const mockEnableRBAC = vi.fn();
+const mockRbacPermissions = { mentors: { '/x/': { read: true } } };
+
+const mockAgentSettingsProvider = vi.fn();
+const mockAgentSkillsTab = vi.fn();
 
 vi.mock('next/navigation', () => ({
   useParams: () => mockUseParams(),
 }));
 
+vi.mock('next-intl', () => ({
+  useTranslations: (namespace: string) => (key: string) =>
+    `${namespace}.${key}`,
+}));
+
 vi.mock('@/hooks/user-navigate', () => ({
-  useNavigate: () => ({
-    getMentorId: mockGetMentorId,
-  }),
+  useNavigate: () => ({ getMentorId: mockGetMentorId }),
 }));
 
 vi.mock('@/hooks/use-user', () => ({
-  useUsername: () => 'admin-user',
+  useUsername: () => mockUseUsername(),
 }));
 
-// The settings lookup only supplies the mentor DB id that keys the RBAC
-// grants the SDK panel gates on — same query the hosting modal already
-// subscribes to, so at runtime it is an RTK cache read.
-const mockUseGetMentorSettingsQuery = vi.fn();
-vi.mock('@iblai/iblai-js/data-layer', () => ({
-  useGetMentorSettingsQuery: (...args: unknown[]) =>
-    mockUseGetMentorSettingsQuery(...args),
+vi.mock('@/lib/config', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/config')>();
+  return {
+    ...actual,
+    config: {
+      ...actual.config,
+      enableRBAC: () => mockEnableRBAC(),
+    },
+  };
+});
+
+vi.mock('@/lib/hooks', () => ({
+  useAppSelector: () => mockRbacPermissions,
 }));
 
-// SkillsTab imports from `@iblai/iblai-js/web-containers` (the unified
-// SDK barrel). Mock the exact path the source uses — Vitest keys mocks
-// by module specifier so the underlying `@iblai/iblai-js/web-containers` mock
-// wouldn't match.
-vi.mock('@iblai/iblai-js/web-containers', () => ({
-  AgentSkills: (props: any) => {
-    mockAgentSkills(props);
-    return (
-      <div
-        data-testid="agent-skills"
-        data-platform-key={props.platformKey}
-        data-mentor-unique-id={props.mentorUniqueId}
-      >
-        AgentSkills
-      </div>
-    );
+vi.mock('@iblai/iblai-js/web-containers/next', () => ({
+  AgentSettingsProvider: ({
+    children,
+    ...value
+  }: {
+    children: React.ReactNode;
+  }) => {
+    mockAgentSettingsProvider(value);
+    return <div data-testid="agent-settings-provider">{children}</div>;
+  },
+  AgentSkillsTab: (props: unknown) => {
+    mockAgentSkillsTab(props);
+    return <div data-testid="agent-skills-tab">AgentSkillsTab</div>;
   },
 }));
 
-// ============================================================================
-// TESTS
-// ============================================================================
+const providerValue = () =>
+  mockAgentSettingsProvider.mock.calls.at(-1)![0] as Record<string, unknown>;
+const tabProps = () =>
+  mockAgentSkillsTab.mock.calls.at(-1)![0] as Record<string, unknown>;
 
 describe('SkillsTab', () => {
   beforeEach(() => {
     cleanup();
     vi.clearAllMocks();
-
-    mockUseParams.mockReturnValue({
-      tenantKey: 'test-tenant',
-      mentorId: 'test-mentor',
-    });
+    mockUseParams.mockReturnValue({ tenantKey: 'acme', mentorId: 'mentor-1' });
     mockGetMentorId.mockReturnValue(null);
-    mockUseGetMentorSettingsQuery.mockReturnValue({
-      data: { mentor_id: 42 },
+    mockUseUsername.mockReturnValue('jane');
+    mockEnableRBAC.mockReturnValue(false);
+  });
+
+  afterEach(() => cleanup());
+
+  it('wraps AgentSkillsTab in a provider carrying the OS identity and RBAC', () => {
+    mockEnableRBAC.mockReturnValue(true);
+    render(<SkillsTab />);
+
+    expect(screen.getByTestId('agent-skills-tab')).toBeInTheDocument();
+    expect(providerValue()).toEqual({
+      tenantKey: 'acme',
+      mentorId: 'mentor-1',
+      username: 'jane',
+      enableRBAC: true,
+      rbacPermissions: mockRbacPermissions,
     });
   });
 
-  afterEach(() => {
-    cleanup();
+  it('prefers the navigation-selected mentor over the route param', () => {
+    mockGetMentorId.mockReturnValue('nav-mentor');
+    render(<SkillsTab />);
+
+    expect(providerValue().mentorId).toBe('nav-mentor');
   });
 
-  describe('Rendering', () => {
-    it('renders the Skills header and description', () => {
-      render(<SkillsTab />);
+  it('maps only the title so the SDK description keeps its "type /" hint', () => {
+    render(<SkillsTab />);
 
-      expect(screen.getByText('Skills')).toBeInTheDocument();
-      expect(
-        screen.getByText(
-          'Reusable playbooks this Base Agent can discover and follow.',
-        ),
-      ).toBeInTheDocument();
-    });
-
-    it('renders AgentSkills with platformKey and mentorUniqueId from url params', () => {
-      render(<SkillsTab />);
-
-      const agentSkills = screen.getByTestId('agent-skills');
-      expect(agentSkills).toHaveAttribute('data-platform-key', 'test-tenant');
-      expect(agentSkills).toHaveAttribute(
-        'data-mentor-unique-id',
-        'test-mentor',
-      );
-      expect(mockAgentSkills).toHaveBeenCalledWith({
-        platformKey: 'test-tenant',
-        mentorUniqueId: 'test-mentor',
-        mentorDbId: 42,
-      });
+    expect(tabProps()).toEqual({
+      labels: { header: { title: 'tabsSkillsTab.heading' } },
     });
   });
 
-  describe('Active mentor id resolution', () => {
-    it('prefers getMentorId() from navigate hook when provided', () => {
-      mockGetMentorId.mockReturnValue('nav-mentor-xyz');
+  it.each([
+    ['tenantKey', { tenantKey: undefined, mentorId: 'mentor-1' }, 'jane'],
+    ['mentorId', { tenantKey: 'acme', mentorId: undefined }, 'jane'],
+    ['username', { tenantKey: 'acme', mentorId: 'mentor-1' }, null],
+  ])('renders nothing until %s is known', (_, params, username) => {
+    mockUseParams.mockReturnValue(params);
+    mockUseUsername.mockReturnValue(username);
+    const { container } = render(<SkillsTab />);
 
-      render(<SkillsTab />);
-
-      expect(mockAgentSkills).toHaveBeenCalledWith({
-        platformKey: 'test-tenant',
-        mentorUniqueId: 'nav-mentor-xyz',
-        mentorDbId: 42,
-      });
-    });
-
-    it('falls back to params.mentorId when getMentorId() returns null', () => {
-      mockGetMentorId.mockReturnValue(null);
-
-      render(<SkillsTab />);
-
-      expect(mockAgentSkills).toHaveBeenCalledWith({
-        platformKey: 'test-tenant',
-        mentorUniqueId: 'test-mentor',
-        mentorDbId: 42,
-      });
-    });
-
-    it('falls back to params.mentorId when getMentorId() returns undefined', () => {
-      mockGetMentorId.mockReturnValue(undefined);
-
-      render(<SkillsTab />);
-
-      expect(mockAgentSkills).toHaveBeenCalledWith({
-        platformKey: 'test-tenant',
-        mentorUniqueId: 'test-mentor',
-        mentorDbId: 42,
-      });
-    });
-  });
-
-  describe('Guard clauses', () => {
-    it('renders nothing when tenantKey is missing', () => {
-      mockUseParams.mockReturnValue({
-        tenantKey: undefined,
-        mentorId: 'test-mentor',
-      });
-
-      const { container } = render(<SkillsTab />);
-
-      expect(container.firstChild).toBeNull();
-      expect(mockAgentSkills).not.toHaveBeenCalled();
-    });
-
-    it('renders nothing when both mentorId and getMentorId() are missing', () => {
-      mockUseParams.mockReturnValue({
-        tenantKey: 'test-tenant',
-        mentorId: undefined,
-      });
-      mockGetMentorId.mockReturnValue(null);
-
-      const { container } = render(<SkillsTab />);
-
-      expect(container.firstChild).toBeNull();
-      expect(mockAgentSkills).not.toHaveBeenCalled();
-    });
-
-    it('renders the tab when getMentorId() provides an id but params.mentorId is missing', () => {
-      mockUseParams.mockReturnValue({
-        tenantKey: 'test-tenant',
-        mentorId: undefined,
-      });
-      mockGetMentorId.mockReturnValue('nav-mentor-xyz');
-
-      render(<SkillsTab />);
-
-      expect(screen.getByText('Skills')).toBeInTheDocument();
-      expect(mockAgentSkills).toHaveBeenCalledWith({
-        platformKey: 'test-tenant',
-        mentorUniqueId: 'nav-mentor-xyz',
-        mentorDbId: 42,
-      });
-    });
+    expect(container).toBeEmptyDOMElement();
+    expect(mockAgentSettingsProvider).not.toHaveBeenCalled();
   });
 });
