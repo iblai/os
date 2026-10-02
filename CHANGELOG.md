@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.160.0](https://github.com/iblai/os/compare/v0.159.2...v0.160.0) (2026-10-02)
+
+### Features
+
+* **mentor:** adding virtual machine sheell and hsitory fixes ([fe130e9](https://github.com/iblai/os/commit/fe130e9e86a4659c201d73671c7943946747c135))
+
+### Bug Fixes
+
+* **deps:** bump axios to 1.20.0 for the seven high advisories ([0487215](https://github.com/iblai/os/commit/048721546940ffec36ef8ed1a80861a2889b0a29))
+* **e2e-tests:** fix for the e2e tests ([8182f47](https://github.com/iblai/os/commit/8182f4794b460f763abb8c8b72f8745dbb24f6fc))
+* **e2e:** delete a freshly created network policy in journey 79 and make it parallel-safe ([a7a84d2](https://github.com/iblai/os/commit/a7a84d27b66b4c767b64f5d96b9be27f8fbdfdd0))
+* **e2e:** match the published SDK copy in the Virtual Machine journey and scope every lookup to its dialog ([931daaf](https://github.com/iblai/os/commit/931daaf1c2775a721db5ab6a95d4470cc3d7a7ab))
+* **mentor:** adding fix for the audit and agent provider ([2768d06](https://github.com/iblai/os/commit/2768d06f8d178e577527150fe24f1e195fa0a0bb))
+* **mentor:** adding fix for the pnpm audit ([612f6d9](https://github.com/iblai/os/commit/612f6d9ea3f7572b95016d9755859c11ce72674b))
+* **mentor:** e2e test fixes for virtual machine, history fixes for canvas and tools ([a769c50](https://github.com/iblai/os/commit/a769c5003b39537454370e9ea5fc1bd345b7ab8d))
+* **mentor:** fix for the system audit ([7a7b87f](https://github.com/iblai/os/commit/7a7b87f446d84900973a5dc8b66cbc6067312531))
+* **os:** fix for the unit test config file ([94460a9](https://github.com/iblai/os/commit/94460a9ae7f52fdebd5a51999b138a61d9944962))
+
 ## [0.159.2](https://github.com/iblai/os/compare/v0.159.1...v0.159.2) (2026-10-01)
 
 ### Documentation
