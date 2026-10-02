@@ -37,7 +37,7 @@ const PROVIDER_OF = { codex: 'openai', claude: 'anthropic' } as const;
 
 /**
  * The top-left model control while Code runs on Codex or Claude Code: the
- * agent's own model list (from its ACP session, cached per agent) in the SDK's
+ * agent's own model list (Claude's ACP session, Codex's CLI) in the SDK's
  * LLM Selection dialog — the one the cloud picker opens behind a provider card
  * — in its `cloudOnly` mode, since these models are not the mentor's LLM and
  * must leave the device's Local Models setting alone. A pick is saved per
@@ -118,8 +118,8 @@ export function AgentModelSelector({
   const defaultEntry = data?.models.find((m) => m.id === data.default);
   // What "Default" resolves to: Claude's own "default" entry describes the
   // model it stands for (nothing to add when it doesn't); a concrete default
-  // (a Claude settings model) is named by its entry; Codex's catalog names
-  // none.
+  // (a Claude settings model, the model a new Codex chat opened on) is named
+  // by its entry.
   const defaultName = defaultEntry
     ? defaultEntry.id === 'default'
       ? defaultEntry.description || null

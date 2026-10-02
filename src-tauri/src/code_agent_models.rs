@@ -93,7 +93,26 @@ pub(crate) fn remember(backend: Backend, options: &Value, first: bool) {
         cached(backend).and_then(|c| c.get("default_model").cloned())
     }
     .unwrap_or(Value::Null);
-    let cache = json!({ "options": options, "default_model": default_model });
+    write_cache(
+        backend,
+        &json!({ "options": options, "default_model": default_model }),
+    );
+}
+
+/// Codex: only its default — a fresh session's opening `currentValue` — joins
+/// the cached catalog, whose list and names the picker keeps.
+pub(crate) fn remember_default(backend: Backend, snapshot: &Value) {
+    let Some(current) = model_option(snapshot).and_then(|o| o.get("currentValue")) else {
+        return;
+    };
+    let mut cache = cached(backend)
+        .filter(|c| c.is_object())
+        .unwrap_or_else(|| json!({ "options": [] }));
+    cache["default_model"] = current.clone();
+    write_cache(backend, &cache);
+}
+
+fn write_cache(backend: Backend, cache: &Value) {
     let path = cache_path(backend);
     if let Some(parent) = path.parent() {
         let _ = std::fs::create_dir_all(parent);
@@ -141,8 +160,8 @@ fn offered(cache: &Value, model: &str) -> bool {
 
 /// Codex's catalog (`codex debug models`) as the ACP `model` option: the
 /// models it lists, in its own order, named as it names them. The catalog
-/// carries no current value, so `default_model` stays null and the picker's
-/// Default row means "Codex's own choice".
+/// carries no current value: the default comes from a fresh session
+/// (`remember_default`), and until one has run, Default is "Codex's own choice".
 fn model_option_from_catalog(catalog: &Value) -> Result<Value, String> {
     let mut models: Vec<&Value> = catalog
         .get("models")
@@ -212,7 +231,8 @@ async fn codex_catalog() -> Result<Value, String> {
 /// The agent's models for the top-left picker. Codex's come from
 /// `codex debug models` on every request — a tenth of a second, and the
 /// catalog may have grown since the last look — so they are current at every
-/// app open; the cache only serves the pick's validation. Claude's come from
+/// app open; the cache serves the pick's validation and keeps the default a
+/// fresh session reported. Claude's come from
 /// the cache, else (or on `refresh`) from a probe session, which needs the
 /// agent installed and signed in, and says so otherwise.
 #[command]
@@ -222,7 +242,8 @@ pub async fn list_code_agent_models(
 ) -> Result<Value, String> {
     let backend = Backend::agent(&backend)?;
     let fresh = |options: Value| {
-        remember(backend, &options, true);
+        // Codex's catalog names no current model: keep the recorded default.
+        remember(backend, &options, backend != Backend::Codex);
         cached(backend)
             .ok_or_else(|| format!("{} reported no model option.", display_name(backend)))
     };
@@ -254,9 +275,7 @@ pub async fn set_code_agent_model(backend: String, model: Option<String>) -> Res
             .and_then(|d| d.as_str())
             .map(str::to_string)
     });
-    if let Some(value) = target {
-        crate::opencode_acp::push_config_option(backend, MODEL_CONFIG_ID, value).await?;
-    }
+    crate::opencode_acp::push_config_option(backend, MODEL_CONFIG_ID, target).await?;
     save(backend, model.as_deref())
 }
 
@@ -528,6 +547,15 @@ esac"#,
             .unwrap();
         assert_eq!(list["selected"], json!("gpt-6-sol"));
         assert_eq!(runs(), 2, "the CLI runs on every request, cache or not");
+        // A fresh session reports the default; the catalog refresh keeps it,
+        // and keeps the catalog's own names.
+        remember_default(
+            Backend::Codex,
+            &json!([{ "id": "model", "currentValue": "gpt-5.5", "options": [] }]),
+        );
+        let list = list_code_agent_models("codex".into(), None).await.unwrap();
+        assert_eq!(list["default"], json!("gpt-5.5"));
+        assert_eq!(list["models"][0]["name"], json!("GPT-6-Sol"));
 
         fake_node(r#"echo "codex: error: unrecognized subcommand 'debug'" >&2; exit 2"#);
         let err = list_code_agent_models("codex".into(), None)

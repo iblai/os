@@ -78,10 +78,23 @@ pub(crate) fn display_name(backend: Backend) -> &'static str {
     }
 }
 
-/// Where the subscription agents can run at all: Windows has no Code, and the
-/// Mac App Store sandbox can't spawn them.
+/// Node v24's macOS binaries target 13.5 (its BUILDING.md); bump with `NODE_VERSION`.
+const NODE_MACOS_MIN: (u64, u64) = (13, 5);
+
+/// Where the subscription agents can run at all: Windows has no Code, the Mac
+/// App Store sandbox can't spawn them, and the pinned Node needs macOS 13.5.
 fn supported() -> bool {
-    cfg!(unix) && !crate::opencode_installer::is_sandboxed()
+    cfg!(unix)
+        && !crate::opencode_installer::is_sandboxed()
+        && (!cfg!(target_os = "macos") || node_runs_on(&tauri_plugin_os::version()))
+}
+
+/// Whether the pinned Node starts on this macOS; an unreadable version gets to try.
+fn node_runs_on(os: &tauri_plugin_os::Version) -> bool {
+    match os {
+        tauri_plugin_os::Version::Semantic(major, minor, _) => (*major, *minor) >= NODE_MACOS_MIN,
+        _ => true,
+    }
 }
 
 /// What the popover shows for an agent beyond the file checks: an install in
@@ -757,7 +770,7 @@ pub async fn check_code_agent_status(backend: String) -> Result<Value, String> {
         "adapter_version": installed.then(|| adapter_pin(backend)),
         "signed_in": signed_in,
         "account": account,
-        "reason": readiness.err().or(sign_reason),
+        "reason": if supported { readiness.err().or(sign_reason) } else { None },
         // An install in flight (the popover refuses the choice meanwhile) and
         // why the last one failed (shown with Install to retry).
         "installing": phase == Phase::Installing,
@@ -784,6 +797,18 @@ pub async fn install_code_agent(app: AppHandle, backend: String) -> Result<Strin
 pub(crate) mod tests {
     use super::*;
     use crate::opencode_acp::ScratchDataDir;
+
+    /// Node v24 needs macOS 13.5: below it the agents are unsupported (no
+    /// launch download, no Agent row); an unreadable version gets to try.
+    #[test]
+    fn the_agents_need_the_macos_node_supports() {
+        use tauri_plugin_os::Version::{Semantic, Unknown};
+        assert!(!node_runs_on(&Semantic(12, 7, 4)));
+        assert!(!node_runs_on(&Semantic(13, 4, 1)));
+        assert!(node_runs_on(&Semantic(13, 5, 0)));
+        assert!(node_runs_on(&Semantic(26, 0, 0)));
+        assert!(node_runs_on(&Unknown));
+    }
 
     /// The managed `node` as a shell script under the scratch data dir — what
     /// every Codex/Claude call runs (the version check, npm, the adapter's

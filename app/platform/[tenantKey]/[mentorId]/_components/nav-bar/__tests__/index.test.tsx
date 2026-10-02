@@ -1,6 +1,7 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
+  act,
   render,
   screen,
   cleanup,
@@ -882,6 +883,45 @@ describe('NavBar', () => {
         expect(
           screen.queryByTestId('local-model-indicator'),
         ).not.toBeInTheDocument();
+      });
+
+      it('starts the agent picker over on a switch: never one agent’s models under the other’s name', async () => {
+        mockIsAdmin = true;
+        mockUserIsStudent = false;
+        mockPathname = '/platform/tenant123/mentor456';
+        localStorage.setItem('ibl_coding_mode_enabled', 'true');
+        localStorage.setItem('ibl_coding_mode_agent', 'codex');
+        // Claude's list never lands: the window a stale picker used to fill.
+        mockInvoke.mockImplementation(
+          async (_cmd: string, args?: { backend?: string }) =>
+            args?.backend === 'claude'
+              ? new Promise(() => {})
+              : {
+                  models: [{ id: 'gpt-5.3-codex', name: '5.3 Codex' }],
+                  default: null,
+                  selected: 'gpt-5.3-codex',
+                },
+        );
+        render(
+          <Provider store={createTestStore()}>
+            <NavBar />
+          </Provider>,
+        );
+        expect(
+          await screen.findByText('Codex · 5.3 Codex'),
+        ).toBeInTheDocument();
+
+        act(() => {
+          localStorage.setItem('ibl_coding_mode_agent', 'claude');
+          window.dispatchEvent(new Event('local-storage'));
+        });
+
+        const picker = await screen.findByTestId('code-agent-model-selector');
+        await waitFor(() =>
+          expect(picker).toHaveTextContent('Claude Code · Loading models…'),
+        );
+        expect(picker).toBeDisabled();
+        expect(screen.queryByText(/5\.3 Codex/)).not.toBeInTheDocument();
       });
 
       it('keeps the LLM selector while Code runs on ibl.ai', () => {

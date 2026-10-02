@@ -592,7 +592,7 @@ export function NavBar() {
                 the top-left; the cloud selector and the on-device badge below
                 step aside (the same `!codeAgent` guard on both). */}
             {isOnChatPage && codeAgent && (
-              <AgentModelSelector backend={codeAgent} />
+              <AgentModelSelector key={codeAgent} backend={codeAgent} />
             )}
             {/* On-device (local) model indicator. Shown while local mode is on;
                 it replaces the cloud model selector below (hidden via the same

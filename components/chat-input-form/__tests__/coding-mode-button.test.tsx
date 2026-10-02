@@ -2229,6 +2229,46 @@ describe('CodingModeButton', () => {
       );
     });
 
+    it('leaves out an agent this computer can’t run, and the row once none is left', async () => {
+      backend({
+        agents: {
+          codex: { installed: false, supported: false },
+          claude: READY.claude,
+        },
+      });
+      const { unmount } = renderButton();
+      await openPopover();
+      expect(
+        await screen.findByRole('radio', { name: 'Claude Code' }),
+      ).toBeInTheDocument();
+      expect(screen.getByRole('radio', { name: 'ibl.ai' })).toBeInTheDocument();
+      expect(
+        screen.queryByRole('radio', { name: 'Codex' }),
+      ).not.toBeInTheDocument();
+      unmount();
+
+      invoke.mockClear();
+      backend({
+        agents: {
+          codex: { installed: false, supported: false },
+          claude: { installed: false, supported: false },
+        },
+      });
+      renderButton();
+      await openPopover();
+      await waitFor(() =>
+        expect(invoke).toHaveBeenCalledWith('check_code_agent_status', {
+          backend: 'claude',
+        }),
+      );
+      await act(async () => {
+        await new Promise((r) => setTimeout(r, 0));
+      });
+      expect(
+        screen.queryByRole('radiogroup', { name: 'Agent' }),
+      ).not.toBeInTheDocument();
+    });
+
     it('surfaces a failed agent install as a toast and re-enables Install', async () => {
       backend({
         agents: {
@@ -2435,33 +2475,20 @@ describe('CodingModeButton', () => {
       );
     });
 
-    it('shows why an agent can’t run on this computer instead of an install button', async () => {
+    it('says a remembered agent isn’t available here, with no radio and no install', async () => {
       backend({
         agents: {
-          codex: {
-            installed: false,
-            supported: false,
-            reason: 'Code needs a 64-bit Linux or macOS',
-          },
+          codex: { installed: false, supported: false },
+          claude: READY.claude,
         },
       });
       localStorage.setItem('ibl_coding_mode_agent', 'codex');
       renderButton();
       await openPopover();
       expect(
-        await screen.findByText('Code needs a 64-bit Linux or macOS'),
-      ).toBeInTheDocument();
-      expect(screen.queryByRole('button', { name: 'Install' })).toBeNull();
-    });
-
-    it('says an agent isn’t available on this computer when the desktop gives no reason', async () => {
-      backend({ agents: { codex: { installed: false, supported: false } } });
-      localStorage.setItem('ibl_coding_mode_agent', 'codex');
-      renderButton();
-      await openPopover();
-      expect(
         await screen.findByText('Not available on this computer'),
       ).toBeInTheDocument();
+      expect(screen.queryByRole('radio', { name: 'Codex' })).toBeNull();
       expect(screen.queryByRole('button', { name: 'Install' })).toBeNull();
     });
 

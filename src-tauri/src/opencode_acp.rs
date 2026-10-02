@@ -199,28 +199,39 @@ pub async fn get_opencode_permission_mode() -> Result<Option<String>, String> {
     Ok(saved_permission_mode())
 }
 
-/// Every live session of one backend — the targets of a setting pushed mid-session.
-async fn live_sessions(backend: Backend) -> Vec<Arc<Session>> {
+/// Every live session of one backend, by chat id — the targets of a setting
+/// pushed mid-session.
+async fn live_sessions(backend: Backend) -> Vec<(String, Arc<Session>)> {
     registry()
         .lock()
         .await
-        .values()
-        .filter(|s| s.backend == backend)
-        .cloned()
+        .iter()
+        .filter(|(_, s)| s.backend == backend)
+        .map(|(id, s)| (id.clone(), s.clone()))
         .collect()
 }
 
 /// Apply a session config option (the `model`) to every live session of the
 /// backend, so a pick in the top-left reaches a running chat without a
 /// respawn and with its conversation intact. The first refusal is the error
-/// — the caller must not save what a live session rejected.
+/// — the caller must not save what a live session rejected. `None` (a default
+/// the agent hasn't reported yet) has nothing to push: refused while it runs.
 pub(crate) async fn push_config_option(
     backend: Backend,
     config_id: &str,
-    value: String,
+    value: Option<String>,
 ) -> Result<(), String> {
     let name = crate::code_agent_installer::display_name(backend);
-    for s in live_sessions(backend).await {
+    let sessions = live_sessions(backend).await;
+    let Some(value) = value else {
+        if sessions.is_empty() {
+            return Ok(());
+        }
+        return Err(format!(
+            "{name} hasn't reported its own default yet — start a new {name} chat, then pick Default again."
+        ));
+    };
+    for (_, s) in sessions {
         let req = s.request(
             "session/set_config_option",
             json!({ "sessionId": s.acp_session_id, "configId": config_id, "value": value }),
@@ -251,28 +262,65 @@ pub async fn set_opencode_permission_mode(mode: String) -> Result<(), String> {
     let mut settings = read_settings();
     settings.insert(SETTINGS_PERMISSION_MODE.to_string(), json!(mode));
     write_settings(&settings)?;
-    permission_auto().store(auto, Ordering::SeqCst);
+    let was_auto = permission_auto().swap(auto, Ordering::SeqCst);
     if auto {
         allow_all_pending().await;
     }
     // Codex carries its own approval mode (see `codex_mode`): repoint every live
-    // Codex session so the flip applies mid-session. opencode and Claude need
-    // nothing — they are governed by how this app answers their requests.
-    for s in live_sessions(Backend::Codex).await {
-        let mode = codex_mode(auto);
-        tokio::spawn(async move {
-            let req = s.request(
-                "session/set_mode",
-                json!({ "sessionId": s.acp_session_id, "modeId": mode }),
-            );
-            match tokio::time::timeout(Duration::from_secs(10), req).await {
-                Ok(Ok(_)) => {}
-                Ok(Err(e)) => eprintln!("[code-agent] session/set_mode {mode} failed: {e}"),
-                Err(_) => eprintln!("[code-agent] session/set_mode {mode} timed out"),
-            }
-        });
+    // Codex session so the flip applies mid-session; one that doesn't confirm
+    // is closed (`pin_codex_mode`). opencode and Claude need nothing — they are
+    // governed by how this app answers their requests.
+    for (session_id, s) in live_sessions(Backend::Codex).await {
+        if let Err(e) = pin_codex_mode(&session_id, &s, auto, was_auto && !auto).await {
+            eprintln!("[code-agent] {e}");
+        }
     }
     Ok(())
+}
+
+/// Point a live Codex session at the approval mode. codex-acp applies a mode
+/// from the next turn on, so `stop_running` (a switch from Automatic to Ask Me)
+/// cancels a turn running with full access. One that doesn't confirm within
+/// 10s is closed, so none keeps running in the other mode; the next message
+/// starts it in this one.
+async fn pin_codex_mode(
+    session_id: &str,
+    s: &Session,
+    auto: bool,
+    stop_running: bool,
+) -> Result<(), String> {
+    let mode = codex_mode(auto);
+    let req = s.request(
+        "session/set_mode",
+        json!({ "sessionId": s.acp_session_id, "modeId": mode }),
+    );
+    let failure = match tokio::time::timeout(Duration::from_secs(10), req).await {
+        Ok(Ok(_)) if stop_running && s.active_turns.load(Ordering::SeqCst) > 0 => {
+            return s
+                .notify("session/cancel", json!({ "sessionId": s.acp_session_id }))
+                .await;
+        }
+        Ok(Ok(_)) => return Ok(()),
+        Ok(Err(e)) => format!("Codex refused the {mode} mode: {e}"),
+        Err(_) => format!("Codex did not confirm the {mode} mode within 10s"),
+    };
+    // Identity-checked like `reader_gone`: a respawn may already hold the id.
+    let removed = {
+        let mut reg = registry().lock().await;
+        match reg.get(session_id) {
+            Some(cur) if Arc::ptr_eq(&cur.pending, &s.pending) => reg.remove(session_id),
+            _ => None,
+        }
+    };
+    s.closing.store(true, Ordering::SeqCst);
+    if removed.is_some() {
+        teardown(session_id, removed).await;
+    } else {
+        let _ = s.child.lock().await.start_kill();
+    }
+    Err(format!(
+        "{failure} — the chat was closed; the next message starts it in that mode."
+    ))
 }
 
 /// Per-turn streaming accumulator, shared between the reader task and the command.
@@ -883,8 +931,8 @@ fn bwrap_args(
         }
     }
     // The agent's CLI config, frozen read-only on top of its rw dir (see
-    // `Backend::frozen`). `--ro-bind-try` skips a missing source rather than
-    // creating a mount point for it, so this covers only what exists.
+    // `Backend::frozen`). `freeze_missing` has created what the agent could
+    // create there; `-try` skips only what sits in read-only `$HOME`.
     for rel in backend.frozen() {
         let p = home.join(rel).to_string_lossy().into_owned();
         args.extend(["--ro-bind-try".into(), p.clone(), p]);
@@ -893,6 +941,49 @@ fn bwrap_args(
     // opencode down with it, and both die if the app does.
     args.push("--die-with-parent".into());
     args
+}
+
+/// Linux: create each `Backend::frozen` entry missing from the agent's own
+/// (read-write) login dir, so the read-only re-bind covers it — bwrap can't
+/// freeze a path that doesn't exist, and the agent could create it for the
+/// user's next unsandboxed run. Nothing is made outside an existing login dir.
+#[cfg_attr(not(target_os = "linux"), allow(dead_code))]
+fn freeze_missing(home: &Path, backend: Backend) -> Result<(), String> {
+    for rel in backend.frozen() {
+        let in_login_dir = backend
+            .own()
+            .iter()
+            .any(|own| rel.starts_with(&format!("{own}/")) && home.join(own).is_dir());
+        let path = home.join(rel);
+        if !in_login_dir || path.symlink_metadata().is_ok() {
+            continue;
+        }
+        // `rules`, `hooks`, … are dirs; `config.toml`, `.env`, `settings.json` files.
+        let made = if rel
+            .rsplit('/')
+            .next()
+            .is_some_and(|name| name.contains('.'))
+        {
+            let body: &[u8] = if rel.ends_with(".json") { b"{}" } else { b"" };
+            std::fs::OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .open(&path)
+                .and_then(|mut f| std::io::Write::write_all(&mut f, body))
+        } else {
+            std::fs::create_dir_all(&path)
+        };
+        match made {
+            Err(e) if e.kind() != std::io::ErrorKind::AlreadyExists => {
+                return Err(format!(
+                    "couldn't freeze {} for the sandbox: {e}",
+                    path.display()
+                ))
+            }
+            _ => {}
+        }
+    }
+    Ok(())
 }
 
 /// Pre-create the core write dirs so their rw binds (Linux) and the decoy's
@@ -997,8 +1088,8 @@ fn sandbox_profile_macos(
     }
     p.push_str(")\n");
     // Last, so it wins over the allow above: the agent's CLI config stays
-    // read-only inside its otherwise writable login dir (`Backend::frozen`).
-    // Unlike the bwrap binds this also covers paths that don't exist yet.
+    // read-only inside its otherwise writable login dir (`Backend::frozen`),
+    // paths that don't exist yet included.
     if !backend.frozen().is_empty() {
         p.push_str("(deny file-write*");
         for rel in backend.frozen() {
@@ -1109,6 +1200,7 @@ fn sandboxed_command(
     {
         let home = home_dir().unwrap_or_default();
         ensure_write_dirs(&home);
+        freeze_missing(&home, backend)?;
         let tmpdir = std::env::var_os("TMPDIR").map(PathBuf::from);
         let mut cmd = create_command("bwrap");
         cmd.args(bwrap_args(
@@ -2395,6 +2487,7 @@ impl Backend {
                 ".codex/config.toml",
                 ".codex/.env",
                 ".codex/AGENTS.md",
+                ".codex/AGENTS.override.md",
                 ".codex/rules",
                 ".codex/skills",
                 ".codex/prompts",
@@ -2403,6 +2496,7 @@ impl Backend {
                 ".claude.json",
                 ".claude/settings.json",
                 ".claude/CLAUDE.md",
+                ".claude/rules",
                 ".claude/commands",
                 ".claude/agents",
                 ".claude/skills",
@@ -3259,10 +3353,15 @@ async fn spawn_session(
     // also names the agent's own default. Codex's list is the CLI's catalog
     // (`code_agent_models::codex_catalog`), named as OpenAI names it: the
     // adapter's snapshot renames the same slugs ("6 Astra") and would make the
-    // picker flip between the two after the first run, so it is not kept.
-    if backend == Backend::Claude {
-        if let Some(opts) = &hs.config_options {
-            crate::code_agent_models::remember(backend, opts, !hs.loaded);
+    // picker flip between the two after the first run, so only its default is
+    // kept — what Default pushes to a running chat.
+    if let Some(opts) = &hs.config_options {
+        match backend {
+            Backend::Claude => crate::code_agent_models::remember(backend, opts, !hs.loaded),
+            Backend::Codex if !hs.loaded => {
+                crate::code_agent_models::remember_default(backend, opts)
+            }
+            _ => {}
         }
     }
     let loaded = hs.loaded;
@@ -3469,6 +3568,17 @@ async fn get_or_spawn(
         .lock()
         .await
         .insert(session_id.to_string(), s.clone());
+    // A mode switch during the spawn found no session to repoint, and the
+    // handshake pinned the mode read before it: pin what is stored now.
+    if s.backend == Backend::Codex {
+        pin_codex_mode(
+            session_id,
+            &s,
+            permission_auto().load(Ordering::SeqCst),
+            false,
+        )
+        .await?;
+    }
     Ok(s)
 }
 
@@ -5677,6 +5787,146 @@ mod tests {
             assert_eq!(args.last().unwrap(), "--die-with-parent");
         }
         let _ = std::fs::remove_dir_all(&scratch);
+    }
+
+    /// Linux: what the agent could create in its rw login dir is created
+    /// first, so the freeze covers it; what exists is left alone, and nothing
+    /// is made outside an existing login dir.
+    #[test]
+    fn missing_frozen_entries_are_created_before_the_freeze() {
+        let scratch =
+            std::env::temp_dir().join(format!("opencode-sbx-freeze-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&scratch);
+        let home = scratch.join("home");
+        std::fs::create_dir_all(home.join(".claude")).unwrap();
+        std::fs::write(home.join(".claude/CLAUDE.md"), "mine").unwrap();
+
+        freeze_missing(&home, Backend::Claude).unwrap();
+        freeze_missing(&home, Backend::Claude).unwrap();
+        freeze_missing(&home, Backend::Codex).unwrap();
+
+        let read = |rel: &str| std::fs::read_to_string(home.join(rel)).unwrap();
+        assert_eq!(read(".claude/settings.json"), "{}");
+        assert_eq!(
+            read(".claude/CLAUDE.md"),
+            "mine",
+            "an existing entry is left alone"
+        );
+        assert!(home.join(".claude/hooks").is_dir());
+        assert!(home.join(".claude/skills").is_dir());
+        assert!(home.join(".claude/rules").is_dir());
+        assert!(
+            !home.join(".claude.json").exists(),
+            "outside the login dir: read-only $HOME"
+        );
+        assert!(
+            !home.join(".codex").exists(),
+            "no login dir, nothing to freeze"
+        );
+
+        std::fs::create_dir_all(home.join(".codex")).unwrap();
+        freeze_missing(&home, Backend::Codex).unwrap();
+        assert_eq!(read(".codex/config.toml"), "");
+        assert_eq!(
+            read(".codex/AGENTS.override.md"),
+            "",
+            "empty: Codex skips it"
+        );
+        assert!(home.join(".codex/rules").is_dir());
+        let _ = std::fs::remove_dir_all(&scratch);
+    }
+
+    /// A Codex session that doesn't confirm an approval-mode switch is closed,
+    /// so none keeps running in the other mode; one that confirms stays.
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn a_codex_session_that_refuses_a_mode_switch_is_closed() {
+        let scratch = ScratchDataDir::new("opencode-pin-mode");
+        let script = scratch.path.join("agent.sh");
+        std::fs::write(&script, FAULTY_AGENT).unwrap();
+        let ok_id = format!("pin-ok-{}", std::process::id());
+        let bad_id = format!("pin-refused-{}", std::process::id());
+        let ok = piped_agent(&script, &scratch.path.join("ok.log"), Backend::Codex);
+        let bad = faulty_agent(
+            &script,
+            &scratch.path.join("bad.log"),
+            Backend::Codex,
+            Some("mode-refused"),
+        );
+        registry().lock().await.insert(ok_id.clone(), ok.clone());
+        registry().lock().await.insert(bad_id.clone(), bad.clone());
+
+        pin_codex_mode(&ok_id, &ok, false, false).await.unwrap();
+        assert!(registry().lock().await.contains_key(&ok_id));
+        let log = || std::fs::read_to_string(scratch.path.join("ok.log")).unwrap();
+        assert!(log().contains(r#""modeId":"read-only""#), "{}", log());
+        // A turn already running keeps its mode in codex-acp: only a switch
+        // from Automatic to Ask Me stops it — not Ask Me picked again, not a
+        // switch to Automatic. The agent logs lines in order and answered every
+        // `set_mode`, so one cancel at the end proves the others sent none.
+        ok.active_turns.store(1, Ordering::SeqCst);
+        pin_codex_mode(&ok_id, &ok, false, false).await.unwrap();
+        pin_codex_mode(&ok_id, &ok, true, false).await.unwrap();
+        pin_codex_mode(&ok_id, &ok, false, true).await.unwrap();
+        let start = Instant::now();
+        while !log().contains("session/cancel") {
+            assert!(start.elapsed() < Duration::from_secs(5), "{}", log());
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+        assert_eq!(log().matches("session/cancel").count(), 1, "{}", log());
+
+        let err = pin_codex_mode(&bad_id, &bad, true, false)
+            .await
+            .unwrap_err();
+        assert!(err.contains("agent-full-access"), "{err}");
+        assert!(
+            !registry().lock().await.contains_key(&bad_id),
+            "a session that refuses is closed"
+        );
+
+        // A refusal from a session the chat has already replaced closes that
+        // session alone, never its successor.
+        let stale = faulty_agent(
+            &script,
+            &scratch.path.join("stale.log"),
+            Backend::Codex,
+            Some("mode-refused"),
+        );
+        let successor = piped_agent(&script, &scratch.path.join("next.log"), Backend::Codex);
+        registry()
+            .lock()
+            .await
+            .insert(bad_id.clone(), successor.clone());
+        pin_codex_mode(&bad_id, &stale, true, false)
+            .await
+            .unwrap_err();
+        let still = registry().lock().await.get(&bad_id).cloned();
+        assert!(still.is_some_and(|s| Arc::ptr_eq(&s, &successor)));
+        assert!(!child_exited(&successor).await);
+        close_session(&bad_id).await;
+        close_session(&ok_id).await;
+    }
+
+    /// Default with no reported default has nothing to push: refused while a
+    /// chat of that agent runs, never saved as if applied.
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn an_unreported_default_is_refused_while_the_agent_has_a_chat() {
+        let scratch = ScratchDataDir::new("opencode-push-default");
+        let script = scratch.path.join("agent.sh");
+        std::fs::write(&script, FAULTY_AGENT).unwrap();
+        push_config_option(Backend::Codex, "model", None)
+            .await
+            .expect("no chat of the agent: nothing to refuse");
+        let id = format!("push-default-{}", std::process::id());
+        let s = piped_agent(&script, &scratch.path.join("agent.log"), Backend::Codex);
+        registry().lock().await.insert(id.clone(), s);
+
+        let err = push_config_option(Backend::Codex, "model", None)
+            .await
+            .unwrap_err();
+        assert!(err.contains("start a new Codex chat"), "{err}");
+        close_session(&id).await;
     }
 
     /// macOS: the profile re-allows writes only to the backend's own login dir

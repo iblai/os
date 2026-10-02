@@ -1138,6 +1138,10 @@ export function CodingModeButton({
   // the desktop couldn't check the sign-in (with Check Again — never "Ready"
   // on a probe that crashed), or nothing (ready).
   const agentSt = agentStatus[agent];
+  // ibl.ai always; an agent this computer can't run (macOS below Node's floor) is left out.
+  const shownAgents = AGENTS.filter(
+    (a) => a === 'opencode' || agentStatus[a]?.supported !== false,
+  );
   const agentWorking = agentBusy === agent || !!agentSt?.installing;
   const signInUnknown =
     !!agentSt?.installed && agentSt.signed_in == null && !!agentSt.reason;
@@ -1353,9 +1357,10 @@ export function CodingModeButton({
           )}
 
           {/* Agent: the same quiet segmented control as Approvals, and only
-            once the backend has answered for at least one agent (never on
-            phones, never on a desktop build without the commands). */}
-          {(agentStatus.codex || agentStatus.claude) && (
+            once the backend has answered for at least one agent this computer
+            can run (never on phones, never on a desktop build without the
+            commands, never below the agents' macOS). */}
+          {shownAgents.some((a) => a !== 'opencode' && agentStatus[a]) && (
             <>
               <div className="mt-3 flex items-center justify-between gap-2">
                 <span className="text-xs font-medium text-gray-600">
@@ -1369,7 +1374,7 @@ export function CodingModeButton({
                   {/* An agent the desktop is still installing (it does that
                       by itself at launch) spins and can't be chosen; ibl.ai
                       and any finished agent stay selectable. */}
-                  {AGENTS.map((a) => (
+                  {shownAgents.map((a) => (
                     <button
                       key={a}
                       type="button"
