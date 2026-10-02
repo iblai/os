@@ -66,6 +66,7 @@ import {
   redirectToAuthSpaJoinTenant,
 } from '@/lib/utils';
 import { UserProfile } from './user-profile';
+import { TOUR_TARGET } from '@/components/product-tour/tour-targets';
 import { useSidebar } from '@/components/ui/sidebar';
 import { LearnerModeSwitch } from './learner-mode-switch';
 import { useShowFreeTrialDialog } from '@/hooks/user-user-actions';
@@ -794,12 +795,14 @@ export function NavBar() {
           )}
           <div className="flex items-center gap-2">
             {isOnChatPage && visibleToLoggedInUsersOnly && tenantKey && (
-              <ChatPrivacyToggle
-                org={tenantKey}
-                userId={username ?? ''}
-                mentor={mentorId}
-                className="inline-flex max-md:[&>span]:hidden"
-              />
+              <div data-tour={TOUR_TARGET.privacyMode} className="flex">
+                <ChatPrivacyToggle
+                  org={tenantKey}
+                  userId={username ?? ''}
+                  mentor={mentorId}
+                  className="inline-flex max-md:[&>span]:hidden"
+                />
+              </div>
             )}
             {creditBalanceComponentIsDisplayed && (
               <CreditBalance
@@ -819,7 +822,11 @@ export function NavBar() {
                 onViewNotifications={handleViewNotifications}
               />
             )}
-            {visibleToLoggedInUsersOnly && <UserProfile />}
+            {visibleToLoggedInUsersOnly && (
+              <div data-tour={TOUR_TARGET.profile} className="flex">
+                <UserProfile />
+              </div>
+            )}
           </div>
 
           {!isLoggedIn() && (

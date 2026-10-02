@@ -2258,5 +2258,25 @@
     "updateNow": "Actualizar ahora",
     "updating": "Actualizando…",
     "later": "Más tarde"
+  },
+  "productTour": {
+    "back": "Atrás",
+    "close": "Cerrar recorrido",
+    "done": "Listo",
+    "next": "Siguiente",
+    "skip": "Omitir recorrido",
+    "progress": "{current} de {total}",
+    "profileTitle": "Tu perfil",
+    "profileContent": "Abre tu perfil, cambia de organización, obtén ayuda o cierra sesión desde este menú.",
+    "privacyModeTitle": "Modo privado",
+    "privacyModeContent": "Activa el modo privado para que una conversación no se guarde en tu historial de chats. Una vez activado, se mantiene durante esa conversación.",
+    "promptInputTitle": "Pregunta lo que quieras",
+    "promptInputContent": "Escribe aquí tu mensaje para el agente. Adjunta archivos o activa herramientas con los botones debajo del cuadro.",
+    "conversationStartersTitle": "Ideas para empezar",
+    "conversationStartersContent": "¿No sabes por dónde empezar? Elige una idea para enviarla como tu primer mensaje.",
+    "agentsTitle": "Explora agentes",
+    "agentsContent": "Explora los agentes disponibles para ti y crea o administra los tuyos desde el menú Agentes.",
+    "accountTitle": "Administra tu organización",
+    "accountContent": "Invita a personas, administra usuarios y grupos, conecta integraciones y cambia la configuración avanzada con las herramientas de la parte inferior de la barra lateral."
   }
 }

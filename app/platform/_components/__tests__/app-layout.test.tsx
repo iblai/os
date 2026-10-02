@@ -114,8 +114,20 @@ vi.mock(
   }),
 );
 
+let mockIsLoggedIn: boolean;
+
+vi.mock('@/lib/utils', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/utils')>()),
+  isLoggedIn: () => mockIsLoggedIn,
+}));
+
+vi.mock('@/components/product-tour', () => ({
+  ProductTour: () => <div data-testid="product-tour" />,
+}));
+
 // Reset mocks before each test
 beforeEach(() => {
+  mockIsLoggedIn = false;
   mockMentorSettingsLoading = false;
   mockSearchParams = new URLSearchParams();
   mockIsTauriApp = false;
@@ -402,6 +414,40 @@ describe('AppLayout', () => {
       ).not.toBeInTheDocument();
       expect(screen.getByTestId('sidebar-provider')).toBeInTheDocument();
       expect(screen.getByTestId('children')).toBeInTheDocument();
+    });
+  });
+
+  describe('product tour', () => {
+    it('mounts the tour inside the sidebar provider for a logged-in user', () => {
+      mockIsLoggedIn = true;
+      render(
+        <AppLayout>
+          <div>Children</div>
+        </AppLayout>,
+      );
+      expect(screen.getByTestId('sidebar-provider')).toContainElement(
+        screen.getByTestId('product-tour'),
+      );
+    });
+
+    it('does not mount the tour for a logged-out visitor', () => {
+      render(
+        <AppLayout>
+          <div>Children</div>
+        </AppLayout>,
+      );
+      expect(screen.queryByTestId('product-tour')).not.toBeInTheDocument();
+    });
+
+    it('does not mount the tour in compact (PiP / embedded) mode', () => {
+      mockIsLoggedIn = true;
+      mockSearchParams = new URLSearchParams('compact=true');
+      render(
+        <AppLayout>
+          <div>Children</div>
+        </AppLayout>,
+      );
+      expect(screen.queryByTestId('product-tour')).not.toBeInTheDocument();
     });
   });
 });

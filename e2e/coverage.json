@@ -1,15 +1,15 @@
 {
   "version": 2,
-  "lastUpdated": "2026-09-30",
+  "lastUpdated": "2026-10-02",
   "summary": {
-    "totalCheckpoints": 798,
-    "coveredCheckpoints": 753,
+    "totalCheckpoints": 807,
+    "coveredCheckpoints": 762,
     "deprecatedCheckpoints": 17,
     "notReproducibleCheckpoints": 17,
     "pendingCheckpoints": 11,
     "percent": 100,
-    "totalJourneys": 81,
-    "activeJourneys": 80
+    "totalJourneys": 82,
+    "activeJourneys": 81
   },
   "journeys": [
     {
@@ -5051,6 +5051,66 @@
         {
           "id": "api-09",
           "description": "Non-admin does not see the API tab in the Edit Mentor modal (Settings menu item itself is unreachable; falls back to a direct tab-absence check)",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "product-tour",
+      "name": "First-Visit Product Tour",
+      "spec": "79-product-tour.spec.ts",
+      "sourceFiles": [
+        "components/product-tour/product-tour.tsx",
+        "components/product-tour/tour-steps.ts",
+        "components/product-tour/tour-targets.ts",
+        "components/product-tour/tour-tooltip.tsx",
+        "components/product-tour/tour-runner.tsx",
+        "components/product-tour/use-tour-completion.ts"
+      ],
+      "checkpoints": [
+        {
+          "id": "tour-01",
+          "description": "Admin opens the chat page with ?tour=1 and the tour starts on the prompt input step, with no Back button and with Next, Skip tour and Close tour",
+          "status": "covered"
+        },
+        {
+          "id": "tour-02",
+          "description": "Admin clicks Next and Back and the tour moves between steps (prompt-input, then profile, then the next) with matching \"n of N\" progress text",
+          "status": "covered"
+        },
+        {
+          "id": "tour-03",
+          "description": "Admin walks every step in order and the account step comes last, with Done instead of Skip tour",
+          "status": "covered"
+        },
+        {
+          "id": "tour-04",
+          "description": "Non-admin walks every step and never sees the account step",
+          "status": "covered"
+        },
+        {
+          "id": "tour-05",
+          "description": "Admin finishes the tour with Done, a 2xx metadata POST carries status finished (version 1), and the tour does not auto-start on the next visit without ?tour=1",
+          "status": "covered"
+        },
+        {
+          "id": "tour-06",
+          "description": "Admin closes the tour with the X and the skipped outcome is POSTed to the user metadata",
+          "status": "covered"
+        },
+        {
+          "id": "tour-07",
+          "description": "Admin clicks Skip tour and the skipped outcome is POSTed to the user metadata",
+          "status": "covered"
+        },
+        {
+          "id": "tour-08",
+          "description": "Admin presses Escape and the tour is skipped (skipped outcome POSTed)",
+          "status": "covered"
+        },
+        {
+          "id": "tour-09",
+          "description": "Admin opens the chat page with ?tour=1&embed=true and no tour is shown",
           "status": "covered"
         }
       ]

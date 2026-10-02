@@ -2258,5 +2258,25 @@
     "updateNow": "立即更新",
     "updating": "正在更新…",
     "later": "稍后"
+  },
+  "productTour": {
+    "back": "上一步",
+    "close": "关闭导览",
+    "done": "完成",
+    "next": "下一步",
+    "skip": "跳过导览",
+    "progress": "第 {current} 步，共 {total} 步",
+    "profileTitle": "你的个人资料",
+    "profileContent": "在此菜单中打开个人资料、切换组织、获取帮助或退出登录。",
+    "privacyModeTitle": "隐私模式",
+    "privacyModeContent": "开启隐私模式后，对话不会保存到聊天记录中。开启后，该对话将一直保持隐私模式。",
+    "promptInputTitle": "随便问",
+    "promptInputContent": "在这里输入发给智能体的消息。可使用输入框下方的按钮附加文件或开启工具。",
+    "conversationStartersTitle": "对话开场",
+    "conversationStartersContent": "不知道从哪里开始？选择一个开场白，将其作为第一条消息发送。",
+    "agentsTitle": "探索智能体",
+    "agentsContent": "在“智能体”菜单中浏览可用的智能体，或创建和管理你自己的智能体。",
+    "accountTitle": "管理你的组织",
+    "accountContent": "使用侧边栏底部的工具邀请成员、管理用户和群组、连接集成以及更改高级设置。"
   }
 }

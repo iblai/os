@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-09-30 | 798 checkpoints (753 covered, 11 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 81 journeys (80 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-10-02 | 807 checkpoints (762 covered, 11 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 82 journeys (81 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -1912,3 +1912,21 @@ The API tab is rendered by the SDK's `AgentApiTab` (`@iblai/iblai-js/web-contain
 - [x] api-07 _(mocked dataset)_: Deleting the only remaining row on a paginated page (page > 1) steps the view back a page and the pagination control disappears once everything fits on one page — exercised against a mocked (`page.route`) dataset, since the real tenant's true last page is always foreign, protected data (verified live: the backend ignores any client-supplied `created` timestamp and always server-stamps "now", so a test-created key can never sort to the tail without deleting real data)
 - [x] api-08: Admin deletes an API key via the UI — the confirmation dialog names the key by name, and confirming removes its row
 - [x] api-09: Non-admin does not see the API tab in the Edit Mentor modal
+
+---
+
+## Journey 79: First-Visit Product Tour (9 checkpoints) — `journeys/79-product-tour.spec.ts`
+
+**Source files:** `components/product-tour/product-tour.tsx`, `components/product-tour/tour-steps.ts`, `components/product-tour/tour-targets.ts`, `components/product-tour/tour-tooltip.tsx`, `components/product-tour/tour-runner.tsx`, `components/product-tour/use-tour-completion.ts`
+
+The tour auto-starts once per user on the agent chat page; whether it was seen is `public_metadata["os-product-tour"]` on the user metadata. Both auth setups (`auth.setup.ts`, `auth-nonadmin.setup.ts`) mark it seen via `utils/product-tour.ts` so its overlay never blocks other journeys; fresh-signup flows (`signUpNewUserOnMain`, Journeys 55 and 59) dismiss it with `dismissProductTourIfShown`. Every checkpoint here replays it with `?tour=1`, and `afterEach` rewrites the record to a seen state.
+
+- [x] tour-01: Admin opens the chat page with `?tour=1` and the tour starts on the prompt input step, with no Back button and with Next, Skip tour and Close tour
+- [x] tour-02: Admin clicks Next and Back and the tour moves between steps (prompt-input, then profile, then the next) with matching "n of N" progress text
+- [x] tour-03: Admin walks every step in order and the account step comes last, with Done instead of Skip tour
+- [x] tour-04: Non-admin walks every step and never sees the account step
+- [x] tour-05: Admin finishes the tour with Done, a 2xx metadata POST carries status `finished` (version 1), and the tour does not auto-start on the next visit without `?tour=1`
+- [x] tour-06: Admin closes the tour with the X and the `skipped` outcome is POSTed to the user metadata
+- [x] tour-07: Admin clicks Skip tour and the `skipped` outcome is POSTed to the user metadata
+- [x] tour-08: Admin presses Escape and the tour is skipped (`skipped` outcome POSTed)
+- [x] tour-09: Admin opens the chat page with `?tour=1&embed=true` and no tour is shown
