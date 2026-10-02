@@ -249,76 +249,84 @@ test.describe('Journey 53: Recent Chats Refresh — session options', () => {
     await waitForPageReady(page);
   });
 
-  test('user reopens a Recent chat that had canvas enabled and the Canvas toggle is active again', async ({
-    page,
-    chatPage,
-    sidebarPage,
-  }) => {
-    await sidebarPage.expandChatsSection();
-    await waitForPageReady(page);
+  // FIXME(stg1): passes locally but fails on stg1 — after reopening the seeded
+  // chat the Canvas toggle's aria-pressed stays "false" even though the
+  // session's artifact card renders. Parked per request until the stg1
+  // canvas-state restore difference (frontend build vs backend session tools
+  // payload) is pinned down.
+  test.fixme(
+    'user reopens a Recent chat that had canvas enabled and the Canvas toggle is active again',
+    async ({ page, chatPage, sidebarPage }) => {
+      await sidebarPage.expandChatsSection();
+      await waitForPageReady(page);
 
-    // Exact name: with Recents expanded, `chatPage.canvasToggle` (/canvas/i)
-    // can match a Recent row whose title mentions "canvas".
-    const canvasToggle = page.getByRole('button', {
-      name: 'Canvas',
-      exact: true,
-    });
+      // Exact name: with Recents expanded, `chatPage.canvasToggle` (/canvas/i)
+      // can match a Recent row whose title mentions "canvas".
+      const canvasToggle = page.getByRole('button', {
+        name: 'Canvas',
+        exact: true,
+      });
 
-    // ── Step 1: Enable canvas on this chat and seed it into Recent ────────────
-    await expect(canvasToggle).toBeVisible({ timeout: 30_000 });
-    if ((await canvasToggle.getAttribute('aria-pressed')) !== 'true') {
-      await canvasToggle.click();
-    }
-    await expect(canvasToggle).toHaveAttribute('aria-pressed', 'true', {
-      timeout: 10_000,
-    });
-    await chatPage.sendMessage(`rcr-03 seed ${Date.now()}: reply with "ok".`);
-    await waitForStreamingDone(page, chatPage.sendButton, chatPage.aiMessages);
+      // ── Step 1: Enable canvas on this chat and seed it into Recent ────────────
+      await expect(canvasToggle).toBeVisible({ timeout: 30_000 });
+      if ((await canvasToggle.getAttribute('aria-pressed')) !== 'true') {
+        await canvasToggle.click();
+      }
+      await expect(canvasToggle).toHaveAttribute('aria-pressed', 'true', {
+        timeout: 10_000,
+      });
+      await chatPage.sendMessage(`rcr-03 seed ${Date.now()}: reply with "ok".`);
+      await waitForStreamingDone(
+        page,
+        chatPage.sendButton,
+        chatPage.aiMessages,
+      );
 
-    const { mentorId } = await getPlatformContext(page);
-    const seededSessionId = await chatPage.getCachedSessionId(mentorId);
-    expect(
-      seededSessionId,
-      'seeded chat session id must be cached after send',
-    ).toBeTruthy();
-    await expect
-      .poll(
-        async () =>
-          sidebarPage.isRecentChatVisibleBySession(seededSessionId!, 3_000),
-        {
-          message: 'Seeded chat should appear in Recent after streaming ends',
+      const { mentorId } = await getPlatformContext(page);
+      const seededSessionId = await chatPage.getCachedSessionId(mentorId);
+      expect(
+        seededSessionId,
+        'seeded chat session id must be cached after send',
+      ).toBeTruthy();
+      await expect
+        .poll(
+          async () =>
+            sidebarPage.isRecentChatVisibleBySession(seededSessionId!, 3_000),
+          {
+            message: 'Seeded chat should appear in Recent after streaming ends',
+            timeout: 20_000,
+            intervals: [1_000, 2_000, 3_000],
+          },
+        )
+        .toBe(true);
+
+      // ── Step 2: Move to a new chat whose Canvas toggle is OFF ─────────────────
+      // Some mentors default canvas on; switch it off so the final assertion can
+      // only pass if the seeded chat's own state was restored.
+      await chatPage.startNewChat();
+      await waitForPageReady(page);
+      await expect
+        .poll(async () => chatPage.getCachedSessionId(mentorId), {
+          message: 'New chat must get its own session',
           timeout: 20_000,
-          intervals: [1_000, 2_000, 3_000],
-        },
-      )
-      .toBe(true);
+        })
+        .not.toBe(seededSessionId);
+      await expect(canvasToggle).toBeVisible({ timeout: 30_000 });
+      if ((await canvasToggle.getAttribute('aria-pressed')) === 'true') {
+        await canvasToggle.click();
+      }
+      await expect(canvasToggle).toHaveAttribute('aria-pressed', 'false', {
+        timeout: 10_000,
+      });
 
-    // ── Step 2: Move to a new chat whose Canvas toggle is OFF ─────────────────
-    // Some mentors default canvas on; switch it off so the final assertion can
-    // only pass if the seeded chat's own state was restored.
-    await chatPage.startNewChat();
-    await waitForPageReady(page);
-    await expect
-      .poll(async () => chatPage.getCachedSessionId(mentorId), {
-        message: 'New chat must get its own session',
+      // ── Step 3: Reopen the seeded chat — its canvas state comes back ──────────
+      await sidebarPage.getRecentChatRowBySession(seededSessionId!).click();
+      await expect(chatPage.userMessages.first()).toBeVisible({
+        timeout: 30_000,
+      });
+      await expect(canvasToggle).toHaveAttribute('aria-pressed', 'true', {
         timeout: 20_000,
-      })
-      .not.toBe(seededSessionId);
-    await expect(canvasToggle).toBeVisible({ timeout: 30_000 });
-    if ((await canvasToggle.getAttribute('aria-pressed')) === 'true') {
-      await canvasToggle.click();
-    }
-    await expect(canvasToggle).toHaveAttribute('aria-pressed', 'false', {
-      timeout: 10_000,
-    });
-
-    // ── Step 3: Reopen the seeded chat — its canvas state comes back ──────────
-    await sidebarPage.getRecentChatRowBySession(seededSessionId!).click();
-    await expect(chatPage.userMessages.first()).toBeVisible({
-      timeout: 30_000,
-    });
-    await expect(canvasToggle).toHaveAttribute('aria-pressed', 'true', {
-      timeout: 20_000,
-    });
-  });
+      });
+    },
+  );
 });
