@@ -1,5 +1,164 @@
 # Changelog
 
+## [0.159.2](https://github.com/iblai/os/compare/v0.159.1...v0.159.2) (2026-10-01)
+
+### Documentation
+
+- add "comment only when necessary" rule to CLAUDE.md/AGENTS.md ([49bfd43](https://github.com/iblai/os/commit/49bfd43c99c62a6abf8a30f9a2af16144185ab5e))
+
+## [0.159.1](https://github.com/iblai/os/compare/v0.159.0...v0.159.1) (2026-09-30)
+
+### Bug Fixes
+
+- **deps:** bump axios to 1.20.0 and lift the brace-expansion floor to 5.0.11 ([29d21e3](https://github.com/iblai/os/commit/29d21e342143d0f754c53078ff79bb43dfc851d0))
+- **deps:** lift the undici override past three new high advisories ([aa9b62d](https://github.com/iblai/os/commit/aa9b62d05c124a07ad1d13c4c1b849af1d0e01e0))
+
+### Refactors
+
+- **edit-mentor-modal:** render the SDK AgentApiTab from the API tab ([49b570b](https://github.com/iblai/os/commit/49b570ba2f5f8f924917bd138e0a2f4358497567))
+- **edit-mentor-modal:** render the SDK AgentToolsTab from the Tools tab ([ffa64cc](https://github.com/iblai/os/commit/ffa64cc61623c89075b9682790136abc716fa7ed))
+- **workflows:** toggle agent tools with the SDK useToggleTools hook ([94b0736](https://github.com/iblai/os/commit/94b07362eb04fe5a0e4aed583c91aeddc0c4c2f6))
+
+### Chores
+
+- **deps:** bump @iblai/iblai-js to 2.26.0 ([681251d](https://github.com/iblai/os/commit/681251deb24d8ef955e83a608265b792491aa712)), closes [#2111](https://github.com/iblai/os/issues/2111)
+- **i18n:** drop the API tab messages now owned by the SDK ([90295e4](https://github.com/iblai/os/commit/90295e4480fe04e7c20d5ec6a7e84dbc2e4bab51))
+- **i18n:** drop the tabsToolsTab messages now owned by the SDK ([14c2f89](https://github.com/iblai/os/commit/14c2f893491f24da19c51cbf93dd2dc755976a60))
+
+### Styles
+
+- prettier-format CHANGELOG.md ([34881a9](https://github.com/iblai/os/commit/34881a9e14539156282fb66b10330e715b333b54))
+
+### Tests
+
+- **e2e:** add agent API tab journey with an ApiTab page object and key residue reaper ([648b986](https://github.com/iblai/os/commit/648b98695560cd3412dc6cd04752f049b0deb0e5))
+- **e2e:** add agent Tools tab journey and harden the ToolsTab page object ([7ab7760](https://github.com/iblai/os/commit/7ab7760a0d1e92a37010c081b768ce435928427b))
+- **e2e:** read API tab row names in one snapshot ([6e33cc5](https://github.com/iblai/os/commit/6e33cc562b2cd1e3fd87eb7932ccf87283e206ad))
+- **e2e:** record API tab coverage for journey 78 ([d3813b8](https://github.com/iblai/os/commit/d3813b8b39493e92f33698e837d67dd6046fea7f))
+- **e2e:** record Tools tab coverage for journey 77 ([61d7bd1](https://github.com/iblai/os/commit/61d7bd13aef3a4a8f0e07142d6c40ed59dcff323))
+
+## [0.159.0](https://github.com/iblai/os/compare/v0.158.6...v0.159.0) (2026-09-30)
+
+### Features
+
+- **datasets:** render the SDK datasets tab with plain props only ([913f26c](https://github.com/iblai/os/commit/913f26c4efe59f0bf3e62f17b20e5fc178de52bc))
+
+### Bug Fixes
+
+- **chat:** clear the upload notification timer on unmount ([5dedda8](https://github.com/iblai/os/commit/5dedda87b64e28eb0d364d9ddf6b383e76e0be50))
+- **e2e:** resolve dataset gating without app source in CI ([e984d9f](https://github.com/iblai/os/commit/e984d9f3af417520edfe6e6373a039efae153200))
+
+### Reverts
+
+- **chat:** drop the OS chat-input-form timer fix ([f7fc5bb](https://github.com/iblai/os/commit/f7fc5bba0393e437dbf47e894e40fbbcd29c1eea)), closes [iblai-platform#2586](https://github.com/iblai/iblai-platform/issues/2586)
+- **icons:** keep OpenFolderIcon in svg-icons ([14d0b65](https://github.com/iblai/os/commit/14d0b65286e1b417b25bad84eba5266d5d1a9fe3)), closes [iblai-platform#2586](https://github.com/iblai/iblai-platform/issues/2586)
+
+### Chores
+
+- remove unused dataset and project components ([887aea9](https://github.com/iblai/os/commit/887aea9811aaaad348c853d938cfb21b0759e817))
+
+### Documentation
+
+- **e2e:** update dataset coverage map ([04e76ac](https://github.com/iblai/os/commit/04e76aca8894c786b3aaaa18b58ea91c1dcd0429))
+
+### Styles
+
+- format CHANGELOG with prettier ([ed83741](https://github.com/iblai/os/commit/ed83741efec0b1b25f757535abe78c8b88be1aa3))
+
+### Tests
+
+- **e2e:** cover every dataset resource type and row action ([07e2377](https://github.com/iblai/os/commit/07e23770078014a23b988df3145aeaeebb1c7d97))
+
+### Build
+
+- **deps:** bump @iblai/iblai-js to 2.24.0 ([cebc8c7](https://github.com/iblai/os/commit/cebc8c7e577b3c065f725467b4c3ad350c774a37)), closes [iblai-web-frontend#2108](https://github.com/iblai/iblai-web-frontend/issues/2108)
+
+## [0.158.6](https://github.com/iblai/os/compare/v0.158.5...v0.158.6) (2026-09-30)
+
+### Chores
+
+- **ext:** bump Chrome extension to 1.1.2 to publish the tenant-switch fixes ([202c5b9](https://github.com/iblai/os/commit/202c5b91f85dee83b59904603312bdf1536c8099)), closes [#546](https://github.com/iblai/os/issues/546)
+
+## [0.158.5](https://github.com/iblai/os/compare/v0.158.4...v0.158.5) (2026-09-30)
+
+### Bug Fixes
+
+- **ext:** refresh agent-ai cached host auth on tenant switch (stop revert) ([98ba6ae](https://github.com/iblai/os/commit/98ba6aeea238c9a1a85eaf54da3e90aa64063945))
+- **ext:** snapshot tenant-switch redirect path before the async auth ([12728c8](https://github.com/iblai/os/commit/12728c8c9b67da43711faf909e220fb6a8ad9044))
+
+## [0.158.4](https://github.com/iblai/os/compare/v0.158.3...v0.158.4) (2026-09-29)
+
+### Bug Fixes
+
+- **mentor:** persist embed Context Aware and Open By Default toggles ([03b545a](https://github.com/iblai/os/commit/03b545a83f538bbb37a8a8af8d3b8c9fc8e29923))
+- **mentor:** stop Create Embed overwriting Advanced CSS ([05c982f](https://github.com/iblai/os/commit/05c982fa0041562848bb2cb04be422d155dfa3cd))
+
+### Chores
+
+- **deps:** bump @iblai/iblai-js to 2.23.1 ([fb474c6](https://github.com/iblai/os/commit/fb474c63afd369bc11844f4614f31b97fe1a1b11))
+- **deps:** bump @iblai/iblai-js to 2.26.0 ([f2e802b](https://github.com/iblai/os/commit/f2e802b7abd0b0ce0338c40063a9489434de230e))
+
+### Documentation
+
+- **e2e:** add mob-08 to coverage ([e04447f](https://github.com/iblai/os/commit/e04447fe98aa73a562dd90dceb806429e6b8653e))
+
+### Styles
+
+- prettier-format CHANGELOG bullets ([3578f5c](https://github.com/iblai/os/commit/3578f5cb6c3b33624a18dcf287593a8add49f4d1))
+
+### Tests
+
+- **e2e:** mobile profile dropdown shows Admin/User labels ([9d28389](https://github.com/iblai/os/commit/9d283894278b79f2b06e9eb66574ca836de0f552))
+- **mentor:** regression tests for Advanced CSS ownership ([7aebf3d](https://github.com/iblai/os/commit/7aebf3dd18f7f39e56ed11f73bb95dd26cc253fe))
+- **mentor:** regression tests for embed toggle persistence ([2ca81e8](https://github.com/iblai/os/commit/2ca81e87458858032ceec135913677ffc041b2f7))
+
+## [0.158.3](https://github.com/iblai/os/compare/v0.158.2...v0.158.3) (2026-09-29)
+
+### Bug Fixes
+
+- **embed:** don't run cross-SPA storage sync in an iframe (reverted switches) ([caae732](https://github.com/iblai/os/commit/caae7326359efc58217a5f52e84c8e1114980b04))
+
+## [0.158.2](https://github.com/iblai/os/compare/v0.158.1...v0.158.2) (2026-09-29)
+
+### Bug Fixes
+
+- **ext:** switch tenants via /login/complete so the target tenant is honored ([4ba13d4](https://github.com/iblai/os/commit/4ba13d4f3051c307aad30661ee9df65b72b5ff55))
+
+## [0.158.1](https://github.com/iblai/os/compare/v0.158.0...v0.158.1) (2026-09-29)
+
+### Refactors
+
+- **edit-mentor:** add a thin Disclaimers tab wrapper over the SDK AgentDisclaimersTab ([de49e1b](https://github.com/iblai/os/commit/de49e1bf5b51d07a2262d357f70286299b8d6b52))
+- **edit-mentor:** mount the SDK-backed Disclaimers tab and delete the in-repo monolith ([e65eabe](https://github.com/iblai/os/commit/e65eabed63ab984e9b5ef7067acd2c1a2673387a))
+
+### Chores
+
+- **deps:** bump @iblai/iblai-js to 2.21.0 ([b2c4ed2](https://github.com/iblai/os/commit/b2c4ed2487664f681ed69a52d21dfd60f33649a5)), closes [#2102](https://github.com/iblai/os/issues/2102)
+- **deps:** bump @iblai/iblai-js to 2.25.0 ([a6f48b5](https://github.com/iblai/os/commit/a6f48b589c138a632613ed35d88284ee33c6e5e3))
+- **edit-mentor:** retarget e2e coverage to the wrapper and drop unused disclaimer aria strings ([ff438d2](https://github.com/iblai/os/commit/ff438d20186af6fc7ebc0d283b472426033130aa))
+
+### Styles
+
+- format CHANGELOG.md with prettier ([4a3b0d1](https://github.com/iblai/os/commit/4a3b0d18c7de1708287beabf5016bf383115429e))
+
+## [0.158.0](https://github.com/iblai/os/compare/v0.157.0...v0.158.0) (2026-09-29)
+
+### Features
+
+- **embed:** switch tenant via the host auth flow in embeds ([158df5c](https://github.com/iblai/os/commit/158df5cd436d4f63fd64126aadccf7859535ad28))
+
+## [0.157.0](https://github.com/iblai/os/compare/v0.156.0...v0.157.0) (2026-09-29)
+
+### Features
+
+- **embed:** hide logout and instructor switch in the embedded user profile ([06779a4](https://github.com/iblai/os/commit/06779a47f6121b7121704022e4f0b6d13a5d507f))
+
+## [0.156.0](https://github.com/iblai/os/compare/v0.155.3...v0.156.0) (2026-09-29)
+
+### Features
+
+- **embed:** show the user profile in the embed navbar when the host opts in ([4ff9d75](https://github.com/iblai/os/commit/4ff9d7531c3b29d07df96105a5afe61cff8f7008))
+
 ## [0.155.3](https://github.com/iblai/os/compare/v0.155.2...v0.155.3) (2026-09-25)
 
 ### Chores

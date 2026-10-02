@@ -1,5 +1,5 @@
 import { test, expect } from '../fixtures/mentor-test';
-import { navigateToMentorApp } from '../utils/auth';
+import { navigateToMentorApp, checkAdminStatus } from '../utils/auth';
 
 test.use({ viewport: { width: 393, height: 851 } }); // Pixel 5
 
@@ -98,4 +98,97 @@ test.describe('Journey 31: Mobile View', () => {
       await nonadminEditMentorPage.close();
     },
   );
+});
+
+// ── Journey 31 (admin): Profile dropdown learner-mode label (issue #2592) ──
+//
+// Below the `xl` breakpoint, the profile dropdown grows a learner-mode row
+// (label + switch) that is otherwise hidden — the equivalent desktop switch
+// lives directly in the navbar instead. Issue #2592 relabels that row's text
+// from "Instructor"/"Learner" to "Admin"/"User". Only an admin viewing a
+// non-`main` tenant gets the row at all (`showLearnerModeSwitch` in
+// `nav-bar/user-profile.tsx`), so this uses the admin `page` fixture, not
+// `nonadminPage`.
+test.describe('Journey 31: Profile Dropdown Learner Mode Label (mobile, admin)', () => {
+  test.beforeEach(async ({ page }) => {
+    await navigateToMentorApp(page);
+    const isAdmin = await checkAdminStatus(page);
+    if (!isAdmin) {
+      test.skip(true, 'Requires admin access');
+    }
+  });
+
+  // Snapshot check for whether the dropdown row is currently rendered —
+  // used instead of `isVisible({timeout}).catch()` (that timeout is
+  // misleading: isVisible() never waits for it). `waitFor` with a short
+  // window gives the close animation a moment to settle before we decide.
+  async function rowIsOpen(
+    row: import('@playwright/test').Locator,
+    timeout = 2_000,
+  ): Promise<boolean> {
+    try {
+      await row.waitFor({ state: 'visible', timeout });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  // mob-08
+  test('admin on mobile opens the profile dropdown and sees Admin/User learner-mode labels, not Instructor/Learner', async ({
+    page,
+    navbarPage,
+  }) => {
+    // Restore admin mode at the end regardless of pass/fail, so this test
+    // never leaves the shared e2e account stuck in User mode.
+    try {
+      // ── 1. Default admin mode: the row reads "Admin" ────────────────────
+      await navbarPage.openProfileDropdown();
+      await expect(navbarPage.mobileLearnerModeRow).toBeVisible({
+        timeout: 10_000,
+      });
+      expect(await navbarPage.getMobileLearnerModeLabel()).toBe('Admin');
+
+      // ── 2. Flip the switch; the dropdown may close as a side effect ─────
+      await navbarPage.toggleMobileLearnerMode();
+      if (!(await rowIsOpen(navbarPage.mobileLearnerModeRow))) {
+        await navbarPage.openProfileDropdown();
+      }
+      await expect(navbarPage.mobileLearnerModeRow).toBeVisible({
+        timeout: 10_000,
+      });
+      expect(await navbarPage.getMobileLearnerModeLabel()).toBe('User');
+
+      // ── 3. Flip back; confirm "Admin" again ─────────────────────────────
+      await navbarPage.toggleMobileLearnerMode();
+      if (!(await rowIsOpen(navbarPage.mobileLearnerModeRow))) {
+        await navbarPage.openProfileDropdown();
+      }
+      await expect(navbarPage.mobileLearnerModeRow).toBeVisible({
+        timeout: 10_000,
+      });
+      expect(await navbarPage.getMobileLearnerModeLabel()).toBe('Admin');
+
+      // ── 4. The old wording must never appear in this row ────────────────
+      const rowText = await navbarPage.mobileLearnerModeRow.textContent();
+      expect(rowText).not.toMatch(/Instructor/);
+      expect(rowText).not.toMatch(/Learner/);
+    } finally {
+      // Leave the account in Admin mode for subsequent tests/journeys.
+      let isOpen = await rowIsOpen(navbarPage.mobileLearnerModeRow, 500);
+      if (!isOpen) {
+        await navbarPage.openProfileDropdown().catch(() => undefined);
+        isOpen = await rowIsOpen(navbarPage.mobileLearnerModeRow, 2_000);
+      }
+      if (isOpen) {
+        const label = await navbarPage
+          .getMobileLearnerModeLabel()
+          .catch(() => '');
+        if (label !== 'Admin') {
+          await navbarPage.toggleMobileLearnerMode().catch(() => undefined);
+        }
+      }
+      await page.keyboard.press('Escape').catch(() => undefined);
+    }
+  });
 });

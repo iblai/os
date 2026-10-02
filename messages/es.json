@@ -157,35 +157,6 @@
     "languageFrenchFrance": "Francés (Francia)",
     "languageSpanish": "Español (Español)"
   },
-  "apiTabApiKeyModal": {
-    "dialogTitle": "Clave API",
-    "dialogDescription": "Copie y pegue la clave API.",
-    "securityWarning": "Por favor, copie su clave API y guárdela en un lugar seguro. Por razones de seguridad, esta clave solo se mostrará una vez y no podrá recuperarse después de abandonar esta página.",
-    "lostKeyWarning": "Si pierde su clave API, deberá generar una nueva."
-  },
-  "apiTabCreateApiModal": {
-    "apiKeyNameRequired": "El nombre de la clave API es obligatorio",
-    "apiKeyNameInvalidChars": "solo puede contener letras, números y guiones",
-    "apiKeyCreatedSuccess": "Clave API creada correctamente",
-    "apiKeyCreatedError": "Error al crear la clave API",
-    "dialogDescriptionSrOnly": "Crear clave API",
-    "dialogTitle": "Crear clave API",
-    "apiKeyNameLabel": "Nombre de la clave API",
-    "apiKeyNamePlaceholder": "Nombre de la clave API",
-    "expirationDateLabel": "Fecha de vencimiento",
-    "pickADate": "Seleccionar una fecha",
-    "submitting": "Enviando...",
-    "submit": "Enviar"
-  },
-  "apiTabDeleteApiModal": {
-    "title": "Eliminar clave API",
-    "confirmationMessage": "¿Estás seguro de que deseas eliminar la clave API con el nombre <bold>{name}</bold>? Esta acción no se puede deshacer.",
-    "cancel": "Cancelar",
-    "delete": "Eliminar",
-    "deleting": "Eliminando...",
-    "deleteSuccess": "Clave API eliminada correctamente",
-    "deleteError": "Error al eliminar la clave API"
-  },
   "appSidebarIndex": {
     "addAgentToProjectFirst": "Primero añade un agente a este proyecto.",
     "projects": "Proyectos",
@@ -581,9 +552,6 @@
     "settings": "Configuración",
     "language": "Idioma"
   },
-  "componentsAddResourceButton": {
-    "addResource": "Agregar recurso"
-  },
   "componentsAdvancedChartWithTooltip": {
     "monthlyRevenue": "Ingresos mensuales",
     "revenueLabel": "Ingresos"
@@ -596,11 +564,6 @@
     "areYouSure": "¿Estás seguro?",
     "cancel": "Cancelar",
     "continue": "Continuar"
-  },
-  "componentsDatasetTab": {
-    "dataset": "Conjunto de datos",
-    "addResource": "Agregar recurso",
-    "noResourcesAddedYet": "No se han agregado recursos aún"
   },
   "componentsFileUpload": {
     "dropFilesHere": "Suelta tus archivos aquí",
@@ -650,64 +613,6 @@
     "poweredBy": "Desarrollado por",
     "inNewYork": "en Nueva York"
   },
-  "datasetsTabAddResourceModal": {
-    "addResources": "Agregar recursos",
-    "description": "Agrega conocimiento para ayudar a tu agente a proporcionar información más relevante. Otros usuarios con acceso de edición pueden reutilizar estas fuentes para más temas.",
-    "googleDrivePickerError": "Error del selector de Google Drive",
-    "forceClosePicker": "Forzar cierre del selector",
-    "notConfigured": "No configurado para este inquilino"
-  },
-  "datasetsTabDatasetItem": {
-    "trainingDocumentUpdatedSuccess": "Documento de entrenamiento actualizado correctamente",
-    "trainingDocumentUpdateFailed": "Error al actualizar el documento de entrenamiento",
-    "scheduleRetrain": "Programar reentrenamiento",
-    "documentCannotBeRetrained": "Este documento no puede ser reentrenado",
-    "scheduleAutomaticRetraining": "Programar reentrenamiento automático para este conjunto de datos",
-    "makePublic": "Hacer público",
-    "makePrivate": "Hacer privado",
-    "inProgress": "En progreso",
-    "disableTrainingForDocument": "Deshabilitar entrenamiento para el documento",
-    "enableTrainingForDocument": "Habilitar entrenamiento para el documento"
-  },
-  "datasetsTabDeleteDatasetModal": {
-    "deleteSuccess": "Documento de entrenamiento eliminado correctamente",
-    "deleteError": "Error al eliminar el documento de entrenamiento",
-    "dialogTitle": "Eliminar conjunto de datos",
-    "confirmationText": "Ha desaprendido correctamente un conjunto de datos, ¿desea eliminarlo? Esta acción no se puede deshacer.",
-    "cancelButton": "Cancelar",
-    "deletingButton": "Eliminando...",
-    "deleteButton": "Eliminar"
-  },
-  "datasetsTabIndex": {
-    "infoBox": "Enseña a tu agente con tu propio material. Sube documentos, archivos o enlaces y responderá a partir de ellos, basándose en tu contenido en lugar de adivinar.",
-    "heading": "Conjuntos de datos",
-    "subheading": "Administre los conjuntos de datos de entrenamiento y las fuentes de conocimiento.",
-    "searchPlaceholder": "Buscar conjuntos de datos...",
-    "addResource": "Agregar recurso",
-    "columnName": "NOMBRE",
-    "columnType": "TIPO",
-    "columnTokens": "TOKENS",
-    "columnInterval": "INTERVALO",
-    "columnVisibility": "VISIBILIDAD",
-    "columnStatus": "ESTADO"
-  },
-  "datasetsTabRetrainScheduleModal": {
-    "toastSuccess": "Intervalo de reentrenamiento actualizado correctamente",
-    "toastError": "Error al actualizar el intervalo de reentrenamiento",
-    "dialogTitle": "Programar reentrenamiento",
-    "dialogDescription": "Configurar el programa de reentrenamiento automático para",
-    "retrainIntervalLabel": "Intervalo de reentrenamiento",
-    "presetDaily": "Diario (1 día)",
-    "presetWeekly": "Semanal (7 días)",
-    "presetMonthly": "Mensual (30 días)",
-    "customIntervalLabel": "Intervalo personalizado (días)",
-    "customIntervalPlaceholder": "Ingresar días",
-    "retrainIntervalHint": "El conjunto de datos se reentrenará cada {days} {unit}",
-    "dayUnit": "día",
-    "daysUnit": "días",
-    "cancelButton": "Cancelar",
-    "submitButton": "Programar reentrenamiento"
-  },
   "disclaimersTabEditDisclaimerModal": {
     "editAdvisory": "Editar aviso",
     "advisoryContent": "Contenido del aviso",
@@ -729,17 +634,12 @@
     "heading": "Avisos",
     "subheading": "Configure los ajustes de aviso para su agente.",
     "userAgreementTitle": "Acuerdo de usuario",
-    "userAgreementInfoAriaLabel": "Más información sobre el acuerdo de usuario",
     "userAgreementTooltip": "Controla el acuerdo de usuario",
     "active": "Activo",
     "inactive": "Inactivo",
-    "userAgreementSwitchAriaLabel": "Acuerdo de usuario {status}",
-    "userAgreementContentAriaLabel": "Contenido del acuerdo de usuario",
     "editButton": "Editar",
     "advisoryTitle": "Aviso",
-    "advisoryInfoAriaLabel": "Más información sobre el aviso",
     "advisoryTooltip": "Controla el aviso",
-    "advisoryContentAriaLabel": "Contenido del aviso",
     "agentUpdatedSuccess": "Agente actualizado correctamente",
     "agentUpdatedError": "Error al actualizar el agente",
     "userAgreementUpdatedSuccess": "Acuerdo de usuario actualizado correctamente",
@@ -1570,34 +1470,6 @@
     "toastDeleteSuccess": "Proyecto eliminado correctamente",
     "toastDeleteError": "Error al eliminar el proyecto"
   },
-  "projectsMinimumMentorAlert": {
-    "cannotRemoveAgent": "No se puede eliminar el agente",
-    "minimumAgentWarning": "Un proyecto debe tener al menos un agente. Por favor, agregue otro agente antes de eliminar este.",
-    "cancel": "Cancelar"
-  },
-  "projectsProjectFilesModal": {
-    "projectFiles": "Archivos del proyecto",
-    "searchDatasetsPlaceholder": "Buscar conjuntos de datos...",
-    "addFiles": "Agregar archivos",
-    "columnName": "NOMBRE",
-    "columnType": "TIPO",
-    "columnTokens": "TOKENS",
-    "columnInterval": "INTERVALO",
-    "columnVisibility": "VISIBILIDAD",
-    "columnStatus": "ESTADO"
-  },
-  "projectsProjectInstructionsModal": {
-    "title": "Instrucciones",
-    "description": "Puedes pedirle al agente que se centre en ciertos temas, o que use un tono o formato específico para las respuestas.",
-    "placeholder": "Ej.: \"Consulta la documentación más reciente de JavaScript. Mantén las respuestas cortas y enfocadas.\"",
-    "cancelAriaLabel": "Cancelar edición de instrucciones",
-    "cancel": "Cancelar",
-    "saveAriaLabel": "Guardar instrucciones del proyecto",
-    "saving": "Guardando...",
-    "save": "Guardar",
-    "saveSuccess": "Instrucciones actualizadas correctamente",
-    "saveError": "Error al actualizar las instrucciones"
-  },
   "projectsRenameProjectModal": {
     "title": "Renombrar proyecto",
     "projectNameLabel": "Nombre del proyecto",
@@ -1607,65 +1479,6 @@
     "renameButton": "Renombrar proyecto",
     "renameSuccess": "Proyecto renombrado correctamente",
     "renameError": "Error al renombrar el proyecto"
-  },
-  "resourceModalGithubFileUploadModal": {
-    "failedToFetchBranches": "Error al obtener las ramas",
-    "unknownError": "Ocurrió un error desconocido",
-    "agentNotFound": "Agente no encontrado",
-    "documentQueued": "El documento ha sido agregado a la cola de entrenamiento",
-    "errorAddingDocument": "Error al agregar el documento de entrenamiento",
-    "githubRepoUrlPlaceholder": "URL del repositorio de Github",
-    "selectBranchPlaceholder": "Seleccionar rama",
-    "submit": "Enviar"
-  },
-  "resourceModalLocalFileUploadModal": {
-    "fileNotFound": "Archivo no encontrado",
-    "documentQueued": "El documento ha sido puesto en cola para entrenamiento",
-    "errorAddingDocument": "Error al agregar el documento de entrenamiento",
-    "fileSizeExceeds": "El tamaño del archivo supera {value} {unit}",
-    "dragAndDrop": "Arrastra y suelta tu archivo aquí",
-    "or": "o",
-    "browseFiles": "Buscar archivos",
-    "maxFileSize": "Tamaño máximo de archivo: {value} {unit}",
-    "descriptionLabel": "Descripción (opcional)",
-    "descriptionPlaceholder": "Agrega una descripción para esta imagen...",
-    "submitting": "Enviando",
-    "submit": "Enviar"
-  },
-  "resourceModalUrlUploadModel": {
-    "documentQueuedForTraining": "El documento ha sido puesto en cola para entrenamiento",
-    "errorAddingTrainingDocument": "Error al agregar el documento de entrenamiento",
-    "invalidYouTubeUrl": "URL de YouTube no válida",
-    "invalidBlackboardUrl": "URL de Blackboard no válida",
-    "invalidUrl": "URL no válida",
-    "urlPlaceholder": "URL",
-    "submitButton": "Enviar"
-  },
-  "resourceModalWebsiteCrawlModal": {
-    "title": "Configuración del rastreador web",
-    "description": "Configure los ajustes del rastreador web y los patrones de URL",
-    "formAriaLabel": "Formulario de configuración del rastreador web",
-    "urlLabel": "URL",
-    "urlRequired": "La URL es obligatoria",
-    "invalidUrl": "URL no válida",
-    "maxCrawlDepthLabel": "Profundidad máxima de rastreo",
-    "fieldRequired": "El campo es obligatorio",
-    "mustBeGreaterThanZero": "Debe ser mayor que 0",
-    "mustBeLessThan10000": "Debe ser menor que 10 000",
-    "maxPagesLimitLabel": "Límite máximo de páginas",
-    "patternTypeLabel": "Tipo de patrón",
-    "selectPatternTypeAriaLabel": "Seleccionar tipo de patrón",
-    "globPattern": "Patrón Glob",
-    "regularExpression": "Expresión regular",
-    "crawlerMatchPatternsLabel": "Patrones de coincidencia del rastreador",
-    "addPatternAriaLabel": "Agregar patrón",
-    "patternHelpText": "Presione Intro o haga clic en el botón más para agregar un patrón",
-    "addedPatternsAriaLabel": "Patrones de coincidencia del rastreador agregados",
-    "noPatternsAdded": "No se han agregado patrones",
-    "removePatternAriaLabel": "Eliminar patrón: {pattern}",
-    "submitting": "Enviando...",
-    "submit": "Enviar",
-    "formBeingSubmitted": "El formulario se está enviando"
   },
   "settingsTabCopyMentorModal": {
     "defaultCopyNamePrefix": "Copia de",
@@ -1697,22 +1510,6 @@
     "deleting": "Eliminando...",
     "deleteSuccess": "Agente eliminado correctamente",
     "deleteError": "Error al eliminar el agente"
-  },
-  "tabsApiTab": {
-    "infoBox": "Usa este agente desde tus propias aplicaciones. Crea aquí claves de API para llamarlo mediante programación e integrarlo en tu producto o flujo de trabajo.",
-    "apiHeading": "API",
-    "manageApiKeysDescription": "Administrar claves API e integraciones.",
-    "secretKeysListedBelow": "Sus claves API secretas se muestran a continuación. Tenga en cuenta que no volvemos a mostrar sus claves API secretas después de que las genere.",
-    "doNotShareApiKey": "No comparta su clave API con otros ni la exponga en el navegador u otro código del lado del cliente. Para proteger la seguridad de su cuenta, IBL también puede rotar automáticamente cualquier clave API cuya filtración pública hayamos detectado.",
-    "columnName": "NOMBRE",
-    "columnCreated": "CREADA",
-    "columnExpires": "EXPIRA",
-    "columnActions": "Acciones",
-    "noApiKeysFound": "No se encontraron claves API",
-    "noPermissionToViewApiKeys": "No tiene permiso para ver las claves API",
-    "notAvailable": "N/A",
-    "deleteApiKey": "Eliminar clave API",
-    "createNew": "Crear nuevo"
   },
   "tabsAuditLogTab": {
     "infoBox": "Mantén un registro. Consulta el historial de quién cambió qué y cuándo en este agente: útil para solucionar problemas y cumplir con la normativa.",
@@ -2193,15 +1990,6 @@
     "heading": "Habilidades",
     "description": "Guías reutilizables que este Agente Base puede descubrir y seguir.",
     "infoBox": "Las Habilidades del Agente son guías reutilizables que puedes adjuntar a un Agente Base: instrucciones escritas (más archivos de referencia opcionales) para una tarea, como investigar un tema en la web o revisar código. El agente lee una habilidad solo cuando es relevante, así que puedes darle muchas capacidades sin sobrecargar cada conversación. En el chat, escribe / para ver las habilidades de este agente y elegir una para iniciarla."
-  },
-  "tabsToolsTab": {
-    "infoBox": "Dale manos a tu agente. Las herramientas le permiten hacer cosas más allá de conversar —buscar información, llamar a una API, activar una acción— para que realmente pueda hacer el trabajo por las personas.",
-    "heading": "Herramientas",
-    "subheading": "Configure las herramientas e integraciones para su agente.",
-    "moreInfoAbout": "Más información sobre {name}",
-    "switchAriaLabel": "{name} {state}",
-    "enabled": "habilitado",
-    "disabled": "deshabilitado"
   },
   "topTrialBannerTopTrialBanner": {
     "defaultBannerText": "Actualiza para crear tus propios agentes. No se requiere tarjeta de crédito 😎",

@@ -157,35 +157,6 @@
     "languageFrenchFrance": "Français (France)",
     "languageSpanish": "Espagnol (Español)"
   },
-  "apiTabApiKeyModal": {
-    "dialogTitle": "Clé API",
-    "dialogDescription": "Copiez et collez la clé API.",
-    "securityWarning": "Veuillez copier votre clé API et la stocker dans un endroit sécurisé. Pour des raisons de sécurité, cette clé ne sera affichée qu'une seule fois et ne pourra pas être récupérée après avoir quitté cette page.",
-    "lostKeyWarning": "Si vous perdez votre clé API, vous devrez en générer une nouvelle."
-  },
-  "apiTabCreateApiModal": {
-    "apiKeyNameRequired": "Le nom de la clé API est requis",
-    "apiKeyNameInvalidChars": "ne peut contenir que des lettres, des chiffres et des tirets",
-    "apiKeyCreatedSuccess": "Clé API créée avec succès",
-    "apiKeyCreatedError": "Échec de la création de la clé API",
-    "dialogDescriptionSrOnly": "Créer une clé API",
-    "dialogTitle": "Créer une clé API",
-    "apiKeyNameLabel": "Nom de la clé API",
-    "apiKeyNamePlaceholder": "Nom de la clé API",
-    "expirationDateLabel": "Date d'expiration",
-    "pickADate": "Choisir une date",
-    "submitting": "Envoi en cours...",
-    "submit": "Soumettre"
-  },
-  "apiTabDeleteApiModal": {
-    "title": "Supprimer la clé API",
-    "confirmationMessage": "Êtes-vous sûr de vouloir supprimer la clé API nommée <bold>{name}</bold> ? Cette action est irréversible.",
-    "cancel": "Annuler",
-    "delete": "Supprimer",
-    "deleting": "Suppression...",
-    "deleteSuccess": "Clé API supprimée avec succès",
-    "deleteError": "Échec de la suppression de la clé API"
-  },
   "appSidebarIndex": {
     "addAgentToProjectFirst": "Ajoutez d'abord un agent à ce projet.",
     "projects": "Projets",
@@ -581,9 +552,6 @@
     "settings": "Paramètres",
     "language": "Langue"
   },
-  "componentsAddResourceButton": {
-    "addResource": "Ajouter une ressource"
-  },
   "componentsAdvancedChartWithTooltip": {
     "monthlyRevenue": "Revenus mensuels",
     "revenueLabel": "Revenus"
@@ -596,11 +564,6 @@
     "areYouSure": "Êtes-vous sûr ?",
     "cancel": "Annuler",
     "continue": "Continuer"
-  },
-  "componentsDatasetTab": {
-    "dataset": "Ensemble de données",
-    "addResource": "Ajouter une ressource",
-    "noResourcesAddedYet": "Aucune ressource ajoutée pour l'instant"
   },
   "componentsFileUpload": {
     "dropFilesHere": "Déposez vos fichiers ici",
@@ -650,64 +613,6 @@
     "poweredBy": "Propulsé par",
     "inNewYork": "à New York"
   },
-  "datasetsTabAddResourceModal": {
-    "addResources": "Ajouter des ressources",
-    "description": "Ajoutez des connaissances pour aider votre agent à fournir des informations plus pertinentes. Les autres utilisateurs disposant d'un accès en modification peuvent réutiliser ces sources pour d'autres sujets.",
-    "googleDrivePickerError": "Erreur du sélecteur Google Drive",
-    "forceClosePicker": "Forcer la fermeture du sélecteur",
-    "notConfigured": "Non configuré pour ce locataire"
-  },
-  "datasetsTabDatasetItem": {
-    "trainingDocumentUpdatedSuccess": "Document d'entraînement mis à jour avec succès",
-    "trainingDocumentUpdateFailed": "Échec de la mise à jour du document d'entraînement",
-    "scheduleRetrain": "Planifier le réentraînement",
-    "documentCannotBeRetrained": "Ce document ne peut pas être réentraîné",
-    "scheduleAutomaticRetraining": "Planifier le réentraînement automatique pour ce jeu de données",
-    "makePublic": "Rendre public",
-    "makePrivate": "Rendre privé",
-    "inProgress": "En cours",
-    "disableTrainingForDocument": "Désactiver l'entraînement pour le document",
-    "enableTrainingForDocument": "Activer l'entraînement pour le document"
-  },
-  "datasetsTabDeleteDatasetModal": {
-    "deleteSuccess": "Document d'entraînement supprimé avec succès",
-    "deleteError": "Échec de la suppression du document d'entraînement",
-    "dialogTitle": "Supprimer le jeu de données",
-    "confirmationText": "Vous avez désappris un jeu de données avec succès, voulez-vous le supprimer ? Cette action est irréversible.",
-    "cancelButton": "Annuler",
-    "deletingButton": "Suppression...",
-    "deleteButton": "Supprimer"
-  },
-  "datasetsTabIndex": {
-    "infoBox": "Formez votre agent avec vos propres contenus. Importez des documents, des fichiers ou des liens, et il y puisera ses réponses — en s'appuyant sur votre contenu plutôt qu'en devinant.",
-    "heading": "Jeux de données",
-    "subheading": "Gérez les jeux de données d'entraînement et les sources de connaissances.",
-    "searchPlaceholder": "Rechercher des jeux de données...",
-    "addResource": "Ajouter une ressource",
-    "columnName": "NOM",
-    "columnType": "TYPE",
-    "columnTokens": "TOKENS",
-    "columnInterval": "INTERVALLE",
-    "columnVisibility": "VISIBILITÉ",
-    "columnStatus": "STATUT"
-  },
-  "datasetsTabRetrainScheduleModal": {
-    "toastSuccess": "Intervalle de ré-entraînement mis à jour avec succès",
-    "toastError": "Échec de la mise à jour de l'intervalle de ré-entraînement",
-    "dialogTitle": "Planifier le ré-entraînement",
-    "dialogDescription": "Configurer le calendrier de ré-entraînement automatique pour",
-    "retrainIntervalLabel": "Intervalle de ré-entraînement",
-    "presetDaily": "Quotidien (1 jour)",
-    "presetWeekly": "Hebdomadaire (7 jours)",
-    "presetMonthly": "Mensuel (30 jours)",
-    "customIntervalLabel": "Intervalle personnalisé (jours)",
-    "customIntervalPlaceholder": "Entrer le nombre de jours",
-    "retrainIntervalHint": "Le jeu de données sera ré-entraîné toutes les {days} {unit}",
-    "dayUnit": "jour",
-    "daysUnit": "jours",
-    "cancelButton": "Annuler",
-    "submitButton": "Planifier le ré-entraînement"
-  },
   "disclaimersTabEditDisclaimerModal": {
     "editAdvisory": "Modifier l'avertissement",
     "advisoryContent": "Contenu de l'avertissement",
@@ -729,17 +634,12 @@
     "heading": "Avertissements",
     "subheading": "Configurez les paramètres d'avertissement pour votre agent.",
     "userAgreementTitle": "Accord utilisateur",
-    "userAgreementInfoAriaLabel": "Plus d'informations sur l'accord utilisateur",
     "userAgreementTooltip": "Contrôle l'accord utilisateur",
     "active": "Actif",
     "inactive": "Inactif",
-    "userAgreementSwitchAriaLabel": "Accord utilisateur {status}",
-    "userAgreementContentAriaLabel": "Contenu de l'accord utilisateur",
     "editButton": "Modifier",
     "advisoryTitle": "Avis",
-    "advisoryInfoAriaLabel": "Plus d'informations sur l'avis",
     "advisoryTooltip": "Contrôle l'avis",
-    "advisoryContentAriaLabel": "Contenu de l'avis",
     "agentUpdatedSuccess": "Agent mis à jour avec succès",
     "agentUpdatedError": "Échec de la mise à jour de l'agent",
     "userAgreementUpdatedSuccess": "Accord utilisateur mis à jour avec succès",
@@ -1570,34 +1470,6 @@
     "toastDeleteSuccess": "Projet supprimé avec succès",
     "toastDeleteError": "Échec de la suppression du projet"
   },
-  "projectsMinimumMentorAlert": {
-    "cannotRemoveAgent": "Impossible de supprimer l'agent",
-    "minimumAgentWarning": "Un projet doit avoir au moins un agent. Veuillez ajouter un autre agent avant de supprimer celui-ci.",
-    "cancel": "Annuler"
-  },
-  "projectsProjectFilesModal": {
-    "projectFiles": "Fichiers du projet",
-    "searchDatasetsPlaceholder": "Rechercher des jeux de données...",
-    "addFiles": "Ajouter des fichiers",
-    "columnName": "NOM",
-    "columnType": "TYPE",
-    "columnTokens": "TOKENS",
-    "columnInterval": "INTERVALLE",
-    "columnVisibility": "VISIBILITÉ",
-    "columnStatus": "STATUT"
-  },
-  "projectsProjectInstructionsModal": {
-    "title": "Instructions",
-    "description": "Vous pouvez demander à l'agent de se concentrer sur certains sujets, ou de répondre avec un certain ton ou format.",
-    "placeholder": "Ex. : \"Référencez la dernière documentation JavaScript. Gardez les réponses courtes et ciblées.\"",
-    "cancelAriaLabel": "Annuler la modification des instructions",
-    "cancel": "Annuler",
-    "saveAriaLabel": "Enregistrer les instructions du projet",
-    "saving": "Enregistrement...",
-    "save": "Enregistrer",
-    "saveSuccess": "Instructions mises à jour avec succès",
-    "saveError": "Échec de la mise à jour des instructions"
-  },
   "projectsRenameProjectModal": {
     "title": "Renommer le projet",
     "projectNameLabel": "Nom du projet",
@@ -1607,65 +1479,6 @@
     "renameButton": "Renommer le projet",
     "renameSuccess": "Projet renommé avec succès",
     "renameError": "Échec du renommage du projet"
-  },
-  "resourceModalGithubFileUploadModal": {
-    "failedToFetchBranches": "Échec de la récupération des branches",
-    "unknownError": "Une erreur inconnue s'est produite",
-    "agentNotFound": "Agent introuvable",
-    "documentQueued": "Le document a été mis en file d'attente pour l'entraînement",
-    "errorAddingDocument": "Erreur lors de l'ajout du document d'entraînement",
-    "githubRepoUrlPlaceholder": "URL du dépôt Github",
-    "selectBranchPlaceholder": "Sélectionner une branche",
-    "submit": "Soumettre"
-  },
-  "resourceModalLocalFileUploadModal": {
-    "fileNotFound": "Fichier introuvable",
-    "documentQueued": "Le document a été mis en file d'attente pour l'entraînement",
-    "errorAddingDocument": "Erreur lors de l'ajout du document d'entraînement",
-    "fileSizeExceeds": "La taille du fichier dépasse {value} {unit}",
-    "dragAndDrop": "Glissez-déposez votre fichier ici",
-    "or": "ou",
-    "browseFiles": "Parcourir les fichiers",
-    "maxFileSize": "Taille maximale du fichier : {value} {unit}",
-    "descriptionLabel": "Description (facultative)",
-    "descriptionPlaceholder": "Ajoutez une description pour cette image...",
-    "submitting": "Envoi en cours",
-    "submit": "Soumettre"
-  },
-  "resourceModalUrlUploadModel": {
-    "documentQueuedForTraining": "Le document a été mis en file d'attente pour l'entraînement",
-    "errorAddingTrainingDocument": "Erreur lors de l'ajout du document d'entraînement",
-    "invalidYouTubeUrl": "URL YouTube invalide",
-    "invalidBlackboardUrl": "URL Blackboard invalide",
-    "invalidUrl": "URL invalide",
-    "urlPlaceholder": "URL",
-    "submitButton": "Soumettre"
-  },
-  "resourceModalWebsiteCrawlModal": {
-    "title": "Configuration du robot d'exploration web",
-    "description": "Configurez les paramètres de votre robot d'exploration web et les modèles d'URL",
-    "formAriaLabel": "Formulaire de configuration du robot d'exploration web",
-    "urlLabel": "URL",
-    "urlRequired": "L'URL est requise",
-    "invalidUrl": "URL invalide",
-    "maxCrawlDepthLabel": "Profondeur maximale d'exploration",
-    "fieldRequired": "Ce champ est obligatoire",
-    "mustBeGreaterThanZero": "Doit être supérieur à 0",
-    "mustBeLessThan10000": "Doit être inférieur à 10 000",
-    "maxPagesLimitLabel": "Limite maximale de pages",
-    "patternTypeLabel": "Type de modèle",
-    "selectPatternTypeAriaLabel": "Sélectionner le type de modèle",
-    "globPattern": "Modèle Glob",
-    "regularExpression": "Expression régulière",
-    "crawlerMatchPatternsLabel": "Modèles de correspondance du robot",
-    "addPatternAriaLabel": "Ajouter un modèle",
-    "patternHelpText": "Appuyez sur Entrée ou cliquez sur le bouton plus pour ajouter un modèle",
-    "addedPatternsAriaLabel": "Modèles de correspondance du robot ajoutés",
-    "noPatternsAdded": "Aucun modèle ajouté",
-    "removePatternAriaLabel": "Supprimer le modèle : {pattern}",
-    "submitting": "Envoi en cours...",
-    "submit": "Envoyer",
-    "formBeingSubmitted": "Le formulaire est en cours d'envoi"
   },
   "settingsTabCopyMentorModal": {
     "defaultCopyNamePrefix": "Copie de",
@@ -1697,22 +1510,6 @@
     "deleting": "Suppression en cours...",
     "deleteSuccess": "Agent supprimé avec succès",
     "deleteError": "Échec de la suppression de l'agent"
-  },
-  "tabsApiTab": {
-    "infoBox": "Utilisez cet agent depuis vos propres applications. Créez ici des clés API pour l'appeler par programmation et l'intégrer à votre produit ou à votre flux de travail.",
-    "apiHeading": "API",
-    "manageApiKeysDescription": "Gérer les clés API et les intégrations.",
-    "secretKeysListedBelow": "Vos clés API secrètes sont listées ci-dessous. Veuillez noter que nous n'affichons plus vos clés API secrètes après leur génération.",
-    "doNotShareApiKey": "Ne partagez pas votre clé API avec d'autres personnes et ne l'exposez pas dans le navigateur ou dans tout autre code côté client. Afin de protéger la sécurité de votre compte, IBL peut également faire pivoter automatiquement toute clé API dont la fuite a été détectée publiquement.",
-    "columnName": "NOM",
-    "columnCreated": "CRÉÉE",
-    "columnExpires": "EXPIRE",
-    "columnActions": "Actions",
-    "noApiKeysFound": "Aucune clé API trouvée",
-    "noPermissionToViewApiKeys": "Vous n'avez pas la permission de consulter les clés API",
-    "notAvailable": "N/A",
-    "deleteApiKey": "Supprimer la clé API",
-    "createNew": "Créer nouveau"
   },
   "tabsAuditLogTab": {
     "infoBox": "Gardez une trace écrite. Consultez le journal indiquant qui a modifié quoi et quand pour cet agent — pratique pour le dépannage et le respect de la conformité.",
@@ -2193,15 +1990,6 @@
     "heading": "Compétences",
     "description": "Guides réutilisables que cet Agent de Base peut découvrir et suivre.",
     "infoBox": "Les Compétences d'Agent sont des guides réutilisables que vous pouvez attacher à un Agent de Base : des instructions écrites (plus des fichiers de référence facultatifs) pour une tâche, comme rechercher un sujet sur le web ou relire du code. L'agent ne lit une compétence que lorsqu'elle est pertinente, vous pouvez donc lui donner de nombreuses capacités sans alourdir chaque conversation. Dans le chat, tapez / pour voir les compétences de cet agent et en choisir une pour la lancer."
-  },
-  "tabsToolsTab": {
-    "infoBox": "Donnez des mains à votre agent. Les outils lui permettent d'aller au-delà de la simple conversation — rechercher une information, appeler une API, déclencher une action — pour qu'il accomplisse réellement des tâches pour les utilisateurs.",
-    "heading": "Outils",
-    "subheading": "Configurez les outils et les intégrations pour votre agent.",
-    "moreInfoAbout": "Plus d'informations sur {name}",
-    "switchAriaLabel": "{name} {state}",
-    "enabled": "activé",
-    "disabled": "désactivé"
   },
   "topTrialBannerTopTrialBanner": {
     "defaultBannerText": "Passez à la version supérieure pour créer vos propres agents. Aucune carte de crédit requise 😎",

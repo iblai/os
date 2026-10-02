@@ -13,7 +13,7 @@ import {
   useGetMentorSettingsQuery,
   useGetToolsQuery,
 } from '@iblai/iblai-js/data-layer';
-import { useToggleTools } from '@/hooks/use-tools/use-toggle-tools';
+import { useToggleTools } from '@iblai/iblai-js/web-containers/next';
 import { useUsername } from '@/hooks/use-user';
 
 // Mock Redux
@@ -46,7 +46,10 @@ vi.mock('@/hooks/use-user', () => ({
 
 // Mock tools hooks
 const mockToggleTools = vi.fn();
-vi.mock('@/hooks/use-tools/use-toggle-tools', () => ({
+vi.mock('@iblai/iblai-js/web-containers/next', async (importOriginal) => ({
+  ...(await importOriginal<
+    typeof import('@iblai/iblai-js/web-containers/next')
+  >()),
   useToggleTools: vi.fn(() => ({
     toggleTools: mockToggleTools,
     isLoading: false,
@@ -211,35 +214,44 @@ vi.mock('@/components/mentors/mentor-selection-grid', () => ({
   ),
 }));
 
-vi.mock('@/components/modals/edit-mentor-modal/tabs/datasets-tab', () => ({
-  DatasetsTab: ({
-    onSelect,
-    selectedDatasetId,
-  }: {
-    onSelect: (dataset: {
-      id: string;
-      document_name: string;
-      url: string;
-    }) => void;
-    selectedDatasetId?: string;
-  }) => (
-    <div data-testid="datasets-tab">
-      <span data-testid="selected-dataset-id">{selectedDatasetId}</span>
-      <button
-        data-testid="select-dataset"
-        onClick={() =>
-          onSelect({
-            id: 'dataset-123',
-            document_name: 'Test Dataset',
-            url: '',
-          })
-        }
-      >
-        Select Dataset
-      </button>
-    </div>
-  ),
-}));
+vi.mock(
+  '@/components/modals/edit-mentor-modal/tabs/datasets-tab/agent-datasets-tab',
+  () => ({
+    AgentDatasetsTabWrapper: ({
+      mentorId,
+      onSelect,
+      selectedDatasetId,
+      syncToUrl,
+    }: {
+      mentorId?: string;
+      onSelect: (dataset: {
+        id: string;
+        document_name: string;
+        url: string;
+      }) => void;
+      selectedDatasetId?: string;
+      syncToUrl?: boolean;
+    }) => (
+      <div data-testid="datasets-tab">
+        <span data-testid="datasets-tab-mentor-id">{mentorId}</span>
+        <span data-testid="datasets-tab-sync-to-url">{String(syncToUrl)}</span>
+        <span data-testid="selected-dataset-id">{selectedDatasetId}</span>
+        <button
+          data-testid="select-dataset"
+          onClick={() =>
+            onSelect({
+              id: 'dataset-123',
+              document_name: 'Test Dataset',
+              url: '',
+            })
+          }
+        >
+          Select Dataset
+        </button>
+      </div>
+    ),
+  }),
+);
 
 vi.mock('@/components/modals/edit-mentor-modal/tabs/mcp-tab', () => ({
   McpTab: ({
@@ -1925,8 +1937,9 @@ describe('NodeConfigPanel', () => {
   });
 
   describe('dataset selection dialog', () => {
-    it('should dispatch pushModal when opening dataset dialog with defaultMentorId', async () => {
+    it('renders the picker for defaultMentorId in local-state mode without a modal push', async () => {
       const user = userEvent.setup();
+      mockDispatch.mockClear();
       render(
         <NodeConfigPanel
           {...baseProps}
@@ -1938,7 +1951,13 @@ describe('NodeConfigPanel', () => {
 
       await user.click(screen.getByText('Select'));
 
-      expect(mockDispatch).toHaveBeenCalled();
+      expect(screen.getByTestId('datasets-tab-mentor-id')).toHaveTextContent(
+        'my-mentor-id',
+      );
+      expect(screen.getByTestId('datasets-tab-sync-to-url')).toHaveTextContent(
+        'false',
+      );
+      expect(mockDispatch).not.toHaveBeenCalled();
     });
 
     it('should select dataset and close dialog', async () => {
@@ -1965,8 +1984,9 @@ describe('NodeConfigPanel', () => {
       );
     });
 
-    it('should close dataset dialog and dispatch popModal', async () => {
+    it('should close dataset dialog without dispatching popModal', async () => {
       const user = userEvent.setup();
+      mockDispatch.mockClear();
       render(
         <NodeConfigPanel
           {...baseProps}
@@ -1978,7 +1998,8 @@ describe('NodeConfigPanel', () => {
       await user.click(screen.getByText('Select'));
       await user.click(screen.getByTestId('close-dialog'));
 
-      expect(mockDispatch).toHaveBeenCalled();
+      expect(screen.queryByTestId('dialog')).not.toBeInTheDocument();
+      expect(mockDispatch).not.toHaveBeenCalled();
     });
 
     it('should handle file search query change', async () => {

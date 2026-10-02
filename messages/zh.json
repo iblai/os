@@ -157,35 +157,6 @@
     "languageFrenchFrance": "法语（法国）",
     "languageSpanish": "西班牙语（Español）"
   },
-  "apiTabApiKeyModal": {
-    "dialogTitle": "API 密钥",
-    "dialogDescription": "复制并粘贴 API 密钥。",
-    "securityWarning": "请复制您的 API 密钥并将其存储在安全的位置。出于安全原因，此密钥仅显示一次，离开此页面后将无法再次获取。",
-    "lostKeyWarning": "如果您丢失了 API 密钥，您需要重新生成一个。"
-  },
-  "apiTabCreateApiModal": {
-    "apiKeyNameRequired": "API 密钥名称为必填项",
-    "apiKeyNameInvalidChars": "只能包含字母、数字和连字符",
-    "apiKeyCreatedSuccess": "API 密钥创建成功",
-    "apiKeyCreatedError": "创建 API 密钥失败",
-    "dialogDescriptionSrOnly": "创建 API 密钥",
-    "dialogTitle": "创建 API 密钥",
-    "apiKeyNameLabel": "API 密钥名称",
-    "apiKeyNamePlaceholder": "API 密钥名称",
-    "expirationDateLabel": "到期日期",
-    "pickADate": "选择日期",
-    "submitting": "提交中...",
-    "submit": "提交"
-  },
-  "apiTabDeleteApiModal": {
-    "title": "删除 API 密钥",
-    "confirmationMessage": "您确定要删除名为 <bold>{name}</bold> 的 API 密钥吗？此操作无法撤销。",
-    "cancel": "取消",
-    "delete": "删除",
-    "deleting": "正在删除...",
-    "deleteSuccess": "API 密钥已成功删除",
-    "deleteError": "删除 API 密钥失败"
-  },
   "appSidebarIndex": {
     "addAgentToProjectFirst": "请先向此项目添加一个智能体。",
     "projects": "项目",
@@ -581,9 +552,6 @@
     "settings": "设置",
     "language": "语言"
   },
-  "componentsAddResourceButton": {
-    "addResource": "添加资源"
-  },
   "componentsAdvancedChartWithTooltip": {
     "monthlyRevenue": "月度收入",
     "revenueLabel": "收入"
@@ -596,11 +564,6 @@
     "areYouSure": "您确定吗？",
     "cancel": "取消",
     "continue": "继续"
-  },
-  "componentsDatasetTab": {
-    "dataset": "数据集",
-    "addResource": "添加资源",
-    "noResourcesAddedYet": "尚未添加任何资源"
   },
   "componentsFileUpload": {
     "dropFilesHere": "将文件拖放到此处",
@@ -650,64 +613,6 @@
     "poweredBy": "技术支持来自",
     "inNewYork": "于纽约"
   },
-  "datasetsTabAddResourceModal": {
-    "addResources": "添加资源",
-    "description": "添加知识以帮助您的智能体提供更相关的见解。拥有编辑权限的其他用户可以将这些来源重复用于更多主题。",
-    "googleDrivePickerError": "Google Drive 选择器错误",
-    "forceClosePicker": "强制关闭选择器",
-    "notConfigured": "未为此租户配置"
-  },
-  "datasetsTabDatasetItem": {
-    "trainingDocumentUpdatedSuccess": "训练文档更新成功",
-    "trainingDocumentUpdateFailed": "更新训练文档失败",
-    "scheduleRetrain": "安排重新训练",
-    "documentCannotBeRetrained": "此文档无法重新训练",
-    "scheduleAutomaticRetraining": "为此数据集安排自动重新训练",
-    "makePublic": "设为公开",
-    "makePrivate": "设为私有",
-    "inProgress": "进行中",
-    "disableTrainingForDocument": "禁用文档训练",
-    "enableTrainingForDocument": "启用文档训练"
-  },
-  "datasetsTabDeleteDatasetModal": {
-    "deleteSuccess": "训练文档已成功删除",
-    "deleteError": "删除训练文档失败",
-    "dialogTitle": "删除数据集",
-    "confirmationText": "您已成功取消训练数据集，是否要将其删除？此操作无法撤销。",
-    "cancelButton": "取消",
-    "deletingButton": "删除中...",
-    "deleteButton": "删除"
-  },
-  "datasetsTabIndex": {
-    "infoBox": "用您自己的资料训练智能体。上传文档、文件或链接，它就会依据这些内容作答——基于您的内容，而不是凭空猜测。",
-    "heading": "数据集",
-    "subheading": "管理训练数据集和知识来源。",
-    "searchPlaceholder": "搜索数据集...",
-    "addResource": "添加资源",
-    "columnName": "名称",
-    "columnType": "类型",
-    "columnTokens": "TOKENS",
-    "columnInterval": "间隔",
-    "columnVisibility": "可见性",
-    "columnStatus": "状态"
-  },
-  "datasetsTabRetrainScheduleModal": {
-    "toastSuccess": "重新训练间隔更新成功",
-    "toastError": "重新训练间隔更新失败",
-    "dialogTitle": "计划重新训练",
-    "dialogDescription": "为以下内容配置自动重新训练计划",
-    "retrainIntervalLabel": "重新训练间隔",
-    "presetDaily": "每天（1 天）",
-    "presetWeekly": "每周（7 天）",
-    "presetMonthly": "每月（30 天）",
-    "customIntervalLabel": "自定义间隔（天）",
-    "customIntervalPlaceholder": "输入天数",
-    "retrainIntervalHint": "数据集将每 {days} {unit}重新训练一次",
-    "dayUnit": "天",
-    "daysUnit": "天",
-    "cancelButton": "取消",
-    "submitButton": "计划重新训练"
-  },
   "disclaimersTabEditDisclaimerModal": {
     "editAdvisory": "编辑公告",
     "advisoryContent": "公告内容",
@@ -729,17 +634,12 @@
     "heading": "免责声明",
     "subheading": "为您的智能体配置免责声明设置。",
     "userAgreementTitle": "用户协议",
-    "userAgreementInfoAriaLabel": "关于用户协议的更多信息",
     "userAgreementTooltip": "控制用户协议",
     "active": "已启用",
     "inactive": "已禁用",
-    "userAgreementSwitchAriaLabel": "用户协议{status}",
-    "userAgreementContentAriaLabel": "用户协议内容",
     "editButton": "编辑",
     "advisoryTitle": "建议",
-    "advisoryInfoAriaLabel": "关于建议的更多信息",
     "advisoryTooltip": "控制建议",
-    "advisoryContentAriaLabel": "建议内容",
     "agentUpdatedSuccess": "智能体更新成功",
     "agentUpdatedError": "更新智能体失败",
     "userAgreementUpdatedSuccess": "用户协议更新成功",
@@ -1570,34 +1470,6 @@
     "toastDeleteSuccess": "项目已成功删除",
     "toastDeleteError": "删除项目失败"
   },
-  "projectsMinimumMentorAlert": {
-    "cannotRemoveAgent": "无法移除代理",
-    "minimumAgentWarning": "一个项目必须至少有一个代理。请在移除此代理之前添加另一个代理。",
-    "cancel": "取消"
-  },
-  "projectsProjectFilesModal": {
-    "projectFiles": "项目文件",
-    "searchDatasetsPlaceholder": "搜索数据集...",
-    "addFiles": "添加文件",
-    "columnName": "名称",
-    "columnType": "类型",
-    "columnTokens": "TOKENS",
-    "columnInterval": "间隔",
-    "columnVisibility": "可见性",
-    "columnStatus": "状态"
-  },
-  "projectsProjectInstructionsModal": {
-    "title": "说明",
-    "description": "您可以要求助手专注于某些主题，或要求其使用特定的语气或格式进行回答。",
-    "placeholder": "例如：“请参考最新的 JavaScript 文档。保持回答简洁且有针对性。”",
-    "cancelAriaLabel": "取消编辑说明",
-    "cancel": "取消",
-    "saveAriaLabel": "保存项目说明",
-    "saving": "保存中...",
-    "save": "保存",
-    "saveSuccess": "说明更新成功",
-    "saveError": "更新说明失败"
-  },
   "projectsRenameProjectModal": {
     "title": "重命名项目",
     "projectNameLabel": "项目名称",
@@ -1607,65 +1479,6 @@
     "renameButton": "重命名项目",
     "renameSuccess": "项目重命名成功",
     "renameError": "重命名项目失败"
-  },
-  "resourceModalGithubFileUploadModal": {
-    "failedToFetchBranches": "获取分支失败",
-    "unknownError": "发生未知错误",
-    "agentNotFound": "未找到代理",
-    "documentQueued": "文档已加入训练队列",
-    "errorAddingDocument": "添加训练文档时出错",
-    "githubRepoUrlPlaceholder": "Github 仓库 URL",
-    "selectBranchPlaceholder": "选择分支",
-    "submit": "提交"
-  },
-  "resourceModalLocalFileUploadModal": {
-    "fileNotFound": "未找到文件",
-    "documentQueued": "文档已加入训练队列",
-    "errorAddingDocument": "添加训练文档时出错",
-    "fileSizeExceeds": "文件大小超过 {value} {unit}",
-    "dragAndDrop": "将文件拖放到此处",
-    "or": "或",
-    "browseFiles": "浏览文件",
-    "maxFileSize": "最大文件大小：{value} {unit}",
-    "descriptionLabel": "描述（可选）",
-    "descriptionPlaceholder": "为此图片添加描述...",
-    "submitting": "提交中",
-    "submit": "提交"
-  },
-  "resourceModalUrlUploadModel": {
-    "documentQueuedForTraining": "文档已加入训练队列",
-    "errorAddingTrainingDocument": "添加训练文档时出错",
-    "invalidYouTubeUrl": "无效的 YouTube URL",
-    "invalidBlackboardUrl": "无效的 Blackboard URL",
-    "invalidUrl": "无效的 URL",
-    "urlPlaceholder": "URL",
-    "submitButton": "提交"
-  },
-  "resourceModalWebsiteCrawlModal": {
-    "title": "网络爬虫配置",
-    "description": "配置您的网络爬虫设置和 URL 模式",
-    "formAriaLabel": "网络爬虫配置表单",
-    "urlLabel": "URL",
-    "urlRequired": "URL 为必填项",
-    "invalidUrl": "无效的 URL",
-    "maxCrawlDepthLabel": "最大爬取深度",
-    "fieldRequired": "此字段为必填项",
-    "mustBeGreaterThanZero": "必须大于 0",
-    "mustBeLessThan10000": "必须小于 10000",
-    "maxPagesLimitLabel": "最大页面数限制",
-    "patternTypeLabel": "模式类型",
-    "selectPatternTypeAriaLabel": "选择模式类型",
-    "globPattern": "Glob 模式",
-    "regularExpression": "正则表达式",
-    "crawlerMatchPatternsLabel": "爬虫匹配模式",
-    "addPatternAriaLabel": "添加模式",
-    "patternHelpText": "按 Enter 键或点击加号按钮以添加模式",
-    "addedPatternsAriaLabel": "已添加的爬虫匹配模式",
-    "noPatternsAdded": "未添加任何模式",
-    "removePatternAriaLabel": "删除模式：{pattern}",
-    "submitting": "提交中...",
-    "submit": "提交",
-    "formBeingSubmitted": "表单正在提交"
   },
   "settingsTabCopyMentorModal": {
     "defaultCopyNamePrefix": "副本",
@@ -1697,22 +1510,6 @@
     "deleting": "正在删除...",
     "deleteSuccess": "智能体已成功删除",
     "deleteError": "删除智能体失败"
-  },
-  "tabsApiTab": {
-    "infoBox": "在您自己的应用中使用该智能体。在此创建 API 密钥，以便通过编程方式调用它，并将其集成到您的产品或工作流程中。",
-    "apiHeading": "API",
-    "manageApiKeysDescription": "管理 API 密钥和集成。",
-    "secretKeysListedBelow": "您的私密 API 密钥列于下方。请注意，生成后我们将不再显示您的私密 API 密钥。",
-    "doNotShareApiKey": "请勿与他人共享您的 API 密钥，也不要在浏览器或其他客户端代码中暴露它。为保护您账户的安全，IBL 还可能自动轮换我们发现已公开泄露的 API 密钥。",
-    "columnName": "名称",
-    "columnCreated": "创建时间",
-    "columnExpires": "到期时间",
-    "columnActions": "操作",
-    "noApiKeysFound": "未找到 API 密钥",
-    "noPermissionToViewApiKeys": "您没有权限查看 API 密钥",
-    "notAvailable": "N/A",
-    "deleteApiKey": "删除 API 密钥",
-    "createNew": "新建"
   },
   "tabsAuditLogTab": {
     "infoBox": "保留操作记录。查看该智能体的变更日志——谁在何时更改了什么——便于排查问题并保持合规。",
@@ -2193,15 +1990,6 @@
     "heading": "技能",
     "description": "此基础智能体可发现并遵循的可复用操作手册。",
     "infoBox": "智能体技能是可附加到基础智能体的可复用操作手册——针对单一任务的书面指令（可附带参考文件），例如在网上调研主题或审查代码。智能体只在相关时才会阅读技能，因此你可以为它添加多种能力而不会让每次对话变得臃肿。在聊天中输入 / 即可查看此智能体的技能并选择一个来启动。"
-  },
-  "tabsToolsTab": {
-    "infoBox": "为您的智能体赋予“双手”。工具让它能够超越单纯的聊天——查找信息、调用 API、触发操作——从而真正为用户完成工作。",
-    "heading": "工具",
-    "subheading": "为您的智能体配置工具和集成。",
-    "moreInfoAbout": "关于 {name} 的更多信息",
-    "switchAriaLabel": "{name} {state}",
-    "enabled": "已启用",
-    "disabled": "已禁用"
   },
   "topTrialBannerTopTrialBanner": {
     "defaultBannerText": "升级以创建您自己的智能体。无需信用卡 😎",

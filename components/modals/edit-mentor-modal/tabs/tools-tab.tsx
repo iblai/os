@@ -1,141 +1,37 @@
-import type React from 'react';
+'use client';
 
-import { Info } from 'lucide-react';
-import { useTranslations } from 'next-intl';
-
-import { useGetMentorSettingsQuery } from '@iblai/iblai-js/data-layer';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
 import { useParams } from 'next/navigation';
-import { useUsername } from '@/hooks/use-user';
-import { Switch } from '@/components/ui/switch';
-import { useNavigate } from '@/hooks/user-navigate';
-import { TenantKeyMentorIdParams } from '@/lib/types';
-import { useGetToolsQuery } from '@iblai/iblai-js/data-layer';
-import { useToggleTools } from '@/hooks/use-tools/use-toggle-tools';
-import WithFormPermissions from '@/hoc/withPermissions';
+import {
+  AgentSettingsProvider,
+  AgentToolsTab,
+} from '@iblai/iblai-js/web-containers/next';
 
+import { useNavigate } from '@/hooks/user-navigate';
+import { useUsername } from '@/hooks/use-user';
+import { config } from '@/lib/config';
+import { TenantKeyMentorIdParams } from '@/lib/types';
+
+/**
+ * OS wiring for the SDK's `AgentToolsTab`. Copy comes from the SDK's own
+ * i18n catalog (bridged via WebContainersI18nProvider), which already matches
+ * the OS wording in all four locales, so no labels are passed.
+ */
 export function ToolsTab() {
-  const t = useTranslations('tabsToolsTab');
   const { tenantKey, mentorId } = useParams<TenantKeyMentorIdParams>();
-  const username = useUsername();
   const { getMentorId } = useNavigate();
+  const username = useUsername();
   const activeMentorId = getMentorId() || mentorId;
 
-  const { data: tools, isLoading: isToolsLoading } = useGetToolsQuery(
-    {
-      mentor: activeMentorId,
-      org: tenantKey,
-      // @ts-ignore
-      userId: username ?? '',
-    },
-    {
-      skip: !username,
-    },
-  );
-
-  const { data: mentorSettings, isLoading: isMentorSettingsLoading } =
-    useGetMentorSettingsQuery(
-      {
-        mentor: activeMentorId,
-        org: tenantKey,
-        // @ts-ignore
-        userId: username ?? '',
-      },
-      { skip: !username || !activeMentorId || !tenantKey },
-    );
-
-  const { toggleTools, isLoading: isToggleToolsLoading } = useToggleTools({
-    tools: mentorSettings?.mentor_tools?.map((tool) => tool.slug) ?? [],
-    activeMentorId,
-    tenantKey,
-    username: username ?? '',
-  });
-
-  const isDisabled =
-    isMentorSettingsLoading || isToggleToolsLoading || isToolsLoading;
+  if (!tenantKey || !activeMentorId || !username) return null;
 
   return (
-    <>
-      <div className="flex hidden h-[73px] flex-shrink-0 items-center border-b border-gray-200 bg-white p-4 lg:block">
-        <div>
-          <h3 className="mb-1 text-base font-medium text-gray-900">
-            {t('heading')}
-          </h3>
-          <p className="text-xs text-gray-700">{t('subheading')}</p>
-        </div>
-      </div>
-      <div
-        className="flex-1 space-y-4 p-3"
-        style={{
-          overflowY: 'auto',
-          overflowX: 'hidden',
-        }}
-      >
-        <div
-          className="rounded-md border border-gray-200 bg-gray-50 p-3 text-xs text-gray-600"
-          data-testid="tools-info-box"
-        >
-          {t('infoBox')}
-        </div>
-        <WithFormPermissions
-          name="mentor_tools"
-          // @ts-ignore
-          permissions={mentorSettings?.permissions?.field}
-        >
-          {({ disabled }) => (
-            <div className="space-y-6">
-              {tools?.map((tool) => {
-                const isEnabled = mentorSettings?.mentor_tools
-                  ?.map((tool) => tool.slug)
-                  .includes(tool?.slug ?? '');
-
-                return (
-                  <div
-                    className="flex items-center justify-between rounded-lg border p-6"
-                    key={tool?.slug ?? tool?.name}
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-gray-700">
-                        {tool?.display_name}
-                      </span>
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger
-                            aria-label={t('moreInfoAbout', {
-                              name: tool?.display_name ?? '',
-                            })}
-                          >
-                            <Info className="h-4 w-4 text-gray-400" />
-                          </TooltipTrigger>
-                          <TooltipContent className="ibl-tooltip-content">
-                            <p>{tool?.description}</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </div>
-                    <Switch
-                      checked={isEnabled}
-                      onCheckedChange={async () => {
-                        await toggleTools(tool?.slug ?? '');
-                      }}
-                      disabled={isDisabled || disabled}
-                      aria-label={t('switchAriaLabel', {
-                        name: tool?.display_name ?? '',
-                        state: isEnabled ? t('enabled') : t('disabled'),
-                      })}
-                    />
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </WithFormPermissions>
-      </div>
-    </>
+    <AgentSettingsProvider
+      tenantKey={tenantKey}
+      mentorId={activeMentorId}
+      username={username}
+      enableRBAC={config.enableRBAC()}
+    >
+      <AgentToolsTab />
+    </AgentSettingsProvider>
   );
 }

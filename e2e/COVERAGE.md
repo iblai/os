@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-09-25 | 768 checkpoints (725 covered, 11 pending/fixme, 15 not-reproducible in default env, 17 deprecated) | 79 journeys (78 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-09-30 | 798 checkpoints (753 covered, 11 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 81 journeys (80 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -111,7 +111,7 @@ _Note: the LLM tab is served by the SDK's `AgentLLMTab`; `components/modals/edit
 - [x] Admin can update mentor profile (name, description, category, visibility), save, and close
 - [x] Non-admin does not see the Settings or Tools menu items
 - [x] Admin can change LLM provider and select a model
-- [x] Admin can toggle tools on/off in the Tools tab
+- [x] Admin sees the Tools tab render with at least one tool _(light smoke check only, on the shared account mentor — real toggle-on/off, reload-persistence, tooltip and a11y coverage moved to Journey 77 on disposable per-test mentors, to avoid mutating `tool_slugs` on a mentor other tests/suites share)_
 - [x] Admin can apply custom CSS via the Advanced CSS editor (embed preview reflects change)
 - [x] Admin can reset custom CSS back to default
 - [x] Admin can apply valid custom JavaScript; invalid JS shows warnings
@@ -357,9 +357,9 @@ The **download-chat** checkpoints (sh-07 … sh-10, issue #2464) cover the "Down
 
 ---
 
-## Journey 20: Dataset Management (26 checkpoints) — `journeys/20-dataset-management.spec.ts`
+## Journey 20: Dataset Management (30 checkpoints) — `journeys/20-dataset-management.spec.ts`
 
-**Source files:** `components/modals/edit-mentor-modal/tabs/datasets-tab/index.tsx`, `components/modals/edit-mentor-modal/tabs/datasets-tab/dataset-item.tsx`, `components/modals/edit-mentor-modal/tabs/datasets-tab/retrain-schedule-modal.tsx`, `components/modals/edit-mentor-modal/tabs/datasets-tab/train-or-delete-modal.tsx`, `components/modals/edit-mentor-modal/tabs/datasets-tab/resource-types.tsx`, `components/modals/edit-mentor-modal/tabs/datasets-tab/agent-datasets-tab.tsx`, `hooks/use-datasets.ts`, `hooks/user-navigate.ts`, `lib/constants.ts`
+**Source files:** `components/modals/edit-mentor-modal/tabs/datasets-tab/agent-datasets-tab.tsx`, `components/workflows/node-config-panel.tsx`, `hooks/user-navigate.ts`, `lib/constants.ts`, `lib/config.ts`, `lib/utils.ts`. The Datasets tab and its Add Resources / Train-or-Delete / Retrain Schedule modals now come from the `@iblai/iblai-js` SDK (`@iblai/web-containers`, linked locally via yalc); `agent-datasets-tab.tsx` is the OS host wrapper around the SDK's `AgentDatasetsTab`, also reused by `node-config-panel.tsx`'s File Search node in picker mode (see Journey 34).
 
 - [x] Datasets tab header and description display correctly (TC01)
 - [x] Search input is visible and filters the dataset list (TC02–TC03)
@@ -367,18 +367,24 @@ The **download-chat** checkpoints (sh-07 … sh-10, issue #2464) cover the "Down
 - [x] Table headers and dataset list (or empty state) render correctly (TC06–TC07)
 - [x] Pagination controls work when datasets exist (TC08)
 - [x] Visibility toggle and training status switch function correctly (TC09–TC10)
-- [x] Schedule Retrain button opens the retrain modal and modal actions work (TC11)
-- [x] Delete Dataset flow opens confirmation modal and completes deletion (TC12–TC13)
+- [x] Schedule Retrain button opens the retrain modal (TC11)
 - [x] In Progress badge displays during training; dataset link is clickable; dialog closes properly (TC14–TC16)
 - [x] Loading states, token count format, and button tooltips are correct (TC17–TC19)
 - [x] State (search input) is preserved after modal close and reopen (TC20)
-- [x] PDF file can be uploaded successfully (TC21)
-- [x] Image file can be uploaded successfully (TC22)
-- [x] Multiple different file types can be uploaded in one session (TC23)
-- [x] Untrained dataset can be trained (TC24)
-- [x] Untrained dataset can be deleted; trained dataset can be untrained then deleted; retraining can be scheduled; file upload cancellation is handled gracefully (TC25–TC28)
+- [x] PDF file can be uploaded successfully — exercised for real in journey 75's du-09 on a fresh mentor (TC21)
+- [x] File upload cancellation (Escape from the resource dialog) is handled gracefully (TC28)
 - [x] Markdown resource type is available in the Add Resources modal (TC30, issue #1117)
 - [x] Markdown (.md) file can be uploaded and appears in the dataset list (TC31, issue #1117)
+
+**Deterministic row actions (self-seeded mentor)** — TC10/13/24/25/26/27 used to scan whatever datasets happened to already exist on the shared tenant for "the first untrained switch" / "the first enabled schedule button", silently `return`ing when the tenant didn't happen to have a dataset in the right state. Rewritten so each test creates its own mentor and seeds exactly the row it needs through the real Add Resource UI (same pattern as journey 75), then hard-asserts the outcome. There is no dedicated per-row delete button any more — the training switch is the delete entry point: an untrained row's switch opens `TrainOrDeleteModal` ("What would you like to do?"); a trained row's switch untrains immediately (no choice) and auto-opens `DeleteDatasetModal` ("Delete Dataset"). TC22 (image upload, never asserted the row) and TC23 (TXT upload, never asserted the row) were vestigial soft checks with no unique assertion — removed, since journey 75's du-07/du-04 already hard-assert both file types' rows.
+
+- [x] Admin deletes a dataset by untraining a trained row and confirming Delete (TC10, rewritten)
+- [x] Train-or-Delete modal shows the Train/Delete choice, description, and (for an uploaded file) no User-Agent field, for an untrained dataset (TC13, rewritten)
+- [x] Admin trains an untrained dataset by clicking Train in the modal (TC24, rewritten)
+- [x] Admin deletes an untrained dataset by clicking Delete in the modal (TC25, rewritten)
+- [x] Admin untrains then deletes a trained dataset — verified via the underlying untrain PUT request firing before the delete confirmation (TC26, rewritten)
+- [x] Retrain schedule interval is set via Weekly, persists across closing/reopening the modal, and is cleared back to no schedule (TC27, rewritten; needs a crawlable URL dataset — retrain scheduling is disabled for every uploaded-file type)
+- [x] Train-or-Delete modal's User-Agent field is present for a web-crawler dataset and absent for an uploaded-file dataset (same self-seeded mentor)
 
 **URL query-string sync** — the Datasets tab syncs its page/search state to `datasetsPage`/`datasetsSearch` query params (`agent-datasets-tab.tsx` + `hooks/user-navigate.ts`). Setting a search always implies a page reset, so page and search are never both non-default at once — the reload/deep-link checkpoints test each in isolation rather than a combined state the app can't produce. The pagination checkpoints (TC36–TC39) need more than one page of results (5 items/page), so each one **seeds its own fixture at runtime**: create a mentor, POST 12 tiny documents to the training API (3 pages — TC37 pages forward twice and TC38 searches from page 3), then delete the mentor in `afterAll` via `MentorTracker`. Seeding goes through `utils/dataset-seeding.ts` rather than the Add Resource UI, which costs ~20s per file. Nothing environment-specific is hard-coded: the tenant key, username and `dm_token` are read from `localStorage` at runtime and the mentor is the one the test just created. An earlier revision pointed these tests at a hand-seeded mentor identified by tenant key + id — that only resolved on the environment it was seeded on and sent every other admin to `/error/403`, so the tests timed out on navigation instead of running.
 
@@ -601,9 +607,9 @@ The "Remember past conversations" (`enable_memory_component`) master toggle move
 
 ---
 
-## Journey 31: Mobile View (7 checkpoints) — `journeys/31-mobile-view.spec.ts`
+## Journey 31: Mobile View (8 checkpoints) — `journeys/31-mobile-view.spec.ts`
 
-**Source files:** `app/platform/[tenantKey]/[mentorId]/page.tsx`, `app/platform/[tenantKey]/[mentorId]/explore/page.tsx`, `components/modals/edit-mentor-modal/tabs/datasets-tab/index.tsx`
+**Source files:** `app/platform/[tenantKey]/[mentorId]/page.tsx`, `app/platform/[tenantKey]/[mentorId]/explore/page.tsx`, `components/modals/edit-mentor-modal/tabs/datasets-tab/agent-datasets-tab.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/user-profile.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/learner-mode-switch.tsx`
 
 - [x] Sidebar navigation displays correct menu items on mobile (Pixel 5 viewport)
 - [x] Mentor dropdown works correctly in mobile view
@@ -612,6 +618,7 @@ The "Remember past conversations" (`enable_memory_component`) master toggle move
 - [x] Explore page title, description, and tabs display correctly on mobile
 - [x] Search and mentor cards work correctly on mobile
 - [x] Dataset upload and untrain/delete flow works on mobile
+- [x] Admin on mobile sees Admin/User labels (not Instructor/Learner) on the profile dropdown's learner-mode row, and the label flips correctly when the switch is toggled (#2592)
 
 ---
 
@@ -645,7 +652,7 @@ The "Remember past conversations" (`enable_memory_component`) master toggle move
 
 ---
 
-## Journey 34: Workflows (15 checkpoints) — `journeys/34-workflows.spec.ts`
+## Journey 34: Workflows (16 checkpoints) — `journeys/34-workflows.spec.ts`
 
 **Source files:** `app/platform/[tenantKey]/workflows/[mentorId]/page.tsx`, `app/platform/[tenantKey]/workflows/[mentorId]/[id]/page.tsx`, `components/workflows/workflow-canvas.tsx`, `components/workflows/node-config-panel.tsx`, `components/workflows/workflow-preview-chat.tsx`
 
@@ -664,6 +671,7 @@ The "Remember past conversations" (`enable_memory_component`) master toggle move
 - [x] Preview mode can be entered and exited; Close preview, New Chat, and Publish are visible
 - [x] Canvas and chat panel are visible in preview mode
 - [x] Workflow can be published; active workflow can be deactivated back to Draft
+- [x] File Search node's dataset picker dialog (the SDK Datasets tab in picker mode, `syncToUrl=false`): opening/searching/paging never touch the `datasetsPage`/`datasetsSearch` URL params; picking a row closes the dialog and shows the dataset name with a Change button; reopening highlights the previously selected row (self-seeded mentor)
 
 ---
 
@@ -1793,7 +1801,7 @@ sequence from the reporter's real trace.
 
 ## Journey 74: Dataset Cloud Pickers (3 checkpoints) — `journeys/74-dataset-cloud-pickers.spec.ts`
 
-**Source files:** `hooks/use-google-drive-picker.ts`, `hooks/use-one-drive-picker.ts`, `hooks/use-dropdox-picker.ts`, `components/modals/edit-mentor-modal/tabs/datasets-tab/add-resource-modal.tsx`
+**Source files:** `components/workflows/node-config-panel.tsx`, `components/modals/edit-mentor-modal/tabs/datasets-tab/agent-datasets-tab.tsx` — the cloud-picker hooks and Add Resources modal now live in the `@iblai/iblai-js` SDK (`@iblai/web-containers`, linked locally via yalc), not in OS source.
 
 Verifies the Google Drive, Microsoft OneDrive, and Dropbox buttons in the Add Resources modal. Each test creates a fresh mentor (matching journey 36 / 75 pattern), opens the Datasets tab → Add Resources modal, and asserts the behaviour the **tenant's own configuration** selects.
 
@@ -1810,11 +1818,11 @@ Both are real assertions about shipped behaviour, so the journey never silently 
 
 ---
 
-## Journey 75: Dataset Upload Types (8 checkpoints) — `journeys/75-dataset-upload-types.spec.ts`
+## Journey 75: Dataset Upload Types (16 checkpoints) — `journeys/75-dataset-upload-types.spec.ts`
 
-**Source files:** `components/modals/edit-mentor-modal/tabs/datasets-tab/add-resource-modal.tsx`, `components/modals/edit-mentor-modal/tabs/datasets-tab/resource-types.tsx`
+**Source files:** `components/modals/edit-mentor-modal/tabs/datasets-tab/agent-datasets-tab.tsx`, `e2e/utils/dataset-resource-gating.ts`
 
-Uploads a real fixture file for each of the 8 local file-upload resource types available in the Add Resources modal: PowerPoint, DOCX, CSV, TXT, Audio, Video, Image, and Excel. **Each test first creates a fresh mentor via `createMentorPage.openAndCreate()`** (matching the journey 36 / Copy Mentor pattern) so uploads are made against a clean dataset list — pre-existing rows from other tests can't mask a missing upload. Then uses `DatasetsTab.uploadFile()` (the same generic helper used by the CSV and Markdown tests in journey 20) to execute the full modal flow — open Add Resources, click the resource type, `setInputFiles`, Submit, wait for network idle, close dialogs — then asserts the uploaded filename appears as a row in the dataset list within 15 s. A failed upload results in no row and an immediate hard-fail assertion. Covers the file-upload surface of [iblai-platform#1677](https://github.com/iblai/iblai-platform/issues/1677).
+Uploads a real fixture file (or submits a real link/crawl) for every resource type in the Add Resources modal. **Each test first creates a fresh mentor via `createMentorPage.openAndCreate()`** (matching the journey 36 / Copy Mentor pattern) so the action is made against a clean dataset list — pre-existing rows from other tests can't mask a missing row. A failed action results in no row and an immediate hard-fail assertion. Covers the file-upload surface of [iblai-platform#1677](https://github.com/iblai/iblai-platform/issues/1677).
 
 - [x] DU-75.1: Admin uploads a PowerPoint (`.pptx`) file — `Title Lorem Ipsum.pptx` row appears in dataset list
 - [x] DU-75.2: Admin uploads a DOCX file — `audrey.docx` row appears in dataset list
@@ -1824,6 +1832,16 @@ Uploads a real fixture file for each of the 8 local file-upload resource types a
 - [x] DU-75.6: Admin uploads a Video file (`.mp4`) — `IMG_4019` row appears in dataset list
 - [x] DU-75.7: Admin uploads an Image file (`.png`) — `acessibility png` row appears in dataset list
 - [x] DU-75.8: Admin uploads an Excel (`.xlsx`) file — `test-data.xlsx` row appears in dataset list
+- [x] DU-75.9: Admin uploads a PDF file — the pdf fixture's row appears in dataset list
+- [x] DU-75.10: Admin submits a URL resource (`https://example.com`) — the row appears in dataset list
+- [x] DU-75.11: Admin submits a YouTube resource — the row appears in dataset list
+- [x] DU-75.12: Admin submits a GitHub repo resource (URL + first branch) — the row appears in dataset list
+- [x] DU-75.13: Admin submits a Web Crawler resource with a User-Agent filled in — the create request carries `crawler_extra_headers` with the value
+- [x] DU-75.14: Admin submits a Web Crawler resource with no User-Agent — the create request omits `crawler_extra_headers`
+- [x] DU-75.15: ZIP resource button's enabled/disabled state matches `NEXT_PUBLIC_DISABLED_DATASETS` as resolved from the running build's env files (default: disabled); the full upload flow runs only when enabled
+- [x] DU-75.16: Course resource button's enabled/disabled state matches `NEXT_PUBLIC_DISABLED_DATASETS` as resolved from the running build's env files (default: disabled); the full upload flow runs only when enabled — Course is a generic file-upload dialog (`LocalFileUploadModal`, `type: 'local'`), not a course browser, per the SDK's resource-types definition
+
+**Resource-type gating (ZIP/Course):** the expected enabled/disabled state is determined independently of the button under test, via `e2e/utils/dataset-resource-gating.ts`'s `expectedResourceEnabled()` — it reads `window.__ENV__.NEXT_PUBLIC_DISABLED_DATASETS` (runtime `env.js` templating) first, then falls back to Next.js's own build-time env-file precedence for `NODE_ENV=production` (`.env.production.local` > `.env.local` > `.env.production` > `.env`, all at the repo root — never `e2e/.env.local`, which is Playwright's own config), then to `lib/config.ts`'s hardcoded `'zip|courses'` default. It throws rather than guessing if it can't determine a value at all. Every gated test asserts `toBeEnabled()`/`toBeDisabled()` against that expectation and only runs the full flow on the enabled branch — never a soft `isVisible().catch()` skip.
 
 ---
 
@@ -1860,3 +1878,37 @@ Covers issue #2544: a new `show_explore_mentors` mentor setting, exposed as a "S
 - [x] sem-04: With the setting ON, the admin's own welcome screen shows the "Explore Agents" section
 - [x] sem-05: With the setting ON, a non-admin non-owner viewer of the same agent also sees the "Explore Agents" section (RBAC-redaction regression guard)
 - [x] sem-06: With the setting OFF, the welcome screen hides the "Explore Agents" section
+
+---
+
+## Journey 77: Mentor Tools Tab (7 checkpoints, 2 not-reproducible) — `journeys/77-mentor-tools-tab.spec.ts`
+
+**Source files:** `components/modals/edit-mentor-modal/tabs/tools-tab.tsx`
+
+The Tools tab was just moved onto the SDK: OS's `ToolsTab` wrapper now returns `null` until `tenantKey`/`agentId`/`username` are known, then renders the SDK's `AgentToolsTab` (`@iblai/iblai-js/web-containers/next`) inside an `AgentSettingsProvider`, passing no `labels` override — all copy (header, the new `data-testid="tools-info-box"` info box, per-tool info-icon/switch aria-labels, toggle toasts) comes straight from the SDK's i18n catalog. Toggling a tool mutates the mentor's `tool_slugs` — the same field Journey 6's mgmt-04 smoke test and the Grader tab's capability toggle (Journey 66) both touch — so, mirroring Journeys 47 and 66, this journey runs serially in one worker and every test gets its own freshly-created, disposable mentor (tracked and deleted via `MentorTracker` in `afterAll`), pinned to the cheap ibl.ai model. Checkpoints needing an existing tool row skip gracefully (not a failure) when the tenant's tool catalogue is empty.
+
+- [x] tools-01: Admin opens the Tools tab and sees the header, description, and the `tools-info-box` copy
+- [x] tools-02: Admin toggles a tool on (`aria-checked` flips + "Agent updated successfully" toast) and it persists across a close + full page reload + reopen; toggling it back off persists the same way
+- [x] tools-03: A tool's info icon exposes `aria-label="More info about {name}"` and its Radix tooltip shows the tool's description on both hover and keyboard focus
+- [x] tools-04: A tool switch's accessible name flips between `"{name} disabled"` and `"{name} enabled"` as it is toggled
+- [x] tools-05: Non-admin does not see the Tools tab in the Edit Mentor modal
+- [ ] _(not-reproducible — RBAC off in default env)_ Read-only `mentor_tools` field permission (`WithFormPermissions`) disables every tool switch — `NEXT_PUBLIC_ENABLE_RBAC` is unset in this env (defaults `false`) and no fixture seeds a `permissions.field.mentor_tools` `write: false` response
+- [ ] _(not-reproducible — no e2e locale-switch mechanism)_ Tools tab copy renders correctly in a non-English locale (e.g. es) — no journey in this repo has an established, reliable way to switch the live app locale and assert on translated text (`ProfilePage.languageSelector`, Journey 4, only checks the selector is visible)
+
+---
+
+## Journey 78: Mentor API Tab (9 checkpoints) — `journeys/78-mentor-api-tab.spec.ts`
+
+**Source files:** `components/modals/edit-mentor-modal/tabs/api-tab.tsx`
+
+The API tab is rendered by the SDK's `AgentApiTab` (`@iblai/iblai-js/web-containers/next`) via OS's thin wrapper, passing no `labels` override — all copy (header, `data-testid="api-info-box"` info box + disclaimers, table columns, Create/Delete/reveal dialogs) comes straight from the SDK's i18n catalog. Top priority for this journey: the expiration date picker (calendar) had a real, user-visible bug where opening the popover and clicking a day fell through to the Create dialog's own overlay and closed the whole dialog instead of picking the date — fixed in the SDK's `ui/popover.tsx` via `pointer-events-auto`. `ApiTab.pickAnyEnabledDay()` asserts the Create dialog is still open immediately after the click, so a regression here fails loudly. API keys are TENANT-scoped (`platform_key`), not agent-scoped — deleting the disposable mentor each test creates never removes them, so every test explicitly tracks and deletes the exact key name(s) it creates (UI or API-seeded via `ApiTab.uniqueName()`, prefix `e2e-apikey-`), and a worker-scoped fixture (`apiKeyResidueReaped`, `utils/api-key-residue.ts`) reaps any stale residue older than 2h — mirrors `lti-residue.ts`'s tenant-scoped pattern. The tenant already carries real, foreign API keys (a few real ones plus ~20 manually created `pagination-test-*` keys); nothing here ever touches a key it didn't create itself. Because every test mutates the same tenant-wide key list, the file runs serially in one worker (mirrors Journeys 47/66/77), and every test still creates its own fresh, disposable mentor via `createMentorPage.openAndCreate()` (auto-tracked + auto-pinned to the cheap ibl.ai model — no manual `MentorTracker` needed) to keep the isolation story uniform with the rest of the Edit Agent modal journeys, even though the keys under test aren't mentor-scoped.
+
+- [x] api-01: Admin opens the API tab and sees the header, description, info box (with disclaimer text), and Create New button
+- [x] api-02 _(calendar regression guard — top priority)_: Admin opens Create, opens the expiration date calendar, navigates to the next month, and picks a day — the Create dialog stays open and the trigger shows the picked PPP date; submitting shows the success toast + reveal dialog, and the new row's EXPIRES cell shows that exact date
+- [x] api-03: Creating an API key without picking an expiration date leaves its EXPIRES cell showing "N/A"
+- [x] api-04: Create dialog validates the API key name (required / letters-numbers-hyphens-underscores only) and keeps Submit disabled until the name is valid
+- [x] api-05: The reveal ("API Key") dialog's copy button flips its accessible name from "Copy API key" to "Copied" once clicked
+- [x] api-06: Pagination appears once more than 10 keys exist (bulk-seeded via the API), page 2's rows differ from page 1's, and creating a key through the UI returns the view to page 1
+- [x] api-07 _(mocked dataset)_: Deleting the only remaining row on a paginated page (page > 1) steps the view back a page and the pagination control disappears once everything fits on one page — exercised against a mocked (`page.route`) dataset, since the real tenant's true last page is always foreign, protected data (verified live: the backend ignores any client-supplied `created` timestamp and always server-stamps "now", so a test-created key can never sort to the tail without deleting real data)
+- [x] api-08: Admin deletes an API key via the UI — the confirmation dialog names the key by name, and confirming removes its row
+- [x] api-09: Non-admin does not see the API tab in the Edit Mentor modal
