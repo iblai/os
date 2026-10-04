@@ -1,15 +1,15 @@
 {
   "version": 2,
-  "lastUpdated": "2026-09-30",
+  "lastUpdated": "2026-10-03",
   "summary": {
-    "totalCheckpoints": 798,
+    "totalCheckpoints": 811,
     "coveredCheckpoints": 753,
     "deprecatedCheckpoints": 17,
     "notReproducibleCheckpoints": 17,
-    "pendingCheckpoints": 11,
+    "pendingCheckpoints": 24,
     "percent": 100,
-    "totalJourneys": 81,
-    "activeJourneys": 80
+    "totalJourneys": 82,
+    "activeJourneys": 81
   },
   "journeys": [
     {
@@ -5052,6 +5052,95 @@
           "id": "api-09",
           "description": "Non-admin does not see the API tab in the Edit Mentor modal (Settings menu item itself is unreachable; falls back to a direct tab-absence check)",
           "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "chat-mcp-servers",
+      "name": "Chat MCP Servers",
+      "spec": "80-chat-mcp-servers.spec.ts",
+      "sourceFiles": [
+        "components/chat-input-form.tsx",
+        "components/chat-input-form/inside-buttons.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "chat-mcp-01",
+          "description": "Admin, on a fresh agent (default tool pills), sees the MCP pill (data-testid chat-mcp-button, accessible name exactly \"MCP\") inline in the composer; it opens the MCP Servers menu (h3 \"MCP Servers\", \"Search Servers\" search, Add Server and Close buttons), a search with no match shows exactly \"No servers match your search.\", and Close closes the menu",
+          "status": "pending",
+          "note": "Live, not yet run: needs the SDK build that exports McpServersButton/McpServersMenu (iblai-web-frontend feat/web-containers/2625). Flip to covered once the journey runs green."
+        },
+        {
+          "id": "chat-mcp-02",
+          "description": "Admin adds a uniquely named no-auth server scoped to \"This Agent\" through Add Server (the shared \"Add MCP Connector\" dialog) on a fresh agent: the create POST carries that agent's id, the server is auto-attached (settings PUT with its id in mcp_servers), the dialog stays open until the attach has landed, and searching the menu finds its row with the agent switch on; the test fixture deletes the server afterwards, even after a timeout",
+          "status": "pending",
+          "note": "Live, not yet run: needs the SDK build that exports McpServersButton/McpServersMenu (iblai-web-frontend feat/web-containers/2625). Flip to covered once the journey runs green."
+        },
+        {
+          "id": "chat-mcp-03",
+          "description": "Admin switches that server off and back on for the agent from the menu; each switch saves the agent settings (PUT) and its state survives a page reload and reopening the menu",
+          "status": "pending",
+          "note": "Live, not yet run: needs the SDK build that exports McpServersButton/McpServersMenu (iblai-web-frontend feat/web-containers/2625). Flip to covered once the journey runs green."
+        },
+        {
+          "id": "chat-mcp-04",
+          "description": "With /mentors/{dbId}/mcpservers/#list denied (real permissions-check response rewritten), once the patched permissions and the agent settings have loaded the composer renders no MCP pill over a 3s window, and with the row collapsed the ••• overflow lists other tools but no MCP item",
+          "status": "pending",
+          "note": "Live, not yet run: needs the SDK build that exports McpServersButton/McpServersMenu (iblai-web-frontend feat/web-containers/2625). Flip to covered once the journey runs green."
+        },
+        {
+          "id": "chat-mcp-05",
+          "description": "With create denied on /mentors/{dbId}/mcpservers/ and /mcpservers/, the menu still opens with search and Close but shows no Add Server button",
+          "status": "pending",
+          "note": "Live, not yet run: needs the SDK build that exports McpServersButton/McpServersMenu (iblai-web-frontend feat/web-containers/2625). Flip to covered once the journey runs green."
+        },
+        {
+          "id": "chat-mcp-06",
+          "description": "Non-admin (default list grant, no create) sees the MCP pill, opens the menu, and gets no Add Server button",
+          "status": "pending",
+          "note": "Live, not yet run: needs the SDK build that exports McpServersButton/McpServersMenu (iblai-web-frontend feat/web-containers/2625). Flip to covered once the journey runs green."
+        },
+        {
+          "id": "chat-mcp-07",
+          "description": "On a narrow viewport MCP collapses into the composer's ••• (More options) menu; choosing its MCP item closes the ••• menu and opens the same MCP Servers menu, whose search takes a click and typed text; the menu fits inside the viewport there and at 375x667 and 320x568",
+          "status": "pending",
+          "note": "Live, not yet run: needs the SDK build that exports McpServersButton/McpServersMenu (iblai-web-frontend feat/web-containers/2625). Flip to covered once the journey runs green."
+        },
+        {
+          "id": "chat-mcp-08",
+          "description": "Keyboard only: Enter on the composer's ••• opens it, End then Enter on the MCP item closes the ••• menu and moves focus into the MCP Servers menu, Tab reaches the Search Servers box and typing goes into it, and Escape closes the menu",
+          "status": "pending",
+          "note": "Live, not yet run: needs the SDK build that exports McpServersButton/McpServersMenu (iblai-web-frontend feat/web-containers/2625). Flip to covered once the journey runs green."
+        },
+        {
+          "id": "chat-mcp-09",
+          "description": "Non-admin, with the server list mocked to one per-user (auth_scope \"user\") OAuth server: its row shows the exact \"User\" scope chip and a \"Connect\" button, with no Disconnect and no agent on/off switch; Connect opens a popup at the sign-in URL the connected-services start endpoint returned (mocked)",
+          "status": "pending",
+          "note": "Live, not yet run: needs the SDK build that exports McpServersButton/McpServersMenu (iblai-web-frontend feat/web-containers/2625). Flip to covered once the journey runs green."
+        },
+        {
+          "id": "chat-mcp-10",
+          "description": "Non-admin, with the server list and connections mocked to one per-user OAuth server they have connected: its row shows a \"Disconnect\" button, with no Connect and no agent switch; Disconnect deletes only their connected service (DELETE connected-services/{id}), sends no agent settings write (the server stays attached for everyone), and the row returns to Connect",
+          "status": "pending",
+          "note": "Live, not yet run: needs the SDK build that exports McpServersButton/McpServersMenu (iblai-web-frontend feat/web-containers/2625). Flip to covered once the journey runs green."
+        },
+        {
+          "id": "chat-mcp-11",
+          "description": "When the MCP-server list request fails the menu shows the alert \"Couldn't load MCP servers.\" with a Retry button; once the API recovers, Retry loads the list (rows or the empty state) and the alert goes away",
+          "status": "pending",
+          "note": "Live, not yet run: needs the SDK build that exports McpServersButton/McpServersMenu (iblai-web-frontend feat/web-containers/2625). Flip to covered once the journey runs green."
+        },
+        {
+          "id": "chat-mcp-12",
+          "description": "Admin taps a custom server row in the menu (Custom tab; the row is a button only with the server's object write permission) and the shared \"Edit MCP Connector\" dialog opens prefilled with its name; renaming it and pressing Update saves the server (PUT mcp-servers/{id}/) and the new name shows in the menu",
+          "status": "pending",
+          "note": "Live, not yet run: needs the SDK build that exports McpServersButton/McpServersMenu (iblai-web-frontend feat/web-containers/2625). Flip to covered once the journey runs green."
+        },
+        {
+          "id": "chat-mcp-13",
+          "description": "Admin deletes a custom server from the menu (Custom tab; the trash icon renders only with the server's object delete permission): the shared \"Remove Connector\" confirmation (the agent settings MCP tab's dialog) names it, Delete sends DELETE mcp-servers/{id}/, and the row is gone, so searching for it shows the empty state",
+          "status": "pending",
+          "note": "Live, not yet run: needs the SDK build that exports McpServersButton/McpServersMenu (iblai-web-frontend feat/web-containers/2625). Flip to covered once the journey runs green."
         }
       ]
     }

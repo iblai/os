@@ -222,8 +222,21 @@ vi.mock('@/components/chat-input-form/inside-buttons', () => ({
     activeSkillSlugs,
     onToggleSkill,
     onClearSkills,
+    mcpEnabled,
+    mentorId,
+    mentorDbId,
+    rbacPermissions,
+    enableRbac,
   }: any) => (
     <div data-testid="inside-buttons">
+      <span
+        data-testid="inside-buttons-mcp"
+        data-mcp-enabled={String(!!mcpEnabled)}
+        data-mentor-id={mentorId ?? ''}
+        data-mentor-db-id={mentorDbId ?? ''}
+        data-rbac-permissions={JSON.stringify(rbacPermissions ?? null)}
+        data-enable-rbac={String(enableRbac)}
+      />
       <button onClick={() => onOptionClick('canvas')}>Canvas</button>
       <button data-testid="open-prompt-gallery" onClick={onOpenPromptGallery}>
         Prompt Gallery
@@ -432,6 +445,7 @@ vi.mock('@/hoc/withPermissions', () => ({
 }));
 
 let mockMaxCharacterSize = '2000';
+let mockEnableRbac = false;
 vi.mock('@/lib/config', async () => {
   const actual =
     await vi.importActual<typeof import('@/lib/config')>('@/lib/config');
@@ -440,6 +454,7 @@ vi.mock('@/lib/config', async () => {
     config: {
       ...actual.config,
       maximumCharacterSizeToCopy: () => mockMaxCharacterSize,
+      enableRBAC: () => mockEnableRbac,
     },
   };
 });
@@ -546,6 +561,7 @@ describe('ChatInputForm', () => {
     mockCheckRbacPermission.mockReturnValue(true);
     mockExecuteWithTrialCheck.mockImplementation((fn: () => void) => fn());
     mockMaxCharacterSize = '2000';
+    mockEnableRbac = false;
     mockShareableToken = null;
   });
 
@@ -2795,6 +2811,86 @@ describe('ChatInputForm', () => {
       expect(
         screen.queryByTestId('slash-skill-picker'),
       ).not.toBeInTheDocument();
+    });
+  });
+  describe('MCP servers RBAC gate', () => {
+    const mentorPerms = { '/mentors/42/': {} };
+    const arrangeMentor = () => {
+      mockMentorSettings = {
+        data: {
+          mentorVisibility: 'PRIVATE',
+          disclaimer: null,
+          mentorUniqueId: 'mentor-uuid-1',
+          mentorDbId: 42,
+        },
+      } as any;
+    };
+    const mcpSurface = () => screen.getByTestId('inside-buttons-mcp');
+
+    it('offers MCP once the permission check grants mcpservers#list', () => {
+      arrangeMentor();
+      mockCheckRbacPermission.mockReturnValue(true);
+      renderWithRedux(<ChatInputForm {...defaultProps} />, {
+        rbac: { rbacPermissions: mentorPerms },
+      });
+      expect(mockCheckRbacPermission).toHaveBeenCalledWith(
+        mentorPerms,
+        '/mentors/42/mcpservers/#list',
+      );
+      expect(mcpSurface()).toHaveAttribute('data-mcp-enabled', 'true');
+    });
+
+    it('withholds MCP when the permission check denies mcpservers#list', () => {
+      arrangeMentor();
+      (mockCheckRbacPermission as unknown as Mock).mockImplementation(
+        (_perms: unknown, resource: string) =>
+          !resource.includes('/mcpservers/#list'),
+      );
+      renderWithRedux(<ChatInputForm {...defaultProps} />, {
+        rbac: { rbacPermissions: mentorPerms },
+      });
+      expect(mcpSurface()).toHaveAttribute('data-mcp-enabled', 'false');
+    });
+
+    it('withholds MCP before the mentor permission data has loaded', () => {
+      arrangeMentor();
+      mockCheckRbacPermission.mockReturnValue(true); // would allow if consulted
+      renderWithRedux(<ChatInputForm {...defaultProps} />); // empty rbac store
+      expect(mockCheckRbacPermission).not.toHaveBeenCalledWith(
+        expect.anything(),
+        '/mentors/42/mcpservers/#list',
+      );
+      expect(mcpSurface()).toHaveAttribute('data-mcp-enabled', 'false');
+    });
+
+    it('withholds MCP while the agent id is unknown', () => {
+      mockCheckRbacPermission.mockReturnValue(true);
+      renderWithRedux(<ChatInputForm {...defaultProps} />, {
+        rbac: { rbacPermissions: mentorPerms },
+      });
+      expect(mcpSurface()).toHaveAttribute('data-mcp-enabled', 'false');
+    });
+
+    it('passes the agent ids, RBAC map and RBAC switch to the composer row', () => {
+      arrangeMentor();
+      mockEnableRbac = true;
+      renderWithRedux(<ChatInputForm {...defaultProps} />, {
+        rbac: { rbacPermissions: mentorPerms },
+      });
+      expect(mcpSurface()).toHaveAttribute('data-mentor-id', 'mentor-uuid-1');
+      expect(mcpSurface()).toHaveAttribute('data-mentor-db-id', '42');
+      expect(
+        JSON.parse(mcpSurface().getAttribute('data-rbac-permissions')!),
+      ).toEqual(mentorPerms);
+      expect(mcpSurface()).toHaveAttribute('data-enable-rbac', 'true');
+    });
+
+    it('forwards a disabled RBAC switch as false', () => {
+      arrangeMentor();
+      renderWithRedux(<ChatInputForm {...defaultProps} />, {
+        rbac: { rbacPermissions: mentorPerms },
+      });
+      expect(mcpSurface()).toHaveAttribute('data-enable-rbac', 'false');
     });
   });
 });

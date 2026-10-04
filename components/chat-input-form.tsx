@@ -199,6 +199,13 @@ export function ChatInputForm({
           `/mentors/${mentorDbId}/#view_skill_assignments`,
         )
       : false;
+  const hasMcpServersPermission =
+    mentorDbId && hasMentorRbacData
+      ? checkRbacPermission(
+          rbacPermissions,
+          `/mentors/${mentorDbId}/mcpservers/#list`,
+        )
+      : false;
 
   const {
     FreeTrialDialog,
@@ -1040,6 +1047,11 @@ export function ChatInputForm({
                   isFetchingMoreSkills={isFetchingMoreSkills}
                   onLoadMoreSkills={loadMoreSkills}
                   skillSync={skillSync}
+                  mcpEnabled={hasMcpServersPermission}
+                  mentorId={mentorUniqueId}
+                  mentorDbId={mentorDbId}
+                  rbacPermissions={rbacPermissions}
+                  enableRbac={config.enableRBAC()}
                 />
               )}
 

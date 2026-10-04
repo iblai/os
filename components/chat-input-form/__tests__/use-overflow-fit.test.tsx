@@ -97,8 +97,12 @@ function stubLayout(root: number) {
 
 function Harness({
   fixed = [] as { key: string; width: number }[],
+  widthOf = {},
+  expanded = [],
 }: {
   fixed?: { key: string; width: number }[];
+  widthOf?: Record<string, number>;
+  expanded?: string[];
 }) {
   const fit = useOverflowFit(
     ITEMS,
@@ -117,10 +121,12 @@ function Harness({
         <span
           key={item.key}
           ref={fit.itemRef(item.key)}
-          data-w={item.estimate}
+          data-w={widthOf[item.key] ?? item.estimate}
           data-testid={`inline-${item.key}`}
         >
-          {item.key}
+          <button aria-expanded={expanded.includes(item.key)}>
+            {item.key}
+          </button>
         </span>
       ))}
       <output data-testid="count">{count === null ? 'null' : count}</output>
@@ -162,6 +168,36 @@ describe('useOverflowFit', () => {
     await waitFor(() =>
       expect(screen.getByTestId('count')).toHaveTextContent('0'),
     );
+  });
+
+  it('re-fits an inline pill that grows', async () => {
+    restore = stubLayout(312);
+    const { rerender } = render(<Harness />);
+    await waitFor(() =>
+      expect(screen.getByTestId('count')).toHaveTextContent('3'),
+    );
+
+    rerender(<Harness widthOf={{ c: 148 }} />);
+    await waitFor(() =>
+      expect(screen.getByTestId('count')).toHaveTextContent('2'),
+    );
+  });
+
+  it('keeps a pill inline while its own popover is open, even as it grows', async () => {
+    // 80 + 90 + 130 + 2 gaps = 312: the row fits c exactly while closed.
+    restore = stubLayout(312);
+    const { rerender } = render(<Harness />);
+    await waitFor(() =>
+      expect(screen.getByTestId('count')).toHaveTextContent('3'),
+    );
+
+    rerender(<Harness widthOf={{ c: 148 }} expanded={['c']} />);
+    rerender(<Harness widthOf={{ c: 148 }} expanded={['c']} />);
+    expect(screen.getByTestId('count')).toHaveTextContent('3');
+    expect(screen.getByTestId('inline-c')).toBeInTheDocument();
+
+    rerender(<Harness />);
+    expect(screen.getByTestId('count')).toHaveTextContent('3');
   });
 
   it('re-fits when the row is resized', async () => {

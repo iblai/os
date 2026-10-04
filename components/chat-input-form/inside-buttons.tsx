@@ -37,6 +37,7 @@ import {
   Monitor,
   Sparkles,
   Loader2,
+  Plug,
 } from 'lucide-react';
 import type { EffectiveAgentSkill } from '@iblai/iblai-js/data-layer';
 import { toast } from 'sonner';
@@ -55,6 +56,8 @@ import {
   isLocalLLMEnabled,
   getLocalLLMModel,
   modelSupportsCowork,
+  McpServersButton,
+  McpServersMenu,
 } from '@iblai/iblai-js/web-containers';
 import { MemoryButton } from './memory-button';
 import { CodingModeButton } from './coding-mode-button';
@@ -131,7 +134,17 @@ interface InsideButtonsProps {
    * Drives the Code pill's spinner while syncing and its popover's error note.
    */
   skillSync?: OpencodeSkillSync;
+  /** The caller's RBAC grant to browse this agent's MCP servers. */
+  mcpEnabled?: boolean;
+  /** Agent unique id (uuid) the MCP menu lists and edits servers for. */
+  mentorId?: string;
+  /** Numeric agent id, for the MCP menu's per-agent RBAC keys. */
+  mentorDbId?: number | string;
+  rbacPermissions?: Record<string, unknown>;
+  enableRbac?: boolean;
 }
+
+type HiddenPopover = 'Memory' | 'MCP';
 
 export const InsideButtons = ({
   sessionId,
@@ -157,6 +170,11 @@ export const InsideButtons = ({
   isFetchingMoreSkills = false,
   onLoadMoreSkills,
   skillSync,
+  mcpEnabled = false,
+  mentorId,
+  mentorDbId,
+  rbacPermissions,
+  enableRbac,
 }: InsideButtonsProps) => {
   const t = useTranslations('chatInputFormInsideButtons');
 
@@ -369,6 +387,18 @@ export const InsideButtons = ({
     cuaDriver.install();
   }, [coworkAvailable, coworkOn, cuaDriver, inExtensionPanel]);
 
+  const mcpMenuProps =
+    mcpEnabled && !embedMode && username && tenantKey && mentorId
+      ? {
+          tenantKey,
+          username,
+          mentorId,
+          mentorDbId,
+          rbacPermissions,
+          enableRbac,
+        }
+      : null;
+
   const allInsideButtons: ToolPill[] = [
     {
       name: 'Canvas',
@@ -413,6 +443,15 @@ export const InsideButtons = ({
       // Hidden in private mode — memory is not stored for a private session.
       isEnabled: memoryEnabled && !embedMode && !!username && !isPrivate,
     },
+    {
+      name: 'MCP',
+      label: t('mcp'),
+      icon: <Plug className="h-4 w-4" />,
+      isActive: false,
+      // Inline it renders <McpServersButton>; collapsed it opens the popover.
+      action: /* istanbul ignore next */ () => {},
+      isEnabled: mcpMenuProps !== null,
+    },
   ].filter((item) => item.isEnabled);
 
   const overflowItems: ToolPill[] = [
@@ -445,7 +484,28 @@ export const InsideButtons = ({
   const visibleInsideButtons = overflowItems.slice(0, visibleCount);
   const hiddenInsideButtons = overflowItems.slice(visibleCount);
 
-  const [hiddenMemoryPopoverOpen, setHiddenMemoryPopoverOpen] = useState(false);
+  // The kind outlives the close on purpose: Radix keeps the content mounted
+  // through its exit animation, and it must keep showing the menu that is
+  // fading out rather than mounting the other one.
+  const [popoverKind, setPopoverKind] = useState<HiddenPopover | null>(null);
+  const [popoverOpen, setPopoverOpen] = useState(false);
+  // An outside click or Escape mid sign-in would unmount the menu and drop the
+  // OAuth listeners that finish the connection.
+  const [mcpConnecting, setMcpConnecting] = useState(false);
+  const focusPopoverOnMenuCloseRef = useRef(false);
+  // An item that left the overflow (gate flipped off, row widened) closes its
+  // popover for good, so it cannot reopen unasked when the item comes back.
+  if (
+    popoverOpen &&
+    !hiddenInsideButtons.some((button) => button.name === popoverKind)
+  ) {
+    setPopoverOpen(false);
+  }
+  const openOverflowPopover = (kind: HiddenPopover) => {
+    focusPopoverOnMenuCloseRef.current = true;
+    setPopoverKind(kind);
+    setPopoverOpen(true);
+  };
 
   // Inline pill markup. The wrapper is measured so the overflow fit knows
   // the pill's real width (label, active ✕ and all).
@@ -794,6 +854,19 @@ export const InsideButtons = ({
           );
         }
 
+        if (button.name === 'MCP') {
+          return (
+            <div
+              key={button.name}
+              ref={fit.itemRef(button.name)}
+              className="flex"
+              data-overflow-key={button.name}
+            >
+              <McpServersButton {...mcpMenuProps!} disabled={disabled} />
+            </div>
+          );
+        }
+
         if (button.name === 'Canvas') {
           return (
             <Fragment key={button.name}>
@@ -812,8 +885,12 @@ export const InsideButtons = ({
       {/* Hidden inside buttons dropdown if needed */}
       {hiddenInsideButtons.length > 0 && (
         <Popover
-          open={hiddenMemoryPopoverOpen}
-          onOpenChange={setHiddenMemoryPopoverOpen}
+          open={popoverOpen}
+          onOpenChange={(open) => {
+            if (!open && !(popoverKind === 'MCP' && mcpConnecting)) {
+              setPopoverOpen(false);
+            }
+          }}
         >
           <PopoverAnchor>
             <DropdownMenu>
@@ -829,23 +906,35 @@ export const InsideButtons = ({
                   <span className="sr-only">{t('moreOptions')}</span>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-48">
+              <DropdownMenuContent
+                align="start"
+                className="w-48"
+                // The chosen item's popover has taken focus; Radix would pull
+                // it back to ••• once this menu finishes closing.
+                onCloseAutoFocus={(e) => {
+                  if (focusPopoverOnMenuCloseRef.current) {
+                    focusPopoverOnMenuCloseRef.current = false;
+                    e.preventDefault();
+                  }
+                }}
+              >
                 {/* Hidden buttons are always inactive based on current logic, so isActive branches are defensive */}
                 {hiddenInsideButtons.map((button) => {
-                  const isMemory = button.name === 'Memory';
+                  const popover =
+                    button.name === 'Memory' || button.name === 'MCP'
+                      ? (button.name as HiddenPopover)
+                      : null;
                   return (
                     <DropdownMenuItem
                       key={button.name}
                       disabled={!!button.disabledReason}
                       title={button.disabledReason}
-                      onClick={
-                        isMemory
-                          ? (e) => {
-                              e.preventDefault();
-                              setHiddenMemoryPopoverOpen(true);
-                            }
-                          : button.action
+                      // Let the ••• menu close: left open, its modal focus
+                      // trap and scroll lock make the popover unusable.
+                      onSelect={
+                        popover ? () => openOverflowPopover(popover) : undefined
                       }
+                      onClick={popover ? undefined : button.action}
                       className={
                         /* istanbul ignore next */ button.isActive
                           ? 'bg-[#F5F8FF] text-[#38A1E5]'
@@ -877,19 +966,40 @@ export const InsideButtons = ({
           </PopoverAnchor>
           <PopoverContent
             align="start"
-            className="w-96 rounded-lg border border-gray-200 bg-white p-0 shadow-xl"
-            onOpenAutoFocus={(e) => e.preventDefault()}
+            collisionPadding={8}
+            aria-label={popoverKind === 'MCP' ? t('mcpServers') : undefined}
+            // MCP scrolls its own list so the header and search stay in view.
+            className={`${
+              popoverKind === 'MCP'
+                ? 'flex w-[min(24rem,calc(100vw-1rem))] flex-col overflow-hidden'
+                : 'w-96 overflow-y-auto'
+            } max-h-(--radix-popover-content-available-height) rounded-lg border border-gray-200 bg-white p-0 shadow-xl`}
+            // Focus the panel, not its first control: Tab still reaches the
+            // controls, and phones do not pop the keyboard over the menu.
+            onOpenAutoFocus={(e) => {
+              e.preventDefault();
+              (e.target as HTMLElement | null)?.focus();
+            }}
             // Radix wires this onto a global focus-outside listener that
             // jsdom cannot reliably trigger from a unit test.
             onFocusOutside={
               /* istanbul ignore next */ (e) => e.preventDefault()
             }
           >
-            <MemoryMenu
-              onClose={() => setHiddenMemoryPopoverOpen(false)}
-              tenantKey={tenantKey}
-              username={username}
-            />
+            {popoverKind === 'MCP' && mcpMenuProps && (
+              <McpServersMenu
+                {...mcpMenuProps}
+                onClose={() => setPopoverOpen(false)}
+                onConnectingChange={setMcpConnecting}
+              />
+            )}
+            {popoverKind === 'Memory' && (
+              <MemoryMenu
+                onClose={() => setPopoverOpen(false)}
+                tenantKey={tenantKey}
+                username={username}
+              />
+            )}
           </PopoverContent>
         </Popover>
       )}

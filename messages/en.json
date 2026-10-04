@@ -467,6 +467,8 @@
     "studyMode": "Study Mode",
     "deepResearch": "Deep Research",
     "memory": "Memory",
+    "mcp": "MCP",
+    "mcpServers": "MCP Servers",
     "cowork": "Cowork",
     "coworkNeedsLocalModel": "Turn on “Local Models” first — Cowork needs a local AI model.",
     "coworkModelTooSmall": "Your local model is too small for Cowork. Pick a model of at least 12GB in Local Models.",

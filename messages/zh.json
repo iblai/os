@@ -467,6 +467,8 @@
     "studyMode": "学习模式",
     "deepResearch": "深度研究",
     "memory": "记忆",
+    "mcp": "MCP",
+    "mcpServers": "MCP 服务器",
     "cowork": "Cowork",
     "coworkNeedsLocalModel": "请先开启“本地模型”——Cowork 需要本地 AI 模型。",
     "coworkModelTooSmall": "您的本地模型太小，无法用于 Cowork。请在“本地模型”中选择至少 12GB 的模型。",
