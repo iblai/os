@@ -8,9 +8,14 @@ onlyBuiltDependencies:
   - unrs-resolver
 overrides:
   vite: '>=7.3.2'
-  # GHSA-c475-qrg2-pj4r — quadratic CPU in the listing parser, patched in 6.2.1.
-  # Dev-only (release-it > proxy-agent > get-uri).
-  basic-ftp: '>=6.2.1'
+  # GHSA-c475-qrg2-pj4r — quadratic-time CPU DoS in Client.list()'s Unix
+  # directory-listing parser (RE_LINE backtracking), affecting <=6.2.0; 6.2.1 is
+  # the only patched release. Surfaced by `pnpm audit` (high), which blocks the
+  # audit gate. Dev-only reach: release-it > proxy-agent > pac-proxy-agent >
+  # get-uri > basic-ftp, so there is no production exposure. The previous floor
+  # ('>=5.2.1') already resolved to 6.0.1, so this stays inside the 6.x line;
+  # the upper bound keeps a future major from being pulled in unreviewed.
+  basic-ftp: '>=6.2.1 <7'
   follow-redirects: '>=1.16.0'
   defu: '>=6.1.5'
   lodash-es: '>=4.18.0'
@@ -28,9 +33,13 @@ overrides:
   # GHSA-4cwx-7wf7-3272 (cross-user information disclosure) affects >=8.0.0 <8.9.0.
   # Only 8.7.0 resolves here (@wdio/local-runner > webdriver), so lifting the floor
   # past the 6.x line is safe — nothing depends on a 6.x or 7.x undici.
-  # Floor lifted to 8.10.2 for GHSA-rfgv-xxqx-mfg5 (WebSocket subprotocol DoS),
-  # GHSA-w293-vg96-wgc3 (BalancedPool TLS validation bypass) and
-  # GHSA-vp8m-p9jh-q5pm (interceptor cache poisoning). Same dev-only reach.
+  # Floor lifted 8.9.0 -> 8.10.2 for the eleven advisories patched there, three
+  # of them high: GHSA-rfgv-xxqx-mfg5 (DoS via unrequested WebSocket
+  # subprotocol), GHSA-w293-vg96-wgc3 (TLS certificate validation bypass in
+  # BalancedPool) and GHSA-vp8m-p9jh-q5pm (cross-origin cache poisoning in
+  # interceptors), plus the moderate/low DoS, cookie-caching and response
+  # handling issues in the same line. Same reach, same major:
+  # @wdio/local-runner > @wdio/runner > webdriver > undici (e2e-tauri only).
   undici: '>=8.10.2'
   # GHSA-8j4g-w8fx-2239 — ReDoS in the CORS middleware via a crafted
   # Access-Control-Request-Headers, patched in 4.12.34. Not surfaced by Dependabot;
@@ -40,9 +49,12 @@ overrides:
   # GHSA-gqvv-2mrq-wpjv, GHSA-g6gw-c38x-mqfc and GHSA-crvj-82cr-hjcx (request
   # smuggling / header handling). Same reach: @iblai/mcp > MCP SDK.
   hono: '>=4.13.5'
-  # Floor lifted to 1.20.0 for GHSA-c29m-xwm3-cm6r, GHSA-mghh-pgcx-3jjj,
-  # GHSA-x97p-jq2g-jp4f, GHSA-3pq3-5fj3-cg6v, GHSA-542g-h47m-68v8 and the other
-  # 1.x ReDoS / prototype-pollution / HTTP/2 advisories patched in 1.20.0.
+  # Floor raised 1.16.0 -> 1.20.0 for seven high advisories fixed together in
+  # 1.20.0: GHSA-c29m-xwm3-cm6r (data: URL ReDoS), GHSA-mghh-pgcx-3jjj (proxy
+  # host ReDoS), GHSA-x97p-jq2g-jp4f (toFormData prototype pollution),
+  # GHSA-3pq3-5fj3-cg6v and GHSA-542g-h47m-68v8 (HTTP/2 adapter),
+  # GHSA-m8m8-qj5v-23w3 (createConnection gadget), GHSA-r4gj-5m52-g5wh
+  # (fetch adapter ignores maxRedirects: 0). Direct dependency, pinned to match.
   axios: '>=1.20.0'
   prismjs: '>=1.30.0'
   # Floor raised 3.4.12 -> 3.4.13 for GHSA-55q2-fjhq-7xh7: IN_PLACE hook removal
@@ -74,8 +86,12 @@ overrides:
   browserslist: '>=4.28.7'
   '@hono/node-server': '>=2.0.10'
   bytes: '>=1.11.1'
-  # GHSA-j22f-vq7h-c4qm, GHSA-mcm9-63f2-9j32, GHSA-x5rw-q4pp-hg5g, patched in
-  # 5.9.3; below 6 because @tanstack/react-form asks for ^5.
+  # GHSA-9rgm-9g3h-6x36 — DoS via malformed input, patched in 5.9.2. Reached
+  # through @iblai/iblai-js > @iblai/web-containers > @tanstack/react-form.
+  # Upper bound is deliberate: a bare '>=5.9.2' resolves to 6.x, a major the
+  # consumer has not declared support for; 5.9.x is the patched line it uses.
+  # Floor lifted 5.9.2 -> 5.9.3 for GHSA-j22f-vq7h-c4qm, GHSA-mcm9-63f2-9j32 and
+  # GHSA-x5rw-q4pp-hg5g (high, all <=5.9.2).
   devalue: '>=5.9.3 <6'
   # GHSA-7p8r-x3mc-p8w7 — host confusion via backslash, patched in 4.1.2.
   # Floor lifted again to 4.1.3 for four more host-confusion/SSRF advisories in
@@ -83,11 +99,19 @@ overrides:
   # GHSA-fph4-wmhf-6fwf (repeated hostname percent-decoding), GHSA-f65p-4m7j-42xc
   # (malformed IPv6 normalization) and GHSA-5jgf-p345-68v8 (skipped IDN
   # canonicalization). Reached through @commitlint/cli > @commitlint/load.
-  fast-uri: '>=4.1.3'
+  # Floor lifted 4.1.3 -> 4.1.5 for GHSA-hrr3-gc8f-f4qj and GHSA-jvvf-x445-j334
+  # (two more parsing issues in the same 4.1.x line). Same dev-only reach, via
+  # @commitlint/config-validator > ajv.
+  fast-uri: '>=4.1.5'
   # GHSA-mwp4-54f8-5fhr — Address4 decodes leading-zero octets as decimal, so an
   # address like 010.0.0.1 parses to an unintended host. Patched in 10.3.1.
   # Reached through @wdio/cli > @wdio/utils > @puppeteer/browsers > proxy-agent.
-  ip-address: '>=10.3.1'
+  # Floor lifted 10.3.1 -> 10.5.1 for GHSA-rpw4-54j3-4h4q (isLinkLocal treats
+  # fe80::/64 rather than fe80::/10 as link-local) and GHSA-2vr4-cq9g-pvrc (the
+  # NAT64 local-use range 64:ff9b:1::/48 goes unclassified), both SSRF /
+  # trust-boundary bypasses. Dev-only reach, now also via
+  # release-it > proxy-agent > socks-proxy-agent > socks. Same major.
+  ip-address: '>=10.5.1'
   # brace-expansion GHSA-mh99-v99m-4gvg (DoS/OOM via unbounded expansion) is patched
   # ONLY in 5.0.8 — there is no patched 1.x/2.x/3.x/4.x. But brace-expansion@5 ships
   # ESM-style named exports, so older minimatch majors that import it as a CJS
@@ -107,9 +131,14 @@ overrides:
   # Floor raised 5.0.8 -> 5.0.9 for GHSA-rgw5-rvv9-x895: unbounded intermediate
   # arrays still allow the DoS that CVE-2026-14257 was meant to stop, so 5.0.8 is
   # no longer sufficient. Same major, so the minimatch analysis above still holds.
-  # Floor raised again to 5.0.11 for GHSA-qhr7-859c-m2p7 (nested brace groups) and
-  # GHSA-6j4f-fj2g-mc7p (parseCommaParts recursion). Still 5.x, same analysis.
-  brace-expansion: '>=5.0.11'
+  # Floor raised again 5.0.9 -> 5.0.12 for three stack-exhaustion DoS advisories
+  # in the 5.x line: GHSA-6j4f-fj2g-mc7p (uncontrolled recursion in
+  # parseCommaParts, patched 5.0.10), GHSA-qhr7-859c-m2p7 (recursion on nested
+  # brace groups, patched 5.0.11) and GHSA-q2hr-2g5m-vwhr (patched 5.0.12).
+  # Surfaced via @eslint/eslintrc > minimatch@3, i.e. the same forced 5.x
+  # resolution the minimatch analysis above already covers — nothing changes
+  # for the callable-default hazard, only the patch level moves.
+  brace-expansion: '>=5.0.12'
   # GHSA-mh99-v99m-4gvg is only fixed in brace-expansion >=5.0.8, but 5.x exports
   # an object ({ expand, EXPANSION_MAX* }) where minimatch@9 does
   # `import expand from 'brace-expansion'` and CALLS it — so pinning 5.x under
@@ -127,6 +156,12 @@ overrides:
   # Floor lifted to 6.16.0 for GHSA-x5fp-wj9c-mxmx + GHSA-4mjr-xmp4-gh2g
   # (parameter-parsing DoS), reached through the MCP SDK's express.
   qs: '>=6.16.0'
+  # GHSA-253c-mchw-3w2r — two quadratic paths in linkify let a few hundred KB
+  # of markdown block the event loop for tens of seconds. Patched in 14.3.1.
+  # Reached through @iblai/iblai-js > @iblai/web-containers > @tiptap/pm >
+  # prosemirror-markdown, which asks for ^14. Upper bound is deliberate: a bare
+  # '>=14.3.1' resolves to 15.x, a major that consumer does not declare.
+  markdown-it: '>=14.3.1 <15'
   # GHSA-cp6q-959q-f8rh + GHSA-j95f-988m-3j2f (XSS via crafted editor
   # content), patched in 3.30.4/3.30.5. Scoped to the 3.x resolution
   # (@iblai/web-containers): the app itself pins the 2.x API for the canvas
@@ -137,7 +172,7 @@ overrides:
   # Floor lifted to 0.35.4 for GHSA-rgj7-g3m4-5g8c (image decode overflow),
   # reached through next's optional sharp.
   sharp: '>=0.35.4'
-  brace-expansion@<=5.0.8: '>=5.0.11'
+  brace-expansion@<=5.0.8: '>=5.0.12'
   # serialize-javascript GHSA-5c6j-r48x-rmvq (RCE via RegExp.flags/Date, patched
   # 7.0.3) and GHSA-qj8w-gfj5-8c6v (CPU-exhaustion DoS, patched 7.0.5). Reached by
   # one path only: e2e-tauri's @wdio/mocha-framework > mocha > serialize-javascript.

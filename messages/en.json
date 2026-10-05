@@ -1661,6 +1661,7 @@
     "sentimentPositive": "Positive",
     "sentimentNeutral": "Neutral",
     "sentimentNegative": "Negative",
+    "userSentiment": "User Sentiment",
     "filterBySentiment": "Filter by sentiment",
     "allTopics": "All Topics",
     "filterByTopic": "Filter by topic",
@@ -2273,5 +2274,25 @@
     "updateNow": "Update Now",
     "updating": "Updating…",
     "later": "Later"
+  },
+  "productTour": {
+    "back": "Back",
+    "close": "Close tour",
+    "done": "Done",
+    "next": "Next",
+    "skip": "Skip tour",
+    "progress": "{current} of {total}",
+    "profileTitle": "Your profile",
+    "profileContent": "Open your profile, switch between organizations, get help, or log out from this menu.",
+    "privacyModeTitle": "Private mode",
+    "privacyModeContent": "Turn on private mode to keep a conversation out of your chat history. Once on, it stays on for that conversation.",
+    "promptInputTitle": "Ask anything",
+    "promptInputContent": "Type your message to the agent here. Attach files or turn on tools with the buttons below the box.",
+    "conversationStartersTitle": "Conversation starters",
+    "conversationStartersContent": "Not sure where to begin? Pick a starter to send it as your first message.",
+    "agentsTitle": "Explore agents",
+    "agentsContent": "Browse the agents available to you, and create or manage your own, from the Agents menu.",
+    "accountTitle": "Manage your organization",
+    "accountContent": "Invite people, manage users and groups, connect integrations, and change advanced settings from the tools at the bottom of the sidebar."
   }
 }

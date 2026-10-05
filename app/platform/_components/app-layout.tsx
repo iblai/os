@@ -12,6 +12,8 @@ import { useMentorSettings } from '@/hooks/use-mentors/use-mentor-settings';
 import { useParams, useSearchParams } from 'next/navigation';
 import { TenantKeyMentorIdParams } from '@/lib/types';
 import { isTauriApp } from '@/types/tauri';
+import { isLoggedIn } from '@/lib/utils';
+import { ProductTour } from '@/components/product-tour';
 import {
   isTauriOfflineMode,
   isOfflineServerOrigin,
@@ -68,6 +70,7 @@ export default function AppLayout({ children, defaultOpen }: AppLayoutProps) {
       <SidebarProvider defaultOpen={defaultOpen}>
         <HotKeysWrapper />
         <AppSidebar />
+        {isLoggedIn() && <ProductTour />}
         <SidebarInset asChild className="flex h-dvh flex-col overflow-hidden">
           <div>
             <NavBar />
