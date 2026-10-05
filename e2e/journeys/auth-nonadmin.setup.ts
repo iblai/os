@@ -1,5 +1,6 @@
 import { test as setup, expect } from '@playwright/test';
 import { safeWaitForURL } from '../utils/navigation';
+import { markProductTourSeen, trackUserMetadata } from '../utils/product-tour';
 import path from 'path';
 import fs from 'fs';
 
@@ -19,6 +20,9 @@ setup('authenticate non-admin', async ({ page }, testInfo) => {
     `../../playwright/.auth/nonadmin-${browserKey}.json`,
   );
   fs.mkdirSync(path.dirname(authFile), { recursive: true });
+
+  // The app's own user-metadata request is reused in Step 7c to mark the tour seen.
+  const userMetadata = trackUserMetadata(page);
 
   // ── Step 0: Intercept request-jwt ────────────────────────────────────────
   // web-utils 1.2.5 calls POST /ibl-auth/request-jwt/ synchronously on mount.
@@ -163,6 +167,9 @@ setup('authenticate non-admin', async ({ page }, testInfo) => {
       `[auth-nonadmin.setup] [${browserKey}] edx_jwt_token: NULL — timed out`,
     );
   }
+
+  // ── Step 7c: Mark the first-visit product tour seen ───────────────────────
+  await markProductTourSeen(page, userMetadata);
 
   // ── Step 8: Save storage state ────────────────────────────────────────────
   await page.context().storageState({ path: authFile });

@@ -2259,5 +2259,25 @@
     "updateNow": "Mettre à jour",
     "updating": "Mise à jour…",
     "later": "Plus tard"
+  },
+  "productTour": {
+    "back": "Retour",
+    "close": "Fermer la visite",
+    "done": "Terminé",
+    "next": "Suivant",
+    "skip": "Passer la visite",
+    "progress": "{current} sur {total}",
+    "profileTitle": "Votre profil",
+    "profileContent": "Ouvrez votre profil, changez d’organisation, obtenez de l’aide ou déconnectez-vous depuis ce menu.",
+    "privacyModeTitle": "Mode privé",
+    "privacyModeContent": "Activez le mode privé pour qu’une conversation ne soit pas enregistrée dans votre historique. Une fois activé, il le reste pour cette conversation.",
+    "promptInputTitle": "Posez votre question",
+    "promptInputContent": "Écrivez ici votre message à l’agent. Joignez des fichiers ou activez des outils avec les boutons sous la zone de saisie.",
+    "conversationStartersTitle": "Idées pour commencer",
+    "conversationStartersContent": "Vous ne savez pas par où commencer ? Choisissez une idée pour l’envoyer comme premier message.",
+    "agentsTitle": "Explorez les agents",
+    "agentsContent": "Parcourez les agents disponibles, et créez ou gérez les vôtres, depuis le menu Agents.",
+    "accountTitle": "Gérez votre organisation",
+    "accountContent": "Invitez des personnes, gérez les utilisateurs et les groupes, connectez des intégrations et modifiez les paramètres avancés avec les outils en bas de la barre latérale."
   }
 }

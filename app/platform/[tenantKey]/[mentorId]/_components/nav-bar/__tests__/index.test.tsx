@@ -718,6 +718,21 @@ describe('NavBar', () => {
       expect(screen.getByTestId('user-profile')).toBeInTheDocument();
     });
 
+    it('wraps the profile menu in the product-tour hook', () => {
+      const store = createTestStore();
+
+      render(
+        <Provider store={store}>
+          <NavBar />
+        </Provider>,
+      );
+
+      expect(screen.getByTestId('user-profile').parentElement).toHaveAttribute(
+        'data-tour',
+        'profile',
+      );
+    });
+
     it('renders notification dropdown when logged in', () => {
       const store = createTestStore();
 
@@ -1309,6 +1324,14 @@ describe('NavBar', () => {
       renderOnAnalytics();
 
       expect(screen.getByTestId('chat-privacy-toggle')).toBeInTheDocument();
+    });
+
+    it('wraps the privacy toggle in the product-tour hook', () => {
+      renderOnAnalytics();
+
+      expect(
+        screen.getByTestId('chat-privacy-toggle').parentElement,
+      ).toHaveAttribute('data-tour', 'privacy-mode');
     });
 
     // …but the tenant-wide section is NOT the same surface: it has no agent in
