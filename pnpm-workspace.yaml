@@ -232,3 +232,8 @@ auditConfig:
     # @wdio/cli > @puppeteer/browsers uses it to unpack browser downloads
     # fetched from vendor CDNs.
     - GHSA-jmr9-qjv8-65gv
+    # braces stack exhaustion via deeply nested patterns (GHSA-vfj7-8cjw-p6xm) —
+    # no patched release; the advisory's patched range is <0.0.0. Reached only
+    # through tooling (mocha > chokidar; fast-glob > micromatch, also via the
+    # SDK's rollup-plugin-copy runtime dep), on the repo's own glob patterns.
+    - GHSA-vfj7-8cjw-p6xm
