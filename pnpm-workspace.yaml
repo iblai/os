@@ -90,7 +90,9 @@ overrides:
   # through @iblai/iblai-js > @iblai/web-containers > @tanstack/react-form.
   # Upper bound is deliberate: a bare '>=5.9.2' resolves to 6.x, a major the
   # consumer has not declared support for; 5.9.x is the patched line it uses.
-  devalue: '>=5.9.2 <6'
+  # Floor lifted 5.9.2 -> 5.9.3 for GHSA-j22f-vq7h-c4qm, GHSA-mcm9-63f2-9j32 and
+  # GHSA-x5rw-q4pp-hg5g (high, all <=5.9.2).
+  devalue: '>=5.9.3 <6'
   # GHSA-7p8r-x3mc-p8w7 — host confusion via backslash, patched in 4.1.2.
   # Floor lifted again to 4.1.3 for four more host-confusion/SSRF advisories in
   # the same line: GHSA-jqff-g426-hqxp (percent-encoded scheme normalization),
@@ -230,3 +232,8 @@ auditConfig:
     # @wdio/cli > @puppeteer/browsers uses it to unpack browser downloads
     # fetched from vendor CDNs.
     - GHSA-jmr9-qjv8-65gv
+    # braces stack exhaustion via deeply nested patterns (GHSA-vfj7-8cjw-p6xm) —
+    # no patched release; the advisory's patched range is <0.0.0. Reached only
+    # through tooling (mocha > chokidar; fast-glob > micromatch, also via the
+    # SDK's rollup-plugin-copy runtime dep), on the repo's own glob patterns.
+    - GHSA-vfj7-8cjw-p6xm

@@ -1,5 +1,33 @@
 # Changelog
 
+## [0.162.0](https://github.com/iblai/os/compare/v0.161.0...v0.162.0) (2026-10-05)
+
+### Features
+
+- **code:** list Codex's models from codex debug models, not a probe session ([679ae56](https://github.com/iblai/os/commit/679ae5659a82b51573a2664533bb6ef027b9e90c))
+- **code:** plain-words app name, two reminders, no local checks, IBL_VIBE_SKILLS_TAG, data-dir lock ([80878cb](https://github.com/iblai/os/commit/80878cbfcf4ba240f8fb946ebf0247786b6e6a51))
+- **domains:** allow DNS-over-HTTPS lookups and surface custom domains in code mode ([7aab6d2](https://github.com/iblai/os/commit/7aab6d281da13bee74eea0210ed25c9db4c068a6))
+- run Code mode on Codex and Claude Code over ACP with the SDK LLM Selection model picker ([a653dca](https://github.com/iblai/os/commit/a653dca57492415756ad1c3b1cfc019fd2942ba9))
+
+### Bug Fixes
+
+- **code-mode:** mention the Domains panel only to platform admins ([6888f03](https://github.com/iblai/os/commit/6888f03841efb667ddcdd5243c92c22cbf6039e1))
+- **code-mode:** point the Domains hint at the sidebar's Advanced entry ([0e33def](https://github.com/iblai/os/commit/0e33def1adf972ec9b487c46619b85e7a1967017))
+- **code:** drop the in-app sign-in, name the ChatGPT app; loud unknown state, spawn deadline, tests ([2cdb76e](https://github.com/iblai/os/commit/2cdb76ea224650bf4e961cd76a5475f086daf974))
+- **code:** plain-words replies and an app named after what it is, never the template ([616a745](https://github.com/iblai/os/commit/616a745088936e4b560c35e53de1ada97b100e3b))
+- **code:** self-review fixes for Codex modes, agent config, macOS 13.5, picker; audit overrides ([95ea185](https://github.com/iblai/os/commit/95ea1854800500566658a9a40933f0e0c98c93ea))
+- **code:** strip npm_config env from the managed npm; IBL_MASK_ACCOUNT_EMAIL for screenshots ([b7f3137](https://github.com/iblai/os/commit/b7f3137cac488a51b32a258072186f679d49f1d2))
+- **code:** strip npm_config env from the managed npm; IBL_MASK_ACCOUNT_EMAIL for screenshots ([0054aeb](https://github.com/iblai/os/commit/0054aeb79180737513fe1a21ed8fdf9a2460c66e))
+- **deps:** ignore the unpatched braces advisory GHSA-vfj7-8cjw-p6xm in pnpm audit ([dfeba33](https://github.com/iblai/os/commit/dfeba338ea676e2c8f2b1c4cd2a130f9511c604d))
+
+### Chores
+
+- **tauri:** release app-v0.95.23 ([f9154f4](https://github.com/iblai/os/commit/f9154f4ba717c051e0bc942c8fcf1cdee90db02b))
+
+### Tests
+
+- **e2e:** drop in-stream bounce-dot check from journey 52 tool-call test ([1e21354](https://github.com/iblai/os/commit/1e2135460f8057d3f8e71f9d6811d7f6d4821ebd))
+
 ## [0.161.0](https://github.com/iblai/os/compare/v0.160.0...v0.161.0) (2026-10-05)
 
 ### Features

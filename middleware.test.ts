@@ -175,6 +175,21 @@ describe('CSP middleware', () => {
     expect(directive('frame-src')).not.toContain('https://api.github.com');
   });
 
+  it('allows DNS-over-HTTPS in connect-src (sign-in domain verification)', () => {
+    const csp = cspOf(middleware(req())) ?? '';
+    const directive = (name: string) =>
+      csp
+        .split(';')
+        .map((d) => d.trim())
+        .find((d) => d.startsWith(`${name} `));
+    // The Domains panel resolves a sign-in domain's CNAME from the browser.
+    // Without this the request never leaves the page and the panel reports
+    // "could not check" for every one of them.
+    expect(directive('connect-src')).toContain('https://dns.google');
+    // connect-src only — the resolver is never framed nor loaded as a script.
+    expect(directive('frame-src')).not.toContain('https://dns.google');
+  });
+
   it('allows blob: in frame-src (binary-artifact PDF preview iframe)', () => {
     const csp = cspOf(middleware(req())) ?? '';
     const frameSrc = csp
