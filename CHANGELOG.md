@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.161.0](https://github.com/iblai/os/compare/v0.160.0...v0.161.0) (2026-10-05)
+
+### Features
+
+* os product tour implementation ([d48b82b](https://github.com/iblai/os/commit/d48b82bebeb44b4c6b6307f53eace756ad8ef076))
+
 ## [0.160.0](https://github.com/iblai/os/compare/v0.159.2...v0.160.0) (2026-10-02)
 
 ### Features
