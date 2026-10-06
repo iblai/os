@@ -127,28 +127,25 @@ export function useRecentChats({
     [recentInfiniteData],
   );
 
-  // Pinned — same shape; `sessionId` arg is the cache key the SDK uses
-  // for invalidation, not a row filter.
+  // Never add the active session id — it would refetch on every chat switch.
+  // Shared with the optimistic patches below so the cache key can't drift.
+  const pinnedArgs = {
+    org: tenantKey,
+    userId: resolvedUserId ?? '',
+    mentor: mentorId,
+  };
   const { data: pinnedMessages, refetch: refetchPinned } =
-    useGetPinnedMessagesQuery(
-      {
-        org: tenantKey,
-        sessionId: appSessionId,
-        // @ts-ignore — userId is required at the URL path level
-        userId: resolvedUserId,
-      },
-      {
-        skip: !tenantKey || !resolvedUserId,
-        selectFromResult: (state) => ({
-          ...state,
-          data: {
-            ...state.data,
-            results: ((state.data as { results?: ChatRow[] } | undefined)
-              ?.results ?? []) as ChatRow[],
-          },
-        }),
-      },
-    );
+    useGetPinnedMessagesQuery(pinnedArgs, {
+      skip: !tenantKey || !resolvedUserId,
+      selectFromResult: (state) => ({
+        ...state,
+        data: {
+          ...state.data,
+          results: ((state.data as { results?: ChatRow[] } | undefined)
+            ?.results ?? []) as ChatRow[],
+        },
+      }),
+    });
 
   const isStreaming = useAppSelector(selectStreaming);
   const numberOfActiveChatMessages = useAppSelector(
@@ -291,18 +288,10 @@ export function useRecentChats({
       // mutated here so the UI's `pinnedSessionIds` dedup is the single
       // signal hiding the row from Recent until it's unpinned.
       dispatch(
-        updateChatCache(
-          'getPinnedMessages',
-          {
-            org: tenantKey,
-            sessionId: appSessionId,
-            userId: resolvedUserId,
-          },
-          (draft) => {
-            draft.results = draft.results ?? [];
-            draft.results.push((result ?? row) as ChatRow);
-          },
-        ) as never,
+        updateChatCache('getPinnedMessages', pinnedArgs, (draft) => {
+          draft.results = draft.results ?? [];
+          draft.results.push((result ?? row) as ChatRow);
+        }) as never,
       );
       await Promise.all([refetchRecent(), refetchPinned()]);
     } catch (err) {
@@ -332,19 +321,11 @@ export function useRecentChats({
       // re-includes the row on next render. Refetch in parallel so we
       // converge on server truth without an extra round-trip.
       dispatch(
-        updateChatCache(
-          'getPinnedMessages',
-          {
-            org: tenantKey,
-            sessionId: appSessionId,
-            userId: resolvedUserId,
-          },
-          (draft) => {
-            draft.results = (draft.results ?? []).filter(
-              (m) => m.session_id !== row.session_id,
-            );
-          },
-        ) as never,
+        updateChatCache('getPinnedMessages', pinnedArgs, (draft) => {
+          draft.results = (draft.results ?? []).filter(
+            (m) => m.session_id !== row.session_id,
+          );
+        }) as never,
       );
       await Promise.all([refetchRecent(), refetchPinned()]);
     } catch (err) {
@@ -365,19 +346,11 @@ export function useRecentChats({
         sessionId: row.session_id,
       }).unwrap();
       dispatch(
-        updateChatCache(
-          'getPinnedMessages',
-          {
-            org: tenantKey,
-            sessionId: appSessionId,
-            userId: resolvedUserId,
-          },
-          (draft) => {
-            draft.results = (draft.results ?? []).filter(
-              (m) => m.session_id !== row.session_id,
-            );
-          },
-        ) as never,
+        updateChatCache('getPinnedMessages', pinnedArgs, (draft) => {
+          draft.results = (draft.results ?? []).filter(
+            (m) => m.session_id !== row.session_id,
+          );
+        }) as never,
       );
       // Recent now renders from the infinite query, so we refetch to drop the
       // deleted row from the paginated pages.

@@ -5,7 +5,7 @@ import { updateSessionId } from '@/lib/features/app/app-slice';
 import { useAppDispatch } from '@/lib/hooks';
 import { sendMessageToParentWebsite } from '@/lib/utils';
 import {
-  useLazyGetPinnedMessagesQuery,
+  chatApiSlice,
   useLazyGetRecentMessageQuery,
   useLazyGetVectorDocumentsQuery,
 } from '@iblai/iblai-js/data-layer';
@@ -25,7 +25,6 @@ export default function AppProvider({
   const dispatch = useAppDispatch();
   const [getVectorDocuments] = useLazyGetVectorDocumentsQuery();
   const [getRecentMessages] = useLazyGetRecentMessageQuery();
-  const [getPinnedMessages] = useLazyGetPinnedMessagesQuery();
   const params = useParams<{ tenantKey: string }>();
 
   useEffect(() => {
@@ -52,12 +51,9 @@ export default function AppProvider({
           // @ts-expect-error userId is part of the useLazyGetRecentMessageQuery Query definition
           userId: getUserName(),
         });
-        await getPinnedMessages({
-          org: tenantKey,
-          sessionId: value.sessionId,
-          // @ts-expect-error userId is part of the useLazyGetPinnedMessagesQuery Query definition
-          userId: getUserName(),
-        });
+        // Invalidate rather than fetch: the sidebar keys its pinned query on
+        // mentor, so a fetch with other args would fill an unused entry.
+        dispatch(chatApiSlice.util.invalidateTags(['pinnedMessages']));
       },
     },
   });
