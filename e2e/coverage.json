@@ -1,9 +1,9 @@
 {
   "version": 2,
-  "lastUpdated": "2026-10-02",
+  "lastUpdated": "2026-10-05",
   "summary": {
-    "totalCheckpoints": 823,
-    "coveredCheckpoints": 777,
+    "totalCheckpoints": 824,
+    "coveredCheckpoints": 778,
     "deprecatedCheckpoints": 17,
     "notReproducibleCheckpoints": 17,
     "pendingCheckpoints": 12,
@@ -448,6 +448,11 @@
         {
           "id": "mgmt-22",
           "description": "Issue #2502: no network requests are made for the 15 deleted static /llm-*-provider.* images while opening the LLM tab and its model picker",
+          "status": "covered"
+        },
+        {
+          "id": "mgmt-23",
+          "description": "Issue #2638: LLM model availability is decided per model from route-mocked mentor-llms (availability wins over has_credentials, legacy shape falls back to provider flags) \u2014 provider card data-disabled only when every model is unavailable; unavailable model rows are disabled with data-availability-status, the backend message as a title tooltip only (no inline text) and sort after available ones; byok_main_fallback model is selectable",
           "status": "covered"
         }
       ]
