@@ -49,7 +49,7 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
   // ────────────────────────────────────────────────────────────────
   // Test 1: Tool Call Indicator - Web Search
   // ────────────────────────────────────────────────────────────────
-  test('Tool Call Indicator Appears With Bounce Dots During Streaming and Settles After', async ({
+  test('Tool Call Indicator Appears During Streaming and Settles Without Bounce Dots After', async ({
     page,
     createMentorPage,
     editMentorPage,
@@ -103,24 +103,10 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
     }
     await expect(toolCallTrigger).toBeVisible({ timeout: 5_000 });
 
-    // While streaming, the trigger shows bounce dots. The dots are a transient
-    // streaming-only animation; a fast reply can settle before they are
-    // observable, so only assert their presence while the stream is still
-    // active. The post-stream "dots cleared" assertion below is the
-    // deterministic check.
+    // In-stream bounce dots are not asserted here: they track the `tool` phase
+    // only, which ends before a live web search's chip is observable. Journey 73
+    // pins the tool-row liveness deterministically over a mocked socket.
     const bounceDots = toolCallTrigger.locator('span.animate-bounce');
-    let streamStillActive = true;
-    try {
-      await chatPage.stopStreamingButton.waitFor({
-        state: 'visible',
-        timeout: 1_000,
-      });
-    } catch {
-      streamStillActive = false;
-    }
-    if (streamStillActive) {
-      await expect(bounceDots).toHaveCount(3, { timeout: 5_000 });
-    }
 
     // Indicator starts collapsed
     await expect(toolCallTrigger).toHaveAttribute('aria-expanded', 'false');

@@ -1,6 +1,6 @@
 {
   "name": "ibl-web-nextjs-mentor-spa",
-  "version": "0.160.0",
+  "version": "0.162.1",
   "private": false,
   "packageManager": "pnpm@10.11.1",
   "engines": {
@@ -128,6 +128,7 @@
     "react-gravatar": "2.6.3",
     "react-hook-form": "7.72.0",
     "react-hotkeys-hook": "5.2.4",
+    "react-joyride": "3.2.0",
     "react-katex": "3.1.0",
     "react-paginate": "8.3.0",
     "react-redux": "9.2.0",

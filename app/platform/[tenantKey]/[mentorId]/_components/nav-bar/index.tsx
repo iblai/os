@@ -41,6 +41,8 @@ import { UserProfileModal } from '@iblai/iblai-js/web-containers/next';
 import { CreateMentorModal } from '@/components/modals/create-mentor-modal';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { LLMProviderSelectionModal } from '@/components/modals/llm-provider-selection-modal';
+import { AgentModelSelector } from './agent-model-selector';
+import { useCodeAgent } from '@/components/chat-input-form/code-agents';
 import {
   useGetMentorSettingsQuery,
   useForkMentorMutation,
@@ -66,6 +68,7 @@ import {
   redirectToAuthSpaJoinTenant,
 } from '@/lib/utils';
 import { UserProfile } from './user-profile';
+import { TOUR_TARGET } from '@/components/product-tour/tour-targets';
 import { useSidebar } from '@/components/ui/sidebar';
 import { LearnerModeSwitch } from './learner-mode-switch';
 import { useShowFreeTrialDialog } from '@/hooks/user-user-actions';
@@ -144,6 +147,9 @@ export const ANALYTICS_NAV_ITEM: MentorSegment = {
 
 export function NavBar() {
   const t = useTranslations('navBarIndex');
+  // While Code runs on Codex or Claude Code, the top-left shows that agent's
+  // own model list instead of the mentor's LLM (which neither agent uses).
+  const codeAgent = useCodeAgent();
   // Segment labels + category titles live in the shared `header` namespace
   // (same keys header.tsx uses) so both nav surfaces stay in sync.
   const tHeader = useTranslations('header');
@@ -583,13 +589,19 @@ export function NavBar() {
           )}
 
           <div className="flex items-center pl-2 md:pl-4">
+            {/* Code on Codex / Claude Code: the agent's own model picker takes
+                the top-left; the cloud selector and the on-device badge below
+                step aside (the same `!codeAgent` guard on both). */}
+            {isOnChatPage && codeAgent && (
+              <AgentModelSelector key={codeAgent} backend={codeAgent} />
+            )}
             {/* On-device (local) model indicator. Shown while local mode is on;
                 it replaces the cloud model selector below (hidden via the same
                 `selectedLocal.isLocal` condition). For users who can switch LLMs
                 it is ALSO the entry point to the model picker — click to open it
                 and choose a different model (cloud or local) without first
                 disabling local mode. */}
-            {isOnChatPage && selectedLocal.isLocal && (
+            {isOnChatPage && !codeAgent && selectedLocal.isLocal && (
               <Tooltip>
                 <TooltipTrigger asChild>
                   {canChooseLlm ? (
@@ -623,6 +635,7 @@ export function NavBar() {
             )}
 
             {isOnChatPage &&
+              !codeAgent &&
               isAdmin &&
               !userIsStudent &&
               !selectedLocal.isLocal && (
@@ -794,12 +807,14 @@ export function NavBar() {
           )}
           <div className="flex items-center gap-2">
             {isOnChatPage && visibleToLoggedInUsersOnly && tenantKey && (
-              <ChatPrivacyToggle
-                org={tenantKey}
-                userId={username ?? ''}
-                mentor={mentorId}
-                className="inline-flex max-md:[&>span]:hidden"
-              />
+              <div data-tour={TOUR_TARGET.privacyMode} className="flex">
+                <ChatPrivacyToggle
+                  org={tenantKey}
+                  userId={username ?? ''}
+                  mentor={mentorId}
+                  className="inline-flex max-md:[&>span]:hidden"
+                />
+              </div>
             )}
             {creditBalanceComponentIsDisplayed && (
               <CreditBalance
@@ -819,7 +834,11 @@ export function NavBar() {
                 onViewNotifications={handleViewNotifications}
               />
             )}
-            {visibleToLoggedInUsersOnly && <UserProfile />}
+            {visibleToLoggedInUsersOnly && (
+              <div data-tour={TOUR_TARGET.profile} className="flex">
+                <UserProfile />
+              </div>
+            )}
           </div>
 
           {!isLoggedIn() && (

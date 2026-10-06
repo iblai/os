@@ -19,6 +19,10 @@ mod nav_guard;
 // `get_foundry_service_endpoint` to reach Foundry Local's OpenAI-compatible API.
 // The rest of the module is exercised by the desktop bin (see main.rs).
 #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+mod code_agent_installer;
+#[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+mod code_agent_models;
+#[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
 #[allow(dead_code)]
 mod foundry_manager;
 mod mcp_bridge_installer;
@@ -2462,6 +2466,16 @@ pub fn run() {
                     opencode_installer::ensure_opencode_current(opencode_handle).await;
                 });
 
+                // The subscription agents (Codex, Claude Code) install themselves in
+                // the background on every launch — a pinned Node plus the pinned
+                // adapters — so the Code popover only ever shows them loading, never
+                // a download the user has to start. Never blocks: ibl.ai turns run
+                // meanwhile, and a failure surfaces in the popover with a retry.
+                let agents_handle = app.handle().clone();
+                tauri::async_runtime::spawn(async move {
+                    code_agent_installer::ensure_agents_current(agents_handle).await;
+                });
+
                 // Vibe skills track the latest GitHub release with no freshness
                 // window — resolve-and-sync in the background on every launch, so
                 // Coding Mode always starts from the newest published set (and a
@@ -3145,6 +3159,10 @@ pub fn run() {
         opencode_acp::check_code_local_model,
         opencode_acp::set_opencode_learner,
         opencode_acp::ensure_opencode_platform_key,
+        code_agent_installer::check_code_agent_status,
+        code_agent_installer::install_code_agent,
+        code_agent_models::list_code_agent_models,
+        code_agent_models::set_code_agent_model,
         app_update::check_app_update,
         app_update::install_app_update,
         remote_code::remote_code_status,

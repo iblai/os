@@ -1,59 +1,112 @@
 # Changelog
 
+## [0.162.1](https://github.com/iblai/os/compare/v0.162.0...v0.162.1) (2026-10-06)
+
+### Chores
+
+* **deps:** bump @iblai/iblai-js to 2.29.2 ([b98cbef](https://github.com/iblai/os/commit/b98cbefb485a1272907ee689067a44409400d369)), closes [iblai/iblai-web-frontend#2123](https://github.com/iblai/iblai-web-frontend/issues/2123)
+
+### Documentation
+
+* **e2e:** add mgmt-23 per-model LLM availability checkpoint ([30ea2b7](https://github.com/iblai/os/commit/30ea2b719371d58cf631272e62624781464fa8df))
+
+### Styles
+
+* format CHANGELOG bullets ([30bf4e6](https://github.com/iblai/os/commit/30bf4e6bb081e224eddf84b5b00d622289ca01e4))
+
+### Tests
+
+* **e2e:** add model-row helpers to the LLM tab page object ([c5f86c1](https://github.com/iblai/os/commit/c5f86c1bb20373675cfd534e1d4b74152e037a2e))
+* **e2e:** cover per-model LLM availability in the agent LLM picker ([9a68c08](https://github.com/iblai/os/commit/9a68c080fa30760837a8b868719a7ba39516d6ae))
+
+## [0.162.0](https://github.com/iblai/os/compare/v0.161.0...v0.162.0) (2026-10-05)
+
+### Features
+
+- **code:** list Codex's models from codex debug models, not a probe session ([679ae56](https://github.com/iblai/os/commit/679ae5659a82b51573a2664533bb6ef027b9e90c))
+- **code:** plain-words app name, two reminders, no local checks, IBL_VIBE_SKILLS_TAG, data-dir lock ([80878cb](https://github.com/iblai/os/commit/80878cbfcf4ba240f8fb946ebf0247786b6e6a51))
+- **domains:** allow DNS-over-HTTPS lookups and surface custom domains in code mode ([7aab6d2](https://github.com/iblai/os/commit/7aab6d281da13bee74eea0210ed25c9db4c068a6))
+- run Code mode on Codex and Claude Code over ACP with the SDK LLM Selection model picker ([a653dca](https://github.com/iblai/os/commit/a653dca57492415756ad1c3b1cfc019fd2942ba9))
+
+### Bug Fixes
+
+- **code-mode:** mention the Domains panel only to platform admins ([6888f03](https://github.com/iblai/os/commit/6888f03841efb667ddcdd5243c92c22cbf6039e1))
+- **code-mode:** point the Domains hint at the sidebar's Advanced entry ([0e33def](https://github.com/iblai/os/commit/0e33def1adf972ec9b487c46619b85e7a1967017))
+- **code:** drop the in-app sign-in, name the ChatGPT app; loud unknown state, spawn deadline, tests ([2cdb76e](https://github.com/iblai/os/commit/2cdb76ea224650bf4e961cd76a5475f086daf974))
+- **code:** plain-words replies and an app named after what it is, never the template ([616a745](https://github.com/iblai/os/commit/616a745088936e4b560c35e53de1ada97b100e3b))
+- **code:** self-review fixes for Codex modes, agent config, macOS 13.5, picker; audit overrides ([95ea185](https://github.com/iblai/os/commit/95ea1854800500566658a9a40933f0e0c98c93ea))
+- **code:** strip npm_config env from the managed npm; IBL_MASK_ACCOUNT_EMAIL for screenshots ([b7f3137](https://github.com/iblai/os/commit/b7f3137cac488a51b32a258072186f679d49f1d2))
+- **code:** strip npm_config env from the managed npm; IBL_MASK_ACCOUNT_EMAIL for screenshots ([0054aeb](https://github.com/iblai/os/commit/0054aeb79180737513fe1a21ed8fdf9a2460c66e))
+- **deps:** ignore the unpatched braces advisory GHSA-vfj7-8cjw-p6xm in pnpm audit ([dfeba33](https://github.com/iblai/os/commit/dfeba338ea676e2c8f2b1c4cd2a130f9511c604d))
+
+### Chores
+
+- **tauri:** release app-v0.95.23 ([f9154f4](https://github.com/iblai/os/commit/f9154f4ba717c051e0bc942c8fcf1cdee90db02b))
+
+### Tests
+
+- **e2e:** drop in-stream bounce-dot check from journey 52 tool-call test ([1e21354](https://github.com/iblai/os/commit/1e2135460f8057d3f8e71f9d6811d7f6d4821ebd))
+
+## [0.161.0](https://github.com/iblai/os/compare/v0.160.0...v0.161.0) (2026-10-05)
+
+### Features
+
+- os product tour implementation ([d48b82b](https://github.com/iblai/os/commit/d48b82bebeb44b4c6b6307f53eace756ad8ef076))
+
 ## [0.160.0](https://github.com/iblai/os/compare/v0.159.2...v0.160.0) (2026-10-02)
 
 ### Features
 
-* **mentor:** adding virtual machine sheell and hsitory fixes ([fe130e9](https://github.com/iblai/os/commit/fe130e9e86a4659c201d73671c7943946747c135))
+- **mentor:** adding virtual machine sheell and hsitory fixes ([fe130e9](https://github.com/iblai/os/commit/fe130e9e86a4659c201d73671c7943946747c135))
 
 ### Bug Fixes
 
-* **deps:** bump axios to 1.20.0 for the seven high advisories ([0487215](https://github.com/iblai/os/commit/048721546940ffec36ef8ed1a80861a2889b0a29))
-* **e2e-tests:** fix for the e2e tests ([8182f47](https://github.com/iblai/os/commit/8182f4794b460f763abb8c8b72f8745dbb24f6fc))
-* **e2e:** delete a freshly created network policy in journey 79 and make it parallel-safe ([a7a84d2](https://github.com/iblai/os/commit/a7a84d27b66b4c767b64f5d96b9be27f8fbdfdd0))
-* **e2e:** match the published SDK copy in the Virtual Machine journey and scope every lookup to its dialog ([931daaf](https://github.com/iblai/os/commit/931daaf1c2775a721db5ab6a95d4470cc3d7a7ab))
-* **mentor:** adding fix for the audit and agent provider ([2768d06](https://github.com/iblai/os/commit/2768d06f8d178e577527150fe24f1e195fa0a0bb))
-* **mentor:** adding fix for the pnpm audit ([612f6d9](https://github.com/iblai/os/commit/612f6d9ea3f7572b95016d9755859c11ce72674b))
-* **mentor:** e2e test fixes for virtual machine, history fixes for canvas and tools ([a769c50](https://github.com/iblai/os/commit/a769c5003b39537454370e9ea5fc1bd345b7ab8d))
-* **mentor:** fix for the system audit ([7a7b87f](https://github.com/iblai/os/commit/7a7b87f446d84900973a5dc8b66cbc6067312531))
-* **os:** fix for the unit test config file ([94460a9](https://github.com/iblai/os/commit/94460a9ae7f52fdebd5a51999b138a61d9944962))
+- **deps:** bump axios to 1.20.0 for the seven high advisories ([0487215](https://github.com/iblai/os/commit/048721546940ffec36ef8ed1a80861a2889b0a29))
+- **e2e-tests:** fix for the e2e tests ([8182f47](https://github.com/iblai/os/commit/8182f4794b460f763abb8c8b72f8745dbb24f6fc))
+- **e2e:** delete a freshly created network policy in journey 79 and make it parallel-safe ([a7a84d2](https://github.com/iblai/os/commit/a7a84d27b66b4c767b64f5d96b9be27f8fbdfdd0))
+- **e2e:** match the published SDK copy in the Virtual Machine journey and scope every lookup to its dialog ([931daaf](https://github.com/iblai/os/commit/931daaf1c2775a721db5ab6a95d4470cc3d7a7ab))
+- **mentor:** adding fix for the audit and agent provider ([2768d06](https://github.com/iblai/os/commit/2768d06f8d178e577527150fe24f1e195fa0a0bb))
+- **mentor:** adding fix for the pnpm audit ([612f6d9](https://github.com/iblai/os/commit/612f6d9ea3f7572b95016d9755859c11ce72674b))
+- **mentor:** e2e test fixes for virtual machine, history fixes for canvas and tools ([a769c50](https://github.com/iblai/os/commit/a769c5003b39537454370e9ea5fc1bd345b7ab8d))
+- **mentor:** fix for the system audit ([7a7b87f](https://github.com/iblai/os/commit/7a7b87f446d84900973a5dc8b66cbc6067312531))
+- **os:** fix for the unit test config file ([94460a9](https://github.com/iblai/os/commit/94460a9ae7f52fdebd5a51999b138a61d9944962))
 
 ## [0.159.2](https://github.com/iblai/os/compare/v0.159.1...v0.159.2) (2026-10-01)
 
 ### Documentation
 
-* add "comment only when necessary" rule to CLAUDE.md/AGENTS.md ([49bfd43](https://github.com/iblai/os/commit/49bfd43c99c62a6abf8a30f9a2af16144185ab5e))
+- add "comment only when necessary" rule to CLAUDE.md/AGENTS.md ([49bfd43](https://github.com/iblai/os/commit/49bfd43c99c62a6abf8a30f9a2af16144185ab5e))
 
 ## [0.159.1](https://github.com/iblai/os/compare/v0.159.0...v0.159.1) (2026-09-30)
 
 ### Bug Fixes
 
-* **deps:** bump axios to 1.20.0 and lift the brace-expansion floor to 5.0.11 ([29d21e3](https://github.com/iblai/os/commit/29d21e342143d0f754c53078ff79bb43dfc851d0))
-* **deps:** lift the undici override past three new high advisories ([aa9b62d](https://github.com/iblai/os/commit/aa9b62d05c124a07ad1d13c4c1b849af1d0e01e0))
+- **deps:** bump axios to 1.20.0 and lift the brace-expansion floor to 5.0.11 ([29d21e3](https://github.com/iblai/os/commit/29d21e342143d0f754c53078ff79bb43dfc851d0))
+- **deps:** lift the undici override past three new high advisories ([aa9b62d](https://github.com/iblai/os/commit/aa9b62d05c124a07ad1d13c4c1b849af1d0e01e0))
 
 ### Refactors
 
-* **edit-mentor-modal:** render the SDK AgentApiTab from the API tab ([49b570b](https://github.com/iblai/os/commit/49b570ba2f5f8f924917bd138e0a2f4358497567))
-* **edit-mentor-modal:** render the SDK AgentToolsTab from the Tools tab ([ffa64cc](https://github.com/iblai/os/commit/ffa64cc61623c89075b9682790136abc716fa7ed))
-* **workflows:** toggle agent tools with the SDK useToggleTools hook ([94b0736](https://github.com/iblai/os/commit/94b07362eb04fe5a0e4aed583c91aeddc0c4c2f6))
+- **edit-mentor-modal:** render the SDK AgentApiTab from the API tab ([49b570b](https://github.com/iblai/os/commit/49b570ba2f5f8f924917bd138e0a2f4358497567))
+- **edit-mentor-modal:** render the SDK AgentToolsTab from the Tools tab ([ffa64cc](https://github.com/iblai/os/commit/ffa64cc61623c89075b9682790136abc716fa7ed))
+- **workflows:** toggle agent tools with the SDK useToggleTools hook ([94b0736](https://github.com/iblai/os/commit/94b07362eb04fe5a0e4aed583c91aeddc0c4c2f6))
 
 ### Chores
 
-* **deps:** bump @iblai/iblai-js to 2.26.0 ([681251d](https://github.com/iblai/os/commit/681251deb24d8ef955e83a608265b792491aa712)), closes [#2111](https://github.com/iblai/os/issues/2111)
-* **i18n:** drop the API tab messages now owned by the SDK ([90295e4](https://github.com/iblai/os/commit/90295e4480fe04e7c20d5ec6a7e84dbc2e4bab51))
-* **i18n:** drop the tabsToolsTab messages now owned by the SDK ([14c2f89](https://github.com/iblai/os/commit/14c2f893491f24da19c51cbf93dd2dc755976a60))
+- **deps:** bump @iblai/iblai-js to 2.26.0 ([681251d](https://github.com/iblai/os/commit/681251deb24d8ef955e83a608265b792491aa712)), closes [#2111](https://github.com/iblai/os/issues/2111)
+- **i18n:** drop the API tab messages now owned by the SDK ([90295e4](https://github.com/iblai/os/commit/90295e4480fe04e7c20d5ec6a7e84dbc2e4bab51))
+- **i18n:** drop the tabsToolsTab messages now owned by the SDK ([14c2f89](https://github.com/iblai/os/commit/14c2f893491f24da19c51cbf93dd2dc755976a60))
 
 ### Styles
 
-* prettier-format CHANGELOG.md ([34881a9](https://github.com/iblai/os/commit/34881a9e14539156282fb66b10330e715b333b54))
+- prettier-format CHANGELOG.md ([34881a9](https://github.com/iblai/os/commit/34881a9e14539156282fb66b10330e715b333b54))
 
 ### Tests
 
-* **e2e:** add agent API tab journey with an ApiTab page object and key residue reaper ([648b986](https://github.com/iblai/os/commit/648b98695560cd3412dc6cd04752f049b0deb0e5))
-* **e2e:** add agent Tools tab journey and harden the ToolsTab page object ([7ab7760](https://github.com/iblai/os/commit/7ab7760a0d1e92a37010c081b768ce435928427b))
-* **e2e:** read API tab row names in one snapshot ([6e33cc5](https://github.com/iblai/os/commit/6e33cc562b2cd1e3fd87eb7932ccf87283e206ad))
-* **e2e:** record API tab coverage for journey 78 ([d3813b8](https://github.com/iblai/os/commit/d3813b8b39493e92f33698e837d67dd6046fea7f))
-* **e2e:** record Tools tab coverage for journey 77 ([61d7bd1](https://github.com/iblai/os/commit/61d7bd13aef3a4a8f0e07142d6c40ed59dcff323))
+- **e2e:** add agent API tab journey with an ApiTab page object and key residue reaper ([648b986](https://github.com/iblai/os/commit/648b98695560cd3412dc6cd04752f049b0deb0e5))
+- **e2e:** add agent Tools tab journey and harden the ToolsTab page object ([7ab7760](https://github.com/iblai/os/commit/7ab7760a0d1e92a37010c081b768ce435928427b))
+- **e2e:** read API tab row names in one snapshot ([6e33cc5](https://github.com/iblai/os/commit/6e33cc562b2cd1e3fd87eb7932ccf87283e206ad))
+- **e2e:** record API tab coverage for journey 78 ([d3813b8](https://github.com/iblai/os/commit/d3813b8b39493e92f33698e837d67dd6046fea7f))
+- **e2e:** record Tools tab coverage for journey 77 ([61d7bd1](https://github.com/iblai/os/commit/61d7bd13aef3a4a8f0e07142d6c40ed59dcff323))
 
 ## [0.159.0](https://github.com/iblai/os/compare/v0.158.6...v0.159.0) (2026-09-30)
 

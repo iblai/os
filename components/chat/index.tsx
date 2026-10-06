@@ -107,6 +107,7 @@ import { FileText } from 'lucide-react';
 import { useFileDragDrop } from '@/hooks/use-file-drag-drop';
 import { useAccessingPublicRoute } from '@/hooks/use-anonymous-mentor';
 import { wasRecent402 } from '@/hooks/use-opencode-402';
+import { wasRecentAuthRequired } from '@/hooks/use-opencode-auth-required';
 
 /* istanbul ignore next -- @preserve dynamic import */
 const CanvasView = dynamic(
@@ -428,9 +429,10 @@ export function Chat({
       if (error) {
         console.error(JSON.stringify({ tenant: tenantKey, error }));
       }
-      // A Code-turn 402 just showed the insufficient-balance UX; skip the
-      // generic toast, as normal chat does by returning before its errorHandler.
-      if (wasRecent402()) {
+      // A Code-turn 402 just showed the insufficient-balance UX, or a
+      // signed-out agent its sign-in toast; skip the generic toast, as normal
+      // chat does by returning before its errorHandler.
+      if (wasRecent402() || wasRecentAuthRequired()) {
         return;
       }
       toast.error(

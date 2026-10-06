@@ -12,6 +12,7 @@ import { selectRbacPermissions } from '@/features/rbac/rbac-slice';
 import { checkRbacPermission } from '@/hoc/withPermissions';
 import { useMentorSettings } from '@/hooks/use-mentors/use-mentor-settings';
 import { cn } from '@/lib/utils';
+import { TOUR_TARGET } from '@/components/product-tour/tour-targets';
 
 interface Props {
   onTemplateSelect: (template: string) => void;
@@ -69,7 +70,10 @@ export function ConversationStarters({
   }
 
   return (
-    <div className="mx-auto w-full max-w-6xl px-4">
+    <div
+      data-tour={TOUR_TARGET.conversationStarters}
+      className="mx-auto w-full max-w-6xl px-4"
+    >
       <h2 className="mb-6 text-xl font-semibold text-gray-900">
         Conversation Starters
       </h2>

@@ -559,6 +559,163 @@ test.describe('Journey 6: Mentor Management — Admin', () => {
     await editMentorPage.close();
   });
 
+  // Issue #2638: model availability is decided PER MODEL from the mentor-llms
+  // response (availability wins over has_credentials; a provider card greys
+  // only when EVERY model is unavailable). The catalogue is route-mocked so
+  // the result is independent of the tenant's real keys; nothing is saved.
+  test('admin goes to edit mentor LLM tab and model availability is decided per model, greying a provider card only when every model is unavailable', async ({
+    page,
+    editMentorPage,
+  }) => {
+    const azureMessage = 'Add your Azure OpenAI API key to use this model.';
+    // Synthetic key: the SDK never greys the ACTIVE provider's card, so the
+    // all-unavailable provider must be one that can never be the mentor's.
+    const allMissingKey = 'e2e-all-byok-missing';
+    const missing = {
+      status: 'byok_missing',
+      requires_credential: true,
+      message: azureMessage,
+    };
+    const available = (status: string) => ({
+      status,
+      requires_credential: false,
+      message: null,
+    });
+    const provider = (
+      name: string,
+      display_name: string,
+      chat_models: Array<Record<string, unknown>>,
+      extra: Record<string, unknown> = {},
+    ) => ({
+      id: name,
+      name,
+      display_name,
+      logo: null,
+      has_credentials: true,
+      can_use_main_keys: true,
+      main_has_credentials: false,
+      chat_models: chat_models.map(({ llm_name, ...rest }) => ({
+        llm_name,
+        display_name: llm_name,
+        ...rest,
+      })),
+      ...extra,
+    });
+    const catalogue = [
+      provider('azure_openai', 'Azure OpenAI', [
+        {
+          llm_name: 'gpt-4o',
+          has_credentials: false,
+          availability: missing,
+        },
+        {
+          llm_name: 'gpt-4.1',
+          has_credentials: true,
+          availability: available('byok_configured'),
+        },
+      ]),
+      provider(
+        'openai',
+        'OpenAI',
+        [
+          {
+            llm_name: 'chat-latest',
+            has_credentials: false,
+            main_has_credentials: true,
+            availability: available('byok_main_fallback'),
+          },
+        ],
+        { has_credentials: false },
+      ),
+      provider(
+        allMissingKey,
+        'E2E All Missing',
+        [
+          { llm_name: 'missing-a', availability: missing },
+          { llm_name: 'missing-b', availability: missing },
+        ],
+        { has_credentials: false },
+      ),
+      // Legacy shape: no per-model fields, falls back to provider flags.
+      provider('mistralai', 'Mistral', [{ llm_name: 'mistral-legacy' }]),
+    ];
+    await page.route('**/mentor-llms/**', (route) =>
+      route.request().method() === 'GET'
+        ? route.fulfill({ json: catalogue })
+        : route.continue(),
+    );
+    // beforeEach already warmed the RTK Query cache with the real catalogue;
+    // a fresh load after the route is registered makes the app re-fetch it.
+    await navigateToMentorApp(page);
+
+    await editMentorPage.open('LLM');
+    await waitForPageReady(page);
+    const llm = editMentorPage.llm;
+    await expect(llm.providerCardByKey('azure_openai')).toBeVisible({
+      timeout: 15_000,
+    });
+
+    for (const [key, disabled] of [
+      ['azure_openai', 'false'],
+      ['openai', 'false'],
+      [allMissingKey, 'true'],
+      ['mistralai', 'false'],
+    ]) {
+      await expect(llm.providerCardByKey(key)).toHaveAttribute(
+        'data-disabled',
+        disabled,
+      );
+    }
+
+    const openProvider = async (key: string) => {
+      await llm.providerCardByKey(key).click();
+      await expect(llm.llmSelectionDialog).toBeVisible({ timeout: 10_000 });
+    };
+    const closePicker = async () => {
+      await page.keyboard.press('Escape');
+      await expect(llm.llmSelectionDialog).not.toBeVisible({
+        timeout: 10_000,
+      });
+    };
+
+    await openProvider('azure_openai');
+    const rejected = llm.modelRowByName('gpt-4o');
+    const accepted = llm.modelRowByName('gpt-4.1');
+    await expect(rejected).toBeDisabled();
+    await expect(rejected).toHaveAttribute('data-unavailable', 'true');
+    await expect(rejected).toHaveAttribute(
+      'data-availability-status',
+      'byok_missing',
+    );
+    await expect(rejected).toHaveAttribute('title', azureMessage);
+    await expect(rejected).not.toContainText(azureMessage);
+    await expect(accepted).toBeEnabled();
+    await expect(accepted).toHaveAttribute('data-unavailable', 'false');
+    await expect(accepted).not.toHaveAttribute('title', /.+/);
+    expect(await llm.getModelRowOrder()).toEqual(['gpt-4.1', 'gpt-4o']);
+    await closePicker();
+
+    await openProvider('openai');
+    const fallback = llm.modelRowByName('chat-latest');
+    await expect(fallback).toBeEnabled();
+    await expect(fallback).toHaveAttribute(
+      'data-availability-status',
+      'byok_main_fallback',
+    );
+    await closePicker();
+
+    await openProvider(allMissingKey);
+    await expect(llm.modelRowByName('missing-a')).toBeDisabled();
+    await expect(llm.modelRowByName('missing-b')).toBeDisabled();
+    await closePicker();
+
+    await openProvider('mistralai');
+    await expect(llm.modelRowByName('mistral-legacy')).toBeEnabled();
+    await closePicker();
+
+    await editMentorPage.close();
+  });
+
   // mgmt-04: intentionally a light smoke check only — this describe block
   // shares one admin-account mentor (from navigateToMentorApp) across every
   // test in the file, and mutating `tool_slugs` on it (a toggle's actual

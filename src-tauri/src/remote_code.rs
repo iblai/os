@@ -1010,6 +1010,11 @@ mod tests {
     /// that list then shows.
     #[tokio::test(flavor = "multi_thread")]
     async fn companion_lists_and_mints_workspaces_behind_auth() {
+        // Both handlers resolve `iblai_data_dir()`, which reads the process-global
+        // `XDG_DATA_HOME`: hold the lock the acp settings tests repoint it under, or
+        // mint and list can land in different roots (`data_dir_lock` documents the
+        // race). Held across the awaits on purpose, like the installer tests.
+        let _data_dir = crate::opencode_acp::data_dir_lock();
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
         let addr = listener.local_addr().unwrap();
         let router = companion_router("pw-test".into());
@@ -1059,9 +1064,10 @@ mod tests {
             .iter()
             .filter_map(|w| w["path"].as_str())
             .collect();
-        assert!(names.contains(&path), "minted folder must be listed");
-
+        // Clean up before asserting: a red run must not leave a `phone-*` folder in
+        // the user's real workspaces root.
         let _ = std::fs::remove_dir_all(path);
+        assert!(names.contains(&path), "minted folder must be listed");
     }
 
     #[test]

@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-10-06 | 820 checkpoints (774 covered, 12 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 82 journeys (81 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-10-07 | 830 checkpoints (784 covered, 12 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 83 journeys (82 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -103,7 +103,7 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 6: Mentor Management — Admin (22 checkpoints) — `journeys/06-mentor-management-admin.spec.ts`
+## Journey 6: Mentor Management — Admin (23 checkpoints) — `journeys/06-mentor-management-admin.spec.ts`
 
 **Source files:** `components/modals/create-mentor-modal.tsx`, `components/modals/edit-mentor-modal/index.tsx`, `components/modals/edit-mentor-modal/tabs/settings-tab.tsx`, `components/modals/edit-mentor-modal/llm-tab.tsx`, `components/modals/edit-mentor-modal/tabs/tools-tab.tsx`, `components/modals/edit-mentor-modal/tabs/prompts-tab.tsx`, `components/modals/settings-modal.tsx`, `hooks/use-mentors.ts`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`, `lib/utils.ts`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`
 
@@ -131,6 +131,7 @@ _Note: the LLM tab is served by the SDK's `AgentLLMTab`; `components/modals/edit
 - [x] Issue #2502: LLM tab provider card labels and logos are backend-owned — captures the live `mentor-llms` GET response (via a direct `page.request` fetch, bypassing RTK Query cache) and asserts every rendered card's label equals `display_name ?? name`, and its logo `<img src>` embeds the backend logo URL (via Next.js's `/_next/image` optimizer) or the `llm-provider-logo-placeholder` testid renders when logo is null
 - [x] Issue #2502: LLM Selection model picker rows render the backend's `chat_models[].display_name` (falling back to `llm_name`), verified against the same live catalogue response
 - [x] Issue #2502: no network requests are made for the 15 deleted static `/llm-*-provider.*` images while opening the LLM tab and its model picker
+- [x] Issue #2638: LLM model availability is decided per model from route-mocked `mentor-llms` (`availability` wins over `has_credentials`; legacy shape falls back to provider flags) — provider card `data-disabled` only when every model is unavailable (synthetic never-active provider, since the SDK never greys the active card); unavailable rows are disabled with `data-availability-status` and the backend message as a `title` tooltip only (no inline text) and sort after available ones; `byok_main_fallback` model is selectable
 
 ---
 
@@ -1948,3 +1949,21 @@ An agent with Virtual Machine Shell turned on runs code in an isolated Linux VM 
 - [x] vmn-11: The saved configuration (Custom, the policy, the bound secret) persists across closing and reopening the Edit Agent dialog
 - [x] vmn-12: Narrowing to No Network with a secret bound opens the "Unbind Secrets?" confirmation; confirming saves with the secrets unbound
 - [x] vmn-13: A non-admin never reaches the tenant Virtual Machine settings — the platform entry is missing from More options, does nothing when clicked, or the tenant settings dialog it opens lists no Virtual Machine section (the SDK Account rail filters it on `isAdmin`)
+
+---
+
+## Journey 79: First-Visit Product Tour (9 checkpoints) — `journeys/79-product-tour.spec.ts`
+
+**Source files:** `components/product-tour/product-tour.tsx`, `components/product-tour/tour-steps.ts`, `components/product-tour/tour-targets.ts`, `components/product-tour/tour-tooltip.tsx`, `components/product-tour/tour-runner.tsx`, `components/product-tour/use-tour-completion.ts`
+
+The tour auto-starts once per user on the agent chat page; whether it was seen is `public_metadata["os-product-tour"]` on the user metadata. Both auth setups (`auth.setup.ts`, `auth-nonadmin.setup.ts`) mark it seen via `utils/product-tour.ts` so its overlay never blocks other journeys; fresh-signup flows (`signUpNewUserOnMain`, Journeys 55 and 59) dismiss it with `dismissProductTourIfShown`. Every checkpoint here replays it with `?tour=1`, and `afterEach` rewrites the record to a seen state.
+
+- [x] tour-01: Admin opens the chat page with `?tour=1` and the tour starts on the prompt input step, with no Back button and with Next, Skip tour and Close tour
+- [x] tour-02: Admin clicks Next and Back and the tour moves between steps (prompt-input, then profile, then the next) with matching "n of N" progress text
+- [x] tour-03: Admin walks every step in order and the account step comes last, with Done instead of Skip tour
+- [x] tour-04: Non-admin walks every step and never sees the account step
+- [x] tour-05: Admin finishes the tour with Done, a 2xx metadata POST carries status `finished` (version 1), and the tour does not auto-start on the next visit without `?tour=1`
+- [x] tour-06: Admin closes the tour with the X and the `skipped` outcome is POSTed to the user metadata
+- [x] tour-07: Admin clicks Skip tour and the `skipped` outcome is POSTed to the user metadata
+- [x] tour-08: Admin presses Escape and the tour is skipped (`skipped` outcome POSTed)
+- [x] tour-09: Admin opens the chat page with `?tour=1&embed=true` and no tour is shown
