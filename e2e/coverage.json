@@ -2,14 +2,14 @@
   "version": 2,
   "lastUpdated": "2026-10-05",
   "summary": {
-    "totalCheckpoints": 824,
-    "coveredCheckpoints": 778,
+    "totalCheckpoints": 837,
+    "coveredCheckpoints": 791,
     "deprecatedCheckpoints": 17,
     "notReproducibleCheckpoints": 17,
     "pendingCheckpoints": 12,
     "percent": 100,
-    "totalJourneys": 83,
-    "activeJourneys": 82
+    "totalJourneys": 84,
+    "activeJourneys": 83
   },
   "journeys": [
     {
@@ -1974,7 +1974,7 @@
       "name": "Accessibility \u2014 WCAG 2.1 AA",
       "spec": "29-accessibility-wcag.spec.ts",
       "sourceFiles": [
-        "components/accessibility/accessibility-toolbar.tsx",
+        "app/platform/[tenantKey]/[mentorId]/_components/accessibility-fab/index.tsx",
         "components/chat/stop-streaming-button.tsx",
         "components/chat/submit-message-button.tsx",
         "components/auto-resize-text-area.tsx",
@@ -5202,6 +5202,81 @@
         {
           "id": "tour-09",
           "description": "Admin opens the chat page with ?tour=1&embed=true and no tour is shown",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "accessibility-fab-draggable",
+      "name": "Draggable Accessibility Button",
+      "spec": "83-accessibility-fab-draggable.spec.ts",
+      "sourceFiles": [
+        "app/platform/[tenantKey]/[mentorId]/_components/accessibility-fab/index.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "fab-01",
+          "description": "User clicks the accessibility button to open the menu; a drag past 5px does not open it; a click right after a drag still opens it",
+          "status": "covered"
+        },
+        {
+          "id": "fab-02",
+          "description": "Mouse drag left of centre snaps the button to the left edge and right of centre to the right edge, keeping its vertical position; the spot persists across reload (localStorage accessibility-fab-position:v2)",
+          "status": "covered"
+        },
+        {
+          "id": "fab-03",
+          "description": "Regression: during a mouse drag no dragstart/dragenter/dragover events fire and the chat file-drop overlay never appears (native <img> drag used to fire pointercancel and trigger the drop zone)",
+          "status": "covered"
+        },
+        {
+          "id": "fab-04",
+          "description": "Keyboard: ArrowUp/ArrowDown move the focused button 16px (Shift 64px), ArrowLeft/ArrowRight switch sides, and the live region announces 'Accessibility button moved to the {side} edge, N pixels from the bottom.'",
+          "status": "covered"
+        },
+        {
+          "id": "fab-05",
+          "description": "With normal motion the inline transition contains cubic-bezier(0.34, 1.56, 0.64, 1) after release and is empty mid-drag",
+          "status": "covered"
+        },
+        {
+          "id": "fab-06",
+          "description": "Button stays on screen on its side after the viewport shrinks and returns to its stored spot when it grows back",
+          "status": "covered"
+        },
+        {
+          "id": "fab-07",
+          "description": "An off-screen stored position is pulled back on screen on load",
+          "status": "covered"
+        },
+        {
+          "id": "fab-08",
+          "description": "Move-to-corner buttons in the menu place the button in each of the four corners (8px margin) and announce the move",
+          "status": "covered"
+        },
+        {
+          "id": "fab-09",
+          "description": "Reset Button Position is hidden until the button has been moved, and clicking it restores the default spot and clears storage",
+          "status": "covered"
+        },
+        {
+          "id": "fab-10",
+          "description": "Reset All Accessibility Settings also clears the stored button position",
+          "status": "covered"
+        },
+        {
+          "id": "fab-11",
+          "description": "Mobile (390x844, touch): tap opens the menu; a touch drag does not open it and a following tap does",
+          "status": "covered"
+        },
+        {
+          "id": "fab-12",
+          "description": "Mobile (touch, CDP): touch drag snaps to the nearest edge, keeps height, and persists across reload",
+          "status": "covered"
+        },
+        {
+          "id": "fab-13",
+          "description": "Mobile: default button position does not overlap the composer Send button",
           "status": "covered"
         }
       ]
