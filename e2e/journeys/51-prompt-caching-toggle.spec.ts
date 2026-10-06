@@ -1,7 +1,7 @@
 /**
  * Journey 51: Prompt Caching Toggle
  *
- * Covers the "Enable prompt caching" switch added to the Capabilities sub-tab
+ * Covers the "Enable Prompt Caching" switch added to the Capabilities sub-tab
  * of the Settings panel (iblai-platform#1608).
  *
  * Architecture: Serial tests sharing a single fresh mentor
@@ -126,7 +126,7 @@ test.describe.fixme('Journey 46: Prompt Caching Toggle', () => {
     await editMentorPage.settings.selectSubTab('Capabilities');
 
     // Label must be visible
-    const label = editMentorPage.dialog.getByText('Enable prompt caching', {
+    const label = editMentorPage.dialog.getByText('Enable Prompt Caching', {
       exact: true,
     });
     await expect(label).toBeVisible({ timeout: 10_000 });

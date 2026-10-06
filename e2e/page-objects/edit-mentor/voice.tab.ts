@@ -42,7 +42,7 @@ export class VoiceTab {
   /** Sub-tab pill for the Voice call (call configuration) sub-tab. */
   readonly callConfigSubTab: Locator;
   /**
-   * "Enable voice calls" (`show_voice_call`) master toggle. Used to live in
+   * "Enable Voice Calls" (`show_voice_call`) master toggle. Used to live in
    * Settings → Capabilities and gate the whole tab's visibility; it now lives
    * inline at the top of this tab via the shared `CapabilityGate` and the
    * Voice tab is always mounted (`hooks/use-mentor-segments.ts` no longer
@@ -99,7 +99,7 @@ export class VoiceTab {
 
   // ── Capability gate ───────────────────────────────────────────────────────
 
-  /** Whether the "Enable voice calls" capability toggle is currently on. */
+  /** Whether the "Enable Voice Calls" capability toggle is currently on. */
   async isCapabilityEnabled(): Promise<boolean> {
     const attr = await this.capabilityToggle
       .getAttribute('aria-checked')
@@ -108,7 +108,7 @@ export class VoiceTab {
   }
 
   /**
-   * Idempotently set the "Enable voice calls" capability toggle to the
+   * Idempotently set the "Enable Voice Calls" capability toggle to the
    * target state. Auto-saves on click (optimistic local state) — no footer
    * Save button involved. Waits for both the toggle's `aria-checked` and the
    * gated content's `data-enabled` attribute to reflect the target state.

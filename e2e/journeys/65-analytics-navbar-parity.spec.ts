@@ -15,7 +15,7 @@ import { ChatPrivacyPage } from '../page-objects/chat-privacy.page';
  *   - show the mentor name as static text instead of the "Selected agent"
  *     dropdown trigger,
  *   - hide the admin-only LLM Model Selector,
- *   - hide the Private Mode chip,
+ *   - hide the Incognito chip,
  *   - silently no-op the dropdown's "New Chat" action (the `newChat` event
  *     bus emit has no listener off the chat route).
  *
@@ -104,7 +104,7 @@ test.describe('Journey 65: Analytics Navbar Parity', () => {
     await page.keyboard.press('Escape');
   });
 
-  test('admin goes to the analytics page and sees full navbar parity: LLM Model Selector and Private Mode chip both appear', async ({
+  test('admin goes to the analytics page and sees full navbar parity: LLM Model Selector and Incognito chip both appear', async ({
     page,
     navbarPage,
     analyticsPage,

@@ -1,4 +1,5 @@
 import { Page, Locator, expect } from '@playwright/test';
+import { RAW_CHAT_MARKUP } from './edit-mentor/history.tab';
 
 export class ProfilePage {
   readonly page: Page;
@@ -33,6 +34,10 @@ export class ProfilePage {
 
   // Security tab
   readonly sendPasswordResetButton: Locator;
+
+  // History tab
+  readonly historyRows: Locator;
+  readonly historyEmptyState: Locator;
 
   constructor(page: Page) {
     this.page = page;
@@ -91,6 +96,11 @@ export class ProfilePage {
     this.sendPasswordResetButton = this.modal.getByRole('button', {
       name: /send password reset/i,
     });
+
+    this.historyRows = this.modal
+      .getByRole('region', { name: /^conversation list$/i })
+      .getByTestId('history-conversation-row');
+    this.historyEmptyState = this.modal.getByText('No conversations found');
   }
 
   async open(): Promise<void> {
@@ -125,6 +135,12 @@ export class ProfilePage {
       name: new RegExp(tabName, 'i'),
       selected: true,
     });
+  }
+
+  /** The text of every History row that still shows raw markdown/LaTeX. */
+  async historyRowsShowingRawMarkup(): Promise<string[]> {
+    const texts = await this.historyRows.allInnerTexts();
+    return texts.filter((text) => RAW_CHAT_MARKUP.test(text));
   }
 
   async switchToSubTab(subTabName: string): Promise<void> {

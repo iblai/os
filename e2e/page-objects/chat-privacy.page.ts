@@ -25,17 +25,36 @@ import {
 import { reliableClick, isVisibleWithin } from '../utils/resilient';
 
 /**
+ * The agent's Incognito policy (Privacy tab → Incognito sub-tab, three radio
+ * cards). `always` is the kill switch (`disable_chathistory`: every
+ * conversation incognito), `never` the lock (`disable_privacy_mode`:
+ * Incognito taken away), `users` clears both.
+ */
+export const INCOGNITO_POLICIES = ['users', 'always', 'never'] as const;
+export type IncognitoPolicy = (typeof INCOGNITO_POLICIES)[number];
+
+/**
+ * The slice of the `editMentorPage` fixture the Privacy-tab helpers drive.
+ * Structurally typed so this page object stays decoupled from the fixture's
+ * full type — pass `editMentorPage` from the spec.
+ */
+interface PrivacyEditMentorPage {
+  open: (tab: 'Privacy') => Promise<void>;
+  close: () => Promise<void>;
+}
+
+/**
  * Page object for the Chat Privacy feature.
  *
  * Wraps the SDK's official Playwright helpers for all four surfaces:
  *
  *  1. **Tenant gate** — `getTenantChatPrivacySwitch` / `setTenantChatPrivacyEnabled`
  *     in the tenant Account Settings → Advanced tab.
- *  2. **Agent settings kill switch** — "Enable private mode" in Edit Mentor →
- *     Settings → Capabilities (in-repo, keyed via `aria-label`).
- *  3. **Header toggle (nav-bar Private Mode pill)** — `getChatPrivacyToggle`
+ *  2. **Agent Incognito policy** — the Incognito sub-tab (Users Decide / Always Incognito / Never Incognito) in Edit Mentor →
+ *     Privacy (in-repo, keyed via test ids).
+ *  3. **Header toggle (nav-bar Incognito pill)** — `getChatPrivacyToggle`
  *     and related helpers; driven by `data-state` / `data-source` / `aria-disabled`.
- *  4. **User profile "Private Mode" tab** — `switchToPrivateModeTab` /
+ *  4. **User profile "Privacy" tab** — `switchToPrivateModeTab` /
  *     `selectPrivateMode` / `expectPrivateModeSelected`.
  *
  * Precedence chain (highest → lowest):
@@ -48,28 +67,21 @@ import { reliableClick, isVisibleWithin } from '../utils/resilient';
  */
 export class ChatPrivacyPage {
   readonly page: Page;
+  /** The Edit Agent dialog every agent-settings locator is scoped to. */
+  readonly dialog: Locator;
 
-  /**
-   * The "Enable private mode" switch inside Edit Mentor → Settings →
-   * Capabilities. This is an in-repo surface — not an SDK helper — so it
-   * is resolved by `aria-label` which the component (`settings-tab.tsx`)
-   * explicitly provides.
-   */
-  readonly agentPrivacySwitch: Locator;
-
-  /** Save button inside the Edit Mentor Settings form. */
-  readonly agentSettingsSaveButton: Locator;
+  /** The "Incognito" sub-tab trigger inside Edit Mentor → Privacy. */
+  readonly incognitoSubTab: Locator;
 
   constructor(page: Page) {
     this.page = page;
     // The settings form is scoped inside the Edit Agent dialog.
     const dialog = page.getByRole('dialog').filter({ hasText: 'Edit Agent' });
-    this.agentPrivacySwitch = dialog.getByRole('switch', {
-      name: 'Enable private mode',
+    this.dialog = dialog;
+    this.incognitoSubTab = dialog.getByRole('tab', {
+      name: 'Incognito',
+      exact: true,
     });
-    this.agentSettingsSaveButton = dialog
-      .getByRole('button', { name: /save/i })
-      .first();
   }
 
   // ── Tenant gate ─────────────────────────────────────────────────────────
@@ -184,67 +196,85 @@ export class ChatPrivacyPage {
     await expectTenantChatPrivacyVisible(dialog, visible);
   }
 
-  // ── Agent settings kill switch ──────────────────────────────────────────
+  // ── Agent Incognito policy (Privacy tab → Incognito sub-tab) ───────────
 
-  /**
-   * Read the current state of "Enable private mode" inside the
-   * Edit Mentor Settings → Capabilities sub-tab.
-   * Returns `true` when `aria-checked="true"`.
-   */
-  async getAgentPrivacyState(): Promise<boolean> {
-    const state = await this.agentPrivacySwitch
-      .getAttribute('aria-checked')
-      .catch(() => 'false');
-    return state === 'true';
+  /** One of the three radio cards. */
+  incognitoOption(policy: IncognitoPolicy): Locator {
+    return this.dialog.getByTestId(`privacy-incognito-${policy}`);
   }
 
-  /**
-   * Idempotently set the "Enable private mode" switch to `enabled` and click
-   * Save. Blocks until the "Agent updated successfully" toast appears so that
-   * the RTK Query cache invalidation (`chatPrivacyApiSlice.util.invalidateTags(
-   * ['ChatPrivacyEffective'])`) has been dispatched and the nav-bar toggle
-   * reflects the new state without a page refresh.
-   *
-   * This is the regression test anchor for feat/mentor/1797.
-   */
-  async setAgentPrivacy(enabled: boolean): Promise<void> {
-    await expect(this.agentPrivacySwitch).toBeVisible({ timeout: 10_000 });
-    const currentlyOn = await this.getAgentPrivacyState();
-    if (currentlyOn !== enabled) {
-      await reliableClick(this.page, this.agentPrivacySwitch);
-      await expect(this.agentPrivacySwitch).toHaveAttribute(
-        'aria-checked',
-        String(enabled),
-        { timeout: 10_000 },
-      );
+  /** Switch the Privacy tab to its Incognito sub-tab (no-op when already there). */
+  async openIncognitoSubTab(): Promise<void> {
+    await expect(this.incognitoSubTab).toBeVisible({ timeout: 10_000 });
+    if ((await this.incognitoSubTab.getAttribute('aria-selected')) !== 'true') {
+      await this.incognitoSubTab.click();
     }
-    await expect(this.agentSettingsSaveButton).toBeEnabled({ timeout: 10_000 });
-    await this.agentSettingsSaveButton.click();
-    await expect(
-      this.page.getByText(/Agent updated successfully/i).first(),
-    ).toBeVisible({ timeout: 30_000 });
+    await expect(this.incognitoOption('users')).toBeVisible({
+      timeout: 10_000,
+    });
+  }
+
+  /** The pressed card. Resolves `users` if none reads pressed. */
+  async getIncognitoPolicy(): Promise<IncognitoPolicy> {
+    for (const policy of INCOGNITO_POLICIES) {
+      const pressed = await this.incognitoOption(policy)
+        .getAttribute('aria-pressed')
+        .catch(() => null);
+      if (pressed === 'true') return policy;
+    }
+    return 'users';
   }
 
   /**
-   * Turn on the agent-level private-mode kill switch and save. After this,
-   * the header toggle should be locked-on (`data-state="on"`, `aria-disabled`)
-   * with `data-source="mentor"` — immediately, without a page refresh.
+   * Idempotently select `policy`. The Privacy tab saves on change: block until
+   * the "Privacy settings updated" toast appears, by which point the tab has
+   * refetched the settings and invalidated `ChatPrivacyEffective` +
+   * `mentorPublicSettings`, so the nav-bar toggle reflects the new policy
+   * without a page refresh. Expects the Privacy tab to be open.
+   */
+  async setIncognitoPolicy(policy: IncognitoPolicy): Promise<void> {
+    await this.openIncognitoSubTab();
+    if ((await this.getIncognitoPolicy()) === policy) return;
+    await reliableClick(this.page, this.incognitoOption(policy));
+    await expect(
+      this.page.getByText(/Privacy settings updated/i).first(),
+    ).toBeVisible({ timeout: 30_000 });
+    await expect(this.incognitoOption(policy)).toHaveAttribute(
+      'aria-pressed',
+      'true',
+      {
+        timeout: 10_000,
+      },
+    );
+  }
+
+  /** Whether the policy is Always Incognito — the mentor-level kill switch. */
+  async getAgentPrivacyState(): Promise<boolean> {
+    return (await this.getIncognitoPolicy()) === 'always';
+  }
+
+  /** Always Incognito when `enabled`, else back to Users Decide. */
+  async setAgentPrivacy(enabled: boolean): Promise<void> {
+    await this.setIncognitoPolicy(enabled ? 'always' : 'users');
+  }
+
+  /**
+   * Force Incognito on for everyone. After this, the header toggle should
+   * be locked-on (`data-state="on"`, `aria-disabled`) with
+   * `data-source="mentor"` — immediately, without a page refresh.
    */
   async lockAgentPrivacyOn(): Promise<void> {
     await this.setAgentPrivacy(true);
   }
 
-  /**
-   * Turn off the agent-level kill switch and save. After this, the header
-   * toggle is no longer locked and precedence falls through to the next tier.
-   */
+  /** Back to Users Decide: the header toggle is no longer locked. */
   async unlockAgentPrivacy(): Promise<void> {
     await this.setAgentPrivacy(false);
   }
 
   // ── Header toggle ───────────────────────────────────────────────────────
 
-  /** Locator for the nav-bar Private Mode toggle. */
+  /** Locator for the nav-bar Incognito toggle. */
   headerToggle(): Locator {
     return getChatPrivacyToggle(this.page);
   }
@@ -391,6 +421,21 @@ export class ChatPrivacyPage {
   }
 
   /**
+   * Wait until a click on the toggle would act. Playwright's `toBeEnabled`
+   * treats `aria-disabled="true"` as disabled, so it covers both the
+   * native `disabled` of an in-flight privacy mutation and the
+   * `aria-disabled` the SDK sets while a reply is in flight in a
+   * conversation with messages (a mid-conversation flip before the first
+   * turn is saved would drop the conversation from history) — hence the
+   * reply-length budget.
+   */
+  async waitForToggleActionable(): Promise<void> {
+    const toggle = this.headerToggle();
+    await expect(toggle).toBeVisible({ timeout: 20_000 });
+    await expect(toggle).toBeEnabled({ timeout: 120_000 });
+  }
+
+  /**
    * Click the toggle to open the confirm dialog and then confirm it.
    *
    * Bypasses the SDK helper because it does a bare `clickChatPrivacyToggle`
@@ -402,20 +447,19 @@ export class ChatPrivacyPage {
    * past the SDK's hard budgets.
    *
    * Our flow:
-   *   1. Wait for the toggle to be visible AND interactive (covers
-   *      mid-stream disable, hydration races, etc.).
+   *   1. Wait for the toggle to be actionable (`waitForToggleActionable`:
+   *      covers the in-flight reply, hydration races, etc.).
    *   2. Click the toggle.
    *   3. Wait up to 30 s for the dialog to appear (cold cache + slow
    *      env).
    *   4. Wait for the confirm action to be visible + enabled, then
    *      click it.
-   *   5. Wait up to 30 s for the dialog to close — that's the
-   *      authoritative "mutation succeeded" signal.
+   *   5. Wait up to 30 s for the dialog to close (it closes on success
+   *      and on failure — assert the resulting state separately).
    */
   async enablePrivacyMidSession(): Promise<void> {
     const toggle = this.headerToggle();
-    await expect(toggle).toBeVisible({ timeout: 20_000 });
-    await expect(toggle).toBeEnabled({ timeout: 20_000 });
+    await this.waitForToggleActionable();
     await toggle.click();
 
     const dialog = this.confirmDialog();
@@ -429,21 +473,50 @@ export class ChatPrivacyPage {
     await expect(dialog).toBeHidden({ timeout: 30_000 });
   }
 
+  /**
+   * Turn Incognito off mid-conversation: one click, no dialog, and the SDK
+   * POSTs `disable_chathistory: false` for the same session. The toggle
+   * flips to `off` optimistically before the backend answers, so wait for
+   * the response and then for the effective mode to settle.
+   */
+  async disablePrivacyMidSession(): Promise<void> {
+    const toggle = this.headerToggle();
+    await this.waitForToggleActionable();
+    const flip = this.page.waitForResponse(
+      (r) =>
+        r.request().method() === 'POST' &&
+        r.url().includes('/disable-chathistory/') &&
+        r.request().postDataJSON()?.disable_chathistory === false,
+      { timeout: 30_000 },
+    );
+    await toggle.click();
+    const response = await flip;
+    expect(response.status(), 'disable-chathistory false was refused').toBe(
+      200,
+    );
+    await expect(toggle).toHaveAttribute('data-state', 'off', {
+      timeout: 30_000,
+    });
+    await expect(toggle).not.toHaveAttribute('data-source', 'session', {
+      timeout: 30_000,
+    });
+  }
+
   /** Click the toggle to open the confirm dialog and then cancel. */
   async cancelPrivacyMidSession(): Promise<void> {
     await cancelEnableChatPrivacyMidSession(this.page);
   }
 
-  // ── User profile "Private Mode" tab ─────────────────────────────────────
+  // ── User profile "Privacy" tab ─────────────────────────────────────
 
   /**
    * Locator for the chat-privacy tab in the UserProfileModal sidebar.
    *
    * The tab's user-visible label is "Privacy" (the chat-privacy feature
-   * itself is still called "Private Mode" within the tab's content). We
+   * itself is still called "Incognito" within the tab's content). We
    * define the locator locally rather than reuse the SDK's
    * `isPrivateModeTabVisible` / `CHAT_PRIVACY_LABELS.profileTab.tabName`,
-   * because that config still points at the old "Private Mode" label and
+   * because that config still points at the old "Incognito" label and
    * no longer matches the rendered tab.
    */
   private profilePrivateModeTab(): Locator {
@@ -489,7 +562,7 @@ export class ChatPrivacyPage {
   }
 
   /**
-   * Click a radio card on the Private Mode tab and wait for the selection to
+   * Click a radio card on the Privacy tab and wait for the selection to
    * persist (`aria-pressed="true"` on the chosen card).
    */
   async selectProfilePrivateMode(mode: ChatPrivacyMode): Promise<void> {
@@ -624,53 +697,54 @@ export class ChatPrivacyPage {
   }
 
   /**
-   * Ensure the current mentor's "Enable private mode" switch is in the
-   * desired state. The agent kill-switch is gated on the tenant
-   * "allow_user_chat_privacy_control" — when that gate is OFF the row
-   * is hidden by settings-tab.tsx and this helper resolves as a no-op
-   * (logs a warning since the caller almost certainly wanted gate ON).
-   *
-   * `editMentorPage` is structurally typed so the helper stays decoupled
-   * from the fixture's full type — pass `editMentorPage` from the spec.
+   * Ensure the current mentor's Incognito policy is `policy`. The sub-tab is
+   * gated on the tenant "allow_user_chat_privacy_control" — when that gate
+   * is OFF it is not rendered and this helper resolves as a no-op.
    */
-  async ensureAgentPrivacy(
-    editMentorPage: {
-      open: (tab: 'Settings') => Promise<void>;
-      close: () => Promise<void>;
-      settings: { selectSubTab: (tab: 'Capabilities') => Promise<void> };
-    },
-    enabled: boolean,
+  async ensureIncognitoPolicy(
+    editMentorPage: PrivacyEditMentorPage,
+    policy: IncognitoPolicy,
   ): Promise<void> {
-    await editMentorPage.open('Settings');
+    await editMentorPage.open('Privacy');
     try {
-      await editMentorPage.settings.selectSubTab('Capabilities');
-      const rowPresent = await isVisibleWithin(this.agentPrivacySwitch, 10_000);
-      if (!rowPresent) {
-        // Row is gated on the tenant gate. Caller should have ensured
-        // gate ON first; we log and bail rather than asserting false.
+      const present = await isVisibleWithin(this.incognitoSubTab, 10_000);
+      if (!present) {
+        // Gated on the tenant gate. Caller should have ensured gate ON first.
         return;
       }
-      const current = await this.getAgentPrivacyState();
-      if (current !== enabled) {
-        await this.setAgentPrivacy(enabled);
+      await this.openIncognitoSubTab();
+      if ((await this.getIncognitoPolicy()) !== policy) {
+        await this.setIncognitoPolicy(policy);
       }
     } finally {
       await editMentorPage.close().catch(() => undefined);
     }
   }
 
-  /** Read the current "Enable private mode" switch value. Returns `null`
-   *  if the row is gated off (tenant gate is OFF). */
-  async readAgentPrivacyState(editMentorPage: {
-    open: (tab: 'Settings') => Promise<void>;
-    close: () => Promise<void>;
-    settings: { selectSubTab: (tab: 'Capabilities') => Promise<void> };
-  }): Promise<boolean | null> {
-    await editMentorPage.open('Settings');
+  /**
+   * Ensure the kill switch is `enabled`: Always Incognito, or back to Users
+   * Decide — which also clears a Never Incognito policy, so the header
+   * toggle is visible again.
+   */
+  async ensureAgentPrivacy(
+    editMentorPage: PrivacyEditMentorPage,
+    enabled: boolean,
+  ): Promise<void> {
+    await this.ensureIncognitoPolicy(
+      editMentorPage,
+      enabled ? 'always' : 'users',
+    );
+  }
+
+  /** Read whether the policy is Always Incognito. Returns `null` if the sub-tab is gated off. */
+  async readAgentPrivacyState(
+    editMentorPage: PrivacyEditMentorPage,
+  ): Promise<boolean | null> {
+    await editMentorPage.open('Privacy');
     try {
-      await editMentorPage.settings.selectSubTab('Capabilities');
-      const visible = await isVisibleWithin(this.agentPrivacySwitch, 10_000);
+      const visible = await isVisibleWithin(this.incognitoSubTab, 10_000);
       if (!visible) return null;
+      await this.openIncognitoSubTab();
       return await this.getAgentPrivacyState();
     } finally {
       await editMentorPage.close().catch(() => undefined);
@@ -678,7 +752,7 @@ export class ChatPrivacyPage {
   }
 
   /**
-   * Ensure the user's profile Private Mode selection is `mode`.
+   * Ensure the user's profile Incognito selection is `mode`.
    * Throws if the tenant gate is OFF (tab not visible) — caller must
    * `ensureTenantGateEnabled(true)` first.
    */
@@ -688,7 +762,7 @@ export class ChatPrivacyPage {
       const tabVisible = await this.isProfilePrivateModeTabVisible();
       if (!tabVisible) {
         throw new Error(
-          'ensureProfilePrivateMode: Private Mode tab not visible. ' +
+          'ensureProfilePrivateMode: Privacy tab not visible. ' +
             'Call ensureTenantGateEnabled(true) before this helper.',
         );
       }
@@ -703,7 +777,7 @@ export class ChatPrivacyPage {
     }
   }
 
-  /** Read the user's current profile Private Mode selection.
+  /** Read the user's current profile Incognito selection.
    *  Returns `null` if the tab is hidden (gate OFF) or no card is pressed. */
   async readProfilePrivateMode(): Promise<ChatPrivacyMode | null> {
     const modal = await this.openProfileModal();

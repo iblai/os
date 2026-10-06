@@ -61,7 +61,7 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
     tracker52.add((await getPlatformContext(page)).mentorId);
 
     // Enable Web Search via Tools tab
-    // Enable verbose reasoning gates the tool-call indicator — enable it first.
+    // Enable Verbose Reasoning gates the tool-call indicator — enable it first.
     await editMentorPage.open('Settings');
     await editMentorPage.settings.setVerboseReasoning(true);
     await editMentorPage.navigateToTab('Tools');
@@ -155,7 +155,7 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
     );
     tracker52.add((await getPlatformContext(page)).mentorId);
 
-    // Enable verbose reasoning gates the tool-call indicator — enable it first.
+    // Enable Verbose Reasoning gates the tool-call indicator — enable it first.
     await editMentorPage.open('Settings');
     await editMentorPage.settings.setVerboseReasoning(true);
     await editMentorPage.navigateToTab('Tools');
@@ -231,7 +231,7 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
     );
     tracker52.add((await getPlatformContext(page)).mentorId);
 
-    // Enable verbose reasoning gates the tool-call indicator — enable it first.
+    // Enable Verbose Reasoning gates the tool-call indicator — enable it first.
     await editMentorPage.open('Settings');
     await editMentorPage.settings.setVerboseReasoning(true);
     await editMentorPage.navigateToTab('Tools');
@@ -339,7 +339,7 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
     );
     tracker52.add((await getPlatformContext(page)).mentorId);
 
-    // Enable verbose reasoning gates the tool-call indicator — enable it first.
+    // Enable Verbose Reasoning gates the tool-call indicator — enable it first.
     await editMentorPage.open('Settings');
     await editMentorPage.settings.setVerboseReasoning(true);
     await editMentorPage.navigateToTab('Tools');
@@ -384,7 +384,7 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
     );
     tracker52.add((await getPlatformContext(page)).mentorId);
 
-    // Enable verbose reasoning gates the reasoning section — enable it first.
+    // Enable Verbose Reasoning gates the reasoning section — enable it first.
     await editMentorPage.open('Settings');
     await editMentorPage.settings.setVerboseReasoning(true);
     await editMentorPage.close();
@@ -481,7 +481,7 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
     );
     tracker52.add((await getPlatformContext(page)).mentorId);
 
-    // Enable verbose reasoning so this test verifies the model produces no
+    // Enable Verbose Reasoning so this test verifies the model produces no
     // reasoning tokens, rather than the section being hidden by the toggle.
     await editMentorPage.open('Settings');
     await editMentorPage.settings.setVerboseReasoning(true);
@@ -527,7 +527,7 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
     );
     tracker52.add((await getPlatformContext(page)).mentorId);
 
-    // Enable verbose reasoning gates both the reasoning section and the tool-call
+    // Enable Verbose Reasoning gates both the reasoning section and the tool-call
     // indicator — enable it first.
     await editMentorPage.open('Settings');
     await editMentorPage.settings.setVerboseReasoning(true);
@@ -611,7 +611,7 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
   });
 
   // ────────────────────────────────────────────────────────────────
-  // Test 4.1: Enable verbose reasoning OFF hides the tool-call indicator
+  // Test 4.1: Enable Verbose Reasoning OFF hides the tool-call indicator
   // ────────────────────────────────────────────────────────────────
   test('Tool Call Indicator Is Hidden When Verbose Reasoning Is Off', async ({
     page,

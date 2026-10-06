@@ -452,7 +452,7 @@ export function NavBar() {
   const isProjectsIndexPage = /\/projects\/?$/.test(pathname);
   // Tenant-wide analytics (/platform/<tenant>/analytics[/<tab>]) has no agent in
   // the URL, so the chat-only controls — LLM selector, on-device model badge,
-  // Private Mode chip — would render with nothing to act on. Anchored on the
+  // Incognito chip — would render with nothing to act on. Anchored on the
   // third segment so the per-agent section (/platform/<tenant>/<mentorId>/
   // analytics) keeps full navbar parity (issue #2248).
   const isTenantAnalyticsPage = /^\/platform\/[^/]+\/analytics(\/|$)/.test(

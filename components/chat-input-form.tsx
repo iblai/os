@@ -156,7 +156,7 @@ export function ChatInputForm({
   const mentorSettings = useMentorSettings();
   const showingSharedChat = useAppSelector(selectShowingSharedChat);
 
-  // Chat private mode signal — same source the nav-bar ChatPrivacyToggle uses.
+  // Chat incognito signal — same source the nav-bar ChatPrivacyToggle uses.
   // When the effective mode is 'disabled' the active session is private, so the
   // Memory button is hidden (memory is not stored for a private session). Gate
   // on `isEffectiveReady` so we don't flash-hide before the query resolves.

@@ -5,32 +5,38 @@
  *
  *  1. **Tenant gate** (cp-tenant-*) — "Allow users to control chat privacy"
  *     switch in Account Settings → Advanced. Controls whether the header
- *     toggle and the user profile "Private Mode" tab are visible at all.
+ *     toggle and the user profile "Privacy" tab are visible at all.
  *
- *  2. **Agent settings kill switch** (cp-agent-*) — "Enable private mode"
- *     row in Edit Mentor → Settings → Capabilities. When on, every
- *     conversation with that mentor is private regardless of other tiers.
+ *  2. **Agent Incognito policy** (cp-agent-*, cp-lock-*) — the Incognito
+ *     sub-tab in Edit Mentor → Privacy, three radio cards: Users Decide /
+ *     Always Incognito (every conversation with that mentor is incognito
+ *     regardless of other tiers) / Never Incognito (nobody can go incognito).
  *     Saving dispatches `chatPrivacyApiSlice.util.invalidateTags(
  *     ['ChatPrivacyEffective'])` so the header toggle reflects the new state
  *     live without a page refresh — the regression anchor for feat/mentor/1797.
+ *     Never Incognito (cp-lock-*) takes Incognito away from every user of the
+ *     mentor: the header toggle is hidden (read from the mentor's public
+ *     settings) and the backend refuses a private session start with 403.
  *
- *  3. **Header toggle** (cp-header-*) — the nav-bar "Private Mode" pill
+ *  3. **Header toggle** (cp-header-*) — the nav-bar "Incognito" pill
  *     (`ChatPrivacyToggle` from `@iblai/iblai-js/web-containers`). Exposes
  *     `data-state="on|off"`, `data-source` (mentor/tenant/user/session/default),
- *     and `aria-disabled` for lock assertions.
+ *     and `aria-disabled` for lock assertions. Two-way since iblai-dm-pro
+ *     #3093: Incognito turned on mid-conversation can be turned off again
+ *     (cp-header-05/07); a chat started in Incognito stays on (cp-header-08).
  *
- *  4. **User profile "Private Mode" tab** (cp-profile-*) — three radio cards
+ *  4. **User profile "Privacy" tab** (cp-profile-*) — three radio cards
  *     (Normal / Anonymized / Disabled) inside `UserProfileModal`. Only shown
  *     when the tenant gate is on.
  *
  *  5. **Private chat round-trip** (cp-chat-*) — the end-to-end happy path:
- *     enable private mode via the header toggle on a fresh chat, send a
+ *     enable incognito via the header toggle on a fresh chat, send a
  *     message, and confirm the assistant still replies. Exercised once as
  *     the admin (`page`) and once as a non-admin (`nonadminPage`). Also
  *     covers seven feature-interaction checkpoints (cp-chat-04 … cp-chat-10)
  *     that exercise prompts, voice/screen, multi-turn context, file
  *     attachments, the memory button, and the AI-bubble share/download
- *     buttons while private mode is active. These assert the
+ *     buttons while incognito is active. These assert the
  *     CORRECT/EXPECTED behavior. cp-chat-08 (memory button), cp-chat-09
  *     (share button), and cp-chat-10 (download button) have their in-repo
  *     gates implemented and should pass; cp-chat-04/05/06 are expected to be
@@ -45,10 +51,10 @@
  * All four describe blocks below mutate the SAME backend state:
  *   • Tenant chat-privacy gate (org-scoped, all blocks read this)
  *   • Default mentor's `disable_chathistory` (mentor-scoped)
- *   • A user's profile Private Mode selection (user-scoped) — cp-profile-*
+ *   • A user's profile Incognito selection (user-scoped) — cp-profile-*
  *     drives this exclusively on `nonadminPage`'s own account, not the
  *     shared admin account: that account is also used by Journey 62 in a
- *     different worker, and this block flipping its Private Mode used to
+ *     different worker, and this block flipping its Incognito used to
  *     race Journey 62 into an intermittent 403 (CI: iblai/os#499).
  *     cp-header-*'s beforeEach still has its own admin-account fallback
  *     path for the same setting; only cp-profile-* was moved.
@@ -307,9 +313,9 @@ test.describe('Journey 50: Chat Privacy', () => {
       await chatPrivacy.assertHeaderToggleVisible(true);
     });
 
-    // cp-tenant-04: Profile "Private Mode" tab is hidden when gate is OFF,
+    // cp-tenant-04: Profile "Privacy" tab is hidden when gate is OFF,
     //               visible when gate is ON.
-    test('cp-tenant-04: Private Mode profile tab visibility tracks the tenant gate', async ({
+    test('cp-tenant-04: Incognito profile tab visibility tracks the tenant gate', async ({
       page,
     }) => {
       const chatPrivacy = new ChatPrivacyPage(page);
@@ -340,7 +346,7 @@ test.describe('Journey 50: Chat Privacy', () => {
 
   // ── 2. Agent settings kill switch (admin-only) ────────────────────────────
 
-  test.describe('Agent settings kill switch (cp-agent-*)', () => {
+  test.describe('Agent Incognito policy — Always Incognito (cp-agent-*)', () => {
     test.beforeEach(async ({ page, editMentorPage }) => {
       await goToChatPage(page, mentorUrl);
       // Throw (don't skip) when admin context is missing.
@@ -365,26 +371,25 @@ test.describe('Journey 50: Chat Privacy', () => {
     // `ensureAgentPrivacy(false)` precondition, no extra restoration
     // is needed at the block level.
 
-    // cp-agent-01: "Enable private mode" row is present in Settings → Capabilities
-    test('cp-agent-01: Enable private mode row is visible in Settings Capabilities sub-tab', async ({
+    // cp-agent-01: the Incognito sub-tab and its three cards are present in the Privacy tab
+    test('cp-agent-01: Incognito sub-tab with its three options is visible in the Privacy tab', async ({
       page,
       editMentorPage,
     }) => {
-      await editMentorPage.open('Settings');
+      await editMentorPage.open('Privacy');
       await waitForPageReady(page);
 
-      await editMentorPage.settings.selectSubTab('Capabilities');
-
       const chatPrivacy = new ChatPrivacyPage(page);
-      await expect(chatPrivacy.agentPrivacySwitch).toBeVisible({
-        timeout: 10_000,
-      });
+      await chatPrivacy.openIncognitoSubTab();
+      for (const policy of ['users', 'always', 'never'] as const) {
+        await expect(chatPrivacy.incognitoOption(policy)).toBeVisible();
+      }
 
       await editMentorPage.close();
     });
 
     // cp-agent-02: Saving with the toggle ON persists (re-open and verify)
-    test('cp-agent-02: saving Enable private mode ON persists across modal re-open', async ({
+    test('cp-agent-02: saving Always Incognito persists across modal re-open', async ({
       page,
       editMentorPage,
     }) => {
@@ -397,9 +402,8 @@ test.describe('Journey 50: Chat Privacy', () => {
 
       const chatPrivacy = new ChatPrivacyPage(page);
 
-      await editMentorPage.open('Settings');
+      await editMentorPage.open('Privacy');
       await waitForPageReady(page);
-      await editMentorPage.settings.selectSubTab('Capabilities');
 
       // Read original state so we can restore it.
       const wasEnabled = await chatPrivacy.getAgentPrivacyState();
@@ -428,11 +432,8 @@ test.describe('Journey 50: Chat Privacy', () => {
       await expect
         .poll(
           async () => {
-            await editMentorPage.open('Settings');
-            await editMentorPage.settings.selectSubTab('Capabilities');
-            await chatPrivacy.agentPrivacySwitch
-              .waitFor({ state: 'visible', timeout: 10_000 })
-              .catch(() => undefined);
+            await editMentorPage.open('Privacy');
+            await chatPrivacy.openIncognitoSubTab().catch(() => undefined);
             const persisted = await chatPrivacy.getAgentPrivacyState();
             if (!persisted) {
               await editMentorPage.close();
@@ -441,7 +442,7 @@ test.describe('Journey 50: Chat Privacy', () => {
           },
           {
             message:
-              'Re-opened Settings should show Enable private mode ON once the post-save mentor refetch settles',
+              'Re-opened Privacy tab should show Always Incognito once the post-save mentor refetch settles',
             // Each poll attempt re-runs editMentorPage.open(), which blocks
             // on the modal's hydration spinner (~30-90s per open) — a 30s
             // budget died inside the FIRST attempt. Size the poll for at
@@ -465,21 +466,20 @@ test.describe('Journey 50: Chat Privacy', () => {
     //              This is the regression test for the
     //              `dispatch(chatPrivacyApiSlice.util.invalidateTags(
     //              ['ChatPrivacyEffective']))` wiring in settings-tab.tsx.
-    test('cp-agent-03: saving Enable private mode ON locks the header toggle to mentor source without page refresh', async ({
+    test('cp-agent-03: saving Always Incognito locks the header toggle to mentor source without page refresh', async ({
       page,
       editMentorPage,
     }) => {
       const chatPrivacy = new ChatPrivacyPage(page);
 
-      await editMentorPage.open('Settings');
+      await editMentorPage.open('Privacy');
       await waitForPageReady(page);
-      await editMentorPage.settings.selectSubTab('Capabilities');
 
       const wasEnabled = await chatPrivacy.getAgentPrivacyState();
 
       await chatPrivacy.lockAgentPrivacyOn();
 
-      // The toast confirms the save. Now close the dialog and immediately
+      // The toast confirms the save (the Privacy tab saves on change). Now close the dialog and immediately
       // assert on the header toggle — no page.reload() allowed here.
       await editMentorPage.close();
 
@@ -508,8 +508,7 @@ test.describe('Journey 50: Chat Privacy', () => {
       });
 
       // Restore.
-      await editMentorPage.open('Settings');
-      await editMentorPage.settings.selectSubTab('Capabilities');
+      await editMentorPage.open('Privacy');
       if (!wasEnabled) {
         await chatPrivacy.unlockAgentPrivacy();
       }
@@ -520,7 +519,7 @@ test.describe('Journey 50: Chat Privacy', () => {
     //              Precedence falls through to the next tier (the exact
     //              data-source depends on tenant/user settings, so we only
     //              assert it is NOT "mentor" and NOT locked).
-    test('cp-agent-04: saving Enable private mode OFF removes the mentor lock from the header toggle', async ({
+    test('cp-agent-04: saving back to Users Decide removes the mentor lock from the header toggle', async ({
       page,
       editMentorPage,
     }) => {
@@ -532,9 +531,8 @@ test.describe('Journey 50: Chat Privacy', () => {
       await chatPrivacy.ensureAgentPrivacy(editMentorPage, true);
 
       // Drive to OFF.
-      await editMentorPage.open('Settings');
+      await editMentorPage.open('Privacy');
       await waitForPageReady(page);
-      await editMentorPage.settings.selectSubTab('Capabilities');
       await chatPrivacy.unlockAgentPrivacy();
       await editMentorPage.close();
 
@@ -556,6 +554,90 @@ test.describe('Journey 50: Chat Privacy', () => {
     });
   });
 
+  // ── 2b. Agent Incognito policy — Never Incognito (disable_privacy_mode) ────
+  //
+  // The third card of the same group: Never Incognito takes Incognito away
+  // from every user of the mentor. The SDK reads the flag from the mentor's
+  // public settings (the effective read only reports `is_locked` for a user
+  // it actually clamped), so the header toggle disappears for everyone and
+  // the backend answers a private-session start with 403.
+
+  test.describe('Agent Incognito policy — Never Incognito (cp-lock-*)', () => {
+    test.beforeEach(async ({ page, editMentorPage }) => {
+      await goToChatPage(page, mentorUrl);
+      await waitForAdmin(page);
+
+      const chatPrivacy = new ChatPrivacyPage(page);
+      await chatPrivacy.ensureTenantGateEnabled(true);
+      // The header toggle being visible proves the lock is OFF (and the
+      // gate ON) straight from the DOM; only open the modal when it is not.
+      const toggleVisible = await chatPrivacy
+        .headerToggle()
+        .isVisible({ timeout: 5_000 })
+        .catch(() => false);
+      if (!toggleVisible) {
+        await chatPrivacy.ensureIncognitoPolicy(editMentorPage, 'users');
+        await expect(chatPrivacy.headerToggle()).toBeVisible({
+          timeout: 30_000,
+        });
+      }
+    });
+
+    test('cp-lock-01: Incognito offers Users Decide, Always Incognito and Never Incognito, with Users Decide selected by default', async ({
+      page,
+      editMentorPage,
+    }) => {
+      await editMentorPage.open('Privacy');
+      await waitForPageReady(page);
+
+      const chatPrivacy = new ChatPrivacyPage(page);
+      await chatPrivacy.openIncognitoSubTab();
+      for (const policy of ['users', 'always', 'never'] as const) {
+        await expect(chatPrivacy.incognitoOption(policy)).toBeVisible();
+        await expect(chatPrivacy.incognitoOption(policy)).toHaveAttribute(
+          'aria-pressed',
+          String(policy === 'users'),
+        );
+      }
+
+      await editMentorPage.close();
+    });
+
+    test('cp-lock-02: saving Never Incognito hides the header toggle live and across a reload; Users Decide brings the toggle back', async ({
+      page,
+      editMentorPage,
+    }) => {
+      // Three Edit Agent opens (lock, reload read, restore), each blocking
+      // on the modal's hydration spinner — same budget as cp-agent-02.
+      test.setTimeout(420_000);
+
+      const chatPrivacy = new ChatPrivacyPage(page);
+      const toggle = chatPrivacy.headerToggle();
+      await expect(toggle).toBeVisible({ timeout: 15_000 });
+
+      await editMentorPage.open('Privacy');
+      await waitForPageReady(page);
+      await chatPrivacy.setIncognitoPolicy('never');
+      await editMentorPage.close();
+
+      try {
+        // Live: the save invalidates the mentor's public settings, which
+        // `useChatPrivacy` reads the lock from — no page.reload() here.
+        await expect(toggle).toBeHidden({ timeout: 30_000 });
+
+        // Persisted: a fresh load reads the flag from the backend.
+        await goToChatPage(page, mentorUrl);
+        await expect(toggle).toBeHidden({ timeout: 30_000 });
+      } finally {
+        // Restore so cp-header-* / cp-chat-* find their toggle.
+        await chatPrivacy.ensureIncognitoPolicy(editMentorPage, 'users');
+      }
+
+      await expect(toggle).toBeVisible({ timeout: 30_000 });
+      await chatPrivacy.assertHeaderLocked(false);
+    });
+  });
+
   // ── 3. Header toggle (unlocked mentor) ────────────────────────────────────
 
   test.describe('Header toggle — unlocked mentor (cp-header-*)', () => {
@@ -570,7 +652,7 @@ test.describe('Journey 50: Chat Privacy', () => {
       // shared states already in the configuration this block wants:
       //   • Gate ON           → header toggle is visible
       //   • Mentor lock OFF   → aria-disabled is absent/"false"
-      //   • User mode not "Disabled" → a fresh chat's data-state is "off"
+      //   • User mode not `disabled` (the "Incognito" card) → a fresh chat's data-state is "off"
       //     (data-source may still legitimately read "user" — see the
       //     fastPathOk / cp-profile-05 comments below)
       // All three are readable from the header toggle DOM in ~150ms with
@@ -594,10 +676,10 @@ test.describe('Journey 50: Chat Privacy', () => {
           .catch(() => null);
         if (dataSource === 'mentor') return false;
         // A "user" source alone is not a reason to fall back to the slow
-        // path: per cp-profile-05, once ANY profile Private Mode selection
+        // path: per cp-profile-05, once ANY profile Incognito selection
         // has ever been saved, the backend keeps data-source="user" for
         // BOTH Normal and Disabled — it can never clear back to another
-        // tier. Only "user" + data-state="on" (profile mode "Disabled")
+        // tier. Only "user" + data-state="on" (profile card "Incognito", mode `disabled`)
         // actually needs recovery; "user" + "off" is the same resting
         // state a never-saved profile would produce.
         if (dataSource === 'user') {
@@ -612,7 +694,7 @@ test.describe('Journey 50: Chat Privacy', () => {
       if (!fastPathOk) {
         // Slow path: at least one precondition is wrong. Tier-targeted
         // recovery — only open the modal that owns the wrong tier, not
-        // all three. The user profile's Private Mode tab in particular
+        // all three. The user profile's Privacy tab in particular
         // is the slowest (its body waits on
         // `useGetUserChatPrivacySettingsQuery` and on a slow env can
         // exceed the SDK helper's 10 s tab-body budget), so we only
@@ -631,6 +713,24 @@ test.describe('Journey 50: Chat Privacy', () => {
         await expect(toggle).toBeVisible({ timeout: 15_000 });
       }
     });
+
+    // cp-header-04/05/07 open the mid-conversation dialog, which the SDK
+    // locks while the admin's profile default is Anonymized (the backend
+    // creates those conversations without an owner, so it would refuse the
+    // enable). The fast path above can't tell Normal from Anonymized — both
+    // read data-source="user" + data-state="off" — so settle it once per run;
+    // nothing else in this serial file changes the admin's profile.
+    let adminProfileIsNormal = false;
+    const ensureAdminProfileNormal = async (chatPrivacy: ChatPrivacyPage) => {
+      if (adminProfileIsNormal) return;
+      const dataSource = await chatPrivacy
+        .headerToggle()
+        .getAttribute('data-source');
+      if (dataSource === 'user') {
+        await chatPrivacy.ensureProfilePrivateMode('normal');
+      }
+      adminProfileIsNormal = true;
+    };
 
     // cp-header-01: Default state on a fresh chat is "off"
     test('cp-header-01: fresh chat starts with the header toggle in the off state', async ({
@@ -685,10 +785,11 @@ test.describe('Journey 50: Chat Privacy', () => {
       page,
       chatPage,
     }) => {
+      const chatPrivacy = new ChatPrivacyPage(page);
+      await ensureAdminProfileNormal(chatPrivacy);
+
       await chatPage.startNewChat();
       await waitForPageReady(page);
-
-      const chatPrivacy = new ChatPrivacyPage(page);
 
       // Ensure we start from "off".
       await chatPrivacy.assertHeaderState('off');
@@ -700,7 +801,9 @@ test.describe('Journey 50: Chat Privacy', () => {
         timeout: 30_000,
       });
 
-      // Click the toggle — the SDK opens the confirm dialog.
+      // Click the toggle once the reply is done — the SDK opens the confirm
+      // dialog (it ignores the click while a reply is in flight).
+      await chatPrivacy.waitForToggleActionable();
       await clickChatPrivacyToggle(page);
       await chatPrivacy.assertConfirmDialogOpen(true);
 
@@ -712,16 +815,17 @@ test.describe('Journey 50: Chat Privacy', () => {
       await chatPrivacy.assertHeaderState('off');
     });
 
-    // cp-header-05: Send a message, click toggle, CONFIRM → state is "on"
-    //               and the session is now one-way locked (expectChatPrivacyLocked).
-    test('cp-header-05: confirming enable-private-mode mid-session locks the session as on', async ({
+    // cp-header-05: Send a message, click toggle, CONFIRM → Incognito is on
+    //               for the same conversation and the pill stays actionable.
+    test('cp-header-05: confirming Incognito mid-session turns it on without locking the toggle', async ({
       page,
       chatPage,
     }) => {
+      const chatPrivacy = new ChatPrivacyPage(page);
+      await ensureAdminProfileNormal(chatPrivacy);
+
       await chatPage.startNewChat();
       await waitForPageReady(page);
-
-      const chatPrivacy = new ChatPrivacyPage(page);
       await chatPrivacy.assertHeaderState('off');
 
       await chatPage.sendMessage('Hello');
@@ -729,31 +833,24 @@ test.describe('Journey 50: Chat Privacy', () => {
         timeout: 30_000,
       });
 
-      // Wait for the chat surface to settle before clicking the toggle.
-      // After sendMessage the SDK can briefly disable the toggle while
-      // the assistant response streams in; clicking during that window
-      // can either silently no-op or open the dialog late, racing the
-      // SDK helper's 10 s budget for the dialog to appear. Waiting for
-      // `toBeEnabled` here proves any in-flight chat-side mutation has
-      // settled and the toggle is interactive.
+      // Mid-session enable. `enablePrivacyMidSession` waits for the reply
+      // to finish (the SDK keeps the toggle aria-disabled until then) and
+      // has generous budgets for each step (dialog visible → action
+      // enabled → click → dialog hidden).
       const toggle = chatPrivacy.headerToggle();
-      await expect(toggle).toBeEnabled({ timeout: 30_000 });
-
-      // Mid-session enable. Our `enablePrivacyMidSession` already has
-      // generous internal budgets (toggle interactive → click → dialog
-      // visible → action enabled → click → dialog hidden), but the
-      // outer-level wait above ensures we don't enter that flow on a
-      // briefly-disabled toggle.
       await chatPrivacy.enablePrivacyMidSession();
 
-      // Toggle is on AND locked — session is one-way per spec.
-      // Use direct attribute assertions with generous timeouts rather
-      // than the SDK helpers; the post-mutation refetch can take a few
-      // seconds beyond the SDK's hard-coded 10 s.
+      // On for this session and NOT locked — the flip is reversible
+      // (cp-header-07). Direct attribute assertions with generous timeouts:
+      // the post-mutation refetch can take a few seconds beyond the SDK's
+      // hard-coded 10 s.
       await expect(toggle).toHaveAttribute('data-state', 'on', {
         timeout: 30_000,
       });
-      await chatPrivacy.assertHeaderLocked(true);
+      await expect(toggle).toHaveAttribute('data-source', 'session', {
+        timeout: 30_000,
+      });
+      await chatPrivacy.assertHeaderLocked(false);
     });
 
     // cp-header-06: Refresh mid-private-chat → state persists as "on".
@@ -795,19 +892,88 @@ test.describe('Journey 50: Chat Privacy', () => {
         timeout: 30_000,
       });
     });
+
+    // cp-header-07: Turn Incognito on mid-conversation, then off again →
+    //               one click, no dialog, same session, history resumes.
+    test('cp-header-07: turning Incognito off mid-conversation resumes history on the same session', async ({
+      page,
+      chatPage,
+    }) => {
+      const chatPrivacy = new ChatPrivacyPage(page);
+      await ensureAdminProfileNormal(chatPrivacy);
+
+      await chatPage.startNewChat();
+      await waitForPageReady(page);
+      await chatPrivacy.assertHeaderState('off');
+
+      // The backend keeps the conversation's owner on the enable only once
+      // the first turn is saved (end of the reply); without an owner the
+      // turn-off below would be refused.
+      await chatPage.sendMessage('Hello');
+      await chatPage.waitForAIResponse();
+      await chatPage.waitForStreamingComplete();
+
+      const { mentorId } = await getPlatformContext(page);
+      const sessionId = await chatPage.getCachedSessionId(mentorId);
+      expect(sessionId).toBeTruthy();
+
+      await chatPrivacy.enablePrivacyMidSession();
+      await expect(chatPrivacy.headerToggle()).toHaveAttribute(
+        'data-source',
+        'session',
+        { timeout: 30_000 },
+      );
+
+      await chatPrivacy.disablePrivacyMidSession();
+      await chatPrivacy.assertConfirmDialogOpen(false);
+      expect(await chatPage.getCachedSessionId(mentorId)).toBe(sessionId);
+    });
+
+    // cp-header-08: A chat started in Incognito stays in Incognito once a
+    //               message is sent — the backend creates it without an
+    //               owner, so the pill locks instead of offering an off it
+    //               would refuse.
+    test('cp-header-08: a chat started in Incognito stays locked on after a message', async ({
+      page,
+      chatPage,
+    }) => {
+      await chatPage.startNewChat();
+      await waitForPageReady(page);
+
+      const chatPrivacy = new ChatPrivacyPage(page);
+      await chatPrivacy.clickToggleAndWaitFor('on', 'session');
+
+      await chatPage.sendMessage('Hello');
+      await chatPage.waitForAIResponse();
+      await chatPage.waitForStreamingComplete();
+
+      await expect(chatPrivacy.headerToggle()).toHaveAttribute(
+        'data-state',
+        'on',
+        { timeout: 30_000 },
+      );
+      // The reason, not just the lock: aria-disabled alone also matches the
+      // temporary "wait for the reply" state.
+      await expect(chatPrivacy.headerToggle()).toHaveAttribute(
+        'aria-label',
+        /stays on for this conversation/,
+        { timeout: 120_000 },
+      );
+      await chatPrivacy.assertHeaderLocked(true);
+    });
   });
 
-  // ── 4. User profile "Private Mode" tab ────────────────────────────────────
+  // ── 4. User profile "Privacy" tab ────────────────────────────────────
 
-  // This block exercises the profile-level Private Mode tab, a per-USER
+  // This block exercises the profile-level Privacy tab, a per-USER
   // preference — driven entirely on `nonadminPage`, never the shared admin
   // account. Journey 62 reads/writes chat sessions for that same shared
   // admin user from a different worker; this block used to flip the
-  // admin's own Private Mode via the profile modal on the admin `page`,
+  // admin's own Incognito via the profile modal on the admin `page`,
   // racing Journey 62 into an intermittent 403 (CI: iblai/os#499). The
   // tenant-gate + mentor-lock preconditions still require admin RBAC, so
   // those `ensure*` calls stay on the admin `page`.
-  test.describe('User profile Private Mode tab (cp-profile-*)', () => {
+  test.describe('User profile Privacy tab (cp-profile-*)', () => {
     test.beforeEach(async ({ page, editMentorPage, nonadminPage }) => {
       await goToChatPage(page, mentorUrl);
       await waitForAdmin(page);
@@ -835,7 +1001,7 @@ test.describe('Journey 50: Chat Privacy', () => {
         await chatPrivacy.ensureAgentPrivacy(editMentorPage, false);
       }
 
-      // Non-admin: reset THIS block's own account's profile Private Mode
+      // Non-admin: reset THIS block's own account's profile Incognito
       // to "normal" before each test, mirroring the fast-path/slow-path
       // split above but scoped to the non-admin user.
       await navigateToMentorApp(nonadminPage, mentorUrl);
@@ -850,7 +1016,7 @@ test.describe('Journey 50: Chat Privacy', () => {
         const dataState = await nonadminToggle.getAttribute('data-state');
         // Per cp-profile-05: "user" + "off" is the same resting state a
         // never-saved profile would produce; only "user" + "on" (profile
-        // mode "Disabled") actually needs recovery.
+        // card "Incognito", mode `disabled`) actually needs recovery.
         nonadminFastPathOk = !(dataSource === 'user' && dataState === 'on');
       } catch {
         nonadminFastPathOk = false;
@@ -860,8 +1026,8 @@ test.describe('Journey 50: Chat Privacy', () => {
       }
     });
 
-    // cp-profile-01: Private Mode tab is visible when the tenant gate is on.
-    test('cp-profile-01: Private Mode tab is visible in UserProfileModal when tenant gate is on', async ({
+    // cp-profile-01: Privacy tab is visible when the tenant gate is on.
+    test('cp-profile-01: Privacy tab is visible in UserProfileModal when tenant gate is on', async ({
       nonadminPage,
     }) => {
       const chatPrivacy = new ChatPrivacyPage(nonadminPage);
@@ -873,11 +1039,11 @@ test.describe('Journey 50: Chat Privacy', () => {
       await chatPrivacy.closeProfileModal(modal);
     });
 
-    // cp-profile-02: Private Mode tab is hidden when the tenant gate is off.
+    // cp-profile-02: Privacy tab is hidden when the tenant gate is off.
     // The gate itself is tenant-wide and admin-only to mutate, so this test
     // flips it via the admin `page` and observes the effect on the
     // non-admin `nonadminPage`.
-    test('cp-profile-02: Private Mode tab is hidden when tenant gate is off', async ({
+    test('cp-profile-02: Privacy tab is hidden when tenant gate is off', async ({
       page,
       nonadminPage,
     }) => {
@@ -909,7 +1075,7 @@ test.describe('Journey 50: Chat Privacy', () => {
     });
 
     // cp-profile-03: All three cards render after switchToPrivateModeTab.
-    test('cp-profile-03: all three Private Mode radio cards render on the tab', async ({
+    test('cp-profile-03: all three Incognito radio cards render on the tab', async ({
       nonadminPage,
     }) => {
       const chatPrivacy = new ChatPrivacyPage(nonadminPage);
@@ -935,10 +1101,10 @@ test.describe('Journey 50: Chat Privacy', () => {
       await chatPrivacy.closeProfileModal(modal);
     });
 
-    // cp-profile-04: Selecting "Disabled" persists and the header toggle
+    // cp-profile-04: Selecting the "Incognito" card (mode `disabled`) persists and the header toggle
     //               then reflects data-source="user" on a fresh unlocked chat.
     //               This verifies the user-tier precedence in the chain.
-    test('cp-profile-04: selecting Disabled card propagates to header toggle as user-source', async ({
+    test('cp-profile-04: selecting the Incognito card (mode disabled) propagates to header toggle as user-source', async ({
       nonadminPage,
       nonadminChatPage,
     }) => {
@@ -1002,7 +1168,7 @@ test.describe('Journey 50: Chat Privacy', () => {
 
         // Auto-retry so we wait for the chat-privacy-effective refetch to
         // land — a bare getAttribute races the post-mutation re-render.
-        // Normal resolves to a non-private mode, so the toggle reverts to
+        // Normal resolves to a non-incognito, so the toggle reverts to
         // off (data-state). The user tier is still what set the effective
         // value, so data-source stays "user".
         await expect(chatPrivacy.headerToggle()).toHaveAttribute(
@@ -1027,8 +1193,8 @@ test.describe('Journey 50: Chat Privacy', () => {
   //
   // The four blocks above exercise the privacy *surfaces* (gate, kill
   // switch, header toggle, profile tab) but never actually hold a
-  // conversation while private mode is on. These two checkpoints close that
-  // gap end-to-end: enable private mode via the header toggle on a fresh
+  // conversation while incognito is on. These two checkpoints close that
+  // gap end-to-end: enable incognito via the header toggle on a fresh
   // chat, send a message, and confirm the assistant still replies — once as
   // the admin, once as a non-admin (separate browser context). Both rely on
   // the tenant gate being ON (org-scoped) so the header toggle is present,
@@ -1062,10 +1228,10 @@ test.describe('Journey 50: Chat Privacy', () => {
           .catch(() => null);
         if (dataSource === 'mentor') return false;
         // A "user" source alone is not a reason to fall back to the slow
-        // path: per cp-profile-05, once ANY profile Private Mode selection
+        // path: per cp-profile-05, once ANY profile Incognito selection
         // has ever been saved, the backend keeps data-source="user" for
         // BOTH Normal and Disabled — it can never clear back to another
-        // tier. Only "user" + data-state="on" (profile mode "Disabled")
+        // tier. Only "user" + data-state="on" (profile card "Incognito", mode `disabled`)
         // actually needs recovery; "user" + "off" is the same resting
         // state a never-saved profile would produce.
         if (dataSource === 'user') {
@@ -1095,9 +1261,9 @@ test.describe('Journey 50: Chat Privacy', () => {
       }
     });
 
-    // cp-chat-01: Admin enables private mode on a fresh chat, sends a
+    // cp-chat-01: Admin enables incognito on a fresh chat, sends a
     //             message, and still receives an assistant reply.
-    test('cp-chat-01: admin can chat in private mode and receive a reply', async ({
+    test('cp-chat-01: admin can chat in incognito and receive a reply', async ({
       page,
       chatPage,
     }) => {
@@ -1108,12 +1274,12 @@ test.describe('Journey 50: Chat Privacy', () => {
       await waitForPageReady(page);
       await chatPrivacy.assertHeaderState('off');
 
-      // Enable private mode via the header toggle. No messages have been
+      // Enable Incognito via the header toggle. No messages have been
       // sent yet, so this starts a private session (data-state=on,
       // data-source=session) without a confirm dialog.
       await chatPrivacy.clickToggleAndWaitFor('on', 'session');
 
-      // Hold a conversation while private mode is on.
+      // Hold a conversation while incognito is on.
       await chatPage.sendMessage('Hello, can you help me?');
       await expect(chatPage.userMessages.first()).toBeVisible({
         timeout: 30_000,
@@ -1121,13 +1287,13 @@ test.describe('Journey 50: Chat Privacy', () => {
       await chatPage.waitForAIResponse();
       await expect(chatPage.aiMessages.first()).toBeVisible();
 
-      // Private mode must remain on across the round-trip.
+      // Incognito must remain on across the round-trip.
       await chatPrivacy.assertHeaderState('on');
     });
 
-    // cp-chat-02: Non-admin (separate browser context) enables private mode
+    // cp-chat-02: Non-admin (separate browser context) enables incognito
     //             on a fresh chat, sends a message, and receives a reply.
-    test('cp-chat-02: non-admin can chat in private mode and receive a reply', async ({
+    test('cp-chat-02: non-admin can chat in incognito and receive a reply', async ({
       nonadminPage,
       nonadminChatPage,
     }) => {
@@ -1149,7 +1315,7 @@ test.describe('Journey 50: Chat Privacy', () => {
       const toggle = chatPrivacy.headerToggle();
       await expect(toggle).toBeVisible({ timeout: 30_000 });
 
-      // Enable private mode. Skip the click if a user-tier profile setting
+      // Enable Incognito. Skip the click if a user-tier profile setting
       // already made this fresh session private (the non-admin user's
       // profile mode is not managed by this journey, so don't assume it).
       const currentState = await toggle
@@ -1162,7 +1328,7 @@ test.describe('Journey 50: Chat Privacy', () => {
         timeout: 30_000,
       });
 
-      // Hold a conversation while private mode is on.
+      // Hold a conversation while incognito is on.
       await nonadminChatPage.sendMessage('Hello, can you help me?');
       await expect(nonadminChatPage.userMessages.first()).toBeVisible({
         timeout: 30_000,
@@ -1170,7 +1336,7 @@ test.describe('Journey 50: Chat Privacy', () => {
       await nonadminChatPage.waitForAIResponse();
       await expect(nonadminChatPage.aiMessages.first()).toBeVisible();
 
-      // Private mode must remain on across the round-trip.
+      // Incognito must remain on across the round-trip.
       await expect(toggle).toHaveAttribute('data-state', 'on', {
         timeout: 30_000,
       });
@@ -1179,7 +1345,7 @@ test.describe('Journey 50: Chat Privacy', () => {
     // ── Feature-interaction checkpoints (cp-chat-04 … cp-chat-08) ───────────
     //
     // These five checkpoints are LIVE regression gates. They assert the
-    // CORRECT/EXPECTED behavior while private mode is active, even though
+    // CORRECT/EXPECTED behavior while incognito is active, even though
     // that behavior does not yet exist for several features (backend fixes
     // and one frontend gate are in progress). They are expected to be RED
     // until the corresponding fix ships. Do NOT mark them test.fixme and
@@ -1190,13 +1356,13 @@ test.describe('Journey 50: Chat Privacy', () => {
     // feature gates run as admin to avoid the non-admin paywall on
     // file attachments and to access features gated on admin roles.
 
-    // cp-chat-04: Admin-curated Prompt Gallery works in private mode; AI
+    // cp-chat-04: Admin-curated Prompt Gallery works in incognito; AI
     //             guided/suggested prompts are shown once the backend fix lands.
     //
     // TWO ASSERTIONS:
     //   (a) Prompt Gallery (admin-curated, mentor-keyed) — PASSES TODAY.
     //       The gallery is fetched from a mentor-scoped endpoint that is
-    //       not session-keyed, so private mode has no effect.
+    //       not session-keyed, so incognito has no effect.
     //   (b) AI guided/suggested prompts row — LIVE GATE, currently RED.
     //       The guided-prompts endpoint is session-keyed
     //       (GET .../sessions/{session_id}/guided-prompts/) and the backend
@@ -1213,7 +1379,7 @@ test.describe('Journey 50: Chat Privacy', () => {
     //   CSS_CLASS_NAMES.APP_LAYOUT.GUIDED_SUGGESTED_PROMPTS_CONTAINER), with
     //   individual prompt buttons under CSS_CLASS_NAMES.APP_LAYOUT
     //   .GUIDED_SUGGESTED_PROMPTS = 'chat-guided-suggested-prompts'.
-    test('cp-chat-04: prompt gallery works in private mode and guided prompts are shown', async ({
+    test('cp-chat-04: prompt gallery works in incognito and guided prompts are shown', async ({
       page,
       chatPage,
     }) => {
@@ -1223,12 +1389,12 @@ test.describe('Journey 50: Chat Privacy', () => {
       await waitForPageReady(page);
       await chatPrivacy.assertHeaderState('off');
 
-      // Enable private mode on an empty chat.
+      // Enable Incognito on an empty chat.
       await chatPrivacy.clickToggleAndWaitFor('on', 'session');
 
       // ── (a) Admin-curated Prompt Gallery ─────────────────────────────
       // The Prompt Gallery button (chatPage.promptsButton) must still be
-      // visible and openable in private mode because its data is mentor-keyed,
+      // visible and openable in incognito because its data is mentor-keyed,
       // not session-keyed. This assertion is expected to PASS today.
       let galleryButtonVisible = false;
       try {
@@ -1243,7 +1409,7 @@ test.describe('Journey 50: Chat Privacy', () => {
       if (galleryButtonVisible) {
         await chatPage.openPromptGallery();
         // At least one Run button should be visible inside the gallery,
-        // meaning prompt cards are rendering in private mode.
+        // meaning prompt cards are rendering in incognito.
         const runButtons = chatPage.getPromptGalleryRunButtons();
         const runCount = await runButtons.count();
         // If the gallery has no prompts configured in this env, skip the
@@ -1260,7 +1426,7 @@ test.describe('Journey 50: Chat Privacy', () => {
       // ── (b) AI guided/suggested prompts row ──────────────────────────
       // Send a message so the AI replies; the guided-prompts query fires
       // after streaming completes (GuidedSuggestedPrompts re-fetches on
-      // !isStreaming). In private mode the backend returns ai_prompts=[]
+      // !isStreaming). In incognito the backend returns ai_prompts=[]
       // so the component renders null. The EXPECTED (once fixed) behavior
       // is that the row IS visible. We assert it IS visible.
       //
@@ -1287,30 +1453,28 @@ test.describe('Journey 50: Chat Privacy', () => {
       });
     });
 
-    // cp-chat-05: Voice call works in private mode (empty-chat path).
+    // cp-chat-05: Voice call works in incognito (empty-chat path).
     //
     // LIVE GATE — currently RED pending backend credential-minting fix.
     //
     // Root cause (hypothesis, medium confidence): on click the LiveKit modal
     // calls useCreateCallCredentialsMutation → POST /create-call-credentials/
     // with session_id = cachedSessionId?.[mentorId] (which is the private
-    // session id). The backend credential lookup is documented to return
-    // 404 "No mentor or session found" when the session has no linked
-    // student (which disable-chathistory's mid-conversation path causes by
-    // nulling Session.student). For the EMPTY-CHAT private path a real new
-    // session IS persisted (startPrivateChat POSTs /sessions/ with
-    // disable_chathistory:true), so this path MAY already pass.
+    // session id). A session started in Incognito is created WITHOUT a
+    // student (the backend drops it when the resolved mode isn't Normal), and
+    // the credential lookup accepts that only as `student=None,
+    // disable_chathistory=True` — so this path MAY already pass.
     //
-    // This test covers the EMPTY-CHAT private path only (no prior messages,
-    // so Session.student is not yet nulled). The expected outcome: the
-    // Voice Chat dialog opens AND does NOT show "Failed to initiate call".
+    // This test covers the EMPTY-CHAT private path only. The expected
+    // outcome: the Voice Chat dialog opens AND does NOT show "Failed to
+    // initiate call".
     //
     // Chromium-only: uses --use-fake-device-for-media-stream so the
     // microphone permission grant and LiveKit media negotiation succeed
     // without real hardware. Mirrors the pattern from journey 09
     // (09-voice-chat.spec.ts) and journey 37
     // (37-voice-call-and-screen-share-in-canvas.spec.ts).
-    test('cp-chat-05: voice call dialog opens without error in private mode', async ({
+    test('cp-chat-05: voice call dialog opens without error in incognito', async ({
       page,
       chatPage,
     }) => {
@@ -1337,10 +1501,9 @@ test.describe('Journey 50: Chat Privacy', () => {
       await waitForPageReady(page);
       await chatPrivacy.assertHeaderState('off');
 
-      // Enable private mode on an EMPTY chat. startPrivateChat creates a
-      // real new session with disable_chathistory:true — Session.student is
-      // NOT yet nulled (no mid-conversation flip occurred here), so the
-      // credential endpoint should find the session.
+      // Enable Incognito on an EMPTY chat. startPrivateChat creates a new
+      // session with disable_chathistory:true and no student — the shape
+      // the credential lookup accepts.
       await chatPrivacy.clickToggleAndWaitFor('on', 'session');
 
       // Guard: voice call button may be hidden if the mentor has voice calls
@@ -1385,7 +1548,7 @@ test.describe('Journey 50: Chat Privacy', () => {
       }
       expect(
         failedVisible,
-        'No "Failed to initiate call" toast should appear when starting a voice call in private mode',
+        'No "Failed to initiate call" toast should appear when starting a voice call in incognito',
       ).toBe(false);
 
       // Close the dialog.
@@ -1406,11 +1569,11 @@ test.describe('Journey 50: Chat Privacy', () => {
       }
       await expect(voiceDialog).not.toBeVisible({ timeout: 10_000 });
 
-      // Private mode must remain on.
+      // Incognito must remain on.
       await chatPrivacy.assertHeaderState('on');
     });
 
-    // cp-chat-06: Multi-turn context retained in private mode.
+    // cp-chat-06: Multi-turn context retained in incognito.
     //
     // TWO ASSERTIONS:
     //   (a) Front-end contract (PASSES TODAY): the cached session id is
@@ -1446,7 +1609,7 @@ test.describe('Journey 50: Chat Privacy', () => {
       await waitForPageReady(page);
       await chatPrivacy.assertHeaderState('off');
 
-      // Enable private mode on an empty chat.
+      // Enable Incognito on an empty chat.
       await chatPrivacy.clickToggleAndWaitFor('on', 'session');
 
       // Get the platform context so we can read the cached session id.
@@ -1511,7 +1674,7 @@ test.describe('Journey 50: Chat Privacy', () => {
       ).toContain('zephyr7');
     });
 
-    // cp-chat-07: File attachment works in private mode.
+    // cp-chat-07: File attachment works in incognito.
     //
     // Analysis: LIKELY PASSES TODAY — the upload path reads session_id via
     // selectSessionId (Redux slice), and startPrivateChat updates that same
@@ -1524,7 +1687,7 @@ test.describe('Journey 50: Chat Privacy', () => {
     // may hit in some environments. Admin context avoids the non-admin
     // pricing paywall (journey 08 documents that non-admin hits ibl.ai
     // Pricing Plans which blocks Attach File entirely).
-    test('cp-chat-07: file attachment works in private mode', async ({
+    test('cp-chat-07: file attachment works in incognito', async ({
       page,
       chatPage,
     }) => {
@@ -1534,7 +1697,7 @@ test.describe('Journey 50: Chat Privacy', () => {
       await waitForPageReady(page);
       await chatPrivacy.assertHeaderState('off');
 
-      // Enable private mode on an empty chat.
+      // Enable Incognito on an empty chat.
       await chatPrivacy.clickToggleAndWaitFor('on', 'session');
 
       // Drag-drop a small text file onto the chat area. The dragAndDropFiles
@@ -1545,7 +1708,7 @@ test.describe('Journey 50: Chat Privacy', () => {
         {
           name: 'test-private.txt',
           type: 'text/plain',
-          content: 'E2E private mode attachment test',
+          content: 'E2E incognito attachment test',
         },
       ]);
 
@@ -1571,11 +1734,11 @@ test.describe('Journey 50: Chat Privacy', () => {
         timeout: 30_000,
       });
 
-      // Private mode must remain on.
+      // Incognito must remain on.
       await chatPrivacy.assertHeaderState('on');
     });
 
-    // cp-chat-08: Memory button is hidden in private mode.
+    // cp-chat-08: Memory button is hidden in incognito.
     //
     // Frontend gate IMPLEMENTED (this is the confirmatory e2e for it):
     // components/chat-input-form.tsx calls
@@ -1586,7 +1749,7 @@ test.describe('Journey 50: Chat Privacy', () => {
     // memory item's gate in inside-buttons.tsx is
     // `memoryEnabled && !embedMode && !!username && !isPrivate`, so the
     // existing `.filter((item) => item.isEnabled)` drops Memory from BOTH the
-    // inline row and the overflow ••• dropdown when private mode is active.
+    // inline row and the overflow ••• dropdown when incognito is active.
     // Deterministic coverage lives in
     // components/chat-input-form/__tests__/inside-buttons.test.tsx
     // ("Memory button private-mode gating"); this e2e confirms the wiring
@@ -1596,8 +1759,8 @@ test.describe('Journey 50: Chat Privacy', () => {
     // Memory button is absent even in NORMAL mode (memory off in mentor
     // settings), skip gracefully — an absent button in both modes gives us
     // no signal. We first confirm visibility in normal mode, then check it
-    // disappears after private mode is enabled.
-    test('cp-chat-08: memory button is hidden while private mode is on and reappears when it is off', async ({
+    // disappears after incognito is enabled.
+    test('cp-chat-08: memory button is hidden while incognito is on and reappears when it is off', async ({
       page,
       chatPage,
     }) => {
@@ -1632,34 +1795,34 @@ test.describe('Journey 50: Chat Privacy', () => {
       // Memory button IS visible in normal mode — establish baseline.
       await expect(chatPage.memoryButton).toBeVisible({ timeout: 5_000 });
 
-      // Enable private mode on the empty chat (no confirm dialog).
+      // Enable Incognito on the empty chat (no confirm dialog).
       await chatPrivacy.clickToggleAndWaitFor('on', 'session');
 
-      // The Memory button must NOT be visible while private mode is on
+      // The Memory button must NOT be visible while incognito is on
       // (data-state='on'). The implemented gate in chat-input-form.tsx
       // computes chatPrivacyActive from useChatPrivacy and passes
       // isPrivate=true into InsideButtons, which drops the Memory item.
       await expect(
         chatPage.memoryButton,
-        'Memory button must be hidden while private mode is on (chatPrivacyActive → isPrivate gate in InsideButtons)',
+        'Memory button must be hidden while incognito is on (chatPrivacyActive → isPrivate gate in InsideButtons)',
       ).not.toBeVisible({ timeout: 15_000 });
 
-      // Exit private mode: start a new (normal) chat. The SDK's
+      // Exit incognito: start a new (normal) chat. The SDK's
       // startNormalChat creates a fresh session with disable_chathistory:false,
       // so the effective mode falls back to the non-private default.
       await chatPage.startNewChat();
       await waitForPageReady(page);
       await chatPrivacy.assertHeaderState('off');
 
-      // After exiting private mode the Memory button must reappear.
+      // After exiting incognito the Memory button must reappear.
       await expect(
         chatPage.memoryButton,
-        'Memory button must reappear once private mode is off',
+        'Memory button must reappear once incognito is off',
       ).toBeVisible({ timeout: 15_000 });
     });
 
     // cp-chat-09: "Share this chat" button in the AI message bubble is hidden
-    //             in private mode.
+    //             in incognito.
     //
     // Frontend gate IMPLEMENTED (this is the confirmatory e2e for it): a
     // private session is a temporary, non-persisted chat, so there is no
@@ -1671,7 +1834,7 @@ test.describe('Journey 50: Chat Privacy', () => {
     //
     // The share control's accessible name is "Share this chat" (the sr-only
     // span in ai-message-share.tsx), matching journey 12's locator.
-    test('cp-chat-09: share-chat button in the AI bubble is hidden in private mode', async ({
+    test('cp-chat-09: share-chat button in the AI bubble is hidden in incognito', async ({
       page,
       chatPage,
     }) => {
@@ -1694,18 +1857,18 @@ test.describe('Journey 50: Chat Privacy', () => {
 
       // The share button appears in the AI bubble's action toolbar once the
       // response is complete. This proves the button exists for this
-      // mentor/user before we assert private mode hides it.
+      // mentor/user before we assert incognito hides it.
       await expect(shareButton).toBeVisible({ timeout: 30_000 });
 
-      // ── Private mode hides the share button ─────────────────────────────
+      // ── Incognito hides the share button ─────────────────────────────
       await chatPage.startNewChat();
       await waitForPageReady(page);
       await chatPrivacy.assertHeaderState('off');
 
-      // Enable private mode on the empty chat (no confirm dialog).
+      // Enable Incognito on the empty chat (no confirm dialog).
       await chatPrivacy.clickToggleAndWaitFor('on', 'session');
 
-      await chatPage.sendMessage('Hello in private mode');
+      await chatPage.sendMessage('Hello in incognito');
       await expect(chatPage.userMessages.first()).toBeVisible({
         timeout: 30_000,
       });
@@ -1716,15 +1879,15 @@ test.describe('Journey 50: Chat Privacy', () => {
       // control (chatPrivacyActive → the AIMessageShare render is gated out).
       await expect(
         shareButton,
-        'Share-chat button must be hidden in the AI bubble while private mode is on',
+        'Share-chat button must be hidden in the AI bubble while incognito is on',
       ).not.toBeVisible({ timeout: 15_000 });
 
-      // Private mode must remain on throughout.
+      // Incognito must remain on throughout.
       await chatPrivacy.assertHeaderState('on');
     });
 
     // cp-chat-10: "Download this chat" button in the AI message bubble is
-    //             hidden in private mode.
+    //             hidden in incognito.
     //
     // Same gate as cp-chat-09: components/chat/ai-message-bubble.tsx renders
     // <AIMessageDownload> right after <AIMessageShare>, inside the identical
@@ -1733,7 +1896,7 @@ test.describe('Journey 50: Chat Privacy', () => {
     // share. The download control's accessible name is "Download this chat"
     // (the sr-only span in ai-message-download.tsx), matching journey 12's
     // locator.
-    test('cp-chat-10: download-chat button in the AI bubble is hidden in private mode', async ({
+    test('cp-chat-10: download-chat button in the AI bubble is hidden in incognito', async ({
       page,
       chatPage,
     }) => {
@@ -1756,18 +1919,18 @@ test.describe('Journey 50: Chat Privacy', () => {
 
       // The download button appears in the AI bubble's action toolbar once
       // the response is complete. This proves the button exists for this
-      // mentor/user before we assert private mode hides it.
+      // mentor/user before we assert incognito hides it.
       await expect(downloadButton).toBeVisible({ timeout: 30_000 });
 
-      // ── Private mode hides the download button ───────────────────────────
+      // ── Incognito hides the download button ───────────────────────────
       await chatPage.startNewChat();
       await waitForPageReady(page);
       await chatPrivacy.assertHeaderState('off');
 
-      // Enable private mode on the empty chat (no confirm dialog).
+      // Enable Incognito on the empty chat (no confirm dialog).
       await chatPrivacy.clickToggleAndWaitFor('on', 'session');
 
-      await chatPage.sendMessage('Hello in private mode');
+      await chatPage.sendMessage('Hello in incognito');
       await expect(chatPage.userMessages.first()).toBeVisible({
         timeout: 30_000,
       });
@@ -1779,10 +1942,10 @@ test.describe('Journey 50: Chat Privacy', () => {
       // is gated out).
       await expect(
         downloadButton,
-        'Download-chat button must be hidden in the AI bubble while private mode is on',
+        'Download-chat button must be hidden in the AI bubble while incognito is on',
       ).not.toBeVisible({ timeout: 15_000 });
 
-      // Private mode must remain on throughout.
+      // Incognito must remain on throughout.
       await chatPrivacy.assertHeaderState('on');
     });
   });

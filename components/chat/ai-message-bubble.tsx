@@ -118,7 +118,7 @@ export function AIMessageBubble({
     !!isCurrentlyStreaming &&
     permissionRequests.some((r) => r.generation_id === message?.id);
 
-  // Chat private mode signal — same source as the nav-bar toggle and the
+  // Chat incognito signal — same source as the nav-bar toggle and the
   // chat-input Memory gate. A private session is a temporary chat that is not
   // persisted, so the "Share this chat" action is hidden while it is active
   // (there is no durable session to share). Gate on `isEffectiveReady` so the

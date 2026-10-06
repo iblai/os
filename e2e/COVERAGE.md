@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-10-01 | 814 checkpoints (768 covered, 12 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 82 journeys (81 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-10-06 | 820 checkpoints (774 covered, 12 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 82 journeys (81 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -56,7 +56,7 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 4: User Profile Management (16 checkpoints) — `journeys/04-user-profile-management.spec.ts`
+## Journey 4: User Profile Management (17 checkpoints) — `journeys/04-user-profile-management.spec.ts`
 
 **Source files:** `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/user-profile.tsx`, `components/modals/edit-mentor-modal/tabs/settings-tab.tsx`
 
@@ -76,6 +76,7 @@ When adding a new page or modifying an existing user flow:
 - [x] User avatar with initials and Admin badge (for admins) are visible
 - [x] History tab on the user's own profile loads (rows or the "No conversations found" empty state) and never shows the 403 permission notice
 - [x] Tenant admin opens another user's profile via sidebar Management → Users → "View profile for …": preview mode (no Security tab) still offers the History tab, which loads that user's history instead of the permission notice (skips without PLAYWRIGHT_NONADMIN_USERNAME or the RBAC-gated Management entry)
+- [x] History tab on the user's own profile: every conversation row on the first page shows its title and first-AI-reply preview as plain text (LaTeX converted to readable text, markdown stripped), with no raw `\(`, `\)`, `\[`, `\]`, `\text{`, `\textbf{` or `**`
 
 ---
 
@@ -461,7 +462,7 @@ Driven by the shared paywall helpers in `@iblai/iblai-js/playwright`. All tests 
 
 ---
 
-## Journey 23: Mentor History Tab (8 checkpoints) — `journeys/23-mentor-history-tab.spec.ts`
+## Journey 23: Mentor History Tab (9 checkpoints) — `journeys/23-mentor-history-tab.spec.ts`
 
 **Source files:** `components/modals/edit-mentor-modal/tabs/history-tab.tsx`, `hooks/use-history.ts`, `hooks/use-history/use-export-chat-history.ts`
 
@@ -473,6 +474,7 @@ Driven by the shared paywall helpers in `@iblai/iblai-js/playwright`. All tests 
 - [x] Every row labels its owner (a real full name first, else email → username → "Anonymous"); a linked owner opens the shared Profile viewer without selecting the row
 - [x] "Documents · N" / "Tools · N" chips and the per-turn "Show Details" panel appear only where the conversation carries extended data; a Documents chip opens the chat's "Retrieved Documents" dialog
 - [x] A conversation that produced a canvas shows the chat's own "Open Canvas" card in the preview (none otherwise); the card opens the chat's canvas read-only in a dialog — title and Export only, no formatting toolbar, rename, version switch or editable content — which closes on Escape
+- [x] Every conversation row on the first page shows its title and first-AI-reply preview as plain text (LaTeX converted to readable text, markdown stripped), with no raw `\(`, `\)`, `\[`, `\]`, `\text{`, `\textbf{` or `**`
 
 ---
 
@@ -954,7 +956,7 @@ Covers the two user-facing features added in [iblai-platform#1902](https://githu
 **Camera dialog (CAM-04) is Chromium-only** — uses `--use-fake-device-for-media-stream` / `--use-fake-ui-for-media-stream` to stub `navigator.mediaDevices.getUserMedia` with a black-frame fake video track. All other checkpoints are cross-browser.
 
 - [x] CAM-01: Upload menu shows both "Upload File" and "Camera" items when `show_attachment` is enabled on the mentor
-- [x] CAM-02: Disabling "Enable file attachments" hides the entire `+` (Attach file) button (UploadMenu returns null)
+- [x] CAM-02: Disabling "Enable File Attachments" hides the entire `+` (Attach file) button (UploadMenu returns null)
 - [x] CAM-03: Hidden native camera `<input type="file" accept="image/*" capture="environment">` is present in the DOM (mobile-OS branch path in `chat-input-form.tsx`)
 - [x] CAM-04: Clicking "Camera" opens the `CameraCaptureDialog` ("Take a photo" title, `[data-testid="camera-video"]`, "Capture" button visible; Retake/Use Photo absent before capture) — Chromium-only
 - [x] CAM-05: Drag-dropping a PNG onto the chat area places the file in the pending attachments list by filename
@@ -969,7 +971,7 @@ Covers the two user-facing features added in [iblai-platform#1902](https://githu
 
 The Voice tab is a thin wrapper around the SDK's `AgentVoiceTab` (`@iblai/web-containers/next`). The wrapper forwards `tenantKey` / `mentorId` / `username` from URL params + the navigate hook so the SDK's `useGetMentorSettingsQuery`, `useEditMentorMutation`, and the new `useGet/Create/UpdateCallConfigurationMutation` hooks resolve correctly. Selectors come from the SDK's official Playwright helpers (`@iblai/iblai-js/playwright`) — never patch a selector in the spec; if labels are overridden via the `labels` prop, update the helper imports in the page object.
 
-The Settings tab also surfaces the smart-document-retrieval voice-call toggle (`use_function_calling_for_rag`) so admins can flip it without leaving the main configuration panel — save routes it through the same `/call-configurations/` endpoint the SDK's Voice tab uses. The "Enable voice calls" (`show_voice_call`) master toggle moved off Settings → Capabilities into an in-tab `CapabilityGate` at the top of the Voice tab itself (feat/2040) and auto-saves on click (optimistic local state) — no footer Save button involved. The Voice tab is now always mounted — `hooks/use-mentor-segments.ts` no longer gates it — and both sub-tabs render inside a grayed + inert `capability-gate-content` wrapper while the toggle is off. ("Enable screen sharing" moved off Settings too — it now lives on the Screen tab's own capability toggle, see journey 48.)
+The Settings tab also surfaces the smart-document-retrieval voice-call toggle (`use_function_calling_for_rag`) so admins can flip it without leaving the main configuration panel — save routes it through the same `/call-configurations/` endpoint the SDK's Voice tab uses. The "Enable Voice Calls" (`show_voice_call`) master toggle moved off Settings → Capabilities into an in-tab `CapabilityGate` at the top of the Voice tab itself (feat/2040) and auto-saves on click (optimistic local state) — no footer Save button involved. The Voice tab is now always mounted — `hooks/use-mentor-segments.ts` no longer gates it — and both sub-tabs render inside a grayed + inert `capability-gate-content` wrapper while the toggle is off. ("Enable screen sharing" moved off Settings too — it now lives on the Screen tab's own capability toggle, see journey 48.)
 
 - [x] VO-01: Voice tab label is visible in the Edit Mentor modal sidebar (always mounted)
 - [x] VO-02: Voice tab heading renders correctly
@@ -981,8 +983,8 @@ The Settings tab also surfaces the smart-document-retrieval voice-call toggle (`
 - [x] VO-08: Switching between Realtime and Step-by-step call modes keeps the Voice call configuration form rendered (SDK no longer surfaces standalone TTS/STT selects)
 - [x] VO-09: Settings tab surfaces the smart-document-retrieval voice-call toggle
 - [x] VO-10: Flipping the smart-document-retrieval voice-call toggle in Settings and clicking Save persists to the CallConfiguration endpoint and shows the success toast
-- [x] VO-11: Voice tab stays visible (always mounted) and its content grays (`data-enabled="false"`) when the in-tab "Enable voice calls" capability toggle is off
-- [x] VO-12: Re-enabling the in-tab "Enable voice calls" capability toggle ungates the Voice tab's sub-tab content
+- [x] VO-11: Voice tab stays visible (always mounted) and its content grays (`data-enabled="false"`) when the in-tab "Enable Voice Calls" capability toggle is off
+- [x] VO-12: Re-enabling the in-tab "Enable Voice Calls" capability toggle ungates the Voice tab's sub-tab content
 
 ---
 
@@ -998,29 +1000,36 @@ Standalone top-level tab rendered by the SDK's `AgentScreenShareTab` (`@iblai/we
 
 ---
 
-## Journey 50: Chat Privacy (28 checkpoints) — `journeys/50-chat-privacy.spec.ts`
+## Journey 50: Chat Privacy (32 checkpoints) — `journeys/50-chat-privacy.spec.ts`
 
-**Source files:** `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`, `components/modals/edit-mentor-modal/tabs/settings-tab.tsx`
+**Source files:** `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`, `components/modals/edit-mentor-modal/tabs/settings-tab.tsx`, `components/modals/edit-mentor-modal/tabs/privacy-tab.tsx`
 
-Covers all four user-facing surfaces of the chat-privacy feature and verifies the precedence chain (highest → lowest): **mentor > tenant > session > user > default**. All SDK surface assertions use `@iblai/iblai-js/playwright` helpers (`getChatPrivacyToggle`, `expectChatPrivacyState`, `expectChatPrivacySource`, `expectChatPrivacyLocked`, `setTenantChatPrivacyEnabled`, `selectPrivateMode`, etc.) driven by `data-state` / `data-source` / `aria-pressed` / `aria-disabled`. The in-repo agent-settings switch is located by its `aria-label="Enable private mode"`.
+Covers all four user-facing surfaces of the chat-privacy feature and verifies the precedence chain (highest → lowest): **mentor > tenant > session > user > default**. All SDK surface assertions use `@iblai/iblai-js/playwright` helpers (`getChatPrivacyToggle`, `expectChatPrivacyState`, `expectChatPrivacySource`, `expectChatPrivacyLocked`, `setTenantChatPrivacyEnabled`, `selectPrivateMode`, etc.) driven by `data-state` / `data-source` / `aria-pressed` / `aria-disabled`. The in-repo agent control is the Incognito sub-tab of the Privacy tab — three radio cards (`privacy-incognito-{users|always|never}`, `aria-pressed`); the tab saves on change.
 
-The **agent kill switch** tests (cp-agent-03) are the regression anchor for `dispatch(chatPrivacyApiSlice.util.invalidateTags(['ChatPrivacyEffective']))` wiring in `settings-tab.tsx` (feat/mentor/1797): after saving, the header toggle reflects mentor-locked state **without a page refresh**.
+The **agent Incognito policy** tests (cp-agent-03, Always Incognito) are the regression anchor for the `invalidateTags(['ChatPrivacyEffective'])` wiring that now lives in the SDK Privacy tab (originally feat/mentor/1797 in `settings-tab.tsx`): after saving, the header toggle reflects mentor-locked state **without a page refresh**.
 
-The **private chat round-trip** tests (cp-chat-\*) cover the end-to-end happy path: enable private mode via the header toggle on a fresh chat, send a message, and confirm the assistant still replies — once as the admin and once as a non-admin (separate browser context). Seven additional feature-interaction checkpoints (cp-chat-04 … cp-chat-10) exercise prompts, voice/screen, multi-turn context, file attachments, the memory button, and the AI-bubble share/download buttons while private mode is active. cp-chat-08 (memory button), cp-chat-09 (share button), and cp-chat-10 (download button) have their in-repo gates implemented; cp-chat-04/05/06 are **live regression gates** expected to be red until the backend fixes land.
+The **Never Incognito** tests (cp-lock-\*) cover the other per-mentor flag, `disable_privacy_mode` (backend iblai-dm-pro #3087): the third card saves `disable_privacy_mode: true` and takes Incognito away from every user of the mentor (the Privacy tab also invalidates `mentorPublicSettings`, which is where the header reads that lock). One three-card choice replaces the former pair of Capabilities switches so "always" and "never" cannot both be set. The SDK's `useChatPrivacy` reads the flag from the mentor's public settings — not from `chat-privacy-effective`, whose `is_locked` is only set for a user the mentor actually clamped — so `ChatPrivacyToggle` renders nothing on a locked mentor, live after Save (the mentor PUT invalidates `mentorPublicSettings`) and on a fresh load. The 403 the backend returns to a private-session start or a `disable-chathistory` flip on a locked mentor (reachable only in the race where an admin locks the mentor while a chat is open) is unit-tested in the SDK (`chat-privacy-toggle.test.tsx`, `use-chat-privacy.test.ts`) rather than driven here.
+
+The **private chat round-trip** tests (cp-chat-\*) cover the end-to-end happy path: enable incognito via the header toggle on a fresh chat, send a message, and confirm the assistant still replies — once as the admin and once as a non-admin (separate browser context). Seven additional feature-interaction checkpoints (cp-chat-04 … cp-chat-10) exercise prompts, voice/screen, multi-turn context, file attachments, the memory button, and the AI-bubble share/download buttons while incognito is active. cp-chat-08 (memory button), cp-chat-09 (share button), and cp-chat-10 (download button) have their in-repo gates implemented; cp-chat-04/05/06 are **live regression gates** expected to be red until the backend fixes land.
 
 ### Tenant gate (cp-tenant-\*)
 
 - [x] cp-tenant-01: Admin sees the "Allow users to control chat privacy" switch in Account Settings → Advanced tab
-- [x] cp-tenant-02: Disabling the tenant gate hides the header Private Mode toggle across the app
-- [x] cp-tenant-03: Enabling the tenant gate shows the header Private Mode toggle
-- [x] cp-tenant-04: Private Mode profile tab visibility tracks the tenant gate: hidden when off, visible when on
+- [x] cp-tenant-02: Disabling the tenant gate hides the header Incognito toggle across the app
+- [x] cp-tenant-03: Enabling the tenant gate shows the header Incognito toggle
+- [x] cp-tenant-04: Incognito profile tab visibility tracks the tenant gate: hidden when off, visible when on
 
-### Agent settings kill switch (cp-agent-\*)
+### Agent Incognito policy — Always Incognito (cp-agent-\*)
 
-- [x] cp-agent-01: "Enable private mode" row is visible in Edit Mentor → Settings → Capabilities sub-tab for admins
-- [x] cp-agent-02: Saving "Enable private mode" ON persists across modal close and re-open
-- [x] cp-agent-03: Saving "Enable private mode" ON locks the header toggle to `data-state="on"` / `data-source="mentor"` without a page refresh _(regression for `chatPrivacyApiSlice.util.invalidateTags` wiring)_
-- [x] cp-agent-04: Saving "Enable private mode" OFF removes the mentor lock; `data-source` is no longer `"mentor"`
+- [x] cp-agent-01: The Incognito sub-tab with its three radio cards (Users Decide / Always Incognito / Never Incognito) is visible in Edit Mentor → Privacy for admins
+- [x] cp-agent-02: Saving "Always Incognito" persists across modal close and re-open
+- [x] cp-agent-03: Saving "Always Incognito" locks the header toggle to `data-state="on"` / `data-source="mentor"` without a page refresh _(regression for `chatPrivacyApiSlice.util.invalidateTags` wiring)_
+- [x] cp-agent-04: Saving back to "Users Decide" removes the mentor lock; `data-source` is no longer `"mentor"`
+
+### Agent Incognito policy — Never Incognito (cp-lock-\*)
+
+- [x] cp-lock-01: The Incognito sub-tab offers Users Decide, Always Incognito and Never Incognito, with Users Decide selected by default
+- [x] cp-lock-02: Saving "Never Incognito" hides the header Incognito toggle without a page refresh and across a reload; "Users Decide" brings the toggle back unlocked
 
 ### Header toggle — unlocked mentor (cp-header-\*)
 
@@ -1028,36 +1037,38 @@ The **private chat round-trip** tests (cp-chat-\*) cover the end-to-end happy pa
 - [x] cp-header-02: Clicking the toggle with no user messages starts a private session (`data-state="on"`, `data-source="session"`)
 - [x] cp-header-03: Clicking an `on` toggle with no messages returns to normal mode (`data-state="off"`)
 - [x] cp-header-04: Clicking the toggle after sending a message opens the confirm dialog; cancelling leaves state `off`
-- [x] cp-header-05: Confirming enable-private-mode mid-session locks the session as `on` (`aria-disabled`) — one-way per spec
+- [x] cp-header-05: Confirming the mid-session dialog turns Incognito on for the same conversation (`data-state="on"`, `data-source="session"`); the pill is not locked (no `aria-disabled`) — the flip is reversible (see cp-header-07)
 - [x] cp-header-06: Private session state persists as `data-state="on"` across a page refresh (localStorage cache + SDK hydration)
+- [x] cp-header-07: Turning Incognito off mid-conversation (chat switched on via the dialog) takes one click with no dialog, answers 200, keeps the same session id and settles to `data-state="off"` with `data-source` no longer `"session"` — history resumes on the same conversation _(two-way `disable-chathistory`, iblai-dm-pro #3093)_
+- [x] cp-header-08: A chat started in Incognito stays locked on (`data-state="on"`, `aria-disabled`) after a message is sent — the backend creates it without an owner, so it can never resume history
 
-### User profile "Private Mode" tab (cp-profile-\*)
+### User profile "Privacy" tab (cp-profile-\*)
 
-- [x] cp-profile-01: "Private Mode" tab is visible in `UserProfileModal` when the tenant gate is on; all three cards render
-- [x] cp-profile-02: "Private Mode" tab is hidden in `UserProfileModal` when the tenant gate is off
-- [x] cp-profile-03: All three radio cards (Normal / Anonymized / Disabled) render after switching to the tab
-- [x] cp-profile-04: Selecting "Disabled" propagates to the header toggle as `data-source="user"` on a fresh unlocked chat _(user-tier precedence)_
+- [x] cp-profile-01: "Privacy" tab is visible in `UserProfileModal` when the tenant gate is on; all three cards render
+- [x] cp-profile-02: "Privacy" tab is hidden in `UserProfileModal` when the tenant gate is off
+- [x] cp-profile-03: All three radio cards (Normal / Anonymized / Incognito) render after switching to the tab
+- [x] cp-profile-04: Selecting the "Incognito" card (mode `disabled`) propagates to the header toggle as `data-source="user"` on a fresh unlocked chat _(user-tier precedence)_
 - [x] cp-profile-05: Selecting "Normal" reverts the header toggle to `data-state="off"` on a fresh chat while `data-source` stays `"user"` _(Normal is an explicit user choice; only `mode="disabled"` reads as private)_
 
 ### Private chat round-trip (cp-chat-\*)
 
-- [x] cp-chat-01: Admin enables private mode via the header toggle on a fresh chat (`data-state="on"`, `data-source="session"`), sends a message, and still receives an assistant reply; private mode stays on across the round-trip
-- [x] cp-chat-02: Non-admin (separate browser context) enables private mode via the header toggle on a fresh chat, sends a message, and receives an assistant reply; private mode stays on across the round-trip
-- [ ] cp-chat-04: Prompt Gallery (admin-curated, mentor-keyed) still opens and renders cards in private mode; AI guided/suggested prompts row (`chat-guided-suggested-prompts`) is visible after the AI replies _(pending: guided-prompts assertion awaits backend generating prompts for private sessions; Prompt Gallery assertion passes today)_
-- [ ] cp-chat-05: Voice call dialog opens in private mode (empty-chat path, Chromium fake-media) and does NOT show `"Failed to initiate call"` error toast _(pending: backend must mint LiveKit credentials for `disable_chathistory` sessions)_
+- [x] cp-chat-01: Admin enables incognito via the header toggle on a fresh chat (`data-state="on"`, `data-source="session"`), sends a message, and still receives an assistant reply; incognito stays on across the round-trip
+- [x] cp-chat-02: Non-admin (separate browser context) enables incognito via the header toggle on a fresh chat, sends a message, and receives an assistant reply; incognito stays on across the round-trip
+- [ ] cp-chat-04: Prompt Gallery (admin-curated, mentor-keyed) still opens and renders cards in incognito; AI guided/suggested prompts row (`chat-guided-suggested-prompts`) is visible after the AI replies _(pending: guided-prompts assertion awaits backend generating prompts for private sessions; Prompt Gallery assertion passes today)_
+- [ ] cp-chat-05: Voice call dialog opens in incognito (empty-chat path, Chromium fake-media) and does NOT show `"Failed to initiate call"` error toast _(pending: backend must mint LiveKit credentials for `disable_chathistory` sessions)_
 - [ ] cp-chat-06: Multi-turn context retained in one private session — cached session id is stable across two sends (passes today); AI echoes back the code word from turn 1 _(skipped as flaky pending backend fix — tracked by [iblai/iblai-platform#2186](https://github.com/iblai/iblai-platform/issues/2186); backend must retain ephemeral in-session context for private sessions)_
-- [ ] cp-chat-07: File attachment (drag-drop) works in private mode — chip appears, message sends, assistant replies; pins that `selectSessionId` follows the private session id _(pending: expected to pass today; included as regression gate)_
-- [x] cp-chat-08: Memory button is hidden while `data-state="on"` and reappears when private mode is off _(frontend gate implemented — `chat-input-form.tsx` derives `chatPrivacyActive` from `useChatPrivacy` and passes `isPrivate` into `InsideButtons`; unit-tested in `inside-buttons.test.tsx`)_
-- [x] cp-chat-09: "Share this chat" button in the AI message bubble is hidden in private mode (temporary chat — no durable session to share) and visible in normal mode _(frontend gate implemented — `ai-message-bubble.tsx` gates `<AIMessageShare>` on `!chatPrivacyActive`; unit-tested in `ai-message-bubble.test.tsx`)_
-- [x] cp-chat-10: "Download this chat" button in the AI message bubble is hidden in private mode (same gate as cp-chat-09 — a private session has no durable record to export) and visible in normal mode _(frontend gate implemented — `ai-message-bubble.tsx` gates `<AIMessageDownload>` on `!chatPrivacyActive`, right after `<AIMessageShare>`)_
+- [ ] cp-chat-07: File attachment (drag-drop) works in incognito — chip appears, message sends, assistant replies; pins that `selectSessionId` follows the private session id _(pending: expected to pass today; included as regression gate)_
+- [x] cp-chat-08: Memory button is hidden while `data-state="on"` and reappears when incognito is off _(frontend gate implemented — `chat-input-form.tsx` derives `chatPrivacyActive` from `useChatPrivacy` and passes `isPrivate` into `InsideButtons`; unit-tested in `inside-buttons.test.tsx`)_
+- [x] cp-chat-09: "Share this chat" button in the AI message bubble is hidden in incognito (temporary chat — no durable session to share) and visible in normal mode _(frontend gate implemented — `ai-message-bubble.tsx` gates `<AIMessageShare>` on `!chatPrivacyActive`; unit-tested in `ai-message-bubble.test.tsx`)_
+- [x] cp-chat-10: "Download this chat" button in the AI message bubble is hidden in incognito (same gate as cp-chat-09 — a private session has no durable record to export) and visible in normal mode _(frontend gate implemented — `ai-message-bubble.tsx` gates `<AIMessageDownload>` on `!chatPrivacyActive`, right after `<AIMessageShare>`)_
 
 ## Journey 51: Prompt Caching Toggle (3 checkpoints) — `journeys/51-prompt-caching-toggle.spec.ts`
 
 **Source files:** `components/modals/edit-mentor-modal/tabs/settings-tab.tsx`
 
-Covers the "Enable prompt caching" toggle added to the Capabilities sub-tab of the Settings panel ([iblai-platform#1608](https://github.com/iblai/iblai-platform/issues/1608)). The switch maps to `enable_prompt_caching` in the mentor settings API (`PUT .../settings/`); it defaults to `false`. Each test creates a fresh mentor via `createMentorPage.openAndCreate()` to guarantee an isolated default state.
+Covers the "Enable Prompt Caching" toggle added to the Capabilities sub-tab of the Settings panel ([iblai-platform#1608](https://github.com/iblai/iblai-platform/issues/1608)). The switch maps to `enable_prompt_caching` in the mentor settings API (`PUT .../settings/`); it defaults to `false`. Each test creates a fresh mentor via `createMentorPage.openAndCreate()` to guarantee an isolated default state.
 
-- [x] PC-01: Fresh mentor → Settings → Capabilities — "Enable prompt caching" switch is visible with `aria-checked=false` (default off) and the tooltip trigger is present
+- [x] PC-01: Fresh mentor → Settings → Capabilities — "Enable Prompt Caching" switch is visible with `aria-checked=false` (default off) and the tooltip trigger is present
 - [x] PC-02: Toggle ON → Save — switch reflects ON, "Agent updated successfully" toast appears, and switch stays ON in the same open dialog after save (persistence across close/reopen not asserted — `enable_prompt_caching` not yet in SDK type)
 - [x] PC-03: Toggle ON → click OFF → `aria-checked=false` immediately in UI → Save → success toast (verifies toggle interaction and API round-trip; persistence of `false` via multipart is a pre-existing backend limitation shared with `enable_multi_query_rag`)
 
@@ -1074,7 +1085,7 @@ Covers the "Enable prompt caching" toggle added to the Capabilities sub-tab of t
 - [x] Reasoning section renders for a reasoning model and auto-collapses to Thought after streaming
 - [x] Reasoning section does not appear for non-reasoning model
 - [x] Tool call indicator and reasoning section both render in correct order in same message
-- [x] Tool call indicator and reasoning section are gated by the Enable verbose reasoning setting — hidden when the toggle is off, shown when on
+- [x] Tool call indicator and reasoning section are gated by the Enable Verbose Reasoning setting — hidden when the toggle is off, shown when on
 
 ---
 
@@ -1304,7 +1315,7 @@ renders `<NavBar />` for every `/platform/<tenant>/<mentor>/**` route, including
 `/analytics`). Before the fix, two path predicates in `nav-bar/index.tsx`
 special-cased `/analytics` the same way as `/prompt-gallery`: the mentor name
 rendered as static text instead of the "Selected agent" dropdown trigger, the
-admin-only LLM Model Selector and the Private Mode chip were both hidden, and
+admin-only LLM Model Selector and the Incognito chip were both hidden, and
 the dropdown's "New Chat" action silently no-op'd (`RemoteEvents.newChat` has
 no listener off the chat route). The fix renames `isPromptGalleryOrAnalytics`
 to `isPromptGalleryPage` (dropping `/analytics`) and stops `isOnChatPage` from
@@ -1316,7 +1327,7 @@ Chosen home: a new journey rather than reviving Journey 18
 fixme` breakage unrelated to this fix) or extending Journey 56 (scoped
 tightly to the User/Admin dropdown-visibility regression, issue #2048).
 
-`anp-02`'s parity check captures the LLM Model Selector and Private Mode chip
+`anp-02`'s parity check captures the LLM Model Selector and Incognito chip
 visibility on the regular chat page first, then asserts the SAME state on
 `/analytics` — this proves parity without the journey mutating the tenant's
 shared chat-privacy gate (which Journey 50 owns) and without a vacuous pass if
@@ -1333,7 +1344,7 @@ against real DOM. That predicate is covered at the unit level instead, in
 `nav-bar/__tests__/index.test.tsx`.
 
 - [x] anp-01: Admin on the analytics page sees the mentor dropdown trigger (not static Avatar+name text), and it opens the categorized menu with New Chat and Settings items
-- [x] anp-02: Full navbar parity — LLM Model Selector and Private Mode chip are both visible on `/analytics`, matching the regular chat page baseline captured in the same test
+- [x] anp-02: Full navbar parity — LLM Model Selector and Incognito chip are both visible on `/analytics`, matching the regular chat page baseline captured in the same test
 - [x] anp-03: REGRESSION GUARD — clicking New Chat from the analytics navbar dropdown routes back to the bare chat route (no `/analytics` suffix) and starts a fresh, empty session
 - [x] anp-04: Fix holds on nested analytics routes — `/analytics/users` still shows the mentor dropdown and LLM Model Selector
 - [x] anp-05: Admin flipped to User (student) mode does not see the LLM Model Selector on the analytics page
@@ -1873,9 +1884,9 @@ route.
 
 **Source files:** `components/modals/edit-mentor-modal/settings-tab.tsx`, `components/welcome-chat-new.tsx`, `components/welcome-chat/explore-mentors.tsx`, `hooks/use-mentors/use-mentor-settings.ts`
 
-Covers issue #2544: a new `show_explore_mentors` mentor setting, exposed as a "Show additional agents" switch (`data-testid="settings-show-explore-mentors-switch"`) in the Edit Agent modal's Settings tab → Capabilities sub-tab → Advanced section. It gates the OS-specific "Explore Agents" section that renders on an agent's own (non-project) welcome screen. Note: the issue asks for the backend default to be `false` for new agents; as of this writing the backend actually defaults it to `true` in this environment, so every checkpoint below explicitly drives the toggle to a known state first rather than asserting a specific out-of-the-box default. sem-05 is a regression guard for a real bug found in manual QA: `use-mentor-settings.ts` used to read `effectiveSettings?.show_explore_mentors ?? effectivePublicSettings?.show_explore_mentors ?? false`, but field-level RBAC returns an unreadable field as `""` (not `null`/`undefined`) for a logged-in non-owner's `/settings/` GET — `"" ?? x` short-circuits to `""`, so non-owner viewers never saw the section even when the owner had it ON; the fix (`asBoolean`) only treats a real boolean as present. The project landing page's own "mentors in this project" list is a separate, SDK-owned feature that hard-codes its own `showExploreMentors` prop and never reads this setting — confirmed by reading `components/welcome-chat-new.tsx`'s `projectId` branch directly, so it is documented here rather than covered by a browser test. Journey 15's sw-06 checkpoint (home-page Explore section) was also fixed alongside this journey: it used to silently no-op ("not in explore-mentors state") whenever the ambient default mentor happened to have the section off; it now seeds its own throw-away mentor with the toggle explicitly ON so the checkpoint is deterministic.
+Covers issue #2544: a new `show_explore_mentors` mentor setting, exposed as a "Show Additional Agents" switch (`data-testid="settings-show-explore-mentors-switch"`) in the Edit Agent modal's Settings tab → Capabilities sub-tab → Advanced section. It gates the OS-specific "Explore Agents" section that renders on an agent's own (non-project) welcome screen. Note: the issue asks for the backend default to be `false` for new agents; as of this writing the backend actually defaults it to `true` in this environment, so every checkpoint below explicitly drives the toggle to a known state first rather than asserting a specific out-of-the-box default. sem-05 is a regression guard for a real bug found in manual QA: `use-mentor-settings.ts` used to read `effectiveSettings?.show_explore_mentors ?? effectivePublicSettings?.show_explore_mentors ?? false`, but field-level RBAC returns an unreadable field as `""` (not `null`/`undefined`) for a logged-in non-owner's `/settings/` GET — `"" ?? x` short-circuits to `""`, so non-owner viewers never saw the section even when the owner had it ON; the fix (`asBoolean`) only treats a real boolean as present. The project landing page's own "mentors in this project" list is a separate, SDK-owned feature that hard-codes its own `showExploreMentors` prop and never reads this setting — confirmed by reading `components/welcome-chat-new.tsx`'s `projectId` branch directly, so it is documented here rather than covered by a browser test. Journey 15's sw-06 checkpoint (home-page Explore section) was also fixed alongside this journey: it used to silently no-op ("not in explore-mentors state") whenever the ambient default mentor happened to have the section off; it now seeds its own throw-away mentor with the toggle explicitly ON so the checkpoint is deterministic.
 
-- [x] sem-01: Admin sees the "Show additional agents" switch under Settings > Capabilities > Advanced, with the right label, data-testid, and tooltip info button
+- [x] sem-01: Admin sees the "Show Additional Agents" switch under Settings > Capabilities > Advanced, with the right label, data-testid, and tooltip info button
 - [x] sem-02: Toggling the switch ON and saving PUTs `show_explore_mentors=true`; the value persists across closing and reopening the Edit Agent dialog
 - [x] sem-03: Toggling the switch OFF and saving PUTs `show_explore_mentors=false`; the value persists across closing and reopening the Edit Agent dialog
 - [x] sem-04: With the setting ON, the admin's own welcome screen shows the "Explore Agents" section

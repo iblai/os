@@ -1,9 +1,9 @@
 {
   "version": 2,
-  "lastUpdated": "2026-10-01",
+  "lastUpdated": "2026-10-06",
   "summary": {
-    "totalCheckpoints": 814,
-    "coveredCheckpoints": 768,
+    "totalCheckpoints": 820,
+    "coveredCheckpoints": 774,
     "deprecatedCheckpoints": 17,
     "notReproducibleCheckpoints": 17,
     "pendingCheckpoints": 12,
@@ -221,6 +221,11 @@
         {
           "id": "prof-16",
           "description": "Tenant admin opens ANOTHER user's profile via the sidebar Management \u2192 Users search \u2192 'View profile for \u2026' row action: the nested 'User profile' dialog is in preview mode (no Security tab) yet offers the History tab (SDK canViewOtherUsersChatHistory: tenant admins + watchers) and loads that user's history (rows or empty state) rather than the 403 permission notice \u2014 skips when PLAYWRIGHT_NONADMIN_USERNAME is unset or the RBAC-gated Management entry is unavailable",
+          "status": "covered"
+        },
+        {
+          "id": "prof-17",
+          "description": "History tab on the user's OWN profile (SDK ChatHistoryTab): every conversation row on the first page shows its title and first-AI-reply preview as plain text (LaTeX converted to readable text, markdown stripped): no raw \\(, \\), \\[, \\], \\text{, \\textbf{ or ** in any row",
           "status": "covered"
         }
       ]
@@ -1667,6 +1672,11 @@
           "id": "hist-08",
           "description": "A conversation that produced a canvas shows the chat's own 'Open Canvas' card in the preview (none otherwise); the card opens the chat's canvas read-only in a dialog — title and Export only, no formatting toolbar, rename, version switch or editable content — which closes on Escape",
           "status": "covered"
+        },
+        {
+          "id": "hist-09",
+          "description": "Every conversation row on the first page shows its title and first-AI-reply preview as plain text (LaTeX converted to readable text, markdown stripped): no raw \\(, \\), \\[, \\], \\text{, \\textbf{ or ** in any row",
+          "status": "covered"
         }
       ]
     },
@@ -3049,7 +3059,7 @@
         },
         {
           "id": "cam-02",
-          "description": "Disabling the 'Enable file attachments' toggle hides the + (Attach file) button entirely",
+          "description": "Disabling the 'Enable File Attachments' toggle hides the + (Attach file) button entirely",
           "status": "covered"
         },
         {
@@ -3144,12 +3154,12 @@
         },
         {
           "id": "VO-11",
-          "description": "Voice tab stays visible (always mounted \u2014 no longer gated on show_voice_call) and its content grays (capability-gate-content data-enabled=\"false\") when the in-tab \"Enable voice calls\" capability toggle is off",
+          "description": "Voice tab stays visible (always mounted \u2014 no longer gated on show_voice_call) and its content grays (capability-gate-content data-enabled=\"false\") when the in-tab \"Enable Voice Calls\" capability toggle is off",
           "status": "covered"
         },
         {
           "id": "VO-12",
-          "description": "Re-enabling the in-tab \"Enable voice calls\" capability toggle ungates the Voice tab's sub-tab content (data-enabled=\"true\")",
+          "description": "Re-enabling the in-tab \"Enable Voice Calls\" capability toggle ungates the Voice tab's sub-tab content (data-enabled=\"true\")",
           "status": "covered"
         }
       ]
@@ -3243,7 +3253,8 @@
       "spec": "50-chat-privacy.spec.ts",
       "sourceFiles": [
         "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx",
-        "components/modals/edit-mentor-modal/tabs/settings-tab.tsx"
+        "components/modals/edit-mentor-modal/tabs/settings-tab.tsx",
+        "components/modals/edit-mentor-modal/tabs/privacy-tab.tsx"
       ],
       "checkpoints": [
         {
@@ -3253,37 +3264,47 @@
         },
         {
           "id": "cp-tenant-02",
-          "description": "Disabling the tenant gate hides the header Private Mode toggle across the app",
+          "description": "Disabling the tenant gate hides the header Incognito toggle across the app",
           "status": "covered"
         },
         {
           "id": "cp-tenant-03",
-          "description": "Enabling the tenant gate shows the header Private Mode toggle",
+          "description": "Enabling the tenant gate shows the header Incognito toggle",
           "status": "covered"
         },
         {
           "id": "cp-tenant-04",
-          "description": "Private Mode profile tab visibility tracks the tenant gate: hidden when off, visible when on",
+          "description": "Incognito profile tab visibility tracks the tenant gate: hidden when off, visible when on",
           "status": "covered"
         },
         {
           "id": "cp-agent-01",
-          "description": "Enable private mode row is visible in Edit Mentor Settings Capabilities sub-tab for admins",
+          "description": "Incognito sub-tab (Users Decide / Always Incognito / Never Incognito radio cards) is visible in the Edit Mentor Privacy tab for admins",
           "status": "covered"
         },
         {
           "id": "cp-agent-02",
-          "description": "Saving Enable private mode ON persists across modal close and re-open",
+          "description": "Saving Always Incognito persists across modal close and re-open",
           "status": "covered"
         },
         {
           "id": "cp-agent-03",
-          "description": "Saving Enable private mode ON locks the header toggle to data-state=on data-source=mentor without a page refresh (regression: chatPrivacyApiSlice.util.invalidateTags wiring in settings-tab.tsx)",
+          "description": "Saving Always Incognito locks the header toggle to data-state=on data-source=mentor without a page refresh (regression: chatPrivacyApiSlice.util.invalidateTags wiring in the Privacy tab)",
           "status": "covered"
         },
         {
           "id": "cp-agent-04",
-          "description": "Saving Enable private mode OFF removes the mentor lock from the header toggle; data-source is no longer mentor",
+          "description": "Saving back to Users Decide removes the mentor lock from the header toggle; data-source is no longer mentor",
+          "status": "covered"
+        },
+        {
+          "id": "cp-lock-01",
+          "description": "Incognito offers Users Decide, Always Incognito and Never Incognito, with Users Decide selected by default",
+          "status": "covered"
+        },
+        {
+          "id": "cp-lock-02",
+          "description": "Saving Never Incognito (disable_privacy_mode) hides the header Incognito toggle live (no refresh) and across a reload; Users Decide brings the toggle back unlocked",
           "status": "covered"
         },
         {
@@ -3308,7 +3329,7 @@
         },
         {
           "id": "cp-header-05",
-          "description": "Confirming enable-private-mode mid-session locks the session as on (aria-disabled) \u2014 session is one-way per spec",
+          "description": "Confirming the mid-session dialog turns Incognito on for the same conversation (data-state=on, data-source=session); the pill stays actionable (no aria-disabled) because the flip is reversible (iblai-dm-pro #3093)",
           "status": "covered"
         },
         {
@@ -3317,23 +3338,33 @@
           "status": "covered"
         },
         {
+          "id": "cp-header-07",
+          "description": "Turning Incognito off mid-conversation on a chat switched on via the dialog: one click, no dialog, POST disable-chathistory {disable_chathistory:false} answers 200; the toggle settles to data-state=off with data-source no longer session and the cached session id is unchanged \u2014 history resumes on the same conversation (iblai-dm-pro #3093)",
+          "status": "covered"
+        },
+        {
+          "id": "cp-header-08",
+          "description": "A chat started in Incognito stays locked on (data-state=on, aria-disabled) after a message is sent \u2014 the backend creates it without an owner, so it can never resume history",
+          "status": "covered"
+        },
+        {
           "id": "cp-profile-01",
-          "description": "Private Mode tab is visible in UserProfileModal when the tenant gate is on; all three cards render",
+          "description": "Privacy tab is visible in UserProfileModal when the tenant gate is on; all three cards render",
           "status": "covered"
         },
         {
           "id": "cp-profile-02",
-          "description": "Private Mode tab is hidden in UserProfileModal when the tenant gate is off",
+          "description": "Privacy tab is hidden in UserProfileModal when the tenant gate is off",
           "status": "covered"
         },
         {
           "id": "cp-profile-03",
-          "description": "All three radio cards (Normal, Anonymized, Disabled) render after switching to the Private Mode tab",
+          "description": "All three radio cards (Normal, Anonymized, Incognito) render after switching to the profile Privacy tab",
           "status": "covered"
         },
         {
           "id": "cp-profile-04",
-          "description": "Selecting Disabled propagates to the header toggle as data-source=user on a fresh unlocked chat (user-tier precedence)",
+          "description": "Selecting the Incognito card (mode disabled) propagates to the header toggle as data-source=user on a fresh unlocked chat (user-tier precedence)",
           "status": "covered"
         },
         {
@@ -3343,23 +3374,23 @@
         },
         {
           "id": "cp-chat-01",
-          "description": "Admin enables private mode via the header toggle on a fresh chat (data-state=on, data-source=session), sends a message, and still receives an assistant reply; private mode stays on across the round-trip",
+          "description": "Admin enables incognito via the header toggle on a fresh chat (data-state=on, data-source=session), sends a message, and still receives an assistant reply; incognito stays on across the round-trip",
           "status": "covered"
         },
         {
           "id": "cp-chat-02",
-          "description": "Non-admin (separate browser context) enables private mode via the header toggle on a fresh chat, sends a message, and receives an assistant reply; private mode stays on across the round-trip",
+          "description": "Non-admin (separate browser context) enables incognito via the header toggle on a fresh chat, sends a message, and receives an assistant reply; incognito stays on across the round-trip",
           "status": "covered"
         },
         {
           "id": "cp-chat-04",
-          "description": "Prompt Gallery (admin-curated, mentor-keyed) still opens and renders cards in private mode; AI guided/suggested prompts row is visible on a fresh private chat after the AI replies",
+          "description": "Prompt Gallery (admin-curated, mentor-keyed) still opens and renders cards in incognito; AI guided/suggested prompts row is visible on a fresh private chat after the AI replies",
           "status": "pending",
           "note": "Assertion (a) Prompt Gallery passes today. Assertion (b) guided prompts row is a live gate awaiting backend fix: backend must generate guided prompts for disable_chathistory sessions (endpoint: GET .../sessions/{session_id}/guided-prompts/)"
         },
         {
           "id": "cp-chat-05",
-          "description": "Voice call dialog opens in private mode (empty-chat path) and does NOT show 'Failed to initiate call' error toast; Chromium fake-media only",
+          "description": "Voice call dialog opens in incognito (empty-chat path) and does NOT show 'Failed to initiate call' error toast; Chromium fake-media only",
           "status": "pending",
           "note": "Live gate awaiting backend fix: backend must mint LiveKit credentials for disable_chathistory sessions (POST /create-call-credentials/); empty-chat path may already pass since the session IS persisted server-side"
         },
@@ -3371,25 +3402,25 @@
         },
         {
           "id": "cp-chat-07",
-          "description": "File attachment (drag-drop) works in private mode: attachment chip appears, message sends with attachment, and assistant replies; pins that selectSessionId follows the private session id through the upload path",
+          "description": "File attachment (drag-drop) works in incognito: attachment chip appears, message sends with attachment, and assistant replies; pins that selectSessionId follows the private session id through the upload path",
           "status": "pending",
           "note": "Expected to pass today (analysis: upload path reads selectSessionId which startPrivateChat updates via chatActions.updateSessionIds \u2014 byte-identical to normal mode). Included as regression gate."
         },
         {
           "id": "cp-chat-08",
-          "description": "Memory button is hidden while private mode is on (data-state=on) and reappears when private mode is off (frontend gate: chat-input-form.tsx derives chatPrivacyActive from useChatPrivacy and passes isPrivate into InsideButtons, which drops Memory from the inline row and the overflow dropdown)",
+          "description": "Memory button is hidden while incognito is on (data-state=on) and reappears when incognito is off (frontend gate: chat-input-form.tsx derives chatPrivacyActive from useChatPrivacy and passes isPrivate into InsideButtons, which drops Memory from the inline row and the overflow dropdown)",
           "status": "covered",
           "note": "Frontend gate implemented in components/chat-input-form.tsx (useChatPrivacy -> isPrivate prop) + components/chat-input-form/inside-buttons.tsx; deterministic regression coverage in components/chat-input-form/__tests__/inside-buttons.test.tsx ('Memory button private-mode gating')"
         },
         {
           "id": "cp-chat-09",
-          "description": "Share-chat button in the AI message bubble is hidden in private mode (a private session is a temporary, non-persisted chat with no durable session to share); visible in normal mode and gated out while effective mode is disabled",
+          "description": "Share-chat button in the AI message bubble is hidden in incognito (a private session is a temporary, non-persisted chat with no durable session to share); visible in normal mode and gated out while effective mode is disabled",
           "status": "covered",
-          "note": "Frontend gate implemented in components/chat/ai-message-bubble.tsx (useChatPrivacy -> chatPrivacyActive gates the <AIMessageShare> render alongside !showingSharedChat); deterministic regression coverage in components/chat/__tests__/ai-message-bubble.test.tsx ('chat private mode active' share-button cases)"
+          "note": "Frontend gate implemented in components/chat/ai-message-bubble.tsx (useChatPrivacy -> chatPrivacyActive gates the <AIMessageShare> render alongside !showingSharedChat); deterministic regression coverage in components/chat/__tests__/ai-message-bubble.test.tsx ('chat incognito active' share-button cases)"
         },
         {
           "id": "cp-chat-10",
-          "description": "Download-chat button in the AI message bubble is hidden in private mode (same gate as cp-chat-09: a private session has no durable record to export); visible in normal mode",
+          "description": "Download-chat button in the AI message bubble is hidden in incognito (same gate as cp-chat-09: a private session has no durable record to export); visible in normal mode",
           "status": "covered",
           "note": "Frontend gate implemented in components/chat/ai-message-bubble.tsx (useChatPrivacy -> chatPrivacyActive gates the <AIMessageDownload> render alongside !showingSharedChat, right after <AIMessageShare>)"
         }
@@ -3405,7 +3436,7 @@
       "checkpoints": [
         {
           "id": "pc-01",
-          "description": "Fresh mentor: Settings \u2192 Capabilities \u2014 \"Enable prompt caching\" switch is visible with aria-checked=false (default off) and tooltip trigger is present",
+          "description": "Fresh mentor: Settings \u2192 Capabilities \u2014 \"Enable Prompt Caching\" switch is visible with aria-checked=false (default off) and tooltip trigger is present",
           "status": "covered"
         },
         {
@@ -3470,7 +3501,7 @@
         },
         {
           "id": "tcr-08",
-          "description": "Tool call indicator and reasoning section are gated by the Enable verbose reasoning setting \u2014 hidden when the toggle is off, shown when on",
+          "description": "Tool call indicator and reasoning section are gated by the Enable Verbose Reasoning setting \u2014 hidden when the toggle is off, shown when on",
           "status": "covered"
         }
       ]
@@ -4067,7 +4098,7 @@
         },
         {
           "id": "anp-02",
-          "description": "Full navbar parity: LLM Model Selector and Private Mode chip are both visible on /analytics, matching the regular chat page baseline captured in the same test (isOnChatPage no longer excludes /analytics)",
+          "description": "Full navbar parity: LLM Model Selector and Incognito chip are both visible on /analytics, matching the regular chat page baseline captured in the same test (isOnChatPage no longer excludes /analytics)",
           "status": "covered"
         },
         {
@@ -4940,7 +4971,7 @@
       "checkpoints": [
         {
           "id": "sem-01",
-          "description": "Admin sees the \"Show additional agents\" switch under Settings > Capabilities > Advanced, with the right label, data-testid, and tooltip info button",
+          "description": "Admin sees the \"Show Additional Agents\" switch under Settings > Capabilities > Advanced, with the right label, data-testid, and tooltip info button",
           "status": "covered"
         },
         {

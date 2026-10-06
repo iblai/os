@@ -29,10 +29,10 @@ export class SettingsTab {
    * locator survives label rewrites in the host.
    */
   readonly useFunctionCallingForRagToggle: Locator;
-  /** "Enable file attachments" toggle (Capabilities sub-tab, feat/1902) */
+  /** "Enable File Attachments" toggle (Capabilities sub-tab, feat/1902) */
   readonly allowFileAttachmentsToggle: Locator;
   /**
-   * "Show additional agents" toggle (Capabilities sub-tab, Advanced section
+   * "Show Additional Agents" toggle (Capabilities sub-tab, Advanced section
    * — issue #2544). Persists `show_explore_mentors`, which gates the OS
    * "Explore Agents" section on this agent's own (non-project) welcome
    * screen. Resolved via `data-testid`, like the RAG toggle, so the locator
@@ -120,7 +120,7 @@ export class SettingsTab {
       .locator('[data-testid="advanced-js-editor"]')
       .or(dialog.locator('.cm-editor').nth(1));
     // Renamed in the Capabilities sub-tab: aria-label is now
-    // "Enable copies" (no enabled/disabled
+    // "Enable Copies" (no enabled/disabled
     // suffix — state is exposed via aria-checked).
     this.allowCopiesToggle = dialog.getByRole('switch', {
       name: /enable copies/i,
@@ -132,24 +132,24 @@ export class SettingsTab {
     this.chatAccessCombobox = dialog.getByRole('combobox', {
       name: 'Select who can chat',
     });
-    // Capabilities sub-tab. The "Enable verbose reasoning" toggle (show_reasoning);
-    // aria-label is "Enable verbose reasoning enabled" / "Enable verbose reasoning disabled"
+    // Capabilities sub-tab. The "Enable Verbose Reasoning" toggle (show_reasoning);
+    // aria-label is "Enable Verbose Reasoning enabled" / "Enable Verbose Reasoning disabled"
     // depending on current state.
     this.verboseReasoningToggle = dialog.getByRole('switch', {
-      name: /^Enable verbose reasoning /i,
+      name: /^Enable Verbose Reasoning /i,
     });
-    // Capabilities sub-tab. Visible label "Enhanced document retrieval"
+    // Capabilities sub-tab. Visible label "Enhanced Document Retrieval"
     // (source: messages/en.json `enhancedDocRetrievalLabel`); the SDK switch
-    // appends the state, so the aria-label reads "Enhanced document retrieval
+    // appends the state, so the aria-label reads "Enhanced Document Retrieval
     // enabled" / "... disabled". Anchored at the start so it does not also
-    // match the sibling "Smart document retrieval" switch.
+    // match the sibling "Smart Document Retrieval" switch.
     this.enhanceDocumentRetrievalToggle = dialog.getByRole('switch', {
-      name: /^Enhanced document retrieval\b/i,
+      name: /^Enhanced Document Retrieval\b/i,
     });
     this.enhanceDocumentRetrievalTooltipTrigger = dialog.getByRole('button', {
       name: 'More info about enhanced document retrieval',
     });
-    // Capabilities sub-tab. Label: "Enable prompt caching".
+    // Capabilities sub-tab. Label: "Enable Prompt Caching".
     this.promptCachingToggle = dialog.getByRole('switch', {
       name: /enable prompt caching/i,
     });
@@ -159,7 +159,7 @@ export class SettingsTab {
     this.useFunctionCallingForRagToggle = dialog.getByTestId(
       'settings-use-function-calling-for-rag-switch',
     );
-    // Capabilities sub-tab. Labelled "Enable file attachments" (feat/1902).
+    // Capabilities sub-tab. Labelled "Enable File Attachments" (feat/1902).
     this.allowFileAttachmentsToggle = dialog.getByRole('switch', {
       name: /enable file attachments/i,
     });
@@ -406,7 +406,7 @@ export class SettingsTab {
   }
 
   /**
-   * Returns true when the Enable verbose reasoning toggle is ON (aria-checked="true").
+   * Returns true when the Enable Verbose Reasoning toggle is ON (aria-checked="true").
    */
   async isVerboseReasoningEnabled(): Promise<boolean> {
     await this.selectSubTab('Capabilities');
@@ -419,7 +419,7 @@ export class SettingsTab {
   }
 
   /**
-   * Sets the Enable verbose reasoning toggle to the desired state and saves the form.
+   * Sets the Enable Verbose Reasoning toggle to the desired state and saves the form.
    * A no-op if the toggle is already in the desired state. Save is called
    * internally (same as setMemoryEnabled) and we block on the success toast so
    * callers can immediately send a chat message that relies on the new setting.
@@ -539,7 +539,7 @@ export class SettingsTab {
   }
 
   /**
-   * Enables "Enable file attachments" and saves the form.
+   * Enables "Enable File Attachments" and saves the form.
    * A no-op if the toggle is already on. (feat/1902)
    */
   async enableFileAttachments(): Promise<void> {
@@ -568,7 +568,7 @@ export class SettingsTab {
   }
 
   /**
-   * Disables "Enable file attachments" and saves the form.
+   * Disables "Enable File Attachments" and saves the form.
    * A no-op if the toggle is already off. (feat/1902)
    */
   async disableFileAttachments(): Promise<void> {
@@ -596,7 +596,7 @@ export class SettingsTab {
     }
   }
 
-  /** Whether the "Show additional agents" toggle is currently on (issue #2544). */
+  /** Whether the "Show Additional Agents" toggle is currently on (issue #2544). */
   async isShowExploreMentorsEnabled(): Promise<boolean> {
     await this.selectSubTab('Capabilities');
     await expect(this.showExploreMentorsToggle).toBeVisible({
@@ -610,7 +610,7 @@ export class SettingsTab {
   }
 
   /**
-   * Sets the "Show additional agents" toggle to the desired state and saves
+   * Sets the "Show Additional Agents" toggle to the desired state and saves
    * the form (issue #2544). Always clicks Save — mirroring
    * `setPromptCaching`/`setVerboseReasoning` — so callers observing the
    * resulting settings PUT via `page.waitForRequest` reliably see one fire,
