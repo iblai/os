@@ -2,8 +2,7 @@
 
 import { useParams, usePathname } from 'next/navigation';
 
-import { FloatingAccessibilityButton } from '@/components/accessibility/floating-accessibility-button';
-import { AccessibilityToolbar } from '@/components/accessibility/accessibility-toolbar';
+import { AccessibilityFab as SdkAccessibilityFab } from '@iblai/iblai-js/web-containers/next';
 import { useTenantMetadata } from '@iblai/iblai-js/web-utils';
 import { TenantKeyMentorIdParams } from '@/lib/types';
 import { useEmbedMode } from '@/hooks/use-embed-mode';
@@ -30,17 +29,14 @@ export function AccessibilityFab() {
   if (isAnalyticsPage) return null;
 
   return (
-    <>
-      <div
-        className={cn('fixed right-4 z-50 mb-10 flex flex-col gap-3', {
+    <SdkAccessibilityFab
+      defaultPositionClassName={cn(
+        'fixed right-4 z-50 mb-10 flex flex-col gap-3',
+        {
           'bottom-4': messages.length === 0,
           'bottom-[21rem]': messages.length > 0,
-        })}
-      >
-        {/* <FloatingMicrophoneButton /> */}
-        <FloatingAccessibilityButton />
-      </div>
-      <AccessibilityToolbar />
-    </>
+        },
+      )}
+    />
   );
 }

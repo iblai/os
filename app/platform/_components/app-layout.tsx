@@ -6,7 +6,7 @@ import { SubscriptionWrapper } from '../[tenantKey]/[mentorId]/_components/subsc
 import { HotKeysWrapper } from '../[tenantKey]/[mentorId]/_components/hot-keys-wrapper';
 import { AppSidebar } from '../[tenantKey]/[mentorId]/_components/app-sidebar';
 import { NavBar } from '../[tenantKey]/[mentorId]/_components/nav-bar';
-import { AccessibilityProvider } from '@/contexts/accessibility-contexts';
+import { AccessibilityProvider } from '@iblai/iblai-js/web-containers/next';
 import { AccessibilityFab } from '../[tenantKey]/[mentorId]/_components/accessibility-fab';
 import { useMentorSettings } from '@/hooks/use-mentors/use-mentor-settings';
 import { useParams, useSearchParams } from 'next/navigation';
