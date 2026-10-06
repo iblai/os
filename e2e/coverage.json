@@ -3486,7 +3486,9 @@
       "spec": "53-recent-chats-refresh.spec.ts",
       "sourceFiles": [
         "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx",
-        "components/chat/index.tsx"
+        "components/chat/index.tsx",
+        "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/chats/use-recent-chats.ts",
+        "providers/app-provider.tsx"
       ],
       "checkpoints": [
         {
@@ -3496,7 +3498,7 @@
         },
         {
           "id": "rcr-02",
-          "description": "Clicking an existing Recent chat row loads the conversation in the chat panel (regression guard for issue #1881: handleSelectRow must write cachedSessionId[mentorId] to localStorage so the message loader re-fires)",
+          "description": "Clicking an existing Recent chat row loads the conversation in the chat panel (regression guard for issue #1881: handleSelectRow must write cachedSessionId[mentorId] to localStorage so the message loader re-fires); also guards issue #2608: the pin-message GET is scoped to the active agent (mentor), sends no session_id or search, and the pinned list is not refetched on new chat / chat switch",
           "status": "covered"
         },
         {

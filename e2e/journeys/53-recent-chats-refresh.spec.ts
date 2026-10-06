@@ -162,11 +162,32 @@ test.describe('Journey 53: Recent Chats Refresh', () => {
   // The Chats section is expanded BEFORE sending so the test observes the live
   // empty→row-appears transition in an already-mounted DOM (same scenario as a
   // user watching the sidebar while the AI replies).
+  //
+  // Also guards #2608: the pin-message GET must be scoped to the active agent,
+  // carry no `session_id` or `search`, and must not refetch on New Chat / chat
+  // switch (sessionId was in the cache key).
   test('admin clicks an existing Recent chat row and the conversation loads', async ({
     page,
     chatPage,
     sidebarPage,
   }) => {
+    // ── Step 0: Record pin-message GETs (#2608) ───────────────────────────────
+    // Reload so the initial-load GET lands after the listener is attached.
+    const isPinnedGet = (req: { method(): string; url(): string }) =>
+      req.method() === 'GET' &&
+      new URL(req.url()).pathname.endsWith('/pin-message/');
+    const pinnedGetUrls: string[] = [];
+    page.on('request', (req) => {
+      if (isPinnedGet(req)) pinnedGetUrls.push(req.url());
+    });
+    const initialPinnedResponse = page.waitForResponse(
+      (res) => isPinnedGet(res.request()),
+      { timeout: 90_000 },
+    );
+    await page.reload();
+    await initialPinnedResponse;
+    await waitForPageReady(page);
+
     // ── Step 1: Expand Chats section before chatting ──────────────────────────
     // Section must be open the whole time so we observe the live update
     // transition (empty state → row appears) in an already-mounted DOM.
@@ -208,6 +229,8 @@ test.describe('Journey 53: Recent Chats Refresh', () => {
       )
       .toBe(true);
 
+    const pinnedGetsBeforeSwitch = pinnedGetUrls.length;
+
     // ── Step 5: Start a new chat to clear the active session ──────────────────
     // Navigate away so clicking back to the seeded row is a real cross-session
     // navigation (not a no-op on the already-active session).
@@ -229,6 +252,30 @@ test.describe('Journey 53: Recent Chats Refresh', () => {
     const userBubble = page.locator('.chat-user-message-query').first();
     const bubbleText = (await userBubble.textContent()) ?? '';
     expect(bubbleText.includes(seededText.split(' ')[0])).toBe(true);
+
+    // ── Step 7: #2608 — pin-message GET carries no session_id, no refetch ─────
+    expect(
+      pinnedGetUrls.length,
+      '#2608: at least one pin-message GET must be recorded',
+    ).toBeGreaterThanOrEqual(1);
+    expect(
+      pinnedGetUrls.filter((u) => new URL(u).searchParams.has('session_id')),
+      '#2608: pin-message GET must not send session_id',
+    ).toEqual([]);
+    expect(
+      pinnedGetUrls.filter(
+        (u) => new URL(u).searchParams.get('mentor') !== mentorId,
+      ),
+      '#2608: pin-message GET must be scoped to the active agent',
+    ).toEqual([]);
+    expect(
+      pinnedGetUrls.filter((u) => new URL(u).searchParams.has('search')),
+      '#2608: pin-message GET must not send search',
+    ).toEqual([]);
+    expect(
+      pinnedGetUrls.length,
+      '#2608: pinned list must not refetch on New Chat / chat switch',
+    ).toBe(pinnedGetsBeforeSwitch);
   });
 });
 
