@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.162.1](https://github.com/iblai/os/compare/v0.162.0...v0.162.1) (2026-10-06)
+
+### Chores
+
+* **deps:** bump @iblai/iblai-js to 2.29.2 ([b98cbef](https://github.com/iblai/os/commit/b98cbefb485a1272907ee689067a44409400d369)), closes [iblai/iblai-web-frontend#2123](https://github.com/iblai/iblai-web-frontend/issues/2123)
+
+### Documentation
+
+* **e2e:** add mgmt-23 per-model LLM availability checkpoint ([30ea2b7](https://github.com/iblai/os/commit/30ea2b719371d58cf631272e62624781464fa8df))
+
+### Styles
+
+* format CHANGELOG bullets ([30bf4e6](https://github.com/iblai/os/commit/30bf4e6bb081e224eddf84b5b00d622289ca01e4))
+
+### Tests
+
+* **e2e:** add model-row helpers to the LLM tab page object ([c5f86c1](https://github.com/iblai/os/commit/c5f86c1bb20373675cfd534e1d4b74152e037a2e))
+* **e2e:** cover per-model LLM availability in the agent LLM picker ([9a68c08](https://github.com/iblai/os/commit/9a68c080fa30760837a8b868719a7ba39516d6ae))
+
 ## [0.162.0](https://github.com/iblai/os/compare/v0.161.0...v0.162.0) (2026-10-05)
 
 ### Features
