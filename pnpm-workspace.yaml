@@ -170,8 +170,9 @@ overrides:
   '@tiptap/core@3': '>=3.30.5'
   uuid: 11.1.1
   # Floor lifted to 0.35.4 for GHSA-rgj7-g3m4-5g8c (image decode overflow),
-  # reached through next's optional sharp.
-  sharp: '>=0.35.4'
+  # reached through next's optional sharp. Lifted again to 0.35.5 for
+  # GHSA-wq5f-xc86-pv6w (vulnerable bundled librsvg).
+  sharp: '>=0.35.5'
   brace-expansion@<=5.0.8: '>=5.0.12'
   # serialize-javascript GHSA-5c6j-r48x-rmvq (RCE via RegExp.flags/Date, patched
   # 7.0.3) and GHSA-qj8w-gfj5-8c6v (CPU-exhaustion DoS, patched 7.0.5). Reached by
@@ -193,6 +194,25 @@ overrides:
   # all still exported by 3.x (the 3.0 break was the archive/download
   # internals — exactly where extract-zip lived).
   '@puppeteer/browsers': '>=3.0.2'
+  # GHSA-6qxp-vccf-f47h (OAuth client can leak credentials to an authorization
+  # server chosen by the MCP server), patched in 1.31.0. Reached through
+  # @iblai/iblai-js > @iblai/mcp and @iblai/web-utils; same major.
+  '@modelcontextprotocol/sdk': '>=1.31.0 <2'
+  # GHSA-jqcg-44mw-7w3h (critical: trust-subnet bypass via IPv4-mapped IPv6),
+  # patched in 2.0.8. Reached through the MCP SDK's express; same major.
+  proxy-addr: '>=2.0.8 <3'
+  # GHSA-c8x8-7fp4-3x9w, patched in 1.42.3. Reached through
+  # @iblai/iblai-js > @iblai/web-containers > @tiptap/pm; same major.
+  prosemirror-view: '>=1.42.3 <2'
+  # GHSA-68fv-2mgg-jv7q, patched in 1.2.2. Dev-only reach:
+  # @vitest/coverage-istanbul > magicast.
+  source-map-js: '>=1.2.2 <2'
+  # GHSA-5gmw-xhrv-c9v3 + GHSA-85c8-ppgw-ccpr (critical: prototype pollution in
+  # worker options -> RCE), patched only in the 2.x line (2.1.2). Dev-only reach:
+  # vitest 3 asks for ^1.1.1. Crossing the major is safe here: tinypool 2 keeps
+  # the Tinypool class API vitest 3 uses and needs Node >=20; the full unit
+  # suite passes on it.
+  tinypool: '>=2.1.2 <3'
 patchedDependencies:
   google-drive-picker@1.1.29: patches/google-drive-picker@1.1.29.patch
   # Three missing Pandoc/markdown-it-katex rules for dollar-delimited text math:
