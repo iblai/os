@@ -2085,6 +2085,7 @@
     "tabBasic": "Básico",
     "tabDiscovery": "Descubrimiento",
     "tabCapabilities": "Capacidades",
+    "tabWelcomeScreen": "Pantalla de bienvenida",
     "nameLabel": "Nombre",
     "agentNamePlaceholder": "Nombre del agente",
     "agentNameRequired": "El nombre del agente es obligatorio",
@@ -2176,7 +2177,9 @@
     "perSurfaceHeading": "Capacidades por superficie",
     "perSurfaceNote": "Se configuran de forma independiente para el chat en la aplicacion y el widget incrustado.",
     "inAppChatNote": "Conversaciones alojadas dentro de la aplicacion: el chat que tus usuarios abren aqui.",
-    "embedWidgetNote": "El widget que incrustas en tu propio sitio con el fragmento de la pestana Insertar."
+    "embedWidgetNote": "El widget que incrustas en tu propio sitio con el fragmento de la pestana Insertar.",
+    "inChatModelChangeLabel": "Permitir cambiar el modelo en el chat",
+    "inChatModelChangeTooltip": "Permite elegir otro modelo de IA para su propio chat. El modelo del agente no cambia y los chats nuevos empiezan con él. Este ajuste tiene un solo valor, así que se aplica al chat de la app y al widget integrado."
   },
   "tabsMcpTab": {
     "infoBox": "Conecta tu agente a tus propios sistemas mediante servidores MCP, para que pueda acceder a tus datos y servicios directamente dentro de una conversación."

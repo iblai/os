@@ -2085,6 +2085,7 @@
     "tabBasic": "Basic",
     "tabDiscovery": "Discovery",
     "tabCapabilities": "Capabilities",
+    "tabWelcomeScreen": "Welcome Screen",
     "nameLabel": "Name",
     "agentNamePlaceholder": "Agent Name",
     "agentNameRequired": "Agent name is required",
@@ -2176,7 +2177,9 @@
     "perSurfaceHeading": "Surface Capabilities",
     "perSurfaceNote": "Set independently for in-app chat and the embed widget.",
     "inAppChatNote": "Conversations hosted inside the app — the chat your users open here.",
-    "embedWidgetNote": "The widget you embed on your own site using the snippet from the Embed tab."
+    "embedWidgetNote": "The widget you embed on your own site using the snippet from the Embed tab.",
+    "inChatModelChangeLabel": "Allow in-chat model change",
+    "inChatModelChangeTooltip": "Let people pick a different AI model for their own chat. The agent’s model doesn’t change, and new chats start on it. This setting has one value, so it applies to both in-app chat and the embed widget."
   },
   "tabsMcpTab": {
     "infoBox": "Connect your agent to your own systems through MCP servers, so it can reach your data and services right inside a conversation."

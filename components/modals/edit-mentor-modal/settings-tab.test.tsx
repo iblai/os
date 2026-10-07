@@ -270,6 +270,7 @@ describe('SettingsTab', () => {
         basic: 'tabBasic',
         discovery: 'tabDiscovery',
         capabilities: 'tabCapabilities',
+        welcomeScreen: 'tabWelcomeScreen',
       });
       expect(labels.sections).toEqual({
         chatExperience: 'chatExperienceHeading',
@@ -307,6 +308,10 @@ describe('SettingsTab', () => {
       expect(labels.fields.enhancedDocRetrieval.label).toBe(
         'enhancedDocRetrievalLabel',
       );
+      expect(labels.fields.inChatModelChange).toEqual({
+        label: 'inChatModelChangeLabel',
+        tooltip: 'inChatModelChangeTooltip',
+      });
       expect(labels.fields.promptCaching.label).toBe(
         'enablePromptCachingLabel',
       );

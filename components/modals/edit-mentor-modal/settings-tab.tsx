@@ -80,6 +80,7 @@ export function SettingsTab() {
       basic: t('tabBasic'),
       discovery: t('tabDiscovery'),
       capabilities: t('tabCapabilities'),
+      welcomeScreen: t('tabWelcomeScreen'),
     },
     sections: {
       chatExperience: t('chatExperienceHeading'),
@@ -177,6 +178,10 @@ export function SettingsTab() {
       enhancedDocRetrieval: {
         label: t('enhancedDocRetrievalLabel'),
         tooltip: t('enhancedDocRetrievalTooltip'),
+      },
+      inChatModelChange: {
+        label: t('inChatModelChangeLabel'),
+        tooltip: t('inChatModelChangeTooltip'),
       },
       promptCaching: {
         label: t('enablePromptCachingLabel'),
