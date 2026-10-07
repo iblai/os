@@ -525,6 +525,22 @@ test.describe('Journey 50: Chat Privacy', () => {
     }) => {
       const chatPrivacy = new ChatPrivacyPage(page);
 
+      // Once the agent lock is gone the header falls through to the admin's
+      // profile tier, and a profile default of Incognito locks the pill too
+      // (a chat can't turn it off). The journey's afterAll restores whatever
+      // profile mode it found, so that default can persist across runs —
+      // settle it to Normal first, as the cp-header / cp-chat blocks do.
+      const toggle = chatPrivacy.headerToggle();
+      await expect(toggle).not.toHaveAttribute('data-source', 'mentor', {
+        timeout: 30_000,
+      });
+      if (
+        (await toggle.getAttribute('data-source')) === 'user' &&
+        (await toggle.getAttribute('data-state')) === 'on'
+      ) {
+        await chatPrivacy.ensureProfilePrivateMode('normal');
+      }
+
       // Idempotent precondition: beforeEach forced OFF, so flip ON first so
       // this test actually exercises the ON→OFF transition rather than a
       // coincidental OFF→OFF no-op.
@@ -536,21 +552,16 @@ test.describe('Journey 50: Chat Privacy', () => {
       await chatPrivacy.unlockAgentPrivacy();
       await editMentorPage.close();
 
-      // The header toggle must no longer be locked. assertHeaderLocked(false)
-      // polls until `aria-disabled` settles to absent or "false" — required
-      // because the unlock flow has a brief window between the Save toast
-      // appearing (mutation done) and the `chat-privacy-effective` refetch
-      // landing (header re-renders).
-      await chatPrivacy.assertHeaderLocked(false);
-
       // data-source must not be "mentor" once the kill switch is off. Use
-      // the auto-retrying matcher so this also waits for the refetch — a
-      // bare `getAttribute` would race the same window as the locked check.
-      await expect(chatPrivacy.headerToggle()).not.toHaveAttribute(
-        'data-source',
-        'mentor',
-        { timeout: 10_000 },
-      );
+      // the auto-retrying matcher so this also waits for the
+      // `chat-privacy-effective` refetch that follows the Save toast.
+      await expect(toggle).not.toHaveAttribute('data-source', 'mentor', {
+        timeout: 10_000,
+      });
+
+      // And the header must no longer be locked. assertHeaderLocked(false)
+      // polls until `aria-disabled` settles to absent or "false".
+      await chatPrivacy.assertHeaderLocked(false);
     });
   });
 
