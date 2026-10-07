@@ -65,6 +65,7 @@ export const CHAT_LABEL_NAMESPACES = [
   'chatAiMessageReportInappropriateContent',
   'chatAiMessageShare',
   'chatCodePermissionCard',
+  'chatComposer',
   'chatIndex',
   'chatInputFormCameraCaptureDialog',
   'chatInputFormFileAttachmentsList',

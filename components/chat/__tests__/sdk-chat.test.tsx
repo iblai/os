@@ -197,6 +197,8 @@ describe('SdkChat', () => {
       uiDialog: { close: 'Cerrar' },
     });
     expect(CHAT_LABEL_NAMESPACES).toContain('chatInputFormInsideButtons');
+    // #2586 redesigned composer ("+" menu, chips, file cards).
+    expect(CHAT_LABEL_NAMESPACES).toContain('chatComposer');
   });
 
   it('builds the config from the OS environment and host hooks', () => {
