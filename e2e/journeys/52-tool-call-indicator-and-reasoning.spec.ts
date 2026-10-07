@@ -518,6 +518,11 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
     await editMentorPage.open('Settings');
     await editMentorPage.settings.setVerboseReasoning(true);
 
+    // The ibl.ai models emit no reasoning tokens on a web-search turn, so no
+    // "Thought" row renders; gpt-5 reasons before the tool call.
+    await editMentorPage.navigateToTab('LLM');
+    await editMentorPage.llm.selectProviderAndModel('OpenAI', 'gpt-5');
+
     // Enable Web Search
     await editMentorPage.navigateToTab('Tools');
     await editMentorPage.tools.enableTool('Web Search');
