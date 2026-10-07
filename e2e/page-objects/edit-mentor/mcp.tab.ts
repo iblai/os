@@ -27,10 +27,11 @@ export class McpTab {
     await expect(this.addConnectorButton).toBeVisible({ timeout: 10_000 });
     await this.addConnectorButton.click();
 
-    const connectorDialog = this.page
-      .getByRole('dialog')
-      .filter({ hasText: /connector/i })
-      .last();
+    // The SDK's shared connector dialog; its submit reads "Connect" for a new server.
+    const connectorDialog = this.page.getByRole('dialog', {
+      name: 'Add MCP Connector',
+      exact: true,
+    });
     await expect(connectorDialog).toBeVisible({ timeout: 10_000 });
 
     const nameInput = connectorDialog.getByPlaceholder('Enter connector name');
@@ -41,9 +42,10 @@ export class McpTab {
     await expect(urlInput).toBeVisible({ timeout: 5_000 });
     await urlInput.fill(serverUrl);
 
-    const saveButton = connectorDialog
-      .getByRole('button', { name: /save|add|create/i })
-      .last();
+    const saveButton = connectorDialog.getByRole('button', {
+      name: 'Connect',
+      exact: true,
+    });
     await expect(saveButton).toBeEnabled({ timeout: 5_000 });
     await saveButton.click();
     await expect(connectorDialog).not.toBeVisible({ timeout: 10_000 });
@@ -66,16 +68,16 @@ export class McpTab {
       await btn.click();
     }
 
-    const confirmDialog = this.page
-      .getByRole('dialog')
-      .filter({ hasText: /delete|confirm/i })
-      .last();
+    const confirmDialog = this.page.getByRole('dialog', {
+      name: 'Remove Connector',
+      exact: true,
+    });
     const confirmVisible = await isVisibleWithin(confirmDialog, 3_000);
     if (confirmVisible) {
       await confirmDialog
-        .getByRole('button', { name: /delete|confirm/i })
-        .last()
+        .getByRole('button', { name: 'Delete', exact: true })
         .click();
+      await expect(confirmDialog).toBeHidden({ timeout: 15_000 });
     }
   }
 

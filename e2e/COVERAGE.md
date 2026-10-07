@@ -491,7 +491,7 @@ The "Remember past conversations" (`enable_memory_component`) master toggle move
 
 ## Journey 25: MCP (Model Context Protocol) Tab (4 checkpoints) — `journeys/25-mentor-mcp-tab.spec.ts`
 
-**Source files:** `components/modals/edit-mentor-modal/tabs/mcp-tab/index.tsx`, `components/modals/edit-mentor-modal/tabs/mcp-tab/connector-management-content.tsx`, `components/modals/edit-mentor-modal/tabs/mcp-tab/connector-dialogs.tsx`
+**Source files:** `components/modals/edit-mentor-modal/tabs/mcp-tab/index.tsx` (OS wrapper around the SDK `McpTab`)
 
 - [x] MCP tab is visible in the Edit Mentor modal
 - [x] MCP tab shows connector list or empty state

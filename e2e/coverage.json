@@ -1712,8 +1712,7 @@
       "name": "Mentor MCP Tab",
       "spec": "25-mentor-mcp-tab.spec.ts",
       "sourceFiles": [
-        "components/modals/edit-mentor-modal/tabs/mcp-tab/index.tsx",
-        "components/modals/edit-mentor-modal/tabs/mcp-tab/connector-management-content.tsx"
+        "components/modals/edit-mentor-modal/tabs/mcp-tab/index.tsx"
       ],
       "checkpoints": [
         {
