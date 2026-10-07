@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.162.2](https://github.com/iblai/os/compare/v0.162.1...v0.162.2) (2026-10-07)
+
+### Tests
+
+* **e2e:** pin gpt-5 for journey 52's reasoning + tool-call test ([eaf3d59](https://github.com/iblai/os/commit/eaf3d59b279cf40034df4504be6dd17515b21976))
+
 ## [0.162.1](https://github.com/iblai/os/compare/v0.162.0...v0.162.1) (2026-10-06)
 
 ### Chores
