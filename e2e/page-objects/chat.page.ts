@@ -151,7 +151,12 @@ export class ChatPage {
       exact: true,
     });
     this.sendButton = page.getByRole('button', { name: 'Send message' });
-    this.newChatButton = page.getByRole('button', { name: 'New Chat' });
+    // Exact: the Incognito pill's accessible name can end in "…start a new
+    // chat", and a bare `name` is a case-insensitive substring match.
+    this.newChatButton = page.getByRole('button', {
+      name: 'New Chat',
+      exact: true,
+    });
     this.userMessages = page.locator('.chat-user-message-query');
     this.aiMessages = page.locator('.chat-ai-message-response');
     this.userAgreementDialog = page.getByRole('dialog', {
