@@ -190,6 +190,45 @@ export class EmbedTab {
     return (await this.embedCodeBlock.textContent()) ?? '';
   }
 
+  /**
+   * Submits the embed form (filling the Website URL first, when the mentor
+   * is non-anonymous and the field renders) and returns the REAL generated
+   * widget snippet from the "Embedded Code" dialog's own `<pre>`.
+   *
+   * Deliberately NOT the same as `getEmbedCode()`/`embedCodeBlock`, which
+   * resolve the FIRST `<pre>` inside the Edit Agent dialog — before a
+   * submit, the real `embedCode` state is empty and that `<pre>` doesn't
+   * exist yet (`useEmbedTab.ts`'s `onSubmit` is the only thing that sets
+   * it), so `embedCodeBlock` instead matches whatever OTHER `<pre>` happens
+   * to render first — observed in practice to be the SSO redirect-token URL
+   * block for a mentor with SSO configured, which `getEmbedCode()` then
+   * returns as if it were the widget snippet. The real snippet's `<pre>`
+   * also lives inside a SEPARATE Radix Dialog portal (`embedCodeDialog`),
+   * not inside `dialog`, once it exists. Dismisses the dialog afterwards,
+   * same as `submit()`.
+   */
+  async createAndGetEmbedCode(
+    websiteUrl = 'https://example.com',
+  ): Promise<string> {
+    let needsUrl = false;
+    try {
+      await this.websiteUrlInput.waitFor({ state: 'visible', timeout: 2_000 });
+      needsUrl = true;
+    } catch {
+      needsUrl = false;
+    }
+    if (needsUrl) {
+      await this.fillWebsiteUrl(websiteUrl);
+    }
+    await expect(this.submitButton).toBeVisible({ timeout: 10_000 });
+    await this.submitButton.click();
+    await expect(this.embedCodeDialog).toBeVisible({ timeout: 30_000 });
+    const code =
+      (await this.embedCodeDialog.locator('pre').first().textContent()) ?? '';
+    await this.dismissEmbedCodeDialog();
+    return code;
+  }
+
   async copyEmbedCode(): Promise<void> {
     await expect(this.copyButton).toBeVisible({ timeout: 5_000 });
     await this.copyButton.click();

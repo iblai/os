@@ -134,6 +134,191 @@ test.describe('Journey 77: SDK Chat Migration — Stage 1', () => {
     expect(await chatPage.isToolActive('Web Search')).toBe(false);
   });
 
+  // scm-02b: a single click of the redesigned Tools-submenu checkbox item
+  // fires exactly ONE session-tools PUT (issue #2586 follow-up). The classic
+  // composer's chip had a nested-button hazard (an inner ✕ `<span onClick>`
+  // living inside an outer `<button>`) that could occasionally fire two
+  // rapid, opposite PUTs from one click — `ChatPage.setToolState`'s
+  // retry-until-holds loop exists to paper over that. The redesigned
+  // `menuitemcheckbox` row is a single, non-nested clickable element, so this
+  // asserts the bug does NOT reproduce here: raw click, not through
+  // `enableTool`/`disableTool` (which would mask a double-PUT by retrying).
+  test('admin toggles Web Search from the Tools submenu with exactly one PUT per click', async ({
+    page,
+    chatPage,
+  }) => {
+    await gotoReadyChat(page, chatPage);
+    // The new chat's session (and the default tools it seeds) must exist
+    // before the OFF state below is established — otherwise its defaults
+    // (Web Search on, for this mentor) land after the guard and the raw
+    // click turns Web Search OFF.
+    await expect
+      .poll(() => chatPage.getCachedSessionId(mentorId), { timeout: 30_000 })
+      .not.toBeNull();
+
+    // Start from a known OFF state via the (retry-safe) helper.
+    await expect(async () => {
+      if (await chatPage.isToolActive('Web Search')) {
+        await chatPage.disableTool('Web Search');
+      }
+      expect(await chatPage.isToolActive('Web Search')).toBe(false);
+    }).toPass({ timeout: 30_000 });
+
+    const isSessionToolsPut = (url: string, method: string) =>
+      method === 'PUT' &&
+      /\/ai-mentor\/orgs\/[^/]+\/users\/[^/]+\/sessions\/[^/]+\/?$/.test(
+        new URL(url).pathname,
+      );
+
+    // ── One click ON ──────────────────────────────────────────────────────
+    const putsOn: string[] = [];
+    const onRequest = (request: import('@playwright/test').Request) => {
+      if (isSessionToolsPut(request.url(), request.method())) {
+        putsOn.push(request.postData() ?? '');
+      }
+    };
+    page.on('request', onRequest);
+    await chatPage.openToolsMenu();
+    // The single raw click under test — not `enableTool()`, which retries.
+    await chatPage.getToolButton('Web Search').click();
+    await chatPage.closePlusMenu();
+    // Retrying assertion (not a fixed sleep + one-shot check): the chip can
+    // take a moment to reflect the just-sent PUT (a client-side settle race
+    // in the composer's active-tools state, independent of this checkpoint —
+    // see `ChatPage.setToolState`'s doc comment), so this waits for it to
+    // land rather than snapshotting too early. The request listener stays
+    // attached through the wait, so a genuine delayed second (opposite) PUT
+    // — the classic bug this checkpoint targets — is still caught below.
+    await expect(chatPage.getToolChip('Web Search')).toBeVisible({
+      timeout: 15_000,
+    });
+    page.off('request', onRequest);
+
+    expect(putsOn.length).toBe(1);
+    expect(JSON.parse(putsOn[0]).tools ?? []).toContain('web-search');
+
+    // ── One click OFF ─────────────────────────────────────────────────────
+    const putsOff: string[] = [];
+    const onRequest2 = (request: import('@playwright/test').Request) => {
+      if (isSessionToolsPut(request.url(), request.method())) {
+        putsOff.push(request.postData() ?? '');
+      }
+    };
+    page.on('request', onRequest2);
+    await chatPage.openToolsMenu();
+    await chatPage.getToolButton('Web Search').click();
+    await chatPage.closePlusMenu();
+    await expect(chatPage.getToolChip('Web Search')).toHaveCount(0, {
+      timeout: 15_000,
+    });
+    page.off('request', onRequest2);
+
+    expect(putsOff.length).toBe(1);
+    expect(JSON.parse(putsOff[0]).tools ?? []).not.toContain('web-search');
+  });
+
+  // scm-08 (regression, issue #2586 fix): toggling a tool immediately after
+  // "New Chat" — before that chat's create-session POST resolves — must not
+  // be lost or PUT to the wrong session. Pre-fix, `useMentorTools`'s
+  // `updateSessionTools` PUT'd straight to whatever `sessionId` the Redux
+  // store held at click time (the PREVIOUS session, or none while a new one
+  // was mid-creation), so a toggle made in that window either landed on the
+  // wrong session or was silently overwritten once the new session's
+  // defaults loaded via `seedSessionTools`. The fix: while
+  // `sessionCreating || !sessionId`, the toggle is queued
+  // (`chatActions.queuePendingTool`) instead — updating the chip
+  // optimistically, client-side, with no PUT at all — and is written with
+  // exactly ONE `setSessionTools` PUT once the new session exists, per the
+  // effect in `use-mentor-tools.ts` keyed on
+  // `[sessionCreating, sessionId, hasPendingTools]`. A 5s artificial delay on
+  // the create-session POST gives the toggle a reliable window to land
+  // mid-flight; this must fail against the pre-fix code, which would either
+  // PUT immediately to the stale/absent session id (wrong session, and two
+  // PUTs total once the real one also fires) or drop the toggle.
+  test('toggling Web Search immediately after New Chat queues it and PUTs exactly once to the NEW session', async ({
+    page,
+    chatPage,
+  }) => {
+    // Generous budget for the case this test runs alone (e.g. via `-g`) and
+    // pays this suite's ~95s mentor-creation cost inside its own timeout.
+    test.setTimeout(180_000);
+    await gotoReadyChat(page, chatPage);
+
+    // Let the mount-time auto-created session settle before this checkpoint
+    // starts driving its own (deliberately delayed) "New Chat" — the initial
+    // auto-create must not be the one caught by the route delay below.
+    await expect
+      .poll(() => chatPage.getCachedSessionId(mentorId), { timeout: 15_000 })
+      .not.toBeNull();
+    const oldSessionId = await chatPage.getCachedSessionId(mentorId);
+
+    const isSessionToolsPut = (url: string, method: string) =>
+      method === 'PUT' &&
+      /\/ai-mentor\/orgs\/[^/]+\/users\/[^/]+\/sessions\/[^/]+\/?$/.test(
+        new URL(url).pathname,
+      );
+    const isCreateSessionPost = (url: string, method: string) =>
+      method === 'POST' &&
+      /\/ai-mentor\/orgs\/[^/]+\/users\/[^/]+\/sessions\/?$/.test(
+        new URL(url).pathname,
+      );
+
+    const puts: string[] = [];
+    const onRequest = (request: import('@playwright/test').Request) => {
+      if (isSessionToolsPut(request.url(), request.method())) {
+        puts.push(request.url());
+      }
+    };
+    page.on('request', onRequest);
+
+    await page.route(
+      /\/ai-mentor\/orgs\/[^/]+\/users\/[^/]+\/sessions\/?(\?.*)?$/,
+      async (route) => {
+        if (
+          !isCreateSessionPost(route.request().url(), route.request().method())
+        ) {
+          await route.continue();
+          return;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 5_000));
+        await route.continue();
+      },
+    );
+
+    await chatPage.startNewChat();
+
+    // Immediately — well inside the 5s create-session delay — toggle Web
+    // Search from the "+" menu's Tools page.
+    await chatPage.openToolsMenu();
+    await chatPage.getToolButton('Web Search').click();
+    await chatPage.closePlusMenu();
+
+    // The chip renders right away: a client-only optimistic update, not
+    // gated on the (still in-flight, delayed) network PUT.
+    await expect(chatPage.getToolChip('Web Search')).toBeVisible({
+      timeout: 2_000,
+    });
+    expect(puts.length).toBe(0);
+
+    // Once the delayed create-session POST resolves, exactly one PUT lands.
+    await expect.poll(() => puts.length, { timeout: 15_000 }).toBe(1);
+    await page.unroute(
+      /\/ai-mentor\/orgs\/[^/]+\/users\/[^/]+\/sessions\/?(\?.*)?$/,
+    );
+    page.off('request', onRequest);
+
+    const newSessionId = await chatPage.getCachedSessionId(mentorId);
+    expect(newSessionId).toBeTruthy();
+    expect(newSessionId).not.toBe(oldSessionId);
+    expect(puts[0]).toContain(`/sessions/${newSessionId}/`);
+    if (oldSessionId) {
+      expect(puts[0]).not.toContain(`/sessions/${oldSessionId}/`);
+    }
+
+    // The chip is still visible afterward.
+    await expect(chatPage.getToolChip('Web Search')).toBeVisible();
+  });
+
   // scm-03: attaching a file and sending carries it in the outgoing WS frame
   // as `file_references`, alongside the prompt and session_id — the exact
   // shape `use-chat-v2.ts`'s `sendMessage` builds (`createFileReference`):

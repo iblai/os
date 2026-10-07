@@ -294,16 +294,11 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
     await createMentorPage.openAndCreate(`E2E No-Tools Mentor ${Date.now()}`);
     tracker52.add((await getPlatformContext(page)).mentorId);
 
-    // No Web Search button should be visible
-    try {
-      await chatPage.webSearchButton.waitFor({
-        state: 'visible',
-        timeout: 5_000,
-      });
-      expect(true).toBe(false); // Should not reach here
-    } catch {
-      // Expected: button is not visible
-    }
+    // No Web Search tool should be offered anywhere in the composer — not as
+    // an active chip, nor as a row in the "+" menu's Tools page (issue #2586:
+    // a disabled tool no longer has a permanently-visible button at all, so
+    // `isToolAvailable` opens/closes that menu itself to check).
+    expect(await chatPage.isToolAvailable('Web Search')).toBe(false);
 
     // Confirm Web Search is off in the Tools tab
     await editMentorPage.open('Tools');
@@ -313,16 +308,8 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
     expect(await editMentorPage.tools.isToolEnabled('Web Search')).toBe(false);
     await editMentorPage.close();
 
-    // Web Search button is still absent
-    try {
-      await chatPage.webSearchButton.waitFor({
-        state: 'visible',
-        timeout: 5_000,
-      });
-      expect(true).toBe(false);
-    } catch {
-      // Expected
-    }
+    // Web Search is still absent everywhere in the composer.
+    expect(await chatPage.isToolAvailable('Web Search')).toBe(false);
   });
 
   // ────────────────────────────────────────────────────────────────
@@ -346,8 +333,9 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
     await editMentorPage.tools.enableTool('Web Search');
     await editMentorPage.close();
 
-    // Verify button is visible but do NOT click it
-    await expect(chatPage.webSearchButton).toBeVisible({ timeout: 10_000 });
+    // Verify the tool is offered (enabled-but-inactive lives in the "+" menu's
+    // Tools page now, issue #2586) but do NOT activate it.
+    expect(await chatPage.isToolAvailable('Web Search')).toBe(true);
 
     await chatPage.sendMessage('What is the current date today?');
     await chatPage.waitForUserMessage(
