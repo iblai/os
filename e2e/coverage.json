@@ -1,15 +1,15 @@
 {
   "version": 2,
-  "lastUpdated": "2026-09-28",
+  "lastUpdated": "2026-10-07",
   "summary": {
-    "totalCheckpoints": 779,
-    "coveredCheckpoints": 737,
+    "totalCheckpoints": 844,
+    "coveredCheckpoints": 803,
     "deprecatedCheckpoints": 17,
     "notReproducibleCheckpoints": 15,
-    "pendingCheckpoints": 10,
+    "pendingCheckpoints": 9,
     "percent": 100,
-    "totalJourneys": 81,
-    "activeJourneys": 80
+    "totalJourneys": 87,
+    "activeJourneys": 86
   },
   "journeys": [
     {
@@ -881,7 +881,7 @@
         {
           "id": "emb-10",
           "description": "Optimize Page Context Tokens toggle: visible label present, tooltip ('Strips HTML tags from page context') reachable on hover, and the setting flips and persists after submit + modal reopen via GET /settings/ round-trip",
-          "status": "pending"
+          "status": "covered"
         },
         {
           "id": "emb-11",
@@ -3494,7 +3494,7 @@
         },
         {
           "id": "pta-04",
-          "description": "Pasting an oversized file triggers a sonner validation error toast and no attachment chip is added",
+          "description": "Pasting an oversized file triggers a sonner validation error toast AND a rejected attachment chip (data-status=\"too-large\") — updated for issue #2586's file-card redesign, which added the too-large chip state alongside the toast (see journey 79's cr-06)",
           "status": "covered"
         }
       ]
@@ -4199,12 +4199,27 @@
         },
         {
           "id": "slash-02",
-          "description": "Mentor with skills: composer textarea gets role=combobox wiring and typing \"/\" opens the slash-skill-picker listing only enabled skills (disabled filtered out) as name + slug — no descriptions (assignment rows carry none; the platform-wide agent-skills catalog is never fetched from chat)",
+          "description": "Mentor with skills: composer textarea gets role=combobox wiring and typing \"/\" opens the slash-skill-picker listing only enabled skills (disabled filtered out) as the skill NAME ONLY (no /slug line, no \"Skills\" header) in a compact (~300px) left-aligned popover ABOVE the composer (picker bottom <= composer top, geometry-asserted) — no descriptions (assignment rows carry none; the platform-wide agent-skills catalog is never fetched from chat)",
+          "status": "covered"
+        },
+        {
+          "id": "slash-02b",
+          "description": "A long skill name wraps onto multiple lines inside the compact \"/\" picker (within the picker width) — never clipped or ellipsized",
+          "status": "covered"
+        },
+        {
+          "id": "slash-02d",
+          "description": "Conversation state (mocked chat socket): the \"/\" picker opens fully visible (not clipped by the chat's scrolling composer wrapper) above the bottom-pinned composer",
+          "status": "covered"
+        },
+        {
+          "id": "slash-02c",
+          "description": "Mobile (390px): the \"/\" picker opens above the bottom-pinned composer without covering the input and fits the viewport",
           "status": "covered"
         },
         {
           "id": "slash-03",
-          "description": "Typing after \"/\" filters the picker by both skill name and slug as the query narrows; no match closes the picker",
+          "description": "Typing after \"/\" filters the picker by both skill name and slug (the slug still matches even though rows show only the name) as the query narrows; no match closes the picker",
           "status": "covered"
         },
         {
@@ -4269,7 +4284,7 @@
         },
         {
           "id": "slash-16",
-          "description": "Skills dropdown button (inside-buttons row, next to Canvas) lists the mentor's enabled skills as name + /slug (no descriptions); selecting inserts the /slug token AT THE CARET with context-aware spacing (highlighted in the composer) and the button shows the armed skill's name with the same ✕ affordance as other active tool pills (✕ disarms without opening the menu); toggling removes the token cleanly; arming another skill replaces the current one (single selection); arming via the \"/\" picker updates the button — both surfaces derive from the composer text so they stay in sync",
+          "description": "Skills row inside the composer's \"+\" menu lists the mentor's enabled skills as name + /slug (no descriptions); selecting inserts the /slug token AT THE CARET with context-aware spacing (highlighted in the composer) — there is no separate skill chip in the #2586 redesign, so the armed state shows only as the composer token, a checked row in the Skills menu, and its count badge on the menu trigger; removing (re-selecting the armed skill, or deleting its token text) clears all three; arming another skill replaces the current one (single selection); arming via the \"/\" picker marks the same skill checked in the Skills menu — both surfaces derive from the composer text so they stay in sync",
           "status": "covered"
         }
       ]
@@ -4920,6 +4935,11 @@
           "status": "covered"
         },
         {
+          "id": "scm-02b",
+          "description": "A single click of the redesigned Tools-submenu checkbox item fires exactly ONE session-tools PUT with the correct tools array — issue #2586 follow-up guard against the classic composer chip's nested-button double-PUT hazard, confirmed not to reproduce in the redesigned menuitemcheckbox/switch row",
+          "status": "covered"
+        },
+        {
           "id": "scm-03",
           "description": "Attaching a file and sending carries the prompt, session id, and a file_references entry (file_id/file_key/file_name/content_type/file_size) in the outgoing WebSocket frame",
           "status": "covered"
@@ -4943,6 +4963,11 @@
           "id": "scm-07",
           "description": "The server closing the WebSocket mid-stream (no eos/error frame) leaves the streaming state and re-enables the composer, and the user can send again on a freshly (re)opened socket",
           "status": "covered"
+        },
+        {
+          "id": "scm-08",
+          "description": "Regression (issue #2586 fix): toggling a tool immediately after New Chat, before that chat's create-session POST resolves, queues the toggle (chip renders optimistically, zero PUTs) and PUTs it exactly once to the NEW session id once the session exists — never to the previous session, never lost",
+          "status": "covered"
         }
       ]
     },
@@ -4963,6 +4988,378 @@
         {
           "id": "ehh-02",
           "description": "The harness, loaded from a genuinely different origin than the mentor app, renders the embedded mentor chat inside its iframe (issue #2586; reusable scaffolding for issue #2590's origin-allowlist work)",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "composer-redesign",
+      "name": "Composer Redesign",
+      "spec": "79-composer-redesign.spec.ts",
+      "sourceFiles": ["components/chat/sdk-chat.tsx"],
+      "checkpoints": [
+        {
+          "id": "cr-01",
+          "description": "The empty-state chat screen renders name, welcome text, disclaimer and the composer directly below it, in that DOM order (issue #2586)",
+          "status": "covered"
+        },
+        {
+          "id": "cr-02",
+          "description": "On a phone-width viewport the empty-state composer is pinned to the bottom of the screen instead of centred with the name/welcome block",
+          "status": "covered"
+        },
+        {
+          "id": "cr-03",
+          "description": "The composer's single \"+\" menu opens and exposes Upload File, Camera and (when the mentor has tools enabled) a Tools submenu trigger",
+          "status": "covered"
+        },
+        {
+          "id": "cr-04",
+          "description": "Escape closes the \"+\" menu and returns focus to its trigger",
+          "status": "covered"
+        },
+        {
+          "id": "cr-05",
+          "description": "Toggling tools from the \"+\" menu's Tools submenu renders them as chips, with 4+ active tools collapsing the overflow into a \"+N\" button that opens an active list (\"Clear all\" included)",
+          "status": "covered"
+        },
+        {
+          "id": "cr-06",
+          "description": "The composer's file card renders every upload state — uploading, done, failed (with Retry) and too-large — via mocked upload responses",
+          "status": "covered"
+        },
+        {
+          "id": "cr-07",
+          "description": "Screen share, dictate, voice call and Send remain independent composer controls, never nested inside the \"+\" menu",
+          "status": "covered"
+        },
+        {
+          "id": "cr-08",
+          "description": "Guided prompts on the main chat stay visible while the user types, including a \"/\" skill command",
+          "status": "covered"
+        },
+        {
+          "id": "cr-09",
+          "description": "On a phone-width viewport the floating accessibility button does not overlap the composer's Send button",
+          "status": "covered"
+        },
+        {
+          "id": "cr-11",
+          "description": "The Canvas pill matches the active tool chips: when on it is the same pale-blue pill (#F5F8FF fill, #D0E0FF border, 32px) with a \"Turn off Canvas\" x that turns Canvas off; when off it is a plain one-click toggle with no x",
+          "status": "covered"
+        },
+        {
+          "id": "cr-12",
+          "description": "Regression (issue #2586): clicking Canvas on a brand-new chat before its create-session POST resolves shows the pill on with its x at once, then PUTs enable_artifacts: true exactly once to the NEW session id (never to sessions// or the previous session), and the choice survives the new session's default",
+          "status": "covered"
+        },
+        {
+          "id": "cr-13",
+          "description": "On a phone-width viewport (390px) the main chat's guided prompts are at most four full-width rows stacked above the composer, matching its left/right edges with no sideways scrolling, and stay visible while typing; desktop keeps the wrapped chips (issue #2586)",
+          "status": "covered"
+        },
+        {
+          "id": "cr-14",
+          "description": "Mobile: the composer's \"+\" menu opens as a bottom sheet with Upload/Camera tiles and Tools/Skills/Prompts/Memory rows; drilling into Tools toggles an available tool to an active chip, and the sheet closes via Escape and via a backdrop click",
+          "status": "covered"
+        },
+        {
+          "id": "cr-15",
+          "description": "The Memory row in the \"+\" menu never shows a trailing chevron (unlike Tools and Skills, both of which open a sub-page/submenu) on desktop or mobile, and clicking it opens the Memory panel (\"Your Memory\")",
+          "status": "covered"
+        },
+        {
+          "id": "cr-16",
+          "description": "The composer in CONVERSATION state (after a mocked reply) still shows an active tool chip, the Canvas \"Turn off Canvas\" x pill, and the \"/\" skill picker positioned above the composer; a 320-390px viewport in that state has no horizontal overflow with Send visible",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "embed-and-lti-redesign",
+      "name": "Embed Header + LTI Redesign",
+      "spec": "80-embed-and-lti-redesign.spec.ts",
+      "sourceFiles": [
+        "components/chat/sdk-chat.tsx",
+        "hooks/use-embed-mode.ts",
+        "hooks/use-is-lti-launch.ts",
+        "lib/embed-context.ts",
+        "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/embed-nav-bar.tsx",
+        "app/platform/[tenantKey]/[mentorId]/_components/accessibility-fab/index.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "emb-hdr-01",
+          "description": "The embed header shows the mentor's identity, a dedicated New chat button, a menu/help trigger and Close, on a genuinely cross-origin embed harness (issue #2586)",
+          "status": "covered"
+        },
+        {
+          "id": "emb-hdr-02",
+          "description": "The embed composer's \"+\" menu never offers Prompts or Memory, even for an authenticated (admin) embed session where they would otherwise render",
+          "status": "covered"
+        },
+        {
+          "id": "emb-hdr-03",
+          "description": "The embed's stacked suggested-prompt rows stay visible while typing, like the main chat's guided prompts (cr-08)",
+          "status": "covered"
+        },
+        {
+          "id": "emb-lti-01",
+          "description": "An LTI launch (?lti=true) hides the embed's Close button and Escape becomes a no-op",
+          "status": "covered"
+        },
+        {
+          "id": "emb-lti-02",
+          "description": "The LTI embed composer is capped at 680px wide even as its iframe widens",
+          "status": "covered"
+        },
+        {
+          "id": "emb-hdr-04",
+          "description": "Regression (issue #2586): the embed's suggested prompts are at most four full-width rows stacked above the composer, each matching the composer's left/right edges, with no horizontal overflow at 320px and still shown while typing",
+          "status": "covered"
+        },
+        {
+          "id": "emb-lti-03",
+          "description": "Regression (issue #2586): in a 320px LTI frame the composer stays inside the frame: the Canvas pill (on, with its x) gives way, the toolbar never overflows, and every action button including Send is fully visible",
+          "status": "covered"
+        },
+        {
+          "id": "emb-lti-04",
+          "description": "Regression (issue #2586): in a 300px LTI frame the composer placeholder stays on one line and ellipsizes (white-space nowrap, ::placeholder text-overflow ellipsis, content under two lines, not clipped), while typed text still wraps",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "project-page-redesign",
+      "name": "Project Page Redesign",
+      "spec": "81-project-page-redesign.spec.ts",
+      "sourceFiles": [
+        "app/platform/[tenantKey]/projects/[projectId]/[mentorId]/page.tsx",
+        "components/welcome-chat-new.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "pjr-01",
+          "description": "The redesigned project landing page renders a small label with the PROJECT name (title tooltip), the gradient AGENT-name h1 like the main chat (project name as its accessible description), the composer, and the Files/Instructions context cards in that order; both card subtitles wrap to a 2-line clamp and the cards share a row at equal height (issue #2586)",
+          "status": "covered"
+        },
+        {
+          "id": "pjr-02",
+          "description": "\"Project agents\" shows a count badge, an \"Add agent\" button, and the currently selected agent marked aria-current",
+          "status": "covered"
+        },
+        {
+          "id": "pjr-03",
+          "description": "Removing the last remaining agent from a project is blocked by a \"Cannot Remove Agent\" guard dialog, with no mutation performed",
+          "status": "covered"
+        },
+        {
+          "id": "pjr-04",
+          "description": "Mobile (390px): the project-name label / agent-name heading order holds, the composer is pinned to the viewport bottom instead of flowing after the context cards, and the Files/Instructions cards stack as one bordered list sharing the same 2-line subtitle clamp as desktop's 2-up grid",
+          "status": "covered"
+        },
+        {
+          "id": "pjr-05",
+          "description": "Mobile (390px): the per-agent \"More actions\" trigger opens a bottom actions sheet (instead of the desktop dropdown) showing the agent name and \"Remove from project\"; removing the last remaining agent through it is still blocked by the \"Cannot Remove Agent\" guard",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "embed-redesign-conversation-and-controls",
+      "name": "Embed Mode Redesign — Conversation & Controls",
+      "spec": "82-embed-redesign-conversation-and-controls.spec.ts",
+      "sourceFiles": [
+        "components/modals/edit-mentor-modal/hooks/useEmbedTab.ts",
+        "components/modals/edit-mentor-modal/tabs/embed-tab.tsx",
+        "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/embed-nav-bar.tsx",
+        "hooks/use-is-lti-launch.ts",
+        "e2e/utils/embed-harness-server.mjs",
+        "e2e/utils/embed-harness-client.ts"
+      ],
+      "checkpoints": [
+        {
+          "id": "er-01",
+          "description": "The REAL generated embed snippet (getEmbedCode(), dropped into a fake customer page) behaves like a real launcher: the bubble is visible and never overlaps the host page's own composer-shaped content, clicking it opens the panel with the chat, the embed header's Close button hides the widget via its closeEmbed postMessage, and reopening the bubble restores the SAME widget rather than recreating it",
+          "status": "covered"
+        },
+        {
+          "id": "er-02",
+          "description": "A scripted embed conversation (mocked chat WebSocket): sending a message renders the user bubble and the AI reply, the suggested-prompt rows disappear once the conversation has started, and the disclaimer (when present) stays directly above the composer mid-conversation",
+          "status": "covered"
+        },
+        {
+          "id": "er-03",
+          "description": "Clicking a suggested-prompt row in the embed sends it immediately (EmbedStarterPrompts wires onPromptSelect straight to handleSubmit), not just filling the composer",
+          "status": "covered"
+        },
+        {
+          "id": "er-04",
+          "description": "The embed composer's \"+\" menu offers Upload/Camera/Tools/Skills but never Prompts/Memory; toggling a tool from the Tools submenu renders an active \"Turn off {name}\" chip, and turning Canvas on shows the matching \"Turn off Canvas\" x pill",
+          "status": "covered"
+        },
+        {
+          "id": "er-05",
+          "description": "The embed composer's \"/\" skill picker opens ABOVE the composer (data-placement=\"above\") and, in the redesign variant, shows only the skill name — never the /slug line",
+          "status": "covered"
+        },
+        {
+          "id": "er-06",
+          "description": "Mocked file-card states inside the embed — uploading, done, failed (with Retry) and too-large — render the same as the main chat (journey 79 cr-06), scoped to the cross-origin iframe",
+          "status": "covered"
+        },
+        {
+          "id": "er-07",
+          "description": "A 390px full-screen embed has no horizontal overflow (document or toolbar) and keeps Send fully visible, including with a widened toolbar (Canvas on)",
+          "status": "covered"
+        },
+        {
+          "id": "er-08",
+          "description": "Embed header controls: New chat clears the conversation back to the empty state, the menu/help trigger opens and lists at least one item, the chat-privacy (\"private mode\") toggle opens its confirm dialog when present, and the hamburger (mobile) opens the minimal sidebar",
+          "status": "covered"
+        },
+        {
+          "id": "er-09",
+          "description": "A logged-out visitor on an anonymous (publicly chattable) mentor gets the embed chat and can send (mocked), but sees no \"+\" menu, Screen Sharing, Voice input (dictation) or Voice call controls (chat-input-form.tsx's visibleToLoggedInUsersOnly gate)",
+          "status": "covered"
+        },
+        {
+          "id": "er-10",
+          "description": "For an agent with the Screen Sharing capability enabled, a logged-in embed user sees the Screen Sharing button and clicking it opens the in-panel LiveKit modal path; selectEnableChatActionsPopup has no dispatch call site anywhere in the OS/web-containers/web-utils source in this build, so the parent-postMessage chat-action-popup path is documented as unreachable rather than tested",
+          "status": "covered"
+        },
+        {
+          "id": "er-11",
+          "description": "For the same Screen-Sharing-enabled agent, the Voice call button is present for a logged-in embed user",
+          "status": "covered"
+        },
+        {
+          "id": "er-12",
+          "description": "An LTI embed (?embed=true&lti=true) keeps the Close button absent and Escape a no-op after New chat and after opening a prior chat from history — the lti flag persists across in-app navigation via the embed-context localStorage cache",
+          "status": "covered"
+        },
+        {
+          "id": "er-13",
+          "description": "The Embed tab's own live preview iframe (Edit Agent -> Embed) renders the redesigned embed's empty-state gradient agent-name heading",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "settings-welcome-screen",
+      "name": "Settings Welcome Screen Sub-Tab",
+      "spec": "83-settings-welcome-screen.spec.ts",
+      "sourceFiles": [
+        "components/modals/edit-mentor-modal/settings-tab.tsx",
+        "e2e/page-objects/edit-mentor/settings.tab.ts"
+      ],
+      "checkpoints": [
+        {
+          "id": "wss-01",
+          "description": "The Settings tab shows a fourth Welcome screen sub-tab after Basic, Discovery and Capabilities; it opens on the main-app live preview with the agent's name as the heading",
+          "status": "covered"
+        },
+        {
+          "id": "wss-02",
+          "description": "The Number of guided prompts control shows only when Guided prompts is picked; Suggested hides it and Off also empties the preview's prompts",
+          "status": "covered"
+        },
+        {
+          "id": "wss-03",
+          "description": "Picking 10 guided prompts shows the first 4 plus View more (6); View more expands to all 10 and Show less folds back to 4",
+          "status": "covered"
+        },
+        {
+          "id": "wss-04",
+          "description": "The Embed and Mobile previews show the prompts as stacked full-width rows, with the same View more expansion",
+          "status": "covered"
+        },
+        {
+          "id": "wss-05",
+          "description": "Picking Personal greeting switches the preview heading to a time-of-day greeting, and Preview as a logged-out visitor shows Hi there",
+          "status": "covered"
+        },
+        {
+          "id": "wss-06",
+          "description": "Save never sends the Welcome screen choices (welcome_heading_style, guided_prompts_count) until the backend stores them (iblai-platform#2626); the save request is intercepted and aborted so the real agent is untouched",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "in-chat-model-picker",
+      "name": "In-chat Model Picker",
+      "spec": "84-in-chat-model-picker.spec.ts",
+      "sourceFiles": [
+        "components/modals/edit-mentor-modal/settings-tab.tsx",
+        "e2e/page-objects/chat.page.ts",
+        "e2e/page-objects/edit-mentor/settings.tab.ts"
+      ],
+      "checkpoints": [
+        {
+          "id": "icm-01",
+          "description": "An admin turns on \"Allow in-chat model change\" under Settings > Capabilities; Save sends enable_in_chat_llm_change=true and it reads back on after reopening",
+          "status": "covered"
+        },
+        {
+          "id": "icm-02",
+          "description": "With the setting on, a user picks a model via + > Model > provider > model: the Model row names the model in use, later turns carry llm_provider/llm_name on the chat socket, and a chip plus a \"Switched to X for this chat\" notice show it",
+          "status": "covered"
+        },
+        {
+          "id": "icm-03",
+          "description": "The chip's x goes back to the agent's model, sent explicitly on the next turn (the backend keeps a session's last pick); a new chat drops the chip and the notices and sends no model fields",
+          "status": "covered"
+        },
+        {
+          "id": "icm-04",
+          "description": "On a phone the + sheet goes Model > provider page (with Back) > model, closes, and shows the model chip",
+          "status": "covered"
+        },
+        {
+          "id": "icm-05",
+          "description": "With the setting off (Save sends enable_in_chat_llm_change=false), the + menu has no Model row",
+          "status": "covered"
+        },
+        {
+          "id": "icm-06",
+          "description": "Per-model credentials (iblai-platform#2638): a model whose availability requires a key is disabled in + > Model > provider and shows the backend's reason; clicking it picks nothing, while a usable model in the same provider stays enabled",
+          "status": "covered"
+        },
+        {
+          "id": "icm-07",
+          "description": "A tenant with a single usable provider: + > Model lists that provider's models straight away, with no provider step",
+          "status": "covered"
+        },
+        {
+          "id": "icm-08",
+          "description": "Per-model credentials (iblai-platform#2638): a provider whose every model requires a key is left out of the + > Model provider list",
+          "status": "covered"
+        },
+        {
+          "id": "icm-09",
+          "description": "When the chat socket rejects the picked model (400 \"The selected model is not available.\"), the error shows, the chip goes away, the picker is back on the agent's model and the message text is back in the composer",
+          "status": "covered"
+        },
+        {
+          "id": "icm-10",
+          "description": "A student (non-admin) picks a model from their own model catalogue via + > Model: the chip names it, turns carry llm_provider/llm_name on the chat socket with no \"not available\" error, and the chip's x sends the agent's model again",
+          "status": "covered"
+        },
+        {
+          "id": "icm-11",
+          "description": "A student's pick is per chat: a new chat drops the chip and sends no model fields, and the admin's chat on the same agent never shows the student's pick",
+          "status": "covered"
+        },
+        {
+          "id": "icm-12",
+          "description": "On a phone a student picks a model through the + sheet and the model chip shows it",
+          "status": "covered"
+        },
+        {
+          "id": "icm-13",
+          "description": "With the setting off, a student's composer has no model picker",
           "status": "covered"
         }
       ]
