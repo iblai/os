@@ -1520,7 +1520,8 @@
     "menuOptions": "菜单选项",
     "openSettingsMenu": "打开设置菜单",
     "settingsMenu": "设置菜单",
-    "closeChat": "关闭聊天"
+    "closeChat": "关闭聊天",
+    "newChat": "新对话"
   },
   "navBarIndex": {
     "logIn": "登录",

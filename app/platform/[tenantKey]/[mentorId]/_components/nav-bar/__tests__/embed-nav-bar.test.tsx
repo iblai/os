@@ -15,6 +15,7 @@ let mockIsPreviewMode = false;
 let mockIsIframed = true;
 let mockChatMode: 'default' | 'advanced' = 'default';
 let mockShowCloseButton = true;
+let mockIsLtiLaunch = false;
 let mockShowUserProfile = false;
 let mockUsername: string | null = 'testuser';
 let mockIsLoggedIn = true;
@@ -42,6 +43,10 @@ vi.mock('@/hooks/use-chat-mode', () => ({
 
 vi.mock('@/hooks/use-show-close-button', () => ({
   useShowCloseButton: () => mockShowCloseButton,
+}));
+
+vi.mock('@/hooks/use-is-lti-launch', () => ({
+  useIsLtiLaunch: () => mockIsLtiLaunch,
 }));
 
 vi.mock('@/hooks/use-show-user-profile', () => ({
@@ -156,6 +161,7 @@ describe('EmbedNavBar', () => {
     mockIsIframed = true;
     mockChatMode = 'default';
     mockShowCloseButton = true;
+    mockIsLtiLaunch = false;
     mockShowUserProfile = false;
     mockUsername = 'testuser';
     mockIsLoggedIn = true;
@@ -217,6 +223,23 @@ describe('EmbedNavBar', () => {
       expect(screen.getByLabelText('Close chat')).toBeInTheDocument();
     });
 
+    // #2586: inside an LMS course (LTI) there is no launcher to reopen the chat.
+    it('does not render close chat button in an LTI launch, even when the host opts in', () => {
+      mockShowCloseButton = true;
+      mockIsLtiLaunch = true;
+      renderEmbedNavBar();
+      expect(screen.queryByLabelText('Close chat')).not.toBeInTheDocument();
+    });
+
+    it('renders the #2586 embed header (56px, bottom rule)', () => {
+      renderEmbedNavBar();
+      expect(screen.getByRole('navigation')).toHaveClass(
+        'h-14',
+        'border-b',
+        'border-[#f0f1f3]',
+      );
+    });
+
     it('renders the avatar container with mentor image ring class', () => {
       renderEmbedNavBar({ profileImage: '/avatar.png' });
       const avatar = document.querySelector('.mentor-image-container-ring');
@@ -236,6 +259,15 @@ describe('EmbedNavBar', () => {
         'Start new chat with Test Mentor',
       );
       fireEvent.click(newChatButton);
+
+      expect(mockDispatch).toHaveBeenCalledTimes(2);
+      expect(mockEmit).toHaveBeenCalledWith('MENTOR:NEW_CHAT');
+    });
+
+    it('starts a new chat from the header New chat button', () => {
+      renderEmbedNavBar();
+
+      fireEvent.click(screen.getByRole('button', { name: 'New chat' }));
 
       expect(mockDispatch).toHaveBeenCalledTimes(2);
       expect(mockEmit).toHaveBeenCalledWith('MENTOR:NEW_CHAT');
@@ -418,6 +450,20 @@ describe('EmbedNavBar', () => {
     });
   });
 
+  describe('Help menu in preview mode', () => {
+    it('ignores help menu picks in preview mode', async () => {
+      mockIsPreviewMode = true;
+      const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
+      const user = userEvent.setup();
+      renderEmbedNavBar();
+
+      await user.click(screen.getByLabelText('Open menu options'));
+      await user.click(await screen.findByText('Support'));
+
+      expect(openSpy).not.toHaveBeenCalled();
+    });
+  });
+
   // --------------------------------------------------------------------------
   // Advanced Chat Mode (settings dropdown)
   // --------------------------------------------------------------------------
@@ -440,6 +486,21 @@ describe('EmbedNavBar', () => {
       expect(await screen.findByText('john')).toBeInTheDocument();
       expect(screen.getByText('Help')).toBeInTheDocument();
       expect(screen.getByText('Support')).toBeInTheDocument();
+    });
+
+    it('opens the support email from the settings dropdown', async () => {
+      mockChatMode = 'advanced';
+      const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
+      const user = userEvent.setup();
+      renderEmbedNavBar();
+
+      await user.click(screen.getByLabelText('Open settings menu'));
+      await user.click(await screen.findByText('Support'));
+
+      expect(openSpy).toHaveBeenCalledWith(
+        'mailto:support@example.com',
+        '_blank',
+      );
     });
 
     it('does not show username when username is null', async () => {
@@ -530,6 +591,13 @@ describe('EmbedNavBar', () => {
 
     it('does not post message when in preview mode', () => {
       mockIsPreviewMode = true;
+      renderEmbedNavBar();
+      pressEscape();
+      expect(postMessageSpy).not.toHaveBeenCalled();
+    });
+
+    it('does not post message in an LTI launch', () => {
+      mockIsLtiLaunch = true;
       renderEmbedNavBar();
       pressEscape();
       expect(postMessageSpy).not.toHaveBeenCalled();

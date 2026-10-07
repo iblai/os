@@ -30,6 +30,7 @@ export const EMBED_CONTEXT_KEYS = [
   'extra-body-classes',
   QUERY_PARAMS.SHOW_CLOSE_BUTTON,
   QUERY_PARAMS.SHOW_USER_PROFILE,
+  QUERY_PARAMS.LTI,
 ] as const;
 
 const STORAGE_KEY = 'ibl:embed-context';

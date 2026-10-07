@@ -1520,7 +1520,8 @@
     "menuOptions": "Opciones del menú",
     "openSettingsMenu": "Abrir menú de configuración",
     "settingsMenu": "Menú de configuración",
-    "closeChat": "Cerrar chat"
+    "closeChat": "Cerrar chat",
+    "newChat": "Nuevo chat"
   },
   "navBarIndex": {
     "logIn": "Iniciar sesión",

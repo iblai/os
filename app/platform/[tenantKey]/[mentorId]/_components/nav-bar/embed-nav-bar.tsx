@@ -5,11 +5,12 @@ import { useTranslations } from 'next-intl';
 
 import {
   BadgeHelp,
+  CircleHelp,
   CircleUser,
-  EllipsisVertical,
   Menu,
   Settings,
   ShieldQuestion,
+  SquarePen,
   X,
 } from 'lucide-react';
 
@@ -33,6 +34,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useChatMode } from '@/hooks/use-chat-mode';
 import { useShowCloseButton } from '@/hooks/use-show-close-button';
+import { useIsLtiLaunch } from '@/hooks/use-is-lti-launch';
 import { useShowUserProfile } from '@/hooks/use-show-user-profile';
 import { useHelpCenter } from '@/hooks/use-help-center';
 import { UserProfile } from './user-profile';
@@ -69,7 +71,9 @@ export function EmbedNavBar({
   const isPreviewMode = useIsPreviewMode();
   const isIframed = useIsIframed();
   const chatMode = useChatMode();
-  const showCloseButton = useShowCloseButton();
+  // An LMS course frame (LTI) has no launcher to reopen the chat: no close.
+  const isLtiLaunch = useIsLtiLaunch();
+  const showCloseButton = useShowCloseButton() && !isLtiLaunch;
   const showUserProfile = useShowUserProfile();
   const dispatch = useAppDispatch();
   const pathname = usePathname();
@@ -110,6 +114,16 @@ export function EmbedNavBar({
     };
   }, [isPreviewMode, showCloseButton]);
 
+  function startNewChat() {
+    dispatch(clearFiles(undefined));
+    eventBus.emit(RemoteEvents.newChat);
+    dispatch(chatActions.setShouldStartNewChat(true));
+  }
+
+  // #2586 Embed v2 header: 40px icon buttons on the right.
+  const iconButtonClass =
+    'h-10 w-10 rounded-[10px] text-gray-600 [&_svg]:h-5 [&_svg]:w-5';
+
   const helpItems = [
     ...(showHelp
       ? [
@@ -132,8 +146,8 @@ export function EmbedNavBar({
   ];
 
   return (
-    <nav className="flex h-16 w-full items-center bg-white px-4">
-      <div className="flex w-full items-center gap-2">
+    <nav className="flex h-14 w-full shrink-0 items-center border-b border-[#f0f1f3] bg-white pr-1.5 pl-3.5">
+      <div className="flex w-full min-w-0 items-center gap-1">
         {/* Toggle sidebar button */}
         {isMobile && visibleToLoggedInUsersOnly && (
           <Tooltip>
@@ -157,29 +171,27 @@ export function EmbedNavBar({
 
         {/* Mentor name and profile image */}
         <button
-          onClick={() => {
-            dispatch(clearFiles(undefined));
-            eventBus.emit(RemoteEvents.newChat);
-            dispatch(chatActions.setShouldStartNewChat(true));
-          }}
-          className="flex cursor-pointer items-center gap-4"
+          onClick={startNewChat}
+          className="flex min-w-0 flex-1 cursor-pointer items-center gap-2.5"
           aria-label={t('startNewChat', { mentorName })}
         >
           <Avatar
             className={cn(
-              'h-10 w-10 border-2 border-blue-500',
+              'h-8 w-8 shrink-0',
               CSS_CLASS_NAMES.APP_LAYOUT.MENTOR_IMAGE_CONTAINER_RING,
             )}
           >
             <AvatarImage src={profileImage} alt="" />
-            <AvatarFallback className="bg-blue-400 text-white">
+            <AvatarFallback className="bg-gradient-to-br from-[#38A1E5] to-[#7284FF] text-xs font-bold text-white">
               {mentorName.substring(0, 2).toUpperCase()}
             </AvatarFallback>
           </Avatar>
-          <span className="text-sm font-bold text-gray-800">{mentorName}</span>
+          <span className="truncate text-[15px] font-semibold text-gray-900">
+            {mentorName}
+          </span>
         </button>
 
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex shrink-0 items-center gap-0.5">
           {isOnChatPage && isLoggedIn() && tenantKey && (
             <ChatPrivacyToggle
               org={tenantKey}
@@ -194,17 +206,27 @@ export function EmbedNavBar({
               hides logout + the instructor/learner switch in this surface. */}
           {showUserProfile && <UserProfile embed />}
 
+          <Button
+            variant="ghost"
+            size="icon"
+            className={iconButtonClass}
+            aria-label={t('newChat')}
+            onClick={startNewChat}
+          >
+            <SquarePen />
+          </Button>
+
           {chatMode === 'default' ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="rounded-full"
+                  className={iconButtonClass}
                   aria-label={t('openMenuOptions')}
                   aria-haspopup="menu"
                 >
-                  <EllipsisVertical className="h-5 w-5" />
+                  <CircleHelp />
                   <span className="sr-only">{t('menuOptions')}</span>
                 </Button>
               </DropdownMenuTrigger>
@@ -230,11 +252,11 @@ export function EmbedNavBar({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="rounded-full"
+                  className={iconButtonClass}
                   aria-label={t('openSettingsMenu')}
                   aria-haspopup="menu"
                 >
-                  <Settings className="h-5 w-5" />
+                  <Settings />
                   <span className="sr-only">{t('settingsMenu')}</span>
                 </Button>
               </DropdownMenuTrigger>
@@ -265,14 +287,14 @@ export function EmbedNavBar({
             <Button
               variant="ghost"
               size="icon"
-              className="rounded-full"
+              className={iconButtonClass}
               aria-label={t('closeChat')}
               onClick={() => {
                 if (isPreviewMode) return;
                 notifyParentOnEmbedClose();
               }}
             >
-              <X className="h-5 w-5" />
+              <X />
               <span className="sr-only">{t('closeChat')}</span>
             </Button>
           )}
