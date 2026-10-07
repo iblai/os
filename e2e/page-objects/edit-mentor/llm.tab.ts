@@ -120,6 +120,20 @@ export class LlmTab {
     return infos;
   }
 
+  /** A model row in the LLM Selection dialog by its wire key (`data-model`). */
+  modelRowByName(llmName: string): Locator {
+    return this.llmSelectionDialog.locator(`button[data-model="${llmName}"]`);
+  }
+
+  /** Wire keys of every model row, in render order. */
+  async getModelRowOrder(): Promise<string[]> {
+    return this.llmSelectionDialog
+      .locator('button[data-model]')
+      .evaluateAll((els) =>
+        els.map((el) => el.getAttribute('data-model') ?? ''),
+      );
+  }
+
   /**
    * Select a provider and a chat model for the mentor.
    *

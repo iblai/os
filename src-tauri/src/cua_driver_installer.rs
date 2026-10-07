@@ -131,7 +131,7 @@ fn target_asset(version: &str) -> Result<String, String> {
 ///
 /// The file is Markdown-fenced (a ``` block around `<sha256>  <filename>` rows),
 /// so parse by matching the filename column rather than assuming line offsets.
-fn expected_sha256(checksums: &str, asset: &str) -> Option<String> {
+pub(crate) fn expected_sha256(checksums: &str, asset: &str) -> Option<String> {
     checksums.lines().find_map(|line| {
         let mut parts = line.split_whitespace();
         let sum = parts.next()?;
@@ -140,7 +140,7 @@ fn expected_sha256(checksums: &str, asset: &str) -> Option<String> {
     })
 }
 
-fn sha256_hex(bytes: &[u8]) -> String {
+pub(crate) fn sha256_hex(bytes: &[u8]) -> String {
     use sha2::{Digest, Sha256};
     hex::encode(Sha256::digest(bytes))
 }

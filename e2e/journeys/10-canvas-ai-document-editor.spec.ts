@@ -45,6 +45,60 @@ test.describe('Journey 10: Canvas — AI Document Editor', () => {
     },
   );
 
+  // Regression (cvs-16): the canvas panel re-sent the session PUT with only
+  // `enable_artifacts` once the agent's reply opened it; the endpoint replaces
+  // the session, so the tools active on it (mcp, grading, …) were wiped.
+  test('admin enables canvas and the canvas opening for an artifact does not drop the session tools', async ({
+    page,
+    chatPage,
+  }) => {
+    const sessionUpdates: Array<Record<string, unknown>> = [];
+    page.on('request', (request) => {
+      if (
+        request.method() === 'PUT' &&
+        /\/api\/ai-mentor\/orgs\/[^/]+\/users\/[^/]+\/sessions\/[^/]+\/$/.test(
+          new URL(request.url()).pathname,
+        )
+      ) {
+        sessionUpdates.push(request.postDataJSON() ?? {});
+      }
+    });
+
+    await chatPage.enableCanvasTool();
+
+    // The canvas loads its artifacts only after its session-update step, so
+    // this response marks that step as done.
+    const artifactsLoaded = page.waitForResponse(
+      (response) =>
+        response.request().method() === 'GET' &&
+        /\/artifacts\/$/.test(new URL(response.url()).pathname),
+      { timeout: 30_000 },
+    );
+    // Same window event the chat stream dispatches when an agent reply starts
+    // an artifact — opens the canvas without depending on a live LLM turn.
+    await page.evaluate(() => {
+      window.dispatchEvent(
+        new CustomEvent('artifact-stream-start', {
+          detail: {
+            artifactId: 987654321,
+            title: 'Ocean Notes',
+            fileExtension: 'md',
+            isUpdate: false,
+          },
+        }),
+      );
+    });
+    await expect(page.getByTestId('canvas-container')).toBeVisible({
+      timeout: 15_000,
+    });
+    await artifactsLoaded;
+
+    expect(
+      sessionUpdates.filter((body) => !('tools' in body)),
+      'every session update must carry the active tools',
+    ).toEqual([]);
+  });
+
   // fixme: canvas contenteditable editor never appears — canvas mode may not be enabled/working on this environment
   test.fixme(
     'admin goes to chat page and generates technical API documentation in canvas mode',

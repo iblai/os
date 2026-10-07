@@ -86,6 +86,7 @@ import { isTauriApp } from '@/types/tauri';
 import { hideInitialLoader } from '@/lib/initial-loader';
 import { useOpencodeLearner } from '@/hooks/use-opencode-learner';
 import { useOpencode402 } from '@/hooks/use-opencode-402';
+import { useOpencodeAuthRequired } from '@/hooks/use-opencode-auth-required';
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   const { handle402Error } = use402ErrorCheck();
@@ -96,6 +97,8 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   useOpencodeLearner();
   // Desktop only: a Code-turn 402 (insufficient credit) gets normal chat's UX.
   useOpencode402();
+  // Desktop only: a Code turn on a signed-out Codex / Claude Code says how to sign in.
+  useOpencodeAuthRequired();
 
   // Mirror the embed-context params into sessionStorage on first load so embed
   // mode survives later navigations that rebuild the URL without them — notably

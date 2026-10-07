@@ -1082,6 +1082,19 @@ describe('AppSidebar — sidebar rail toggle', () => {
   });
 });
 
+describe('AppSidebar — product tour hooks', () => {
+  it('marks the expanded Agents trigger and the footer for the tour', () => {
+    renderSidebar();
+    const [agents] = document.querySelectorAll('[data-tour="agents"]');
+    expect(agents).toHaveTextContent('Agents');
+    expect(agents.tagName).toBe('BUTTON');
+    expect(screen.getByTestId('sidebar-footer')).toHaveAttribute(
+      'data-tour',
+      'account',
+    );
+  });
+});
+
 describe('AppSidebar — Agents section', () => {
   it('expanding Agents reveals New Agent / My Agents / Explore', () => {
     renderSidebar();
@@ -2359,6 +2372,18 @@ describe('AppSidebar — Rail-collapsed mode', () => {
     expect(
       screen.getAllByRole('button', { name: 'Projects' }).length,
     ).toBeGreaterThan(0);
+  });
+
+  it('marks the rail Agents icon and the rail footer for the tour', () => {
+    renderSidebar();
+    expect(document.querySelector('[data-tour="agents"]')).toHaveAttribute(
+      'aria-label',
+      'Agents',
+    );
+    expect(screen.getByTestId('sidebar-footer')).toHaveAttribute(
+      'data-tour',
+      'account',
+    );
   });
 
   function findRailLink(label: string) {

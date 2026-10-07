@@ -6,6 +6,10 @@ import { useGetUserProjectDetailsQuery } from '@iblai/iblai-js/data-layer';
 import { Message } from '@iblai/iblai-js/web-utils';
 import { CHAT_AREA_SIZE } from '@iblai/iblai-js/web-utils';
 import { config } from '@/lib/config';
+import {
+  disabledDatasetResourceTypes,
+  maxDatasetFileSizeInMegaBytes,
+} from '@/lib/utils';
 import { useEmbedMode } from '@/hooks/use-embed-mode';
 import { WelcomeChat } from './welcome-chat';
 import { WelcomeMessage } from '@/components/welcome-chat/welcome-message';
@@ -173,6 +177,8 @@ export function WelcomeChatNew({
         isPublicRoute={isPublicRoute}
         navigateToProject={navigateToProject}
         showExploreMentors
+        disabledResourceTypes={disabledDatasetResourceTypes()}
+        maxUploadSizeMb={maxDatasetFileSizeInMegaBytes()}
       />
     );
   }

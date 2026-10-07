@@ -13,6 +13,9 @@ import { useIframeMessageHandler } from '@iblai/iblai-js/web-containers';
 import { useParams } from 'next/navigation';
 import { useEffect } from 'react';
 import { MessageBridgeProvider } from './message-bridge-provider';
+import { AgentSettingsLauncher } from './agent-settings-launcher';
+// Side effect: gives the SDK's canvas this app's markdown engine.
+import '@/lib/canvas-markdown-engine';
 
 export default function AppProvider({
   children,
@@ -59,5 +62,9 @@ export default function AppProvider({
     },
   });
 
-  return <MessageBridgeProvider>{children}</MessageBridgeProvider>;
+  return (
+    <MessageBridgeProvider>
+      <AgentSettingsLauncher>{children}</AgentSettingsLauncher>
+    </MessageBridgeProvider>
+  );
 }

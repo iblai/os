@@ -2,14 +2,14 @@
   "version": 2,
   "lastUpdated": "2026-10-07",
   "summary": {
-    "totalCheckpoints": 844,
-    "coveredCheckpoints": 803,
+    "totalCheckpoints": 899,
+    "coveredCheckpoints": 855,
     "deprecatedCheckpoints": 17,
-    "notReproducibleCheckpoints": 15,
-    "pendingCheckpoints": 9,
+    "notReproducibleCheckpoints": 17,
+    "pendingCheckpoints": 10,
     "percent": 100,
-    "totalJourneys": 87,
-    "activeJourneys": 86
+    "totalJourneys": 91,
+    "activeJourneys": 90
   },
   "journeys": [
     {
@@ -362,7 +362,7 @@
         },
         {
           "id": "mgmt-04",
-          "description": "Admin can toggle tools on/off",
+          "description": "Admin sees the Tools tab render with at least one tool (light smoke check on the shared account mentor; real toggle-on/off + persistence + a11y coverage moved to journey 77's tools-01..05 on disposable per-test mentors, to avoid mutating tool_slugs on a mentor other tests/suites share)",
           "status": "covered"
         },
         {
@@ -453,6 +453,11 @@
         {
           "id": "mgmt-22",
           "description": "Issue #2502: no network requests are made for the 15 deleted static /llm-*-provider.* images while opening the LLM tab and its model picker",
+          "status": "covered"
+        },
+        {
+          "id": "mgmt-23",
+          "description": "Issue #2638: LLM model availability is decided per model from route-mocked mentor-llms (availability wins over has_credentials, legacy shape falls back to provider flags) — provider card data-disabled only when every model is unavailable; unavailable model rows are disabled with data-availability-status, the backend message as a title tooltip only (no inline text) and sort after available ones; byok_main_fallback model is selectable",
           "status": "covered"
         }
       ]
@@ -653,10 +658,7 @@
       "name": "Canvas — AI Document Editor",
       "spec": "10-canvas-ai-document-editor.spec.ts",
       "sourceFiles": [
-        "components/canvas/canvas-controls.tsx",
-        "components/canvas/canvas-view.tsx",
-        "components/canvas/binary-canvas-component.tsx",
-        "components/canvas/binary-artifact-utils.ts",
+        "lib/canvas-markdown-engine.ts",
         "components/chat/chat-messages/canvas-message-preview.tsx",
         "components/chat/chat-messages/message-preview.tsx",
         "components/chat/chat-messages/types.ts",
@@ -737,6 +739,11 @@
           "id": "cvs-15",
           "description": "Binary canvas preview paths beyond pdf: image/svg inline preview (data-testid=\"binary-canvas-image\"), the non-previewable-type fallback message for zip/xlsx/docx/… (data-testid=\"binary-canvas-fallback\"), the preview-error state for a malformed file (data-testid=\"binary-canvas-preview-error\", invalid SVG XML / non-PDF bytes / image decode failure), and the loading/error/retry states — unit-covered in binary-canvas-component.test.tsx, canvas-view.test.tsx, and binary-artifact-utils.test.ts; not e2e-reproducible because there is no deterministic way to make a live agent produce these specific shapes (Journey 71 shares a .txt file, which takes the text-canvas path and never reaches the binary canvas at all)",
           "status": "not-reproducible"
+        },
+        {
+          "id": "cvs-16",
+          "description": "Opening the canvas for an agent artifact never sends a session update (PUT sessions/{id}/) without `tools` — the canvas panel used to re-send `{ enable_artifacts: true }` alone, which wiped the session's active tools (mcp, grading, …); the canvas is opened deterministically via the `artifact-stream-start` window event, no live LLM turn needed",
+          "status": "covered"
         }
       ]
     },
@@ -1252,11 +1259,12 @@
       "name": "Dataset Management",
       "spec": "20-dataset-management.spec.ts",
       "sourceFiles": [
-        "components/modals/edit-mentor-modal/tabs/datasets-tab/index.tsx",
-        "components/modals/edit-mentor-modal/tabs/datasets-tab/resource-types.tsx",
         "components/modals/edit-mentor-modal/tabs/datasets-tab/agent-datasets-tab.tsx",
+        "components/workflows/node-config-panel.tsx",
         "hooks/user-navigate.ts",
-        "lib/constants.ts"
+        "lib/constants.ts",
+        "lib/config.ts",
+        "lib/utils.ts"
       ],
       "checkpoints": [
         {
@@ -1321,7 +1329,7 @@
         },
         {
           "id": "ds-13",
-          "description": "PDF file can be uploaded",
+          "description": "PDF file can be uploaded (exercised by journey 75's du-09 on a fresh mentor; the in-place placeholder here was a dead commented-out test prior to this change)",
           "status": "covered"
         },
         {
@@ -1387,6 +1395,26 @@
         {
           "id": "ds-26",
           "description": "Reloading the page while paginated restores datasetsPage and the active page (self-seeded multi-page mentor)",
+          "status": "covered"
+        },
+        {
+          "id": "ds-27",
+          "description": "Train-or-Delete modal shows the Train/Delete choice, description text, and (for an uploaded-file dataset) no User-Agent field, for a deterministically self-seeded untrained dataset",
+          "status": "covered"
+        },
+        {
+          "id": "ds-28",
+          "description": "Untraining a trained dataset fires the underlying PUT (train:false) immediately, before the auto-opened delete confirmation — verified via the network request (self-seeded)",
+          "status": "covered"
+        },
+        {
+          "id": "ds-29",
+          "description": "Retrain schedule interval is set via Weekly, persists across closing and reopening the modal, and can be cleared back to no schedule (self-seeded crawlable URL dataset — retrain scheduling is disabled for every uploaded-file type)",
+          "status": "covered"
+        },
+        {
+          "id": "ds-30",
+          "description": "Train-or-Delete modal's User-Agent field is present for a web-crawler dataset and absent for an uploaded-file dataset (self-seeded pair, same mentor)",
           "status": "covered"
         }
       ]
@@ -1643,6 +1671,11 @@
         {
           "id": "hist-07",
           "description": "Rows whose turns carry retrieved documents / tool calls show 'Documents · N' / 'Tools · N' chips with N > 0 (never an empty chip container); a Documents chip opens the chat's 'Retrieved Documents' dialog listing what the conversation retrieved (closes on Escape); the transcript offers a 'Show Details' per-turn panel (retrieved documents / tool calls / metadata / request context) only for turns with extended data, and no panel at all otherwise",
+          "status": "covered"
+        },
+        {
+          "id": "hist-08",
+          "description": "A conversation that produced a canvas shows the chat's own 'Open Canvas' card in the preview (none otherwise); the card opens the chat's canvas read-only in a dialog — title and Export only, no formatting toolbar, rename, version switch or editable content — which closes on Escape",
           "status": "covered"
         }
       ]
@@ -2393,6 +2426,11 @@
         {
           "id": "wf-15",
           "description": "Workflow can be published; active workflow can be deactivated back to Draft",
+          "status": "covered"
+        },
+        {
+          "id": "wf-16",
+          "description": "File Search node's dataset picker dialog: opening/searching/paging never touch datasetsPage/datasetsSearch URL params (syncToUrl=false, unlike the edit-mentor modal's Datasets tab); picking a row closes the dialog and shows the dataset name with a Change button; reopening highlights the previously selected row (self-seeded mentor)",
           "status": "covered"
         }
       ]
@@ -3452,7 +3490,8 @@
       "name": "Recent Chats Refresh",
       "spec": "53-recent-chats-refresh.spec.ts",
       "sourceFiles": [
-        "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx"
+        "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx",
+        "components/chat/index.tsx"
       ],
       "checkpoints": [
         {
@@ -3464,6 +3503,12 @@
           "id": "rcr-02",
           "description": "Clicking an existing Recent chat row loads the conversation in the chat panel (regression guard for issue #1881: handleSelectRow must write cachedSessionId[mentorId] to localStorage so the message loader re-fires)",
           "status": "covered"
+        },
+        {
+          "id": "rcr-03",
+          "description": "Reopening a Recent chat restores that session's own options: a chat that had Canvas enabled shows the Canvas toggle active again (aria-pressed=true) after switching to a new chat with Canvas off and back. The SDK tools hook (useMentorTools) restores tools + canvas from the session detail (my-chat-history/{session_id}) and the chat no longer sends a session update turning canvas off on the chat being opened",
+          "status": "pending",
+          "note": "Needs an SDK build that includes the useMentorTools session restore (web-utils); red until the app picks that build up"
         }
       ]
     },
@@ -4491,10 +4536,7 @@
       "name": "VM Sandbox File Artifact — Canvas Preview",
       "spec": "71-vm-sandbox-txt-file-canvas.spec.ts",
       "sourceFiles": [
-        "components/canvas/binary-canvas-component.tsx",
-        "components/canvas/binary-artifact-utils.ts",
-        "components/canvas/canvas-view.tsx",
-        "components/canvas/canvas-component.tsx",
+        "lib/canvas-markdown-engine.ts",
         "components/chat/chat-messages/canvas-message-preview.tsx",
         "components/chat/chat-messages/message-preview.tsx",
         "components/chat/index.tsx",
@@ -4739,10 +4781,8 @@
       "name": "Dataset Cloud Pickers",
       "spec": "74-dataset-cloud-pickers.spec.ts",
       "sourceFiles": [
-        "hooks/use-google-drive-picker.ts",
-        "hooks/use-one-drive-picker.ts",
-        "hooks/use-dropdox-picker.ts",
-        "components/modals/edit-mentor-modal/tabs/datasets-tab/add-resource-modal.tsx"
+        "components/workflows/node-config-panel.tsx",
+        "components/modals/edit-mentor-modal/tabs/datasets-tab/agent-datasets-tab.tsx"
       ],
       "checkpoints": [
         {
@@ -4767,8 +4807,8 @@
       "name": "Dataset Upload Types",
       "spec": "75-dataset-upload-types.spec.ts",
       "sourceFiles": [
-        "components/modals/edit-mentor-modal/tabs/datasets-tab/add-resource-modal.tsx",
-        "components/modals/edit-mentor-modal/tabs/datasets-tab/resource-types.tsx"
+        "components/modals/edit-mentor-modal/tabs/datasets-tab/agent-datasets-tab.tsx",
+        "e2e/utils/dataset-resource-gating.ts"
       ],
       "checkpoints": [
         {
@@ -4809,6 +4849,46 @@
         {
           "id": "du-08",
           "description": "Admin uploads an Excel (.xlsx) file via the Add Resources modal and the file row appears in the dataset list",
+          "status": "covered"
+        },
+        {
+          "id": "du-09",
+          "description": "Admin uploads a PDF file via the Add Resources modal and the file row appears in the dataset list",
+          "status": "covered"
+        },
+        {
+          "id": "du-10",
+          "description": "Admin submits a URL resource via the Add Resources modal and the row appears in the dataset list",
+          "status": "covered"
+        },
+        {
+          "id": "du-11",
+          "description": "Admin submits a YouTube resource via the Add Resources modal and the row appears in the dataset list",
+          "status": "covered"
+        },
+        {
+          "id": "du-12",
+          "description": "Admin submits a GitHub repo resource (URL + branch) via the Add Resources modal and the row appears in the dataset list",
+          "status": "covered"
+        },
+        {
+          "id": "du-13",
+          "description": "Admin submits a Web Crawler resource with a User-Agent filled in; the create request carries crawler_extra_headers with the value",
+          "status": "covered"
+        },
+        {
+          "id": "du-14",
+          "description": "Admin submits a Web Crawler resource with the User-Agent left blank; the create request omits crawler_extra_headers",
+          "status": "covered"
+        },
+        {
+          "id": "du-15",
+          "description": "ZIP resource button's enabled/disabled state matches NEXT_PUBLIC_DISABLED_DATASETS as resolved from the running build's env files (default: disabled) — full upload flow runs only when enabled",
+          "status": "covered"
+        },
+        {
+          "id": "du-16",
+          "description": "Course resource button's enabled/disabled state matches NEXT_PUBLIC_DISABLED_DATASETS as resolved from the running build's env files (default: disabled) — full upload flow runs only when enabled",
           "status": "covered"
         }
       ]
@@ -4911,6 +4991,237 @@
         {
           "id": "sem-06",
           "description": "With the setting OFF, the welcome screen hides the \"Explore Agents\" section",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "mentor-tools-tab",
+      "name": "Mentor Tools Tab",
+      "spec": "77-mentor-tools-tab.spec.ts",
+      "sourceFiles": ["components/modals/edit-mentor-modal/tabs/tools-tab.tsx"],
+      "checkpoints": [
+        {
+          "id": "tools-01",
+          "description": "Admin opens the Tools tab and sees the header, description, and the tools-info-box copy",
+          "status": "covered"
+        },
+        {
+          "id": "tools-02",
+          "description": "Admin toggles a tool on (aria-checked + success toast) and it persists across a close + full page reload + reopen; toggling it back off persists the same way; skips gracefully on an empty tenant tool catalogue",
+          "status": "covered"
+        },
+        {
+          "id": "tools-03",
+          "description": "A tool's info icon exposes \"More info about {name}\" and its tooltip shows the description on both hover and keyboard focus",
+          "status": "covered"
+        },
+        {
+          "id": "tools-04",
+          "description": "A tool switch's accessible name flips between \"{name} disabled\" and \"{name} enabled\" as it is toggled",
+          "status": "covered"
+        },
+        {
+          "id": "tools-05",
+          "description": "Non-admin does not see the Tools tab in the Edit Mentor modal (dropdown has no Settings item; falls back to a direct tab-absence check)",
+          "status": "covered"
+        },
+        {
+          "id": "tools-06",
+          "description": "Read-only mentor_tools field permission (WithFormPermissions) disables every tool switch; not reproducible in this environment — NEXT_PUBLIC_ENABLE_RBAC is unset (defaults false) and no fixture seeds a permissions.field.mentor_tools write:false response",
+          "status": "not-reproducible"
+        },
+        {
+          "id": "tools-07",
+          "description": "Tools tab copy renders correctly in a non-English locale (e.g. es); not reproducible — no journey in this repo has an established, reliable mechanism to switch the live app locale and assert on translated text",
+          "status": "not-reproducible"
+        }
+      ]
+    },
+    {
+      "id": "mentor-api-tab",
+      "name": "Mentor API Tab",
+      "spec": "78-mentor-api-tab.spec.ts",
+      "sourceFiles": ["components/modals/edit-mentor-modal/tabs/api-tab.tsx"],
+      "checkpoints": [
+        {
+          "id": "api-01",
+          "description": "Admin opens the API tab and sees the header, description, info box (with disclaimer text), and Create New button",
+          "status": "covered"
+        },
+        {
+          "id": "api-02",
+          "description": "Admin opens Create, opens the expiration date calendar, navigates to the next month, and picks a day — the Create dialog stays open (regression guard for the popover click-through bug fixed via pointer-events-auto in the SDK's ui/popover.tsx) and the trigger shows the picked PPP date; submitting shows the success toast + reveal dialog, and the new row's EXPIRES cell shows that exact date",
+          "status": "covered"
+        },
+        {
+          "id": "api-03",
+          "description": "Creating an API key without picking an expiration date leaves its EXPIRES cell showing \"N/A\"",
+          "status": "covered"
+        },
+        {
+          "id": "api-04",
+          "description": "Create dialog validates the API key name (required / letters-numbers-hyphens-underscores only) and keeps Submit disabled until the name is valid",
+          "status": "covered"
+        },
+        {
+          "id": "api-05",
+          "description": "The reveal (\"API Key\") dialog's copy button flips its accessible name from \"Copy API key\" to \"Copied\" once clicked",
+          "status": "covered"
+        },
+        {
+          "id": "api-06",
+          "description": "Pagination appears once more than 10 keys exist (bulk-seeded via the API), page 2's rows differ from page 1's, and creating a key through the UI returns the view to page 1",
+          "status": "covered"
+        },
+        {
+          "id": "api-07",
+          "description": "Deleting the only remaining row on a paginated page (page > 1) steps the view back a page and the pagination control disappears once everything fits on one page — exercised against a mocked (page.route) dataset, since the real tenant's true last page is always foreign, protected data (verified live: the backend ignores any client-supplied `created` timestamp and always server-stamps \"now\", so a test-created key can never sort to the tail)",
+          "status": "covered"
+        },
+        {
+          "id": "api-08",
+          "description": "Admin deletes an API key via the UI: the confirmation dialog names the key by name, and confirming removes its row",
+          "status": "covered"
+        },
+        {
+          "id": "api-09",
+          "description": "Non-admin does not see the API tab in the Edit Mentor modal (Settings menu item itself is unreachable; falls back to a direct tab-absence check)",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "virtual-machine-network-and-secrets",
+      "name": "Virtual Machine Network Policies & Secrets",
+      "spec": "79-virtual-machine-network-and-secrets.spec.ts",
+      "sourceFiles": [
+        "components/modals/edit-mentor-modal/tabs/sandbox-tab.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "vmn-01",
+          "description": "Admin reaches the tenant Virtual Machine settings through the User Profile dialog (More options, then the platform name, then the SDK Account rail's admin-only \"Virtual Machine\" entry) which hosts the SDK VirtualMachineAdminTab: the info box plus the Network Policies and Secrets sub-tabs, each hosting its table with a New button",
+          "status": "covered"
+        },
+        {
+          "id": "vmn-02",
+          "description": "Admin creates a network policy through the SDK dialog: hosts are entered with the keyboard-driven chip input (Enter commits, Backspace on an empty box removes the last chip, every chip has a labelled Remove button) and the client-side host:port check refuses a scheme/path entry and a reserved host inline via the aria-live line without adding a chip; saving shows the \"Network policy created\" toast and the new row lists the host",
+          "status": "covered"
+        },
+        {
+          "id": "vmn-03",
+          "description": "Admin edits the policy: adding a host and removing the original shows the removed-hosts warning (a secret sent to a removed host would stop working; the backend does not block the edit); saving shows \"Network policy updated\" and the row reflects the replaced host list",
+          "status": "covered"
+        },
+        {
+          "id": "vmn-04",
+          "description": "Admin creates a VM secret from a pasted value: an IP literal is refused inline (hostnames only), the source is a choice between \"Enter a Value\" (default) and an integration credential, the value box is a password field, and values shorter than 8 characters or masked-looking (sk-****) are rejected before any request; saving shows \"VM secret created\" and the row shows name, hosts and the \"Stored Value\" source, never the value",
+          "status": "covered"
+        },
+        {
+          "id": "vmn-05",
+          "description": "On edit the env var is read-only, the value box is blank with the \"Leave blank to keep the current value\" hint, and switching to the credential source offers the org's credentials (or the no-credentials notice) without ever showing a masked value; deleting confirms that every agent using the secret loses it, shows \"VM secret deleted\" and removes the row",
+          "status": "covered"
+        },
+        {
+          "id": "vmn-06",
+          "description": "Admin deletes a network policy they just created (bound to no agent): the row is found on whichever page of the org-wide table it landed, the confirmation dialog names the policy, Cancel leaves it in place, and confirming shows \"Network policy deleted\", closes the dialog and leaves no page of the table listing it",
+          "status": "covered"
+        },
+        {
+          "id": "vmn-07",
+          "description": "With the Virtual Machine Shell kind selected on a dedicated agent, the Sandbox tab renders the Network Access section: the billing notice ($1 per 10 minutes by default, prorated per second) and a labelled \"Egress Profile\" radio group with the four labelled options (No Network / Package Registries / Public Internet / Custom Allowlist); a fresh agent defaults to No Network, so neither picker renders and Save is disabled",
+          "status": "covered"
+        },
+        {
+          "id": "vmn-08",
+          "description": "The secrets multi-select renders only under Public or Custom (with one checkbox per org secret) and the policy picker only under Custom; neither renders under No Network or Package Registries",
+          "status": "covered"
+        },
+        {
+          "id": "vmn-09",
+          "description": "Custom requires a policy: the picker shows the \"The Custom profile needs a network policy.\" message and Save stays disabled until one is chosen; the \"Create Policy\" shortcut opens the SDK network policy dialog in place; picking a policy lists the hosts it allows",
+          "status": "covered"
+        },
+        {
+          "id": "vmn-10",
+          "description": "Binding a secret whose host the chosen policy does not allow lists the gap (\"ENV needs host, which policy doesn't allow.\"), keeps Save disabled, and \"Add Hosts to {policy} and Save\" patches the policy (\"Hosts added to {policy}\") and then saves the settings (\"Network settings saved\") in one go",
+          "status": "covered"
+        },
+        {
+          "id": "vmn-11",
+          "description": "The saved configuration persists across closing and reopening the Edit Agent dialog: Custom selected, the policy chosen (now also allowing the secret's host) and the secret still bound",
+          "status": "covered"
+        },
+        {
+          "id": "vmn-12",
+          "description": "Narrowing the profile to No Network while a secret is bound opens the \"Unbind Secrets?\" confirmation naming the secret count; confirming saves with the secrets unbound, and the reopened agent is on No Network with the secret unchecked under Public",
+          "status": "covered"
+        },
+        {
+          "id": "vmn-13",
+          "description": "A non-admin never reaches the tenant Virtual Machine settings: the platform entry is missing from More options, does nothing when clicked, or the tenant settings dialog it opens lists no Virtual Machine section (the SDK Account rail filters it on isAdmin)",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "product-tour",
+      "name": "First-Visit Product Tour",
+      "spec": "79-product-tour.spec.ts",
+      "sourceFiles": [
+        "components/product-tour/product-tour.tsx",
+        "components/product-tour/tour-steps.ts",
+        "components/product-tour/tour-targets.ts",
+        "components/product-tour/tour-tooltip.tsx",
+        "components/product-tour/tour-runner.tsx",
+        "components/product-tour/use-tour-completion.ts"
+      ],
+      "checkpoints": [
+        {
+          "id": "tour-01",
+          "description": "Admin opens the chat page with ?tour=1 and the tour starts on the prompt input step, with no Back button and with Next, Skip tour and Close tour",
+          "status": "covered"
+        },
+        {
+          "id": "tour-02",
+          "description": "Admin clicks Next and Back and the tour moves between steps (prompt-input, then profile, then the next) with matching \"n of N\" progress text",
+          "status": "covered"
+        },
+        {
+          "id": "tour-03",
+          "description": "Admin walks every step in order and the account step comes last, with Done instead of Skip tour",
+          "status": "covered"
+        },
+        {
+          "id": "tour-04",
+          "description": "Non-admin walks every step and never sees the account step",
+          "status": "covered"
+        },
+        {
+          "id": "tour-05",
+          "description": "Admin finishes the tour with Done, a 2xx metadata POST carries status finished (version 1), and the tour does not auto-start on the next visit without ?tour=1",
+          "status": "covered"
+        },
+        {
+          "id": "tour-06",
+          "description": "Admin closes the tour with the X and the skipped outcome is POSTed to the user metadata",
+          "status": "covered"
+        },
+        {
+          "id": "tour-07",
+          "description": "Admin clicks Skip tour and the skipped outcome is POSTed to the user metadata",
+          "status": "covered"
+        },
+        {
+          "id": "tour-08",
+          "description": "Admin presses Escape and the tour is skipped (skipped outcome POSTed)",
+          "status": "covered"
+        },
+        {
+          "id": "tour-09",
+          "description": "Admin opens the chat page with ?tour=1&embed=true and no tour is shown",
           "status": "covered"
         }
       ]

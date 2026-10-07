@@ -9,16 +9,12 @@ import { MentorTracker } from '../utils/mentor-cleanup';
 import {
   seedDatasetsForMentor,
   waitForDatasetsReady,
+  waitForMatchingDatasetTrained,
 } from '../utils/dataset-seeding';
 import { logger } from '@iblai/iblai-js/playwright';
 import path from 'path';
 
 const FILES_DIR = path.resolve(__dirname, '../../e2e/files/testing_folder');
-const PDF_FILE = path.join(
-  FILES_DIR,
-  '0028-oop-object-oriented-programming-using-cpp.pdf',
-);
-const IMAGE_FILE = path.join(FILES_DIR, 'acessibility png.png');
 const TXT_FILE = path.join(FILES_DIR, 'outerHTML.txt');
 const CSV_FILE = path.join(FILES_DIR, 'test-data.csv');
 const MARKDOWN_FILE = path.join(FILES_DIR, 'test-data.md');
@@ -160,51 +156,17 @@ test.describe('Journey 20: Dataset Management', () => {
     }
   });
 
-  test('admin goes to datasets tab and deletes a dataset when datasets exist', async ({
-    editMentorPage,
-  }) => {
-    const hasDatasets = await editMentorPage.datasets.hasDatasets();
-    if (!hasDatasets) return;
-    const deleteBtn = editMentorPage.datasets.deleteButton;
-    const visible = await deleteBtn
-      .isVisible({ timeout: 5_000 })
-      .catch(() => false);
-    if (visible) {
-      await deleteBtn.click();
-      const confirmDialog = editMentorPage.page
-        .getByRole('dialog')
-        .filter({ hasText: /delete/i });
-      const hasConfirm = await confirmDialog
-        .isVisible({ timeout: 5_000 })
-        .catch(() => false);
-      if (hasConfirm) {
-        await confirmDialog
-          .getByRole('button', { name: /delete|confirm/i })
-          .last()
-          .click();
-      }
-    }
-  });
+  // TC10 is rewritten below (deterministic, self-seeded mentor) in the
+  // "Journey 20: Deterministic row actions (self-seeded mentor)" describe at
+  // the bottom of this file — see `deletes a dataset by untraining a trained
+  // row and confirming Delete`. There is no dedicated per-row delete button
+  // in the SDK's Datasets tab any more: deleting a TRAINED row goes through
+  // the training switch (untrain → auto-opened DeleteDatasetModal → confirm).
 
-  // test('admin goes to datasets tab and uploads a PDF file successfully', async ({
-  //   page,
-  //   editMentorPage,
-  // }) => {
-  //   const modal = await editMentorPage.datasets.openAddResourceModal();
-  //   await expect(modal).toBeVisible();
-  //   const fileInput = page.locator('input[type="file"]').first();
-  //   const chooserVisible = await fileInput
-  //     .isVisible({ timeout: 3_000 })
-  //     .catch(() => false);
-  //   if (chooserVisible) {
-  //     await fileInput.setInputFiles({
-  //       name: 'test.pdf',
-  //       mimeType: 'application/pdf',
-  //       buffer: Buffer.from('%PDF-1.4 test content'),
-  //     });
-  //   }
-  //   await page.keyboard.press('Escape');
-  // });
+  // The commented-out PDF upload placeholder that used to live here (a fake
+  // in-memory buffer, never asserted) is superseded by journey 75's du-09,
+  // which uploads the real PDF fixture on a fresh mentor and hard-asserts
+  // the row appears.
 
   test('admin goes to datasets tab and the state is preserved after closing and reopening the modal', async ({
     editMentorPage,
@@ -264,51 +226,8 @@ test.describe('Journey 20: Dataset Management', () => {
     logger.info('TC31: Markdown file uploaded and visible in dataset list');
   });
 
-  // ── TC13: Train or Delete modal ────────────────────────────────────────────
-
-  test('admin goes to datasets tab and tests Train or Delete modal actions for an untrained dataset', async ({
-    page,
-    editMentorPage,
-  }) => {
-    await page.waitForTimeout(3_000);
-    const trainingSwitches = editMentorPage.dialog.getByRole('switch', {
-      name: /training for document/i,
-    });
-    const switchCount = await trainingSwitches.count().catch(() => 0);
-    if (switchCount === 0) {
-      logger.info('TC13: No training switches found');
-      return;
-    }
-
-    for (let i = 0; i < switchCount; i++) {
-      const sw = trainingSwitches.nth(i);
-      if ((await sw.getAttribute('aria-checked')) === 'false') {
-        await sw.click();
-        await page.waitForTimeout(1_000);
-        const modal = page
-          .getByRole('dialog')
-          .filter({ hasText: /What would you like to do/i });
-        const modalVisible = await modal
-          .isVisible({ timeout: 5_000 })
-          .catch(() => false);
-        if (modalVisible) {
-          const trainBtn = modal.getByRole('button', { name: /^Train$/i });
-          const deleteBtn = modal.getByRole('button', { name: /Delete/i });
-          await expect(trainBtn).toBeVisible();
-          await expect(deleteBtn).toBeVisible();
-          await expect(
-            modal.getByText(/This dataset is currently untrained/i),
-          ).toBeVisible();
-          await expect(trainBtn).toBeEnabled();
-          await expect(deleteBtn).toBeEnabled();
-          await page.keyboard.press('Escape');
-          await expect(modal).not.toBeVisible({ timeout: 5_000 });
-          logger.info('TC13: Train or Delete modal verified');
-        }
-        break;
-      }
-    }
-  });
+  // TC13 is rewritten below (deterministic, self-seeded mentor) — see
+  // `shows the Train-or-Delete modal contents for an untrained dataset`.
 
   // ── TC14: In Progress badge ────────────────────────────────────────────────
 
@@ -455,212 +374,24 @@ test.describe('Journey 20: Dataset Management', () => {
     }
   });
 
-  // ── TC22: Image upload ─────────────────────────────────────────────────────
+  // TC22 (image upload, clicked Close without asserting the row) and TC23
+  // (TXT upload, never asserted the row) were vestigial soft checks with no
+  // unique assertion — journey 75's du-07 (Image) and du-04 (TXT) already
+  // hard-assert both file types' rows appear via a fresh, self-seeded mentor.
+  // Removed here rather than kept as dead weight.
 
-  test('admin goes to datasets tab and uploads an Image file successfully', async ({
-    page,
-    editMentorPage,
-  }) => {
-    const modal = await editMentorPage.datasets.openAddResourceModal();
-    await expect(modal).toBeVisible();
-    const imageBtn = modal.locator('button').filter({ hasText: /^Image$/i });
-    await expect(imageBtn).toBeVisible({ timeout: 5_000 });
-    await imageBtn.click();
-    await page.waitForTimeout(1_000);
-    const imageDialog = page.getByRole('dialog', { name: 'Image' });
-    await expect(imageDialog).toBeVisible({ timeout: 5_000 });
-    const fileInput = imageDialog.locator('input[type="file"]');
-    await fileInput.setInputFiles(IMAGE_FILE);
-    const closeBtn = imageDialog.getByRole('button', { name: 'Close' });
-    await expect(closeBtn).toBeVisible();
-    await closeBtn.click();
-    await page.waitForTimeout(2_000);
-    const fileName = editMentorPage.dialog.getByText(/acessibility png/i);
-    const fileVisible = await fileName.isVisible().catch(() => false);
-    logger.info(`TC22: Image file visible in list: ${fileVisible}`);
-  });
+  // TC24 (train an untrained dataset), TC25 (delete an untrained dataset) and
+  // TC26 (untrain then delete a trained dataset) are rewritten below
+  // (deterministic, self-seeded mentor) — see the "Journey 20: Deterministic
+  // row actions" describe at the bottom of this file.
 
-  // ── TC23: Multiple file types ──────────────────────────────────────────────
-
-  test('admin goes to datasets tab and uploads multiple different file types successfully', async ({
-    page,
-    editMentorPage,
-  }) => {
-    test.setTimeout(400_000);
-    const resources = [{ type: 'TXT', path: TXT_FILE, name: 'outerHTML.txt' }];
-    for (const resource of resources) {
-      const addBtn = editMentorPage.datasets.addResourceButton;
-      await expect(addBtn).toBeVisible({ timeout: 10_000 });
-      await addBtn.click();
-      const addModal = page
-        .getByRole('dialog')
-        .filter({ hasText: /Add Resources/i });
-      await expect(addModal).toBeVisible({ timeout: 15_000 });
-      const typeBtn = addModal
-        .locator('button')
-        .filter({ hasText: new RegExp(`^${resource.type}$`, 'i') });
-      await expect(typeBtn).toBeVisible({ timeout: 5_000 });
-      await typeBtn.click();
-      await page.waitForTimeout(1_000);
-      const typeDialog = page.getByRole('dialog', { name: resource.type });
-      await expect(typeDialog).toBeVisible({ timeout: 10_000 });
-      await typeDialog
-        .locator('input[type="file"]')
-        .setInputFiles(resource.path);
-      await page.waitForTimeout(3_000);
-      // Bounded + non-fatal: the SPA's streaming/polling connections may
-      // keep it from ever idling, so cap networkidle so it can't hang.
-      await page
-        .waitForLoadState('networkidle', { timeout: 15_000 })
-        .catch(() => {});
-      await page.keyboard.press('Escape');
-      await page.waitForTimeout(2_000);
-      logger.info(`TC23: Uploaded ${resource.type}: ${resource.name}`);
-    }
-  });
-
-  // ── TC24: Train untrained dataset ──────────────────────────────────────────
-
-  test('admin goes to datasets tab and trains an untrained dataset by clicking Train in the modal', async ({
-    page,
-    editMentorPage,
-  }) => {
-    await page.waitForTimeout(3_000);
-    const switches = editMentorPage.dialog.getByRole('switch', {
-      name: /training for document/i,
-    });
-    const count = await switches.count().catch(() => 0);
-    if (count === 0) {
-      logger.info('TC24: No training switches found');
-      return;
-    }
-    for (let i = 0; i < count; i++) {
-      const sw = switches.nth(i);
-      if ((await sw.getAttribute('aria-checked')) === 'false') {
-        await sw.click();
-        await page.waitForTimeout(1_000);
-        const modal = page
-          .getByRole('dialog')
-          .filter({ hasText: /What would you like to do/i });
-        if (await modal.isVisible({ timeout: 5_000 }).catch(() => false)) {
-          await modal.getByRole('button', { name: /^Train$/i }).click();
-          await page.waitForTimeout(2_000);
-          const badge = editMentorPage.dialog.getByText('In Progress');
-          const badgeVisible = await badge
-            .isVisible({ timeout: 5_000 })
-            .catch(() => false);
-          logger.info(
-            `TC24: Training initiated — In Progress badge: ${badgeVisible}`,
-          );
-        }
-        break;
-      }
-    }
-  });
-
-  // ── TC25: Delete untrained dataset ─────────────────────────────────────────
-
-  test('admin goes to datasets tab and deletes an untrained dataset by clicking Delete in the modal', async ({
-    page,
-    editMentorPage,
-  }) => {
-    await page.waitForTimeout(3_000);
-    const switches = editMentorPage.dialog.getByRole('switch', {
-      name: /training for document/i,
-    });
-    const initial = await switches.count().catch(() => 0);
-    if (initial === 0) {
-      logger.info('TC25: No datasets found');
-      return;
-    }
-    for (let i = 0; i < initial; i++) {
-      const sw = switches.nth(i);
-      if ((await sw.getAttribute('aria-checked')) === 'false') {
-        await sw.click();
-        await page.waitForTimeout(1_000);
-        const modal = page
-          .getByRole('dialog')
-          .filter({ hasText: /What would you like to do/i });
-        if (await modal.isVisible({ timeout: 5_000 }).catch(() => false)) {
-          await modal.getByRole('button', { name: /Delete/i }).click();
-          await page.waitForTimeout(2_000);
-          const after = await switches.count().catch(() => 0);
-          logger.info(`TC25: Count before: ${initial}, after: ${after}`);
-        }
-        break;
-      }
-    }
-  });
-
-  // ── TC26: Untrain and delete trained dataset ───────────────────────────────
-
-  test('admin goes to datasets tab and untrains then deletes a trained dataset', async ({
-    page,
-    editMentorPage,
-  }) => {
-    await page.waitForTimeout(3_000);
-    const switches = editMentorPage.dialog.getByRole('switch', {
-      name: /training for document/i,
-    });
-    const initial = await switches.count().catch(() => 0);
-    if (initial === 0) {
-      logger.info('TC26: No datasets found');
-      return;
-    }
-    for (let i = 0; i < initial; i++) {
-      const sw = switches.nth(i);
-      if ((await sw.getAttribute('aria-checked')) === 'true') {
-        await sw.click();
-        await page.waitForTimeout(1_000);
-        const modal = page
-          .getByRole('dialog')
-          .filter({ hasText: /Delete Dataset/i });
-        if (await modal.isVisible({ timeout: 5_000 }).catch(() => false)) {
-          await modal.getByRole('button', { name: /Delete/i }).click();
-          await page.waitForTimeout(2_000);
-          const after = await switches.count().catch(() => 0);
-          logger.info(`TC26: Count before: ${initial}, after: ${after}`);
-        }
-        break;
-      }
-    }
-  });
-
-  // ── TC27: Schedule retraining ──────────────────────────────────────────────
-
-  test('admin goes to datasets tab and schedules retraining for a trained dataset', async ({
-    page,
-    editMentorPage,
-  }) => {
-    await page.waitForTimeout(3_000);
-    const scheduleBtns = editMentorPage.dialog
-      .getByRole('button')
-      .filter({ has: page.locator('svg.lucide-clock') });
-    const count = await scheduleBtns.count().catch(() => 0);
-    if (count === 0) {
-      logger.info('TC27: No schedule buttons found');
-      return;
-    }
-    for (let i = 0; i < count; i++) {
-      const btn = scheduleBtns.nth(i);
-      if (!(await btn.isDisabled().catch(() => true))) {
-        await btn.click();
-        const modal = page
-          .getByRole('dialog')
-          .filter({ hasText: /Schedule Retraining/i });
-        if (await modal.isVisible({ timeout: 5_000 }).catch(() => false)) {
-          await modal.getByRole('button', { name: /Weekly/i }).click();
-          const intervalInput = modal.locator('input[type="number"]');
-          await expect(intervalInput).toHaveValue('7');
-          // H24 fix: Cancel instead of Schedule to avoid side effects (original clicked Cancel)
-          await page.keyboard.press('Escape');
-          await expect(modal).not.toBeVisible({ timeout: 5_000 });
-          logger.info('TC27: Schedule retraining modal verified and cancelled');
-        }
-        break;
-      }
-    }
-  });
+  // TC27 (schedule retraining) is rewritten below — see `schedules, persists,
+  // and clears a retrain interval for a trained dataset`. The original test
+  // only ever exercised whatever dataset happened to have an ENABLED
+  // schedule button in the shared tenant; retrain scheduling is disabled for
+  // every uploaded-file type (see `isCrawlableDocType` in
+  // `@iblai/web-containers`), so a deterministic version needs to seed a
+  // crawlable (URL) dataset specifically.
 
   // ── TC28: Upload cancellation ──────────────────────────────────────────────
 
@@ -967,5 +698,391 @@ test.describe('Journey 20: Datasets tab pagination URL sync (self-seeded mentor)
       { timeout: 10_000 },
     );
     logger.info('TC39: datasetsPage restored after a full reload');
+  });
+});
+
+// ── Journey 20: Deterministic row actions (self-seeded mentor) ─────────────
+//
+// TC10/13/24/25/26/27 used to scan whatever datasets happened to already
+// exist on the shared tenant for "the first untrained switch" / "the first
+// enabled schedule button" — non-deterministic, order-dependent, and
+// silently skipped (`return`) whenever the tenant didn't happen to have a
+// dataset in the right state. Each test below instead creates its own
+// mentor, seeds exactly the row it needs (through the real Add Resource UI,
+// same as journey 75), and hard-asserts the outcome.
+//
+// There is no dedicated per-row delete button in the SDK's Datasets tab: the
+// training switch IS the delete entry point.
+//   - Untrained row + switch click → `TrainOrDeleteModal` ("What would you
+//     like to do?") with Train/Delete choices.
+//   - Trained row + switch click → untrains immediately (no choice) and
+//     `onUntrainSuccess` auto-opens `DeleteDatasetModal` ("Delete Dataset").
+// (See `TrainingStatusSwitch`/`DatasetItem` in `@iblai/web-containers`.)
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/** Uploads the shared TXT fixture and waits for it to finish training. */
+async function seedTrainedTxtRow(
+  page: import('@playwright/test').Page,
+  editMentorPage: import('../page-objects/edit-mentor/edit-mentor.page').EditMentorPage,
+  mentorId: string,
+) {
+  await editMentorPage.datasets.uploadFile(TXT_FILE, 'TXT');
+  await waitForMatchingDatasetTrained(page, mentorId, (d) =>
+    (d.document_name ?? d.url ?? '').includes('outerHTML.txt'),
+  );
+  const row = editMentorPage.datasets.datasetRowByName(/outerHTML\.txt/i);
+  await expect(row).toBeVisible({ timeout: 10_000 });
+  return row;
+}
+
+/**
+ * Submits a URL resource and waits for it to finish training. Used instead
+ * of an uploaded file wherever a test needs a *crawlable* dataset — retrain
+ * scheduling is disabled for every uploaded-file type (`isCrawlableDocType`
+ * in `@iblai/web-containers` excludes `file`/`image`/`audio`/`video`/`zip`
+ * and every cloud provider).
+ */
+async function seedTrainedUrlRow(
+  page: import('@playwright/test').Page,
+  editMentorPage: import('../page-objects/edit-mentor/edit-mentor.page').EditMentorPage,
+  mentorId: string,
+  url: string,
+) {
+  await editMentorPage.datasets.submitUrlLikeResource('url', url);
+  await waitForMatchingDatasetTrained(
+    page,
+    mentorId,
+    (d) => (d.url ?? '').includes(url),
+    { timeout: 60_000 },
+  );
+  const row = editMentorPage.datasets.datasetRowByName(
+    new RegExp(escapeRegExp(url)),
+  );
+  await expect(row).toBeVisible({ timeout: 10_000 });
+  return row;
+}
+
+/**
+ * Clicks a TRAINED row's switch (untrains immediately, auto-opening the
+ * delete confirmation) then Cancels that confirmation — leaving a genuinely
+ * untrained row in place without deleting it. Several tests below need to
+ * start from "untrained" without going through a slow re-upload.
+ */
+async function untrainRowThenCancelDelete(
+  page: import('@playwright/test').Page,
+  editMentorPage: import('../page-objects/edit-mentor/edit-mentor.page').EditMentorPage,
+  row: import('@playwright/test').Locator,
+) {
+  await editMentorPage.datasets.trainingSwitchInRow(row).click();
+  const confirmModal = page.getByRole('dialog', { name: 'Delete Dataset' });
+  await expect(confirmModal).toBeVisible({ timeout: 10_000 });
+  await confirmModal.getByRole('button', { name: 'Cancel' }).click();
+  await expect(confirmModal).not.toBeVisible({ timeout: 5_000 });
+}
+
+test.describe('Journey 20: Deterministic row actions (self-seeded mentor)', () => {
+  test.beforeEach(async ({ page }) => {
+    test.setTimeout(180_000);
+    await navigateToMentorApp(page);
+    const isAdmin = await checkAdminStatus(page);
+    expect(
+      isAdmin,
+      'Test user must be admin — check PLAYWRIGHT_USERNAME in e2e/.env.local',
+    ).toBe(true);
+  });
+
+  // ── TC10 (rewritten): delete a dataset ─────────────────────────────────────
+
+  test('admin deletes a dataset by untraining a trained row and confirming Delete', async ({
+    page,
+    createMentorPage,
+    editMentorPage,
+  }) => {
+    await createMentorPage.openAndCreate();
+    const { mentorId } = await getPlatformContext(page);
+    await editMentorPage.open('Datasets');
+    await waitForPageReady(page);
+
+    const row = await seedTrainedTxtRow(page, editMentorPage, mentorId);
+
+    await editMentorPage.datasets.trainingSwitchInRow(row).click();
+    const modal = page.getByRole('dialog', { name: 'Delete Dataset' });
+    await expect(modal).toBeVisible({ timeout: 10_000 });
+    // Proves this is the delete-confirmation, not the Train/Delete choice.
+    await expect(modal.getByRole('button', { name: /^Train$/i })).toHaveCount(
+      0,
+    );
+    await modal.getByRole('button', { name: /^Delete$/i }).click();
+
+    await expect(row).not.toBeVisible({ timeout: 15_000 });
+    logger.info('TC10: dataset row removed after untrain → Delete confirm');
+  });
+
+  // ── TC13 (rewritten): Train-or-Delete modal contents for an untrained row ──
+
+  test('admin sees the Train-or-Delete modal contents for an untrained dataset', async ({
+    page,
+    createMentorPage,
+    editMentorPage,
+  }) => {
+    await createMentorPage.openAndCreate();
+    const { mentorId } = await getPlatformContext(page);
+    await editMentorPage.open('Datasets');
+    await waitForPageReady(page);
+
+    const row = await seedTrainedTxtRow(page, editMentorPage, mentorId);
+    await untrainRowThenCancelDelete(page, editMentorPage, row);
+
+    await editMentorPage.datasets.trainingSwitchInRow(row).click();
+    const modal = page.getByRole('dialog', {
+      name: 'What would you like to do?',
+    });
+    await expect(modal).toBeVisible({ timeout: 10_000 });
+
+    const trainBtn = modal.getByRole('button', { name: /^Train$/i });
+    const deleteBtn = modal.getByRole('button', { name: /^Delete$/i });
+    await expect(trainBtn).toBeVisible();
+    await expect(deleteBtn).toBeVisible();
+    await expect(trainBtn).toBeEnabled();
+    await expect(deleteBtn).toBeEnabled();
+    await expect(
+      modal.getByText(/This dataset is currently untrained/i),
+    ).toBeVisible();
+    // Uploaded-file dataset: no User-Agent field (only web-crawler rows get
+    // one — see the dedicated pair test below).
+    await expect(modal.getByLabel(/User-Agent/i)).toHaveCount(0);
+
+    await page.keyboard.press('Escape');
+    await expect(modal).not.toBeVisible({ timeout: 5_000 });
+    logger.info(
+      'TC13: Train-or-Delete modal contents verified for an untrained uploaded-file dataset',
+    );
+  });
+
+  // ── TC24 (rewritten): train an untrained dataset ───────────────────────────
+
+  test('admin trains an untrained dataset by clicking Train in the modal', async ({
+    page,
+    createMentorPage,
+    editMentorPage,
+  }) => {
+    await createMentorPage.openAndCreate();
+    const { mentorId } = await getPlatformContext(page);
+    await editMentorPage.open('Datasets');
+    await waitForPageReady(page);
+
+    const row = await seedTrainedTxtRow(page, editMentorPage, mentorId);
+    await untrainRowThenCancelDelete(page, editMentorPage, row);
+
+    await editMentorPage.datasets.trainingSwitchInRow(row).click();
+    const modal = page.getByRole('dialog', {
+      name: 'What would you like to do?',
+    });
+    await expect(modal).toBeVisible({ timeout: 10_000 });
+    await modal.getByRole('button', { name: /^Train$/i }).click();
+    await expect(modal).not.toBeVisible({ timeout: 10_000 });
+
+    const trained = await waitForMatchingDatasetTrained(page, mentorId, (d) =>
+      (d.document_name ?? d.url ?? '').includes('outerHTML.txt'),
+    );
+    expect(trained.is_trained).toBe(true);
+    logger.info('TC24: dataset re-trained via the Train-or-Delete modal');
+  });
+
+  // ── TC25 (rewritten): delete an untrained dataset via the modal ────────────
+
+  test('admin deletes an untrained dataset by clicking Delete in the modal', async ({
+    page,
+    createMentorPage,
+    editMentorPage,
+  }) => {
+    await createMentorPage.openAndCreate();
+    const { mentorId } = await getPlatformContext(page);
+    await editMentorPage.open('Datasets');
+    await waitForPageReady(page);
+
+    const row = await seedTrainedTxtRow(page, editMentorPage, mentorId);
+    await untrainRowThenCancelDelete(page, editMentorPage, row);
+
+    await editMentorPage.datasets.trainingSwitchInRow(row).click();
+    const chooseModal = page.getByRole('dialog', {
+      name: 'What would you like to do?',
+    });
+    await expect(chooseModal).toBeVisible({ timeout: 10_000 });
+    await chooseModal.getByRole('button', { name: /^Delete$/i }).click();
+
+    const confirmModal = page.getByRole('dialog', { name: 'Delete Dataset' });
+    await expect(confirmModal).toBeVisible({ timeout: 10_000 });
+    await confirmModal.getByRole('button', { name: /^Delete$/i }).click();
+
+    await expect(row).not.toBeVisible({ timeout: 15_000 });
+    logger.info(
+      'TC25: untrained dataset deleted via the Train-or-Delete modal',
+    );
+  });
+
+  // ── TC26 (rewritten): untrain then delete a trained dataset ────────────────
+  // Distinct from TC10: this asserts the MECHANISM (a trained row's switch
+  // fires the untrain PUT immediately, before the delete-confirmation
+  // modal appears) rather than just the end-to-end outcome.
+
+  test('admin untrains then deletes a trained dataset, verified via the underlying untrain request', async ({
+    page,
+    createMentorPage,
+    editMentorPage,
+  }) => {
+    await createMentorPage.openAndCreate();
+    const { mentorId } = await getPlatformContext(page);
+    await editMentorPage.open('Datasets');
+    await waitForPageReady(page);
+
+    const row = await seedTrainedTxtRow(page, editMentorPage, mentorId);
+    await expect(
+      editMentorPage.datasets.trainingSwitchInRow(row),
+    ).toHaveAttribute('aria-label', /disable training/i);
+
+    const untrainRequestPromise = page.waitForRequest(
+      (req) =>
+        req.method() === 'PUT' &&
+        /\/documents\/[^/]+\/$/.test(new URL(req.url()).pathname),
+      { timeout: 15_000 },
+    );
+    await editMentorPage.datasets.trainingSwitchInRow(row).click();
+    const untrainRequest = await untrainRequestPromise;
+    expect(untrainRequest.postData() ?? '').toMatch(
+      /name="train"[\s\S]*?false/,
+    );
+
+    const confirmModal = page.getByRole('dialog', { name: 'Delete Dataset' });
+    await expect(confirmModal).toBeVisible({ timeout: 10_000 });
+    await confirmModal.getByRole('button', { name: /^Delete$/i }).click();
+
+    await expect(row).not.toBeVisible({ timeout: 15_000 });
+    logger.info(
+      'TC26: trained dataset untrained (verified via the PUT request) then deleted',
+    );
+  });
+
+  // ── TC27 (rewritten): schedule retraining, persisted + cleaned up ─────────
+
+  test('admin schedules, persists, and clears a retrain interval for a trained dataset', async ({
+    page,
+    createMentorPage,
+    editMentorPage,
+  }) => {
+    await createMentorPage.openAndCreate();
+    const { mentorId } = await getPlatformContext(page);
+    await editMentorPage.open('Datasets');
+    await waitForPageReady(page);
+
+    const url = `https://example.com/?e2e=${Date.now()}`;
+    const row = await seedTrainedUrlRow(page, editMentorPage, mentorId, url);
+
+    const scheduleBtn = editMentorPage.datasets.scheduleRetrainButtonInRow(row);
+    await expect(scheduleBtn).toBeEnabled({ timeout: 10_000 });
+    await scheduleBtn.click();
+
+    const modal = page.getByRole('dialog', { name: 'Schedule Retraining' });
+    await expect(modal).toBeVisible({ timeout: 10_000 });
+    await modal.getByRole('button', { name: /Weekly/i }).click();
+    const intervalInput = modal.locator('input[type="number"]');
+    await expect(intervalInput).toHaveValue('7');
+    await modal.getByRole('button', { name: 'Schedule Retraining' }).click();
+    await expect(
+      page.getByText(/Successfully updated retrain interval/i),
+    ).toBeVisible({ timeout: 10_000 });
+    await modal.getByRole('button', { name: 'Cancel' }).click();
+    await expect(modal).not.toBeVisible({ timeout: 5_000 });
+
+    // Reopen — the input now reflects a fresh GET, proving the interval
+    // persisted server-side rather than only in local component state.
+    await scheduleBtn.click();
+    const reopened = page.getByRole('dialog', { name: 'Schedule Retraining' });
+    await expect(reopened).toBeVisible({ timeout: 10_000 });
+    await expect(reopened.locator('input[type="number"]')).toHaveValue('7', {
+      timeout: 10_000,
+    });
+
+    // Clean up: clear the schedule so this mentor doesn't retain a lingering
+    // non-default retrain interval.
+    await reopened.locator('input[type="number"]').fill('0');
+    await reopened.getByRole('button', { name: 'Schedule Retraining' }).click();
+    await expect(
+      page.getByText(/Successfully updated retrain interval/i).last(),
+    ).toBeVisible({ timeout: 10_000 });
+
+    logger.info(
+      'TC27: retrain interval scheduled, verified persisted on reopen, then cleared',
+    );
+  });
+
+  // ── User-Agent field visibility: web-crawler vs uploaded-file dataset ─────
+
+  test('Train-or-Delete modal shows the User-Agent field only for a web-crawler dataset, not an uploaded file', async ({
+    page,
+    createMentorPage,
+    editMentorPage,
+  }) => {
+    test.setTimeout(240_000);
+    await createMentorPage.openAndCreate();
+    const { mentorId } = await getPlatformContext(page);
+    await editMentorPage.open('Datasets');
+    await waitForPageReady(page);
+
+    const fileRow = await seedTrainedTxtRow(page, editMentorPage, mentorId);
+
+    const crawlerUrl = `https://example.com/?e2e-crawl=${Date.now()}`;
+    const crawlerDialog =
+      await editMentorPage.datasets.openAndFillWebCrawlerResource({
+        url: crawlerUrl,
+        maxDepth: 1,
+        maxPages: 1,
+      });
+    await editMentorPage.datasets.submitButtonIn(crawlerDialog).click();
+    await editMentorPage.datasets.closeResourceDialogAndModal(crawlerDialog);
+    const crawlerRow = await (async () => {
+      await waitForMatchingDatasetTrained(
+        page,
+        mentorId,
+        (d) => (d.url ?? '').includes(crawlerUrl),
+        { timeout: 60_000 },
+      );
+      const row = editMentorPage.datasets.datasetRowByName(
+        new RegExp(escapeRegExp(crawlerUrl)),
+      );
+      await expect(row).toBeVisible({ timeout: 10_000 });
+      return row;
+    })();
+
+    // Uploaded-file row: no User-Agent field in the Train-or-Delete modal.
+    await untrainRowThenCancelDelete(page, editMentorPage, fileRow);
+    await editMentorPage.datasets.trainingSwitchInRow(fileRow).click();
+    const fileModal = page.getByRole('dialog', {
+      name: 'What would you like to do?',
+    });
+    await expect(fileModal).toBeVisible({ timeout: 10_000 });
+    await expect(fileModal.getByLabel(/User-Agent/i)).toHaveCount(0);
+    await page.keyboard.press('Escape');
+    await expect(fileModal).not.toBeVisible({ timeout: 5_000 });
+
+    // Web-crawler row: the User-Agent field IS present.
+    await untrainRowThenCancelDelete(page, editMentorPage, crawlerRow);
+    await editMentorPage.datasets.trainingSwitchInRow(crawlerRow).click();
+    const crawlerModal = page.getByRole('dialog', {
+      name: 'What would you like to do?',
+    });
+    await expect(crawlerModal).toBeVisible({ timeout: 10_000 });
+    const userAgentField = crawlerModal.getByLabel(/User-Agent/i);
+    await expect(userAgentField).toBeVisible({ timeout: 5_000 });
+    await expect(userAgentField).toHaveAttribute('placeholder', /Iblai-bot/i);
+    await page.keyboard.press('Escape');
+    await expect(crawlerModal).not.toBeVisible({ timeout: 5_000 });
+
+    logger.info(
+      'User-Agent field: absent for uploaded-file row, present for web-crawler row',
+    );
   });
 });

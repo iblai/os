@@ -8,7 +8,7 @@ import {
   resolveBinaryMimeType,
   resolveEffectiveFileExtension,
   shouldUseBinaryCanvas,
-} from '@/components/canvas/binary-artifact-utils';
+} from '@iblai/iblai-js/web-containers';
 
 const CODE_EXTENSIONS = new Set([
   'py',

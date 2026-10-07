@@ -1,4 +1,5 @@
 import { Page, Locator, expect } from '@playwright/test';
+import type { DatasetResourceId } from '../../utils/dataset-resource-gating';
 
 // URL query keys the SDK Datasets tab owns, synced by the OS host wrapper
 // (components/modals/edit-mentor-modal/tabs/datasets-tab/agent-datasets-tab.tsx)
@@ -7,6 +8,32 @@ import { Page, Locator, expect } from '@playwright/test';
 // constant is ever renamed.
 export const DATASETS_PAGE_PARAM = 'datasetsPage';
 export const DATASETS_SEARCH_PARAM = 'datasetsSearch';
+
+// Visible button label in the Add Resources modal for each gate-able resource
+// id (see `dataset-resource-gating.ts`). Verified against the live
+// `.yalc/@iblai/web-containers` resource-types definition on 2026-09-28 —
+// keep in sync if the SDK ever renames a label.
+export const RESOURCE_LABEL_BY_ID: Record<DatasetResourceId, string> = {
+  powerpoint: 'PowerPoint',
+  onedrive: 'Microsoft OneDrive',
+  'google-drive': 'Google Drive',
+  dropbox: 'Dropbox',
+  youtube: 'YouTube',
+  url: 'URL',
+  pdf: 'PDF',
+  docx: 'DOCX',
+  excel: 'Excel',
+  csv: 'CSV',
+  github: 'GitHub',
+  text: 'TXT',
+  markdown: 'Markdown',
+  audio: 'Audio',
+  video: 'Video',
+  image: 'Image',
+  'web-crawler': 'Web Crawler',
+  zip: 'ZIP',
+  courses: 'Course',
+};
 
 export class DatasetsTab {
   readonly page: Page;
@@ -198,8 +225,9 @@ export class DatasetsTab {
   }
 
   /**
-   * Returns the "Google Drive" button inside the Add Resources modal.
-   * The button text comes from resource-types.tsx → name: 'Google Drive'.
+   * Returns the "Google Drive" button inside the Add Resources modal. The
+   * button text comes from the SDK's resource-types definition
+   * (`@iblai/web-containers`, id: 'google-drive') → name: 'Google Drive'.
    */
   googleDriveButton(modal: Locator): Locator {
     return modal.getByRole('button', { name: /Google Drive/i });
@@ -207,15 +235,17 @@ export class DatasetsTab {
 
   /**
    * Returns the "Microsoft OneDrive" button inside the Add Resources modal.
-   * The button text comes from resource-types.tsx → name: 'Microsoft OneDrive'.
+   * The button text comes from the SDK's resource-types definition
+   * (`@iblai/web-containers`, id: 'onedrive') → name: 'Microsoft OneDrive'.
    */
   oneDriveButton(modal: Locator): Locator {
     return modal.getByRole('button', { name: /Microsoft OneDrive/i });
   }
 
   /**
-   * Returns the "Dropbox" button inside the Add Resources modal.
-   * The button text comes from resource-types.tsx → name: 'Dropbox'.
+   * Returns the "Dropbox" button inside the Add Resources modal. The button
+   * text comes from the SDK's resource-types definition
+   * (`@iblai/web-containers`, id: 'dropbox') → name: 'Dropbox'.
    */
   dropboxButton(modal: Locator): Locator {
     return modal.getByRole('button', { name: /^Dropbox$/i });
@@ -289,6 +319,196 @@ export class DatasetsTab {
       await addResourcesModal.getByRole('button', { name: 'Close' }).click();
       await this.page.waitForTimeout(1_000);
     }
+  }
+
+  /**
+   * The Add Resources modal button for `resourceId` (e.g. `'zip'` → the
+   * "ZIP" button). Shared by the gating checks (journeys 20/74/75) and by
+   * every resource-creation helper below so the button-matching regex lives
+   * in exactly one place.
+   */
+  resourceButton(modal: Locator, resourceId: DatasetResourceId): Locator {
+    const label = RESOURCE_LABEL_BY_ID[resourceId];
+    return modal
+      .locator('button')
+      .filter({ hasText: new RegExp(`^${label}$`, 'i') });
+  }
+
+  /**
+   * Clicks the `resourceId` button in an already-open Add Resources modal and
+   * returns the resulting resource dialog (DialogTitle === the resource's
+   * label, e.g. "PDF" / "Web Crawler").
+   */
+  async openResourceDialog(
+    modal: Locator,
+    resourceId: DatasetResourceId,
+  ): Promise<Locator> {
+    const label = RESOURCE_LABEL_BY_ID[resourceId];
+    const typeBtn = this.resourceButton(modal, resourceId);
+    await expect(typeBtn).toBeVisible({ timeout: 5_000 });
+    await expect(typeBtn).toBeEnabled({ timeout: 5_000 });
+    await typeBtn.click();
+    const dialog = this.page.getByRole('dialog', { name: label }).last();
+    await expect(dialog).toBeVisible({ timeout: 10_000 });
+    return dialog;
+  }
+
+  /**
+   * Closes a resource dialog and the Add Resources modal behind it. Mirrors
+   * `uploadFile()`'s tail — shared here so the newer URL/GitHub/Web Crawler
+   * helpers below don't duplicate it.
+   */
+  async closeResourceDialogAndModal(dialog: Locator): Promise<void> {
+    await this.page
+      .waitForLoadState('networkidle', { timeout: 15_000 })
+      .catch(() => {});
+    await this.page.waitForTimeout(2_000);
+
+    let isDialogOpen = false;
+    try {
+      await dialog.waitFor({ state: 'visible', timeout: 3_000 });
+      isDialogOpen = true;
+    } catch {
+      isDialogOpen = false;
+    }
+    if (isDialogOpen) {
+      await dialog.getByRole('button', { name: 'Close' }).click();
+      await this.page.waitForTimeout(1_000);
+    }
+
+    const addResourcesModal = this.page.getByRole('dialog', {
+      name: /Add Resources/i,
+    });
+    let isAddResourcesOpen = false;
+    try {
+      await addResourcesModal.waitFor({ state: 'visible', timeout: 3_000 });
+      isAddResourcesOpen = true;
+    } catch {
+      isAddResourcesOpen = false;
+    }
+    if (isAddResourcesOpen) {
+      await addResourcesModal.getByRole('button', { name: 'Close' }).click();
+      await this.page.waitForTimeout(1_000);
+    }
+  }
+
+  /**
+   * Submits the URL or YouTube resource dialog (identical `UrlUploadModal`
+   * form under both labels — a single `#resource-url` input).
+   */
+  async submitUrlLikeResource(
+    resourceId: 'url' | 'youtube',
+    url: string,
+  ): Promise<void> {
+    const modal = await this.openAddResourceModal();
+    const dialog = await this.openResourceDialog(modal, resourceId);
+    await dialog.getByPlaceholder('URL').fill(url);
+    const submit = dialog.getByRole('button', { name: /submit/i });
+    await expect(submit).toBeEnabled({ timeout: 5_000 });
+    await submit.click();
+    await this.closeResourceDialogAndModal(dialog);
+  }
+
+  /**
+   * Submits the GitHub resource dialog: fills the repo URL, waits for the
+   * branch combobox to populate (a debounced backend lookup), picks the
+   * first branch, then submits.
+   */
+  async submitGithubResource(repoUrl: string): Promise<void> {
+    const modal = await this.openAddResourceModal();
+    const dialog = await this.openResourceDialog(modal, 'github');
+    await dialog.getByPlaceholder('Github Repo URL').fill(repoUrl);
+
+    const branchCombobox = dialog.getByRole('combobox');
+    await expect(branchCombobox).toBeEnabled({ timeout: 20_000 });
+    await branchCombobox.click();
+    const firstBranchOption = this.page.getByRole('option').first();
+    await expect(firstBranchOption).toBeVisible({ timeout: 10_000 });
+    await firstBranchOption.click();
+
+    const submit = dialog.getByRole('button', { name: /submit/i });
+    await expect(submit).toBeEnabled({ timeout: 5_000 });
+    await submit.click();
+    await this.closeResourceDialogAndModal(dialog);
+  }
+
+  /**
+   * Opens the Web Crawler resource dialog and fills its form WITHOUT
+   * submitting — callers that need to assert on the create request (e.g. the
+   * `crawler_extra_headers` User-Agent contract) must arm
+   * `page.waitForRequest(...)` before clicking Submit themselves.
+   */
+  async openAndFillWebCrawlerResource(opts: {
+    url: string;
+    maxDepth?: number;
+    maxPages?: number;
+    userAgent?: string;
+  }): Promise<Locator> {
+    const modal = await this.openAddResourceModal();
+    const dialog = await this.openResourceDialog(modal, 'web-crawler');
+    await dialog.locator('#url').fill(opts.url);
+    if (opts.maxDepth !== undefined) {
+      await dialog.locator('#crawler_max_depth').fill(String(opts.maxDepth));
+    }
+    if (opts.maxPages !== undefined) {
+      await dialog
+        .locator('#crawler_max_pages_limit')
+        .fill(String(opts.maxPages));
+    }
+    if (opts.userAgent !== undefined) {
+      await dialog.locator('#crawler_user_agent').fill(opts.userAgent);
+    }
+    return dialog;
+  }
+
+  /** The Submit button inside an open resource dialog. */
+  submitButtonIn(dialog: Locator): Locator {
+    return dialog.getByRole('button', { name: /submit/i });
+  }
+
+  /**
+   * The dataset row (table `<tr>`) whose name/link text matches `name` —
+   * scoping every row-level action (train switch, schedule retrain,
+   * visibility) to one deterministically-seeded dataset instead of guessing
+   * "the first untrained switch" among whatever else the tenant holds.
+   */
+  datasetRowByName(name: string | RegExp): Locator {
+    return this.dialog.getByRole('row').filter({ hasText: name });
+  }
+
+  /** The training switch inside a specific row (see `datasetRowByName`). */
+  trainingSwitchInRow(row: Locator): Locator {
+    return row.getByRole('switch', { name: /training for document/i });
+  }
+
+  /** The Schedule Retrain (clock icon) button inside a specific row. */
+  scheduleRetrainButtonInRow(row: Locator): Locator {
+    return row
+      .getByRole('button')
+      .filter({ has: this.page.locator('svg.lucide-clock') });
+  }
+
+  /** The visibility (eye/eye-off icon) toggle inside a specific row. */
+  visibilityToggleInRow(row: Locator): Locator {
+    return row
+      .getByRole('button')
+      .filter({ has: this.page.locator('svg.lucide-eye, svg.lucide-eye-off') });
+  }
+
+  /**
+   * Clicks a row's training switch and returns whichever modal it opens:
+   * `TrainOrDeleteModal` ("What would you like to do?") for an untrained row,
+   * or `DeleteDatasetModal` ("Delete Dataset") for a trained row (untraining
+   * a trained row is immediate — no choice — and auto-opens the delete
+   * confirmation).
+   */
+  async clickTrainingSwitchInRow(row: Locator): Promise<Locator> {
+    await this.trainingSwitchInRow(row).click();
+    const modal = this.page
+      .getByRole('dialog')
+      .filter({ hasText: /What would you like to do\?|Delete Dataset/i });
+    await expect(modal).toBeVisible({ timeout: 10_000 });
+    return modal;
   }
 
   async hasDatasets(): Promise<boolean> {

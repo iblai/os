@@ -1,5 +1,6 @@
 import { test, expect } from '../fixtures/mentor-test';
 import { ECOMMERCE_CHECKOUT_URL } from '../fixtures/test-data';
+import { dismissProductTourIfShown } from '../utils/product-tour';
 import {
   creditBalancePlanBadge,
   creditBalanceTrigger,
@@ -52,6 +53,8 @@ test.describe('Journey 55: Free Credits Checkout Onboarding', () => {
       await expect(
         page.getByRole('button', { name: 'Selected agent dropdown button' }),
       ).toBeVisible({ timeout: 60_000 });
+
+      await dismissProductTourIfShown(page);
 
       // Final URL must match <base-url>/platform/<platform-key>/<mentor-id>.
       const finalUrl = new URL(page.url());

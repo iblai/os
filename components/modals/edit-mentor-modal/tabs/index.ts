@@ -7,7 +7,6 @@ export * from './privacy-tab';
 export * from './tasks-tab';
 export * from './flow-tab';
 export * from './history-tab';
-export * from './datasets-tab';
 export * from './evaluation-tab';
 export * from './api-tab';
 export * from './embed-tab';

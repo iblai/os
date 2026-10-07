@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { CodingModeButton } from '../coding-mode-button';
@@ -16,6 +16,7 @@ import type { OpencodeSkillSync } from '@/hooks/use-opencode-skill-sync';
 
 const {
   invoke,
+  eventHandlers,
   openDialog,
   openPath,
   scannerState,
@@ -28,6 +29,11 @@ const {
   userOS,
 } = vi.hoisted(() => ({
   invoke: vi.fn(),
+  /** Tauri event listeners the component registered, by event name. */
+  eventHandlers: {} as Record<
+    string,
+    ((e: { payload: unknown }) => void) | undefined
+  >,
   openDialog: vi.fn(),
   openPath: vi.fn(),
   toastError: vi.fn(),
@@ -52,6 +58,14 @@ const {
 
 vi.mock('@tauri-apps/api/core', () => ({
   invoke: (...args: unknown[]) => invoke(...args),
+}));
+vi.mock('@tauri-apps/api/event', () => ({
+  listen: async (event: string, cb: (e: { payload: unknown }) => void) => {
+    eventHandlers[event] = cb;
+    return () => {
+      delete eventHandlers[event];
+    };
+  },
 }));
 vi.mock('@tauri-apps/plugin-dialog', () => ({
   open: (...args: unknown[]) => openDialog(...args),
@@ -119,10 +133,19 @@ function backend(
     remoteHost?: unknown;
     /** iOS Local Network verdict (Tauri mobile); granted unless a test says. */
     localNetwork?: 'granted' | 'denied' | 'undetermined';
+    /**
+     * `check_code_agent_status` per agent. Absent = a desktop build without the
+     * agent commands (the invoke answers nothing), so the choice stays hidden.
+     */
+    agents?: Partial<Record<'codex' | 'claude', unknown>>;
   } = {},
 ) {
-  invoke.mockImplementation(async (cmd: string) => {
+  invoke.mockImplementation(async (cmd: string, args?: unknown) => {
     switch (cmd) {
+      case 'check_code_agent_status':
+        return overrides.agents?.[
+          (args as { backend: 'codex' | 'claude' }).backend
+        ];
       case 'check_opencode_status':
         return {
           sandboxed: overrides.sandboxed ?? false,
@@ -174,6 +197,22 @@ function extend(handlers: Record<string, (args?: unknown) => unknown>) {
 }
 
 const SESSION_ID = 'chat-abc123';
+
+/** Both subscription agents installed and signed in. */
+const READY = {
+  codex: {
+    installed: true,
+    supported: true,
+    signed_in: true,
+    account: 'Logged in using ChatGPT',
+  },
+  claude: {
+    installed: true,
+    supported: true,
+    signed_in: true,
+    account: 'me@example.com',
+  },
+};
 
 const renderButton = (
   sessionId: string | undefined = SESSION_ID,
@@ -397,6 +436,21 @@ describe('CodingModeButton', () => {
       await openPopover();
       // Paired and unblocked — yet no silent default-on.
       expect(localStorage.getItem('ibl_coding_mode_enabled')).toBeNull();
+    });
+
+    it('never offers the agent choice on a phone (Code runs on the paired desktop)', async () => {
+      backend({
+        agents: READY,
+        remoteHost: { configured: true, connected: true, url: 'http://x:1' },
+      });
+      renderButton();
+      await openPopover();
+      await screen.findByTestId('code-remote-host');
+      expect(screen.queryByRole('radiogroup', { name: 'Agent' })).toBeNull();
+      expect(invoke).not.toHaveBeenCalledWith(
+        'check_code_agent_status',
+        expect.anything(),
+      );
     });
 
     it('shows the last refusal when no advertised address answers', async () => {
@@ -1957,6 +2011,633 @@ describe('CodingModeButton', () => {
       } finally {
         window.removeEventListener('local-storage', fanOut);
       }
+    });
+  });
+
+  // Codex / Claude Code: the Agent choice, its one status line, and the flows
+  // behind it. The choice routes turns through the model key alone; the row
+  // exists only once the backend has answered for an agent.
+  describe('agent (Codex / Claude Code)', () => {
+    const agentGroup = () =>
+      screen.queryByRole('radiogroup', { name: 'Agent' });
+
+    it('hides the agent choice on a desktop build without the agent commands', async () => {
+      renderButton();
+      await openPopover();
+      await waitFor(() =>
+        expect(invoke).toHaveBeenCalledWith('check_code_agent_status', {
+          backend: 'codex',
+        }),
+      );
+      expect(agentGroup()).toBeNull();
+    });
+
+    it('offers ibl.ai, Codex and Claude Code, with ibl.ai chosen by default', async () => {
+      backend({ agents: READY });
+      renderButton();
+      await openPopover();
+      const group = await screen.findByRole('radiogroup', { name: 'Agent' });
+      const radios = within(group).getAllByRole('radio');
+      expect(radios.map((r) => r.textContent)).toEqual([
+        'ibl.ai',
+        'Codex',
+        'Claude Code',
+      ]);
+      expect(radios[0]).toHaveAttribute('aria-checked', 'true');
+      expect(screen.queryByTestId('code-agent-status')).toBeNull();
+    });
+
+    it('choosing Codex routes Code to codex/default and remembers it on this machine only', async () => {
+      backend({ agents: READY });
+      const fired = vi.fn();
+      window.addEventListener('local-storage', fired);
+      renderButton();
+      await openPopover();
+      await userEvent.click(
+        await screen.findByRole('radio', { name: 'Codex' }),
+      );
+      expect(localStorage.getItem('ibl_coding_mode_agent')).toBe('codex');
+      expect(localStorage.getItem('ibl_coding_mode_model')).toBe(
+        'codex/default',
+      );
+      expect(fired).toHaveBeenCalled();
+      expect(saveMetadata).not.toHaveBeenCalled();
+      // Signed in → the quiet ready line names the account.
+      expect(
+        await screen.findByText('Logged in using ChatGPT'),
+      ).toBeInTheDocument();
+      window.removeEventListener('local-storage', fired);
+    });
+
+    it('keeps the mentor LLM (and its unavailable warning) off an agent’s model', async () => {
+      localStorage.setItem('ibl_coding_mode_agent', 'claude');
+      localStorage.setItem('ibl_coding_mode_model', 'claude/default');
+      localStorage.setItem('ibl_coding_mode_enabled', 'true');
+      localStorage.setItem('tenant', 'acme');
+      localStorage.setItem('dm_token', 'jwt-test-token');
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async () => ({ ok: true, json: async () => ({ data: [] }) })),
+      );
+      backend({ agents: READY });
+      renderButton();
+      await openPopover();
+      await screen.findByRole('radiogroup', { name: 'Agent' });
+      expect(localStorage.getItem('ibl_coding_mode_model')).toBe(
+        'claude/default',
+      );
+      expect(fetch).not.toHaveBeenCalled();
+      expect(screen.queryByText(/isn’t available for Code/)).toBeNull();
+    });
+
+    it('lets an agent run while an on-device model without tool calling is selected', async () => {
+      localStorage.setItem('ibl_local_llm_enabled', 'true');
+      localStorage.setItem('ibl_coding_mode_agent', 'codex');
+      backend({
+        agents: READY,
+        local: {
+          runtime: 'ollama',
+          spec: 'ollama/tiny',
+          model: 'tiny',
+          running: true,
+          tools_supported: false,
+          reason: 'tiny cannot call tools',
+        },
+      });
+      renderButton();
+      await openPopover();
+      await screen.findByRole('radiogroup', { name: 'Agent' });
+      expect(screen.getByRole('switch')).not.toBeDisabled();
+      expect(invoke).not.toHaveBeenCalledWith(
+        'check_code_local_model',
+        expect.anything(),
+      );
+      expect(screen.queryByText(/cannot call tools/)).toBeNull();
+    });
+
+    it('seeds the agent’s model when Code is switched on', async () => {
+      localStorage.setItem('ibl_coding_mode_agent', 'claude');
+      localStorage.setItem('ibl_coding_mode_enabled', 'false');
+      localStorage.setItem('ibl_coding_mode_folder_chosen', 'true');
+      backend({ agents: READY });
+      renderButton();
+      await openPopover();
+      await userEvent.click(screen.getByRole('switch'));
+      await waitFor(() =>
+        expect(localStorage.getItem('ibl_coding_mode_model')).toBe(
+          'claude/default',
+        ),
+      );
+    });
+
+    it('switching back to ibl.ai restores the mentor LLM as the model', async () => {
+      localStorage.setItem('ibl_coding_mode_agent', 'codex');
+      localStorage.setItem('ibl_coding_mode_model', 'codex/default');
+      backend({ agents: READY });
+      renderButton();
+      await openPopover();
+      await userEvent.click(
+        await screen.findByRole('radio', { name: 'ibl.ai' }),
+      );
+      expect(localStorage.getItem('ibl_coding_mode_model')).toBe(
+        'openai/gpt-4o',
+      );
+      expect(localStorage.getItem('ibl_coding_mode_agent')).toBe('opencode');
+      await waitFor(() =>
+        expect(screen.queryByTestId('code-agent-status')).toBeNull(),
+      );
+    });
+
+    it('switching back never leaves turns on the agent while the mentor LLM is unknown', async () => {
+      mentorSettings.current = { llmProvider: '', llmName: '' };
+      localStorage.setItem('ibl_coding_mode_agent', 'codex');
+      localStorage.setItem('ibl_coding_mode_model', 'codex/default');
+      backend({ agents: READY });
+      renderButton();
+      await openPopover();
+      await userEvent.click(
+        await screen.findByRole('radio', { name: 'ibl.ai' }),
+      );
+      expect(localStorage.getItem('ibl_coding_mode_model')).toBeNull();
+    });
+
+    it('installs a missing agent, showing only its own installer progress, then its status', async () => {
+      const state = { installed: false };
+      let finishInstall: () => void = () => {};
+      extend({
+        check_code_agent_status: (args) =>
+          (args as { backend: string }).backend === 'codex'
+            ? {
+                installed: state.installed,
+                supported: true,
+                signed_in: state.installed ? true : null,
+                account: state.installed ? 'Logged in using ChatGPT' : null,
+              }
+            : READY.claude,
+        install_code_agent: () =>
+          new Promise<void>((resolve) => {
+            finishInstall = () => {
+              state.installed = true;
+              resolve();
+            };
+          }),
+      });
+      localStorage.setItem('ibl_coding_mode_agent', 'codex');
+      renderButton();
+      await openPopover();
+      expect(await screen.findByText('Not installed')).toBeInTheDocument();
+      const install = screen.getByRole('button', { name: 'Install' });
+      await userEvent.click(install);
+      await waitFor(() => expect(install).toBeDisabled());
+      expect(invoke).toHaveBeenCalledWith('install_code_agent', {
+        backend: 'codex',
+      });
+      // Our installer's progress shows; another source's lines do not.
+      await waitFor(() =>
+        expect(eventHandlers['model:installation-log']).toBeDefined(),
+      );
+      act(() => {
+        eventHandlers['model:installation-log']?.({
+          payload: {
+            message: 'downloading Node v24…',
+            source: 'code-agent',
+            backend: 'codex',
+          },
+        });
+      });
+      expect(
+        await screen.findByText('downloading Node v24…'),
+      ).toBeInTheDocument();
+      act(() => {
+        eventHandlers['model:installation-log']?.({
+          payload: {
+            message: 'opencode already installed',
+            source: 'opencode',
+          },
+        });
+      });
+      expect(screen.queryByText('opencode already installed')).toBeNull();
+      act(() => finishInstall());
+      expect(
+        await screen.findByText('Logged in using ChatGPT'),
+      ).toBeInTheDocument();
+      // The popover owns the listener: up while open, gone once it closes.
+      expect(eventHandlers['model:installation-log']).toBeDefined();
+      await userEvent.keyboard('{Escape}');
+      await waitFor(() =>
+        expect(eventHandlers['model:installation-log']).toBeUndefined(),
+      );
+    });
+
+    it('leaves out an agent this computer can’t run, and the row once none is left', async () => {
+      backend({
+        agents: {
+          codex: { installed: false, supported: false },
+          claude: READY.claude,
+        },
+      });
+      const { unmount } = renderButton();
+      await openPopover();
+      expect(
+        await screen.findByRole('radio', { name: 'Claude Code' }),
+      ).toBeInTheDocument();
+      expect(screen.getByRole('radio', { name: 'ibl.ai' })).toBeInTheDocument();
+      expect(
+        screen.queryByRole('radio', { name: 'Codex' }),
+      ).not.toBeInTheDocument();
+      unmount();
+
+      invoke.mockClear();
+      backend({
+        agents: {
+          codex: { installed: false, supported: false },
+          claude: { installed: false, supported: false },
+        },
+      });
+      renderButton();
+      await openPopover();
+      await waitFor(() =>
+        expect(invoke).toHaveBeenCalledWith('check_code_agent_status', {
+          backend: 'claude',
+        }),
+      );
+      await act(async () => {
+        await new Promise((r) => setTimeout(r, 0));
+      });
+      expect(
+        screen.queryByRole('radiogroup', { name: 'Agent' }),
+      ).not.toBeInTheDocument();
+    });
+
+    it('surfaces a failed agent install as a toast and re-enables Install', async () => {
+      backend({
+        agents: {
+          codex: { installed: false, supported: true },
+        },
+      });
+      extend({
+        install_code_agent: () => {
+          throw new Error('npm install failed: registry unreachable');
+        },
+      });
+      localStorage.setItem('ibl_coding_mode_agent', 'codex');
+      renderButton();
+      await openPopover();
+      await userEvent.click(
+        await screen.findByRole('button', { name: 'Install' }),
+      );
+      await waitFor(() =>
+        expect(toastError).toHaveBeenCalledWith(
+          'npm install failed: registry unreachable',
+        ),
+      );
+      await waitFor(() =>
+        expect(
+          screen.getByRole('button', { name: 'Install' }),
+        ).not.toBeDisabled(),
+      );
+    });
+
+    it('tells Codex users to sign in in the ChatGPT app and checks again on request', async () => {
+      const state = { signedIn: false };
+      extend({
+        check_code_agent_status: (args) =>
+          (args as { backend: string }).backend === 'codex'
+            ? {
+                installed: true,
+                supported: true,
+                signed_in: state.signedIn,
+                account: state.signedIn ? 'Logged in using ChatGPT' : null,
+              }
+            : READY.claude,
+      });
+      localStorage.setItem('ibl_coding_mode_agent', 'codex');
+      renderButton();
+      await openPopover();
+      expect(
+        await screen.findByText(/sign in to Codex in the ChatGPT app/),
+      ).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /Sign in/ })).toBeNull();
+      state.signedIn = true;
+      await userEvent.click(
+        screen.getByRole('button', { name: 'Check Again' }),
+      );
+      expect(
+        await screen.findByText('Logged in using ChatGPT'),
+      ).toBeInTheDocument();
+    });
+
+    it('tells Claude Code users to sign in from a terminal and checks again on request', async () => {
+      const state = { signedIn: false };
+      extend({
+        check_code_agent_status: (args) =>
+          (args as { backend: string }).backend === 'claude'
+            ? {
+                installed: true,
+                supported: true,
+                signed_in: state.signedIn,
+                account: state.signedIn ? 'me@example.com' : null,
+              }
+            : READY.codex,
+      });
+      localStorage.setItem('ibl_coding_mode_agent', 'claude');
+      renderButton();
+      await openPopover();
+      expect(
+        await screen.findByText(/Not signed in — run/),
+      ).toBeInTheDocument();
+      expect(screen.getByText('claude').tagName).toBe('CODE');
+      expect(screen.queryByRole('button', { name: /Sign in/ })).toBeNull();
+      state.signedIn = true;
+      await userEvent.click(
+        screen.getByRole('button', { name: 'Check Again' }),
+      );
+      expect(await screen.findByText('me@example.com')).toBeInTheDocument();
+    });
+
+    it('shows an installing agent with a spinner, refuses the choice and keeps ibl.ai usable', async () => {
+      backend({
+        agents: {
+          codex: {
+            installed: false,
+            supported: true,
+            installing: true,
+          },
+          claude: READY.claude,
+        },
+      });
+      renderButton();
+      await openPopover();
+      const codex = await screen.findByRole('radio', { name: 'Codex' });
+      expect(codex).toBeDisabled();
+      expect(codex).toHaveAttribute('aria-busy', 'true');
+      expect(codex.querySelector('.animate-spin')).not.toBeNull();
+      await userEvent.click(codex);
+      expect(localStorage.getItem('ibl_coding_mode_agent')).toBeNull();
+      // The finished agent and ibl.ai stay selectable meanwhile.
+      const claude = screen.getByRole('radio', { name: 'Claude Code' });
+      expect(claude).not.toBeDisabled();
+      expect(claude.querySelector('.animate-spin')).toBeNull();
+      await userEvent.click(claude);
+      expect(localStorage.getItem('ibl_coding_mode_agent')).toBe('claude');
+      await userEvent.click(screen.getByRole('radio', { name: 'ibl.ai' }));
+      expect(localStorage.getItem('ibl_coding_mode_agent')).toBe('opencode');
+      expect(screen.queryByRole('button', { name: 'Install' })).toBeNull();
+    });
+
+    it('follows a launch-time install to its end: progress by agent, then the account once code-agent:changed lands', async () => {
+      const state = { installed: false };
+      extend({
+        check_code_agent_status: (args) =>
+          (args as { backend: string }).backend === 'codex'
+            ? state.installed
+              ? READY.codex
+              : {
+                  installed: false,
+                  supported: true,
+                  installing: true,
+                }
+            : READY.claude,
+      });
+      localStorage.setItem('ibl_coding_mode_agent', 'codex');
+      renderButton();
+      await openPopover();
+      expect(await screen.findByText('Installing…')).toBeInTheDocument();
+      // Nothing to click: the desktop is doing it.
+      expect(screen.queryByRole('button', { name: 'Install' })).toBeNull();
+      await waitFor(() =>
+        expect(eventHandlers['code-agent:changed']).toBeDefined(),
+      );
+      // Claude's progress never shows on Codex's line.
+      act(() => {
+        eventHandlers['model:installation-log']?.({
+          payload: {
+            message: 'installing claude…',
+            source: 'code-agent',
+            backend: 'claude',
+          },
+        });
+      });
+      expect(screen.getByText('Installing…')).toBeInTheDocument();
+      act(() => {
+        eventHandlers['model:installation-log']?.({
+          payload: {
+            message: 'downloading Node v24…',
+            source: 'code-agent',
+            backend: 'codex',
+          },
+        });
+      });
+      expect(
+        await screen.findByText('downloading Node v24…'),
+      ).toBeInTheDocument();
+      state.installed = true;
+      act(() => {
+        eventHandlers['code-agent:changed']?.({
+          payload: { backend: 'codex' },
+        });
+      });
+      expect(
+        await screen.findByText('Logged in using ChatGPT'),
+      ).toBeInTheDocument();
+      expect(screen.getByRole('radio', { name: 'Codex' })).not.toBeDisabled();
+      expect(invoke).not.toHaveBeenCalledWith(
+        'install_code_agent',
+        expect.anything(),
+      );
+    });
+
+    it('shows why a launch-time install failed and offers Install to retry', async () => {
+      backend({
+        agents: {
+          codex: {
+            installed: false,
+            supported: true,
+            error: 'npm install of codex-acp failed: registry unreachable',
+          },
+        },
+      });
+      extend({ install_code_agent: () => undefined });
+      localStorage.setItem('ibl_coding_mode_agent', 'codex');
+      renderButton();
+      await openPopover();
+      expect(
+        await screen.findByText(
+          'npm install of codex-acp failed: registry unreachable',
+        ),
+      ).toBeInTheDocument();
+      expect(screen.getByRole('radio', { name: 'Codex' })).not.toBeDisabled();
+      await userEvent.click(screen.getByRole('button', { name: 'Install' }));
+      await waitFor(() =>
+        expect(invoke).toHaveBeenCalledWith('install_code_agent', {
+          backend: 'codex',
+        }),
+      );
+    });
+
+    it('says a remembered agent isn’t available here, with no radio and no install', async () => {
+      backend({
+        agents: {
+          codex: { installed: false, supported: false },
+          claude: READY.claude,
+        },
+      });
+      localStorage.setItem('ibl_coding_mode_agent', 'codex');
+      renderButton();
+      await openPopover();
+      expect(
+        await screen.findByText('Not available on this computer'),
+      ).toBeInTheDocument();
+      expect(screen.queryByRole('radio', { name: 'Codex' })).toBeNull();
+      expect(screen.queryByRole('button', { name: 'Install' })).toBeNull();
+    });
+
+    it('keeps the agent choice hidden and quiet when the status command rejects', async () => {
+      extend({
+        check_code_agent_status: () => {
+          // What Tauri says for a command an older desktop lacks: a plain string.
+          throw 'command check_code_agent_status not found';
+        },
+      });
+      renderButton();
+      await openPopover();
+      await waitFor(() =>
+        expect(invoke).toHaveBeenCalledWith('check_code_agent_status', {
+          backend: 'claude',
+        }),
+      );
+      expect(agentGroup()).toBeNull();
+      expect(toastError).not.toHaveBeenCalled();
+    });
+
+    it('surfaces the desktop’s plain-string rejection of Install as a toast', async () => {
+      // Tauri rejects with the Rust `Err` string itself, not an Error.
+      backend({
+        agents: {
+          codex: READY.codex,
+          claude: {
+            installed: false,
+            supported: true,
+          },
+        },
+      });
+      extend({
+        install_code_agent: () => {
+          throw 'npm install of @agentclientprotocol/claude-agent-acp@0.83.0 failed: exit Some(1): npm ERR! 404 Not Found';
+        },
+      });
+      localStorage.setItem('ibl_coding_mode_agent', 'claude');
+      renderButton();
+      await openPopover();
+      await userEvent.click(
+        await screen.findByRole('button', { name: 'Install' }),
+      );
+      await waitFor(() =>
+        expect(toastError).toHaveBeenCalledWith(
+          'npm install of @agentclientprotocol/claude-agent-acp@0.83.0 failed: exit Some(1): npm ERR! 404 Not Found',
+        ),
+      );
+      expect(screen.getByRole('button', { name: 'Install' })).toBeEnabled();
+    });
+
+    it('shows why the sign-in state couldn’t be checked, with Check Again', async () => {
+      const state = { known: false };
+      extend({
+        check_code_agent_status: (args) =>
+          (args as { backend: string }).backend === 'codex'
+            ? state.known
+              ? READY.codex
+              : {
+                  installed: true,
+                  supported: true,
+                  signed_in: null,
+                  account: null,
+                  reason: "Couldn't check the Codex sign-in state.",
+                }
+            : READY.claude,
+      });
+      localStorage.setItem('ibl_coding_mode_agent', 'codex');
+      renderButton();
+      await openPopover();
+      expect(
+        await screen.findByText("Couldn't check the Codex sign-in state."),
+      ).toBeInTheDocument();
+      expect(screen.queryByText('Ready')).toBeNull();
+      expect(screen.queryByText(/Not signed in/)).toBeNull();
+      state.known = true;
+      await userEvent.click(
+        screen.getByRole('button', { name: 'Check Again' }),
+      );
+      expect(
+        await screen.findByText('Logged in using ChatGPT'),
+      ).toBeInTheDocument();
+    });
+
+    it('offers Install for an agent installed at another pin', async () => {
+      backend({
+        agents: {
+          codex: {
+            installed: false,
+            supported: true,
+            reason:
+              'Codex needs an update (1.0.0 → 2.0.0) — install it again from the Code menu.',
+            error: null,
+          },
+        },
+      });
+      extend({ install_code_agent: () => undefined });
+      localStorage.setItem('ibl_coding_mode_agent', 'codex');
+      renderButton();
+      await openPopover();
+      expect(await screen.findByText('Not installed')).toBeInTheDocument();
+      await userEvent.click(screen.getByRole('button', { name: 'Install' }));
+      await waitFor(() =>
+        expect(invoke).toHaveBeenCalledWith('install_code_agent', {
+          backend: 'codex',
+        }),
+      );
+    });
+
+    it('follows a launch-time install into its failure and offers Install to retry', async () => {
+      const state = { failed: false };
+      extend({
+        check_code_agent_status: (args) =>
+          (args as { backend: string }).backend === 'codex'
+            ? {
+                installed: false,
+                supported: true,
+                installing: !state.failed,
+                error: state.failed
+                  ? 'npm install of @agentclientprotocol/codex-acp@2.0.0 failed: exit Some(1): npm ERR! 404 Not Found'
+                  : null,
+              }
+            : READY.claude,
+        install_code_agent: () => undefined,
+      });
+      localStorage.setItem('ibl_coding_mode_agent', 'codex');
+      renderButton();
+      await openPopover();
+      expect(await screen.findByText('Installing…')).toBeInTheDocument();
+      expect(screen.getByRole('radio', { name: 'Codex' })).toBeDisabled();
+      await waitFor(() =>
+        expect(eventHandlers['code-agent:changed']).toBeDefined(),
+      );
+      state.failed = true;
+      act(() => {
+        eventHandlers['code-agent:changed']?.({
+          payload: { backend: 'codex' },
+        });
+      });
+      expect(
+        await screen.findByText(/npm ERR! 404 Not Found/),
+      ).toBeInTheDocument();
+      expect(screen.getByRole('radio', { name: 'Codex' })).not.toBeDisabled();
+      await userEvent.click(screen.getByRole('button', { name: 'Install' }));
+      await waitFor(() =>
+        expect(invoke).toHaveBeenCalledWith('install_code_agent', {
+          backend: 'codex',
+        }),
+      );
     });
   });
 });

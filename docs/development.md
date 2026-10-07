@@ -174,7 +174,6 @@ os/
 │   ├── use-voice-chat.ts       # LiveKit voice integration
 │   ├── use-mentors.ts          # Agent CRUD operations
 │   ├── use-history.ts          # Chat history management
-│   ├── use-datasets.ts         # Training data management
 │   ├── subscription/           # Subscription hooks
 │   └── ...
 │

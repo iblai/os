@@ -49,6 +49,19 @@ interface OpencodeStatus {
   sandbox_ready: boolean;
 }
 
+/** `check_code_agent_status` for a subscription agent (Codex / Claude Code). */
+interface CodeAgentStatus {
+  /** A launch-time (or Install) run in flight; the popover refuses the choice meanwhile. */
+  installing?: boolean;
+  installed: boolean;
+  supported: boolean;
+  signed_in?: boolean | null;
+  account?: string | null;
+  reason?: string | null;
+  node_version?: string | null;
+  adapter_version?: string | null;
+}
+
 /** Session ids used only by this journey, so cleanup can find their leftovers. */
 const SESSION_A = 'e2e-code-a';
 const SESSION_B = 'e2e-code-b';
@@ -606,6 +619,156 @@ describe('Journey 3: Code Mode (opencode)', () => {
          harness gap as code-08..10/15); the reclassification is covered
          meanwhile by pre_tool_text_is_reclassified_as_narration in
          opencode_acp.rs */
+    });
+  });
+
+  // The subscription agents: Codex and Claude Code run next to opencode
+  // through their ACP adapters on a managed Node. The status is the one cheap
+  // real-command check; everything that needs the ~700 MB install, a
+  // signed-in subscription or an authenticated UI session is a pending stub,
+  // covered meanwhile by the Rust and Vitest suites named in each one.
+  describe('Codex / Claude Code agents', () => {
+    it('code-29: check_code_agent_status answers for Codex and Claude Code and refuses an unknown backend', async () => {
+      for (const backend of ['codex', 'claude'] as const) {
+        const st = await invokeCmd<CodeAgentStatus>('check_code_agent_status', {
+          backend,
+        });
+        expect(typeof st.installed).toBe('boolean');
+        expect(typeof st.supported).toBe('boolean');
+        // The launch-time install reports itself; a boolean, never absent.
+        expect(typeof st.installing).toBe('boolean');
+        // Linux under tauri-driver, outside the Mac App Store sandbox.
+        expect(st.supported).toBe(true);
+        expect([true, false, null, undefined]).toContain(st.signed_in);
+        // Not installed on a fresh harness → a reason names the fix; installed
+        // → the pins are reported.
+        if (!st.installed) {
+          expect(st.reason).toMatch(/install/i);
+        } else {
+          expect(st.node_version).toBeTruthy();
+          expect(st.adapter_version).toBeTruthy();
+        }
+      }
+      expect(
+        await invokeExpectingFailure('check_code_agent_status', {
+          backend: 'gemini',
+        }),
+      ).toMatch(/unknown code agent/);
+    });
+
+    it.skip('code-30: install_code_agent installs the pinned Node runtime and each adapter (live)', () => {
+      /* pending — a ~700 MB download, too heavy for the harness like code-26;
+         covered meanwhile by the #[ignore]d code_agent_pins_install_and_load
+         and the pinning tests in code_agent_installer.rs */
+    });
+
+    it.skip('code-31: code_agent_sign_in for Claude Code refuses with the terminal guidance instead of opening a browser', () => {
+      /* deprecated in #531 — the in-app sign-in was removed: Codex signs in
+         in the ChatGPT app and Claude Code in a terminal, and the popover's
+         line says so; the signed-out status reason is pinned by the Rust
+         the_status_of_an_installed_agent_reports_its_sign_in_state */
+    });
+
+    it.skip('code-32: the Code popover’s Agent choice routes turns through the model key and keeps the other writers off it', () => {
+      /* pending — needs an authenticated UI session (like code-14/23/24);
+         covered meanwhile by the coding-mode-button Vitest cases (choosing
+         Codex routes…, keeps the mentor LLM…, lets an agent run…, switching
+         back…, hides the agent choice…, never offers the agent choice on a
+         phone…) and the Rust the_model_string_picks_the_backend */
+    });
+
+    it.skip('code-33: the popover shows the selected agent’s one quiet status line', () => {
+      /* pending — same authenticated-UI gap; covered meanwhile by the
+         coding-mode-button Vitest cases (installs a missing agent…, tells
+         Codex users…, tells Claude Code users…, shows why an agent can’t
+         run…) */
+    });
+
+    it.skip('code-34: a Codex sign-in made in the ChatGPT app is picked up by Check Again and the status names the account', () => {
+      /* pending — needs a real ChatGPT account and the ChatGPT app the harness
+         can't drive; covered meanwhile by the tells Codex users… Vitest case
+         and the Rust probe-parsing tests in code_agent_installer.rs */
+    });
+
+    it.skip('code-35: a turn on a signed-out agent raises one sign-in toast and no generic chat error toast', () => {
+      /* pending — needs a real agent turn; covered meanwhile by
+         use-opencode-auth-required.test.tsx and the Rust
+         sign_in_errors_become_one_sentence_and_never_retry /
+         a_scripted_agent_gets_our_session_params_and_a_signed_out_prompt_fails_loudly */
+    });
+
+    it.skip('code-36: a Code turn on Codex streams into the same bubble with the guidance as developer_instructions and Codex’s mode following the Approvals toggle', () => {
+      /* pending — needs a signed-in ChatGPT subscription; covered meanwhile by
+         the Rust each_backend_carries_guidance_and_skills_its_own_way,
+         the_os_approval_mode_drives_codex_s_own_mode,
+         permission_answers_pick_the_exact_once_kinds and
+         each_agent_gets_its_own_wording */
+    });
+
+    it.skip('code-37: a Code turn on Claude Code streams into the same bubble with the guidance appended via systemPrompt.append', () => {
+      /* pending — needs a signed-in Claude subscription; covered meanwhile by
+         the Rust each_backend_carries_guidance_and_skills_its_own_way,
+         a_scripted_agent_gets_our_session_params_and_a_signed_out_prompt_fails_loudly
+         and each_backend_sees_only_its_own_login */
+    });
+
+    it.skip('code-38: the desktop installs both agents by itself at launch; the popover shows them loading and refuses the choice until they are ready', () => {
+      /* pending — the same ~700 MB download as code-30, started by
+         ensure_agents_current in both entry points; covered meanwhile by the
+         coding-mode-button Vitest cases (shows an installing agent with a
+         spinner…, follows a launch-time install to its end…, shows why a
+         launch-time install failed…) and the Rust
+         an_installing_or_failed_agent_reports_its_phase plus the stale_agents
+         asserts in readiness_distinguishes_missing_stale_and_current */
+    });
+
+    it('code-39: list_code_agent_models answers each agent’s models with its default, or refuses naming install / sign-in', async () => {
+      for (const backend of ['codex', 'claude'] as const) {
+        const st = await invokeCmd<CodeAgentStatus>('check_code_agent_status', {
+          backend,
+        });
+        if (st.installed && st.signed_in) {
+          const list = await invokeCmd<{
+            models: { id: string; name: string }[];
+            default: string | null;
+            selected: string | null;
+          }>('list_code_agent_models', { backend });
+          expect(list.models.length).toBeGreaterThan(0);
+          expect(
+            list.models.every(
+              (m) => typeof m.id === 'string' && typeof m.name === 'string',
+            ),
+          ).toBe(true);
+          expect(typeof list.default).toBe('string');
+        } else {
+          // Not installed or signed out: the refusal names the fix.
+          expect(
+            await invokeExpectingFailure('list_code_agent_models', { backend }),
+          ).toMatch(/install|sign-in|signed in/i);
+        }
+      }
+      expect(
+        await invokeExpectingFailure('list_code_agent_models', {
+          backend: 'gemini',
+        }),
+      ).toMatch(/unknown code agent/);
+    });
+
+    it.skip('code-40: the top-left model picker opens the SDK’s LLM Selection dialog with the agent’s models while Code runs on Codex / Claude Code and saves the pick per machine', () => {
+      /* pending — needs an authenticated UI session (like code-14/23/24);
+         covered meanwhile by the nav-bar Vitest cases (shows the agent model
+         picker instead of the LLM selector, keeps the LLM selector…) and
+         agent-model-selector.test.tsx (opens the SDK LLM Selection dialog…,
+         a pick saves it…, a refused pick toasts…, a failed list shows on the
+         button…) */
+    });
+
+    it.skip('code-41: a Code turn runs on the picked model — the handshake applies it with session/set_config_option right after the mode pin, and a refused model fails the turn naming the picker', () => {
+      /* pending — needs a signed-in ChatGPT / Claude subscription; covered
+         meanwhile by the Rust a_scripted_agent_reports_its_models_and_takes_the_saved_one
+         (opencode_acp.rs), an_unknown_model_is_refused_before_it_is_saved and
+         the_model_choice_lists_the_agents_offer_with_default_and_selection
+         (code_agent_models.rs) */
     });
   });
 });
