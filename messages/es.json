@@ -1988,9 +1988,7 @@
     "infoBox": "Conecta tu agente a tus propios sistemas mediante servidores MCP, para que pueda acceder a tus datos y servicios directamente dentro de una conversación."
   },
   "tabsSkillsTab": {
-    "heading": "Habilidades",
-    "description": "Guías reutilizables que este Agente Base puede descubrir y seguir.",
-    "infoBox": "Las Habilidades del Agente son guías reutilizables que puedes adjuntar a un Agente Base: instrucciones escritas (más archivos de referencia opcionales) para una tarea, como investigar un tema en la web o revisar código. El agente lee una habilidad solo cuando es relevante, así que puedes darle muchas capacidades sin sobrecargar cada conversación. En el chat, escribe / para ver las habilidades de este agente y elegir una para iniciarla."
+    "heading": "Habilidades"
   },
   "topTrialBannerTopTrialBanner": {
     "defaultBannerText": "Actualiza para crear tus propios agentes. No se requiere tarjeta de crédito 😎",

@@ -1988,9 +1988,7 @@
     "infoBox": "Connect your agent to your own systems through MCP servers, so it can reach your data and services right inside a conversation."
   },
   "tabsSkillsTab": {
-    "heading": "Skills",
-    "description": "Reusable playbooks this Base Agent can discover and follow.",
-    "infoBox": "Agent Skills are reusable playbooks you can attach to a Base Agent — written instructions (plus optional reference files) for one job, like researching a topic on the web or reviewing code. The agent reads a skill only when it's relevant, so you can give it many capabilities without bloating every conversation. In chat, type / to see this agent's skills and pick one to start it."
+    "heading": "Skills"
   },
   "topTrialBannerTopTrialBanner": {
     "defaultBannerText": "Upgrade to create your own agents. No credit card required 😎",
