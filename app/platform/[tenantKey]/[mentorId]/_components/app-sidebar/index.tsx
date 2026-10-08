@@ -72,6 +72,7 @@ import { useAppSelector } from '@/lib/hooks';
 import { selectRbacPermissions } from '@/features/rbac/rbac-slice';
 import { checkRbacPermission } from '@/hoc/withPermissions';
 import { useEmbedMode } from '@/hooks/use-embed-mode';
+import { useAllowMentorSelection } from '@/hooks/use-allow-mentor-selection';
 import { useHelpCenter } from '@/hooks/use-help-center';
 import { useShowFreeTrialDialog } from '@/hooks/user-user-actions';
 import { cn, isLoggedIn, redirectToLogin } from '@/lib/utils';
@@ -472,6 +473,7 @@ export function AppSidebar() {
   const { projectId } = useParams<ProjectPageParams>();
   const username = useUsername();
   const embedMode = useEmbedMode();
+  const allowMentorSelection = useAllowMentorSelection();
   const isAdmin = useIsAdmin();
   // `userIsStudent` is the LIVE inverse-admin signal — reacts to the
   // User/Admin toggle in the nav-bar (backed by the Redux user slice).
@@ -1263,6 +1265,23 @@ export function AppSidebar() {
                 </SidebarCollapsedLabelFlyout>
               )}
 
+              {allowMentorSelection && (
+                <SidebarCollapsedLabelFlyout label={t('agents')}>
+                  <button
+                    type="button"
+                    onClick={() => handleAgentMenuSelect('agents-explore')}
+                    data-testid="sidebar-explore-agents"
+                    className="inline-flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-[8px] transition-colors outline-none hover:bg-[#f0f0f0] focus-visible:ring-2 focus-visible:ring-[#c4c4c8] focus-visible:ring-offset-2 focus-visible:ring-offset-[#fafafa]"
+                    aria-label={t('agents')}
+                  >
+                    <Globe2
+                      className="size-4 shrink-0"
+                      style={{ color: NAV_MUTED }}
+                      strokeWidth={1.5}
+                    />
+                  </button>
+                </SidebarCollapsedLabelFlyout>
+              )}
               {agentsMenu.items.length > 0 && (
                 <SidebarNavCollapsibleSection
                   collapsed
@@ -1365,6 +1384,24 @@ export function AppSidebar() {
                   </div>
                 )}
 
+                {allowMentorSelection && (
+                  <button
+                    type="button"
+                    onClick={() => handleAgentMenuSelect('agents-explore')}
+                    data-testid="sidebar-explore-agents"
+                    className="flex h-9 w-full min-w-0 cursor-pointer items-center gap-2 rounded-md px-2 text-left text-[14px] font-normal text-[#5f5f61] transition-colors outline-none hover:bg-[#f4f4f4] focus-visible:ring-2 focus-visible:ring-[#cfe8fa] focus-visible:ring-offset-2 focus-visible:ring-offset-[#fafafa]"
+                  >
+                    <Globe2
+                      className="size-4 shrink-0"
+                      style={{ color: NAV_MUTED }}
+                      strokeWidth={1.5}
+                      aria-hidden
+                    />
+                    <span className="min-w-0 flex-1 truncate">
+                      {t('agents')}
+                    </span>
+                  </button>
+                )}
                 {agentsMenu.items.length > 0 && (
                   <SidebarNavCollapsibleSection
                     collapsed={false}
