@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.162.3](https://github.com/iblai/os/compare/v0.162.2...v0.162.3) (2026-10-08)
+
+### Bug Fixes
+
+* **desktop:** also treat microsoft-graph SSO as an in-app OAuth URL ([33a2725](https://github.com/iblai/os/commit/33a272529bf7c14ddd8e4c7d340a24ec4a11bb4a))
+* **desktop:** open Microsoft/Azure AD sign-in in the in-app OAuth popup ([79a6bca](https://github.com/iblai/os/commit/79a6bcadb1ee2fff7bbafb069461298eae157a19))
+
+### Chores
+
+* **tauri:** release app-v0.95.24 ([f6c53e0](https://github.com/iblai/os/commit/f6c53e0b8d019fe0719293bad9dfb782a54edc92))
+
 ## [0.162.2](https://github.com/iblai/os/compare/v0.162.1...v0.162.2) (2026-10-07)
 
 ### Tests
