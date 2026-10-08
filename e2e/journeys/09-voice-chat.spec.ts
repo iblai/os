@@ -117,7 +117,7 @@ test.describe('Journey 9: Voice Chat', () => {
       // journey 47's assertions. New mentors default voice ON, so there is
       // still something to toggle off. Mirrors vc-07 + journey 37.
       //
-      // The "Enable voice calls" master toggle now lives in-tab on the Voice
+      // The "Enable Voice Calls" master toggle now lives in-tab on the Voice
       // tab itself (feat/2040 — moved off Settings → Capabilities) and
       // auto-saves on click — no footer Save button involved.
       await createMentorPage.openAndCreate();
@@ -162,7 +162,7 @@ test.describe('Journey 9: Voice Chat', () => {
       // this re-enable flow never touches the shared default mentor that
       // journey 47 asserts against in parallel.
       //
-      // The "Enable voice calls" master toggle now lives in-tab on the Voice
+      // The "Enable Voice Calls" master toggle now lives in-tab on the Voice
       // tab itself (feat/2040 — moved off Settings → Capabilities) and
       // auto-saves on click.
       await createMentorPage.openAndCreate();

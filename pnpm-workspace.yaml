@@ -170,8 +170,9 @@ overrides:
   '@tiptap/core@3': '>=3.30.5'
   uuid: 11.1.1
   # Floor lifted to 0.35.4 for GHSA-rgj7-g3m4-5g8c (image decode overflow),
-  # reached through next's optional sharp.
-  sharp: '>=0.35.4'
+  # reached through next's optional sharp. Lifted again to 0.35.5 for
+  # GHSA-wq5f-xc86-pv6w (bundled librsvg, CVE-2026-96889).
+  sharp: '>=0.35.5'
   brace-expansion@<=5.0.8: '>=5.0.12'
   # serialize-javascript GHSA-5c6j-r48x-rmvq (RCE via RegExp.flags/Date, patched
   # 7.0.3) and GHSA-qj8w-gfj5-8c6v (CPU-exhaustion DoS, patched 7.0.5). Reached by
@@ -193,6 +194,20 @@ overrides:
   # all still exported by 3.x (the 3.0 break was the archive/download
   # internals — exactly where extract-zip lived).
   '@puppeteer/browsers': '>=3.0.2'
+  # GHSA-jqcg-44mw-7w3h (critical, IP spoofing via IPv4-mapped IPv6 trust
+  # subnet), reached through @iblai/iblai-js > @iblai/mcp >
+  # @modelcontextprotocol/sdk > express. Patch release inside express's ^2.0.7.
+  proxy-addr: '>=2.0.8 <3'
+  # GHSA-6qxp-vccf-f47h (OAuth credentials sent to an MCP-server-chosen
+  # authorization server). The published @iblai/mcp and @iblai/web-utils pin
+  # 1.27.1; 1.31 is a minor bump within the same 1.x API.
+  '@modelcontextprotocol/sdk': '>=1.31.0 <2'
+  # GHSA-c8x8-7fp4-3x9w (XSS in paste handling), reached through the SDK
+  # canvas's @tiptap/pm.
+  prosemirror-view: '>=1.42.3 <2'
+  # GHSA-68fv-2mgg-jv7q (event-loop DoS via indexed source-map offsets).
+  # Dev-only reach: @vitest/coverage-istanbul > magicast.
+  source-map-js: '>=1.2.2 <2'
 patchedDependencies:
   google-drive-picker@1.1.29: patches/google-drive-picker@1.1.29.patch
   # Three missing Pandoc/markdown-it-katex rules for dollar-delimited text math:
@@ -227,6 +242,12 @@ auditConfig:
     # a major away from the 3.x this repo runs. Dev-only reach (test
     # runner); the 3->4 migration is tracked separately.
     - GHSA-82fw-gwwq-j7x9
+    # tinypool prototype-pollution gadgets (GHSA-5gmw-xhrv-c9v3,
+    # GHSA-85c8-ppgw-ccpr) — patched only in 2.1.2, a major away from the
+    # ^1 that vitest 3.x requires. Dev-only reach (vitest's worker pool, which
+    # never receives untrusted options); resolves with the same 3->4 migration.
+    - GHSA-5gmw-xhrv-c9v3
+    - GHSA-85c8-ppgw-ccpr
     # extract-zip symlink traversal (GHSA-jmr9-qjv8-65gv) — no patched release
     # exists; the advisory's patched range is <0.0.0. Dev-only reach:
     # @wdio/cli > @puppeteer/browsers uses it to unpack browser downloads

@@ -54,8 +54,6 @@ export default function AppProvider({
         });
         await getPinnedMessages({
           org: tenantKey,
-          sessionId: value.sessionId,
-          // @ts-expect-error userId is part of the useLazyGetPinnedMessagesQuery Query definition
           userId: getUserName(),
         });
       },

@@ -75,6 +75,12 @@ vi.mock('@iblai/iblai-js/web-containers', async () => {
   >('@iblai/iblai-js/web-containers');
   return {
     ...actual,
+    // The SDK's markdown/LaTeX-to-text conversion has its own tests; a
+    // recognizable stub shows the row preview goes through it, independent of
+    // whether the installed SDK build ships it yet.
+    chatTextPreview: vi.fn((text: string | null | undefined) =>
+      text?.trim() ? `PREVIEW:${text}` : '',
+    ),
     RetrievedDocumentsButton: ({ documents, sessionId, label }: any) => (
       <button
         type="button"
@@ -1391,6 +1397,55 @@ describe('HistoryTab', () => {
       expect(within(list).getByTestId('conversation-topics')).toHaveTextContent(
         'Biology',
       );
+    });
+  });
+
+  describe('row preview text', () => {
+    const rawReply = '**Bold** answer: \\(x^2\\) and \\[\\text{area}\\]';
+
+    function withFirstReply(ai: string) {
+      mockUseHistoryWithPagination.mockReturnValue(
+        defaultHistory({
+          chatHistory: {
+            results: [
+              {
+                ...baseConversation,
+                messages: [
+                  { human: 'Hello there mentor', ai },
+                  { human: 'And then?', ai: 'A later reply' },
+                ],
+              },
+            ],
+          },
+        }),
+      );
+    }
+
+    it('previews the first AI reply as plain text (markdown and LaTeX converted), never the raw reply', () => {
+      withFirstReply(rawReply);
+      render(<HistoryTab />);
+      const list = screen.getByLabelText('Conversation list');
+      expect(within(list).getByText(`PREVIEW:${rawReply}`)).toBeInTheDocument();
+      expect(within(list).queryByText(rawReply)).not.toBeInTheDocument();
+      expect(within(list).queryByText(/A later reply/)).not.toBeInTheDocument();
+    });
+
+    it('falls back to "No response available" when the reply has no text to preview', () => {
+      withFirstReply('   ');
+      render(<HistoryTab />);
+      const list = screen.getByLabelText('Conversation list');
+      expect(
+        within(list).getByText('No response available'),
+      ).toBeInTheDocument();
+    });
+
+    it('marks each row with its session id for the e2e row locators', () => {
+      withFirstReply(rawReply);
+      render(<HistoryTab />);
+      const list = screen.getByLabelText('Conversation list');
+      const row = within(list).getByTestId('history-conversation-row');
+      expect(row).toHaveAttribute('data-session-id', 'conv-1');
+      expect(row).toHaveTextContent(`PREVIEW:${rawReply}`);
     });
   });
 });

@@ -54,6 +54,7 @@ import {
   type TranscriptMessage,
 } from '@iblai/iblai-js/data-layer';
 import {
+  chatTextPreview,
   conversationDocuments,
   ConversationSentiment,
   conversationTitle,
@@ -611,13 +612,15 @@ export function HistoryTab() {
                       ),
                       50,
                     );
-                    const preview = firstMessage?.ai
-                      ? textTruncate(firstMessage.ai, 60)
-                      : t('noResponseAvailable');
+                    const preview =
+                      textTruncate(chatTextPreview(firstMessage?.ai), 60) ||
+                      t('noResponseAvailable');
 
                     return (
                       <div
                         key={conversation.id}
+                        data-testid="history-conversation-row"
+                        data-session-id={conversation.id}
                         className={cn(
                           'flex cursor-pointer items-center justify-between border-b p-4 last:border-b-0',
                           selectedConversation?.id === conversation.id

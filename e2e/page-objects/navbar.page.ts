@@ -71,9 +71,11 @@ export class NavbarPage {
       exact: true,
     });
     this.notificationBell = page.getByRole('button', { name: /notification/i });
+    // Anchored: the Incognito pill's accessible name can end in "…start a
+    // new chat", which an unanchored /new chat/i would also match.
     this.newChatItem = page
-      .getByRole('menuitem', { name: /new chat/i })
-      .or(page.getByRole('button', { name: /new chat/i }));
+      .getByRole('menuitem', { name: /^new chat$/i })
+      .or(page.getByRole('button', { name: /^new chat$/i }));
     this.profileItem = page.getByRole('menuitem', { name: /profile/i });
     this.helpItem = page.getByRole('menuitem', { name: /help/i });
     this.logoutItem = page.getByRole('menuitem', { name: /log out/i });
