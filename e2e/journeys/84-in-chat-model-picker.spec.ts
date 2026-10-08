@@ -260,8 +260,10 @@ test.describe.serial('Journey 84: In-chat model picker', () => {
       'the backend accepts a student-picked model',
     ).toHaveCount(0);
 
+    // The student's catalogue lacks the agent model, so this label comes
+    // from the agent settings' llm_config, never the raw llm_name.
     await nonadminChatPage.modelChip
-      .getByRole('button', { name: /^Back to / })
+      .getByRole('button', { name: 'Back to ibl.ai Fast', exact: true })
       .click();
     await expect(nonadminChatPage.modelChip).toHaveCount(0);
 

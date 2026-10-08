@@ -5691,7 +5691,7 @@
         },
         {
           "id": "icm-10",
-          "description": "A student (non-admin) picks a model from their own model catalogue via + > Model: the chip names it, turns carry llm_provider/llm_name on the chat socket with no \"not available\" error, and the chip's x sends the agent's model again",
+          "description": "A student (non-admin) picks a model from their own model catalogue via + > Model: the chip names it, turns carry llm_provider/llm_name on the chat socket with no \"not available\" error, and the chip's x (labelled with the agent model's display name, \"Back to ibl.ai Fast\", even though the student's catalogue lacks that model) sends the agent's model again",
           "status": "covered"
         },
         {

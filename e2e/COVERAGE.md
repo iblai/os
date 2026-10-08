@@ -2035,7 +2035,7 @@ iblai/iblai-platform#2633: with the agent's `enable_in_chat_llm_change` on, a us
 - [x] icm-07: A tenant with a single usable provider: + > Model lists that provider's models straight away, with no provider step
 - [x] icm-08: Per-model credentials (iblai-platform#2638): a provider whose every model requires a key is left out of the + > Model provider list
 - [x] icm-09: When the chat socket rejects the picked model (400 "The selected model is not available."), the error shows, the chip goes away, the picker is back on the agent's model and the message text is back in the composer
-- [x] icm-10: A student (non-admin) picks a model from their own model catalogue via + > Model: the chip names it, turns carry llm_provider/llm_name on the chat socket with no "not available" error, and the chip's x sends the agent's model again
+- [x] icm-10: A student (non-admin) picks a model from their own model catalogue via + > Model: the chip names it, turns carry llm_provider/llm_name on the chat socket with no "not available" error, and the chip's x (labelled with the agent model's display name, "Back to ibl.ai Fast", even though the student's catalogue lacks that model) sends the agent's model again
 - [x] icm-11: A student's pick is per chat: a new chat drops the chip and sends no model fields, and the admin's chat on the same agent never shows the student's pick
 - [x] icm-12: On a phone a student picks a model through the + sheet and the model chip shows it
 - [x] icm-13: With the setting off, a student's composer has no model picker
