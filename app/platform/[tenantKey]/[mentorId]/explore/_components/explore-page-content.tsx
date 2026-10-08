@@ -6,7 +6,6 @@ import { useDebounce } from 'use-debounce';
 import { Search, Loader2, Plus, X } from 'lucide-react';
 
 import { useUsername } from '@/hooks/use-user';
-import { useAllowMentorSelection } from '@/hooks/use-allow-mentor-selection';
 import {
   useGetAiSearchMentorsQuery,
   useStarMentorMutation,
@@ -17,7 +16,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useNavigate } from '@/hooks/user-navigate';
 import { useTenantMetadata } from '@iblai/iblai-js/web-utils';
-import { cn, isLoggedIn, redirectToAuthSpaJoinTenant } from '@/lib/utils';
+import { isLoggedIn, redirectToAuthSpaJoinTenant } from '@/lib/utils';
 import { WithPermissions } from '@/hoc/withPermissions';
 
 import { MentorCategories } from './mentor-categories';
@@ -55,7 +54,6 @@ interface ExplorePageContentProps {
 
 export function ExplorePageContent({ tenantKey }: ExplorePageContentProps) {
   const t = useTranslations('exploreExplorePageContent');
-  const allowMentorSelection = useAllowMentorSelection();
   const [searchQuery, setSearchQuery] = React.useState('');
   const [debouncedSearch] = useDebounce(searchQuery, 500);
   const [filters, setFilters] = React.useState<ExplorePageFilters>({
@@ -276,38 +274,31 @@ export function ExplorePageContent({ tenantKey }: ExplorePageContentProps) {
           id="main-content"
           aria-label={t('agentExplorationPage')}
         >
-          <div
-            className={cn(
-              'mx-auto w-full max-w-6xl px-4 pb-32 md:px-6',
-              allowMentorSelection ? 'pt-4' : 'pt-6 md:pt-10',
-            )}
-          >
-            {!allowMentorSelection && (
-              <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-                <h1 className="min-w-0">
-                  <span className="block text-2xl font-semibold tracking-tight text-gray-900 md:text-3xl">
-                    {t('pageTitle')}
-                  </span>
-                  <span className="mt-1.5 block max-w-2xl text-sm leading-relaxed font-normal text-gray-600 md:text-base">
-                    {t('discoverAndCreateAgents')}
-                  </span>
-                </h1>
-                <WithPermissions rbacResource={CREATE_MENTOR_RBAC_RESOURCE}>
-                  {({ hasPermission }) =>
-                    hasPermission ? (
-                      <Button
-                        onClick={handleCreateMentor}
-                        aria-label={t('createAgentAriaLabel')}
-                        className="h-10 shrink-0 gap-1.5 self-start rounded-lg bg-[#1C77B8] px-4 text-white shadow-sm hover:bg-[#1F6FA8] sm:self-auto"
-                      >
-                        <Plus className="h-4 w-4" aria-hidden="true" />
-                        {t('createAgentButton')}
-                      </Button>
-                    ) : null
-                  }
-                </WithPermissions>
-              </header>
-            )}
+          <div className="mx-auto w-full max-w-6xl px-4 pt-6 pb-32 md:px-6 md:pt-10">
+            <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+              <h1 className="min-w-0">
+                <span className="block text-2xl font-semibold tracking-tight text-gray-900 md:text-3xl">
+                  {t('pageTitle')}
+                </span>
+                <span className="mt-1.5 block max-w-2xl text-sm leading-relaxed font-normal text-gray-600 md:text-base">
+                  {t('discoverAndCreateAgents')}
+                </span>
+              </h1>
+              <WithPermissions rbacResource={CREATE_MENTOR_RBAC_RESOURCE}>
+                {({ hasPermission }) =>
+                  hasPermission ? (
+                    <Button
+                      onClick={handleCreateMentor}
+                      aria-label={t('createAgentAriaLabel')}
+                      className="h-10 shrink-0 gap-1.5 self-start rounded-lg bg-[#1C77B8] px-4 text-white shadow-sm hover:bg-[#1F6FA8] sm:self-auto"
+                    >
+                      <Plus className="h-4 w-4" aria-hidden="true" />
+                      {t('createAgentButton')}
+                    </Button>
+                  ) : null
+                }
+              </WithPermissions>
+            </header>
 
             <div className="relative">
               <label htmlFor="mentor-search" className="sr-only">

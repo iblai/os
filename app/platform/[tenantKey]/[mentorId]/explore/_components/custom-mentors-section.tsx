@@ -19,7 +19,6 @@ import {
 } from './section';
 import { WithPermissions } from '@/hoc/withPermissions';
 import { useNavigate } from '@/hooks/user-navigate';
-import { useAllowMentorSelection } from '@/hooks/use-allow-mentor-selection';
 import { isLoggedIn, redirectToAuthSpaJoinTenant } from '@/lib/utils';
 const CREATE_MENTOR_RBAC_RESOURCE = '/mentors/#create';
 
@@ -82,7 +81,6 @@ export function CustomMentorsSection() {
   const [numberOfCustomMentors, setNumberOfCustomMentors] =
     React.useState(CUSTOM_MENTORS_LIMIT);
   const { openCreateMentorModal } = useNavigate();
-  const allowMentorSelection = useAllowMentorSelection();
   const headingId = React.useId();
 
   // Reset pagination when filters or search change
@@ -146,7 +144,6 @@ export function CustomMentorsSection() {
   // Nothing of their own yet: the section is only worth showing to people who
   // can create an agent, as the way to make their first one.
   if (customMentors.length === 0) {
-    if (allowMentorSelection) return null;
     return (
       <WithPermissions rbacResource={CREATE_MENTOR_RBAC_RESOURCE}>
         {({ hasPermission }) =>
@@ -175,17 +172,15 @@ export function CustomMentorsSection() {
             <MentorCardWithStar mentor={mentor} />
           </div>
         ))}
-        {!allowMentorSelection && (
-          <WithPermissions rbacResource={CREATE_MENTOR_RBAC_RESOURCE}>
-            {({ hasPermission }) =>
-              hasPermission ? (
-                <div role="listitem">
-                  <CreateAgentTile onClick={handleCreateMentor} />
-                </div>
-              ) : null
-            }
-          </WithPermissions>
-        )}
+        <WithPermissions rbacResource={CREATE_MENTOR_RBAC_RESOURCE}>
+          {({ hasPermission }) =>
+            hasPermission ? (
+              <div role="listitem">
+                <CreateAgentTile onClick={handleCreateMentor} />
+              </div>
+            ) : null
+          }
+        </WithPermissions>
       </div>
       {customMentorsData?.next && (
         <div className="mt-6 flex justify-center">

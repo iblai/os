@@ -1415,7 +1415,6 @@
     "viewLogs": "查看日志（{count}）"
   },
   "navBarEmbedNavBar": {
-    "exploreAgents": "探索智能体",
     "closeSidebar": "关闭侧边栏",
     "openSidebar": "打开侧边栏",
     "toggleSidebar": "切换侧边栏",

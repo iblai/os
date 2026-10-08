@@ -17,7 +17,6 @@ import { ChatPrivacyToggle } from '@iblai/iblai-js/web-containers';
 
 import { Button } from '@/components/ui/button';
 import { useIsPreviewMode } from '@/hooks/use-is-preview-mode';
-import { useAllowMentorSelection } from '@/hooks/use-allow-mentor-selection';
 import { useIsIframed } from '@/hooks/use-is-iframed';
 import {
   Tooltip,
@@ -75,13 +74,11 @@ export function EmbedNavBar({
   const dispatch = useAppDispatch();
   const pathname = usePathname();
   const isWorkflowsPage = /\/workflows\/[^/]+\/?$/.test(pathname ?? '');
-  const isExplorePage = !!pathname?.includes('/explore');
   const isOnChatPage =
     !pathname?.includes('/prompt-gallery') &&
     !pathname?.includes('/analytics') &&
-    !isExplorePage &&
+    !pathname?.includes('/explore') &&
     !isWorkflowsPage;
-  const showExploreTitle = useAllowMentorSelection() && isExplorePage;
 
   const { helpCenterUrl, supportEmail, showHelp } = useHelpCenter(tenantKey);
 
@@ -158,36 +155,29 @@ export function EmbedNavBar({
           </Tooltip>
         )}
 
-        {showExploreTitle ? (
-          <span className="text-sm font-bold text-gray-800">
-            {t('exploreAgents')}
-          </span>
-        ) : (
-          <button
-            onClick={() => {
-              dispatch(clearFiles(undefined));
-              eventBus.emit(RemoteEvents.newChat);
-              dispatch(chatActions.setShouldStartNewChat(true));
-            }}
-            className="flex cursor-pointer items-center gap-4"
-            aria-label={t('startNewChat', { mentorName })}
+        {/* Mentor name and profile image */}
+        <button
+          onClick={() => {
+            dispatch(clearFiles(undefined));
+            eventBus.emit(RemoteEvents.newChat);
+            dispatch(chatActions.setShouldStartNewChat(true));
+          }}
+          className="flex cursor-pointer items-center gap-4"
+          aria-label={t('startNewChat', { mentorName })}
+        >
+          <Avatar
+            className={cn(
+              'h-10 w-10 border-2 border-blue-500',
+              CSS_CLASS_NAMES.APP_LAYOUT.MENTOR_IMAGE_CONTAINER_RING,
+            )}
           >
-            <Avatar
-              className={cn(
-                'h-10 w-10 border-2 border-blue-500',
-                CSS_CLASS_NAMES.APP_LAYOUT.MENTOR_IMAGE_CONTAINER_RING,
-              )}
-            >
-              <AvatarImage src={profileImage} alt="" />
-              <AvatarFallback className="bg-blue-400 text-white">
-                {mentorName.substring(0, 2).toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
-            <span className="text-sm font-bold text-gray-800">
-              {mentorName}
-            </span>
-          </button>
-        )}
+            <AvatarImage src={profileImage} alt="" />
+            <AvatarFallback className="bg-blue-400 text-white">
+              {mentorName.substring(0, 2).toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+          <span className="text-sm font-bold text-gray-800">{mentorName}</span>
+        </button>
 
         <div className="ml-auto flex items-center gap-2">
           {isOnChatPage && isLoggedIn() && tenantKey && (

@@ -1415,7 +1415,6 @@
     "viewLogs": "View logs ({count})"
   },
   "navBarEmbedNavBar": {
-    "exploreAgents": "Explore Agents",
     "closeSidebar": "Close sidebar",
     "openSidebar": "Open sidebar",
     "toggleSidebar": "Toggle Sidebar",
