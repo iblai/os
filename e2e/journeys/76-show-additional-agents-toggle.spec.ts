@@ -3,7 +3,7 @@
  *
  * Adds coverage for the new `show_explore_mentors` mentor setting: a switch
  * in the Edit Agent modal's Settings tab → Capabilities sub-tab → Advanced
- * section, labelled "Show additional agents"
+ * section, labelled "Show Additional Agents"
  * (`data-testid="settings-show-explore-mentors-switch"`). It gates the
  * OS-specific "Explore Agents" section (`components/welcome-chat/
  * explore-mentors.tsx`) that renders on an agent's own (non-project)
@@ -93,7 +93,7 @@ test.describe.serial('Journey 76: Show Additional Agents Toggle', () => {
 
   let mentorUrl = '';
 
-  test('sem-01: admin sees the "Show additional agents" toggle under Capabilities > Advanced with the right label, testid, and tooltip', async ({
+  test('sem-01: admin sees the "Show Additional Agents" toggle under Capabilities > Advanced with the right label, testid, and tooltip', async ({
     page,
     editMentorPage,
     createMentorPage,
@@ -131,7 +131,7 @@ test.describe.serial('Journey 76: Show Additional Agents Toggle', () => {
       editMentorPage.settings.showExploreMentorsToggle,
     ).toHaveAttribute('data-testid', 'settings-show-explore-mentors-switch');
     await expect(
-      editMentorPage.dialog.getByText('Show additional agents', {
+      editMentorPage.dialog.getByText('Show Additional Agents', {
         exact: true,
       }),
     ).toBeVisible({ timeout: 5_000 });

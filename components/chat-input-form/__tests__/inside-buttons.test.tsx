@@ -287,7 +287,7 @@ describe('InsideButtons', () => {
   });
 
   describe('Memory button private-mode gating', () => {
-    it('renders MemoryButton inline when isPrivate is false (private mode off)', () => {
+    it('renders MemoryButton inline when isPrivate is false (incognito off)', () => {
       render(
         <InsideButtons
           {...defaultProps}
@@ -301,7 +301,7 @@ describe('InsideButtons', () => {
       expect(screen.getByTestId('memory-button')).toBeInTheDocument();
     });
 
-    it('hides MemoryButton inline when isPrivate is true (private mode active)', () => {
+    it('hides MemoryButton inline when isPrivate is true (incognito active)', () => {
       render(
         <InsideButtons
           {...defaultProps}

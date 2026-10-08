@@ -425,9 +425,9 @@ describe('AIMessageBubble', () => {
       mockShowingSharedChat = false; // Reset for other tests
     });
 
-    // Private mode is a temporary, non-persisted chat — there is no durable
+    // Incognito is a temporary, non-persisted chat — there is no durable
     // session to share, so the share button is hidden while it is active.
-    it('should not render share button when chat private mode is active', () => {
+    it('should not render share button when chat incognito is active', () => {
       mockChatPrivacyMode = 'disabled';
       renderWithRedux(<AIMessageBubble {...defaultProps} />);
       expect(screen.queryByTestId('ai-message-share')).not.toBeInTheDocument();
@@ -440,7 +440,7 @@ describe('AIMessageBubble', () => {
       expect(screen.getByTestId('ai-message-share')).toBeInTheDocument();
     });
 
-    it('should render share button when private mode is anonymized (only disabled hides it)', () => {
+    it('should render share button when incognito is anonymized (only disabled hides it)', () => {
       mockChatPrivacyMode = 'anonymized';
       renderWithRedux(<AIMessageBubble {...defaultProps} />);
       expect(screen.getByTestId('ai-message-share')).toBeInTheDocument();
@@ -472,7 +472,7 @@ describe('AIMessageBubble', () => {
       mockShowingSharedChat = false;
     });
 
-    it('should not render download button when chat private mode is active', () => {
+    it('should not render download button when chat incognito is active', () => {
       mockChatPrivacyMode = 'disabled';
       renderWithRedux(<AIMessageBubble {...defaultProps} />);
       expect(

@@ -151,7 +151,12 @@ export class ChatPage {
       exact: true,
     });
     this.sendButton = page.getByRole('button', { name: 'Send message' });
-    this.newChatButton = page.getByRole('button', { name: 'New Chat' });
+    // Exact: the Incognito pill's accessible name can end in "…start a new
+    // chat", and a bare `name` is a case-insensitive substring match.
+    this.newChatButton = page.getByRole('button', {
+      name: 'New Chat',
+      exact: true,
+    });
     this.userMessages = page.locator('.chat-user-message-query');
     this.aiMessages = page.locator('.chat-ai-message-response');
     this.userAgreementDialog = page.getByRole('dialog', {
@@ -176,7 +181,7 @@ export class ChatPage {
       .or(page.locator('.ProseMirror'))
       .first();
     // Exact name — NOT /memory/i. The chat-privacy toggle's aria-label is
-    // "Turn on Private Mode. This chat won't be saved to history or used for
+    // "Turn on Incognito. This chat won't be saved to history or used for
     // memory.", so a loose /memory/i match also resolves the (always-present,
     // desktop-visible) privacy toggle. That made `not.toBeVisible()` fail when
     // memory was off (toggle still visible) and let `toBeVisible()` pass off the

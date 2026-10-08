@@ -14,7 +14,11 @@ import { useNavigate } from '@/hooks/user-navigate';
 import { useUsername } from '@/hooks/use-user';
 import { useShowFreeTrialDialog } from '@/hooks/user-user-actions';
 import { config } from '@/lib/config';
-import { MENTOR_VISIBILITY, MODALS } from '@/lib/constants';
+import {
+  MENTOR_VISIBILITY,
+  MENTOR_VISIBILITY_VALUES,
+  MODALS,
+} from '@/lib/constants';
 import { selectRbacPermissions } from '@/features/rbac/rbac-slice';
 import { useAppDispatch, useAppSelector } from '@/lib/hooks';
 import { useGetUserTenantsQuery } from '@/features/tenants/api-slice';
@@ -67,10 +71,14 @@ export function SettingsTab() {
     is_admin: tenant.is_admin,
   }));
 
-  // Map the SDK's "agent" label contract onto the OS monolith's exact strings.
-  // Most come straight from the existing next-intl bundles so all four locales
-  // stay in parity; the three the monolith hard-coded in English (verbose
-  // reasoning, PII filter, private mode) are reproduced verbatim.
+  const visibilityLabels: Record<string, string> = {
+    [MENTOR_VISIBILITY_VALUES.ADMINISTRATORS]: t('administratorsOption'),
+    [MENTOR_VISIBILITY_VALUES.STUDENTS]: t('usersOption'),
+    [MENTOR_VISIBILITY_VALUES.ANYONE]: t('anyoneOption'),
+  };
+
+  // Map the SDK's "agent" label contract onto the OS monolith's wording, all
+  // from the next-intl bundles so the four locales stay in parity.
   const labels: SettingsTabLabels = {
     header: {
       title: t('settingsHeading'),
@@ -124,9 +132,10 @@ export function SettingsTab() {
         tooltip: t('whoCanViewTooltip'),
         triggerPlaceholder: t('selectWhoCanView'),
         options: {
-          administrators: 'Administrators',
-          students: 'Users',
-          anyone: 'Anyone',
+          administrators:
+            visibilityLabels[MENTOR_VISIBILITY_VALUES.ADMINISTRATORS],
+          students: visibilityLabels[MENTOR_VISIBILITY_VALUES.STUDENTS],
+          anyone: visibilityLabels[MENTOR_VISIBILITY_VALUES.ANYONE],
         },
       },
       whoCanChat: {
@@ -170,9 +179,8 @@ export function SettingsTab() {
         tooltip: t('enableCopiesTooltip'),
       },
       showReasoning: {
-        label: 'Enable verbose reasoning',
-        tooltip:
-          'Show the agent’s reasoning steps while it responds. This setting has one value, so it applies to both in-app chat and the embed widget.',
+        label: t('enableVerboseReasoningLabel'),
+        tooltip: t('enableVerboseReasoningTooltip'),
       },
       enhancedDocRetrieval: {
         label: t('enhancedDocRetrievalLabel'),
@@ -181,11 +189,6 @@ export function SettingsTab() {
       promptCaching: {
         label: t('enablePromptCachingLabel'),
         tooltip: t('enablePromptCachingTooltip'),
-      },
-      privateMode: {
-        label: 'Enable private mode',
-        tooltip:
-          'When on, every conversation with this agent runs in private mode — no chat history or memory is stored for any user. Use this for sensitive or compliance-bound deployments. This setting has one value, so it applies to both in-app chat and the embed widget.',
       },
       smartDocRetrieval: {
         label: t('smartDocRetrievalLabel'),
@@ -301,7 +304,10 @@ export function SettingsTab() {
       rbacPermissions={rbacPermissions}
       // Route every gated action (Save, etc.) through the OS paywall check.
       executeGatedAction={(fn) => executeWithTrialCheck(fn)}
-      visibilityOptions={MENTOR_VISIBILITY}
+      visibilityOptions={MENTOR_VISIBILITY.map((option) => ({
+        ...option,
+        label: visibilityLabels[option.value] ?? option.label,
+      }))}
     >
       <AgentSettingsTab
         tenants={copyTenants}

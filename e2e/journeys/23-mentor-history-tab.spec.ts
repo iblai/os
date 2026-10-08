@@ -269,6 +269,28 @@ test.describe('Journey 23: Mentor History Tab', () => {
     await editMentorPage.close();
   });
 
+  // hist-09: list rows show the conversation title and the first AI reply as
+  // plain text: LaTeX converted to readable text and markdown stripped, never
+  // raw delimiters such as \( \[ \textbf{ or **.
+  test('admin goes to history tab and sees every conversation row title and preview as plain text with no raw markdown or LaTeX', async ({
+    editMentorPage,
+  }) => {
+    const history = editMentorPage.history;
+    await expect(
+      history.conversationRows.first().or(history.emptyState),
+    ).toBeVisible({ timeout: 30_000 });
+    if (await history.emptyState.isVisible()) {
+      await editMentorPage.close();
+      return;
+    }
+
+    expect(
+      await history.rowsShowingRawMarkup(),
+      'history rows showing raw markdown/LaTeX',
+    ).toEqual([]);
+    await editMentorPage.close();
+  });
+
   test('admin goes to history tab and clicks on Export to trigger a file download', async ({
     page,
     editMentorPage,

@@ -949,6 +949,33 @@ test.describe('Journey 4: User Profile Management', () => {
     await expect(modal.getByText(HISTORY_FORBIDDEN_NOTICE)).toHaveCount(0);
   });
 
+  // prof-17: History rows show the conversation title and the first AI reply
+  // as plain text: LaTeX converted to readable text and markdown stripped,
+  // never raw delimiters such as \( \[ \textbf{ or **.
+  test('non-admin goes to profile History tab and sees every conversation row title and preview as plain text with no raw markdown or LaTeX', async ({
+    nonadminProfilePage,
+  }) => {
+    await nonadminProfilePage.open();
+    await nonadminProfilePage.switchToTab('History');
+    await expect(nonadminProfilePage.activeTab('History')).toBeVisible({
+      timeout: 5_000,
+    });
+
+    await expect(
+      nonadminProfilePage.historyRows
+        .first()
+        .or(nonadminProfilePage.historyEmptyState),
+    ).toBeVisible({ timeout: 15_000 });
+    if (await nonadminProfilePage.historyEmptyState.isVisible()) {
+      return;
+    }
+
+    expect(
+      await nonadminProfilePage.historyRowsShowingRawMarkup(),
+      'History rows showing raw markdown/LaTeX',
+    ).toEqual([]);
+  });
+
   test("admin opens another user's profile from Management → Users and its History tab loads that user's history", async ({
     page,
     sidebarPage,
