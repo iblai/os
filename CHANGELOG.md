@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.163.0](https://github.com/iblai/os/compare/v0.162.3...v0.163.0) (2026-10-08)
+
+### Features
+
+* **os:** adding incognito and fixes for history ([61252b9](https://github.com/iblai/os/commit/61252b9a9765c4345cb3453ead290ee10a9d956b))
+
+### Bug Fixes
+
+* **os:** adding fix for the new chat button lookup ([9292dbc](https://github.com/iblai/os/commit/9292dbcebe274915367cc3863bfffda10d165324))
+* **os:** adding fix for the playwright test ([641ffa7](https://github.com/iblai/os/commit/641ffa77904e6c39c1d5f4401e3a94f6ab9febc8))
+* **os:** adding fix for the system audit ([f2e15ff](https://github.com/iblai/os/commit/f2e15ffa6579c1730aea051e193a59bd73288f9f))
+
 ## [0.162.3](https://github.com/iblai/os/compare/v0.162.2...v0.162.3) (2026-10-08)
 
 ### Bug Fixes
