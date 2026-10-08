@@ -38,6 +38,7 @@ import {
 import eventBus, { RemoteEvents } from '@/lib/eventBus';
 import { TenantKeyMentorIdParams } from '@/lib/types';
 import { config } from '@/lib/config';
+import { sessionCacheKey } from '@/lib/utils';
 import { useUsername } from './use-user';
 import {
   useGetMentorPublicSettingsQuery,
@@ -361,7 +362,7 @@ export function useNavigate() {
       const tenantKeyToUse = newTenantKey || tenantKey;
       if (tenantKeyToUse) {
         const newCachedSessionId = { ...cachedSessionId };
-        delete newCachedSessionId[newMentorId];
+        delete newCachedSessionId[sessionCacheKey(tenantKeyToUse, newMentorId)];
         saveCachedSessionId(newCachedSessionId);
         setDetermineUserPath(false);
         const needsSwitching = shouldAddSwitchingParam(newMentorId);
@@ -383,7 +384,7 @@ export function useNavigate() {
     ) => {
       if (tenantKey) {
         const newCachedSessionId = { ...cachedSessionId };
-        delete newCachedSessionId[newMentorId];
+        delete newCachedSessionId[sessionCacheKey(tenantKey, newMentorId)];
         saveCachedSessionId(newCachedSessionId);
         setDetermineUserPath(false);
         const queryString = shouldAddSwitchingParam(newMentorId)
@@ -402,7 +403,7 @@ export function useNavigate() {
     navigateToProject: (newProjectId: string, newMentorId: string) => {
       if (tenantKey) {
         const newCachedSessionId = { ...cachedSessionId };
-        delete newCachedSessionId[newMentorId];
+        delete newCachedSessionId[sessionCacheKey(tenantKey, newMentorId)];
         saveCachedSessionId(newCachedSessionId);
         setDetermineUserPath(false);
         const queryString = shouldAddSwitchingParam(newMentorId)
