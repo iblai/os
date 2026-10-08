@@ -41,6 +41,7 @@ const mockUpdateConfig = vi.fn();
 const mockUpdateMultipleConfig = vi.fn();
 const mockFormHandleSubmit = vi.fn();
 const mockRemoveCustomImage = vi.fn();
+const mockSetAllowMentorSelection = vi.fn();
 
 // next/navigation
 vi.mock('next/navigation', () => ({
@@ -340,6 +341,8 @@ function buildUseEmbedTabReturn(overrides: Partial<any> = {}) {
     // an embed form field. The tab reads it off the hook to gate the website
     // URL / redirect-token controls.
     allowAnonymous: true,
+    allowMentorSelection: false,
+    setAllowMentorSelection: mockSetAllowMentorSelection,
     form: makeForm(overrides.formValues ?? {}),
     createTokenHandler: mockCreateTokenHandler,
     createTokenError: '',
@@ -1250,6 +1253,32 @@ describe('EmbedTab', () => {
     expect(handleChange).toHaveBeenCalledWith(true);
   });
 
+  it('renders the Allow Agent Selection toggle off by default', () => {
+    renderEmbedTab();
+    expect(screen.getByText('Allow Agent Selection')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'Let signed-in visitors open Explore from the embed and switch to another agent.',
+      ),
+    ).toBeInTheDocument();
+    const toggle = screen.getByTestId('embed-allow-mentor-selection-switch');
+    expect(toggle).not.toBeChecked();
+    expect(toggle).toHaveAccessibleName('Agent selection disabled');
+  });
+
+  it('turns agent selection on via the hook setter', () => {
+    renderEmbedTab();
+    fireEvent.click(screen.getByTestId('embed-allow-mentor-selection-switch'));
+    expect(mockSetAllowMentorSelection).toHaveBeenCalledWith(true);
+  });
+
+  it('renders the Allow Agent Selection toggle checked when on', () => {
+    renderEmbedTab({ allowMentorSelection: true });
+    const toggle = screen.getByTestId('embed-allow-mentor-selection-switch');
+    expect(toggle).toBeChecked();
+    expect(toggle).toHaveAccessibleName('Agent selection enabled');
+  });
+
   // ==========================================================================
   // ISSUE #2153: toggling / regenerating a shareable link must NOT run the
   // embed-settings sync (which validates website_url and shows the spurious
@@ -1424,5 +1453,21 @@ describe('EmbedTab context-aware / open-by-default hydration (#2592)', () => {
     expect(
       screen.getByRole('checkbox', { name: 'Open by default disabled' }),
     ).not.toBeChecked();
+  });
+
+  it('toggles Allow Agent Selection with the real hook', () => {
+    mockGetMentorSettingsQuery.mockReturnValue({
+      data: defaultMentorSettings,
+      isLoading: false,
+    });
+
+    render(<EmbedTab />);
+
+    const toggle = screen.getByTestId('embed-allow-mentor-selection-switch');
+    expect(toggle).not.toBeChecked();
+    fireEvent.click(toggle);
+    expect(
+      screen.getByTestId('embed-allow-mentor-selection-switch'),
+    ).toBeChecked();
   });
 });

@@ -19,6 +19,7 @@ let mockShowUserProfile = false;
 let mockUsername: string | null = 'testuser';
 let mockIsLoggedIn = true;
 let mockPathname = '/platform/tenant123/mentor123';
+let mockAllowMentorSelection = false;
 let mockMetadata: any = {
   show_help: true,
   help_center_url: 'https://help.example.com',
@@ -30,6 +31,10 @@ const mockEmit = vi.fn();
 
 vi.mock('@/hooks/use-is-preview-mode', () => ({
   useIsPreviewMode: () => mockIsPreviewMode,
+}));
+
+vi.mock('@/hooks/use-allow-mentor-selection', () => ({
+  useAllowMentorSelection: () => mockAllowMentorSelection,
 }));
 
 vi.mock('@/hooks/use-is-iframed', () => ({
@@ -160,6 +165,7 @@ describe('EmbedNavBar', () => {
     mockUsername = 'testuser';
     mockIsLoggedIn = true;
     mockPathname = '/platform/tenant123/mentor123';
+    mockAllowMentorSelection = false;
     mockMetadata = {
       show_help: true,
       help_center_url: 'https://help.example.com',
@@ -227,6 +233,43 @@ describe('EmbedNavBar', () => {
   // --------------------------------------------------------------------------
   // New Chat Button (mentor name/avatar click)
   // --------------------------------------------------------------------------
+
+  describe('Explore title (allow-mentor-selection)', () => {
+    const explorePath = '/platform/tenant123/mentor123/explore';
+
+    it('replaces the agent avatar and name with "Explore agents" on Explore', () => {
+      mockAllowMentorSelection = true;
+      mockPathname = explorePath;
+      renderEmbedNavBar({ mentorName: 'AI Bot', isMobile: true });
+
+      expect(
+        screen.getByRole('heading', { name: 'Explore agents' }),
+      ).toBeInTheDocument();
+      expect(screen.queryByText('AI Bot')).toBeNull();
+      expect(screen.queryByText('AI')).toBeNull();
+      expect(screen.queryByLabelText(/start new chat/i)).toBeNull();
+      expect(screen.getByLabelText('Open menu options')).toBeInTheDocument();
+      expect(screen.getByLabelText('Open sidebar')).toBeInTheDocument();
+    });
+
+    it('keeps the agent avatar and name on Explore when the flag is off', () => {
+      mockPathname = explorePath;
+      renderEmbedNavBar({ mentorName: 'AI Bot' });
+
+      expect(screen.getByText('AI Bot')).toBeInTheDocument();
+      expect(screen.getByText('AI')).toBeInTheDocument();
+      expect(screen.queryByText('Explore agents')).toBeNull();
+    });
+
+    it('keeps the agent avatar and name on the chat page when the flag is on', () => {
+      mockAllowMentorSelection = true;
+      renderEmbedNavBar({ mentorName: 'AI Bot' });
+
+      expect(screen.getByText('AI Bot')).toBeInTheDocument();
+      expect(screen.getByText('AI')).toBeInTheDocument();
+      expect(screen.queryByText('Explore agents')).toBeNull();
+    });
+  });
 
   describe('New Chat', () => {
     it('dispatches new chat actions when clicking mentor name area', () => {

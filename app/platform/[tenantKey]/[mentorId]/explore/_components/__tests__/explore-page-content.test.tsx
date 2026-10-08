@@ -46,6 +46,11 @@ vi.mock('@/hoc/withPermissions', () => ({
   }) => children({ hasPermission: mockHasPermission }),
 }));
 
+let mockAllowMentorSelection = false;
+vi.mock('@/hooks/use-allow-mentor-selection', () => ({
+  useAllowMentorSelection: () => mockAllowMentorSelection,
+}));
+
 const mockIsLoggedIn = vi.fn();
 const mockRedirectToAuthSpaJoinTenant = vi.fn();
 vi.mock('@/lib/utils', async (importOriginal) => {
@@ -234,6 +239,7 @@ describe('ExplorePageContent', () => {
       isLoading: false,
     });
     mockHasPermission = true;
+    mockAllowMentorSelection = false;
 
     mockStarMentor.mockReturnValue({ unwrap: vi.fn().mockResolvedValue({}) });
     mockUnstarMentor.mockReturnValue({ unwrap: vi.fn().mockResolvedValue({}) });
@@ -799,6 +805,27 @@ describe('ExplorePageContent', () => {
       expect(
         screen.queryByRole('button', { name: 'Create new agent' }),
       ).not.toBeInTheDocument();
+    });
+
+    it('hides Create Agent when allow-mentor-selection is active, even with permission', () => {
+      mockAllowMentorSelection = true;
+      renderComponent();
+
+      expect(
+        screen.queryByRole('button', { name: 'Create new agent' }),
+      ).not.toBeInTheDocument();
+    });
+
+    it('drops the page header when allow-mentor-selection is active, keeping search and filters', () => {
+      mockAllowMentorSelection = true;
+      renderComponent();
+
+      expect(screen.queryByRole('heading', { level: 1 })).toBeNull();
+      expect(screen.queryByText(/Discover and create agents/i)).toBeNull();
+      expect(
+        screen.getByRole('textbox', { name: /Search agents/i }),
+      ).toBeInTheDocument();
+      expect(screen.getByTestId('mentor-categories')).toBeInTheDocument();
     });
 
     it('sends signed-out users to sign in instead of opening the create modal', async () => {

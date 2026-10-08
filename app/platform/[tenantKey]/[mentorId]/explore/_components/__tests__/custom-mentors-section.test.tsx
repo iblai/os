@@ -50,6 +50,11 @@ vi.mock('@/hoc/withPermissions', () => ({
   }) => children({ hasPermission: mockHasPermission }),
 }));
 
+let mockAllowMentorSelection = false;
+vi.mock('@/hooks/use-allow-mentor-selection', () => ({
+  useAllowMentorSelection: () => mockAllowMentorSelection,
+}));
+
 // Mock UI components
 vi.mock('@/components/ui/button', () => ({
   Button: ({ children, onClick, disabled, ...props }: any) => (
@@ -156,6 +161,7 @@ describe('CustomMentorsSection', () => {
     mockIsLoggedIn.mockReturnValue(true);
     mockRedirectToAuthSpaJoinTenant.mockClear();
     mockHasPermission = true;
+    mockAllowMentorSelection = false;
     mockUseGetPersonnalizedMentorsQuery.mockReturnValue({
       data: { results: mockCustomMentors, next: null },
       isFetching: false,
@@ -284,6 +290,32 @@ describe('CustomMentorsSection', () => {
 
       expect(screen.getByText('Custom Mentor 1')).toBeInTheDocument();
       expect(screen.getByText('Create Custom Agent')).toBeInTheDocument();
+    });
+  });
+
+  describe('allow-mentor-selection embed flag', () => {
+    beforeEach(() => {
+      mockAllowMentorSelection = true;
+    });
+
+    it('omits the create tile below existing agents, even with permission', () => {
+      renderWithContext();
+
+      expect(screen.getByText('Custom Mentor 1')).toBeInTheDocument();
+      expect(screen.queryByText('Create Custom Agent')).not.toBeInTheDocument();
+      expect(screen.getAllByRole('listitem')).toHaveLength(2);
+    });
+
+    it('renders nothing when there are no agents, even with permission', () => {
+      mockUseGetPersonnalizedMentorsQuery.mockReturnValue({
+        data: { results: [], next: null },
+        isFetching: false,
+      });
+
+      const { container } = renderWithContext();
+
+      expect(screen.queryByText('Create Custom Agent')).not.toBeInTheDocument();
+      expect(container).toBeEmptyDOMElement();
     });
   });
 

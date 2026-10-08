@@ -89,6 +89,14 @@ vi.mock('@iblai/iblai-js/web-utils', () => ({
 
 vi.mock('@/lib/constants', () => ({
   ANONYMOUS_USERNAME: 'anonymous',
+  QUERY_PARAMS: {
+    EMBED: 'embed',
+    INTERNAL_PREVIEW: 'internalPreview',
+    MODE: 'mode',
+    SHOW_CLOSE_BUTTON: 'show-close-button',
+    SHOW_USER_PROFILE: 'show-user-profile',
+    ALLOW_MENTOR_SELECTION: 'allow-mentor-selection',
+  },
   LOCAL_STORAGE_KEYS: {
     SESSION_ID: 'session_id',
   },
@@ -456,6 +464,108 @@ describe('user-navigate', () => {
         expect(mocked.push).toHaveBeenCalledWith(
           '/platform/new-tenant/mentor-456?switching-mentor=true',
         );
+      });
+
+      describe('allow-mentor-selection embed', () => {
+        const EMBED_QUERY =
+          'embed=true&mode=anonymous&allow-mentor-selection=true&hide-navbar=true';
+
+        function embedAt(query: string) {
+          window.history.replaceState(
+            {},
+            '',
+            `/platform/test-tenant/mentor-123?${query}`,
+          );
+          mocked.useSearchParams.mockReturnValue(new URLSearchParams(query));
+        }
+
+        beforeEach(() => {
+          localStorage.setItem('axd_token', 'token');
+        });
+
+        afterEach(() => {
+          window.history.replaceState({}, '', '/');
+          localStorage.removeItem('axd_token');
+        });
+
+        function pushedParams() {
+          const url = mocked.push.mock.calls[0][0] as string;
+          return { url, params: new URLSearchParams(url.split('?')[1]) };
+        }
+
+        it('navigateToExplore keeps the embed params', () => {
+          embedAt(EMBED_QUERY);
+          const { result } = renderHook(() => useNavigate());
+
+          result.current.navigateToExplore();
+
+          const { url, params } = pushedParams();
+          expect(
+            url.startsWith('/platform/test-tenant/mentor-123/explore?'),
+          ).toBe(true);
+          expect(params.get('embed')).toBe('true');
+          expect(params.get('mode')).toBe('anonymous');
+          expect(params.get('allow-mentor-selection')).toBe('true');
+          expect(params.get('hide-navbar')).toBe('true');
+        });
+
+        it('navigateToMentor keeps the embed params alongside switching-mentor', () => {
+          embedAt(EMBED_QUERY);
+          const { result } = renderHook(() => useNavigate());
+
+          result.current.navigateToMentor('mentor-456');
+
+          const { url, params } = pushedParams();
+          expect(url.startsWith('/platform/test-tenant/mentor-456?')).toBe(
+            true,
+          );
+          expect(params.get('switching-mentor')).toBe('true');
+          expect(params.get('embed')).toBe('true');
+          expect(params.get('allow-mentor-selection')).toBe('true');
+          expect(params.get('hide-navbar')).toBe('true');
+        });
+
+        it('navigateToHome keeps the embed params', () => {
+          embedAt(EMBED_QUERY);
+          const { result } = renderHook(() => useNavigate());
+
+          result.current.navigateToHome();
+
+          const { url, params } = pushedParams();
+          expect(url.startsWith('/platform/test-tenant/mentor-123?')).toBe(
+            true,
+          );
+          expect(params.get('allow-mentor-selection')).toBe('true');
+        });
+
+        it('leaves URLs untouched for an anonymous viewer even with the flag', () => {
+          localStorage.removeItem('axd_token');
+          embedAt(EMBED_QUERY);
+          const { result } = renderHook(() => useNavigate());
+
+          result.current.navigateToExplore();
+          result.current.navigateToMentor('mentor-456');
+
+          expect(mocked.push.mock.calls.map((c) => c[0])).toEqual([
+            '/platform/test-tenant/mentor-123/explore',
+            '/platform/test-tenant/mentor-456?switching-mentor=true',
+          ]);
+        });
+
+        it('leaves URLs untouched in embed mode without the flag', () => {
+          embedAt('embed=true&hide-navbar=true');
+          const { result } = renderHook(() => useNavigate());
+
+          result.current.navigateToExplore();
+          result.current.navigateToMentor('mentor-456');
+          result.current.navigateToHome();
+
+          expect(mocked.push.mock.calls.map((c) => c[0])).toEqual([
+            '/platform/test-tenant/mentor-123/explore',
+            '/platform/test-tenant/mentor-456?switching-mentor=true',
+            '/platform/test-tenant/mentor-123',
+          ]);
+        });
       });
 
       it('navigateToMentorInProject - should navigate to mentor in project', () => {
