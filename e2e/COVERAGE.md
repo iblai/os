@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-10-07 | 899 checkpoints (855 covered, 10 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 91 journeys (90 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-10-08 | 900 checkpoints (856 covered, 10 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 91 journeys (90 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -1874,7 +1874,7 @@ route.
 
 ---
 
-## Journey 76: Show Additional Agents Toggle (6 checkpoints) — `journeys/76-show-additional-agents-toggle.spec.ts`
+## Journey 76: Show Additional Agents Toggle (7 checkpoints) — `journeys/76-show-additional-agents-toggle.spec.ts`
 
 **Source files:** `components/modals/edit-mentor-modal/settings-tab.tsx`, `components/welcome-chat-new.tsx`, `components/welcome-chat/explore-mentors.tsx`, `hooks/use-mentors/use-mentor-settings.ts`
 
@@ -1886,6 +1886,7 @@ Covers issue #2544: a new `show_explore_mentors` mentor setting, exposed as a "S
 - [x] sem-04: With the setting ON, the admin's own welcome screen shows the "Explore Agents" section
 - [x] sem-05: With the setting ON, a non-admin non-owner viewer of the same agent also sees the "Explore Agents" section (RBAC-redaction regression guard)
 - [x] sem-06: With the setting OFF, the welcome screen hides the "Explore Agents" section
+- [x] sem-07: With the setting ON, the "Explore Agents" section sits below the first screen in two columns, and the "Explore Agents" hint scrolls it into view
 
 ---
 

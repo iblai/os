@@ -2,8 +2,8 @@
   "version": 2,
   "lastUpdated": "2026-10-07",
   "summary": {
-    "totalCheckpoints": 899,
-    "coveredCheckpoints": 855,
+    "totalCheckpoints": 900,
+    "coveredCheckpoints": 856,
     "deprecatedCheckpoints": 17,
     "notReproducibleCheckpoints": 17,
     "pendingCheckpoints": 10,
@@ -4991,6 +4991,11 @@
         {
           "id": "sem-06",
           "description": "With the setting OFF, the welcome screen hides the \"Explore Agents\" section",
+          "status": "covered"
+        },
+        {
+          "id": "sem-07",
+          "description": "With the setting ON, the \"Explore Agents\" section sits below the first screen in two columns, and the \"Explore Agents\" hint scrolls it into view",
           "status": "covered"
         }
       ]
