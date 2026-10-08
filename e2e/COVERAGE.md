@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-10-08 | 900 checkpoints (856 covered, 10 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 91 journeys (90 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-10-08 | 904 checkpoints (860 covered, 10 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 92 journeys (91 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -2028,6 +2028,19 @@ iblai/iblai-platform#2633: with the agent's `enable_in_chat_llm_change` on, a us
 - [x] icm-11: A student's pick is per chat: a new chat drops the chip and sends no model fields, and the admin's chat on the same agent never shows the student's pick
 - [x] icm-12: On a phone a student picks a model through the + sheet and the model chip shows it
 - [x] icm-13: With the setting off, a student's composer has no model picker
+
+---
+
+## Journey 85: Stale Session Id Self-Heal (4 checkpoints) — `journeys/85-stale-session-id-self-heal.spec.ts`
+
+**Source files:** `components/chat/sdk-chat.tsx`, `lib/utils.ts`, `hooks/user-navigate.ts`, `lib/logger.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/chats/use-recent-chats.ts`, `app/share/chat/[sessionId]/share-chat-redirect-content.tsx`, `e2e/page-objects/chat.page.ts` (the self-heal lives in the SDK Chat and `@iblai/web-utils` / `@iblai/data-layer`)
+
+Regression guard for [iblai-platform#2536](https://github.com/iblai/iblai-platform/issues/2536): a dead `session_id` in localStorage (purged, or minted under another tenant) left the chat spinning, never minted a new session, and failed every send with a "Session not found" toast; embeds have no New chat to recover with. The cache key is now `${tenantKey}:${mentorId}`. Retries are unchanged (1 + 3); only after the last 404 is it returned as `{ error }`, and that 404 or a WS "Session not found" frame calls `onSessionNotFound`, which drops the dead id so a fresh session is minted, with no toast. Uses the tenant's default agent; nothing to clean up.
+
+- [x] sess-01: A dead session id seeded into the tenant-scoped `session_id` cache is fetched exactly 4 times (1 initial + 3 retries, retries unchanged), all before the POST .../sessions/ that mints the replacement and never after it; no "Session not found" toast; the chat stays usable (real send + reply)
+- [x] sess-02: A legacy cache entry keyed by the bare mentorId is never looked up; the app mints and uses a session under the `${tenantKey}:${mentorId}` key
+- [x] sess-03: A WS "Session not found: <id>" frame mid-chat self-heals with no error toast: the working indicator clears, a fresh session replaces the dead id, and a follow-up message on it succeeds
+- [x] sess-04: In embed mode (`?embed=true`) a dead session id self-heals with no manual New chat, fetching the dead id exactly 4 times, all before the mint
 
 ---
 

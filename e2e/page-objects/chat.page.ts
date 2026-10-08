@@ -487,14 +487,17 @@ export class ChatPage {
   /**
    * Read the cached session id for a specific `mentorId` from localStorage.
    * The app stores sessions as `Record<string, string>` under the key
-   * `session_id` (see `lib/constants.ts → LOCAL_STORAGE_KEYS.SESSION_ID`).
+   * `session_id` (see `lib/constants.ts → LOCAL_STORAGE_KEYS.SESSION_ID`),
+   * keyed `${tenantKey}:${mentorId}` (#2536).
    */
   async getCachedSessionId(mentorId: string): Promise<string | null> {
     return this.page.evaluate((mid: string) => {
       try {
         const raw = window.localStorage.getItem('session_id');
         if (!raw) return null;
-        return (JSON.parse(raw) as Record<string, string>)[mid] ?? null;
+        const cache = JSON.parse(raw) as Record<string, string>;
+        const key = Object.keys(cache).find((k) => k.endsWith(`:${mid}`));
+        return key ? cache[key] : null;
       } catch {
         return null;
       }

@@ -1,15 +1,15 @@
 {
   "version": 2,
-  "lastUpdated": "2026-10-07",
+  "lastUpdated": "2026-10-08",
   "summary": {
-    "totalCheckpoints": 900,
-    "coveredCheckpoints": 856,
+    "totalCheckpoints": 904,
+    "coveredCheckpoints": 860,
     "deprecatedCheckpoints": 17,
     "notReproducibleCheckpoints": 17,
     "pendingCheckpoints": 10,
     "percent": 100,
-    "totalJourneys": 91,
-    "activeJourneys": 90
+    "totalJourneys": 92,
+    "activeJourneys": 91
   },
   "journeys": [
     {
@@ -5676,6 +5676,42 @@
         {
           "id": "icm-13",
           "description": "With the setting off, a student's composer has no model picker",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "stale-session-id-self-heal",
+      "name": "Stale Session Id Self-Heal",
+      "spec": "85-stale-session-id-self-heal.spec.ts",
+      "sourceFiles": [
+        "components/chat/sdk-chat.tsx",
+        "lib/utils.ts",
+        "hooks/user-navigate.ts",
+        "lib/logger.tsx",
+        "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/chats/use-recent-chats.ts",
+        "app/share/chat/[sessionId]/share-chat-redirect-content.tsx",
+        "e2e/page-objects/chat.page.ts"
+      ],
+      "checkpoints": [
+        {
+          "id": "sess-01",
+          "description": "A dead session id seeded into the tenant-scoped `session_id` cache is fetched exactly 4 times (1 initial + 3 retries, retries unchanged), all before the POST .../sessions/ that mints the replacement and never after it; no \"Session not found\" toast; the chat stays usable (real send + reply)",
+          "status": "covered"
+        },
+        {
+          "id": "sess-02",
+          "description": "A legacy cache entry keyed by the bare mentorId is never looked up; the app mints and uses a session under the `${tenantKey}:${mentorId}` key",
+          "status": "covered"
+        },
+        {
+          "id": "sess-03",
+          "description": "A WS \"Session not found: <id>\" frame mid-chat self-heals with no error toast: the working indicator clears, a fresh session replaces the dead id, and a follow-up message on it succeeds",
+          "status": "covered"
+        },
+        {
+          "id": "sess-04",
+          "description": "In embed mode (`?embed=true`) a dead session id self-heals with no manual New chat, fetching the dead id exactly 4 times, all before the mint",
           "status": "covered"
         }
       ]

@@ -181,8 +181,12 @@ test.describe('Journey 79: Composer Redesign', () => {
     const switchLabels = await editMentorPage.tools.toolToggles.evaluateAll(
       (nodes) => nodes.map((n) => n.getAttribute('aria-label') ?? ''),
     );
+    // Exact name, as `enableTool` matches it: a prefix would let "Image"
+    // match "Image Generation".
     const available = COMPOSER_TOOL_NAMES.filter((name) =>
-      switchLabels.some((label) => label.startsWith(name)),
+      switchLabels.some((label) =>
+        new RegExp(`^${name} (enabled|disabled)$`, 'i').test(label),
+      ),
     );
     test.skip(
       available.length < 2,
