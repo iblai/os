@@ -26,16 +26,18 @@ vi.mock('@/hooks/use-embed-mode', () => ({
   useEmbedMode: () => mockUseEmbedMode(),
 }));
 
-// Mock child components
-vi.mock('@/components/accessibility/floating-accessibility-button', () => ({
-  FloatingAccessibilityButton: () => (
-    <div data-testid="floating-accessibility-button">Floating Button</div>
-  ),
-}));
-
-vi.mock('@/components/accessibility/accessibility-toolbar', () => ({
-  AccessibilityToolbar: () => (
-    <div data-testid="accessibility-toolbar">Toolbar</div>
+vi.mock('@iblai/iblai-js/web-containers/next', () => ({
+  AccessibilityFab: ({
+    defaultPositionClassName,
+  }: {
+    defaultPositionClassName?: string;
+  }) => (
+    <>
+      <div className={defaultPositionClassName}>
+        <div data-testid="floating-accessibility-button">Floating Button</div>
+      </div>
+      <div data-testid="accessibility-toolbar">Toolbar</div>
+    </>
   ),
 }));
 
@@ -60,7 +62,7 @@ describe('AccessibilityFab', () => {
   });
 
   describe('Rendering behavior', () => {
-    it('renders both FloatingAccessibilityButton and AccessibilityToolbar when conditions are met', () => {
+    it('renders the SDK AccessibilityFab when conditions are met', () => {
       mockUseEmbedMode.mockReturnValue(false);
       mockUseTenantMetadata.mockReturnValue({
         metadata: { accessibility_menu: true },
@@ -327,6 +329,30 @@ describe('AccessibilityFab', () => {
       expect(wrapperDiv?.className).toContain('gap-3');
       expect(wrapperDiv?.className).toContain('z-50');
       expect(wrapperDiv?.className).toContain('mb-10');
+    });
+  });
+
+  describe('Default position', () => {
+    it.each([
+      ['an empty chat', { chats: { chat: [] }, activeTab: 'chat' }],
+      ['chats that are not loaded yet', {}],
+    ])('sits at bottom-4 for %s', (_, chatState) => {
+      mockUseTenantMetadata.mockReturnValue({
+        metadata: { accessibility_menu: true },
+      });
+      const store = configureStore({
+        reducer: { chatSliceShared: (state = chatState) => state },
+      });
+
+      const { container } = render(
+        <Provider store={store}>
+          <AccessibilityFab />
+        </Provider>,
+      );
+
+      const wrapperDiv = container.querySelector('div.fixed');
+      expect(wrapperDiv).toHaveClass('bottom-4', 'mb-10', 'right-4');
+      expect(wrapperDiv).not.toHaveClass('bottom-[21rem]');
     });
   });
 

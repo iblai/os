@@ -203,13 +203,12 @@ describe('AppProvider', () => {
       });
     });
 
-    it('fetches pinned messages with tenant, session, and user name', async () => {
+    it('fetches the user-wide pinned messages with tenant and user name', async () => {
       await invokeMentorResponded({
         data: { value: { sessionId: 'session-4' } },
       });
       expect(mockGetPinnedMessages).toHaveBeenCalledWith({
         org: 'tenant-xyz',
-        sessionId: 'session-4',
         userId: 'user-name-abc',
       });
     });
