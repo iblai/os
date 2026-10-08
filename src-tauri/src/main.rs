@@ -76,6 +76,9 @@ const OAUTH_URL_PATTERNS: &[&str] = &[
     "azuread-oauth2",
     "/auth/login/azuread",
     "/login/azuread",
+    "microsoft-graph",
+    "/auth/login/microsoft-graph",
+    "/login/microsoft-graph",
 ];
 
 fn is_oauth_url(url: &str) -> bool {
@@ -2940,11 +2943,15 @@ mod oauth_url_tests {
     fn microsoft_oauth_opens_in_app_like_google() {
         for url in [
             "https://learn.iblai.app/auth/login/azuread-oauth2/?auth_entry=login&next=%2F",
+            "https://learn.iblai.app/auth/login/microsoft-graph/?auth_entry=login&next=%2F",
             "https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=x",
             "https://login.live.com/oauth20_authorize.srf",
         ] {
-            assert!(is_oauth_url(url), "azure url should be oauth: {url}");
-            assert!(opens_oauth_popup(url), "azure url should open in-app: {url}");
+            assert!(is_oauth_url(url), "microsoft url should be oauth: {url}");
+            assert!(
+                opens_oauth_popup(url),
+                "microsoft url should open in-app: {url}"
+            );
         }
     }
 

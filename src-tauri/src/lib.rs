@@ -173,6 +173,9 @@ const OAUTH_URL_PATTERNS: &[&str] = &[
     "azuread-oauth2",
     "/auth/login/azuread",
     "/login/azuread",
+    "microsoft-graph",
+    "/auth/login/microsoft-graph",
+    "/login/microsoft-graph",
 ];
 
 fn is_oauth_url(url: &str) -> bool {
@@ -2786,7 +2789,10 @@ pub fn run() {
             url.includes('login.live.com') ||
             url.includes('azuread-oauth2') ||
             url.includes('/auth/login/azuread') ||
-            url.includes('/login/azuread')
+            url.includes('/login/azuread') ||
+            url.includes('microsoft-graph') ||
+            url.includes('/auth/login/microsoft-graph') ||
+            url.includes('/login/microsoft-graph')
         );
     }
 
