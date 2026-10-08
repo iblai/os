@@ -167,6 +167,15 @@ const OAUTH_URL_PATTERNS: &[&str] = &[
     "appleid.apple.com",
     "/auth/login/apple",
     "/login/apple",
+    // Microsoft / Azure AD OAuth (kept in sync with main.rs).
+    "login.microsoftonline.com",
+    "login.live.com",
+    "azuread-oauth2",
+    "/auth/login/azuread",
+    "/login/azuread",
+    "microsoft-graph",
+    "/auth/login/microsoft-graph",
+    "/login/microsoft-graph",
 ];
 
 fn is_oauth_url(url: &str) -> bool {
@@ -2775,7 +2784,15 @@ pub fn run() {
             url.includes('google-oauth2') ||
             url.includes('appleid.apple.com') ||
             url.includes('/auth/login/apple') ||
-            url.includes('/login/apple')
+            url.includes('/login/apple') ||
+            url.includes('login.microsoftonline.com') ||
+            url.includes('login.live.com') ||
+            url.includes('azuread-oauth2') ||
+            url.includes('/auth/login/azuread') ||
+            url.includes('/login/azuread') ||
+            url.includes('microsoft-graph') ||
+            url.includes('/auth/login/microsoft-graph') ||
+            url.includes('/login/microsoft-graph')
         );
     }
 
