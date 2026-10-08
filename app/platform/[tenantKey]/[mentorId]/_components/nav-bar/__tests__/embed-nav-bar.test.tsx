@@ -237,14 +237,12 @@ describe('EmbedNavBar', () => {
   describe('Explore title (allow-mentor-selection)', () => {
     const explorePath = '/platform/tenant123/mentor123/explore';
 
-    it('replaces the agent avatar and name with "Explore agents" on Explore', () => {
+    it('replaces the agent avatar and name with "Explore Agents" on Explore', () => {
       mockAllowMentorSelection = true;
       mockPathname = explorePath;
       renderEmbedNavBar({ mentorName: 'AI Bot', isMobile: true });
 
-      expect(
-        screen.getByRole('heading', { name: 'Explore agents' }),
-      ).toBeInTheDocument();
+      expect(screen.getByText('Explore Agents')).toBeInTheDocument();
       expect(screen.queryByText('AI Bot')).toBeNull();
       expect(screen.queryByText('AI')).toBeNull();
       expect(screen.queryByLabelText(/start new chat/i)).toBeNull();
@@ -258,7 +256,7 @@ describe('EmbedNavBar', () => {
 
       expect(screen.getByText('AI Bot')).toBeInTheDocument();
       expect(screen.getByText('AI')).toBeInTheDocument();
-      expect(screen.queryByText('Explore agents')).toBeNull();
+      expect(screen.queryByText('Explore Agents')).toBeNull();
     });
 
     it('keeps the agent avatar and name on the chat page when the flag is on', () => {
@@ -267,7 +265,7 @@ describe('EmbedNavBar', () => {
 
       expect(screen.getByText('AI Bot')).toBeInTheDocument();
       expect(screen.getByText('AI')).toBeInTheDocument();
-      expect(screen.queryByText('Explore agents')).toBeNull();
+      expect(screen.queryByText('Explore Agents')).toBeNull();
     });
   });
 

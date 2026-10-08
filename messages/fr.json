@@ -1415,6 +1415,7 @@
     "viewLogs": "Voir les journaux ({count})"
   },
   "navBarEmbedNavBar": {
+    "exploreAgents": "Explorer les Agents",
     "closeSidebar": "Fermer la barre latérale",
     "openSidebar": "Ouvrir la barre latérale",
     "toggleSidebar": "Basculer la barre latérale",

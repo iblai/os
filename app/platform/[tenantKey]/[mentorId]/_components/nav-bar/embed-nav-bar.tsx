@@ -66,7 +66,6 @@ export function EmbedNavBar({
   mentorId,
 }: Props) {
   const t = useTranslations('navBarEmbedNavBar');
-  const tExplore = useTranslations('exploreExplorePageContent');
   const username = useUsername();
   const isPreviewMode = useIsPreviewMode();
   const isIframed = useIsIframed();
@@ -160,9 +159,9 @@ export function EmbedNavBar({
         )}
 
         {showExploreTitle ? (
-          <h1 className="text-sm font-bold text-gray-800">
-            {tExplore('pageTitle')}
-          </h1>
+          <span className="text-sm font-bold text-gray-800">
+            {t('exploreAgents')}
+          </span>
         ) : (
           <button
             onClick={() => {

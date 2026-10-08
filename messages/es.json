@@ -1415,6 +1415,7 @@
     "viewLogs": "Ver registros ({count})"
   },
   "navBarEmbedNavBar": {
+    "exploreAgents": "Explorar Agentes",
     "closeSidebar": "Cerrar barra lateral",
     "openSidebar": "Abrir barra lateral",
     "toggleSidebar": "Alternar barra lateral",
