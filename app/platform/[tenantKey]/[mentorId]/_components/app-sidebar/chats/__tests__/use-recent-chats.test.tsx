@@ -28,6 +28,7 @@ const unpinMessageMock = vi.fn(() => ({ unwrap: () => Promise.resolve({}) }));
 const deleteMessageMock = vi.fn(() => ({ unwrap: () => Promise.resolve({}) }));
 const exportMessagesToXlsxMock = vi.fn();
 const eventBusEmitMock = vi.fn();
+const pinnedQueryArgsMock = vi.fn();
 const updateQueryDataMock = vi.fn(
   (_endpoint: string, _args: unknown, recipe: (draft: any) => void) => {
     const draft: { results: any[] } = { results: [] };
@@ -121,9 +122,10 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
     isFetchingNextPage: mockIsFetchingNextPage,
   }),
   useGetPinnedMessagesQuery: (
-    _args: unknown,
+    args: unknown,
     options?: { skip?: boolean; selectFromResult?: (state: any) => any },
   ) => {
+    pinnedQueryArgsMock(args);
     const state = {
       data: options?.skip ? undefined : mockPinnedPages,
       isError: false,
@@ -314,6 +316,126 @@ describe('useRecentChats', () => {
     );
     expect(refetchRecentMock).toHaveBeenCalled();
     expect(refetchPinnedMock).toHaveBeenCalled();
+  });
+
+  // #2608: the endpoint takes no session_id.
+  it('queries pinned messages by org + user + mentor, stable across chat switches', () => {
+    const { rerender } = renderHook((props) => useRecentChats(props), {
+      initialProps: baseArgs,
+    });
+    rerender({ ...baseArgs, appSessionId: 'another-chat' });
+
+    expect(pinnedQueryArgsMock).toHaveBeenCalled();
+    for (const [args] of pinnedQueryArgsMock.mock.calls) {
+      expect(args).toEqual({
+        org: 'tenant-a',
+        userId: 'admin-user',
+        mentor: 'mentor-1',
+      });
+    }
+  });
+
+  // Search UI never shows pinned chats, so the pinned query stays off the term.
+  it('keeps the pinned query off the search term and patches that same entry', async () => {
+    vi.useFakeTimers();
+    try {
+      const { result } = renderHook(() => useRecentChats(baseArgs));
+
+      act(() => result.current.setSearchInput('hello'));
+      act(() => {
+        vi.advanceTimersByTime(300);
+      });
+
+      const hookArgs = pinnedQueryArgsMock.mock.calls.at(-1)?.[0];
+      expect(hookArgs).toEqual({
+        org: 'tenant-a',
+        userId: 'admin-user',
+        mentor: 'mentor-1',
+      });
+
+      await act(async () => {
+        await result.current.handlePin({
+          session_id: 'pin-me',
+          mentor: { unique_id: 'mentor-1' },
+        });
+      });
+      expect(updateQueryDataMock).toHaveBeenCalledWith(
+        'getPinnedMessages',
+        hookArgs,
+        expect.any(Function),
+      );
+      expect(refetchPinnedMock).toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it.each([
+    ['handlePin', 'pin-me'],
+    ['handleUnpin', 'unpin-me'],
+    ['handleDelete', 'delete-me'],
+  ] as const)(
+    '%s patches the pinned cache under the exact hook args',
+    async (handler, sessionId) => {
+      const { result } = renderHook(() => useRecentChats(baseArgs));
+
+      await act(async () => {
+        await result.current[handler]({
+          session_id: sessionId,
+          mentor: { unique_id: 'mentor-1' },
+        });
+      });
+
+      const hookArgs = pinnedQueryArgsMock.mock.calls.at(-1)?.[0];
+      expect(updateQueryDataMock).toHaveBeenCalledWith(
+        'getPinnedMessages',
+        hookArgs,
+        expect.any(Function),
+      );
+    },
+  );
+
+  it('optimistic recipes tolerate a cold pinned cache (no results yet)', async () => {
+    // Pin response with no body falls back to the clicked row.
+    addPinnedMessageMock.mockImplementationOnce(() => ({
+      unwrap: () => Promise.resolve(undefined as never),
+    }));
+    const row = { session_id: 'cold', mentor: { unique_id: 'mentor-1' } };
+    const { result } = renderHook(() => useRecentChats(baseArgs));
+
+    await act(async () => {
+      await result.current.handlePin(row);
+      await result.current.handleUnpin(row);
+      await result.current.handleDelete(row);
+    });
+
+    const drafts = updateQueryDataMock.mock.calls.map(([, , recipe]) => {
+      const draft: { results?: any[] } = {};
+      recipe(draft);
+      return draft.results;
+    });
+    expect(drafts).toEqual([[row], [], []]);
+  });
+
+  it('handlePin / handleUnpin short-circuit without a user id', async () => {
+    const { result } = renderHook(() =>
+      useRecentChats({ ...baseArgs, resolvedUserId: null }),
+    );
+
+    await act(async () => {
+      await result.current.handlePin({ session_id: 'x' });
+      await result.current.handleUnpin({ session_id: 'x' });
+    });
+
+    expect(addPinnedMessageMock).not.toHaveBeenCalled();
+    expect(unpinMessageMock).not.toHaveBeenCalled();
+    expect(updateQueryDataMock).not.toHaveBeenCalled();
+  });
+
+  it('treats a recent page without results as empty', () => {
+    mockRecentInfinite = { pages: [{}], pageParams: [0] };
+    const { result } = renderHook(() => useRecentChats(baseArgs));
+    expect(result.current.recent).toEqual([]);
   });
 
   it('handleUnpin unpins a row and refetches both lists', async () => {

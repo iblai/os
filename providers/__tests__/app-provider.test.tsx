@@ -7,7 +7,10 @@ import React from 'react';
 const mockDispatch = vi.fn();
 const mockGetVectorDocuments = vi.fn().mockResolvedValue({});
 const mockGetRecentMessages = vi.fn().mockResolvedValue({});
-const mockGetPinnedMessages = vi.fn().mockResolvedValue({});
+const mockInvalidateTags = vi.fn((tags: string[]) => ({
+  type: 'chatApiSlice/invalidateTags',
+  payload: tags,
+}));
 const mockSendMessageToParentWebsite = vi.fn();
 
 let mockParams: Record<string, string> = { tenantKey: 'tenant-xyz' };
@@ -45,7 +48,11 @@ vi.mock('@/lib/features/app/app-slice', () => ({
 vi.mock('@iblai/iblai-js/data-layer', () => ({
   useLazyGetVectorDocumentsQuery: () => [mockGetVectorDocuments],
   useLazyGetRecentMessageQuery: () => [mockGetRecentMessages],
-  useLazyGetPinnedMessagesQuery: () => [mockGetPinnedMessages],
+  chatApiSlice: {
+    util: {
+      invalidateTags: (tags: string[]) => mockInvalidateTags(tags),
+    },
+  },
 }));
 
 vi.mock('@iblai/iblai-js/web-containers', () => ({
@@ -203,14 +210,14 @@ describe('AppProvider', () => {
       });
     });
 
-    it('fetches pinned messages with tenant, session, and user name', async () => {
+    it('invalidates the pinnedMessages tag instead of fetching with its own args', async () => {
       await invokeMentorResponded({
         data: { value: { sessionId: 'session-4' } },
       });
-      expect(mockGetPinnedMessages).toHaveBeenCalledWith({
-        org: 'tenant-xyz',
-        sessionId: 'session-4',
-        userId: 'user-name-abc',
+      expect(mockInvalidateTags).toHaveBeenCalledWith(['pinnedMessages']);
+      expect(mockDispatch).toHaveBeenCalledWith({
+        type: 'chatApiSlice/invalidateTags',
+        payload: ['pinnedMessages'],
       });
     });
 
@@ -225,9 +232,6 @@ describe('AppProvider', () => {
       expect(mockGetRecentMessages).toHaveBeenCalledWith(
         expect.objectContaining({ org: 'other-tenant' }),
       );
-      expect(mockGetPinnedMessages).toHaveBeenCalledWith(
-        expect.objectContaining({ org: 'other-tenant' }),
-      );
     });
 
     it('awaits each data-layer query in sequence', async () => {
@@ -238,8 +242,9 @@ describe('AppProvider', () => {
       mockGetRecentMessages.mockImplementationOnce(async () => {
         order.push('recent');
       });
-      mockGetPinnedMessages.mockImplementationOnce(async () => {
+      mockInvalidateTags.mockImplementationOnce((tags: string[]) => {
         order.push('pinned');
+        return { type: 'chatApiSlice/invalidateTags', payload: tags };
       });
       await invokeMentorResponded({
         data: { value: { sessionId: 'session-6' } },

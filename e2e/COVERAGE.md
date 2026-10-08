@@ -1081,12 +1081,12 @@ Covers the "Enable prompt caching" toggle added to the Capabilities sub-tab of t
 
 ## Journey 53: Recent Chats Refresh (3 checkpoints; 1 pending) — `journeys/53-recent-chats-refresh.spec.ts`
 
-**Source files:** `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`, `components/chat/index.tsx`
+**Source files:** `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`, `components/chat/index.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/chats/use-recent-chats.ts`, `providers/app-provider.tsx`
 
 Regression guard for the `SidebarChatsSection` `useEffect` that calls `refetchRecent()` once streaming finishes on a brand-new chat (exactly 2 messages: user + first assistant reply). On `main` the effect was orphaned in an unrendered component; on `fix/1982` it lives inside the rendered `SidebarChatsSection`.
 
 - [x] rcr-01: New chat appears in the sidebar Recent list immediately after the first AI response finishes streaming — no page reload _(regression guard for issue #1982)_
-- [x] rcr-02: Clicking an existing Recent chat row loads the conversation in the chat panel _(regression guard for issue #1881: `handleSelectRow` must write `cachedSessionId[mentorId]` to localStorage so the message loader re-fires)_
+- [x] rcr-02: Clicking an existing Recent chat row loads the conversation in the chat panel _(regression guard for issue #1881: `handleSelectRow` must write `cachedSessionId[mentorId]` to localStorage so the message loader re-fires; also #2608: the pin-message GET is scoped to the active agent (`mentor`), sends no `session_id` or `search`, and the pinned list is not refetched on new chat / chat switch)_
 - [ ] rcr-03: Reopening a Recent chat restores that session's own options — a chat that had Canvas enabled shows the Canvas toggle active again after switching to a new chat with Canvas off and back; the chat no longer sends a session update turning canvas off on the chat being opened _(pending: needs an SDK build that includes the `useMentorTools` session restore)_
 
 ---
