@@ -69,8 +69,8 @@ export function SettingsTab() {
 
   // Map the SDK's "agent" label contract onto the OS monolith's exact strings.
   // Most come straight from the existing next-intl bundles so all four locales
-  // stay in parity; the three the monolith hard-coded in English (verbose
-  // reasoning, PII filter, private mode) are reproduced verbatim.
+  // stay in parity; the two the monolith hard-coded in English (verbose
+  // reasoning, PII filter) are reproduced verbatim.
   const labels: SettingsTabLabels = {
     header: {
       title: t('settingsHeading'),
@@ -186,11 +186,6 @@ export function SettingsTab() {
       promptCaching: {
         label: t('enablePromptCachingLabel'),
         tooltip: t('enablePromptCachingTooltip'),
-      },
-      privateMode: {
-        label: 'Enable private mode',
-        tooltip:
-          'When on, every conversation with this agent runs in private mode — no chat history or memory is stored for any user. Use this for sensitive or compliance-bound deployments. This setting has one value, so it applies to both in-app chat and the embed widget.',
       },
       smartDocRetrieval: {
         label: t('smartDocRetrievalLabel'),

@@ -262,7 +262,6 @@ describe('SettingsTab', () => {
       expect(labels.fields.showReasoning.label).toBe(
         'Enable verbose reasoning',
       );
-      expect(labels.fields.privateMode.label).toBe('Enable private mode');
 
       // Sub-tabs, section headings, and the full Capabilities toggle set are
       // all wired to their OS i18n keys.
