@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.164.1](https://github.com/iblai/os/compare/v0.164.0...v0.164.1) (2026-10-09)
+
+### Chores
+
+* **build:** rebuild image with updated NEXT_IMAGE_PATTERNS ([28c1d98](https://github.com/iblai/os/commit/28c1d98076285bac997a6b6308c5c561746817ac))
+
 ## [0.164.0](https://github.com/iblai/os/compare/v0.163.1...v0.164.0) (2026-10-09)
 
 ### Features
