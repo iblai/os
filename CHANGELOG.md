@@ -10,30 +10,30 @@
 
 ### Features
 
-* **os:** adding incognito and fixes for history ([61252b9](https://github.com/iblai/os/commit/61252b9a9765c4345cb3453ead290ee10a9d956b))
+- **os:** adding incognito and fixes for history ([61252b9](https://github.com/iblai/os/commit/61252b9a9765c4345cb3453ead290ee10a9d956b))
 
 ### Bug Fixes
 
-* **os:** adding fix for the new chat button lookup ([9292dbc](https://github.com/iblai/os/commit/9292dbcebe274915367cc3863bfffda10d165324))
-* **os:** adding fix for the playwright test ([641ffa7](https://github.com/iblai/os/commit/641ffa77904e6c39c1d5f4401e3a94f6ab9febc8))
-* **os:** adding fix for the system audit ([f2e15ff](https://github.com/iblai/os/commit/f2e15ffa6579c1730aea051e193a59bd73288f9f))
+- **os:** adding fix for the new chat button lookup ([9292dbc](https://github.com/iblai/os/commit/9292dbcebe274915367cc3863bfffda10d165324))
+- **os:** adding fix for the playwright test ([641ffa7](https://github.com/iblai/os/commit/641ffa77904e6c39c1d5f4401e3a94f6ab9febc8))
+- **os:** adding fix for the system audit ([f2e15ff](https://github.com/iblai/os/commit/f2e15ffa6579c1730aea051e193a59bd73288f9f))
 
 ## [0.162.3](https://github.com/iblai/os/compare/v0.162.2...v0.162.3) (2026-10-08)
 
 ### Bug Fixes
 
-* **desktop:** also treat microsoft-graph SSO as an in-app OAuth URL ([33a2725](https://github.com/iblai/os/commit/33a272529bf7c14ddd8e4c7d340a24ec4a11bb4a))
-* **desktop:** open Microsoft/Azure AD sign-in in the in-app OAuth popup ([79a6bca](https://github.com/iblai/os/commit/79a6bcadb1ee2fff7bbafb069461298eae157a19))
+- **desktop:** also treat microsoft-graph SSO as an in-app OAuth URL ([33a2725](https://github.com/iblai/os/commit/33a272529bf7c14ddd8e4c7d340a24ec4a11bb4a))
+- **desktop:** open Microsoft/Azure AD sign-in in the in-app OAuth popup ([79a6bca](https://github.com/iblai/os/commit/79a6bcadb1ee2fff7bbafb069461298eae157a19))
 
 ### Chores
 
-* **tauri:** release app-v0.95.24 ([f6c53e0](https://github.com/iblai/os/commit/f6c53e0b8d019fe0719293bad9dfb782a54edc92))
+- **tauri:** release app-v0.95.24 ([f6c53e0](https://github.com/iblai/os/commit/f6c53e0b8d019fe0719293bad9dfb782a54edc92))
 
 ## [0.162.2](https://github.com/iblai/os/compare/v0.162.1...v0.162.2) (2026-10-07)
 
 ### Tests
 
-* **e2e:** pin gpt-5 for journey 52's reasoning + tool-call test ([eaf3d59](https://github.com/iblai/os/commit/eaf3d59b279cf40034df4504be6dd17515b21976))
+- **e2e:** pin gpt-5 for journey 52's reasoning + tool-call test ([eaf3d59](https://github.com/iblai/os/commit/eaf3d59b279cf40034df4504be6dd17515b21976))
 
 ## [0.162.1](https://github.com/iblai/os/compare/v0.162.0...v0.162.1) (2026-10-06)
 

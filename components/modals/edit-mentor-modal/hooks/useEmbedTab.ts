@@ -122,6 +122,7 @@ const SETTINGS_OWNED_FIELDS = [
 
 const useEmbedTab = () => {
   const [embedCode, setEmbedCode] = useState('');
+  const [allowMentorSelection, setAllowMentorSelection] = useState(false);
   const { getMentorId } = useNavigate();
   const username = useUsername();
   const params = useParams<{ tenantKey: string; mentorId: string }>();
@@ -470,7 +471,11 @@ const useEmbedTab = () => {
       const embed = await getEmbedCode(
         params.tenantKey,
         // @ts-expect-error - value is not typed correctly
-        { ...value, allow_anonymous: allowAnonymous },
+        {
+          ...value,
+          allow_anonymous: allowAnonymous,
+          allow_mentor_selection: allowMentorSelection,
+        },
         syncResult.redirectToken ?? '',
         value.icon_selection === 'custom',
         customFloatingBubbleConfig,
@@ -564,6 +569,8 @@ const useEmbedTab = () => {
 
   return {
     allowAnonymous,
+    allowMentorSelection,
+    setAllowMentorSelection,
     createTokenHandler,
     form,
     createTokenError,

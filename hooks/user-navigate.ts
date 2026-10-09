@@ -48,6 +48,8 @@ import { useShowFreeTrialDialog } from './user-user-actions';
 import { clearFiles } from '@iblai/iblai-js/web-utils';
 import { useTenantContext } from '@iblai/iblai-js/web-utils';
 import { useLocalStorage } from './use-local-storage';
+import { useAllowMentorSelection } from './use-allow-mentor-selection';
+import { withMentorSelectionEmbedParams } from '@/lib/allow-mentor-selection';
 
 // Helper to deeply compare modal stacks
 const areModalStacksEqual = (
@@ -73,6 +75,11 @@ export function useNavigate() {
   const username = useUsername();
   const searchParams = useSearchParams();
   const isAccessingPublicRoute = !!searchParams.get('token');
+  const allowMentorSelection = useAllowMentorSelection();
+  const keepEmbed = (url: string) =>
+    allowMentorSelection
+      ? withMentorSelectionEmbedParams(url, searchParams)
+      : url;
   const params = useParams<{
     tenantKey?: string;
     mentorId?: string;
@@ -307,9 +314,9 @@ export function useNavigate() {
     // Original navigation functions
     navigateToHome: () => {
       if (tenantKey && mentorIdFromParams) {
-        router.push(`/platform/${tenantKey}/${mentorIdFromParams}`);
+        router.push(keepEmbed(`/platform/${tenantKey}/${mentorIdFromParams}`));
       } else if (tenantKey) {
-        router.push(`/platform/${tenantKey}`);
+        router.push(keepEmbed(`/platform/${tenantKey}`));
       } else {
         console.warn(
           'Cannot navigate to home: tenantKey or mentorId missing from URL params.',
@@ -319,11 +326,13 @@ export function useNavigate() {
     },
     navigateToExplore: (withoutMentorId?: boolean) => {
       if (withoutMentorId) {
-        router.push(`/platform/${tenantKey}/explore`);
+        router.push(keepEmbed(`/platform/${tenantKey}/explore`));
       } else if (tenantKey && mentorIdFromParams) {
-        router.push(`/platform/${tenantKey}/${mentorIdFromParams}/explore`);
+        router.push(
+          keepEmbed(`/platform/${tenantKey}/${mentorIdFromParams}/explore`),
+        );
       } else if (tenantKey) {
-        router.push(`/platform/${tenantKey}/explore`);
+        router.push(keepEmbed(`/platform/${tenantKey}/explore`));
       } else {
         console.warn(
           'Cannot navigate to explore: tenantKey or mentorId missing from URL params.',
@@ -370,7 +379,9 @@ export function useNavigate() {
           : needsSwitching
             ? '?switching-mentor=true'
             : '';
-        router.push(`/platform/${tenantKeyToUse}/${newMentorId}${queryString}`);
+        router.push(
+          keepEmbed(`/platform/${tenantKeyToUse}/${newMentorId}${queryString}`),
+        );
       } else {
         console.warn(
           'Cannot navigate to mentor: tenantKey missing from URL params.',
