@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.165.0](https://github.com/iblai/os/compare/v0.164.1...v0.165.0) (2026-10-09)
+
+### Features
+
+* **ext:** keep a downloadable build artifact + enable mentor selection ([b332ebd](https://github.com/iblai/os/commit/b332ebd5297b865aefc96f911a1e5b75a729d131))
+
 ## [0.164.1](https://github.com/iblai/os/compare/v0.164.0...v0.164.1) (2026-10-09)
 
 ### Chores
