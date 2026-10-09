@@ -16,6 +16,7 @@ declare module 'react' {
         component?: string;
         authrelyonhost?: string;
         showuserprofile?: string;
+        allowmentorselection?: string;
       };
     }
   }

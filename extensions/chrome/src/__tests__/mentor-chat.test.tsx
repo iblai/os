@@ -53,6 +53,7 @@ describe('MentorChat', () => {
     expect(element.getAttribute('theme')).toBe('light');
     expect(element.getAttribute('component')).toBe('chat');
     expect(element.hasAttribute('authrelyonhost')).toBe(true);
+    expect(element.hasAttribute('allowmentorselection')).toBe(true);
     expect(removeWidgetSpinner).toHaveBeenCalledWith(element);
     expect(watchAndInstallSession).toHaveBeenCalledWith(element);
     expect(watchTenantSwitch).toHaveBeenCalledWith(element);

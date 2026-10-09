@@ -8,8 +8,13 @@ name: Release Chrome Extension
 #
 # Chrome rejects re-uploading an existing version, so a publish only happens when
 # extensions/chrome/public/manifest.json "version" changes vs the previous commit —
-# bump it in the same change you want shipped. A manual "Run workflow" always
-# attempts to publish the current version.
+# bump it in the same change you want shipped. A manual "Run workflow" builds the
+# current version and, with its "publish" input checked (default), also publishes.
+#
+# Every build that runs also uploads the packaged .zip as the "ibl-ai-extension"
+# workflow artifact (2-day retention) so it can be downloaded, unzipped and loaded
+# unpacked for testing. To get a test build WITHOUT publishing, run the workflow
+# manually and UNCHECK "publish".
 #
 # Requires these repo secrets (Chrome Web Store API — generate for the publishing
 # Google account: https://github.com/fregante/chrome-webstore-upload-keys):
@@ -29,6 +34,11 @@ on:
     paths:
       - 'extensions/chrome/**'
   workflow_dispatch:
+    inputs:
+      publish:
+        description: 'Publish to the Chrome Web Store. Uncheck to only build the downloadable artifact for testing (no store upload).'
+        type: boolean
+        default: true
 
 concurrency:
   group: release-chrome-extension
@@ -73,7 +83,7 @@ jobs:
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "changed=true" >> "$GITHUB_OUTPUT"
-            echo "Manual dispatch — will publish v$VERSION."
+            echo "Manual dispatch — building v$VERSION (publish=${{ inputs.publish }})."
             exit 0
           fi
           PREV=$(git show HEAD~1:extensions/chrome/public/manifest.json 2>/dev/null \
@@ -101,8 +111,23 @@ jobs:
           zip -r "$GITHUB_WORKSPACE/ibl-ai-extension.zip" .
           echo "Packaged contents:" && unzip -l "$GITHUB_WORKSPACE/ibl-ai-extension.zip"
 
-      - name: Upload and publish to the Chrome Web Store
+      # Keep the packaged .zip as a downloadable workflow artifact so a build can
+      # be sideloaded and tested before (or instead of) publishing. Short
+      # retention — it's a throwaway test build, the store holds the real release.
+      - name: Upload extension artifact
         if: steps.creds.outputs.configured == 'true' && steps.version.outputs.changed == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ibl-ai-extension
+          path: ibl-ai-extension.zip
+          retention-days: 2
+          if-no-files-found: error
+
+      - name: Upload and publish to the Chrome Web Store
+        if: >-
+          steps.creds.outputs.configured == 'true' &&
+          steps.version.outputs.changed == 'true' &&
+          (github.event_name != 'workflow_dispatch' || inputs.publish)
         env:
           EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
           CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
