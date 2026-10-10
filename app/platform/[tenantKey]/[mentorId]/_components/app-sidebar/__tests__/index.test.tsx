@@ -1529,7 +1529,7 @@ describe('AppSidebar — Chats section', () => {
     );
     // The cached session id — the loader effect's dependency — is written.
     expect(saveCachedSessionIdMock).toHaveBeenCalledWith({
-      'mentor-1': 'sess-recent-2',
+      'tenant-a:mentor-1': 'sess-recent-2',
     });
   });
 
@@ -1545,7 +1545,7 @@ describe('AppSidebar — Chats section', () => {
     // chat-page params like `?embed=true` intact once we arrive.
     expect(pushMock).toHaveBeenCalledWith('/platform/tenant-a/mentor-1');
     expect(saveCachedSessionIdMock).toHaveBeenCalledWith({
-      'mentor-1': 'sess-recent-2',
+      'tenant-a:mentor-1': 'sess-recent-2',
     });
   });
 
@@ -1556,7 +1556,7 @@ describe('AppSidebar — Chats section', () => {
     fireEvent.click(screen.getByText('Recent message one').closest('button')!);
     expect(saveCachedSessionIdMock).toHaveBeenCalledWith({
       'other-mentor': 'keep-me',
-      'mentor-1': 'sess-recent-1',
+      'tenant-a:mentor-1': 'sess-recent-1',
     });
   });
 
@@ -1567,7 +1567,7 @@ describe('AppSidebar — Chats section', () => {
     // On the chat page → no navigation, but the session is still selected.
     expect(pushMock).not.toHaveBeenCalled();
     expect(saveCachedSessionIdMock).toHaveBeenCalledWith({
-      'mentor-1': 'sess-pinned-1',
+      'tenant-a:mentor-1': 'sess-pinned-1',
     });
   });
 
@@ -3387,7 +3387,7 @@ describe('AppSidebar — Rail-collapsed chats flyout click', () => {
     // On the chat page the flyout row selects the session without navigating.
     expect(pushMock).not.toHaveBeenCalled();
     expect(saveCachedSessionIdMock).toHaveBeenCalledWith(
-      expect.objectContaining({ 'mentor-1': 'sess-flyp' }),
+      expect.objectContaining({ 'tenant-a:mentor-1': 'sess-flyp' }),
     );
   });
 
@@ -3415,7 +3415,7 @@ describe('AppSidebar — Rail-collapsed chats flyout click', () => {
     // On the chat page the flyout row selects the session without navigating.
     expect(pushMock).not.toHaveBeenCalled();
     expect(saveCachedSessionIdMock).toHaveBeenCalledWith(
-      expect.objectContaining({ 'mentor-1': 'sess-flyr' }),
+      expect.objectContaining({ 'tenant-a:mentor-1': 'sess-flyr' }),
     );
   });
 });
