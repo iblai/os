@@ -1418,15 +1418,13 @@
     "closeSidebar": "关闭侧边栏",
     "openSidebar": "打开侧边栏",
     "toggleSidebar": "切换侧边栏",
-    "startNewChat": "与 {mentorName} 开始新对话",
     "help": "帮助",
     "support": "支持",
     "openMenuOptions": "打开菜单选项",
-    "menuOptions": "菜单选项",
-    "openSettingsMenu": "打开设置菜单",
-    "settingsMenu": "设置菜单",
     "closeChat": "关闭聊天",
-    "newChat": "新对话"
+    "newChat": "新对话",
+    "incognito": "无痕模式",
+    "incognitoChat": "无痕对话"
   },
   "navBarIndex": {
     "logIn": "登录",

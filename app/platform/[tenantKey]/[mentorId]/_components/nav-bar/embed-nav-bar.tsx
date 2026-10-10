@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { usePathname } from 'next/navigation';
 
 import { useTranslations } from 'next-intl';
@@ -6,15 +6,17 @@ import { useTranslations } from 'next-intl';
 import {
   BadgeHelp,
   CircleHelp,
-  CircleUser,
+  Glasses,
   Menu,
-  Settings,
   ShieldQuestion,
   SquarePen,
   X,
 } from 'lucide-react';
 
-import { ChatPrivacyToggle } from '@iblai/iblai-js/web-containers';
+import {
+  ChatPrivacyToggle,
+  useChatPrivacy,
+} from '@iblai/iblai-js/web-containers';
 
 import { Button } from '@/components/ui/button';
 import { useIsPreviewMode } from '@/hooks/use-is-preview-mode';
@@ -30,9 +32,8 @@ import {
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
+  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import { useChatMode } from '@/hooks/use-chat-mode';
 import { useShowCloseButton } from '@/hooks/use-show-close-button';
 import { useIsLtiLaunch } from '@/hooks/use-is-lti-launch';
 import { useShowUserProfile } from '@/hooks/use-show-user-profile';
@@ -70,7 +71,6 @@ export function EmbedNavBar({
   const username = useUsername();
   const isPreviewMode = useIsPreviewMode();
   const isIframed = useIsIframed();
-  const chatMode = useChatMode();
   // An LMS course frame (LTI) has no launcher to reopen the chat: no close.
   const isLtiLaunch = useIsLtiLaunch();
   const showCloseButton = useShowCloseButton() && !isLtiLaunch;
@@ -87,6 +87,15 @@ export function EmbedNavBar({
   const { helpCenterUrl, supportEmail, showHelp } = useHelpCenter(tenantKey);
 
   const visibleToLoggedInUsersOnly = !isAnonymousMentor || isLoggedIn();
+
+  const { featureEnabled, privacyModeDisabled, effective, messageCount } =
+    useChatPrivacy({
+      org: tenantKey,
+      userId: username ?? '',
+      mentor: mentorId,
+    });
+  const isPrivate = effective.mode === 'disabled';
+  const hasMessages = messageCount > 0;
 
   function notifyParentOnEmbedClose() {
     window.parent?.postMessage(
@@ -120,7 +129,6 @@ export function EmbedNavBar({
     dispatch(chatActions.setShouldStartNewChat(true));
   }
 
-  // #2586 Embed v2 header: 40px icon buttons on the right.
   const iconButtonClass =
     'h-10 w-10 rounded-[10px] text-gray-600 [&_svg]:h-5 [&_svg]:w-5';
 
@@ -145,10 +153,35 @@ export function EmbedNavBar({
     },
   ];
 
+  const showIncognito =
+    isOnChatPage &&
+    isLoggedIn() &&
+    !!tenantKey &&
+    ((featureEnabled && !privacyModeDisabled) || isPrivate);
+
+  // The SDK toggle owns the Incognito rules and its confirm dialog; the menu
+  // row drives it, so the row stays one keyboard-reachable menu item.
+  const incognitoToggleRef = useRef<HTMLDivElement>(null);
+
+  // The toggle's confirm dialog opens over the menu. Closing the menu would
+  // unmount the toggle and its dialog with it.
+  function keepMenuOpenForConfirm(event: Event) {
+    if (document.querySelector('[data-testid="chat-privacy-confirm-dialog"]')) {
+      event.preventDefault();
+    }
+  }
+
   return (
-    <nav className="flex h-14 w-full shrink-0 items-center border-b border-[#f0f1f3] bg-white pr-1.5 pl-3.5">
+    <nav
+      data-elevated={hasMessages ? 'true' : 'false'}
+      className={cn(
+        'flex h-14 w-full shrink-0 items-center border-b bg-white pr-1.5 pl-3.5 transition-[border-color,box-shadow] duration-200',
+        hasMessages
+          ? 'border-[#f0f1f3] shadow-[0_1px_3px_rgba(16,24,40,0.05)]'
+          : 'border-transparent',
+      )}
+    >
       <div className="flex w-full min-w-0 items-center gap-1">
-        {/* Toggle sidebar button */}
         {isMobile && visibleToLoggedInUsersOnly && (
           <Tooltip>
             <TooltipTrigger asChild>
@@ -169,41 +202,46 @@ export function EmbedNavBar({
           </Tooltip>
         )}
 
-        {/* Mentor name and profile image */}
-        <button
-          onClick={startNewChat}
-          className="flex min-w-0 flex-1 cursor-pointer items-center gap-2.5"
-          aria-label={t('startNewChat', { mentorName })}
+        <div
+          className="flex min-w-0 flex-1 items-center gap-2.5"
+          data-testid="embed-agent-identity"
         >
-          <Avatar
-            className={cn(
-              'h-8 w-8 shrink-0',
-              CSS_CLASS_NAMES.APP_LAYOUT.MENTOR_IMAGE_CONTAINER_RING,
+          <div className="relative shrink-0">
+            <Avatar
+              className={cn(
+                'h-8 w-8',
+                CSS_CLASS_NAMES.APP_LAYOUT.MENTOR_IMAGE_CONTAINER_RING,
+              )}
+            >
+              <AvatarImage src={profileImage} alt="" />
+              <AvatarFallback className="bg-gradient-to-br from-[#38A1E5] to-[#7284FF] text-xs font-bold text-white">
+                {mentorName.substring(0, 2).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            {isPrivate && (
+              <span
+                aria-hidden="true"
+                data-testid="embed-incognito-badge"
+                className="absolute -right-1 -bottom-1 flex h-4 w-4 items-center justify-center rounded-full bg-gray-900 text-white ring-2 ring-white [&_svg]:h-2.5 [&_svg]:w-2.5"
+              >
+                <Glasses />
+              </span>
             )}
-          >
-            <AvatarImage src={profileImage} alt="" />
-            <AvatarFallback className="bg-gradient-to-br from-[#38A1E5] to-[#7284FF] text-xs font-bold text-white">
-              {mentorName.substring(0, 2).toUpperCase()}
-            </AvatarFallback>
-          </Avatar>
-          <span className="truncate text-[15px] font-semibold text-gray-900">
-            {mentorName}
-          </span>
-        </button>
+          </div>
+          <div className="flex min-w-0 flex-col">
+            <span className="truncate text-[15px] leading-5 font-semibold text-gray-900">
+              {mentorName}
+            </span>
+            {isPrivate && (
+              <span className="truncate text-xs leading-4 text-gray-500">
+                {t('incognitoChat')}
+              </span>
+            )}
+          </div>
+        </div>
 
         <div className="ml-auto flex shrink-0 items-center gap-0.5">
-          {isOnChatPage && isLoggedIn() && tenantKey && (
-            <ChatPrivacyToggle
-              org={tenantKey}
-              userId={username ?? ''}
-              mentor={mentorId}
-              className="inline-flex max-md:[&>span]:hidden"
-            />
-          )}
-
-          {/* Host opt-in (agent-ai `showuserprofile` → `show-user-profile=true`):
-              the user-profile menu, shown just before the help items. `embed`
-              hides logout + the instructor/learner switch in this surface. */}
+          {/* Only when the host asks for it (the Chrome side panel does). */}
           {showUserProfile && <UserProfile embed />}
 
           <Button
@@ -216,72 +254,86 @@ export function EmbedNavBar({
             <SquarePen />
           </Button>
 
-          {chatMode === 'default' ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className={iconButtonClass}
-                  aria-label={t('openMenuOptions')}
-                  aria-haspopup="menu"
-                >
-                  <CircleHelp />
-                  <span className="sr-only">{t('menuOptions')}</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                {helpItems.map((item) => (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className={iconButtonClass}
+                aria-label={t('openMenuOptions')}
+                aria-haspopup="menu"
+              >
+                <CircleHelp />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="end"
+              className="w-60 rounded-xl p-1.5"
+              onFocusOutside={keepMenuOpenForConfirm}
+              onInteractOutside={keepMenuOpenForConfirm}
+            >
+              {showIncognito && (
+                <>
                   <DropdownMenuItem
-                    className="h-10"
-                    key={item.labelKey}
-                    onClick={() => {
+                    role="menuitemcheckbox"
+                    aria-checked={isPrivate}
+                    data-testid="embed-incognito-item"
+                    className="h-10 justify-between gap-3"
+                    onSelect={(event) => {
+                      event.preventDefault();
                       if (isPreviewMode) return;
-                      item.onClick();
+                      incognitoToggleRef.current
+                        ?.querySelector<HTMLButtonElement>(
+                          '[data-testid="chat-privacy-toggle"]',
+                        )
+                        ?.click();
                     }}
                   >
-                    <item.icon className="h-7 w-7" />
-                    {t(item.labelKey)}
+                    <span className="flex items-center gap-2">
+                      <Glasses className="h-4 w-4 text-gray-500" />
+                      {t('incognito')}
+                    </span>
+                    <span
+                      aria-hidden="true"
+                      className={cn(
+                        'relative inline-flex h-5 w-9 shrink-0 rounded-full transition-colors',
+                        isPrivate ? 'bg-[#38A1E5]' : 'bg-gray-200',
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          'absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-[left]',
+                          isPrivate ? 'left-[18px]' : 'left-0.5',
+                        )}
+                      />
+                    </span>
+                    <div ref={incognitoToggleRef} className="sr-only">
+                      <ChatPrivacyToggle
+                        org={tenantKey}
+                        userId={username ?? ''}
+                        mentor={mentorId}
+                        className="inline-flex"
+                      />
+                    </div>
                   </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className={iconButtonClass}
-                  aria-label={t('openSettingsMenu')}
-                  aria-haspopup="menu"
+                  <DropdownMenuSeparator />
+                </>
+              )}
+              {helpItems.map((item) => (
+                <DropdownMenuItem
+                  className="h-10"
+                  key={item.labelKey}
+                  onClick={() => {
+                    if (isPreviewMode) return;
+                    item.onClick();
+                  }}
                 >
-                  <Settings />
-                  <span className="sr-only">{t('settingsMenu')}</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                {username && (
-                  <DropdownMenuLabel className="flex items-center gap-2 font-normal">
-                    <CircleUser className="h-7 w-7" />
-                    {username}
-                  </DropdownMenuLabel>
-                )}
-                {helpItems.map((item) => (
-                  <DropdownMenuItem
-                    key={item.labelKey}
-                    onClick={() => {
-                      if (isPreviewMode) return;
-                      item.onClick();
-                    }}
-                  >
-                    <item.icon className="h-7 w-7" />
-                    {t(item.labelKey)}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
+                  <item.icon className="h-4 w-4 text-gray-500" />
+                  {t(item.labelKey)}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           {isIframed && showCloseButton && (
             <Button
@@ -295,7 +347,6 @@ export function EmbedNavBar({
               }}
             >
               <X />
-              <span className="sr-only">{t('closeChat')}</span>
             </Button>
           )}
         </div>

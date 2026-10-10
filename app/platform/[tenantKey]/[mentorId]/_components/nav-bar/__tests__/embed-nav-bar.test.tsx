@@ -13,7 +13,12 @@ import { EmbedNavBar } from '../embed-nav-bar';
 
 let mockIsPreviewMode = false;
 let mockIsIframed = true;
-let mockChatMode: 'default' | 'advanced' = 'default';
+let mockPrivacy = {
+  featureEnabled: true,
+  privacyModeDisabled: false,
+  effective: { mode: 'enabled' },
+  messageCount: 0,
+};
 let mockShowCloseButton = true;
 let mockIsLtiLaunch = false;
 let mockShowUserProfile = false;
@@ -35,10 +40,6 @@ vi.mock('@/hooks/use-is-preview-mode', () => ({
 
 vi.mock('@/hooks/use-is-iframed', () => ({
   useIsIframed: () => mockIsIframed,
-}));
-
-vi.mock('@/hooks/use-chat-mode', () => ({
-  useChatMode: () => mockChatMode,
 }));
 
 vi.mock('@/hooks/use-show-close-button', () => ({
@@ -103,6 +104,8 @@ vi.mock('next/navigation', () => ({
   usePathname: () => mockPathname,
 }));
 
+const mockToggleClick = vi.fn();
+
 // Stub the SDK Incognito pill (the real one fires chat-privacy API calls).
 vi.mock('@iblai/iblai-js/web-containers', () => ({
   ChatPrivacyToggle: ({ org, userId, mentor, className }: any) => (
@@ -112,10 +115,12 @@ vi.mock('@iblai/iblai-js/web-containers', () => ({
       data-user={userId}
       data-mentor={mentor}
       className={className}
+      onClick={() => mockToggleClick()}
     >
       Incognito
     </button>
   ),
+  useChatPrivacy: () => mockPrivacy,
 }));
 
 // ============================================================================
@@ -159,7 +164,13 @@ describe('EmbedNavBar', () => {
     cleanup();
     mockIsPreviewMode = false;
     mockIsIframed = true;
-    mockChatMode = 'default';
+    mockPrivacy = {
+      featureEnabled: true,
+      privacyModeDisabled: false,
+      effective: { mode: 'enabled' },
+      messageCount: 0,
+    };
+    mockToggleClick.mockReset();
     mockShowCloseButton = true;
     mockIsLtiLaunch = false;
     mockShowUserProfile = false;
@@ -231,13 +242,29 @@ describe('EmbedNavBar', () => {
       expect(screen.queryByLabelText('Close chat')).not.toBeInTheDocument();
     });
 
-    it('renders the #2586 embed header (56px, bottom rule)', () => {
+    it('is borderless on the greeting screen', () => {
       renderEmbedNavBar();
-      expect(screen.getByRole('navigation')).toHaveClass(
-        'h-14',
-        'border-b',
-        'border-[#f0f1f3]',
-      );
+      const nav = screen.getByRole('navigation');
+      expect(nav).toHaveClass('h-14', 'border-transparent');
+      expect(nav).toHaveAttribute('data-elevated', 'false');
+    });
+
+    it('gains a hairline and soft shadow once the conversation has messages', () => {
+      mockPrivacy.messageCount = 1;
+      renderEmbedNavBar();
+      const nav = screen.getByRole('navigation');
+      expect(nav).toHaveClass('border-[#f0f1f3]');
+      expect(nav.className).toContain('shadow-');
+      expect(nav).toHaveAttribute('data-elevated', 'true');
+    });
+
+    it('shows the agent name as plain text, not a button', () => {
+      renderEmbedNavBar({ mentorName: 'Alabama State University' });
+      const name = screen.getByText('Alabama State University');
+      expect(name.closest('button')).toBeNull();
+      expect(
+        screen.queryByRole('button', { name: /Alabama State University/ }),
+      ).not.toBeInTheDocument();
     });
 
     it('renders the avatar container with mentor image ring class', () => {
@@ -252,18 +279,6 @@ describe('EmbedNavBar', () => {
   // --------------------------------------------------------------------------
 
   describe('New Chat', () => {
-    it('dispatches new chat actions when clicking mentor name area', () => {
-      renderEmbedNavBar();
-
-      const newChatButton = screen.getByLabelText(
-        'Start new chat with Test Mentor',
-      );
-      fireEvent.click(newChatButton);
-
-      expect(mockDispatch).toHaveBeenCalledTimes(2);
-      expect(mockEmit).toHaveBeenCalledWith('MENTOR:NEW_CHAT');
-    });
-
     it('starts a new chat from the header New chat button', () => {
       renderEmbedNavBar();
 
@@ -391,13 +406,11 @@ describe('EmbedNavBar', () => {
 
   describe('Default Chat Mode', () => {
     it('renders menu options button', () => {
-      mockChatMode = 'default';
       renderEmbedNavBar();
       expect(screen.getByLabelText('Open menu options')).toBeInTheDocument();
     });
 
     it('shows Help and Support in dropdown', async () => {
-      mockChatMode = 'default';
       const user = userEvent.setup();
       renderEmbedNavBar();
 
@@ -408,7 +421,6 @@ describe('EmbedNavBar', () => {
     });
 
     it('hides Help item when metadata.show_help is false', async () => {
-      mockChatMode = 'default';
       mockMetadata = { ...mockMetadata, show_help: false };
       const user = userEvent.setup();
       renderEmbedNavBar();
@@ -420,7 +432,6 @@ describe('EmbedNavBar', () => {
     });
 
     it('opens help URL when clicking Help', async () => {
-      mockChatMode = 'default';
       const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
       const user = userEvent.setup();
       renderEmbedNavBar();
@@ -435,7 +446,6 @@ describe('EmbedNavBar', () => {
     });
 
     it('opens support email when clicking Support', async () => {
-      mockChatMode = 'default';
       const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
       const user = userEvent.setup();
       renderEmbedNavBar();
@@ -467,78 +477,6 @@ describe('EmbedNavBar', () => {
   // --------------------------------------------------------------------------
   // Advanced Chat Mode (settings dropdown)
   // --------------------------------------------------------------------------
-
-  describe('Advanced Chat Mode', () => {
-    it('renders settings button', () => {
-      mockChatMode = 'advanced';
-      renderEmbedNavBar();
-      expect(screen.getByLabelText('Open settings menu')).toBeInTheDocument();
-    });
-
-    it('shows username, Help, and Support in settings dropdown', async () => {
-      mockChatMode = 'advanced';
-      mockUsername = 'john';
-      const user = userEvent.setup();
-      renderEmbedNavBar();
-
-      await user.click(screen.getByLabelText('Open settings menu'));
-
-      expect(await screen.findByText('john')).toBeInTheDocument();
-      expect(screen.getByText('Help')).toBeInTheDocument();
-      expect(screen.getByText('Support')).toBeInTheDocument();
-    });
-
-    it('opens the support email from the settings dropdown', async () => {
-      mockChatMode = 'advanced';
-      const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
-      const user = userEvent.setup();
-      renderEmbedNavBar();
-
-      await user.click(screen.getByLabelText('Open settings menu'));
-      await user.click(await screen.findByText('Support'));
-
-      expect(openSpy).toHaveBeenCalledWith(
-        'mailto:support@example.com',
-        '_blank',
-      );
-    });
-
-    it('does not show username when username is null', async () => {
-      mockChatMode = 'advanced';
-      mockUsername = null;
-      const user = userEvent.setup();
-      renderEmbedNavBar();
-
-      await user.click(screen.getByLabelText('Open settings menu'));
-
-      expect(await screen.findByText('Support')).toBeInTheDocument();
-      expect(screen.queryByText('testuser')).not.toBeInTheDocument();
-    });
-
-    it('blocks dropdown item clicks in preview mode', async () => {
-      mockChatMode = 'advanced';
-      mockIsPreviewMode = true;
-      const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
-      const user = userEvent.setup();
-      renderEmbedNavBar();
-
-      await user.click(screen.getByLabelText('Open settings menu'));
-      const helpItem = await screen.findByText('Help');
-      await user.click(helpItem);
-
-      expect(openSpy).not.toHaveBeenCalled();
-    });
-
-    it('does not open settings dropdown in preview mode (early return on click)', () => {
-      mockChatMode = 'advanced';
-      mockIsPreviewMode = true;
-      renderEmbedNavBar();
-
-      const settingsBtn = screen.getByLabelText('Open settings menu');
-      // The onClick has an early return for preview mode — button should still render
-      expect(settingsBtn).toBeInTheDocument();
-    });
-  });
 
   // --------------------------------------------------------------------------
   // ESC Key Handler (WCAG 2.4.3 — Focus Order)
@@ -671,55 +609,138 @@ describe('EmbedNavBar', () => {
   // Incognito toggle (parity with the main NavBar)
   // --------------------------------------------------------------------------
 
-  describe('Incognito toggle', () => {
-    it('renders the toggle on the chat page for a logged-in user', () => {
+  describe('Incognito in the ? menu', () => {
+    async function openMenu() {
+      const user = userEvent.setup();
+      await user.click(screen.getByLabelText('Open menu options'));
+      return user;
+    }
+
+    it('is not in the bar itself', () => {
       renderEmbedNavBar();
-      expect(screen.getByTestId('chat-privacy-toggle')).toBeInTheDocument();
+      expect(
+        screen.queryByTestId('chat-privacy-toggle'),
+      ).not.toBeInTheDocument();
     });
 
-    it('passes org, userId and mentor through to the SDK toggle', () => {
+    it('lists Incognito first, then Help and Support', async () => {
+      renderEmbedNavBar();
+      await openMenu();
+      await screen.findByTestId('embed-incognito-item');
+      const items = Array.from(
+        document.querySelectorAll(
+          '[role="menuitem"], [role="menuitemcheckbox"]',
+        ),
+      );
+      expect(items.map((item) => item.textContent)).toEqual([
+        expect.stringContaining('Incognito'),
+        'Help',
+        'Support',
+      ]);
+      const incognito = screen.getByTestId('embed-incognito-item');
+      expect(incognito).toHaveAttribute('role', 'menuitemcheckbox');
+      expect(incognito).toHaveAttribute('aria-checked', 'false');
+    });
+
+    it('passes org, userId and mentor through to the SDK toggle', async () => {
       mockUsername = 'jane';
       renderEmbedNavBar({ tenantKey: 'acme', mentorId: 'mentor-xyz' });
-      const toggle = screen.getByTestId('chat-privacy-toggle');
+      await openMenu();
+      const toggle = await screen.findByTestId('chat-privacy-toggle');
       expect(toggle).toHaveAttribute('data-org', 'acme');
       expect(toggle).toHaveAttribute('data-user', 'jane');
       expect(toggle).toHaveAttribute('data-mentor', 'mentor-xyz');
     });
 
-    it('stays compact on small screens (inline-flex + label hidden)', () => {
+    it('drives the SDK toggle from the row and keeps the menu open', async () => {
       renderEmbedNavBar();
-      const cls = screen.getByTestId('chat-privacy-toggle').className;
-      expect(cls).toContain('inline-flex');
-      expect(cls).toContain('max-md:[&>span]:hidden');
+      const user = await openMenu();
+      await user.click(await screen.findByTestId('embed-incognito-item'));
+      expect(mockToggleClick).toHaveBeenCalledTimes(1);
+      expect(screen.getByTestId('embed-incognito-item')).toBeInTheDocument();
     });
 
-    it('hides the toggle on non-chat routes (e.g. analytics)', () => {
+    it('drives the toggle from the keyboard', async () => {
+      renderEmbedNavBar();
+      const user = await openMenu();
+      await screen.findByTestId('embed-incognito-item');
+      await user.keyboard('{ArrowDown}');
+      await user.keyboard('{Enter}');
+      expect(mockToggleClick).toHaveBeenCalledTimes(1);
+    });
+
+    it('ignores the row in preview mode', async () => {
+      mockIsPreviewMode = true;
+      renderEmbedNavBar();
+      const user = await openMenu();
+      await user.click(await screen.findByTestId('embed-incognito-item'));
+      expect(mockToggleClick).not.toHaveBeenCalled();
+    });
+
+    it('marks an Incognito chat in the header and the menu', async () => {
+      mockPrivacy.effective = { mode: 'disabled' };
+      renderEmbedNavBar();
+      expect(screen.getByText('Incognito chat')).toBeInTheDocument();
+      expect(screen.getByTestId('embed-incognito-badge')).toBeInTheDocument();
+      await openMenu();
+      expect(await screen.findByTestId('embed-incognito-item')).toHaveAttribute(
+        'aria-checked',
+        'true',
+      );
+    });
+
+    it('hides Incognito when the tenant or agent turns it off', async () => {
+      mockPrivacy.privacyModeDisabled = true;
+      renderEmbedNavBar();
+      await openMenu();
+      expect(await screen.findByText('Support')).toBeInTheDocument();
+      expect(
+        screen.queryByTestId('embed-incognito-item'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('keeps Incognito while a chat is still private, even when turned off', async () => {
+      mockPrivacy.featureEnabled = false;
+      mockPrivacy.effective = { mode: 'disabled' };
+      renderEmbedNavBar();
+      await openMenu();
+      expect(
+        await screen.findByTestId('embed-incognito-item'),
+      ).toBeInTheDocument();
+    });
+
+    it('hides Incognito on non-chat routes (e.g. analytics)', async () => {
       mockPathname = '/platform/tenant123/mentor123/analytics';
       renderEmbedNavBar();
+      await openMenu();
+      expect(await screen.findByText('Support')).toBeInTheDocument();
       expect(
-        screen.queryByTestId('chat-privacy-toggle'),
+        screen.queryByTestId('embed-incognito-item'),
       ).not.toBeInTheDocument();
     });
 
-    it('hides the toggle when the user is not logged in', () => {
+    it('hides Incognito when the user is not logged in', async () => {
       mockIsLoggedIn = false;
       renderEmbedNavBar({ isAnonymousMentor: false });
+      await openMenu();
+      expect(await screen.findByText('Support')).toBeInTheDocument();
       expect(
-        screen.queryByTestId('chat-privacy-toggle'),
+        screen.queryByTestId('embed-incognito-item'),
       ).not.toBeInTheDocument();
     });
 
-    it('hides the toggle when there is no tenant key', () => {
+    it('hides Incognito when there is no tenant key', async () => {
       renderEmbedNavBar({ tenantKey: '' });
+      await openMenu();
+      expect(await screen.findByText('Support')).toBeInTheDocument();
       expect(
-        screen.queryByTestId('chat-privacy-toggle'),
+        screen.queryByTestId('embed-incognito-item'),
       ).not.toBeInTheDocument();
     });
   });
 
   describe('Help Items', () => {
     it('uses config fallback when metadata URLs are missing', async () => {
-      mockChatMode = 'default';
       mockMetadata = { show_help: true };
       const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
       const user = userEvent.setup();
@@ -735,7 +756,6 @@ describe('EmbedNavBar', () => {
     });
 
     it('uses config fallback for support email when metadata is missing', async () => {
-      mockChatMode = 'default';
       mockMetadata = { show_help: true };
       const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
       const user = userEvent.setup();

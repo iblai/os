@@ -1418,15 +1418,13 @@
     "closeSidebar": "Fermer la barre latérale",
     "openSidebar": "Ouvrir la barre latérale",
     "toggleSidebar": "Basculer la barre latérale",
-    "startNewChat": "Démarrer une nouvelle conversation avec {mentorName}",
     "help": "Aide",
     "support": "Support",
     "openMenuOptions": "Ouvrir les options du menu",
-    "menuOptions": "Options du menu",
-    "openSettingsMenu": "Ouvrir le menu des paramètres",
-    "settingsMenu": "Menu des paramètres",
     "closeChat": "Fermer le chat",
-    "newChat": "Nouvelle discussion"
+    "newChat": "Nouvelle discussion",
+    "incognito": "Mode incognito",
+    "incognitoChat": "Discussion incognito"
   },
   "navBarIndex": {
     "logIn": "Se connecter",

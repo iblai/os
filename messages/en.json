@@ -1418,15 +1418,13 @@
     "closeSidebar": "Close sidebar",
     "openSidebar": "Open sidebar",
     "toggleSidebar": "Toggle Sidebar",
-    "startNewChat": "Start new chat with {mentorName}",
     "help": "Help",
     "support": "Support",
     "openMenuOptions": "Open menu options",
-    "menuOptions": "Menu options",
-    "openSettingsMenu": "Open settings menu",
-    "settingsMenu": "Settings menu",
     "closeChat": "Close chat",
-    "newChat": "New chat"
+    "newChat": "New chat",
+    "incognito": "Incognito",
+    "incognitoChat": "Incognito chat"
   },
   "navBarIndex": {
     "logIn": "Log in",
