@@ -313,7 +313,7 @@ export class SettingsTab {
     }
   }
 
-  /** Welcome screen sub-tab (#2586): local preview state, not saved yet. */
+  /** Welcome screen sub-tab (#2586); saved with the agent since #2626. */
   get welcomePreview(): Locator {
     return this.dialog.getByTestId('welcome-preview');
   }
@@ -333,6 +333,24 @@ export class SettingsTab {
     await this.selectSubTab('Welcome Screen');
     await this.dialog.getByTestId(`welcome-${control}-select`).click();
     await this.page.getByRole('option', { name: option, exact: true }).click();
+  }
+
+  /** Saves the Settings tab and returns the request body that carried `field`. */
+  async saveAndCaptureField(field: string): Promise<string> {
+    await expect(this.saveButton).toBeEnabled({ timeout: 10_000 });
+    const [request] = await Promise.all([
+      this.page.waitForRequest(
+        (req) =>
+          ['PUT', 'PATCH'].includes(req.method()) &&
+          (req.postData() ?? '').includes(field),
+        { timeout: 30_000 },
+      ),
+      this.saveButton.click(),
+    ]);
+    await expect(
+      this.page.getByText(/Agent updated successfully/i).first(),
+    ).toBeVisible({ timeout: 30_000 });
+    return request.postData() ?? '';
   }
 
   async showWelcomePreview(

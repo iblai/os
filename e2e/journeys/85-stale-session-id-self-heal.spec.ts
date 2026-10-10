@@ -186,8 +186,15 @@ test.describe('Journey 85: Stale Session Id Self-Heal', () => {
       if (msg.type() !== 'error') return;
       const text = msg.text();
       if (text.includes('chat-privacy-effective')) return;
+      // Same for the SDK's tools restore (use-mentor-tools), which reads the
+      // session from my-chat-history and 404s on the dead id; the OS logger
+      // stamps the cached session id onto every error, so match by endpoint.
+      if (text.includes('my-chat-history')) return;
       if (
-        text.includes('{"status":404,"data":{"error":"Session not found"}}') &&
+        (text.includes('{"status":404,"data":{"error":"Session not found"}}') ||
+          text.includes(
+            '{"status":404,"data":{"detail":"No Session matches the given query."}}',
+          )) &&
         !text.includes('"context"')
       ) {
         return;

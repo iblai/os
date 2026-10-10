@@ -1443,6 +1443,62 @@ export class ChatPage {
   }
 
   /**
+   * Picks, through the UI only, the first model the user can use other than
+   * the one the chat is already on: "+" › Model › (first provider that has
+   * one) › that model. Names no model, so it works for whatever catalogue the
+   * user has. Returns the provider key (null when the picker skips the
+   * provider step), the model's wire key and its label. Desktop submenus and
+   * phone sheet pages alike.
+   */
+  async pickFirstAvailableChatModel(): Promise<{
+    provider: string | null;
+    llmName: string;
+    label: string;
+  }> {
+    await this.openPlusMenu();
+    await expect(this.modelMenuTrigger).toBeVisible({ timeout: 10_000 });
+    await this.modelMenuTrigger.click();
+
+    const providers = this.page
+      .locator('[data-testid^="composer-model-provider-"]')
+      .filter({ visible: true });
+    const items = this.page
+      .locator('[data-testid="composer-model-item"]')
+      .filter({ visible: true });
+    const usable = items.and(
+      this.page.locator(
+        '[data-unavailable="false"]:not([aria-checked="true"]):not([aria-pressed="true"])',
+      ),
+    );
+    await expect(providers.or(items).first()).toBeVisible({ timeout: 10_000 });
+
+    const providerCount = await providers.count();
+    for (let i = 0; i < Math.max(providerCount, 1); i++) {
+      let provider: string | null = null;
+      if (providerCount > 0) {
+        const row = providers.nth(i);
+        const testId = (await row.getAttribute('data-testid')) ?? '';
+        provider = testId.replace('composer-model-provider-', '');
+        await row.click();
+      }
+      await expect(items.first()).toBeVisible({ timeout: 10_000 });
+      if ((await usable.count()) > 0) {
+        const pick = usable.first();
+        const llmName = (await pick.getAttribute('data-model')) ?? '';
+        const label = (await pick.innerText()).trim();
+        await pick.click();
+        await expect(this.openPlusMenuAny()).not.toBeVisible({
+          timeout: 5_000,
+        });
+        return { provider, llmName, label };
+      }
+      const back = this.page.getByRole('button', { name: 'Back' });
+      if (providerCount > 0 && (await back.isVisible())) await back.click();
+    }
+    throw new Error('the model picker offers no usable model to pick');
+  }
+
+  /**
    * Records every message the chat socket sends (parsed JSON), so a test can
    * assert on the payload of each turn. Call before the page connects.
    */
@@ -1489,8 +1545,13 @@ export class ChatPage {
 
   /** Closes the "+" menu (and any open submenu/sheet page) via Escape. */
   async closePlusMenu(): Promise<void> {
-    await this.page.keyboard.press('Escape');
-    await expect(this.openPlusMenuAny()).not.toBeVisible({ timeout: 5_000 });
+    // Radix sends Escape only to the topmost dismissable layer. Right after a
+    // sidebar click, that button's tooltip can still be fading out above the
+    // menu and swallow the first Escape, so press again until the menu closes.
+    await expect(async () => {
+      await this.page.keyboard.press('Escape');
+      await expect(this.openPlusMenuAny()).not.toBeVisible({ timeout: 1_000 });
+    }).toPass({ timeout: 10_000 });
   }
 
   /**

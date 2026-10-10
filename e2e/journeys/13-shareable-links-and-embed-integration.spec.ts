@@ -243,9 +243,10 @@ test.describe('Journey 13: Shareable Links & Embed Integration', () => {
       await editMentorPage.settings.setVisibility('Anyone');
     }
     await editMentorPage.navigateToTab('Embed');
-    await expect(editMentorPage.embed.embedCodeBlock).toBeVisible({
-      timeout: 15_000,
-    });
+    // The snippet only exists after "Create Embed"; before that the tab
+    // renders no <pre> of its own (see createAndGetEmbedCode).
+    const code = await editMentorPage.embed.createAndGetEmbedCode();
+    expect(code).toContain('ibl-chat-bubble');
     await editMentorPage.close();
   });
 

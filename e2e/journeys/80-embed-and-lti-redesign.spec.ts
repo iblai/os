@@ -50,26 +50,30 @@ test.describe('Journey 80: Embed Header + LTI Redesign', () => {
     return page.frameLocator('#embed-harness-iframe');
   }
 
-  // emb-hdr-01: the embed header shows avatar+name, New chat, a menu/help
-  // trigger, and Close — all as 40px icon buttons.
-  test('embed header shows the mentor identity, New chat, menu and Close controls', async ({
+  // emb-hdr-01: the embed header shows the agent's avatar and name as plain
+  // text (not a button), then New chat, the "?" menu and Close — all as 40px
+  // icon buttons.
+  test('embed header shows the agent identity, New chat, the ? menu and Close controls', async ({
     page,
   }) => {
     const iframe = await gotoEmbedHarness(page, page.url());
 
-    const startNewChat = iframe.getByRole('button', {
-      name: /^Start new chat with /,
-    });
-    await expect(startNewChat).toBeVisible({ timeout: 20_000 });
+    const identity = iframe.getByTestId('embed-agent-identity');
+    await expect(identity).toBeVisible({ timeout: 20_000 });
+    await expect(identity.locator('button')).toHaveCount(0);
+    await expect(
+      iframe.getByRole('button', { name: /^Start new chat with / }),
+    ).toHaveCount(0);
 
     await expect(
       iframe.getByRole('button', { name: 'New chat', exact: true }),
     ).toBeVisible();
     await expect(
-      iframe
-        .getByRole('button', { name: 'Open menu options' })
-        .or(iframe.getByRole('button', { name: 'Open settings menu' })),
+      iframe.getByRole('button', { name: 'Open menu options' }),
     ).toBeVisible();
+    await expect(
+      iframe.getByRole('button', { name: 'Open settings menu' }),
+    ).toHaveCount(0);
     await expect(
       iframe.getByRole('button', { name: 'Close chat', exact: true }),
     ).toBeVisible();

@@ -96,9 +96,11 @@ test.describe('Journey 54: Chat Paste-to-Attachment', () => {
 
     await simulateTextPaste(page, OVER_LIMIT_TEXT);
 
-    const pastedTxtChip = page.getByTestId('attachment-chip').filter({
-      hasText: /pasted-\d+\.txt/,
-    });
+    // The redesigned file card labels a paste "Pasted text"; the file name
+    // lives in its title.
+    const pastedTxtChip = page.locator(
+      '[data-testid="attachment-chip"][title^="pasted-"][title$=".txt"]',
+    );
 
     await expect(pastedTxtChip).toBeVisible({ timeout: 15_000 });
     await expect(chatPage.chatInput).toHaveValue('', { timeout: 5_000 });

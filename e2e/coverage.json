@@ -2,8 +2,8 @@
   "version": 2,
   "lastUpdated": "2026-10-08",
   "summary": {
-    "totalCheckpoints": 910,
-    "coveredCheckpoints": 866,
+    "totalCheckpoints": 920,
+    "coveredCheckpoints": 876,
     "deprecatedCheckpoints": 17,
     "notReproducibleCheckpoints": 17,
     "pendingCheckpoints": 10,
@@ -5437,7 +5437,7 @@
       "checkpoints": [
         {
           "id": "emb-hdr-01",
-          "description": "The embed header shows the mentor's identity, a dedicated New chat button, a menu/help trigger and Close, on a genuinely cross-origin embed harness (issue #2586)",
+          "description": "The embed header shows the agent's avatar and name as plain text (not a button), a dedicated New chat button, the ? menu trigger and Close, on a genuinely cross-origin embed harness (issue #2586)",
           "status": "covered"
         },
         {
@@ -5563,7 +5563,7 @@
         },
         {
           "id": "er-08",
-          "description": "Embed header controls: New chat clears the conversation back to the empty state, the menu/help trigger opens and lists at least one item, the chat-privacy (\"private mode\") toggle opens its confirm dialog when present, and the hamburger (mobile) opens the minimal sidebar",
+          "description": "Embed header controls: borderless on the empty chat and a hairline once a reply lands; New chat clears the conversation back to the empty state; the ? menu lists Incognito (when offered) then Help/Support, and its Incognito row turns an empty chat Incognito (header shows \"Incognito chat\") and back off; the hamburger (mobile) opens the minimal sidebar",
           "status": "covered"
         },
         {
@@ -5629,7 +5629,52 @@
         },
         {
           "id": "wss-06",
-          "description": "Save never sends the Welcome screen choices (welcome_heading_style, guided_prompts_count) until the backend stores them (iblai-platform#2626); the save request is intercepted and aborted so the real agent is untouched",
+          "description": "Save sends the Welcome screen choices (welcome_heading_style, guided_prompts_count) now that the backend stores them (iblai-platform#2626); on the tenant's default agent the save request is intercepted and aborted so the real agent is untouched",
+          "status": "covered"
+        },
+        {
+          "id": "wss-07",
+          "description": "On a throw-away agent, Save sends welcome_heading_style=personal_greeting, Settings reopens on Personal greeting, and the new-chat heading greets the signed-in user by first name (\"Good morning|afternoon|evening, <First name>\")",
+          "status": "covered"
+        },
+        {
+          "id": "wss-08",
+          "description": "The embed view of an agent with Personal greeting shows the same first-name greeting as its new-chat heading",
+          "status": "covered"
+        },
+        {
+          "id": "wss-09",
+          "description": "A full name that fails the first-name rule (\"#12345\", \"user_8812\") gets the nameless greeting, and \"john#4821 Doe\" is greeted as \"John\"; the heading never shows a # tag",
+          "status": "covered"
+        },
+        {
+          "id": "wss-10",
+          "description": "Every Welcome screen control changes the preview: heading Personal greeting then back to the agent name, guided count 1/3/4/5/10 shows min(count,4) chips with a \"View more (count-4)\" button only above 4, Off removes every chip and Guided brings 4 back",
+          "status": "covered"
+        },
+        {
+          "id": "wss-11",
+          "description": "On a throw-away agent, Save sends guided_prompts_count=3 with Agent name + Guided prompts; after a reload the three controls still show them and the preview has 3 chips (needs the #2626 SDK rebuild)",
+          "status": "covered"
+        },
+        {
+          "id": "wss-12",
+          "description": "With Agent name + 3 guided prompts saved, both the admin's and a student's new chat show the agent name (no greeting) and at most 3 prompt chips (needs the #2626 SDK rebuild)",
+          "status": "covered"
+        },
+        {
+          "id": "wss-13",
+          "description": "Admin saves Personal greeting + Off: both persist after a reload, then the new chat greets by first name, shows no prompt chips and fires no guided-prompts request (needs the #2626 SDK rebuild)",
+          "status": "covered"
+        },
+        {
+          "id": "wss-14",
+          "description": "A student opening the same agent sees the admin's Personal greeting with the student's own first name and no prompt chips (needs the #2626 SDK rebuild)",
+          "status": "covered"
+        },
+        {
+          "id": "wss-15",
+          "description": "Admin saves Suggested prompts (yours) with Agent name: both persist after a reload and the guided-prompt count select is hidden (needs the #2626 SDK rebuild)",
           "status": "covered"
         }
       ]
@@ -5691,7 +5736,7 @@
         },
         {
           "id": "icm-10",
-          "description": "A student (non-admin) picks a model from their own model catalogue via + > Model: the chip names it, turns carry llm_provider/llm_name on the chat socket with no \"not available\" error, and the chip's x (labelled with the agent model's display name, \"Back to ibl.ai Fast\", even though the student's catalogue lacks that model) sends the agent's model again",
+          "description": "A student (non-admin) opens + > Model through the UI and picks the first model they can use (no model name hard-coded; skips the one the chat is already on): the chip names it, turns carry llm_provider/llm_name on the chat socket with no \"not available\" error, and the chip's x (\"Back to ibl.ai Fast\", the agent model) sends the agent's model again",
           "status": "covered"
         },
         {
@@ -5701,12 +5746,17 @@
         },
         {
           "id": "icm-12",
-          "description": "On a phone a student picks a model through the + sheet and the model chip shows it",
+          "description": "On a phone a student picks the first usable model through the + sheet, the chip shows it and the next turn carries it",
           "status": "covered"
         },
         {
           "id": "icm-13",
           "description": "With the setting off, a student's composer has no model picker",
+          "status": "covered"
+        },
+        {
+          "id": "icm-14",
+          "description": "A student whose model catalogue has a single provider sees + > Model list its models straight away with no provider step, picks the first usable one, the chip shows it and the turn carries it",
           "status": "covered"
         }
       ]

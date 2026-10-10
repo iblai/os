@@ -210,17 +210,14 @@ export class EmbedTab {
   async createAndGetEmbedCode(
     websiteUrl = 'https://example.com',
   ): Promise<string> {
-    let needsUrl = false;
-    try {
-      await this.websiteUrlInput.waitFor({ state: 'visible', timeout: 2_000 });
-      needsUrl = true;
-    } catch {
-      needsUrl = false;
-    }
-    if (needsUrl) {
-      await this.fillWebsiteUrl(websiteUrl);
-    }
+    // Wait for the form to render before probing for the URL field: right
+    // after a tab switch the field isn't mounted yet, and a short probe then
+    // skips it and "Create Embed" fails validation.
     await expect(this.submitButton).toBeVisible({ timeout: 10_000 });
+    if (await this.websiteUrlInput.isVisible()) {
+      const current = await this.websiteUrlInput.inputValue();
+      if (!current) await this.fillWebsiteUrl(websiteUrl);
+    }
     await this.submitButton.click();
     await expect(this.embedCodeDialog).toBeVisible({ timeout: 30_000 });
     const code =

@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-10-08 | 910 checkpoints (866 covered, 10 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 92 journeys (91 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-10-08 | 920 checkpoints (876 covered, 10 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 92 journeys (91 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -1962,7 +1962,7 @@ Covers issue #2586's composer rebuild: the classic UploadMenu + always-visible I
 
 Covers issue #2586's embed surface redesign: a new OS header (`EmbedNavBar` — avatar/name, a dedicated "New chat" icon button, a menu/help trigger and Close) and up to four suggested prompts stacked as full-width rows that, unlike the main chat's guided prompts (journey 79's cr-08), stay visible while the user types. An LTI launch (`?embed=true&lti=true`) additionally drops the Close button and makes Escape a no-op, and that `lti` flag persists across in-app navigation via the embed-context localStorage cache. Uses the same genuinely-cross-origin embed harness as journey 78 rather than a same-origin `?embed=true` navigation, since that is the shape a real customer site presents.
 
-- [x] emb-hdr-01: The embed header shows the mentor's identity, a dedicated New chat button, a menu/help trigger and Close, on a genuinely cross-origin embed harness
+- [x] emb-hdr-01: The embed header shows the agent's avatar and name as plain text (not a button), a dedicated New chat button, the ? menu trigger and Close, on a genuinely cross-origin embed harness
 - [x] emb-hdr-02: The embed composer's "+" menu never offers Prompts or Memory, even for an authenticated (admin) embed session where they would otherwise render
 - [x] emb-hdr-03: The embed's stacked suggested-prompt rows stay visible while typing, like the main chat's guided prompts (cr-08)
 - [x] emb-lti-01: An LTI launch (`?lti=true`) hides the embed's Close button and Escape becomes a no-op
@@ -2000,27 +2000,36 @@ Journeys 78/80 cover the second-origin harness infrastructure and the embed head
 - [x] er-05: The embed composer's "/" skill picker opens ABOVE the composer and, in the redesign variant, shows only the skill name — never the /slug line
 - [x] er-06: Mocked file-card states inside the embed — uploading, done, failed (with Retry) and too-large — render the same as the main chat (journey 79 cr-06)
 - [x] er-07: A 390px full-screen embed has no horizontal overflow and keeps Send fully visible, including with a widened toolbar (Canvas on)
-- [x] er-08: Embed header controls: New chat clears the conversation back to the empty state, the menu/help trigger opens and lists at least one item, the chat-privacy ("private mode") toggle opens its confirm dialog when present, and the hamburger (mobile) opens the minimal sidebar
+- [x] er-08: Embed header controls: borderless on the empty chat and a hairline once a reply lands; New chat clears the conversation back to the empty state; the ? menu lists Incognito (when offered) then Help/Support, and its Incognito row turns an empty chat Incognito (header shows "Incognito chat") and back off; the hamburger (mobile) opens the minimal sidebar
 - [x] er-09: A logged-out visitor on an anonymous (publicly chattable) mentor gets the embed chat and can send (mocked), but sees no "+" menu, Screen Sharing, Voice input (dictation) or Voice call controls
 - [x] er-10: For an agent with the Screen Sharing capability enabled, a logged-in embed user sees the Screen Sharing button and clicking it opens the in-panel LiveKit modal path; `selectEnableChatActionsPopup` has no dispatch call site anywhere in the OS/web-containers/web-utils source in this build, so the parent-postMessage chat-action-popup path is documented as unreachable rather than tested
 - [x] er-11: For the same Screen-Sharing-enabled agent, the Voice call button is present for a logged-in embed user
 - [x] er-12: An LTI embed (`?embed=true&lti=true`) keeps the Close button absent and Escape a no-op after New chat and after opening a prior chat from history
 - [x] er-13: The Embed tab's own live preview iframe (Edit Agent -> Embed) renders the redesigned embed's empty-state gradient agent-name heading
 
-## Journey 83: Settings Welcome Screen Sub-Tab (6 checkpoints) — `journeys/83-settings-welcome-screen.spec.ts`
+## Journey 83: Settings Welcome Screen Sub-Tab (15 checkpoints) — `journeys/83-settings-welcome-screen.spec.ts`
 
 **Source files:** `components/modals/edit-mentor-modal/settings-tab.tsx`, `e2e/page-objects/edit-mentor/settings.tab.ts` (UI lives in the SDK `AgentSettingsTab` → `WelcomeScreenSubTab`)
 
-The Welcome screen sub-tab (#2586) is UI-only until the backend stores its fields (iblai/iblai-platform#2626): heading style, starter-prompt source and guided-prompt count live in local state and drive a live preview built from the chat's own prompt chips/rows. Runs on the tenant's default agent and never saves to it.
+The Welcome screen sub-tab (#2586) saves heading style, starter-prompt source and guided-prompt count with the agent (iblai/iblai-platform#2626) and drives a live preview built from the chat's own prompt chips/rows. wss-01..06 run on the tenant's default agent and never save to it (wss-06 aborts its save); wss-07..09 save Personal greeting on a throw-away agent and check the chat's new-chat heading (`data-testid="welcome-heading"`, SDK `WelcomeHeading` + `greetingFirstName`), mocking the profile's full name for the `#` cases.
 
 - [x] wss-01: The Settings tab shows a fourth Welcome screen sub-tab after Basic, Discovery and Capabilities; it opens on the main-app live preview with the agent's name as the heading
 - [x] wss-02: The Number of guided prompts control shows only when Guided prompts is picked; Suggested hides it and Off also empties the preview's prompts
 - [x] wss-03: Picking 10 guided prompts shows the first 4 plus View more (6); View more expands to all 10 and Show less folds back to 4
 - [x] wss-04: The Embed and Mobile previews show the prompts as stacked full-width rows, with the same View more expansion
 - [x] wss-05: Picking Personal greeting switches the preview heading to a time-of-day greeting, and Preview as a logged-out visitor shows Hi there
-- [x] wss-06: Save never sends the Welcome screen choices (welcome_heading_style, guided_prompts_count) until the backend stores them (iblai-platform#2626); the save request is intercepted and aborted so the real agent is untouched
+- [x] wss-06: Save sends the Welcome screen choices (welcome_heading_style, guided_prompts_count) now that the backend stores them (iblai-platform#2626); on the tenant's default agent the save request is intercepted and aborted so the real agent is untouched
+- [x] wss-07: On a throw-away agent, Save sends welcome_heading_style=personal_greeting, Settings reopens on Personal greeting, and the new-chat heading greets the signed-in user by first name ("Good morning|afternoon|evening, <First name>")
+- [x] wss-08: The embed view of an agent with Personal greeting shows the same first-name greeting as its new-chat heading
+- [x] wss-09: A full name that fails the first-name rule ("#12345", "user_8812") gets the nameless greeting, and "john#4821 Doe" is greeted as "John"; the heading never shows a # tag
+- [x] wss-10: Every Welcome screen control changes the preview: heading Personal greeting then back to the agent name, guided count 1/3/4/5/10 shows min(count,4) chips with a "View more (count-4)" button only above 4, Off removes every chip and Guided brings 4 back
+- [x] wss-11: On a throw-away agent, Save sends guided_prompts_count=3 with Agent name + Guided prompts; after a reload the three controls still show them and the preview has 3 chips (needs the #2626 SDK rebuild)
+- [x] wss-12: With Agent name + 3 guided prompts saved, both the admin's and a student's new chat show the agent name (no greeting) and at most 3 prompt chips (needs the #2626 SDK rebuild)
+- [x] wss-13: Admin saves Personal greeting + Off: both persist after a reload, then the new chat greets by first name, shows no prompt chips and fires no guided-prompts request (needs the #2626 SDK rebuild)
+- [x] wss-14: A student opening the same agent sees the admin's Personal greeting with the student's own first name and no prompt chips (needs the #2626 SDK rebuild)
+- [x] wss-15: Admin saves Suggested prompts (yours) with Agent name: both persist after a reload and the guided-prompt count select is hidden (needs the #2626 SDK rebuild)
 
-## Journey 84: In-chat Model Picker (13 checkpoints) — `journeys/84-in-chat-model-picker.spec.ts`
+## Journey 84: In-chat Model Picker (14 checkpoints) — `journeys/84-in-chat-model-picker.spec.ts`
 
 **Source files:** `components/modals/edit-mentor-modal/settings-tab.tsx`, `e2e/page-objects/chat.page.ts`, `e2e/page-objects/edit-mentor/settings.tab.ts` (UI lives in the SDK composer "+" menu → Model, `useComposerModels`, and the web-utils chat socket payload)
 
@@ -2035,10 +2044,11 @@ iblai/iblai-platform#2633: with the agent's `enable_in_chat_llm_change` on, a us
 - [x] icm-07: A tenant with a single usable provider: + > Model lists that provider's models straight away, with no provider step
 - [x] icm-08: Per-model credentials (iblai-platform#2638): a provider whose every model requires a key is left out of the + > Model provider list
 - [x] icm-09: When the chat socket rejects the picked model (400 "The selected model is not available."), the error shows, the chip goes away, the picker is back on the agent's model and the message text is back in the composer
-- [x] icm-10: A student (non-admin) picks a model from their own model catalogue via + > Model: the chip names it, turns carry llm_provider/llm_name on the chat socket with no "not available" error, and the chip's x (labelled with the agent model's display name, "Back to ibl.ai Fast", even though the student's catalogue lacks that model) sends the agent's model again
+- [x] icm-10: A student (non-admin) opens + > Model through the UI and picks the first model they can use (no model name hard-coded; skips the one the chat is already on): the chip names it, turns carry llm_provider/llm_name on the chat socket with no "not available" error, and the chip's x ("Back to ibl.ai Fast", the agent model) sends the agent's model again
 - [x] icm-11: A student's pick is per chat: a new chat drops the chip and sends no model fields, and the admin's chat on the same agent never shows the student's pick
-- [x] icm-12: On a phone a student picks a model through the + sheet and the model chip shows it
+- [x] icm-12: On a phone a student picks the first usable model through the + sheet, the chip shows it and the next turn carries it
 - [x] icm-13: With the setting off, a student's composer has no model picker
+- [x] icm-14: A student whose model catalogue has a single provider sees + > Model list its models straight away with no provider step, picks the first usable one, the chip shows it and the turn carries it
 
 ---
 

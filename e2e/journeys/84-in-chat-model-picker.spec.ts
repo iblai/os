@@ -15,7 +15,6 @@
  * icm-10..13 repeat the picker as a non-admin (student) on the same agent.
  */
 
-import type { Page } from '@playwright/test';
 import { test, expect } from '../fixtures/mentor-test';
 import { MENTOR_NEXTJS_HOST, generateMentorName } from '../fixtures/test-data';
 import {
@@ -41,43 +40,15 @@ async function frameFor(frames: Frame[], prompt: string): Promise<Frame> {
   return frames.find((frame) => frame.prompt === prompt)!;
 }
 
-type StudentModel = { provider: string; llmName: string; label: string };
-
-/**
- * The first model the student's own catalogue offers as usable, other than
- * the agent's. A student's `mentor-llms` list is scoped by the backend and
- * can differ from the admin's (it need not include the agent's provider), so
- * student checkpoints pick from it rather than from a hard-coded model.
- */
-async function studentModel(
-  page: Page,
-  open: () => Promise<void>,
-): Promise<StudentModel> {
-  const response = page.waitForResponse(
-    (res) => /\/mentor-llms\/\?.*mentor_id=/.test(res.url()) && res.ok(),
-    { timeout: 30_000 },
-  );
-  await open();
-  const rows = (await (await response).json()) as {
-    name: string;
-    chat_models?: {
-      llm_name: string;
-      display_name?: string | null;
-      availability?: { requires_credential?: boolean } | null;
-    }[];
-  }[];
-  for (const row of rows) {
-    for (const model of row.chat_models ?? []) {
-      if (model.availability?.requires_credential) continue;
-      if (row.name === PROVIDER && model.llm_name === AGENT_MODEL) continue;
-      return {
-        provider: row.name,
-        llmName: model.llm_name,
-        label: model.display_name || model.llm_name,
-      };
-    }
-  }
-  throw new Error('the student catalogue offers no usable model to pick');
+/** The turn's expected model fields; the provider is only known when the picker showed it. */
+function carries(model: {
+  provider: string | null;
+  llmName: string;
+}): Record<string, unknown> {
+  return {
+    llm_name: model.llmName,
+    llm_provider: model.provider ?? expect.any(String),
+  };
 }
 
 test.describe.serial('Journey 84: In-chat model picker', () => {
@@ -234,26 +205,21 @@ test.describe.serial('Journey 84: In-chat model picker', () => {
     await expect(chatPage.modelChip).toContainText('ibl.ai Pro');
   });
 
-  test('icm-10: a student picks a model from their catalogue; turns carry it, and × goes back to the agent model', async ({
+  test('icm-10: a student opens + › Model and picks the first model they can use, whatever it is; turns carry it, and × goes back to the agent model', async ({
     nonadminPage,
     nonadminChatPage,
   }) => {
     test.skip(!mentorUrl, 'icm-01 setup did not run');
     const frames = nonadminChatPage.recordChatFrames();
-    const target = await studentModel(nonadminPage, async () => {
-      await navigateToMentorApp(nonadminPage, mentorUrl);
-      await waitForPageReady(nonadminPage);
-    });
+    await navigateToMentorApp(nonadminPage, mentorUrl);
+    await waitForPageReady(nonadminPage);
 
-    await nonadminChatPage.pickChatModel(target.provider, target.llmName);
+    const target = await nonadminChatPage.pickFirstAvailableChatModel();
     await expect(nonadminChatPage.modelChip).toContainText(target.label);
 
     const picked = 'Reply with the single word: student';
     await nonadminChatPage.sendMessage(picked);
-    expect(await frameFor(frames, picked)).toMatchObject({
-      llm_provider: target.provider,
-      llm_name: target.llmName,
-    });
+    expect(await frameFor(frames, picked)).toMatchObject(carries(target));
     await nonadminChatPage.waitForStreamingComplete();
     await expect(
       nonadminPage.getByText('The selected model is not available.'),
@@ -284,12 +250,10 @@ test.describe.serial('Journey 84: In-chat model picker', () => {
   }) => {
     test.skip(!mentorUrl, 'icm-01 setup did not run');
     const frames = nonadminChatPage.recordChatFrames();
-    const target = await studentModel(nonadminPage, async () => {
-      await navigateToMentorApp(nonadminPage, mentorUrl);
-      await waitForPageReady(nonadminPage);
-    });
+    await navigateToMentorApp(nonadminPage, mentorUrl);
+    await waitForPageReady(nonadminPage);
 
-    await nonadminChatPage.pickChatModel(target.provider, target.llmName);
+    await nonadminChatPage.pickFirstAvailableChatModel();
     await expect(nonadminChatPage.modelChip).toBeVisible();
     await nonadminChatPage.startNewChat();
     await expect(nonadminChatPage.modelChip).toHaveCount(0, {
@@ -315,16 +279,65 @@ test.describe.serial('Journey 84: In-chat model picker', () => {
   }) => {
     test.skip(!mentorUrl, 'icm-01 setup did not run');
     await nonadminPage.setViewportSize({ width: 390, height: 844 });
-    const target = await studentModel(nonadminPage, async () => {
-      await navigateToMentorApp(nonadminPage, mentorUrl);
-      await waitForPageReady(nonadminPage);
-    });
+    const frames = nonadminChatPage.recordChatFrames();
+    await navigateToMentorApp(nonadminPage, mentorUrl);
+    await waitForPageReady(nonadminPage);
 
-    await nonadminChatPage.pickChatModel(target.provider, target.llmName);
+    const target = await nonadminChatPage.pickFirstAvailableChatModel();
     await expect(nonadminPage.getByRole('dialog')).toHaveCount(0, {
       timeout: 5_000,
     });
     await expect(nonadminChatPage.modelChip).toContainText(target.label);
+
+    const prompt = 'Reply with the single word: phone';
+    await nonadminChatPage.sendMessage(prompt);
+    expect(await frameFor(frames, prompt)).toMatchObject(carries(target));
+    await nonadminChatPage.waitForStreamingComplete();
+  });
+
+  test('icm-14: a student whose catalogue has a single provider sees its models straight away and picks the first usable one', async ({
+    nonadminPage,
+    nonadminChatPage,
+  }) => {
+    test.skip(!mentorUrl, 'icm-01 setup did not run');
+    const frames = nonadminChatPage.recordChatFrames();
+    await nonadminPage.route('**/mentor-llms/**', async (route) => {
+      const response = await route.fetch();
+      const providers = (await response.json()) as {
+        name: string;
+        chat_models?: {
+          llm_name: string;
+          availability?: { requires_credential?: boolean } | null;
+        }[];
+      }[];
+      const first = providers.find((row) =>
+        (row.chat_models ?? []).some(
+          (model) => !model.availability?.requires_credential,
+        ),
+      );
+      await route.fulfill({ response, json: first ? [first] : providers });
+    });
+    await navigateToMentorApp(nonadminPage, mentorUrl);
+    await waitForPageReady(nonadminPage);
+
+    await nonadminChatPage.openPlusMenu();
+    await nonadminChatPage.modelMenuTrigger.click();
+    await expect(
+      nonadminPage.locator('[data-testid="composer-model-item"]').last(),
+    ).toBeVisible({ timeout: 10_000 });
+    await expect(
+      nonadminPage.locator('[data-testid^="composer-model-provider-"]'),
+    ).toHaveCount(0);
+    await nonadminChatPage.closePlusMenu();
+
+    const target = await nonadminChatPage.pickFirstAvailableChatModel();
+    expect(target.provider, 'no provider step').toBeNull();
+    await expect(nonadminChatPage.modelChip).toContainText(target.label);
+    const prompt = 'Reply with the single word: single';
+    await nonadminChatPage.sendMessage(prompt);
+    expect(await frameFor(frames, prompt)).toMatchObject(carries(target));
+    await nonadminChatPage.waitForStreamingComplete();
+    await nonadminPage.unroute('**/mentor-llms/**');
   });
 
   test('icm-06: a model that needs a key is disabled with its reason, and a usable one in the same provider still picks (#2638)', async ({

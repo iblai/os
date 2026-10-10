@@ -570,13 +570,14 @@ test.describe('Journey 82: Embed Mode Redesign — Conversation & Controls', () 
     await page.setViewportSize({ width: 1280, height: 800 });
   });
 
-  // er-08: header controls — New chat clears the conversation back to the
-  // empty state, the help/settings menu opens and lists its items, the
-  // private-mode (chat privacy) toggle works if the mentor exposes one, and
-  // the hamburger opens the minimal sidebar (New Chat + Chats, nothing
+  // er-08: header controls — the bar is borderless on the empty chat and
+  // gains its hairline once a reply lands; New chat clears the conversation
+  // back to the empty state; the "?" menu holds Incognito (when the agent
+  // offers it), then Help/Support; Incognito is driven from that menu row;
+  // and the hamburger opens the minimal sidebar (New Chat + Chats, nothing
   // else — journey 13's emb-09 already covers the full absence list, this
   // only confirms the toggle itself works from the redesigned header).
-  test('embed header: New chat resets the conversation, the menu lists items, the private-mode toggle works, and the hamburger opens the minimal sidebar', async ({
+  test('embed header: hairline once chatting, New chat resets, the ? menu holds Incognito/Help/Support, and the hamburger opens the minimal sidebar', async ({
     page,
     chatPage,
   }) => {
@@ -584,8 +585,9 @@ test.describe('Journey 82: Embed Mode Redesign — Conversation & Controls', () 
     const iframe = await gotoEmbedHarness(page, page.url());
     const chatInput = iframe.locator('#chat-input-textarea');
     await expect(chatInput).toBeVisible({ timeout: 20_000 });
+    const nav = iframe.locator('nav[data-elevated]');
+    await expect(nav).toHaveAttribute('data-elevated', 'false');
 
-    // Start a conversation, then New chat clears it back to the empty state.
     await chatInput.fill('Message before New chat');
     await iframe.getByRole('button', { name: 'Send message' }).click();
     const clientFrame = await ws.waitForClientMessage();
@@ -596,49 +598,49 @@ test.describe('Journey 82: Embed Mode Redesign — Conversation & Controls', () 
     await expect(
       iframe.locator('.chat-ai-message-response').first(),
     ).toBeVisible({ timeout: 15_000 });
+    await expect(nav).toHaveAttribute('data-elevated', 'true');
 
     await iframe.getByRole('button', { name: 'New chat', exact: true }).click();
     await expect(iframe.locator('.chat-user-message-query')).toHaveCount(0, {
       timeout: 10_000,
     });
+    await expect(nav).toHaveAttribute('data-elevated', 'false');
 
-    // Menu/help trigger opens and lists at least one item (Help and/or
-    // Support; Help is conditional on tenant config).
-    const menuTrigger = iframe
-      .getByRole('button', { name: 'Open menu options' })
-      .or(iframe.getByRole('button', { name: 'Open settings menu' }));
+    // The ? menu: Incognito (optional, per tenant/agent), then Help (optional,
+    // per tenant) and Support (always).
+    const menuTrigger = iframe.getByRole('button', {
+      name: 'Open menu options',
+    });
     await expect(menuTrigger).toBeVisible({ timeout: 10_000 });
     await menuTrigger.click();
-    const menuItems = iframe.getByRole('menuitem');
-    await expect(menuItems.first()).toBeVisible({ timeout: 5_000 });
-    expect(await menuItems.count()).toBeGreaterThan(0);
-    await page.keyboard.press('Escape');
-
-    // Private-mode (chat privacy) toggle, when the mentor/session exposes
-    // one: clicking it opens the confirm dialog; cancel to avoid mutating
-    // shared state.
-    const privacyToggle = iframe.getByTestId('chat-privacy-toggle');
-    let hasPrivacyToggle = false;
-    try {
-      await privacyToggle.waitFor({ state: 'visible', timeout: 5_000 });
-      hasPrivacyToggle = true;
-    } catch {
-      hasPrivacyToggle = false;
-    }
-    if (hasPrivacyToggle) {
-      await privacyToggle.click();
+    await expect(iframe.getByRole('menuitem', { name: 'Support' })).toBeVisible(
+      { timeout: 5_000 },
+    );
+    const incognitoItem = iframe.getByTestId('embed-incognito-item');
+    const hasIncognito = (await incognitoItem.count()) > 0;
+    if (!hasIncognito) {
+      await page.keyboard.press('Escape');
+    } else {
+      await expect(incognitoItem).toHaveAttribute('aria-checked', 'false');
+      await incognitoItem.click();
+      // Mid-conversation the SDK asks first; on an empty chat it starts an
+      // Incognito chat straight away. Cancel a confirm to keep state.
       const confirmDialog = iframe.getByTestId('chat-privacy-confirm-dialog');
-      let confirmVisible = false;
-      try {
-        await confirmDialog.waitFor({ state: 'visible', timeout: 5_000 });
-        confirmVisible = true;
-      } catch {
-        confirmVisible = false;
-      }
-      if (confirmVisible) {
+      if (await confirmDialog.isVisible().catch(() => false)) {
         await iframe.getByTestId('chat-privacy-confirm-cancel').click();
+      } else {
+        await expect(incognitoItem).toHaveAttribute('aria-checked', 'true', {
+          timeout: 10_000,
+        });
+        await expect(iframe.getByText('Incognito chat')).toBeVisible();
+        await incognitoItem.click();
+        await expect(incognitoItem).toHaveAttribute('aria-checked', 'false', {
+          timeout: 10_000,
+        });
       }
+      await page.keyboard.press('Escape');
     }
+    await expect(iframe.getByRole('menu')).toHaveCount(0);
 
     // Hamburger (mobile only) opens the minimal sidebar.
     await page.setViewportSize({ width: 390, height: 844 });

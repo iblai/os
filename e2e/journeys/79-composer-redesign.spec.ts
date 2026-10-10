@@ -701,6 +701,16 @@ test.describe('Journey 79: Composer Redesign', () => {
     page,
     chatPage,
   }) => {
+    // The Skills row renders only when the agent has skills; the shared
+    // default agent has none, so mock one.
+    await chatPage.mockEffectiveSkills([
+      {
+        unique_id: 'e2e-cr12-skill',
+        name: 'Summarize Reading',
+        slug: 'summarize-reading',
+        enabled: true,
+      },
+    ]);
     await page.setViewportSize({ width: 390, height: 844 });
     await page.reload({ waitUntil: 'domcontentloaded' });
     await waitForPageReady(page);
@@ -712,6 +722,9 @@ test.describe('Journey 79: Composer Redesign', () => {
     await expect(chatPage.getAttachMenuItem('Camera')).toBeVisible();
     await expect(sheet.getByRole('button', { name: /^Tools\b/ })).toBeVisible();
     await expect(sheet.getByTestId('skills-menu-trigger')).toBeVisible();
+    // isToolAvailable() opens the + menu itself, which needs the sheet closed.
+    await page.keyboard.press('Escape');
+    await expect(sheet).not.toBeVisible({ timeout: 5_000 });
 
     // cr-03 enabled "Web Search" on this shared mentor and never disabled it.
     const toolName = 'Web Search';
@@ -826,6 +839,8 @@ test.describe('Journey 79: Composer Redesign', () => {
         enabled: true,
       },
     ]);
+    // The socket mock only catches sockets opened after it is registered.
+    const ws = await chatPage.mockChatWebSocket();
     await page.reload({ waitUntil: 'domcontentloaded' });
     await waitForPageReady(page);
 
@@ -836,7 +851,6 @@ test.describe('Journey 79: Composer Redesign', () => {
     }
     await chatPage.enableCanvasTool();
 
-    const ws = await chatPage.mockChatWebSocket();
     await chatPage.sendMessage('Conversation state composer check');
     const clientFrame = await ws.waitForClientMessage();
     const sessionId = clientFrame.session_id;
