@@ -93,3 +93,61 @@ describe('getEmbedCode default bubble image (thumbnail uses dm, not axd)', () =>
     expect(code).toContain(`${DM_BASE}/api/core/orgs/main/thumbnail/`);
   });
 });
+
+describe('getEmbedCode allow-mentor-selection param', () => {
+  const EMBED_URL =
+    'https://mentor.example.com/platform/acme/my-mentor?embed=true&extra-body-classes=iframed-externally';
+
+  beforeEach(() => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({ ok: true }) as Response),
+    );
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('leaves the embed URL unchanged by default', async () => {
+    const code = await getEmbedCode('acme', settings, 'redirect-token');
+
+    expect(code).toContain(`iframe.src = '${EMBED_URL}';`);
+    expect(code).not.toContain('allow-mentor-selection');
+  });
+
+  it('produces the same code when allow_mentor_selection is false', async () => {
+    const baseline = await getEmbedCode('acme', settings, 'redirect-token');
+    const off = await getEmbedCode(
+      'acme',
+      { ...settings, allow_mentor_selection: false },
+      'redirect-token',
+    );
+
+    expect(off).toBe(baseline);
+  });
+
+  it('adds allow-mentor-selection=true to the embed URL when allow_mentor_selection is on', async () => {
+    const code = await getEmbedCode(
+      'acme',
+      { ...settings, allow_mentor_selection: true },
+      'redirect-token',
+    );
+
+    expect(code).toContain(
+      `iframe.src = '${EMBED_URL}&allow-mentor-selection=true';`,
+    );
+  });
+
+  it('keeps chat=advanced alongside allow-mentor-selection', async () => {
+    const code = await getEmbedCode(
+      'acme',
+      { ...settings, mode: 'advanced', allow_mentor_selection: true },
+      'redirect-token',
+    );
+
+    expect(code).toContain(
+      `iframe.src = '${EMBED_URL}&chat=advanced&allow-mentor-selection=true';`,
+    );
+  });
+});

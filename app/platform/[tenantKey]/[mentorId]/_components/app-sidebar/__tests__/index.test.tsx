@@ -3674,3 +3674,88 @@ describe('AppSidebar — New Chat evicts the old Code process', () => {
     expect(invokeTauriMock).not.toHaveBeenCalled();
   });
 });
+
+describe('AppSidebar — allow-mentor-selection embed', () => {
+  it('collapses the embed Agents section to a single Agents button that opens Explore', () => {
+    mockEmbedMode = true;
+    mockSearchParams = new URLSearchParams(
+      'embed=true&allow-mentor-selection=true',
+    );
+    renderSidebar();
+
+    const agents = screen.getByTestId('sidebar-explore-agents');
+    expect(agents).toHaveTextContent('Agents');
+    expect(
+      screen.queryByRole('button', { name: 'New Agent' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'My Agents' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Explore' }),
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(agents);
+    expect(navigateToExploreMock).toHaveBeenCalledTimes(1);
+    expect(openCreateMentorModalMock).not.toHaveBeenCalled();
+    expect(openSettingsModalMock).not.toHaveBeenCalled();
+  });
+
+  it('renders the Agents icon in the collapsed rail and opens Explore', () => {
+    mockEmbedMode = true;
+    mockSearchParams = new URLSearchParams(
+      'embed=true&allow-mentor-selection=true',
+    );
+    mockSidebarState = {
+      state: 'collapsed',
+      open: false,
+      openMobile: false,
+      isMobile: false,
+    };
+    renderSidebar();
+
+    const agents = screen.getByTestId('sidebar-explore-agents');
+    expect(agents).toHaveAttribute('aria-label', 'Agents');
+    fireEvent.click(agents);
+    expect(navigateToExploreMock).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(['', 'allow-mentor-selection=false', 'allow-mentor-selection=1'])(
+    'keeps the minimal embed sidebar when the flag is %s',
+    (query) => {
+      mockEmbedMode = true;
+      mockSearchParams = new URLSearchParams(`embed=true&${query}`);
+      renderSidebar();
+      expect(
+        screen.queryByTestId('sidebar-explore-agents'),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', { name: 'Agents' }),
+      ).not.toBeInTheDocument();
+    },
+  );
+
+  it('hides the Agents button from anonymous embed viewers even with the flag', () => {
+    mockEmbedMode = true;
+    mockIsLoggedIn = false;
+    mockSearchParams = new URLSearchParams(
+      'embed=true&allow-mentor-selection=true',
+    );
+    renderSidebar();
+    expect(
+      screen.queryByTestId('sidebar-explore-agents'),
+    ).not.toBeInTheDocument();
+  });
+
+  it('ignores the flag outside embed mode', () => {
+    mockSearchParams = new URLSearchParams('allow-mentor-selection=true');
+    renderSidebar();
+    expect(
+      screen.queryByTestId('sidebar-explore-agents'),
+    ).not.toBeInTheDocument();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Agents' })[0]);
+    expect(
+      screen.getByRole('button', { name: 'New Agent' }),
+    ).toBeInTheDocument();
+  });
+});

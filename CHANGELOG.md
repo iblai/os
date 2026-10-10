@@ -1,5 +1,49 @@
 # Changelog
 
+## [0.165.1](https://github.com/iblai/os/compare/v0.165.0...v0.165.1) (2026-10-10)
+
+### Bug Fixes
+
+- **tts:** add trailing slash to the chat-message TTS endpoint ([599e2e5](https://github.com/iblai/os/commit/599e2e56dc34fbeef7b7d4017dd791fba0a51682))
+
+## [0.165.0](https://github.com/iblai/os/compare/v0.164.1...v0.165.0) (2026-10-09)
+
+### Features
+
+- **ext:** keep a downloadable build artifact + enable mentor selection ([b332ebd](https://github.com/iblai/os/commit/b332ebd5297b865aefc96f911a1e5b75a729d131))
+
+## [0.164.1](https://github.com/iblai/os/compare/v0.164.0...v0.164.1) (2026-10-09)
+
+### Chores
+
+- **build:** rebuild image with updated NEXT_IMAGE_PATTERNS ([28c1d98](https://github.com/iblai/os/commit/28c1d98076285bac997a6b6308c5c561746817ac))
+
+## [0.164.0](https://github.com/iblai/os/compare/v0.163.1...v0.164.0) (2026-10-09)
+
+### Features
+
+- **embed:** add Allow Agent Selection toggle to the Embed tab ([1837439](https://github.com/iblai/os/commit/183743993b99dcd22d03a3790928c517ad843e5e))
+- **embed:** add allow-mentor-selection URL flag and keep it through navigation ([8796234](https://github.com/iblai/os/commit/87962347ad7a8b41eb3165bb7e0f03504495324f))
+- **embed:** show a single Agents button in the embed sidebar when allowed ([22a93c0](https://github.com/iblai/os/commit/22a93c0485a99a614d7c20897155b3478b8321e1))
+- **explore:** hide agent creation on Explore when agent selection is on ([c8a2513](https://github.com/iblai/os/commit/c8a2513ac21d4846f1747f466c41d041595c0d69))
+- **explore:** slim Explore for agent selection in the embed ([5ae6c86](https://github.com/iblai/os/commit/5ae6c8689d58cba56f52c3eed7a86b9bf6788dfc))
+
+### Bug Fixes
+
+- **embed:** title-case Explore Agents and match the agent name style in the top bar ([2341262](https://github.com/iblai/os/commit/234126290d19e4455d4819108fb6e8d41e829880))
+
+### Reverts
+
+- **explore:** keep the Explore page and embed top bar unchanged ([1c46eaa](https://github.com/iblai/os/commit/1c46eaa8750df27fffa1ff2eea51e29e26818996))
+
+### Styles
+
+- prettier formatting of CHANGELOG ([bbe3742](https://github.com/iblai/os/commit/bbe374279d3d779e786130649789bac4856b08e1))
+
+### Tests
+
+- **embed:** cover allow-mentor-selection flag, toggle, sidebar and Explore ([c5ec7d0](https://github.com/iblai/os/commit/c5ec7d066de4e6a90270abb2e01abb9bc3ed954e))
+
 ## [0.163.1](https://github.com/iblai/os/compare/v0.163.0...v0.163.1) (2026-10-08)
 
 ### Chores

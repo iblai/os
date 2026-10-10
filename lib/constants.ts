@@ -32,6 +32,7 @@ export const QUERY_PARAMS = {
   SHOW_USER_PROFILE: 'show-user-profile',
   /** Set on LTI launch URLs (with `embed=true`): the chat is inside an LMS course. */
   LTI: 'lti',
+  ALLOW_MENTOR_SELECTION: 'allow-mentor-selection',
 };
 
 // URL patterns

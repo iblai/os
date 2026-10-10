@@ -1695,6 +1695,61 @@ describe('useEmbedTab', () => {
       });
     });
 
+    it('passes allow_mentor_selection=false to the snippet builder by default', async () => {
+      mockUpdateMentorSettingsFn.mockResolvedValueOnce({
+        data: { success: true },
+      });
+
+      setAllowAnonymous(true);
+      const { result } = renderHook(() => useEmbedTab());
+      expect(result.current.allowMentorSelection).toBe(false);
+
+      await act(async () => {
+        await result.current.form.handleSubmit();
+      });
+
+      await waitFor(() => {
+        expect(mockGetEmbedCode).toHaveBeenCalledWith(
+          'test-tenant',
+          expect.objectContaining({ allow_mentor_selection: false }),
+          '',
+          false,
+          expect.any(Object),
+        );
+      });
+    });
+
+    it('passes allow_mentor_selection=true once toggled on, without saving it to the backend', async () => {
+      mockUpdateMentorSettingsFn.mockResolvedValueOnce({
+        data: { success: true },
+      });
+
+      setAllowAnonymous(true);
+      const { result } = renderHook(() => useEmbedTab());
+
+      act(() => {
+        result.current.setAllowMentorSelection(true);
+      });
+      expect(result.current.allowMentorSelection).toBe(true);
+
+      await act(async () => {
+        await result.current.form.handleSubmit();
+      });
+
+      await waitFor(() => {
+        expect(mockGetEmbedCode).toHaveBeenCalledWith(
+          'test-tenant',
+          expect.objectContaining({ allow_mentor_selection: true }),
+          '',
+          false,
+          expect.any(Object),
+        );
+      });
+      expect(JSON.stringify(mockUpdateMentorSettingsFn.mock.calls)).not.toMatch(
+        /allow_mentor_selection|allow-mentor-selection/,
+      );
+    });
+
     it('should not generate embed code when syncEmbedSettings fails', async () => {
       mockUpdateMentorSettingsFn.mockResolvedValueOnce({
         error: { error: { error: 'Update failed' } },

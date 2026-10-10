@@ -193,7 +193,7 @@ const getBubbleImage = async (tenant: string) => {
 };
 
 const getUrl = (
-  settings: EmbedFormValues,
+  settings: EmbedFormValues & { allow_mentor_selection?: boolean },
   tenant: string,
   extraBodyClasses = '',
 ) => {
@@ -204,6 +204,9 @@ const getUrl = (
   if (settings.mode === 'advanced') {
     url += `&chat=advanced`;
   }
+  if (settings.allow_mentor_selection) {
+    url += `&allow-mentor-selection=true`;
+  }
   return url;
 };
 
@@ -213,7 +216,10 @@ export const getEmbedCode = async (
   // embed-form field (#2476), but the generated snippet still needs it to
   // decide whether to redirect to auth — the caller passes it in alongside the
   // form values.
-  settings: EmbedFormValues & { allow_anonymous: boolean },
+  settings: EmbedFormValues & {
+    allow_anonymous: boolean;
+    allow_mentor_selection?: boolean;
+  },
   redirectToken: string,
   useCustomFloatingBubble?: boolean,
   customFloatingBubbleConfig?: CustomFloatingBubbleConfig,
