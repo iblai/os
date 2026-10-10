@@ -114,7 +114,7 @@ async function loadTtsAudio(
     typeof window !== 'undefined'
       ? window.localStorage.getItem(LOCAL_STORAGE_KEYS.DM_TOKEN_KEY)
       : null;
-  const url = `${config.dmUrl()}/api/ai-mentor/orgs/${org}/users/${userId}/chat-messages/${chatMessageId}/tts`;
+  const url = `${config.dmUrl()}/api/ai-mentor/orgs/${org}/users/${userId}/chat-messages/${chatMessageId}/tts/`;
   const response = await fetch(url, {
     method: 'GET',
     cache: 'no-cache',
