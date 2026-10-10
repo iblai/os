@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.165.1](https://github.com/iblai/os/compare/v0.165.0...v0.165.1) (2026-10-10)
+
+### Bug Fixes
+
+* **tts:** add trailing slash to the chat-message TTS endpoint ([599e2e5](https://github.com/iblai/os/commit/599e2e56dc34fbeef7b7d4017dd791fba0a51682))
+
 ## [0.165.0](https://github.com/iblai/os/compare/v0.164.1...v0.165.0) (2026-10-09)
 
 ### Features
