@@ -1424,7 +1424,9 @@
     "closeChat": "Fermer le chat",
     "newChat": "Nouvelle discussion",
     "incognito": "Mode incognito",
-    "incognitoChat": "Discussion incognito"
+    "incognitoChat": "Discussion incognito",
+    "enterFullscreen": "Plein écran",
+    "exitFullscreen": "Quitter le plein écran"
   },
   "navBarIndex": {
     "logIn": "Se connecter",
@@ -1592,6 +1594,11 @@
     "allowMentorSelectionTooltip": "Permettre aux visiteurs connectés d'ouvrir Explorer depuis l'intégration et de passer à un autre agent.",
     "allowMentorSelectionEnabled": "Sélection d'agent activée",
     "allowMentorSelectionDisabled": "Sélection d'agent désactivée",
+    "allowFullscreenLabel": "Autoriser le plein écran",
+    "moreInfoAllowFullscreen": "Plus d'informations sur le plein écran",
+    "allowFullscreenTooltip": "Affiche un bouton dans le chat pour passer de la petite fenêtre au plein écran.",
+    "allowFullscreenEnabled": "Plein écran activé",
+    "allowFullscreenDisabled": "Plein écran désactivé",
     "shareableLinkLabel": "Lien partageable",
     "moreInfoShareableLink": "Plus d'informations sur la génération d'un lien partageable",
     "shareableLinkTooltip": "Générer un lien que les utilisateurs peuvent utiliser pour chatter avec cet agent anonymement",

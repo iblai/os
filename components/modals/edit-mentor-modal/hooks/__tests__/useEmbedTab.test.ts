@@ -1750,6 +1750,61 @@ describe('useEmbedTab', () => {
       );
     });
 
+    it('passes allow_fullscreen=false to the snippet builder by default', async () => {
+      mockUpdateMentorSettingsFn.mockResolvedValueOnce({
+        data: { success: true },
+      });
+
+      setAllowAnonymous(true);
+      const { result } = renderHook(() => useEmbedTab());
+      expect(result.current.allowFullscreen).toBe(false);
+
+      await act(async () => {
+        await result.current.form.handleSubmit();
+      });
+
+      await waitFor(() => {
+        expect(mockGetEmbedCode).toHaveBeenCalledWith(
+          'test-tenant',
+          expect.objectContaining({ allow_fullscreen: false }),
+          '',
+          false,
+          expect.any(Object),
+        );
+      });
+    });
+
+    it('passes allow_fullscreen=true once toggled on, without saving it to the backend', async () => {
+      mockUpdateMentorSettingsFn.mockResolvedValueOnce({
+        data: { success: true },
+      });
+
+      setAllowAnonymous(true);
+      const { result } = renderHook(() => useEmbedTab());
+
+      act(() => {
+        result.current.setAllowFullscreen(true);
+      });
+      expect(result.current.allowFullscreen).toBe(true);
+
+      await act(async () => {
+        await result.current.form.handleSubmit();
+      });
+
+      await waitFor(() => {
+        expect(mockGetEmbedCode).toHaveBeenCalledWith(
+          'test-tenant',
+          expect.objectContaining({ allow_fullscreen: true }),
+          '',
+          false,
+          expect.any(Object),
+        );
+      });
+      expect(JSON.stringify(mockUpdateMentorSettingsFn.mock.calls)).not.toMatch(
+        /allow_fullscreen|allow-fullscreen/,
+      );
+    });
+
     it('should not generate embed code when syncEmbedSettings fails', async () => {
       mockUpdateMentorSettingsFn.mockResolvedValueOnce({
         error: { error: { error: 'Update failed' } },
