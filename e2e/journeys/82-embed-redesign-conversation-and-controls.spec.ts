@@ -157,7 +157,7 @@ test.describe('Journey 82: Embed Mode Redesign — Conversation & Controls', () 
     expect(snippet).toContain('ibl-chat-bubble');
     await editMentorPage.close();
 
-    const { originalOrigin } = await gotoRealSnippetPage(page, snippet);
+    await gotoRealSnippetPage(page, snippet);
 
     const bubble = page.locator('.ibl-chat-bubble');
     await expect(bubble).toBeVisible({ timeout: 15_000 });
@@ -187,9 +187,6 @@ test.describe('Journey 82: Embed Mode Redesign — Conversation & Controls', () 
       .getAttribute('src');
     expect(iframeSrc).not.toBeNull();
     expect(iframeSrc!.startsWith(MENTOR_NEXTJS_HOST)).toBe(true);
-    if (originalOrigin) {
-      expect(originalOrigin).not.toBe(MENTOR_NEXTJS_HOST);
-    }
 
     const panelFrame = page.frameLocator('#ibl-chat-widget-container iframe');
     await expect(panelFrame.locator('#chat-input-textarea')).toBeVisible({

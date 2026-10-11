@@ -916,15 +916,20 @@ export class ChatPage {
   async seedCachedSessionId(
     mentorId: string,
     sessionId: string,
+    tenantKey?: string,
   ): Promise<void> {
     await this.page.addInitScript(
-      ({ mentorId, sessionId }) => {
+      ({ mentorId, sessionId, tenantKey }) => {
+        // The app keys the cache `${tenantKey}:${mentorId}` (#2536).
         window.localStorage.setItem(
           'session_id',
-          JSON.stringify({ [mentorId]: sessionId }),
+          JSON.stringify({
+            [mentorId]: sessionId,
+            ...(tenantKey ? { [`${tenantKey}:${mentorId}`]: sessionId } : {}),
+          }),
         );
       },
-      { mentorId, sessionId },
+      { mentorId, sessionId, tenantKey },
     );
   }
 

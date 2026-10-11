@@ -54,9 +54,14 @@ describe('buildTourSteps', () => {
 
   it('targets each step through its data-tour hook', () => {
     const steps = buildTourSteps({ isAdmin: true, t });
-    for (const step of steps) {
+    for (const step of steps.filter((s) => s.id !== 'prompt-input')) {
       expect(step.target).toBe(`[data-tour="${step.id}"]`);
     }
+  });
+
+  it('anchors the prompt input step through the composer resolver', () => {
+    const step = buildTourSteps({ isAdmin: true, t })[0];
+    expect(typeof step.target).toBe('function');
   });
 
   it('pins the sidebar steps to the fixed sidebar', () => {
