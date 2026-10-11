@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.165.3](https://github.com/iblai/os/compare/v0.165.2...v0.165.3) (2026-10-11)
+
+### Bug Fixes
+
+* **ext:** vendor current agent-ai UMD so mentor selection reaches the URL ([756d41f](https://github.com/iblai/os/commit/756d41fd2d4c4b8ddf1876b20ee3a32ef2a65d90))
+
 ## [0.165.2](https://github.com/iblai/os/compare/v0.165.1...v0.165.2) (2026-10-10)
 
 ### Chores
