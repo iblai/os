@@ -167,9 +167,14 @@ describe('getEmbedCode allow-fullscreen', () => {
       'fetch',
       vi.fn(async () => ({ ok: true }) as Response),
     );
+    // The snippet focuses the iframe on a 100ms timer, which would otherwise
+    // fire after jsdom is torn down.
+    vi.useFakeTimers();
   });
 
   afterEach(() => {
+    vi.clearAllTimers();
+    vi.useRealTimers();
     vi.unstubAllGlobals();
     hostListeners
       .splice(0)
