@@ -1456,6 +1456,8 @@ describe('EmbedTab', () => {
 // #2592: drive the REAL useEmbedTab hook so the switches reflect what the
 // settings GET returns, not a hand-built form. Pre-fix both were hardcoded off.
 describe('EmbedTab context-aware / open-by-default hydration (#2592)', () => {
+  // importActual cold-loads the real hook; under a full-suite run that alone
+  // can exceed the 15s default.
   beforeEach(async () => {
     cleanup();
     vi.clearAllMocks();
@@ -1473,7 +1475,7 @@ describe('EmbedTab context-aware / open-by-default hydration (#2592)', () => {
     mockEditMentorLoading.mockReturnValue(false);
     mockUseTenantMetadata.mockReturnValue({ metadata: undefined });
     mockSupportEmail.mockReturnValue('support@ibl.ai');
-  });
+  }, 30_000);
 
   afterEach(() => {
     cleanup();
