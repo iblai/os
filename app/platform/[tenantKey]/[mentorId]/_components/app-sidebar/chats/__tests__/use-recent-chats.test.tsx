@@ -28,6 +28,7 @@ const unpinMessageMock = vi.fn(() => ({ unwrap: () => Promise.resolve({}) }));
 const deleteMessageMock = vi.fn(() => ({ unwrap: () => Promise.resolve({}) }));
 const exportMessagesToXlsxMock = vi.fn();
 const eventBusEmitMock = vi.fn();
+const pinnedQueryArgsMock = vi.fn();
 const updateQueryDataMock = vi.fn(
   (_endpoint: string, _args: unknown, recipe: (draft: any) => void) => {
     const draft: { results: any[] } = { results: [] };
@@ -121,9 +122,10 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
     isFetchingNextPage: mockIsFetchingNextPage,
   }),
   useGetPinnedMessagesQuery: (
-    _args: unknown,
+    args: unknown,
     options?: { skip?: boolean; selectFromResult?: (state: any) => any },
   ) => {
+    pinnedQueryArgsMock(args);
     const state = {
       data: options?.skip ? undefined : mockPinnedPages,
       isError: false,
@@ -314,6 +316,29 @@ describe('useRecentChats', () => {
     );
     expect(refetchRecentMock).toHaveBeenCalled();
     expect(refetchPinnedMock).toHaveBeenCalled();
+  });
+
+  it('reads and patches one user-wide pinned cache entry, never keyed by session', async () => {
+    // The pin-message list is user-wide and the SDK keys its cache on the full
+    // args, so a sessionId here splits the entry from AppProvider's refetch.
+    const pinnedCacheKey = { org: 'tenant-a', userId: 'admin-user' };
+    const row = { session_id: 'row-1', mentor: { unique_id: 'mentor-1' } };
+    const { result } = renderHook(() => useRecentChats(baseArgs));
+
+    await act(async () => {
+      await result.current.handlePin(row);
+      await result.current.handleUnpin(row);
+      await result.current.handleDelete(row);
+    });
+
+    expect(pinnedQueryArgsMock).toHaveBeenLastCalledWith(pinnedCacheKey);
+    const pinnedPatches = updateQueryDataMock.mock.calls.filter(
+      ([endpoint]) => endpoint === 'getPinnedMessages',
+    );
+    expect(pinnedPatches).toHaveLength(3);
+    for (const [, args] of pinnedPatches) {
+      expect(args).toEqual(pinnedCacheKey);
+    }
   });
 
   it('handleUnpin unpins a row and refetches both lists', async () => {
