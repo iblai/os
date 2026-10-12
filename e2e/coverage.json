@@ -1,15 +1,15 @@
 {
   "version": 2,
-  "lastUpdated": "2026-10-08",
+  "lastUpdated": "2026-10-12",
   "summary": {
-    "totalCheckpoints": 920,
-    "coveredCheckpoints": 876,
+    "totalCheckpoints": 923,
+    "coveredCheckpoints": 878,
     "deprecatedCheckpoints": 17,
     "notReproducibleCheckpoints": 17,
-    "pendingCheckpoints": 10,
+    "pendingCheckpoints": 11,
     "percent": 100,
-    "totalJourneys": 92,
-    "activeJourneys": 91
+    "totalJourneys": 93,
+    "activeJourneys": 92
   },
   "journeys": [
     {
@@ -5793,6 +5793,33 @@
         {
           "id": "sess-04",
           "description": "In embed mode (`?embed=true`) a dead session id self-heals with no manual New chat, fetching the dead id exactly 4 times, all before the mint",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "read-aloud-voice-sources",
+      "name": "Read Aloud Across Voice Sources",
+      "spec": "86-read-aloud-voice-sources.spec.ts",
+      "sourceFiles": [
+        "components/chat/ai-message-speak.tsx",
+        "hooks/use-speech.ts",
+        "components/modals/edit-mentor-modal/tabs/voice-tab.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "rav-01",
+          "description": "Admin switches the agent's voice source from Browser to each other source in Settings \u2192 Voice and saves it (\"Voice saved\")",
+          "status": "covered"
+        },
+        {
+          "id": "rav-02",
+          "description": "For each server voice source, clicking Read Aloud on a fresh reply fetches the chat-message /tts/ audio (2xx, audio/*) and audio starts playing within 30s",
+          "status": "pending"
+        },
+        {
+          "id": "rav-03",
+          "description": "After switching back to Browser, clicking Read Aloud on a fresh reply starts speech synthesis within 30s",
           "status": "covered"
         }
       ]

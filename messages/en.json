@@ -677,14 +677,14 @@
     "loadMoreAriaLabel": "Load more {category} agents",
     "loadMoreAllAriaLabel": "Load more agents",
     "loadingMore": "Loading more",
-    "seeMore": "See more"
+    "seeMore": "See More"
   },
   "exploreCustomMentorsSection": {
-    "sectionHeading": "My agents",
-    "listAriaLabel": "My agents",
+    "sectionHeading": "My Agents",
+    "listAriaLabel": "My Agents",
     "loadMoreAriaLabel": "Load more of my agents",
     "loadingMore": "Loading more",
-    "seeMore": "See more",
+    "seeMore": "See More",
     "createAgentAriaLabel": "Create Custom Agent",
     "createAgentHeading": "Create Custom Agent",
     "createAgentDescription": "Build your own custom agent tailored to your specific learning needs"
@@ -695,7 +695,7 @@
     "exploreAgentAriaLabel": "Explore agent: {name}",
     "loadMoreAriaLabel": "Load more agents",
     "loadingMore": "Loading more",
-    "seeMore": "See more",
+    "seeMore": "See More",
     "subjectSubtext": "Explore {subject} agents and specialized learning assistants.",
     "categorySubtext": "Explore {category} agents and specialized learning assistants.",
     "llmProviderTitle": "{provider} Agents",
@@ -713,7 +713,7 @@
     "searchAgentsLabel": "Search agents",
     "searchPlaceholder": "Search agents",
     "searchAgentsInputLabel": "Search agents",
-    "pageTitle": "Explore agents",
+    "pageTitle": "Explore Agents",
     "clearSearch": "Clear search",
     "createAgentButton": "Create Agent",
     "createAgentAriaLabel": "Create new agent"
@@ -722,7 +722,7 @@
     "heading": "Featured",
     "loadMoreAriaLabel": "Load more featured agents",
     "loadingMore": "Loading more",
-    "seeMore": "See more"
+    "seeMore": "See More"
   },
   "exploreMentorCategories": {
     "featured": "Featured",
@@ -747,7 +747,7 @@
     "favoriteAgentsList": "Favorite agents",
     "loadMoreAriaLabel": "Load more favorite agents",
     "loadingMore": "Loading more",
-    "seeMore": "See more",
+    "seeMore": "See More",
     "addToFavoritesCardAriaLabel": "Add to Favorites - Sign up to star agents",
     "addToFavoritesDescription": "Star your favorite agents to quickly access them here",
     "noFavoritesYet": "No favorites yet"

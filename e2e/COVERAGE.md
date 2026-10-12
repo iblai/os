@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-10-08 | 920 checkpoints (876 covered, 10 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 92 journeys (91 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-10-12 | 923 checkpoints (878 covered, 11 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 93 journeys (92 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -85,10 +85,10 @@ When adding a new page or modifying an existing user flow:
 
 **Source files:** `app/platform/[tenantKey]/[mentorId]/explore/page.tsx`, `app/platform/[tenantKey]/[mentorId]/explore/_components/explore-page-content.tsx`, `app/platform/[tenantKey]/[mentorId]/explore/_components/search-section.tsx`, `app/platform/[tenantKey]/[mentorId]/explore/_components/mentor-categories.tsx`, `app/platform/[tenantKey]/[mentorId]/explore/_components/section.tsx`, `app/platform/[tenantKey]/[mentorId]/explore/_components/mentor-card-with-star.tsx`, `app/platform/[tenantKey]/[mentorId]/explore/_components/custom-mentors-section.tsx`, `app/platform/[tenantKey]/[mentorId]/explore/_components/default-mentors-section.tsx`, `app/platform/[tenantKey]/[mentorId]/explore/_components/featured-mentors-section.tsx`, `app/platform/[tenantKey]/[mentorId]/explore/_components/starred-mentors-section.tsx`, `app/platform/[tenantKey]/[mentorId]/explore/_components/empty-state.tsx`
 
-- [x] Explore page title ("Explore agents") and description are visible
+- [x] Explore page title ("Explore Agents") and description are visible
 - [x] Mentor cards display correct information
 - [x] Search input filters the mentor list
-- [x] "See more" button loads additional mentors
+- [x] "See More" button loads additional mentors
 - [x] Featured section is displayed when configured
 - [x] Filter by LLM Provider narrows results
 - [x] Filter by Subject narrows results
@@ -2136,3 +2136,15 @@ The tour auto-starts once per user on the agent chat page; whether it was seen i
 - [x] tour-07: Admin clicks Skip tour and the `skipped` outcome is POSTed to the user metadata
 - [x] tour-08: Admin presses Escape and the tour is skipped (`skipped` outcome POSTed)
 - [x] tour-09: Admin opens the chat page with `?tour=1&embed=true` and no tour is shown
+
+---
+
+## Journey 86: Read Aloud Across Voice Sources (3 checkpoints, 1 pending) — `journeys/86-read-aloud-voice-sources.spec.ts`
+
+**Source files:** `components/chat/ai-message-speak.tsx`, `hooks/use-speech.ts`, `components/modals/edit-mentor-modal/tabs/voice-tab.tsx`
+
+Unlike Journey 40, nothing is stubbed: playback is detected by wrapping `HTMLMediaElement.prototype.play` (server voices stream from the chat-message `/tts/` endpoint into a detached `Audio` element) and counting speechSynthesis utterance `start` events (Browser). The voice sources are read from the rendered provider cards, so a new source is exercised without a spec change. Assertions are soft, so one failing source doesn't hide the rest, and each failure names the outcome (HTTP status, `net::ERR_FAILED`, or still pending at 30s). Runs on a fresh mentor, so the admin account's tenant must hold the voice provider keys (Google / ibl.ai / OpenAI). rav-02 stays pending: on 2026-10-12 ibl.ai and OpenAI passed while Google TTS returned 502 after 60s at the API itself.
+
+- [x] rav-01: Admin switches the agent's voice source from Browser to each other source in Settings → Voice and saves it ("Voice saved")
+- [ ] rav-02: For each server voice source, clicking Read Aloud on a fresh reply fetches the chat-message `/tts/` audio (2xx, `audio/*`) and audio starts playing within 30s _(pending: Google TTS 502s at the API; ibl.ai and OpenAI pass)_
+- [x] rav-03: After switching back to Browser, clicking Read Aloud on a fresh reply starts speech synthesis within 30s
