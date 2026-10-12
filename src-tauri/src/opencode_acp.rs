@@ -272,7 +272,7 @@ pub async fn set_opencode_permission_mode(mode: String) -> Result<(), String> {
     // governed by how this app answers their requests.
     for (session_id, s) in live_sessions(Backend::Codex).await {
         if let Err(e) = pin_codex_mode(&session_id, &s, auto, was_auto && !auto).await {
-            eprintln!("[code-agent] {e}");
+            crate::telemetry::report("[code-agent] could not pin the Codex approval mode", e);
         }
     }
     Ok(())
@@ -3898,9 +3898,12 @@ pub async fn opencode_chat_stream(
 
         match &res {
             Err(e) if should_retry(e, session.closing.load(Ordering::SeqCst), attempt) => {
-                eprintln!(
-                    "[opencode] child died mid-turn ({e}) — respawning silently, attempt {}",
-                    attempt + 1
+                // Warning, not error: the respawn is expected to recover the
+                // turn, so this is a rate to watch rather than a failure to
+                // chase — but a jump in it means the child is dying often.
+                crate::telemetry::report_warning(
+                    "[opencode] child died mid-turn — respawning silently",
+                    format!("{e} (attempt {})", attempt + 1),
                 );
                 // Machine event only — the SDK clears the partial stream for
                 // this generation; nothing user-visible marks the seam.

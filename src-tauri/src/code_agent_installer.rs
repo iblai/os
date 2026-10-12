@@ -610,6 +610,13 @@ pub async fn ensure_agents_current(app: AppHandle) {
                     display_name(backend)
                 ),
             );
+            // The UI log is the only trace this leaves otherwise, and nobody
+            // reads it: a pin that 404s for everyone looks like one user's
+            // spinner that never resolves. Grouped per agent, not per error.
+            crate::telemetry::report(
+                &format!("[code-agent] {} install failed", display_name(backend)),
+                e,
+            );
         }
     }
 }

@@ -46,6 +46,7 @@ mod remote_code;
 // commands are registered only on mobile.
 #[allow(dead_code)]
 mod remote_code_client;
+mod telemetry;
 #[cfg(not(any(target_os = "ios", target_os = "android")))]
 mod web_cache;
 
@@ -924,7 +925,12 @@ where
     if let Err(err) = app.run_on_main_thread(move || {
         let _ = handle.emit(&name, payload);
     }) {
-        eprintln!("[emit_on_main] could not schedule '{event}' on main thread: {err}");
+        // The event name stays out of the grouping key: one issue for "the
+        // webview-mutex scheduling path failed", not one per event name.
+        telemetry::report_once(
+            "[emit_on_main] could not schedule an event on the main thread",
+            format!("'{event}' — {err}"),
+        );
     }
 }
 
@@ -2318,6 +2324,13 @@ pub fn run() {
         }
     }
 
+    // Rust-side error reporting. After the dotenv loads (so a dev build can be
+    // aimed at a scratch project from .env.local) and before the builder, so
+    // `setup()` and every task spawned there is already covered — that is where
+    // the failures worth knowing about happen. The guard MUST stay bound for
+    // the life of the process: dropping it discards every queued event.
+    let _sentry = telemetry::init();
+
     // CrabNebula DevTools (debug builds only) — initialize before the builder so
     // its tracing subscriber is installed first.
     #[cfg(debug_assertions)]
@@ -2396,6 +2409,10 @@ pub fn run() {
                                 println!("[ibl.ai] dev origin capability added for {origin}");
                             }
                         }
+                        // Left as a print: this whole block is
+                        // `#[cfg(debug_assertions)]`, and reporting is off in
+                        // debug builds — a `report` here would only look like
+                        // coverage it does not have.
                         Err(e) => eprintln!("[ibl.ai] default capability unreadable: {e}"),
                     }
                 }
@@ -2441,7 +2458,7 @@ pub fn run() {
                 match app.path().app_data_dir() {
                     Ok(dir) => {
                         if let Err(e) = local_llm::start(dir.join("models")) {
-                            eprintln!("[LocalLLM] failed to start embedded server: {e}");
+                            telemetry::report("[LocalLLM] failed to start embedded server", e);
                         }
                         // Phone Code: pairing + per-chat session map storage.
                         remote_code_client::init(dir.clone());
@@ -2450,7 +2467,7 @@ pub fn run() {
                         // force-quit or killed) is stopped on the desktop.
                         tauri::async_runtime::spawn(remote_code_client::abort_abandoned_turns());
                     }
-                    Err(e) => eprintln!("[LocalLLM] no app data dir: {e}"),
+                    Err(e) => telemetry::report("[LocalLLM] no app data dir", e),
                 }
                 // Ask for Local Network access at first open (iOS prompts
                 // once), so the first pairing scan is not the first thing
@@ -2491,7 +2508,9 @@ pub fn run() {
                 // fresh machine has them before Code is ever enabled).
                 let vibe_handle = app.handle().clone();
                 tauri::async_runtime::spawn(async move {
-                    let _ = opencode_installer::ensure_vibe_skills(vibe_handle).await;
+                    if let Err(e) = opencode_installer::ensure_vibe_skills(vibe_handle).await {
+                        telemetry::report("[vibe] skills sync failed at startup", e);
+                    }
                 });
 
                 // Initialize web cache with app data directory

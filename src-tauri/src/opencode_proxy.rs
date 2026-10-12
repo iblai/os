@@ -546,7 +546,12 @@ const DM_CALL_TIMEOUT: Duration = Duration::from_secs(10);
 /// the id names this device and must not shift mid-run, and the uncached read
 /// raced the tests that repoint `XDG_DATA_HOME` (the data dir never moves at
 /// runtime in the app itself).
-fn device_id() -> String {
+///
+/// pub(crate): also Sentry's `user.id` (`telemetry::init`), so an issue can be
+/// counted in affected machines rather than events. Nothing in it identifies
+/// anyone — eight hex characters — and reusing this one keeps a single id per
+/// install instead of minting a second, parallel one for reporting.
+pub(crate) fn device_id() -> String {
     static ID: OnceLock<String> = OnceLock::new();
     ID.get_or_init(|| {
         let path = crate::opencode_acp::iblai_data_dir().join("device-id");
@@ -638,6 +643,10 @@ pub async fn platform_api_key(tenant: &str, token: &str) -> Option<(String, u64)
         eprintln!("[opencode-proxy] IBLAI_API_KEY skipped: no signed-in tenant/token yet");
         return None;
     }
+    // Tag later error reports with the organization that hit them. Here
+    // because it is the earliest point the Rust side is handed a tenant —
+    // startup has none, and a Code spawn always passes through.
+    crate::telemetry::set_tenant(tenant);
     let base = dm_base_url().await;
     let _one_at_a_time = mint_lock().lock().await;
     let now = unix_now();
@@ -654,7 +663,7 @@ pub async fn platform_api_key(tenant: &str, token: &str) -> Option<(String, u64)
             record_platform_key(&mut settings, &base, tenant, &key, expires_at);
             if let Err(e) = crate::opencode_acp::write_settings(&settings) {
                 // The key still works for this run; only its persistence failed.
-                eprintln!("[opencode-proxy] could not persist IBLAI_API_KEY: {e}");
+                crate::telemetry::report("[opencode-proxy] could not persist IBLAI_API_KEY", e);
             }
             eprintln!("[opencode-proxy] IBLAI_API_KEY minted for {tenant} at {base}");
             Some((key, expires_at))
@@ -668,7 +677,12 @@ pub async fn platform_api_key(tenant: &str, token: &str) -> Option<(String, u64)
             None
         }
         Err(e) => {
-            eprintln!("[opencode-proxy] IBLAI_API_KEY not minted ({base}): {e}");
+            // `base` is the DM host, not part of the grouping key — a per-host
+            // issue would split one broken mint across every platform.
+            crate::telemetry::report(
+                "[opencode-proxy] IBLAI_API_KEY not minted",
+                format!("{base}: {e}"),
+            );
             None
         }
     }
@@ -758,7 +772,7 @@ pub async fn ensure_started() -> Result<u16, String> {
     let app = Router::new().route("/v1/{*path}", any(forward));
     tokio::spawn(async move {
         if let Err(e) = axum::serve(listener, app).await {
-            eprintln!("[opencode-proxy] server stopped: {e}");
+            crate::telemetry::report("[opencode-proxy] server stopped", e);
         }
     });
     *port = Some(p);
