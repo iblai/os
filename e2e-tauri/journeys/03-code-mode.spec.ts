@@ -14,7 +14,7 @@ import { join, resolve } from 'node:path';
  * Journey 3: Code Mode (opencode over ACP)
  *
  * The desktop-only agentic coding flow, driven against the REAL compiled binary
- * through tauri-driver.
+ * through @wdio/tauri-service.
  *
  * These go through the live Tauri IPC bridge (`window.__TAURI__`, exposed via
  * `withGlobalTauri`), so the compiled `opencode_installer.rs` / `opencode_acp.rs`
@@ -195,10 +195,10 @@ describe('Journey 3: Code Mode (opencode)', () => {
 
     expect(typeof status.installed).toBe('boolean');
     expect(typeof status.config_ready).toBe('boolean');
-    // The macOS App Sandbox flag: false everywhere tauri-driver can run.
+    // The macOS App Sandbox flag: false for any binary outside the MAS sandbox.
     expect(status.sandboxed).toBe(false);
-    // tauri-driver only runs on Linux/Windows-with-Code-off… in practice Linux,
-    // where Code is supported; bwrap availability depends on the host.
+    // Code runs on macOS and Linux (not Windows); bwrap availability depends on
+    // the host.
     expect(status.supported).toBe(true);
     expect(typeof status.sandbox_ready).toBe('boolean');
   });
@@ -460,8 +460,9 @@ describe('Journey 3: Code Mode (opencode)', () => {
 
       expect(res.present).toBe(true);
       const vibeDir = join(DATA_DIR, 'skills', 'vibe');
-      const packages = readdirSync(vibeDir).filter((entry) =>
-        existsSync(join(vibeDir, entry, 'SKILL.md')),
+      // Skills nest under category folders (ship/<name>/SKILL.md).
+      const packages = readdirSync(vibeDir, { recursive: true }).filter(
+        (entry) => String(entry).endsWith('SKILL.md'),
       );
       expect(packages.length).toBeGreaterThan(0);
     });
@@ -637,7 +638,7 @@ describe('Journey 3: Code Mode (opencode)', () => {
         expect(typeof st.supported).toBe('boolean');
         // The launch-time install reports itself; a boolean, never absent.
         expect(typeof st.installing).toBe('boolean');
-        // Linux under tauri-driver, outside the Mac App Store sandbox.
+        // A raw debug binary, outside the Mac App Store sandbox.
         expect(st.supported).toBe(true);
         expect([true, false, null, undefined]).toContain(st.signed_in);
         // Not installed on a fresh harness → a reason names the fix; installed

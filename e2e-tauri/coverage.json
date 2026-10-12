@@ -1,15 +1,15 @@
 {
   "version": 1,
-  "lastUpdated": "2026-09-29",
+  "lastUpdated": "2026-10-12",
   "summary": {
-    "totalCheckpoints": 52,
-    "coveredCheckpoints": 22,
+    "totalCheckpoints": 58,
+    "coveredCheckpoints": 28,
     "pendingCheckpoints": 29,
     "deprecatedCheckpoints": 1,
     "notReproducibleCheckpoints": 0,
     "percent": 100,
-    "totalJourneys": 3,
-    "activeJourneys": 3
+    "totalJourneys": 4,
+    "activeJourneys": 4
   },
   "journeys": [
     {
@@ -25,7 +25,7 @@
       "checkpoints": [
         {
           "id": "shell-01",
-          "description": "App binary launches under tauri-driver and a WebDriver session attaches to its WebView",
+          "description": "App binary launches with its embedded WebDriver server and a session attaches to its WebView",
           "status": "covered"
         },
         {
@@ -323,6 +323,48 @@
           "id": "code-41",
           "description": "A Code turn runs on the picked model: the handshake applies it with session/set_config_option right after the mode pin, a live session takes a new pick without a respawn, and a model the agent refuses fails the turn naming the picker",
           "status": "pending"
+        }
+      ]
+    },
+    {
+      "id": "ollama-setups",
+      "name": "Ollama on every macOS setup",
+      "spec": "04-ollama-setups.spec.ts",
+      "sourceFiles": [
+        "src-tauri/src/model_manager.rs",
+        "src-tauri/src/ollama_installer.rs",
+        "src-tauri/src/main.rs"
+      ],
+      "checkpoints": [
+        {
+          "id": "setup-01",
+          "description": "check_ollama_status reports the scenario's starting state (installed / running) for a fresh Mac, Ollama.app (running or not), the Homebrew formula (as a service or CLI only) and a bare CLI in /usr/local/bin",
+          "status": "covered"
+        },
+        {
+          "id": "setup-02",
+          "description": "install_ollama resolves on that setup (installing when nothing is there, starting when it is) and Ollama answers on :11434 afterwards",
+          "status": "covered"
+        },
+        {
+          "id": "setup-03",
+          "description": "A fresh Mac takes the documented install route: Homebrew when brew is present, the DMG into /Applications when it is not",
+          "status": "covered"
+        },
+        {
+          "id": "setup-04",
+          "description": "A model pull completes on that setup",
+          "status": "covered"
+        },
+        {
+          "id": "setup-05",
+          "description": "The cancel bounce (pkill + restart) leaves Ollama reachable within 30 s on that setup",
+          "status": "covered"
+        },
+        {
+          "id": "setup-06",
+          "description": "stop_ollama leaves Ollama stopped on that setup, and install_ollama brings it back",
+          "status": "covered"
         }
       ]
     }

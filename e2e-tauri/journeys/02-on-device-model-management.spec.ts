@@ -1,12 +1,21 @@
 /// <reference types="@wdio/globals/types" />
-import { spawnSync } from 'node:child_process';
+import {
+  TEST_MODEL,
+  TEST_MODEL_BASE,
+  invokeCmd,
+  pullToCompletion,
+  removeTestModel,
+  startInFlightDownload,
+  waitForOllama,
+  type TauriWindow,
+} from '../support/ollama';
 import { loginIfNeeded } from '../support/login';
 
 /**
  * Journey 2: On-device Model Management
  *
  * The desktop-only local-model flow, driven against the REAL compiled binary
- * through tauri-driver.
+ * through @wdio/tauri-service.
  *
  * The download mechanics (odm-02/03/05) go through the live Tauri IPC bridge
  * (`window.__TAURI__`, exposed via `withGlobalTauri`) using a tiny real model
@@ -26,153 +35,19 @@ import { loginIfNeeded } from '../support/login';
  * `smollm:135m`. Override the model with TAURI_E2E_MODEL.
  */
 
-const TEST_MODEL = process.env.TAURI_E2E_MODEL ?? 'smollm:135m';
-const TEST_MODEL_BASE = TEST_MODEL.split(':')[0];
-const OLLAMA_URL = 'http://localhost:11434';
-
-// Tauri global (withGlobalTauri) shapes — used only for casts inside the
-// injected browser functions; the annotations are erased before the function is
-// serialised to the WebView.
-type Invoke = (cmd: string, args?: unknown) => Promise<unknown>;
-type Listen = (
-  event: string,
-  cb: (e: { payload: unknown }) => void,
-) => Promise<() => void>;
-interface TauriWindow {
-  __TAURI__?: { core?: { invoke?: Invoke }; event?: { listen?: Listen } };
-}
-type ProgressEvent = { status?: string; percentage?: number };
-interface PullResult {
-  progress: ProgressEvent[];
-  done: boolean;
-  error: string | null;
-}
-
-/** Poll Ollama's HTTP API until it answers — it gets bounced on cancel. */
-async function waitForOllama(timeoutMs = 30_000): Promise<void> {
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
-    try {
-      const r = await fetch(`${OLLAMA_URL}/api/version`, {
-        signal: AbortSignal.timeout(2000),
-      });
-      if (r.ok) return;
-    } catch {
-      /* not up yet */
-    }
-    await new Promise((res) => setTimeout(res, 500));
-  }
-  throw new Error('Ollama did not become reachable on :11434 within timeout');
-}
-
-/** Remove the test model host-side so the next pull is real, not a fake-complete. */
-function removeTestModel(): void {
-  spawnSync('ollama', ['rm', TEST_MODEL], { stdio: 'ignore' });
-}
-
-/** Invoke a Tauri command in the WebView and bring back its result. */
-async function invokeCmd<T>(
-  command: string,
-  args?: Record<string, unknown>,
-): Promise<T> {
-  const res = (await browser.execute(
-    async (cmd: string, a: Record<string, unknown> | null) => {
-      const invoke = (window as unknown as TauriWindow).__TAURI__?.core?.invoke;
-      if (!invoke) {
-        return { ok: false, error: 'window.__TAURI__.core.invoke unavailable' };
-      }
-      try {
-        return { ok: true, value: await invoke(cmd, a ?? undefined) };
-      } catch (err) {
-        return { ok: false, error: String(err) };
-      }
-    },
-    command,
-    args ?? null,
-  )) as { ok: boolean; value?: T; error?: string };
-  if (!res.ok) throw new Error(`invoke('${command}'): ${res.error}`);
-  return res.value as T;
-}
-
-/**
- * Pull a model to completion in ONE execute, collecting every
- * `model:download-progress` payload, then return them. Awaiting the whole pull
- * (rather than fire-and-forget + poll) keeps the WebView script alive so no
- * progress event is missed — the pull's Rust command resolves only when it
- * truly finishes.
- */
-async function pullToCompletion(model: string): Promise<PullResult> {
-  return (await browser.execute(async (m: string) => {
-    const t = (window as unknown as TauriWindow).__TAURI__;
-    const invoke = t?.core?.invoke;
-    const listen = t?.event?.listen;
-    if (!invoke || !listen) {
-      return {
-        progress: [],
-        done: false,
-        error: 'window.__TAURI__ unavailable',
-      };
-    }
-    const progress: ProgressEvent[] = [];
-    const un = await listen('model:download-progress', (e) => {
-      progress.push(e.payload as ProgressEvent);
-    });
-    let done = false;
-    let error: string | null = null;
-    try {
-      await invoke('download_model', { model: m });
-      done = true;
-    } catch (err) {
-      error = String(err);
-    }
-    un();
-    return { progress, done, error };
-  }, model)) as PullResult;
-}
-
-/**
- * Start a pull and wait — INSIDE the page — until the first progress event lands
- * (up to `settleMs`), so the pull is genuinely in flight when we return, then
- * leave it running in the background for the caller to cancel. Returns true if a
- * live pull was confirmed.
- */
-async function startInFlightDownload(
-  model: string,
-  settleMs = 10_000,
-): Promise<boolean> {
-  return (await browser.execute(
-    async (m: string, budget: number) => {
-      const t = (window as unknown as TauriWindow).__TAURI__;
-      const invoke = t?.core?.invoke;
-      const listen = t?.event?.listen;
-      if (!invoke || !listen) return false;
-      const seen = { count: 0, done: false, error: false };
-      await listen('model:download-progress', () => {
-        seen.count += 1;
-      });
-      invoke('download_model', { model: m })
-        .then(() => {
-          seen.done = true;
-        })
-        .catch(() => {
-          seen.error = true;
-        });
-      const start = performance.now();
-      while (performance.now() - start < budget) {
-        if (seen.count > 0 || seen.done || seen.error) break;
-        await new Promise((r) => setTimeout(r, 100));
-      }
-      return seen.count > 0;
-    },
-    model,
-    settleMs,
-  )) as boolean;
-}
-
-describe('Journey 2: On-device Model Management', () => {
+describe('Journey 2: On-device Model Management', function () {
+  // A real pull can take a couple of minutes on a slow network.
+  this.timeout(300_000);
   before(async () => {
     // Pulls awaited in-page can run for many seconds; give WebDriver scripts room.
     await browser.setTimeout({ script: 300_000 });
+    // Let the shell settle BEFORE injecting any script: the app navigates right
+    // after launch, and a script in flight across that loses its result.
+    await $('body').waitForExist({
+      timeout: 60_000,
+      timeoutMsg: 'the app never rendered a <body> in its WebView',
+    });
+    await browser.pause(5000);
     // Every on-device action rides the Tauri IPC bridge; fail fast and clearly
     // if it never shows up on the WebView.
     await browser.waitUntil(
@@ -257,9 +132,12 @@ describe('Journey 2: On-device Model Management', () => {
   // `pnpm test:tauri:auth:delete`). They stay OUT of the IPC suite above because
   // driving a real download on the authenticated page makes the app's own
   // download UI react and fight these tests. Pending stubs until the UI pass —
-  // Mocha skips the login `before` while every test here is pending.
+  // the login `before` skips itself without credentials.
   describe('authenticated picker UI', () => {
-    before(async () => {
+    before(async function () {
+      // The authenticated checkpoints are pending; without credentials there is
+      // nothing to log in for.
+      if (!process.env.TAURI_E2E_USERNAME) return this.skip();
       await loginIfNeeded();
     });
 

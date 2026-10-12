@@ -1,6 +1,7 @@
 name: PR e2e commands
 
 # Slash commands for the PR e2e pipeline: /retest, /retest <spec>, /status, /report, /cancel.
+# The macOS matrix has its own: /retest-macos [scenario…], /status-macos, /report-macos, /cancel-macos (job `macos`).
 #
 # SECURITY — why this shape is safe on a PUBLIC repo:
 #   1. `issue_comment` runs this workflow from the DEFAULT BRANCH, never from the PR. A fork PR
@@ -56,3 +57,77 @@ jobs:
           # human did. DEPLOY_OPS_DISPATCH_TOKEN is scoped to iblai-deploy-ops and 403s here, so
           # this needs its own PAT with Issues + Pull requests write on this repo.
           label_token: ${{ secrets.PR_E2E_LABEL_TOKEN }}
+
+  # /retest-macos [scenario…|all], /status-macos, /report-macos, /cancel-macos for
+  # macos-e2e-tauri.yml. pr-e2e-action matches only /retest, "/retest <spec>", /status,
+  # /report, /cancel and /help exactly, so these never reach it. /retest-macos DISPATCHES
+  # (workflow_dispatch is exempt from GITHUB_TOKEN's no-new-runs rule): the macOS matrix is
+  # not a required check, and recycling run-tests would also restart the web pipeline.
+  macos:
+    if: github.event.issue.pull_request && startsWith(github.event.comment.body, '/') && contains(github.event.comment.body, '-macos')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read # main's matrix.mjs names the scenarios
+      issues: write # the eyes reaction
+      pull-requests: write # replies
+      actions: write # dispatch, list, cancel
+      statuses: write # /cancel-macos settles "macOS E2E"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: e2e-tauri/ci/macos
+
+      - name: Run the command
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          BODY: ${{ github.event.comment.body }}
+          WHO: ${{ github.event.comment.user.login }}
+          CID: ${{ github.event.comment.id }}
+          PR: ${{ github.event.issue.number }}
+          WF: macos-e2e-tauri.yml
+        run: |
+          FIRST=${BODY%%$'\n'*}
+          read -r CMD ARGS <<< "${FIRST%$'\r'}" || true
+          case "$CMD" in /retest-macos|/status-macos|/report-macos|/cancel-macos) ;; *) exit 0 ;; esac
+          say() { gh api "repos/$GH_REPO/issues/$PR/comments" -f body="$1" >/dev/null; }
+          read -r HEAD_REPO HEAD_REF HEAD_SHA <<< "$(gh api "repos/$GH_REPO/pulls/$PR" --jq '"\(.head.repo.full_name) \(.head.ref) \(.head.sha)"')"
+          PERM=$(gh api "repos/$GH_REPO/collaborators/$WHO/permission" --jq .permission 2>/dev/null || echo none)
+          if [ "$HEAD_REPO" != "$GH_REPO" ]; then say "🚫 **Not authorized.** This is a fork PR: e2e does not run on forks."; exit 0; fi
+          case "$PERM" in admin|maintain|write) ;; *)
+            say "🚫 **Not authorized.** \`$WHO\` needs **write** access to \`$GH_REPO\` (has: \`$PERM\`)."; exit 0 ;;
+          esac
+          gh api "repos/$GH_REPO/issues/comments/$CID/reactions" -f content=eyes >/dev/null || true
+          runs() { gh run list --workflow "$WF" --branch "$HEAD_REF" --limit 20 --json databaseId,status,conclusion,event,url,createdAt "$@"; }
+          case "$CMD" in
+            /retest-macos)
+              SC=$(tr ' ,' '\n\n' <<< "$ARGS" | grep -vxE 'all|' | paste -sd, - || true)
+              # main's matrix.mjs, never the PR's: this job holds write tokens.
+              if ! ERR=$(SCENARIOS="$SC" node e2e-tauri/ci/macos/matrix.mjs 2>&1 >/dev/null); then
+                ALL=$(node e2e-tauri/ci/macos/matrix.mjs | sed -n 's/^matrix=//p' | jq -r '[.[].scenario] | unique | join(" ")')
+                say "❌ $ERR. Nothing was started. Scenarios: \`$ALL\` (none = all rows)."; exit 0
+              fi
+              if ! ERR=$(gh workflow run "$WF" --ref "$HEAD_REF" -f scenarios="$SC" -f pr_number="$PR" 2>&1); then
+                say "⚠️ Could not start the macOS run: \`$ERR\`. A branch older than the macOS workflow needs a rebase on main."; exit 1
+              fi
+              say "$(printf '%s\n' "### Re-running macOS E2E (${SC:-all rows}), requested by @$WHO" "" \
+                "Tests the **head of \`$HEAD_REF\`**, not its merge with main (the \`run-tests\` label run tests the merge). It replaces any macOS run in progress for this PR; the result arrives as a new comment and the \`macOS E2E\` status." "" \
+                "[Runs](https://github.com/$GH_REPO/actions/workflows/$WF) · \`/status-macos\` · \`/cancel-macos\`")"
+              ;;
+            /status-macos)
+              L=$(runs --jq '.[:5][] | "- [\(.status) \(.conclusion)](\(.url)): \(.event), \(.createdAt)"')
+              say "$(printf '%s\n' "### macOS E2E runs, #$PR" "" "${L:-No macOS runs on \`$HEAD_REF\` yet.}")"
+              ;;
+            /report-macos)
+              L=$(gh api "repos/$GH_REPO/issues/$PR/comments" --paginate --jq '.[] | select(.body | startswith("<!-- pr-e2e-macos-report -->")) | .html_url' | tail -1)
+              if [ -n "$L" ]; then say "Latest macOS report: $L (report links expire after 7 days)."; else say "No macOS report on this PR yet. \`/retest-macos\` starts a run."; fi
+              ;;
+            /cancel-macos)
+              IDS=$(runs --jq '.[] | select(.status != "completed") | .databaseId')
+              [ -n "$IDS" ] || { say "Nothing to cancel: no queued or running macOS run for this PR."; exit 0; }
+              for id in $IDS; do gh run cancel "$id" >/dev/null || true; done
+              # A cancelled run's summary never runs: settle the status it left pending.
+              gh api "repos/$GH_REPO/statuses/$HEAD_SHA" -f state=error -f context='macOS E2E' -f description="Cancelled by @$WHO" >/dev/null || true
+              say "### macOS E2E cancelled, requested by @$WHO"
+              ;;
+          esac

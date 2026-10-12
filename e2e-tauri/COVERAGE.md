@@ -1,9 +1,9 @@
 # Tauri Desktop E2E Coverage — Journey Checklist
 
-> Last updated: 2026-10-01 | 52 checkpoints (22 covered, 29 pending, 1 deprecated) | 3 journeys | 100% of reproducible checkpoints covered | Driver: WebdriverIO + tauri-driver
+> Last updated: 2026-10-12 | 58 checkpoints (28 covered, 29 pending, 1 deprecated) | 4 journeys | 100% of reproducible checkpoints covered | Driver: WebdriverIO + @wdio/tauri-service (embedded)
 
 This is the desktop counterpart to the web `e2e/COVERAGE.md`. It tracks only what
-is exercised by driving the **built desktop binary** through `tauri-driver` (see
+is exercised by driving the **built desktop binary** through `@wdio/tauri-service` (see
 `e2e-tauri/`) — the native shell + WebView layer that the Playwright suite (`e2e/`)
 and the Vitest unit tests don't reach.
 
@@ -23,13 +23,13 @@ Coverage % = `covered / (total − pending − deprecated − not-reproducible)`
 spec file exists, that the `summary` counts match the journeys, and that the
 checkpoint count has not regressed (`--no-regress`).
 
-Platform support (same as `e2e-tauri/README.md`): Linux (`WebKitWebDriver`) and
-Windows (`msedgedriver`) only — `tauri-driver` has no macOS support.
+Platform support (same as `e2e-tauri/README.md`): macOS, Linux and Windows — the
+debug binary serves WebDriver itself (`tauri-plugin-wdio-webdriver`).
 
 **iOS note:** the mobile app's embedded on-device LLM runtime
 (`src-tauri/src/local_llm.rs` — the Ollama-compatible server that backs
-Journey 2's commands on iPhones) cannot be driven by `tauri-driver` (no
-iOS support). Its coverage lives in the Rust unit tests (`local_llm.rs`
+Journey 2's commands on iPhones) cannot be driven by this suite (desktop
+binaries only). Its coverage lives in the Rust unit tests (`local_llm.rs`
 `mod tests`, including an opt-in real-inference test:
 `IBL_LLM_TEST_MODEL=… cargo test --features embedded-llm -- --ignored`) and
 the Vitest suites (`coding-mode-button` mobile gating,
@@ -50,8 +50,8 @@ props) and `tool-call-item-memo.test.tsx` (tool rows skip identity-only
 re-renders).
 
 **App self-update note:** the update prompt (`components/app-update-prompt.tsx`,
-`src-tauri/src/app_update.rs`) cannot be e2e-driven either — tauri-driver has no
-release-build updater endpoint to point at, and the mobile halves open real
+`src-tauri/src/app_update.rs`) cannot be e2e-driven either — the suite drives a
+debug build with no updater endpoint to point at, and the mobile halves open real
 store pages. Coverage lives in the Rust `app_update` `mod tests` (version
 comparison, iTunes lookup parsing, Play listing parsing) and the
 `app-update-prompt` Vitest suite (check on every open, session-only "Later",
@@ -65,7 +65,7 @@ two vendored release workflows and are exercised by real releases.
 
 **Source files:** `src-tauri/src/lib.rs`, `src-tauri/src/main.rs`, `hooks/use-tauri.ts`, `types/tauri.ts`
 
-- [x] `shell-01` App binary launches under tauri-driver and a WebDriver session attaches to its WebView
+- [x] `shell-01` App binary launches with its embedded WebDriver server and a session attaches to its WebView
 - [x] `shell-02` The WebView renders a `<body>` element
 - [x] `shell-03` The WebView loads a document with a non-empty URL (the platform shell or the offline fallback)
 - [x] `shell-04` The document exposes a non-empty title
@@ -195,3 +195,22 @@ two vendored release workflows and are exercised by real releases.
 - [x] `code-39` `list_code_agent_models` answers each agent's models (id, name, description) with the agent's own default and the saved pick, or refuses naming install / sign-in; an unknown backend is refused
 - [ ] `code-40` The top-left model picker opens the SDK's LLM Selection dialog (`LLMProviderModal` in its `cloudOnly` mode, the same dialog the cloud picker opens behind a provider card) while Code runs on Codex / Claude Code (in place of the mentor's LLM selector and the on-device badge), lists Default with the agent's own default and the agent's models as cards, saves the pick per machine, and shows a failed list on the button with a click to retry _(needs an authenticated UI session like code-14/23/24; covered meanwhile by the nav-bar Vitest cases `shows the agent model picker instead of the LLM selector`, `keeps the LLM selector…` and `agent-model-selector.test.tsx`)_
 - [ ] `code-41` A Code turn runs on the picked model: the handshake applies it with `session/set_config_option` right after the mode pin, a live session takes a new pick without a respawn, and a model the agent refuses fails the turn naming the picker _(needs a signed-in ChatGPT / Claude subscription; covered meanwhile by the Rust `a_scripted_agent_reports_its_models_and_takes_the_saved_one`, `an_unknown_model_is_refused_before_it_is_saved` and `the_model_choice_lists_the_agents_offer_with_default_and_selection`)_
+
+---
+
+## Journey 4: Ollama on every macOS setup (6 checkpoints) — `journeys/04-ollama-setups.spec.ts`
+
+**Source files:** `src-tauri/src/model_manager.rs`, `src-tauri/src/ollama_installer.rs`, `src-tauri/src/main.rs`
+
+Runs only under `TAURI_E2E_SCENARIO`: the CI matrix (`.github/workflows/macos-e2e-tauri.yml`)
+puts a fresh macOS runner into one machine setup (`e2e-tauri/ci/macos/<scenario>.sh` —
+fresh, fresh without Homebrew, fresh Intel, Ollama.app running / stopped, the Homebrew
+formula as a service / CLI only, a bare CLI in `/usr/local/bin`) and runs this journey, then
+Journey 2, against it. Locally the journey is skipped.
+
+- [x] `setup-01` check_ollama_status reports the scenario's starting state (installed / running)
+- [x] `setup-02` install_ollama resolves on that setup (installing when nothing is there, starting when it is) and Ollama answers on :11434 afterwards
+- [x] `setup-03` A fresh Mac takes the documented install route: Homebrew when brew is present, the DMG into /Applications when it is not
+- [x] `setup-04` A model pull completes on that setup
+- [x] `setup-05` The cancel bounce (pkill + restart) leaves Ollama reachable within 30 s on that setup
+- [x] `setup-06` stop_ollama leaves Ollama stopped on that setup, and install_ollama brings it back
