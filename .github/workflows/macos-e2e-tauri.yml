@@ -1,0 +1,297 @@
+# macOS desktop e2e across machine setups. Same opt-in as pr-e2e-tests.yml (the
+# `run-tests` label on a same-repo PR) plus a manual dispatch. Each matrix row is
+# a fresh GitHub macOS VM put into one Ollama setup by
+# e2e-tauri/ci/macos/<scenario>.sh (rows: e2e-tauri/ci/macos/matrix.mjs), then
+# driven through the app's embedded WebDriver (e2e-tauri/README.md).
+#
+# Results arrive like the web e2e's: one PR comment per run with the report on
+# tests.iblai.app, and the `macOS E2E` commit status, green while every failure
+# is listed in e2e-tauri/ci/macos/known-failures.json. Informative only:
+# pr-gate.yml / `PR Validation` do not read it.
+#
+#   gh workflow run macos-e2e-tauri.yml --ref <branch> -f scenarios=app-running,fresh
+#   (or `/retest-macos [scenario…]` on the PR — see pr-e2e-commands.yml)
+name: macOS E2E (Tauri)
+
+on:
+  pull_request:
+    branches: [main]
+    types: [labeled, unlabeled, synchronize]
+  workflow_dispatch:
+    inputs:
+      scenarios:
+        description: 'Comma-separated scenario names (empty = all rows)'
+        required: false
+        default: ''
+        type: string
+      runner:
+        description: 'Runner label for the arm64 rows (macos-latest, macos-15, or a self-hosted label)'
+        required: false
+        default: 'macos-latest'
+        type: string
+      grep:
+        description: "Mocha grep applied to every row (empty = the row's own journeys)"
+        required: false
+        default: ''
+        type: string
+      pr_number:
+        description: 'PR to report to (comment + "macOS E2E" status); its head must be the --ref branch. Set by /retest-macos.'
+        required: false
+        default: ''
+        type: string
+
+run-name: "macOS E2E — ${{ github.event_name == 'pull_request' && format('#{0}', github.event.pull_request.number) || format('manual{0}: {1}', inputs.pr_number && format(' #{0}', inputs.pr_number) || '', inputs.scenarios || 'all') }}"
+
+permissions:
+  contents: read
+
+concurrency:
+  # A /retest-macos dispatch carries pr_number, so it supersedes the PR's label run and vice versa.
+  group: macos-e2e-${{ github.event.pull_request.number || inputs.pr_number || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  # Same gate as pr-e2e-tests.yml; a dispatch is its own opt-in.
+  gate:
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (contains(github.event.pull_request.labels.*.name, 'run-tests') &&
+       github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read # a dispatch's pr_number is checked against the PR's head
+      statuses: write # "macOS E2E" → pending
+    outputs:
+      matrix: ${{ steps.rows.outputs.matrix }}
+      jobs: ${{ steps.rows.outputs.jobs }}
+      pr: ${{ steps.pr.outputs.pr }}
+      sha: ${{ steps.pr.outputs.sha }}
+      # The web e2e's staging account, resolved by the private ops repo's action.
+      username: ${{ steps.config.outputs.username }}
+      app_url: ${{ steps.config.outputs.mentor-domain }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # Same as reusable-oci-test-runner.yml: the username never lives in this public repo.
+      - name: Checkout ops
+        uses: actions/checkout@v4
+        with:
+          repository: iblai/ibl-web-ops
+          token: ${{ secrets.GIT_TOKEN || github.token }}
+          path: .ops
+
+      - name: Determine the test user
+        id: config
+        uses: ./.ops/.github/actions/determine-test-user
+        with:
+          domain-number: '1'
+          app-type: mentor
+
+      # Before spending macOS hours on a run the summary could not report.
+      - name: Self-check the report builder
+        run: node --test e2e-tauri/ci/macos/build-report.test.mjs
+
+      - name: Select the rows
+        id: rows
+        env:
+          SCENARIOS: ${{ inputs.scenarios }}
+          RUNNER: ${{ inputs.runner }}
+        run: node e2e-tauri/ci/macos/matrix.mjs | tee -a "$GITHUB_OUTPUT"
+
+      - name: Mark the PR pending
+        id: pr
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number || inputs.pr_number }}
+          SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          # A dispatch reports to pr_number only if that PR's head is the dispatched branch.
+          if [ -n "$PR" ] && [ "$GITHUB_EVENT_NAME" = workflow_dispatch ]; then
+            [[ "$PR" =~ ^[0-9]+$ ]] || { echo "::error::pr_number must be a PR number"; exit 1; }
+            HEAD=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR" --jq '"\(.head.repo.full_name):\(.head.ref)"')
+            [ "$HEAD" = "$GITHUB_REPOSITORY:$GITHUB_REF_NAME" ] || { echo "::error::#$PR's head is $HEAD, not $GITHUB_REF_NAME"; exit 1; }
+          fi
+          { echo "pr=$PR"; echo "sha=$SHA"; } >> "$GITHUB_OUTPUT"
+          [ -z "$PR" ] || gh api "repos/$GITHUB_REPOSITORY/statuses/$SHA" -f state=pending \
+            -f context='macOS E2E' -f description='Running the macOS matrix' -f target_url="$RUN_URL" >/dev/null
+
+  # One job per architecture: it builds the debug binary (the WebDriver server only
+  # exists in debug builds) and runs its rows one after another on the same VM —
+  # run-rows.mjs resets the machine between setups. Rows run PR code with the
+  # checkout token: no write scopes here.
+  macos:
+    needs: gate
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.gate.outputs.jobs) }}
+    name: macOS ${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: ${{ matrix.timeout }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust build
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+          # ~/.cargo/bin can carry stale binaries across macOS runs.
+          cache-bin: false
+
+      - name: Build the debug binary
+        run: cargo build
+        working-directory: src-tauri
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: package.json
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Exits 0 whatever the rows did: the summary job decides from the JSON results.
+      - name: Run the rows
+        env:
+          MATRIX: ${{ needs.gate.outputs.matrix }}
+          ARCH: ${{ matrix.arch }}
+          GREP: ${{ inputs.grep }}
+          TAURI_APP_URL: ${{ needs.gate.outputs.app_url }}
+          TAURI_E2E_USERNAME: ${{ needs.gate.outputs.username }}
+          TAURI_E2E_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
+          TAURI_E2E_DATA_HOME: ${{ runner.temp }}/iblai-os-test
+          TAURI_APP_BINARY: src-tauri/target/debug/ibl-ai-os
+        run: node e2e-tauri/ci/macos/run-rows.mjs
+
+      - name: Leftover processes
+        if: always()
+        run: |
+          pgrep -fl 'ibl-ai-os|ollama|opencode' || echo "none"
+          pkill -x ibl-ai-os || true
+
+      # One dir per row: screenshots, JSON results, a setup.log when the setup failed.
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: macos-e2e-${{ matrix.arch }}
+          path: e2e-tauri/logs
+          if-no-files-found: ignore
+
+  summary:
+    needs: [gate, macos]
+    # Not when cancelled: a superseded run must not overwrite the newer run's pending status.
+    if: ${{ !cancelled() && needs.gate.result == 'success' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write # the report comment
+      statuses: write # "macOS E2E"
+    env:
+      KEY: runs/pr-os-${{ needs.gate.outputs.pr || 'manual' }}-${{ github.run_id }}/macos
+    steps:
+      - uses: actions/checkout@v4
+
+      # One dir per job artifact; no match = no dir, no error (the builder copes).
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: macos-e2e-*
+          path: report
+
+      - name: Build the report
+        env:
+          MATRIX: ${{ needs.gate.outputs.matrix }}
+          GREP: ${{ inputs.grep }}
+          PR: ${{ needs.gate.outputs.pr }}
+          SHA: ${{ needs.gate.outputs.sha }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          REPORT_URL: https://${{ vars.CLOUDFRONT_DOMAIN || 'tests.iblai.app' }}/${{ env.KEY }}/index.html
+          TAURI_APP_URL: ${{ needs.gate.outputs.app_url }}
+        run: node e2e-tauri/ci/macos/build-report.mjs report > rows.md
+
+      - name: Publish the report
+        id: s3
+        # No link beats no comment; the comment says why.
+        continue-on-error: true
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.S3_LOGS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_LOGS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
+          BUCKET: ${{ secrets.S3_LOGS_BUCKET }}
+        run: aws s3 cp report "s3://$BUCKET/$KEY/" --recursive --only-show-errors
+
+      - name: Comment, status, verdict
+        uses: actions/github-script@v7
+        env:
+          PR: ${{ needs.gate.outputs.pr }}
+          SHA: ${{ needs.gate.outputs.sha }}
+          JOB: ${{ needs.macos.result }}
+          UPLOADED: ${{ steps.s3.outcome }}
+          SCENARIOS: ${{ inputs.scenarios }}
+          GREP: ${{ inputs.grep }}
+        with:
+          script: |
+            const fs = require('fs');
+            const s = JSON.parse(fs.readFileSync('report/summary.json', 'utf8'));
+            const { PR, SHA, JOB, UPLOADED, SCENARIOS, GREP } = process.env;
+            // Rows never fail their job, so a job that is not a success died before them (build, setup).
+            const ran = JOB === 'success' || s.rows.some((r) => r.passed + r.failed + r.skipped > 0);
+            const ok = ran && s.gate === 'PASS';
+            const word = !ran ? 'NOT RUN' : ok ? 'OK' : 'FAILED';
+            const url = UPLOADED === 'success' ? s.report_url : '';
+            // As on the web: a run with a report posts its own comment; one without edits a sticky notice.
+            const marker = url ? '<!-- pr-e2e-macos-report -->' : '<!-- pr-e2e-macos-norun -->';
+            const runners = [...new Set(s.rows.map((r) => r.runner))].join('`, `');
+            const body = [
+              marker,
+              `### macOS E2E - ${word}`,
+              '',
+              url
+                ? `**[Full report and screenshots](${url})**`
+                : ran
+                  ? `_Report not published (S3 upload: ${UPLOADED}); results and screenshots are in the run's \`macos-e2e-*\` artifacts._`
+                  : `_The macOS job ${JOB} before any row ran (build or setup)._`,
+              '',
+              '| | |',
+              '|---|---|',
+              `| result | **${word}** |`,
+              `| run | [\`${context.runId}\`](${s.run_url}) |`,
+              `| commit | \`${SHA.slice(0, 8)}\` |`,
+              `| suite | \`macos\` - ${s.rows.length} rows - scenarios \`${SCENARIOS || 'all'}\`${GREP ? ` - grep \`${GREP}\`` : ''} |`,
+              `| tested against | \`${s.app_url}\` - app \`${s.app_version}\` (debug) - \`${runners}\` |`,
+              `| failed | \`${s.failed}\` |`,
+              `| new failures | \`${s.new_failures}\` |`,
+              '',
+              fs.readFileSync('rows.md', 'utf8'),
+              '<sub>`/retest-macos [scenario…]` · `/status-macos` · `/report-macos` · `/cancel-macos`</sub>',
+            ].join('\n');
+            await core.summary.addRaw(body).write();
+            if (PR) {
+              const { owner, repo } = context.repo;
+              const issue_number = Number(PR);
+              const sticky =
+                !url &&
+                (await github.paginate(github.rest.issues.listComments, { owner, repo, issue_number, per_page: 100 })).findLast(
+                  (c) => c.body?.startsWith(marker),
+                );
+              if (sticky) await github.rest.issues.updateComment({ owner, repo, comment_id: sticky.id, body });
+              else await github.rest.issues.createComment({ owner, repo, issue_number, body });
+              await github.rest.repos.createCommitStatus({
+                owner,
+                repo,
+                sha: SHA,
+                context: 'macOS E2E',
+                state: ok ? 'success' : 'failure',
+                target_url: url || s.run_url,
+                description: (ran ? `${s.passed} passed, ${s.failed} failed (${s.new_failures} new)` : `macOS job ${JOB}`).slice(0, 140),
+              });
+            }
+            if (!ok) core.setFailed(`macOS E2E ${word}: gate ${s.gate}, macOS job ${JOB}`);

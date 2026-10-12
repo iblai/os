@@ -86,6 +86,8 @@ llama-cpp-2 = { version = "0.1.155", features = ["metal"], optional = true }
 # In-place auto-update (desktop only): checks the signed latest-{{target}}.json
 # on the GitHub release, downloads + verifies + installs, then relaunches.
 tauri-plugin-updater = "2"
+# e2e only: in-app WebDriver server, registered in debug builds when wdio launches the app.
+tauri-plugin-wdio-webdriver = "1.5.0"
 
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"

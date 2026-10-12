@@ -1,0 +1,4 @@
+{
+  "_doc": "Accepted macOS e2e failures: scenario (\"*\" = every row) -> checkpoint id -> { reason, since }. The id is the it() prefix (setup-06), a spec file name for a spec with no results, or a failed hook's title. The macOS E2E status stays green while every failure is listed; remove an entry once fixed so a re-failure turns it red again.",
+  "*": {}
+}

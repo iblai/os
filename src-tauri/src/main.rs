@@ -2262,6 +2262,14 @@ fn main() {
     #[cfg(target_os = "macos")]
     let base = base.plugin(tauri_plugin_macos_permissions::init());
 
+    // e2e only: the embedded WebDriver server (`@wdio/tauri-service` sets the env).
+    #[cfg(debug_assertions)]
+    let base = if std::env::var_os("WDIO_EMBEDDED_SERVER").is_some() {
+        base.plugin(tauri_plugin_wdio_webdriver::init())
+    } else {
+        base
+    };
+
     base.plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_opener::init())

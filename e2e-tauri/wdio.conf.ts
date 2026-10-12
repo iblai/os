@@ -1,24 +1,20 @@
 /// <reference types="@wdio/types" />
-import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
-import { existsSync, mkdirSync, writeFileSync, chmodSync } from 'node:fs';
+/// <reference types="@wdio/globals/types" />
+import { spawnSync } from 'node:child_process';
+import { existsSync, mkdirSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { homedir, tmpdir } from 'node:os';
+import { homedir } from 'node:os';
 import { config as loadEnvFile } from 'dotenv';
+import { SevereServiceError } from 'webdriverio';
 
 /**
- * WebdriverIO end-to-end config for the ibl.ai Tauri desktop app, following the
- * official guide: https://webdriver.io/docs/desktop-testing/tauri
+ * WebdriverIO end-to-end config for the ibl.ai Tauri desktop app.
  *
- * WDIO drives `tauri-driver` (listens on 127.0.0.1:4444), which proxies WebDriver
- * requests to the platform WebView driver:
- *   - Linux   → `WebKitWebDriver`   (package: webkit2gtk-driver)
- *   - Windows → `msedgedriver`      (matching the installed WebView2 runtime)
- *   - macOS   → NOT supported by tauri-driver (WKWebView has no WebDriver).
- *
- * Prereqs (see e2e-tauri/README.md):
- *   1. `cargo install tauri-driver --locked`
- *   2. the platform WebView driver on PATH (WebKitWebDriver / msedgedriver)
- *   3. a built app binary — see APP_BINARY below.
+ * `@wdio/tauri-service` (embedded provider) spawns the DEBUG binary with
+ * WDIO_EMBEDDED_SERVER set; the app then serves W3C WebDriver itself on
+ * 127.0.0.1:4445 (`tauri-plugin-wdio-webdriver`, registered in debug builds
+ * only — see src-tauri/src/main.rs). Same path on macOS, Linux and Windows:
+ * no tauri-driver, no platform WebView driver.
  *
  * Run from the repo root:  pnpm test:tauri
  */
@@ -29,84 +25,74 @@ import { config as loadEnvFile } from 'dotenv';
 // launcher and the workers. (Run from the repo root, as the pnpm scripts do.)
 loadEnvFile({ path: resolve(process.cwd(), 'e2e-tauri/.env.local') });
 
-// Isolate the test webview profile (cookies / localStorage / auth) from the real
-// app data dir by pointing XDG_DATA_HOME at a disposable directory — the app's
-// data then lives under <AUTH_STATE_DIR>/ai.ibl.mentorai instead of
-// ~/.local/share/ai.ibl.mentorai, so tests never touch your real session. Delete
-// it to force a fresh login (`pnpm test:tauri:auth:delete`); keep it to reuse the
-// saved session (`pnpm test:tauri:auth:save`). Every child (tauri-driver → WebView
-// driver → app) inherits this env. Override the location with TAURI_E2E_DATA_HOME.
+// Isolate the test profile from the real app data by pointing XDG_DATA_HOME at a
+// disposable directory; the service spawns the app with this env. On Linux that
+// moves the whole app data dir (cookies / localStorage / auth included); on macOS
+// and Windows only the app's `iblai` dir (opencode, workspaces) follows it — the
+// webview store and Tauri's app-data dir stay at their real locations. Delete it
+// to force a fresh login (`pnpm test:tauri:auth:delete`); keep it to reuse the
+// saved session (`pnpm test:tauri:auth:save`). Override with TAURI_E2E_DATA_HOME.
 const AUTH_STATE_DIR =
   process.env.TAURI_E2E_DATA_HOME ??
   resolve(homedir(), '.local/share/iblai-os-test');
 mkdirSync(AUTH_STATE_DIR, { recursive: true });
 process.env.XDG_DATA_HOME = AUTH_STATE_DIR;
 
-// The app binary bundles the built frontend (tauri.conf.json `frontendDist`).
-// Prefer an existing build (release, then debug); if nothing is built yet, use
-// the debug path — `onPrepare` builds it on demand. Override with
-// TAURI_APP_BINARY.
-// Windows binaries carry the `.exe` extension.
+// Only a debug build carries the embedded WebDriver server, so the binary is
+// target/debug — `onPrepare` (re)builds it. Override with TAURI_APP_BINARY (a
+// prebuilt debug binary, e.g. a CI artifact). Windows binaries carry `.exe`.
 const BIN = process.platform === 'win32' ? 'ibl-ai-os.exe' : 'ibl-ai-os';
-const BINARY_CANDIDATES = [
-  `src-tauri/target/release/${BIN}`,
-  `src-tauri/target/debug/${BIN}`,
-].map((p) => resolve(process.cwd(), p));
-
-const APP_BINARY = process.env.TAURI_APP_BINARY
-  ? resolve(process.cwd(), process.env.TAURI_APP_BINARY)
-  : (BINARY_CANDIDATES.find(existsSync) ?? BINARY_CANDIDATES[1]);
-
-// WebKitWebDriver launches the app with a sanitised environment, so exporting
-// XDG_DATA_HOME to tauri-driver never reaches the app — it keeps writing to the
-// real ~/.local/share/ai.ibl.mentorai. Force the isolated profile with a tiny
-// launcher shim that sets the env and exec's the real binary (exec keeps the same
-// pid, so the process-group kill in afterSession still reaps it). Linux only;
-// Windows uses %APPDATA% and is launched directly.
-const APP_LAUNCH_TARGET = (() => {
-  if (process.platform === 'win32') return APP_BINARY;
-  const shim = resolve(tmpdir(), 'iblai-os-e2e-app-launch.sh');
-  writeFileSync(
-    shim,
-    `#!/bin/sh\nexport XDG_DATA_HOME=${JSON.stringify(AUTH_STATE_DIR)}\nexec ${JSON.stringify(APP_BINARY)} "$@"\n`,
-  );
-  chmodSync(shim, 0o755);
-  return shim;
-})();
-
-// The `tauri-driver` child process, spawned per session and killed after it.
-let tauriDriver: ChildProcess;
+const APP_BINARY = resolve(
+  process.cwd(),
+  process.env.TAURI_APP_BINARY || `src-tauri/target/debug/${BIN}`,
+);
+// Failure screenshots + JSON results (one wdio-<cid>-json-reporter.json per spec file);
+// CI gives every row its own dir under e2e-tauri/logs and uploads the lot.
+const LOGS = resolve(
+  process.cwd(),
+  process.env.TAURI_E2E_LOGS ?? 'e2e-tauri/logs',
+);
+const STATUS_URL = `http://127.0.0.1:${process.env.TAURI_WEBDRIVER_PORT ?? 4445}/status`;
 
 export const config: WebdriverIO.Config = {
   runner: 'local',
-
-  // tauri-driver's default listen address.
-  hostname: '127.0.0.1',
-  port: 4444,
-  path: '/',
 
   // Journey specs (mirrors e2e/journeys/). Each `it` is a coverage checkpoint;
   // the ledger lives in coverage.json / COVERAGE.md.
   specs: ['./journeys/**/*.spec.ts'],
 
-  // One desktop window / WebDriver session at a time.
+  // Embedded mode shares ONE app instance across all spec files.
   maxInstances: 1,
   capabilities: [
     {
-      // tauri-driver reads this and launches the app under the native WebDriver.
-      // Points at the XDG_DATA_HOME shim so the app uses the isolated profile.
+      browserName: 'tauri',
+      // The service spawns this binary and fills in hostname/port for its
+      // embedded WebDriver server.
       'tauri:options': {
-        application: APP_LAUNCH_TARGET,
+        application: APP_BINARY,
       },
       'wdio:maxInstances': 1,
-      // `tauri:options` is tauri-driver's custom capability, not part of WDIO's
+      // `tauri:options` is the service's custom capability, not part of WDIO's
       // standard capability types — cast so the strict config type accepts it.
     } as WebdriverIO.Capabilities,
   ],
 
+  // `embedded` is the default, but only a named provider makes the worker pass
+  // browser.execute through untouched. Backend logs: the app's stdout, as the
+  // inherited stdio gave us before.
+  services: [
+    [
+      '@wdio/tauri-service',
+      { driverProvider: 'embedded', captureBackendLogs: true },
+    ],
+  ],
+
   logLevel: 'info',
+  // Pulls and installs are awaited inside one WebDriver command; the specs allow
+  // such scripts 300 s, so the HTTP side must wait as long or it re-sends them.
+  connectionRetryTimeout: 300_000,
   framework: 'mocha',
-  reporters: ['spec'],
+  reporters: ['spec', ['json', { outputDir: LOGS }]],
   mochaOpts: {
     ui: 'bdd',
     // Cold desktop launch + webview navigation is slow; give it room.
@@ -114,63 +100,44 @@ export const config: WebdriverIO.Config = {
   },
 
   /**
-   * Build the app on demand if no binary exists yet (the guide auto-builds too).
-   * This app's binary embeds a separately-built frontend, so a bare `cargo build`
-   * is insufficient — use the repo's debug build (`pnpm build && cargo tauri build
-   * --debug`), which produces `target/debug/ibl-ai-os`. Skipped entirely when a
-   * binary already exists, so normal runs don't pay the build cost.
-   *
-   * The build's exit code is ignored (a failing *bundle* step still leaves a
-   * usable binary); success is decided by whether the binary now exists.
+   * A leftover app on the WebDriver port would silently be the one under test;
+   * refuse. Then (re)build the debug binary — `cargo build` is a no-op when it
+   * is current, and it is the same dev build `tauri dev` makes (no bundle, no
+   * signing; the online path is identical). Plain errors thrown here are only
+   * logged by the runner; SevereServiceError aborts the run.
    */
-  onPrepare: () => {
-    if (existsSync(APP_BINARY)) return;
-    console.log(
-      `[e2e] no app binary at ${APP_BINARY}\n` +
-        `[e2e] building it (pnpm tauri:build:debug) — this can take several minutes…`,
-    );
-    spawnSync('pnpm', ['tauri:build:debug'], { stdio: 'inherit' });
-    if (!existsSync(APP_BINARY)) {
-      throw new Error(
-        `Build did not produce ${APP_BINARY}.\n` +
-          `Build it manually and retry:\n` +
-          `  pnpm tauri:build:debug     # debug (target/debug/ibl-ai-os)\n` +
-          `  pnpm tauri build           # release (target/release/ibl-ai-os)\n`,
+  onPrepare: async () => {
+    if (
+      await fetch(STATUS_URL).then(
+        () => true,
+        () => false,
+      )
+    ) {
+      throw new SevereServiceError(
+        `Something already serves ${STATUS_URL} — kill the leftover ibl-ai-os first.`,
       );
+    }
+    if (process.env.TAURI_APP_BINARY) return;
+    const build = spawnSync('cargo', ['build'], {
+      cwd: resolve(process.cwd(), 'src-tauri'),
+      stdio: 'inherit',
+    });
+    if (build.status !== 0 || !existsSync(APP_BINARY)) {
+      throw new SevereServiceError(`cargo build did not produce ${APP_BINARY}`);
     }
   },
 
-  /**
-   * Start `tauri-driver` before the session so it can proxy WebDriver requests,
-   * and stop it after (per the guide). A missing binary surfaces a clear hint
-   * instead of an opaque connection failure.
-   */
-  beforeSession: () => {
-    // `detached` puts tauri-driver in its own process group so we can reap the
-    // whole tree (tauri-driver → native WebView driver → the app + its sidecars)
-    // in afterSession — otherwise those children linger and keep the runner from
-    // exiting after the tests finish.
-    tauriDriver = spawn('tauri-driver', [], {
-      stdio: ['ignore', 'inherit', 'inherit'],
-      detached: true,
-      // Redirect the app's data dir (auth state) into the isolated profile.
-      env: { ...process.env, XDG_DATA_HOME: AUTH_STATE_DIR },
-    });
-    tauriDriver.on('error', (err) => {
-      console.error(
-        '\n[tauri-driver] failed to start — is it installed and on PATH?\n' +
-          '  cargo install tauri-driver --locked\n',
-        err,
-      );
-    });
+  // An explicit window switch turns off the service's per-command focus probe,
+  // which needs the guest plugin we don't ship (a 5 s timeout per lookup otherwise).
+  before: async (_caps, _specs, browser) => {
+    await browser.switchToWindow(await browser.getWindowHandle());
   },
-  afterSession: () => {
-    if (!tauriDriver?.pid) return;
-    try {
-      // Negative pid → kill the whole process group.
-      process.kill(-tauriDriver.pid, 'SIGKILL');
-    } catch {
-      tauriDriver.kill('SIGKILL');
-    }
+
+  // Screenshot on failure — the only eyes a CI run has.
+  afterTest: async (test, _context, { passed }) => {
+    if (passed) return;
+    mkdirSync(LOGS, { recursive: true });
+    const name = test.title.replace(/[^\w.-]+/g, '_').slice(0, 80);
+    await browser.saveScreenshot(resolve(LOGS, `${name}.png`)).catch(() => {});
   },
 };
