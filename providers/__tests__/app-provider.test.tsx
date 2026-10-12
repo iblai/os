@@ -203,10 +203,12 @@ describe('AppProvider', () => {
       });
     });
 
-    it('fetches the user-wide pinned messages with tenant and user name', async () => {
+    it('fetches pinned messages with tenant and user name', async () => {
       await invokeMentorResponded({
         data: { value: { sessionId: 'session-4' } },
       });
+      // iblai-js 2.33.1 dropped sessionId from PinnedMessagesArgs — pinned
+      // messages are scoped by org + user, not by session.
       expect(mockGetPinnedMessages).toHaveBeenCalledWith({
         org: 'tenant-xyz',
         userId: 'user-name-abc',

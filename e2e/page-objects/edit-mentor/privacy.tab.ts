@@ -66,7 +66,7 @@ export class PrivacyTab {
 
     this.heading = dialog.getByRole('heading', { name: 'Privacy' });
     this.description = dialog.getByText(
-      /Detect and filter personally identifiable information from chat messages\./i,
+      /Control what personal information the agent sees and how Incognito works for its conversations\./i,
     );
     this.body = dialog.getByTestId('privacy-tab-body');
     this.capabilityToggle = dialog.getByTestId('privacy-capability-toggle');

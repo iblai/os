@@ -1,5 +1,96 @@
 # Changelog
 
+## [0.165.3](https://github.com/iblai/os/compare/v0.165.2...v0.165.3) (2026-10-11)
+
+### Bug Fixes
+
+- **ext:** vendor current agent-ai UMD so mentor selection reaches the URL ([756d41f](https://github.com/iblai/os/commit/756d41fd2d4c4b8ddf1876b20ee3a32ef2a65d90))
+
+## [0.165.2](https://github.com/iblai/os/compare/v0.165.1...v0.165.2) (2026-10-10)
+
+### Chores
+
+- **ext:** bump Chrome extension to 1.1.3 ([73da04f](https://github.com/iblai/os/commit/73da04f856ce35d6bfed6ad058faf4987bf83b61))
+
+## [0.165.1](https://github.com/iblai/os/compare/v0.165.0...v0.165.1) (2026-10-10)
+
+### Bug Fixes
+
+- **tts:** add trailing slash to the chat-message TTS endpoint ([599e2e5](https://github.com/iblai/os/commit/599e2e56dc34fbeef7b7d4017dd791fba0a51682))
+
+## [0.165.0](https://github.com/iblai/os/compare/v0.164.1...v0.165.0) (2026-10-09)
+
+### Features
+
+- **ext:** keep a downloadable build artifact + enable mentor selection ([b332ebd](https://github.com/iblai/os/commit/b332ebd5297b865aefc96f911a1e5b75a729d131))
+
+## [0.164.1](https://github.com/iblai/os/compare/v0.164.0...v0.164.1) (2026-10-09)
+
+### Chores
+
+- **build:** rebuild image with updated NEXT_IMAGE_PATTERNS ([28c1d98](https://github.com/iblai/os/commit/28c1d98076285bac997a6b6308c5c561746817ac))
+
+## [0.164.0](https://github.com/iblai/os/compare/v0.163.1...v0.164.0) (2026-10-09)
+
+### Features
+
+- **embed:** add Allow Agent Selection toggle to the Embed tab ([1837439](https://github.com/iblai/os/commit/183743993b99dcd22d03a3790928c517ad843e5e))
+- **embed:** add allow-mentor-selection URL flag and keep it through navigation ([8796234](https://github.com/iblai/os/commit/87962347ad7a8b41eb3165bb7e0f03504495324f))
+- **embed:** show a single Agents button in the embed sidebar when allowed ([22a93c0](https://github.com/iblai/os/commit/22a93c0485a99a614d7c20897155b3478b8321e1))
+- **explore:** hide agent creation on Explore when agent selection is on ([c8a2513](https://github.com/iblai/os/commit/c8a2513ac21d4846f1747f466c41d041595c0d69))
+- **explore:** slim Explore for agent selection in the embed ([5ae6c86](https://github.com/iblai/os/commit/5ae6c8689d58cba56f52c3eed7a86b9bf6788dfc))
+
+### Bug Fixes
+
+- **embed:** title-case Explore Agents and match the agent name style in the top bar ([2341262](https://github.com/iblai/os/commit/234126290d19e4455d4819108fb6e8d41e829880))
+
+### Reverts
+
+- **explore:** keep the Explore page and embed top bar unchanged ([1c46eaa](https://github.com/iblai/os/commit/1c46eaa8750df27fffa1ff2eea51e29e26818996))
+
+### Styles
+
+- prettier formatting of CHANGELOG ([bbe3742](https://github.com/iblai/os/commit/bbe374279d3d779e786130649789bac4856b08e1))
+
+### Tests
+
+- **embed:** cover allow-mentor-selection flag, toggle, sidebar and Explore ([c5ec7d0](https://github.com/iblai/os/commit/c5ec7d066de4e6a90270abb2e01abb9bc3ed954e))
+
+## [0.163.1](https://github.com/iblai/os/compare/v0.163.0...v0.163.1) (2026-10-08)
+
+### Chores
+
+- **deps:** bump @iblai/iblai-js 2.29.0 -> 2.33.1 ([3f386d2](https://github.com/iblai/os/commit/3f386d2edd7dd516f813e963ba68c806a5aab502))
+
+## [0.163.0](https://github.com/iblai/os/compare/v0.162.3...v0.163.0) (2026-10-08)
+
+### Features
+
+- **os:** adding incognito and fixes for history ([61252b9](https://github.com/iblai/os/commit/61252b9a9765c4345cb3453ead290ee10a9d956b))
+
+### Bug Fixes
+
+- **os:** adding fix for the new chat button lookup ([9292dbc](https://github.com/iblai/os/commit/9292dbcebe274915367cc3863bfffda10d165324))
+- **os:** adding fix for the playwright test ([641ffa7](https://github.com/iblai/os/commit/641ffa77904e6c39c1d5f4401e3a94f6ab9febc8))
+- **os:** adding fix for the system audit ([f2e15ff](https://github.com/iblai/os/commit/f2e15ffa6579c1730aea051e193a59bd73288f9f))
+
+## [0.162.3](https://github.com/iblai/os/compare/v0.162.2...v0.162.3) (2026-10-08)
+
+### Bug Fixes
+
+- **desktop:** also treat microsoft-graph SSO as an in-app OAuth URL ([33a2725](https://github.com/iblai/os/commit/33a272529bf7c14ddd8e4c7d340a24ec4a11bb4a))
+- **desktop:** open Microsoft/Azure AD sign-in in the in-app OAuth popup ([79a6bca](https://github.com/iblai/os/commit/79a6bcadb1ee2fff7bbafb069461298eae157a19))
+
+### Chores
+
+- **tauri:** release app-v0.95.24 ([f6c53e0](https://github.com/iblai/os/commit/f6c53e0b8d019fe0719293bad9dfb782a54edc92))
+
+## [0.162.2](https://github.com/iblai/os/compare/v0.162.1...v0.162.2) (2026-10-07)
+
+### Tests
+
+- **e2e:** pin gpt-5 for journey 52's reasoning + tool-call test ([eaf3d59](https://github.com/iblai/os/commit/eaf3d59b279cf40034df4504be6dd17515b21976))
+
 ## [0.162.1](https://github.com/iblai/os/compare/v0.162.0...v0.162.1) (2026-10-06)
 
 ### Chores

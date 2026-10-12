@@ -15,6 +15,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useNavigate } from '@/hooks/user-navigate';
+import { useAllowMentorSelection } from '@/hooks/use-allow-mentor-selection';
 import { useTenantMetadata } from '@iblai/iblai-js/web-utils';
 import { isLoggedIn, redirectToAuthSpaJoinTenant } from '@/lib/utils';
 import { WithPermissions } from '@/hoc/withPermissions';
@@ -160,6 +161,8 @@ export function ExplorePageContent({ tenantKey }: ExplorePageContentProps) {
     [tenantAgentsData, username],
   );
 
+  const allowMentorSelection = useAllowMentorSelection();
+
   const handleCreateMentor = React.useCallback(() => {
     if (!isLoggedIn()) {
       redirectToAuthSpaJoinTenant(tenantKey);
@@ -286,7 +289,7 @@ export function ExplorePageContent({ tenantKey }: ExplorePageContentProps) {
               </h1>
               <WithPermissions rbacResource={CREATE_MENTOR_RBAC_RESOURCE}>
                 {({ hasPermission }) =>
-                  hasPermission ? (
+                  hasPermission && !allowMentorSelection ? (
                     <Button
                       onClick={handleCreateMentor}
                       aria-label={t('createAgentAriaLabel')}

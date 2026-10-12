@@ -163,7 +163,18 @@ describe('SettingsTab', () => {
       expect(value.username).toBe('jane');
       expect(value.enableRBAC).toBe(false);
       expect(value.rbacPermissions).toBe(mockRbacPermissions);
-      expect(value.visibilityOptions).toEqual(MENTOR_VISIBILITY);
+      // Same values, labels from next-intl (the prompts-tab visibility
+      // selects read them).
+      expect(value.visibilityOptions).toEqual(
+        MENTOR_VISIBILITY.map((option) => ({
+          ...option,
+          label: {
+            viewable_by_tenant_admins: 'administratorsOption',
+            viewable_by_tenant_students: 'usersOption',
+            viewable_by_anyone: 'anyoneOption',
+          }[option.value],
+        })),
+      );
     });
 
     it('forwards the config-derived enableRBAC flag', () => {
@@ -240,7 +251,7 @@ describe('SettingsTab', () => {
   });
 
   describe('Labels override (agent -> mentor/OS wording)', () => {
-    it('maps translated strings and reproduces the hard-coded ones', () => {
+    it('maps every label to its next-intl key', () => {
       render(<SettingsTab />);
       const labels = tabProps().labels;
 
@@ -251,18 +262,15 @@ describe('SettingsTab', () => {
       expect(labels.copyModal.title).toBe('dialogTitle');
       expect(labels.copyModal.defaultNamePrefix).toBe('defaultCopyNamePrefix');
 
-      // Who-can-view options match MENTOR_VISIBILITY labels.
       expect(labels.fields.whoCanView.options).toEqual({
-        administrators: 'Administrators',
-        students: 'Users',
-        anyone: 'Anyone',
+        administrators: 'administratorsOption',
+        students: 'usersOption',
+        anyone: 'anyoneOption',
       });
-
-      // Strings the monolith hard-coded in English (no i18n key).
-      expect(labels.fields.showReasoning.label).toBe(
-        'Enable verbose reasoning',
-      );
-      expect(labels.fields.privateMode.label).toBe('Enable private mode');
+      expect(labels.fields.showReasoning).toEqual({
+        label: 'enableVerboseReasoningLabel',
+        tooltip: 'enableVerboseReasoningTooltip',
+      });
 
       // Sub-tabs, section headings, and the full Capabilities toggle set are
       // all wired to their OS i18n keys.
@@ -321,6 +329,36 @@ describe('SettingsTab', () => {
   // owns the separator. A prefix that carries its own trailing space (as an
   // ICU "Copy of {name}" rendered with an empty name did) produces
   // "Copy of  Agent" on the copied agent, so keep every catalog value bare.
+  describe('Settings tab catalogs', () => {
+    it('translates the visibility options and verbose reasoning in every locale', async () => {
+      const catalogs = {
+        en: (await import('../../../messages/en.json')).default,
+        es: (await import('../../../messages/es.json')).default,
+        fr: (await import('../../../messages/fr.json')).default,
+        zh: (await import('../../../messages/zh.json')).default,
+      };
+      const keys = [
+        'administratorsOption',
+        'usersOption',
+        'anyoneOption',
+        'enableVerboseReasoningLabel',
+        'enableVerboseReasoningTooltip',
+      ];
+
+      for (const [locale, messages] of Object.entries(catalogs)) {
+        const tab = (
+          messages as unknown as { tabsSettingsTab: Record<string, string> }
+        ).tabsSettingsTab;
+        for (const key of keys) {
+          expect(tab[key], `${locale}.${key}`).toBeTruthy();
+        }
+      }
+      expect(catalogs.en.tabsSettingsTab.enableVerboseReasoningLabel).toBe(
+        'Enable Verbose Reasoning',
+      );
+    });
+  });
+
   describe('Copy-name prefix catalogs', () => {
     it('stores a bare prefix with no separator or placeholder', async () => {
       const catalogs = {

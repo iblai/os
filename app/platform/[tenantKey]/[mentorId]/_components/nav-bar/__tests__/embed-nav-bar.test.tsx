@@ -98,7 +98,7 @@ vi.mock('next/navigation', () => ({
   usePathname: () => mockPathname,
 }));
 
-// Stub the SDK Private Mode pill (the real one fires chat-privacy API calls).
+// Stub the SDK Incognito pill (the real one fires chat-privacy API calls).
 vi.mock('@iblai/iblai-js/web-containers', () => ({
   ChatPrivacyToggle: ({ org, userId, mentor, className }: any) => (
     <button
@@ -108,7 +108,7 @@ vi.mock('@iblai/iblai-js/web-containers', () => ({
       data-mentor={mentor}
       className={className}
     >
-      Private Mode
+      Incognito
     </button>
   ),
 }));
@@ -600,10 +600,10 @@ describe('EmbedNavBar', () => {
   // --------------------------------------------------------------------------
 
   // --------------------------------------------------------------------------
-  // Private Mode toggle (parity with the main NavBar)
+  // Incognito toggle (parity with the main NavBar)
   // --------------------------------------------------------------------------
 
-  describe('Private Mode toggle', () => {
+  describe('Incognito toggle', () => {
     it('renders the toggle on the chat page for a logged-in user', () => {
       renderEmbedNavBar();
       expect(screen.getByTestId('chat-privacy-toggle')).toBeInTheDocument();

@@ -67,6 +67,18 @@ const OAUTH_URL_PATTERNS: &[&str] = &[
     "appleid.apple.com",
     "/auth/login/apple",
     "/login/apple",
+    // Microsoft / Azure AD OAuth. Azure AD refuses to run inside an embedded
+    // webview when it is the MAIN window, so — like Google and Apple — the
+    // provider URL and the Microsoft login domains it redirects to are matched
+    // here and opened in the in-app OAuth popup instead.
+    "login.microsoftonline.com",
+    "login.live.com",
+    "azuread-oauth2",
+    "/auth/login/azuread",
+    "/login/azuread",
+    "microsoft-graph",
+    "/auth/login/microsoft-graph",
+    "/login/microsoft-graph",
 ];
 
 fn is_oauth_url(url: &str) -> bool {
@@ -2154,7 +2166,17 @@ async fn foundry_chat(
 /// creation must run on the main thread.
 #[command]
 async fn open_external_url(app: AppHandle, url: String) -> Result<(), String> {
-    if let Some(title) = in_app_popup_title(&url) {
+    // OAuth sign-in (Google / Apple / Microsoft) opens in the in-app "Sign In"
+    // popup — the same window the main-frame navigation interceptor uses — so the
+    // experience is identical no matter whether the frontend invokes this command
+    // or falls back to a plain navigation. Everything else is matched by
+    // IN_APP_URL_PATTERNS (e.g. Stripe); anything unmatched opens in the browser.
+    let popup_title = if is_oauth_url(&url) {
+        Some("Sign In")
+    } else {
+        in_app_popup_title(&url)
+    };
+    if let Some(title) = popup_title {
         println!("[ibl.ai] Opening URL in in-app window: {}", url);
         let app_for_main = app.clone();
         let title = title.to_string();
@@ -2904,4 +2926,55 @@ fn main() {
                 remote_code::shutdown_sync();
             }
         });
+}
+
+#[cfg(test)]
+mod oauth_url_tests {
+    use super::{in_app_popup_title, is_oauth_url};
+
+    // The in-app "Sign In" popup opens for exactly these URLs; Azure AD is the
+    // regression this guards (it used to fall through to the system browser /
+    // a blocked main-window navigation while Google and Apple did not).
+    fn opens_oauth_popup(url: &str) -> bool {
+        is_oauth_url(url) || in_app_popup_title(url) == Some("Sign In")
+    }
+
+    #[test]
+    fn microsoft_oauth_opens_in_app_like_google() {
+        for url in [
+            "https://learn.iblai.app/auth/login/azuread-oauth2/?auth_entry=login&next=%2F",
+            "https://learn.iblai.app/auth/login/microsoft-graph/?auth_entry=login&next=%2F",
+            "https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=x",
+            "https://login.live.com/oauth20_authorize.srf",
+        ] {
+            assert!(is_oauth_url(url), "microsoft url should be oauth: {url}");
+            assert!(
+                opens_oauth_popup(url),
+                "microsoft url should open in-app: {url}"
+            );
+        }
+    }
+
+    #[test]
+    fn google_and_apple_still_open_in_app() {
+        for url in [
+            "https://learn.iblai.app/auth/login/google-oauth2/?auth_entry=login",
+            "https://accounts.google.com/o/oauth2/v2/auth?client_id=x",
+            "https://learn.iblai.app/auth/login/apple/?auth_entry=login",
+        ] {
+            assert!(opens_oauth_popup(url), "should open in-app: {url}");
+        }
+    }
+
+    #[test]
+    fn non_oauth_urls_do_not_open_the_sign_in_popup() {
+        // Stripe keeps its own in-app popup; plain pages open in the browser.
+        assert!(!is_oauth_url("https://checkout.stripe.com/pay/cs_test_123"));
+        assert_eq!(
+            in_app_popup_title("https://checkout.stripe.com/pay/cs_test_123"),
+            Some("Checkout")
+        );
+        assert!(!opens_oauth_popup("https://example.com/docs"));
+        assert!(!is_oauth_url("https://os.ibl.ai/platform/acme/bot"));
+    }
 }
