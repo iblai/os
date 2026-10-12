@@ -22,6 +22,7 @@ let mockPrivacy = {
 let mockShowCloseButton = true;
 let mockIsLtiLaunch = false;
 let mockShowUserProfile = false;
+let mockAllowFullscreen = false;
 let mockUsername: string | null = 'testuser';
 let mockIsLoggedIn = true;
 let mockPathname = '/platform/tenant123/mentor123';
@@ -48,6 +49,10 @@ vi.mock('@/hooks/use-show-close-button', () => ({
 
 vi.mock('@/hooks/use-is-lti-launch', () => ({
   useIsLtiLaunch: () => mockIsLtiLaunch,
+}));
+
+vi.mock('@/hooks/use-allow-fullscreen', () => ({
+  useAllowFullscreen: () => mockAllowFullscreen,
 }));
 
 vi.mock('@/hooks/use-show-user-profile', () => ({
@@ -174,6 +179,7 @@ describe('EmbedNavBar', () => {
     mockShowCloseButton = true;
     mockIsLtiLaunch = false;
     mockShowUserProfile = false;
+    mockAllowFullscreen = false;
     mockUsername = 'testuser';
     mockIsLoggedIn = true;
     mockPathname = '/platform/tenant123/mentor123';
@@ -397,6 +403,91 @@ describe('EmbedNavBar', () => {
       fireEvent.click(screen.getByLabelText('Close chat'));
 
       expect(postMessageSpy).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Full screen toggle', () => {
+    let postMessageSpy: ReturnType<typeof vi.fn>;
+
+    beforeEach(() => {
+      postMessageSpy = vi.fn();
+      Object.defineProperty(window, 'parent', {
+        value: { postMessage: postMessageSpy },
+        writable: true,
+      });
+    });
+
+    it('is hidden when the host has not allowed full screen', () => {
+      renderEmbedNavBar();
+      expect(screen.queryByTestId('embed-fullscreen-toggle')).toBeNull();
+    });
+
+    it('is hidden when not iframed even if allowed', () => {
+      mockAllowFullscreen = true;
+      mockIsIframed = false;
+      renderEmbedNavBar();
+      expect(screen.queryByTestId('embed-fullscreen-toggle')).toBeNull();
+    });
+
+    it('shows a Full screen button when allowed', () => {
+      mockAllowFullscreen = true;
+      renderEmbedNavBar();
+      expect(screen.getByTestId('embed-fullscreen-toggle')).toHaveAttribute(
+        'aria-label',
+        'Full screen',
+      );
+    });
+
+    it('posts embedFullscreen to the parent and flips the icon each click', () => {
+      mockAllowFullscreen = true;
+      renderEmbedNavBar();
+      const button = screen.getByTestId('embed-fullscreen-toggle');
+      expect(button.querySelector('.lucide-maximize-2')).not.toBeNull();
+
+      fireEvent.click(button);
+      expect(postMessageSpy).toHaveBeenLastCalledWith(
+        { embedFullscreen: true },
+        '*',
+      );
+      expect(button).toHaveAttribute('aria-label', 'Exit full screen');
+      expect(button.querySelector('.lucide-minimize-2')).not.toBeNull();
+
+      fireEvent.click(button);
+      expect(postMessageSpy).toHaveBeenLastCalledWith(
+        { embedFullscreen: false },
+        '*',
+      );
+      expect(button).toHaveAttribute('aria-label', 'Full screen');
+      expect(button.querySelector('.lucide-maximize-2')).not.toBeNull();
+    });
+
+    it('goes back to Full screen after the chat is closed', () => {
+      mockAllowFullscreen = true;
+      renderEmbedNavBar();
+      const button = screen.getByTestId('embed-fullscreen-toggle');
+      fireEvent.click(button);
+      fireEvent.click(screen.getByLabelText('Close chat'));
+      expect(button).toHaveAttribute('aria-label', 'Full screen');
+    });
+
+    it('keeps the action buttons from being pushed out by a long agent name', () => {
+      mockAllowFullscreen = true;
+      renderEmbedNavBar();
+      const actions = screen.getByTestId(
+        'embed-fullscreen-toggle',
+      ).parentElement;
+      expect(actions).toHaveClass('shrink-0');
+      expect(screen.getByLabelText('Close chat').parentElement).toBe(actions);
+    });
+
+    it('does nothing in preview mode', () => {
+      mockAllowFullscreen = true;
+      mockIsPreviewMode = true;
+      renderEmbedNavBar();
+      const button = screen.getByTestId('embed-fullscreen-toggle');
+      fireEvent.click(button);
+      expect(postMessageSpy).not.toHaveBeenCalled();
+      expect(button).toHaveAttribute('aria-label', 'Full screen');
     });
   });
 
