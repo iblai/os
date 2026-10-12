@@ -40,6 +40,7 @@ use std::borrow::Cow;
 use std::fmt::Display;
 
 use sentry::protocol::{Event, Value};
+use sentry::types::Dsn;
 use sentry::{ClientInitGuard, ClientOptions, Level, TracesSamplingStrategy};
 
 /// `settings.json` key: `false` turns reporting off for this machine.
@@ -63,8 +64,8 @@ const DEFAULT_DSN: &str =
 /// `let _ = …` drops it immediately and every queued event dies with it.
 ///
 /// Returns `None` — and reports nothing, at zero cost — when the machine has
-/// opted out or in a debug build that hasn't opted in. Call it AFTER the
-/// dotenv loads (so a DSN override in
+/// opted out, when the configured DSN is unusable, or in a debug build that
+/// hasn't opted in. Call it AFTER the dotenv loads (so a DSN override in
 /// `.env.local` is visible) and BEFORE `tauri::Builder`, so `setup()` and
 /// every task spawned there is already covered.
 pub fn init() -> Option<ClientInitGuard> {
@@ -76,7 +77,7 @@ pub fn init() -> Option<ClientInitGuard> {
     if opted_out() {
         return None;
     }
-    let guard = sentry::init((dsn(), options()));
+    let guard = sentry::init((dsn()?, options()));
 
     sentry::configure_scope(|scope| {
         // The one filter that separates these events from the web app's in the
@@ -198,16 +199,31 @@ fn emit(context: &str, err: impl Display, level: Level) {
     sentry::capture_event(event);
 }
 
-fn dsn() -> String {
-    [
+/// The configured DSN, PARSED — never handed to `sentry::init` as a string.
+///
+/// `ClientOptions::from` does `into_dsn().expect("invalid value for DSN")`, so
+/// a malformed value panics the process. That value can come from CI: a typo'd
+/// or shell-quoted `IBL_SENTRY_DSN_DESKTOP` would be baked by `build.rs` into a
+/// binary that dies on launch for every user, before a window ever opens.
+/// Reporting is the thing allowed to fail here, so a bad DSN disables it and
+/// says why.
+fn dsn() -> Option<Dsn> {
+    let raw = [
         std::env::var(DSN_VAR).ok(),
         option_env!("IBL_SENTRY_DSN_DESKTOP").map(str::to_string),
+        Some(DEFAULT_DSN.to_string()),
     ]
     .into_iter()
     .flatten()
     .map(|s| s.trim().to_string())
-    .find(|s| !s.is_empty())
-    .unwrap_or_else(|| DEFAULT_DSN.to_string())
+    .find(|s| !s.is_empty())?;
+    match raw.parse::<Dsn>() {
+        Ok(dsn) => Some(dsn),
+        Err(e) => {
+            eprintln!("[telemetry] ignoring an unusable Sentry DSN: {e}");
+            None
+        }
+    }
 }
 
 fn opted_out() -> bool {
@@ -507,15 +523,45 @@ mod tests {
         // the runtime override reading a name the build never bakes.
         assert_eq!(DSN_VAR, "IBL_SENTRY_DSN_DESKTOP");
 
+        // Compared as parsed values: `Dsn`'s own `to_string` re-serializes an
+        // absent secret key as a bare `:`, so round-tripped strings never
+        // match what was configured.
+        let parse = |s: &str| s.parse::<Dsn>().unwrap();
         std::env::set_var(DSN_VAR, "https://abc@sentry.example/9");
-        assert_eq!(dsn(), "https://abc@sentry.example/9");
+        assert_eq!(dsn(), Some(parse("https://abc@sentry.example/9")));
         for blank in ["", "   "] {
             std::env::set_var(DSN_VAR, blank);
-            assert_eq!(dsn(), DEFAULT_DSN, "a blank override is not a DSN");
+            assert_eq!(
+                dsn(),
+                Some(parse(DEFAULT_DSN)),
+                "a blank override is not a DSN"
+            );
         }
-        std::env::remove_var(DSN_VAR);
-        if option_env!("IBL_SENTRY_DSN_DESKTOP").is_none() {
-            assert_eq!(dsn(), DEFAULT_DSN);
+        drop(restore);
+    }
+
+    /// `ClientOptions::from` does `into_dsn().expect(...)`, so handing it an
+    /// unparseable string panics the process. The value can come from CI, where
+    /// a typo or a shell-quoted DSN would be baked into a release that then
+    /// dies on launch for every user, before a window opens. Reporting is what
+    /// is allowed to fail here — never the app.
+    #[test]
+    fn an_unusable_dsn_disables_reporting_instead_of_panicking() {
+        let _g = env_lock();
+        let restore = Restore::of(&[DSN_VAR, "IBL_SENTRY_DEBUG"]);
+        std::env::set_var("IBL_SENTRY_DEBUG", "1");
+        for bad in [
+            "not-a-url",
+            "https://sentry.ibl.network/33",   // no public key
+            "\"https://abc@sentry.example/1\"", // shell quotes kept
+            "https://abc@/1",
+        ] {
+            std::env::set_var(DSN_VAR, bad);
+            assert!(dsn().is_none(), "{bad:?} must not parse as a DSN");
+            assert!(
+                init().is_none(),
+                "{bad:?} must disable reporting, not panic the app"
+            );
         }
         drop(restore);
     }
