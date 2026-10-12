@@ -208,6 +208,14 @@ overrides:
   # GHSA-68fv-2mgg-jv7q (event-loop DoS via indexed source-map offsets).
   # Dev-only reach: @vitest/coverage-istanbul > magicast.
   source-map-js: '>=1.2.2 <2'
+  # GHSA-8r5x-fm3f-whwj (AST type confusion that bypasses the CVE-2026-33937
+  # fix) and GHSA-p8wg-vrv2-v86f (own-property check bypass): JavaScript
+  # injection in `compile`, critical, affecting >=4.0.0 <=4.7.9; patched in
+  # 4.7.10. Dev-only reach: @release-it/conventional-changelog >
+  # conventional-changelog > conventional-changelog-writer, which renders
+  # release notes from our own commits. The writer asks for ^4.7.7, so this
+  # stays inside its declared range; the upper bound keeps 5.x out.
+  handlebars: '>=4.7.10 <5'
 patchedDependencies:
   google-drive-picker@1.1.29: patches/google-drive-picker@1.1.29.patch
   # Three missing Pandoc/markdown-it-katex rules for dollar-delimited text math:
