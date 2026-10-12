@@ -1121,8 +1121,17 @@ test.describe('Journey 13: Shareable Links & Embed Integration', () => {
         .getByRole('button', { name: /save/i })
         .first();
       await expect(saveBtn).toBeEnabled({ timeout: 5_000 });
+      // The save can take 10s+ on staging. Until it lands, the Embed tab still
+      // sees a private agent and Create Embed fails the Website URL check.
+      const saved = page.waitForResponse(
+        (res) =>
+          res.request().method() === 'PUT' &&
+          /\/settings\/?$/.test(new URL(res.url()).pathname) &&
+          res.ok(),
+        { timeout: 60_000 },
+      );
       await saveBtn.click();
-      await page.waitForTimeout(1_500);
+      await saved;
       await editMentorPage.close();
     });
 
