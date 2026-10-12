@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.166.0](https://github.com/iblai/os/compare/v0.165.3...v0.166.0) (2026-10-12)
+
+### Features
+
+* **desktop:** report Rust-side errors to Sentry ([1ae7766](https://github.com/iblai/os/commit/1ae77661bbba56da398d2d899d8dc26d6247567b))
+
+### Bug Fixes
+
+* close two gaps found reviewing the Sentry change ([f64c201](https://github.com/iblai/os/commit/f64c201908adba8b7ecc3dce4fb2a506099c799e))
+* **desktop:** never let telemetry setup crash the app ([0bb12e8](https://github.com/iblai/os/commit/0bb12e88b6d0429a154d94c879a6523094c91578))
+* **test:** expect the trailing slash the TTS endpoint is called with ([68e01b3](https://github.com/iblai/os/commit/68e01b318035aeef3c3f0ba5f51da8541b29fcbe))
+
+### Chores
+
+* **tauri:** release app-v0.95.25 ([74f4d74](https://github.com/iblai/os/commit/74f4d744591df08c27066c586de508c0eb3be05b))
+
 ## [0.165.3](https://github.com/iblai/os/compare/v0.165.2...v0.165.3) (2026-10-11)
 
 ### Bug Fixes
