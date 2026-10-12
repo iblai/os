@@ -166,6 +166,35 @@ describe('WorkingIndicator', () => {
       ).toBeInTheDocument();
     });
 
+    it('restarts the reassurance clock when a new step is named', () => {
+      const { rerender } = renderIndicator({
+        kind: 'workflow',
+        detail: 'Reading app/page.tsx',
+      });
+      act(() => {
+        vi.advanceTimersByTime(LONG_TURN_REASSURANCE_DELAY_MS - 1_000);
+      });
+
+      rerender(
+        <TooltipProvider>
+          <WorkingIndicator
+            phase={{ kind: 'workflow', detail: 'Changing app/page.tsx' }}
+          />
+        </TooltipProvider>,
+      );
+      act(() => {
+        vi.advanceTimersByTime(PHASE_ANNOUNCE_THROTTLE_MS);
+      });
+
+      expect(screen.getByText('Changing app/page.tsx…')).toBeInTheDocument();
+      expect(screen.queryByText(STILL_WORKING)).not.toBeInTheDocument();
+
+      act(() => {
+        vi.advanceTimersByTime(LONG_TURN_REASSURANCE_DELAY_MS);
+      });
+      expect(screen.getByText(STILL_WORKING)).toBeInTheDocument();
+    });
+
     it('does not show the reassurance copy while tokens are arriving', () => {
       renderIndicator({ kind: 'writing' });
 

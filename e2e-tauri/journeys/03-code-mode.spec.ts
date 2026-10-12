@@ -620,6 +620,34 @@ describe('Journey 3: Code Mode (opencode)', () => {
          meanwhile by pre_tool_text_is_reclassified_as_narration in
          opencode_acp.rs */
     });
+
+    it.skip('code-42: while a Code turn runs, the line under the reply says in plain words what the agent is doing right now, never a raw tool name; it stands down while a permission card waits and a new step restarts its reassurance clock', () => {
+      /* pending — needs a tool-calling model driving real turns (the same
+         harness gap as code-08..10/15); covered meanwhile by codeTurnPhase
+         and the working-indicator cases in code-activity.test.tsx and
+         ai-message-bubble.test.tsx */
+    });
+
+    it.skip('code-43: a Code turn’s steps fold into one quiet "N steps" row that opens to one plain-words sentence per step with a done / didn’t-go-through / stopped mark and the exact command, file or address one click away', () => {
+      /* pending — same harness gap; covered meanwhile by the describer table
+         and the CodeActivity cases in code-activity.test.tsx */
+    });
+
+    it.skip('code-44: the task list the agent keeps (Claude Code’s and Codex’s plan updates, opencode’s todo tool) shows as the reply’s checklist and ticks off as it works', () => {
+      /* pending — same harness gap; covered meanwhile by the store’s plan
+         cases in code-activity.test.tsx and the Rust
+         plans_reach_the_webview_and_agent_bookkeeping_does_not */
+    });
+
+    it.skip('code-45: a permission card leads with what Code wants to do in plain words above the exact command or file, with no tool-kind chip, on desktop and from a paired phone', () => {
+      /* pending — same harness gap; covered meanwhile by
+         code-permission-card.test.tsx */
+    });
+
+    it.skip('code-46: a failed Code turn’s toast says what went wrong in plain words instead of the raw agent error', () => {
+      /* pending — same harness gap; covered meanwhile by
+         code-error-text.test.ts and toast-error-message.test.tsx */
+    });
   });
 
   // The subscription agents: Codex and Claude Code run next to opencode

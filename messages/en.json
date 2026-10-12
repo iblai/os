@@ -376,7 +376,8 @@
     "agentTodoStatusInProgress": "In progress",
     "agentTodoStatusPending": "To do",
     "agentTodoProgress": "{done} of {total} done",
-    "agentTodoAnnouncement": "Step {done} of {total} complete"
+    "agentTodoAnnouncement": "Step {done} of {total} complete",
+    "reasoningTitle": "Thought"
   },
   "chatAiMessageCopy": {
     "copyToClipboard": "Copy to Clipboard",
@@ -2263,19 +2264,51 @@
   "chatCodePermissionCard": {
     "title": "Code needs your permission",
     "unnamedAction": "An action it didn’t name",
-    "kind": {
-      "read": "read",
-      "write": "write",
-      "exec": "exec",
-      "delete": "delete",
-      "move": "move",
-      "search": "search",
-      "fetch": "fetch",
-      "think": "think",
-      "other": "action"
-    },
     "allow": "Allow",
     "deny": "Deny"
+  },
+  "chatCodeActivity": {
+    "steps": "{count, plural, one {# step} other {# steps}}",
+    "aFile": "a file",
+    "statusRunning": "Running",
+    "statusDone": "Done",
+    "statusFailed": "Didn’t go through",
+    "statusStopped": "Stopped",
+    "read": "{form, select, running {Reading {file}} done {Read {file}} failed {Couldn’t read {file}} other {Code wants to read {file}}}",
+    "create": "{form, select, running {Creating {file}} done {Created {file}} failed {Couldn’t create {file}} other {Code wants to create {file}}}",
+    "edit": "{form, select, running {Changing {file}} done {Changed {file}} failed {Couldn’t change {file}} other {Code wants to change {file}}}",
+    "editMany": "{form, select, running {Changing {count} files} done {Changed {count} files} failed {Couldn’t change {count} files} other {Code wants to change {count} files}}",
+    "remove": "{form, select, running {Removing {file}} done {Removed {file}} failed {Couldn’t remove {file}} other {Code wants to remove {file}}}",
+    "move": "{form, select, running {Moving {file}} done {Moved {file}} failed {Couldn’t move {file}} other {Code wants to move {file}}}",
+    "search": "{form, select, running {Looking through the app’s files} done {Looked through the app’s files} failed {Couldn’t look through the app’s files} other {Code wants to look through the app’s files}}",
+    "run": "{form, select, running {Running a command} done {Ran a command} failed {A command didn’t go through} other {Code wants to run a command}}",
+    "runDescribed": "{form, select, running {Running a command: {description}} done {Ran a command: {description}} failed {A command didn’t go through: {description}} other {Code wants to run a command: {description}}}",
+    "install": "{form, select, running {Installing what the app needs} done {Installed what the app needs} failed {Couldn’t install what the app needs} other {Code wants to install what the app needs}}",
+    "preview": "{form, select, running {Starting the preview} done {Started the preview} failed {Couldn’t start the preview} other {Code wants to start the preview}}",
+    "open": "{form, select, running {Opening {host}} done {Opened {host}} failed {Couldn’t open {host}} other {Code wants to open {host}}}",
+    "openPreview": "{form, select, running {Checking the preview} done {Checked the preview} failed {Couldn’t reach the preview} other {Code wants to check the preview}}",
+    "web": "{form, select, running {Searching the web for “{query}”} done {Searched the web for “{query}”} failed {Couldn’t search the web for “{query}”} other {Code wants to search the web for “{query}”}}",
+    "helper": "{form, select, running {Working on a side task: {description}} done {Finished a side task: {description}} failed {A side task didn’t go through: {description}} other {Code wants to start a side task: {description}}}",
+    "helperPlain": "{form, select, running {Working on a side task} done {Finished a side task} failed {A side task didn’t go through} other {Code wants to start a side task}}",
+    "skill": "{form, select, running {Looking up how to do this} done {Looked up how to do this} failed {Couldn’t look up how to do this} other {Code wants to look up how to do this}}",
+    "plan": "{form, select, running {Updating its task list} done {Updated its task list} failed {Couldn’t update its task list} other {Code wants to update its task list}}",
+    "approve": "{form, select, running {Asking to go ahead with its plan} done {Got the go-ahead for its plan} failed {Didn’t get the go-ahead} other {Code wants to go ahead with its plan}}",
+    "ask": "{form, select, running {Asking you a question} done {Asked you a question} failed {Couldn’t ask its question} other {Code wants to ask you a question}}",
+    "connector": "{form, select, running {Using {name}} done {Used {name}} failed {Couldn’t use {name}} other {Code wants to use {name}}}",
+    "think": "{form, select, running {Working something out} done {Worked something out} failed {Couldn’t work it out} other {Code wants to think this through}}",
+    "other": "{form, select, running {Working on a step} done {Finished a step} failed {A step didn’t go through} other {Code wants to do something it didn’t describe}}"
+  },
+  "chatCodeErrors": {
+    "stopped": "Code stopped unexpectedly. Send your message again.",
+    "noAnswer": "Code took too long to answer. Try again.",
+    "noModel": "Pick a model in the top-left, then send again.",
+    "couldNotStart": "Code couldn’t start. Try again, and restart the app if it keeps happening.",
+    "signedOut": "Sign in to use Code."
+  },
+  "chatToastErrorMessage": {
+    "sorry": "Sorry about that!",
+    "tryAgain": "Please try again or <contact>contact us</contact>.",
+    "textUs": "If you prefer, text us at <phone>{number}</phone>."
   },
   "appUpdatePrompt": {
     "title": "Update Available",

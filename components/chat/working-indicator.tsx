@@ -116,7 +116,10 @@ export function WorkingIndicator({
   const isStreamOnScreen = isWriting && (content ?? '').trim().length > 0;
 
   const [showReassurance, setShowReassurance] = useState(false);
+  const rawLabel = phaseLabel(phase, t);
 
+  // A new label is a sign of life (a Code turn moves step to step without
+  // ever writing), so it restarts the clock.
   useEffect(() => {
     if (!isActive || isWriting) {
       setShowReassurance(false);
@@ -128,7 +131,7 @@ export function WorkingIndicator({
       LONG_TURN_REASSURANCE_DELAY_MS,
     );
     return () => clearTimeout(timer);
-  }, [isActive, isWriting]);
+  }, [isActive, isWriting, rawLabel]);
 
   // The phase sticks at `writing` after the last token — it only moves when
   // some other signal arrives — so a mid-turn grind looks identical to a
@@ -137,7 +140,7 @@ export function WorkingIndicator({
   const isStreamStalled =
     useStalledStream(content, isActive, isWriting) && isStreamOnScreen;
 
-  const label = useThrottledPhaseLabel(phaseLabel(phase, t), isActive);
+  const label = useThrottledPhaseLabel(rawLabel, isActive);
 
   // Nothing to add: the turn is over, a visible row already says this, or the
   // answer text is moving on its own.

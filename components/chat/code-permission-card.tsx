@@ -27,6 +27,12 @@ import { useSyncExternalStore } from 'react';
 import { useTranslations } from 'next-intl';
 import { ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import {
+  describeStep,
+  mergeToolCall,
+  stepSentence,
+  type AcpToolCall,
+} from './code-activity';
 
 export interface PermissionRequest {
   request_id: string;
@@ -35,11 +41,13 @@ export interface PermissionRequest {
   /** The chat waiting on it, for the sidebar badge. */
   session_id: string;
   title: string | null;
-  /** ACP ToolKind — "read" | "edit" | "execute" | … See `KIND_LABELS`. */
+  /** ACP ToolKind — "read" | "edit" | "execute" | …, or a phone's permission name. */
   kind: string | null;
   command: string | null;
   allow_option_id: string | null;
   reject_option_id: string | null;
+  /** The whole ACP toolCall (desktop only); absent from a paired phone or an older binary. */
+  tool_call?: AcpToolCall | null;
   /**
    * Answer this request directly instead of telling Rust. Set for prompts that
    * did not come from opencode — the extension's Browse runs raise them over a
@@ -151,17 +159,26 @@ export function resetCodePermissionsForTests() {
   subscribers.forEach((notify) => notify());
 }
 
-/** ACP ToolKind → the i18n key naming the operation, so the user sees what's at stake. */
-const KIND_LABELS: Record<string, string> = {
-  read: 'read',
-  edit: 'write',
-  delete: 'delete',
-  move: 'move',
-  search: 'search',
-  execute: 'exec',
-  fetch: 'fetch',
-  think: 'think',
-};
+/**
+ * A request without a tool call (a paired phone, an older binary, a Browse run)
+ * described from its kind: a phone's `command` holds command patterns for bash,
+ * file patterns for edit, URL patterns for webfetch.
+ */
+function legacyToolCall(request: PermissionRequest): AcpToolCall {
+  const kind = request.kind ?? '';
+  const value = request.command ?? undefined;
+  if (/^(execute|bash|shell)$/.test(kind)) {
+    return { title: request.title, kind, rawInput: { command: value } };
+  }
+  if (/^(fetch|webfetch)$/.test(kind)) {
+    return { title: request.title, kind, rawInput: { url: value } };
+  }
+  return {
+    title: request.title,
+    kind,
+    locations: value?.split(/\s+/).map((path) => ({ path })),
+  };
+}
 
 export function CodePermissionCards({
   generationId,
@@ -172,6 +189,7 @@ export function CodePermissionCards({
   const all = useCodePermissionRequests();
   const requests = all.filter((r) => r.generation_id === generationId);
   const t = useTranslations('chatCodePermissionCard');
+  const tActivity = useTranslations('chatCodeActivity');
 
   const answer = async (
     request: PermissionRequest,
@@ -202,53 +220,67 @@ export function CodePermissionCards({
     // xs gray text, 18px sub-indent (12px icon + 6px gap). A white bordered card here
     // shouted next to that quiet list; this reads as a continuation of the agent's
     // activity, which is what it is. Only the buttons carry colour.
-    <div className="mb-2 space-y-3 border-l-2 border-gray-200 pt-1 pl-3 text-xs leading-relaxed">
-      {requests.map((request) => (
-        <div key={request.request_id}>
-          <div className="flex flex-wrap items-center gap-1.5 text-gray-600 dark:text-gray-300">
-            <ShieldCheck className="h-3 w-3 shrink-0 text-gray-400" />
-            <span className="font-medium">{t('title')}</span>
-            <span className="rounded bg-gray-200 px-1 py-px font-mono text-[10px] tracking-wide text-gray-500 uppercase">
-              {t(`kind.${KIND_LABELS[request.kind ?? ''] ?? 'other'}`)}
-            </span>
-          </div>
-          <div className="mt-0.5 ml-[18px] text-gray-400 dark:text-gray-500">
-            {request.title || t('unnamedAction')}
-          </div>
-          {request.command && (
-            // bg-gray-200 is what the bubble already uses for inline code and pre
-            // blocks, so the command sits on the same surface as the reply's own.
-            <code className="mt-1 ml-[18px] block rounded bg-gray-200 px-1.5 py-1 font-mono break-all text-gray-700">
-              {request.command}
-            </code>
-          )}
-          <div className="mt-2 ml-[18px] flex items-center gap-2">
-            {/* The app's brand CTA (globals.css) — the ibl.ai blue gradient, same as
+    <div
+      className="mb-2 space-y-3 border-l-2 border-gray-200 pt-1 pl-3 text-xs leading-relaxed"
+      aria-live="polite"
+    >
+      {requests.map((request) => {
+        const step = describeStep(
+          mergeToolCall(
+            undefined,
+            request.tool_call ?? legacyToolCall(request),
+          ),
+          request.request_id,
+        );
+        // Only a described action gets a sentence; a Browse run keeps its own title.
+        const named = step.action !== 'other';
+        const shown = request.command ?? (named ? step.details : undefined);
+        return (
+          <div key={request.request_id}>
+            <div className="flex flex-wrap items-center gap-1.5 text-gray-600 dark:text-gray-300">
+              <ShieldCheck className="h-3 w-3 shrink-0 text-gray-400" />
+              <span className="font-medium">{t('title')}</span>
+            </div>
+            <div className="mt-0.5 ml-[18px] text-gray-400 dark:text-gray-500">
+              {named
+                ? stepSentence(tActivity, step, 'want')
+                : request.title || t('unnamedAction')}
+            </div>
+            {shown && (
+              // bg-gray-200 is what the bubble already uses for inline code and pre
+              // blocks, so the command sits on the same surface as the reply's own.
+              <code className="mt-1 ml-[18px] block max-h-32 overflow-y-auto rounded bg-gray-200 px-1.5 py-1 font-mono break-all whitespace-pre-wrap text-gray-700">
+                {shown}
+              </code>
+            )}
+            <div className="mt-2 ml-[18px] flex items-center gap-2">
+              {/* The app's brand CTA (globals.css) — the ibl.ai blue gradient, same as
                 auth-popover and free-trial-dialog. NOT shadcn's `bg-primary`, which
                 this app maps to near-black. Kept in colour on purpose: everything
                 around it is grey, and this is the one thing needing an answer. */}
-            <Button
-              size="sm"
-              type="button"
-              className="ibl-button-primary h-7 text-xs"
-              onClick={() => answer(request, request.allow_option_id)}
-            >
-              {t('allow')}
-            </Button>
-            {/* Neutral outline, not destructive red: denying is a routine answer
+              <Button
+                size="sm"
+                type="button"
+                className="ibl-button-primary h-7 text-xs"
+                onClick={() => answer(request, request.allow_option_id)}
+              >
+                {t('allow')}
+              </Button>
+              {/* Neutral outline, not destructive red: denying is a routine answer
                 here, not an error. */}
-            <Button
-              variant="outline"
-              size="sm"
-              type="button"
-              className="h-7 text-xs"
-              onClick={() => answer(request, request.reject_option_id)}
-            >
-              {t('deny')}
-            </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                type="button"
+                className="h-7 text-xs"
+                onClick={() => answer(request, request.reject_option_id)}
+              >
+                {t('deny')}
+              </Button>
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

@@ -176,7 +176,12 @@ export function AgentTodoList({
           data-testid="agent-todo-list-items"
         >
           {items.map((todo, index) => {
-            const meta = getStatusMeta(todo.status);
+            // An unfinished step after the turn ended must not keep shimmering.
+            const meta = getStatusMeta(
+              todo.status === 'in_progress' && !isCurrentlyStreaming
+                ? 'pending'
+                : todo.status,
+            );
             const { Icon } = meta;
             const statusLabel = t(meta.labelKey);
 

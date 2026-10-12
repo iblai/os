@@ -4,19 +4,19 @@
 
 ### Bug Fixes
 
-* **ext:** vendor current agent-ai UMD so mentor selection reaches the URL ([756d41f](https://github.com/iblai/os/commit/756d41fd2d4c4b8ddf1876b20ee3a32ef2a65d90))
+- **ext:** vendor current agent-ai UMD so mentor selection reaches the URL ([756d41f](https://github.com/iblai/os/commit/756d41fd2d4c4b8ddf1876b20ee3a32ef2a65d90))
 
 ## [0.165.2](https://github.com/iblai/os/compare/v0.165.1...v0.165.2) (2026-10-10)
 
 ### Chores
 
-* **ext:** bump Chrome extension to 1.1.3 ([73da04f](https://github.com/iblai/os/commit/73da04f856ce35d6bfed6ad058faf4987bf83b61))
+- **ext:** bump Chrome extension to 1.1.3 ([73da04f](https://github.com/iblai/os/commit/73da04f856ce35d6bfed6ad058faf4987bf83b61))
 
 ## [0.165.1](https://github.com/iblai/os/compare/v0.165.0...v0.165.1) (2026-10-10)
 
 ### Bug Fixes
 
-* **tts:** add trailing slash to the chat-message TTS endpoint ([599e2e5](https://github.com/iblai/os/commit/599e2e56dc34fbeef7b7d4017dd791fba0a51682))
+- **tts:** add trailing slash to the chat-message TTS endpoint ([599e2e5](https://github.com/iblai/os/commit/599e2e56dc34fbeef7b7d4017dd791fba0a51682))
 
 ## [0.165.0](https://github.com/iblai/os/compare/v0.164.1...v0.165.0) (2026-10-09)
 

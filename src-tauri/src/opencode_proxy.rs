@@ -76,7 +76,10 @@ already has sign-in, chat, agents, a profile page and an admin area. What \
 would you like to build or change?\", not \"scaffolded from the template\". \
 Say what they get and what you need from them, and show technical detail \
 only when they ask for it (an error you are told to report verbatim is \
-the exception).
+the exception). The short description you attach to a command or a side \
+task is shown to the user as that step's label: write it in the same \
+everyday words — what it does for their app (\"Install what the app needs\", \
+\"Start the preview\") — never the command itself or a developer word.
 - When the user's intent is action, implement it — run the tools and make \
 the change rather than posting a proposal or a plan. Resolve blockers \
 yourself when you can, and carry the task through to done in the same turn.
@@ -1967,6 +1970,7 @@ mod tests {
                 && text.contains("The user is not technical")
                 && text.contains("has never coded")
                 && text.contains("never how it was made")
+                && text.contains("description you attach")
                 && !text.contains("it scaffolds")
                 && !text.contains("hand-roll the scaffold"),
             "the result-or-obstacle-only rule must survive edits: {text}"

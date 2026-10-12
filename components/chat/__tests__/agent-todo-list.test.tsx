@@ -137,6 +137,19 @@ describe('AgentTodoList', () => {
       expect(shimmer?.tagName).toBe('SPAN');
     });
 
+    it('stops shimmering an unfinished step once the turn is over', () => {
+      const { container } = render(
+        <AgentTodoList todos={MIXED} isCurrentlyStreaming={false} />,
+      );
+      fireEvent.click(screen.getByTestId('agent-todo-list-trigger'));
+
+      expect(container.querySelector('.todo-shimmer')).not.toBeInTheDocument();
+      const row = screen
+        .getAllByTestId('agent-todo-item')
+        .find((r) => r.getAttribute('data-status') === 'in_progress')!;
+      expect(row).toHaveTextContent('To do');
+    });
+
     it('stops shimmering once a step completes', () => {
       const { container } = render(
         <AgentTodoList

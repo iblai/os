@@ -35,6 +35,7 @@ import {
   useCodePermissionRequests,
 } from './code-permission-card';
 import { AgentTodoList } from './agent-todo-list';
+import { CodeActivity, codeTurnPhase, useCodeTurn } from './code-activity';
 import {
   AIMessageFrame,
   bubbleTodos,
@@ -107,6 +108,7 @@ export function AIMessageBubble({
   workingPhase,
 }: AIMessageBubbleProps) {
   const t = useTranslations('chatAiMessageBubble');
+  const tActivity = useTranslations('chatCodeActivity');
   const showingSharedChat = useAppSelector(selectShowingSharedChat);
   // Code's permission prompts belong to the turn that raised them. A streaming
   // assistant message's id IS the generation id (`onStart` seeds it), so matching on it
@@ -152,6 +154,9 @@ export function AIMessageBubble({
   const isCodeTurn =
     typeof message?.id === 'string' && message.id.startsWith('opencode-');
   const showAgentActivity = showReasoning || isCodeTurn;
+  // A Code turn's steps and plan come from the OS store, in plain words; the
+  // SDK's own tool list only ever showed raw agent titles.
+  const codeTurn = useCodeTurn(isCodeTurn ? message.id : undefined);
 
   // The reasoning section and tool-call indicator are gated by that flag.
   // While that's off, an assistant message that is still streaming has no text
@@ -176,9 +181,18 @@ export function AIMessageBubble({
   }
 
   const showReasoningSection = Boolean(showAgentActivity && reasoningContent);
-  const showToolCalls = hasGenericToolCalls(toolCalls, showAgentActivity);
-  const todos = bubbleTodos(toolCalls, showAgentActivity);
+  const showToolCalls = isCodeTurn
+    ? codeTurn.steps.length > 0
+    : hasGenericToolCalls(toolCalls, showAgentActivity);
+  const todos = isCodeTurn
+    ? codeTurn.plan
+    : bubbleTodos(toolCalls, showAgentActivity);
   const hasTodosToShow = !!todos?.length;
+  // The SDK emits no phase for Code turns; the store knows which step runs.
+  const phase =
+    isCodeTurn && workingPhase
+      ? codeTurnPhase(codeTurn.steps, content, tActivity)
+      : workingPhase;
 
   // A disclosure row is "active" when the phase it depicts is the live one AND
   // the row is actually on screen. These two booleans do double duty, and the
@@ -187,9 +201,11 @@ export function AIMessageBubble({
   // because repeating "Thinking…" under a row that says "Thought" puts the same
   // statement on screen twice. Exactly one of them animates.
   const isReasoningRowActive =
-    workingPhase?.kind === 'thinking' && showReasoningSection;
-  const isToolRowActive = workingPhase?.kind === 'tool' && showToolCalls;
-  const isRestatedByVisibleRow = isReasoningRowActive || isToolRowActive;
+    phase?.kind === 'thinking' && showReasoningSection;
+  const isToolRowActive = phase?.kind === 'tool' && showToolCalls;
+  // A waiting permission card is the thing needing attention, not the line.
+  const isRestatedByVisibleRow =
+    isReasoningRowActive || isToolRowActive || hasPermissionPrompts;
 
   return (
     <TooltipProvider>
@@ -212,12 +228,18 @@ export function AIMessageBubble({
                 isActive={isReasoningRowActive}
               />
             )}
-            {showToolCalls && (
-              <ToolCallIndicator
-                toolCalls={toolCalls!}
-                isActive={isToolRowActive}
-              />
-            )}
+            {showToolCalls &&
+              (isCodeTurn ? (
+                <CodeActivity
+                  generationId={message.id}
+                  isCurrentlyStreaming={isCurrentlyStreaming}
+                />
+              ) : (
+                <ToolCallIndicator
+                  toolCalls={toolCalls!}
+                  isActive={isToolRowActive}
+                />
+              ))}
             {hasTodosToShow && (
               <AgentTodoList
                 todos={todos}
@@ -258,9 +280,9 @@ export function AIMessageBubble({
                   it is invisible. We only hand it the facts it cannot see —
                   which rows are speaking for it, and the streamed text whose
                   changes mark token arrival. */}
-            {workingPhase && (
+            {phase && (
               <WorkingIndicator
-                phase={workingPhase}
+                phase={phase}
                 restatedByVisibleRow={isRestatedByVisibleRow}
                 content={content}
                 className="mt-2"
