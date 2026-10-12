@@ -131,6 +131,19 @@ fn options() -> ClientOptions {
     options
 }
 
+/// The signed-in tenant, applied to every event in [`scrub_event`].
+///
+/// NOT `configure_scope`: that writes the CURRENT hub's scope, which is
+/// thread-local. This is called from a tokio worker on the Code spawn path, so
+/// a scope write would have tagged only the events that same worker captured —
+/// leaving reports from the installers, the LLM thread and `emit_on_main`
+/// untagged, which is most of them. A static read in `before_send` reaches
+/// every event from every thread.
+///
+/// (The `runtime` tag and install id set during [`init`] are fine on the scope:
+/// threads spawned afterwards inherit it via `Hub::new_from_top`.)
+static TENANT: std::sync::Mutex<Option<String>> = std::sync::Mutex::new(None);
+
 /// Tag every later event with the signed-in tenant, so a Rust issue can be
 /// matched to the organization that hit it (and to the web app's own events).
 /// Called once the tenant is known — the Rust side starts up without one.
@@ -138,7 +151,11 @@ pub fn set_tenant(tenant: &str) {
     if tenant.is_empty() {
         return;
     }
-    sentry::configure_scope(|scope| scope.set_tag("tenant", tenant));
+    *TENANT.lock().unwrap_or_else(|e| e.into_inner()) = Some(tenant.to_string());
+}
+
+fn tenant() -> Option<String> {
+    TENANT.lock().unwrap_or_else(|e| e.into_inner()).clone()
 }
 
 /// Report a failure, and print it exactly as the `eprintln!` it replaced did.
@@ -267,6 +284,10 @@ fn scrub_event(event: &mut Event<'static>) {
     // `sentry-contexts` fills this with the machine's hostname, which on a
     // personal Mac is usually the owner's name ("sones-macbook-pro.local").
     event.server_name = None;
+
+    if let Some(tenant) = tenant() {
+        event.tags.insert("tenant".to_string(), tenant);
+    }
 
     if let Some(message) = event.message.take() {
         event.message = Some(scrub(&message));
@@ -789,6 +810,28 @@ mod tests {
             assert!(!first_time(context), "every later call is print-only");
         }
         assert!(first_time("[test] a different failure"));
+    }
+
+    /// The tenant has to reach events captured on ANY thread, which is why it
+    /// is a static read in `before_send` rather than a scope write — a scope
+    /// is thread-local, and the one caller runs on a tokio worker.
+    #[test]
+    fn the_tenant_tag_is_applied_to_every_event_not_one_thread() {
+        let _g = env_lock();
+        set_tenant("acme");
+        let tagged = std::thread::spawn(|| {
+            let mut event = Event::default();
+            scrub_event(&mut event);
+            event.tags.get("tenant").cloned()
+        })
+        .join()
+        .unwrap();
+        assert_eq!(
+            tagged.as_deref(),
+            Some("acme"),
+            "an event captured on another thread must still carry the tenant"
+        );
+        *TENANT.lock().unwrap() = None;
     }
 
     /// Reporting must survive being called before (or without) `init`, since

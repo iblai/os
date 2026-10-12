@@ -629,7 +629,9 @@ pub async fn ensure_opencode_current(app: AppHandle) {
         );
         // A pin bump reaches every desktop through this path on its next
         // launch, so a broken pin fails here silently and everywhere at once.
-        crate::telemetry::report("[opencode] managed upgrade failed", e);
+        // Warning, not error: an offline launch lands here too, and that is
+        // not a failure anyone can act on.
+        crate::telemetry::report_warning("[opencode] managed upgrade failed", e);
     }
 }
 

@@ -36,11 +36,21 @@ tower-http = { version = "0.6", features = ["cors", "fs"] }
 mime_guess = "2.0"
 base64 = "0.22"
 # Rust-side error reporting (see src/telemetry.rs). `default-features = false`
-# is load-bearing: the default `transport` feature pulls native-tls, which
-# would link a second TLS stack next to the rustls-only reqwest above — this
-# way rustls stays single in the graph. It does NOT avoid a second reqwest:
-# sentry needs 0.13 and the app is on 0.12, so both are built (they share
-# rustls and hyper 1.x). Accepted over moving the app's HTTP to 0.13.
+# is load-bearing: the default `transport` feature pulls native-tls, a second
+# TLS stack beside the rustls-only reqwest above.
+#
+# `rustls-no-provider`, NOT `rustls`: sentry's plain `rustls` resolves to
+# reqwest 0.13's `__rustls-aws-lc-rs`, which drags in aws-lc-rs/aws-lc-sys —
+# C and hand-written assembly whose build script ends in
+# `panic!("NASM command not found!")` on x86_64-windows, and the Windows
+# release job installs no NASM. It also left rustls 0.23 carrying BOTH `ring`
+# and `aws_lc_rs`, making `CryptoProvider::from_crate_features()` ambiguous
+# process-wide. With no provider requested here, rustls keeps only the `ring`
+# that the reqwest 0.12 above already enables, so resolution stays unambiguous.
+#
+# This does NOT avoid a second reqwest: sentry needs 0.13 and the app is on
+# 0.12, so both are built (sharing rustls and hyper 1.x). Accepted over moving
+# the app's HTTP to 0.13.
 # No `logs`/`metrics`/`release-health` — errors and panics only.
 # No `debug-images`: it attaches the running binary's own path to every event
 # (DebugImagesIntegration filters nothing), which on a Downloads-folder launch
@@ -53,7 +63,7 @@ sentry = { version = "0.49", default-features = false, features = [
     "contexts",
     "panic",
     "reqwest",
-    "rustls",
+    "rustls-no-provider",
 ] }
 tauri-plugin-os = "2.3.2"
 tauri-plugin-dialog = "2"

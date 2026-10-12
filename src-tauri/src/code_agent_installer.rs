@@ -613,7 +613,12 @@ pub async fn ensure_agents_current(app: AppHandle) {
             // The UI log is the only trace this leaves otherwise, and nobody
             // reads it: a pin that 404s for everyone looks like one user's
             // spinner that never resolves. Grouped per agent, not per error.
-            crate::telemetry::report(
+            //
+            // Warning, not error: this fires on EVERY offline launch, twice
+            // (Codex and Claude). At error level two installs nobody can do
+            // anything about would outnumber every real failure — the same
+            // reason the app-update check reports at warning.
+            crate::telemetry::report_warning(
                 &format!("[code-agent] {} install failed", display_name(backend)),
                 e,
             );

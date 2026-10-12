@@ -2508,9 +2508,11 @@ pub fn run() {
                 // fresh machine has them before Code is ever enabled).
                 let vibe_handle = app.handle().clone();
                 tauri::async_runtime::spawn(async move {
-                    if let Err(e) = opencode_installer::ensure_vibe_skills(vibe_handle).await {
-                        telemetry::report("[vibe] skills sync failed at startup", e);
-                    }
+                    // Not reported here: `ensure_vibe_skills` returns Ok on every
+                    // path — offline, no release found, download failed — so an
+                    // `Err` arm would be dead code. Its failures stay as silent as
+                    // they were; reporting them means changing what it returns.
+                    let _ = opencode_installer::ensure_vibe_skills(vibe_handle).await;
                 });
 
                 // Initialize web cache with app data directory
@@ -3256,6 +3258,17 @@ pub fn run() {
             #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
             if let tauri::RunEvent::Exit = _event {
                 remote_code::shutdown_sync();
+            }
+            // Flush before the process goes. `App::run` ends in tao's
+            // `EventLoop::run`, whose return type is `!` — it exits the
+            // process, so the ClientInitGuard in main()/run() is never
+            // dropped and its queued events die with it. That lost exactly
+            // the quit-time reports `report_once` exists for: once the event
+            // loop is gone, every `emit_on_main` fails.
+            if let tauri::RunEvent::Exit = _event {
+                if let Some(client) = sentry::Hub::current().client() {
+                    client.close(Some(std::time::Duration::from_secs(2)));
+                }
             }
             // Phone back in the foreground: the OS reclaims a suspended
             // app's sockets, so a Code turn streaming from the desktop
