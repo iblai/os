@@ -93,5 +93,8 @@
   },
   "tokenLimit": {
     "message": "已停止：本次运行用完了令牌预算。"
+  },
+  "noScriptablePage": {
+    "message": "我无法读取此页面——浏览器不允许。请打开你希望我处理的页面后重试。"
   }
 }
