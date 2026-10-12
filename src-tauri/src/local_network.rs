@@ -400,7 +400,10 @@ mod settings {
                 msg_send![class!(NSString), stringWithUTF8String: c_url.as_ptr()];
             let ns_url: *mut Object = msg_send![class!(NSURL), URLWithString: ns_string];
             if ns_url.is_null() {
-                eprintln!("[LocalNetwork] app-settings: URL did not parse");
+                crate::telemetry::report(
+                    "[LocalNetwork] app-settings URL did not parse",
+                    "NSURL::URLWithString returned nil",
+                );
                 return;
             }
             let shared: *mut Object = msg_send![class!(UIApplication), sharedApplication];

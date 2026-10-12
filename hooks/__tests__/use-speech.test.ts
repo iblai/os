@@ -216,7 +216,7 @@ describe('useSpeech', () => {
 
       await waitFor(() => expect(createdAudios).toHaveLength(1));
       expect(globalThis.fetch).toHaveBeenCalledWith(
-        'https://dm.test/api/ai-mentor/orgs/org-1/users/alice/chat-messages/m-endpoint/tts',
+        'https://dm.test/api/ai-mentor/orgs/org-1/users/alice/chat-messages/m-endpoint/tts/',
         expect.objectContaining({
           method: 'GET',
           cache: 'no-cache',

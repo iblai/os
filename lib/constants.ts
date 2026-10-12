@@ -30,6 +30,7 @@ export const QUERY_PARAMS = {
   MODE: 'mode',
   SHOW_CLOSE_BUTTON: 'show-close-button',
   SHOW_USER_PROFILE: 'show-user-profile',
+  ALLOW_MENTOR_SELECTION: 'allow-mentor-selection',
 };
 
 // URL patterns

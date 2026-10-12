@@ -28,6 +28,7 @@ mod opencode_installer;
 #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
 mod opencode_proxy;
 mod remote_code;
+mod telemetry;
 mod web_cache;
 
 use foundry_installer::{
@@ -123,7 +124,12 @@ where
     if let Err(err) = app.run_on_main_thread(move || {
         let _ = handle.emit(event, payload);
     }) {
-        eprintln!("[emit_on_main] could not schedule '{event}' on main thread: {err}");
+        // The event name stays out of the grouping key: one issue for "the
+        // webview-mutex scheduling path failed", not one per event name.
+        telemetry::report_once(
+            "[emit_on_main] could not schedule an event on the main thread",
+            format!("'{event}' — {err}"),
+        );
     }
 }
 
@@ -2236,6 +2242,13 @@ fn main() {
         }
     }
 
+    // Rust-side error reporting. After the dotenv loads (so a dev build can be
+    // aimed at a scratch project from .env.local) and before the builder, so
+    // `setup()` and every task spawned there is already covered — that is where
+    // the failures worth knowing about happen. The guard MUST stay bound for
+    // the life of the process: dropping it discards every queued event.
+    let _sentry = telemetry::init();
+
     // CrabNebula DevTools (debug builds only) — initialize before the builder so
     // its tracing subscriber is installed first.
     #[cfg(debug_assertions)]
@@ -2283,7 +2296,9 @@ fn main() {
             // fresh machine has them before Code is ever enabled).
             let vibe_handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {
-                let _ = opencode_installer::ensure_vibe_skills(vibe_handle).await;
+                if let Err(e) = opencode_installer::ensure_vibe_skills(vibe_handle).await {
+                    telemetry::report("[vibe] skills sync failed at startup", e);
+                }
             });
 
             // Initialize web cache with app data directory

@@ -24,6 +24,8 @@ const rawPatterns = envPatterns
       'https://base.manager.ai.syr.edu',
       'https://api.iblai.org',
       'https://api.iblai.app',
+      'https://os.ibl.ai',
+      'https://mentorai.iblai.org',
     ];
 
 const remotePatterns = rawPatterns
