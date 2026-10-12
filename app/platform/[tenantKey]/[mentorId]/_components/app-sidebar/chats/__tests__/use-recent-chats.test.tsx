@@ -43,6 +43,8 @@ const updateQueryDataMock = vi.fn(
 let mockIsStreaming = false;
 let mockNumberOfActiveChatMessages = 0;
 let mockActiveChatMessages: Array<{ role?: string }> = [];
+let mockCachedSessionId: Record<string, string> = {};
+const saveCachedSessionIdMock = vi.fn();
 
 let mockRecentInfinite: any = {
   pages: [{ results: [] }],
@@ -74,7 +76,7 @@ vi.mock('@/lib/hooks', () => ({
 }));
 
 vi.mock('@/hooks/use-local-storage', () => ({
-  useLocalStorage: () => [{}, vi.fn()],
+  useLocalStorage: () => [mockCachedSessionId, saveCachedSessionIdMock],
 }));
 
 vi.mock('@/features/utils', () => ({
@@ -188,6 +190,7 @@ beforeEach(() => {
   mockPinnedPages = { results: [] };
   mockHasNextPage = false;
   mockIsFetchingNextPage = false;
+  mockCachedSessionId = {};
 });
 
 describe('useRecentChats', () => {
@@ -355,6 +358,34 @@ describe('useRecentChats', () => {
     // Different session than the active one => state is torn down / repointed.
     expect(dispatchMock).toHaveBeenCalled();
     expect(onAfterNav).toHaveBeenCalled();
+  });
+
+  it('handleSelectRow writes the localStorage session_id cache under a tenant-scoped key (#2536)', () => {
+    const row = { session_id: 'new-sess', mentor: { unique_id: 'mentor-1' } };
+    const { result } = renderHook(() => useRecentChats(baseArgs));
+
+    act(() => {
+      result.current.handleSelectRow(row);
+    });
+
+    expect(saveCachedSessionIdMock).toHaveBeenCalledWith({
+      'tenant-a:mentor-1': 'new-sess',
+    });
+  });
+
+  it('handleSelectRow keeps sessions from other tenants distinct for the same mentor id (#2536)', () => {
+    mockCachedSessionId = { 'tenant-b:mentor-1': 'other-tenant-session' };
+    const row = { session_id: 'new-sess', mentor: { unique_id: 'mentor-1' } };
+    const { result } = renderHook(() => useRecentChats(baseArgs));
+
+    act(() => {
+      result.current.handleSelectRow(row);
+    });
+
+    expect(saveCachedSessionIdMock).toHaveBeenCalledWith({
+      'tenant-b:mentor-1': 'other-tenant-session',
+      'tenant-a:mentor-1': 'new-sess',
+    });
   });
 
   it('refetches recent after the first assistant reply lands', () => {

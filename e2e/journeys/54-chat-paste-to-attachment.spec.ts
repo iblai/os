@@ -96,9 +96,11 @@ test.describe('Journey 54: Chat Paste-to-Attachment', () => {
 
     await simulateTextPaste(page, OVER_LIMIT_TEXT);
 
-    const pastedTxtChip = page.getByTestId('attachment-chip').filter({
-      hasText: /pasted-\d+\.txt/,
-    });
+    // The redesigned file card labels a paste "Pasted text"; the file name
+    // lives in its title.
+    const pastedTxtChip = page.locator(
+      '[data-testid="attachment-chip"][title^="pasted-"][title$=".txt"]',
+    );
 
     await expect(pastedTxtChip).toBeVisible({ timeout: 15_000 });
     await expect(chatPage.chatInput).toHaveValue('', { timeout: 5_000 });
@@ -148,7 +150,7 @@ test.describe('Journey 54: Chat Paste-to-Attachment', () => {
     logger.info('PTA-03: Pasted image file produced an attachment chip');
   });
 
-  test('admin pastes an oversized file and sees a validation error toast with no attachment chip', async ({
+  test('admin pastes an oversized file and sees a validation error toast and a too-large chip', async ({
     page,
     chatPage,
   }) => {
@@ -169,13 +171,18 @@ test.describe('Journey 54: Chat Paste-to-Attachment', () => {
 
     await expect(validationToast).toBeVisible({ timeout: 10_000 });
 
-    const oversizedChip = page.getByTestId('attachment-chip').filter({
-      hasText: 'huge-file.pdf',
-    });
-    await expect(oversizedChip).not.toBeVisible({ timeout: 3_000 });
+    // Issue #2586: an oversized file now also renders as a rejected
+    // attachment chip (`data-status="too-large"`, part of the composer's
+    // file-card redesign — see journey 79's cr-06), alongside the toast,
+    // rather than the classic toast-only/no-chip behavior.
+    const oversizedChip = page
+      .getByTestId('attachment-chip')
+      .filter({ hasText: 'huge-file.pdf' });
+    await expect(oversizedChip).toBeVisible({ timeout: 3_000 });
+    await expect(oversizedChip).toHaveAttribute('data-status', 'too-large');
 
     logger.info(
-      'PTA-04: Oversized file paste showed validation error toast and no chip was added',
+      'PTA-04: Oversized file paste showed a validation error toast and a too-large attachment chip',
     );
   });
 });

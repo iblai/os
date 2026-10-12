@@ -23,6 +23,7 @@ import {
 import { useAppDispatch, useAppSelector } from '@/lib/hooks';
 import { useLocalStorage } from '@/hooks/use-local-storage';
 import { LOCAL_STORAGE_KEYS } from '@/lib/constants';
+import { sessionCacheKey } from '@/lib/utils';
 import { getUserName } from '@/features/utils';
 import { ProjectPageParams } from '@/lib/types';
 import eventBus, { RemoteEvents } from '@/lib/eventBus';
@@ -259,7 +260,7 @@ export function useRecentChats({
       if (mentorId) {
         saveCachedSessionId({
           ...cachedSessionId,
-          [mentorId]: row.session_id,
+          [sessionCacheKey(tenantKey, mentorId)]: row.session_id,
         });
       }
     }

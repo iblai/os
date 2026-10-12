@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-10-07 | 830 checkpoints (784 covered, 12 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 83 journeys (82 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-10-08 | 920 checkpoints (876 covered, 10 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 92 journeys (91 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -29,7 +29,7 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 2: First-Time User Chat & Navigation (8 checkpoints) — `journeys/02-first-time-user-chat-and-navigation.spec.ts`
+## Journey 2: First-Time User Chat & Navigation (9 checkpoints) — `journeys/02-first-time-user-chat-and-navigation.spec.ts`
 
 **Source files:** `app/platform/[tenantKey]/[mentorId]/page.tsx`, `components/chat/index.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`, `components/welcome-chat.tsx`, `components/advanced-chat/ui-tags/default-tag.tsx`
 
@@ -40,7 +40,8 @@ When adding a new page or modifying an existing user flow:
 - [x] Sidebar can be toggled open and closed
 - [x] Help button opens the docs/help link in a new tab when the tenant's own metadata (observed from the app's own org-metadata GET, no `DM_URL` required) shows `show_help !== false`; the menu item is correctly absent when a tenant explicitly sets `show_help: false` (#uat-9)
 - [x] Suggested prompts authored with Markdown render via the Markdown component (issue #1179, fixme until a seeded mentor fixture is available)
-- [ ] NAV-08: Clicking "New Chat" once fires exactly ONE create-session POST (issue #1002 regression guard — parked as `test.fixme`; activate after verifying against the live backend)
+- [x] NAV-08: Clicking "New Chat" once fires exactly ONE create-session POST (issue #1002 regression guard — activated and verified against the SDK Chat, issue #2586)
+- [x] NAV-09: A freshly created mentor's session lifecycle stays at exactly ONE session through its first message and through navigating away (Explore) and back (issue #2586) — covers the mount-time auto-create path, complementing NAV-08's "New Chat" button coverage
 
 ---
 
@@ -249,7 +250,7 @@ The **download-chat** checkpoints (sh-07 … sh-10, issue #2464) cover the "Down
 **Source files:** `components/modals/edit-mentor-modal/tabs/embed-tab.tsx`, `components/modals/edit-mentor-modal/hooks/useEmbedTab.ts`, `components/modals/edit-mentor-modal/utils.ts`, `components/logo.tsx`, `hooks/use-mentors/use-mentor-settings.ts`, `hooks/use-embed-mode.ts`, `components/chat-input-form/voice-call-button.tsx`, `components/chat-input-form/voice-chat-button.tsx`, `components/chat-input-form/screen-sharing-button.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`
 
 - [x] ~~Non-anonymous embed with voice call, voice record, and attachment buttons renders correctly~~ _(deprecated in #2476 — the Embed tab's Show Attachment / Show Voice Record / Show Voice Call toggles were removed entirely; owned per-surface by Settings -> Capabilities now)_
-- [x] Authenticated flow in embed: user can send a message and receive an AI response
+- [x] Authenticated flow in embed: user can send a message and receive an AI response _(runs against a real `EMBED_URL` when configured, otherwise against the local second-origin embed harness — issue #2586 — with the chat WebSocket mocked)_
 - [x] Advanced anonymous embed (Anyone visibility, no context awareness) renders and allows chatting
 - [x] Advanced anonymous embed with context awareness sends message with injected context
 - [x] WCAG 2.4.3: pressing Escape inside embedded iframe closes the widget via postMessage
@@ -257,7 +258,7 @@ The **download-chat** checkpoints (sh-07 … sh-10, issue #2464) cover the "Down
 - [x] Embed view sidebar logo is not clickable when Show Catalogue is disabled (configured via the embed UI on a fresh mentor, verified at the embed URL)
 - [x] Embed view sidebar logo is clickable when Show Catalogue is enabled (configured via the embed UI on a fresh mentor, verified at the embed URL)
 - [x] Embed mode renders a minimal sidebar: New Chat present (and Chats when the user is logged in); Agents (New Agent), Workflows, Analytics, Projects, and Support/docs footer link all absent — holds for both expanded and rail-collapsed layouts regardless of user role
-- [ ] Optimize Page Context Tokens toggle: visible label present, tooltip ('Strips HTML tags from page context') reachable on hover, and the setting flips and persists after submit + modal reopen via GET /settings/ round-trip _(parked as `test.fixme` — flaky in CI with shared mentor + slow submit cycle; activate with a dedicated mentor fixture)_
+- [x] Optimize Page Context Tokens toggle: visible label present, tooltip ('Strips HTML tags from page context') reachable on hover, and the setting flips (default-off, on a dedicated per-test mentor) and persists after submit + modal reopen via GET /settings/ round-trip
 - [x] Issue #2153: toggling the Shareable Link switch ON for a non-anonymous mentor with an empty Website URL does not surface the "Please specify a valid Website URL" error and still creates the shareable link (success toast)
 - [x] Issue #2153: clicking the regenerate (refresh) icon next to Shareable Link does not surface the Website URL validation error
 - [x] Issue #2153: toggling the Shareable Link switch OFF does not surface the Website URL validation error
@@ -1111,7 +1112,7 @@ Covers the `handlePaste` → `extractFilesFromClipboard` → `processFiles` path
 - [x] pta-01: Pasting plain text over the `NEXT_PUBLIC_MAXIMUM_CHARACTER_SIZE_TO_COPY` threshold converts it to a `pasted-*.txt` attachment chip and leaves the textarea empty
 - [x] pta-02: Pasting plain text under the threshold is not converted into an attachment chip
 - [x] pta-03: Pasting an image file via the clipboard produces an attachment chip and the textarea remains empty
-- [x] pta-04: Pasting an oversized file triggers a sonner validation error toast and no attachment chip is added
+- [x] pta-04: Pasting an oversized file triggers a sonner validation error toast AND a rejected attachment chip (`data-status="too-large"`) — updated for issue #2586's file-card redesign, which added the too-large chip state alongside the toast (see journey 79's cr-06)
 
 ---
 
@@ -1383,7 +1384,7 @@ Because the toggle mutates the mentor's attached tools — the same fields Journ
 
 ---
 
-## Journey 67: Agent Skills (22 checkpoints) — `journeys/67-agent-skills.spec.ts`
+## Journey 67: Agent Skills (26 checkpoints) — `journeys/67-agent-skills.spec.ts`
 
 **Source files:** `hooks/use-mentor-segments.ts`, `components/modals/edit-mentor-modal/tabs/skills-tab.tsx`, `components/chat-input-form.tsx`, `components/auto-resize-text-area.tsx`
 
@@ -1444,8 +1445,11 @@ surfaces:
 - [x] ags-06: NON-ADMIN — the Skills tab is absent from the Edit Mentor modal (the segment is ADMIN-only via userTypes in `MENTOR_SEGMENTS`)
 - [x] ags-07: View-only RBAC (`view_skill_assignments` granted, create/write/delete denied via the same permission-check mock) — the Agent Skills sub-tab renders with its empty state, while the Available Skills sub-tab and the New Skill button are absent from the DOM
 - [x] slash-01: Mentor with no effective skills — chat composer stays a plain textbox (no combobox role) and typing "/" opens nothing
-- [x] slash-02: Mentor with skills — composer gets `role=combobox` wiring and "/" opens the picker listing only enabled skills as name stacked over `/slug` (column layout — full name, never truncated; geometry-asserted), no descriptions (assignment rows carry none; the platform-wide agent-skills catalog is never fetched from chat)
-- [x] slash-03: Typing after "/" filters the picker by both skill name and slug as the query narrows; no match closes the picker
+- [x] slash-02: Mentor with skills — composer gets `role=combobox` wiring and "/" opens the picker listing only enabled skills by NAME ONLY (no `/slug` line, no "Skills" header) in a compact (~300px) left-aligned popover ABOVE the composer (picker bottom <= composer top; geometry-asserted), no descriptions (assignment rows carry none; the platform-wide agent-skills catalog is never fetched from chat)
+- [x] slash-02b: A long skill name wraps onto multiple lines within the compact picker width — never clipped or ellipsized
+- [x] slash-02c: Mobile (390px) — the "/" picker opens above the bottom-pinned composer without covering the input and fits the viewport
+- [x] slash-02d: Conversation state (mocked chat socket) — the "/" picker opens fully visible (not clipped by the chat's scrolling composer wrapper) above the bottom-pinned composer
+- [x] slash-03: Typing after "/" filters the picker by both skill name and slug (slug still matches though rows show only the name) as the query narrows; no match closes the picker
 - [x] slash-04: ArrowDown/ArrowUp cycle the active picker option and the composer's `aria-activedescendant` follows the active option's id
 - [x] slash-05: Enter completes the active option IN PLACE — `/<slug> ` lands at the typed token's index and the backdrop layer (`skill-token-highlight`) paints an active-pill background behind it; nothing is submitted
 - [x] slash-06: Clicking a picker option (mousedown) completes that skill's token in place with the same highlight
@@ -1456,7 +1460,7 @@ surfaces:
 - [x] slash-11: A mid-sentence token is removed atomically and the seam space collapses ("say /web-research please" → "say please")
 - [x] slash-12: Multiple skill invocations in one message are each highlighted; unknown or disabled slugs never highlight
 - [x] slash-13: Typing "/" while the assignments fetch (the composer's only skill source) is still in flight shows the "Loading skills…" popover (`slash-skill-loading`, `role=status`), which yields to the picker once the list resolves
-- [x] slash-16: Skills dropdown (next to Canvas) lists enabled skills as name stacked over `/slug` (same column layout as the `/` picker — full name, never truncated; geometry-asserted); selecting inserts the token AT THE CARET with context-aware spacing; the active pill shows the armed name + the standard ✕ (disarms without opening the menu); toggling removes cleanly; arming another replaces (single selection); `/`-picker arming updates the button — one composer-text source of truth
+- [x] slash-16: Skills row inside the composer's "+" menu lists enabled skills as name stacked over `/slug` (column layout — full name, never truncated; geometry-asserted); selecting inserts the token AT THE CARET with context-aware spacing — no separate skill chip exists in the #2586 redesign, so the armed state shows only as the composer token, a checked row in the Skills menu, and a count badge on the menu trigger; removing (re-selecting the skill, or deleting its token text) clears all three; arming another replaces (single selection); `/`-picker arming marks the same skill checked in the Skills menu — one composer-text source of truth
 - [x] slash-15: NON-ADMIN — with the assignments endpoint readable (mocked granted state; a 403 degrades to an inactive picker) the "/" picker offers skills; selecting completes the token and the sent invocation message receives a live AI reply — skips when the environment denies the non-admin CHAT permission entirely (composer disabled with a "you don't have permission to chat" placeholder): the picker rides on top of chat access
 - [x] slash-14: A "/" token typed after existing text (caret-adjacent, preceded by whitespace) opens the picker; selecting completes the invocation at that index keeping the sentence. A "/" glued inside a word (and/or, URLs) never triggers
 
@@ -1881,7 +1885,7 @@ route.
 
 ---
 
-## Journey 76: Show Additional Agents Toggle (6 checkpoints) — `journeys/76-show-additional-agents-toggle.spec.ts`
+## Journey 76: Show Additional Agents Toggle (7 checkpoints) — `journeys/76-show-additional-agents-toggle.spec.ts`
 
 **Source files:** `components/modals/edit-mentor-modal/settings-tab.tsx`, `components/welcome-chat-new.tsx`, `components/welcome-chat/explore-mentors.tsx`, `hooks/use-mentors/use-mentor-settings.ts`
 
@@ -1893,6 +1897,171 @@ Covers issue #2544: a new `show_explore_mentors` mentor setting, exposed as a "S
 - [x] sem-04: With the setting ON, the admin's own welcome screen shows the "Explore Agents" section
 - [x] sem-05: With the setting ON, a non-admin non-owner viewer of the same agent also sees the "Explore Agents" section (RBAC-redaction regression guard)
 - [x] sem-06: With the setting OFF, the welcome screen hides the "Explore Agents" section
+- [x] sem-07: With the setting ON, the "Explore Agents" section sits below the first screen in two columns, and the "Explore Agents" hint scrolls it into view
+
+---
+
+## Journey 77: SDK Chat Migration — Stage 1 (9 checkpoints) — `journeys/77-sdk-chat-migration-stage-1.spec.ts`
+
+**Source files:** `components/chat/sdk-chat.tsx`, `app/platform/[tenantKey]/[mentorId]/mentor-page-content.tsx`
+
+Covers issue #2586 Stage 1: the chat surface now renders the SDK `Chat` component (`@iblai/iblai-js/web-containers/next`) via `components/chat/sdk-chat.tsx`, instead of OS's own `components/chat/index.tsx` + `components/chat-input-form/*` (still present, but no longer rendered on this page). Live model replies are unavailable in this environment (the shared ibl.ai free-tier model new e2e agents use returns `TooManyRequestsResponseError: Rate limit exceeded`), so every test scripts the chat WebSocket via `ChatPage.mockChatWebSocket()` / the new `mockStopGenerationWebSocket()` rather than depending on a real reply — the same technique journeys 68/70/73 established. Frame shapes and endpoints were confirmed by reading `@iblai/web-utils`'s `use-chat-v2.ts` and `use-mentor-tools.ts` directly (source, not the bundled `dist/`): the outgoing WS frame is `{flow, session_id, token, prompt, file_references?, ...}` — session tools are NOT resent per message (session-scoped, read server-side from the `PUT .../sessions/{id}/` `{tools}` body instead); Stop opens a SEPARATE `wss://.../ws/langflow-stop-generation/` socket and only re-enables the composer once THAT socket replies; a mid-stream WS close (no eos/error frame) is handled the same way a real backend error surfaces, and does not require any `test.fixme`/skip to reproduce.
+
+Excludes issue #2536's session-recovery checkpoints — that fix has not yet been ported into the SDK Chat. Needed once it lands: (1) a dropped/expired session on reload falls back to a fresh session rather than showing a permanently broken composer; (2) an explicit "session expired" affordance (if any) is shown and actionable; (3) resuming after recovery does not resend or duplicate the last user message; (4) recovery does not clobber an unrelated, still-valid session for a different mentor tab.
+
+- [x] scm-01: The composer's Attach-file dropdown exposes the Upload File and Camera options
+- [x] scm-02: Enabling/disabling the Web Search session tool flips the chip's `aria-pressed` state and PUTs the tools array to the session-update REST endpoint
+- [x] scm-02b: A single click of the redesigned Tools-submenu checkbox item fires exactly ONE session-tools PUT with the correct tools array (issue #2586 follow-up guard against the classic chip's nested-button double-PUT hazard — confirmed not to reproduce in the redesigned `menuitemcheckbox`/`switch` row)
+- [x] scm-03: Attaching a file and sending carries the prompt, session id, and a `file_references` entry (file_id/file_key/file_name/content_type/file_size) in the outgoing WebSocket frame
+- [x] scm-04: An attached file's chip visibly transitions from uploading (spinner) to done (no retry affordance, Remove enabled)
+- [x] scm-05: A failed upload (mocked 500 on the presigned-URL request) drives the file chip to its error/retry affordance
+- [x] scm-06: Clicking Stop mid-stream opens the dedicated stop-generation socket with the matching `generation_id`; once it replies, streaming ends and the composer re-enables, and a frame arriving on the paused main socket right after Stop never renders
+- [x] scm-07: The server closing the WebSocket mid-stream leaves the streaming state and re-enables the composer, and the user can send again on a freshly (re)opened socket
+- [x] scm-08 (regression, issue #2586 fix): toggling a tool immediately after "New Chat", before that chat's create-session POST resolves, queues the toggle (chip renders optimistically, zero PUTs) and PUTs it exactly once to the NEW session id once the session exists — never to the previous session, never lost
+
+---
+
+## Journey 78: Embed Second-Origin Harness (2 checkpoints) — `journeys/78-embed-second-origin-harness.spec.ts`
+
+**Source files:** `hooks/use-embed-mode.ts`, `components/chat/sdk-chat.tsx`
+
+Covers issue #2586's test infrastructure: `e2e/utils/embed-harness-server.mjs`, a static page served on `127.0.0.1:4599` (a genuinely different origin than the mentor app) that iframes any URL passed via `?src=`, wired as a Playwright `webServer` entry. Built to un-skip journey 13's `EMBED_URL`-gated tests without depending on an external, personally-owned demo site — `EMBED_URL` is now optional and empty by default; when unset, embed specs fall back to this harness. Kept deliberately generic so issue #2590's origin-allowlist security work can reuse it unchanged.
+
+- [x] ehh-01: The harness serves a visible placeholder page when no `?src=` is given
+- [x] ehh-02: The harness, loaded from a genuinely different origin than the mentor app, renders the embedded mentor chat inside its iframe
+
+---
+
+## Journey 79: Composer Redesign (15 checkpoints) — `journeys/79-composer-redesign.spec.ts`
+
+**Source files:** `components/chat/sdk-chat.tsx`
+
+Covers issue #2586's composer rebuild: the classic UploadMenu + always-visible InsideButtons/OutsideButtons rows are replaced by a single "+" menu (Upload File, Camera, Tools ›, Skills ›, Prompts, Memory), a desktop Radix dropdown or a phone bottom sheet depending on viewport. Active tools/skills render as removable chips in the composer toolbar, with 4+ active collapsing the overflow into a "+N" button that opens an active list ("Clear all" included). Complements journey 77 (attach menu / session-tools REST contract / WS file references) and journey 67 (the `/` skill picker, updated in place for the new menu location).
+
+- [x] cr-01: The empty-state chat screen renders name, welcome text, disclaimer and the composer directly below it, in that DOM order
+- [x] cr-02: On a phone-width viewport the empty-state composer is pinned to the bottom of the screen instead of centred with the name/welcome block
+- [x] cr-03: The composer's single "+" menu opens and exposes Upload File, Camera and (when the mentor has tools enabled) a Tools submenu trigger
+- [x] cr-04: Escape closes the "+" menu and returns focus to its trigger
+- [x] cr-05: Toggling tools from the "+" menu's Tools submenu renders them as chips, with 4+ active tools collapsing the overflow into a "+N" button that opens an active list ("Clear all" included)
+- [x] cr-06: The composer's file card renders every upload state — uploading, done, failed (with Retry) and too-large — via mocked upload responses
+- [x] cr-07: Screen share, dictate, voice call and Send remain independent composer controls, never nested inside the "+" menu
+- [x] cr-08: Guided prompts on the main chat stay visible while the user types, including a "/" skill command
+- [x] cr-09: On a phone-width viewport the floating accessibility button does not overlap the composer's Send button or the suggested-prompt rows
+- [x] cr-11: The Canvas pill matches the active tool chips: when on it is the same pale-blue pill (#F5F8FF fill, #D0E0FF border, 32px) with a "Turn off Canvas" × that turns Canvas off; when off it is a plain one-click toggle with no ×
+- [x] cr-12 (regression, issue #2586): Clicking Canvas on a brand-new chat before its create-session POST resolves shows the pill on with its × at once (zero PUTs), then PUTs `enable_artifacts: true` exactly once to the NEW session id — never to `sessions//` or the previous session — and the choice survives the new session's default
+- [x] cr-13 (issue #2586): On a phone-width viewport the main chat's guided prompts are at most four full-width rows stacked above the composer, matching its edges with no sideways scrolling, and stay visible while typing; desktop keeps the wrapped chips
+- [x] cr-14 (mobile, issue #2586): The composer's "+" menu opens as a bottom sheet with Upload/Camera tiles and Tools/Skills/Prompts/Memory rows; drilling into Tools toggles an available tool to an active chip, and the sheet closes via Escape and via a backdrop click
+- [x] cr-15 (issue #2586): The Memory row in the "+" menu never shows a trailing chevron (unlike Tools and Skills, both of which open a sub-page/submenu) on desktop or mobile, and clicking it opens the Memory panel ("Your Memory")
+- [x] cr-16 (issue #2586): The composer in CONVERSATION state (after a mocked reply) still shows an active tool chip, the Canvas "Turn off Canvas" × pill, and the "/" skill picker positioned above the composer; a 320-390px viewport in that state has no horizontal overflow with Send visible
+
+---
+
+## Journey 80: Embed Header + LTI Redesign (8 checkpoints) — `journeys/80-embed-and-lti-redesign.spec.ts`
+
+**Source files:** `components/chat/sdk-chat.tsx`, `hooks/use-embed-mode.ts`, `hooks/use-is-lti-launch.ts`, `lib/embed-context.ts`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/embed-nav-bar.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/accessibility-fab/index.tsx`
+
+Covers issue #2586's embed surface redesign: a new OS header (`EmbedNavBar` — avatar/name, a dedicated "New chat" icon button, a menu/help trigger and Close) and up to four suggested prompts stacked as full-width rows that, unlike the main chat's guided prompts (journey 79's cr-08), stay visible while the user types. An LTI launch (`?embed=true&lti=true`) additionally drops the Close button and makes Escape a no-op, and that `lti` flag persists across in-app navigation via the embed-context localStorage cache. Uses the same genuinely-cross-origin embed harness as journey 78 rather than a same-origin `?embed=true` navigation, since that is the shape a real customer site presents.
+
+- [x] emb-hdr-01: The embed header shows the agent's avatar and name as plain text (not a button), a dedicated New chat button, the ? menu trigger and Close, on a genuinely cross-origin embed harness
+- [x] emb-hdr-02: The embed composer's "+" menu never offers Prompts or Memory, even for an authenticated (admin) embed session where they would otherwise render
+- [x] emb-hdr-03: The embed's stacked suggested-prompt rows stay visible while typing, like the main chat's guided prompts (cr-08)
+- [x] emb-lti-01: An LTI launch (`?lti=true`) hides the embed's Close button and Escape becomes a no-op
+- [x] emb-lti-02: The LTI embed composer is capped at 680px wide even as its iframe widens
+- [x] emb-lti-03 (regression, issue #2586): In a 320px LTI frame the composer stays inside the frame: the Canvas pill (on, with its ×) gives way, the toolbar never overflows, and every action button including Send is fully visible
+- [x] emb-hdr-04 (regression, issue #2586): The embed's suggested prompts are at most four full-width rows stacked above the composer, each matching the composer's left/right edges, with no horizontal overflow at 320px and still shown while typing
+- [x] emb-lti-04 (regression, issue #2586): In a 300px LTI frame the composer placeholder stays on one line and ellipsizes instead of wrapping into a clipped second line; typed text still wraps
+
+---
+
+## Journey 81: Project Page Redesign (5 checkpoints) — `journeys/81-project-page-redesign.spec.ts`
+
+**Source files:** `app/platform/[tenantKey]/projects/[projectId]/[mentorId]/page.tsx`, `components/welcome-chat-new.tsx`
+
+Covers issue #2586's project landing page redesign (SDK `ProjectLandingPage`, rendered by OS's `WelcomeChatNew` for the project chat route): the same composer as the main chat plus a redesigned header/context section — a small label with the project name above the gradient agent name (the main chat's heading), Files/Instructions cards with count badges (hidden for students), a "Project agents" list with a count badge, "Add agent", click-to-switch agent cards, a per-agent "…" menu with "Remove from project", and a "Cannot Remove Agent" guard when only one agent remains. Journey 26 already covers the Files/Instructions modal entry points and basic chat send; this journey covers the new layout and the agent-list interactions specifically. Uses the `testProject` fixture (a project created fresh per test with exactly one attached agent, via `ProjectPage.createFromSidebar`, which now skips any leftover "Test Workflow" mentor when picking the agent card).
+
+- [x] pjr-01: The redesigned project landing page renders a small label with the PROJECT name (title tooltip), the gradient AGENT-name h1 like the main chat (project name as its accessible description), the composer, and the Files/Instructions context cards in that order; both card subtitles wrap to a 2-line clamp and the cards share a row at equal height
+- [x] pjr-02: "Project agents" shows a count badge, an "Add agent" button, and the currently selected agent marked `aria-current`
+- [x] pjr-03: Removing the last remaining agent from a project is blocked by a "Cannot Remove Agent" guard dialog, with no mutation performed
+- [x] pjr-04 (mobile, issue #2586): At 390px the project-name label / agent-name heading order holds, the composer is pinned to the viewport bottom instead of flowing after the context cards, and the Files/Instructions cards stack as one bordered list sharing the same 2-line subtitle clamp as desktop's 2-up grid
+- [x] pjr-05 (mobile, issue #2586): At 390px the per-agent "More actions" trigger opens a bottom actions sheet (instead of the desktop dropdown) showing the agent name and "Remove from project"; removing the last remaining agent through it is still blocked by the "Cannot Remove Agent" guard
+
+---
+
+## Journey 82: Embed Mode Redesign — Conversation & Controls (13 checkpoints) — `journeys/82-embed-redesign-conversation-and-controls.spec.ts`
+
+**Source files:** `components/modals/edit-mentor-modal/hooks/useEmbedTab.ts`, `components/modals/edit-mentor-modal/tabs/embed-tab.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/embed-nav-bar.tsx`, `hooks/use-is-lti-launch.ts`, `e2e/utils/embed-harness-server.mjs`, `e2e/utils/embed-harness-client.ts`
+
+Journeys 78/80 cover the second-origin harness infrastructure and the embed header/LTI CSS-shape regressions. This journey drives full INTERACTIONS inside the redesigned embed (issue #2586): a REAL generated customer-site snippet (not just a bare `?src=` iframe) served by a new `/real-snippet` route on the embed harness, a scripted conversation (mocked chat WebSocket), the "+" menu/tool chips/skills picker/file cards, header controls (New chat, menu, private mode, minimal sidebar), an unauthenticated visitor, screen share/voice, and LTI persistence across in-app navigation. Journey 13 still owns embed-tab CONFIGURATION; this journey owns the embed RUNTIME. Every mentor created is pinned to the cheap ibl.ai model and cleaned up automatically (`resource-tracker.ts`).
+
+- [x] er-01: The REAL generated embed snippet (`getEmbedCode()`, dropped into a fake customer page) behaves like a real launcher: the bubble never overlaps the host page's own composer-shaped content, clicking it opens the panel with the chat, the embed header's Close button hides the widget via its `closeEmbed` postMessage, and reopening the bubble restores the SAME widget rather than recreating it
+- [x] er-02: A scripted embed conversation (mocked chat WebSocket): sending a message renders the user bubble and the AI reply, the suggested-prompt rows disappear once the conversation has started, and the disclaimer (when present) stays directly above the composer mid-conversation
+- [x] er-03: Clicking a suggested-prompt row in the embed sends it immediately (`EmbedStarterPrompts` wires `onPromptSelect` straight to `handleSubmit`), not just filling the composer
+- [x] er-04: The embed composer's "+" menu offers Upload/Camera/Tools/Skills but never Prompts/Memory; toggling a tool renders an active "Turn off {name}" chip, and turning Canvas on shows the matching "Turn off Canvas" × pill
+- [x] er-05: The embed composer's "/" skill picker opens ABOVE the composer and, in the redesign variant, shows only the skill name — never the /slug line
+- [x] er-06: Mocked file-card states inside the embed — uploading, done, failed (with Retry) and too-large — render the same as the main chat (journey 79 cr-06)
+- [x] er-07: A 390px full-screen embed has no horizontal overflow and keeps Send fully visible, including with a widened toolbar (Canvas on)
+- [x] er-08: Embed header controls: borderless on the empty chat and a hairline once a reply lands; New chat clears the conversation back to the empty state; the ? menu lists Incognito (when offered) then Help/Support, and its Incognito row turns an empty chat Incognito (header shows "Incognito chat") and back off; the hamburger (mobile) opens the minimal sidebar
+- [x] er-09: A logged-out visitor on an anonymous (publicly chattable) mentor gets the embed chat and can send (mocked), but sees no "+" menu, Screen Sharing, Voice input (dictation) or Voice call controls
+- [x] er-10: For an agent with the Screen Sharing capability enabled, a logged-in embed user sees the Screen Sharing button and clicking it opens the in-panel LiveKit modal path; `selectEnableChatActionsPopup` has no dispatch call site anywhere in the OS/web-containers/web-utils source in this build, so the parent-postMessage chat-action-popup path is documented as unreachable rather than tested
+- [x] er-11: For the same Screen-Sharing-enabled agent, the Voice call button is present for a logged-in embed user
+- [x] er-12: An LTI embed (`?embed=true&lti=true`) keeps the Close button absent and Escape a no-op after New chat and after opening a prior chat from history
+- [x] er-13: The Embed tab's own live preview iframe (Edit Agent -> Embed) renders the redesigned embed's empty-state gradient agent-name heading
+
+## Journey 83: Settings Welcome Screen Sub-Tab (15 checkpoints) — `journeys/83-settings-welcome-screen.spec.ts`
+
+**Source files:** `components/modals/edit-mentor-modal/settings-tab.tsx`, `e2e/page-objects/edit-mentor/settings.tab.ts` (UI lives in the SDK `AgentSettingsTab` → `WelcomeScreenSubTab`)
+
+The Welcome screen sub-tab (#2586) saves heading style, starter-prompt source and guided-prompt count with the agent (iblai/iblai-platform#2626) and drives a live preview built from the chat's own prompt chips/rows. wss-01..06 run on the tenant's default agent and never save to it (wss-06 aborts its save); wss-07..09 save Personal greeting on a throw-away agent and check the chat's new-chat heading (`data-testid="welcome-heading"`, SDK `WelcomeHeading` + `greetingFirstName`), mocking the profile's full name for the `#` cases.
+
+- [x] wss-01: The Settings tab shows a fourth Welcome screen sub-tab after Basic, Discovery and Capabilities; it opens on the main-app live preview with the agent's name as the heading
+- [x] wss-02: The Number of guided prompts control shows only when Guided prompts is picked; Suggested hides it and Off also empties the preview's prompts
+- [x] wss-03: Picking 10 guided prompts shows the first 4 plus View more (6); View more expands to all 10 and Show less folds back to 4
+- [x] wss-04: The Embed and Mobile previews show the prompts as stacked full-width rows, with the same View more expansion
+- [x] wss-05: Picking Personal greeting switches the preview heading to a time-of-day greeting, and Preview as a logged-out visitor shows Hi there
+- [x] wss-06: Save sends the Welcome screen choices (welcome_heading_style, guided_prompts_count) now that the backend stores them (iblai-platform#2626); on the tenant's default agent the save request is intercepted and aborted so the real agent is untouched
+- [x] wss-07: On a throw-away agent, Save sends welcome_heading_style=personal_greeting, Settings reopens on Personal greeting, and the new-chat heading greets the signed-in user by first name ("Good morning|afternoon|evening, <First name>")
+- [x] wss-08: The embed view of an agent with Personal greeting shows the same first-name greeting as its new-chat heading
+- [x] wss-09: A full name that fails the first-name rule ("#12345", "user_8812") gets the nameless greeting, and "john#4821 Doe" is greeted as "John"; the heading never shows a # tag
+- [x] wss-10: Every Welcome screen control changes the preview: heading Personal greeting then back to the agent name, guided count 1/3/4/5/10 shows min(count,4) chips with a "View more (count-4)" button only above 4, Off removes every chip and Guided brings 4 back
+- [x] wss-11: On a throw-away agent, Save sends guided_prompts_count=3 with Agent name + Guided prompts; after a reload the three controls still show them and the preview has 3 chips (needs the #2626 SDK rebuild)
+- [x] wss-12: With Agent name + 3 guided prompts saved, both the admin's and a student's new chat show the agent name (no greeting) and at most 3 prompt chips (needs the #2626 SDK rebuild)
+- [x] wss-13: Admin saves Personal greeting + Off: both persist after a reload, then the new chat greets by first name, shows no prompt chips and fires no guided-prompts request (needs the #2626 SDK rebuild)
+- [x] wss-14: A student opening the same agent sees the admin's Personal greeting with the student's own first name and no prompt chips (needs the #2626 SDK rebuild)
+- [x] wss-15: Admin saves Suggested prompts (yours) with Agent name: both persist after a reload and the guided-prompt count select is hidden (needs the #2626 SDK rebuild)
+
+## Journey 84: In-chat Model Picker (14 checkpoints) — `journeys/84-in-chat-model-picker.spec.ts`
+
+**Source files:** `components/modals/edit-mentor-modal/settings-tab.tsx`, `e2e/page-objects/chat.page.ts`, `e2e/page-objects/edit-mentor/settings.tab.ts` (UI lives in the SDK composer "+" menu → Model, `useComposerModels`, and the web-utils chat socket payload)
+
+iblai/iblai-platform#2633: with the agent's `enable_in_chat_llm_change` on, a user picks a model for the current chat only. Runs on its own throw-away agent on the cheap ibl.ai model and only ever picks ibl.ai models.
+
+- [x] icm-01: An admin turns on "Allow in-chat model change" under Settings > Capabilities; Save sends enable_in_chat_llm_change=true and it reads back on after reopening
+- [x] icm-02: With the setting on, a user picks a model via + > Model > provider > model: the Model row names the model in use, later turns carry llm_provider/llm_name on the chat socket, and a chip plus a "Switched to X for this chat" notice show it
+- [x] icm-03: The chip's x goes back to the agent's model, sent explicitly on the next turn (the backend keeps a session's last pick); a new chat drops the chip and the notices and sends no model fields
+- [x] icm-04: On a phone the + sheet goes Model > provider page (with Back) > model, closes, and shows the model chip
+- [x] icm-05: With the setting off (Save sends enable_in_chat_llm_change=false), the + menu has no Model row
+- [x] icm-06: Per-model credentials (iblai-platform#2638): a model whose availability requires a key is disabled in + > Model > provider and shows the backend's reason; clicking it picks nothing, while a usable model in the same provider stays enabled
+- [x] icm-07: A tenant with a single usable provider: + > Model lists that provider's models straight away, with no provider step
+- [x] icm-08: Per-model credentials (iblai-platform#2638): a provider whose every model requires a key is left out of the + > Model provider list
+- [x] icm-09: When the chat socket rejects the picked model (400 "The selected model is not available."), the error shows, the chip goes away, the picker is back on the agent's model and the message text is back in the composer
+- [x] icm-10: A student (non-admin) opens + > Model through the UI and picks the first model they can use (no model name hard-coded; skips the one the chat is already on): the chip names it, turns carry llm_provider/llm_name on the chat socket with no "not available" error, and the chip's x ("Back to ibl.ai Fast", the agent model) sends the agent's model again
+- [x] icm-11: A student's pick is per chat: a new chat drops the chip and sends no model fields, and the admin's chat on the same agent never shows the student's pick
+- [x] icm-12: On a phone a student picks the first usable model through the + sheet, the chip shows it and the next turn carries it
+- [x] icm-13: With the setting off, a student's composer has no model picker
+- [x] icm-14: A student whose model catalogue has a single provider sees + > Model list its models straight away with no provider step, picks the first usable one, the chip shows it and the turn carries it
+
+---
+
+## Journey 85: Stale Session Id Self-Heal (4 checkpoints) — `journeys/85-stale-session-id-self-heal.spec.ts`
+
+**Source files:** `components/chat/sdk-chat.tsx`, `lib/utils.ts`, `hooks/user-navigate.ts`, `lib/logger.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/chats/use-recent-chats.ts`, `app/share/chat/[sessionId]/share-chat-redirect-content.tsx`, `e2e/page-objects/chat.page.ts` (the self-heal lives in the SDK Chat and `@iblai/web-utils` / `@iblai/data-layer`)
+
+Regression guard for [iblai-platform#2536](https://github.com/iblai/iblai-platform/issues/2536): a dead `session_id` in localStorage (purged, or minted under another tenant) left the chat spinning, never minted a new session, and failed every send with a "Session not found" toast; embeds have no New chat to recover with. The cache key is now `${tenantKey}:${mentorId}`. Retries are unchanged (1 + 3); only after the last 404 is it returned as `{ error }`, and that 404 or a WS "Session not found" frame calls `onSessionNotFound`, which drops the dead id so a fresh session is minted, with no toast. Uses the tenant's default agent; nothing to clean up.
+
+- [x] sess-01: A dead session id seeded into the tenant-scoped `session_id` cache is fetched exactly 4 times (1 initial + 3 retries, retries unchanged), all before the POST .../sessions/ that mints the replacement and never after it; no "Session not found" toast; the chat stays usable (real send + reply)
+- [x] sess-02: A legacy cache entry keyed by the bare mentorId is never looked up; the app mints and uses a session under the `${tenantKey}:${mentorId}` key
+- [x] sess-03: A WS "Session not found: <id>" frame mid-chat self-heals with no error toast: the working indicator clears, a fresh session replaces the dead id, and a follow-up message on it succeeds
+- [x] sess-04: In embed mode (`?embed=true`) a dead session id self-heals with no manual New chat, fetching the dead id exactly 4 times, all before the mint
 
 ---
 

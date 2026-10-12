@@ -30,6 +30,8 @@ export const QUERY_PARAMS = {
   MODE: 'mode',
   SHOW_CLOSE_BUTTON: 'show-close-button',
   SHOW_USER_PROFILE: 'show-user-profile',
+  /** Set on LTI launch URLs (with `embed=true`): the chat is inside an LMS course. */
+  LTI: 'lti',
   ALLOW_MENTOR_SELECTION: 'allow-mentor-selection',
 };
 

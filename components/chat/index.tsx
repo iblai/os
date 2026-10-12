@@ -62,6 +62,7 @@ import {
   redirectToAuthSpa,
   sanitizePromptParam,
   sendMessageToParentWebsite,
+  sessionCacheKey,
 } from '@/lib/utils';
 import { toast } from 'sonner';
 import { config } from '@/lib/config';
@@ -305,6 +306,9 @@ export function Chat({
     return CHAT_AREA_SIZE.DEFAULT;
   })();
   const mentorId = getMentorId() ?? mentorIdParam;
+  // Namespaces the `session_id` localStorage cache by tenant so a session
+  // id minted under one tenant is never reused under another (#2536).
+  const sessionKey = sessionCacheKey(tenantKey, mentorId);
   const searchParams = useSearchParams();
   const isCompactMode = searchParams.get('compact') === 'true';
   const initialPrompt = sanitizePromptParam(searchParams.get('prompt'));
@@ -328,7 +332,7 @@ export function Chat({
     { deserializer: (value) => JSON.parse(value) },
   );
   const isNewSession = useRef<boolean>(
-    cachedSessionId?.[mentorId] ? false : true,
+    cachedSessionId?.[sessionKey] ? false : true,
   );
 
   const { handle402Error } = use402ErrorCheck();
@@ -462,11 +466,28 @@ export function Chat({
     on402Error: handle402Error,
     on401Error: handle401Error,
     cachedSessionId,
+    sessionKey,
     onStartNewChat: (sessionId: string) => {
       dispatch(chatActions.updateSessionIds(sessionId));
       if (mentorId) {
-        saveCachedSessionId({ ...cachedSessionId, [mentorId]: sessionId });
+        saveCachedSessionId({ ...cachedSessionId, [sessionKey]: sessionId });
       }
+    },
+    // The backend no longer recognizes the cached session id (404 on
+    // history, or WS "Session not found") — the hook already cleared the
+    // redux-held id; drop it from the persisted cache too so the
+    // auto-start-new-chat guard re-arms and mints a fresh session. Only
+    // remove it if it still equals the dead id: read the latest persisted
+    // value via the functional updater rather than the closed-over
+    // `cachedSessionId`, so a newer id written between the failure and this
+    // callback running is never clobbered.
+    onSessionNotFound: (deadSessionId: string) => {
+      saveCachedSessionId((prev) => {
+        if (prev?.[sessionKey] !== deadSessionId) return prev;
+        const next = { ...prev };
+        delete next[sessionKey];
+        return next;
+      });
     },
     // OAuth callbacks for per_user MCP servers
     onOAuthRequired: (data) => {
@@ -769,7 +790,7 @@ export function Chat({
         setShowVoiceCallConfirmation(true);
         setChatActionType('voice-call');
         if (sessionId) {
-          saveCachedSessionId({ [mentorId]: sessionId });
+          saveCachedSessionId({ [sessionKey]: sessionId });
         } else {
           saveCachedSessionId({});
         }
@@ -777,7 +798,7 @@ export function Chat({
         setShowScreenShareConfirmation(true);
         setChatActionType('screen-share');
         if (sessionId) {
-          saveCachedSessionId({ [mentorId]: sessionId });
+          saveCachedSessionId({ [sessionKey]: sessionId });
         } else {
           saveCachedSessionId({});
         }
@@ -1768,7 +1789,7 @@ export function Chat({
                 activeTab={activeTab}
                 tenantKey={tenantKey}
                 username={username ?? ''}
-                sessionId={cachedSessionId?.[mentorId] ?? sessionId}
+                sessionId={cachedSessionId?.[sessionKey] ?? sessionId}
                 mentorUniqueId={uniqueMentorId}
                 // messages={messages}
                 // isPreviewMode={isPreviewMode}
@@ -1805,7 +1826,7 @@ export function Chat({
           ) && (
             <WelcomeChatNew
               mentorName={mentorName}
-              sessionId={cachedSessionId?.[mentorId] ?? sessionId}
+              sessionId={cachedSessionId?.[sessionKey] ?? sessionId}
               isNewSession={
                 isNewSession.current ||
                 (messages.length === 0 && !isLoadingChats)
@@ -1821,7 +1842,7 @@ export function Chat({
                 if (enableChatPopupActions && isInIframe()) {
                   sendMessageToParentWebsite({
                     type: 'MENTOR:CHAT_ACTION_SCREENSHARE',
-                    sessionId: cachedSessionId?.[mentorId] ?? sessionId,
+                    sessionId: cachedSessionId?.[sessionKey] ?? sessionId,
                   });
                   return;
                 }
@@ -1836,7 +1857,7 @@ export function Chat({
                 if (enableChatPopupActions && isInIframe()) {
                   sendMessageToParentWebsite({
                     type: 'MENTOR:CHAT_ACTION_VOICECALL',
-                    sessionId: cachedSessionId?.[mentorId] ?? sessionId,
+                    sessionId: cachedSessionId?.[sessionKey] ?? sessionId,
                   });
                   return;
                 }
@@ -1960,7 +1981,7 @@ export function Chat({
                   if (enableChatPopupActions && isInIframe()) {
                     sendMessageToParentWebsite({
                       type: 'MENTOR:CHAT_ACTION_SCREENSHARE',
-                      sessionId: cachedSessionId?.[mentorId] ?? sessionId,
+                      sessionId: cachedSessionId?.[sessionKey] ?? sessionId,
                     });
                     return;
                   }
@@ -1975,7 +1996,7 @@ export function Chat({
                   if (enableChatPopupActions && isInIframe()) {
                     sendMessageToParentWebsite({
                       type: 'MENTOR:CHAT_ACTION_VOICECALL',
-                      sessionId: cachedSessionId?.[mentorId] ?? sessionId,
+                      sessionId: cachedSessionId?.[sessionKey] ?? sessionId,
                     });
                     return;
                   }
@@ -2061,7 +2082,7 @@ export function Chat({
                   if (enableChatPopupActions && isInIframe()) {
                     sendMessageToParentWebsite({
                       type: 'MENTOR:CHAT_ACTION_SCREENSHARE',
-                      sessionId: cachedSessionId?.[mentorId] ?? sessionId,
+                      sessionId: cachedSessionId?.[sessionKey] ?? sessionId,
                     });
                     return;
                   }
@@ -2076,7 +2097,7 @@ export function Chat({
                   if (enableChatPopupActions && isInIframe()) {
                     sendMessageToParentWebsite({
                       type: 'MENTOR:CHAT_ACTION_VOICECALL',
-                      sessionId: cachedSessionId?.[mentorId] ?? sessionId,
+                      sessionId: cachedSessionId?.[sessionKey] ?? sessionId,
                     });
                     return;
                   }
@@ -2140,7 +2161,7 @@ export function Chat({
                   highlightedMessageId={highlightedMessageId}
                   profileImage={profileImage}
                   mentorName={mentorName}
-                  sessionId={cachedSessionId?.[mentorId] ?? sessionId}
+                  sessionId={cachedSessionId?.[sessionKey] ?? sessionId}
                   mentorId={mentorId}
                   tenantKey={tenantKey}
                   handleHighlightMessage={handleHighlightMessage}
@@ -2209,14 +2230,14 @@ export function Chat({
               .length > 0)) && (
           <div className="flex-shrink-0 overflow-y-auto pb-3.5 [scrollbar-gutter:stable]">
             <ChatInputForm
-              sessionId={cachedSessionId?.[mentorId] ?? sessionId}
+              sessionId={cachedSessionId?.[sessionKey] ?? sessionId}
               onSubmit={handleSubmit}
               stopGenerating={stopAnyGeneration}
               onScreenSharingClick={() => {
                 if (enableChatPopupActions && isInIframe()) {
                   sendMessageToParentWebsite({
                     type: 'MENTOR:CHAT_ACTION_SCREENSHARE',
-                    sessionId: cachedSessionId?.[mentorId] ?? sessionId,
+                    sessionId: cachedSessionId?.[sessionKey] ?? sessionId,
                   });
                   return;
                 }
@@ -2231,7 +2252,7 @@ export function Chat({
                 if (enableChatPopupActions && isInIframe()) {
                   sendMessageToParentWebsite({
                     type: 'MENTOR:CHAT_ACTION_VOICECALL',
-                    sessionId: cachedSessionId?.[mentorId] ?? sessionId,
+                    sessionId: cachedSessionId?.[sessionKey] ?? sessionId,
                   });
                   return;
                 }
@@ -2266,7 +2287,7 @@ export function Chat({
         <LiveKitChat
           tenantKey={tenantKey}
           mentorUniqueId={uniqueMentorId}
-          sessionId={cachedSessionId?.[mentorId] ?? sessionId}
+          sessionId={cachedSessionId?.[sessionKey] ?? sessionId}
           username={username ?? ''}
           // Labels the agent's transcript lines with the mentor's real name
           // and face, so call captions match the chat thread behind them.
@@ -2291,7 +2312,7 @@ export function Chat({
         <LiveKitScreenSharing
           tenantKey={tenantKey}
           mentorUniqueId={uniqueMentorId}
-          sessionId={cachedSessionId?.[mentorId] ?? sessionId}
+          sessionId={cachedSessionId?.[sessionKey] ?? sessionId}
           username={username ?? ''}
           isOpen={isScreenSharingModalOpen}
           mentorName={mentorName}

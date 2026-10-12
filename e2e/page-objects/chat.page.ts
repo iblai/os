@@ -97,15 +97,46 @@ export class ChatPage {
    * as journey 10.
    */
   readonly canvasEditor: Locator;
+  /**
+   * The "Memory" row/item — only ever mounted inside the "+" menu now (issue
+   * #2586). Resolved from `openPlusMenuAny()`, so it only ever "exists" while
+   * the + menu is open — callers MUST `openPlusMenu()` first, both to click
+   * it and to assert it absent/present for a given mentor.
+   */
   readonly memoryButton: Locator;
   readonly createMentorDialog: Locator;
   readonly loginBanner: Locator;
+  /**
+   * The composer's single "+" menu trigger (issue #2586). Its aria-label is
+   * still exactly "Attach file" (`chatInputFormUploadMenu.attachFile`) even
+   * though it now opens Upload/Camera/Tools/Skills/Prompts/Memory, not just
+   * attachments — kept for backward compatibility with any direct callers.
+   * Prefer `plusMenuButton` in new code; both resolve the same element.
+   */
   readonly uploadButton: Locator;
+  /** Alias for `uploadButton` — the composer's "+" trigger (`composer-plus-button`). */
+  readonly plusMenuButton: Locator;
   readonly voiceCallButton: Locator;
   readonly voiceInputButton: Locator;
+  readonly screenShareButton: Locator;
   readonly dragOverlay: Locator;
+  /**
+   * The rendered "Web Search" chip/menu item, whichever is currently in the
+   * DOM (issue #2586): the active chip (`Turn off Web Search`) when the tool
+   * is ON, or the Tools-submenu row (`menuitemcheckbox`/`switch` named "Web
+   * Search") when the + menu's Tools page is open. See `getToolButton`,
+   * `isToolActive`, `enableTool`/`disableTool` for the full state machine —
+   * this field alone does NOT open any menu, so a bare visibility check on it
+   * only tells you "currently mounted", not "tool is enabled for this
+   * mentor" (use `isToolAvailable` for that).
+   */
   readonly webSearchButton: Locator;
   readonly stopStreamingButton: Locator;
+  /**
+   * The "Prompts" item — only ever mounted inside the "+" menu now (issue
+   * #2586). Resolved from `openPlusMenuAny()` — callers MUST `openPlusMenu()`
+   * first, both to click it and to assert it absent/present.
+   */
   readonly promptsButton: Locator;
   readonly promptGalleryDialog: Locator;
   readonly guidedSuggestedPrompts: Locator;
@@ -113,16 +144,26 @@ export class ChatPage {
   readonly slashSkillPicker: Locator;
   readonly skillTokenHighlights: Locator;
   /**
-   * The Skills dropdown trigger in the inside-buttons row — the discoverable
-   * alternative to typing `/`. Shows the armed skill's name (active pill
-   * styling) whenever a `/slug` token is present in the composer, "Skills"
-   * otherwise. Hidden entirely when the mentor has no skills.
+   * The Skills row/submenu-trigger — now only ever mounted inside the "+"
+   * menu (issue #2586's `ComposerPlusMenu`), desktop (a `DropdownMenuSub`
+   * trigger) and mobile (a sheet row) alike, both sharing the SAME
+   * `skills-menu-trigger` testid. Shows the armed skill's name whenever a
+   * `/slug` token is present in the composer, "Skills" otherwise. Callers
+   * MUST `openPlusMenu()` first — see `openSkillsMenu()`, which does that.
    */
   readonly skillsMenuTrigger: Locator;
   /**
-   * The ✕ inside the active skills pill (disarms the token without opening
-   * the menu). Resolved FROM `skillsMenuTrigger` — never the page — so the
-   * testid can only ever match inside the trigger it belongs to.
+   * REMOVED in the #2586 redesign — the old inline ✕ on the armed Skills
+   * trigger no longer exists (the trigger is now a plain submenu row with a
+   * count badge, not a standalone pill). To disarm a skill without typing,
+   * re-select it in the Skills menu (`getSkillsMenuItem(slug)` — a checkbox
+   * item that un-arms on a second click) or use its "Remove {name}" active
+   * chip (`getToolChip`/`composer-active-row`, when it isn't collapsed into
+   * "+N"). Kept as a locator that never matches anything, so any caller that
+   * still references it fails loudly (a missing property would be a
+   * TypeScript error; an always-empty locator fails at the `expect()` site
+   * with a clear "0 elements" message) rather than silently reinterpreting
+   * unrelated DOM.
    */
   readonly skillsMenuClear: Locator;
   /** The Skills dropdown's content panel (Radix portal), when open. */
@@ -143,6 +184,12 @@ export class ChatPage {
   readonly downloadScopeMessageRadio: Locator;
   /** The dialog's single primary action button ("Download"). There is no Cancel — dismiss via Escape or the dialog's built-in close. */
   readonly downloadConfirmButton: Locator;
+  /**
+   * One rendered file-attachment chip (SDK `file-attachments-list.tsx`,
+   * `data-testid="attachment-chip"`). Use `.first()`/`.nth()` to disambiguate
+   * when more than one file is attached.
+   */
+  readonly attachmentChip: Locator;
 
   constructor(page: Page) {
     this.page = page;
@@ -165,7 +212,12 @@ export class ChatPage {
     this.userAgreementAccept = this.userAgreementDialog.getByRole('button', {
       name: /i accept/i,
     });
-    this.canvasToggle = page.getByRole('button', { name: /canvas/i });
+    // Exact name: when Canvas is on, its pill also carries a "Turn off
+    // Canvas" × (like the tool chips), which a /canvas/i regex would match.
+    this.canvasToggle = page.getByRole('button', {
+      name: 'Canvas',
+      exact: true,
+    });
     this.canvasMessagePreview = page.getByTestId('canvas-message-preview');
     this.canvasOpenButton = page.getByTestId('canvas-open-button');
     this.canvasBinaryGenerating = page.getByTestId('canvas-binary-generating');
@@ -180,38 +232,58 @@ export class ChatPage {
       .locator('[contenteditable="true"]')
       .or(page.locator('.ProseMirror'))
       .first();
-    // Exact name — NOT /memory/i. The chat-privacy toggle's aria-label is
-    // "Turn on Incognito. This chat won't be saved to history or used for
-    // memory.", so a loose /memory/i match also resolves the (always-present,
-    // desktop-visible) privacy toggle. That made `not.toBeVisible()` fail when
-    // memory was off (toggle still visible) and let `toBeVisible()` pass off the
-    // toggle even when the real button was gone. The MemoryButton renders text
-    // "Memory" with only decorative icons, so its accessible name is exactly
-    // "Memory" — which the privacy toggle never matches. Pinned further to its
-    // `chat-memory-button` test id because an admin's sidebar footer now also
-    // has a "Memory" button (tenant Memory tab), which an unscoped exact-name
-    // match would resolve as well (strict-mode violation).
-    this.memoryButton = page
-      .getByTestId('chat-memory-button')
-      .and(page.getByRole('button', { name: 'Memory', exact: true }));
+    // `chat-memory-button` (a DropdownMenuItem on desktop, a sheet row on
+    // mobile — SAME testid both layouts) now lives ONLY inside the "+" menu
+    // (issue #2586's `ComposerPlusMenu`), never standalone in the composer
+    // row. Resolved from `openPlusMenuAny()` (the currently-OPEN desktop
+    // dropdown content or mobile sheet) so it can never match a stray
+    // same-testid element elsewhere, and so it correctly reports "not
+    // visible" both when the + menu is closed AND when Memory genuinely isn't
+    // offered — callers that need to tell those apart MUST `openPlusMenu()`
+    // first (see the field's doc comment).
+    this.memoryButton =
+      this.openPlusMenuAny().getByTestId('chat-memory-button');
     this.createMentorDialog = page.getByRole('dialog', {
       name: /create.*mentor/i,
     });
     this.loginBanner = page.getByRole('button', { name: /log in/i });
+    // Still "Attach file" — `ComposerPlusMenu`'s trigger reuses the classic
+    // UploadMenu's aria-label verbatim even though it now opens far more than
+    // attachments (issue #2586).
     this.uploadButton = page.getByRole('button', { name: 'Attach file' });
+    this.plusMenuButton = this.uploadButton;
     this.voiceCallButton = page.getByRole('button', { name: 'Voice call' });
     this.voiceInputButton = page.getByRole('button', { name: 'Voice input' });
+    // Always "Screen Sharing" (`ScreenSharingButton`'s aria-label never
+    // changes with state — only its tooltip text does).
+    this.screenShareButton = page.getByRole('button', {
+      name: 'Screen Sharing',
+      exact: true,
+    });
     this.dragOverlay = page.locator(
       '[data-testid="drag-overlay"], [class*="drag-overlay"]',
     );
-    this.webSearchButton = page.locator('button[data-slot="button"]', {
-      hasText: 'Web Search',
-    });
+    // Resolves to whichever the DOM currently has (issue #2586): the active
+    // chip ("Turn off Web Search") when the tool is on, or the Tools-submenu
+    // row (a `menuitemcheckbox` on desktop, a `switch` on mobile — both named
+    // "Web Search") when the + menu's Tools page happens to be open. See the
+    // field's doc comment — a bare visibility check on this alone conflates
+    // "not currently mounted" with "not enabled for this mentor".
+    this.webSearchButton = this.getToolButton('Web Search');
     this.stopStreamingButton = page.locator('.chat-stop-streaming-button');
-    this.promptsButton = page.getByRole('button', {
-      name: 'Prompts',
-      exact: true,
-    });
+    // "Prompts" is a DropdownMenuItem (desktop) / sheet row (mobile) inside
+    // the "+" menu now (issue #2586) — resolved from `openPlusMenuAny()`, so
+    // callers MUST `openPlusMenu()` first (see the field's doc comment).
+    // `.or(...)` covers both the desktop `menuitem` role and the mobile
+    // sheet's plain `button` role for the same visible row.
+    this.promptsButton = this.openPlusMenuAny()
+      .getByRole('menuitem', { name: 'Prompts', exact: true })
+      .or(
+        this.openPlusMenuAny().getByRole('button', {
+          name: 'Prompts',
+          exact: true,
+        }),
+      );
     this.promptGalleryDialog = page.getByRole('dialog', {
       name: 'Prompt Gallery',
     });
@@ -233,9 +305,14 @@ export class ChatPage {
     // at a token's end (or Delete at its start) removes the whole token in
     // one stroke.
     this.skillTokenHighlights = page.getByTestId('skill-token-highlight');
-    this.skillsMenuTrigger = page.getByTestId('skills-menu-trigger');
-    this.skillsMenuClear =
-      this.skillsMenuTrigger.getByTestId('skills-menu-clear');
+    // Only ever mounted inside the "+" menu now (issue #2586) — resolved from
+    // `openPlusMenuAny()`, so callers MUST `openPlusMenu()` first (see the
+    // field's doc comment; `openSkillsMenu()` does this for you).
+    this.skillsMenuTrigger = this.openPlusMenuAny().getByTestId(
+      'skills-menu-trigger',
+    );
+    // Never matches anything post-#2586 — see the field's doc comment.
+    this.skillsMenuClear = page.getByTestId('skills-menu-clear-REMOVED-2586');
     this.skillsMenuContent = page.getByTestId('skills-menu-content');
     this.downloadButton = page.getByRole('button', {
       name: 'Download this chat',
@@ -251,6 +328,7 @@ export class ChatPage {
       name: 'Download',
       exact: true,
     });
+    this.attachmentChip = page.getByTestId('attachment-chip');
   }
 
   async sendMessage(text: string): Promise<void> {
@@ -313,11 +391,14 @@ export class ChatPage {
   }
 
   /**
-   * Activate the Web Search session toggle in the chat input bar.
+   * Activate the Web Search session tool. Delegates to `enableTool` (issue
+   * #2586): an enabled-but-inactive tool no longer has a permanently-visible
+   * standalone button in the chat input bar (the classic `OutsideButtons`
+   * row) — it only surfaces once the "+" menu's Tools page is opened, which
+   * `enableTool`/`setToolState` already handle (open, click, verify it holds).
    */
   async activateWebSearch(): Promise<void> {
-    await expect(this.webSearchButton).toBeVisible({ timeout: 10_000 });
-    await this.webSearchButton.click();
+    await this.enableTool('Web Search');
   }
 
   /**
@@ -340,6 +421,8 @@ export class ChatPage {
   }
 
   async openPromptGallery(): Promise<void> {
+    // "Prompts" is a "+" menu item now (issue #2586) — open the menu first.
+    await this.openPlusMenu();
     await expect(this.promptsButton).toBeVisible({ timeout: 10_000 });
     await this.promptsButton.click();
     await expect(this.promptGalleryDialog).toBeVisible({ timeout: 10_000 });
@@ -409,14 +492,17 @@ export class ChatPage {
   /**
    * Read the cached session id for a specific `mentorId` from localStorage.
    * The app stores sessions as `Record<string, string>` under the key
-   * `session_id` (see `lib/constants.ts → LOCAL_STORAGE_KEYS.SESSION_ID`).
+   * `session_id` (see `lib/constants.ts → LOCAL_STORAGE_KEYS.SESSION_ID`),
+   * keyed `${tenantKey}:${mentorId}` (#2536).
    */
   async getCachedSessionId(mentorId: string): Promise<string | null> {
     return this.page.evaluate((mid: string) => {
       try {
         const raw = window.localStorage.getItem('session_id');
         if (!raw) return null;
-        return (JSON.parse(raw) as Record<string, string>)[mid] ?? null;
+        const cache = JSON.parse(raw) as Record<string, string>;
+        const key = Object.keys(cache).find((k) => k.endsWith(`:${mid}`));
+        return key ? cache[key] : null;
       } catch {
         return null;
       }
@@ -714,9 +800,14 @@ export class ChatPage {
    * goes through this state-filtered locator instead.
    */
   private openSkillsMenuContent(): Locator {
-    return this.page.locator(
-      '[data-testid="skills-menu-content"][data-state="open"]',
-    );
+    // Desktop: a `DropdownMenuSubContent` portal, `data-state="open"` while
+    // showing. Phones: the SAME testid on a plain `<div>` sheet PAGE (no
+    // `data-state` at all — that attribute is Radix dropdown-specific) —
+    // matched instead via the currently-open sheet, which already implies
+    // this page is the one showing.
+    return this.page
+      .locator('[data-testid="skills-menu-content"][data-state="open"]')
+      .or(this.openPlusMenuSheet().getByTestId('skills-menu-content'));
   }
 
   /**
@@ -740,6 +831,7 @@ export class ChatPage {
    * content is visible.
    */
   async openSkillsMenu(): Promise<void> {
+    await this.openPlusMenu();
     const anyOpenItem = this.openSkillsMenuContent()
       .locator('[data-testid^="skills-menu-item-"]')
       .first();
@@ -824,15 +916,20 @@ export class ChatPage {
   async seedCachedSessionId(
     mentorId: string,
     sessionId: string,
+    tenantKey?: string,
   ): Promise<void> {
     await this.page.addInitScript(
-      ({ mentorId, sessionId }) => {
+      ({ mentorId, sessionId, tenantKey }) => {
+        // The app keys the cache `${tenantKey}:${mentorId}` (#2536).
         window.localStorage.setItem(
           'session_id',
-          JSON.stringify({ [mentorId]: sessionId }),
+          JSON.stringify({
+            [mentorId]: sessionId,
+            ...(tenantKey ? { [`${tenantKey}:${mentorId}`]: sessionId } : {}),
+          }),
         );
       },
-      { mentorId, sessionId },
+      { mentorId, sessionId, tenantKey },
     );
   }
 
@@ -943,40 +1040,92 @@ export class ChatPage {
    * reads only the last `write_todos`-named entry), and `{eos: true}` ends
    * the turn.
    */
-  async mockChatWebSocket(): Promise<{
+  /**
+   * Shared implementation behind `mockChatWebSocket()` and
+   * `mockStopGenerationWebSocket()` — routes `urlPattern` via
+   * `page.routeWebSocket()` and exposes a small QUEUE-based controller: each
+   * `waitForClientMessage()` call resolves the next not-yet-consumed client
+   * frame (oldest first), so a test can observe several client sends in
+   * sequence (e.g. the turn-start prompt, then later the stop frame) rather
+   * than only ever the very first one — the original one-shot-Promise
+   * version silently dropped every message after the first.
+   */
+  private async mockWebSocketRoute(urlPattern: string): Promise<{
     waitForClientMessage: () => Promise<Record<string, unknown>>;
     send: (frame: Record<string, unknown>) => void;
+    close: () => void;
   }> {
     let capturedWs: WebSocketRoute | undefined;
-    let resolveMessage: ((msg: Record<string, unknown>) => void) | undefined;
-    const messagePromise = new Promise<Record<string, unknown>>((resolve) => {
-      resolveMessage = resolve;
-    });
+    const pendingMessages: Record<string, unknown>[] = [];
+    const pendingWaiters: Array<(msg: Record<string, unknown>) => void> = [];
 
-    await this.page.routeWebSocket('**/ws/langflow/**', (ws) => {
+    await this.page.routeWebSocket(urlPattern, (ws) => {
       capturedWs = ws;
       ws.onMessage((raw) => {
+        let parsed: Record<string, unknown>;
         try {
-          const parsed = JSON.parse(raw.toString());
-          resolveMessage?.(parsed);
+          parsed = JSON.parse(raw.toString());
         } catch {
           // Non-JSON frame from the page — not expected on this socket,
           // ignore rather than throw out of the WS event handler.
+          return;
         }
+        const waiter = pendingWaiters.shift();
+        if (waiter) waiter(parsed);
+        else pendingMessages.push(parsed);
       });
     });
 
     return {
-      waitForClientMessage: () => messagePromise,
+      waitForClientMessage: () =>
+        pendingMessages.length
+          ? Promise.resolve(pendingMessages.shift() as Record<string, unknown>)
+          : new Promise((resolve) => pendingWaiters.push(resolve)),
       send: (frame: Record<string, unknown>) => {
         if (!capturedWs) {
           throw new Error(
-            '[mockChatWebSocket] send() called before the page opened the mocked socket',
+            `[mockWebSocketRoute] send() called before the page opened the mocked socket (${urlPattern})`,
           );
         }
         capturedWs.send(JSON.stringify(frame));
       },
+      close: () => {
+        capturedWs?.close();
+      },
     };
+  }
+
+  async mockChatWebSocket(): Promise<{
+    waitForClientMessage: () => Promise<Record<string, unknown>>;
+    send: (frame: Record<string, unknown>) => void;
+    close: () => void;
+  }> {
+    return this.mockWebSocketRoute('**/ws/langflow/**');
+  }
+
+  /**
+   * Mocks the dedicated stop-generation socket
+   * (`wss://.../ws/langflow-stop-generation/`) — a SEPARATE connection opened
+   * fresh every time the Stop button is clicked (`stopGenerating()` in
+   * `@iblai/web-utils`'s `use-chat-v2.ts`), never the same socket as
+   * `mockChatWebSocket()`. On open the client sends
+   * `{generation_id, name, tenant, username, token}` (the `generation_id`
+   * must match whatever the mocked main socket's turn-start frame carried —
+   * that's the only id the stop handler recognises). Replying with ANY
+   * message (e.g. `{detail: 'Stopped'}`) is what actually flips the app out
+   * of the streaming state and re-enables the composer
+   * (`handleStopGenerationSocketMessage`) — clicking Stop alone only pauses
+   * the main socket (`isWebSocketPaused.current = true`, set synchronously,
+   * which is also why a frame sent on the main socket right after Stop is
+   * silently ignored even before this reply arrives). Must be registered
+   * before navigation, alongside `mockChatWebSocket()`.
+   */
+  async mockStopGenerationWebSocket(): Promise<{
+    waitForClientMessage: () => Promise<Record<string, unknown>>;
+    send: (frame: Record<string, unknown>) => void;
+    close: () => void;
+  }> {
+    return this.mockWebSocketRoute('**/ws/langflow-stop-generation/**');
   }
 
   /** Returns the agent task-list panel root within `scope` (default: page). */
@@ -1208,5 +1357,575 @@ export class ChatPage {
       stream.on('error', reject);
     });
     return Buffer.concat(chunks).toString('utf-8');
+  }
+
+  // ── SDK Chat migration (issue #2586, Stage 1 Tier 1) ────────────────────────
+  //
+  // The chat surface is now the SDK `Chat` component
+  // (`@iblai/iblai-js/web-containers/next`, wired via
+  // `components/chat/sdk-chat.tsx`) — the composer, attach menu, tool chips
+  // and WS transport below are all owned by that package now, not by OS's
+  // (now-unrendered-on-this-page) `components/chat-input-form/*`. Selectors
+  // and wire shapes here were confirmed by reading the SDK's own source
+  // directly (`upload-menu.tsx`, `file-attachments-list.tsx`,
+  // `web-search-button.tsx`, `use-chat-v2.ts`, `use-mentor-tools.ts` in
+  // `@iblai/web-containers`/`@iblai/web-utils`), not the bundled `dist/`.
+
+  // ── The single "+" composer menu (issue #2586) ──────────────────────────
+  //
+  // `ComposerPlusMenu` (SDK, `chat-input-form/composer-plus-menu.tsx`)
+  // replaced the classic UploadMenu + InsideButtons/OutsideButtons rows with
+  // ONE trigger (`composer-plus-button`, still aria-labelled "Attach file" —
+  // see `uploadButton`) that opens either a desktop Radix dropdown
+  // (`composer-plus-menu`, with a `composer-tools-menu` / `skills-menu-content`
+  // sub-popover per item) or, on phones, a bottom sheet
+  // (`composer-plus-sheet`) with paged content (main → tools/skills/memory).
+  // Tools/Skills/Prompts/Memory now only exist in the DOM while this is open.
+
+  /** The desktop dropdown's currently OPEN content. */
+  private openPlusMenuContent(): Locator {
+    return this.page.locator(
+      '[data-testid="composer-plus-menu"][data-state="open"]',
+    );
+  }
+
+  /** The phone bottom-sheet's currently OPEN content (any page). */
+  private openPlusMenuSheet(): Locator {
+    return this.page.locator(
+      '[data-testid="composer-plus-sheet"][data-state="open"]',
+    );
+  }
+
+  /**
+   * Whichever of the desktop dropdown / phone sheet is genuinely open right
+   * now — the two are mutually exclusive by viewport, so this always
+   * resolves to at most one open surface. Every "+" menu item locator is
+   * scoped from this, never the bare page, so a closed menu correctly
+   * reports its items as absent rather than matching a stray leftover DOM
+   * node from a previous open/close cycle.
+   */
+  private openPlusMenuAny(): Locator {
+    return this.openPlusMenuContent().or(this.openPlusMenuSheet());
+  }
+
+  /** "+" menu → Model row (#2633); only exists while the "+" menu is open. */
+  get modelMenuTrigger(): Locator {
+    return this.openPlusMenuAny().getByTestId('composer-model-trigger');
+  }
+
+  /** The composer chip naming the model picked for this chat. */
+  get modelChip(): Locator {
+    return this.page.getByTestId('composer-model-chip');
+  }
+
+  /** The "Switched to X for this chat" notices in the thread. */
+  get modelSwitchNotices(): Locator {
+    return this.page.getByTestId('chat-model-switch-notice');
+  }
+
+  /**
+   * Picks a model for this chat through "+" › Model › provider › model, by
+   * provider key and model wire key (`data-model`). Works for the desktop
+   * submenus and the phone sheet pages alike. With a single usable provider
+   * the picker lists its models straight away, so the provider step is
+   * skipped when no provider row shows.
+   */
+  async pickChatModel(providerKey: string, modelKey: string): Promise<void> {
+    await this.openPlusMenu();
+    await expect(this.modelMenuTrigger).toBeVisible({ timeout: 10_000 });
+    await this.modelMenuTrigger.click();
+    const provider = this.page
+      .locator(`[data-testid="composer-model-provider-${providerKey}"]`)
+      .last();
+    const model = this.page
+      .locator(`[data-testid="composer-model-item"][data-model="${modelKey}"]`)
+      .last();
+    await expect(provider.or(model).first()).toBeVisible({ timeout: 10_000 });
+    if (await provider.isVisible()) await provider.click();
+    await expect(model).toBeVisible({ timeout: 10_000 });
+    await model.click();
+    await expect(this.openPlusMenuAny()).not.toBeVisible({ timeout: 5_000 });
+  }
+
+  /**
+   * Picks, through the UI only, the first model the user can use other than
+   * the one the chat is already on: "+" › Model › (first provider that has
+   * one) › that model. Names no model, so it works for whatever catalogue the
+   * user has. Returns the provider key (null when the picker skips the
+   * provider step), the model's wire key and its label. Desktop submenus and
+   * phone sheet pages alike.
+   */
+  async pickFirstAvailableChatModel(): Promise<{
+    provider: string | null;
+    llmName: string;
+    label: string;
+  }> {
+    await this.openPlusMenu();
+    await expect(this.modelMenuTrigger).toBeVisible({ timeout: 10_000 });
+    await this.modelMenuTrigger.click();
+
+    const providers = this.page
+      .locator('[data-testid^="composer-model-provider-"]')
+      .filter({ visible: true });
+    const items = this.page
+      .locator('[data-testid="composer-model-item"]')
+      .filter({ visible: true });
+    const usable = items.and(
+      this.page.locator(
+        '[data-unavailable="false"]:not([aria-checked="true"]):not([aria-pressed="true"])',
+      ),
+    );
+    await expect(providers.or(items).first()).toBeVisible({ timeout: 10_000 });
+
+    const providerCount = await providers.count();
+    for (let i = 0; i < Math.max(providerCount, 1); i++) {
+      let provider: string | null = null;
+      if (providerCount > 0) {
+        const row = providers.nth(i);
+        const testId = (await row.getAttribute('data-testid')) ?? '';
+        provider = testId.replace('composer-model-provider-', '');
+        await row.click();
+      }
+      await expect(items.first()).toBeVisible({ timeout: 10_000 });
+      if ((await usable.count()) > 0) {
+        const pick = usable.first();
+        const llmName = (await pick.getAttribute('data-model')) ?? '';
+        const label = (await pick.innerText()).trim();
+        await pick.click();
+        await expect(this.openPlusMenuAny()).not.toBeVisible({
+          timeout: 5_000,
+        });
+        return { provider, llmName, label };
+      }
+      const back = this.page.getByRole('button', { name: 'Back' });
+      if (providerCount > 0 && (await back.isVisible())) await back.click();
+    }
+    throw new Error('the model picker offers no usable model to pick');
+  }
+
+  /**
+   * Records every message the chat socket sends (parsed JSON), so a test can
+   * assert on the payload of each turn. Call before the page connects.
+   */
+  recordChatFrames(): Record<string, unknown>[] {
+    const frames: Record<string, unknown>[] = [];
+    this.page.on('websocket', (socket) => {
+      if (!socket.url().includes('/ws/langflow/')) return;
+      socket.on('framesent', ({ payload }) => {
+        try {
+          const frame = JSON.parse(String(payload));
+          if (frame && typeof frame === 'object' && 'prompt' in frame) {
+            frames.push(frame);
+          }
+        } catch {
+          // Not JSON (pings): not a chat turn.
+        }
+      });
+    });
+    return frames;
+  }
+
+  /** The desktop Tools submenu's currently OPEN content (`DropdownMenuSub`). */
+  private openToolsSubmenuContent(): Locator {
+    return this.page.locator(
+      '[data-testid="composer-tools-menu"][data-state="open"]',
+    );
+  }
+
+  /**
+   * Opens the composer's "+" menu (desktop dropdown or phone sheet) and
+   * waits until it is genuinely showing — retried like `openSkillsMenu()`,
+   * since a click landing while a previous Radix instance is still tearing
+   * down can be swallowed or double-toggle.
+   */
+  async openPlusMenu(): Promise<void> {
+    await expect(this.plusMenuButton).toBeVisible({ timeout: 15_000 });
+    await expect(async () => {
+      if (!(await this.openPlusMenuAny().isVisible())) {
+        await this.plusMenuButton.click();
+      }
+      await expect(this.openPlusMenuAny()).toBeVisible({ timeout: 1_000 });
+    }).toPass({ timeout: 15_000 });
+  }
+
+  /** Closes the "+" menu (and any open submenu/sheet page) via Escape. */
+  async closePlusMenu(): Promise<void> {
+    // Radix sends Escape only to the topmost dismissable layer. Right after a
+    // sidebar click, that button's tooltip can still be fading out above the
+    // menu and swallow the first Escape, so press again until the menu closes.
+    await expect(async () => {
+      await this.page.keyboard.press('Escape');
+      await expect(this.openPlusMenuAny()).not.toBeVisible({ timeout: 1_000 });
+    }).toPass({ timeout: 10_000 });
+  }
+
+  /**
+   * Returns an item inside the OPEN "+" menu — only "Upload File" and
+   * "Camera" are implemented. `.or(...)` covers both the desktop dropdown's
+   * `menuitem` role and the phone sheet's plain `button` tiles for the same
+   * visible row. Call `openPlusMenu()`/`openAttachMenu()` first.
+   */
+  getAttachMenuItem(name: 'Upload File' | 'Camera'): Locator {
+    return this.openPlusMenuAny()
+      .getByRole('menuitem', { name, exact: true })
+      .or(this.openPlusMenuAny().getByRole('button', { name, exact: true }));
+  }
+
+  /** Opens the composer's "+" menu and waits for Upload File/Camera to render. */
+  async openAttachMenu(): Promise<void> {
+    await this.openPlusMenu();
+    // Asserted separately, not via a combined `.or()`: Upload File and
+    // Camera are both present/visible at once, so a single `.or()` locator
+    // resolves to 2 real elements and `toBeVisible()` throws a strict-mode
+    // violation rather than treating it as "at least one".
+    await expect(this.getAttachMenuItem('Upload File')).toBeVisible({
+      timeout: 10_000,
+    });
+    await expect(this.getAttachMenuItem('Camera')).toBeVisible({
+      timeout: 10_000,
+    });
+  }
+
+  // ── Composer tools (issue #2586) ─────────────────────────────────────────
+  //
+  // A session tool the mentor has ENABLED is only ever in the DOM two ways:
+  // ACTIVE, as a removable chip in the toolbar (`composer-tool-chip`, named
+  // "Turn off {name}") — or, active or not, as a row inside the "+" menu's
+  // Tools page (a `menuitemcheckbox` on desktop, a `switch` on phones, both
+  // named exactly `{name}`, e.g. "Web Search"). There is no longer a
+  // permanently-visible always-there button for an enabled-but-inactive tool
+  // (that was the classic `OutsideButtons` row) — it only surfaces once the
+  // Tools page is opened. `isToolAvailable()` is for "is this tool enabled
+  // for the mentor at all"; `isToolActive()`/`getToolButton()` are for "is it
+  // currently ON", which callers should check without assuming a menu is open.
+
+  /** The active-chip form of a tool, if currently rendered (`Turn off {name}`). */
+  getToolChip(name: string): Locator {
+    return this.page.getByRole('button', {
+      name: `Turn off ${name}`,
+      exact: true,
+    });
+  }
+
+  /** The Tools-submenu row for `name` — only present while that page is open. */
+  private getSubmenuToolItem(name: string): Locator {
+    return this.openToolsSubmenuContent()
+      .getByRole('menuitemcheckbox', { name, exact: true })
+      .or(this.openPlusMenuSheet().getByRole('switch', { name, exact: true }));
+  }
+
+  /**
+   * Resolves to whichever form of tool `name` is CURRENTLY mounted: its
+   * active chip, or its Tools-submenu row if that page happens to be open.
+   * A bare visibility check on this is NOT "is the tool enabled" — an
+   * enabled-but-inactive tool with the + menu closed matches nothing here
+   * (use `isToolAvailable` for that question).
+   */
+  getToolButton(name: string): Locator {
+    return this.getToolChip(name).or(this.getSubmenuToolItem(name));
+  }
+
+  /**
+   * Whether tool `name` is currently ON: true if its active chip is showing,
+   * else — if the Tools submenu happens to be open — whatever its row's
+   * `aria-checked` says, else false (nothing on-screen claims it's active).
+   */
+  async isToolActive(name: string): Promise<boolean> {
+    if (await this.getToolChip(name).first().isVisible()) return true;
+    const menuItem = this.getSubmenuToolItem(name).first();
+    if (await menuItem.isVisible()) {
+      return (await menuItem.getAttribute('aria-checked')) === 'true';
+    }
+    return false;
+  }
+
+  /**
+   * Opens the "+" menu's Tools page: the desktop `DropdownMenuSub` (hover or
+   * click its `composer-tools-trigger`) or the phone sheet's "Tools" row.
+   * Asserts the Tools entry point exists — for a mentor that may have NO
+   * tools enabled, check `isToolAvailable()` first, which tolerates absence.
+   */
+  async openToolsMenu(): Promise<void> {
+    await this.openPlusMenu();
+    if (await this.openPlusMenuSheet().isVisible()) {
+      const toolsRow = this.openPlusMenuSheet().getByRole('button', {
+        name: /^Tools\b/,
+      });
+      await expect(toolsRow).toBeVisible({ timeout: 10_000 });
+      await toolsRow.click();
+      await expect(
+        this.openPlusMenuSheet().getByRole('switch').first(),
+      ).toBeVisible({ timeout: 10_000 });
+      return;
+    }
+    const trigger = this.openPlusMenuAny().getByTestId(
+      'composer-tools-trigger',
+    );
+    await expect(trigger).toBeVisible({ timeout: 10_000 });
+    await expect(async () => {
+      if (!(await this.openToolsSubmenuContent().isVisible())) {
+        await trigger.click();
+      }
+      await expect(this.openToolsSubmenuContent()).toBeVisible({
+        timeout: 1_000,
+      });
+    }).toPass({ timeout: 15_000 });
+  }
+
+  /**
+   * Whether tool `name` is enabled for the mentor AT ALL (active or not) —
+   * checks the active chip first (no menu needed), then opens the + menu's
+   * Tools page to look for its row, tolerating a mentor with no tools/attach
+   * options at all (no "+" menu) or no tools specifically (no Tools page).
+   * Always leaves the + menu closed on return.
+   */
+  async isToolAvailable(name: string): Promise<boolean> {
+    if (await this.getToolChip(name).first().isVisible()) return true;
+    let hasPlusMenu = false;
+    try {
+      await this.plusMenuButton.waitFor({ state: 'visible', timeout: 5_000 });
+      hasPlusMenu = true;
+    } catch {
+      hasPlusMenu = false;
+    }
+    if (!hasPlusMenu) return false;
+
+    await this.openPlusMenu();
+    const isMobileSheet = await this.openPlusMenuSheet().isVisible();
+    const toolsTrigger = isMobileSheet
+      ? this.openPlusMenuSheet().getByRole('button', { name: /^Tools\b/ })
+      : this.openPlusMenuAny().getByTestId('composer-tools-trigger');
+
+    let hasTools = false;
+    try {
+      await toolsTrigger.waitFor({ state: 'visible', timeout: 5_000 });
+      hasTools = true;
+    } catch {
+      hasTools = false;
+    }
+    if (!hasTools) {
+      await this.closePlusMenu();
+      return false;
+    }
+
+    await toolsTrigger.click();
+    let available = false;
+    try {
+      await this.getSubmenuToolItem(name)
+        .first()
+        .waitFor({ state: 'visible', timeout: 8_000 });
+      available = true;
+    } catch {
+      available = false;
+    }
+    await this.closePlusMenu();
+    return available;
+  }
+
+  /**
+   * Drives a tool to `target` (active/inactive) via the Tools submenu and
+   * confirms the resulting state both lands AND holds. The classic chip's
+   * double-PUT bug was rooted in `OutsideButtons.tsx`'s nested-button chip
+   * (an inner ✕ `<span onClick>` inside an outer `<button>`, whose click
+   * could bubble to both handlers); the redesigned menuitemcheckbox/switch
+   * row is a single non-nested element with only a decorative check/thumb
+   * inside, which structurally can't repro that. Journey 52's `sw-tools-01`
+   * checkpoint asserts exactly one PUT per click network-side; this
+   * retry-until-holds shape stays as a low-cost guard against any other
+   * timing flake in the underlying `editSession` mutation, not as a
+   * still-needed workaround for the old bug.
+   */
+  private async setToolState(name: string, target: boolean): Promise<void> {
+    await expect(async () => {
+      if ((await this.isToolActive(name)) !== target) {
+        await this.openToolsMenu();
+        await this.getSubmenuToolItem(name).first().click();
+        await this.closePlusMenu();
+      }
+      expect(await this.isToolActive(name)).toBe(target);
+      await this.page.waitForTimeout(1_000);
+      expect(await this.isToolActive(name)).toBe(target);
+    }).toPass({ timeout: 25_000 });
+  }
+
+  /** Idempotently enables a named composer tool (no-op if already on and holding). */
+  async enableTool(name: string): Promise<void> {
+    await this.setToolState(name, true);
+  }
+
+  /** Idempotently disables a named composer tool (no-op if already off and holding). */
+  async disableTool(name: string): Promise<void> {
+    await this.setToolState(name, false);
+  }
+
+  /**
+   * Waits for the next PUT to the session-update endpoint whose body
+   * satisfies `bodyPredicate` — the REST call `useMentorTools`'s
+   * `updateSessionTools`/`setSessionTools` fire
+   * (`PUT .../ai-mentor/orgs/{org}/users/{user}/sessions/{session_id}/` with
+   * body `{tools: string[], enable_artifacts?: boolean}`) — and resolves
+   * with its parsed JSON body. `bodyPredicate` defaults to matching any body;
+   * pass one when OTHER PUTs to this same endpoint may be in flight around
+   * the same time (e.g. an unrelated session-metadata autosave that also
+   * happens to PUT a `tools` field) and only a specific tools list should
+   * resolve the wait — confirmed necessary in practice, not merely
+   * defensive. The request is observed, not intercepted: it proceeds to the
+   * real backend so the session's tool list stays consistent with whatever
+   * the (possibly mocked) chat WS turn reads server-side. Note enabled tools
+   * are NOT resent in the per-message WS frame (confirmed in
+   * `use-chat-v2.ts`'s `sendMessage`) — they're session-scoped, read back by
+   * the backend from this same PUT per `session_id`.
+   */
+  waitForSessionToolsUpdate(
+    timeout = 15_000,
+    bodyPredicate: (body: { tools?: string[] }) => boolean = () => true,
+  ): Promise<{ tools?: string[] }> {
+    return this.page
+      .waitForRequest(
+        (request) => {
+          if (request.method() !== 'PUT') return false;
+          if (
+            !/\/ai-mentor\/orgs\/[^/]+\/users\/[^/]+\/sessions\/[^/]+\/?$/.test(
+              new URL(request.url()).pathname,
+            )
+          ) {
+            return false;
+          }
+          try {
+            return bodyPredicate(request.postDataJSON());
+          } catch {
+            return false;
+          }
+        },
+        { timeout },
+      )
+      .then((request) => request.postDataJSON());
+  }
+
+  // ── File attachments (composer) ─────────────────────────────────────────
+
+  /** The chip's spinner overlay — visible only while `uploadStatus === 'uploading'`. */
+  getAttachmentSpinner(scope?: Locator): Locator {
+    return (scope ?? this.attachmentChip).locator('.animate-spin');
+  }
+
+  /** The chip's "Retry" button — visible only once `uploadStatus === 'error'`. */
+  getRetryFileButton(scope?: Locator): Locator {
+    return (scope ?? this.page).getByRole('button', {
+      name: 'Retry',
+      exact: true,
+    });
+  }
+
+  /** The chip's "Remove file" button — present in every state except mid-upload. */
+  getRemoveFileButton(scope?: Locator): Locator {
+    return (scope ?? this.page).getByRole('button', { name: 'Remove file' });
+  }
+
+  /**
+   * The hidden device-upload `<input type="file">` (`upload-menu.tsx`'s
+   * `fileUploadInputRef`). Excludes the sibling camera input, which carries
+   * `capture="environment"`.
+   */
+  getFileUploadInput(): Locator {
+    return this.page.locator('input[type="file"]:not([capture])');
+  }
+
+  /**
+   * Attaches `filePath` via the hidden upload input directly — equivalent to
+   * picking a file from `openAttachMenu()` → "Upload File" without needing to
+   * drive the native file-picker dialog. Pair with `mockFileUpload()`,
+   * registered first.
+   */
+  async attachFile(filePath: string): Promise<void> {
+    await this.getFileUploadInput().setInputFiles(filePath);
+  }
+
+  /**
+   * Mocks the two-step upload the composer performs for every attached file
+   * (`use-chat-file-upload.ts`): a presigned-URL POST
+   * (`.../chat/files/upload-url/`), then a direct PUT of the raw bytes to
+   * that URL (real S3 in production — never reached in tests). Must be
+   * registered before `attachFile()`.
+   *
+   * `outcome`:
+   *  - `'success'` (default): both legs succeed.
+   *  - `'upload-url-error'`: the presigned-URL POST 500s (S3 never
+   *    contacted) — drives the chip to its error/retry state.
+   *  - `'s3-error'`: the presigned-URL POST succeeds but the PUT 500s — same
+   *    observable chip state, different failing leg.
+   *
+   * `s3DelayMs` stalls the mocked PUT so the chip's transient "uploading"
+   * spinner is actually observable instead of resolving within one render
+   * tick.
+   */
+  async mockFileUpload(
+    outcome: 'success' | 'upload-url-error' | 's3-error' = 'success',
+    s3DelayMs = 1_000,
+  ): Promise<{ uploadUrl: string; fileId: string; fileKey: string }> {
+    // Must match the app's CSP `connect-src` allowlist — an arbitrary/invalid
+    // domain is blocked by the BROWSER before Playwright's route interception
+    // ever sees the request (confirmed via a CSP violation console error:
+    // "Refused to connect to '...' because it violates the following
+    // Content Security Policy directive"). `*.s3.amazonaws.com` is on the
+    // allowlist (real presigned upload URLs are S3), so this subdomain is
+    // never actually resolved/contacted — `page.route` fulfills it first.
+    const uploadUrl = `https://e2e-mock.s3.amazonaws.com/upload/${Date.now()}`;
+    const fileId = `e2e-file-id-${Date.now()}`;
+    const fileKey = `e2e-file-key-${Date.now()}`;
+
+    await this.page.route(
+      '**/api/ai-mentor/orgs/*/users/*/chat/files/upload-url/**',
+      async (route) => {
+        if (outcome === 'upload-url-error') {
+          await route.fulfill({
+            status: 500,
+            contentType: 'application/json',
+            body: JSON.stringify({ detail: 'e2e mock: upload-url failure' }),
+          });
+          return;
+        }
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            upload_url: uploadUrl,
+            file_id: fileId,
+            file_key: fileKey,
+          }),
+        });
+      },
+    );
+
+    await this.page.route(uploadUrl, async (route) => {
+      // The mocked upload URL is a different origin from the app, and the
+      // real upload sets a custom Content-Type header, so the browser issues
+      // a CORS preflight (OPTIONS) before the actual PUT — Playwright's
+      // interception happens at the network layer, but the BROWSER still
+      // enforces CORS on the (mocked) response, so both legs need explicit
+      // CORS headers or axios's PUT rejects with a network error regardless
+      // of the mocked status code.
+      const corsHeaders = {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'PUT, OPTIONS',
+        'Access-Control-Allow-Headers': '*',
+      };
+      if (route.request().method() === 'OPTIONS') {
+        await route.fulfill({ status: 204, headers: corsHeaders });
+        return;
+      }
+      if (s3DelayMs > 0) await new Promise((r) => setTimeout(r, s3DelayMs));
+      if (outcome === 's3-error') {
+        await route.fulfill({
+          status: 500,
+          headers: corsHeaders,
+          body: 'e2e mock: s3 put failure',
+        });
+        return;
+      }
+      await route.fulfill({ status: 200, headers: corsHeaders, body: '' });
+    });
+
+    return { uploadUrl, fileId, fileKey };
   }
 }
