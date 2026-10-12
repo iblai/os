@@ -30,3 +30,46 @@ export function markAuthRecovery(now: number = Date.now()): void {
 export function clearAuthRecovery(): void {
   startedAt = 0;
 }
+
+// --- Iframe refresh round-trip -----------------------------------------------
+//
+// When embedded, the data layer's `refreshAuthToken` recovers by asking the host
+// for fresh tokens (`authExpired`) and awaiting the reply, instead of reloading.
+// The data layer AWAITS the returned promise and replays the failed request, so
+// a successful round-trip recovers with no page reload. The caller posts the
+// message; this only coordinates the wait (and the timeout failsafe) so the
+// module stays dependency-free and unit-testable.
+
+export const AUTH_RECOVERY_ROUND_TRIP_TIMEOUT_MS = 10_000;
+
+let pendingResolve: ((ok: boolean) => void) | null = null;
+
+/** True while an iframe refresh round-trip is awaiting the host's token reply. */
+export function isAuthRecoveryPending(): boolean {
+  return pendingResolve !== null;
+}
+
+/**
+ * Await the host's token reply. Resolves `true` when `resolveAuthRecovery(true)`
+ * is called (new tokens installed) or `false` after the timeout, so a host that
+ * never answers falls back to the redirect rather than hanging the request.
+ */
+export function beginAuthRecoveryRoundTrip(
+  timeoutMs: number = AUTH_RECOVERY_ROUND_TRIP_TIMEOUT_MS,
+): Promise<boolean> {
+  return new Promise<boolean>((resolve) => {
+    const settle = (ok: boolean) => {
+      if (pendingResolve !== settle) return; // superseded or already settled
+      pendingResolve = null;
+      clearTimeout(timer);
+      resolve(ok);
+    };
+    const timer = setTimeout(() => settle(false), timeoutMs);
+    pendingResolve = settle;
+  });
+}
+
+/** Settle a pending round-trip — call when tokens arrive (true) from the host. */
+export function resolveAuthRecovery(ok: boolean): void {
+  pendingResolve?.(ok);
+}

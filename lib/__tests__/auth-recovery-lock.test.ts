@@ -1,10 +1,13 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 import {
   AUTH_RECOVERY_TTL_MS,
+  beginAuthRecoveryRoundTrip,
   clearAuthRecovery,
   isAuthRecoveryInProgress,
+  isAuthRecoveryPending,
   markAuthRecovery,
+  resolveAuthRecovery,
 } from '../auth-recovery-lock';
 
 describe('auth-recovery-lock', () => {
@@ -35,5 +38,43 @@ describe('auth-recovery-lock', () => {
     expect(isAuthRecoveryInProgress(1_000)).toBe(true);
     clearAuthRecovery();
     expect(isAuthRecoveryInProgress(1_000)).toBe(false);
+  });
+});
+
+describe('auth-recovery round-trip', () => {
+  beforeEach(() => vi.useRealTimers());
+
+  it('is not pending until a round-trip begins', () => {
+    expect(isAuthRecoveryPending()).toBe(false);
+  });
+
+  it('resolves true when the host replies with tokens', async () => {
+    const trip = beginAuthRecoveryRoundTrip(10_000);
+    expect(isAuthRecoveryPending()).toBe(true);
+    resolveAuthRecovery(true);
+    expect(await trip).toBe(true);
+    expect(isAuthRecoveryPending()).toBe(false);
+  });
+
+  it('times out to false when the host never replies', async () => {
+    vi.useFakeTimers();
+    const trip = beginAuthRecoveryRoundTrip(10_000);
+    vi.advanceTimersByTime(10_000);
+    expect(await trip).toBe(false);
+    expect(isAuthRecoveryPending()).toBe(false);
+  });
+
+  it('is a no-op to resolve when nothing is pending', () => {
+    expect(() => resolveAuthRecovery(true)).not.toThrow();
+    expect(isAuthRecoveryPending()).toBe(false);
+  });
+
+  it('clears the timeout once resolved, so it cannot settle twice', async () => {
+    vi.useFakeTimers();
+    const trip = beginAuthRecoveryRoundTrip(10_000);
+    resolveAuthRecovery(true);
+    expect(await trip).toBe(true);
+    vi.advanceTimersByTime(10_000); // the timeout must not fire now
+    expect(isAuthRecoveryPending()).toBe(false);
   });
 });

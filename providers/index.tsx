@@ -33,9 +33,12 @@ import {
 } from '@iblai/iblai-js/data-layer';
 import { redirectToAuthSpa } from '@/lib/utils';
 import {
+  beginAuthRecoveryRoundTrip,
   clearAuthRecovery,
   isAuthRecoveryInProgress,
+  isAuthRecoveryPending,
   markAuthRecovery,
+  resolveAuthRecovery,
 } from '@/lib/auth-recovery-lock';
 import AppProvider from './app-provider';
 import { useEffect, useMemo, useState } from 'react';
@@ -166,6 +169,15 @@ export default function Providers({ children }: { children: React.ReactNode }) {
       // release the recovery lock so a later expiry can recover again.
       clearAuthRecovery();
       saveUserObjectToLocalStorage(payload);
+
+      // If a data-layer refresh round-trip is awaiting this reply, resolve it so
+      // the failed request REPLAYS with the new tokens — no page reload. Only
+      // reload when nothing is waiting (e.g. a proactive token push), where
+      // there is no in-flight request to replay.
+      if (isAuthRecoveryPending()) {
+        resolveAuthRecovery(true);
+        return;
+      }
       window.location.reload();
     },
   });
@@ -213,6 +225,17 @@ export default function Providers({ children }: { children: React.ReactNode }) {
         402: () =>
           handle402Error({ error: SUBSCRIPTION_CREDIT_LIMIT_ERROR_MESSAGE }),
       },
+      undefined,
+      isInIframe()
+        ? () => {
+            // Embedded: recover by asking the host for fresh tokens and awaiting
+            // the reply, so the data layer replays the failed request instead of
+            // reloading the page. Standalone leaves this undefined, keeping the
+            // data layer's own edX-session mint.
+            sendMessageToParentWebsite({ authExpired: true });
+            return beginAuthRecoveryRoundTrip();
+          }
+        : undefined,
     );
     setReady(true);
   };
