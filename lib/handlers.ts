@@ -64,6 +64,12 @@ export function useIframeHandlers() {
   };
 
   const handleCssInjection = (css: string) => {
+    // `css` comes straight off an untrusted postMessage payload, so it can be
+    // absent. Assigning `undefined` to innerText used to be a harmless no-op;
+    // hashing it is not, so the guard has to be here rather than implied.
+    // An empty string is NOT excluded — it hashes fine and callers rely on it
+    // still producing a stylesheet.
+    if (typeof css !== 'string') return;
     const key = cssKey(css);
     if (document.head.querySelector(`style[data-host-css="${key}"]`)) return;
     const style = document.createElement('style');

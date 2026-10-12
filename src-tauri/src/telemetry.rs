@@ -351,6 +351,10 @@ fn redact_secrets(text: &str) -> String {
             i = next;
             continue;
         }
+        if let Some(next) = redact_header(&chars, i, &mut out) {
+            i = next;
+            continue;
+        }
         if chars[i] == '"' {
             if let Some(next) = redact_json_pair(&chars, i, &mut out) {
                 i = next;
@@ -396,17 +400,54 @@ fn redact_json_pair(chars: &[char], at: usize, out: &mut String) -> Option<usize
     if !is_sensitive_key(&key) {
         return None;
     }
-    let mut i = skip_spaces(chars, after_key);
+    let mut i = skip_whitespace(chars, after_key);
     if chars.get(i) != Some(&':') {
         return None;
     }
-    i = skip_spaces(chars, i + 1);
+    i = skip_whitespace(chars, i + 1);
     let (after_value, _) = read_quoted(chars, i)?;
     out.extend(&chars[at..i]);
     out.push('"');
     out.push_str(REDACTED);
     out.push('"');
     Some(after_value)
+}
+
+/// Header names whose whole value is a credential. EXACT names, deliberately:
+/// a substring rule on `:` is what once ate the real error out of `could not
+/// persist IBLAI_API_KEY: <io error>`, and that error text is the entire point
+/// of the report. These five carry nothing but the secret.
+const SECRET_HEADERS: [&str; 5] = [
+    "authorization",
+    "proxy-authorization",
+    "cookie",
+    "set-cookie",
+    "x-api-key",
+];
+
+/// `Cookie: sessionid=abc` → `Cookie: [redacted]`. The value runs to the end
+/// of the line, since a cookie or auth header is one opaque blob that may
+/// itself contain `=`, `;` and spaces.
+fn redact_header(chars: &[char], at: usize, out: &mut String) -> Option<usize> {
+    if at > 0 && !matches!(chars[at - 1], '\n' | '\r' | ' ' | '{' | ',' | '(') {
+        return None;
+    }
+    let name_end = (at..chars.len()).find(|i| chars[*i] == ':')?;
+    let name: String = chars[at..name_end].iter().collect();
+    let name = name.trim().to_ascii_lowercase();
+    if !SECRET_HEADERS.contains(&name.as_str()) {
+        return None;
+    }
+    let value_start = skip_whitespace(chars, name_end + 1);
+    let value_end = (value_start..chars.len())
+        .find(|i| matches!(chars[*i], '\n' | '\r'))
+        .unwrap_or(chars.len());
+    if value_end == value_start {
+        return None;
+    }
+    out.extend(&chars[at..value_start]);
+    out.push_str(REDACTED);
+    Some(value_end)
 }
 
 /// `Bearer <token>` → `Bearer [redacted]`, case-insensitive.
@@ -485,9 +526,13 @@ fn read_delimited(chars: &[char], at: usize, quote: char) -> Option<(usize, Stri
     None
 }
 
-fn skip_spaces(chars: &[char], at: usize) -> usize {
+/// Any whitespace, not just `' '`: a pretty-printed body puts a newline (and
+/// indentation) between the key and its value, and that slipped a secret
+/// through [`redact_json_pair`] completely — the `KEY=value` rule does not
+/// catch the JSON shape either.
+fn skip_whitespace(chars: &[char], at: usize) -> usize {
     let mut i = at;
-    while chars.get(i).is_some_and(|c| *c == ' ') {
+    while chars.get(i).is_some_and(|c| c.is_whitespace()) {
         i += 1;
     }
     i
@@ -629,7 +674,27 @@ mod tests {
         );
         assert_eq!(
             redact_secrets("authorization: Bearer eyJhbGciOiJIUzI1NiJ9.x"),
-            "authorization: Bearer [redacted]"
+            "authorization: [redacted]"
+        );
+        // A pretty-printed body puts a newline and indentation between the key
+        // and its value. Only `' '` was skipped, so this leaked in full.
+        assert_eq!(
+            redact_secrets("{\n  \"access_token\":\n    \"ey.secret\"\n}"),
+            "{\n  \"access_token\":\n    \"[redacted]\"\n}"
+        );
+        assert_eq!(
+            redact_secrets("{\"api_key\":\t\"sk-live\"}"),
+            "{\"api_key\":\t\"[redacted]\"}"
+        );
+        // Header values are one opaque blob to the end of the line, and the
+        // cookie name itself is not a word `is_sensitive_key` knows.
+        assert_eq!(
+            redact_secrets("Cookie: sessionid=abc; csrftoken=def\nnext line"),
+            "Cookie: [redacted]\nnext line"
+        );
+        assert_eq!(
+            redact_secrets("X-Api-Key: sk-live-1"),
+            "X-Api-Key: [redacted]"
         );
     }
 
@@ -647,6 +712,12 @@ mod tests {
         assert_eq!(
             redact_secrets("[AppUpdate] check failed: error sending request"),
             "[AppUpdate] check failed: error sending request"
+        );
+        // The header rule matches EXACT names only, so a context naming a key
+        // still keeps its error — the regression the loose `:` rule caused.
+        assert_eq!(
+            redact_secrets("Authorization-ish: No space left on device"),
+            "Authorization-ish: No space left on device"
         );
         assert_eq!(
             redact_secrets("a bare = sign and an empty KEY= stay as they are"),
