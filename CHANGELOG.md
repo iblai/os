@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.167.1](https://github.com/iblai/os/compare/v0.167.0...v0.167.1) (2026-10-12)
+
+### Bug Fixes
+
+* **extension:** don't try to read the Chrome Web Store ([97959ee](https://github.com/iblai/os/commit/97959ee841693206b8fa526032883abd7b62b7a2))
+
 ## [0.167.0](https://github.com/iblai/os/compare/v0.166.0...v0.167.0) (2026-10-12)
 
 ### Features
