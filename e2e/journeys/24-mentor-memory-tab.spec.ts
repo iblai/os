@@ -100,7 +100,7 @@ test.describe('Journey 24: Mentor Memory Tab', () => {
     page,
   }) => {
     await createMentorPage.openAndCreate();
-    // The "Remember past conversations" master toggle moved from Settings →
+    // The "Long-term Memory" master toggle moved from Settings →
     // Capabilities to an in-tab `CapabilityGate` at the top of the Memory
     // tab itself (feat/2040). It now auto-saves on click (optimistic local
     // state via `useEditMentorMutation`) — no footer Save button involved.
@@ -349,6 +349,201 @@ test.describe('Journey 24: Mentor Memory Tab', () => {
 
     await editMentorPage.close();
   });
+
+  // ── Shared Memories sub-tab ─────────────────────────────────────────────
+  // The Memory tab is the SDK's AgentMemoryTab: capability gate on top, then
+  // "Personal Memories" (default) and "Shared Memories" sub-tabs. Both sit inside the
+  // gate, which is inert while the toggle is off, so each test switches the
+  // capability on first (a no-op when the fresh mentor already has it on).
+
+  test('admin sees Personal Memories and Shared Memories sub-tabs, Personal Memories is active by default, and the Shared Memories sub-tab shows the empty-state guidance on a fresh mentor', async ({
+    page,
+    createMentorPage,
+    editMentorPage,
+  }) => {
+    await createMentorPage.openAndCreate();
+    await editMentorPage.open('Memory');
+    await waitForPageReady(page);
+
+    const memory = editMentorPage.memory;
+    await memory.setCapabilityEnabled(true);
+
+    await expect(memory.subTabs).toBeVisible({ timeout: 15_000 });
+    await expect(memory.personalSubTab).toHaveText('Personal Memories');
+    await expect(memory.sharedSubTab).toHaveText('Shared Memories');
+
+    // Personal Memories is the default view: its Categories button is on screen
+    // and the Shared Memories section is not mounted yet. (Both sub-tabs have an
+    // "Add Memory" button, so the Categories button is the personal-only marker.)
+    await expect(memory.personalSubTab).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+    await expect(memory.sharedSubTab).toHaveAttribute('aria-selected', 'false');
+    await expect(memory.manageCategoriesButton).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(memory.sharedMemorySection).toHaveCount(0);
+
+    await memory.switchToSubTab('shared');
+    await expect(memory.sharedSubTab).toHaveAttribute('aria-selected', 'true');
+    await expect(memory.personalSubTab).toHaveAttribute(
+      'aria-selected',
+      'false',
+    );
+    await expect(memory.manageCategoriesButton).toHaveCount(0);
+
+    // A brand-new agent has no shared memories yet: the empty state (not a
+    // blank list) explains what the section is for. Like Personal Memories,
+    // there is no repeated title, subtitle or note above the list.
+    await expect(memory.sharedMemoryEmptyState).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(memory.sharedMemoryEmptyTitle).toBeVisible();
+    await expect(memory.sharedMemoryList).toHaveCount(0);
+    await expect(memory.sharedMemoryAddButton).toBeVisible();
+
+    // Going back restores the Personal Memories content.
+    await memory.switchToSubTab('personal');
+    await expect(memory.manageCategoriesButton).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(memory.sharedMemorySection).toHaveCount(0);
+
+    await editMentorPage.close();
+  });
+
+  test('admin adds, edits and deletes a shared memory (delete asks for confirmation)', async ({
+    page,
+    createMentorPage,
+    editMentorPage,
+  }) => {
+    await createMentorPage.openAndCreate();
+    await editMentorPage.open('Memory');
+    await waitForPageReady(page);
+
+    const memory = editMentorPage.memory;
+    await memory.setCapabilityEnabled(true);
+    await memory.switchToSubTab('shared');
+    await expect(memory.sharedMemoryEmptyState).toBeVisible({
+      timeout: 15_000,
+    });
+
+    const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const initialContent = `E2E shared memory ${suffix}`;
+    const updatedContent = `E2E shared memory updated ${suffix}`;
+
+    // ─── ADD ────────────────────────────────────────────────────────────
+    await memory.addSharedMemory(initialContent);
+    await expect(memory.sharedMemoryEntryByContent(initialContent)).toHaveCount(
+      1,
+    );
+    // Same card as Personal Memories: the created-at time on the left and the
+    // author (the signed-in admin) on the right.
+    await expect(
+      memory.sharedMemoryEntryByContent(initialContent),
+    ).toContainText(/ago/);
+    // The empty-state guidance gives way to the list once an entry exists.
+    await expect(memory.sharedMemoryEmptyState).toHaveCount(0);
+
+    // ─── EDIT ───────────────────────────────────────────────────────────
+    await memory.editSharedMemoryByContent(initialContent, updatedContent);
+    await expect(memory.sharedMemoryEntryByContent(updatedContent)).toHaveCount(
+      1,
+    );
+
+    // ─── DELETE (asks for confirmation first) ───────────────────────────
+    const deleteDialog =
+      await memory.openSharedMemoryDeleteDialog(updatedContent);
+    await expect(deleteDialog).toContainText(
+      'Are you sure you want to delete this memory? This action cannot be undone.',
+    );
+    await memory.cancelSharedMemoryDialog(deleteDialog);
+    // Cancelling leaves the entry untouched.
+    await expect(memory.sharedMemoryEntryByContent(updatedContent)).toHaveCount(
+      1,
+    );
+
+    await memory.deleteSharedMemoryByContent(updatedContent);
+    await expect(memory.sharedMemoryEntryByContent(updatedContent)).toHaveCount(
+      0,
+    );
+    await expect(memory.sharedMemoryEmptyState).toBeVisible({
+      timeout: 15_000,
+    });
+
+    await editMentorPage.close();
+  });
+
+  test('adding a shared memory that already exists shows the duplicate message inside the dialog', async ({
+    page,
+    createMentorPage,
+    editMentorPage,
+  }) => {
+    await createMentorPage.openAndCreate();
+    await editMentorPage.open('Memory');
+    await waitForPageReady(page);
+
+    const memory = editMentorPage.memory;
+    await memory.setCapabilityEnabled(true);
+    await memory.switchToSubTab('shared');
+
+    const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const content = `E2E shared memory duplicate ${suffix}`;
+
+    await memory.addSharedMemory(content);
+
+    try {
+      await memory.expectDuplicateError(content);
+      // The rejected repeat must not have created a second row.
+      await expect(memory.sharedMemoryEntryByContent(content)).toHaveCount(1);
+    } finally {
+      // Best-effort: the run-level teardown deletes the mentor anyway, so a
+      // failed cleanup here must not mask the real assertion failure.
+      await memory.deleteSharedMemoryByContent(content).catch(() => undefined);
+    }
+
+    await editMentorPage.close();
+  });
+
+  test('the Save button stays disabled until the shared memory text has at least 10 characters', async ({
+    page,
+    createMentorPage,
+    editMentorPage,
+  }) => {
+    await createMentorPage.openAndCreate();
+    await editMentorPage.open('Memory');
+    await waitForPageReady(page);
+
+    const memory = editMentorPage.memory;
+    await memory.setCapabilityEnabled(true);
+
+    const dialog = await memory.openSharedMemoryAddDialog();
+    const input = memory.sharedMemoryContentInput(dialog);
+    const saveButton = memory.sharedMemorySaveButton(dialog);
+
+    // Nothing typed yet: Save is off.
+    await expect(saveButton).toBeDisabled();
+
+    await input.fill('abcde');
+    await expect(dialog.getByText('5/10 characters minimum')).toBeVisible();
+    await expect(saveButton).toBeDisabled();
+
+    await input.fill('abcdefghijkl');
+    await expect(
+      dialog.getByText('12 characters', { exact: true }),
+    ).toBeVisible();
+    await expect(dialog.getByText('/10 characters minimum')).toHaveCount(0);
+    await expect(saveButton).toBeEnabled();
+
+    // Cancelling must not create anything.
+    await memory.cancelSharedMemoryDialog(dialog);
+    await expect(memory.sharedMemoryEmptyState).toBeVisible({
+      timeout: 15_000,
+    });
+
+    await editMentorPage.close();
+  });
 });
 
 test.describe('Journey 24: Memory in Prompt Box', () => {
@@ -376,7 +571,7 @@ test.describe('Journey 24: Memory in Prompt Box', () => {
     // Own mentor per test — see Journey 24 describe block above for rationale.
     await createMentorPage.openAndCreate();
 
-    // The "Remember past conversations" master toggle now lives in-tab on
+    // The "Long-term Memory" master toggle now lives in-tab on
     // the Memory tab itself (feat/2040 — moved off Settings → Capabilities).
     // First ensure memory is enabled on the mentor.
     await editMentorPage.open('Memory');

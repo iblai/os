@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-10-07 | 830 checkpoints (784 covered, 12 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 83 journeys (82 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-10-08 | 835 checkpoints (788 covered, 12 pending/fixme, 18 not-reproducible in default env, 17 deprecated) | 83 journeys (82 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -479,18 +479,23 @@ Driven by the shared paywall helpers in `@iblai/iblai-js/playwright`. All tests 
 
 ---
 
-## Journey 24: Mentor Memory Tab (6 checkpoints) — `journeys/24-mentor-memory-tab.spec.ts`
+## Journey 24: Mentor Memory Tab (11 checkpoints; 2 not-reproducible) — `journeys/24-mentor-memory-tab.spec.ts`
 
-**Source files:** `components/modals/edit-mentor-modal/tabs/memory-tab/index.tsx`, `components/modals/edit-mentor-modal/tabs/memory-tab/manage-memories.tsx`, `components/modals/edit-mentor-modal/tabs/memory-tab/learners-memories.tsx`, `components/modals/edit-mentor-modal/capability-gate.tsx`, `hooks/use-mentor-segments.ts`
+**Source files:** `components/modals/edit-mentor-modal/tabs/memory-tab/index.tsx`, `hooks/use-mentor-segments.ts`
 
-The "Remember past conversations" (`enable_memory_component`) master toggle moved off Settings → Capabilities into an in-tab `CapabilityGate` at the top of the Memory tab itself (feat/2040). It auto-saves on click via `useEditMentorMutation` (optimistic local state) — no footer Save button involved. The Memory tab itself is now always mounted regardless of the toggle's value.
+The Memory tab is the SDK's `AgentMemoryTab`, rendered by a thin OS wrapper (`tabs/memory-tab/index.tsx`) that only resolves the agent, user and permissions. A capability gate (the "Long-term Memory" toggle, `enable_memory_component`) sits on top and auto-saves on click via `useEditMentorMutation` (optimistic local state) — no footer Save button involved; the tab itself is always mounted regardless of the toggle's value. Below the gate are two sub-tabs: **Personal Memories** (the default — what the agent remembered per person, with categories) and **Shared Memories** (facts and rules entered by admins). Shared memories reach every person who chats with the agent and only reach chats while memory is turned on, which the sub-tab says in a hint. Both sub-tabs sit inside the gate, which is inert while the toggle is off, so the page object's sub-tab helpers expect the capability to be on.
 
 - [x] CP-24.1: Memory tab is visible in Edit Mentor modal
-- [x] CP-24.2: In-tab "Remember past conversations" capability toggle can be enabled and disabled (auto-saves `enable_memory_component`, no footer Save button)
+- [x] CP-24.2: In-tab "Long-term Memory" capability toggle can be enabled and disabled (auto-saves `enable_memory_component`, no footer Save button)
 - [x] CP-24.3: Admin completes the full memory CRUD lifecycle in one flow: add a memory, edit its content, then delete it
 - [x] CP-24.4: Admin manages memory categories (create, rename, delete)
 - [x] CP-24.5: Memory button visibility in chat input reflects the Memory tab's in-tab capability toggle
-- [ ] _(not-reproducible — RBAC off in default env)_ Memory capability toggle (`enable_memory_component`) is disabled when the user only has read access — unit-covered in `memory-tab.test.tsx`
+- [ ] CP-24.6: _(not-reproducible — RBAC off in default env)_ Memory capability toggle (`enable_memory_component`) is disabled when the user only has read access — unit-covered in the SDK (`memory-tab.test.tsx`)
+- [x] CP-24.7: Memory tab shows Personal Memories and Shared Memories sub-tabs with Personal Memories active by default; the Shared Memories sub-tab shows the empty-state guidance and the "only while memory is turned on" hint on a fresh agent
+- [x] CP-24.8: Admin adds, edits and deletes a shared memory; deleting asks for confirmation first and cancelling keeps the entry
+- [x] CP-24.9: Adding a shared memory that already exists keeps the Add Memory dialog on the Shared Memories sub-tab open and shows "This shared memory already exists." inline
+- [x] CP-24.10: Save in the Add Memory dialog on the Shared Memories sub-tab stays disabled until the text has at least 10 characters (live "N/10 characters minimum" counter)
+- [ ] CP-24.11: _(not-reproducible — RBAC off in default env)_ Write controls (Add/Edit/Delete) are hidden and the capability toggle disabled for a Limited Viewer (RBAC proxy on the mentor write grant); 403s render the denied panel / forbidden toast — unit-covered in the SDK (`memory-tab.test.tsx`, `shared-memory-section.test.tsx`)
 
 ---
 

@@ -1,24 +1,45 @@
 import { Page, Locator, expect } from '@playwright/test';
 import { isVisibleWithin } from '../../utils/resilient';
 
+const SHARED_MEMORY_PLACEHOLDER =
+  'Write what this agent should always keep in mind...';
+
+export type MemorySubTab = 'personal' | 'shared';
+
+/**
+ * The Memory tab is the SDK's `AgentMemoryTab`: a capability gate on top and
+ * two sub-tabs below it — Personal Memories (per-person memories, categories)
+ * and Shared Memories (memories shared with everyone who chats with the agent).
+ * Radix unmounts the inactive sub-tab, so every helper below that touches
+ * one sub-tab's content switches to it first.
+ */
 export class MemoryTab {
   readonly page: Page;
   readonly dialog: Locator;
 
   /**
-   * "Remember past conversations" (`enable_memory_component`) master toggle.
-   * Used to live in Settings → Capabilities and gate the whole tab's
-   * visibility; it now lives inline at the top of this tab via the shared
-   * `CapabilityGate` component, and the Memory tab is always mounted
+   * "Long-term Memory" (`enable_memory_component`) master toggle. Used to
+   * live in Settings → Capabilities and gate the whole tab's visibility; it
+   * now lives inline at the top of this tab via the shared `CapabilityGate`
+   * component, and the Memory tab is always mounted
    * (`hooks/use-mentor-segments.ts` no longer gates it). Toggling auto-saves
-   * (`MemoryTab`'s `handleToggleMemory` calls `useEditMentorMutation`
-   * directly with optimistic local state) — no footer Save button involved.
+   * (the SDK's `useMemoryCapability` PATCHes `enable_memory_component` with
+   * optimistic local state) — no footer Save button involved.
    */
   readonly capabilityToggle: Locator;
   /** Wrapper around the gated memory-management content — `data-enabled` mirrors the toggle. */
   readonly capabilityContent: Locator;
   /** Hint shown next to the description while the capability is off. */
   readonly capabilityOffHint: Locator;
+  /** Sub-tab strip under the gate: "Personal Memories" (default) and "Shared Memories". */
+  readonly subTabs: Locator;
+  readonly personalSubTab: Locator;
+  readonly sharedSubTab: Locator;
+  readonly sharedMemorySection: Locator;
+  readonly sharedMemoryAddButton: Locator;
+  readonly sharedMemoryList: Locator;
+  readonly sharedMemoryEmptyState: Locator;
+  readonly sharedMemoryEmptyTitle: Locator;
   readonly addMemoryButton: Locator;
   readonly manageCategoriesButton: Locator;
   readonly emptyState: Locator;
@@ -45,6 +66,29 @@ export class MemoryTab {
     this.capabilityOffHint = dialog.locator(
       '[data-testid="capability-gate-off-hint"]:visible',
     );
+    this.subTabs = dialog.getByTestId('memory-sub-tabs');
+    this.personalSubTab = dialog.getByTestId('memory-sub-tab-personal');
+    this.sharedSubTab = dialog.getByTestId('memory-sub-tab-shared');
+    this.sharedMemorySection = dialog.getByTestId('shared-memory-section');
+    // Same "Add Memory" copy as the Personal Memories sub-tab; scoped to the
+    // section so it never matches the personal button.
+    this.sharedMemoryAddButton = this.sharedMemorySection.getByRole('button', {
+      name: 'Add Memory',
+      exact: true,
+    });
+    this.sharedMemoryList = this.sharedMemorySection.getByRole('list', {
+      name: 'Shared memories',
+      exact: true,
+    });
+    this.sharedMemoryEmptyState = this.sharedMemorySection.getByTestId(
+      'shared-memory-empty',
+    );
+    this.sharedMemoryEmptyTitle = this.sharedMemorySection.getByRole(
+      'heading',
+      {
+        name: 'No Shared Memories Yet',
+      },
+    );
     this.addMemoryButton = dialog.getByRole('button', { name: /add memory/i });
     this.manageCategoriesButton = dialog.getByRole('button', {
       name: 'Manage categories',
@@ -65,7 +109,7 @@ export class MemoryTab {
 
   // ── Capability gate ───────────────────────────────────────────────────────
 
-  /** Whether the "Remember past conversations" capability toggle is currently on. */
+  /** Whether the "Long-term Memory" capability toggle is currently on. */
   async isCapabilityEnabled(): Promise<boolean> {
     const attr = await this.capabilityToggle
       .getAttribute('aria-checked')
@@ -74,7 +118,7 @@ export class MemoryTab {
   }
 
   /**
-   * Idempotently set the "Remember past conversations" capability toggle to
+   * Idempotently set the "Long-term Memory" capability toggle to
    * the target state. Auto-saves on click (optimistic local state) — no
    * footer Save button involved. Waits for both the toggle's `aria-checked`
    * and the gated content's `data-enabled` attribute to reflect the target
@@ -98,7 +142,35 @@ export class MemoryTab {
     );
   }
 
+  /**
+   * Activates a sub-tab and waits for its content to settle. A no-op click
+   * when it is already active. Both triggers live inside the capability gate,
+   * which is inert while the toggle is off, so callers must have
+   * `setCapabilityEnabled(true)` first.
+   */
+  async switchToSubTab(name: MemorySubTab): Promise<void> {
+    const trigger = name === 'shared' ? this.sharedSubTab : this.personalSubTab;
+    await expect(trigger).toBeVisible({ timeout: 15_000 });
+    if ((await trigger.getAttribute('aria-selected')) !== 'true') {
+      await trigger.click();
+    }
+    await expect(trigger).toHaveAttribute('aria-selected', 'true', {
+      timeout: 10_000,
+    });
+
+    if (name === 'shared') {
+      await expect(this.sharedMemorySection).toBeVisible({ timeout: 10_000 });
+      await this.waitForSharedMemoriesSettled();
+    } else {
+      // The list wrapper stays in the DOM while empty (zero height, so not
+      // "visible") — attached is the right readiness signal.
+      await expect(this.memoryList).toBeAttached({ timeout: 10_000 });
+      await this.waitForMemoriesSettled();
+    }
+  }
+
   async hasMemories(): Promise<boolean> {
+    await this.switchToSubTab('personal');
     const empty = await isVisibleWithin(this.emptyState, 5_000);
     return !empty;
   }
@@ -121,9 +193,9 @@ export class MemoryTab {
    * @param category - Optional category to select from the dropdown.
    */
   async createMemory(content: string, category?: string): Promise<void> {
-    // Pre-settle the list so the dialog opens against a stable state and the
-    // post-create assertion isn't racing an in-flight initial fetch.
-    await this.waitForMemoriesSettled();
+    // Switching also pre-settles the list so the dialog opens against a stable
+    // state and the post-create assertion isn't racing an in-flight fetch.
+    await this.switchToSubTab('personal');
     await expect(this.addMemoryButton).toBeVisible({ timeout: 10_000 });
     await this.addMemoryButton.click();
 
@@ -237,6 +309,7 @@ export class MemoryTab {
    * the caller can immediately assert on the list contents.
    */
   async resetCategoryFilter(): Promise<void> {
+    await this.switchToSubTab('personal');
     // The category bar uses role="tablist" / role="tab" with the category
     // names as accessible text. Scope to the tablist labelled
     // "Memory categories" so we never match a tab from a different region.
@@ -267,6 +340,7 @@ export class MemoryTab {
     content: string,
     timeout = 10_000,
   ): Promise<boolean> {
+    await this.switchToSubTab('personal');
     return this.entryByContent(content)
       .first()
       .waitFor({ state: 'visible', timeout })
@@ -296,9 +370,10 @@ export class MemoryTab {
     currentContent: string,
     newContent: string,
   ): Promise<void> {
-    // Pre-settle so the action menu we click stays attached through the click
-    // (a mid-flight list refetch can detach the row's MoreHorizontal button).
-    await this.waitForMemoriesSettled();
+    // Switching also pre-settles so the action menu we click stays attached
+    // through the click (a mid-flight list refetch can detach the row's
+    // MoreHorizontal button).
+    await this.switchToSubTab('personal');
     await this.openActionMenuForContent(currentContent);
 
     const editMenuItem = this.page
@@ -372,8 +447,9 @@ export class MemoryTab {
    * deleteFirst for parallel-safe tests.
    */
   async deleteByContent(content: string): Promise<void> {
-    // Pre-settle so the action menu we click stays attached through the click.
-    await this.waitForMemoriesSettled();
+    // Switching also pre-settles so the action menu we click stays attached
+    // through the click.
+    await this.switchToSubTab('personal');
     await this.openActionMenuForContent(content);
 
     const deleteMenuItem = this.page
@@ -405,6 +481,7 @@ export class MemoryTab {
    * @deprecated Positional — races with parallel tests. Use editByContent.
    */
   async editFirst(newContent: string): Promise<void> {
+    await this.switchToSubTab('personal');
     const firstActionBtn = this.memoryActionButtons.first();
     await expect(firstActionBtn).toBeVisible({ timeout: 10_000 });
     await firstActionBtn.click();
@@ -448,6 +525,7 @@ export class MemoryTab {
    * @deprecated Positional — races with parallel tests. Use deleteByContent.
    */
   async deleteFirst(): Promise<void> {
+    await this.switchToSubTab('personal');
     // Click the MoreHorizontal icon button for the first memory entry.
     const firstActionBtn = this.memoryActionButtons.first();
     await expect(firstActionBtn).toBeVisible({ timeout: 10_000 });
@@ -478,6 +556,7 @@ export class MemoryTab {
    * Returns the number of visible memory entries.
    */
   async getMemoryCount(): Promise<number> {
+    await this.switchToSubTab('personal');
     return this.memoryActionButtons.count().catch(() => 0);
   }
 
@@ -494,6 +573,7 @@ export class MemoryTab {
    * Opens the Manage Categories modal from the memory tab.
    */
   async openManageCategories(): Promise<void> {
+    await this.switchToSubTab('personal');
     await expect(this.manageCategoriesButton).toBeVisible({ timeout: 10_000 });
     await this.manageCategoriesButton.click();
     await expect(this.categoriesDialog).toBeVisible({ timeout: 10_000 });
@@ -585,6 +665,7 @@ export class MemoryTab {
    * Returns the text content of the first memory entry.
    */
   async getFirstMemoryContent(): Promise<string> {
+    await this.switchToSubTab('personal');
     // The memory content is the only <p> inside each role="listitem" entry
     // (metadata renders as <span>s). Targeting via the paragraph element
     // keeps this stable when Tailwind classes change.
@@ -594,5 +675,237 @@ export class MemoryTab {
       .locator('p')
       .first();
     return (await firstEntry.textContent().catch(() => '')) ?? '';
+  }
+
+  // ── Shared Memories sub-tab ───────────────────────────────────────────────
+
+  get sharedMemoryAddDialog(): Locator {
+    return this.page.getByRole('dialog', {
+      name: 'Add Memory',
+      exact: true,
+    });
+  }
+
+  get sharedMemoryEditDialog(): Locator {
+    return this.page.getByRole('dialog', {
+      name: 'Edit Memory',
+      exact: true,
+    });
+  }
+
+  get sharedMemoryDeleteDialog(): Locator {
+    return this.page.getByRole('dialog', {
+      name: 'Delete Memory',
+      exact: true,
+    });
+  }
+
+  /**
+   * Waits for the "Loading shared memories..." placeholder to disappear, signalling
+   * that the initial fetch (or a page change) has settled. No-op when absent.
+   */
+  async waitForSharedMemoriesSettled(timeout = 15_000): Promise<void> {
+    await this.sharedMemorySection
+      .getByText('Loading shared memories...')
+      .waitFor({ state: 'hidden', timeout })
+      .catch(() => undefined);
+  }
+
+  /**
+   * Locator for the shared memory entry whose text contains `content`. Entries are
+   * `role="listitem"` rows inside the list labelled "Shared memories".
+   */
+  sharedMemoryEntryByContent(content: string): Locator {
+    return this.sharedMemoryList
+      .getByRole('listitem')
+      .filter({ hasText: content });
+  }
+
+  sharedMemoryContentInput(dialog: Locator): Locator {
+    return dialog.getByPlaceholder(SHARED_MEMORY_PLACEHOLDER);
+  }
+
+  sharedMemorySaveButton(dialog: Locator): Locator {
+    return dialog.getByRole('button', { name: 'Save', exact: true });
+  }
+
+  /** Opens the Add Memory dialog (Shared Memories sub-tab) and returns it. */
+  async openSharedMemoryAddDialog(): Promise<Locator> {
+    await this.switchToSubTab('shared');
+    await expect(this.sharedMemoryAddButton).toBeVisible({ timeout: 15_000 });
+    await this.sharedMemoryAddButton.click();
+    const dialog = this.sharedMemoryAddDialog;
+    await expect(dialog).toBeVisible({ timeout: 10_000 });
+    return dialog;
+  }
+
+  async cancelSharedMemoryDialog(dialog: Locator): Promise<void> {
+    await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
+    await expect(dialog).toBeHidden({ timeout: 10_000 });
+  }
+
+  /**
+   * Waits for a shared memory dialog to close after Save / Delete. The dialog only
+   * closes on success; a rejection leaves it open with an inline alert (add /
+   * edit) or raises an error toast, so those are raced to fail fast with a
+   * readable message instead of burning the full hidden timeout.
+   */
+  private async waitForSharedMemoryDialogToClose(
+    dialog: Locator,
+    action: string,
+  ): Promise<void> {
+    const outcome = await Promise.race([
+      dialog
+        .waitFor({ state: 'hidden', timeout: 30_000 })
+        .then(() => 'closed' as const)
+        .catch(() => 'timeout' as const),
+      dialog
+        .getByRole('alert')
+        .waitFor({ state: 'visible', timeout: 30_000 })
+        .then(() => 'rejected' as const)
+        .catch(() => 'timeout' as const),
+      this.page
+        .getByText(/Couldn.t (save|delete) shared memory/i)
+        .first()
+        .waitFor({ state: 'visible', timeout: 30_000 })
+        .then(() => 'error' as const)
+        .catch(() => 'timeout' as const),
+    ]);
+    if (outcome === 'rejected') {
+      throw new Error(`${action} failed: the dialog showed an inline error`);
+    }
+    if (outcome === 'error') {
+      throw new Error(
+        `${action} failed: saw a "Couldn't ... shared memory" toast`,
+      );
+    }
+    if (outcome === 'timeout') {
+      throw new Error(`${action} timed out: the dialog never closed`);
+    }
+  }
+
+  /**
+   * Adds a shared memory through the Add Memory dialog (Shared Memories sub-tab) and waits for it
+   * to show up in the list. `content` must be at least 10 characters (Save stays
+   * disabled below that).
+   */
+  async addSharedMemory(content: string): Promise<void> {
+    const dialog = await this.openSharedMemoryAddDialog();
+    await this.sharedMemoryContentInput(dialog).fill(content);
+
+    const saveButton = this.sharedMemorySaveButton(dialog);
+    await expect(saveButton).toBeEnabled({ timeout: 5_000 });
+    await saveButton.click();
+
+    await this.waitForSharedMemoryDialogToClose(dialog, 'addSharedMemory');
+    // The create mutation invalidates the list → refetch; poll until the new
+    // entry renders so callers can rely on it once this resolves.
+    await expect(this.sharedMemoryEntryByContent(content)).toBeVisible({
+      timeout: 30_000,
+    });
+  }
+
+  private async openSharedMemoryActionMenu(content: string): Promise<void> {
+    await this.switchToSubTab('shared');
+    const entry = this.sharedMemoryEntryByContent(content).first();
+    await expect(entry).toBeVisible({ timeout: 10_000 });
+    const actionButton = entry.getByRole('button', {
+      name: 'Shared memory actions',
+    });
+    await expect(actionButton).toBeVisible({ timeout: 10_000 });
+    await actionButton.click();
+  }
+
+  /** Edits the entry identified by its current text and waits for the new text. */
+  async editSharedMemoryByContent(
+    currentContent: string,
+    newContent: string,
+  ): Promise<void> {
+    await this.openSharedMemoryActionMenu(currentContent);
+    const editMenuItem = this.page.getByRole('menuitem', {
+      name: 'Edit',
+      exact: true,
+    });
+    await expect(editMenuItem).toBeVisible({ timeout: 5_000 });
+    await editMenuItem.click();
+
+    const dialog = this.sharedMemoryEditDialog;
+    await expect(dialog).toBeVisible({ timeout: 10_000 });
+    const input = this.sharedMemoryContentInput(dialog);
+    await expect(input).toHaveValue(currentContent, { timeout: 5_000 });
+    await input.fill(newContent);
+
+    const saveButton = this.sharedMemorySaveButton(dialog);
+    await expect(saveButton).toBeEnabled({ timeout: 5_000 });
+    await saveButton.click();
+
+    await this.waitForSharedMemoryDialogToClose(
+      dialog,
+      'editSharedMemoryByContent',
+    );
+    await expect(this.sharedMemoryEntryByContent(newContent)).toBeVisible({
+      timeout: 30_000,
+    });
+    await expect(this.sharedMemoryEntryByContent(currentContent)).toHaveCount(
+      0,
+      {
+        timeout: 30_000,
+      },
+    );
+  }
+
+  /** Opens the "Delete Memory" confirmation for an entry and returns it. */
+  async openSharedMemoryDeleteDialog(content: string): Promise<Locator> {
+    await this.openSharedMemoryActionMenu(content);
+    const deleteMenuItem = this.page.getByRole('menuitem', {
+      name: 'Delete',
+      exact: true,
+    });
+    await expect(deleteMenuItem).toBeVisible({ timeout: 5_000 });
+    await deleteMenuItem.click();
+
+    const dialog = this.sharedMemoryDeleteDialog;
+    await expect(dialog).toBeVisible({ timeout: 10_000 });
+    return dialog;
+  }
+
+  /** Deletes an entry through its confirmation dialog and waits for it to leave the list. */
+  async deleteSharedMemoryByContent(content: string): Promise<void> {
+    const dialog = await this.openSharedMemoryDeleteDialog(content);
+    const confirmButton = dialog.getByRole('button', {
+      name: 'Delete',
+      exact: true,
+    });
+    await expect(confirmButton).toBeEnabled({ timeout: 5_000 });
+    await confirmButton.click();
+
+    await this.waitForSharedMemoryDialogToClose(
+      dialog,
+      'deleteSharedMemoryByContent',
+    );
+    await expect(this.sharedMemoryEntryByContent(content)).toHaveCount(0, {
+      timeout: 30_000,
+    });
+  }
+
+  /**
+   * Submits already-saved text through the Add Memory dialog (Shared Memories sub-tab) and asserts the
+   * inline "already exists" message, then cancels. The server answers a repeat
+   * with a conflict, so the dialog must stay open instead of closing.
+   */
+  async expectDuplicateError(content: string): Promise<void> {
+    const dialog = await this.openSharedMemoryAddDialog();
+    await this.sharedMemoryContentInput(dialog).fill(content);
+
+    const saveButton = this.sharedMemorySaveButton(dialog);
+    await expect(saveButton).toBeEnabled({ timeout: 5_000 });
+    await saveButton.click();
+
+    await expect(dialog.getByRole('alert')).toHaveText(
+      'This shared memory already exists.',
+      { timeout: 30_000 },
+    );
+    await expect(dialog).toBeVisible();
+    await this.cancelSharedMemoryDialog(dialog);
   }
 }

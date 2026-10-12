@@ -1,11 +1,11 @@
 {
   "version": 2,
-  "lastUpdated": "2026-10-07",
+  "lastUpdated": "2026-10-08",
   "summary": {
-    "totalCheckpoints": 830,
-    "coveredCheckpoints": 784,
+    "totalCheckpoints": 835,
+    "coveredCheckpoints": 788,
     "deprecatedCheckpoints": 17,
-    "notReproducibleCheckpoints": 17,
+    "notReproducibleCheckpoints": 18,
     "pendingCheckpoints": 12,
     "percent": 100,
     "totalJourneys": 83,
@@ -1691,9 +1691,6 @@
       "spec": "24-mentor-memory-tab.spec.ts",
       "sourceFiles": [
         "components/modals/edit-mentor-modal/tabs/memory-tab/index.tsx",
-        "components/modals/edit-mentor-modal/tabs/memory-tab/manage-memories.tsx",
-        "components/modals/edit-mentor-modal/tabs/memory-tab/learners-memories.tsx",
-        "components/modals/edit-mentor-modal/capability-gate.tsx",
         "hooks/use-mentor-segments.ts"
       ],
       "checkpoints": [
@@ -1704,7 +1701,7 @@
         },
         {
           "id": "mem-02",
-          "description": "\"Remember past conversations\" in-tab capability toggle (feat/2040 \u2014 moved off Settings \u2192 Capabilities into the Memory tab's own CapabilityGate) can be enabled and disabled; auto-saves via useEditMentorMutation (optimistic, no footer Save button)",
+          "description": "\"Long-term Memory\" in-tab capability toggle (feat/2040 \u2014 moved off Settings \u2192 Capabilities into the Memory tab's own CapabilityGate) can be enabled and disabled; auto-saves via useEditMentorMutation (optimistic, no footer Save button)",
           "status": "covered"
         },
         {
@@ -1724,7 +1721,32 @@
         },
         {
           "id": "mem-06",
-          "description": "Memory capability toggle (enable_memory_component) is disabled when the user only has read access to the field (RBAC) \u2014 unit-covered in memory-tab.test.tsx; not e2e-reproducible without RBAC field-permission seeding",
+          "description": "Memory capability toggle (enable_memory_component) is disabled when the user only has read access to the field (RBAC) \u2014 unit-covered in the SDK (memory-tab.test.tsx); not e2e-reproducible without RBAC field-permission seeding",
+          "status": "not-reproducible"
+        },
+        {
+          "id": "mem-07",
+          "description": "Memory tab shows Personal Memories and Shared Memories sub-tabs with Personal Memories active by default; the Shared Memories sub-tab shows the empty-state guidance and the \"only while memory is turned on\" hint on a fresh agent",
+          "status": "covered"
+        },
+        {
+          "id": "mem-08",
+          "description": "Admin adds, edits and deletes a shared memory; deleting asks for confirmation first and cancelling keeps the entry",
+          "status": "covered"
+        },
+        {
+          "id": "mem-09",
+          "description": "Adding a shared memory that already exists keeps the Add Memory dialog on the Shared Memories sub-tab open and shows \"This shared memory already exists.\" inline",
+          "status": "covered"
+        },
+        {
+          "id": "mem-10",
+          "description": "Save in the Add Memory dialog on the Shared Memories sub-tab stays disabled until the text has at least 10 characters (live \"N/10 characters minimum\" counter)",
+          "status": "covered"
+        },
+        {
+          "id": "mem-11",
+          "description": "Write controls (Add/Edit/Delete) are hidden and the capability toggle disabled for a Limited Viewer (RBAC proxy on the mentor write grant); 403s render the denied panel / forbidden toast \u2014 unit-covered in the SDK (memory-tab.test.tsx, shared-memory-section.test.tsx); not e2e-reproducible with RBAC off",
           "status": "not-reproducible"
         }
       ]
