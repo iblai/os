@@ -11,6 +11,7 @@ const SPEC = '--spec e2e-tauri/journeys/04-ollama-setups.spec.ts';
 const row = (scenario) => ({
   scenario,
   runner: 'macos-latest',
+  arch: 'arm64',
   specs: SPEC,
   name: `${scenario}@macos-latest`,
   slug: `${scenario}--macos-latest`,
@@ -28,11 +29,12 @@ const t = (name, state, message) => ({
 
 function fixture() {
   const dir = mkdtempSync(join(tmpdir(), 'macos-report-'));
-  const write = (slug, body, png) => {
-    const d = join(dir, `macos-e2e-${slug}`);
-    mkdirSync(d);
+  const write = (slug, body, png, setupLog) => {
+    const d = join(dir, 'macos-e2e-arm64', slug);
+    mkdirSync(d, { recursive: true });
     if (body) writeFileSync(join(d, 'wdio-0-0-json-reporter.json'), body);
     if (png) writeFileSync(join(d, 'setup-06_x.png'), '');
+    if (setupLog) writeFileSync(join(d, 'setup.log'), setupLog);
   };
   write(
     'passing--macos-latest',
@@ -66,6 +68,12 @@ function fixture() {
       suites: [],
     }),
   );
+  write(
+    'broken--macos-latest',
+    null,
+    false,
+    '$ bash fresh.sh\nnot fresh: /usr/local/bin/ollama exists',
+  );
   // 'missing' has no artifact at all
   const known = join(dir, 'known.json');
   writeFileSync(
@@ -86,7 +94,14 @@ const run = (dir, known, scenarios, env = {}) =>
 
 test('counts, known flags, hooks, dead and missing rows', () => {
   const { dir, known } = fixture();
-  const md = run(dir, known, ['passing', 'known', 'fresh', 'dead', 'missing']);
+  const md = run(dir, known, [
+    'passing',
+    'known',
+    'fresh',
+    'dead',
+    'broken',
+    'missing',
+  ]);
   const s = JSON.parse(readFileSync(join(dir, 'summary.json'), 'utf8'));
   assert.equal(s.verdict, 'FAIL');
   assert.equal(s.gate, 'FAIL');
@@ -101,7 +116,10 @@ test('counts, known flags, hooks, dead and missing rows', () => {
   assert.equal(byId['fresh/"before all" hook'].known, false);
   assert.equal(byId['dead/04-ollama-setups.spec.ts'].known, false);
   assert.equal(byId['missing/04-ollama-setups.spec.ts'].known, false);
-  assert.equal(s.new_failures, 4);
+  // A failed setup is one failure carrying its log, not a "no results" per spec.
+  assert.match(byId['broken/setup'].error, /not fresh/);
+  assert.equal(byId['broken/04-ollama-setups.spec.ts'], undefined);
+  assert.equal(s.new_failures, 5);
   assert.equal(
     s.rows.find((r) => r.scenario === 'known').screenshots.length,
     1,

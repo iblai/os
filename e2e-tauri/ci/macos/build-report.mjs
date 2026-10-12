@@ -1,12 +1,12 @@
-// Turns the macOS matrix's row artifacts (e2e-tauri/logs per row: wdio JSON
-// results + failure screenshots) into the run's report: <dir>/summary.json,
-// <dir>/index.html, and the PR comment's rows fragment on stdout.
+// Turns the macOS jobs' artifacts (one macos-e2e-<arch>/ per job, one <slug>/ per
+// row inside: wdio JSON results, failure screenshots, a setup.log when the setup
+// failed) into the run's report: <dir>/summary.json, <dir>/index.html, and the PR
+// comment's rows fragment on stdout.
 //
 //   MATRIX=<rows json> [GREP RUN_URL REPORT_URL PR SHA] \
 //     node build-report.mjs <dir> [known-failures.json]
 //
-// <dir> holds one macos-e2e-<slug>/ per downloaded artifact. A row with no
-// results counts as failed: the setup script, the app, or the row timed out.
+// A row with no results counts as failed: the app never started or the row timed out.
 import {
   existsSync,
   mkdirSync,
@@ -41,8 +41,12 @@ const stripAnsi = (s) => String(s ?? '').replace(/\x1b\[[\d;]*m/g, '');
 const idOf = (title) => title.match(/^[a-z]+-\d+/)?.[0] ?? title;
 
 const rows = JSON.parse(MATRIX).map((row) => {
-  const rdir = join(dir, `macos-e2e-${row.slug}`);
+  const rel = `macos-e2e-${row.arch}/${row.slug}`;
+  const rdir = join(dir, rel);
   const files = existsSync(rdir) ? readdirSync(rdir).sort() : [];
+  const setupLog = files.includes('setup.log')
+    ? readFileSync(join(rdir, 'setup.log'), 'utf8')
+    : '';
   const runs = files
     .filter((f) => f.endsWith('-json-reporter.json'))
     .map((f) => read(join(rdir, f)));
@@ -75,13 +79,23 @@ const rows = JSON.parse(MATRIX).map((row) => {
         title: `${h.associatedSuite ?? ''} ${h.title}`.trim(),
         error: h.error?.message,
       })),
+    // The setup failed: the journeys never ran, the log says why.
+    ...(setupLog
+      ? [
+          {
+            id: 'setup',
+            title: 'setup failed (setup.log)',
+            error: setupLog.slice(-4000),
+          },
+        ]
+      : []),
     // No JSON, or `suites: []` (what WDIO also writes when the session never started) = never ran.
     // ponytail: a grep matching nothing writes the same JSON, so grep runs cannot see a dead session.
     ...specs
-      .filter((spec) => !hasResults(spec))
+      .filter((spec) => !setupLog && !hasResults(spec))
       .map((spec) => ({
         id: spec,
-        title: `${spec}: no results (setup failed, the app never started, or the row timed out)`,
+        title: `${spec}: no results (the app never started, or the row timed out)`,
       })),
   ].map((f) => {
     const k = known[row.scenario]?.[f.id] ?? known['*']?.[f.id];
@@ -105,7 +119,7 @@ const rows = JSON.parse(MATRIX).map((row) => {
     failures,
     screenshots: files
       .filter((f) => f.endsWith('.png'))
-      .map((f) => `macos-e2e-${row.slug}/${f}`),
+      .map((f) => `${rel}/${f}`),
   };
 });
 
@@ -189,7 +203,7 @@ ${s.rows.map(section).join('')}
 `;
 }
 
-mkdirSync(dir, { recursive: true }); // no artifacts at all when the debug build failed
+mkdirSync(dir, { recursive: true }); // no artifacts at all when every build failed
 writeFileSync(join(dir, 'summary.json'), JSON.stringify(summary, null, 2));
 writeFileSync(join(dir, 'index.html'), html(summary));
 console.log(markdown(summary, [...fresh, ...all.filter((f) => f.known)]));

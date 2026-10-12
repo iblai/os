@@ -64,7 +64,7 @@ jobs:
       statuses: write # "macOS E2E" → pending
     outputs:
       matrix: ${{ steps.rows.outputs.matrix }}
-      archs: ${{ steps.rows.outputs.archs }}
+      jobs: ${{ steps.rows.outputs.jobs }}
       pr: ${{ steps.pr.outputs.pr }}
       sha: ${{ steps.pr.outputs.sha }}
       # The web e2e's staging account, resolved by the private ops repo's action.
@@ -117,16 +117,19 @@ jobs:
           [ -z "$PR" ] || gh api "repos/$GITHUB_REPOSITORY/statuses/$SHA" -f state=pending \
             -f context='macOS E2E' -f description='Running the macOS matrix' -f target_url="$RUN_URL" >/dev/null
 
-  # One debug build per arch feeds every row; the WebDriver server only exists
-  # in debug builds. No Node here: the binary embeds only the static offline shell.
-  build:
+  # One job per architecture: it builds the debug binary (the WebDriver server only
+  # exists in debug builds) and runs its rows one after another on the same VM —
+  # run-rows.mjs resets the machine between setups. Rows run PR code with the
+  # checkout token: no write scopes here.
+  macos:
     needs: gate
     strategy:
       fail-fast: false
       matrix:
-        arch: ${{ fromJSON(needs.gate.outputs.archs) }}
-    runs-on: ${{ matrix.arch == 'x64' && 'macos-15-intel' || inputs.runner || 'macos-latest' }}
-    timeout-minutes: 60
+        include: ${{ fromJSON(needs.gate.outputs.jobs) }}
+    name: macOS ${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: ${{ matrix.timeout }}
     steps:
       - uses: actions/checkout@v4
 
@@ -144,35 +147,6 @@ jobs:
         run: cargo build
         working-directory: src-tauri
 
-      - uses: actions/upload-artifact@v4
-        with:
-          name: ibl-ai-os-debug-${{ matrix.arch }}
-          path: src-tauri/target/debug/ibl-ai-os
-          if-no-files-found: error
-
-  # Rows run PR code with the checkout token: no write scopes here.
-  e2e:
-    needs: [gate, build]
-    strategy:
-      fail-fast: false
-      # The org has five macOS slots; leave room for a release build.
-      max-parallel: 3
-      matrix:
-        include: ${{ fromJSON(needs.gate.outputs.matrix) }}
-    name: ${{ matrix.name }}
-    runs-on: ${{ matrix.runner }}
-    timeout-minutes: ${{ matrix.timeout }}
-    env:
-      TAURI_E2E_SCENARIO: ${{ matrix.scenario }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/download-artifact@v4
-        with:
-          name: ibl-ai-os-debug-${{ matrix.arch }}
-          path: ${{ runner.temp }}/app
-      - run: chmod +x "$RUNNER_TEMP/app/ibl-ai-os"
-
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
 
@@ -185,25 +159,18 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Put the Mac into the "${{ matrix.scenario }}" setup
-        run: bash "e2e-tauri/ci/macos/${{ matrix.scenario }}.sh"
-
-      - name: Run the journeys
-        # Step-level: a job-level continue-on-error still leaves a red X check on the PR
-        # for a known failure. The summary job decides from the JSON results.
-        continue-on-error: true
+      # Exits 0 whatever the rows did: the summary job decides from the JSON results.
+      - name: Run the rows
         env:
+          MATRIX: ${{ needs.gate.outputs.matrix }}
+          ARCH: ${{ matrix.arch }}
           GREP: ${{ inputs.grep }}
-          SPECS: ${{ matrix.specs }}
           TAURI_APP_URL: ${{ needs.gate.outputs.app_url }}
           TAURI_E2E_USERNAME: ${{ needs.gate.outputs.username }}
           TAURI_E2E_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
           TAURI_E2E_DATA_HOME: ${{ runner.temp }}/iblai-os-test
-          TAURI_APP_BINARY: ${{ runner.temp }}/app/ibl-ai-os
-        run: |
-          pkill -x ibl-ai-os || true
-          # shellcheck disable=SC2086 # SPECS is a list of --spec flags
-          pnpm test:tauri $SPECS ${GREP:+--mochaOpts.grep "$GREP"}
+          TAURI_APP_BINARY: src-tauri/target/debug/ibl-ai-os
+        run: node e2e-tauri/ci/macos/run-rows.mjs
 
       - name: Leftover processes
         if: always()
@@ -211,16 +178,16 @@ jobs:
           pgrep -fl 'ibl-ai-os|ollama|opencode' || echo "none"
           pkill -x ibl-ai-os || true
 
-      # Screenshots of failed checkpoints + the JSON results the summary reads.
+      # One dir per row: screenshots, JSON results, a setup.log when the setup failed.
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: macos-e2e-${{ matrix.slug }}
+          name: macos-e2e-${{ matrix.arch }}
           path: e2e-tauri/logs
           if-no-files-found: ignore
 
   summary:
-    needs: [gate, build, e2e]
+    needs: [gate, macos]
     # Not when cancelled: a superseded run must not overwrite the newer run's pending status.
     if: ${{ !cancelled() && needs.gate.result == 'success' }}
     runs-on: ubuntu-latest
@@ -233,7 +200,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # One dir per row artifact; no match = no dir, no error (the builder copes).
+      # One dir per job artifact; no match = no dir, no error (the builder copes).
       - uses: actions/download-artifact@v4
         with:
           pattern: macos-e2e-*
@@ -252,7 +219,6 @@ jobs:
 
       - name: Publish the report
         id: s3
-        if: needs.build.result == 'success'
         # No link beats no comment; the comment says why.
         continue-on-error: true
         env:
@@ -267,7 +233,7 @@ jobs:
         env:
           PR: ${{ needs.gate.outputs.pr }}
           SHA: ${{ needs.gate.outputs.sha }}
-          BUILD: ${{ needs.build.result }}
+          JOB: ${{ needs.macos.result }}
           UPLOADED: ${{ steps.s3.outcome }}
           SCENARIOS: ${{ inputs.scenarios }}
           GREP: ${{ inputs.grep }}
@@ -275,8 +241,9 @@ jobs:
           script: |
             const fs = require('fs');
             const s = JSON.parse(fs.readFileSync('report/summary.json', 'utf8'));
-            const { PR, SHA, BUILD, UPLOADED, SCENARIOS, GREP } = process.env;
-            const ran = BUILD === 'success';
+            const { PR, SHA, JOB, UPLOADED, SCENARIOS, GREP } = process.env;
+            // Rows never fail their job, so a job that is not a success died before them (build, setup).
+            const ran = JOB === 'success' || s.rows.some((r) => r.passed + r.failed + r.skipped > 0);
             const ok = ran && s.gate === 'PASS';
             const word = !ran ? 'NOT RUN' : ok ? 'OK' : 'FAILED';
             const url = UPLOADED === 'success' ? s.report_url : '';
@@ -291,7 +258,7 @@ jobs:
                 ? `**[Full report and screenshots](${url})**`
                 : ran
                   ? `_Report not published (S3 upload: ${UPLOADED}); results and screenshots are in the run's \`macos-e2e-*\` artifacts._`
-                  : `_The debug build ${BUILD}: no row ran._`,
+                  : `_The macOS job ${JOB} before any row ran (build or setup)._`,
               '',
               '| | |',
               '|---|---|',
@@ -299,7 +266,7 @@ jobs:
               `| run | [\`${context.runId}\`](${s.run_url}) |`,
               `| commit | \`${SHA.slice(0, 8)}\` |`,
               `| suite | \`macos\` - ${s.rows.length} rows - scenarios \`${SCENARIOS || 'all'}\`${GREP ? ` - grep \`${GREP}\`` : ''} |`,
-              `| tested against | \`os.ibl.ai\` production - app \`${s.app_version}\` (debug) - \`${runners}\` |`,
+              `| tested against | \`${s.app_url}\` - app \`${s.app_version}\` (debug) - \`${runners}\` |`,
               `| failed | \`${s.failed}\` |`,
               `| new failures | \`${s.new_failures}\` |`,
               '',
@@ -324,7 +291,7 @@ jobs:
                 context: 'macOS E2E',
                 state: ok ? 'success' : 'failure',
                 target_url: url || s.run_url,
-                description: (ran ? `${s.passed} passed, ${s.failed} failed (${s.new_failures} new)` : `Debug build ${BUILD}`).slice(0, 140),
+                description: (ran ? `${s.passed} passed, ${s.failed} failed (${s.new_failures} new)` : `macOS job ${JOB}`).slice(0, 140),
               });
             }
-            if (!ok) core.setFailed(`macOS E2E ${word}: gate ${s.gate}, debug build ${BUILD}`);
+            if (!ok) core.setFailed(`macOS E2E ${word}: gate ${s.gate}, macOS job ${JOB}`);

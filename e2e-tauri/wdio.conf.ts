@@ -46,8 +46,12 @@ const APP_BINARY = resolve(
   process.cwd(),
   process.env.TAURI_APP_BINARY || `src-tauri/target/debug/${BIN}`,
 );
-// Failure screenshots + JSON results (one wdio-<cid>-json-reporter.json per spec file); CI uploads this dir.
-const LOGS = resolve(process.cwd(), 'e2e-tauri/logs');
+// Failure screenshots + JSON results (one wdio-<cid>-json-reporter.json per spec file);
+// CI gives every row its own dir under e2e-tauri/logs and uploads the lot.
+const LOGS = resolve(
+  process.cwd(),
+  process.env.TAURI_E2E_LOGS ?? 'e2e-tauri/logs',
+);
 const STATUS_URL = `http://127.0.0.1:${process.env.TAURI_WEBDRIVER_PORT ?? 4445}/status`;
 
 export const config: WebdriverIO.Config = {

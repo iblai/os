@@ -59,3 +59,26 @@ report() {
   if ollama_up; then echo ":11434 open"; else echo ":11434 closed"; fi
   if [ -e /opt/homebrew/bin/brew ] || [ -e /usr/local/bin/brew ]; then echo "brew: present"; else echo "brew: absent"; fi
 }
+
+# Back to a Mac that never had Ollama, whichever route put it there (a setup
+# script or the app itself), so the next row starts clean on the same VM.
+reset_machine() {
+  local b
+  pkill -x ibl-ai-os || true
+  pkill -x Ollama || true
+  pkill -x ollama || true
+  for b in /opt/homebrew/bin/brew /usr/local/bin/brew; do
+    if [ -e "$b.off" ]; then sudo mv "$b.off" "$b"; fi
+  done
+  if command -v brew >/dev/null 2>&1; then
+    brew services stop ollama >/dev/null 2>&1 || true
+    brew uninstall --formula ollama >/dev/null 2>&1 || true
+    brew uninstall --cask ollama-app >/dev/null 2>&1 || true
+  fi
+  sudo rm -rf "$OLLAMA_APP" /usr/local/bin/ollama /usr/local/lib/ollama-e2e
+  rm -rf "$HOME/.ollama"
+  for b in 1 2 3 4 5 6 7 8 9 10; do
+    if ollama_up; then sleep 1; else break; fi
+  done
+  assert_fresh
+}

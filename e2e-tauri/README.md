@@ -88,6 +88,8 @@ pnpm test:tauri --mochaOpts.grep 'odm-02'
 - `TAURI_E2E_DATA_HOME` — the isolated data dir (default `~/.local/share/iblai-os-test`;
   `pnpm test:tauri:auth:delete` removes it).
 - `TAURI_E2E_MODEL` — the model Journey 2 pulls (default `smollm:135m`).
+- `TAURI_E2E_LOGS` — where screenshots and JSON results go (default `e2e-tauri/logs`;
+  CI gives every matrix row its own dir).
 - `TAURI_APP_URL` — the app the shell loads (default `https://os.ibl.ai`; the macOS
   workflow points it at the staging deployment the web e2e signs into).
 - `TAURI_E2E_USERNAME` / `TAURI_E2E_PASSWORD` in `e2e-tauri/.env.local` — the
@@ -124,12 +126,18 @@ pnpm test:tauri --mochaOpts.grep 'odm-02'
 
 ## CI matrix (macOS)
 
-`.github/workflows/macos-e2e-tauri.yml` runs the suite on GitHub's macOS runners,
-one fresh VM per **machine setup** — the Ollama installs a user's Mac can have
+`.github/workflows/macos-e2e-tauri.yml` runs the suite on GitHub's macOS runners
+against every **machine setup** a user's Mac can have — the Ollama installs
 (nothing, Ollama.app running or stopped, the Homebrew formula as a service or
-CLI only, a bare CLI in `/usr/local/bin`, no Homebrew at all, Intel) plus a
-fresh Mac for the Code journeys. Each row runs `e2e-tauri/ci/macos/<scenario>.sh`,
-then Journey 4 and Journey 2 against that setup (`code-fresh`: Journeys 1 and 3).
+CLI only, a bare CLI in `/usr/local/bin`, no Homebrew at all) plus a fresh Mac
+for the Code journeys, on arm64 and on Intel (where the formula has no bottle and
+builds from source). To keep the macOS job count at two, **one job per
+architecture** builds the debug binary on its VM and runs its rows one after
+another (`e2e-tauri/ci/macos/run-rows.mjs`): `reset.sh` puts the machine back to
+"never had Ollama", `<scenario>.sh` puts it into the row's setup, then Journey 4
+and Journey 2 run against it (`code-fresh`: Journeys 1 and 3) with the row's own
+logs dir (`TAURI_E2E_LOGS`). Budget: the arm64 job about an hour, the Intel job
+about two.
 The rows sign in to stg1 with the web e2e's staging account, resolved the way
 `reusable-oci-test-runner.yml` does it (the `gate` job checks out `iblai/ibl-web-ops`
 with `GIT_TOKEN` and runs its `determine-test-user` action; the password is the
@@ -142,9 +150,11 @@ gh workflow run macos-e2e-tauri.yml --ref <branch> -f scenarios=app-running,fres
 ```
 
 The rows live in `e2e-tauri/ci/macos/matrix.mjs`; a new setup is one script and
-one row. Failed checkpoints leave screenshots and the JSON results in the run's
-`macos-e2e-<scenario>--<runner>` artifact. The scripts mutate the machine and refuse to run outside a
-GitHub-hosted VM; to reproduce a row in a disposable local VM:
+one row, and a selection that names only arm64 or only Intel rows runs one job.
+Failed checkpoints leave screenshots and the JSON results in the run's
+`macos-e2e-<arch>` artifact, one `<scenario>--<runner>/` dir per row (plus a
+`setup.log` when the setup failed). The scripts mutate the machine and refuse to
+run outside a GitHub-hosted VM; to reproduce a row in a disposable local VM:
 
 ```bash
 TAURI_E2E_SCENARIO_FORCE=1 bash e2e-tauri/ci/macos/app-running.sh
