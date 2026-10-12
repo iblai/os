@@ -120,7 +120,7 @@ const summary = {
   pr: PR,
   sha: SHA,
   app_version: version,
-  app_url: 'https://os.ibl.ai',
+  app_url: process.env.TAURI_APP_URL || 'https://os.ibl.ai',
   passed: total('passed'),
   failed: all.length,
   skipped: total('skipped'),

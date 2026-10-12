@@ -67,8 +67,26 @@ jobs:
       archs: ${{ steps.rows.outputs.archs }}
       pr: ${{ steps.pr.outputs.pr }}
       sha: ${{ steps.pr.outputs.sha }}
+      # The web e2e's staging account, resolved by the private ops repo's action.
+      username: ${{ steps.config.outputs.username }}
+      app_url: ${{ steps.config.outputs.mentor-domain }}
     steps:
       - uses: actions/checkout@v4
+
+      # Same as reusable-oci-test-runner.yml: the username never lives in this public repo.
+      - name: Checkout ops
+        uses: actions/checkout@v4
+        with:
+          repository: iblai/ibl-web-ops
+          token: ${{ secrets.GIT_TOKEN || github.token }}
+          path: .ops
+
+      - name: Determine the test user
+        id: config
+        uses: ./.ops/.github/actions/determine-test-user
+        with:
+          domain-number: '1'
+          app-type: mentor
 
       # Before spending macOS hours on a run the summary could not report.
       - name: Self-check the report builder
@@ -177,6 +195,9 @@ jobs:
         env:
           GREP: ${{ inputs.grep }}
           SPECS: ${{ matrix.specs }}
+          TAURI_APP_URL: ${{ needs.gate.outputs.app_url }}
+          TAURI_E2E_USERNAME: ${{ needs.gate.outputs.username }}
+          TAURI_E2E_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
           TAURI_E2E_DATA_HOME: ${{ runner.temp }}/iblai-os-test
           TAURI_APP_BINARY: ${{ runner.temp }}/app/ibl-ai-os
         run: |
@@ -226,6 +247,7 @@ jobs:
           SHA: ${{ needs.gate.outputs.sha }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           REPORT_URL: https://${{ vars.CLOUDFRONT_DOMAIN || 'tests.iblai.app' }}/${{ env.KEY }}/index.html
+          TAURI_APP_URL: ${{ needs.gate.outputs.app_url }}
         run: node e2e-tauri/ci/macos/build-report.mjs report > rows.md
 
       - name: Publish the report

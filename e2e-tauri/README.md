@@ -38,8 +38,8 @@ Statuses: `covered` (a passing test), `pending` (planned; excluded from the %),
 `deprecated` / `not-reproducible`. Coverage % =
 `covered / (total − pending − deprecated − not-reproducible)`. The on-device
 model journey's download mechanics (pull / cancel / install) run against real
-Ollama through the IPC bridge; its picker-UI checkpoints are `pending` the
-authenticated harness and are covered meanwhile by the Vitest unit tests.
+Ollama through the IPC bridge; its picker-UI checkpoints sign in and drive the
+LLM Selection dialog like a user (see "Signed-in checkpoints").
 
 ## Prerequisites
 
@@ -88,11 +88,20 @@ pnpm test:tauri --mochaOpts.grep 'odm-02'
 - `TAURI_E2E_DATA_HOME` — the isolated data dir (default `~/.local/share/iblai-os-test`;
   `pnpm test:tauri:auth:delete` removes it).
 - `TAURI_E2E_MODEL` — the model Journey 2 pulls (default `smollm:135m`).
+- `TAURI_APP_URL` — the app the shell loads (default `https://os.ibl.ai`; the macOS
+  workflow points it at the staging deployment the web e2e signs into).
 - `TAURI_E2E_USERNAME` / `TAURI_E2E_PASSWORD` in `e2e-tauri/.env.local` — the
-  authenticated checkpoints' login.
+  signed-in checkpoints' login (CI: the web e2e's staging account — the username
+  from `ibl-web-ops`' `determine-test-user` action, the `TEST_USER_PASSWORD` secret).
 
 ## Notes
 
+- Signed-in checkpoints (Journey 2's odm-01/04/06/08): they need the login
+  above and a chat page, then drive the nav-bar LLM Model Selector, the SDK's LLM
+  Selection dialog and the Local Models switch in Profile → Advanced, pulling the
+  catalog model Llama 3.2 (2 GB — not the IPC checkpoints' `smollm`). odm-08
+  pins what a pick must do with Local Models off (turn it on, set Ollama up, pull)
+  and stays red until the SDK does it — that red is the point, not a known failure.
 - The shell spec is intentionally resilient (asserts the app boots + renders a
   `<body>`) because the shell can be the online app or the offline fallback
   depending on network/auth. Tighten it once you decide which shell CI targets.
@@ -121,6 +130,11 @@ one fresh VM per **machine setup** — the Ollama installs a user's Mac can have
 CLI only, a bare CLI in `/usr/local/bin`, no Homebrew at all, Intel) plus a
 fresh Mac for the Code journeys. Each row runs `e2e-tauri/ci/macos/<scenario>.sh`,
 then Journey 4 and Journey 2 against that setup (`code-fresh`: Journeys 1 and 3).
+The rows sign in to stg1 with the web e2e's staging account, resolved the way
+`reusable-oci-test-runner.yml` does it (the `gate` job checks out `iblai/ibl-web-ops`
+with `GIT_TOKEN` and runs its `determine-test-user` action; the password is the
+`TEST_USER_PASSWORD` secret), so `fresh` is where a picker pick must install Ollama
+from nothing.
 Same opt-in as the web e2e — the `run-tests` label on a same-repo PR — or by hand:
 
 ```bash

@@ -10,6 +10,19 @@ import {
   type TauriWindow,
 } from '../support/ollama';
 import { loginIfNeeded } from '../support/login';
+import {
+  OTHER_MODEL,
+  UI_MODEL,
+  advancedSwitchChecked,
+  badgeText,
+  closeDialogs,
+  localModelsEnabled,
+  localRow,
+  openPicker,
+  pickerButton,
+  rowStatus,
+  setLocalModelsEnabled,
+} from '../support/local-models';
 
 /**
  * Journey 2: On-device Model Management
@@ -26,10 +39,12 @@ import { loginIfNeeded } from '../support/login';
  * the IPC transport, so only here does the compiled `model_manager.rs` pull path
  * actually run.
  *
- * The picker-UI checkpoints (odm-01 merge, odm-04 one-at-a-time guard, odm-06
- * nav badge) need an authenticated session; they are pending stubs here (Mocha
- * reports them as skipped) and are covered meanwhile by the Vitest hook/component
- * tests. They get real bodies in the UI pass once credentials are wired.
+ * The picker-UI checkpoints (odm-01/04/06/08) drive the signed-in app the way a
+ * user does: the nav-bar's LLM Model Selector, the SDK's LLM Selection dialog,
+ * the Local Models switch in Profile → Advanced. They need TAURI_E2E_USERNAME /
+ * _PASSWORD (CI: the staging account) and skip without them. odm-08 pins what
+ * the product must do when a model is picked with Local Models off — turn it on
+ * and set Ollama up — and stays red until it does.
  *
  * Requires locally: Ollama installed + running, and network access to pull
  * `smollm:135m`. Override the model with TAURI_E2E_MODEL.
@@ -126,28 +141,148 @@ describe('Journey 2: On-device Model Management', function () {
     expect(await isInstalled()).toBe(true);
   });
 
-  // The picker-UI checkpoints need an authenticated session, so they run in a
-  // nested suite whose `before` logs in (auth setup on start; a no-op once the
-  // session is saved to the isolated profile — reset with
-  // `pnpm test:tauri:auth:delete`). They stay OUT of the IPC suite above because
-  // driving a real download on the authenticated page makes the app's own
-  // download UI react and fight these tests. Pending stubs until the UI pass —
-  // the login `before` skips itself without credentials.
-  describe('authenticated picker UI', () => {
+  // The picker-UI checkpoints need a signed-in session, so they run in a nested
+  // suite whose `before` logs in (a no-op once the session is saved to the
+  // isolated profile — reset with `pnpm test:tauri:auth:delete`). They stay OUT
+  // of the IPC suite above because driving a real download on the signed-in
+  // page makes the app's own download UI react and fight those tests. The
+  // `before` skips the suite without credentials.
+  describe('authenticated picker UI', function () {
+    // One real catalog pull (Llama 3.2, 2 GB); odm-06 waits for it to finish.
+    this.timeout(720_000);
+    const live = ['starting', 'downloading', 'installed', 'selected'];
+    // Rejects inside waitUntil, so a pull that dies fails fast with its reason.
+    const liveOrThrow = async (): Promise<boolean> => {
+      const status = await rowStatus(UI_MODEL.name);
+      if (status === 'error') {
+        const why = await localRow(UI_MODEL.name).getAttribute('title');
+        throw new Error(`the ${UI_MODEL.name} pull errored: ${why}`);
+      }
+      return live.includes(status ?? '');
+    };
+
     before(async function () {
-      // The authenticated checkpoints are pending; without credentials there is
-      // nothing to log in for.
       if (!process.env.TAURI_E2E_USERNAME) return this.skip();
       await loginIfNeeded();
+      await pickerButton().waitForExist({
+        timeout: 60_000,
+        timeoutMsg: 'the chat page never showed its LLM Model Selector',
+      });
+      removeTestModel(UI_MODEL.id); // the pick below must need a real pull
+      await setLocalModelsEnabled(false);
     });
 
-    it(
-      'odm-01: the LLM picker merges on-device models with the provider cloud models in one list',
-    );
-    it(
-      'odm-04: starting a second on-device download while one is in flight shows the "already downloading" guard',
-    );
-    it('odm-06: the nav-bar on-device badge reflects the selected local model');
+    after(async () => {
+      await closeDialogs();
+      await setLocalModelsEnabled(false);
+      removeTestModel(UI_MODEL.id);
+    });
+
+    it('odm-01: the picker lists the on-device models whether Local Models is off or on', async () => {
+      await setLocalModelsEnabled(false);
+      await openPicker(UI_MODEL.provider);
+      await expect(localRow(UI_MODEL.name)).toBeExisting();
+      await closeDialogs();
+
+      await setLocalModelsEnabled(true);
+      await openPicker(UI_MODEL.provider);
+      await expect(localRow(UI_MODEL.name)).toBeExisting();
+      await closeDialogs();
+      await setLocalModelsEnabled(false);
+    });
+
+    it('odm-08: picking an on-device model turns Local Models on and sets Ollama up for its pull', async () => {
+      await setLocalModelsEnabled(false);
+      await openPicker(UI_MODEL.provider);
+      expect(await rowStatus(UI_MODEL.name)).toBe('not-installed');
+      await localRow(UI_MODEL.name).click();
+
+      // The flag flips on the pick itself, not once the pull lands: the badge,
+      // the Advanced switch and chat routing follow it.
+      await browser.waitUntil(
+        async () => (await localModelsEnabled()) === 'true',
+        {
+          timeout: 10_000,
+          timeoutMsg:
+            'picking an on-device model left Local Models off (ibl_local_llm_enabled is not "true")',
+        },
+      );
+      expect(await badgeText()).toContain(UI_MODEL.name);
+      expect(await advancedSwitchChecked()).toBe('true');
+      await closeDialogs();
+
+      // The setup the toggle stands for: the manager answers and the pull runs.
+      await waitForOllama(120_000);
+      await openPicker(UI_MODEL.provider);
+      await browser.waitUntil(liveOrThrow, {
+        timeout: 60_000,
+        timeoutMsg: `the ${UI_MODEL.name} row never started downloading`,
+      });
+    });
+
+    it('odm-04: picking another on-device model mid-pull shows the "already downloading" notice', async function () {
+      await openPicker(UI_MODEL.provider);
+      const status = await rowStatus(UI_MODEL.name);
+      if (status !== 'starting' && status !== 'downloading') {
+        console.log(
+          `[e2e] odm-04 skipped: no ${UI_MODEL.name} pull in flight (${status})`,
+        );
+        return this.skip();
+      }
+
+      await openPicker(OTHER_MODEL.provider);
+      await localRow(OTHER_MODEL.name).click();
+      const notice = $('[role="alertdialog"]');
+      await notice.waitForExist({
+        timeout: 10_000,
+        timeoutMsg: 'no "already downloading" notice came up',
+      });
+      const text = await notice.getText();
+      expect(text).toContain('A model is already downloading');
+      expect(text).toContain(UI_MODEL.name);
+      await $(
+        '//*[@role="alertdialog"]//button[normalize-space(.)="Got It"]',
+      ).click();
+      await notice.waitForExist({ reverse: true, timeout: 5_000 });
+      expect(await rowStatus(OTHER_MODEL.name)).toBe('not-installed');
+      await closeDialogs();
+    });
+
+    it('odm-06: selecting the installed model marks it in use and the nav-bar badge shows it', async function () {
+      await openPicker(UI_MODEL.provider);
+      if (!live.includes((await rowStatus(UI_MODEL.name)) ?? '')) {
+        console.log(
+          `[e2e] odm-06 skipped: ${UI_MODEL.name} never started installing`,
+        );
+        return this.skip();
+      }
+      await browser.waitUntil(
+        async () =>
+          (await liveOrThrow()) &&
+          ['installed', 'selected'].includes(
+            (await rowStatus(UI_MODEL.name)) ?? '',
+          ),
+        {
+          timeout: 600_000,
+          interval: 5_000,
+          timeoutMsg: `the ${UI_MODEL.name} pull never finished`,
+        },
+      );
+
+      if ((await rowStatus(UI_MODEL.name)) !== 'selected') {
+        await localRow(UI_MODEL.name).click();
+      }
+      await browser.waitUntil(
+        async () => (await rowStatus(UI_MODEL.name)) === 'selected',
+        {
+          timeout: 10_000,
+          timeoutMsg: 'the installed row never became the selected one',
+        },
+      );
+      expect(await localModelsEnabled()).toBe('true');
+      await closeDialogs();
+      expect(await badgeText()).toContain(UI_MODEL.name);
+    });
   });
 
   // Pending: needs a harness that occupies 8000/3457 BEFORE launching the

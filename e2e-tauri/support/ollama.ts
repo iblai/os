@@ -55,9 +55,9 @@ export const OLLAMA_CLI =
     '/Applications/Ollama.app/Contents/Resources/ollama',
   ].find(existsSync) ?? 'ollama';
 
-/** Remove the test model host-side so the next pull is real, not a fake-complete. */
-export function removeTestModel(): void {
-  spawnSync(OLLAMA_CLI, ['rm', TEST_MODEL], { stdio: 'ignore' });
+/** Remove a model host-side so the next pull is real, not a fake-complete. */
+export function removeTestModel(model = TEST_MODEL): void {
+  spawnSync(OLLAMA_CLI, ['rm', model], { stdio: 'ignore' });
 }
 
 /** Invoke a Tauri command in the WebView and bring back its result. */
