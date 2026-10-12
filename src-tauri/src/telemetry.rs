@@ -77,6 +77,7 @@ pub fn init() -> Option<ClientInitGuard> {
     if opted_out() {
         return None;
     }
+    install_crypto_provider();
     let guard = sentry::init((dsn()?, options()));
 
     sentry::configure_scope(|scope| {
@@ -96,6 +97,24 @@ pub fn init() -> Option<ClientInitGuard> {
         }
     });
     Some(guard)
+}
+
+/// Install the process-wide rustls crypto provider, BEFORE `sentry::init`.
+///
+/// Not optional. sentry's transport is reqwest 0.13, built eagerly inside
+/// `sentry::init`, and it resolves its provider as "whatever is installed
+/// process-wide, else our compiled-in default" — where that default is a bare
+/// `panic!` under the `rustls-no-provider` feature this crate uses. Nothing
+/// else in this process installs one (the app's own reqwest 0.12 only reads
+/// the default, it never sets it), so without this call `init` would crash the
+/// app at launch: the very failure mode `dsn()` is hardened against, arriving
+/// by another door. `cargo test` never builds a transport, so no unit test
+/// would have caught it either — hence the explicit client build in the tests.
+///
+/// `install_default` errs only when a provider is already installed, which is
+/// a perfectly good outcome.
+fn install_crypto_provider() {
+    let _ = rustls::crypto::ring::default_provider().install_default();
 }
 
 /// `ClientOptions` is `#[non_exhaustive]`, so these are assigned rather than
@@ -832,6 +851,27 @@ mod tests {
             "an event captured on another thread must still carry the tenant"
         );
         *TENANT.lock().unwrap() = None;
+    }
+
+    /// `init` must be able to BUILD its transport, not merely be constructed.
+    /// sentry's reqwest 0.13 client is created eagerly inside `sentry::init`
+    /// and panics if no crypto provider is installed — and because this crate
+    /// uses `rustls-no-provider`, the compiled-in fallback IS that panic. No
+    /// other test here builds a client, so nothing else would notice.
+    ///
+    /// The DSN points at a port nothing listens on: the client is constructed
+    /// and the transport spawned, but no event can reach a real project.
+    #[test]
+    fn init_can_actually_build_its_transport() {
+        let _g = env_lock();
+        let restore = Restore::of(&[DSN_VAR, "IBL_SENTRY_DEBUG", "IBL_TELEMETRY"]);
+        std::env::set_var("IBL_SENTRY_DEBUG", "1");
+        std::env::remove_var("IBL_TELEMETRY");
+        std::env::set_var(DSN_VAR, "https://abc@127.0.0.1:1/1");
+        let guard = init().expect("a valid DSN in a debug build that asked");
+        assert!(guard.is_enabled(), "the client must be live, not a no-op");
+        drop(guard);
+        drop(restore);
     }
 
     /// Reporting must survive being called before (or without) `init`, since
