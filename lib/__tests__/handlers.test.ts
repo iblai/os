@@ -239,6 +239,21 @@ describe('useIframeHandlers', () => {
       expect(styleElements[1].innerText).toBe(css2);
     });
 
+    it('should not re-inject a stylesheet it already has', () => {
+      const { result } = renderHook(() => useIframeHandlers());
+      const css = 'body { background: red; }';
+
+      // Hosts push the same sheet on a burst because an early push can be
+      // lost; each repeat used to leave another copy in the head.
+      for (let i = 0; i < 5; i++) {
+        result.current['MENTOR:CSS_INJECT'](undefined, {
+          data: { css },
+        } as MessageEvent);
+      }
+
+      expect(document.head.querySelectorAll('style').length).toBe(1);
+    });
+
     it('should handle empty CSS string', () => {
       const { result } = renderHook(() => useIframeHandlers());
 

@@ -759,7 +759,7 @@ pub async fn remote_code_enable(
                 return;
             };
             if let Err(e) = axum::serve(listener, companion_router).await {
-                eprintln!("[RemoteCode] companion exited: {e}");
+                crate::telemetry::report("[RemoteCode] companion exited", e);
             }
         });
         let child = Command::new(opencode_program())

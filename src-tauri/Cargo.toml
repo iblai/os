@@ -35,6 +35,21 @@ tokio-stream = "0.1"
 tower-http = { version = "0.6", features = ["cors", "fs"] }
 mime_guess = "2.0"
 base64 = "0.22"
+# Rust-side error reporting (see src/telemetry.rs). `default-features = false`
+# is load-bearing: the default `transport` feature pulls native-tls, which
+# would link a second TLS stack next to the rustls-only reqwest above — this
+# way rustls stays single in the graph. It does NOT avoid a second reqwest:
+# sentry needs 0.13 and the app is on 0.12, so both are built (they share
+# rustls and hyper 1.x). Accepted over moving the app's HTTP to 0.13.
+# No `logs`/`metrics`/`release-health` — errors and panics only.
+sentry = { version = "0.49", default-features = false, features = [
+    "backtrace",
+    "contexts",
+    "debug-images",
+    "panic",
+    "reqwest",
+    "rustls",
+] }
 tauri-plugin-os = "2.3.2"
 tauri-plugin-dialog = "2"
 # All local interface addresses — the phone-pairing address list must prefer
@@ -81,6 +96,9 @@ tauri-plugin-macos-permissions = "2.3.0"
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
+# Reads the shipped version out of tauri.conf.json for the Sentry release tag;
+# already in the graph via tauri-build, so this adds no download.
+serde_json = "1.0"
 
 [patch.crates-io]
 glib = { git = "https://github.com/gtk-rs/gtk-rs-core.git", package = "glib", tag = "0.20.0"}
