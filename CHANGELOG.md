@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.169.0](https://github.com/iblai/os/compare/v0.168.1...v0.169.0) (2026-10-13)
+
+### Features
+
+* **mentor:** use the SDK draggable accessibility button ([7701ac3](https://github.com/iblai/os/commit/7701ac367c647a53bb6040e5b52952e0bf8a9c50)), closes [iblai/iblai-platform#2611](https://github.com/iblai/iblai-platform/issues/2611)
+
+### Bug Fixes
+
+* **deps:** override handlebars to 4.7.10 for the audit gate ([7f4bf53](https://github.com/iblai/os/commit/7f4bf53a50c3205f4112740e9ab035211ebf0ca5))
+* **deps:** override vulnerable transitive packages for the audit gate ([07deefc](https://github.com/iblai/os/commit/07deefc0b69af790c969052df3daf2014af71a11))
+* **mentor:** key the sidebar's pinned list cache by org and user only ([93968bf](https://github.com/iblai/os/commit/93968bff65b57ff02d7da79d064e7e077a631275)), closes [iblai/iblai-platform#2611](https://github.com/iblai/iblai-platform/issues/2611)
+
+### Chores
+
+* **deps:** bump @iblai/iblai-js to 2.31.0 ([40f2fa5](https://github.com/iblai/os/commit/40f2fa5c827914c0b4bda6e089c8946ade4b74d9)), closes [#2611](https://github.com/iblai/os/issues/2611)
+
+### Tests
+
+* **e2e:** add journey 83 for the draggable accessibility button ([c7009a8](https://github.com/iblai/os/commit/c7009a8ac33b26a04839733abe62ca7eb02f68aa)), closes [iblai/iblai-platform#2611](https://github.com/iblai/iblai-platform/issues/2611)
+* **tts:** expect the trailing slash on the chat-message TTS endpoint ([a303818](https://github.com/iblai/os/commit/a303818e7f5d42def908f6599198012487cc48ad))
+
 ## [0.168.1](https://github.com/iblai/os/compare/v0.168.0...v0.168.1) (2026-10-13)
 
 ### Chores
