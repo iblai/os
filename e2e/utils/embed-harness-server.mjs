@@ -41,8 +41,11 @@
  * issue #2590's origin-allowlist work can reuse it unchanged.
  */
 import http from 'node:http';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const PORT = 4599;
+const PORT = Number(process.env.EMBED_HARNESS_PORT) || 4599;
 const HOST = '127.0.0.1';
 
 const HTML = `<!doctype html>
@@ -68,6 +71,44 @@ const HTML = `<!doctype html>
     </script>
   </body>
 </html>`;
+
+/**
+ * `/agent-ai` (issue #2680): a customer page that loads the VENDORED
+ * `<agent-ai>` web component bundle (`@iblai/agent-ai`, shipped inside the
+ * Chrome extension) and renders its launcher against the app under test.
+ * Query params become the element's attributes: `mentorurl`, `tenant`,
+ * `mentor`; `authrelyonhost=1` makes the element take its session from the
+ * host page's localStorage instead of redirecting to the login page. The bundle is served from `/vendor/agent-ai.umd.js`, read
+ * straight from the extension folder so the test exercises what ships.
+ */
+export const AGENT_AI_BUNDLE = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  '../../extensions/chrome/public/vendor/agent-ai.umd.js',
+);
+
+function agentAiPageHtml() {
+  return `<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Customer Page (agent-ai launcher)</title>
+  </head>
+  <body style="margin:0;font-family:sans-serif">
+    <main style="padding:24px"><h1>Acme Customer Site</h1></main>
+    <script src="/vendor/agent-ai.umd.js"></script>
+    <script>
+      var params = new URLSearchParams(window.location.search);
+      var el = document.createElement('agent-ai');
+      el.style.cssText = 'display:block;width:100vw;height:80vh';
+      ['mentorurl', 'tenant', 'mentor'].forEach(function (k) {
+        if (params.get(k)) el.setAttribute(k, params.get(k));
+      });
+      if (params.get('authrelyonhost')) el.setAttribute('authrelyonhost', '');
+      document.body.appendChild(el);
+    </script>
+  </body>
+</html>`;
+}
 
 /** In-memory store for POSTed real-snippet payloads. Never persisted. */
 const snippetStore = new Map();
@@ -133,6 +174,23 @@ export function startEmbedHarnessServer() {
             '<p data-testid="real-snippet-missing">No snippet registered for this id.</p>',
         ),
       );
+      return;
+    }
+
+    if (url.pathname === '/vendor/agent-ai.umd.js') {
+      if (!fs.existsSync(AGENT_AI_BUNDLE)) {
+        res.writeHead(404);
+        res.end('agent-ai bundle not found');
+        return;
+      }
+      res.writeHead(200, { 'Content-Type': 'text/javascript; charset=utf-8' });
+      res.end(fs.readFileSync(AGENT_AI_BUNDLE));
+      return;
+    }
+
+    if (url.pathname === '/agent-ai') {
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.end(agentAiPageHtml());
       return;
     }
 
