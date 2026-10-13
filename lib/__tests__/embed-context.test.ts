@@ -113,6 +113,19 @@ describe('surviving a hard navigation that wipes the query (the bug)', () => {
   });
 });
 
+describe('host display flags survive navigation', () => {
+  it('carries allow-fullscreen through a hard navigation', () => {
+    framed();
+    setUrl('/platform/acme/bot-1?embed=true&allow-fullscreen=true');
+    persistEmbedContextFromUrl();
+    setUrl('/');
+    expect(getEmbedContext()?.['allow-fullscreen']).toBe('true');
+    expect(appendEmbedContext('/platform/acme/bot-2')).toBe(
+      '/platform/acme/bot-2?embed=true&allow-fullscreen=true',
+    );
+  });
+});
+
 describe('appendEmbedContext', () => {
   beforeEach(() => setUrl(EMBED_URL));
 
@@ -142,6 +155,12 @@ describe('appendEmbedContext', () => {
 });
 
 describe('resilience', () => {
+  it('returns nothing when framed with an empty store', () => {
+    framed();
+    setUrl('/');
+    expect(getEmbedContext()).toBeNull();
+  });
+
   it('ignores a stored copy whose embed flag is not "true"', () => {
     framed();
     setUrl('/');

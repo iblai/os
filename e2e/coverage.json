@@ -2,14 +2,14 @@
   "version": 2,
   "lastUpdated": "2026-10-13",
   "summary": {
-    "totalCheckpoints": 922,
-    "coveredCheckpoints": 878,
+    "totalCheckpoints": 935,
+    "coveredCheckpoints": 891,
     "deprecatedCheckpoints": 17,
     "notReproducibleCheckpoints": 17,
     "pendingCheckpoints": 10,
     "percent": 100,
-    "totalJourneys": 93,
-    "activeJourneys": 92
+    "totalJourneys": 94,
+    "activeJourneys": 93
   },
   "journeys": [
     {
@@ -933,6 +933,26 @@
         {
           "id": "emb-18",
           "description": "Issue #2476 regression guard: saving the Embed tab's own form does not overwrite mentor_visibility set via Settings -> Discovery — the two tabs used to write the same backend field from independent forms, so an Embed save could silently revert a Settings change",
+          "status": "covered"
+        },
+        {
+          "id": "emb-19",
+          "description": "Issue #2665: Embed tab Allow Full Screen switch is present and off by default; Create Embed adds `allow-fullscreen=true` plus the host handler only when it is on, and leaves the snippet unchanged when off",
+          "status": "covered"
+        },
+        {
+          "id": "emb-20",
+          "description": "Issue #2665: inside an iframe host built from the real generated snippet, the embedded chat's maximize button makes the host widget fill the window and hides the bubble; a second click restores the small widget and bubble",
+          "status": "covered"
+        },
+        {
+          "id": "emb-21",
+          "description": "Issue #2665: closing the embedded chat while full screen restores normal size, so it reopens small with the button back to 'Full screen'",
+          "status": "covered"
+        },
+        {
+          "id": "emb-22",
+          "description": "Issue #2665: an embedded chat generated without allow-fullscreen renders no full screen button",
           "status": "covered"
         }
       ]
@@ -5798,9 +5818,84 @@
       ]
     },
     {
+      "id": "accessibility-fab-draggable",
+      "name": "Draggable Accessibility Button",
+      "spec": "86-accessibility-fab-draggable.spec.ts",
+      "sourceFiles": [
+        "app/platform/[tenantKey]/[mentorId]/_components/accessibility-fab/index.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "fab-01",
+          "description": "User clicks the accessibility button to open the menu; a drag past 5px does not open it; a click right after a drag still opens it",
+          "status": "covered"
+        },
+        {
+          "id": "fab-02",
+          "description": "Mouse drag left of centre snaps the button to the left edge and right of centre to the right edge, keeping its vertical position; the spot persists across reload (localStorage accessibility-fab-position:v2)",
+          "status": "covered"
+        },
+        {
+          "id": "fab-03",
+          "description": "Regression: during a mouse drag no dragstart/dragenter/dragover events fire and the chat file-drop overlay never appears (native <img> drag used to fire pointercancel and trigger the drop zone)",
+          "status": "covered"
+        },
+        {
+          "id": "fab-04",
+          "description": "Keyboard: ArrowUp/ArrowDown move the focused button 16px (Shift 64px), ArrowLeft/ArrowRight switch sides, and the live region announces 'Accessibility button moved to the {side} edge, N pixels from the bottom.'",
+          "status": "covered"
+        },
+        {
+          "id": "fab-05",
+          "description": "With normal motion the inline transition contains cubic-bezier(0.34, 1.56, 0.64, 1) after release and is empty mid-drag",
+          "status": "covered"
+        },
+        {
+          "id": "fab-06",
+          "description": "Button stays on screen on its side after the viewport shrinks and returns to its stored spot when it grows back",
+          "status": "covered"
+        },
+        {
+          "id": "fab-07",
+          "description": "An off-screen stored position is pulled back on screen on load",
+          "status": "covered"
+        },
+        {
+          "id": "fab-08",
+          "description": "Move-to-corner buttons in the menu place the button in each of the four corners (8px margin) and announce the move",
+          "status": "covered"
+        },
+        {
+          "id": "fab-09",
+          "description": "Reset Button Position is hidden until the button has been moved, and clicking it restores the default spot and clears storage",
+          "status": "covered"
+        },
+        {
+          "id": "fab-10",
+          "description": "Reset All Accessibility Settings also clears the stored button position",
+          "status": "covered"
+        },
+        {
+          "id": "fab-11",
+          "description": "Mobile (390x844, touch): tap opens the menu; a touch drag does not open it and a following tap does",
+          "status": "covered"
+        },
+        {
+          "id": "fab-12",
+          "description": "Mobile (touch, CDP): touch drag snaps to the nearest edge, keeps height, and persists across reload",
+          "status": "covered"
+        },
+        {
+          "id": "fab-13",
+          "description": "Mobile: default button position does not overlap the composer Send button",
+          "status": "covered"
+        }
+      ]
+    },
+    {
       "id": "agent-ai-launcher-chat-download",
       "name": "agent-ai Launcher Chat Download",
-      "spec": "86-agent-ai-launcher-chat-download.spec.ts",
+      "spec": "87-agent-ai-launcher-chat-download.spec.ts",
       "sourceFiles": [
         "extensions/chrome/public/vendor/agent-ai.umd.js",
         "extensions/chrome/public/manifest.json",

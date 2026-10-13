@@ -5,7 +5,7 @@ import type { ChatPage } from '../page-objects/chat.page';
 import { EMBED_HARNESS_URL, MENTOR_NEXTJS_HOST } from '../fixtures/test-data';
 
 /**
- * Journey 86: `<agent-ai>` launcher — chat export (iblai-platform#2680)
+ * Journey 87: `<agent-ai>` launcher — chat export (iblai-platform#2680)
  *
  * Chrome silently blocks a download (no error, no console message) started
  * from a sandboxed iframe whose `sandbox` lacks `allow-downloads`. The
@@ -107,7 +107,7 @@ async function chatAndOpenDownloadDialog(
   return frame;
 }
 
-test.describe('Journey 86: agent-ai launcher chat download', () => {
+test.describe('Journey 87: agent-ai launcher chat download', () => {
   test.beforeEach(async ({ page }) => {
     await navigateToMentorApp(page);
   });

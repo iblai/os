@@ -1,4 +1,6 @@
 import type { Page } from '@playwright/test';
+import http from 'http';
+import type { AddressInfo } from 'net';
 import path from 'path';
 import { test, expect } from '../fixtures/mentor-test';
 import {
@@ -1089,6 +1091,207 @@ test.describe('Journey 13: Shareable Links & Embed Integration', () => {
         { timeout: 15_000 },
       );
       await editMentorPage.close();
+    });
+  });
+
+  // emb-19..emb-22: Allow Full Screen (issue #2665). The switch is URL-only
+  // (never saved); it adds `allow-fullscreen=true` to the generated iframe URL
+  // and, when on, a host-side `embedFullscreen` handler that the embed nav
+  // bar's maximize button drives via postMessage. The host is built from the
+  // REAL generated snippet, served from a fake origin so the chat really loads
+  // cross-origin inside an iframe (the only place the button renders).
+  test.describe('Embed Allow Full Screen (issue #2665)', () => {
+    const fullscreenTracker = new MentorTracker();
+    test.afterAll(async ({ browser }, testInfo) => {
+      await fullscreenTracker.deleteAll(browser, testInfo);
+    });
+
+    test.beforeEach(async ({ page, createMentorPage, editMentorPage }) => {
+      test.setTimeout(240_000);
+      await createMentorPage.openAndCreate(`E2E Fullscreen ${Date.now()}`);
+      const { mentorId } = await getPlatformContext(page);
+      fullscreenTracker.add(mentorId);
+
+      // Anonymous so "Create Embed" passes the Website URL gate.
+      await editMentorPage.open('Settings');
+      await waitForPageReady(page);
+      await editMentorPage.settings.setVisibilityAnyone();
+      await editMentorPage.settings.setChatAccessAnyone();
+      const saveBtn = editMentorPage.dialog
+        .getByRole('button', { name: /save/i })
+        .first();
+      await expect(saveBtn).toBeEnabled({ timeout: 5_000 });
+      // The save can take 10s+ on staging. Until it lands, the Embed tab still
+      // sees a private agent and Create Embed fails the Website URL check.
+      const saved = page.waitForResponse(
+        (res) =>
+          res.request().method() === 'PUT' &&
+          /\/settings\/?$/.test(new URL(res.url()).pathname) &&
+          res.ok(),
+        { timeout: 60_000 },
+      );
+      await saveBtn.click();
+      await saved;
+      await editMentorPage.close();
+    });
+
+    async function generateCode(
+      editMentorPage: EditMentorPage,
+      allowFullscreen: boolean,
+    ): Promise<string> {
+      await editMentorPage.open('Embed');
+      await editMentorPage.embed.setAllowFullscreen(allowFullscreen);
+      const code = await editMentorPage.embed.createEmbedAndReadCode();
+      await editMentorPage.close();
+      return code;
+    }
+
+    let hostServer: http.Server | undefined;
+
+    test.afterEach(async () => {
+      await new Promise<void>((resolve) =>
+        hostServer ? hostServer.close(() => resolve()) : resolve(),
+      );
+      hostServer = undefined;
+    });
+
+    /**
+     * Serves the real snippet from a real loopback server (a routed or
+     * public-looking origin is blocked by Chrome's private-network-access
+     * check when framing the local app), iframe pointed at the local app.
+     */
+    async function openHost(page: Page, code: string): Promise<void> {
+      const localCode = code.replace(
+        /iframe\.src = '[^']*?(\/platform\/[^']*)'/,
+        `iframe.src = '${MENTOR_NEXTJS_HOST}$1'`,
+      );
+      expect(localCode).toContain(
+        `iframe.src = '${MENTOR_NEXTJS_HOST}/platform/`,
+      );
+      const html = `<!doctype html><html><head><title>Host</title></head><body><h1>Host page</h1>${localCode}</body></html>`;
+      hostServer = http.createServer((_req, res) => {
+        res.setHeader('Content-Type', 'text/html');
+        res.end(html);
+      });
+      await new Promise<void>((resolve) =>
+        hostServer!.listen(0, '127.0.0.1', resolve),
+      );
+      const { port } = hostServer.address() as AddressInfo;
+      await page.setViewportSize({ width: 1440, height: 900 });
+      await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: 'load' });
+    }
+
+    const widgetOf = (page: Page) => page.locator('#ibl-chat-widget-container');
+    const bubbleOf = (page: Page) => page.locator('.ibl-chat-bubble');
+
+    // emb-19: the toggle is present, off by default, and drives the URL param.
+    test('admin toggles Allow Full Screen in the embed tab and the generated code carries allow-fullscreen only when on', async ({
+      editMentorPage,
+    }) => {
+      await editMentorPage.open('Embed');
+      await expect(editMentorPage.embed.allowFullscreenToggle).toBeVisible({
+        timeout: 15_000,
+      });
+      await expect(editMentorPage.embed.allowFullscreenToggle).toHaveAttribute(
+        'aria-checked',
+        'false',
+      );
+      await expect(
+        editMentorPage.embed.allowFullscreenToggle,
+      ).toHaveAccessibleName(/full screen disabled/i);
+
+      const offCode = await editMentorPage.embed.createEmbedAndReadCode();
+      expect(offCode).not.toContain('allow-fullscreen');
+      expect(offCode).not.toContain('setWidgetFullscreen');
+      expect(offCode).not.toContain('embedFullscreen');
+
+      await editMentorPage.embed.setAllowFullscreen(true);
+      await expect(
+        editMentorPage.embed.allowFullscreenToggle,
+      ).toHaveAccessibleName(/full screen enabled/i);
+      const onCode = await editMentorPage.embed.createEmbedAndReadCode();
+      expect(onCode).toMatch(/iframe\.src = '[^']*&allow-fullscreen=true'/);
+      expect(onCode).toContain('setWidgetFullscreen');
+      expect(onCode).toContain('embedFullscreen');
+      await editMentorPage.close();
+    });
+
+    // emb-20/21: inside a real iframe host with the flag, the maximize button
+    // fills the host window, hides the bubble, restores on second click, and a
+    // close while full screen reopens at normal size.
+    test('embedded chat with allow-fullscreen goes full window, back to small, and reopens small after close', async ({
+      page,
+      editMentorPage,
+    }) => {
+      const code = await generateCode(editMentorPage, true);
+      await openHost(page, code);
+
+      await bubbleOf(page).click();
+      await expect(widgetOf(page)).toBeVisible({ timeout: 15_000 });
+      const normalBox = await widgetOf(page).boundingBox();
+      expect(normalBox).not.toBeNull();
+      expect(normalBox!.width).toBeLessThan(1440);
+
+      const chat = page.frameLocator('#ibl-chat-widget-container iframe');
+      const toggle = chat.getByTestId('embed-fullscreen-toggle');
+      await expect(toggle).toBeVisible({ timeout: 60_000 });
+      await expect(toggle).toHaveAccessibleName('Full screen');
+
+      // The extra header button must not push Close out of the 400px widget.
+      const closeBox = await chat
+        .getByRole('button', { name: /close chat/i })
+        .boundingBox();
+      expect(closeBox!.x + closeBox!.width).toBeLessThanOrEqual(
+        normalBox!.x + normalBox!.width,
+      );
+
+      await toggle.click();
+      await expect(toggle).toHaveAccessibleName('Exit full screen');
+      await expect
+        .poll(async () => widgetOf(page).boundingBox(), { timeout: 10_000 })
+        .toMatchObject({ x: 0, y: 0, width: 1440, height: 900 });
+      await expect(bubbleOf(page)).toBeHidden();
+
+      await toggle.click();
+      await expect(toggle).toHaveAccessibleName('Full screen');
+      await expect
+        .poll(async () => (await widgetOf(page).boundingBox())?.width, {
+          timeout: 10_000,
+        })
+        .toBe(normalBox!.width);
+      await expect(bubbleOf(page)).toBeVisible();
+
+      // Close while full screen -> reopens small.
+      await toggle.click();
+      await expect
+        .poll(async () => (await widgetOf(page).boundingBox())?.width)
+        .toBe(1440);
+      await chat.getByRole('button', { name: /close chat/i }).click();
+      await expect(widgetOf(page)).toBeHidden();
+      await expect(bubbleOf(page)).toBeVisible();
+      await bubbleOf(page).click();
+      await expect(widgetOf(page)).toBeVisible();
+      expect((await widgetOf(page).boundingBox())!.width).toBe(
+        normalBox!.width,
+      );
+      await expect(toggle).toHaveAccessibleName('Full screen');
+    });
+
+    // emb-22: without the flag the embedded chat has no full screen button.
+    test('embedded chat without allow-fullscreen has no full screen button', async ({
+      page,
+      editMentorPage,
+    }) => {
+      const code = await generateCode(editMentorPage, false);
+      await openHost(page, code);
+
+      await bubbleOf(page).click();
+      await expect(widgetOf(page)).toBeVisible({ timeout: 15_000 });
+      const chat = page.frameLocator('#ibl-chat-widget-container iframe');
+      await expect(
+        chat.getByRole('button', { name: /close chat/i }),
+      ).toBeVisible({ timeout: 60_000 });
+      await expect(chat.getByTestId('embed-fullscreen-toggle')).toHaveCount(0);
     });
   });
 

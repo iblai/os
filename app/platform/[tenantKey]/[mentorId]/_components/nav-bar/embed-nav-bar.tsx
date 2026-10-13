@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
 
 import { useTranslations } from 'next-intl';
@@ -7,7 +7,9 @@ import {
   BadgeHelp,
   CircleHelp,
   Glasses,
+  Maximize2,
   Menu,
+  Minimize2,
   ShieldQuestion,
   SquarePen,
   X,
@@ -35,6 +37,7 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { useShowCloseButton } from '@/hooks/use-show-close-button';
+import { useAllowFullscreen } from '@/hooks/use-allow-fullscreen';
 import { useIsLtiLaunch } from '@/hooks/use-is-lti-launch';
 import { useShowUserProfile } from '@/hooks/use-show-user-profile';
 import { useHelpCenter } from '@/hooks/use-help-center';
@@ -75,6 +78,8 @@ export function EmbedNavBar({
   const isLtiLaunch = useIsLtiLaunch();
   const showCloseButton = useShowCloseButton() && !isLtiLaunch;
   const showUserProfile = useShowUserProfile();
+  const allowFullscreen = useAllowFullscreen();
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const dispatch = useAppDispatch();
   const pathname = usePathname();
   const isWorkflowsPage = /\/workflows\/[^/]+\/?$/.test(pathname ?? '');
@@ -98,6 +103,8 @@ export function EmbedNavBar({
   const hasMessages = messageCount > 0;
 
   function notifyParentOnEmbedClose() {
+    // The host restores normal size when the widget closes, so it reopens small.
+    setIsFullscreen(false);
     window.parent?.postMessage(
       {
         closeEmbed: true,
@@ -105,6 +112,12 @@ export function EmbedNavBar({
       },
       '*',
     );
+  }
+
+  function toggleFullscreen() {
+    const next = !isFullscreen;
+    setIsFullscreen(next);
+    window.parent?.postMessage({ embedFullscreen: next }, '*');
   }
 
   useEffect(() => {
@@ -334,6 +347,24 @@ export function EmbedNavBar({
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
+
+          {isIframed && allowFullscreen && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className={iconButtonClass}
+              aria-label={
+                isFullscreen ? t('exitFullscreen') : t('enterFullscreen')
+              }
+              data-testid="embed-fullscreen-toggle"
+              onClick={() => {
+                if (isPreviewMode) return;
+                toggleFullscreen();
+              }}
+            >
+              {isFullscreen ? <Minimize2 /> : <Maximize2 />}
+            </Button>
+          )}
 
           {isIframed && showCloseButton && (
             <Button

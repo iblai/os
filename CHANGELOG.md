@@ -1,5 +1,48 @@
 # Changelog
 
+## [0.169.0](https://github.com/iblai/os/compare/v0.168.1...v0.169.0) (2026-10-13)
+
+### Features
+
+- **mentor:** use the SDK draggable accessibility button ([7701ac3](https://github.com/iblai/os/commit/7701ac367c647a53bb6040e5b52952e0bf8a9c50)), closes [iblai/iblai-platform#2611](https://github.com/iblai/iblai-platform/issues/2611)
+
+### Bug Fixes
+
+- **deps:** override handlebars to 4.7.10 for the audit gate ([7f4bf53](https://github.com/iblai/os/commit/7f4bf53a50c3205f4112740e9ab035211ebf0ca5))
+- **deps:** override vulnerable transitive packages for the audit gate ([07deefc](https://github.com/iblai/os/commit/07deefc0b69af790c969052df3daf2014af71a11))
+- **mentor:** key the sidebar's pinned list cache by org and user only ([93968bf](https://github.com/iblai/os/commit/93968bff65b57ff02d7da79d064e7e077a631275)), closes [iblai/iblai-platform#2611](https://github.com/iblai/iblai-platform/issues/2611)
+
+### Chores
+
+- **deps:** bump @iblai/iblai-js to 2.31.0 ([40f2fa5](https://github.com/iblai/os/commit/40f2fa5c827914c0b4bda6e089c8946ade4b74d9)), closes [#2611](https://github.com/iblai/os/issues/2611)
+
+### Tests
+
+- **e2e:** add journey 83 for the draggable accessibility button ([c7009a8](https://github.com/iblai/os/commit/c7009a8ac33b26a04839733abe62ca7eb02f68aa)), closes [iblai/iblai-platform#2611](https://github.com/iblai/iblai-platform/issues/2611)
+- **tts:** expect the trailing slash on the chat-message TTS endpoint ([a303818](https://github.com/iblai/os/commit/a303818e7f5d42def908f6599198012487cc48ad))
+
+## [0.168.1](https://github.com/iblai/os/compare/v0.168.0...v0.168.1) (2026-10-13)
+
+### Chores
+
+- **ext:** bump Chrome extension to 1.1.5 ([1ba663c](https://github.com/iblai/os/commit/1ba663c16b10b37709fd42d01935647cb882fd0d)), closes [#574](https://github.com/iblai/os/issues/574)
+
+## [0.168.0](https://github.com/iblai/os/compare/v0.167.1...v0.168.0) (2026-10-13)
+
+### Features
+
+- **embed:** add a full screen button to the embed nav bar ([ce86fd4](https://github.com/iblai/os/commit/ce86fd4d8f6a112ef99453c0ffc20d084299aae2))
+- **embed:** add allow-fullscreen URL flag ([eb01159](https://github.com/iblai/os/commit/eb0115953826288c0cfaa0991ada89de964af14f))
+- **embed:** add the allow full screen toggle to the embed tab ([2e34b0c](https://github.com/iblai/os/commit/2e34b0c8411052f72bfd9c3905457d9fc49a67ff))
+
+### Tests
+
+- **e2e:** cover the embed allow full screen flow ([dc34afb](https://github.com/iblai/os/commit/dc34afb46f79e15ee21279bbb14a6bbbe6412b79))
+- **e2e:** give cp-chat-04 a 60s wait for guided prompts ([c51cf90](https://github.com/iblai/os/commit/c51cf901c413502ff89ec5528e94c18c37cd8c5e))
+- **e2e:** wait for the settings save before generating embed code ([10bb9a8](https://github.com/iblai/os/commit/10bb9a852569371f29072c9d550c7fb20e57762c))
+- **embed:** give the [#2592](https://github.com/iblai/os/issues/2592) hydration setup a 30s hook timeout ([1f09064](https://github.com/iblai/os/commit/1f09064575313da0d70db938d29ad435e6a992db))
+- **embed:** run the snippet tests on fake timers ([04f46b0](https://github.com/iblai/os/commit/04f46b0d31d7735da152c097b5fa3523576d76d8))
+
 ## [0.167.1](https://github.com/iblai/os/compare/v0.167.0...v0.167.1) (2026-10-12)
 
 ### Bug Fixes
