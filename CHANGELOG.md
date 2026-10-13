@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.168.1](https://github.com/iblai/os/compare/v0.168.0...v0.168.1) (2026-10-13)
+
+### Chores
+
+* **ext:** bump Chrome extension to 1.1.5 ([1ba663c](https://github.com/iblai/os/commit/1ba663c16b10b37709fd42d01935647cb882fd0d)), closes [#574](https://github.com/iblai/os/issues/574)
+
 ## [0.168.0](https://github.com/iblai/os/compare/v0.167.1...v0.168.0) (2026-10-13)
 
 ### Features
