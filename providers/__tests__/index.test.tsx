@@ -765,12 +765,25 @@ describe('Providers', () => {
       expect(capturedIframeMessageHandler.defaultHandler).toBeDefined();
     });
 
-    it('default handler saves user data and reloads when axd_token present', () => {
+    it('default handler saves user data and re-hydrates in place (no reload) when axd_token present', () => {
+      const reloadSpy = vi.fn();
+      const originalLocation = window.location;
+      Object.defineProperty(window, 'location', {
+        configurable: true,
+        value: { ...originalLocation, reload: reloadSpy },
+      });
       // Queue a message with axd_token to be processed by the defaultHandler during render
       pendingIframeMessages = [{ axd_token: 'test-token' }];
       renderProviders();
       expect(mockSaveUserObjectToLocalStorage).toHaveBeenCalledWith({
         axd_token: 'test-token',
+      });
+      // Saving dispatches `local-storage` events that flip the reactive auth
+      // hooks, so the AuthProvider re-renders authenticated without a full reload.
+      expect(reloadSpy).not.toHaveBeenCalled();
+      Object.defineProperty(window, 'location', {
+        configurable: true,
+        value: originalLocation,
       });
     });
 
