@@ -80,3 +80,6 @@ test.describe('Journey 33: UI Render Console Errors', () => {
     }
   });
 });
+
+// Smoke-test marker for the central PR-e2e pipeline (iblai/iblai-deploy-ops).
+// Comment only — no behaviour change. Safe to delete with this branch.
