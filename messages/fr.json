@@ -1419,14 +1419,13 @@
     "closeSidebar": "Fermer la barre latérale",
     "openSidebar": "Ouvrir la barre latérale",
     "toggleSidebar": "Basculer la barre latérale",
-    "startNewChat": "Démarrer une nouvelle conversation avec {mentorName}",
     "help": "Aide",
     "support": "Support",
     "openMenuOptions": "Ouvrir les options du menu",
-    "menuOptions": "Options du menu",
-    "openSettingsMenu": "Ouvrir le menu des paramètres",
-    "settingsMenu": "Menu des paramètres",
-    "closeChat": "Fermer le chat"
+    "closeChat": "Fermer le chat",
+    "newChat": "Nouvelle discussion",
+    "incognito": "Mode incognito",
+    "incognitoChat": "Discussion incognito"
   },
   "navBarIndex": {
     "logIn": "Se connecter",
@@ -1897,6 +1896,7 @@
     "tabBasic": "Basique",
     "tabDiscovery": "Découverte",
     "tabCapabilities": "Capacités",
+    "tabWelcomeScreen": "Écran d'accueil",
     "nameLabel": "Nom",
     "agentNamePlaceholder": "Nom de l'agent",
     "agentNameRequired": "Le nom de l'agent est requis",
@@ -1992,7 +1992,9 @@
     "perSurfaceHeading": "Capacites par surface",
     "perSurfaceNote": "A configurer independamment pour le chat dans l'application et le widget integre.",
     "inAppChatNote": "Les conversations hebergees dans l'application : le chat que vos utilisateurs ouvrent ici.",
-    "embedWidgetNote": "Le widget que vous integrez a votre propre site avec l'extrait de l'onglet Integration."
+    "embedWidgetNote": "Le widget que vous integrez a votre propre site avec l'extrait de l'onglet Integration.",
+    "inChatModelChangeLabel": "Autoriser le changement de modèle dans le chat",
+    "inChatModelChangeTooltip": "Permet de choisir un autre modèle d’IA pour son propre chat. Le modèle de l’agent ne change pas, et les nouveaux chats démarrent avec lui. Ce réglage n’a qu’une valeur : il s’applique au chat de l’application et au widget intégré."
   },
   "tabsMcpTab": {
     "infoBox": "Connectez votre agent à vos propres systèmes via des serveurs MCP, afin qu'il puisse accéder à vos données et services directement au sein d'une conversation."

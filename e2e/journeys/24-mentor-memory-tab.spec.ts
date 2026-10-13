@@ -389,11 +389,17 @@ test.describe('Journey 24: Memory in Prompt Box', () => {
     await editMentorPage.close();
     await page.waitForTimeout(2_000);
 
-    // Check if Memory button is visible in the chat input area.
-    // Note: visibility also depends on tenant-level memsearch config.
-    const memoryBtnVisible = await chatPage.memoryButton
-      .isVisible({ timeout: 5_000 })
-      .catch(() => false);
+    // The Memory row now lives inside the composer's "+" menu (issue #2586)
+    // — open it first to see whether Memory renders for this mentor/tenant
+    // config. Note: visibility also depends on tenant-level memsearch config.
+    let memoryBtnVisible = false;
+    try {
+      await chatPage.openPlusMenu();
+      await chatPage.memoryButton.waitFor({ state: 'visible', timeout: 5_000 });
+      memoryBtnVisible = true;
+    } catch {
+      memoryBtnVisible = false;
+    }
 
     if (memoryBtnVisible) {
       // If visible, clicking it should open the memory popover.
@@ -405,17 +411,21 @@ test.describe('Journey 24: Memory in Prompt Box', () => {
       await expect(
         page.getByRole('heading', { name: 'Your Memory' }),
       ).toBeVisible({ timeout: 10_000 });
+    } else {
+      await chatPage.closePlusMenu().catch(() => {});
     }
 
-    // Now disable memory on the mentor and verify button disappears.
+    // Now disable memory on the mentor and verify the row disappears.
     await editMentorPage.open('Memory');
     await waitForPageReady(page);
     await editMentorPage.memory.setCapabilityEnabled(false);
     await editMentorPage.close();
     await page.waitForTimeout(2_000);
 
-    // Memory button should not be visible when memory is disabled
+    // Memory row should not appear in the "+" menu when memory is disabled.
+    await chatPage.openPlusMenu();
     await expect(chatPage.memoryButton).not.toBeVisible({ timeout: 5_000 });
+    await chatPage.closePlusMenu();
 
     // Restore original state
     if (wasEnabled) {

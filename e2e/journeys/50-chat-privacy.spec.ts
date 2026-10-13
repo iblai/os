@@ -1407,8 +1407,11 @@ test.describe('Journey 50: Chat Privacy', () => {
       // The Prompt Gallery button (chatPage.promptsButton) must still be
       // visible and openable in incognito because its data is mentor-keyed,
       // not session-keyed. This assertion is expected to PASS today.
+      // "Prompts" is a "+" menu item now (issue #2586) — open the menu first
+      // to see whether it renders.
       let galleryButtonVisible = false;
       try {
+        await chatPage.openPlusMenu();
         await chatPage.promptsButton.waitFor({
           state: 'visible',
           timeout: 10_000,
@@ -1417,7 +1420,13 @@ test.describe('Journey 50: Chat Privacy', () => {
       } catch {
         galleryButtonVisible = false;
       }
+      if (!galleryButtonVisible) {
+        await chatPage.closePlusMenu().catch(() => {});
+      }
       if (galleryButtonVisible) {
+        // `openPromptGallery()` opens the "+" menu itself, so close the one
+        // opened above first to avoid a stale/duplicate open.
+        await chatPage.closePlusMenu().catch(() => {});
         await chatPage.openPromptGallery();
         // At least one Run button should be visible inside the gallery,
         // meaning prompt cards are rendering in incognito.
@@ -1782,11 +1791,13 @@ test.describe('Journey 50: Chat Privacy', () => {
       await waitForPageReady(page);
       await chatPrivacy.assertHeaderState('off');
 
-      // Guard: check whether the Memory button is present in NORMAL mode.
-      // If the mentor has memory disabled in its settings, the button is
+      // Guard: check whether the Memory row is present in NORMAL mode. Memory
+      // now lives inside the composer's "+" menu (issue #2586) — open it
+      // first. If the mentor has memory disabled in its settings, the row is
       // absent regardless of privacy — no signal to test. Skip gracefully.
       let memoryVisibleInNormalMode = false;
       try {
+        await chatPage.openPlusMenu();
         await chatPage.memoryButton.waitFor({
           state: 'visible',
           timeout: 10_000,
@@ -1796,27 +1807,31 @@ test.describe('Journey 50: Chat Privacy', () => {
         memoryVisibleInNormalMode = false;
       }
       if (!memoryVisibleInNormalMode) {
+        await chatPage.closePlusMenu().catch(() => {});
         test.skip(
           true,
-          'Memory button not visible in normal mode — mentor memory may be disabled in settings; no private-mode signal to assert',
+          'Memory row not visible in normal mode — mentor memory may be disabled in settings; no private-mode signal to assert',
         );
         return;
       }
 
-      // Memory button IS visible in normal mode — establish baseline.
+      // Memory row IS visible in normal mode — establish baseline.
       await expect(chatPage.memoryButton).toBeVisible({ timeout: 5_000 });
+      await chatPage.closePlusMenu();
 
       // Enable Incognito on the empty chat (no confirm dialog).
       await chatPrivacy.clickToggleAndWaitFor('on', 'session');
 
-      // The Memory button must NOT be visible while incognito is on
-      // (data-state='on'). The implemented gate in chat-input-form.tsx
+      // The Memory row must NOT appear in the "+" menu while incognito is
+      // on (data-state='on'). The implemented gate in chat-input-form.tsx
       // computes chatPrivacyActive from useChatPrivacy and passes
-      // isPrivate=true into InsideButtons, which drops the Memory item.
+      // isPrivate=true into ComposerPlusMenu, which drops the Memory item.
+      await chatPage.openPlusMenu();
       await expect(
         chatPage.memoryButton,
-        'Memory button must be hidden while incognito is on (chatPrivacyActive → isPrivate gate in InsideButtons)',
+        'Memory row must be hidden while incognito is on (chatPrivacyActive → showMemory gate in ComposerPlusMenu)',
       ).not.toBeVisible({ timeout: 15_000 });
+      await chatPage.closePlusMenu();
 
       // Exit incognito: start a new (normal) chat. The SDK's
       // startNormalChat creates a fresh session with disable_chathistory:false,
@@ -1825,11 +1840,13 @@ test.describe('Journey 50: Chat Privacy', () => {
       await waitForPageReady(page);
       await chatPrivacy.assertHeaderState('off');
 
-      // After exiting incognito the Memory button must reappear.
+      // After exiting incognito the Memory row must reappear.
+      await chatPage.openPlusMenu();
       await expect(
         chatPage.memoryButton,
-        'Memory button must reappear once incognito is off',
+        'Memory row must reappear once incognito is off',
       ).toBeVisible({ timeout: 15_000 });
+      await chatPage.closePlusMenu();
     });
 
     // cp-chat-09: "Share this chat" button in the AI message bubble is hidden

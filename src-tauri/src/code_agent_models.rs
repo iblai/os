@@ -118,9 +118,12 @@ fn write_cache(backend: Backend, cache: &Value) {
         let _ = std::fs::create_dir_all(parent);
     }
     if let Err(e) = std::fs::write(&path, cache.to_string()) {
-        eprintln!(
-            "[code-agent] could not cache the {} config options: {e}",
-            backend.id()
+        crate::telemetry::report(
+            &format!(
+                "[code-agent] could not cache the {} config options",
+                backend.id()
+            ),
+            e,
         );
     }
 }

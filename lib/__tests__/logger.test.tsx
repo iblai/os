@@ -23,6 +23,9 @@ vi.mock('@/features/utils', () => ({
 vi.mock('@/lib/utils', () => ({
   getTenantKeyFromUrl: vi.fn(() => 'test-tenant'),
   getMentorIdFromUrl: vi.fn(() => 'test-mentor'),
+  sessionCacheKey: vi.fn(
+    (tenantKey: string, mentorId: string) => `${tenantKey}:${mentorId}`,
+  ),
 }));
 
 vi.mock('./constants', () => ({
@@ -159,7 +162,9 @@ describe('logger', () => {
 
     it('should not throw when logging with metadata', () => {
       localStorageMock._setStore({
-        session_id: JSON.stringify({ 'test-mentor': 'session-123' }),
+        session_id: JSON.stringify({
+          'test-tenant:test-mentor': 'session-123',
+        }),
       });
 
       expect(() => console.log('test')).not.toThrow();
@@ -198,7 +203,9 @@ describe('logger', () => {
   describe('localStorage session handling', () => {
     it('should read from localStorage', () => {
       localStorageMock._setStore({
-        session_id: JSON.stringify({ 'test-mentor': 'session-123' }),
+        session_id: JSON.stringify({
+          'test-tenant:test-mentor': 'session-123',
+        }),
       });
 
       // The logger module reads from localStorage when formatting
@@ -238,7 +245,9 @@ describe('logger', () => {
 
     it('should not throw when session ID is available', () => {
       localStorageMock._setStore({
-        session_id: JSON.stringify({ 'test-mentor': 'session-abc-123' }),
+        session_id: JSON.stringify({
+          'test-tenant:test-mentor': 'session-abc-123',
+        }),
       });
 
       expect(() => console.log('test with session')).not.toThrow();
@@ -247,7 +256,9 @@ describe('logger', () => {
     it('should successfully parse and use session ID from localStorage', async () => {
       // Set valid session data before the test
       localStorageMock._setStore({
-        session_id: JSON.stringify({ 'test-mentor': 'valid-session-id' }),
+        session_id: JSON.stringify({
+          'test-tenant:test-mentor': 'valid-session-id',
+        }),
       });
 
       // Re-import the module to ensure fresh execution with the new localStorage state
@@ -260,6 +271,9 @@ describe('logger', () => {
       vi.doMock('@/lib/utils', () => ({
         getTenantKeyFromUrl: vi.fn(() => 'test-tenant'),
         getMentorIdFromUrl: vi.fn(() => 'test-mentor'),
+        sessionCacheKey: vi.fn(
+          (tenantKey: string, mentorId: string) => `${tenantKey}:${mentorId}`,
+        ),
       }));
       vi.doMock('./constants', () => ({
         LOCAL_STORAGE_KEYS: {
@@ -360,6 +374,9 @@ describe('logger', () => {
       vi.doMock('@/lib/utils', () => ({
         getTenantKeyFromUrl: vi.fn(() => 'test-tenant'),
         getMentorIdFromUrl: vi.fn(() => 'test-mentor'),
+        sessionCacheKey: vi.fn(
+          (tenantKey: string, mentorId: string) => `${tenantKey}:${mentorId}`,
+        ),
       }));
       vi.doMock('./constants', () => ({
         LOCAL_STORAGE_KEYS: {
@@ -394,6 +411,9 @@ describe('logger', () => {
       vi.doMock('@/lib/utils', () => ({
         getTenantKeyFromUrl: vi.fn(() => 'test-tenant'),
         getMentorIdFromUrl: vi.fn(() => 'test-mentor'),
+        sessionCacheKey: vi.fn(
+          (tenantKey: string, mentorId: string) => `${tenantKey}:${mentorId}`,
+        ),
       }));
       vi.doMock('./constants', () => ({
         LOCAL_STORAGE_KEYS: {
@@ -427,6 +447,9 @@ describe('logger', () => {
       vi.doMock('@/lib/utils', () => ({
         getTenantKeyFromUrl: vi.fn(() => 'test-tenant'),
         getMentorIdFromUrl: vi.fn(() => 'test-mentor'),
+        sessionCacheKey: vi.fn(
+          (tenantKey: string, mentorId: string) => `${tenantKey}:${mentorId}`,
+        ),
       }));
       vi.doMock('./constants', () => ({
         LOCAL_STORAGE_KEYS: {

@@ -125,6 +125,14 @@
   * {
     @apply border-border outline-ring/50;
   }
+  /* Thin scrollbars app-wide. Not inherited, so every element needs it. The
+     tailwind-scrollbar plugin emits `*{scrollbar-width:auto}` later in this
+     layer, so out-rank it on specificity; staying in the base layer keeps
+     utilities such as scrollbar-hide / scrollbar-none in charge. */
+  html,
+  html * {
+    scrollbar-width: thin;
+  }
   body {
     @apply bg-background text-foreground;
   }
