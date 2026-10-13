@@ -376,8 +376,7 @@
     "agentTodoStatusInProgress": "进行中",
     "agentTodoStatusPending": "待办",
     "agentTodoProgress": "已完成 {done}/{total}",
-    "agentTodoAnnouncement": "第 {done} 步，共 {total} 步已完成",
-    "reasoningTitle": "思考过程"
+    "agentTodoAnnouncement": "第 {done} 步，共 {total} 步已完成"
   },
   "chatAiMessageCopy": {
     "copyToClipboard": "复制到剪贴板",
@@ -2266,51 +2265,19 @@
   "chatCodePermissionCard": {
     "title": "代码模式需要你的许可",
     "unnamedAction": "一项未命名的操作",
+    "kind": {
+      "read": "读取",
+      "write": "写入",
+      "exec": "执行",
+      "delete": "删除",
+      "move": "移动",
+      "search": "搜索",
+      "fetch": "获取",
+      "think": "思考",
+      "other": "操作"
+    },
     "allow": "允许",
     "deny": "拒绝"
-  },
-  "chatCodeActivity": {
-    "steps": "{count, plural, other {# 个步骤}}",
-    "aFile": "一个文件",
-    "statusRunning": "进行中",
-    "statusDone": "已完成",
-    "statusFailed": "未成功",
-    "statusStopped": "已中断",
-    "read": "{form, select, running {正在读取 {file}} done {已读取 {file}} failed {无法读取 {file}} other {代码模式想读取 {file}}}",
-    "create": "{form, select, running {正在创建 {file}} done {已创建 {file}} failed {无法创建 {file}} other {代码模式想创建 {file}}}",
-    "edit": "{form, select, running {正在修改 {file}} done {已修改 {file}} failed {无法修改 {file}} other {代码模式想修改 {file}}}",
-    "editMany": "{form, select, running {正在修改 {count} 个文件} done {已修改 {count} 个文件} failed {无法修改 {count} 个文件} other {代码模式想修改 {count} 个文件}}",
-    "remove": "{form, select, running {正在删除 {file}} done {已删除 {file}} failed {无法删除 {file}} other {代码模式想删除 {file}}}",
-    "move": "{form, select, running {正在移动 {file}} done {已移动 {file}} failed {无法移动 {file}} other {代码模式想移动 {file}}}",
-    "search": "{form, select, running {正在查看应用的文件} done {已查看应用的文件} failed {无法查看应用的文件} other {代码模式想查看应用的文件}}",
-    "run": "{form, select, running {正在运行一条命令} done {已运行一条命令} failed {一条命令未成功} other {代码模式想运行一条命令}}",
-    "runDescribed": "{form, select, running {正在运行一条命令：{description}} done {已运行一条命令：{description}} failed {一条命令未成功：{description}} other {代码模式想运行一条命令：{description}}}",
-    "install": "{form, select, running {正在安装应用所需的内容} done {已安装应用所需的内容} failed {无法安装应用所需的内容} other {代码模式想安装应用所需的内容}}",
-    "preview": "{form, select, running {正在启动预览} done {已启动预览} failed {无法启动预览} other {代码模式想启动预览}}",
-    "open": "{form, select, running {正在打开 {host}} done {已打开 {host}} failed {无法打开 {host}} other {代码模式想打开 {host}}}",
-    "openPreview": "{form, select, running {正在检查预览} done {已检查预览} failed {无法访问预览} other {代码模式想检查预览}}",
-    "web": "{form, select, running {正在网上搜索“{query}”} done {已在网上搜索“{query}”} failed {无法在网上搜索“{query}”} other {代码模式想在网上搜索“{query}”}}",
-    "helper": "{form, select, running {正在处理一项附带任务：{description}} done {已完成一项附带任务：{description}} failed {一项附带任务未成功：{description}} other {代码模式想开始一项附带任务：{description}}}",
-    "helperPlain": "{form, select, running {正在处理一项附带任务} done {已完成一项附带任务} failed {一项附带任务未成功} other {代码模式想开始一项附带任务}}",
-    "skill": "{form, select, running {正在查阅操作方法} done {已查阅操作方法} failed {无法查阅操作方法} other {代码模式想查阅操作方法}}",
-    "plan": "{form, select, running {正在更新任务清单} done {已更新任务清单} failed {无法更新任务清单} other {代码模式想更新任务清单}}",
-    "approve": "{form, select, running {正在请求按计划继续} done {已获准按计划继续} failed {未获准继续} other {代码模式想按计划继续}}",
-    "ask": "{form, select, running {正在向你提问} done {已向你提问} failed {无法提出问题} other {代码模式想向你提问}}",
-    "connector": "{form, select, running {正在使用 {name}} done {已使用 {name}} failed {无法使用 {name}} other {代码模式想使用 {name}}}",
-    "think": "{form, select, running {正在思考} done {已想清楚} failed {没能想清楚} other {代码模式想先思考一下}}",
-    "other": "{form, select, running {正在处理一个步骤} done {已完成一个步骤} failed {一个步骤未成功} other {代码模式想做一件没有说明的事}}"
-  },
-  "chatCodeErrors": {
-    "stopped": "代码模式意外停止了。请再发送一次你的消息。",
-    "noAnswer": "代码模式响应太慢。请再试一次。",
-    "noModel": "请先在左上角选择一个模型，然后再发送。",
-    "couldNotStart": "代码模式无法启动。请再试一次；如果持续出现，请重启应用。",
-    "signedOut": "请先登录再使用代码模式。"
-  },
-  "chatToastErrorMessage": {
-    "sorry": "很抱歉！",
-    "tryAgain": "请再试一次，或<contact>联系我们</contact>。",
-    "textUs": "如果你愿意，也可以发短信至 <phone>{number}</phone>。"
   },
   "appUpdatePrompt": {
     "title": "有可用更新",

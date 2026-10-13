@@ -376,8 +376,7 @@
     "agentTodoStatusInProgress": "En cours",
     "agentTodoStatusPending": "À faire",
     "agentTodoProgress": "{done} sur {total} terminées",
-    "agentTodoAnnouncement": "Étape {done} sur {total} terminée",
-    "reasoningTitle": "Réflexion"
+    "agentTodoAnnouncement": "Étape {done} sur {total} terminée"
   },
   "chatAiMessageCopy": {
     "copyToClipboard": "Copier dans le presse-papiers",
@@ -2266,51 +2265,19 @@
   "chatCodePermissionCard": {
     "title": "Code a besoin de votre autorisation",
     "unnamedAction": "Une action non nommée",
+    "kind": {
+      "read": "lire",
+      "write": "écrire",
+      "exec": "exécuter",
+      "delete": "supprimer",
+      "move": "déplacer",
+      "search": "chercher",
+      "fetch": "récupérer",
+      "think": "réfléchir",
+      "other": "action"
+    },
     "allow": "Autoriser",
     "deny": "Refuser"
-  },
-  "chatCodeActivity": {
-    "steps": "{count, plural, one {# étape} other {# étapes}}",
-    "aFile": "un fichier",
-    "statusRunning": "En cours",
-    "statusDone": "Terminé",
-    "statusFailed": "N’a pas abouti",
-    "statusStopped": "Interrompu",
-    "read": "{form, select, running {Lecture de {file}} done {A lu {file}} failed {N’a pas pu lire {file}} other {Code veut lire {file}}}",
-    "create": "{form, select, running {Création de {file}} done {A créé {file}} failed {N’a pas pu créer {file}} other {Code veut créer {file}}}",
-    "edit": "{form, select, running {Modification de {file}} done {A modifié {file}} failed {N’a pas pu modifier {file}} other {Code veut modifier {file}}}",
-    "editMany": "{form, select, running {Modification de {count} fichiers} done {A modifié {count} fichiers} failed {N’a pas pu modifier {count} fichiers} other {Code veut modifier {count} fichiers}}",
-    "remove": "{form, select, running {Suppression de {file}} done {A supprimé {file}} failed {N’a pas pu supprimer {file}} other {Code veut supprimer {file}}}",
-    "move": "{form, select, running {Déplacement de {file}} done {A déplacé {file}} failed {N’a pas pu déplacer {file}} other {Code veut déplacer {file}}}",
-    "search": "{form, select, running {Parcourt les fichiers de l’app} done {A parcouru les fichiers de l’app} failed {N’a pas pu parcourir les fichiers de l’app} other {Code veut parcourir les fichiers de l’app}}",
-    "run": "{form, select, running {Exécution d’une commande} done {A exécuté une commande} failed {Une commande n’a pas abouti} other {Code veut exécuter une commande}}",
-    "runDescribed": "{form, select, running {Exécution d’une commande : {description}} done {A exécuté une commande : {description}} failed {Une commande n’a pas abouti : {description}} other {Code veut exécuter une commande : {description}}}",
-    "install": "{form, select, running {Installation de ce dont l’app a besoin} done {A installé ce dont l’app a besoin} failed {N’a pas pu installer ce dont l’app a besoin} other {Code veut installer ce dont l’app a besoin}}",
-    "preview": "{form, select, running {Lancement de l’aperçu} done {A lancé l’aperçu} failed {N’a pas pu lancer l’aperçu} other {Code veut lancer l’aperçu}}",
-    "open": "{form, select, running {Ouverture de {host}} done {A ouvert {host}} failed {N’a pas pu ouvrir {host}} other {Code veut ouvrir {host}}}",
-    "openPreview": "{form, select, running {Vérification de l’aperçu} done {A vérifié l’aperçu} failed {N’a pas pu joindre l’aperçu} other {Code veut vérifier l’aperçu}}",
-    "web": "{form, select, running {Recherche sur le web de « {query} »} done {A cherché sur le web « {query} »} failed {N’a pas pu chercher sur le web « {query} »} other {Code veut chercher sur le web « {query} »}}",
-    "helper": "{form, select, running {Travaille sur une tâche annexe : {description}} done {A terminé une tâche annexe : {description}} failed {Une tâche annexe n’a pas abouti : {description}} other {Code veut lancer une tâche annexe : {description}}}",
-    "helperPlain": "{form, select, running {Travaille sur une tâche annexe} done {A terminé une tâche annexe} failed {Une tâche annexe n’a pas abouti} other {Code veut lancer une tâche annexe}}",
-    "skill": "{form, select, running {Consulte la marche à suivre} done {A consulté la marche à suivre} failed {N’a pas pu consulter la marche à suivre} other {Code veut consulter la marche à suivre}}",
-    "plan": "{form, select, running {Mise à jour de sa liste de tâches} done {A mis à jour sa liste de tâches} failed {N’a pas pu mettre à jour sa liste de tâches} other {Code veut mettre à jour sa liste de tâches}}",
-    "approve": "{form, select, running {Demande le feu vert pour son plan} done {A reçu le feu vert pour son plan} failed {N’a pas reçu le feu vert} other {Code veut poursuivre son plan}}",
-    "ask": "{form, select, running {Vous pose une question} done {Vous a posé une question} failed {N’a pas pu poser sa question} other {Code veut vous poser une question}}",
-    "connector": "{form, select, running {Utilisation de {name}} done {A utilisé {name}} failed {N’a pas pu utiliser {name}} other {Code veut utiliser {name}}}",
-    "think": "{form, select, running {Réfléchit à quelque chose} done {A réfléchi à quelque chose} failed {N’a pas pu trancher} other {Code veut y réfléchir}}",
-    "other": "{form, select, running {Travaille sur une étape} done {A terminé une étape} failed {Une étape n’a pas abouti} other {Code veut faire quelque chose qu’il n’a pas décrit}}"
-  },
-  "chatCodeErrors": {
-    "stopped": "Code s’est arrêté de façon inattendue. Renvoyez votre message.",
-    "noAnswer": "Code a mis trop de temps à répondre. Réessayez.",
-    "noModel": "Choisissez un modèle en haut à gauche, puis renvoyez votre message.",
-    "couldNotStart": "Code n’a pas pu démarrer. Réessayez, et redémarrez l’app si cela continue.",
-    "signedOut": "Connectez-vous pour utiliser Code."
-  },
-  "chatToastErrorMessage": {
-    "sorry": "Désolé !",
-    "tryAgain": "Veuillez réessayer ou <contact>nous contacter</contact>.",
-    "textUs": "Si vous préférez, envoyez-nous un SMS au <phone>{number}</phone>."
   },
   "appUpdatePrompt": {
     "title": "Mise à jour disponible",

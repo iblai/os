@@ -568,41 +568,4 @@ describe('ToastErrorMessage Component', () => {
       expect(link).toBeInTheDocument();
     });
   });
-
-  describe('Code errors', () => {
-    it('says what went wrong in plain words for a developer-shaped Code error', () => {
-      render(
-        <ToastErrorMessage
-          message='opencode error on session/prompt: {"code":-32603}'
-          supportEmail="support@example.com"
-        />,
-      );
-
-      expect(
-        screen.getByText(
-          /Code stopped unexpectedly\. Send your message again\./,
-        ),
-      ).toBeInTheDocument();
-      expect(screen.queryByText(/session\/prompt/)).not.toBeInTheDocument();
-      // The raw text is still logged for support.
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        expect.stringContaining('session/prompt'),
-      );
-    });
-
-    it('keeps a Code sentence the app already wrote in plain words', () => {
-      render(
-        <ToastErrorMessage
-          message="Codex isn’t installed — install it from the Code menu."
-          supportEmail="support@example.com"
-        />,
-      );
-
-      expect(
-        screen.getByText(
-          /Codex isn’t installed — install it from the Code menu\./,
-        ),
-      ).toBeInTheDocument();
-    });
-  });
 });

@@ -376,8 +376,7 @@
     "agentTodoStatusInProgress": "En curso",
     "agentTodoStatusPending": "Pendiente",
     "agentTodoProgress": "{done} de {total} completadas",
-    "agentTodoAnnouncement": "Paso {done} de {total} completado",
-    "reasoningTitle": "Razonamiento"
+    "agentTodoAnnouncement": "Paso {done} de {total} completado"
   },
   "chatAiMessageCopy": {
     "copyToClipboard": "Copiar al portapapeles",
@@ -2266,51 +2265,19 @@
   "chatCodePermissionCard": {
     "title": "Código necesita tu permiso",
     "unnamedAction": "Una acción sin nombre",
+    "kind": {
+      "read": "leer",
+      "write": "escribir",
+      "exec": "ejecutar",
+      "delete": "eliminar",
+      "move": "mover",
+      "search": "buscar",
+      "fetch": "obtener",
+      "think": "pensar",
+      "other": "acción"
+    },
     "allow": "Permitir",
     "deny": "Denegar"
-  },
-  "chatCodeActivity": {
-    "steps": "{count, plural, one {# paso} other {# pasos}}",
-    "aFile": "un archivo",
-    "statusRunning": "En curso",
-    "statusDone": "Hecho",
-    "statusFailed": "No se completó",
-    "statusStopped": "Detenido",
-    "read": "{form, select, running {Leyendo {file}} done {Leyó {file}} failed {No pudo leer {file}} other {Código quiere leer {file}}}",
-    "create": "{form, select, running {Creando {file}} done {Creó {file}} failed {No pudo crear {file}} other {Código quiere crear {file}}}",
-    "edit": "{form, select, running {Cambiando {file}} done {Cambió {file}} failed {No pudo cambiar {file}} other {Código quiere cambiar {file}}}",
-    "editMany": "{form, select, running {Cambiando {count} archivos} done {Cambió {count} archivos} failed {No pudo cambiar {count} archivos} other {Código quiere cambiar {count} archivos}}",
-    "remove": "{form, select, running {Eliminando {file}} done {Eliminó {file}} failed {No pudo eliminar {file}} other {Código quiere eliminar {file}}}",
-    "move": "{form, select, running {Moviendo {file}} done {Movió {file}} failed {No pudo mover {file}} other {Código quiere mover {file}}}",
-    "search": "{form, select, running {Revisando los archivos de la app} done {Revisó los archivos de la app} failed {No pudo revisar los archivos de la app} other {Código quiere revisar los archivos de la app}}",
-    "run": "{form, select, running {Ejecutando un comando} done {Ejecutó un comando} failed {Un comando no se completó} other {Código quiere ejecutar un comando}}",
-    "runDescribed": "{form, select, running {Ejecutando un comando: {description}} done {Ejecutó un comando: {description}} failed {Un comando no se completó: {description}} other {Código quiere ejecutar un comando: {description}}}",
-    "install": "{form, select, running {Instalando lo que la app necesita} done {Instaló lo que la app necesita} failed {No pudo instalar lo que la app necesita} other {Código quiere instalar lo que la app necesita}}",
-    "preview": "{form, select, running {Iniciando la vista previa} done {Inició la vista previa} failed {No pudo iniciar la vista previa} other {Código quiere iniciar la vista previa}}",
-    "open": "{form, select, running {Abriendo {host}} done {Abrió {host}} failed {No pudo abrir {host}} other {Código quiere abrir {host}}}",
-    "openPreview": "{form, select, running {Comprobando la vista previa} done {Comprobó la vista previa} failed {No pudo acceder a la vista previa} other {Código quiere comprobar la vista previa}}",
-    "web": "{form, select, running {Buscando en la web “{query}”} done {Buscó en la web “{query}”} failed {No pudo buscar en la web “{query}”} other {Código quiere buscar en la web “{query}”}}",
-    "helper": "{form, select, running {Trabajando en una tarea aparte: {description}} done {Terminó una tarea aparte: {description}} failed {Una tarea aparte no se completó: {description}} other {Código quiere iniciar una tarea aparte: {description}}}",
-    "helperPlain": "{form, select, running {Trabajando en una tarea aparte} done {Terminó una tarea aparte} failed {Una tarea aparte no se completó} other {Código quiere iniciar una tarea aparte}}",
-    "skill": "{form, select, running {Consultando cómo hacerlo} done {Consultó cómo hacerlo} failed {No pudo consultar cómo hacerlo} other {Código quiere consultar cómo hacerlo}}",
-    "plan": "{form, select, running {Actualizando su lista de tareas} done {Actualizó su lista de tareas} failed {No pudo actualizar su lista de tareas} other {Código quiere actualizar su lista de tareas}}",
-    "approve": "{form, select, running {Pidiendo permiso para seguir con su plan} done {Recibió permiso para seguir con su plan} failed {No recibió permiso para seguir} other {Código quiere seguir con su plan}}",
-    "ask": "{form, select, running {Haciéndote una pregunta} done {Te hizo una pregunta} failed {No pudo hacer su pregunta} other {Código quiere hacerte una pregunta}}",
-    "connector": "{form, select, running {Usando {name}} done {Usó {name}} failed {No pudo usar {name}} other {Código quiere usar {name}}}",
-    "think": "{form, select, running {Resolviendo algo} done {Resolvió algo} failed {No pudo resolverlo} other {Código quiere pensarlo}}",
-    "other": "{form, select, running {Trabajando en un paso} done {Terminó un paso} failed {Un paso no se completó} other {Código quiere hacer algo que no describió}}"
-  },
-  "chatCodeErrors": {
-    "stopped": "Código se detuvo de forma inesperada. Envía tu mensaje de nuevo.",
-    "noAnswer": "Código tardó demasiado en responder. Inténtalo de nuevo.",
-    "noModel": "Elige un modelo arriba a la izquierda y vuelve a enviar.",
-    "couldNotStart": "Código no pudo iniciarse. Inténtalo de nuevo y reinicia la app si sigue pasando.",
-    "signedOut": "Inicia sesión para usar Código."
-  },
-  "chatToastErrorMessage": {
-    "sorry": "¡Lo sentimos!",
-    "tryAgain": "Inténtalo de nuevo o <contact>contáctanos</contact>.",
-    "textUs": "Si lo prefieres, escríbenos al <phone>{number}</phone>."
   },
   "appUpdatePrompt": {
     "title": "Actualización disponible",

@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useTranslations } from 'next-intl';
 import { ChevronRight } from 'lucide-react';
 import {
   Collapsible,
@@ -34,7 +33,6 @@ export function ReasoningSection({
   reasoningContent,
   isActive = false,
 }: ReasoningSectionProps) {
-  const t = useTranslations('chatAiMessageBubble');
   const [isOpen, setIsOpen] = useState(false);
 
   if (!reasoningContent) {
@@ -58,7 +56,7 @@ export function ReasoningSection({
             isOpen && 'rotate-90',
           )}
         />
-        <span>{t('reasoningTitle')}</span>
+        <span>Thought</span>
         {isActive && (
           <span className="inline-flex gap-0.5" aria-hidden="true">
             <span className="inline-block h-1 w-1 animate-bounce rounded-full bg-gray-500 [animation-delay:0ms] motion-reduce:animate-none" />

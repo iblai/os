@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "lastUpdated": "2026-10-12",
+  "lastUpdated": "2026-10-14",
   "summary": {
     "totalCheckpoints": 57,
     "coveredCheckpoints": 22,
@@ -115,11 +115,7 @@
         "src-tauri/src/code_agent_models.rs",
         "components/chat-input-form/code-agents.ts",
         "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/agent-model-selector.tsx",
-        "components/chat/code-activity.tsx",
-        "components/chat/code-error-text.ts",
-        "components/chat/toast-error-message.tsx",
-        "components/chat/working-indicator.tsx",
-        "components/chat/agent-todo-list.tsx"
+        "components/chat/sdk-chat.tsx"
       ],
       "checkpoints": [
         {

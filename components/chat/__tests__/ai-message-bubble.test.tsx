@@ -4,11 +4,6 @@ import { Provider } from 'react-redux';
 import { configureStore } from '@reduxjs/toolkit';
 import { AIMessageBubble, getLastUserMessage } from '../ai-message-bubble';
 import { STALLED_STREAM_DELAY_MS } from '../working-indicator';
-import {
-  applyPlan,
-  applyToolCall,
-  resetCodeActivityForTests,
-} from '../code-activity';
 import { CSS_CLASS_NAMES } from '@/lib/constants';
 import type { Message } from '@iblai/iblai-js/web-utils';
 
@@ -290,7 +285,6 @@ describe('AIMessageBubble', () => {
     extractLatestTodosArgs.length = 0;
     tenantMetadataReturnValue.metadata = {};
     mockPermissionRequests.current = [];
-    resetCodeActivityForTests();
     const { isLoggedIn } = await import('@/lib/utils');
     vi.mocked(isLoggedIn).mockReturnValue(true);
   });
@@ -856,13 +850,6 @@ describe('AIMessageBubble', () => {
      * progress surfaces.
      */
     it('keeps the collapsed progress surfaces on a Code turn with verbose reasoning off', () => {
-      applyToolCall('opencode-1700000000000', {
-        toolCallId: 't1',
-        title: 'read',
-        kind: 'read',
-        rawInput: { filePath: '/ws/app/page.tsx' },
-        status: 'completed',
-      });
       renderWithRedux(
         <AIMessageBubble
           {...defaultProps}
@@ -874,130 +861,8 @@ describe('AIMessageBubble', () => {
           isCurrentlyStreaming={true}
         />,
       );
-      expect(screen.getByTestId('code-activity')).toBeInTheDocument();
+      expect(screen.getByTestId('tool-call-indicator')).toBeInTheDocument();
       expect(screen.getByTestId('reasoning-section')).toBeInTheDocument();
-    });
-
-    // A Code turn's steps come from the OS store in plain words; the SDK's own
-    // tool list, which only ever showed raw agent titles, stays off Code turns.
-    it('describes a Code turn’s steps in plain words instead of the raw tool list', () => {
-      const gid = 'opencode-1700000000001';
-      applyToolCall(gid, {
-        toolCallId: 't1',
-        title: 'read',
-        kind: 'read',
-        rawInput: { filePath: '/ws/app/page.tsx' },
-        status: 'completed',
-      });
-      renderWithRedux(
-        <AIMessageBubble
-          {...defaultProps}
-          message={{ ...defaultProps.message, id: gid }}
-          content=""
-          toolCalls={mockToolCalls}
-          showReasoning={false}
-          isCurrentlyStreaming={true}
-        />,
-      );
-      expect(
-        screen.queryByTestId('tool-call-indicator'),
-      ).not.toBeInTheDocument();
-      fireEvent.click(screen.getByTestId('code-activity-trigger'));
-      expect(screen.getByText('Read app/page.tsx')).toBeInTheDocument();
-    });
-
-    it('narrates the running step on the working line of a Code turn', () => {
-      const gid = 'opencode-1700000000002';
-      applyToolCall(gid, {
-        toolCallId: 't1',
-        title: 'edit',
-        kind: 'edit',
-        rawInput: { filePath: '/ws/app/page.tsx' },
-      });
-      renderWithRedux(
-        <AIMessageBubble
-          {...defaultProps}
-          message={{ ...defaultProps.message, id: gid }}
-          content=""
-          reasoningContent="checking the API"
-          toolCalls={mockToolCalls}
-          showReasoning={false}
-          isCurrentlyStreaming
-          workingPhase={{ kind: 'thinking' }}
-        />,
-      );
-      expect(screen.getByTestId('chat-working-indicator')).toHaveTextContent(
-        'Changing app/page.tsx…',
-      );
-    });
-
-    it('stands the working line down while a permission card waits on a Code turn', () => {
-      const gid = 'opencode-1700000000003';
-      applyToolCall(gid, {
-        toolCallId: 't1',
-        title: 'bash',
-        kind: 'execute',
-        rawInput: { command: 'pnpm i' },
-      });
-      mockPermissionRequests.current = [
-        { generation_id: gid, request_id: 'perm-1' },
-      ];
-      renderWithRedux(
-        <AIMessageBubble
-          {...defaultProps}
-          message={{ ...defaultProps.message, id: gid }}
-          content=""
-          toolCalls={mockToolCalls}
-          showReasoning={false}
-          isCurrentlyStreaming
-          workingPhase={{ kind: 'thinking' }}
-        />,
-      );
-      expect(screen.getByTestId('code-permission-cards')).toBeInTheDocument();
-      expect(
-        screen.queryByTestId('chat-working-indicator'),
-      ).not.toBeInTheDocument();
-    });
-
-    it('lets the reply text speak once it streams on a Code turn', () => {
-      const gid = 'opencode-1700000000004';
-      applyToolCall(gid, { toolCallId: 't1', title: 'bash', kind: 'execute' });
-      renderWithRedux(
-        <AIMessageBubble
-          {...defaultProps}
-          message={{ ...defaultProps.message, id: gid }}
-          content="Done."
-          toolCalls={mockToolCalls}
-          showReasoning={false}
-          isCurrentlyStreaming
-          workingPhase={{ kind: 'thinking' }}
-        />,
-      );
-      expect(
-        screen.queryByTestId('chat-working-indicator'),
-      ).not.toBeInTheDocument();
-    });
-
-    it('shows the store’s plan as the task list on a Code turn', () => {
-      const gid = 'opencode-1700000000005';
-      mockLatestTodos = [{ content: 'Add the page', status: 'pending' }];
-      applyPlan(gid, {
-        entries: [{ content: 'Add the page', status: 'pending' }],
-      });
-      renderWithRedux(
-        <AIMessageBubble
-          {...defaultProps}
-          message={{ ...defaultProps.message, id: gid }}
-          content=""
-          reasoningContent="checking the API"
-          showReasoning={false}
-          isCurrentlyStreaming
-        />,
-      );
-      expect(screen.getByTestId('agent-todo-list')).toHaveAttribute(
-        'data-todo-count',
-        '1',
-      );
     });
 
     it('still hides them on an ordinary turn with verbose reasoning off', () => {
