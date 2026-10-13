@@ -1,15 +1,15 @@
 {
   "version": 2,
-  "lastUpdated": "2026-10-08",
+  "lastUpdated": "2026-10-13",
   "summary": {
-    "totalCheckpoints": 920,
-    "coveredCheckpoints": 876,
+    "totalCheckpoints": 922,
+    "coveredCheckpoints": 878,
     "deprecatedCheckpoints": 17,
     "notReproducibleCheckpoints": 17,
     "pendingCheckpoints": 10,
     "percent": 100,
-    "totalJourneys": 92,
-    "activeJourneys": 91
+    "totalJourneys": 93,
+    "activeJourneys": 92
   },
   "journeys": [
     {
@@ -3164,7 +3164,7 @@
         },
         {
           "id": "VO-11",
-          "description": "Voice tab stays visible (always mounted \u2014 no longer gated on show_voice_call) and its content grays (capability-gate-content data-enabled=\"false\") when the in-tab \"Enable Voice Calls\" capability toggle is off",
+          "description": "Voice tab stays visible (always mounted — no longer gated on show_voice_call) and its content grays (capability-gate-content data-enabled=\"false\") when the in-tab \"Enable Voice Calls\" capability toggle is off",
           "status": "covered"
         },
         {
@@ -3349,12 +3349,12 @@
         },
         {
           "id": "cp-header-07",
-          "description": "Turning Incognito off mid-conversation on a chat switched on via the dialog: one click, no dialog, POST disable-chathistory {disable_chathistory:false} answers 200; the toggle settles to data-state=off with data-source no longer session and the cached session id is unchanged \u2014 history resumes on the same conversation (iblai-dm-pro #3093)",
+          "description": "Turning Incognito off mid-conversation on a chat switched on via the dialog: one click, no dialog, POST disable-chathistory {disable_chathistory:false} answers 200; the toggle settles to data-state=off with data-source no longer session and the cached session id is unchanged — history resumes on the same conversation (iblai-dm-pro #3093)",
           "status": "covered"
         },
         {
           "id": "cp-header-08",
-          "description": "A chat started in Incognito stays locked on (data-state=on, aria-disabled) after a message is sent \u2014 the backend creates it without an owner, so it can never resume history",
+          "description": "A chat started in Incognito stays locked on (data-state=on, aria-disabled) after a message is sent — the backend creates it without an owner, so it can never resume history",
           "status": "covered"
         },
         {
@@ -3446,7 +3446,7 @@
       "checkpoints": [
         {
           "id": "pc-01",
-          "description": "Fresh mentor: Settings \u2192 Capabilities \u2014 \"Enable Prompt Caching\" switch is visible with aria-checked=false (default off) and tooltip trigger is present",
+          "description": "Fresh mentor: Settings → Capabilities — \"Enable Prompt Caching\" switch is visible with aria-checked=false (default off) and tooltip trigger is present",
           "status": "covered"
         },
         {
@@ -3511,7 +3511,7 @@
         },
         {
           "id": "tcr-08",
-          "description": "Tool call indicator and reasoning section are gated by the Enable Verbose Reasoning setting \u2014 hidden when the toggle is off, shown when on",
+          "description": "Tool call indicator and reasoning section are gated by the Enable Verbose Reasoning setting — hidden when the toggle is off, shown when on",
           "status": "covered"
         }
       ]
@@ -5793,6 +5793,28 @@
         {
           "id": "sess-04",
           "description": "In embed mode (`?embed=true`) a dead session id self-heals with no manual New chat, fetching the dead id exactly 4 times, all before the mint",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "agent-ai-launcher-chat-download",
+      "name": "agent-ai Launcher Chat Download",
+      "spec": "86-agent-ai-launcher-chat-download.spec.ts",
+      "sourceFiles": [
+        "extensions/chrome/public/vendor/agent-ai.umd.js",
+        "extensions/chrome/public/manifest.json",
+        "e2e/utils/embed-harness-server.mjs"
+      ],
+      "checkpoints": [
+        {
+          "id": "aa-01",
+          "description": "The <agent-ai> launcher (vendored @iblai/agent-ai bundle on the second-origin harness /agent-ai page) renders its chat iframe with a sandbox containing allow-downloads, and \"Download this chat\" > Download inside the frame produces a chat-*.txt file holding both conversation turns (iblai-platform#2680)",
+          "status": "covered"
+        },
+        {
+          "id": "aa-02",
+          "description": "Negative control: with the iframe reloaded under the pre-fix sandbox (no allow-downloads) the same export yields no download event, proving aa-01 detects the silently blocked download",
           "status": "covered"
         }
       ]

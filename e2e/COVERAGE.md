@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-10-08 | 920 checkpoints (876 covered, 10 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 92 journeys (91 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-10-13 | 922 checkpoints (878 covered, 10 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 93 journeys (92 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -2062,6 +2062,17 @@ Regression guard for [iblai-platform#2536](https://github.com/iblai/iblai-platfo
 - [x] sess-02: A legacy cache entry keyed by the bare mentorId is never looked up; the app mints and uses a session under the `${tenantKey}:${mentorId}` key
 - [x] sess-03: A WS "Session not found: <id>" frame mid-chat self-heals with no error toast: the working indicator clears, a fresh session replaces the dead id, and a follow-up message on it succeeds
 - [x] sess-04: In embed mode (`?embed=true`) a dead session id self-heals with no manual New chat, fetching the dead id exactly 4 times, all before the mint
+
+---
+
+## Journey 86: agent-ai Launcher Chat Download (2 checkpoints) — `journeys/86-agent-ai-launcher-chat-download.spec.ts`
+
+**Source files:** `extensions/chrome/public/vendor/agent-ai.umd.js`, `extensions/chrome/public/manifest.json`, `e2e/utils/embed-harness-server.mjs`
+
+Regression guard for [iblai-platform#2680](https://github.com/iblai/iblai-platform/issues/2680): Chrome silently blocks a download from a sandboxed iframe lacking `allow-downloads`, and the `<agent-ai>` web component rendered its chat iframe without it, so chat export did nothing in launcher embeds. The spec loads the VENDORED bundle through the harness's `/agent-ai` page (second origin, session taken from the host page's localStorage via `authrelyonhost`) with a mocked chat WebSocket on the tenant's default agent; nothing is created. Skipped when the extension bundle is not on disk (the CI e2e image carries only `e2e/`).
+
+- [x] aa-01: The launcher's chat iframe sandbox includes `allow-downloads`, and "Download this chat" > Download inside the frame yields a `chat-*.txt` containing both conversation turns
+- [x] aa-02: Negative control: reloading the iframe under the pre-fix sandbox (no `allow-downloads`) yields no download within 5s, so aa-01 detects the bug
 
 ---
 
