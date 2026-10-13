@@ -79,11 +79,13 @@ const HTML = `<!doctype html>
  * Query params become the element's attributes: `mentorurl`, `tenant`,
  * `mentor`; `authrelyonhost=1` makes the element take its session from the
  * host page's localStorage instead of redirecting to the login page. The bundle is served from `/vendor/agent-ai.umd.js`, read
- * straight from the extension folder so the test exercises what ships.
+ * from `e2e/fixtures/agent-ai.umd.js` (a byte-identical copy of the extension's
+ * vendored file, pinned by `scripts/agent-ai-vendor-copy.test.ts`), because the
+ * CI e2e image carries no `extensions/` folder.
  */
 export const AGENT_AI_BUNDLE = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
-  '../../extensions/chrome/public/vendor/agent-ai.umd.js',
+  '../fixtures/agent-ai.umd.js',
 );
 
 function agentAiPageHtml() {

@@ -1,7 +1,5 @@
 import { test, expect } from '../fixtures/mentor-test';
 import type { FrameLocator, Page } from '@playwright/test';
-import fs from 'fs';
-import path from 'path';
 import { navigateToMentorApp, getPlatformContext } from '../utils/auth';
 import type { ChatPage } from '../page-objects/chat.page';
 import { EMBED_HARNESS_URL, MENTOR_NEXTJS_HOST } from '../fixtures/test-data';
@@ -15,16 +13,12 @@ import { EMBED_HARNESS_URL, MENTOR_NEXTJS_HOST } from '../fixtures/test-data';
  * extension) rendered its chat iframe without it, so "Download this chat" did
  * nothing in launcher embeds. Journey 82 covers the OS-generated snippet,
  * which does not use agent-ai, so this is its own journey: it loads the
- * VENDORED bundle through the harness's `/agent-ai` page (second origin).
+ * VENDORED bundle (e2e/fixtures copy) through the harness's `/agent-ai` page (second origin).
  *
  * Uses the tenant's default agent with a mocked chat WebSocket, so nothing
  * is created and nothing needs cleaning up.
  */
 
-const AGENT_AI_BUNDLE = path.resolve(
-  __dirname,
-  '../../extensions/chrome/public/vendor/agent-ai.umd.js',
-);
 // The sandbox string agent-ai shipped before the fix.
 const OLD_SANDBOX =
   'allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox';
@@ -114,11 +108,6 @@ async function chatAndOpenDownloadDialog(
 }
 
 test.describe('Journey 86: agent-ai launcher chat download', () => {
-  test.skip(
-    !fs.existsSync(AGENT_AI_BUNDLE),
-    'Requires the vendored agent-ai bundle (extensions/chrome/public/vendor) on disk',
-  );
-
   test.beforeEach(async ({ page }) => {
     await navigateToMentorApp(page);
   });
