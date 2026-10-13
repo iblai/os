@@ -92,7 +92,7 @@ test.describe('Journey 68: Agent Task List', () => {
     ];
 
     await chatPage.mockShowReasoning();
-    await chatPage.seedCachedSessionId(mentorId, sessionId);
+    await chatPage.seedCachedSessionId(mentorId, sessionId, tenantKey);
     await chatPage.mockChatHistoryWithToolCalls(
       sessionId,
       [{ id: 'toolu_01', name: 'write_todos', args: { todos } }],
@@ -194,7 +194,7 @@ test.describe('Journey 68: Agent Task List', () => {
     ];
 
     await chatPage.mockShowReasoning();
-    await chatPage.seedCachedSessionId(mentorId, sessionId);
+    await chatPage.seedCachedSessionId(mentorId, sessionId, tenantKey);
     await chatPage.mockChatHistoryWithToolCalls(
       sessionId,
       [
@@ -268,7 +268,7 @@ test.describe('Journey 68: Agent Task List', () => {
     ];
 
     await chatPage.mockShowReasoning();
-    await chatPage.seedCachedSessionId(mentorId, sessionId);
+    await chatPage.seedCachedSessionId(mentorId, sessionId, tenantKey);
     await chatPage.mockChatHistoryWithToolCalls(
       sessionId,
       [
@@ -315,7 +315,7 @@ test.describe('Journey 68: Agent Task List', () => {
     const sessionId = newSessionId('none');
 
     await chatPage.mockShowReasoning();
-    await chatPage.seedCachedSessionId(mentorId, sessionId);
+    await chatPage.seedCachedSessionId(mentorId, sessionId, tenantKey);
     // No tool calls at all on this turn.
     await chatPage.mockChatHistoryWithToolCalls(sessionId, [], {
       aiContent: 'Here is a quick answer, no plan needed.',

@@ -231,7 +231,9 @@ test.describe('Journey 79: First-Visit Product Tour', () => {
       waitUntil: 'domcontentloaded',
       timeout: 120_000,
     });
-    await expect(page.locator('[data-tour="prompt-input"]')).toBeVisible({
+    await expect(
+      page.getByRole('textbox', { name: 'Ask anything', exact: true }),
+    ).toBeVisible({
       timeout: 60_000,
     });
     // Past the tour's start delay (1s) and its retry window.

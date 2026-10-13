@@ -289,9 +289,19 @@ test.describe('Journey 42: Suggested Prompts', () => {
   }) => {
     await waitForPageReady(page);
 
-    const promptsVisible = await chatPage.promptsButton
-      .isVisible({ timeout: 10_000 })
-      .catch(() => false);
+    // "Prompts" is a "+" menu item now (issue #2586) — open the menu first.
+    let promptsVisible = false;
+    try {
+      await chatPage.openPlusMenu();
+      await chatPage.promptsButton.waitFor({
+        state: 'visible',
+        timeout: 10_000,
+      });
+      promptsVisible = true;
+    } catch {
+      promptsVisible = false;
+    }
+    await chatPage.closePlusMenu().catch(() => {});
     if (!promptsVisible) {
       test.skip(true, 'Prompts button not visible — prompts may be disabled');
     }
@@ -326,9 +336,19 @@ test.describe('Journey 42: Suggested Prompts', () => {
       .toBeGreaterThan(0);
     await editMentorPage.close();
 
-    const promptsVisible = await chatPage.promptsButton
-      .isVisible({ timeout: 10_000 })
-      .catch(() => false);
+    // "Prompts" is a "+" menu item now (issue #2586) — open the menu first.
+    let promptsVisible = false;
+    try {
+      await chatPage.openPlusMenu();
+      await chatPage.promptsButton.waitFor({
+        state: 'visible',
+        timeout: 10_000,
+      });
+      promptsVisible = true;
+    } catch {
+      promptsVisible = false;
+    }
+    await chatPage.closePlusMenu().catch(() => {});
     if (!promptsVisible) {
       test.skip(true, 'Prompts button not visible — prompts may be disabled');
     }
@@ -366,9 +386,19 @@ test.describe('Journey 42: Suggested Prompts', () => {
       .toBeGreaterThan(0);
     await editMentorPage.close();
 
-    const promptsVisible = await chatPage.promptsButton
-      .isVisible({ timeout: 10_000 })
-      .catch(() => false);
+    // "Prompts" is a "+" menu item now (issue #2586) — open the menu first.
+    let promptsVisible = false;
+    try {
+      await chatPage.openPlusMenu();
+      await chatPage.promptsButton.waitFor({
+        state: 'visible',
+        timeout: 10_000,
+      });
+      promptsVisible = true;
+    } catch {
+      promptsVisible = false;
+    }
+    await chatPage.closePlusMenu().catch(() => {});
     if (!promptsVisible) {
       test.skip(true, 'Prompts button not visible — prompts may be disabled');
     }
@@ -451,7 +481,10 @@ test.describe('Journey 42: Suggested Prompts', () => {
       }
 
       // ── Open the Prompt Gallery from the chat area ──────────────────────────
+      // "Prompts" is a "+" menu item now (issue #2586) — open the menu first.
+      await chatPage.openPlusMenu();
       await expect(chatPage.promptsButton).toBeVisible({ timeout: 15_000 });
+      await chatPage.closePlusMenu();
       await chatPage.openPromptGallery();
 
       // ── Assert: prompt is visible in the gallery ───────────────────────────

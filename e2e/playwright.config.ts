@@ -192,14 +192,29 @@ const config = defineConfig({
       dependencies: ['snapshot-edge', 'setup-nonadmin-edge'],
     },
   ],
-  webServer: process.env.MENTOR_NEXTJS_HOST
-    ? undefined
-    : {
-        command: 'pnpm dev',
-        url: 'http://localhost:3000',
-        reuseExistingServer: !process.env.CI,
-        timeout: 120_000,
-      },
+  webServer: [
+    // The mentor app itself — dev-served only when MENTOR_NEXTJS_HOST isn't
+    // already pointing at an externally-managed server (e.g. `pnpm start`).
+    ...(process.env.MENTOR_NEXTJS_HOST
+      ? []
+      : [
+          {
+            command: 'pnpm dev',
+            url: 'http://localhost:3000',
+            reuseExistingServer: !process.env.CI,
+            timeout: 120_000,
+          },
+        ]),
+    // Second-origin embed test harness (issue #2586) — always started,
+    // independent of MENTOR_NEXTJS_HOST, since embed specs need a page on a
+    // genuinely different origin to iframe the app from.
+    {
+      command: `node ${path.join(root, 'utils/embed-harness-server.mjs')}`,
+      url: 'http://127.0.0.1:4599/',
+      reuseExistingServer: true,
+      timeout: 30_000,
+    },
+  ],
 });
 
 // Enable video recording when PLAYWRIGHT_VIDEO env var is set

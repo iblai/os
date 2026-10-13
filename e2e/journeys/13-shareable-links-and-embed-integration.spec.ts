@@ -1,4 +1,6 @@
 import type { Page } from '@playwright/test';
+import http from 'http';
+import type { AddressInfo } from 'net';
 import path from 'path';
 import { test, expect } from '../fixtures/mentor-test';
 import {
@@ -6,8 +8,16 @@ import {
   checkAdminStatus,
   getPlatformContext,
 } from '../utils/auth';
-import { EMBED_URL } from '../fixtures/test-data';
+import {
+  EMBED_URL,
+  EMBED_HARNESS_URL,
+  MENTOR_NEXTJS_HOST,
+} from '../fixtures/test-data';
 import { waitForPageReady } from '../utils/resilient';
+import {
+  postRealSnippetUrl,
+  rewriteSnippetOrigin,
+} from '../utils/embed-harness-client';
 import type { EditMentorPage } from '../page-objects/edit-mentor/edit-mentor.page';
 import { logger } from '@iblai/iblai-js/playwright';
 import { MentorTracker } from '../utils/mentor-cleanup';
@@ -86,78 +96,161 @@ test.describe('Journey 13: Shareable Links & Embed Integration', () => {
     if (!isAdmin) test.skip(true, 'Embed configuration requires admin access');
   });
 
-  // fixme: embed configuration times out — setVisibility method error
-  //
   // emb-01's original title referenced the Embed tab's "voice call, voice
   // record, and attachment" toggles — those were removed entirely by issue
   // #2476 (Settings -> Capabilities now owns them per-surface); this test's
   // body never exercised them directly, so it's left as a basic embed-code
   // smoke check. See coverage.json emb-01 (marked deprecated).
-  test.fixme(
-    'admin goes to embed tab and the embed code renders for a non-anonymous mentor',
-    async ({ page, editMentorPage }) => {
-      await editMentorPage.open('Embed');
-      await waitForPageReady(page);
-      await expect(editMentorPage.embed.embedCodeBlock).toBeVisible({
-        timeout: 15_000,
-      });
-      const code = await editMentorPage.embed.getEmbedCode();
-      expect(code.length).toBeGreaterThan(0);
-      await editMentorPage.close();
-    },
-  );
-
-  test('admin goes to embed tab and an authenticated embed chat sends a message and receives a response', async ({
+  //
+  // Re-verified for issue #2586: no "setVisibility" call in this test's body
+  // at all, so the "setVisibility method error" this was fixme'd for does
+  // not reproduce — un-skipped. While re-verifying, found that the ORIGINAL
+  // body (`embedCodeBlock`/`getEmbedCode()`, asserting only non-empty text)
+  // did not actually prove "the embed code renders": `embedCodeBlock` reads
+  // the first `<pre>` in the Edit Agent dialog, and for this shared mentor
+  // (SSO configured) that is the SSO redirect-token `<pre>`, not the widget
+  // snippet — the real one doesn't exist until "Create Embed" is submitted
+  // (`useEmbedTab.ts`). Rewritten to use `createAndGetEmbedCode()` (submits
+  // the form and reads the real post-submit `<pre>`) and to assert the
+  // returned text actually looks like the widget snippet.
+  test('admin goes to embed tab and the embed code renders for a non-anonymous mentor', async ({
     page,
     editMentorPage,
   }) => {
-    if (!EMBED_URL) {
-      test.skip(true, 'Set EMBED_URL to enable embed integration test');
-      return;
-    }
+    await editMentorPage.open('Embed');
+    await waitForPageReady(page);
+    const code = await editMentorPage.embed.createAndGetEmbedCode();
+    expect(code.length).toBeGreaterThan(0);
+    expect(code).toContain('ibl-chat-bubble');
+    await editMentorPage.close();
+  });
+
+  // emb-02: previously skipped by default (EMBED_URL had a hardcoded
+  // fallback to a personal external site, so it either ran against that
+  // fragile dependency or never at all). Issue #2586 replaced that default
+  // with the local second-origin harness (`e2e/utils/embed-harness-server.mjs`)
+  // so this runs, hermetically, on every run: EMBED_URL still takes priority
+  // when explicitly set (a real customer embedding page + a live model
+  // reply), otherwise the harness iframes OUR OWN mentor from a genuinely
+  // different origin with the chat WS mocked — a live model reply isn't
+  // available in this environment (see journey 77's header comment).
+  test('admin goes to embed tab and an authenticated embed chat sends a message and receives a response', async ({
+    page,
+    editMentorPage,
+    chatPage,
+  }) => {
     await editMentorPage.open('Embed');
     const embedCode = await editMentorPage.embed.getEmbedCode().catch(() => '');
     await editMentorPage.close();
 
     if (!embedCode) return;
 
-    await page.goto(EMBED_URL, {
-      waitUntil: 'domcontentloaded',
-      timeout: 30_000,
-    });
-    const iframe = page.frameLocator('iframe').first();
-    const chatInput = iframe.getByPlaceholder('Ask anything', { exact: true });
-    if (await chatInput.isVisible({ timeout: 15_000 }).catch(() => false)) {
-      await chatInput.fill('Hello from embed test');
-      await iframe.getByRole('button', { name: 'Send message' }).click();
-      await expect(
-        iframe.locator('.chat-ai-message-response').first(),
-      ).toBeVisible({ timeout: 60_000 });
+    const mentorUrl = page.url();
+
+    if (EMBED_URL) {
+      await page.goto(EMBED_URL, {
+        waitUntil: 'domcontentloaded',
+        timeout: 30_000,
+      });
+      const iframe = page.frameLocator('iframe').first();
+      const chatInput = iframe.getByPlaceholder('Ask anything', {
+        exact: true,
+      });
+      let chatInputVisible = false;
+      try {
+        await chatInput.waitFor({ state: 'visible', timeout: 15_000 });
+        chatInputVisible = true;
+      } catch {
+        chatInputVisible = false;
+      }
+      if (chatInputVisible) {
+        await chatInput.fill('Hello from embed test');
+        await iframe.getByRole('button', { name: 'Send message' }).click();
+        await expect(
+          iframe.locator('.chat-ai-message-response').first(),
+        ).toBeVisible({ timeout: 60_000 });
+      }
+      return;
     }
+
+    // Harness path (default): a genuinely cross-origin iframe embedding our
+    // own mentor. `page.routeWebSocket` is page-scoped, so registering it
+    // before navigating to the harness intercepts the socket the iframe
+    // opens on mount, even though the iframe itself is a different origin.
+    const ws = await chatPage.mockChatWebSocket();
+    await page.goto(
+      `${EMBED_HARNESS_URL}/?src=${encodeURIComponent(embedUrlFor(mentorUrl))}`,
+      { waitUntil: 'domcontentloaded', timeout: 30_000 },
+    );
+    const iframe = page.frameLocator('#embed-harness-iframe');
+    const chatInput = iframe.getByPlaceholder('Ask anything', {
+      exact: true,
+    });
+    await expect(chatInput).toBeVisible({ timeout: 20_000 });
+    await chatInput.fill('Hello from embed test');
+    await iframe.getByRole('button', { name: 'Send message' }).click();
+
+    const clientFrame = await ws.waitForClientMessage();
+    expect(clientFrame.prompt).toBe('Hello from embed test');
+    const sessionId = clientFrame.session_id;
+    ws.send({
+      generation_id: `e2e-embed-gen-${Date.now()}`,
+      session_id: sessionId,
+    });
+    ws.send({
+      data: 'Hello from the mocked embed reply',
+      session_id: sessionId,
+    });
+    ws.send({ eos: true, session_id: sessionId });
+
+    await expect(
+      iframe.locator('.chat-ai-message-response').first(),
+    ).toBeVisible({ timeout: 15_000 });
   });
 
-  // fixme: embed visibility setting fails — Radix UI option locator issue
-  test.fixme(
-    'admin goes to embed tab and configures an advanced anonymous embed with Anyone visibility',
-    async ({ page, editMentorPage }) => {
-      await editMentorPage.open('Settings');
-      await waitForPageReady(page);
-      // Visibility moved under the Discovery sub-tab when Settings was
-      // split into Basic / Discovery / Capabilities.
-      await editMentorPage.settings.selectSubTab('Discovery');
-      const hasVisibility = await editMentorPage.settings.visibilityCombobox
-        .isVisible({ timeout: 5_000 })
-        .catch(() => false);
-      if (hasVisibility) {
-        await editMentorPage.settings.setVisibility('Anyone');
-      }
-      await editMentorPage.navigateToTab('Embed');
-      await expect(editMentorPage.embed.embedCodeBlock).toBeVisible({
-        timeout: 15_000,
+  // Re-verified for issue #2586: `editMentorPage.settings.setVisibility()`
+  // (via `setVisibilityAnyone()`) is exercised successfully elsewhere in this
+  // same file (the "Show Catalogue setting" describe block below) and in
+  // journey 14's `beforeAll` — the "Radix UI option locator issue" this was
+  // fixme'd for does not reproduce. Un-skipped, but rewritten to run against
+  // a DEDICATED, disposable mentor instead of the shared default one: this
+  // test permanently flips visibility to "Anyone", and the Website-URL
+  // comment a few tests down in this same file explicitly warns that
+  // mutating the shared mentor's visibility "would disrupt auth redirects
+  // for subsequent tests" — the original body risked exactly that.
+  test('admin goes to embed tab and configures an advanced anonymous embed with Anyone visibility', async ({
+    page,
+    editMentorPage,
+    createMentorPage,
+  }) => {
+    await createMentorPage.openAndCreate(
+      `E2E Embed Anon Visibility ${Date.now()}`,
+    );
+    await editMentorPage.open('Settings');
+    await waitForPageReady(page);
+    // Visibility moved under the Discovery sub-tab when Settings was
+    // split into Basic / Discovery / Capabilities.
+    await editMentorPage.settings.selectSubTab('Discovery');
+    let hasVisibility = false;
+    try {
+      await editMentorPage.settings.visibilityCombobox.waitFor({
+        state: 'visible',
+        timeout: 5_000,
       });
-      await editMentorPage.close();
-    },
-  );
+      hasVisibility = true;
+    } catch {
+      hasVisibility = false;
+    }
+    if (hasVisibility) {
+      await editMentorPage.settings.setVisibility('Anyone');
+    }
+    await editMentorPage.navigateToTab('Embed');
+    // The snippet only exists after "Create Embed"; before that the tab
+    // renders no <pre> of its own (see createAndGetEmbedCode).
+    const code = await editMentorPage.embed.createAndGetEmbedCode();
+    expect(code).toContain('ibl-chat-bubble');
+    await editMentorPage.close();
+  });
 
   test('admin goes to embed tab and configures context-aware anonymous embed', async ({
     page,
@@ -412,96 +505,118 @@ test.describe('Journey 13: Shareable Links & Embed Integration', () => {
   // for subsequent tests), a throwaway https://example.com URL is filled into the
   // Website URL field. The original toggle state is restored at the end.
   //
-  // fixme: shared-mentor reuse + the slow submit/reopen cycle (300s timeout)
-  //        make this flaky in CI; revisit with a dedicated mentor fixture so it
-  //        can assert default-off and avoid contending on shared state.
-  test.fixme(
-    'embed tab Optimize Page Context Tokens toggle: label, tooltip, and persists when toggled',
-    async ({ page, editMentorPage }) => {
-      // This test exercises a full cycle: open Embed tab → check UI → submit →
-      // close → reopen → verify persistence → cleanup. The cycle takes up to 3
-      // minutes in slow environments, so extend the timeout to avoid false failures.
-      test.setTimeout(300_000);
+  // Re-verified for issue #2586 and rewritten against a DEDICATED mentor
+  // (the fixme's own suggested fix) rather than the shared default one: that
+  // removes the "contending on shared state" half of the original flakiness
+  // report and lets this assert default-OFF outright instead of working
+  // around "whatever the current value already is". The "slow submit/reopen
+  // cycle" is real backend latency (a settings PUT + a GET round trip through
+  // the Embedded Code dialog teardown) rather than a bug, so the generous
+  // 300s timeout is kept.
+  test('embed tab Optimize Page Context Tokens toggle: label, tooltip, and persists when toggled', async ({
+    page,
+    editMentorPage,
+    createMentorPage,
+  }) => {
+    // This test exercises a full cycle: create mentor → open Embed tab →
+    // check UI → submit → close → reopen → verify persistence. The cycle
+    // takes up to 3 minutes in slow environments, so extend the timeout to
+    // avoid false failures.
+    test.setTimeout(300_000);
 
-      // Step 1: open Edit modal → Embed tab.
-      await editMentorPage.open('Embed');
-      await expect(editMentorPage.embed.optimizePageContextToggle).toBeVisible({
-        timeout: 15_000,
-      });
+    await createMentorPage.openAndCreate(
+      `E2E Embed Context Tokens ${Date.now()}`,
+    );
 
-      // Step 2: record the initial state (backend default is false; may already
-      // have been flipped in a previous run — we work with whatever the current
-      // value is and restore it at the end).
-      const initialState =
-        await editMentorPage.embed.getOptimizePageContextState();
+    // Step 1: open Edit modal → Embed tab.
+    await editMentorPage.open('Embed');
+    await expect(editMentorPage.embed.optimizePageContextToggle).toBeVisible({
+      timeout: 15_000,
+    });
 
-      // Step 3: visible label "Optimize Page Context Tokens" is present.
-      await expect(
-        editMentorPage.dialog.getByText('Optimize Page Context Tokens', {
-          exact: true,
-        }),
-      ).toBeVisible({ timeout: 5_000 });
+    // Step 2: a freshly created mentor defaults to OFF.
+    const initialState =
+      await editMentorPage.embed.getOptimizePageContextState();
+    expect(initialState).toBe(false);
 
-      // Step 4: tooltip trigger is reachable and shows the expected body text.
-      const tooltipTrigger = editMentorPage.dialog.locator(
-        '[aria-label="More info about optimizing page context tokens"]',
-      );
-      await expect(tooltipTrigger).toBeVisible({ timeout: 5_000 });
-      await tooltipTrigger.hover();
-      await expect(
-        page
-          .getByText('Strips HTML tags from page context', { exact: false })
-          .first(),
-      ).toBeVisible({ timeout: 5_000 });
+    // Step 3: visible label "Optimize Page Context Tokens" is present.
+    await expect(
+      editMentorPage.dialog.getByText('Optimize Page Context Tokens', {
+        exact: true,
+      }),
+    ).toBeVisible({ timeout: 5_000 });
 
-      // Step 5: fill the Website URL field so "Create Embed" can proceed without
-      // the mentor needing to be anonymous (avoids mutating the mentor's visibility
-      // settings which can break auth redirects for subsequent tests).
-      await editMentorPage.embed.fillWebsiteUrl('https://example.com');
+    // Step 4: tooltip trigger is reachable and shows the expected body text.
+    const tooltipTrigger = editMentorPage.dialog.locator(
+      '[aria-label="More info about optimizing page context tokens"]',
+    );
+    await expect(tooltipTrigger).toBeVisible({ timeout: 5_000 });
+    await tooltipTrigger.hover();
+    await expect(
+      page
+        .getByText('Strips HTML tags from page context', { exact: false })
+        .first(),
+    ).toBeVisible({ timeout: 5_000 });
 
-      // Toggle to the OPPOSITE of the initial state, then submit to persist.
-      await editMentorPage.embed.setOptimizePageContext(!initialState);
-      await editMentorPage.embed.submit();
+    // Step 5: fill the Website URL field so "Create Embed" can proceed
+    // without the mentor needing to be anonymous.
+    await editMentorPage.embed.fillWebsiteUrl('https://example.com');
 
-      // Step 6: close and reopen the Embed tab — switch must now reflect the
-      // toggled value, proving the setting round-trips via GET /settings/.
-      await editMentorPage.close();
-      // Let the SDK dialog cleanup settle before reopening — the Embedded Code
-      // dialog that appears during submit() can leave stale aria-hidden state on
-      // the page that breaks a11y-tree queries in the immediately following open().
-      await waitForPageReady(page);
-      await editMentorPage.open('Embed');
-      await expect(editMentorPage.embed.optimizePageContextToggle).toBeVisible({
-        timeout: 15_000,
-      });
-      const persistedState =
-        await editMentorPage.embed.getOptimizePageContextState();
-      expect(persistedState).toBe(!initialState);
+    // Turn it ON and submit to persist.
+    await editMentorPage.embed.setOptimizePageContext(true);
+    await editMentorPage.embed.submit();
 
-      // Cleanup: restore the toggle to the original value and submit so the shared
-      // mentor is not permanently modified.
-      await editMentorPage.embed.fillWebsiteUrl('https://example.com');
-      await editMentorPage.embed.setOptimizePageContext(initialState);
-      await editMentorPage.embed.submit();
-      await editMentorPage.close();
-    },
-  );
+    // Step 6: close and reopen the Embed tab — switch must now reflect the
+    // toggled value, proving the setting round-trips via GET /settings/.
+    await editMentorPage.close();
+    // Let the SDK dialog cleanup settle before reopening — the Embedded Code
+    // dialog that appears during submit() can leave stale aria-hidden state on
+    // the page that breaks a11y-tree queries in the immediately following open().
+    await waitForPageReady(page);
+    await editMentorPage.open('Embed');
+    await expect(editMentorPage.embed.optimizePageContextToggle).toBeVisible({
+      timeout: 15_000,
+    });
+    const persistedState =
+      await editMentorPage.embed.getOptimizePageContextState();
+    expect(persistedState).toBe(true);
+    await editMentorPage.close();
+  });
 
-  // WCAG 2.4.3 Focus Order — Escape key inside embed iframe closes the widget (issue #772)
+  // WCAG 2.4.3 Focus Order — Escape key inside embed iframe closes the widget
+  // (issue #772). Re-verified for issue #2586: previously skipped by default
+  // (required a personal external EMBED_URL) — now defaults to the local
+  // second-origin harness's `/real-snippet` page (the REAL generated embed
+  // snippet, see journey 82), which renders the exact same
+  // `.ibl-chat-bubble` / `#ibl-chat-widget-container` markup. `EMBED_URL`
+  // still takes priority when explicitly set, matching emb-02's precedence.
   test('admin opens embedded mentor and pressing Escape inside the iframe closes the widget', async ({
     page,
+    editMentorPage,
   }) => {
-    if (!EMBED_URL) {
-      test.skip(true, 'Set EMBED_URL to enable embed ESC-close test');
-      return;
+    if (EMBED_URL) {
+      await page.goto(EMBED_URL, {
+        waitUntil: 'domcontentloaded',
+        timeout: 30_000,
+      });
+      await waitForPageReady(page);
+    } else {
+      await editMentorPage.open('Embed');
+      await waitForPageReady(page);
+      const snippet = await editMentorPage.embed.createAndGetEmbedCode();
+      await editMentorPage.close();
+      // Rewrite the snippet's build-time-baked app origin to the app
+      // actually under test (see `rewriteSnippetOrigin`'s doc comment on
+      // journey 82 — in this environment it bakes in an unrelated app's
+      // origin, `http://localhost:3000`, not `MENTOR_NEXTJS_HOST`).
+      const { rewritten } = rewriteSnippetOrigin(snippet, MENTOR_NEXTJS_HOST);
+      const url = await postRealSnippetUrl(
+        page.request,
+        EMBED_HARNESS_URL,
+        rewritten,
+      );
+      await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30_000 });
     }
-
-    // Navigate to the host page that has the embed widget
-    await page.goto(EMBED_URL, {
-      waitUntil: 'domcontentloaded',
-      timeout: 30_000,
-    });
-    await waitForPageReady(page);
 
     // Open the widget if it is not already visible (click the chat bubble)
     const widgetContainer = page.locator('#ibl-chat-widget-container');
@@ -976,6 +1091,207 @@ test.describe('Journey 13: Shareable Links & Embed Integration', () => {
         { timeout: 15_000 },
       );
       await editMentorPage.close();
+    });
+  });
+
+  // emb-19..emb-22: Allow Full Screen (issue #2665). The switch is URL-only
+  // (never saved); it adds `allow-fullscreen=true` to the generated iframe URL
+  // and, when on, a host-side `embedFullscreen` handler that the embed nav
+  // bar's maximize button drives via postMessage. The host is built from the
+  // REAL generated snippet, served from a fake origin so the chat really loads
+  // cross-origin inside an iframe (the only place the button renders).
+  test.describe('Embed Allow Full Screen (issue #2665)', () => {
+    const fullscreenTracker = new MentorTracker();
+    test.afterAll(async ({ browser }, testInfo) => {
+      await fullscreenTracker.deleteAll(browser, testInfo);
+    });
+
+    test.beforeEach(async ({ page, createMentorPage, editMentorPage }) => {
+      test.setTimeout(240_000);
+      await createMentorPage.openAndCreate(`E2E Fullscreen ${Date.now()}`);
+      const { mentorId } = await getPlatformContext(page);
+      fullscreenTracker.add(mentorId);
+
+      // Anonymous so "Create Embed" passes the Website URL gate.
+      await editMentorPage.open('Settings');
+      await waitForPageReady(page);
+      await editMentorPage.settings.setVisibilityAnyone();
+      await editMentorPage.settings.setChatAccessAnyone();
+      const saveBtn = editMentorPage.dialog
+        .getByRole('button', { name: /save/i })
+        .first();
+      await expect(saveBtn).toBeEnabled({ timeout: 5_000 });
+      // The save can take 10s+ on staging. Until it lands, the Embed tab still
+      // sees a private agent and Create Embed fails the Website URL check.
+      const saved = page.waitForResponse(
+        (res) =>
+          res.request().method() === 'PUT' &&
+          /\/settings\/?$/.test(new URL(res.url()).pathname) &&
+          res.ok(),
+        { timeout: 60_000 },
+      );
+      await saveBtn.click();
+      await saved;
+      await editMentorPage.close();
+    });
+
+    async function generateCode(
+      editMentorPage: EditMentorPage,
+      allowFullscreen: boolean,
+    ): Promise<string> {
+      await editMentorPage.open('Embed');
+      await editMentorPage.embed.setAllowFullscreen(allowFullscreen);
+      const code = await editMentorPage.embed.createEmbedAndReadCode();
+      await editMentorPage.close();
+      return code;
+    }
+
+    let hostServer: http.Server | undefined;
+
+    test.afterEach(async () => {
+      await new Promise<void>((resolve) =>
+        hostServer ? hostServer.close(() => resolve()) : resolve(),
+      );
+      hostServer = undefined;
+    });
+
+    /**
+     * Serves the real snippet from a real loopback server (a routed or
+     * public-looking origin is blocked by Chrome's private-network-access
+     * check when framing the local app), iframe pointed at the local app.
+     */
+    async function openHost(page: Page, code: string): Promise<void> {
+      const localCode = code.replace(
+        /iframe\.src = '[^']*?(\/platform\/[^']*)'/,
+        `iframe.src = '${MENTOR_NEXTJS_HOST}$1'`,
+      );
+      expect(localCode).toContain(
+        `iframe.src = '${MENTOR_NEXTJS_HOST}/platform/`,
+      );
+      const html = `<!doctype html><html><head><title>Host</title></head><body><h1>Host page</h1>${localCode}</body></html>`;
+      hostServer = http.createServer((_req, res) => {
+        res.setHeader('Content-Type', 'text/html');
+        res.end(html);
+      });
+      await new Promise<void>((resolve) =>
+        hostServer!.listen(0, '127.0.0.1', resolve),
+      );
+      const { port } = hostServer.address() as AddressInfo;
+      await page.setViewportSize({ width: 1440, height: 900 });
+      await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: 'load' });
+    }
+
+    const widgetOf = (page: Page) => page.locator('#ibl-chat-widget-container');
+    const bubbleOf = (page: Page) => page.locator('.ibl-chat-bubble');
+
+    // emb-19: the toggle is present, off by default, and drives the URL param.
+    test('admin toggles Allow Full Screen in the embed tab and the generated code carries allow-fullscreen only when on', async ({
+      editMentorPage,
+    }) => {
+      await editMentorPage.open('Embed');
+      await expect(editMentorPage.embed.allowFullscreenToggle).toBeVisible({
+        timeout: 15_000,
+      });
+      await expect(editMentorPage.embed.allowFullscreenToggle).toHaveAttribute(
+        'aria-checked',
+        'false',
+      );
+      await expect(
+        editMentorPage.embed.allowFullscreenToggle,
+      ).toHaveAccessibleName(/full screen disabled/i);
+
+      const offCode = await editMentorPage.embed.createEmbedAndReadCode();
+      expect(offCode).not.toContain('allow-fullscreen');
+      expect(offCode).not.toContain('setWidgetFullscreen');
+      expect(offCode).not.toContain('embedFullscreen');
+
+      await editMentorPage.embed.setAllowFullscreen(true);
+      await expect(
+        editMentorPage.embed.allowFullscreenToggle,
+      ).toHaveAccessibleName(/full screen enabled/i);
+      const onCode = await editMentorPage.embed.createEmbedAndReadCode();
+      expect(onCode).toMatch(/iframe\.src = '[^']*&allow-fullscreen=true'/);
+      expect(onCode).toContain('setWidgetFullscreen');
+      expect(onCode).toContain('embedFullscreen');
+      await editMentorPage.close();
+    });
+
+    // emb-20/21: inside a real iframe host with the flag, the maximize button
+    // fills the host window, hides the bubble, restores on second click, and a
+    // close while full screen reopens at normal size.
+    test('embedded chat with allow-fullscreen goes full window, back to small, and reopens small after close', async ({
+      page,
+      editMentorPage,
+    }) => {
+      const code = await generateCode(editMentorPage, true);
+      await openHost(page, code);
+
+      await bubbleOf(page).click();
+      await expect(widgetOf(page)).toBeVisible({ timeout: 15_000 });
+      const normalBox = await widgetOf(page).boundingBox();
+      expect(normalBox).not.toBeNull();
+      expect(normalBox!.width).toBeLessThan(1440);
+
+      const chat = page.frameLocator('#ibl-chat-widget-container iframe');
+      const toggle = chat.getByTestId('embed-fullscreen-toggle');
+      await expect(toggle).toBeVisible({ timeout: 60_000 });
+      await expect(toggle).toHaveAccessibleName('Full screen');
+
+      // The extra header button must not push Close out of the 400px widget.
+      const closeBox = await chat
+        .getByRole('button', { name: /close chat/i })
+        .boundingBox();
+      expect(closeBox!.x + closeBox!.width).toBeLessThanOrEqual(
+        normalBox!.x + normalBox!.width,
+      );
+
+      await toggle.click();
+      await expect(toggle).toHaveAccessibleName('Exit full screen');
+      await expect
+        .poll(async () => widgetOf(page).boundingBox(), { timeout: 10_000 })
+        .toMatchObject({ x: 0, y: 0, width: 1440, height: 900 });
+      await expect(bubbleOf(page)).toBeHidden();
+
+      await toggle.click();
+      await expect(toggle).toHaveAccessibleName('Full screen');
+      await expect
+        .poll(async () => (await widgetOf(page).boundingBox())?.width, {
+          timeout: 10_000,
+        })
+        .toBe(normalBox!.width);
+      await expect(bubbleOf(page)).toBeVisible();
+
+      // Close while full screen -> reopens small.
+      await toggle.click();
+      await expect
+        .poll(async () => (await widgetOf(page).boundingBox())?.width)
+        .toBe(1440);
+      await chat.getByRole('button', { name: /close chat/i }).click();
+      await expect(widgetOf(page)).toBeHidden();
+      await expect(bubbleOf(page)).toBeVisible();
+      await bubbleOf(page).click();
+      await expect(widgetOf(page)).toBeVisible();
+      expect((await widgetOf(page).boundingBox())!.width).toBe(
+        normalBox!.width,
+      );
+      await expect(toggle).toHaveAccessibleName('Full screen');
+    });
+
+    // emb-22: without the flag the embedded chat has no full screen button.
+    test('embedded chat without allow-fullscreen has no full screen button', async ({
+      page,
+      editMentorPage,
+    }) => {
+      const code = await generateCode(editMentorPage, false);
+      await openHost(page, code);
+
+      await bubbleOf(page).click();
+      await expect(widgetOf(page)).toBeVisible({ timeout: 15_000 });
+      const chat = page.frameLocator('#ibl-chat-widget-container iframe');
+      await expect(
+        chat.getByRole('button', { name: /close chat/i }),
+      ).toBeVisible({ timeout: 60_000 });
+      await expect(chat.getByTestId('embed-fullscreen-toggle')).toHaveCount(0);
     });
   });
 

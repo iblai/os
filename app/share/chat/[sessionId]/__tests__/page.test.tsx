@@ -143,6 +143,16 @@ describe('ShareChatPage', () => {
     });
   });
 
+  it('caches the session id under a tenant-scoped key (#2536)', async () => {
+    render(<ShareChatPage />);
+
+    await waitFor(() => {
+      expect(mockSaveCachedSessionId).toHaveBeenCalledWith({
+        'main:mentor-1': 'session-123',
+      });
+    });
+  });
+
   it('shows spinner when loading', () => {
     mockSharedChatData = {
       ...mockSharedChatData,

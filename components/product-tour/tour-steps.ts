@@ -1,6 +1,11 @@
 import type { Step } from 'react-joyride';
 
-import { isTourTargetVisible, TOUR_TARGET, tourSelector } from './tour-targets';
+import {
+  isTourTargetVisible,
+  resolvePromptInputTarget,
+  TOUR_TARGET,
+  tourSelector,
+} from './tour-targets';
 
 export type TourStepId =
   | 'prompt-input'
@@ -34,7 +39,7 @@ export function buildTourSteps({
   const steps: TourStep[] = [
     {
       id: 'prompt-input',
-      target: tourSelector(TOUR_TARGET.promptInput),
+      target: () => resolvePromptInputTarget(),
       placement: 'top',
       title: t('promptInputTitle'),
       content: t('promptInputContent'),

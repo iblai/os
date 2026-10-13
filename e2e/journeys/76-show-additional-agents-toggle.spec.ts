@@ -245,6 +245,39 @@ test.describe.serial('Journey 76: Show Additional Agents Toggle', () => {
     await expect(exploreAgentsHeading(page)).toBeVisible({ timeout: 30_000 });
   });
 
+  test('sem-07: the section sits below the first screen in two columns, and the "Explore Agents" hint scrolls to it', async ({
+    page,
+  }) => {
+    test.skip(!mentorUrl, 'sem-01 setup did not run (skipped or failed)');
+    // Relies on sem-04 having left the toggle ON on this shared mentor.
+    await navigateToMentorApp(page, mentorUrl);
+    await waitForPageReady(page);
+
+    const section = page.locator('#explore-agents');
+    await expect(section).toBeAttached({ timeout: 30_000 });
+    await expect(section).not.toBeInViewport();
+
+    await page.getByRole('button', { name: /^explore agents$/i }).click();
+    await expect(section).toBeInViewport({ timeout: 10_000 });
+
+    // One in-page read so every rect comes from the same scroll position
+    // (the hint's smooth scroll may still be moving).
+    const rects = await section.evaluate((el) =>
+      Array.from(
+        el.querySelectorAll('[role="button"][aria-label^="Explore agent:"]'),
+      ).map((card) => {
+        const r = card.getBoundingClientRect();
+        return { x: r.x, y: r.y };
+      }),
+    );
+    test.skip(rects.length < 3, 'Two-column check needs at least three agents');
+    const [first, second, third] = rects;
+    expect(second!.y).toBeCloseTo(first!.y, 0);
+    expect(second!.x).toBeGreaterThan(first!.x);
+    expect(third!.x).toBeCloseTo(first!.x, 0);
+    expect(third!.y).toBeGreaterThan(first!.y);
+  });
+
   test('sem-05: with the toggle ON, a non-admin, non-owner viewer of the same agent also sees the Explore Agents section (RBAC redaction regression)', async ({
     nonadminPage,
   }) => {

@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   resetCodePermissionsForTests,
   useCodePermissionRequests,
-} from '@/components/chat/code-permission-card';
+} from '@iblai/iblai-js/web-containers/next';
 import { useBrowseRun } from '@/hooks/use-browse-run';
 
 let postMessage: ReturnType<typeof vi.fn>;

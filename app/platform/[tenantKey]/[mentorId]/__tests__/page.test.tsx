@@ -29,8 +29,8 @@ vi.mock('@iblai/iblai-js/web-containers', async () => {
   };
 });
 
-vi.mock('@/components/chat', () => ({
-  Chat: () => <div data-testid="chat" />,
+vi.mock('@/components/chat/sdk-chat', () => ({
+  SdkChat: () => <div data-testid="chat" />,
 }));
 
 vi.mock('@/lib/hooks', () => ({
