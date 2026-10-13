@@ -93,5 +93,8 @@
   },
   "tokenLimit": {
     "message": "Arrêté : l’exécution a épuisé son budget de jetons."
+  },
+  "noScriptablePage": {
+    "message": "Je ne peux pas lire cette page : le navigateur ne l’autorise pas. Ouvrez la page sur laquelle vous voulez que je travaille, puis réessayez."
   }
 }

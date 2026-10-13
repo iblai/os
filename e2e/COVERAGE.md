@@ -245,7 +245,7 @@ The **download-chat** checkpoints (sh-07 … sh-10, issue #2464) cover the "Down
 
 ---
 
-## Journey 13: Shareable Links & Embed Integration (18 checkpoints; 1 deprecated) — `journeys/13-shareable-links-and-embed-integration.spec.ts`
+## Journey 13: Shareable Links & Embed Integration (22 checkpoints; 1 deprecated) — `journeys/13-shareable-links-and-embed-integration.spec.ts`
 
 **Source files:** `components/modals/edit-mentor-modal/tabs/embed-tab.tsx`, `components/modals/edit-mentor-modal/hooks/useEmbedTab.ts`, `components/modals/edit-mentor-modal/utils.ts`, `components/logo.tsx`, `hooks/use-mentors/use-mentor-settings.ts`, `hooks/use-embed-mode.ts`, `components/chat-input-form/voice-call-button.tsx`, `components/chat-input-form/voice-chat-button.tsx`, `components/chat-input-form/screen-sharing-button.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`
 
@@ -267,6 +267,10 @@ The **download-chat** checkpoints (sh-07 … sh-10, issue #2464) cover the "Down
 - [x] Issue #789: "Remove Image" persists immediately (own PUT, independent of Create Embed) with a "Custom icon removed" toast, Icon Selection reverting to Default, and the removal surviving a reload (guards the RTK cache invalidation behind the fix)
 - [x] Embed tab footer contains only the "Create Embed" button (the standalone footer Save button was removed); Advanced CSS / Advanced JavaScript panels elsewhere in the tab keep their own working Save buttons
 - [x] Issue #2476 regression guard: saving the Embed tab's own form does not overwrite mentor_visibility set via Settings -> Discovery — the two tabs used to write the same backend field from independent forms, so an Embed save could silently revert a Settings change
+- [x] Issue #2665: Embed tab Allow Full Screen switch is present and off by default; Create Embed adds `allow-fullscreen=true` plus the host handler only when it is on, and leaves the snippet unchanged when off
+- [x] Issue #2665: inside an iframe host built from the real generated snippet, the embedded chat's maximize button makes the host widget fill the window and hides the bubble; a second click restores the small widget and bubble
+- [x] Issue #2665: closing the embedded chat while full screen restores normal size, so it reopens small with the button back to "Full screen"
+- [x] Issue #2665: an embedded chat generated without allow-fullscreen renders no full screen button
 
 ---
 

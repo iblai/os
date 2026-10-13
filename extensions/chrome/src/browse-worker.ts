@@ -14,6 +14,7 @@ import { userTurn } from './prompt';
 import {
   apiBases,
   completionsBase,
+  blockedByBrowser,
   injectable,
   loadSettings,
   saveSettings,
@@ -120,9 +121,13 @@ export function handleBrowsePort(port: chrome.runtime.Port): void {
       // tabs between submitting and the run starting.
       const tab = await chrome.tabs.get(tabId).catch(() => null);
       if (!tab || !injectable(tab.url)) {
+        // Two different refusals, and the http/https wording is simply untrue
+        // for the Web Store — it IS https, Chrome just forbids it.
         send({
           type: 'error',
-          message: translate('noActiveTab', tab?.url ?? ''),
+          message: blockedByBrowser(tab?.url)
+            ? translate('noScriptablePage')
+            : translate('noActiveTab', tab?.url ?? ''),
         });
         return;
       }

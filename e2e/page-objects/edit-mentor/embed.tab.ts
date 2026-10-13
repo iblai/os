@@ -8,6 +8,7 @@ export class EmbedTab {
   readonly embedCodeBlock: Locator;
   readonly copyButton: Locator;
   readonly showCatalogueToggle: Locator;
+  readonly allowFullscreenToggle: Locator;
   readonly optimizePageContextToggle: Locator;
   readonly websiteUrlInput: Locator;
   readonly websiteUrlError: Locator;
@@ -44,6 +45,9 @@ export class EmbedTab {
     this.showCatalogueToggle = dialog.getByRole('switch', {
       name: /show catalogue/i,
     });
+    this.allowFullscreenToggle = dialog.getByTestId(
+      'embed-allow-fullscreen-switch',
+    );
     this.optimizePageContextToggle = dialog.getByRole('switch', {
       name: /optimize page context tokens/i,
     });
@@ -255,6 +259,37 @@ export class EmbedTab {
         { timeout: 5_000 },
       );
     }
+  }
+
+  /** Ensures the Allow Full Screen switch (URL-only, never saved) matches `enabled`. */
+  async setAllowFullscreen(enabled: boolean): Promise<void> {
+    await expect(this.allowFullscreenToggle).toBeVisible({ timeout: 10_000 });
+    const current =
+      (await this.allowFullscreenToggle.getAttribute('aria-checked')) ===
+      'true';
+    if (current !== enabled) {
+      await this.allowFullscreenToggle.click();
+    }
+    await expect(this.allowFullscreenToggle).toHaveAttribute(
+      'aria-checked',
+      enabled ? 'true' : 'false',
+      { timeout: 5_000 },
+    );
+  }
+
+  /**
+   * Clicks "Create Embed", reads the generated snippet from the "Embedded
+   * Code" dialog, then dismisses the dialog.
+   */
+  async createEmbedAndReadCode(): Promise<string> {
+    await expect(this.submitButton).toBeVisible({ timeout: 10_000 });
+    await this.submitButton.click();
+    const block = this.embedCodeDialog.locator('pre');
+    await expect(block).toBeVisible({ timeout: 30_000 });
+    await expect(block).toContainText('iframe.src', { timeout: 10_000 });
+    const code = (await block.textContent()) ?? '';
+    await this.dismissEmbedCodeDialog();
+    return code;
   }
 
   /**

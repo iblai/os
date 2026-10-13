@@ -193,7 +193,10 @@ const getBubbleImage = async (tenant: string) => {
 };
 
 const getUrl = (
-  settings: EmbedFormValues & { allow_mentor_selection?: boolean },
+  settings: EmbedFormValues & {
+    allow_mentor_selection?: boolean;
+    allow_fullscreen?: boolean;
+  },
   tenant: string,
   extraBodyClasses = '',
 ) => {
@@ -207,6 +210,9 @@ const getUrl = (
   if (settings.allow_mentor_selection) {
     url += `&allow-mentor-selection=true`;
   }
+  if (settings.allow_fullscreen) {
+    url += `&allow-fullscreen=true`;
+  }
   return url;
 };
 
@@ -219,6 +225,7 @@ export const getEmbedCode = async (
   settings: EmbedFormValues & {
     allow_anonymous: boolean;
     allow_mentor_selection?: boolean;
+    allow_fullscreen?: boolean;
   },
   redirectToken: string,
   useCustomFloatingBubble?: boolean,
@@ -413,6 +420,38 @@ export const getEmbedCode = async (
                     return { iframeContainer, iframe };
                 }
 
+                ${
+                  settings.allow_fullscreen
+                    ? `
+                let savedNormalStyles = null;
+
+                function setWidgetFullscreen(fullscreen) {
+                  const widget = document.getElementById('ibl-chat-widget-container');
+                  const bubble = document.querySelector('.ibl-chat-bubble');
+                  const iframe = widget?.querySelector('iframe');
+                  if (!widget) return;
+                  if (fullscreen) {
+                    if (savedNormalStyles === null) {
+                      savedNormalStyles = {
+                        widget: widget.style.cssText,
+                        iframeRadius: iframe ? iframe.style.borderRadius : '',
+                        bubbleDisplay: bubble ? bubble.style.display : '',
+                      };
+                    }
+                    widget.style.cssText = 'position: fixed !important; inset: 0 !important; top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important; width: 100vw !important; max-width: 100vw !important; height: 100vh !important; border: none !important; z-index: 2147483647;';
+                    if (iframe) iframe.style.borderRadius = '0';
+                    if (bubble) bubble.style.display = 'none';
+                  } else if (savedNormalStyles !== null) {
+                    widget.style.cssText = savedNormalStyles.widget;
+                    if (iframe) iframe.style.borderRadius = savedNormalStyles.iframeRadius;
+                    if (bubble) bubble.style.display = savedNormalStyles.bubbleDisplay;
+                    savedNormalStyles = null;
+                  }
+                }
+                `
+                    : ''
+                }
+
                 function toggleWidget() {
                   let widget = document.getElementById('ibl-chat-widget-container');
                   const bubble = document.querySelector('.ibl-chat-bubble');
@@ -441,6 +480,7 @@ export const getEmbedCode = async (
                             setupFocusTrap(iframe);
                           }, 100);
                       } else {
+                          ${settings.allow_fullscreen ? 'setWidgetFullscreen(false);' : ''}
                           widget.style.display = 'none';
                           bubble.setAttribute('aria-expanded', 'false');
                           bubble.focus();
@@ -643,6 +683,13 @@ export const getEmbedCode = async (
                     }
                     if (message?.closeEmbed) {
                       toggleWidget();
+                    }
+                    ${
+                      settings.allow_fullscreen
+                        ? `if (typeof message?.embedFullscreen === 'boolean') {
+                      setWidgetFullscreen(message.embedFullscreen);
+                    }`
+                        : ''
                     }
                 });
             };
