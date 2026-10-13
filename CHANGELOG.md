@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.169.2](https://github.com/iblai/os/compare/v0.169.1...v0.169.2) (2026-10-13)
+
+### Bug Fixes
+
+* **embed:** re-hydrate in place on authExpired tokens instead of reloading ([53c5c5a](https://github.com/iblai/os/commit/53c5c5a11d6ffa1c77e506536b2de27ed75d7175))
+
 ## [0.169.1](https://github.com/iblai/os/compare/v0.169.0...v0.169.1) (2026-10-13)
 
 ### Bug Fixes
