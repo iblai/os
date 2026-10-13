@@ -2105,6 +2105,35 @@ fn command_of(tool_call: &Value) -> Option<String> {
     })
 }
 
+/// What the permission card gets. The whole ACP toolCall rides along so the card
+/// can say in plain words what is being asked (locations, diffs, rawInput);
+/// older frontends ignore it.
+fn permission_payload(
+    generation_id: &str,
+    session_id: &str,
+    request_id: &str,
+    tool_call: &Value,
+    allow: &Option<String>,
+    reject: &Option<String>,
+    options: &Value,
+) -> Value {
+    json!({
+        "generation_id": generation_id,
+        // Which chat is waiting. The card itself scopes by generation_id (it renders
+        // in the streaming message that produced it); this is what lets the sidebar
+        // badge a chat the user isn't currently looking at.
+        "session_id": session_id,
+        "request_id": request_id,
+        "title": tool_call.get("title").cloned().unwrap_or(Value::Null),
+        "kind": tool_call.get("kind").cloned().unwrap_or(Value::Null),
+        "command": command_of(tool_call),
+        "allow_option_id": allow,
+        "reject_option_id": reject,
+        "options": options,
+        "tool_call": tool_call,
+    })
+}
+
 /// Handle one `session/request_permission`.
 ///
 /// In manual mode every request becomes an inline card and the person reading it decides.
@@ -2157,23 +2186,15 @@ async fn handle_permission_request(
     let generation_id = turn.lock().await.generation_id.clone();
     let _ = app.emit(
         "opencode:permission_request",
-        json!({
-            "generation_id": generation_id,
-            // Which chat is waiting. The card itself scopes by generation_id (it renders
-            // in the streaming message that produced it); this is what lets the sidebar
-            // badge a chat the user isn't currently looking at.
-            "session_id": session_id,
-            "request_id": request_id,
-            "title": tool_call.get("title").cloned().unwrap_or(Value::Null),
-            "kind": tool_call.get("kind").cloned().unwrap_or(Value::Null),
-            "command": command_of(&tool_call),
-            "allow_option_id": allow,
-            "reject_option_id": reject.clone(),
-            "options": options,
-            // The whole ACP toolCall, so the card can say in plain words what is
-            // being asked (locations, diffs, rawInput) — older frontends ignore it.
-            "tool_call": tool_call,
-        }),
+        permission_payload(
+            &generation_id,
+            session_id,
+            &request_id,
+            &tool_call,
+            &allow,
+            &reject,
+            &options,
+        ),
     );
 
     let app = app.clone();
@@ -5647,6 +5668,48 @@ mod tests {
         ] {
             assert!(!stripped.iter().any(|k| k == kept), "{kept} must survive");
         }
+    }
+
+    #[test]
+    fn permission_payloads_carry_the_whole_tool_call() {
+        let tool_call = json!({
+            "toolCallId": "call-1",
+            "title": "Terminal",
+            "kind": "execute",
+            "rawInput": { "command": "pnpm install" },
+            "locations": [{ "path": "/w/app/package.json" }]
+        });
+        let payload = permission_payload(
+            "opencode-7",
+            "chat-1",
+            "perm-1",
+            &tool_call,
+            &Some("allow".to_string()),
+            &Some("reject".to_string()),
+            &json!([{ "optionId": "allow", "kind": "allow_once" }]),
+        );
+        assert_eq!(payload["tool_call"], tool_call);
+        assert_eq!(payload["title"], "Terminal");
+        assert_eq!(payload["kind"], "execute");
+        assert_eq!(payload["command"], "pnpm install");
+        assert_eq!(payload["generation_id"], "opencode-7");
+        assert_eq!(payload["allow_option_id"], "allow");
+        assert_eq!(payload["reject_option_id"], "reject");
+
+        // No toolCall at all: the card still comes up, with nothing to describe.
+        let bare = permission_payload(
+            "opencode-7",
+            "chat-1",
+            "perm-2",
+            &Value::Null,
+            &None,
+            &None,
+            &Value::Null,
+        );
+        assert_eq!(bare["tool_call"], Value::Null);
+        assert_eq!(bare["title"], Value::Null);
+        assert_eq!(bare["command"], Value::Null);
+        assert_eq!(bare["allow_option_id"], Value::Null);
     }
 
     /// The exact-kind pick: Claude's ExitPlanMode lists `allow_always` mode

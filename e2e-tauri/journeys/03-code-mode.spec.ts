@@ -642,7 +642,8 @@ describe('Journey 3: Code Mode (opencode)', () => {
 
     it.skip('code-45: a permission card leads with what Code wants to do in plain words above the exact command or file, with no tool-kind chip, on desktop and from a paired phone', () => {
       /* pending — same harness gap; covered meanwhile by the SDK's
-         code-permission-card.test.tsx */
+         code-permission-card.test.tsx and the Rust
+         permission_payloads_carry_the_whole_tool_call */
     });
 
     it.skip('code-46: a failed Code turn’s toast says what went wrong in plain words instead of the raw agent error', () => {
