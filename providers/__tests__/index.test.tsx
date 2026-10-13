@@ -511,7 +511,18 @@ describe('Providers', () => {
           401: expect.any(Function),
           402: expect.any(Function),
         }),
+        undefined,
+        // Standalone (not iframed): no refreshAuthToken, so the data layer uses
+        // its own edX-session mint.
+        undefined,
       );
+    });
+
+    it('passes a refreshAuthToken (host round-trip) when iframed', () => {
+      mockIsInIframe.mockReturnValue(true);
+      renderProviders();
+      const call = mockInitializeDataLayer.mock.calls.at(-1)!;
+      expect(call[6]).toEqual(expect.any(Function));
     });
 
     it('creates a script element when __ENV__ is not defined', () => {

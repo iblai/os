@@ -7,6 +7,7 @@ import {
 } from '@/features/navigation/slice';
 import { chatActions, selectLessonCompletion } from '@iblai/iblai-js/web-utils';
 import { sendMessageToParentWebsite } from './utils';
+import { clearAuthRecovery } from './auth-recovery-lock';
 import {
   enableChatActionsPopup,
   setAutoplayLastAiMessage,
@@ -101,6 +102,8 @@ export function useIframeHandlers() {
       localStorage.setItem('current_tenant', JSON.stringify(selectedTenant));
       localStorage.setItem('tenants', JSON.stringify(tenants));
     }
+    // New tokens installed — release the recovery lock so a later 401 can recover.
+    clearAuthRecovery();
     window.location.reload();
   };
 
