@@ -162,4 +162,4 @@ workflow header). CI has no `.env.local`, so what it publishes always points at
 
 Copy a fresh `dist/index.umd.js` from the SDK's `packages/agent-ai` build over
 `public/vendor/agent-ai.umd.js` (the directory is prettier-ignored so it stays
-as published). Vendored: `@iblai/agent-ai` 2.6.1.
+as published). Vendored: `@iblai/agent-ai` 2.12.1 plus the `allow-downloads` sandbox fix (iblai-web-frontend#2144).
