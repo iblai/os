@@ -798,18 +798,40 @@ test.describe('Journey 6: Mentor Management — Admin', () => {
   test('admin goes to edit mentor prompts tab and edits the system prompt', async ({
     page,
     editMentorPage,
+    createMentorPage,
   }) => {
+    // The System Prompt card is hidden for mentors connected to a claw
+    // sandbox (its behavior is driven by the sandbox agent config instead —
+    // see prompts-tab.tsx), so whatever mentor the page happened to land on
+    // may not have one at all. This test owns a freshly created mentor
+    // (never claw-enabled) so the System Prompt card is guaranteed to exist,
+    // mirroring the "deletes a mentor" test below.
+    let created = false;
+    for (let attempt = 0; attempt < 3 && !created; attempt++) {
+      try {
+        await createMentorPage.open();
+        created = true;
+      } catch {
+        await page.keyboard.press('Escape');
+      }
+    }
+    expect(created).toBe(true);
+    await createMentorPage.createWithName();
+    await waitForPageReady(page);
+
     await editMentorPage.open('Prompts');
     await waitForPageReady(page);
 
-    await editMentorPage.prompts.page
-      .getByRole('button', { name: 'Edit', exact: true })
-      .first()
-      .click();
+    await editMentorPage.prompts.systemPromptEditButton.click();
     await editMentorPage.prompts.setSystemPrompt(
       'You are a helpful E2E test assistant.',
     );
-    await editMentorPage.close();
+
+    // Clean up the mentor this test created.
+    await editMentorPage.open('Settings');
+    await waitForPageReady(page);
+    await editMentorPage.settings.deleteMentor();
+    await expect(page).toHaveURL(/\/platform\//, { timeout: 15_000 });
   });
 
   // fixme: flaky — LLM response time can exceed test timeout on remote server

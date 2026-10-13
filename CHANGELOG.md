@@ -1,5 +1,97 @@
 # Changelog
 
+## [0.168.0](https://github.com/iblai/os/compare/v0.167.1...v0.168.0) (2026-10-13)
+
+### Features
+
+- **embed:** add a full screen button to the embed nav bar ([ce86fd4](https://github.com/iblai/os/commit/ce86fd4d8f6a112ef99453c0ffc20d084299aae2))
+- **embed:** add allow-fullscreen URL flag ([eb01159](https://github.com/iblai/os/commit/eb0115953826288c0cfaa0991ada89de964af14f))
+- **embed:** add the allow full screen toggle to the embed tab ([2e34b0c](https://github.com/iblai/os/commit/2e34b0c8411052f72bfd9c3905457d9fc49a67ff))
+
+### Tests
+
+- **e2e:** cover the embed allow full screen flow ([dc34afb](https://github.com/iblai/os/commit/dc34afb46f79e15ee21279bbb14a6bbbe6412b79))
+- **e2e:** give cp-chat-04 a 60s wait for guided prompts ([c51cf90](https://github.com/iblai/os/commit/c51cf901c413502ff89ec5528e94c18c37cd8c5e))
+- **e2e:** wait for the settings save before generating embed code ([10bb9a8](https://github.com/iblai/os/commit/10bb9a852569371f29072c9d550c7fb20e57762c))
+- **embed:** give the [#2592](https://github.com/iblai/os/issues/2592) hydration setup a 30s hook timeout ([1f09064](https://github.com/iblai/os/commit/1f09064575313da0d70db938d29ad435e6a992db))
+- **embed:** run the snippet tests on fake timers ([04f46b0](https://github.com/iblai/os/commit/04f46b0d31d7735da152c097b5fa3523576d76d8))
+
+## [0.167.1](https://github.com/iblai/os/compare/v0.167.0...v0.167.1) (2026-10-12)
+
+### Bug Fixes
+
+- **extension:** don't try to read the Chrome Web Store ([97959ee](https://github.com/iblai/os/commit/97959ee841693206b8fa526032883abd7b62b7a2))
+
+## [0.167.0](https://github.com/iblai/os/compare/v0.166.0...v0.167.0) (2026-10-12)
+
+### Features
+
+- **chat:** add SdkChat, the OS wrapper around the SDK Chat ([f220fba](https://github.com/iblai/os/commit/f220fbafc81586e67e47162c3e6e85fb7e8dec12))
+- **chat:** pass the composer labels to the SDK chat ([b60b858](https://github.com/iblai/os/commit/b60b8586be47776435340b31ef34143fbadf446d))
+- **chat:** render the SDK chat on the agent page ([69b8ef5](https://github.com/iblai/os/commit/69b8ef5b6c988173950b4b06e239a3c6b4bf5bed))
+- **embed:** move incognito, help and support into the ? menu ([f51f097](https://github.com/iblai/os/commit/f51f097dff624341bd5256466824a6c5d8bdd73e))
+- **embed:** redesigned embed header with a New chat button; no close button in LTI launches ([48ee7a4](https://github.com/iblai/os/commit/48ee7a4151f5dcc7f872a49d7bf6b59003603914))
+- **projects:** render the SDK chat on the project chat page ([d1ab5a6](https://github.com/iblai/os/commit/d1ab5a66f4aec0a9ab3045e2d4b75f2226ba9359))
+- **settings:** add the Welcome Screen tab and in-chat model change labels ([85dc472](https://github.com/iblai/os/commit/85dc4728b43eea22072f8cf0e482ee3d582d72ae))
+
+### Bug Fixes
+
+- **app:** show a high-resolution ibl.ai logo when the tenant logo fails to load ([bfd2a09](https://github.com/iblai/os/commit/bfd2a090a72d8ac2ca47c3d835af9b69f8896822))
+- **chat:** keep the accessibility button above the phone composer ([2bd65e4](https://github.com/iblai/os/commit/2bd65e431e21bf25f78c1b2e25606ef8f2ca8b46))
+- **chat:** key the cached session by tenant and agent ([#2536](https://github.com/iblai/os/issues/2536)) ([caa6d95](https://github.com/iblai/os/commit/caa6d956deeb6dd119869d43e013112f8f067871))
+- **deps:** lift handlebars to 4.7.10 for two critical advisories ([68d4efa](https://github.com/iblai/os/commit/68d4efaa887db34d399e252b4281bac5dbef9a10))
+- **settings:** drop the privateMode label the SDK removed ([2f776c9](https://github.com/iblai/os/commit/2f776c948198426b5869b0215351bc90d549b715))
+- **tour:** start the product tour on the sdk chat composer ([67edcfd](https://github.com/iblai/os/commit/67edcfde274a791553148bb55e67ec2456ab9e13)), closes [#2536](https://github.com/iblai/os/issues/2536)
+
+### Refactors
+
+- **chat:** read Code permission sessions from the SDK ([674d1db](https://github.com/iblai/os/commit/674d1dbb4f6a84a4adb82b75b801d4d4ed39032b))
+
+### Chores
+
+- **deps:** bump @iblai/iblai-js to 2.36.0 ([4227fbf](https://github.com/iblai/os/commit/4227fbf501a51ea6aed70d0c54c5c5f75985e35e))
+- **deps:** bump @iblai/iblai-js to 2.36.2 ([148c663](https://github.com/iblai/os/commit/148c66354a88dd4d0f4162f1bc75de8c36155757))
+
+### Documentation
+
+- **e2e:** record the [#2586](https://github.com/iblai/os/issues/2586) checkpoints in coverage ([11cb855](https://github.com/iblai/os/commit/11cb855ffc36fd30e10326270c2eb7e83f1d7a7a))
+- **e2e:** record the redesign journeys 79-84 in coverage ([55911ca](https://github.com/iblai/os/commit/55911caa9a8282f92d0af6af9cd2afd8f97e280b))
+
+### Styles
+
+- apply prettier to CHANGELOG ([b68fdca](https://github.com/iblai/os/commit/b68fdca3904c9dfb893ab2b1f7ed3f84c8d4f9b2))
+- **app:** thin scrollbars app-wide ([99fc0a7](https://github.com/iblai/os/commit/99fc0a7c51fa9c4b29db52e357a7c493e14027a9))
+
+### Tests
+
+- **app-sidebar:** expect the tenant and agent session cache key ([70ac4e0](https://github.com/iblai/os/commit/70ac4e0c2d6bc19c6738b7e23d71d61e2fdec04c))
+- **e2e:** add the [#2586](https://github.com/iblai/os/issues/2586) redesign journeys 79-84 ([5a91ee9](https://github.com/iblai/os/commit/5a91ee9eae67db17ef5b501f113477fc3d9954cd))
+- **e2e:** assert one session per new chat (nav-08, nav-09) ([3e0fd28](https://github.com/iblai/os/commit/3e0fd285e28bef39953628838932f7cf2b694580))
+- **e2e:** cover stale session id self-heal (journey 85) ([571e174](https://github.com/iblai/os/commit/571e174f1f8fb827cefda7546c2375432ca30494))
+- **e2e:** cover the Explore agents hint and two-column layout (sem-07) ([b201fd2](https://github.com/iblai/os/commit/b201fd26fedb2360827e36389027d61cdab3f600))
+- **e2e:** cover the SDK chat composer, uploads, tools, stop and WS drop ([524754a](https://github.com/iblai/os/commit/524754a0b1394a2f7f63befdc811dc8045f3385d))
+- **e2e:** follow the [#2586](https://github.com/iblai/os/issues/2586) composer and embed redesign in existing journeys ([828c0d6](https://github.com/iblai/os/commit/828c0d63a7772c35264b42eb2b81d37908e80000))
+- **e2e:** follow the new embed header, welcome screen and model picker ([91c78b7](https://github.com/iblai/os/commit/91c78b72315c3a5451cbf61abf2eac4dbb3eace3))
+- **e2e:** require the agent model's display name for students (icm-10) ([d72ce34](https://github.com/iblai/os/commit/d72ce34686e79b7b979700676bc94b68d5197755))
+- **e2e:** serve a second-origin embed harness for embed specs ([01dc214](https://github.com/iblai/os/commit/01dc21429a4fdfa7eec4b9ee6ece35ff8853538c))
+- **tts:** expect the trailing slash on the chat-message tts endpoint ([a32a9cc](https://github.com/iblai/os/commit/a32a9cc0a5999f9750ff1cbb36f89e7386671617))
+
+## [0.166.0](https://github.com/iblai/os/compare/v0.165.3...v0.166.0) (2026-10-12)
+
+### Features
+
+- **desktop:** report Rust-side errors to Sentry ([1ae7766](https://github.com/iblai/os/commit/1ae77661bbba56da398d2d899d8dc26d6247567b))
+
+### Bug Fixes
+
+- close two gaps found reviewing the Sentry change ([f64c201](https://github.com/iblai/os/commit/f64c201908adba8b7ecc3dce4fb2a506099c799e))
+- **desktop:** never let telemetry setup crash the app ([0bb12e8](https://github.com/iblai/os/commit/0bb12e88b6d0429a154d94c879a6523094c91578))
+- **test:** expect the trailing slash the TTS endpoint is called with ([68e01b3](https://github.com/iblai/os/commit/68e01b318035aeef3c3f0ba5f51da8541b29fcbe))
+
+### Chores
+
+- **tauri:** release app-v0.95.25 ([74f4d74](https://github.com/iblai/os/commit/74f4d744591df08c27066c586de508c0eb3be05b))
+
 ## [0.165.3](https://github.com/iblai/os/compare/v0.165.2...v0.165.3) (2026-10-11)
 
 ### Bug Fixes

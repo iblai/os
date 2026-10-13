@@ -4,7 +4,7 @@ import { waitForPageReady } from '../utils/resilient';
 import { AccessibilityFabPage } from '../page-objects/accessibility-fab.page';
 
 /**
- * Journey 83: Draggable accessibility button (issue #2611)
+ * Journey 86: Draggable accessibility button (issue #2611)
  *
  * The floating accessibility button is the SDK's `AccessibilityFab`
  * (`@iblai/iblai-js/web-containers/next`) behind OS's thin wrapper
@@ -33,7 +33,7 @@ async function setup(page: import('@playwright/test').Page) {
   return fab;
 }
 
-test.describe('Journey 83: Draggable accessibility button — desktop', () => {
+test.describe('Journey 86: Draggable accessibility button — desktop', () => {
   test.use({ viewport: { width: 1280, height: 720 } });
 
   test.beforeEach(async ({ page }) => {
@@ -263,7 +263,7 @@ test.describe('Journey 83: Draggable accessibility button — desktop', () => {
   });
 });
 
-test.describe('Journey 83: Draggable accessibility button — mobile', () => {
+test.describe('Journey 86: Draggable accessibility button — mobile', () => {
   test.use({ viewport: { width: 390, height: 844 }, hasTouch: true });
 
   test.beforeEach(async ({ page, browserName }) => {

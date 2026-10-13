@@ -113,7 +113,10 @@ mod desktop {
             // A dead endpoint (offline, release without updater artifacts yet)
             // must not error-toast anyone — it just means "nothing to offer".
             Err(e) => {
-                eprintln!("[AppUpdate] check failed: {e}");
+                // Warning, not error: every offline launch lands here, so at
+                // error level this one site would bury everything else. The
+                // rate is still the signal that the feed itself has broken.
+                crate::telemetry::report_warning("[AppUpdate] check failed", e);
                 Ok(json!({ "available": false, "supported": true }))
             }
         }

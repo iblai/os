@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   apiBases,
+  blockedByBrowser,
   completionsBase,
   DEFAULT_SETTINGS,
   injectable,
@@ -99,5 +100,42 @@ describe('injectable', () => {
     expect(injectable('view-source:https://acme.com')).toBe(false);
     expect(injectable(undefined)).toBe(false);
     expect(injectable('nope')).toBe(false);
+  });
+});
+
+describe('pages the browser will not let an extension read', () => {
+  // Reloading an extension leaves the Web Store as the active tab, so this is
+  // the page a run most often starts from. It is ordinary https, so the
+  // protocol check passed it through and `executeScript` then failed with
+  // Chrome's own "The extensions gallery cannot be scripted."
+  it('refuses the Chrome Web Store even though it is https', () => {
+    for (const url of [
+      'https://chromewebstore.google.com/',
+      'https://chromewebstore.google.com/detail/foo/abc',
+      'https://chrome.google.com/webstore',
+      'https://chrome.google.com/webstore/detail/foo/abc',
+    ]) {
+      expect(blockedByBrowser(url)).toBe(true);
+      expect(injectable(url)).toBe(false);
+    }
+  });
+
+  it('still allows ordinary pages, including the rest of chrome.google.com', () => {
+    for (const url of [
+      'https://example.com/article',
+      'http://localhost:3000/',
+      'https://chrome.google.com/',
+      'https://notchromewebstore.google.com/',
+    ]) {
+      expect(blockedByBrowser(url)).toBe(false);
+      expect(injectable(url)).toBe(true);
+    }
+  });
+
+  it('treats a missing or unparseable url as not blocked, but not injectable', () => {
+    for (const url of [undefined, '', 'not a url']) {
+      expect(blockedByBrowser(url)).toBe(false);
+      expect(injectable(url)).toBe(false);
+    }
   });
 });

@@ -3,6 +3,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import {
   isBlockingDialogOpen,
   isTourTargetVisible,
+  resolvePromptInputTarget,
   resolveTourTarget,
   TOUR_TARGET,
   tourSelector,
@@ -108,6 +109,25 @@ describe('tour targets', () => {
         rect(32, 32),
       ] as unknown as DOMRectList);
       expect(isTourTargetVisible(el)).toBe(true);
+    });
+  });
+
+  describe('resolvePromptInputTarget', () => {
+    it('prefers an explicit data-tour hook', () => {
+      document.body.innerHTML =
+        '<div data-tour="prompt-input" id="hook"></div><div><textarea></textarea><button></button></div>';
+      expect(resolvePromptInputTarget()?.id).toBe('hook');
+    });
+
+    it('falls back to the composer card holding the textarea and its buttons', () => {
+      document.body.innerHTML =
+        '<section id="page"><div id="card"><div><textarea></textarea></div><div><button></button></div></div></section>';
+      expect(resolvePromptInputTarget()?.id).toBe('card');
+    });
+
+    it('returns null when no composer is mounted', () => {
+      document.body.innerHTML = '<div></div>';
+      expect(resolvePromptInputTarget()).toBeNull();
     });
   });
 });

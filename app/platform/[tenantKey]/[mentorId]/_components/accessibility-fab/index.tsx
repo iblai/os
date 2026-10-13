@@ -33,7 +33,11 @@ export function AccessibilityFab() {
       defaultPositionClassName={cn(
         'fixed right-4 z-50 mb-10 flex flex-col gap-3',
         {
-          'bottom-4': messages.length === 0,
+          // Phones pin the new-chat composer (plus the disclaimer and the
+          // suggested prompts above it) to the bottom, so the button sits
+          // above that stack (up to four prompt rows) instead of over the
+          // prompts or the Send button (#2586).
+          'bottom-4 max-md:bottom-[22rem] max-md:mb-0': messages.length === 0,
           'bottom-[21rem]': messages.length > 0,
         },
       )}

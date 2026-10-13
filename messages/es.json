@@ -1380,14 +1380,15 @@
     "closeSidebar": "Cerrar barra lateral",
     "openSidebar": "Abrir barra lateral",
     "toggleSidebar": "Alternar barra lateral",
-    "startNewChat": "Iniciar nueva conversación con {mentorName}",
     "help": "Ayuda",
     "support": "Soporte",
     "openMenuOptions": "Abrir opciones del menú",
-    "menuOptions": "Opciones del menú",
-    "openSettingsMenu": "Abrir menú de configuración",
-    "settingsMenu": "Menú de configuración",
-    "closeChat": "Cerrar chat"
+    "closeChat": "Cerrar chat",
+    "newChat": "Nuevo chat",
+    "incognito": "Modo incógnito",
+    "incognitoChat": "Chat de incógnito",
+    "enterFullscreen": "Pantalla completa",
+    "exitFullscreen": "Salir de pantalla completa"
   },
   "navBarIndex": {
     "logIn": "Iniciar sesión",
@@ -1555,6 +1556,11 @@
     "allowMentorSelectionTooltip": "Permite a los visitantes con sesión iniciada abrir Explorar desde la inserción y cambiar a otro agente.",
     "allowMentorSelectionEnabled": "Selección de agente habilitada",
     "allowMentorSelectionDisabled": "Selección de agente deshabilitada",
+    "allowFullscreenLabel": "Permitir pantalla completa",
+    "moreInfoAllowFullscreen": "Más información sobre la pantalla completa",
+    "allowFullscreenTooltip": "Muestra un botón en el chat para cambiar entre la ventana pequeña y la pantalla completa.",
+    "allowFullscreenEnabled": "Pantalla completa habilitada",
+    "allowFullscreenDisabled": "Pantalla completa deshabilitada",
     "shareableLinkLabel": "Enlace compartible",
     "moreInfoShareableLink": "Más información sobre generar enlace compartible",
     "shareableLinkTooltip": "Generar un enlace que los usuarios pueden usar para chatear con este agente de forma anónima",
@@ -1858,6 +1864,7 @@
     "tabBasic": "Básico",
     "tabDiscovery": "Descubrimiento",
     "tabCapabilities": "Capacidades",
+    "tabWelcomeScreen": "Pantalla de bienvenida",
     "nameLabel": "Nombre",
     "agentNamePlaceholder": "Nombre del agente",
     "agentNameRequired": "El nombre del agente es obligatorio",
@@ -1953,7 +1960,9 @@
     "perSurfaceHeading": "Capacidades por superficie",
     "perSurfaceNote": "Se configuran de forma independiente para el chat en la aplicacion y el widget incrustado.",
     "inAppChatNote": "Conversaciones alojadas dentro de la aplicacion: el chat que tus usuarios abren aqui.",
-    "embedWidgetNote": "El widget que incrustas en tu propio sitio con el fragmento de la pestana Insertar."
+    "embedWidgetNote": "El widget que incrustas en tu propio sitio con el fragmento de la pestana Insertar.",
+    "inChatModelChangeLabel": "Permitir cambiar el modelo en el chat",
+    "inChatModelChangeTooltip": "Permite elegir otro modelo de IA para su propio chat. El modelo del agente no cambia y los chats nuevos empiezan con él. Este ajuste tiene un solo valor, así que se aplica al chat de la app y al widget integrado."
   },
   "tabsMcpTab": {
     "infoBox": "Conecta tu agente a tus propios sistemas mediante servidores MCP, para que pueda acceder a tus datos y servicios directamente dentro de una conversación."

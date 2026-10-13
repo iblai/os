@@ -93,5 +93,8 @@
   },
   "tokenLimit": {
     "message": "Stopped: the run used up its token budget."
+  },
+  "noScriptablePage": {
+    "message": "I can’t read this page — the browser doesn’t allow it. Open the page you’d like me to work on and try again."
   }
 }

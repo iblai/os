@@ -422,7 +422,7 @@ describe('user-navigate', () => {
       it('navigateToMentor - should navigate to new mentor and clear session cache', () => {
         const saveCachedSessionId = vi.fn();
         mocked.useLocalStorage.mockReturnValue([
-          { 'mentor-456': 'session-1' },
+          { 'test-tenant:mentor-456': 'session-1' },
           saveCachedSessionId,
         ]);
 
@@ -434,6 +434,27 @@ describe('user-navigate', () => {
         expect(mocked.push).toHaveBeenCalledWith(
           '/platform/test-tenant/mentor-456?switching-mentor=true',
         );
+      });
+
+      it('navigateToMentor - clears the tenant-scoped entry under newTenantKey, not the current tenant (#2536)', () => {
+        const saveCachedSessionId = vi.fn();
+        mocked.useLocalStorage.mockReturnValue([
+          {
+            'new-tenant:mentor-456': 'session-in-new-tenant',
+            'test-tenant:mentor-456': 'session-in-current-tenant',
+          },
+          saveCachedSessionId,
+        ]);
+
+        const { result } = renderHook(() => useNavigate());
+
+        result.current.navigateToMentor('mentor-456', undefined, 'new-tenant');
+
+        // Only the destination tenant's entry is cleared; a same-mentor
+        // session cached under a different tenant is left untouched.
+        expect(saveCachedSessionId).toHaveBeenCalledWith({
+          'test-tenant:mentor-456': 'session-in-current-tenant',
+        });
       });
 
       it('navigateToMentor - should navigate without switching param when same mentor', () => {
@@ -1410,9 +1431,9 @@ describe('user-navigate', () => {
       it('should handle switching between mentors multiple times', () => {
         const saveCachedSessionId = vi.fn();
         const cachedSessions = {
-          'mentor-1': 'session-1',
-          'mentor-2': 'session-2',
-          'mentor-3': 'session-3',
+          'test-tenant:mentor-1': 'session-1',
+          'test-tenant:mentor-2': 'session-2',
+          'test-tenant:mentor-3': 'session-3',
         };
         mocked.useLocalStorage.mockReturnValue([
           cachedSessions,
@@ -1424,8 +1445,8 @@ describe('user-navigate', () => {
         result.current.navigateToMentor('mentor-2');
 
         expect(saveCachedSessionId).toHaveBeenCalledWith({
-          'mentor-1': 'session-1',
-          'mentor-3': 'session-3',
+          'test-tenant:mentor-1': 'session-1',
+          'test-tenant:mentor-3': 'session-3',
         });
       });
 

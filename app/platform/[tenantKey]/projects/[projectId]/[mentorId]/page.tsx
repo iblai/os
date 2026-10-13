@@ -15,7 +15,7 @@ import {
   useTenantMetadata,
 } from '@iblai/iblai-js/web-utils';
 import '../../../[mentorId]/page.css';
-import { Chat } from '@/components/chat';
+import { SdkChat } from '@/components/chat/sdk-chat';
 import { useIsPreviewMode } from '@/hooks/use-is-preview-mode';
 import { useChatMode } from '@/hooks/use-chat-mode';
 import { useAppDispatch, useAppSelector } from '@/lib/hooks';
@@ -29,7 +29,7 @@ import { toast } from 'sonner';
 import { config } from '@/lib/config';
 
 export default function Page() {
-  const { tenantKey } = useParams<ProjectPageParams>();
+  const { tenantKey, projectId } = useParams<ProjectPageParams>();
   const { mentorId } = useParams<TenantKeyMentorIdParams>();
   const router = useRouter();
 
@@ -120,10 +120,11 @@ export default function Page() {
     <ErrorBoundary>
       <div className="flex min-h-0 flex-1">
         <div className="flex min-h-0 w-full flex-1 flex-col px-1 md:px-4">
-          <Chat
+          <SdkChat
             isPreviewMode={isPreviewMode}
             mode={chatMode}
             hasBorder={false}
+            projectId={projectId}
           />
         </div>
         {!isMobile && <DocumentSidebar sessionId={sessionId} />}

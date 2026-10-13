@@ -308,6 +308,39 @@ describe('removeWidgetSpinner', () => {
 });
 
 describe('readActiveTab', () => {
+  // The Web Store is ordinary https, so the old protocol check waved it
+  // through and `executeScript` failed inside Chrome instead — which left the
+  // panel silently holding the PREVIOUS page's text, since a failed read
+  // neither pushes nor clears.
+  it('skips the Chrome Web Store, which no extension may read', async () => {
+    for (const url of [
+      'https://chromewebstore.google.com/detail/foo/abc',
+      'https://chrome.google.com/webstore/detail/foo/abc',
+    ]) {
+      chromeStub.stub.tabs.query.mockResolvedValueOnce([
+        { id: 1, url, active: true },
+      ]);
+      await expect(readActiveTab()).resolves.toBeNull();
+    }
+    expect(chromeStub.stub.scripting.executeScript).not.toHaveBeenCalled();
+  });
+
+  // Undocked DevTools is a window of its own, so `lastFocusedWindow` resolved
+  // to it while debugging and the read came back empty. The browse bridge
+  // already resolves by window id for exactly this reason.
+  it('asks for the active tab of THIS window, not the last-focused one', async () => {
+    chromeStub.stub.tabs.query.mockResolvedValueOnce([
+      { id: 1, url: 'https://example.com', active: true },
+    ]);
+    await readActiveTab();
+    expect(chromeStub.stub.tabs.query).toHaveBeenCalledWith(
+      expect.objectContaining({ active: true, windowId: 1 }),
+    );
+    expect(chromeStub.stub.tabs.query).not.toHaveBeenCalledWith(
+      expect.objectContaining({ lastFocusedWindow: true }),
+    );
+  });
+
   it('skips browser pages and swallows injection failures', async () => {
     chromeStub.stub.tabs.query.mockResolvedValueOnce([
       { id: 1, url: 'chrome://extensions', active: true },

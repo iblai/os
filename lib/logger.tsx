@@ -1,7 +1,11 @@
 'use client';
 
 import { getUserName } from '@/features/utils';
-import { getMentorIdFromUrl, getTenantKeyFromUrl } from '@/lib/utils';
+import {
+  getMentorIdFromUrl,
+  getTenantKeyFromUrl,
+  sessionCacheKey,
+} from '@/lib/utils';
 import { LOCAL_STORAGE_KEYS } from './constants';
 
 // lib/console-overrides.ts
@@ -16,8 +20,11 @@ function formatDateTime() {
   return `${yyyy}-${mm}-${dd} ${hh}:${min}:${ss}`;
 }
 
-function getSessionIdFromLocalStorage(mentorId: string | null) {
-  if (!mentorId) return '';
+function getSessionIdFromLocalStorage(
+  tenantKey: string | null,
+  mentorId: string | null,
+) {
+  if (!tenantKey || !mentorId) return '';
   if (
     typeof window === 'undefined' ||
     typeof localStorage?.getItem !== 'function'
@@ -29,7 +36,7 @@ function getSessionIdFromLocalStorage(mentorId: string | null) {
     if (!sessionIds) return '';
     const sessionId = JSON.parse(sessionIds) as Record<string, string>;
 
-    return sessionId[mentorId] ?? '';
+    return sessionId[sessionCacheKey(tenantKey, mentorId)] ?? '';
   } catch {
     return '';
   }
@@ -62,7 +69,8 @@ function formatLogMessageMetadata() {
     const username = getUserName();
     if (username) metadata.push(`username: ${username}`);
 
-    const sessionId = getSessionIdFromLocalStorage(mentorId);
+    const tenantKey = getTenantKeyFromUrl();
+    const sessionId = getSessionIdFromLocalStorage(tenantKey, mentorId);
     if (sessionId) metadata.push(`sessionId: ${sessionId}`);
   } catch (e) {
     // Silently fail if any metadata is unavailable
