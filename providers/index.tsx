@@ -171,14 +171,18 @@ export default function Providers({ children }: { children: React.ReactNode }) {
       saveUserObjectToLocalStorage(payload);
 
       // If a data-layer refresh round-trip is awaiting this reply, resolve it so
-      // the failed request REPLAYS with the new tokens — no page reload. Only
-      // reload when nothing is waiting (e.g. a proactive token push), where
-      // there is no in-flight request to replay.
+      // the failed request REPLAYS with the new tokens.
       if (isAuthRecoveryPending()) {
         resolveAuthRecovery(true);
         return;
       }
-      window.location.reload();
+
+      // Otherwise (e.g. the AuthProvider posted `authExpired` for a non-public
+      // route and the host answered) re-hydrate IN PLACE rather than reloading:
+      // saveUserObjectToLocalStorage dispatches `local-storage` events, so the
+      // reactive auth hooks (useUserData -> useUsername) flip anonymous ->
+      // authenticated and AuthProvider re-runs its check (keyed on `username`)
+      // and renders authenticated. A full reload would re-download every asset.
     },
   });
 
