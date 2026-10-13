@@ -4,23 +4,23 @@
 
 ### Features
 
-* **embed:** add a full screen button to the embed nav bar ([ce86fd4](https://github.com/iblai/os/commit/ce86fd4d8f6a112ef99453c0ffc20d084299aae2))
-* **embed:** add allow-fullscreen URL flag ([eb01159](https://github.com/iblai/os/commit/eb0115953826288c0cfaa0991ada89de964af14f))
-* **embed:** add the allow full screen toggle to the embed tab ([2e34b0c](https://github.com/iblai/os/commit/2e34b0c8411052f72bfd9c3905457d9fc49a67ff))
+- **embed:** add a full screen button to the embed nav bar ([ce86fd4](https://github.com/iblai/os/commit/ce86fd4d8f6a112ef99453c0ffc20d084299aae2))
+- **embed:** add allow-fullscreen URL flag ([eb01159](https://github.com/iblai/os/commit/eb0115953826288c0cfaa0991ada89de964af14f))
+- **embed:** add the allow full screen toggle to the embed tab ([2e34b0c](https://github.com/iblai/os/commit/2e34b0c8411052f72bfd9c3905457d9fc49a67ff))
 
 ### Tests
 
-* **e2e:** cover the embed allow full screen flow ([dc34afb](https://github.com/iblai/os/commit/dc34afb46f79e15ee21279bbb14a6bbbe6412b79))
-* **e2e:** give cp-chat-04 a 60s wait for guided prompts ([c51cf90](https://github.com/iblai/os/commit/c51cf901c413502ff89ec5528e94c18c37cd8c5e))
-* **e2e:** wait for the settings save before generating embed code ([10bb9a8](https://github.com/iblai/os/commit/10bb9a852569371f29072c9d550c7fb20e57762c))
-* **embed:** give the [#2592](https://github.com/iblai/os/issues/2592) hydration setup a 30s hook timeout ([1f09064](https://github.com/iblai/os/commit/1f09064575313da0d70db938d29ad435e6a992db))
-* **embed:** run the snippet tests on fake timers ([04f46b0](https://github.com/iblai/os/commit/04f46b0d31d7735da152c097b5fa3523576d76d8))
+- **e2e:** cover the embed allow full screen flow ([dc34afb](https://github.com/iblai/os/commit/dc34afb46f79e15ee21279bbb14a6bbbe6412b79))
+- **e2e:** give cp-chat-04 a 60s wait for guided prompts ([c51cf90](https://github.com/iblai/os/commit/c51cf901c413502ff89ec5528e94c18c37cd8c5e))
+- **e2e:** wait for the settings save before generating embed code ([10bb9a8](https://github.com/iblai/os/commit/10bb9a852569371f29072c9d550c7fb20e57762c))
+- **embed:** give the [#2592](https://github.com/iblai/os/issues/2592) hydration setup a 30s hook timeout ([1f09064](https://github.com/iblai/os/commit/1f09064575313da0d70db938d29ad435e6a992db))
+- **embed:** run the snippet tests on fake timers ([04f46b0](https://github.com/iblai/os/commit/04f46b0d31d7735da152c097b5fa3523576d76d8))
 
 ## [0.167.1](https://github.com/iblai/os/compare/v0.167.0...v0.167.1) (2026-10-12)
 
 ### Bug Fixes
 
-* **extension:** don't try to read the Chrome Web Store ([97959ee](https://github.com/iblai/os/commit/97959ee841693206b8fa526032883abd7b62b7a2))
+- **extension:** don't try to read the Chrome Web Store ([97959ee](https://github.com/iblai/os/commit/97959ee841693206b8fa526032883abd7b62b7a2))
 
 ## [0.167.0](https://github.com/iblai/os/compare/v0.166.0...v0.167.0) (2026-10-12)
 
