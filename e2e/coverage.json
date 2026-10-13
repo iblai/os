@@ -934,6 +934,26 @@
           "id": "emb-18",
           "description": "Issue #2476 regression guard: saving the Embed tab's own form does not overwrite mentor_visibility set via Settings -> Discovery — the two tabs used to write the same backend field from independent forms, so an Embed save could silently revert a Settings change",
           "status": "covered"
+        },
+        {
+          "id": "emb-19",
+          "description": "Issue #2665: Embed tab Allow Full Screen switch is present and off by default; Create Embed adds `allow-fullscreen=true` plus the host handler only when it is on, and leaves the snippet unchanged when off",
+          "status": "covered"
+        },
+        {
+          "id": "emb-20",
+          "description": "Issue #2665: inside an iframe host built from the real generated snippet, the embedded chat's maximize button makes the host widget fill the window and hides the bubble; a second click restores the small widget and bubble",
+          "status": "covered"
+        },
+        {
+          "id": "emb-21",
+          "description": "Issue #2665: closing the embedded chat while full screen restores normal size, so it reopens small with the button back to 'Full screen'",
+          "status": "covered"
+        },
+        {
+          "id": "emb-22",
+          "description": "Issue #2665: an embedded chat generated without allow-fullscreen renders no full screen button",
+          "status": "covered"
         }
       ]
     },

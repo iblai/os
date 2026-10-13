@@ -1424,7 +1424,9 @@
     "closeChat": "Close chat",
     "newChat": "New chat",
     "incognito": "Incognito",
-    "incognitoChat": "Incognito chat"
+    "incognitoChat": "Incognito chat",
+    "enterFullscreen": "Full screen",
+    "exitFullscreen": "Exit full screen"
   },
   "navBarIndex": {
     "logIn": "Log in",
@@ -1592,6 +1594,11 @@
     "allowMentorSelectionTooltip": "Let signed-in visitors open Explore from the embed and switch to another agent.",
     "allowMentorSelectionEnabled": "Agent selection enabled",
     "allowMentorSelectionDisabled": "Agent selection disabled",
+    "allowFullscreenLabel": "Allow Full Screen",
+    "moreInfoAllowFullscreen": "More info about full screen",
+    "allowFullscreenTooltip": "Show a button in the chat that switches between the small window and full screen.",
+    "allowFullscreenEnabled": "Full screen enabled",
+    "allowFullscreenDisabled": "Full screen disabled",
     "shareableLinkLabel": "Shareable Link",
     "moreInfoShareableLink": "More info about generate shareable link",
     "shareableLinkTooltip": "Generate a link users can use to chat with this agent anonymously",
