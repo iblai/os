@@ -164,6 +164,7 @@
   "devDependencies": {
     "@ai-sdk/openai-compatible": "3.0.5",
     "@axe-core/playwright": "4.10.2",
+    "@next/bundle-analyzer": "15.5.4",
     "@commitlint/cli": "20.5.0",
     "@commitlint/config-conventional": "20.5.0",
     "@eslint/eslintrc": "3.3.5",

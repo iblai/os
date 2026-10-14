@@ -1,7 +1,7 @@
 'use client';
 
 import { config } from '@/lib/config';
-import { ErrorPage } from '@iblai/iblai-js/web-containers/next';
+import { ErrorPage } from '@/components/error-page';
 
 export default function NotFound() {
   return (

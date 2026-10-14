@@ -1,9 +1,16 @@
 import { withSentryConfig } from '@sentry/nextjs';
 import createNextIntlPlugin from 'next-intl/plugin';
+import withBundleAnalyzer from '@next/bundle-analyzer';
 import type { NextConfig } from 'next';
 import type { RemotePattern } from 'next/dist/shared/lib/image-config';
 
 const withNextIntl = createNextIntlPlugin('./i18n/request.ts');
+
+// Opt-in bundle analyzer: `ANALYZE=true pnpm build` emits a treemap of every
+// chunk under .next/analyze/ so first-load weight is measured, not guessed.
+const withAnalyzer = withBundleAnalyzer({
+  enabled: process.env.ANALYZE === 'true',
+});
 
 // Sourcemap generation is heavy (multi-GB) and only pays off if the maps are
 // actually uploaded to Sentry — which requires SENTRY_AUTH_TOKEN at build time.
@@ -192,7 +199,6 @@ const sentryWebpackPluginOptions = {
   },
 };
 
-export default withSentryConfig(
-  withNextIntl(nextConfig),
-  sentryWebpackPluginOptions,
+export default withAnalyzer(
+  withSentryConfig(withNextIntl(nextConfig), sentryWebpackPluginOptions),
 );
