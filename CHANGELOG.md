@@ -1,25 +1,44 @@
 # Changelog
 
+## [0.169.3](https://github.com/iblai/os/compare/v0.169.2...v0.169.3) (2026-10-14)
+
+### Bug Fixes
+
+- **embed:** re-check auth via a token-update event instead of reloading ([3d3c46c](https://github.com/iblai/os/commit/3d3c46cc3d516626ce4579669c807ae313749484)), closes [os#580](https://github.com/iblai/os/issues/580)
+
+## [0.169.2](https://github.com/iblai/os/compare/v0.169.1...v0.169.2) (2026-10-13)
+
+### Bug Fixes
+
+- **embed:** re-hydrate in place on authExpired tokens instead of reloading ([53c5c5a](https://github.com/iblai/os/commit/53c5c5a11d6ffa1c77e506536b2de27ed75d7175))
+
+## [0.169.1](https://github.com/iblai/os/compare/v0.169.0...v0.169.1) (2026-10-13)
+
+### Bug Fixes
+
+- **auth:** single-flight 401 recovery so a burst recovers once ([a0a7ecd](https://github.com/iblai/os/commit/a0a7ecd5ccb5957503c0f55fe3a61c9c47bf4d1f)), closes [iblai-web-frontend#2140](https://github.com/iblai/iblai-web-frontend/issues/2140)
+- **embed:** recover 401s without a full page reload ([81287f4](https://github.com/iblai/os/commit/81287f47cc785a2c664b9e7635bf3c5dbf8698ec))
+
 ## [0.169.0](https://github.com/iblai/os/compare/v0.168.1...v0.169.0) (2026-10-13)
 
 ### Features
 
-* **mentor:** use the SDK draggable accessibility button ([7701ac3](https://github.com/iblai/os/commit/7701ac367c647a53bb6040e5b52952e0bf8a9c50)), closes [iblai/iblai-platform#2611](https://github.com/iblai/iblai-platform/issues/2611)
+- **mentor:** use the SDK draggable accessibility button ([7701ac3](https://github.com/iblai/os/commit/7701ac367c647a53bb6040e5b52952e0bf8a9c50)), closes [iblai/iblai-platform#2611](https://github.com/iblai/iblai-platform/issues/2611)
 
 ### Bug Fixes
 
-* **deps:** override handlebars to 4.7.10 for the audit gate ([7f4bf53](https://github.com/iblai/os/commit/7f4bf53a50c3205f4112740e9ab035211ebf0ca5))
-* **deps:** override vulnerable transitive packages for the audit gate ([07deefc](https://github.com/iblai/os/commit/07deefc0b69af790c969052df3daf2014af71a11))
-* **mentor:** key the sidebar's pinned list cache by org and user only ([93968bf](https://github.com/iblai/os/commit/93968bff65b57ff02d7da79d064e7e077a631275)), closes [iblai/iblai-platform#2611](https://github.com/iblai/iblai-platform/issues/2611)
+- **deps:** override handlebars to 4.7.10 for the audit gate ([7f4bf53](https://github.com/iblai/os/commit/7f4bf53a50c3205f4112740e9ab035211ebf0ca5))
+- **deps:** override vulnerable transitive packages for the audit gate ([07deefc](https://github.com/iblai/os/commit/07deefc0b69af790c969052df3daf2014af71a11))
+- **mentor:** key the sidebar's pinned list cache by org and user only ([93968bf](https://github.com/iblai/os/commit/93968bff65b57ff02d7da79d064e7e077a631275)), closes [iblai/iblai-platform#2611](https://github.com/iblai/iblai-platform/issues/2611)
 
 ### Chores
 
-* **deps:** bump @iblai/iblai-js to 2.31.0 ([40f2fa5](https://github.com/iblai/os/commit/40f2fa5c827914c0b4bda6e089c8946ade4b74d9)), closes [#2611](https://github.com/iblai/os/issues/2611)
+- **deps:** bump @iblai/iblai-js to 2.31.0 ([40f2fa5](https://github.com/iblai/os/commit/40f2fa5c827914c0b4bda6e089c8946ade4b74d9)), closes [#2611](https://github.com/iblai/os/issues/2611)
 
 ### Tests
 
-* **e2e:** add journey 83 for the draggable accessibility button ([c7009a8](https://github.com/iblai/os/commit/c7009a8ac33b26a04839733abe62ca7eb02f68aa)), closes [iblai/iblai-platform#2611](https://github.com/iblai/iblai-platform/issues/2611)
-* **tts:** expect the trailing slash on the chat-message TTS endpoint ([a303818](https://github.com/iblai/os/commit/a303818e7f5d42def908f6599198012487cc48ad))
+- **e2e:** add journey 83 for the draggable accessibility button ([c7009a8](https://github.com/iblai/os/commit/c7009a8ac33b26a04839733abe62ca7eb02f68aa)), closes [iblai/iblai-platform#2611](https://github.com/iblai/iblai-platform/issues/2611)
+- **tts:** expect the trailing slash on the chat-message TTS endpoint ([a303818](https://github.com/iblai/os/commit/a303818e7f5d42def908f6599198012487cc48ad))
 
 ## [0.168.1](https://github.com/iblai/os/compare/v0.168.0...v0.168.1) (2026-10-13)
 

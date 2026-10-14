@@ -32,6 +32,14 @@ import {
   useLazyGetMentorPublicSettingsQuery,
 } from '@iblai/iblai-js/data-layer';
 import { redirectToAuthSpa } from '@/lib/utils';
+import {
+  beginAuthRecoveryRoundTrip,
+  clearAuthRecovery,
+  isAuthRecoveryInProgress,
+  isAuthRecoveryPending,
+  markAuthRecovery,
+  resolveAuthRecovery,
+} from '@/lib/auth-recovery-lock';
 import AppProvider from './app-provider';
 import { useEffect, useMemo, useState } from 'react';
 import Script from 'next/script';
@@ -42,6 +50,7 @@ import {
   useTenantSwitchSync,
   refreshTenantSwitchLock,
   isTenantSwitchInProgress,
+  AUTH_TOKENS_UPDATED_EVENT,
 } from '@iblai/iblai-js/web-utils';
 import {
   AuthProvider,
@@ -157,8 +166,26 @@ export default function Providers({ children }: { children: React.ReactNode }) {
         return;
       }
 
+      // A new session arrived (e.g. the host's answer to our `authExpired`) —
+      // release the recovery lock so a later expiry can recover again.
+      clearAuthRecovery();
       saveUserObjectToLocalStorage(payload);
-      window.location.reload();
+
+      // Fresh tokens just landed in THIS window. The browser's `storage` event
+      // only fires in OTHER windows, and a refresh often leaves `username`
+      // unchanged (the user was already known — e.g. an LTI launch seeds user
+      // data early and only the tokens were missing), so the AuthProvider's
+      // username-keyed check would never re-run and the embed would stay stuck
+      // on its loading fallback. Tell the provider to re-check in place; this
+      // replaces the full page reload we used to do here (which re-downloaded
+      // every asset).
+      window.dispatchEvent(new Event(AUTH_TOKENS_UPDATED_EVENT));
+
+      // If a data-layer refresh round-trip is awaiting this reply, resolve it so
+      // the failed request REPLAYS with the new tokens.
+      if (isAuthRecoveryPending()) {
+        resolveAuthRecovery(true);
+      }
     },
   });
 
@@ -187,12 +214,35 @@ export default function Providers({ children }: { children: React.ReactNode }) {
             );
             return;
           }
+          // Single-flight: a burst of concurrent 401s should recover ONCE.
+          // The first 401 starts recovery; the rest are suppressed until new
+          // tokens arrive (clears the lock) or the TTL lapses. Without this,
+          // each 401 posts its own `authExpired` (iframed) / triggers its own
+          // redirect, and the embed recovers once per failed request.
+          if (isAuthRecoveryInProgress()) {
+            console.log(
+              '[auth-redirect] auth recovery already in progress — skipping duplicate 401',
+            );
+            return;
+          }
+          markAuthRecovery();
           console.log('[auth-redirect] API returned 401 Unauthorized');
           redirectToAuthSpa(undefined, undefined, true);
         },
         402: () =>
           handle402Error({ error: SUBSCRIPTION_CREDIT_LIMIT_ERROR_MESSAGE }),
       },
+      undefined,
+      isInIframe()
+        ? () => {
+            // Embedded: recover by asking the host for fresh tokens and awaiting
+            // the reply, so the data layer replays the failed request instead of
+            // reloading the page. Standalone leaves this undefined, keeping the
+            // data layer's own edX-session mint.
+            sendMessageToParentWebsite({ authExpired: true });
+            return beginAuthRecoveryRoundTrip();
+          }
+        : undefined,
     );
     setReady(true);
   };
