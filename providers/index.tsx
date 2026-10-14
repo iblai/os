@@ -50,6 +50,7 @@ import {
   useTenantSwitchSync,
   refreshTenantSwitchLock,
   isTenantSwitchInProgress,
+  AUTH_TOKENS_UPDATED_EVENT,
 } from '@iblai/iblai-js/web-utils';
 import {
   AuthProvider,
@@ -170,19 +171,21 @@ export default function Providers({ children }: { children: React.ReactNode }) {
       clearAuthRecovery();
       saveUserObjectToLocalStorage(payload);
 
+      // Fresh tokens just landed in THIS window. The browser's `storage` event
+      // only fires in OTHER windows, and a refresh often leaves `username`
+      // unchanged (the user was already known — e.g. an LTI launch seeds user
+      // data early and only the tokens were missing), so the AuthProvider's
+      // username-keyed check would never re-run and the embed would stay stuck
+      // on its loading fallback. Tell the provider to re-check in place; this
+      // replaces the full page reload we used to do here (which re-downloaded
+      // every asset).
+      window.dispatchEvent(new Event(AUTH_TOKENS_UPDATED_EVENT));
+
       // If a data-layer refresh round-trip is awaiting this reply, resolve it so
       // the failed request REPLAYS with the new tokens.
       if (isAuthRecoveryPending()) {
         resolveAuthRecovery(true);
-        return;
       }
-
-      // Otherwise (e.g. the AuthProvider posted `authExpired` for a non-public
-      // route and the host answered) re-hydrate IN PLACE rather than reloading:
-      // saveUserObjectToLocalStorage dispatches `local-storage` events, so the
-      // reactive auth hooks (useUserData -> useUsername) flip anonymous ->
-      // authenticated and AuthProvider re-runs its check (keyed on `username`)
-      // and renders authenticated. A full reload would re-download every asset.
     },
   });
 

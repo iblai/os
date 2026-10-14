@@ -1,6 +1,11 @@
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import { render, act } from '@testing-library/react';
 import React from 'react';
+import {
+  beginAuthRecoveryRoundTrip,
+  clearAuthRecovery,
+  resolveAuthRecovery,
+} from '@/lib/auth-recovery-lock';
 
 // ── controllable mocks ──────────────────────────────────────────────────────
 
@@ -286,6 +291,7 @@ vi.mock('@iblai/iblai-js/web-utils', () => ({
   useTenantSwitchSync: vi.fn(),
   refreshTenantSwitchLock: vi.fn(),
   isTenantSwitchInProgress: vi.fn(() => false),
+  AUTH_TOKENS_UPDATED_EVENT: 'ibl:auth-tokens-updated',
   useTenantMetadata: () => ({
     metadata: mockMetadata,
     platformName: null,
@@ -462,6 +468,10 @@ describe('Providers', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     resetState();
+    // The auth-recovery lock is a real module singleton; reset its state so a
+    // round-trip or in-progress flag from one test can't leak into the next.
+    resolveAuthRecovery(false);
+    clearAuthRecovery();
     // clearAllMocks wipes call history but not implementations set via
     // mockReturnValue, so restore the non-iframe default that most tests assume.
     mockIsInIframe.mockReturnValue(false);
@@ -772,26 +782,50 @@ describe('Providers', () => {
         configurable: true,
         value: { ...originalLocation, reload: reloadSpy },
       });
+      const eventSpy = vi.fn();
+      window.addEventListener('ibl:auth-tokens-updated', eventSpy);
       // Queue a message with axd_token to be processed by the defaultHandler during render
       pendingIframeMessages = [{ axd_token: 'test-token' }];
       renderProviders();
       expect(mockSaveUserObjectToLocalStorage).toHaveBeenCalledWith({
         axd_token: 'test-token',
       });
-      // Saving dispatches `local-storage` events that flip the reactive auth
-      // hooks, so the AuthProvider re-renders authenticated without a full reload.
+      // Fresh tokens arrived in this window; the handler fires the
+      // token-update event so the AuthProvider re-checks and renders
+      // authenticated IN PLACE — no full reload (which re-downloads assets).
+      expect(eventSpy).toHaveBeenCalledTimes(1);
       expect(reloadSpy).not.toHaveBeenCalled();
+      window.removeEventListener('ibl:auth-tokens-updated', eventSpy);
       Object.defineProperty(window, 'location', {
         configurable: true,
         value: originalLocation,
       });
     });
 
+    it('default handler resolves a pending data-layer round-trip when tokens arrive', async () => {
+      const eventSpy = vi.fn();
+      window.addEventListener('ibl:auth-tokens-updated', eventSpy);
+      // A data-layer 401 is awaiting fresh tokens from the host.
+      const roundTrip = beginAuthRecoveryRoundTrip();
+      pendingIframeMessages = [{ axd_token: 'test-token' }];
+      renderProviders();
+      // The token-update event still fires (so a separately-blocked
+      // AuthProvider recovers too), AND the awaited round-trip resolves true so
+      // the failed request replays with the new tokens.
+      expect(eventSpy).toHaveBeenCalledTimes(1);
+      await expect(roundTrip).resolves.toBe(true);
+      window.removeEventListener('ibl:auth-tokens-updated', eventSpy);
+    });
+
     it('default handler does nothing when axd_token is absent', () => {
+      const eventSpy = vi.fn();
+      window.addEventListener('ibl:auth-tokens-updated', eventSpy);
       // Queue a message without axd_token
       pendingIframeMessages = [{ some_other_data: true }];
       renderProviders();
       expect(mockSaveUserObjectToLocalStorage).not.toHaveBeenCalled();
+      expect(eventSpy).not.toHaveBeenCalled();
+      window.removeEventListener('ibl:auth-tokens-updated', eventSpy);
     });
   });
 
