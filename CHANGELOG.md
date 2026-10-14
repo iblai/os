@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.169.3](https://github.com/iblai/os/compare/v0.169.2...v0.169.3) (2026-10-14)
+
+### Bug Fixes
+
+* **embed:** re-check auth via a token-update event instead of reloading ([3d3c46c](https://github.com/iblai/os/commit/3d3c46cc3d516626ce4579669c807ae313749484)), closes [os#580](https://github.com/iblai/os/issues/580)
+
 ## [0.169.2](https://github.com/iblai/os/compare/v0.169.1...v0.169.2) (2026-10-13)
 
 ### Bug Fixes
