@@ -24,7 +24,7 @@ use std::sync::{Arc, OnceLock};
 use std::time::{Duration, Instant};
 
 use serde_json::{json, Value};
-use tauri::{command, AppHandle, Emitter};
+use tauri::{command, AppHandle};
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::process::{Child, ChildStdin, Command};
 use tokio::sync::{oneshot, Mutex};
@@ -323,6 +323,22 @@ async fn pin_codex_mode(
     ))
 }
 
+/// The tool-update fields the chat UI reads (the SDK's `mergeToolCall` /
+/// `addToolCall`); an update that changes none of them carries only output.
+const TOOL_VISIBLE_FIELDS: [&str; 6] = ["status", "title", "kind", "name", "rawInput", "locations"];
+
+/// A `content` item of type `diff`: an edit's final text, which the UI shows.
+fn carries_diff(update: &Value) -> bool {
+    update
+        .get("content")
+        .and_then(Value::as_array)
+        .is_some_and(|items| {
+            items
+                .iter()
+                .any(|i| i.get("type").and_then(Value::as_str) == Some("diff"))
+        })
+}
+
 /// Per-turn streaming accumulator, shared between the reader task and the command.
 struct TurnState {
     generation_id: String,
@@ -334,15 +350,90 @@ struct TurnState {
     /// section rather than the reply. Kept so a turn that ends on a tool call
     /// with no trailing text still shows the model's only words.
     last_narration: String,
+    /// Thought deltas batched like `pending_delta`; `None` = none flushed yet this turn.
+    pending_reasoning: String,
+    last_reasoning_emit: Option<Instant>,
+    /// Per tool call, the visible fields last forwarded — the gate in `admit_tool_update`.
+    tool_shapes: HashMap<String, serde_json::Map<String, Value>>,
 }
 
 impl TurnState {
+    fn new() -> Self {
+        Self {
+            generation_id: String::new(),
+            full_content: String::new(),
+            pending_delta: String::new(),
+            last_emit: Instant::now(),
+            last_narration: String::new(),
+            pending_reasoning: String::new(),
+            last_reasoning_emit: None,
+            tool_shapes: HashMap::new(),
+        }
+    }
+
     fn reset(&mut self, generation_id: String) {
         self.generation_id = generation_id;
         self.full_content.clear();
         self.pending_delta.clear();
         self.last_narration.clear();
         self.last_emit = Instant::now();
+        self.pending_reasoning.clear();
+        self.last_reasoning_emit = None;
+        self.tool_shapes.clear();
+    }
+
+    /// Whether a `tool_call` / `tool_call_update` is worth a WebView event: a new
+    /// call, a visible field that changed, or a diff riding along (claude-agent-acp
+    /// reports an edit's final diff on a status-less PostToolUse update). Everything
+    /// else is output growth — opencode re-sends a bash call's whole output on every
+    /// stdout chunk, Codex a delta per chunk — which no consumer renders and which,
+    /// forwarded one-for-one, re-rendered the chat per chunk until the webview froze.
+    // ponytail: dropped outright, no window; add a per-call window here if an SDK
+    // ever shows live output.
+    fn admit_tool_update(&mut self, update: &Value) -> bool {
+        let Some(id) = update.get("toolCallId").and_then(Value::as_str) else {
+            return true;
+        };
+        let visible: Vec<(String, Value)> = TOOL_VISIBLE_FIELDS
+            .iter()
+            .filter_map(|k| update.get(*k).map(|v| ((*k).to_string(), v.clone())))
+            .collect();
+        let admit = match self.tool_shapes.get(id) {
+            None => true,
+            Some(known) => {
+                carries_diff(update) || visible.iter().any(|(k, v)| known.get(k) != Some(v))
+            }
+        };
+        if admit {
+            self.tool_shapes
+                .entry(id.to_string())
+                .or_default()
+                .extend(visible);
+        }
+        admit
+    }
+
+    /// Batch thought deltas as `pending_delta` batches reply text: the first flushes
+    /// at once, the rest at most once per `TOKEN_EMIT_WINDOW`.
+    fn push_reasoning(&mut self, delta: &str, now: Instant) -> Option<String> {
+        self.pending_reasoning.push_str(delta);
+        let due = self
+            .last_reasoning_emit
+            .map_or(true, |t| now.duration_since(t) >= TOKEN_EMIT_WINDOW);
+        if due {
+            self.take_reasoning(now)
+        } else {
+            None
+        }
+    }
+
+    /// The buffered thought text, if any — flushed before anything that must follow it.
+    fn take_reasoning(&mut self, now: Instant) -> Option<String> {
+        if self.pending_reasoning.is_empty() {
+            return None;
+        }
+        self.last_reasoning_emit = Some(now);
+        Some(std::mem::take(&mut self.pending_reasoning))
     }
 
     /// A NEW tool call starts: whatever streamed so far was a preamble ("Let
@@ -490,13 +581,29 @@ fn login_dir_present(backend: Backend, home: &Path) -> bool {
 fn surface_auth(app: &AppHandle, generation_id: &str, backend: Backend, err: String) -> String {
     match auth_hint(backend, &err) {
         Some(hint) => {
-            let _ = app.emit(
+            crate::emit_on_main(
+                app,
                 "opencode:auth_required",
                 json!({ "generation_id": generation_id, "backend": backend.id() }),
             );
             hint.to_string()
         }
         None => err,
+    }
+}
+
+/// Wait until the main thread has run every emit posted so far (`emit_on_main` is
+/// FIFO). Before a command returns after emitting: the SDK drops its listeners the
+/// moment `invoke` resolves, so a terminal event still queued would be lost.
+async fn flush_emits(app: &AppHandle) {
+    let (tx, rx) = oneshot::channel::<()>();
+    if app
+        .run_on_main_thread(move || {
+            let _ = tx.send(());
+        })
+        .is_ok()
+    {
+        let _ = rx.await;
     }
 }
 
@@ -1958,7 +2065,7 @@ fn link_skills(dest: &Path, vibe_dir: &Path, mentor_dir: Option<&Path>) -> Resul
 /// `$XDG_CONFIG_HOME/opencode/AGENTS.md` for existence on every model call
 /// and folds it into the system prompt first among instruction files — main
 /// turns, subagents and ACP alike, cloud and on-device sessions both.
-/// (Verified against pinned opencode v1.18.13 `session/instruction.ts`;
+/// (Verified against pinned opencode v1.19.0 `session/instruction.ts`;
 /// re-verify when `OPENCODE_VERSION` bumps.) The file lives only under the
 /// per-session ibl.ai config home — never the user's workspace or any
 /// non-ibl.ai directory; opencode reads it from there because spawn points
@@ -2153,8 +2260,20 @@ async fn handle_permission_request(
         },
     );
 
-    let generation_id = turn.lock().await.generation_id.clone();
-    let _ = app.emit(
+    let (generation_id, reasoning) = {
+        let mut ts = turn.lock().await;
+        (ts.generation_id.clone(), ts.take_reasoning(Instant::now()))
+    };
+    // The card can wait minutes; the thoughts behind it must be on screen first.
+    if let Some(delta) = reasoning {
+        crate::emit_on_main(
+            app,
+            "opencode:reasoning",
+            json!({ "generation_id": generation_id, "delta": delta }),
+        );
+    }
+    crate::emit_on_main(
+        app,
         "opencode:permission_request",
         json!({
             "generation_id": generation_id,
@@ -2182,7 +2301,8 @@ async fn handle_permission_request(
             _ => reject,
         };
         permissions().lock().await.remove(&request_id);
-        let _ = app.emit(
+        crate::emit_on_main(
+            &app,
             "opencode:permission_resolved",
             json!({ "request_id": request_id }),
         );
@@ -2242,7 +2362,8 @@ async fn reader_loop(
         if line.trim().is_empty() {
             continue;
         }
-        eprintln!("[acp←] {line}");
+        // The first 400 chars: a bash update carries up to 30 KB of output per line.
+        eprintln!("[acp←] {}", line.chars().take(400).collect::<String>());
         let Ok(v) = serde_json::from_str::<Value>(&line) else {
             continue;
         };
@@ -2323,6 +2444,8 @@ async fn handle_update(app: &AppHandle, v: &Value, turn: &Arc<Mutex<TurnState>>)
         .and_then(|c| c.get("text"))
         .and_then(|t| t.as_str());
 
+    let now = Instant::now();
+
     match kind {
         "agent_message_chunk" => {
             let Some(text) = text else { return };
@@ -2332,7 +2455,8 @@ async fn handle_update(app: &AppHandle, v: &Value, turn: &Arc<Mutex<TurnState>>)
             // Throttle: emit at most once per window; the trailing delta is flushed
             // on `ollama:done`.
             if ts.last_emit.elapsed() >= TOKEN_EMIT_WINDOW {
-                let _ = app.emit(
+                crate::emit_on_main(
+                    app,
                     "ollama:token",
                     json!({
                         "generation_id": ts.generation_id,
@@ -2345,43 +2469,63 @@ async fn handle_update(app: &AppHandle, v: &Value, turn: &Arc<Mutex<TurnState>>)
             }
         }
         "agent_thought_chunk" => {
-            if let Some(text) = text {
-                let gid = turn.lock().await.generation_id.clone();
-                let _ = app.emit(
+            let Some(text) = text else { return };
+            let (gid, batch) = {
+                let mut ts = turn.lock().await;
+                (ts.generation_id.clone(), ts.push_reasoning(text, now))
+            };
+            if let Some(delta) = batch {
+                crate::emit_on_main(
+                    app,
                     "opencode:reasoning",
-                    json!({ "generation_id": gid, "delta": text }),
+                    json!({ "generation_id": gid, "delta": delta }),
                 );
             }
         }
-        "tool_call" => {
-            let (gid, narration) = {
+        "tool_call" | "tool_call_update" => {
+            let (gid, admit, retract, reasoning) = {
                 let mut ts = turn.lock().await;
-                (ts.generation_id.clone(), ts.take_narration())
+                let admit = ts.admit_tool_update(update);
+                let mut retract = false;
+                if kind == "tool_call" {
+                    if let Some(text) = ts.take_narration() {
+                        // Pre-tool text is process narration: move it to the reasoning
+                        // section and retract it from the reply bubble (the frontend
+                        // replaces its content with `full_content`).
+                        ts.pending_reasoning.push_str(&text);
+                        ts.pending_reasoning.push('\n');
+                        retract = true;
+                    }
+                }
+                // Batched thoughts precede the call they led to.
+                let reasoning = if admit || retract {
+                    ts.take_reasoning(now)
+                } else {
+                    None
+                };
+                (ts.generation_id.clone(), admit, retract, reasoning)
             };
-            if let Some(text) = narration {
-                // Pre-tool text is process narration: move it to the reasoning
-                // section and retract it from the reply bubble (the frontend
-                // replaces its content with `full_content`).
-                let _ = app.emit(
+            if let Some(delta) = reasoning {
+                crate::emit_on_main(
+                    app,
                     "opencode:reasoning",
-                    json!({ "generation_id": gid, "delta": format!("{text}\n") }),
+                    json!({ "generation_id": gid, "delta": delta }),
                 );
-                let _ = app.emit(
+            }
+            if retract {
+                crate::emit_on_main(
+                    app,
                     "ollama:token",
                     json!({ "generation_id": gid, "token": "", "full_content": "" }),
                 );
             }
-            let _ = app.emit(
-                "opencode:tool_call",
-                json!({ "generation_id": gid, "update": update }),
-            );
-        }
-        "tool_call_update" => {
-            let gid = turn.lock().await.generation_id.clone();
-            let _ = app.emit(
-                "opencode:tool_call",
-                json!({ "generation_id": gid, "update": update }),
-            );
+            if admit {
+                crate::emit_on_main(
+                    app,
+                    "opencode:tool_call",
+                    json!({ "generation_id": gid, "update": update }),
+                );
+            }
         }
         _ => {}
     }
@@ -2575,7 +2719,7 @@ fn enforce_permission_policy(root: &mut serde_json::Map<String, Value>) {
     // asked in prose the way they are on the desktop. Written as a
     // permission rather than the `tools: {question: false}` shorthand: opencode
     // turns that shorthand into a permission rule which a top-level string
-    // policy then overwrites (verified against 1.18.13 — the model still got
+    // policy then overwrites (verified against 1.19.0 — the model still got
     // the tool).
     root.insert(
         "permission".to_string(),
@@ -2850,13 +2994,7 @@ async fn probe_in(
         requested_model: None,
         backend,
         proxy_secret: None,
-        turn: Arc::new(Mutex::new(TurnState {
-            generation_id: String::new(),
-            full_content: String::new(),
-            pending_delta: String::new(),
-            last_narration: String::new(),
-            last_emit: Instant::now(),
-        })),
+        turn: Arc::new(Mutex::new(TurnState::new())),
         last_used: Mutex::new(Instant::now()),
         active_turns: AtomicUsize::new(0),
         closing: AtomicBool::new(false),
@@ -3131,7 +3269,8 @@ async fn spawn_session(
             || mentor_key.as_deref().is_some_and(|k| map.contains_key(k))
     };
     if sync_in_flight {
-        let _ = app.emit(
+        crate::emit_on_main(
+            app,
             "opencode:reasoning",
             json!({ "generation_id": generation_id, "delta": "Preparing skills…\n" }),
         );
@@ -3298,13 +3437,7 @@ async fn spawn_session(
 
     let pending: Arc<Mutex<HashMap<i64, oneshot::Sender<Value>>>> =
         Arc::new(Mutex::new(HashMap::new()));
-    let turn = Arc::new(Mutex::new(TurnState {
-        generation_id: String::new(),
-        full_content: String::new(),
-        pending_delta: String::new(),
-        last_narration: String::new(),
-        last_emit: Instant::now(),
-    }));
+    let turn = Arc::new(Mutex::new(TurnState::new()));
 
     // Start the reader BEFORE the handshake so responses are routed.
     tokio::spawn(reader_loop(
@@ -3822,7 +3955,8 @@ pub async fn opencode_chat_stream(
         .map(|m| parse_model_spec(m).local)
         .unwrap_or(false)
     {
-        let _ = app.emit(
+        crate::emit_on_main(
+            &app,
             "opencode:reasoning",
             json!({
                 "generation_id": generation_id,
@@ -3862,16 +3996,22 @@ pub async fn opencode_chat_stream(
             Err(e) if attempt > 1 => {
                 // The recovery respawn itself failed — that IS the loud failure.
                 let e = surface_auth(&app, &generation_id, backend, e);
-                let _ = app.emit(
+                crate::emit_on_main(
+                    &app,
                     "ollama:error",
                     json!({ "generation_id": generation_id, "error": e }),
                 );
+                flush_emits(&app).await;
                 return Err(e);
             }
             // First spawn: keep today's invoke-rejection (a missing binary
             // stays immediately loud in the UI's own error path). A signed-out
             // agent additionally announces itself so the UI can offer the fix.
-            Err(e) => return Err(surface_auth(&app, &generation_id, backend, e)),
+            Err(e) => {
+                let e = surface_auth(&app, &generation_id, backend, e);
+                flush_emits(&app).await;
+                return Err(e);
+            }
         };
         // Replace (and thereby drop) the previous attempt's guard, if any.
         drop(turn_guard.take());
@@ -3907,7 +4047,11 @@ pub async fn opencode_chat_stream(
                 );
                 // Machine event only — the SDK clears the partial stream for
                 // this generation; nothing user-visible marks the seam.
-                let _ = app.emit("ollama:restart", json!({ "generation_id": generation_id }));
+                crate::emit_on_main(
+                    &app,
+                    "ollama:restart",
+                    json!({ "generation_id": generation_id }),
+                );
                 resume = Some(session.acp_session_id.clone());
                 attempt += 1;
             }
@@ -3919,29 +4063,39 @@ pub async fn opencode_chat_stream(
 
     match res {
         Ok(result) => {
-            let mut ts = session.turn.lock().await;
-            // Flush the final throttled delta as one last token so the committed
-            // message includes the tail — the last <TOKEN_EMIT_WINDOW of tokens lived
-            // only in `pending_delta` and never shipped. Then signal done.
-            if !ts.pending_delta.is_empty() {
-                let _ = app.emit(
-                    "ollama:token",
+            let (reasoning, tail, done) = {
+                let mut ts = session.turn.lock().await;
+                let reasoning = ts.take_reasoning(Instant::now());
+                // Flush the final throttled delta as one last token so the committed
+                // message includes the tail — the last <TOKEN_EMIT_WINDOW of tokens lived
+                // only in `pending_delta` and never shipped. Then signal done.
+                let tail = (!ts.pending_delta.is_empty()).then(|| {
                     json!({
                         "generation_id": generation_id,
                         "token": ts.pending_delta,
                         "full_content": ts.full_content,
-                    }),
-                );
+                    })
+                });
                 ts.pending_delta.clear();
-            }
-            let _ = app.emit(
-                "ollama:done",
-                json!({
+                let done = json!({
                     "generation_id": generation_id,
                     "full_content": ts.final_reply(),
                     "stop_reason": result.get("stopReason").cloned().unwrap_or(Value::Null),
-                }),
-            );
+                });
+                (reasoning, tail, done)
+            };
+            if let Some(delta) = reasoning {
+                crate::emit_on_main(
+                    &app,
+                    "opencode:reasoning",
+                    json!({ "generation_id": generation_id, "delta": delta }),
+                );
+            }
+            if let Some(token) = tail {
+                crate::emit_on_main(&app, "ollama:token", token);
+            }
+            crate::emit_on_main(&app, "ollama:done", done);
+            flush_emits(&app).await;
             Ok(())
         }
         Err(e) => {
@@ -3953,13 +4107,15 @@ pub async fn opencode_chat_stream(
             // next turn (after the user signs in) starts fresh and `session/load`s.
             let signed_out = auth_hint(backend, &e).is_some();
             let e = surface_auth(&app, &generation_id, backend, e);
-            let _ = app.emit(
+            crate::emit_on_main(
+                &app,
                 "ollama:error",
                 json!({ "generation_id": generation_id, "error": e }),
             );
             if signed_out {
                 close_session(&session_id).await;
             }
+            flush_emits(&app).await;
             Err(e)
         }
     }
@@ -5094,13 +5250,7 @@ mod tests {
             requested_model: Some("m".to_string()),
             backend: Backend::Opencode,
             proxy_secret: None,
-            turn: Arc::new(Mutex::new(TurnState {
-                generation_id: String::new(),
-                full_content: String::new(),
-                pending_delta: String::new(),
-                last_narration: String::new(),
-                last_emit: Instant::now(),
-            })),
+            turn: Arc::new(Mutex::new(TurnState::new())),
             last_used: Mutex::new(Instant::now()),
             active_turns: AtomicUsize::new(0),
             closing: AtomicBool::new(false),
@@ -5333,13 +5483,7 @@ mod tests {
     /// falling back to the model's only text when a turn ends on a tool call.
     #[test]
     fn pre_tool_text_is_reclassified_as_narration() {
-        let mut ts = TurnState {
-            generation_id: String::new(),
-            full_content: String::new(),
-            pending_delta: String::new(),
-            last_narration: String::new(),
-            last_emit: Instant::now(),
-        };
+        let mut ts = TurnState::new();
         ts.reset("g1".to_string());
         assert_eq!(
             ts.take_narration(),
@@ -5378,16 +5522,121 @@ mod tests {
     /// updates are dropped; a reset opens the gate.
     #[test]
     fn updates_between_turns_are_not_emitted() {
-        let mut ts = TurnState {
-            generation_id: String::new(),
-            full_content: String::new(),
-            pending_delta: String::new(),
-            last_narration: String::new(),
-            last_emit: Instant::now(),
-        };
+        let mut ts = TurnState::new();
         assert!(!ts.in_flight(), "fresh spawn: replay must be droppable");
         ts.reset("g1".to_string());
         assert!(ts.in_flight());
+    }
+
+    /// The tool-update gate. opencode re-sends a bash call's whole output on every
+    /// stdout chunk (a content-less duplicate when it didn't change), Codex a
+    /// `_meta` delta per chunk; forwarded one-for-one they re-rendered the chat per
+    /// chunk until the webview froze. Only what the UI reads passes: a new call, a
+    /// changed visible field, a diff.
+    #[test]
+    fn output_only_tool_updates_never_reach_the_webview() {
+        let mut ts = TurnState::new();
+        ts.reset("g1".to_string());
+        let pending = json!({
+            "sessionUpdate": "tool_call", "toolCallId": "c1", "title": "bash",
+            "kind": "execute", "status": "pending", "rawInput": {}
+        });
+        assert!(ts.admit_tool_update(&pending), "a new call is always shown");
+        let running = json!({
+            "sessionUpdate": "tool_call_update", "toolCallId": "c1", "status": "in_progress",
+            "kind": "execute", "title": "pnpm install", "locations": [],
+            "rawInput": { "command": "pnpm install", "cwd": "/w" }
+        });
+        assert!(
+            ts.admit_tool_update(&running),
+            "the command and status changed"
+        );
+        for i in 0..50 {
+            let mut snapshot = running.clone();
+            if i % 2 == 0 {
+                snapshot["content"] = json!([{
+                    "type": "content",
+                    "content": { "type": "text", "text": "x".repeat(i * 600) }
+                }]);
+            }
+            assert!(
+                !ts.admit_tool_update(&snapshot),
+                "output growth #{i} is not an event"
+            );
+        }
+        let codex = json!({
+            "sessionUpdate": "tool_call_update", "toolCallId": "c1",
+            "_meta": { "terminal_output_delta": { "data": "…", "terminal_id": "t" } }
+        });
+        assert!(
+            !ts.admit_tool_update(&codex),
+            "a Codex output delta is not an event"
+        );
+        let hook = json!({
+            "sessionUpdate": "tool_call_update", "toolCallId": "c1", "_meta": { "claudeCode": {} },
+            "content": [{ "type": "diff", "path": "/w/a.ts", "oldText": "a", "newText": "b" }]
+        });
+        assert!(
+            ts.admit_tool_update(&hook),
+            "an edit's final diff rides a status-less update"
+        );
+        let completed = json!({
+            "sessionUpdate": "tool_call_update", "toolCallId": "c1", "status": "completed",
+            "content": [{ "type": "content", "content": { "type": "text", "text": "done" } }],
+            "rawOutput": { "output": "done" }
+        });
+        assert!(ts.admit_tool_update(&completed));
+        assert!(
+            !ts.admit_tool_update(&completed),
+            "nothing new, nothing shown"
+        );
+        let failed = json!({
+            "sessionUpdate": "tool_call_update", "toolCallId": "c2", "status": "failed",
+            "content": [{ "type": "content", "content": { "type": "text", "text": "exit 1" } }]
+        });
+        assert!(
+            ts.admit_tool_update(&failed),
+            "calls are gated independently"
+        );
+        ts.reset("g2".to_string());
+        assert!(ts.admit_tool_update(&completed), "a new turn starts over");
+    }
+
+    /// Thought deltas stream at token rate; they are batched like reply text — the
+    /// first at once, then one per window — and flushed before what must follow.
+    #[test]
+    fn reasoning_chunks_are_batched_per_window() {
+        let mut ts = TurnState::new();
+        ts.reset("g1".to_string());
+        let t0 = Instant::now();
+        let at = |ms: u64| t0 + Duration::from_millis(ms);
+        assert_eq!(
+            ts.push_reasoning("Let", t0).as_deref(),
+            Some("Let"),
+            "the first chunk goes out at once"
+        );
+        for _ in 0..20 {
+            assert_eq!(ts.push_reasoning(" me", at(50)), None, "inside the window");
+        }
+        assert_eq!(
+            ts.push_reasoning(" think.", at(250)).as_deref(),
+            Some(format!("{} think.", " me".repeat(20)).as_str()),
+            "one batch per window"
+        );
+        assert_eq!(ts.push_reasoning("x", at(300)), None);
+        assert_eq!(
+            ts.take_reasoning(at(300)).as_deref(),
+            Some("x"),
+            "a flush takes the rest"
+        );
+        assert_eq!(
+            ts.take_reasoning(at(300)),
+            None,
+            "nothing buffered, nothing flushed"
+        );
+        assert_eq!(ts.push_reasoning("y", at(310)), None);
+        ts.reset("g2".to_string());
+        assert_eq!(ts.take_reasoning(at(400)), None, "reset clears the buffer");
     }
 
     // ---------- Codex / Claude Code backends ----------
@@ -6155,13 +6404,7 @@ mod tests {
             requested_model: Some(format!("{}/default", backend.id())),
             backend,
             proxy_secret: None,
-            turn: Arc::new(Mutex::new(TurnState {
-                generation_id: String::new(),
-                full_content: String::new(),
-                pending_delta: String::new(),
-                last_narration: String::new(),
-                last_emit: Instant::now(),
-            })),
+            turn: Arc::new(Mutex::new(TurnState::new())),
             last_used: Mutex::new(Instant::now()),
             active_turns: AtomicUsize::new(0),
             closing: AtomicBool::new(false),
@@ -6528,13 +6771,7 @@ done
                 requested_model: Some(format!("{}/default", backend.id())),
                 backend,
                 proxy_secret: None,
-                turn: Arc::new(Mutex::new(TurnState {
-                    generation_id: String::new(),
-                    full_content: String::new(),
-                    pending_delta: String::new(),
-                    last_narration: String::new(),
-                    last_emit: Instant::now(),
-                })),
+                turn: Arc::new(Mutex::new(TurnState::new())),
                 last_used: Mutex::new(Instant::now()),
                 active_turns: AtomicUsize::new(0),
                 closing: AtomicBool::new(false),

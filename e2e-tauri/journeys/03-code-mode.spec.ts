@@ -770,5 +770,11 @@ describe('Journey 3: Code Mode (opencode)', () => {
          the_model_choice_lists_the_agents_offer_with_default_and_selection
          (code_agent_models.rs) */
     });
+
+    it.skip('code-42: the app keeps answering while a Code turn streams a chatty command — a build’s output never reaches the chat as events', () => {
+      /* pending — needs a tool-calling model; covered meanwhile by the Rust
+         output_only_tool_updates_never_reach_the_webview and
+         reasoning_chunks_are_batched_per_window (opencode_acp.rs) */
+    });
   });
 });

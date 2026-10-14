@@ -1,6 +1,6 @@
 # Tauri Desktop E2E Coverage — Journey Checklist
 
-> Last updated: 2026-10-01 | 52 checkpoints (22 covered, 29 pending, 1 deprecated) | 3 journeys | 100% of reproducible checkpoints covered | Driver: WebdriverIO + tauri-driver
+> Last updated: 2026-10-15 | 53 checkpoints (22 covered, 30 pending, 1 deprecated) | 3 journeys | 100% of reproducible checkpoints covered | Driver: WebdriverIO + tauri-driver
 
 This is the desktop counterpart to the web `e2e/COVERAGE.md`. It tracks only what
 is exercised by driving the **built desktop binary** through `tauri-driver` (see
@@ -97,7 +97,7 @@ two vendored release workflows and are exercised by real releases.
 
 ---
 
-## Journey 3: Code Mode (opencode) (41 checkpoints: 15 covered, 25 pending, 1 deprecated) — `journeys/03-code-mode.spec.ts`
+## Journey 3: Code Mode (opencode) (42 checkpoints: 15 covered, 26 pending, 1 deprecated) — `journeys/03-code-mode.spec.ts`
 
 > **Partly covered.** The installer and per-chat state (code-01…07) run against
 > the REAL compiled binary through the live Tauri IPC bridge (`window.__TAURI__`):
@@ -195,3 +195,4 @@ two vendored release workflows and are exercised by real releases.
 - [x] `code-39` `list_code_agent_models` answers each agent's models (id, name, description) with the agent's own default and the saved pick, or refuses naming install / sign-in; an unknown backend is refused
 - [ ] `code-40` The top-left model picker opens the SDK's LLM Selection dialog (`LLMProviderModal` in its `cloudOnly` mode, the same dialog the cloud picker opens behind a provider card) while Code runs on Codex / Claude Code (in place of the mentor's LLM selector and the on-device badge), lists Default with the agent's own default and the agent's models as cards, saves the pick per machine, and shows a failed list on the button with a click to retry _(needs an authenticated UI session like code-14/23/24; covered meanwhile by the nav-bar Vitest cases `shows the agent model picker instead of the LLM selector`, `keeps the LLM selector…` and `agent-model-selector.test.tsx`)_
 - [ ] `code-41` A Code turn runs on the picked model: the handshake applies it with `session/set_config_option` right after the mode pin, a live session takes a new pick without a respawn, and a model the agent refuses fails the turn naming the picker _(needs a signed-in ChatGPT / Claude subscription; covered meanwhile by the Rust `a_scripted_agent_reports_its_models_and_takes_the_saved_one`, `an_unknown_model_is_refused_before_it_is_saved` and `the_model_choice_lists_the_agents_offer_with_default_and_selection`)_
+- [ ] `code-42` The app keeps answering while a Code turn streams a chatty command: a build's output never reaches the chat as events, only a tool call's visible changes do _(needs a tool-calling model; covered meanwhile by the Rust `output_only_tool_updates_never_reach_the_webview` and `reasoning_chunks_are_batched_per_window`)_

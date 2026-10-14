@@ -1,10 +1,10 @@
 {
   "version": 1,
-  "lastUpdated": "2026-09-29",
+  "lastUpdated": "2026-10-15",
   "summary": {
-    "totalCheckpoints": 52,
+    "totalCheckpoints": 53,
     "coveredCheckpoints": 22,
-    "pendingCheckpoints": 29,
+    "pendingCheckpoints": 30,
     "deprecatedCheckpoints": 1,
     "notReproducibleCheckpoints": 0,
     "percent": 100,
@@ -322,6 +322,11 @@
         {
           "id": "code-41",
           "description": "A Code turn runs on the picked model: the handshake applies it with session/set_config_option right after the mode pin, a live session takes a new pick without a respawn, and a model the agent refuses fails the turn naming the picker",
+          "status": "pending"
+        },
+        {
+          "id": "code-42",
+          "description": "The app keeps answering while a Code turn streams a chatty command: a build's output never reaches the chat as events, only a tool call's visible changes do",
           "status": "pending"
         }
       ]
