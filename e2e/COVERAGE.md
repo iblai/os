@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-10-08 | 920 checkpoints (876 covered, 10 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 92 journeys (91 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-10-08 | 933 checkpoints (889 covered, 10 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 93 journeys (92 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -2066,6 +2066,28 @@ Regression guard for [iblai-platform#2536](https://github.com/iblai/iblai-platfo
 - [x] sess-02: A legacy cache entry keyed by the bare mentorId is never looked up; the app mints and uses a session under the `${tenantKey}:${mentorId}` key
 - [x] sess-03: A WS "Session not found: <id>" frame mid-chat self-heals with no error toast: the working indicator clears, a fresh session replaces the dead id, and a follow-up message on it succeeds
 - [x] sess-04: In embed mode (`?embed=true`) a dead session id self-heals with no manual New chat, fetching the dead id exactly 4 times, all before the mint
+
+---
+
+## Journey 86: Draggable Accessibility Button (13 checkpoints) — `journeys/86-accessibility-fab-draggable.spec.ts`
+
+**Source files:** `app/platform/[tenantKey]/[mentorId]/_components/accessibility-fab/index.tsx` (wraps the SDK `AccessibilityFab` from `@iblai/iblai-js/web-containers/next`)
+
+Issue #2611. The floating accessibility button can be dragged (mouse + touch), nudged with the arrow keys, sent to a corner from the menu and reset; it snaps to the nearest edge and persists in `localStorage` (`accessibility-fab-position:v2` => `{side, bottom}`). The tenant-metadata GET is route-mocked to force `accessibility_menu: true`; `reducedMotion: 'reduce'` makes snaps instant except in fab-05. Touch drags use CDP `Input.dispatchTouchEvent` (Chromium only; mobile tests skip elsewhere). Page object: `page-objects/accessibility-fab.page.ts`.
+
+- [x] fab-01: User clicks the accessibility button to open the menu; a drag past 5px does not open it; a click right after a drag still opens it
+- [x] fab-02: Mouse drag left of centre snaps the button to the left edge and right of centre to the right edge, keeping its vertical position; the spot persists across reload (localStorage accessibility-fab-position:v2)
+- [x] fab-03: Regression: during a mouse drag no dragstart/dragenter/dragover events fire and the chat file-drop overlay never appears (native <img> drag used to fire pointercancel and trigger the drop zone)
+- [x] fab-04: Keyboard: ArrowUp/ArrowDown move the focused button 16px (Shift 64px), ArrowLeft/ArrowRight switch sides, and the live region announces 'Accessibility button moved to the {side} edge, N pixels from the bottom.'
+- [x] fab-05: With normal motion the inline transition contains cubic-bezier(0.34, 1.56, 0.64, 1) after release and is empty mid-drag
+- [x] fab-06: Button stays on screen on its side after the viewport shrinks and returns to its stored spot when it grows back
+- [x] fab-07: An off-screen stored position is pulled back on screen on load
+- [x] fab-08: Move-to-corner buttons in the menu place the button in each of the four corners (8px margin) and announce the move
+- [x] fab-09: Reset Button Position is hidden until the button has been moved, and clicking it restores the default spot and clears storage
+- [x] fab-10: Reset All Accessibility Settings also clears the stored button position
+- [x] fab-11: Mobile (390x844, touch): tap opens the menu; a touch drag does not open it and a following tap does
+- [x] fab-12: Mobile (touch, CDP): touch drag snaps to the nearest edge, keeps height, and persists across reload
+- [x] fab-13: Mobile: default button position does not overlap the composer Send button
 
 ---
 

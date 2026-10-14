@@ -99,7 +99,7 @@ vi.mock('@/app/platform/[tenantKey]/[mentorId]/_components/nav-bar', () => ({
   NavBar: () => <div data-testid="nav-bar">NavBar</div>,
 }));
 
-vi.mock('@/contexts/accessibility-contexts', () => ({
+vi.mock('@iblai/iblai-js/web-containers/next', () => ({
   AccessibilityProvider: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="accessibility-provider">{children}</div>
   ),
