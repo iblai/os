@@ -102,6 +102,9 @@ export function CreateMentorForm({
     );
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const categoryFieldRef = React.useRef<HTMLDivElement>(null);
+  const [categoryPortalContainer, setCategoryPortalContainer] =
+    React.useState<HTMLElement | null>(null);
   const [activeTab, setActiveTab] = React.useState('settings');
   const [prompt, setPrompt] = React.useState<Prompt | null>(null);
 
@@ -232,12 +235,25 @@ export function CreateMentorForm({
 
                   <form.Field name="category">
                     {(field) => (
-                      <div className="space-y-2">
+                      <div ref={categoryFieldRef} className="space-y-2">
                         <label className="flex items-center text-sm font-medium text-gray-700">
                           {t('categoryLabel')}
                           <span className="ml-1 text-red-500">*</span>
                         </label>
-                        <Popover>
+                        {/* Portaled into the Dialog: on document.body the list
+                            sits outside the Dialog's scroll lock, which cancels
+                            every wheel event there. */}
+                        <Popover
+                          onOpenChange={(isOpen) => {
+                            if (isOpen) {
+                              setCategoryPortalContainer(
+                                categoryFieldRef.current?.closest<HTMLElement>(
+                                  '[role="dialog"]',
+                                ) ?? null,
+                              );
+                            }
+                          }}
+                        >
                           <PopoverTrigger asChild>
                             <Button
                               variant="outline"
@@ -258,14 +274,20 @@ export function CreateMentorForm({
                             aria-label={t('categoriesDropdownAriaLabel')}
                             role="listbox"
                             aria-labelledby="Categories dropdown container"
-                            className="w-full max-w-[490px] p-0 sm:w-[400px] lg:w-[490px]"
+                            className="flex w-full max-w-[490px] flex-col overflow-hidden p-0 sm:w-[400px] lg:w-[490px]"
+                            style={{
+                              maxHeight:
+                                'var(--radix-popover-content-available-height)',
+                            }}
+                            container={categoryPortalContainer}
+                            collisionBoundary={categoryPortalContainer}
                           >
-                            <Command>
+                            <Command className="flex min-h-0 flex-1 flex-col">
                               <CommandInput
                                 placeholder={t('searchCategoryPlaceholder')}
                                 className="h-9"
                               />
-                              <CommandList>
+                              <CommandList className="min-h-0">
                                 <CommandEmpty>
                                   {t('noCategoryFound')}
                                 </CommandEmpty>
