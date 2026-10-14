@@ -31,7 +31,7 @@ When adding a new page or modifying an existing user flow:
 
 ## Journey 2: First-Time User Chat & Navigation (9 checkpoints) — `journeys/02-first-time-user-chat-and-navigation.spec.ts`
 
-**Source files:** `app/platform/[tenantKey]/[mentorId]/page.tsx`, `components/chat/index.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`, `components/welcome-chat.tsx`, `components/advanced-chat/ui-tags/default-tag.tsx`
+**Source files:** `app/platform/[tenantKey]/[mentorId]/page.tsx`, `components/chat/sdk-chat.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`
 
 - [x] Newly created user can send a message and receive an AI response
 - [x] Newly created user can start a new chat session after chatting
@@ -164,7 +164,7 @@ _Note: the LLM tab is served by the SDK's `AgentLLMTab`; `components/modals/edit
 
 ## Journey 8: Chat File Upload (9 checkpoints) — `journeys/08-chat-file-upload.spec.ts`
 
-**Source files:** `components/chat-input-form/upload-menu.tsx`, `components/chat-input-form/file-attachments-list.tsx`, `hooks/use-chat-file-upload.ts`, `hooks/use-file-drag-drop.ts`, `hooks/use-show-attachment.ts`
+**Source files:** `components/chat-input-form/upload-menu.tsx`, `components/chat-input-form/file-attachments-list.tsx`, `hooks/use-chat-file-upload.ts`, `hooks/use-show-attachment.ts`
 
 - [x] Image, PDF, and text files can be uploaded via the upload button
 - [x] File input `accept` attribute correctly includes supported and excludes unsupported types
@@ -180,7 +180,7 @@ _Note: the LLM tab is served by the SDK's `AgentLLMTab`; `components/modals/edit
 
 ## Journey 9: Voice Chat (7 checkpoints) — `journeys/09-voice-chat.spec.ts`
 
-**Source files:** `components/live-kit-voice-chat.tsx`, `components/modals/voice-chat-modal.tsx`, `components/chat-input-form/voice-call-button.tsx`, `hooks/use-voice-chat.ts`, `hooks/use-show-voice-call.ts`
+**Source files:** `components/chat-input-form/voice-call-button.tsx`, `hooks/use-voice-chat.ts`, `hooks/use-show-voice-call.ts`
 
 - [x] Voice call dialog opens with heading, mute button, and end-call button (Chromium)
 - [x] Voice call dialog opens correctly on Firefox and WebKit
@@ -194,7 +194,7 @@ _Note: the LLM tab is served by the SDK's `AgentLLMTab`; `components/modals/edit
 
 ## Journey 10: Canvas — AI Document Editor (16 checkpoints; 2 not-reproducible) — `journeys/10-canvas-ai-document-editor.spec.ts`
 
-**Source files:** `lib/canvas-markdown-engine.ts` (the canvas itself — `CanvasView`, `CanvasComponent`, the rich-text editor, controls, export handlers, the binary viewer and `binary-artifact-utils` — lives in the SDK at `packages/web-containers/src/components/canvas/` and is imported from `@iblai/iblai-js/web-containers`; this app hands it the chat's markdown engine), `components/chat/chat-messages/canvas-message-preview.tsx`, `components/chat/chat-messages/message-preview.tsx`, `components/chat/chat-messages/types.ts`, `components/chat/index.tsx`, `hooks/use-canvas-aware-send.ts`
+**Source files:** `lib/canvas-markdown-engine.ts` (the canvas itself — `CanvasView`, `CanvasComponent`, the rich-text editor, controls, export handlers, the binary viewer and `binary-artifact-utils` — lives in the SDK at `packages/web-containers/src/components/canvas/` and is imported from `@iblai/iblai-js/web-containers`; this app hands it the chat's markdown engine), `components/chat/chat-messages/canvas-message-preview.tsx`, `components/chat/chat-messages/message-preview.tsx`, `components/chat/chat-messages/types.ts`, `components/chat/sdk-chat.tsx`
 
 Binary artifacts (pdf, xlsx, zip, …) are a read-only variant of the canvas artifact: the backend marks them with `is_binary`/`mime_type` and serves the bytes base64-encoded in `binary_content` from the artifact DETAIL endpoint only. The chat message chip always shows "Open Canvas" (disabled with a tooltip while the binary is still generating) — there is no separate "Download" chip variant; the binary canvas (the SDK's `binary-canvas-component.tsx`) is view + a single header Export — no editing, formatting toolbar, AI controls, version menu, or rename — previews pdf/images/svg inline, shows friendly no-preview / malformed-file messages for everything else, and is never pinned to outgoing chat messages the way the text/code canvas is. **Journey 71** (`71-vm-sandbox-txt-file-canvas.spec.ts`) exercises the VM-sandbox file-sharing pipeline end-to-end against a live LLM — deliberately with a **.txt** file (reliable to produce in the VM with plain shell tooling), which is a TEXT artifact: it verifies the chip + text-canvas path and that text/binary routing picks the text path. The binary-specific surfaces (binary chip gating, pdf/image preview, non-previewable fallback, malformed-file preview-error, stream-end binary auto-open/takeover, no-pin behavior) stay unit-only (the SDK's `binary-artifact-utils.test.ts`, `binary-canvas-component.test.tsx` and `canvas-view.test.tsx`; this app's `canvas-message-preview.test.tsx` and `message-preview.test.tsx`) since no journey makes a live agent produce a real binary artifact.
 
@@ -444,7 +444,7 @@ Driven by the shared paywall helpers in `@iblai/iblai-js/playwright`. All tests 
 
 ## Journey 22: Disclaimers & User Agreement (19 checkpoints) — `journeys/22-disclaimers-and-user-agreement.spec.ts`
 
-**Source files:** `components/modals/edit-mentor-modal/tabs/disclaimers-tab/index.tsx`, `components/modals/edit-mentor-modal/tabs/disclaimers-tab/edit-user-agreement-modal.tsx`, `components/modals/edit-mentor-modal/tabs/disclaimers-tab/edit-disclaimer-modal.tsx`, `components/modals/edit-mentor-modal/tabs/disclaimers-tab/agreements-modal.tsx`, `components/modals/disclaimer-modal.tsx`, `hooks/use-user-agreement.ts`, `constants/disclaimer.ts`
+**Source files:** `components/modals/edit-mentor-modal/tabs/disclaimers-tab/index.tsx`, `components/modals/edit-mentor-modal/tabs/disclaimers-tab/edit-user-agreement-modal.tsx`, `components/modals/edit-mentor-modal/tabs/disclaimers-tab/edit-disclaimer-modal.tsx`, `components/modals/edit-mentor-modal/tabs/disclaimers-tab/agreements-modal.tsx`, `constants/disclaimer.ts`
 
 - [x] Admin enables User Agreement toggle and sees Active status _(creates fresh mentor; skips if non-admin)_
 - [x] Admin disables User Agreement toggle and sees Inactive status _(creates fresh mentor; skips if non-admin)_
@@ -512,7 +512,7 @@ The "Remember past conversations" (`enable_memory_component`) master toggle move
 
 ## Journey 26: Projects (17 checkpoints) — `journeys/26-projects.spec.ts`
 
-**Source files:** `app/platform/[tenantKey]/projects/page.tsx`, `app/platform/[tenantKey]/projects/[projectId]/[mentorId]/page.tsx`, `hooks/user-navigate.ts`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`, `components/welcome-chat-new.tsx`, `components/modals/no-mentor-selected-modal.tsx`
+**Source files:** `app/platform/[tenantKey]/projects/page.tsx`, `app/platform/[tenantKey]/projects/[projectId]/[mentorId]/page.tsx`, `hooks/user-navigate.ts`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`, `components/chat/sdk-chat.tsx`, `components/modals/no-mentor-selected-modal.tsx`
 
 - [x] A new project can be created from the sidebar
 - [x] Project landing page shows the assigned mentor list and action buttons
@@ -721,7 +721,7 @@ The "Remember past conversations" (`enable_memory_component`) master toggle move
 
 ## Journey 37: Voice Call and Screen Share in Canvas (9 checkpoints) — `journeys/37-voice-call-and-screen-share-in-canvas.spec.ts`
 
-**Source files:** `components/chat-input-form/screen-sharing-button.tsx`, `components/chat-input-form/voice-call-button.tsx`, `components/chat/index.tsx`
+**Source files:** `components/chat-input-form/screen-sharing-button.tsx`, `components/chat-input-form/voice-call-button.tsx`, `components/chat/sdk-chat.tsx`
 
 - [x] Non-admin screen share button has `type="button"` and does not submit the chat form
 - [x] Non-admin clicking screen share activates screen sharing, not form submit
@@ -926,7 +926,7 @@ VTT-02, VTT-03 and VTT-04 are regression cover for [iblai-platform#2402](https:/
 
 ## Journey: Chat URL ?prompt= Auto-Injection (10 checkpoints) — `journeys/chat-url-prompt-injection.spec.ts`
 
-**Source files:** `components/chat/index.tsx`
+**Source files:** `components/chat/sdk-chat.tsx`
 
 Covers the feature introduced in [iblai/iblai-platform#1722](https://github.com/iblai/iblai-platform/issues/1722). When a mentor chat page loads with `?prompt=<text>` in the URL, the `useAdvancedChat` hook (from `@iblai/iblai-js`) reads `searchParams.get('prompt')?.trim()` and auto-submits that text as a user message exactly once per mount.
 
@@ -1082,7 +1082,7 @@ Covers the "Enable Prompt Caching" toggle added to the Capabilities sub-tab of t
 
 ## Journey 52: Tool Call Indicator & Reasoning Section (8 checkpoints) — `journeys/52-tool-call-indicator-and-reasoning.spec.ts`
 
-**Source files:** `components/chat/tool-call-item.tsx`, `components/chat/reasoning-section.tsx`, `components/chat/ai-message-bubble.tsx`, `components/chat/chat-messages/index.tsx`, `components/chat/index.tsx`, `hooks/use-mentors/use-mentor-settings.ts`
+**Source files:** `components/chat/tool-call-item.tsx`, `components/chat/reasoning-section.tsx`, `components/chat/ai-message-bubble.tsx`, `components/chat/chat-messages/index.tsx`, `components/chat/sdk-chat.tsx`, `hooks/use-mentors/use-mentor-settings.ts`
 
 - [x] Web Search tool pill appears during streaming with tool name and pulse animation
 - [x] Tool call pill is expandable and shows query detail
@@ -1097,7 +1097,7 @@ Covers the "Enable Prompt Caching" toggle added to the Capabilities sub-tab of t
 
 ## Journey 53: Recent Chats Refresh (3 checkpoints; 1 pending) — `journeys/53-recent-chats-refresh.spec.ts`
 
-**Source files:** `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`, `components/chat/index.tsx`
+**Source files:** `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`, `components/chat/sdk-chat.tsx`
 
 Regression guard for the `SidebarChatsSection` `useEffect` that calls `refetchRecent()` once streaming finishes on a brand-new chat (exactly 2 messages: user + first assistant reply). On `main` the effect was orphaned in an unrendered component; on `fix/1982` it lives inside the rendered `SidebarChatsSection`.
 
@@ -1683,7 +1683,7 @@ affected; only the internal preview could reach our storage.
 
 ## Journey 71: VM Sandbox File Artifact — Canvas Preview (2 checkpoints) — `journeys/71-vm-sandbox-txt-file-canvas.spec.ts`
 
-**Source files:** `lib/canvas-markdown-engine.ts` (the canvas itself — `CanvasView`, `CanvasComponent`, the rich-text editor, controls, export handlers, the binary viewer and `binary-artifact-utils` — lives in the SDK at `packages/web-containers/src/components/canvas/` and is imported from `@iblai/iblai-js/web-containers`; this app hands it the chat's markdown engine), `components/chat/chat-messages/canvas-message-preview.tsx`, `components/chat/chat-messages/message-preview.tsx`, `components/chat/index.tsx`, `components/modals/edit-mentor-modal/tabs/sandbox-tab.tsx`
+**Source files:** `lib/canvas-markdown-engine.ts` (the canvas itself — `CanvasView`, `CanvasComponent`, the rich-text editor, controls, export handlers, the binary viewer and `binary-artifact-utils` — lives in the SDK at `packages/web-containers/src/components/canvas/` and is imported from `@iblai/iblai-js/web-containers`; this app hands it the chat's markdown engine), `components/chat/chat-messages/canvas-message-preview.tsx`, `components/chat/chat-messages/message-preview.tsx`, `components/chat/sdk-chat.tsx`, `components/modals/edit-mentor-modal/tabs/sandbox-tab.tsx`
 
 LIVE-LLM coverage of the VM-sandbox file-sharing pipeline that Journey 10 (Canvas) and Journey 44 (CLAW Advanced Sandbox) can only reach at the unit-test / settings-toggle level. On a dedicated per-test mentor (selecting a sandbox kind is a destructive settings mutation — never run against the shared admin mentor, per the project's shared-mentor-isolation convention), this journey selects the "Virtual Machine Shell" sandbox kind via `SandboxTab.selectKind('virtual-machine')` (mutually exclusive with the other two kinds, and at least one kind is always active — see Journey 44), asks the agent over a real chat turn to create and share **hello.txt** with a known marker line, and verifies the agent replies with the file: the chat chip appears and the canvas shows the file's content. A .txt file was chosen deliberately over a binary format (pdf/xlsx) — the VM produces it reliably with plain shell tooling, so the journey verifies the sandbox→share_files→artifact pipeline without gambling on the LLM assembling valid binary bytes; since .txt is a TEXT artifact, the expected surface is the text canvas and the binary canvas is asserted absent (text/binary routing). The whole file runs in `test.describe.configure({ mode: 'serial' })` and uses `MentorTracker` + `afterAll` to delete its mentor, mirroring Journey 44's pattern. `test.slow()` accounts for VM boot + real generation time; the chip wait carries a multi-minute budget while unrelated assertions keep normal timeouts.
 
@@ -1759,7 +1759,7 @@ instead.
 
 ## Journey 73: Agent Working Indicator (11 checkpoints) — `journeys/73-agent-working-indicator.spec.ts`
 
-**Source files:** `components/chat/working-indicator.tsx`, `components/chat/ai-message-frame.tsx`, `components/chat/ai-message-bubble.tsx`, `components/chat/chat-messages/index.tsx`, `components/chat/index.tsx`, `components/chat/reasoning-section.tsx`, `lib/constants.ts`, `app/globals.css`, `components/markdown.tsx`, `components/chat/chat-messages/message-preview.tsx`
+**Source files:** `components/chat/working-indicator.tsx`, `components/chat/ai-message-frame.tsx`, `components/chat/ai-message-bubble.tsx`, `components/chat/chat-messages/index.tsx`, `components/chat/sdk-chat.tsx`, `components/chat/reasoning-section.tsx`, `lib/constants.ts`, `app/globals.css`, `components/markdown.tsx`, `components/chat/chat-messages/message-preview.tsx`
 
 Issue #2217 — a persistent "agent is working" indicator in chat, replacing a
 placeholder that used to vanish for good the instant any token rendered.
@@ -1891,7 +1891,7 @@ route.
 
 ## Journey 76: Show Additional Agents Toggle (7 checkpoints) — `journeys/76-show-additional-agents-toggle.spec.ts`
 
-**Source files:** `components/modals/edit-mentor-modal/settings-tab.tsx`, `components/welcome-chat-new.tsx`, `components/welcome-chat/explore-mentors.tsx`, `hooks/use-mentors/use-mentor-settings.ts`
+**Source files:** `components/modals/edit-mentor-modal/settings-tab.tsx`, `components/chat/sdk-chat.tsx`, `hooks/use-mentors/use-mentor-settings.ts`
 
 Covers issue #2544: a new `show_explore_mentors` mentor setting, exposed as a "Show Additional Agents" switch (`data-testid="settings-show-explore-mentors-switch"`) in the Edit Agent modal's Settings tab → Capabilities sub-tab → Advanced section. It gates the OS-specific "Explore Agents" section that renders on an agent's own (non-project) welcome screen. Note: the issue asks for the backend default to be `false` for new agents; as of this writing the backend actually defaults it to `true` in this environment, so every checkpoint below explicitly drives the toggle to a known state first rather than asserting a specific out-of-the-box default. sem-05 is a regression guard for a real bug found in manual QA: `use-mentor-settings.ts` used to read `effectiveSettings?.show_explore_mentors ?? effectivePublicSettings?.show_explore_mentors ?? false`, but field-level RBAC returns an unreadable field as `""` (not `null`/`undefined`) for a logged-in non-owner's `/settings/` GET — `"" ?? x` short-circuits to `""`, so non-owner viewers never saw the section even when the owner had it ON; the fix (`asBoolean`) only treats a real boolean as present. The project landing page's own "mentors in this project" list is a separate, SDK-owned feature that hard-codes its own `showExploreMentors` prop and never reads this setting — confirmed by reading `components/welcome-chat-new.tsx`'s `projectId` branch directly, so it is documented here rather than covered by a browser test. Journey 15's sw-06 checkpoint (home-page Explore section) was also fixed alongside this journey: it used to silently no-op ("not in explore-mentors state") whenever the ambient default mentor happened to have the section off; it now seeds its own throw-away mentor with the toggle explicitly ON so the checkpoint is deterministic.
 
@@ -1909,7 +1909,7 @@ Covers issue #2544: a new `show_explore_mentors` mentor setting, exposed as a "S
 
 **Source files:** `components/chat/sdk-chat.tsx`, `app/platform/[tenantKey]/[mentorId]/mentor-page-content.tsx`
 
-Covers issue #2586 Stage 1: the chat surface now renders the SDK `Chat` component (`@iblai/iblai-js/web-containers/next`) via `components/chat/sdk-chat.tsx`, instead of OS's own `components/chat/index.tsx` + `components/chat-input-form/*` (still present, but no longer rendered on this page). Live model replies are unavailable in this environment (the shared ibl.ai free-tier model new e2e agents use returns `TooManyRequestsResponseError: Rate limit exceeded`), so every test scripts the chat WebSocket via `ChatPage.mockChatWebSocket()` / the new `mockStopGenerationWebSocket()` rather than depending on a real reply — the same technique journeys 68/70/73 established. Frame shapes and endpoints were confirmed by reading `@iblai/web-utils`'s `use-chat-v2.ts` and `use-mentor-tools.ts` directly (source, not the bundled `dist/`): the outgoing WS frame is `{flow, session_id, token, prompt, file_references?, ...}` — session tools are NOT resent per message (session-scoped, read server-side from the `PUT .../sessions/{id}/` `{tools}` body instead); Stop opens a SEPARATE `wss://.../ws/langflow-stop-generation/` socket and only re-enables the composer once THAT socket replies; a mid-stream WS close (no eos/error frame) is handled the same way a real backend error surfaces, and does not require any `test.fixme`/skip to reproduce.
+Covers issue #2586 Stage 1: the chat surface now renders the SDK `Chat` component (`@iblai/iblai-js/web-containers/next`) via `components/chat/sdk-chat.tsx`, instead of OS's own `components/chat/index.tsx` (since removed) + `components/chat-input-form/*`. Live model replies are unavailable in this environment (the shared ibl.ai free-tier model new e2e agents use returns `TooManyRequestsResponseError: Rate limit exceeded`), so every test scripts the chat WebSocket via `ChatPage.mockChatWebSocket()` / the new `mockStopGenerationWebSocket()` rather than depending on a real reply — the same technique journeys 68/70/73 established. Frame shapes and endpoints were confirmed by reading `@iblai/web-utils`'s `use-chat-v2.ts` and `use-mentor-tools.ts` directly (source, not the bundled `dist/`): the outgoing WS frame is `{flow, session_id, token, prompt, file_references?, ...}` — session tools are NOT resent per message (session-scoped, read server-side from the `PUT .../sessions/{id}/` `{tools}` body instead); Stop opens a SEPARATE `wss://.../ws/langflow-stop-generation/` socket and only re-enables the composer once THAT socket replies; a mid-stream WS close (no eos/error frame) is handled the same way a real backend error surfaces, and does not require any `test.fixme`/skip to reproduce.
 
 Excludes issue #2536's session-recovery checkpoints — that fix has not yet been ported into the SDK Chat. Needed once it lands: (1) a dropped/expired session on reload falls back to a fresh session rather than showing a permanently broken composer; (2) an explicit "session expired" affordance (if any) is shown and actionable; (3) resuming after recovery does not resend or duplicate the last user message; (4) recovery does not clobber an unrelated, still-valid session for a different mentor tab.
 
@@ -1979,7 +1979,7 @@ Covers issue #2586's embed surface redesign: a new OS header (`EmbedNavBar` — 
 
 ## Journey 81: Project Page Redesign (5 checkpoints) — `journeys/81-project-page-redesign.spec.ts`
 
-**Source files:** `app/platform/[tenantKey]/projects/[projectId]/[mentorId]/page.tsx`, `components/welcome-chat-new.tsx`
+**Source files:** `app/platform/[tenantKey]/projects/[projectId]/[mentorId]/page.tsx`, `components/chat/sdk-chat.tsx`
 
 Covers issue #2586's project landing page redesign (SDK `ProjectLandingPage`, rendered by OS's `WelcomeChatNew` for the project chat route): the same composer as the main chat plus a redesigned header/context section — a small label with the project name above the gradient agent name (the main chat's heading), Files/Instructions cards with count badges (hidden for students), a "Project agents" list with a count badge, "Add agent", click-to-switch agent cards, a per-agent "…" menu with "Remove from project", and a "Cannot Remove Agent" guard when only one agent remains. Journey 26 already covers the Files/Instructions modal entry points and basic chat send; this journey covers the new layout and the agent-list interactions specifically. Uses the `testProject` fixture (a project created fresh per test with exactly one attached agent, via `ProjectPage.createFromSidebar`, which now skips any leftover "Test Workflow" mentor when picking the agent card).
 
