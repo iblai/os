@@ -2,8 +2,8 @@
   "version": 2,
   "lastUpdated": "2026-10-23",
   "summary": {
-    "totalCheckpoints": 984,
-    "coveredCheckpoints": 939,
+    "totalCheckpoints": 998,
+    "coveredCheckpoints": 953,
     "deprecatedCheckpoints": 17,
     "notReproducibleCheckpoints": 17,
     "pendingCheckpoints": 11,
@@ -5472,7 +5472,9 @@
         "hooks/use-is-lti-launch.ts",
         "lib/embed-context.ts",
         "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/embed-nav-bar.tsx",
-        "app/platform/[tenantKey]/[mentorId]/_components/accessibility-fab/index.tsx"
+        "app/platform/[tenantKey]/[mentorId]/_components/accessibility-fab/index.tsx",
+        "hooks/use-show-user-profile.ts",
+        "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/user-profile.tsx"
       ],
       "checkpoints": [
         {
@@ -5513,6 +5515,26 @@
         {
           "id": "emb-lti-04",
           "description": "Regression (issue #2586): in a 300px LTI frame the composer placeholder stays on one line and ellipsizes (white-space nowrap, ::placeholder text-overflow ellipsis, content under two lines, not clipped), while typed text still wraps",
+          "status": "covered"
+        },
+        {
+          "id": "emb-prof-01",
+          "description": "The embed header shows the user's profile avatar (\"More options\") only when the host sets `show-user-profile=true`; without it there is no avatar",
+          "status": "covered"
+        },
+        {
+          "id": "emb-prof-02",
+          "description": "The embed profile menu offers Profile, the tenant switcher and Help, and leaves out Log Out and the Admin/User mode switch (the host owns auth)",
+          "status": "covered"
+        },
+        {
+          "id": "emb-prof-03",
+          "description": "Profile in the embed profile menu opens the User Profile dialog inside the frame on the Basic tab, and Cancel closes it without saving",
+          "status": "covered"
+        },
+        {
+          "id": "emb-prof-04",
+          "description": "Picking another tenant in the embed profile menu posts `{ tenantSwitch: true, tenant }` to the host page and leaves the frame on the chat instead of redirecting it to the auth app",
           "status": "covered"
         }
       ]
