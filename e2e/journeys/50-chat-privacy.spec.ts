@@ -1458,9 +1458,6 @@ test.describe('Journey 50: Chat Privacy', () => {
       });
       await chatPage.waitForStreamingComplete(120_000);
 
-      // Wait a moment for the guided-prompts refetch to settle post-stream.
-      await page.waitForTimeout(3_000);
-
       // Assert the row container is present (single, stable testid hook) and
       // that at least one guided-prompt button rendered inside it — the row
       // shows up to three, so we confirm ≥1 rather than asserting on the
@@ -1468,8 +1465,10 @@ test.describe('Journey 50: Chat Privacy', () => {
       await expect(chatPage.guidedSuggestedPrompts).toBeVisible({
         timeout: 30_000,
       });
+      // The guided-prompts request is an LLM call: 7-18s on staging, so a
+      // short timeout flakes.
       await expect(chatPage.guidedSuggestedPromptButtons.first()).toBeVisible({
-        timeout: 5_000,
+        timeout: 60_000,
       });
     });
 

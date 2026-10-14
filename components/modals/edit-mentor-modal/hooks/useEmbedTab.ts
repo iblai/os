@@ -123,6 +123,7 @@ const SETTINGS_OWNED_FIELDS = [
 const useEmbedTab = () => {
   const [embedCode, setEmbedCode] = useState('');
   const [allowMentorSelection, setAllowMentorSelection] = useState(false);
+  const [allowFullscreen, setAllowFullscreen] = useState(false);
   const { getMentorId } = useNavigate();
   const username = useUsername();
   const params = useParams<{ tenantKey: string; mentorId: string }>();
@@ -475,6 +476,7 @@ const useEmbedTab = () => {
           ...value,
           allow_anonymous: allowAnonymous,
           allow_mentor_selection: allowMentorSelection,
+          allow_fullscreen: allowFullscreen,
         },
         syncResult.redirectToken ?? '',
         value.icon_selection === 'custom',
@@ -571,6 +573,8 @@ const useEmbedTab = () => {
     allowAnonymous,
     allowMentorSelection,
     setAllowMentorSelection,
+    allowFullscreen,
+    setAllowFullscreen,
     createTokenHandler,
     form,
     createTokenError,

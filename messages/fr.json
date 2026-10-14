@@ -105,44 +105,6 @@
     "noMatchingGroupsFound": "Aucun groupe correspondant trouvé.",
     "groupSearchHint": "Saisissez au moins deux caractères pour rechercher et assigner des groupes à ce rôle."
   },
-  "accessibilityAccessibilityToolbar": {
-    "accessibilityMenu": "Menu d'accessibilité",
-    "contrastPlus": "Contraste +",
-    "highlightLinks": "Mettre les liens en évidence",
-    "biggerText": "Texte plus grand",
-    "textSpacing": "Espacement du texte",
-    "pauseAnimations": "Mettre les animations en pause",
-    "hideImages": "Masquer les images",
-    "dyslexiaFriendly": "Adapté à la dyslexie",
-    "cursor": "Curseur",
-    "tooltips": "Infobulles",
-    "lineHeight": "Hauteur de ligne",
-    "textAlign": "Alignement du texte",
-    "saturation": "Saturation",
-    "resetAllAccessibilitySettings": "Réinitialiser tous les paramètres d'accessibilité",
-    "contrastInvertColors": "Inverser les couleurs",
-    "contrastDark": "Contraste sombre",
-    "contrastLight": "Contraste clair",
-    "textSizeNormal": "Texte normal",
-    "textSizeLarge": "Grand texte",
-    "textSizeLarger": "Texte très grand",
-    "spacingLight": "Espacement léger",
-    "spacingModerate": "Espacement modéré",
-    "spacingHeavy": "Espacement important",
-    "dyslexiaFont": "Police dyslexie",
-    "legibleFont": "Police lisible",
-    "alignLeft": "Aligner à gauche",
-    "alignCenter": "Centrer",
-    "alignRight": "Aligner à droite",
-    "justify": "Justifier",
-    "saturationNormal": "Saturation normale",
-    "saturationHigh": "Haute saturation",
-    "saturationLow": "Faible saturation"
-  },
-  "accessibilityFloatingAccessibilityButton": {
-    "openAccessibilityMenu": "Ouvrir le menu d'accessibilité",
-    "accessibilityIconAlt": "Accessibilité"
-  },
   "advancedChatExpandTab": {
     "expand": "Développer"
   },
@@ -1424,7 +1386,9 @@
     "closeChat": "Fermer le chat",
     "newChat": "Nouvelle discussion",
     "incognito": "Mode incognito",
-    "incognitoChat": "Discussion incognito"
+    "incognitoChat": "Discussion incognito",
+    "enterFullscreen": "Plein écran",
+    "exitFullscreen": "Quitter le plein écran"
   },
   "navBarIndex": {
     "logIn": "Se connecter",
@@ -1592,6 +1556,11 @@
     "allowMentorSelectionTooltip": "Permettre aux visiteurs connectés d'ouvrir Explorer depuis l'intégration et de passer à un autre agent.",
     "allowMentorSelectionEnabled": "Sélection d'agent activée",
     "allowMentorSelectionDisabled": "Sélection d'agent désactivée",
+    "allowFullscreenLabel": "Autoriser le plein écran",
+    "moreInfoAllowFullscreen": "Plus d'informations sur le plein écran",
+    "allowFullscreenTooltip": "Affiche un bouton dans le chat pour passer de la petite fenêtre au plein écran.",
+    "allowFullscreenEnabled": "Plein écran activé",
+    "allowFullscreenDisabled": "Plein écran désactivé",
     "shareableLinkLabel": "Lien partageable",
     "moreInfoShareableLink": "Plus d'informations sur la génération d'un lien partageable",
     "shareableLinkTooltip": "Générer un lien que les utilisateurs peuvent utiliser pour chatter avec cet agent anonymement",
