@@ -5814,7 +5814,7 @@
         },
         {
           "id": "rav-02",
-          "description": "For each server voice source, clicking Read Aloud on a fresh reply fetches the chat-message /tts/ audio (2xx, audio/*) and audio starts playing within 30s",
+          "description": "For each server voice source, clicking Read Aloud on a fresh reply fetches the chat-message /tts/ audio (2xx, audio/*) and audio starts playing within 7s (the budget past which useSpeech reports TtsSlowFirstAudioError to Sentry)",
           "status": "pending"
         },
         {

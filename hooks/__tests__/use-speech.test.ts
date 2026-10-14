@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { act, renderHook, waitFor } from '@testing-library/react';
+import * as Sentry from '@sentry/nextjs';
 
 const mockUseUsername = vi.fn();
 const mockUseMentorSettings = vi.fn();
@@ -20,7 +21,17 @@ vi.mock('@/lib/constants', () => ({
   LOCAL_STORAGE_KEYS: { DM_TOKEN_KEY: 'dm_token' },
 }));
 
-import { useSpeech } from '../use-speech';
+vi.mock('@sentry/nextjs', () => ({
+  captureException: vi.fn(),
+}));
+
+import {
+  FIRST_AUDIO_BUDGET_MS,
+  TtsSlowFirstAudioError,
+  useSpeech,
+} from '../use-speech';
+
+const captureException = vi.mocked(Sentry.captureException);
 
 type AudioInstance = {
   src: string;
@@ -76,6 +87,7 @@ beforeEach(() => {
   createdUtterances = [];
   speak.mockReset();
   cancel.mockReset();
+  captureException.mockReset();
   mockUseUsername.mockReset();
   mockUseMentorSettings.mockReset();
   mockUseUsername.mockReturnValue('alice');
@@ -649,6 +661,110 @@ describe('useSpeech', () => {
       expect(result.current.currentMessageId).toBeNull();
       // An aborted stream is torn down by stop(), not finalised by the pump.
       expect(fakeMediaSource.endOfStream).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('slow first audio reporting', () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+      mockUseMentorSettings.mockReturnValue({
+        data: { voiceProvider: 'google' },
+      });
+      window.localStorage.setItem('dm_token', 'tok-123');
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    function mockFetchPending() {
+      globalThis.fetch = vi.fn(
+        (_url, opts) =>
+          new Promise((_resolve, reject) => {
+            (opts as RequestInit).signal?.addEventListener('abort', () =>
+              reject(new DOMException('Aborted', 'AbortError')),
+            );
+          }),
+      ) as unknown as typeof fetch;
+    }
+
+    it('reports to Sentry when no audio has arrived after 7s', async () => {
+      mockFetchPending();
+      const { result } = renderHook(() => useSpeech({ tenantKey: 'org-1' }));
+      await act(async () => {
+        result.current.speak({ id: 'm-slow', content: 'slow' } as never);
+      });
+
+      await act(() => vi.advanceTimersByTimeAsync(FIRST_AUDIO_BUDGET_MS - 1));
+      expect(captureException).not.toHaveBeenCalled();
+
+      await act(() => vi.advanceTimersByTimeAsync(1));
+      expect(captureException).toHaveBeenCalledTimes(1);
+      expect(captureException).toHaveBeenCalledWith(
+        expect.any(TtsSlowFirstAudioError),
+        expect.objectContaining({
+          tags: expect.objectContaining({
+            subsystem: 'tts',
+            tenant: 'org-1',
+            voiceProvider: 'google',
+          }),
+          extra: expect.objectContaining({ chatMessageId: 'm-slow' }),
+        }),
+      );
+      expect(result.current.isLoading).toBe(true);
+    });
+
+    it('does not report when audio arrives within 7s', async () => {
+      mockFetchOk();
+      const { result } = renderHook(() => useSpeech({ tenantKey: 'org-1' }));
+      await act(async () => {
+        result.current.speak({ id: 'm-fast', content: 'fast' } as never);
+      });
+
+      await act(() => vi.advanceTimersByTimeAsync(FIRST_AUDIO_BUDGET_MS * 2));
+      expect(result.current.isSpeaking).toBe(true);
+      expect(captureException).not.toHaveBeenCalled();
+    });
+
+    it('does not report when the request fails within 7s', async () => {
+      mockFetchFail(502);
+      const { result } = renderHook(() => useSpeech({ tenantKey: 'org-1' }));
+      await act(async () => {
+        result.current.speak({ id: 'm-fail', content: 'fail' } as never);
+      });
+
+      await act(() => vi.advanceTimersByTimeAsync(FIRST_AUDIO_BUDGET_MS * 2));
+      expect(result.current.isLoading).toBe(false);
+      expect(captureException).not.toHaveBeenCalled();
+    });
+
+    it('does not report when the user stops before 7s', async () => {
+      mockFetchPending();
+      const { result } = renderHook(() => useSpeech({ tenantKey: 'org-1' }));
+      await act(async () => {
+        result.current.speak({ id: 'm-stopped', content: 'stop' } as never);
+      });
+      await act(() => vi.advanceTimersByTimeAsync(FIRST_AUDIO_BUDGET_MS / 2));
+      act(() => {
+        result.current.stop();
+      });
+
+      await act(() => vi.advanceTimersByTimeAsync(FIRST_AUDIO_BUDGET_MS * 2));
+      expect(captureException).not.toHaveBeenCalled();
+    });
+
+    it('does not report for browser speech', async () => {
+      mockUseMentorSettings.mockReturnValue({
+        data: { voiceProvider: 'browser' },
+      });
+      const { result } = renderHook(() => useSpeech({ tenantKey: 'org-1' }));
+      act(() => {
+        result.current.speak({ id: 'm-browser', content: 'local' } as never);
+      });
+
+      await act(() => vi.advanceTimersByTimeAsync(FIRST_AUDIO_BUDGET_MS * 2));
+      expect(speak).toHaveBeenCalled();
+      expect(captureException).not.toHaveBeenCalled();
     });
   });
 

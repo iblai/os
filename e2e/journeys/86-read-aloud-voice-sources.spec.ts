@@ -11,8 +11,9 @@ import type { VoiceProviderId } from '../page-objects/edit-mentor/voice.tab';
  * agent's voice source is switched in Settings → Voice, a fresh reply is read
  * aloud, and the test waits for audio to actually start. Server voices
  * (Google, ibl.ai, OpenAI, …) stream from the chat-message `/tts/` endpoint
- * into an `Audio` element; Browser uses speechSynthesis. Runs on a fresh
- * mentor, so the tenant must hold the voice provider keys.
+ * into an `Audio` element and must start within 7s; Browser uses
+ * speechSynthesis. Runs on a fresh mentor, so the tenant must hold the voice
+ * provider keys.
  */
 
 type PlaybackWindow = Window & {
@@ -21,6 +22,10 @@ type PlaybackWindow = Window & {
 };
 
 const PLAYBACK_TIMEOUT = 30_000;
+// Mirrors FIRST_AUDIO_BUDGET_MS in hooks/use-speech.ts: past it the app
+// reports a TtsSlowFirstAudioError to Sentry, so a server voice slower than
+// this is a failure here too.
+const FIRST_AUDIO_BUDGET = 7_000;
 const PROMPT = 'Reply with one short sentence about the ocean.';
 
 const isTtsUrl = (url: string) =>
@@ -87,7 +92,7 @@ async function setVoiceSource(
   await editMentorPage.close();
 }
 
-// Up to five legs, each a chat reply plus up to 30s of playback.
+// Up to five legs, each a chat reply plus up to 30s of playback (7s for server voices).
 test.describe.configure({ timeout: 12 * 60_000 });
 
 test.describe('Journey 86: Read Aloud across voice sources', () => {
@@ -120,7 +125,10 @@ test.describe('Journey 86: Read Aloud across voice sources', () => {
     await editMentorPage.close();
 
     for (const provider of [...serverVoices, 'browser' as const]) {
-      await test.step(`${provider}: Read Aloud starts playing within 30s`, async () => {
+      const budget =
+        provider === 'browser' ? PLAYBACK_TIMEOUT : FIRST_AUDIO_BUDGET;
+      const budgetLabel = `${budget / 1000}s`;
+      await test.step(`${provider}: Read Aloud starts playing within ${budgetLabel}`, async () => {
         await setVoiceSource(editMentorPage, provider);
 
         const repliesBefore = await chatPage.aiMessages.count();
@@ -154,7 +162,7 @@ test.describe('Journey 86: Read Aloud across voice sources', () => {
             ? null
             : page
                 .waitForResponse((r) => isTtsUrl(r.url()), {
-                  timeout: PLAYBACK_TIMEOUT,
+                  timeout: budget,
                 })
                 .catch(() => null);
 
@@ -164,8 +172,8 @@ test.describe('Journey 86: Read Aloud across voice sources', () => {
         if (provider === 'browser') {
           await softExpect
             .poll(() => speechStartsSince(page, speechBaseline), {
-              message: 'browser: speech synthesis started speaking',
-              timeout: PLAYBACK_TIMEOUT,
+              message: `browser: speech synthesis started speaking within ${budgetLabel}`,
+              timeout: budget,
             })
             .toBeGreaterThan(0);
         } else {
@@ -178,10 +186,11 @@ test.describe('Journey 86: Read Aloud across voice sources', () => {
           const response = await ttsResponse;
           const outcome = response
             ? `HTTP ${response.status()}`
-            : (request?.failure()?.errorText ?? 'still pending after 30s');
+            : (request?.failure()?.errorText ??
+              `still pending after ${budgetLabel}`);
           softExpect(
             response,
-            `${provider}: TTS audio arrived within 30s (${outcome})`,
+            `${provider}: TTS audio arrived within ${budgetLabel} (${outcome})`,
           ).not.toBeNull();
           if (response) {
             softExpect(
@@ -194,10 +203,10 @@ test.describe('Journey 86: Read Aloud across voice sources', () => {
             ).toMatch(/^audio\//);
           }
 
-          const remaining = PLAYBACK_TIMEOUT - (Date.now() - clickedAt);
+          const remaining = budget - (Date.now() - clickedAt);
           await softExpect
             .poll(() => isAudioElementPlaying(page), {
-              message: `${provider}: audio is playing within 30s of clicking Read Aloud`,
+              message: `${provider}: audio is playing within ${budgetLabel} of clicking Read Aloud`,
               timeout: Math.max(remaining, 1_000),
             })
             .toBe(true);
