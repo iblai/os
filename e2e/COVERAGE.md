@@ -1520,7 +1520,7 @@ tool calls actually mounts `AgentTodoList`.
 - [x] atl-05: An unrecognized todo status (e.g. "blocked") renders as pending rather than being dropped
 - [x] atl-06: A turn that never emits `write_todos` shows no affordance at all — no panel, no header, no skeleton
 - [x] atl-07: `write_todos` never appears in the generic "Used N tools" indicator or as its own raw tool card, even with a companion tool call present on the same turn
-- [x] atl-08: The in-progress row's text carries the `.todo-shimmer` left-to-right sweep class
+- [x] atl-08: While the turn streams, the in-progress row reads "In progress" and its text carries the `.todo-shimmer` left-to-right sweep class; once the turn has ended (history), an unfinished row reads "To do" and stops shimmering
 - [x] atl-09: The sr-only `aria-live` announcer carries only the throttled "Step N of M complete" summary, never any todo row text
 - [x] atl-10: The task list survives a page reload, recovered from chat history
 - [x] atl-11: First fixture-backed validation of the LangChain-shape and OpenAI-shape `write_todos` history parsing, plus a malformed entry dropped without throwing

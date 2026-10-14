@@ -4425,7 +4425,7 @@
         },
         {
           "id": "atl-08",
-          "description": "The in-progress row's text carries the .todo-shimmer left-to-right sweep class",
+          "description": "While the turn streams, the in-progress row reads \"In progress\" and its text carries the .todo-shimmer left-to-right sweep class; once the turn has ended (history), an unfinished row reads \"To do\" and stops shimmering",
           "status": "covered"
         },
         {
