@@ -4397,7 +4397,7 @@
       "checkpoints": [
         {
           "id": "atl-01",
-          "description": "The task list renders as a real <ol> with one <li> per todo; status communicated via data-status + a sr-only status word + a distinct icon shape per status — no visible status text on the row itself (issue #2216)",
+          "description": "The task list renders as a real <ol> with one <li> per todo; status communicated via data-status + a sr-only status word + a distinct icon shape per status — no visible status text on the row itself; once the turn is over, an in_progress step reads as To do with the pending icon (data-status keeps in_progress) (issue #2216)",
           "status": "covered"
         },
         {
@@ -4432,7 +4432,7 @@
         },
         {
           "id": "atl-08",
-          "description": "The in-progress row's text carries the .todo-shimmer left-to-right sweep class",
+          "description": "The in-progress row's text carries the .todo-shimmer left-to-right sweep class while the turn streams, and loses it once the turn is over",
           "status": "covered"
         },
         {

@@ -1513,14 +1513,14 @@ A lone leading `assistant`-role history message is special-cased by
 fixture therefore includes a preceding human message so the AI message with
 tool calls actually mounts `AgentTodoList`.
 
-- [x] atl-01: The task list renders as a real `<ol>` with one `<li>` per todo; status via `data-status` + a sr-only status word + a distinct icon per status — no visible status text on the row itself
+- [x] atl-01: The task list renders as a real `<ol>` with one `<li>` per todo; status via `data-status` + a sr-only status word + a distinct icon per status — no visible status text on the row itself; once the turn is over, an in_progress step reads as To do with the pending icon (`data-status` keeps `in_progress`)
 - [x] atl-02: The panel header shows an "N of M done" progress summary, visible even while the row list underneath is collapsed
 - [x] atl-03: The panel is expanded by default while the turn is streaming, auto-collapses once the turn completes, and clicking the trigger re-expands it (collapsed-by-default also verified for historical/reload-recovered turns)
 - [x] atl-04: A second `write_todos` call within the same streaming turn replaces the list wholesale — never merges or appends onto the previous call's rows
 - [x] atl-05: An unrecognized todo status (e.g. "blocked") renders as pending rather than being dropped
 - [x] atl-06: A turn that never emits `write_todos` shows no affordance at all — no panel, no header, no skeleton
 - [x] atl-07: `write_todos` never appears in the generic "Used N tools" indicator or as its own raw tool card, even with a companion tool call present on the same turn
-- [x] atl-08: The in-progress row's text carries the `.todo-shimmer` left-to-right sweep class
+- [x] atl-08: The in-progress row's text carries the `.todo-shimmer` left-to-right sweep class while the turn streams, and loses it once the turn is over
 - [x] atl-09: The sr-only `aria-live` announcer carries only the throttled "Step N of M complete" summary, never any todo row text
 - [x] atl-10: The task list survives a page reload, recovered from chat history
 - [x] atl-11: First fixture-backed validation of the LangChain-shape and OpenAI-shape `write_todos` history parsing, plus a malformed entry dropped without throwing
