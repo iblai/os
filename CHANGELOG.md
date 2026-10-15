@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.171.3](https://github.com/iblai/os/compare/v0.171.2...v0.171.3) (2026-10-15)
+
+### Bug Fixes
+
+* adopt iblai-js 2.40.6 + transpile react-gravatar (prod avatar crash) ([0e14c76](https://github.com/iblai/os/commit/0e14c768bcf99cb8c22788250ee30a072cc57f34))
+
 ## [0.171.2](https://github.com/iblai/os/compare/v0.171.1...v0.171.2) (2026-10-15)
 
 ### Performance
