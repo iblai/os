@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.171.0](https://github.com/iblai/os/compare/v0.170.0...v0.171.0) (2026-10-15)
+
+### Features
+
+* **code-mode:** describe every Code-turn step, card, line and error in plain words ([20541fe](https://github.com/iblai/os/commit/20541fe7ee4b276fc92db7d1f5e2867a8c2bec98))
+
+### Bug Fixes
+
+* **code-mode:** keep task-list items plain, test the permission payload, fix the ledger notes ([616116a](https://github.com/iblai/os/commit/616116ab09cdec38c2f43b96e1a2483b68d88c37))
+* **e2e:** read an unfinished task of a finished turn as To do ([c3dbc91](https://github.com/iblai/os/commit/c3dbc91202a952f0b2194ff3b6e5861fb6e58502))
+
+### Chores
+
+* **code-mode:** move the plain-words Code-turn UI to the SDK and pin @iblai/iblai-js 2.38.0 ([a441380](https://github.com/iblai/os/commit/a4413800b5b7221d5dac62a131c3268be218723c))
+* **tauri:** release app-v0.95.26 ([1e6fd4b](https://github.com/iblai/os/commit/1e6fd4b5bdfa573ff487a899790288da13806e04))
+
 ## [0.170.0](https://github.com/iblai/os/compare/v0.169.3...v0.170.0) (2026-10-15)
 
 ### Features
