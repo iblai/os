@@ -1252,6 +1252,8 @@
       "cancel": "Annuler",
       "inUse": "Utilisé",
       "downloadFailedRetry": "Échec du téléchargement — réessayer",
+      "downloadFailed": "Échec du téléchargement",
+      "retry": "Réessayer",
       "ariaDownload": "Télécharger {modelName}, {modelSize}, modèle sur l''appareil",
       "ariaStarting": "Démarrage du téléchargement de {modelName}",
       "ariaDownloading": "Annuler le téléchargement de {modelName}, {percent} pour cent",

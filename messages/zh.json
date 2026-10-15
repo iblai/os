@@ -1252,6 +1252,8 @@
       "cancel": "取消",
       "inUse": "使用中",
       "downloadFailedRetry": "下载失败——重试",
+      "downloadFailed": "下载失败",
+      "retry": "重试",
       "ariaDownload": "下载 {modelName}，{modelSize}，设备端模型",
       "ariaStarting": "正在开始下载 {modelName}",
       "ariaDownloading": "取消下载 {modelName}，{percent}%",
