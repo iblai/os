@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.171.1](https://github.com/iblai/os/compare/v0.171.0-patch.2...v0.171.1) (2026-10-15)
+
+### Chores
+
+* iblai js bump 2.40.4 > patch version update ([eeae31e](https://github.com/iblai/os/commit/eeae31e82c6b9bbc038c33531893859a672f40fc))
+
 ## [0.171.0](https://github.com/iblai/os/compare/v0.170.0...v0.171.0) (2026-10-15)
 
 ### Features
