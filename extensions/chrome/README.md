@@ -162,4 +162,4 @@ workflow header). CI has no `.env.local`, so what it publishes always points at
 
 Copy a fresh `dist/index.umd.js` from the SDK's `packages/agent-ai` build over
 `public/vendor/agent-ai.umd.js` (the directory is prettier-ignored so it stays
-as published). Also copy it byte-for-byte to `e2e/fixtures/agent-ai.umd.js` (journey 87 serves that copy; `scripts/agent-ai-vendor-copy.test.ts` fails when they differ). Vendored: `@iblai/agent-ai` 2.13.1.
+as published). Also copy it byte-for-byte to `e2e/fixtures/agent-ai.umd.js` (journey 89 serves that copy; `scripts/agent-ai-vendor-copy.test.ts` fails when they differ). Vendored: `@iblai/agent-ai` 2.13.1.
