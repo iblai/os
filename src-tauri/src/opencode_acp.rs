@@ -333,15 +333,15 @@ async fn pin_codex_mode(
 const TOOL_VISIBLE_FIELDS: [&str; 6] = ["status", "title", "kind", "name", "rawInput", "locations"];
 
 /// A `content` item of type `diff`: an edit's final text, which the UI shows.
+fn is_diff(item: &Value) -> bool {
+    item.get("type").and_then(Value::as_str) == Some("diff")
+}
+
 fn carries_diff(update: &Value) -> bool {
     update
         .get("content")
         .and_then(Value::as_array)
-        .is_some_and(|items| {
-            items
-                .iter()
-                .any(|i| i.get("type").and_then(Value::as_str) == Some("diff"))
-        })
+        .is_some_and(|items| items.iter().any(is_diff))
 }
 
 fn is_failed(status: Option<&Value>) -> bool {
@@ -406,12 +406,13 @@ impl TurnState {
             return true;
         };
         let known = self.tool_shapes.get(id);
-        let failed = known.is_some_and(|k| is_failed(k.get("status")));
+        let failed =
+            is_failed(update.get("status")) || known.is_some_and(|k| is_failed(k.get("status")));
         let fields = TOOL_VISIBLE_FIELDS
             .iter()
             .copied()
             .chain(failed.then_some("content"));
-        let admit = known.map_or(true, |known| {
+        let admit = known.is_none_or(|known| {
             carries_diff(update)
                 || fields
                     .clone()
@@ -450,13 +451,7 @@ impl TurnState {
                 "content" if !failed => {
                     let diffs: Vec<Value> = v
                         .as_array()
-                        .map(|items| {
-                            items
-                                .iter()
-                                .filter(|i| i.get("type").and_then(Value::as_str) == Some("diff"))
-                                .cloned()
-                                .collect()
-                        })
+                        .map(|items| items.iter().filter(|i| is_diff(i)).cloned().collect())
                         .unwrap_or_default();
                     if !diffs.is_empty() {
                         out.insert(k.clone(), Value::Array(diffs));
@@ -481,7 +476,7 @@ impl TurnState {
         self.pending_reasoning.push_str(delta);
         let due = self
             .last_reasoning_emit
-            .map_or(true, |t| now.duration_since(t) >= TOKEN_EMIT_WINDOW);
+            .is_none_or(|t| now.duration_since(t) >= TOKEN_EMIT_WINDOW);
         if due {
             self.take_reasoning(now)
         } else {
@@ -679,7 +674,12 @@ async fn flush_emits(app: &AppHandle) {
         })
         .is_ok()
     {
-        let _ = tokio::time::timeout(FLUSH_TIMEOUT, rx).await;
+        if tokio::time::timeout(FLUSH_TIMEOUT, rx).await.is_err() {
+            crate::telemetry::report_warning(
+                "[opencode] main thread did not run a turn's last events in time",
+                format!("waited {FLUSH_TIMEOUT:?}"),
+            );
+        }
     }
 }
 
@@ -2589,6 +2589,16 @@ fn flush_turn(emit: Emit<'_>, ts: &mut TurnState, now: Instant) {
     }
 }
 
+/// A failed turn's one signal is `ollama:error`: the invoke resolves after it, or the
+/// SDK's `catch` toasts the same failure a second time.
+fn fail_turn(emit: Emit<'_>, generation_id: &str, error: String) -> Result<(), String> {
+    emit(
+        "ollama:error",
+        json!({ "generation_id": generation_id, "error": error }),
+    );
+    Ok(())
+}
+
 async fn handle_update(emit: Emit<'_>, v: &Value, turn: &Arc<Mutex<TurnState>>) {
     // No generation in flight → this is the `session/load` history replay at
     // spawn time (or a stray post-turn notification): drop it, never re-stream
@@ -2624,8 +2634,8 @@ async fn handle_update(emit: Emit<'_>, v: &Value, turn: &Arc<Mutex<TurnState>>) 
             }
             ts.full_content.push_str(text);
             ts.pending_delta.push_str(text);
-            // Throttle: emit at most once per window; the trailing delta is flushed
-            // on `ollama:done`.
+            // Throttle: emit at most once per window; `flush_turn` ships the
+            // trailing delta at the turn's end.
             if ts.last_emit.elapsed() >= TOKEN_EMIT_WINDOW {
                 emit(
                     "ollama:token",
@@ -4195,12 +4205,7 @@ async fn chat_stream(
             Err(e) if attempt > 1 => {
                 // The recovery respawn itself failed — that IS the loud failure.
                 let e = surface_auth(&app, &generation_id, backend, e);
-                crate::emit_on_main(
-                    &app,
-                    "ollama:error",
-                    json!({ "generation_id": generation_id, "error": e }),
-                );
-                return Err(e);
+                return fail_turn(&mut emit_via(&app), &generation_id, e);
             }
             // First spawn: keep today's invoke-rejection (a missing binary
             // stays immediately loud in the UI's own error path). A signed-out
@@ -4255,7 +4260,7 @@ async fn chat_stream(
             _ => break (session, res),
         }
     };
-    // Held to fn end, as before — busy until after the done/error emit.
+    // Busy until the done/error is queued; it drops before the wrapper's flush.
     let _turn_guard = turn_guard;
 
     match res {
@@ -4290,15 +4295,11 @@ async fn chat_stream(
                 &mut *session.turn.lock().await,
                 Instant::now(),
             );
-            crate::emit_on_main(
-                &app,
-                "ollama:error",
-                json!({ "generation_id": generation_id, "error": e }),
-            );
+            let res = fail_turn(&mut emit_via(&app), &generation_id, e);
             if signed_out {
                 close_session(&session_id).await;
             }
-            Err(e)
+            res
         }
     }
 }
@@ -5846,6 +5847,13 @@ mod tests {
             ts.admit_tool_update(&failed),
             "calls are gated independently"
         );
+        let resent = json!({
+            "sessionUpdate": "tool_call_update", "toolCallId": "c2", "content": failed["content"]
+        });
+        assert!(
+            !ts.admit_tool_update(&resent),
+            "the error text it failed with is not news"
+        );
         let error_text = json!({
             "sessionUpdate": "tool_call_update", "toolCallId": "c2",
             "content": [{ "type": "content", "content": { "type": "text", "text": "Permission denied: rm" } }]
@@ -6009,6 +6017,23 @@ mod tests {
         let mut again: Vec<(&'static str, Value)> = Vec::new();
         flush_turn(&mut |e, p| again.push((e, p)), &mut ts, t0);
         assert!(again.is_empty(), "nothing buffered, nothing emitted");
+    }
+
+    /// The SDK toasts an `ollama:error` and a rejected invoke alike, and the flush
+    /// lands the event before the invoke settles: a failed turn that also rejected
+    /// showed every failure twice.
+    #[test]
+    fn a_failed_turn_is_reported_once() {
+        let mut events: Vec<(&'static str, Value)> = Vec::new();
+        let res = fail_turn(&mut |e, p| events.push((e, p)), "g1", "boom".to_string());
+        assert_eq!(
+            events,
+            [(
+                "ollama:error",
+                json!({ "generation_id": "g1", "error": "boom" })
+            )]
+        );
+        assert_eq!(res, Ok(()), "a rejection would be the second toast");
     }
 
     /// The wiring behind the gate, through `handle_update` itself: a chatty

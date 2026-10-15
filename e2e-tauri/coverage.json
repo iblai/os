@@ -347,11 +347,11 @@
         },
         {
           "id": "code-46",
-          "description": "A failed Code turn's toast says what went wrong in plain words (stopped unexpectedly, took too long, no model picked, couldn't start, signed out) instead of the raw agent error",
+          "description": "A failed Code turn raises one toast, saying what went wrong in plain words (stopped unexpectedly, took too long, no model picked, couldn't start, signed out) instead of the raw agent error",
           "status": "pending"
         },
         {
-          "id": "code-47",
+          "id": "code-48",
           "description": "The app keeps answering while a Code turn streams a chatty command: a build's output never reaches the chat as events, only a tool call's visible changes do",
           "status": "pending"
         }
