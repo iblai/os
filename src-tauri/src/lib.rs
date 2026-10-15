@@ -937,6 +937,10 @@ where
 /// Check Ollama installation and model status
 #[command]
 async fn check_ollama_status(app: AppHandle) -> Result<OllamaStatus, String> {
+    // Mobile: a status check is the first thing to reach the embedded server
+    // after the app resumes, so it is where a dead one gets restarted.
+    #[cfg(any(target_os = "ios", target_os = "android"))]
+    let _ = crate::local_llm::ensure_answering().await;
     // Determine availability FIRST (/api/version), then — only once available —
     // wait a short grace period BEFORE reaching /api/tags (it lags /api/version
     // right after start, so reading too early reports "stopped"/"no models").
@@ -1041,6 +1045,12 @@ async fn download_ollama_model(app: AppHandle, model: String) -> Result<(), Stri
         },
     );
 
+    // Mobile: the embedded server. One that stopped answering (iOS reclaims a
+    // suspended app's sockets) is restarted in place, with no 30 s wait on
+    // the dead port first.
+    #[cfg(any(target_os = "ios", target_os = "android"))]
+    crate::local_llm::ensure_answering().await?;
+
     // Check if Ollama is running
     if !is_ollama_running().await {
         emit_on_main(
@@ -1059,25 +1069,6 @@ async fn download_ollama_model(app: AppHandle, model: String) -> Result<(), Stri
         // Wait for it to actually become ready (it can take several seconds; a
         // fixed short delay raced the server and made downloads fail).
         if !wait_for_ollama_ready(30).await {
-            // Mobile: there is no "manually" — the server is embedded. Say
-            // what the probe actually saw so a failure is diagnosable from
-            // the error toast alone (device stdout is not readable in dev).
-            #[cfg(any(target_os = "ios", target_os = "android"))]
-            {
-                let url = crate::local_llm::server_url();
-                let probe = match url.as_deref() {
-                    Some(u) => match reqwest::get(format!("{u}/api/version")).await {
-                        Ok(r) => format!("HTTP {}", r.status()),
-                        Err(e) => format!("{e}"),
-                    },
-                    None => "embedded server never started".to_string(),
-                };
-                return Err(format!(
-                    "Embedded model server is not responding (url: {}, probe: {probe})",
-                    url.as_deref().unwrap_or("none")
-                ));
-            }
-            #[cfg(not(any(target_os = "ios", target_os = "android")))]
             return Err("Could not start Ollama server. Please start Ollama manually.".to_string());
         }
 
@@ -1477,6 +1468,8 @@ async fn ollama_chat(
     tool_support: Option<bool>,
 ) -> Result<String, String> {
     let model = model.unwrap_or_else(|| "phi3:mini".to_string());
+    #[cfg(any(target_os = "ios", target_os = "android"))]
+    crate::local_llm::ensure_answering().await?;
     let base = model_manager::chat_base_url(tool_support.unwrap_or(false))?;
     let ollama_url = format!("{base}/api/chat");
 
@@ -1530,6 +1523,8 @@ async fn ollama_chat_stream(
     tool_support: Option<bool>,
 ) -> Result<(), String> {
     let model = model.unwrap_or_else(|| "phi3:mini".to_string());
+    #[cfg(any(target_os = "ios", target_os = "android"))]
+    crate::local_llm::ensure_answering().await?;
     let base = model_manager::chat_base_url(tool_support.unwrap_or(false))?;
     let ollama_url = format!("{base}/api/chat");
 

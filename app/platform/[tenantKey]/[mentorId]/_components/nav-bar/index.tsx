@@ -84,6 +84,7 @@ import {
 } from '@/features/analytics/slice';
 import { useMentorSettings } from '@/hooks/use-mentors/use-mentor-settings';
 import {
+  localModelDisplayName,
   useLlmDisplayName,
   useLlmProviderCatalogue,
 } from '@iblai/iblai-js/web-containers';
@@ -277,7 +278,8 @@ export function NavBar() {
     ? resolveLlmProvider(selectedLocal.model.provider).logo
     : '';
   const localModelName =
-    selectedLocal.model?.name ?? selectedLocal.modelId ?? '';
+    selectedLocal.model?.name ??
+    (selectedLocal.modelId ? localModelDisplayName(selectedLocal.modelId) : '');
   // Admins (non-students) can switch the mentor's LLM; for them the on-device
   // badge doubles as the entry point to the model picker (mirrors the cloud
   // selector's gate). Others get a plain, non-interactive indicator.
@@ -297,12 +299,12 @@ export function NavBar() {
           <HardDrive className="h-4 w-4 text-[#646464]" />
         )}
       </div>
-      <span className="hidden max-w-[150px] overflow-hidden text-ellipsis whitespace-nowrap lowercase sm:block">
+      <span className="hidden max-w-[150px] overflow-hidden text-ellipsis whitespace-nowrap sm:block">
         {localModelName}
       </span>
       <span className="hidden flex-shrink-0 items-center gap-1 rounded-full bg-[#F5F8FF] px-2 py-0.5 text-[11px] font-medium text-[#38A1E5] md:inline-flex">
         <HardDrive className="h-3 w-3" aria-hidden="true" />
-        On-device
+        {t('onDevice')}
       </span>
       {canChooseLlm && <ChevronDown className="h-4 w-4 text-gray-500" />}
     </>

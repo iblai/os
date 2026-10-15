@@ -559,8 +559,18 @@ fn router(models_dir: PathBuf) -> Router {
         .with_state(AppState { models_dir })
 }
 
-/// The base URL of the running embedded server, once [`start`] has bound it.
-static SERVER_URL: OnceLock<String> = OnceLock::new();
+/// The running embedded server: its base URL and the handle that stops it.
+/// Replaceable, not set-once: iOS reclaims a suspended app's sockets, which
+/// leaves the listener dead while axum's accept loop keeps running, so the
+/// server has to be shut down and started afresh (see [`restart_after`]).
+static SERVER: Mutex<Option<Server>> = Mutex::new(None);
+
+struct Server {
+    url: String,
+    /// Dropping it ends the accept loop (`with_graceful_shutdown`), so the
+    /// thread, its runtime and the port are released.
+    shutdown: tokio::sync::oneshot::Sender<()>,
+}
 /// Serializes `start`'s check → bind → spawn → publish: without it two
 /// concurrent callers both see no URL, both bind and spawn a server, and the
 /// loser's server lives forever on a port nobody is told about.
@@ -594,8 +604,60 @@ pub fn ensure_started() -> Result<String, String> {
     }
 }
 
+/// Start a fresh server after the one at `dead_url` stopped answering: iOS
+/// reclaims a suspended app's sockets, so the listener is dead while its URL
+/// still points at the port. Stopping that server and forgetting it is what
+/// lets `start` bind again (on 11434 once released, else a new port) instead
+/// of handing back the dead one. A server already replaced is left alone, so
+/// two callers racing after one suspension restart it once.
+pub fn restart_after(dead_url: &str) -> Result<String, String> {
+    stop_into(&SERVER, dead_url);
+    ensure_started()
+}
+
+fn stop_into(slot: &Mutex<Option<Server>>, dead_url: &str) {
+    let mut slot = slot.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+    if slot.as_ref().is_some_and(|s| s.url == dead_url) {
+        // Dropping the sender is the shutdown signal.
+        *slot = None;
+    }
+}
+
+/// The server's URL once it is known to answer. A dead server (socket
+/// reclaimed while the app was suspended) is restarted first, so every
+/// caller — status, download, chat — gets a live one.
+pub async fn ensure_answering() -> Result<String, String> {
+    let url = ensure_started()?;
+    if answers(&url).await {
+        return Ok(url);
+    }
+    println!("[LocalLLM] server at {url} is not answering; restarting it");
+    let url = restart_after(&url)?;
+    for _ in 0..30 {
+        if answers(&url).await {
+            return Ok(url);
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+    }
+    Err(format!(
+        "Embedded model server is not responding (url: {url})"
+    ))
+}
+
+async fn answers(url: &str) -> bool {
+    reqwest::Client::new()
+        .get(format!("{url}/api/version"))
+        .timeout(std::time::Duration::from_secs(2))
+        .send()
+        .await
+        .is_ok_and(|r| r.status().is_success())
+}
+
 pub fn server_url() -> Option<String> {
-    SERVER_URL.get().cloned()
+    SERVER
+        .lock()
+        .ok()
+        .and_then(|s| s.as_ref().map(|s| s.url.clone()))
 }
 
 /// Start the embedded server on its own thread (own runtime, so it works no
@@ -610,20 +672,24 @@ pub fn start(models_dir: PathBuf) -> Result<String, String> {
     if let Ok(mut dir) = MODELS_DIR.lock() {
         *dir = Some(models_dir.clone());
     }
-    start_into(&SERVER_URL, &START_LOCK, models_dir)
+    start_into(&SERVER, &START_LOCK, models_dir)
 }
 
 /// `start` against explicit state, so the race guard is testable on a fresh
 /// slot (a `OnceLock` can never be reset once another test has started the
 /// global server).
 fn start_into(
-    url_slot: &OnceLock<String>,
+    slot: &Mutex<Option<Server>>,
     lock: &Mutex<()>,
     models_dir: PathBuf,
 ) -> Result<String, String> {
     let _serialized = lock.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
-    if let Some(url) = url_slot.get() {
-        return Ok(url.clone());
+    if let Some(url) = slot
+        .lock()
+        .ok()
+        .and_then(|s| s.as_ref().map(|s| s.url.clone()))
+    {
+        return Ok(url);
     }
     let listener = std::net::TcpListener::bind("127.0.0.1:11434")
         .or_else(|_| std::net::TcpListener::bind("127.0.0.1:0"))
@@ -631,6 +697,7 @@ fn start_into(
     listener.set_nonblocking(true).map_err(|e| e.to_string())?;
     let addr = listener.local_addr().map_err(|e| e.to_string())?;
     let url = format!("http://127.0.0.1:{}", addr.port());
+    let (shutdown, stopped) = tokio::sync::oneshot::channel::<()>();
 
     std::thread::Builder::new()
         .name("ibl-local-llm".into())
@@ -642,14 +709,23 @@ fn start_into(
             rt.block_on(async move {
                 let listener =
                     tokio::net::TcpListener::from_std(listener).expect("local llm listener");
-                if let Err(e) = axum::serve(listener, router(models_dir)).await {
+                let serve =
+                    axum::serve(listener, router(models_dir)).with_graceful_shutdown(async move {
+                        let _ = stopped.await;
+                    });
+                if let Err(e) = serve.await {
                     crate::telemetry::report("[LocalLLM] server exited", e);
                 }
             });
         })
         .map_err(|e| e.to_string())?;
 
-    let _ = url_slot.set(url.clone());
+    if let Ok(mut slot) = slot.lock() {
+        *slot = Some(Server {
+            url: url.clone(),
+            shutdown,
+        });
+    }
     println!("[LocalLLM] embedded server listening on {url}");
     Ok(url)
 }
@@ -1132,7 +1208,7 @@ mod tests {
         assert_eq!(s.push(b"next").as_deref(), Some("next"));
     }
 
-    /// `start()` records into process-wide state (MODELS_DIR, SERVER_URL),
+    /// `start()` records into process-wide state (MODELS_DIR, SERVER),
     /// so the tests that call it must not interleave.
     static START_TEST_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 
@@ -1169,7 +1245,7 @@ mod tests {
     /// since the global one may already be started by another test.
     #[test]
     fn concurrent_starts_share_one_server() {
-        static URL: OnceLock<String> = OnceLock::new();
+        static URL: Mutex<Option<Server>> = Mutex::new(None);
         static LOCK: Mutex<()> = Mutex::new(());
         let dir = std::env::temp_dir()
             .join(format!("ibl-race-{}", std::process::id()))
@@ -1194,6 +1270,47 @@ mod tests {
             urls.iter().all(|u| u == &urls[0]),
             "every caller must get the same url, got {urls:?}"
         );
+    }
+
+    /// The bug this pins: iOS reclaims a suspended app's sockets, which leaves
+    /// the listener dead while the URL kept pointing at its port, so every
+    /// download failed with "embedded model server is not responding".
+    /// Restarting stops that server (releasing its thread and port) and binds
+    /// a fresh one that answers; a server already replaced is left alone.
+    #[tokio::test(flavor = "multi_thread")]
+    async fn a_dead_server_is_stopped_and_a_fresh_one_answers() {
+        let _guard = START_TEST_LOCK.lock().await;
+        let dir = std::env::temp_dir()
+            .join(format!("ibl-restart-{}", std::process::id()))
+            .join("models");
+        let first = start(dir.clone()).expect("start");
+        assert!(wait_until_answers(&first).await, "first server answers");
+
+        let second = restart_after(&first).expect("restart");
+        assert!(wait_until_answers(&second).await, "fresh server answers");
+        assert_eq!(
+            server_url().as_deref(),
+            Some(second.as_str()),
+            "the fresh server is the one on record"
+        );
+
+        restart_after(&first).expect("restart of a replaced url");
+        assert_eq!(
+            server_url().as_deref(),
+            Some(second.as_str()),
+            "a server already replaced is left alone"
+        );
+        assert_eq!(ensure_answering().await.unwrap(), second);
+    }
+
+    async fn wait_until_answers(url: &str) -> bool {
+        for _ in 0..50 {
+            if answers(url).await {
+                return true;
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+        }
+        false
     }
 
     #[test]

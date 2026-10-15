@@ -4,10 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslations } from 'next-intl';
 import { Code2, Folder, Info, Loader2, X } from 'lucide-react';
-import {
-  useGetUserPlatformMetadataQuery,
-  useUpdateUserPlatformMetadataMutation,
-} from '@iblai/iblai-js/data-layer';
+import { localModelDisplayName } from '@iblai/iblai-js/web-containers';
 import {
   Popover,
   PopoverContent,
@@ -18,15 +15,6 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -45,13 +33,20 @@ import {
   readAgent,
   type CodeAgent,
 } from './code-agents';
+import {
+  CodeApprovalsButton,
+  PERMISSION_MODES,
+  PERMISSION_MODE_ICONS,
+  loadApprovalMode,
+  setApprovalMode,
+  useApprovalMode,
+  type PermissionMode,
+} from './code-approvals-button';
 
 const MODEL_KEY = 'ibl_coding_mode_model';
 const FOLDER_CHOSEN_KEY = 'ibl_coding_mode_folder_chosen';
 /** Mentor the composer is bound to — written by useOpencodeSkillSync. */
 const MENTOR_KEY = 'ibl_coding_mode_mentor';
-/** The one top-level user-metadata key code mode owns. */
-const METADATA_KEY = 'code_mode';
 /** The on-device model the user picked in Local Models settings (see ollama-client). */
 const LOCAL_LLM_MODEL_KEY = 'ibl_local_llm_model';
 /**
@@ -74,23 +69,15 @@ interface CodeAgentStatus {
 }
 
 /**
- * Whether Code asks before each operation (`manual`) or approves them all
- * (`auto`). Absent = the user has never chosen, which is what raises the
- * first-run dialog: there is deliberately no default, because either answer
- * picks a security posture on their behalf.
+ * On-device when Local Models is on with a model picked (what the nav bar shows
+ * as in use, and what online chat routes on), or whenever the app is offline.
  */
-type PermissionMode = 'manual' | 'auto';
-
-function isMode(v: unknown): v is PermissionMode {
-  return v === 'manual' || v === 'auto';
-}
-
-/** On-device when Local Models is on, or when the app is forced offline. */
 function readLocalMode(): boolean {
   if (typeof window === 'undefined') return false;
+  if (isTauriOfflineMode()) return true;
   return (
-    localStorage.getItem(LOCAL_LLM_ENABLED_KEY) === 'true' ||
-    isTauriOfflineMode()
+    localStorage.getItem(LOCAL_LLM_ENABLED_KEY) === 'true' &&
+    !!localStorage.getItem(LOCAL_LLM_MODEL_KEY)
   );
 }
 
@@ -164,10 +151,16 @@ async function resolveCodingModel(
 export function CodingModeButton({
   sessionId,
   skillSync,
+  approvalsSlot,
+  compact = false,
 }: {
   sessionId?: string;
   /** Skill sync state from useOpencodeSkillSync (mounted by the composer). */
   skillSync?: OpencodeSkillSync;
+  /** Spot beside the composer's microphone where the approvals button renders. */
+  approvalsSlot?: HTMLElement | null;
+  /** The composer row is too narrow for the pill's label (`useOverflowFit`). */
+  compact?: boolean;
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [enabled, setEnabled] = useState(
@@ -187,10 +180,9 @@ export function CodingModeButton({
   // Linux: name of the app that actually opens folders (the inode/directory
   // default, probed by the backend); null → generic "Open Folder" label.
   const [fileManager, setFileManager] = useState<string | null>(null);
-  // undefined = not read yet, null = never chosen (→ first-run dialog).
-  const [permissionMode, setPermissionMode] = useState<
-    PermissionMode | null | undefined
-  >(undefined);
+  // One mode for every chat, saved by the desktop: Automatic until the user
+  // picks Ask Me, which then holds in every chat until they switch back.
+  const permissionMode = useApprovalMode();
   // Tauri mobile: Code runs against a paired desktop's opencode server. The
   // pairing state gates everything; the SDK reads the mirrored localStorage
   // flag (ibl_remote_code_ready) at send time.
@@ -237,18 +229,6 @@ export function CodingModeButton({
   const mentorUniqueId =
     typeof window === 'undefined' ? '' : localStorage.getItem(MENTOR_KEY) || '';
 
-  // The mode is a per-user preference, so it lives in DM and follows the user
-  // to their other machines; the Rust side keeps a local copy that survives a
-  // cold start and an offline launch.
-  const { data: platformMetadata } = useGetUserPlatformMetadataQuery(
-    { tenantKey },
-    { skip: !tenantKey },
-  );
-  const [saveMetadata] = useUpdateUserPlatformMetadataMutation();
-  const savedCodeMode = (platformMetadata?.metadata?.[METADATA_KEY] ?? {}) as
-    | Record<string, unknown>
-    | undefined;
-
   const { data: mentorSettings } = useMentorSettings();
   const llmProvider = mentorSettings?.llmProvider;
   const llmName = mentorSettings?.llmName;
@@ -277,7 +257,13 @@ export function CodingModeButton({
   const [localMode, setLocalMode] = useState(readLocalMode);
   const isLocal = localMode && agent === 'opencode';
   const [local, setLocal] = useState<LocalModelCheck | null>(null);
-  const [localModelId, setLocalModelId] = useState('');
+  const [localModelId, setLocalModelId] = useState(() =>
+    typeof window === 'undefined'
+      ? ''
+      : localStorage.getItem(LOCAL_LLM_MODEL_KEY) || '',
+  );
+  // Named the way the model list shows it ("Qwen 3"), not by its raw id.
+  const localModelName = localModelDisplayName(local?.model || localModelId);
 
   useEffect(() => {
     const sync = () => {
@@ -694,63 +680,18 @@ export function CodingModeButton({
     if (isOpen) void refresh();
   }, [isOpen, sessionId, tenantKey, mentorUniqueId, mobile, remoteConnected]);
 
-  // Read the locally cached mode first so the popover renders the real value
-  // immediately; DM reconciles below. Only ever `null` once — that's the signal
-  // to ask.
   useEffect(() => {
-    if (permissionMode !== undefined) return;
-    void (async () => {
-      try {
-        const saved = await callTauri<string | null>(
-          'get_opencode_permission_mode',
-        );
-        // Only fill a still-empty value: this read is async, and DM (below) is
-        // the source of truth — landing late must not undo it.
-        setPermissionMode((prev) =>
-          prev === undefined ? (isMode(saved) ? saved : null) : prev,
-        );
-      } catch {
-        setPermissionMode((prev) => (prev === undefined ? null : prev));
-      }
-    })();
-  }, [permissionMode]);
+    void loadApprovalMode(() =>
+      callTauri<string | null>('get_opencode_permission_mode'),
+    );
+  }, []);
 
-  // DM is the source of truth, so a value from another machine wins over the
-  // local cache. Once only: the PATCH below invalidates this query, and without
-  // the guard that refetch would fight a user who just changed their mind.
-  const reconciled = useRef(false);
-  useEffect(() => {
-    if (reconciled.current || !platformMetadata) return;
-    reconciled.current = true;
-    const remote = savedCodeMode?.permission_mode;
-    if (!isMode(remote) || remote === permissionMode) return;
-    setPermissionMode(remote);
-    callTauri('set_opencode_permission_mode', { mode: remote }).catch(() => {});
-  }, [platformMetadata, savedCodeMode, permissionMode]);
-
-  /** Record the choice locally (Rust enforces it) and in DM (it follows the user). */
   const chooseMode = async (mode: PermissionMode) => {
-    setPermissionMode(mode);
+    setApprovalMode(mode);
     try {
       await callTauri('set_opencode_permission_mode', { mode });
     } catch (e) {
       console.error('[coding-mode] could not apply permission mode', e);
-    }
-    if (!tenantKey) return;
-    try {
-      // Send only our own top-level key: the endpoint shallow-merges, so
-      // siblings (language, …) survive, and spreading the stored object keeps
-      // any future code_mode sub-key of ours.
-      await saveMetadata({
-        tenantKey,
-        metadata: {
-          [METADATA_KEY]: { ...savedCodeMode, permission_mode: mode },
-        },
-      }).unwrap();
-    } catch (e) {
-      // Keep the local choice rather than reverting under the user; the next
-      // change re-sends it.
-      console.error('[coding-mode] could not save permission mode', e);
     }
   };
 
@@ -776,12 +717,18 @@ export function CodingModeButton({
   // whether it can drive Code. Rust auto-detects Ollama vs Foundry Local.
   useEffect(() => {
     if (!isLocal || sandboxed !== false || mobile) return;
+    const model =
+      localModelId || localStorage.getItem(LOCAL_LLM_MODEL_KEY) || '';
+    // Nothing to check: the popover asks for a model instead.
+    if (!model) {
+      setLocal(null);
+      return;
+    }
     let cancelled = false;
     void (async () => {
       try {
         const res = await callTauri<LocalModelCheck>('check_code_local_model', {
-          model:
-            localModelId || localStorage.getItem(LOCAL_LLM_MODEL_KEY) || '',
+          model,
         });
         if (cancelled || !res) return;
         setLocal(res);
@@ -1085,7 +1032,6 @@ export function CodingModeButton({
 
   const toggle = async (next: boolean) => {
     if (blocked) return; // can't enable Code while a local model is active
-    if (next) setEngaged(true);
     setEnabled(next);
     localStorage.setItem(ENABLED_KEY, next ? 'true' : 'false');
     // Plain setItem doesn't notify the same tab — fan out on the app's custom
@@ -1116,16 +1062,6 @@ export function CodingModeButton({
     }
     void refresh();
   };
-
-  // Engagement, not mere enablement: Code defaults ON for logged-in desktop
-  // users, and raising a modal at app launch for a feature nobody asked for
-  // would be an ambush. Opening the popover or flipping the switch is a
-  // deliberate act, and that is when the mode question is fair to ask.
-  const [engaged, setEngaged] = useState(false);
-  useEffect(() => {
-    if (isOpen) setEngaged(true);
-  }, [isOpen]);
-  const needsModeChoice = engaged && permissionMode === null;
 
   const active = enabled || isOpen;
   // The pill's spinner covers SKILLS loading (mentor sync + vibe fetch), never
@@ -1183,36 +1119,6 @@ export function CodingModeButton({
 
   return (
     <>
-      {/* No `onOpenChange`, so there is no way past this but to answer it.
-          Deliberate: both answers set a security posture, so neither can be
-          the silent default. */}
-      <AlertDialog open={needsModeChoice}>
-        <AlertDialogContent
-          data-testid="code-permission-mode-dialog"
-          className="max-w-md"
-        >
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t('permissionDialogTitle')}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {t('permissionDialogDescription')}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogAction
-              className="ibl-btn-secondary w-full sm:w-auto"
-              onClick={() => void chooseMode('manual')}
-            >
-              {t('permissionDialogManualAction')}
-            </AlertDialogAction>
-            <AlertDialogAction
-              className="w-full sm:w-auto"
-              onClick={() => void chooseMode('auto')}
-            >
-              {t('permissionDialogAutoAction')}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
       <Popover open={isOpen} onOpenChange={setIsOpen}>
         <Tooltip>
           <TooltipTrigger asChild>
@@ -1240,9 +1146,18 @@ export function CodingModeButton({
                 </span>
                 {/* On phone widths an INACTIVE pill is icon-only so the
                     composer row never pushes the send button off-screen;
-                    once Code is on (or its popover is open) the label
-                    always shows, so the user can see it is selected. */}
-                <span className={active ? undefined : 'max-[520px]:hidden'}>
+                    once Code is on (or its popover is open) the label shows
+                    too, unless the row is too narrow for it (`compact`) —
+                    the blue fill then marks it as on. */}
+                <span
+                  className={
+                    compact
+                      ? 'hidden'
+                      : active
+                        ? undefined
+                        : 'max-[520px]:hidden'
+                  }
+                >
                   {t('code')}
                 </span>
                 {isOpen && (
@@ -1265,7 +1180,10 @@ export function CodingModeButton({
         </Tooltip>
         <PopoverContent
           align="start"
-          className="w-96 max-w-[calc(100vw-2rem)] rounded-lg border border-gray-200 bg-white p-4 shadow-xl"
+          collisionPadding={8}
+          // Short windows: cap to the room Radix reports and scroll inside, so the
+          // lower sections (Workspace, Phone Access) stay reachable.
+          className="max-h-[var(--radix-popover-content-available-height)] w-96 max-w-[calc(100vw-2rem)] overflow-y-auto overscroll-contain rounded-lg border border-gray-200 bg-white p-4 shadow-xl"
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -1295,17 +1213,28 @@ export function CodingModeButton({
               <span>{t('sandboxMissing')}</span>
             </div>
           ) : isLocal && blocked ? (
-            <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-2.5 text-xs text-amber-700">
-              {local?.reason || t('checkingLocalModel')}
-              {local?.tools_supported === false && (
-                <>{t('tryToolCapableModel')}</>
+            <div
+              data-testid="code-local-model-warning"
+              className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-2.5 text-xs text-amber-700"
+            >
+              {!localModelId ? (
+                t('pickLocalModel')
+              ) : local?.tools_supported === false ? (
+                <>
+                  {t('localModelCantEdit', { model: localModelName })}
+                  {t('tryToolCapableModel')}
+                </>
+              ) : (
+                local?.reason || t('checkingLocalModel')
               )}
             </div>
           ) : isLocal ? (
             <div className="mt-2 text-[11px] text-gray-400">
               <div>{t('firstRunSlow')}</div>
-              {local?.tools_supported === null && local?.reason && (
-                <div className="mt-1 text-amber-600">{local.reason}</div>
+              {local?.tools_supported === null && (
+                <div className="mt-1 text-amber-600">
+                  {t('localModelUnknown', { model: localModelName })}
+                </div>
               )}
             </div>
           ) : agent === 'opencode' && resolvedModel && !modelMatched ? (
@@ -1327,34 +1256,42 @@ export function CodingModeButton({
               aria-label={t('permissionModeLabel')}
               className="flex items-center gap-0.5 rounded-md border border-gray-200 p-0.5"
             >
-              {(['manual', 'auto'] as const).map((mode) => (
-                <button
-                  key={mode}
-                  type="button"
-                  role="radio"
-                  aria-checked={permissionMode === mode}
-                  onClick={() => void chooseMode(mode)}
-                  className={`h-6 rounded px-2 text-[11px] transition-colors ${
-                    permissionMode === mode
-                      ? 'bg-gray-100 text-gray-900'
-                      : 'text-gray-500 hover:text-gray-700'
-                  }`}
-                >
-                  {mode === 'manual'
-                    ? t('permissionModeManual')
-                    : t('permissionModeAuto')}
-                </button>
-              ))}
+              {PERMISSION_MODES.map((mode) => {
+                const ModeIcon = PERMISSION_MODE_ICONS[mode];
+                return (
+                  <button
+                    key={mode}
+                    type="button"
+                    role="radio"
+                    aria-checked={permissionMode === mode}
+                    onClick={() => void chooseMode(mode)}
+                    className={`flex h-6 items-center gap-1 rounded px-2 text-[11px] transition-colors ${
+                      permissionMode === mode
+                        ? 'bg-gray-100 text-gray-900'
+                        : 'text-gray-500 hover:text-gray-700'
+                    }`}
+                  >
+                    <ModeIcon className="h-3 w-3" aria-hidden="true" />
+                    {mode === 'manual'
+                      ? t('permissionModeManual')
+                      : t('permissionModeAuto')}
+                  </button>
+                );
+              })}
             </div>
           </div>
-          {permissionMode === 'auto' && (
-            <p
-              data-testid="code-auto-mode-hint"
-              className="mt-1 text-[11px] text-gray-400"
-            >
-              {t('permissionModeAutoHint')}
-            </p>
-          )}
+          <p
+            data-testid={
+              permissionMode === 'auto'
+                ? 'code-auto-mode-hint'
+                : 'code-manual-mode-hint'
+            }
+            className="mt-1 text-[11px] text-gray-400"
+          >
+            {permissionMode === 'auto'
+              ? t('permissionModeAutoHint')
+              : t('permissionModeManualHint')}
+          </p>
 
           {/* Agent: the same quiet segmented control as Approvals, and only
             once the backend has answered for at least one agent this computer
@@ -1758,6 +1695,16 @@ export function CodingModeButton({
           )}
         </PopoverContent>
       </Popover>
+      {approvalsSlot &&
+        enabled &&
+        !blocked &&
+        createPortal(
+          <CodeApprovalsButton
+            mode={permissionMode}
+            onChange={(mode) => void chooseMode(mode)}
+          />,
+          approvalsSlot,
+        )}
       {/* Fullscreen QR-scanner overlay — portaled to <body> so it survives
           the globals.css rule that hides every other body child while the
           camera renders behind the transparent webview. The close button

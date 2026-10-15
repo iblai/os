@@ -64,14 +64,17 @@ vi.mock('../coding-mode-button', () => ({
   CodingModeButton: ({
     sessionId,
     skillSync,
+    approvalsSlot,
   }: {
     sessionId?: string;
     skillSync?: { state: string };
+    approvalsSlot?: HTMLElement | null;
   }) => (
     <button
       data-testid="coding-mode-button"
       data-session-id={sessionId}
       data-skill-sync={skillSync?.state}
+      data-approvals-slot={approvalsSlot?.id}
     >
       Code
     </button>
@@ -1023,6 +1026,12 @@ describe('InsideButtons', () => {
       // Icon active span branch.
       const iconSpan = canvasItem.querySelector('span.text-\\[\\#38A1E5\\]');
       expect(iconSpan).not.toBeNull();
+      // The icon takes that span's blue: the menu item's own grey for
+      // uncoloured icons is replaced, not left to win over it.
+      expect(canvasItem.className).toContain(
+        "[&_svg:not([class*='text-'])]:text-current",
+      );
+      expect(canvasItem.className).not.toContain(':text-muted-foreground');
       // Trailing Check icon.
       expect(canvasItem.querySelector('svg.lucide-check')).not.toBeNull();
     });
@@ -1147,6 +1156,18 @@ describe('InsideButtons', () => {
       expect(screen.getByTestId('coding-mode-button')).toHaveAttribute(
         'data-skill-sync',
         'error',
+      );
+    });
+
+    it('hands the Code button the spot beside the microphone for its approvals button', () => {
+      mockIsTauri = true;
+      const slot = document.createElement('div');
+      slot.id = 'code-approvals-slot';
+      render(<InsideButtons {...defaultProps} codeApprovalsSlot={slot} />);
+
+      expect(screen.getByTestId('coding-mode-button')).toHaveAttribute(
+        'data-approvals-slot',
+        'code-approvals-slot',
       );
     });
 
@@ -1339,7 +1360,7 @@ describe('InsideButtons', () => {
       expect(screen.getByTestId('cowork-auto-mode-hint')).toBeInTheDocument();
     });
 
-    it('remembers Ask Me, and drops the hint with it', async () => {
+    it('remembers Ask Me, and says what that means instead', async () => {
       const user = userEvent.setup();
       render(<InsideButtons {...defaultProps} />);
 
@@ -1359,6 +1380,9 @@ describe('InsideButtons', () => {
         ).toHaveAttribute('aria-checked', 'true'),
       );
       expect(screen.queryByTestId('cowork-auto-mode-hint')).toBeNull();
+      expect(screen.getByTestId('cowork-manual-mode-hint')).toHaveTextContent(
+        /checks with you before/,
+      );
     });
 
     it('opens on the choice already saved', async () => {
@@ -1792,6 +1816,49 @@ describe('InsideButtons', () => {
       ).not.toBeInTheDocument();
     });
 
+    it('moves into the ••• menu when the row is too narrow, and expands its list there', async () => {
+      const user = userEvent.setup();
+      const onToggleSkill = vi.fn();
+      render(
+        <InsideButtons
+          {...defaultProps}
+          containerWidth={500}
+          skills={skills}
+          activeSkillSlugs={new Set()}
+          onToggleSkill={onToggleSkill}
+        />,
+      );
+      expect(
+        screen.queryByTestId('skills-menu-trigger'),
+      ).not.toBeInTheDocument();
+
+      await user.click(screen.getByText('•••').closest('button')!);
+      const skillsEntry = await screen.findByTestId('skills-menu-overflow');
+      expect(skillsEntry).toHaveAttribute('aria-expanded', 'false');
+
+      // Tapping Skills expands its list in place; tapping again folds it.
+      await user.click(skillsEntry);
+      expect(skillsEntry).toHaveAttribute('aria-expanded', 'true');
+      expect(
+        screen.getByTestId('skills-menu-overflow-list'),
+      ).toBeInTheDocument();
+      await user.click(skillsEntry);
+      expect(
+        screen.queryByTestId('skills-menu-overflow-list'),
+      ).not.toBeInTheDocument();
+
+      await user.click(skillsEntry);
+      await user.click(
+        within(screen.getByTestId('skills-menu-overflow-list')).getByTestId(
+          'skills-menu-item-code-review',
+        ),
+      );
+
+      expect(onToggleSkill).toHaveBeenCalledWith(
+        expect.objectContaining({ slug: 'code-review' }),
+      );
+    });
+
     it('renders right after Canvas — Canvas stays the first tool pill', () => {
       render(
         <InsideButtons
@@ -2183,9 +2250,10 @@ describe('Skills pill label on phone widths', () => {
       screen.getByTestId('skills-menu-trigger').querySelectorAll('span'),
     ).find((span) => /Skills|Web Research/.test(span.textContent ?? ''))!;
 
-  it('is icon-only on phones while no skill is armed', () => {
+  it('keeps its label like the other tool pills (the fit moves it into ••• instead)', () => {
     render(<InsideButtons {...base} activeSkillSlugs={new Set()} />);
-    expect(labelSpan().className).toContain('max-[520px]:hidden');
+    expect(labelSpan()).toHaveTextContent('Skills');
+    expect(labelSpan().className).not.toContain('max-[520px]:hidden');
   });
 
   it('always shows the armed skill name once one is selected', () => {

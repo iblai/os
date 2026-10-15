@@ -2,9 +2,15 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
+import { useTranslations } from 'next-intl';
 
 import { useTauri } from './use-tauri';
 import { useLocalStorage } from './use-local-storage';
+import {
+  LOCAL_LLM_CHANGED_EVENT,
+  LOCAL_LLM_ENABLED_KEY,
+  LOCAL_LLM_MODEL_KEY,
+} from '@/lib/local-llm-flags';
 import {
   DownloadProgress,
   DiskSpaceError,
@@ -25,6 +31,17 @@ const LOCAL_STORAGE_KEY = 'model_download_state';
 const FIRST_LAUNCH_DISMISSED_KEY = 'model_download_prompt_dismissed';
 const MAX_LOGS = 100;
 
+function setLocalModelsEnabled(enabled: boolean) {
+  localStorage.setItem(LOCAL_LLM_ENABLED_KEY, String(enabled));
+  window.dispatchEvent(new Event(LOCAL_LLM_CHANGED_EVENT));
+}
+
+function setSelectedLocalModel(modelId: string | null) {
+  if (modelId) localStorage.setItem(LOCAL_LLM_MODEL_KEY, modelId);
+  else localStorage.removeItem(LOCAL_LLM_MODEL_KEY);
+  window.dispatchEvent(new Event(LOCAL_LLM_CHANGED_EVENT));
+}
+
 // Manager/download status is authoritative from Tauri, never the persisted
 // snapshot. This flips true the first time any hook instance mounts in a page
 // session so we wipe the persisted state exactly once — clearing a stale
@@ -43,6 +60,7 @@ let didResetPersistedState = false;
  * - Provides installation logs
  */
 export function useModelDownload() {
+  const t = useTranslations('hooksModelDownload');
   const { isAvailable, invoke, listen } = useTauri();
   const [state, setState] = useLocalStorage<ModelDownloadState>(
     LOCAL_STORAGE_KEY,
@@ -526,118 +544,10 @@ export function useModelDownload() {
   }, [checkStatus]);
 
   /**
-   * Start downloading the Phi3 Mini model
+   * Install Ollama on the system. Resolves true once the manager is running.
    */
-  const startDownload = useCallback(
-    async (modelId?: string) => {
-      if (!isAvailable) {
-        toast.error('Desktop app required for local model download');
-        return;
-      }
-
-      try {
-        setState((prev) => ({
-          ...prev,
-          status: 'downloading',
-          progress: 0,
-          message: 'Starting download...',
-          error: undefined,
-          logs: [],
-          // Record which model is downloading so the right row shows progress even
-          // if the dialog is closed and reopened mid-download (state is persisted).
-          activeModel: modelId ?? 'phi3:mini',
-        }));
-
-        // Check disk space first
-        // The model id lets mobile budget the model's REAL size + 1 GB instead
-        // of the desktop's blanket 5 GB (hosts that don't know the id fall
-        // back to the blanket check).
-        const hasSpace = await invoke<boolean>(
-          TAURI_COMMANDS.CHECK_DISK_SPACE,
-          {
-            model: modelId,
-          },
-        );
-        if (!hasSpace) {
-          return; // Error will be emitted via event
-        }
-
-        // Start the download. The selected model identifier is forwarded so the
-        // backend can pull it; the current backend defaults to Phi-3 Mini.
-        // `invoke` resolves only once the Rust pull has fully finished, so treat a
-        // successful resolution as completion. This guarantees the UI leaves the
-        // "downloading" state even if the terminal progress event was missed (live
-        // progress still streams from the progress events while the pull runs).
-        await invoke(
-          TAURI_COMMANDS.DOWNLOAD_MODEL,
-          modelId ? { model: modelId } : undefined,
-        );
-
-        let didComplete = false;
-        setState((prev) => {
-          // Don't clobber a cancellation/error that landed while awaiting.
-          if (prev.status !== 'downloading') return prev;
-          didComplete = true;
-          return {
-            ...prev,
-            status: 'completed',
-            progress: 100,
-            message: 'Download complete',
-          };
-        });
-        if (didComplete) {
-          toast.success('Model downloaded successfully!');
-        }
-        // Refresh installed models so the row flips to "Ready" and is selectable.
-        checkStatusRef.current();
-      } catch (error) {
-        const errorMessage =
-          error instanceof Error ? error.message : String(error);
-        let wasCancelled = false;
-        setState((prev) => {
-          if (prev.status === 'cancelled') {
-            wasCancelled = true;
-            return prev;
-          }
-          return { ...prev, status: 'error', error: errorMessage };
-        });
-        if (!wasCancelled) {
-          toast.error(`Download failed: ${errorMessage}`);
-        }
-      }
-    },
-    [isAvailable, invoke, setState],
-  );
-
-  /**
-   * Cancel the ongoing download
-   */
-  const cancelDownload = useCallback(async () => {
-    if (!isAvailable) return;
-
-    // Mark cancelled up front so the in-flight download promise (which resolves
-    // cleanly once the backend aborts the pull) can't race ahead and mark the
-    // row "completed".
-    setState((prev) => ({
-      ...prev,
-      status: 'cancelled',
-      progress: 0,
-      message: 'Download cancelled',
-    }));
-
-    try {
-      await invoke(TAURI_COMMANDS.CANCEL_DOWNLOAD);
-      toast.info('Download cancelled');
-    } catch (error) {
-      console.error('Failed to cancel download:', error);
-    }
-  }, [isAvailable, invoke, setState]);
-
-  /**
-   * Install Ollama on the system
-   */
-  const installOllama = useCallback(async () => {
-    if (!isAvailable) return;
+  const installOllama = useCallback(async (): Promise<boolean> => {
+    if (!isAvailable) return false;
 
     try {
       // Drive the toggle's loading state. "Enable Local Models" ensures the model
@@ -697,6 +607,7 @@ export function useModelDownload() {
         await new Promise((resolve) => setTimeout(resolve, 1500));
       }
       setState((prev) => ({ ...prev, managerInstalling: false }));
+      return true;
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
@@ -709,14 +620,166 @@ export function useModelDownload() {
         error: errorMessage,
       }));
 
-      toast.error(`Failed to enable local models: ${errorMessage}`);
+      toast.error(t('enableFailed', { error: errorMessage }));
       addLog({
         timestamp: new Date().toISOString(),
         level: 'error',
         message: `Installation failed: ${errorMessage}`,
       });
+      return false;
     }
-  }, [isAvailable, invoke, addLog, checkStatus, setState]);
+  }, [isAvailable, invoke, addLog, checkStatus, setState, t]);
+
+  /**
+   * Start downloading the Phi3 Mini model
+   */
+  const startDownload = useCallback(
+    async (modelId?: string) => {
+      if (!isAvailable) {
+        toast.error(t('desktopRequired'));
+        return;
+      }
+
+      try {
+        setState((prev) => ({
+          ...prev,
+          status: 'downloading',
+          progress: 0,
+          message: 'Starting download...',
+          error: undefined,
+          logs: [],
+          // Record which model is downloading so the right row shows progress even
+          // if the dialog is closed and reopened mid-download (state is persisted).
+          activeModel: modelId ?? 'phi3:mini',
+        }));
+
+        // Check disk space first
+        // The model id lets mobile budget the model's REAL size + 1 GB instead
+        // of the desktop's blanket 5 GB (hosts that don't know the id fall
+        // back to the blanket check).
+        const hasSpace = await invoke<boolean>(
+          TAURI_COMMANDS.CHECK_DISK_SPACE,
+          {
+            model: modelId,
+          },
+        );
+        if (!hasSpace) {
+          return; // Error will be emitted via event
+        }
+
+        // A download needs the Model Manager, which is what "Enable Local
+        // Models" installs and starts — so turn that on first, exactly as the
+        // switch does. Fresh status, not the cached `ollamaStatus`, which can
+        // predate an uninstall.
+        const localModelsWereEnabled =
+          localStorage.getItem(LOCAL_LLM_ENABLED_KEY) === 'true';
+        // A leftover selection of the model being downloaded would make the
+        // picker show its row as "In Use" (hiding progress and cancel) once
+        // Local Models is on. Clear it for the download; restored on completion.
+        const reselectWhenDone =
+          !!modelId && localStorage.getItem(LOCAL_LLM_MODEL_KEY) === modelId;
+        if (reselectWhenDone) setSelectedLocalModel(null);
+        const managerStatus = await invoke<OllamaStatus>(
+          TAURI_COMMANDS.CHECK_OLLAMA_STATUS,
+        );
+        setOllamaStatus(managerStatus);
+        const firstSetup = managerStatus?.installed === false;
+        if (!localModelsWereEnabled || firstSetup) {
+          setLocalModelsEnabled(true);
+          const setupToast = firstSetup
+            ? toast.loading(t('setupTitle'), {
+                description: t('setupDescription'),
+              })
+            : undefined;
+          const ready = await installOllama().finally(() => {
+            if (setupToast !== undefined) toast.dismiss(setupToast);
+          });
+          if (!ready) {
+            // Chat routes to the on-device model while this flag is on, so
+            // don't leave it on without a running Model Manager.
+            if (!localModelsWereEnabled) setLocalModelsEnabled(false);
+            return;
+          }
+
+          let cancelledDuringSetup = false;
+          setState((prev) => {
+            cancelledDuringSetup = prev.status !== 'downloading';
+            return prev;
+          });
+          if (cancelledDuringSetup) return;
+        }
+
+        // Start the download. The selected model identifier is forwarded so the
+        // backend can pull it; the current backend defaults to Phi-3 Mini.
+        // `invoke` resolves only once the Rust pull has fully finished, so treat a
+        // successful resolution as completion. This guarantees the UI leaves the
+        // "downloading" state even if the terminal progress event was missed (live
+        // progress still streams from the progress events while the pull runs).
+        await invoke(
+          TAURI_COMMANDS.DOWNLOAD_MODEL,
+          modelId ? { model: modelId } : undefined,
+        );
+
+        let didComplete = false;
+        setState((prev) => {
+          // Don't clobber a cancellation/error that landed while awaiting.
+          if (prev.status !== 'downloading') return prev;
+          didComplete = true;
+          return {
+            ...prev,
+            status: 'completed',
+            progress: 100,
+            message: 'Download complete',
+          };
+        });
+        if (didComplete) {
+          if (reselectWhenDone && modelId) setSelectedLocalModel(modelId);
+          toast.success(t('downloaded'));
+        }
+        // Refresh installed models so the row flips to "Ready" and is selectable.
+        checkStatusRef.current();
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
+        let wasCancelled = false;
+        setState((prev) => {
+          if (prev.status === 'cancelled') {
+            wasCancelled = true;
+            return prev;
+          }
+          return { ...prev, status: 'error', error: errorMessage };
+        });
+        if (!wasCancelled) {
+          toast.error(t('downloadFailed', { error: errorMessage }));
+        }
+      }
+    },
+    [isAvailable, invoke, setState, setOllamaStatus, installOllama],
+  );
+
+  /**
+   * Cancel the ongoing download
+   */
+  const cancelDownload = useCallback(async () => {
+    if (!isAvailable) return;
+
+    // Mark cancelled up front so the in-flight download promise (which resolves
+    // cleanly once the backend aborts the pull) can't race ahead and mark the
+    // row "completed".
+    setState((prev) => ({
+      ...prev,
+      status: 'cancelled',
+      progress: 0,
+      message: 'Download cancelled',
+    }));
+
+    try {
+      await invoke(TAURI_COMMANDS.CANCEL_DOWNLOAD);
+      toast.info(t('downloadCancelled'));
+    } catch (error) {
+      console.error('Failed to cancel download:', error);
+    }
+  }, [isAvailable, invoke, setState, t]);
 
   /**
    * Stop the model manager (Ollama). Backs turning "Enable Local Models" off.
@@ -737,7 +800,7 @@ export function useModelDownload() {
         error instanceof Error ? error.message : String(error);
       console.error('Failed to stop model manager:', errorMessage);
     }
-  }, [isAvailable, invoke, addLog, checkStatus]);
+  }, [isAvailable, invoke, addLog, checkStatus, t]);
 
   /**
    * Clear all logs
@@ -776,7 +839,7 @@ export function useModelDownload() {
 
         if (!model) {
           console.error('[useModelDownload] Model not found:', modelId);
-          toast.error('Model not found');
+          toast.error(t('modelNotFound'));
           return;
         }
 
@@ -847,7 +910,7 @@ export function useModelDownload() {
             });
 
             toast.success(
-              `Model downloaded and loaded: ${model.name || modelId}`,
+              t('downloadedAndLoaded', { model: model.name || modelId }),
             );
 
             // Refresh status to update the downloaded flag
@@ -875,7 +938,7 @@ export function useModelDownload() {
               message: `Download failed: ${errorMessage}`,
             });
 
-            toast.error(`Failed to download model: ${errorMessage}`);
+            toast.error(t('modelDownloadFailed', { error: errorMessage }));
           }
         } else {
           // Model already downloaded, just load it
@@ -912,7 +975,7 @@ export function useModelDownload() {
             message: `Model ready: ${model.name || modelId}`,
           }));
 
-          toast.success(`Loaded model: ${model.name || modelId}`);
+          toast.success(t('modelLoaded', { model: model.name || modelId }));
         }
       } catch (error) {
         const errorMessage =
@@ -921,7 +984,7 @@ export function useModelDownload() {
           '[useModelDownload] Failed to handle model selection:',
           errorMessage,
         );
-        toast.error(`Failed to load model: ${errorMessage}`);
+        toast.error(t('modelLoadFailed', { error: errorMessage }));
 
         setState((prev) => ({
           ...prev,
@@ -1012,7 +1075,7 @@ export function useModelDownload() {
         message: `Installation failed: ${errorMessage}`,
       });
     }
-  }, [isAvailable, invoke, addLog, checkStatus]);
+  }, [isAvailable, invoke, addLog, checkStatus, t]);
 
   /**
    * Check if the first launch prompt should be shown

@@ -2,8 +2,8 @@
   "version": 2,
   "lastUpdated": "2026-10-07",
   "summary": {
-    "totalCheckpoints": 830,
-    "coveredCheckpoints": 784,
+    "totalCheckpoints": 831,
+    "coveredCheckpoints": 785,
     "deprecatedCheckpoints": 17,
     "notReproducibleCheckpoints": 17,
     "pendingCheckpoints": 12,
@@ -4045,7 +4045,7 @@
         },
         {
           "id": "eval-14",
-          "description": "Manage benchmarks lists the created benchmark, and searching for its name filters down to it",
+          "description": "Manage benchmarks lists the created benchmark with a Created time in minutes (not hours), and searching for its name filters down to it",
           "status": "covered"
         },
         {
@@ -4341,6 +4341,11 @@
         {
           "id": "slash-16",
           "description": "Skills dropdown button (inside-buttons row, next to Canvas) lists the mentor's enabled skills as name + /slug (no descriptions); selecting inserts the /slug token AT THE CARET with context-aware spacing (highlighted in the composer) and the button shows the armed skill's name with the same \u2715 affordance as other active tool pills (\u2715 disarms without opening the menu); toggling removes the token cleanly; arming another skill replaces the current one (single selection); arming via the \"/\" picker updates the button \u2014 both surfaces derive from the composer text so they stay in sync",
+          "status": "covered"
+        },
+        {
+          "id": "slash-17",
+          "description": "On a phone-width composer (360px) the Skills button collapses into the \u2022\u2022\u2022 menu like the other tool pills; its \u2022\u2022\u2022 entry expands the skills list in place (scrolling, inside the viewport), and picking a skill arms its /slug token",
           "status": "covered"
         }
       ]

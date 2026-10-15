@@ -16,7 +16,7 @@
 
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Mutex, OnceLock};
 
 use futures_util::{StreamExt, TryStreamExt};
@@ -35,9 +35,57 @@ static CONFIG_PATH: OnceLock<PathBuf> = OnceLock::new();
 static PENDING_PERMISSIONS: Mutex<Option<HashMap<String, String>>> = Mutex::new(None);
 
 /// `"auto"` short-circuits permission events with an immediate allow, exactly
-/// like the desktop's auto mode. Kept in the config file; defaults to manual.
+/// like the desktop's auto mode. Kept in the config file; see [`permission_mode`].
 const MODE_AUTO: &str = "auto";
 const MODE_MANUAL: &str = "manual";
+
+/// The approval mode in force, matching the desktop: nothing saved, or a saved
+/// `"auto"`, is Automatic; Ask Me only when chosen. A garbled value asks, so a
+/// corrupted file can only make Code ask more, never less.
+fn permission_mode(cfg: &HostConfig) -> &'static str {
+    match cfg.permission_mode.as_deref() {
+        None | Some(MODE_AUTO) => MODE_AUTO,
+        Some(_) => MODE_MANUAL,
+    }
+}
+
+/// The approval mode in force: read from disk once, then kept by
+/// `save_permission_mode`, so a request never reads the file while another
+/// chat is rewriting it.
+fn phone_auto() -> &'static AtomicBool {
+    static AUTO: OnceLock<AtomicBool> = OnceLock::new();
+    AUTO.get_or_init(|| AtomicBool::new(permission_mode(&read_config()) == MODE_AUTO))
+}
+
+/// Queue a permission for its card unless the mode is Automatic (true: answer
+/// it now). Checked per request, not once per turn, so a switch mid-turn holds
+/// for the rest of it, and under the lock `save_permission_mode` drains with,
+/// so a switch can't slip between the check and the queueing.
+fn queue_unless_auto(per_id: &str, remote: &str) -> bool {
+    let mut map = PENDING_PERMISSIONS.lock().expect("permissions lock");
+    if phone_auto().load(Ordering::SeqCst) {
+        return true;
+    }
+    map.get_or_insert_with(HashMap::new)
+        .insert(per_id.to_string(), remote.to_string());
+    false
+}
+
+/// Save the mode. On a switch to Automatic, hand back every permission still
+/// waiting (per_id, remote session) for the caller to answer: those cards are
+/// exactly what the user just said to stop asking about.
+fn save_permission_mode(mode: &str) -> Result<Vec<(String, String)>, String> {
+    let mut map = PENDING_PERMISSIONS.lock().expect("permissions lock");
+    let mut cfg = read_config();
+    cfg.permission_mode = Some(mode.to_string());
+    write_config(&cfg)?;
+    phone_auto().store(mode == MODE_AUTO, Ordering::SeqCst);
+    Ok(if mode == MODE_AUTO {
+        map.get_or_insert_with(HashMap::new).drain().collect()
+    } else {
+        Vec::new()
+    })
+}
 
 /// Hard cap on one turn; a phone must never hold an SSE stream forever.
 const TURN_TIMEOUT_SECS: u64 = 30 * 60;
@@ -300,25 +348,45 @@ pub fn init(config_dir: PathBuf) {
     let _ = CONFIG_PATH.set(config_dir.join("remote_code.json"));
 }
 
+/// No file is a fresh default (Automatic). A file that exists but can't be read
+/// or parsed comes back as Ask Me, so the next write of any field saves Ask Me
+/// with it — damage can only make Code ask more, never less.
 fn read_config() -> HostConfig {
     let Some(path) = CONFIG_PATH.get() else {
         return HostConfig::default();
     };
-    std::fs::read_to_string(path)
-        .ok()
-        .and_then(|s| serde_json::from_str(&s).ok())
-        .unwrap_or_default()
+    let parsed = match std::fs::read_to_string(path) {
+        Ok(raw) => serde_json::from_str(&raw).ok(),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return HostConfig::default(),
+        Err(_) => None,
+    };
+    parsed.unwrap_or_else(|| HostConfig {
+        permission_mode: Some(MODE_MANUAL.into()),
+        ..HostConfig::default()
+    })
 }
 
 fn write_config(cfg: &HostConfig) -> Result<(), String> {
     let path = CONFIG_PATH
         .get()
         .ok_or("remote code storage not initialized")?;
+    // Written aside and renamed into place, so a reader (or a crash) never
+    // finds the file cut short.
+    static SEQ: AtomicU64 = AtomicU64::new(0);
+    let tmp = path.with_extension(format!(
+        "json.{}-{}.tmp",
+        std::process::id(),
+        SEQ.fetch_add(1, Ordering::Relaxed)
+    ));
     std::fs::write(
-        path,
+        &tmp,
         serde_json::to_string_pretty(cfg).map_err(|e| e.to_string())?,
     )
-    .map_err(|e| e.to_string())
+    .map_err(|e| e.to_string())?;
+    std::fs::rename(&tmp, path).map_err(|e| {
+        let _ = std::fs::remove_file(&tmp);
+        e.to_string()
+    })
 }
 
 /// The paired host's base URL + password, or a user-actionable error.
@@ -673,8 +741,13 @@ pub async fn remote_code_clear_host() -> Result<(), String> {
 /// phone-side auto-allow in [`run_turn`], mirroring desktop semantics.
 #[cfg(any(target_os = "ios", target_os = "android"))]
 #[command]
-pub async fn get_opencode_permission_mode() -> Result<Option<String>, String> {
-    Ok(read_config().permission_mode)
+pub async fn get_opencode_permission_mode() -> Result<String, String> {
+    Ok(if phone_auto().load(Ordering::SeqCst) {
+        MODE_AUTO
+    } else {
+        MODE_MANUAL
+    }
+    .to_string())
 }
 
 #[cfg(any(target_os = "ios", target_os = "android"))]
@@ -683,9 +756,21 @@ pub async fn set_opencode_permission_mode(mode: String) -> Result<(), String> {
     if mode != MODE_AUTO && mode != MODE_MANUAL {
         return Err(format!("unknown permission mode: {mode}"));
     }
-    let mut cfg = read_config();
-    cfg.permission_mode = Some(mode);
-    write_config(&cfg)
+    let waiting = save_permission_mode(&mode)?;
+    if waiting.is_empty() {
+        return Ok(());
+    }
+    let (base, pw) = host()?;
+    for (per_id, remote) in waiting {
+        let _ = post_json(
+            &base,
+            &pw,
+            &format!("/session/{remote}/permissions/{per_id}"),
+            &json!({ "response": "once" }),
+        )
+        .await;
+    }
+    Ok(())
 }
 
 /// The workspace shown in the Code popover: this chat's chosen desktop folder,
@@ -1456,7 +1541,6 @@ async fn catch_up(
     pw: &str,
     remote: &str,
     dir: Option<&str>,
-    auto_mode: bool,
     text: &mut TokenCoalescer,
     reasoning: &mut TokenCoalescer,
     seen_tools: &mut HashMap<String, bool>,
@@ -1531,7 +1615,7 @@ async fn catch_up(
             if per_id.is_empty() {
                 continue;
             }
-            if auto_mode {
+            if queue_unless_auto(&per_id, remote) {
                 let _ = post_json(
                     base,
                     pw,
@@ -1541,11 +1625,6 @@ async fn catch_up(
                 .await;
                 continue;
             }
-            PENDING_PERMISSIONS
-                .lock()
-                .expect("permissions lock")
-                .get_or_insert_with(HashMap::new)
-                .insert(per_id.clone(), remote.to_string());
             awaiting_permissions.insert(per_id.clone());
             let patterns = req["patterns"]
                 .as_array()
@@ -1703,7 +1782,6 @@ async fn run_turn_inner(
         }
     }
 
-    let auto_mode = read_config().permission_mode.as_deref() == Some(MODE_AUTO);
     // Streamed text and reasoning are batched by TokenCoalescer (first delta
     // immediately, then an adaptive 200ms→1s window) — the same policy the
     // embedded local-LLM stream uses, in one implementation.
@@ -1766,7 +1844,6 @@ async fn run_turn_inner(
                 &pw,
                 &remote,
                 turn_dir.as_deref(),
-                auto_mode,
                 &mut text,
                 &mut reasoning,
                 &mut seen_tools,
@@ -1988,7 +2065,7 @@ async fn run_turn_inner(
                     if per_id.is_empty() {
                         continue;
                     }
-                    if auto_mode {
+                    if queue_unless_auto(&per_id, &remote) {
                         let _ = post_json(
                             &base,
                             &pw,
@@ -1998,11 +2075,6 @@ async fn run_turn_inner(
                         .await;
                         continue;
                     }
-                    PENDING_PERMISSIONS
-                        .lock()
-                        .expect("permissions lock")
-                        .get_or_insert_with(HashMap::new)
-                        .insert(per_id.clone(), remote.clone());
                     awaiting_permissions.insert(per_id.clone());
                     let patterns = props
                         .get("patterns")
@@ -2167,6 +2239,71 @@ mod tests {
             ..HostConfig::default()
         };
         write_config(&cfg).unwrap();
+    }
+
+    /// The bug this pins: the phone read the mode once per turn, so a switch
+    /// to Automatic mid-turn left the waiting cards up and kept asking for the
+    /// rest of the turn. The switch now hands back every waiting card to be
+    /// answered, and the next request is answered without one.
+    #[tokio::test]
+    async fn switching_to_automatic_answers_the_waiting_cards_and_stops_asking() {
+        let _serial = CONFIG_TEST_LOCK.lock().await;
+        test_config("http://127.0.0.1:9");
+        save_permission_mode(MODE_MANUAL).unwrap();
+        assert!(
+            !queue_unless_auto("per-switch-1", "ses-switch"),
+            "Ask Me queues it for its card"
+        );
+
+        let waiting = save_permission_mode(MODE_AUTO).unwrap();
+        assert!(waiting.contains(&("per-switch-1".to_string(), "ses-switch".to_string())));
+        assert!(
+            queue_unless_auto("per-switch-2", "ses-switch"),
+            "Automatic answers the next one itself"
+        );
+        let map = PENDING_PERMISSIONS.lock().unwrap();
+        assert!(!map
+            .as_ref()
+            .is_some_and(|m| m.contains_key("per-switch-1") || m.contains_key("per-switch-2")));
+    }
+
+    /// Only a missing file means Automatic: a file cut short mid-write asks.
+    #[tokio::test]
+    async fn a_damaged_config_asks_and_only_a_missing_one_means_automatic() {
+        let _serial = CONFIG_TEST_LOCK.lock().await;
+        test_config("http://127.0.0.1:9");
+        let path = CONFIG_PATH.get().unwrap().clone();
+
+        std::fs::write(&path, "{\"url\": \"http://127.0").unwrap();
+        assert_eq!(
+            permission_mode(&read_config()),
+            MODE_MANUAL,
+            "a file cut short asks"
+        );
+        // …and keeps asking after another field is saved over the damage.
+        let mut cfg = read_config();
+        cfg.url = Some("http://127.0.0.1:9".into());
+        write_config(&cfg).unwrap();
+        assert_eq!(permission_mode(&read_config()), MODE_MANUAL);
+
+        std::fs::remove_file(&path).unwrap();
+        assert_eq!(permission_mode(&read_config()), MODE_AUTO, "no file at all");
+
+        test_config("http://127.0.0.1:9");
+    }
+
+    #[test]
+    fn the_phone_defaults_to_automatic_like_the_desktop() {
+        let mode = |saved: Option<&str>| {
+            permission_mode(&HostConfig {
+                permission_mode: saved.map(str::to_string),
+                ..HostConfig::default()
+            })
+        };
+        assert_eq!(mode(None), MODE_AUTO, "nothing saved is Automatic");
+        assert_eq!(mode(Some("auto")), MODE_AUTO);
+        assert_eq!(mode(Some("manual")), MODE_MANUAL, "Ask Me only when chosen");
+        assert_eq!(mode(Some("YOLO")), MODE_MANUAL, "a garbled value asks");
     }
 
     #[test]
@@ -2764,6 +2901,16 @@ mod tests {
         tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
 
         test_config(&format!("http://{addr}"));
+        // This turn pins the approval card, which only Ask Me shows; Automatic
+        // comes back however the test ends.
+        struct BackToAutomatic;
+        impl Drop for BackToAutomatic {
+            fn drop(&mut self) {
+                let _ = save_permission_mode(MODE_AUTO);
+            }
+        }
+        save_permission_mode(MODE_MANUAL).unwrap();
+        let _automatic_after = BackToAutomatic;
 
         let sink = Arc::new(VecSink(Mutex::new(Vec::new())));
         run_turn(

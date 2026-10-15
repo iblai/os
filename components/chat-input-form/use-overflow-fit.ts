@@ -65,6 +65,11 @@ export interface OverflowFit {
    * been measured (before the first layout, or when it is not displayed).
    */
   visibleCount: number | null;
+  /**
+   * The always-inline elements should drop their labels: even at full width
+   * they would not leave room for the ••• trigger beside them.
+   */
+  compact: boolean;
 }
 
 /**
@@ -88,6 +93,18 @@ export function useOverflowFit(
   const [available, setAvailable] = useState<number | null>(null);
   const elsRef = useRef(new Map<string, HTMLElement>());
   const widthsRef = useRef(new Map<string, number>());
+  // The estimate each width was measured under: a pill whose label changed
+  // since (an armed skill's long name, cleared again) is judged by its new
+  // estimate rather than a width it no longer has.
+  const measuredEstimatesRef = useRef(new Map<string, number>());
+  const itemsRef = useRef(items);
+  itemsRef.current = items;
+  // Fixed elements' widths as last measured WITH their labels. Deciding
+  // `compact` from these, not from the compact widths it produces, is what
+  // keeps the decision from flipping back and forth.
+  const fullWidthsRef = useRef(new Map<string, number>());
+  const compactRef = useRef(false);
+  const measuredCompactRef = useRef(new Map<string, boolean>());
   // Bumped whenever a measured width changes so the fit is recomputed.
   const [, setTick] = useState(0);
 
@@ -125,7 +142,28 @@ export function useOverflowFit(
     let changed = false;
     for (const [key, el] of elsRef.current) {
       const width = Math.ceil(el.getBoundingClientRect().width);
-      if (widthsRef.current.get(key) !== width) {
+      const previous = widthsRef.current.get(key);
+      if (fixedKeys.includes(key)) {
+        const full = fullWidthsRef.current.get(key);
+        if (!compactRef.current) {
+          fullWidthsRef.current.set(key, width);
+        } else if (
+          measuredCompactRef.current.get(key) &&
+          previous !== undefined &&
+          full !== undefined
+        ) {
+          // Compact to compact: whatever came or went (the ✕ of an open
+          // popover) is not the label, so the full width moves with it.
+          fullWidthsRef.current.set(key, full + width - previous);
+        }
+        measuredCompactRef.current.set(key, compactRef.current);
+      }
+      const item = itemsRef.current.find((i) => i.key === key);
+      if (item && measuredEstimatesRef.current.get(key) !== item.estimate) {
+        measuredEstimatesRef.current.set(key, item.estimate);
+        changed = true;
+      }
+      if (previous !== width) {
         widthsRef.current.set(key, width);
         changed = true;
       }
@@ -134,21 +172,42 @@ export function useOverflowFit(
   });
 
   if (available === null || available <= 0) {
-    return { rootRef, itemRef, visibleCount: null };
+    compactRef.current = false;
+    return { rootRef, itemRef, visibleCount: null, compact: false };
   }
 
   let fixedWidth = 0;
+  let fullFixedWidth = 0;
   let fixedCount = 0;
   for (const key of fixedKeys) {
     // Only elements that are actually mounted take space.
     if (!elsRef.current.has(key)) continue;
-    fixedWidth += widthsRef.current.get(key) ?? 0;
+    const width = widthsRef.current.get(key) ?? 0;
+    fixedWidth += width;
+    fullFixedWidth += fullWidthsRef.current.get(key) ?? width;
     fixedCount += 1;
   }
+  const compact =
+    fixedCount > 0 &&
+    available <
+      fullFixedWidth +
+        (items.length > 0
+          ? fixedCount * OVERFLOW_ITEM_GAP + OVERFLOW_TRIGGER_WIDTH
+          : (fixedCount - 1) * OVERFLOW_ITEM_GAP);
+  compactRef.current = compact;
   const usable = available - fixedWidth - fixedCount * OVERFLOW_ITEM_GAP;
-  const widths = items.map(
-    (item) => widthsRef.current.get(item.key) ?? item.estimate,
-  );
+  const widths = items.map((item) => {
+    const measured = widthsRef.current.get(item.key);
+    return measured !== undefined &&
+      measuredEstimatesRef.current.get(item.key) === item.estimate
+      ? measured
+      : item.estimate;
+  });
 
-  return { rootRef, itemRef, visibleCount: fitInlineCount(usable, widths) };
+  return {
+    rootRef,
+    itemRef,
+    visibleCount: fitInlineCount(usable, widths),
+    compact,
+  };
 }

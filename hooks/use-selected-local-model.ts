@@ -10,13 +10,9 @@ import {
   type LocalModel,
 } from '@iblai/iblai-js/web-containers';
 
-/**
- * Window event other OS components dispatch after changing the device-global
- * on-device selection — a model pick in the LLM tab or the Local Models master
- * toggle in Profile → Advanced. `storage` events only fire cross-tab, so this
- * covers the same-tab case so the nav-bar badge updates immediately.
- */
-export const LOCAL_LLM_CHANGED_EVENT = 'ibl:local-llm-changed';
+import { LOCAL_LLM_CHANGED_EVENT } from '@/lib/local-llm-flags';
+
+export { LOCAL_LLM_CHANGED_EVENT };
 
 export interface SelectedLocalModel {
   /** On-device mode is enabled and a model id is selected. */
@@ -45,7 +41,12 @@ export function useSelectedLocalModel(): SelectedLocalModel {
     const read = () => {
       const enabled = isLocalLLMEnabled();
       const id = getLocalLLMModel();
-      const model = id ? (LOCAL_MODELS.find((m) => m.id === id) ?? null) : null;
+      // Ignore the ":tag" and case, like the SDK picker does, so a stored
+      // "qwen3:latest" still resolves to the "Qwen 3" catalog entry.
+      const base = (ref: string) => ref.toLowerCase().split(':')[0];
+      const model = id
+        ? (LOCAL_MODELS.find((m) => base(m.id) === base(id)) ?? null)
+        : null;
       // Self-heal the derived tool-support cache. Local chat routes on
       // `ibl_local_llm_tool_support` (SDK ollama-client), but an older selection
       // may have left it stale/false — which makes streaming reject a genuinely

@@ -487,7 +487,8 @@
     "coworkApprovalsLabel": "Approbations",
     "coworkApprovalsManual": "Me demander",
     "coworkApprovalsAuto": "Automatique",
-    "coworkApprovalsAutoHint": "Cowork clique, saisit et soumet des formulaires sans demander. À utiliser uniquement sur des sites de confiance."
+    "coworkApprovalsAutoHint": "Cowork clique, saisit et soumet des formulaires sans demander. À utiliser uniquement sur des sites de confiance.",
+    "coworkApprovalsManualHint": "Cowork vous demande avant de cliquer, saisir ou soumettre des formulaires."
   },
   "chatInputFormMemoryMenu": {
     "yourMemory": "Votre mémoire",
@@ -1414,6 +1415,20 @@
     "reset": "Réinitialiser",
     "viewLogs": "Voir les journaux ({count})"
   },
+  "hooksModelDownload": {
+    "setupTitle": "Configuration du gestionnaire de modèles",
+    "setupDescription": "Cela n’arrive que la première fois et peut prendre quelques minutes. Votre téléchargement commencera juste après.",
+    "enableFailed": "Impossible d’activer les modèles locaux : {error}",
+    "desktopRequired": "L’application de bureau est nécessaire pour télécharger un modèle local",
+    "downloaded": "Modèle téléchargé avec succès !",
+    "downloadFailed": "Échec du téléchargement : {error}",
+    "downloadCancelled": "Téléchargement annulé",
+    "modelNotFound": "Modèle introuvable",
+    "downloadedAndLoaded": "Modèle téléchargé et chargé : {model}",
+    "modelDownloadFailed": "Impossible de télécharger le modèle : {error}",
+    "modelLoaded": "Modèle chargé : {model}",
+    "modelLoadFailed": "Impossible de charger le modèle : {error}"
+  },
   "navBarEmbedNavBar": {
     "closeSidebar": "Fermer la barre latérale",
     "openSidebar": "Ouvrir la barre latérale",
@@ -1447,7 +1462,8 @@
     "selectedAgent": "Agent sélectionné",
     "user": "Utilisateur",
     "admin": "Administrateur",
-    "signUpForFree": "S'inscrire gratuitement"
+    "signUpForFree": "S'inscrire gratuitement",
+    "onDevice": "Sur l’appareil"
   },
   "projectsCreateProjectModal": {
     "title": "Nouveau projet",
@@ -2200,7 +2216,10 @@
     "tooltip": "Un outil de codage agentique pour votre dossier de projet",
     "description": "Un outil de codage agentique qui modifie des fichiers, exécute des commandes et valide les changements dans le dossier que vous choisissez.",
     "checkingLocalModel": "Vérification que votre modèle local peut exécuter Code…",
-    "tryToolCapableModel": " Essayez un modèle compatible avec les outils comme qwen3, llama3.2 ou phi4-mini.",
+    "pickLocalModel": "Choisissez d’abord un modèle sur l’appareil : ouvrez la liste des modèles et sélectionnez-en un marqué « Sur l’appareil ».",
+    "localModelCantEdit": "{model} ne peut pas modifier de fichiers ni exécuter de commandes, donc Code ne peut pas l’utiliser.",
+    "localModelUnknown": "Nous n’avons pas pu confirmer que {model} peut modifier des fichiers ou exécuter des commandes, donc Code risque de ne pas fonctionner avec ce modèle.",
+    "tryToolCapableModel": " Essayez un modèle qui en est capable, comme Qwen 3, Llama 3.2 ou Phi-4 Mini.",
     "firstRunSlow": "La première exécution peut prendre quelques minutes pendant le chargement du modèle.",
     "modelUnavailable": "n’est pas disponible pour Code — les tours échoueront. Choisissez un autre modèle en haut à gauche.",
     "workspace": "Espace de travail",
@@ -2212,6 +2231,8 @@
     "permissionModeManual": "Me demander",
     "permissionModeAuto": "Automatique",
     "permissionModeAutoHint": "Code modifie des fichiers et exécute des commandes sans demander. À utiliser uniquement dans des dossiers de confiance.",
+    "permissionModeManualHint": "Code vous demande avant de modifier des fichiers ou d’exécuter des commandes.",
+    "approvalsAria": "Approbations : {mode}",
     "agentLabel": "Agent",
     "agentNotInstalled": "Non installé",
     "agentInstall": "Installer",
@@ -2231,10 +2252,6 @@
     "openFolderFailed": "Impossible d’ouvrir le dossier",
     "pickFolderFailed": "Impossible de choisir un dossier",
     "newWorkspaceFailed": "Impossible de créer un nouvel espace de travail",
-    "permissionDialogTitle": "Comment Code doit-il demander votre accord ?",
-    "permissionDialogDescription": "Code peut modifier des fichiers et exécuter des commandes dans votre espace de travail. Choisissez s’il doit vous consulter d’abord ; vous pourrez le changer plus tard dans le panneau Code.",
-    "permissionDialogManualAction": "Me demander à chaque fois",
-    "permissionDialogAutoAction": "Approuver automatiquement",
     "connectTitle": "Votre ordinateur",
     "connectHint": "Dans l'app de bureau, ouvrez Code et activez l'accès depuis le téléphone, puis saisissez ici son adresse et son mot de passe.",
     "connectedTo": "Connecté à",
@@ -2275,7 +2292,8 @@
       "other": "action"
     },
     "allow": "Autoriser",
-    "deny": "Refuser"
+    "deny": "Refuser",
+    "switchToAutomatic": "Passer en Automatique"
   },
   "appUpdatePrompt": {
     "title": "Mise à jour disponible",

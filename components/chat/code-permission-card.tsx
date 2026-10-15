@@ -21,12 +21,21 @@
  * Unanswered prompts resolve themselves — Rust denies on a timeout, and Stop denies
  * immediately — and both emit `opencode:permission_resolved` so the panel clears
  * instead of stranding on screen.
+ *
+ * A new prompt plays a short chime while the app isn't in front, and
+ * Switch to Automatic answers it and turns Approvals to Automatic for every chat
+ * — which, in Rust, also answers every other card still waiting.
  */
 
 import { useSyncExternalStore } from 'react';
 import { useTranslations } from 'next-intl';
 import { ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import {
+  PERMISSION_MODE_ICONS,
+  setApprovalMode,
+} from '@/components/chat-input-form/code-approvals-button';
+import { isAppInBackground, playAttentionChime } from '@/lib/attention-chime';
 
 export interface PermissionRequest {
   request_id: string;
@@ -73,6 +82,13 @@ function publish(next: PermissionRequest[]) {
   subscribers.forEach((notify) => notify());
 }
 
+/** Every new prompt, from opencode or a Browse run, comes through here once. */
+function raise(request: PermissionRequest) {
+  if (pending.some((p) => p.request_id === request.request_id)) return;
+  publish([...pending, request]);
+  if (isAppInBackground()) playAttentionChime();
+}
+
 function drop(requestId: string) {
   const next = pending.filter((p) => p.request_id !== requestId);
   if (next.length !== pending.length) publish(next.length ? next : EMPTY);
@@ -82,10 +98,9 @@ async function startListening() {
   if (listening || !isTauriApp()) return;
   listening = true;
   const { listen } = await import('@tauri-apps/api/event');
-  await listen<PermissionRequest>('opencode:permission_request', (evt) => {
-    if (pending.some((p) => p.request_id === evt.payload.request_id)) return;
-    publish([...pending, evt.payload]);
-  });
+  await listen<PermissionRequest>('opencode:permission_request', (evt) =>
+    raise(evt.payload),
+  );
   await listen<{ request_id: string }>('opencode:permission_resolved', (evt) =>
     drop(evt.payload.request_id),
   );
@@ -109,8 +124,7 @@ function subscribe(notify: () => void) {
  * second thing to keep in step with this one.
  */
 export function addPermissionRequest(request: PermissionRequest): void {
-  if (pending.some((p) => p.request_id === request.request_id)) return;
-  publish([...pending, request]);
+  raise(request);
 }
 
 /** Withdraw a prompt nobody can answer any more (the run ended or was stopped). */
@@ -172,6 +186,8 @@ export function CodePermissionCards({
   const all = useCodePermissionRequests();
   const requests = all.filter((r) => r.generation_id === generationId);
   const t = useTranslations('chatCodePermissionCard');
+  const tModes = useTranslations('chatInputFormCodingModeButton');
+  const AutomaticIcon = PERMISSION_MODE_ICONS.auto;
 
   const answer = async (
     request: PermissionRequest,
@@ -193,6 +209,21 @@ export function CodePermissionCards({
     } catch (e) {
       console.error('[code-permission] respond failed', e);
     }
+  };
+
+  // Automatic is saved BEFORE this card is answered: saving it answers every
+  // waiting card (this one included) and leaves nothing to ask in the gap. The
+  // answer after it is a no-op by then, and covers a switch that failed.
+  const switchToAutomatic = async (request: PermissionRequest) => {
+    setApprovalMode('auto');
+    drop(request.request_id);
+    try {
+      const { invoke } = await import('@tauri-apps/api/core');
+      await invoke('set_opencode_permission_mode', { mode: 'auto' });
+    } catch (e) {
+      console.error('[code-permission] could not switch to Automatic', e);
+    }
+    await answer(request, request.allow_option_id);
   };
 
   if (requests.length === 0) return null;
@@ -222,7 +253,7 @@ export function CodePermissionCards({
               {request.command}
             </code>
           )}
-          <div className="mt-2 ml-[18px] flex items-center gap-2">
+          <div className="mt-2 ml-[18px] flex flex-wrap items-center gap-2">
             {/* The app's brand CTA (globals.css) — the ibl.ai blue gradient, same as
                 auth-popover and free-trial-dialog. NOT shadcn's `bg-primary`, which
                 this app maps to near-black. Kept in colour on purpose: everything
@@ -246,6 +277,22 @@ export function CodePermissionCards({
             >
               {t('deny')}
             </Button>
+            {/* Code prompts only: a Browse run follows Cowork's own Approvals
+                setting, and a prompt with nothing to allow can't be approved. */}
+            {!request.respond && request.allow_option_id && (
+              <Button
+                variant="ghost"
+                size="sm"
+                type="button"
+                data-testid="code-permission-switch-to-automatic"
+                title={tModes('permissionModeAutoHint')}
+                className="h-7 gap-1 text-xs text-[#38A1E5] hover:bg-[#F5F8FF] hover:text-[#38A1E5]"
+                onClick={() => void switchToAutomatic(request)}
+              >
+                <AutomaticIcon className="h-3 w-3" aria-hidden="true" />
+                {t('switchToAutomatic')}
+              </Button>
+            )}
           </div>
         </div>
       ))}

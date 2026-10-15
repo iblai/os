@@ -487,7 +487,8 @@
     "coworkApprovalsLabel": "操作审批",
     "coworkApprovalsManual": "每次询问",
     "coworkApprovalsAuto": "自动批准",
-    "coworkApprovalsAutoHint": "Cowork 将直接点击、输入并提交表单，不再询问。请仅在受信任的网站上使用。"
+    "coworkApprovalsAutoHint": "Cowork 将直接点击、输入并提交表单，不再询问。请仅在受信任的网站上使用。",
+    "coworkApprovalsManualHint": "Cowork 在点击、输入或提交表单前会先征求你的同意。"
   },
   "chatInputFormMemoryMenu": {
     "yourMemory": "您的记忆",
@@ -1414,6 +1415,20 @@
     "reset": "重置",
     "viewLogs": "查看日志（{count}）"
   },
+  "hooksModelDownload": {
+    "setupTitle": "正在设置模型管理器",
+    "setupDescription": "这只会在第一次进行，可能需要几分钟。设置完成后将立即开始下载。",
+    "enableFailed": "无法启用本地模型：{error}",
+    "desktopRequired": "下载本地模型需要桌面应用",
+    "downloaded": "模型下载成功！",
+    "downloadFailed": "下载失败：{error}",
+    "downloadCancelled": "已取消下载",
+    "modelNotFound": "未找到模型",
+    "downloadedAndLoaded": "模型已下载并加载：{model}",
+    "modelDownloadFailed": "模型下载失败：{error}",
+    "modelLoaded": "已加载模型：{model}",
+    "modelLoadFailed": "模型加载失败：{error}"
+  },
   "navBarEmbedNavBar": {
     "closeSidebar": "关闭侧边栏",
     "openSidebar": "打开侧边栏",
@@ -1447,7 +1462,8 @@
     "selectedAgent": "已选智能体",
     "user": "用户",
     "admin": "管理员",
-    "signUpForFree": "免费注册"
+    "signUpForFree": "免费注册",
+    "onDevice": "本机"
   },
   "projectsCreateProjectModal": {
     "title": "新建项目",
@@ -2200,7 +2216,10 @@
     "tooltip": "针对你的项目文件夹的智能体编程工具",
     "description": "一个智能体编程工具，可在你选择的文件夹中编辑文件、运行命令并提交更改。",
     "checkingLocalModel": "正在检查你的本地模型是否能运行代码模式…",
-    "tryToolCapableModel": " 请尝试支持工具调用的模型，如 qwen3、llama3.2 或 phi4-mini。",
+    "pickLocalModel": "请先选择一个设备端模型：打开模型列表，选择标有“设备端”的模型。",
+    "localModelCantEdit": "{model} 无法修改文件或执行命令，因此 Code 无法使用它。",
+    "localModelUnknown": "我们无法确认 {model} 能否修改文件或执行命令，因此 Code 可能无法正常使用它。",
+    "tryToolCapableModel": " 请换一个能做到的模型，例如 Qwen 3、Llama 3.2 或 Phi-4 Mini。",
     "firstRunSlow": "首次运行时模型加载可能需要几分钟。",
     "modelUnavailable": "不可用于代码模式 — 对话会失败。请在左上角选择其他模型。",
     "workspace": "工作区",
@@ -2211,7 +2230,9 @@
     "permissionModeLabel": "操作审批",
     "permissionModeManual": "每次询问",
     "permissionModeAuto": "自动批准",
-    "permissionModeAutoHint": "Code 将直接编辑文件并执行命令，不再询问。请仅在受信任的文件夹中使用。",
+    "permissionModeAutoHint": "Code 将直接修改文件并执行命令，不再询问。请仅在受信任的文件夹中使用。",
+    "permissionModeManualHint": "Code 在修改文件或执行命令前会先征求你的同意。",
+    "approvalsAria": "操作审批：{mode}",
     "agentLabel": "智能体",
     "agentNotInstalled": "未安装",
     "agentInstall": "安装",
@@ -2231,10 +2252,6 @@
     "openFolderFailed": "无法打开文件夹",
     "pickFolderFailed": "无法选择文件夹",
     "newWorkspaceFailed": "无法创建新的工作区",
-    "permissionDialogTitle": "Code 应如何请求授权？",
-    "permissionDialogDescription": "Code 可以在你的工作区中编辑文件并执行命令。请选择它是否需要先征得你的同意；稍后可在 Code 面板中更改。",
-    "permissionDialogManualAction": "每次都询问我",
-    "permissionDialogAutoAction": "自动批准",
     "connectTitle": "你的电脑",
     "connectHint": "在桌面应用中打开 Code 并启用手机访问，然后在此输入其地址和密码。",
     "connectedTo": "已连接到",
@@ -2275,7 +2292,8 @@
       "other": "操作"
     },
     "allow": "允许",
-    "deny": "拒绝"
+    "deny": "拒绝",
+    "switchToAutomatic": "切换为自动批准"
   },
   "appUpdatePrompt": {
     "title": "有可用更新",

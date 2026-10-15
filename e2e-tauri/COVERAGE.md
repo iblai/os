@@ -1,6 +1,6 @@
 # Tauri Desktop E2E Coverage — Journey Checklist
 
-> Last updated: 2026-10-01 | 52 checkpoints (22 covered, 29 pending, 1 deprecated) | 3 journeys | 100% of reproducible checkpoints covered | Driver: WebdriverIO + tauri-driver
+> Last updated: 2026-10-12 | 54 checkpoints (22 covered, 31 pending, 1 deprecated) | 3 journeys | 100% of reproducible checkpoints covered | Driver: WebdriverIO + tauri-driver
 
 This is the desktop counterpart to the web `e2e/COVERAGE.md`. It tracks only what
 is exercised by driving the **built desktop binary** through `tauri-driver` (see
@@ -72,7 +72,7 @@ two vendored release workflows and are exercised by real releases.
 
 ---
 
-## Journey 2: On-device Model Management (7 checkpoints: 3 covered, 4 pending) — `journeys/02-on-device-model-management.spec.ts`
+## Journey 2: On-device Model Management (8 checkpoints: 3 covered, 5 pending) — `journeys/02-on-device-model-management.spec.ts`
 
 > **Partly covered.** The download mechanics (odm-02/03/05) run against the REAL
 > compiled binary through the live Tauri IPC bridge (`window.__TAURI__`), pulling
@@ -87,17 +87,18 @@ two vendored release workflows and are exercised by real releases.
 
 **Source files:** `hooks/use-model-download.ts`, `components/modals/llm-provider-modal.tsx`, `components/modals/llm-provider-modal/local-model-row.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`, `src-tauri/src/model_manager.rs`, `src-tauri/src/lib.rs`
 
-- [ ] `odm-01` The LLM picker merges on-device (local) models with the provider's cloud models in one availability-ranked list _(UI pass)_
+- [ ] `odm-01` The LLM picker lists on-device (local) models first, then the provider's cloud models, in one list; each group is ranked by availability _(UI pass)_
 - [x] `odm-02` A not-installed on-device model pulls via the `download_model` IPC and streams live progress events (real `smollm:135m` pull)
 - [x] `odm-03` Cancelling an in-flight pull returns promptly and the app keeps answering IPC (the no-freeze regression fix)
 - [ ] `odm-04` Starting a second on-device download while one is in flight shows the "already downloading" guard — one pull at a time _(UI pass)_
 - [x] `odm-05` A completed pull installs the on-device model (`check_ollama_status` lists it)
-- [ ] `odm-06` The nav-bar on-device badge reflects the selected local model _(UI pass)_
+- [ ] `odm-06` The nav-bar on-device badge reflects the selected local model, with its name cased as written (not lowercased) _(UI pass)_
 - [ ] `odm-07` Busy default ports at launch degrade to allocated ones: the MCP bridge and the offline server each bind a free port (preferring 8000/3457) and every consumer follows — local chat still streams, the offline cache still serves _(needs a journey that pre-occupies the ports before launching the binary; covered meanwhile by the `pick_port`/`bind_with_fallback`/`chat_base_url` Rust tests in `mcp_bridge_manager.rs`, `offline_server.rs` and `model_manager.rs`)_
+- [ ] `odm-08` Downloading an on-device model with Local Models off turns Local Models on first, which sets up and starts the Model Manager (with a one-time setup notice when it was never installed), then starts the pull; a failed setup turns Local Models back off and a failed or cancelled setup starts no pull _(needs a machine without Ollama, while every other checkpoint here requires it; the picker runs the SDK's own `useModelDownload`, so it is covered meanwhile by the SDK Vitest suite "useModelDownload startDownload with Local Models off" in `@iblai/web-containers` `src/hooks/__tests__/use-model-download.test.ts`)_
 
 ---
 
-## Journey 3: Code Mode (opencode) (41 checkpoints: 15 covered, 25 pending, 1 deprecated) — `journeys/03-code-mode.spec.ts`
+## Journey 3: Code Mode (opencode) (42 checkpoints: 15 covered, 26 pending, 1 deprecated) — `journeys/03-code-mode.spec.ts`
 
 > **Partly covered.** The installer and per-chat state (code-01…07) run against
 > the REAL compiled binary through the live Tauri IPC bridge (`window.__TAURI__`):
@@ -176,7 +177,7 @@ two vendored release workflows and are exercised by real releases.
 - [ ] `code-20` Killing the opencode process mid-turn: the answer continues in the same bubble with no visible interruption (one silent respawn re-sends the prompt), and a second kill in the same turn surfaces `ollama:error` _(needs a tool-calling model; covered meanwhile by the Rust crash-retry tests in `opencode_acp.rs` — `should_retry`, `reader_gone`, `closing` — and the proxy rebind/read-timeout tests)_
 - [x] `code-21` The Code approval mode (manual/auto) round-trips through `settings.json`, survives a restart, and an unknown mode is refused rather than defaulting
 - [x] `code-22` A mentor keeps one workspace across chats while another mentor gets its own, and New Workspace mints a fresh folder without deleting the previous one
-- [ ] `code-23` The Code popover asks for an approval mode on first use and stores the answer against the signed-in user, so it follows them to another machine _(needs an authenticated UI session; covered meanwhile by the coding-mode-button Vitest cases)_
+- [ ] `code-23` Code starts in Automatic (nothing saved), shown as an icon beside the microphone; its menu switches to Ask Me, which is saved and holds in every chat until switched back _(needs an authenticated UI session; covered meanwhile by the coding-mode-button Vitest cases)_
 - [ ] `code-24` The Code popover offers New Workspace and a platform-named Open Folder button (Finder / Explorer / the probed Linux file manager) _(needs an authenticated UI session, and clicking Open Folder would spawn a real file manager; labels and disabled states covered by the coding-mode-button Vitest cases)_
 - [ ] `code-25` A between-turn opencode death (crash, idle reap, LRU eviction) is invisible: the next turn `session/load`s the same conversation back, and when a load isn't possible the frontend's transcript is resent so the agent continues; a mid-turn death keeps the input busy — the Stop button stays Stop and no suggested prompts appear while the backend silently respawns _(needs an authenticated chat driving real opencode turns; covered meanwhile by the Rust resume-map + `prompt_with_history` tests in `opencode_acp.rs` and the SDK transcript/restart + mentor-socket-guard Vitest cases)_
 - [ ] `code-26` A managed opencode older than the pinned version is re-downloaded at boot, and a user's own PATH copy is never replaced _(the upgrade downloads a ~100MB release, too heavy for the harness; the decision is covered by `only_a_present_and_outdated_managed_copy_wants_an_upgrade` in `opencode_installer.rs`)_
@@ -195,3 +196,4 @@ two vendored release workflows and are exercised by real releases.
 - [x] `code-39` `list_code_agent_models` answers each agent's models (id, name, description) with the agent's own default and the saved pick, or refuses naming install / sign-in; an unknown backend is refused
 - [ ] `code-40` The top-left model picker opens the SDK's LLM Selection dialog (`LLMProviderModal` in its `cloudOnly` mode, the same dialog the cloud picker opens behind a provider card) while Code runs on Codex / Claude Code (in place of the mentor's LLM selector and the on-device badge), lists Default with the agent's own default and the agent's models as cards, saves the pick per machine, and shows a failed list on the button with a click to retry _(needs an authenticated UI session like code-14/23/24; covered meanwhile by the nav-bar Vitest cases `shows the agent model picker instead of the LLM selector`, `keeps the LLM selector…` and `agent-model-selector.test.tsx`)_
 - [ ] `code-41` A Code turn runs on the picked model: the handshake applies it with `session/set_config_option` right after the mode pin, a live session takes a new pick without a respawn, and a model the agent refuses fails the turn naming the picker _(needs a signed-in ChatGPT / Claude subscription; covered meanwhile by the Rust `a_scripted_agent_reports_its_models_and_takes_the_saved_one`, `an_unknown_model_is_refused_before_it_is_saved` and `the_model_choice_lists_the_agents_offer_with_default_and_selection`)_
+- [ ] `code-42` An Ask Me permission card's **Switch to Automatic** answers it, saves Automatic (the composer's approvals icon and the Code popover show it), clears every other waiting card, and no later request in that turn raises a card — on the desktop and on a paired phone; each new card plays a short chime _(needs an authenticated UI session and a tool-calling turn, like code-08/code-10; covered meanwhile by the Vitest `switches to Automatic from the card…`, `offers Switch to Automatic only on Code prompts…`, `chimes once for each new prompt…` and the Rust `a_request_is_answered_by_automatic_or_queued_for_its_sweep`, `switching_to_automatic_answers_the_waiting_cards_and_stops_asking`)_

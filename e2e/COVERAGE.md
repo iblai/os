@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-10-07 | 830 checkpoints (784 covered, 12 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 83 journeys (82 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-10-07 | 831 checkpoints (785 covered, 12 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 83 journeys (82 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -897,7 +897,7 @@ Wraps the packaged `AgentEvaluationTab` from `@iblai/iblai-js/web-containers/nex
 - [x] EVAL-11: Once a run has completed, admin can open View results and Export CSV _(opportunistic — skips gracefully while the run has not completed yet)_
 - [x] EVAL-12: Once a run has completed, the New review (LLM-judge) dialog keeps Evaluate disabled until criteria and score name are filled _(opportunistic — skips gracefully while the run has not completed yet)_
 - [x] EVAL-13: Admin can cancel a delete confirmation (row stays) and then delete a run for real (row is removed)
-- [x] EVAL-14: Manage benchmarks lists the created benchmark, and searching for its name filters down to it
+- [x] EVAL-14: Manage benchmarks lists the created benchmark with a Created time in minutes (not hours), and searching for its name filters down to it
 - [x] EVAL-15: Evals tab has no axe-core accessibility violations on visible dialogs
 - [x] EVAL-16: Admin can leave the Evals tab and return without errors (wrapper re-mounts cleanly)
 - [x] EVAL-17: Non-admin does not see the Evals tab in the Edit Mentor modal (ADMIN-only segment in `use-mentor-segments.ts`)
@@ -1383,7 +1383,7 @@ Because the toggle mutates the mentor's attached tools — the same fields Journ
 
 ---
 
-## Journey 67: Agent Skills (22 checkpoints) — `journeys/67-agent-skills.spec.ts`
+## Journey 67: Agent Skills (23 checkpoints) — `journeys/67-agent-skills.spec.ts`
 
 **Source files:** `hooks/use-mentor-segments.ts`, `components/modals/edit-mentor-modal/tabs/skills-tab.tsx`, `components/chat-input-form.tsx`, `components/auto-resize-text-area.tsx`
 
@@ -1457,6 +1457,7 @@ surfaces:
 - [x] slash-12: Multiple skill invocations in one message are each highlighted; unknown or disabled slugs never highlight
 - [x] slash-13: Typing "/" while the assignments fetch (the composer's only skill source) is still in flight shows the "Loading skills…" popover (`slash-skill-loading`, `role=status`), which yields to the picker once the list resolves
 - [x] slash-16: Skills dropdown (next to Canvas) lists enabled skills as name stacked over `/slug` (same column layout as the `/` picker — full name, never truncated; geometry-asserted); selecting inserts the token AT THE CARET with context-aware spacing; the active pill shows the armed name + the standard ✕ (disarms without opening the menu); toggling removes cleanly; arming another replaces (single selection); `/`-picker arming updates the button — one composer-text source of truth
+- [x] slash-17: On a phone-width composer (360px) the Skills button collapses into the ••• menu like the other tool pills; its ••• entry expands the skills list in place (scrolling, inside the viewport), and picking a skill arms its `/slug` token
 - [x] slash-15: NON-ADMIN — with the assignments endpoint readable (mocked granted state; a 403 degrades to an inactive picker) the "/" picker offers skills; selecting completes the token and the sent invocation message receives a live AI reply — skips when the environment denies the non-admin CHAT permission entirely (composer disabled with a "you don't have permission to chat" placeholder): the picker rides on top of chat access
 - [x] slash-14: A "/" token typed after existing text (caret-adjacent, preceded by whitespace) opens the picker; selecting completes the invocation at that index keeping the sentence. A "/" glued inside a word (and/or, URLs) never triggers
 

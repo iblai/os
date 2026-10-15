@@ -96,9 +96,9 @@ function stubLayout(root: number) {
 }
 
 function Harness({
-  fixed = [] as { key: string; width: number }[],
+  fixed = [] as { key: string; width: number; compactWidth?: number }[],
 }: {
-  fixed?: { key: string; width: number }[];
+  fixed?: { key: string; width: number; compactWidth?: number }[];
 }) {
   const fit = useOverflowFit(
     ITEMS,
@@ -108,11 +108,17 @@ function Harness({
   const inline = count === null ? ITEMS : ITEMS.slice(0, count);
   return (
     <div ref={fit.rootRef} data-root="">
+      {/* A fixed pill renders narrower once compact, as the real ones do. */}
       {fixed.map((f) => (
-        <span key={f.key} ref={fit.itemRef(f.key)} data-w={f.width}>
+        <span
+          key={f.key}
+          ref={fit.itemRef(f.key)}
+          data-w={fit.compact ? (f.compactWidth ?? f.width) : f.width}
+        >
           fixed-{f.key}
         </span>
       ))}
+      <output data-testid="compact">{String(fit.compact)}</output>
       {inline.map((item) => (
         <span
           key={item.key}
@@ -161,6 +167,68 @@ describe('useOverflowFit', () => {
     render(<Harness fixed={[{ key: 'code', width: 100 }]} />);
     await waitFor(() =>
       expect(screen.getByTestId('count')).toHaveTextContent('0'),
+    );
+  });
+
+  it('keeps fixed pills full while they fit beside the ••• trigger', async () => {
+    // 100 + gap 6 + trigger 32 = 138 <= 140.
+    restore = stubLayout(140);
+    render(<Harness fixed={[{ key: 'code', width: 100, compactWidth: 34 }]} />);
+    await waitFor(() =>
+      expect(screen.getByTestId('count')).toHaveTextContent('0'),
+    );
+    expect(screen.getByTestId('compact')).toHaveTextContent('false');
+  });
+
+  it('goes compact when the fixed pills would push the ••• trigger out, and stays so', async () => {
+    // 100 + 6 + 32 = 138 > 120. Once compact the pill measures 34, which
+    // would fit with its label too if judged by that width; the decision
+    // must keep using the full width or it would flip back and forth.
+    restore = stubLayout(120);
+    render(<Harness fixed={[{ key: 'code', width: 100, compactWidth: 34 }]} />);
+    await waitFor(() =>
+      expect(screen.getByTestId('compact')).toHaveTextContent('true'),
+    );
+    await new Promise((r) => setTimeout(r, 20));
+    expect(screen.getByTestId('compact')).toHaveTextContent('true');
+  });
+
+  it('judges a pill by its new estimate once its label changed', async () => {
+    // 'c' was measured wide (an armed skill's long name); its label is short
+    // again, so the stale width must not keep it in the ••• menu.
+    function Relabel({ wide }: { wide: boolean }) {
+      const items = [
+        { key: 'a', estimate: 80 },
+        { key: 'c', estimate: wide ? 200 : 60 },
+      ];
+      const fit = useOverflowFit(items);
+      const count = fit.visibleCount ?? items.length;
+      return (
+        <div ref={fit.rootRef} data-root="">
+          {items.slice(0, count).map((item) => (
+            <span
+              key={item.key}
+              ref={fit.itemRef(item.key)}
+              data-w={item.estimate}
+            >
+              {item.key}
+            </span>
+          ))}
+          <output data-testid="count">{String(fit.visibleCount)}</output>
+        </div>
+      );
+    }
+    restore = stubLayout(150);
+    const { rerender } = render(<Relabel wide />);
+    await waitFor(() =>
+      expect(screen.getByTestId('count')).toHaveTextContent('1'),
+    );
+
+    rerender(<Relabel wide={false} />);
+
+    // 80 + 6 + 60 = 146 <= 150: both fit again.
+    await waitFor(() =>
+      expect(screen.getByTestId('count')).toHaveTextContent('2'),
     );
   });
 
