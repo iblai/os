@@ -302,6 +302,32 @@ describe('CreateMentorForm', () => {
         screen.queryByRole('button', { name: /remove uploaded image/i }),
       ).not.toBeInTheDocument();
     });
+
+    // The Dialog's scroll lock cancels every wheel event outside its content,
+    // so the list must be portaled into the Dialog, not document.body.
+    it('lets the mouse wheel scroll the category list inside the dialog', async () => {
+      const user = userEvent.setup();
+      renderDialogVariant();
+
+      await user.click(
+        screen.getByRole('combobox', { name: /select category/i }),
+      );
+      await screen.findByText('General');
+      const list = document.querySelector<HTMLElement>('[cmdk-list]')!;
+      expect(list.closest('[role="dialog"]')).not.toBeNull();
+      list.style.overflowY = 'auto';
+      Object.defineProperty(list, 'scrollHeight', { value: 1000 });
+      Object.defineProperty(list, 'clientHeight', { value: 300 });
+
+      const wheel = new WheelEvent('wheel', {
+        deltaY: 100,
+        bubbles: true,
+        cancelable: true,
+      });
+      list.dispatchEvent(wheel);
+
+      expect(wheel.defaultPrevented).toBe(false);
+    });
   });
 
   describe('prompts tab + submission', () => {

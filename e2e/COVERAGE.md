@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-10-08 | 933 checkpoints (889 covered, 10 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 93 journeys (92 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-10-08 | 937 checkpoints (893 covered, 10 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 95 journeys (94 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -2162,3 +2162,25 @@ The tour auto-starts once per user on the agent chat page; whether it was seen i
 - [x] tour-07: Admin clicks Skip tour and the `skipped` outcome is POSTed to the user metadata
 - [x] tour-08: Admin presses Escape and the tour is skipped (`skipped` outcome POSTed)
 - [x] tour-09: Admin opens the chat page with `?tour=1&embed=true` and no tour is shown
+
+---
+
+## Journey 87: Camera Dialog Leaves Page Clickable (3 checkpoints) — `journeys/87-camera-dialog-pointer-events.spec.ts`
+
+**Source files:** `components/chat/sdk-chat.tsx` (SDK composer "+" menu / `CameraCaptureDialog`)
+
+Regression: the camera dialog opened from the "+" menu item left `<body style="pointer-events: none">`, freezing all clicks. Chromium-only fake camera (`--use-fake-device-for-media-stream`, `camera` permission) scoped to this spec via `test.use`; upload outcome is never asserted. Page object: `page-objects/camera-capture.page.ts`.
+
+- [x] camera-01: Composer + -> Camera -> Capture -> Use photo: live feed shows, then body pointer-events is not 'none', the composer accepts typing and + reopens its menu (regression: separate Radix DismissableLayer copies froze the page)
+- [x] camera-02: Composer + -> Camera -> Capture -> Escape closes the dialog and leaves the page clickable (same regression)
+- [x] camera-03: Camera -> Capture -> Retake -> Capture -> Use photo leaves the page clickable and a message can still be sent
+
+---
+
+## Journey 88: Create Agent Category Wheel Scroll (1 checkpoint) — `journeys/88-create-agent-category-wheel-scroll.spec.ts`
+
+**Source files:** `components/modals/create-mentor-form.tsx`
+
+Regression: the Category popover is portaled outside the Create Agent dialog, whose scroll lock swallowed wheel events. Page object: `page-objects/create-mentor.page.ts` (`categoryList`).
+
+- [x] catscroll-01: Admin opens Create Agent, opens the Category picker and wheels the list: scrollTop increases and a lower category can be selected
