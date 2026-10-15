@@ -52,6 +52,29 @@ export function setApprovalMode(mode: PermissionMode) {
 }
 
 /**
+ * Show a chosen mode at once, so every control agrees, and save it on the
+ * desktop. A save that fails puts back the mode the desktop still enforces
+ * and reports it: left as chosen, Code would keep approving on its own
+ * behind an "Ask Me" label. A newer pick that landed meanwhile is kept.
+ */
+export async function applyApprovalMode(
+  mode: PermissionMode,
+  save: (mode: PermissionMode) => Promise<unknown>,
+  onFailure: (error: unknown) => void,
+): Promise<boolean> {
+  const previous = approvalMode;
+  setApprovalMode(mode);
+  try {
+    await save(mode);
+    return true;
+  } catch (error) {
+    if (approvalMode === mode) setApprovalMode(previous);
+    onFailure(error);
+    return false;
+  }
+}
+
+/**
  * Show the mode the desktop has saved. Anything but `"auto"` is Ask Me: an
  * older desktop answers null when nothing was chosen, and one older still has
  * no such command — both ask at every step.

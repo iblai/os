@@ -15,6 +15,7 @@ import {
   useApprovalMode,
 } from '@/components/chat-input-form/code-approvals-button';
 import { playAttentionChime } from '@/lib/attention-chime';
+import { toast } from 'sonner';
 
 /**
  * The inline Allow/Deny prompts Code shows before every tool call — reads included,
@@ -51,6 +52,8 @@ vi.mock('@/lib/attention-chime', () => ({
   playAttentionChime: vi.fn(),
   isAppInBackground: () => appInBackground.current,
 }));
+
+vi.mock('sonner', () => ({ toast: { error: vi.fn() } }));
 
 const GENERATION = 'opencode-1';
 
@@ -164,6 +167,35 @@ describe('CodePermissionCards', () => {
     });
     expect(screen.queryByText('Run a shell command')).not.toBeInTheDocument();
     expect(renderHook(() => useApprovalMode()).result.current).toBe('auto');
+  });
+
+  it('goes back to Ask Me and says so when the switch cannot be saved, still allowing this one', async () => {
+    // Shown as Automatic but never saved, Code would keep asking in Rust while
+    // every control said it would not.
+    const err = vi.spyOn(console, 'error').mockImplementation(() => {});
+    setApprovalMode('manual');
+    invoke.mockImplementation(async (cmd: string) => {
+      if (cmd === 'set_opencode_permission_mode') throw new Error('disk full');
+    });
+    render(<CodePermissionCards generationId={GENERATION} />);
+    await emit('opencode:permission_request', REQUEST);
+
+    await userEvent.click(
+      screen.getByTestId('code-permission-switch-to-automatic'),
+    );
+
+    await waitFor(() =>
+      expect(invoke).toHaveBeenCalledWith('opencode_permission_respond', {
+        requestId: 'perm-1',
+        optionId: 'allow-once',
+      }),
+    );
+    expect(renderHook(() => useApprovalMode()).result.current).toBe('manual');
+    expect(toast.error).toHaveBeenCalledWith(
+      'The approval setting could not be saved. Code still uses the previous setting.',
+    );
+    expect(screen.queryByText('Run a shell command')).not.toBeInTheDocument();
+    err.mockRestore();
   });
 
   it('offers Switch to Automatic only on Code prompts that can be allowed', async () => {

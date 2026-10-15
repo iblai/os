@@ -617,6 +617,80 @@ describe('useModelDownload hook', () => {
       expect(localStorage.getItem(LOCAL_MODELS_ENABLED)).toBe('true');
     });
 
+    it('puts the model back in use when its re-download fails', async () => {
+      mockSetState.mockImplementation((update: any) => {
+        mockState = typeof update === 'function' ? update(mockState) : update;
+      });
+      localStorage.setItem(LOCAL_MODELS_ENABLED, 'true');
+      localStorage.setItem(SELECTED_LOCAL_MODEL, 'qwen3');
+      stubBackend({ installed: true });
+      const backend = mockInvoke.getMockImplementation()!;
+      mockInvoke.mockImplementation(async (cmd: string, args?: unknown) => {
+        if (cmd === 'download_model') throw new Error('connection reset');
+        return backend(cmd, args);
+      });
+      const { result } = await renderAndSettle();
+
+      await act(async () => {
+        await result.current.startDownload('qwen3');
+      });
+
+      expect(toast.error).toHaveBeenCalledWith(
+        expect.stringContaining('connection reset'),
+      );
+      expect(localStorage.getItem(SELECTED_LOCAL_MODEL)).toBe('qwen3');
+    });
+
+    it('puts the model back in use when its re-download is cancelled', async () => {
+      mockSetState.mockImplementation((update: any) => {
+        mockState = typeof update === 'function' ? update(mockState) : update;
+      });
+      localStorage.setItem(LOCAL_MODELS_ENABLED, 'true');
+      localStorage.setItem(SELECTED_LOCAL_MODEL, 'qwen3');
+      stubBackend({ installed: true });
+      const backend = mockInvoke.getMockImplementation()!;
+      mockInvoke.mockImplementation(async (cmd: string, args?: unknown) => {
+        if (cmd === 'download_model') {
+          // Cancel lands while the pull runs; the backend then resolves cleanly.
+          mockState = { ...mockState, status: 'cancelled' };
+          return null;
+        }
+        return backend(cmd, args);
+      });
+      const { result } = await renderAndSettle();
+
+      await act(async () => {
+        await result.current.startDownload('qwen3');
+      });
+
+      expect(toast.success).not.toHaveBeenCalled();
+      expect(localStorage.getItem(SELECTED_LOCAL_MODEL)).toBe('qwen3');
+    });
+
+    it('keeps a model picked during the download when the download ends', async () => {
+      mockSetState.mockImplementation((update: any) => {
+        mockState = typeof update === 'function' ? update(mockState) : update;
+      });
+      localStorage.setItem(LOCAL_MODELS_ENABLED, 'true');
+      localStorage.setItem(SELECTED_LOCAL_MODEL, 'qwen3');
+      stubBackend({ installed: true });
+      const backend = mockInvoke.getMockImplementation()!;
+      mockInvoke.mockImplementation(async (cmd: string, args?: unknown) => {
+        if (cmd === 'download_model') {
+          localStorage.setItem(SELECTED_LOCAL_MODEL, 'phi3:mini');
+          throw new Error('connection reset');
+        }
+        return backend(cmd, args);
+      });
+      const { result } = await renderAndSettle();
+
+      await act(async () => {
+        await result.current.startDownload('qwen3');
+      });
+
+      expect(localStorage.getItem(SELECTED_LOCAL_MODEL)).toBe('phi3:mini');
+    });
+
     it('does not download when the user cancels while the Model Manager is being set up', async () => {
       mockSetState.mockImplementation((update: any) => {
         mockState = typeof update === 'function' ? update(mockState) : update;

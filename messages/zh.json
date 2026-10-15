@@ -2205,6 +2205,7 @@
     "permissionModeAuto": "自动批准",
     "permissionModeAutoHint": "Code 将直接修改文件并执行命令，不再询问。请仅在受信任的文件夹中使用。",
     "permissionModeManualHint": "Code 在修改文件或执行命令前会先征求你的同意。",
+    "permissionModeSaveFailed": "无法保存操作审批设置。Code 仍沿用之前的设置。",
     "approvalsAria": "操作审批：{mode}",
     "agentLabel": "智能体",
     "agentNotInstalled": "未安装",

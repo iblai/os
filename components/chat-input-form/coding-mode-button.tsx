@@ -21,6 +21,10 @@ import { Switch } from '@/components/ui/switch';
 import { useMentorSettings } from '@/hooks/use-mentors/use-mentor-settings';
 import { isTauriOfflineMode } from '@/hooks/use-tauri-offline';
 import { config } from '@/lib/config';
+import {
+  LOCAL_LLM_ENABLED_KEY,
+  LOCAL_LLM_MODEL_KEY,
+} from '@/lib/local-llm-flags';
 import { getUserOS } from '@/lib/utils';
 import { isTauriMobile } from '@/types/tauri';
 import type { OpencodeSkillSync } from '@/hooks/use-opencode-skill-sync';
@@ -37,8 +41,8 @@ import {
   CodeApprovalsButton,
   PERMISSION_MODES,
   PERMISSION_MODE_ICONS,
+  applyApprovalMode,
   loadApprovalMode,
-  setApprovalMode,
   useApprovalMode,
   type PermissionMode,
 } from './code-approvals-button';
@@ -47,14 +51,6 @@ const MODEL_KEY = 'ibl_coding_mode_model';
 const FOLDER_CHOSEN_KEY = 'ibl_coding_mode_folder_chosen';
 /** Mentor the composer is bound to — written by useOpencodeSkillSync. */
 const MENTOR_KEY = 'ibl_coding_mode_mentor';
-/** The on-device model the user picked in Local Models settings (see ollama-client). */
-const LOCAL_LLM_MODEL_KEY = 'ibl_local_llm_model';
-/**
- * Set by the Local Models toggle. This — NOT offline mode — is what the chat transport
- * (`use-chat-v2`) uses to route to an on-device model, so Code must read the same flag
- * or it will happily point at a cloud model while the rest of the app is local.
- */
-const LOCAL_LLM_ENABLED_KEY = 'ibl_local_llm_enabled';
 /** `check_code_agent_status`; `signed_in` null = the probe couldn't tell. */
 interface CodeAgentStatus {
   installed: boolean;
@@ -686,14 +682,15 @@ export function CodingModeButton({
     );
   }, []);
 
-  const chooseMode = async (mode: PermissionMode) => {
-    setApprovalMode(mode);
-    try {
-      await callTauri('set_opencode_permission_mode', { mode });
-    } catch (e) {
-      console.error('[coding-mode] could not apply permission mode', e);
-    }
-  };
+  const chooseMode = (mode: PermissionMode) =>
+    applyApprovalMode(
+      mode,
+      (chosen) => callTauri('set_opencode_permission_mode', { mode: chosen }),
+      (e) => {
+        console.error('[coding-mode] could not apply permission mode', e);
+        toast.error(t('permissionModeSaveFailed'));
+      },
+    );
 
   // Force Code off whenever it can't run (runtime down, an on-device model with no
   // tool calling, or a Linux host missing bubblewrap) — the send path (SDK) reads

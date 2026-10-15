@@ -34,6 +34,24 @@ static CONFIG_PATH: OnceLock<PathBuf> = OnceLock::new();
 /// id, so `opencode_permission_respond` can address the reply.
 static PENDING_PERMISSIONS: Mutex<Option<HashMap<String, String>>> = Mutex::new(None);
 
+/// Serializes every read-change-write of the config file. Writers that each
+/// read the file, change one field and write the whole thing back undo each
+/// other when they interleave: a mode saved mid-turn vanished under that
+/// turn's own `in_flight` bookkeeping and came back wrong at the next
+/// launch. Held only across the synchronous read, change and write, never
+/// across an await.
+static CONFIG_LOCK: Mutex<()> = Mutex::new(());
+
+/// Read the config, apply `change` and write it back, atomically with
+/// respect to every other writer. Hands back what `change` returns.
+fn update_config<T>(change: impl FnOnce(&mut HostConfig) -> T) -> Result<T, String> {
+    let _serial = CONFIG_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+    let mut cfg = read_config();
+    let out = change(&mut cfg);
+    write_config(&cfg)?;
+    Ok(out)
+}
+
 /// `"auto"` short-circuits permission events with an immediate allow, exactly
 /// like the desktop's auto mode. Kept in the config file; see [`permission_mode`].
 const MODE_AUTO: &str = "auto";
@@ -76,9 +94,7 @@ fn queue_unless_auto(per_id: &str, remote: &str) -> bool {
 /// exactly what the user just said to stop asking about.
 fn save_permission_mode(mode: &str) -> Result<Vec<(String, String)>, String> {
     let mut map = PENDING_PERMISSIONS.lock().expect("permissions lock");
-    let mut cfg = read_config();
-    cfg.permission_mode = Some(mode.to_string());
-    write_config(&cfg)?;
+    update_config(|cfg| cfg.permission_mode = Some(mode.to_string()))?;
     phone_auto().store(mode == MODE_AUTO, Ordering::SeqCst);
     Ok(if mode == MODE_AUTO {
         map.get_or_insert_with(HashMap::new).drain().collect()
@@ -170,20 +186,17 @@ struct InFlight(String);
 
 impl InFlight {
     fn mark(remote: &str, dir: Option<&str>) -> Self {
-        let mut cfg = read_config();
-        cfg.in_flight
-            .insert(remote.to_string(), dir.unwrap_or("").to_string());
-        let _ = write_config(&cfg);
+        let _ = update_config(|cfg| {
+            cfg.in_flight
+                .insert(remote.to_string(), dir.unwrap_or("").to_string());
+        });
         Self(remote.to_string())
     }
 }
 
 impl Drop for InFlight {
     fn drop(&mut self) {
-        let mut cfg = read_config();
-        if cfg.in_flight.remove(&self.0).is_some() {
-            let _ = write_config(&cfg);
-        }
+        let _ = update_config(|cfg| cfg.in_flight.remove(&self.0));
     }
 }
 
@@ -216,11 +229,11 @@ pub async fn abort_abandoned_turns() {
     }
     // Forget only what was handled: a turn started while the desktop was
     // being asked is this run's, and stays recorded.
-    let mut cfg = read_config();
-    for remote in abandoned.keys() {
-        cfg.in_flight.remove(remote);
-    }
-    let _ = write_config(&cfg);
+    let _ = update_config(|cfg| {
+        for remote in abandoned.keys() {
+            cfg.in_flight.remove(remote);
+        }
+    });
 }
 
 /// Coalesces streamed token deltas so the webview re-renders at a bounded
@@ -597,7 +610,6 @@ pub async fn remote_code_set_host(
         }
     }
 
-    let mut cfg = read_config();
     // Session and folder maps hold ids/absolute paths that belong to ONE
     // desktop. Re-pairing with another machine (scanning desktop B's QR
     // while A is unreachable never passes through clear_host) must drop
@@ -611,34 +623,35 @@ pub async fn remote_code_set_host(
         .map(|u| normalize_url(u))
         .chain(std::iter::once(url.clone()))
         .collect();
-    let same_desktop = cfg.url.is_none()
-        || cfg.url.as_deref() == Some(url.as_str())
-        || cfg.alt_urls.contains(&url)
-        || cfg
-            .url
-            .as_ref()
-            .is_some_and(|stored| known_addresses.iter().any(|u| u == stored));
-    if !same_desktop {
-        println!("[RemoteCode] pairing moved to another desktop; forgetting its folders");
-        cfg.sessions.clear();
-        cfg.session_dirs.clear();
-        cfg.directories.clear();
-        cfg.mentor_directories.clear();
-    }
-    cfg.url = Some(url.clone());
-    cfg.password = Some(password);
-    cfg.mgmt = mgmt_url;
-    // Remember the OTHER candidate addresses of this desktop (a QR carries
-    // one address per network interface) so the pairing can heal itself
-    // when the current address stops being the reachable one.
-    cfg.alt_urls = urls
-        .unwrap_or_default()
-        .iter()
-        .map(|u| normalize_url(u))
-        .filter(|u| !u.is_empty() && *u != url)
-        .collect();
-    cfg.alt_mgmt = mgmt_candidates;
-    write_config(&cfg)?;
+    update_config(|cfg| {
+        let same_desktop = cfg.url.is_none()
+            || cfg.url.as_deref() == Some(url.as_str())
+            || cfg.alt_urls.contains(&url)
+            || cfg
+                .url
+                .as_ref()
+                .is_some_and(|stored| known_addresses.iter().any(|u| u == stored));
+        if !same_desktop {
+            println!("[RemoteCode] pairing moved to another desktop; forgetting its folders");
+            cfg.sessions.clear();
+            cfg.session_dirs.clear();
+            cfg.directories.clear();
+            cfg.mentor_directories.clear();
+        }
+        cfg.url = Some(url.clone());
+        cfg.password = Some(password);
+        cfg.mgmt = mgmt_url;
+        // Remember the OTHER candidate addresses of this desktop (a QR carries
+        // one address per network interface) so the pairing can heal itself
+        // when the current address stops being the reachable one.
+        cfg.alt_urls = urls
+            .unwrap_or_default()
+            .iter()
+            .map(|u| normalize_url(u))
+            .filter(|u| !u.is_empty() && *u != url)
+            .collect();
+        cfg.alt_mgmt = mgmt_candidates;
+    })?;
     Ok(json!({ "ok": true, "url": url, "directory": directory }))
 }
 
@@ -693,7 +706,13 @@ pub async fn remote_code_get_host() -> Result<Value, String> {
             cfg.alt_urls.push(url.clone());
             cfg.url = Some(alt.clone());
             cfg.mgmt = new_mgmt;
-            let _ = write_config(&cfg);
+            // Only the address fields: the snapshot above predates the
+            // probes, and whatever was saved meanwhile must survive.
+            let _ = update_config(|c| {
+                c.url = cfg.url.clone();
+                c.mgmt = cfg.mgmt.clone();
+                c.alt_urls = cfg.alt_urls.clone();
+            });
             url = alt;
             break;
         }
@@ -719,20 +738,20 @@ pub async fn remote_code_get_host() -> Result<Value, String> {
 
 #[command]
 pub async fn remote_code_clear_host() -> Result<(), String> {
-    let mut cfg = read_config();
-    cfg.url = None;
-    cfg.password = None;
-    cfg.mgmt = None;
-    cfg.alt_urls.clear();
-    cfg.alt_mgmt.clear();
-    cfg.sessions.clear();
-    // Folder maps hold ABSOLUTE paths on the unpaired desktop; carried into
-    // a pairing with a different machine they point at folders that do not
-    // exist there, and every session lands in a broken directory.
-    cfg.directories.clear();
-    cfg.mentor_directories.clear();
-    cfg.session_dirs.clear();
-    write_config(&cfg)
+    update_config(|cfg| {
+        cfg.url = None;
+        cfg.password = None;
+        cfg.mgmt = None;
+        cfg.alt_urls.clear();
+        cfg.alt_mgmt.clear();
+        cfg.sessions.clear();
+        // Folder maps hold ABSOLUTE paths on the unpaired desktop; carried into
+        // a pairing with a different machine they point at folders that do not
+        // exist there, and every session lands in a broken directory.
+        cfg.directories.clear();
+        cfg.mentor_directories.clear();
+        cfg.session_dirs.clear();
+    })
 }
 
 // ---------- opencode_* command surface (mobile) ----------
@@ -802,8 +821,7 @@ fn record_directory(
     mentor: Option<&str>,
     dir: &str,
 ) -> Result<(), String> {
-    let mut cfg = read_config();
-    match (tenant, mentor) {
+    update_config(|cfg| match (tenant, mentor) {
         (Some(t), Some(m)) if !m.is_empty() => {
             cfg.mentor_directories
                 .insert(mentor_key(t, m), dir.to_string());
@@ -812,8 +830,7 @@ fn record_directory(
             cfg.directories
                 .insert(session_id.to_string(), dir.to_string());
         }
-    }
-    write_config(&cfg)
+    })
 }
 
 /// The folder this chat runs in, minting a fresh `phone-<id>` one on the
@@ -852,19 +869,19 @@ fn set_chat_directory(
     mentor: Option<&str>,
     dir: &str,
 ) -> Result<(), String> {
-    let mut cfg = read_config();
-    match (tenant, mentor) {
-        (Some(t), Some(m)) if !m.is_empty() => {
-            cfg.mentor_directories
-                .insert(mentor_key(t, m), dir.to_string());
+    update_config(|cfg| {
+        match (tenant, mentor) {
+            (Some(t), Some(m)) if !m.is_empty() => {
+                cfg.mentor_directories
+                    .insert(mentor_key(t, m), dir.to_string());
+            }
+            _ => {
+                cfg.directories
+                    .insert(session_id.to_string(), dir.to_string());
+            }
         }
-        _ => {
-            cfg.directories
-                .insert(session_id.to_string(), dir.to_string());
-        }
-    }
-    cfg.sessions.remove(session_id);
-    write_config(&cfg)
+        cfg.sessions.remove(session_id);
+    })
 }
 
 #[cfg(any(target_os = "ios", target_os = "android"))]
@@ -1064,23 +1081,18 @@ fn migrate_chat_key(session_id: &str, new_chat_key: Option<&str>) {
     let Some(prior) = new_chat_key.filter(|k| *k != session_id) else {
         return;
     };
-    let mut cfg = read_config();
-    let mut changed = false;
-    if !cfg.sessions.contains_key(session_id) {
-        if let Some(remote) = cfg.sessions.remove(prior) {
-            cfg.sessions.insert(session_id.to_string(), remote);
-            changed = true;
+    let _ = update_config(|cfg| {
+        if !cfg.sessions.contains_key(session_id) {
+            if let Some(remote) = cfg.sessions.remove(prior) {
+                cfg.sessions.insert(session_id.to_string(), remote);
+            }
         }
-    }
-    if !cfg.directories.contains_key(session_id) {
-        if let Some(dir) = cfg.directories.remove(prior) {
-            cfg.directories.insert(session_id.to_string(), dir);
-            changed = true;
+        if !cfg.directories.contains_key(session_id) {
+            if let Some(dir) = cfg.directories.remove(prior) {
+                cfg.directories.insert(session_id.to_string(), dir);
+            }
         }
-    }
-    if changed {
-        let _ = write_config(&cfg);
-    }
+    });
 }
 
 /// The chat's server session, creating (and persisting) one on first use.
@@ -1136,17 +1148,17 @@ async fn ensure_session(
     // creating its session, a folder pick, a re-pair) was silently undone —
     // that chat's next turn found no session and minted a second one, and
     // its conversation was gone.
-    let mut cfg = read_config();
-    cfg.sessions.insert(session_id.to_string(), remote.clone());
-    match &dir {
-        Some(d) => {
-            cfg.session_dirs.insert(session_id.to_string(), d.clone());
+    update_config(|cfg| {
+        cfg.sessions.insert(session_id.to_string(), remote.clone());
+        match &dir {
+            Some(d) => {
+                cfg.session_dirs.insert(session_id.to_string(), d.clone());
+            }
+            None => {
+                cfg.session_dirs.remove(session_id);
+            }
         }
-        None => {
-            cfg.session_dirs.remove(session_id);
-        }
-    }
-    write_config(&cfg)?;
+    })?;
     Ok(remote)
 }
 
@@ -2265,6 +2277,41 @@ mod tests {
         assert!(!map
             .as_ref()
             .is_some_and(|m| m.contains_key("per-switch-1") || m.contains_key("per-switch-2")));
+    }
+
+    /// The bug this pins: `save_permission_mode` and a turn's `in_flight`
+    /// bookkeeping each read the file, changed one field and wrote the whole
+    /// thing back, so a mode switched while a turn ran (the only time the
+    /// card's Switch to Automatic exists) was undone by that turn's own
+    /// start or end, and the next launch opened in the old mode.
+    #[tokio::test]
+    async fn a_mode_saved_mid_turn_survives_the_turns_own_bookkeeping() {
+        let _serial = CONFIG_TEST_LOCK.lock().await;
+        test_config("http://127.0.0.1:9");
+        let turns = std::thread::spawn(|| {
+            (0..40)
+                .map(|i| InFlight::mark(&format!("ses-race-{i}"), None))
+                .collect::<Vec<_>>()
+        });
+        let switches = std::thread::spawn(|| {
+            for i in 0..40 {
+                let mode = if i % 2 == 0 { MODE_AUTO } else { MODE_MANUAL };
+                save_permission_mode(mode).unwrap();
+            }
+        });
+        switches.join().unwrap();
+        let guards = turns.join().unwrap();
+
+        let cfg = read_config();
+        assert_eq!(
+            cfg.permission_mode.as_deref(),
+            Some(MODE_MANUAL),
+            "the last switch holds"
+        );
+        assert_eq!(cfg.in_flight.len(), 40, "no turn lost its mark");
+        drop(guards);
+        assert!(read_config().in_flight.is_empty());
+        save_permission_mode(MODE_AUTO).unwrap();
     }
 
     /// Only a missing file means Automatic: a file cut short mid-write asks.

@@ -30,10 +30,11 @@
 import { useSyncExternalStore } from 'react';
 import { useTranslations } from 'next-intl';
 import { ShieldCheck } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import {
   PERMISSION_MODE_ICONS,
-  setApprovalMode,
+  applyApprovalMode,
 } from '@/components/chat-input-form/code-approvals-button';
 import { isAppInBackground, playAttentionChime } from '@/lib/attention-chime';
 
@@ -213,16 +214,22 @@ export function CodePermissionCards({
 
   // Automatic is saved BEFORE this card is answered: saving it answers every
   // waiting card (this one included) and leaves nothing to ask in the gap. The
-  // answer after it is a no-op by then, and covers a switch that failed.
+  // answer after it is a no-op by then. A switch the desktop could not save
+  // goes back to Ask Me with a notice, and the answer still allows this one
+  // action, which is what the click asked for.
   const switchToAutomatic = async (request: PermissionRequest) => {
-    setApprovalMode('auto');
     drop(request.request_id);
-    try {
-      const { invoke } = await import('@tauri-apps/api/core');
-      await invoke('set_opencode_permission_mode', { mode: 'auto' });
-    } catch (e) {
-      console.error('[code-permission] could not switch to Automatic', e);
-    }
+    await applyApprovalMode(
+      'auto',
+      async (mode) => {
+        const { invoke } = await import('@tauri-apps/api/core');
+        await invoke('set_opencode_permission_mode', { mode });
+      },
+      (e) => {
+        console.error('[code-permission] could not switch to Automatic', e);
+        toast.error(tModes('permissionModeSaveFailed'));
+      },
+    );
     await answer(request, request.allow_option_id);
   };
 

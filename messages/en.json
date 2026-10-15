@@ -2205,6 +2205,7 @@
     "permissionModeAuto": "Automatic",
     "permissionModeAutoHint": "Code changes files and runs commands without asking. Use it only in folders you trust.",
     "permissionModeManualHint": "Code checks with you before it changes files or runs commands.",
+    "permissionModeSaveFailed": "The approval setting could not be saved. Code still uses the previous setting.",
     "approvalsAria": "Approvals: {mode}",
     "agentLabel": "Agent",
     "agentNotInstalled": "Not installed",

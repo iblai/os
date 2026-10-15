@@ -1856,7 +1856,9 @@ describe('CodingModeButton', () => {
       ).not.toBeInTheDocument();
     });
 
-    it('keeps the choice on screen when the desktop refuses to apply it', async () => {
+    it('puts the mode back and says so when the desktop cannot save the choice', async () => {
+      // Shown as chosen but never saved, Code would keep approving on its own
+      // behind an "Ask Me" label.
       const err = vi.spyOn(console, 'error').mockImplementation(() => {});
       backend();
       extend({
@@ -1875,12 +1877,16 @@ describe('CodingModeButton', () => {
       );
 
       await waitFor(() =>
-        expect(err).toHaveBeenCalledWith(
-          '[coding-mode] could not apply permission mode',
-          expect.any(Error),
+        expect(toastError).toHaveBeenCalledWith(
+          'The approval setting could not be saved. Code still uses the previous setting.',
         ),
       );
-      expect(screen.getByRole('radio', { name: /Ask Me/ })).toBeChecked();
+      expect(screen.getByRole('radio', { name: /Automatic/ })).toBeChecked();
+      expect(screen.getByRole('radio', { name: /Ask Me/ })).not.toBeChecked();
+      expect(err).toHaveBeenCalledWith(
+        '[coding-mode] could not apply permission mode',
+        expect.any(Error),
+      );
       expect(saveMetadata).not.toHaveBeenCalled();
       err.mockRestore();
     });

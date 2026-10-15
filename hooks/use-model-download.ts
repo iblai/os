@@ -640,6 +640,7 @@ export function useModelDownload() {
         return;
       }
 
+      let reselect = () => {};
       try {
         setState((prev) => ({
           ...prev,
@@ -675,10 +676,18 @@ export function useModelDownload() {
           localStorage.getItem(LOCAL_LLM_ENABLED_KEY) === 'true';
         // A leftover selection of the model being downloaded would make the
         // picker show its row as "In Use" (hiding progress and cancel) once
-        // Local Models is on. Clear it for the download; restored on completion.
-        const reselectWhenDone =
-          !!modelId && localStorage.getItem(LOCAL_LLM_MODEL_KEY) === modelId;
-        if (reselectWhenDone) setSelectedLocalModel(null);
+        // Local Models is on. Clear it for the download and put it back
+        // however the download ends: a failed or cancelled retry must not
+        // drop the user out of on-device mode. A model picked meanwhile wins.
+        const model = modelId;
+        if (model && localStorage.getItem(LOCAL_LLM_MODEL_KEY) === model) {
+          setSelectedLocalModel(null);
+          reselect = () => {
+            if (!localStorage.getItem(LOCAL_LLM_MODEL_KEY)) {
+              setSelectedLocalModel(model);
+            }
+          };
+        }
         const managerStatus = await invoke<OllamaStatus>(
           TAURI_COMMANDS.CHECK_OLLAMA_STATUS,
         );
@@ -732,10 +741,7 @@ export function useModelDownload() {
             message: 'Download complete',
           };
         });
-        if (didComplete) {
-          if (reselectWhenDone && modelId) setSelectedLocalModel(modelId);
-          toast.success(t('downloaded'));
-        }
+        if (didComplete) toast.success(t('downloaded'));
         // Refresh installed models so the row flips to "Ready" and is selectable.
         checkStatusRef.current();
       } catch (error) {
@@ -752,6 +758,8 @@ export function useModelDownload() {
         if (!wasCancelled) {
           toast.error(t('downloadFailed', { error: errorMessage }));
         }
+      } finally {
+        reselect();
       }
     },
     [isAvailable, invoke, setState, setOllamaStatus, installOllama],

@@ -2205,6 +2205,7 @@
     "permissionModeAuto": "Automatique",
     "permissionModeAutoHint": "Code modifie des fichiers et exécute des commandes sans demander. À utiliser uniquement dans des dossiers de confiance.",
     "permissionModeManualHint": "Code vous demande avant de modifier des fichiers ou d’exécuter des commandes.",
+    "permissionModeSaveFailed": "Le réglage des approbations n’a pas pu être enregistré. Code garde le réglage précédent.",
     "approvalsAria": "Approbations : {mode}",
     "agentLabel": "Agent",
     "agentNotInstalled": "Non installé",

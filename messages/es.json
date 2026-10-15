@@ -2205,6 +2205,7 @@
     "permissionModeAuto": "Automático",
     "permissionModeAutoHint": "Code modifica archivos y ejecuta comandos sin preguntar. Úsalo solo en carpetas de confianza.",
     "permissionModeManualHint": "Code te pregunta antes de modificar archivos o ejecutar comandos.",
+    "permissionModeSaveFailed": "No se pudo guardar el ajuste de aprobaciones. Code sigue usando el anterior.",
     "approvalsAria": "Aprobaciones: {mode}",
     "agentLabel": "Agente",
     "agentNotInstalled": "No instalado",
