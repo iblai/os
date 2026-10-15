@@ -103,6 +103,9 @@ pub mod reason {
     pub const KDE_UNPROVEN: &str = "kde_unproven";
     pub const GNOME_HELPER_MISSING: &str = "gnome_helper_missing";
     pub const UNKNOWN_SESSION: &str = "unknown_session";
+    /// The Mac App Store build: its App Sandbox blocks the Accessibility and
+    /// Screen Recording grants that driving other apps needs.
+    pub const SANDBOXED: &str = "sandboxed";
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -141,6 +144,8 @@ pub struct SessionEnv {
     pub sway: bool,
     /// The WinRects GNOME Shell helper is installed.
     pub gnome_helper: bool,
+    /// macOS App Sandbox (the Mac App Store build).
+    pub sandboxed: bool,
 }
 
 /// Whether the current desktop session is one cua-driver has proven behaviour on.
@@ -159,6 +164,9 @@ pub struct SessionEnv {
 /// Refusing up front is deliberate: a half-working agent that silently drops
 /// clicks is worse than one that says it cannot run here.
 pub fn session_support(env: &SessionEnv) -> DriverSupport {
+    if env.sandboxed {
+        return DriverSupport::no(reason::SANDBOXED);
+    }
     match env.os.as_str() {
         "windows" | "macos" => return DriverSupport::yes(),
         "linux" => {}
@@ -217,7 +225,45 @@ pub fn current_session_env() -> SessionEnv {
         desktop: std::env::var("XDG_CURRENT_DESKTOP").unwrap_or_default(),
         sway: std::env::var_os("SWAYSOCK").is_some(),
         gnome_helper: gnome_helper_present(),
+        sandboxed: crate::opencode_installer::is_sandboxed(),
     }
+}
+
+/// The System Settings pane a missing grant lives in. `request_*` from the
+/// permissions plugin raises the system prompt once; after a refusal only the
+/// pane itself lets the user change their mind, so the panel links straight
+/// to it (the plugin's own full-disk request opens its pane the same way).
+#[command]
+pub async fn open_privacy_settings(pane: String) -> Result<(), String> {
+    let anchor = privacy_pane_anchor(&pane)?;
+    #[cfg(target_os = "macos")]
+    {
+        Command::new("open")
+            .arg(format!(
+                "x-apple.systempreferences:com.apple.preference.security?{anchor}"
+            ))
+            .output()
+            .map_err(|e| e.to_string())?;
+    }
+    #[cfg(not(target_os = "macos"))]
+    let _ = anchor;
+    Ok(())
+}
+
+/// The `x-apple.systempreferences` anchor of each pane the setup dialog links to.
+fn privacy_pane_anchor(pane: &str) -> Result<&'static str, String> {
+    match pane {
+        "screen_recording" => Ok("Privacy_ScreenCapture"),
+        "accessibility" => Ok("Privacy_Accessibility"),
+        other => Err(format!("unknown privacy pane: {other}")),
+    }
+}
+
+/// macOS applies a Screen Recording grant only to processes started after it,
+/// so Cowork can't read the screen until the app relaunches.
+#[command]
+pub async fn relaunch_app(app: AppHandle) {
+    app.restart();
 }
 
 /// Whether Cowork can run on this machine, and why not when it cannot.
@@ -535,6 +581,35 @@ mod tests {
             };
             assert_eq!(session_support(&env), DriverSupport::yes(), "{os}");
         }
+    }
+
+    /// The Mac App Store build can't drive other apps: its sandbox blocks the
+    /// grants. Refusing up front keeps the pill from walking the user into a
+    /// permission flow that cannot work there.
+    #[test]
+    fn the_sandboxed_mac_app_store_build_is_refused() {
+        let env = SessionEnv {
+            os: "macos".to_string(),
+            sandboxed: true,
+            ..Default::default()
+        };
+        assert_eq!(session_support(&env), DriverSupport::no(reason::SANDBOXED));
+    }
+
+    /// The pane names are the exact strings the composer's setup dialog sends;
+    /// a wrong anchor lands the user on the Privacy & Security root instead.
+    #[test]
+    fn only_the_two_privacy_panes_can_be_opened() {
+        assert_eq!(
+            privacy_pane_anchor("accessibility"),
+            Ok("Privacy_Accessibility")
+        );
+        assert_eq!(
+            privacy_pane_anchor("screen_recording"),
+            Ok("Privacy_ScreenCapture")
+        );
+        let err = privacy_pane_anchor("camera").unwrap_err();
+        assert!(err.contains("camera"), "{err}");
     }
 
     #[test]

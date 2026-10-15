@@ -441,15 +441,28 @@
     "coworkConsentBody": "Cowork permite al asistente leer el contenido de las ventanas de tu pantalla y actuar sobre ellas por ti. Eso incluye tu navegador, donde puede actuar como tú en cualquier sitio en el que hayas iniciado sesión. Lo que lee se envía a ibl.ai para decidir el siguiente paso. Continúa para concederle los accesos de Accesibilidad y Grabación de pantalla que necesita.",
     "coworkConsentCancel": "Cancelar",
     "coworkConsentConfirm": "Continuar",
-    "coworkNeedsAccessibility": "Cowork necesita acceso de Accesibilidad para controlar tu equipo. Concédelo en Ajustes del Sistema › Privacidad y seguridad › Accesibilidad, reinicia la app y vuelve a activar Cowork.",
-    "coworkNeedsScreenRecording": "Cowork necesita acceso de Grabación de pantalla para leer tus ventanas. Concédelo en Ajustes del Sistema › Privacidad y seguridad › Grabación de pantalla, reinicia la app y vuelve a activar Cowork.",
     "skills": "Habilidades",
     "coworkNeedsSession": "Inicia sesión primero: Cowork necesita tu sesión de la plataforma para acceder al modelo.",
     "coworkTabNote": "Lee esta pestaña y actúa en ella por ti: nunca en campos de contraseña o de pago. Lo que lee se envía a ibl.ai para decidir el siguiente paso.",
     "coworkApprovalsLabel": "Aprobaciones",
     "coworkApprovalsManual": "Preguntarme",
     "coworkApprovalsAuto": "Automático",
-    "coworkApprovalsAutoHint": "Cowork hace clic, escribe y envía formularios sin preguntar. Úsalo solo en sitios de confianza."
+    "coworkApprovalsAutoHint": "Cowork hace clic, escribe y envía formularios sin preguntar. Úsalo solo en sitios de confianza.",
+    "coworkUnsupportedSandboxed": "Cowork no está disponible en la versión de la App Store de la app.",
+    "coworkSetupTitle": "Permite que Cowork use tu equipo",
+    "coworkSetupBody": "macOS necesita tu permiso para cada elemento de abajo. Abre los que aún no estén permitidos, activa ibl.ai en la lista y vuelve aquí: esta lista se actualiza sola.",
+    "coworkGrantAccessibility": "Accesibilidad",
+    "coworkGrantAccessibilityHint": "Para que Cowork pueda hacer clic y escribir por ti",
+    "coworkGrantScreenRecording": "Grabación de pantalla",
+    "coworkGrantScreenRecordingHint": "Para que Cowork pueda ver lo que hay en tu pantalla",
+    "coworkGrantAllowed": "Permitido",
+    "coworkOpenSettings": "Abrir Ajustes del Sistema",
+    "coworkRelaunchHint": "¿Ya activaste la grabación de pantalla? Solo se aplica cuando la app se reinicia.",
+    "coworkRelaunch": "Reiniciar app",
+    "coworkReady": "Cowork está activado.",
+    "coworkOverCode": "Mientras Cowork esté activado, responde a tus mensajes en lugar de Code.",
+    "coworkOpenSettingsManually": "Abre Ajustes del Sistema › Privacidad y seguridad › {pane} y activa ibl.ai.",
+    "coworkRelaunchManually": "Cierra la app y vuelve a abrirla para terminar de activar Cowork."
   },
   "chatInputFormMemoryMenu": {
     "yourMemory": "Tu memoria",
@@ -2229,7 +2242,8 @@
     "cameraDenied": "Se denegó el acceso a la cámara: ingresa la dirección manualmente.",
     "notAPairingCode": "Ese código QR no es un código de emparejamiento de Code.",
     "closeScanner": "Cerrar escáner",
-    "scanHint": "Apunta la cámara al código QR de emparejamiento que se muestra en tu computadora."
+    "scanHint": "Apunta la cámara al código QR de emparejamiento que se muestra en tu computadora.",
+    "coworkAnswersInstead": "Cowork está activado, así que por ahora responde a tus mensajes. Desactiva Cowork para usar Code."
   },
   "chatCodePermissionCard": {
     "title": "Código necesita tu permiso",

@@ -441,15 +441,28 @@
     "coworkConsentBody": "开启 Cowork 后，助手可以读取屏幕上各窗口的内容，并代您进行操作。这也包括您的浏览器——在您已登录的任何网站上，它都能以您的身份进行操作。它读取的内容会发送至 ibl.ai，用于判断下一步该做什么。继续即可授予它所需的“辅助功能”和“屏幕录制”权限。",
     "coworkConsentCancel": "取消",
     "coworkConsentConfirm": "继续",
-    "coworkNeedsAccessibility": "Cowork 需要“辅助功能”权限才能控制您的电脑。请在“系统设置 › 隐私与安全性 › 辅助功能”中授权，然后重启应用并重新开启 Cowork。",
-    "coworkNeedsScreenRecording": "Cowork 需要“屏幕录制”权限才能读取窗口内容。请在“系统设置 › 隐私与安全性 › 屏幕录制”中授权，然后重启应用并重新开启 Cowork。",
     "skills": "技能",
     "coworkNeedsSession": "请先登录——Cowork 需要你的平台会话才能访问模型。",
     "coworkTabNote": "读取当前标签页并代你操作，但绝不会填写密码或支付字段。它读取的内容会发送到 ibl.ai 以决定下一步。",
     "coworkApprovalsLabel": "操作审批",
     "coworkApprovalsManual": "每次询问",
     "coworkApprovalsAuto": "自动批准",
-    "coworkApprovalsAutoHint": "Cowork 将直接点击、输入并提交表单，不再询问。请仅在受信任的网站上使用。"
+    "coworkApprovalsAutoHint": "Cowork 将直接点击、输入并提交表单，不再询问。请仅在受信任的网站上使用。",
+    "coworkUnsupportedSandboxed": "App Store 版本的应用不支持 Cowork。",
+    "coworkSetupTitle": "允许 Cowork 使用您的电脑",
+    "coworkSetupBody": "macOS 需要您为下方每一项授权。请打开尚未允许的项目，在列表中开启 ibl.ai，然后回到这里——此列表会自动更新。",
+    "coworkGrantAccessibility": "辅助功能",
+    "coworkGrantAccessibilityHint": "让 Cowork 能替您点击和输入",
+    "coworkGrantScreenRecording": "屏幕录制",
+    "coworkGrantScreenRecordingHint": "让 Cowork 能看到您屏幕上的内容",
+    "coworkGrantAllowed": "已允许",
+    "coworkOpenSettings": "打开系统设置",
+    "coworkRelaunchHint": "已经开启了屏幕录制？它要在应用重新启动后才会生效。",
+    "coworkRelaunch": "重新启动应用",
+    "coworkReady": "Cowork 已开启。",
+    "coworkOverCode": "Cowork 开启期间，由它而不是 Code 来回复您的消息。",
+    "coworkOpenSettingsManually": "打开“系统设置 › 隐私与安全性 › {pane}”，然后开启 ibl.ai。",
+    "coworkRelaunchManually": "退出应用并重新打开，即可完成开启 Cowork。"
   },
   "chatInputFormMemoryMenu": {
     "yourMemory": "您的记忆",
@@ -2229,7 +2242,8 @@
     "cameraDenied": "相机访问被拒绝 — 请手动输入地址。",
     "notAPairingCode": "该二维码不是 Code 配对码。",
     "closeScanner": "关闭扫描器",
-    "scanHint": "将相机对准电脑上显示的配对二维码。"
+    "scanHint": "将相机对准电脑上显示的配对二维码。",
+    "coworkAnswersInstead": "Cowork 已开启，因此暂时由它回复您的消息。关闭 Cowork 即可使用 Code。"
   },
   "chatCodePermissionCard": {
     "title": "代码模式需要你的许可",

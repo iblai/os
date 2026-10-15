@@ -441,15 +441,28 @@
     "coworkConsentBody": "Cowork lets the assistant read the contents of windows on your screen and act on them for you. That includes your browser, where it can act as you on any site you are signed into. What it reads is sent to ibl.ai to work out what to do next. Continue to give it the Accessibility and Screen Recording access it needs.",
     "coworkConsentCancel": "Cancel",
     "coworkConsentConfirm": "Continue",
-    "coworkNeedsAccessibility": "Cowork needs Accessibility access to control your computer. Grant it in System Settings › Privacy & Security › Accessibility, then restart the app and turn Cowork on again.",
-    "coworkNeedsScreenRecording": "Cowork needs Screen Recording access to read your windows. Grant it in System Settings › Privacy & Security › Screen Recording, then restart the app and turn Cowork on again.",
     "skills": "Skills",
     "coworkNeedsSession": "Sign in first — Cowork needs your platform session to reach the model.",
     "coworkTabNote": "Reads this tab and acts on it for you — never password or payment fields. What it reads goes to ibl.ai to decide what to do next.",
     "coworkApprovalsLabel": "Approvals",
     "coworkApprovalsManual": "Ask Me",
     "coworkApprovalsAuto": "Automatic",
-    "coworkApprovalsAutoHint": "Cowork clicks, types and submits without asking. Use it only on sites you trust."
+    "coworkApprovalsAutoHint": "Cowork clicks, types and submits without asking. Use it only on sites you trust.",
+    "coworkUnsupportedSandboxed": "Cowork isn’t available in the App Store version of the app.",
+    "coworkSetupTitle": "Allow Cowork to Use Your Computer",
+    "coworkSetupBody": "macOS needs your okay for each item below. Open any that isn’t allowed yet, switch on ibl.ai in the list, then come back here — this list updates by itself.",
+    "coworkGrantAccessibility": "Accessibility",
+    "coworkGrantAccessibilityHint": "So Cowork can click and type for you",
+    "coworkGrantScreenRecording": "Screen Recording",
+    "coworkGrantScreenRecordingHint": "So Cowork can see what’s on your screen",
+    "coworkGrantAllowed": "Allowed",
+    "coworkOpenSettings": "Open System Settings",
+    "coworkRelaunchHint": "Already switched on Screen Recording? It only takes effect after the app relaunches.",
+    "coworkRelaunch": "Relaunch App",
+    "coworkReady": "Cowork is on.",
+    "coworkOverCode": "While Cowork is on, it answers your messages instead of Code.",
+    "coworkOpenSettingsManually": "Open System Settings › Privacy & Security › {pane}, then switch on ibl.ai.",
+    "coworkRelaunchManually": "Quit the app and open it again to finish turning on Cowork."
   },
   "chatInputFormMemoryMenu": {
     "yourMemory": "Your Memory",
@@ -2229,7 +2242,8 @@
     "cameraDenied": "Camera access was denied — enter the address manually.",
     "notAPairingCode": "That QR code isn't a Code pairing code.",
     "closeScanner": "Close Scanner",
-    "scanHint": "Point your camera at the pairing QR code shown on your computer."
+    "scanHint": "Point your camera at the pairing QR code shown on your computer.",
+    "coworkAnswersInstead": "Cowork is on, so it answers your messages for now. Turn Cowork off to use Code."
   },
   "chatCodePermissionCard": {
     "title": "Code needs your permission",

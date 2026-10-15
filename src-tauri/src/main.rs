@@ -2869,6 +2869,8 @@ fn main() {
             cua_driver_mcp::cua_driver_start,
             cua_driver_mcp::cua_driver_send,
             cua_driver_mcp::cua_driver_stop,
+            cua_driver_mcp::open_privacy_settings,
+            cua_driver_mcp::relaunch_app,
             check_foundry_local_status,
             start_foundry_local_service,
             load_foundry_local_model,

@@ -1,15 +1,15 @@
 {
   "version": 1,
-  "lastUpdated": "2026-10-14",
+  "lastUpdated": "2026-10-16",
   "summary": {
-    "totalCheckpoints": 57,
-    "coveredCheckpoints": 22,
-    "pendingCheckpoints": 34,
+    "totalCheckpoints": 64,
+    "coveredCheckpoints": 24,
+    "pendingCheckpoints": 39,
     "deprecatedCheckpoints": 1,
     "notReproducibleCheckpoints": 0,
     "percent": 100,
-    "totalJourneys": 3,
-    "activeJourneys": 3
+    "totalJourneys": 4,
+    "activeJourneys": 4
   },
   "journeys": [
     {
@@ -348,6 +348,54 @@
         {
           "id": "code-46",
           "description": "A failed Code turn's toast says what went wrong in plain words (stopped unexpectedly, took too long, no model picked, couldn't start, signed out) instead of the raw agent error",
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "id": "cowork",
+      "name": "Cowork (Cua Driver)",
+      "spec": "04-cowork.spec.ts",
+      "sourceFiles": [
+        "src-tauri/src/cua_driver_mcp.rs",
+        "components/chat-input-form/inside-buttons.tsx",
+        "lib/cowork-approvals.ts",
+        "lib/call-tauri.ts"
+      ],
+      "checkpoints": [
+        {
+          "id": "cowork-01",
+          "description": "`cua_driver_support` says whether this desktop session can run Cowork, with one of the known machine-readable reasons (unsupported_os, kde_unproven, gnome_helper_missing, unknown_session, sandboxed) when it cannot",
+          "status": "covered"
+        },
+        {
+          "id": "cowork-02",
+          "description": "`open_privacy_settings` accepts only the two panes the setup dialog links to (accessibility, screen_recording) and refuses any other, naming it",
+          "status": "covered"
+        },
+        {
+          "id": "cowork-03",
+          "description": "Accepting the Cowork consent dialog with a macOS grant missing opens the setup dialog instead of a toast: one row per grant (Accessibility, Screen Recording) reading Allowed or offering Open System Settings, which opens that exact Privacy & Security pane; Cowork stays off and nothing is installed",
+          "status": "pending"
+        },
+        {
+          "id": "cowork-04",
+          "description": "The setup dialog re-checks the grants by itself whenever the app regains focus, and turns Cowork on (install + “Cowork is on.” toast) the moment both are held",
+          "status": "pending"
+        },
+        {
+          "id": "cowork-05",
+          "description": "While Screen Recording still reads denied the dialog explains it takes effect only after a relaunch and offers Relaunch App; the setup is remembered across that relaunch and finishes by itself on the next launch, or shows what is still missing, without prompting again; cancelling forgets it",
+          "status": "pending"
+        },
+        {
+          "id": "cowork-06",
+          "description": "With both the Code and Cowork pills on, Cowork takes the turn on the desktop whenever the turn would reach its screen tools (signed in, no local model in use) and either switch says so; otherwise, and on a phone paired with a desktop, Code keeps the turn; Stop stops whichever turn is running even if a pill was flipped mid-turn",
+          "status": "pending"
+        },
+        {
+          "id": "cowork-07",
+          "description": "The Mac App Store (sandboxed) build shows the Cowork pill disabled with the App Store reason instead of walking the user into grants that cannot work there",
           "status": "pending"
         }
       ]

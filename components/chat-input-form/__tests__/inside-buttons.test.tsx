@@ -111,6 +111,7 @@ let mockScreenRecordingGrant: boolean | null = null;
 const mockGhostInstall = vi.fn();
 const mockGhostStop = vi.fn();
 const mockRequestPermissions = vi.fn();
+const mockCheckStatus = vi.fn();
 const mockSetCoworkEnabled = vi.fn();
 vi.mock('@iblai/iblai-js/web-containers', () => ({
   useCuaDriver: () => ({
@@ -118,6 +119,14 @@ vi.mock('@iblai/iblai-js/web-containers', () => ({
     isSupported: mockDriverSupported,
     unsupportedReason: mockUnsupportedReason,
     status: mockDriverStatus,
+    // The hook's own read of the grants, refreshed by checkStatus(); the mock
+    // reports the same values requestDriverPermissions() hands back.
+    accessibilityPermission: mockAccessibilityGrant,
+    screenRecordingPermission: mockScreenRecordingGrant,
+    checkStatus: () => {
+      mockCheckStatus();
+      return Promise.resolve(true);
+    },
     install: () => mockGhostInstall(),
     stop: () => mockGhostStop(),
     requestDriverPermissions: () => {
@@ -150,8 +159,20 @@ vi.mock('@iblai/iblai-js/web-utils', async (importOriginal) => ({
 }));
 
 const mockToastWarning = vi.fn();
+const mockToastSuccess = vi.fn();
+const mockToastInfo = vi.fn();
 vi.mock('sonner', () => ({
-  toast: { warning: (...args: unknown[]) => mockToastWarning(...args) },
+  toast: {
+    warning: (...args: unknown[]) => mockToastWarning(...args),
+    success: (...args: unknown[]) => mockToastSuccess(...args),
+    info: (...args: unknown[]) => mockToastInfo(...args),
+  },
+}));
+
+// The setup dialog's two host commands (open a System Settings pane, relaunch).
+const mockInvoke = vi.fn(async (..._args: unknown[]) => undefined);
+vi.mock('@tauri-apps/api/core', () => ({
+  invoke: (...args: unknown[]) => mockInvoke(...args),
 }));
 
 // Import mocked modules for testing
@@ -1446,6 +1467,19 @@ describe('InsideButtons', () => {
       expect(mockRequestPermissions).not.toHaveBeenCalled();
     });
 
+    it('says the App Store build cannot run Cowork', () => {
+      // The Mac App Store build is sandboxed, which blocks the grants driving
+      // other apps needs. Disabled-with-a-reason, like every other refusal.
+      enableCowork();
+      mockDriverSupported = false;
+      mockUnsupportedReason = 'sandboxed';
+      render(<InsideButtons {...defaultProps} />);
+
+      const button = screen.getByText('Cowork').closest('button')!;
+      expect(button).toBeDisabled();
+      expect(button.getAttribute('title')).toMatch(/App Store/);
+    });
+
     it('installs the driver when Cowork is already on but nothing is installed', () => {
       // The bug: the ON preference persists across runs, the install does not.
       // A user whose first install failed came back to a toggle that read ON
@@ -1693,38 +1727,321 @@ describe('InsideButtons', () => {
         expect(mockToastWarning).not.toHaveBeenCalled();
       });
 
-      it('refuses without Accessibility, and says where to grant it', async () => {
+      it('says Cowork answers instead of Code while both stay on', async () => {
+        // Both pills may be on at once; the chat hook then gives Cowork the
+        // turn, so the switch says so rather than letting Code go quiet.
         readyBackend();
-        mockAccessibilityGrant = false;
+        localStorage.setItem('ibl_coding_mode_enabled', 'true');
+        mockAccessibilityGrant = true;
         mockScreenRecordingGrant = true;
         render(<InsideButtons {...defaultProps} />);
 
         await consentToCowork();
 
-        await waitFor(() => expect(mockToastWarning).toHaveBeenCalledTimes(1));
-        // The restart matters: the grant often does not take effect until the
-        // app relaunches, so the re-check can read false right after granting.
-        expect(mockToastWarning.mock.calls[0][0]).toMatch(
-          /Accessibility.+restart the app/,
+        await waitFor(() =>
+          expect(mockToastInfo).toHaveBeenCalledWith(
+            expect.stringMatching(/instead of Code/),
+          ),
         );
-        expect(mockSetCoworkEnabled).not.toHaveBeenCalled();
-        expect(mockGhostInstall).not.toHaveBeenCalled();
       });
 
-      it('refuses without Screen Recording, and says where to grant it', async () => {
+      it('says nothing about Code when a local model would take the turn', async () => {
+        // The chat hook keeps Code's turns then: the local model's tools have
+        // no screen to drive, so Cowork would not answer anyway.
         readyBackend();
+        mockHasRemoteAi = false;
+        mockLocalLLMEnabled = true;
+        mockModelSupportsCowork = true;
+        localStorage.setItem('ibl_coding_mode_enabled', 'true');
         mockAccessibilityGrant = true;
-        mockScreenRecordingGrant = false;
+        mockScreenRecordingGrant = true;
         render(<InsideButtons {...defaultProps} />);
 
         await consentToCowork();
 
-        await waitFor(() => expect(mockToastWarning).toHaveBeenCalledTimes(1));
-        expect(mockToastWarning.mock.calls[0][0]).toMatch(
-          /Screen Recording.+restart the app/,
+        await waitFor(() =>
+          expect(mockSetCoworkEnabled).toHaveBeenCalledWith(true),
         );
-        expect(mockSetCoworkEnabled).not.toHaveBeenCalled();
-        expect(mockGhostInstall).not.toHaveBeenCalled();
+        expect(mockToastInfo).not.toHaveBeenCalled();
+      });
+
+      it('installs the driver once when the host still reports it missing', async () => {
+        // The host's status keeps saying `installed: false` until the install
+        // finishes; the startup reconcile must not start a second one.
+        readyBackend();
+        mockDriverStatus = { installed: false, supported: true };
+        mockAccessibilityGrant = true;
+        mockScreenRecordingGrant = true;
+        render(<InsideButtons {...defaultProps} />);
+
+        await consentToCowork();
+
+        await waitFor(() =>
+          expect(mockSetCoworkEnabled).toHaveBeenCalledWith(true),
+        );
+        await act(async () => {});
+        expect(mockGhostInstall).toHaveBeenCalledTimes(1);
+      });
+
+      describe('a grant macOS said no to', () => {
+        /** The setup dialog, with Accessibility held and Screen Recording denied. */
+        const denyScreenRecording = async () => {
+          readyBackend();
+          mockAccessibilityGrant = true;
+          mockScreenRecordingGrant = false;
+          const view = render(<InsideButtons {...defaultProps} />);
+          await consentToCowork();
+          const dialog = await screen.findByTestId('cowork-setup-dialog');
+          return { ...view, dialog };
+        };
+
+        it('opens the setup dialog instead of giving up, naming what is missing', async () => {
+          const { dialog } = await denyScreenRecording();
+
+          expect(
+            within(dialog).getByTestId('cowork-grant-accessibility'),
+          ).toHaveTextContent(/Allowed/);
+          const missing = within(dialog).getByTestId(
+            'cowork-grant-screen_recording',
+          );
+          expect(missing).not.toHaveTextContent(/Allowed/);
+          expect(
+            within(missing).getByRole('button', {
+              name: 'Open System Settings',
+            }),
+          ).toHaveAccessibleDescription('Screen Recording');
+          // Cowork stays off, nothing was installed, and no toast scolded.
+          expect(mockSetCoworkEnabled).not.toHaveBeenCalled();
+          expect(mockGhostInstall).not.toHaveBeenCalled();
+          expect(mockToastWarning).not.toHaveBeenCalled();
+          // Remembered, so the setup survives the relaunch the grant needs.
+          expect(localStorage.getItem('ibl_cowork_setup_pending')).toBe('true');
+        });
+
+        it('opens the exact System Settings pane for the missing grant', async () => {
+          readyBackend();
+          mockAccessibilityGrant = false;
+          mockScreenRecordingGrant = true;
+          render(<InsideButtons {...defaultProps} />);
+          await consentToCowork();
+          const dialog = await screen.findByTestId('cowork-setup-dialog');
+
+          fireEvent.click(
+            within(
+              within(dialog).getByTestId('cowork-grant-accessibility'),
+            ).getByRole('button', { name: 'Open System Settings' }),
+          );
+
+          await waitFor(() =>
+            expect(mockInvoke).toHaveBeenCalledWith('open_privacy_settings', {
+              pane: 'accessibility',
+            }),
+          );
+          // Only Screen Recording needs a relaunch, and it is held here.
+          expect(
+            screen.queryByRole('button', { name: 'Relaunch App' }),
+          ).not.toBeInTheDocument();
+          expect(screen.queryByTestId('cowork-relaunch-hint')).toBeNull();
+        });
+
+        it('re-checks the grants when the user comes back from System Settings', async () => {
+          await denyScreenRecording();
+          mockCheckStatus.mockClear();
+
+          act(() => {
+            window.dispatchEvent(new Event('focus'));
+          });
+
+          expect(mockCheckStatus).toHaveBeenCalledTimes(1);
+        });
+
+        it('turns Cowork on by itself once both grants are held', async () => {
+          mockDriverStatus = { installed: false, supported: true };
+          const { rerender } = await denyScreenRecording();
+
+          mockScreenRecordingGrant = true;
+          rerender(<InsideButtons {...defaultProps} />);
+
+          await waitFor(() =>
+            expect(mockSetCoworkEnabled).toHaveBeenCalledWith(true),
+          );
+          await act(async () => {});
+          expect(mockGhostInstall).toHaveBeenCalledTimes(1);
+          expect(mockToastSuccess).toHaveBeenCalledWith('Cowork is on.');
+          expect(screen.queryByTestId('cowork-setup-dialog')).toBeNull();
+          expect(localStorage.getItem('ibl_cowork_setup_pending')).toBeNull();
+        });
+
+        it('offers a relaunch while Screen Recording still reads denied, keeping the setup for after it', async () => {
+          // CGRequestScreenCaptureAccess reports the old answer until the app
+          // relaunches, so a user who just allowed it needs a way through.
+          const { dialog } = await denyScreenRecording();
+          expect(screen.getByTestId('cowork-relaunch-hint')).toHaveTextContent(
+            /relaunches/,
+          );
+
+          fireEvent.click(
+            within(dialog).getByRole('button', { name: 'Relaunch App' }),
+          );
+
+          await waitFor(() =>
+            expect(mockInvoke).toHaveBeenCalledWith('relaunch_app', undefined),
+          );
+          expect(localStorage.getItem('ibl_cowork_setup_pending')).toBe('true');
+          expect(screen.getByTestId('cowork-setup-dialog')).toBeInTheDocument();
+        });
+
+        it('picks the setup back up after the relaunch, without prompting again', async () => {
+          readyBackend();
+          localStorage.setItem('ibl_cowork_setup_pending', 'true');
+          // The real hook starts unanswered and fills in from its mount check.
+          const { rerender } = render(<InsideButtons {...defaultProps} />);
+          await act(async () => {});
+          expect(mockSetCoworkEnabled).not.toHaveBeenCalled();
+
+          mockAccessibilityGrant = true;
+          mockScreenRecordingGrant = true;
+          rerender(<InsideButtons {...defaultProps} />);
+
+          await waitFor(() =>
+            expect(mockSetCoworkEnabled).toHaveBeenCalledWith(true),
+          );
+          expect(mockGhostInstall).toHaveBeenCalledTimes(1);
+          expect(mockRequestPermissions).not.toHaveBeenCalled();
+          expect(mockToastSuccess).toHaveBeenCalledWith('Cowork is on.');
+          expect(mockToastInfo).not.toHaveBeenCalled();
+          expect(localStorage.getItem('ibl_cowork_setup_pending')).toBeNull();
+        });
+
+        it('says Cowork answers instead of Code when the relaunch finishes the switch-on', async () => {
+          // The user who comes back through a relaunch is the one least likely
+          // to remember Code was on, so this path must say it too.
+          readyBackend();
+          localStorage.setItem('ibl_cowork_setup_pending', 'true');
+          localStorage.setItem('ibl_coding_mode_enabled', 'true');
+          mockAccessibilityGrant = true;
+          mockScreenRecordingGrant = true;
+          render(<InsideButtons {...defaultProps} />);
+
+          await waitFor(() =>
+            expect(mockToastSuccess).toHaveBeenCalledWith('Cowork is on.'),
+          );
+          expect(mockToastInfo).toHaveBeenCalledWith(
+            expect.stringMatching(/instead of Code/),
+          );
+        });
+
+        it('shows what is still missing after the relaunch, without prompting', async () => {
+          readyBackend();
+          localStorage.setItem('ibl_cowork_setup_pending', 'true');
+          const { rerender } = render(<InsideButtons {...defaultProps} />);
+          await act(async () => {});
+          expect(screen.queryByTestId('cowork-setup-dialog')).toBeNull();
+
+          mockAccessibilityGrant = true;
+          mockScreenRecordingGrant = false;
+          rerender(<InsideButtons {...defaultProps} />);
+
+          expect(
+            await screen.findByTestId('cowork-setup-dialog'),
+          ).toBeInTheDocument();
+          expect(mockRequestPermissions).not.toHaveBeenCalled();
+          expect(mockSetCoworkEnabled).not.toHaveBeenCalled();
+        });
+
+        it('waits for the host to answer before deciding after a relaunch', async () => {
+          // null on both = not answered yet, not "does not apply": neither the
+          // dialog nor Cowork may appear on a guess.
+          readyBackend();
+          localStorage.setItem('ibl_cowork_setup_pending', 'true');
+          render(<InsideButtons {...defaultProps} />);
+          await act(async () => {});
+
+          expect(screen.queryByTestId('cowork-setup-dialog')).toBeNull();
+          expect(mockSetCoworkEnabled).not.toHaveBeenCalled();
+          expect(localStorage.getItem('ibl_cowork_setup_pending')).toBe('true');
+        });
+
+        it('says where to go when the desktop app cannot open System Settings itself', async () => {
+          // The web app ships apart from the desktop binary; one released
+          // before the command rejects it, and the button must not just do nothing.
+          mockInvoke.mockRejectedValueOnce(new Error('unknown command'));
+          const { dialog } = await denyScreenRecording();
+
+          fireEvent.click(
+            within(dialog).getByRole('button', {
+              name: 'Open System Settings',
+            }),
+          );
+
+          expect(
+            await screen.findByTestId('cowork-setup-manual'),
+          ).toHaveTextContent(
+            'Open System Settings › Privacy & Security › Screen Recording, then switch on ibl.ai.',
+          );
+        });
+
+        it('says to reopen the app when it cannot relaunch itself', async () => {
+          mockInvoke.mockRejectedValueOnce(new Error('unknown command'));
+          const { dialog } = await denyScreenRecording();
+
+          fireEvent.click(
+            within(dialog).getByRole('button', { name: 'Relaunch App' }),
+          );
+
+          expect(
+            await screen.findByTestId('cowork-setup-manual'),
+          ).toHaveTextContent(
+            'Quit the app and open it again to finish turning on Cowork.',
+          );
+          expect(localStorage.getItem('ibl_cowork_setup_pending')).toBe('true');
+        });
+
+        it('keeps one dialog, one toast and one install with two composers on screen', async () => {
+          // The canvas split layout mounts a desktop and a (hidden) mobile
+          // composer at once.
+          readyBackend();
+          localStorage.setItem('ibl_cowork_setup_pending', 'true');
+          mockDriverStatus = { installed: false, supported: true };
+          mockAccessibilityGrant = true;
+          mockScreenRecordingGrant = false;
+          const twoComposers = () => (
+            <>
+              <InsideButtons {...defaultProps} />
+              <InsideButtons {...defaultProps} />
+            </>
+          );
+          const { rerender } = render(twoComposers());
+
+          await waitFor(() =>
+            expect(screen.getAllByTestId('cowork-setup-dialog')).toHaveLength(
+              1,
+            ),
+          );
+
+          mockScreenRecordingGrant = true;
+          rerender(twoComposers());
+
+          await waitFor(() =>
+            expect(mockToastSuccess).toHaveBeenCalledTimes(1),
+          );
+          await act(async () => {});
+          expect(mockGhostInstall).toHaveBeenCalledTimes(1);
+          expect(screen.queryByTestId('cowork-setup-dialog')).toBeNull();
+        });
+
+        it('forgets the setup when it is cancelled', async () => {
+          await denyScreenRecording();
+
+          fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+
+          await waitFor(() =>
+            expect(screen.queryByTestId('cowork-setup-dialog')).toBeNull(),
+          );
+          expect(localStorage.getItem('ibl_cowork_setup_pending')).toBeNull();
+          expect(mockSetCoworkEnabled).not.toHaveBeenCalled();
+          expect(mockGhostInstall).not.toHaveBeenCalled();
+        });
       });
 
       it('turns on where the grants do not exist at all', async () => {

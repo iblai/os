@@ -58,3 +58,30 @@ export function writeCoworkApprovals(mode: CoworkApprovals): void {
     // the mode simply does not persist past this page.
   }
 }
+
+/**
+ * Set while the macOS grants Cowork needs are still being collected. Persisted
+ * rather than kept in state because a Screen Recording grant only takes effect
+ * after the app relaunches, and the setup has to pick itself back up on the
+ * other side of that. Cleared the moment Cowork turns on or the user cancels.
+ */
+const SETUP_PENDING_KEY = 'ibl_cowork_setup_pending';
+
+export function coworkSetupPending(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    return window.localStorage.getItem(SETUP_PENDING_KEY) === 'true';
+  } catch {
+    return false;
+  }
+}
+
+export function writeCoworkSetupPending(pending: boolean): void {
+  if (typeof window === 'undefined') return;
+  try {
+    if (pending) window.localStorage.setItem(SETUP_PENDING_KEY, 'true');
+    else window.localStorage.removeItem(SETUP_PENDING_KEY);
+  } catch {
+    // Without storage the setup simply does not survive a relaunch.
+  }
+}

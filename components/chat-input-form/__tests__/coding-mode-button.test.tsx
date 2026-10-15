@@ -91,9 +91,19 @@ vi.mock('@tauri-apps/plugin-barcode-scanner', () => ({
     }),
   Format: { QRCode: 'QR_CODE' },
 }));
+const toastInfo = vi.fn();
 vi.mock('sonner', () => ({
-  toast: { error: (...args: unknown[]) => toastError(...args) },
+  toast: {
+    error: (...args: unknown[]) => toastError(...args),
+    info: (...args: unknown[]) => toastInfo(...args),
+  },
   Toaster: () => null,
+}));
+// Whether Cowork is on and answering in Code's place (its own tests pin the
+// routing it mirrors); off unless a test says otherwise.
+let mockCoworkAnswers = false;
+vi.mock('@/lib/cowork-routing', () => ({
+  coworkAnswersInsteadOfCode: () => mockCoworkAnswers,
 }));
 vi.mock('@iblai/iblai-js/data-layer', () => ({
   useGetUserPlatformMetadataQuery: () => ({ data: platformMetadata.current }),
@@ -1413,6 +1423,37 @@ describe('CodingModeButton', () => {
           token: 'jwt-test-token',
         }),
       );
+    });
+
+    it('says Cowork keeps answering when Code is switched on beside it', async () => {
+      localStorage.setItem('ibl_coding_mode_enabled', 'false');
+      localStorage.setItem('ibl_coding_mode_folder_chosen', 'true');
+      mockCoworkAnswers = true;
+      renderButton();
+      await openPopover();
+
+      await userEvent.click(await screen.findByRole('switch'));
+
+      await waitFor(() =>
+        expect(toastInfo).toHaveBeenCalledWith(
+          expect.stringMatching(/Turn Cowork off to use Code/),
+        ),
+      );
+      mockCoworkAnswers = false;
+    });
+
+    it('says nothing about Cowork when it is not answering', async () => {
+      localStorage.setItem('ibl_coding_mode_enabled', 'false');
+      localStorage.setItem('ibl_coding_mode_folder_chosen', 'true');
+      renderButton();
+      await openPopover();
+
+      await userEvent.click(await screen.findByRole('switch'));
+
+      await waitFor(() =>
+        expect(localStorage.getItem('ibl_coding_mode_enabled')).toBe('true'),
+      );
+      expect(toastInfo).not.toHaveBeenCalled();
     });
 
     it('does not re-prompt for a folder once one is chosen', async () => {

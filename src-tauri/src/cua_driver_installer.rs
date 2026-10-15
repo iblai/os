@@ -346,6 +346,28 @@ pub async fn check_cua_driver_status() -> Result<CuaDriverStatus, String> {
     })
 }
 
+/// One install at a time. A composer that remounts mid-download (or a second
+/// composer on screen) asks again, and two runs race on the same download file.
+static INSTALL_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+
+/// Runs `install` unless `installed` already holds, never two at once: a caller
+/// that queued behind a running install finds the driver there and skips it.
+/// Returns whether this call installed.
+async fn install_unless_present<Fut>(
+    installed: impl Fn() -> bool,
+    install: impl FnOnce() -> Fut,
+) -> Result<bool, String>
+where
+    Fut: std::future::Future<Output = Result<(), String>>,
+{
+    let _guard = INSTALL_LOCK.lock().await;
+    if installed() {
+        return Ok(false);
+    }
+    install().await?;
+    Ok(true)
+}
+
 /// Install cua-driver if it isn't already runnable. Returns its version.
 #[command]
 pub async fn install_cua_driver(app: AppHandle) -> Result<String, String> {
@@ -358,14 +380,16 @@ pub async fn install_cua_driver(app: AppHandle) -> Result<String, String> {
         ));
     }
 
-    if driver_installed() {
+    let app_ref = &app;
+    let fetched = install_unless_present(driver_installed, move || async move {
+        log(app_ref, "cua-driver not found — downloading");
+        download_and_install(app_ref).await
+    })
+    .await?;
+    if !fetched {
         log(&app, "cua-driver already installed");
-    } else {
-        log(&app, "cua-driver not found — downloading");
-        download_and_install(&app).await?;
-        if !driver_installed() {
-            return Err("cua-driver still not runnable after install".to_string());
-        }
+    } else if !driver_installed() {
+        return Err("cua-driver still not runnable after install".to_string());
     }
     Ok(driver_version().unwrap_or_else(|| "installed".to_string()))
 }
@@ -373,6 +397,41 @@ pub async fn install_cua_driver(app: AppHandle) -> Result<String, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Two callers at once (a remounted composer, or the canvas layout's second
+    /// composer) must download once; the one that waited finds it installed.
+    #[tokio::test]
+    async fn concurrent_installs_download_once() {
+        use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+        use std::sync::Arc;
+
+        let installed = Arc::new(AtomicBool::new(false));
+        let downloads = Arc::new(AtomicUsize::new(0));
+        let run = || {
+            let installed = installed.clone();
+            let downloads = downloads.clone();
+            async move {
+                let present = installed.clone();
+                install_unless_present(
+                    move || present.load(Ordering::SeqCst),
+                    move || async move {
+                        downloads.fetch_add(1, Ordering::SeqCst);
+                        tokio::time::sleep(Duration::from_millis(50)).await;
+                        installed.store(true, Ordering::SeqCst);
+                        Ok(())
+                    },
+                )
+                .await
+            }
+        };
+
+        let (first, second) = tokio::join!(run(), run());
+
+        assert_eq!(downloads.load(Ordering::SeqCst), 1);
+        let mut outcomes = [first.unwrap(), second.unwrap()];
+        outcomes.sort();
+        assert_eq!(outcomes, [false, true]);
+    }
 
     const CHECKSUMS: &str = "\
 ## SHA256 Checksums

@@ -1,6 +1,6 @@
 # Tauri Desktop E2E Coverage — Journey Checklist
 
-> Last updated: 2026-10-14 | 57 checkpoints (22 covered, 34 pending, 1 deprecated) | 3 journeys | 100% of reproducible checkpoints covered | Driver: WebdriverIO + tauri-driver
+> Last updated: 2026-10-16 | 64 checkpoints (24 covered, 39 pending, 1 deprecated) | 4 journeys | 100% of reproducible checkpoints covered | Driver: WebdriverIO + tauri-driver
 
 This is the desktop counterpart to the web `e2e/COVERAGE.md`. It tracks only what
 is exercised by driving the **built desktop binary** through `tauri-driver` (see
@@ -200,3 +200,21 @@ two vendored release workflows and are exercised by real releases.
 - [ ] `code-44` The task list the agent keeps (Claude Code's and Codex's plan updates, opencode's todo tool) shows as the reply's checklist and ticks off as it works _(needs a tool-calling model driving real turns, the same harness gap as code-08..10/15/28; covered meanwhile by the store's plan cases in the SDK's `code-activity.test.tsx`, the task-list cases in `ai-message-bubble.os-parity.test.tsx` and the Rust `plans_reach_the_webview_and_agent_bookkeeping_does_not`)_
 - [ ] `code-45` A permission card leads with what Code wants to do in plain words above the exact command or file, with no tool-kind chip, from the request's tool call on desktop and from the permission name on a paired phone; a Browse prompt keeps its own description _(needs a tool-calling model driving real turns, the same harness gap as code-08..10/15/28; covered meanwhile by the SDK's `code-permission-card.test.tsx` and the Rust `permission_payloads_carry_the_whole_tool_call`)_
 - [ ] `code-46` A failed Code turn's toast says what went wrong in plain words (stopped unexpectedly, took too long, no model picked, couldn't start, signed out) instead of the raw agent error _(needs a tool-calling model driving real turns, the same harness gap as code-08..10/15/28; covered meanwhile by the SDK's `code-error-text.test.ts` and `toast-error-message.test.tsx`)_
+
+## Journey 4: Cowork (Cua Driver) (7 checkpoints: 2 covered, 5 pending) — `journeys/04-cowork.spec.ts`
+
+> **Host side only.** `cua_driver_support` and the two commands the macOS setup
+> dialog relies on (`open_privacy_settings`, `relaunch_app`) run against the
+> real binary through the IPC bridge. The dialog itself needs macOS — the
+> Accessibility and Screen Recording grants exist nowhere else, and
+> `tauri-driver` has no macOS support — so its checkpoints are `pending` and
+> covered meanwhile by the `inside-buttons` Vitest cases named below, the Rust
+> `cua_driver_mcp` tests and the SDK's `use-chat-v2` routing cases.
+
+- [x] `cowork-01` `cua_driver_support` says whether this desktop session can run Cowork, with one of the known machine-readable reasons (unsupported_os, kde_unproven, gnome_helper_missing, unknown_session, sandboxed) when it cannot
+- [x] `cowork-02` `open_privacy_settings` accepts only the two panes the setup dialog links to (accessibility, screen_recording) and refuses any other, naming it
+- [ ] `cowork-03` Accepting the Cowork consent dialog with a macOS grant missing opens the setup dialog instead of a toast: one row per grant (Accessibility, Screen Recording) reading Allowed or offering Open System Settings, which opens that exact Privacy & Security pane; Cowork stays off and nothing is installed _(needs macOS; covered meanwhile by the Vitest cases `opens the setup dialog instead of giving up…` and `opens the exact System Settings pane…` in `inside-buttons.test.tsx`)_
+- [ ] `cowork-04` The setup dialog re-checks the grants by itself whenever the app regains focus, and turns Cowork on (install + “Cowork is on.” toast) the moment both are held _(needs macOS; covered meanwhile by `re-checks the grants when the user comes back…` and `turns Cowork on by itself once both grants are held`)_
+- [ ] `cowork-05` While Screen Recording still reads denied the dialog explains it takes effect only after a relaunch and offers Relaunch App; the setup is remembered across that relaunch and finishes by itself on the next launch, or shows what is still missing, without prompting again; cancelling forgets it _(needs macOS; covered meanwhile by `offers a relaunch while Screen Recording still reads denied…`, `picks the setup back up after the relaunch…`, `shows what is still missing after the relaunch…`, `waits for the host to answer…` and `forgets the setup when it is cancelled`, plus `lib/__tests__/cowork-approvals.test.ts`)_
+- [ ] `cowork-06` With both the Code and Cowork pills on, Cowork takes the turn on the desktop whenever the turn would reach its screen tools (signed in, no local model in use) and either switch says so; otherwise, and on a phone paired with a desktop, Code keeps the turn; Stop stops whichever turn is running even if a pill was flipped mid-turn _(needs a tool-calling model driving real turns, the same harness gap as code-08..10; covered meanwhile by the SDK's `use-chat-v2.test.ts` “while Cowork is on as well” cases, `lib/__tests__/cowork-routing.test.ts`, the Cowork-note cases in `inside-buttons.test.tsx` and `says Cowork keeps answering when Code is switched on beside it` in `coding-mode-button.test.tsx`)_
+- [ ] `cowork-07` The Mac App Store (sandboxed) build shows the Cowork pill disabled with the App Store reason instead of walking the user into grants that cannot work there _(the sandbox exists only in the signed App Store build; covered meanwhile by the Rust `the_sandboxed_mac_app_store_build_is_refused` and `says the App Store build cannot run Cowork` in `inside-buttons.test.tsx`)_

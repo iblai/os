@@ -1,8 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   coworkPrefSet,
+  coworkSetupPending,
   readCoworkApprovals,
   writeCoworkApprovals,
+  writeCoworkSetupPending,
 } from '@/lib/cowork-approvals';
 
 const KEY = 'ibl_cowork_approvals';
@@ -65,5 +67,34 @@ describe('coworkPrefSet', () => {
       throw new Error('blocked');
     });
     expect(coworkPrefSet()).toBe(false);
+  });
+});
+
+describe('cowork setup pending', () => {
+  it('is off until a setup is left waiting on a grant', () => {
+    expect(coworkSetupPending()).toBe(false);
+  });
+
+  it('survives a relaunch and is forgotten once cleared', () => {
+    writeCoworkSetupPending(true);
+    expect(window.localStorage.getItem('ibl_cowork_setup_pending')).toBe(
+      'true',
+    );
+    expect(coworkSetupPending()).toBe(true);
+
+    writeCoworkSetupPending(false);
+    expect(window.localStorage.getItem('ibl_cowork_setup_pending')).toBeNull();
+    expect(coworkSetupPending()).toBe(false);
+  });
+
+  it('reads unusable storage as nothing pending, and swallows a blocked write', () => {
+    vi.spyOn(window.localStorage, 'getItem').mockImplementation(() => {
+      throw new Error('blocked');
+    });
+    vi.spyOn(window.localStorage, 'setItem').mockImplementation(() => {
+      throw new Error('blocked');
+    });
+    expect(() => writeCoworkSetupPending(true)).not.toThrow();
+    expect(coworkSetupPending()).toBe(false);
   });
 });
