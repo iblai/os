@@ -1252,6 +1252,8 @@
       "cancel": "Cancelar",
       "inUse": "En uso",
       "downloadFailedRetry": "Error en la descarga: reintentar",
+      "downloadFailed": "Error en la descarga",
+      "retry": "Reintentar",
       "ariaDownload": "Descargar {modelName}, {modelSize}, modelo en el dispositivo",
       "ariaStarting": "Iniciando la descarga de {modelName}",
       "ariaDownloading": "Cancelar la descarga de {modelName}, {percent} por ciento",
