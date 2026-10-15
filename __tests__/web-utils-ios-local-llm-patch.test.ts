@@ -11,16 +11,15 @@ import path from 'node:path';
  * so the gate must be widened with `isTauriEmbeddedLLMHost()` (iOS only —
  * Coding Mode stays desktop-gated).
  *
- * The widened gate can reach the app two ways, and this test accepts either:
- * - the pnpm patch (patches/@iblai__web-utils@*.patch) on the registry
- *   package — keyed to an exact version, so a version bump silently drops it;
- * - a yalc-linked / released SDK build that carries the change in source
- *   (the formatter there splits the condition across lines, hence the
- *   whitespace-insensitive matching).
+ * The widened gate ships in the released SDK (web-utils ≥ 2.9), where the
+ * send-time rule is: desktop-or-embedded host AND a local model in use (or
+ * offline with Local Models on). This pins both halves against the installed
+ * bundle — a yalc-linked or registry build alike (the formatter splits the
+ * condition across lines and comments it, hence the comment-stripped,
+ * whitespace-insensitive matching).
  *
- * If it fails, whichever channel is active lost the gate: re-apply the patch
- * for the new version, or rebuild+push the SDK — until the change ships in a
- * release, at which point the patch and this test can retire.
+ * If it fails, the installed SDK lost the gate: check the SDK's
+ * use-chat-v2.ts send path before bumping the pin.
  */
 describe('@iblai/web-utils iOS local-LLM gate', () => {
   const iblaiJsDir = realpathSync(
@@ -37,11 +36,17 @@ describe('@iblai/web-utils iOS local-LLM gate', () => {
     'keeps the widened send-time gate in %s',
     (bundle) => {
       const src = readFileSync(path.join(distDir, bundle), 'utf8');
-      const flat = src.replace(/\s+/g, '');
+      // Comments are stripped before flattening: the released build keeps
+      // comments inside the condition, which a literal match would trip over.
+      const flat = src.replace(/\/\/[^\n]*/g, '').replace(/\s+/g, '');
       expect(src).toContain('function isTauriEmbeddedLLMHost()');
+      // The host half of the gate: desktop OR the embedded runtime. The other
+      // half (a local model actually in use, or offline with Local Models on)
+      // is the routing rule shipped in web-utils 2.9; both halves are asserted.
       expect(flat).toContain(
-        'if((isTauriDesktop()||isTauriEmbeddedLLMHost())&&isLocalLLMEnabled())',
+        'if((isTauriDesktop()||isTauriEmbeddedLLMHost())&&(hasLocalLLMInUse()||',
       );
+      expect(flat).toContain('&&isLocalLLMEnabled())))');
       // Coding Mode must NOT have been widened along with it.
       expect(flat).not.toContain('isTauriEmbeddedLLMHost()&&isCodingMode');
       expect(flat).not.toContain('isTauriEmbeddedLLMHost())&&isCodingMode');

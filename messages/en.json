@@ -1291,6 +1291,8 @@
       "cancel": "Cancel",
       "inUse": "In Use",
       "downloadFailedRetry": "Download Failed — Retry",
+      "downloadFailed": "Download Failed",
+      "retry": "Retry",
       "ariaDownload": "Download {modelName}, {modelSize}, on-device model",
       "ariaStarting": "Starting download of {modelName}",
       "ariaDownloading": "Cancel download of {modelName}, {percent} percent",
