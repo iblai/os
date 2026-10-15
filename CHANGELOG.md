@@ -4,45 +4,45 @@
 
 ### Features
 
-- **code-mode:** describe every Code-turn step, card, line and error in plain words ([20541fe](https://github.com/iblai/os/commit/20541fe7ee4b276fc92db7d1f5e2867a8c2bec98))
+* **code-mode:** describe every Code-turn step, card, line and error in plain words ([20541fe](https://github.com/iblai/os/commit/20541fe7ee4b276fc92db7d1f5e2867a8c2bec98))
 
 ### Bug Fixes
 
-- **code-mode:** keep task-list items plain, test the permission payload, fix the ledger notes ([616116a](https://github.com/iblai/os/commit/616116ab09cdec38c2f43b96e1a2483b68d88c37))
-- **e2e:** read an unfinished task of a finished turn as To do ([c3dbc91](https://github.com/iblai/os/commit/c3dbc91202a952f0b2194ff3b6e5861fb6e58502))
+* **code-mode:** keep task-list items plain, test the permission payload, fix the ledger notes ([616116a](https://github.com/iblai/os/commit/616116ab09cdec38c2f43b96e1a2483b68d88c37))
+* **e2e:** read an unfinished task of a finished turn as To do ([c3dbc91](https://github.com/iblai/os/commit/c3dbc91202a952f0b2194ff3b6e5861fb6e58502))
 
 ### Chores
 
-- **code-mode:** move the plain-words Code-turn UI to the SDK and pin @iblai/iblai-js 2.38.0 ([a441380](https://github.com/iblai/os/commit/a4413800b5b7221d5dac62a131c3268be218723c))
-- **tauri:** release app-v0.95.26 ([1e6fd4b](https://github.com/iblai/os/commit/1e6fd4b5bdfa573ff487a899790288da13806e04))
+* **code-mode:** move the plain-words Code-turn UI to the SDK and pin @iblai/iblai-js 2.38.0 ([a441380](https://github.com/iblai/os/commit/a4413800b5b7221d5dac62a131c3268be218723c))
+* **tauri:** release app-v0.95.26 ([1e6fd4b](https://github.com/iblai/os/commit/1e6fd4b5bdfa573ff487a899790288da13806e04))
 
 ## [0.170.0](https://github.com/iblai/os/compare/v0.169.3...v0.170.0) (2026-10-15)
 
 ### Features
 
-- **ui:** let PopoverContent portal into a given container ([90f76a8](https://github.com/iblai/os/commit/90f76a834ec9ebd08fe7dd980050077db88a4a4c))
+* **ui:** let PopoverContent portal into a given container ([90f76a8](https://github.com/iblai/os/commit/90f76a834ec9ebd08fe7dd980050077db88a4a4c))
 
 ### Bug Fixes
 
-- **create-agent:** portal the category list into the dialog so the wheel scrolls it ([4d1e221](https://github.com/iblai/os/commit/4d1e221436a14a42e36230b97b3f5e168fdbe699))
+* **create-agent:** portal the category list into the dialog so the wheel scrolls it ([4d1e221](https://github.com/iblai/os/commit/4d1e221436a14a42e36230b97b3f5e168fdbe699))
 
 ### Chores
 
-- **deps:** bump @iblai/iblai-js to 2.39.1 for the camera dialog fix ([45fc836](https://github.com/iblai/os/commit/45fc836e23d0d301b3b61f8bf9b553438fda2b07))
+* **deps:** bump @iblai/iblai-js to 2.39.1 for the camera dialog fix ([45fc836](https://github.com/iblai/os/commit/45fc836e23d0d301b3b61f8bf9b553438fda2b07))
 
 ### Documentation
 
-- **e2e:** add journeys 87 and 88 to coverage ([00a8aa0](https://github.com/iblai/os/commit/00a8aa0f18458fa21e6e9b15c28b1c50c911339c))
+* **e2e:** add journeys 87 and 88 to coverage ([00a8aa0](https://github.com/iblai/os/commit/00a8aa0f18458fa21e6e9b15c28b1c50c911339c))
 
 ### Styles
 
-- prettier-format CHANGELOG bullets ([1084e1d](https://github.com/iblai/os/commit/1084e1d3420c41dc7b3121097f6f65de2139cb6f))
+* prettier-format CHANGELOG bullets ([1084e1d](https://github.com/iblai/os/commit/1084e1d3420c41dc7b3121097f6f65de2139cb6f))
 
 ### Tests
 
-- **create-agent:** cover wheel scrolling the category list inside the dialog ([49ec699](https://github.com/iblai/os/commit/49ec699fe94969ae8237b12be54cf4528b884aed))
-- **e2e:** journey 87 — closing the camera dialog keeps the page clickable ([4733088](https://github.com/iblai/os/commit/4733088d227b1aaf19539c50aefdebd7be39814d))
-- **e2e:** journey 88 — Create Agent category list scrolls with the wheel ([e939893](https://github.com/iblai/os/commit/e9398938833b901be991eb2a7b7c8cfc273f4c37))
+* **create-agent:** cover wheel scrolling the category list inside the dialog ([49ec699](https://github.com/iblai/os/commit/49ec699fe94969ae8237b12be54cf4528b884aed))
+* **e2e:** journey 87 — closing the camera dialog keeps the page clickable ([4733088](https://github.com/iblai/os/commit/4733088d227b1aaf19539c50aefdebd7be39814d))
+* **e2e:** journey 88 — Create Agent category list scrolls with the wheel ([e939893](https://github.com/iblai/os/commit/e9398938833b901be991eb2a7b7c8cfc273f4c37))
 
 ## [0.169.3](https://github.com/iblai/os/compare/v0.169.2...v0.169.3) (2026-10-14)
 

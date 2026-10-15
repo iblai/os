@@ -650,6 +650,13 @@ describe('Journey 3: Code Mode (opencode)', () => {
       /* pending — same harness gap; covered meanwhile by the SDK's
          code-error-text.test.ts and toast-error-message.test.tsx */
     });
+
+    it.skip('code-47: the app keeps answering while a Code turn streams a chatty command — a build’s output never reaches the chat as events', () => {
+      /* pending — same harness gap; covered meanwhile by the Rust
+         output_only_tool_updates_never_reach_the_webview,
+         reasoning_chunks_are_batched_per_window and
+         handle_update_forwards_only_what_the_webview_renders (opencode_acp.rs) */
+    });
   });
 
   // The subscription agents: Codex and Claude Code run next to opencode
@@ -799,12 +806,6 @@ describe('Journey 3: Code Mode (opencode)', () => {
          (opencode_acp.rs), an_unknown_model_is_refused_before_it_is_saved and
          the_model_choice_lists_the_agents_offer_with_default_and_selection
          (code_agent_models.rs) */
-    });
-
-    it.skip('code-47: the app keeps answering while a Code turn streams a chatty command — a build’s output never reaches the chat as events', () => {
-      /* pending — needs a tool-calling model; covered meanwhile by the Rust
-         output_only_tool_updates_never_reach_the_webview and
-         reasoning_chunks_are_batched_per_window (opencode_acp.rs) */
     });
   });
 });

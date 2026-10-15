@@ -29,6 +29,7 @@ pnpm-lock.yaml
 # auto-generated
 *.min.js
 *.min.css
+CHANGELOG.md
 
 # Tauri
 src-tauri/target/
