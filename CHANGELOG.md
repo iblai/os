@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.171.2](https://github.com/iblai/os/compare/v0.171.1...v0.171.2) (2026-10-15)
+
+### Performance
+
+* adopt @iblai/iblai-js 2.40.1 (tree-shakeable web-containers) ([bbed213](https://github.com/iblai/os/commit/bbed2139670c21ee6237c8c1f26773832045fda3))
+* trim first-load JS off error/404 and non-chat routes ([44f4d71](https://github.com/iblai/os/commit/44f4d717e90aa38a57dabbf88cd9903340a7adcf))
+
+### Tests
+
+* retire the web-utils iOS local-LLM gate guard (shipped in the SDK) ([71a39c3](https://github.com/iblai/os/commit/71a39c3c847628856e0386f36fbf7da0a5a1659a))
+
 ## [0.171.1](https://github.com/iblai/os/compare/v0.171.0-patch.2...v0.171.1) (2026-10-15)
 
 ### Chores
