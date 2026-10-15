@@ -1,50 +1,94 @@
 # Changelog
 
+## [0.171.0](https://github.com/iblai/os/compare/v0.170.0...v0.171.0) (2026-10-15)
+
+### Features
+
+* **code-mode:** describe every Code-turn step, card, line and error in plain words ([20541fe](https://github.com/iblai/os/commit/20541fe7ee4b276fc92db7d1f5e2867a8c2bec98))
+
+### Bug Fixes
+
+* **code-mode:** keep task-list items plain, test the permission payload, fix the ledger notes ([616116a](https://github.com/iblai/os/commit/616116ab09cdec38c2f43b96e1a2483b68d88c37))
+* **e2e:** read an unfinished task of a finished turn as To do ([c3dbc91](https://github.com/iblai/os/commit/c3dbc91202a952f0b2194ff3b6e5861fb6e58502))
+
+### Chores
+
+* **code-mode:** move the plain-words Code-turn UI to the SDK and pin @iblai/iblai-js 2.38.0 ([a441380](https://github.com/iblai/os/commit/a4413800b5b7221d5dac62a131c3268be218723c))
+* **tauri:** release app-v0.95.26 ([1e6fd4b](https://github.com/iblai/os/commit/1e6fd4b5bdfa573ff487a899790288da13806e04))
+
+## [0.170.0](https://github.com/iblai/os/compare/v0.169.3...v0.170.0) (2026-10-15)
+
+### Features
+
+* **ui:** let PopoverContent portal into a given container ([90f76a8](https://github.com/iblai/os/commit/90f76a834ec9ebd08fe7dd980050077db88a4a4c))
+
+### Bug Fixes
+
+* **create-agent:** portal the category list into the dialog so the wheel scrolls it ([4d1e221](https://github.com/iblai/os/commit/4d1e221436a14a42e36230b97b3f5e168fdbe699))
+
+### Chores
+
+* **deps:** bump @iblai/iblai-js to 2.39.1 for the camera dialog fix ([45fc836](https://github.com/iblai/os/commit/45fc836e23d0d301b3b61f8bf9b553438fda2b07))
+
+### Documentation
+
+* **e2e:** add journeys 87 and 88 to coverage ([00a8aa0](https://github.com/iblai/os/commit/00a8aa0f18458fa21e6e9b15c28b1c50c911339c))
+
+### Styles
+
+* prettier-format CHANGELOG bullets ([1084e1d](https://github.com/iblai/os/commit/1084e1d3420c41dc7b3121097f6f65de2139cb6f))
+
+### Tests
+
+* **create-agent:** cover wheel scrolling the category list inside the dialog ([49ec699](https://github.com/iblai/os/commit/49ec699fe94969ae8237b12be54cf4528b884aed))
+* **e2e:** journey 87 — closing the camera dialog keeps the page clickable ([4733088](https://github.com/iblai/os/commit/4733088d227b1aaf19539c50aefdebd7be39814d))
+* **e2e:** journey 88 — Create Agent category list scrolls with the wheel ([e939893](https://github.com/iblai/os/commit/e9398938833b901be991eb2a7b7c8cfc273f4c37))
+
 ## [0.169.3](https://github.com/iblai/os/compare/v0.169.2...v0.169.3) (2026-10-14)
 
 ### Bug Fixes
 
-* **embed:** re-check auth via a token-update event instead of reloading ([3d3c46c](https://github.com/iblai/os/commit/3d3c46cc3d516626ce4579669c807ae313749484)), closes [os#580](https://github.com/iblai/os/issues/580)
+- **embed:** re-check auth via a token-update event instead of reloading ([3d3c46c](https://github.com/iblai/os/commit/3d3c46cc3d516626ce4579669c807ae313749484)), closes [os#580](https://github.com/iblai/os/issues/580)
 
 ## [0.169.2](https://github.com/iblai/os/compare/v0.169.1...v0.169.2) (2026-10-13)
 
 ### Bug Fixes
 
-* **embed:** re-hydrate in place on authExpired tokens instead of reloading ([53c5c5a](https://github.com/iblai/os/commit/53c5c5a11d6ffa1c77e506536b2de27ed75d7175))
+- **embed:** re-hydrate in place on authExpired tokens instead of reloading ([53c5c5a](https://github.com/iblai/os/commit/53c5c5a11d6ffa1c77e506536b2de27ed75d7175))
 
 ## [0.169.1](https://github.com/iblai/os/compare/v0.169.0...v0.169.1) (2026-10-13)
 
 ### Bug Fixes
 
-* **auth:** single-flight 401 recovery so a burst recovers once ([a0a7ecd](https://github.com/iblai/os/commit/a0a7ecd5ccb5957503c0f55fe3a61c9c47bf4d1f)), closes [iblai-web-frontend#2140](https://github.com/iblai/iblai-web-frontend/issues/2140)
-* **embed:** recover 401s without a full page reload ([81287f4](https://github.com/iblai/os/commit/81287f47cc785a2c664b9e7635bf3c5dbf8698ec))
+- **auth:** single-flight 401 recovery so a burst recovers once ([a0a7ecd](https://github.com/iblai/os/commit/a0a7ecd5ccb5957503c0f55fe3a61c9c47bf4d1f)), closes [iblai-web-frontend#2140](https://github.com/iblai/iblai-web-frontend/issues/2140)
+- **embed:** recover 401s without a full page reload ([81287f4](https://github.com/iblai/os/commit/81287f47cc785a2c664b9e7635bf3c5dbf8698ec))
 
 ## [0.169.0](https://github.com/iblai/os/compare/v0.168.1...v0.169.0) (2026-10-13)
 
 ### Features
 
-* **mentor:** use the SDK draggable accessibility button ([7701ac3](https://github.com/iblai/os/commit/7701ac367c647a53bb6040e5b52952e0bf8a9c50)), closes [iblai/iblai-platform#2611](https://github.com/iblai/iblai-platform/issues/2611)
+- **mentor:** use the SDK draggable accessibility button ([7701ac3](https://github.com/iblai/os/commit/7701ac367c647a53bb6040e5b52952e0bf8a9c50)), closes [iblai/iblai-platform#2611](https://github.com/iblai/iblai-platform/issues/2611)
 
 ### Bug Fixes
 
-* **deps:** override handlebars to 4.7.10 for the audit gate ([7f4bf53](https://github.com/iblai/os/commit/7f4bf53a50c3205f4112740e9ab035211ebf0ca5))
-* **deps:** override vulnerable transitive packages for the audit gate ([07deefc](https://github.com/iblai/os/commit/07deefc0b69af790c969052df3daf2014af71a11))
-* **mentor:** key the sidebar's pinned list cache by org and user only ([93968bf](https://github.com/iblai/os/commit/93968bff65b57ff02d7da79d064e7e077a631275)), closes [iblai/iblai-platform#2611](https://github.com/iblai/iblai-platform/issues/2611)
+- **deps:** override handlebars to 4.7.10 for the audit gate ([7f4bf53](https://github.com/iblai/os/commit/7f4bf53a50c3205f4112740e9ab035211ebf0ca5))
+- **deps:** override vulnerable transitive packages for the audit gate ([07deefc](https://github.com/iblai/os/commit/07deefc0b69af790c969052df3daf2014af71a11))
+- **mentor:** key the sidebar's pinned list cache by org and user only ([93968bf](https://github.com/iblai/os/commit/93968bff65b57ff02d7da79d064e7e077a631275)), closes [iblai/iblai-platform#2611](https://github.com/iblai/iblai-platform/issues/2611)
 
 ### Chores
 
-* **deps:** bump @iblai/iblai-js to 2.31.0 ([40f2fa5](https://github.com/iblai/os/commit/40f2fa5c827914c0b4bda6e089c8946ade4b74d9)), closes [#2611](https://github.com/iblai/os/issues/2611)
+- **deps:** bump @iblai/iblai-js to 2.31.0 ([40f2fa5](https://github.com/iblai/os/commit/40f2fa5c827914c0b4bda6e089c8946ade4b74d9)), closes [#2611](https://github.com/iblai/os/issues/2611)
 
 ### Tests
 
-* **e2e:** add journey 83 for the draggable accessibility button ([c7009a8](https://github.com/iblai/os/commit/c7009a8ac33b26a04839733abe62ca7eb02f68aa)), closes [iblai/iblai-platform#2611](https://github.com/iblai/iblai-platform/issues/2611)
-* **tts:** expect the trailing slash on the chat-message TTS endpoint ([a303818](https://github.com/iblai/os/commit/a303818e7f5d42def908f6599198012487cc48ad))
+- **e2e:** add journey 83 for the draggable accessibility button ([c7009a8](https://github.com/iblai/os/commit/c7009a8ac33b26a04839733abe62ca7eb02f68aa)), closes [iblai/iblai-platform#2611](https://github.com/iblai/iblai-platform/issues/2611)
+- **tts:** expect the trailing slash on the chat-message TTS endpoint ([a303818](https://github.com/iblai/os/commit/a303818e7f5d42def908f6599198012487cc48ad))
 
 ## [0.168.1](https://github.com/iblai/os/compare/v0.168.0...v0.168.1) (2026-10-13)
 
 ### Chores
 
-* **ext:** bump Chrome extension to 1.1.5 ([1ba663c](https://github.com/iblai/os/commit/1ba663c16b10b37709fd42d01935647cb882fd0d)), closes [#574](https://github.com/iblai/os/issues/574)
+- **ext:** bump Chrome extension to 1.1.5 ([1ba663c](https://github.com/iblai/os/commit/1ba663c16b10b37709fd42d01935647cb882fd0d)), closes [#574](https://github.com/iblai/os/issues/574)
 
 ## [0.168.0](https://github.com/iblai/os/compare/v0.167.1...v0.168.0) (2026-10-13)
 

@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-10-08 | 933 checkpoints (889 covered, 10 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 93 journeys (92 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-10-08 | 937 checkpoints (893 covered, 10 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 95 journeys (94 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -1513,14 +1513,14 @@ A lone leading `assistant`-role history message is special-cased by
 fixture therefore includes a preceding human message so the AI message with
 tool calls actually mounts `AgentTodoList`.
 
-- [x] atl-01: The task list renders as a real `<ol>` with one `<li>` per todo; status via `data-status` + a sr-only status word + a distinct icon per status — no visible status text on the row itself
+- [x] atl-01: The task list renders as a real `<ol>` with one `<li>` per todo; status via `data-status` + a sr-only status word + a distinct icon per status — no visible status text on the row itself; once the turn is over, an in_progress step reads as To do with the pending icon (`data-status` keeps `in_progress`)
 - [x] atl-02: The panel header shows an "N of M done" progress summary, visible even while the row list underneath is collapsed
 - [x] atl-03: The panel is expanded by default while the turn is streaming, auto-collapses once the turn completes, and clicking the trigger re-expands it (collapsed-by-default also verified for historical/reload-recovered turns)
 - [x] atl-04: A second `write_todos` call within the same streaming turn replaces the list wholesale — never merges or appends onto the previous call's rows
 - [x] atl-05: An unrecognized todo status (e.g. "blocked") renders as pending rather than being dropped
 - [x] atl-06: A turn that never emits `write_todos` shows no affordance at all — no panel, no header, no skeleton
 - [x] atl-07: `write_todos` never appears in the generic "Used N tools" indicator or as its own raw tool card, even with a companion tool call present on the same turn
-- [x] atl-08: The in-progress row's text carries the `.todo-shimmer` left-to-right sweep class
+- [x] atl-08: The in-progress row's text carries the `.todo-shimmer` left-to-right sweep class while the turn streams, and loses it once the turn is over
 - [x] atl-09: The sr-only `aria-live` announcer carries only the throttled "Step N of M complete" summary, never any todo row text
 - [x] atl-10: The task list survives a page reload, recovered from chat history
 - [x] atl-11: First fixture-backed validation of the LangChain-shape and OpenAI-shape `write_todos` history parsing, plus a malformed entry dropped without throwing
@@ -2162,3 +2162,25 @@ The tour auto-starts once per user on the agent chat page; whether it was seen i
 - [x] tour-07: Admin clicks Skip tour and the `skipped` outcome is POSTed to the user metadata
 - [x] tour-08: Admin presses Escape and the tour is skipped (`skipped` outcome POSTed)
 - [x] tour-09: Admin opens the chat page with `?tour=1&embed=true` and no tour is shown
+
+---
+
+## Journey 87: Camera Dialog Leaves Page Clickable (3 checkpoints) — `journeys/87-camera-dialog-pointer-events.spec.ts`
+
+**Source files:** `components/chat/sdk-chat.tsx` (SDK composer "+" menu / `CameraCaptureDialog`)
+
+Regression: the camera dialog opened from the "+" menu item left `<body style="pointer-events: none">`, freezing all clicks. Chromium-only fake camera (`--use-fake-device-for-media-stream`, `camera` permission) scoped to this spec via `test.use`; upload outcome is never asserted. Page object: `page-objects/camera-capture.page.ts`.
+
+- [x] camera-01: Composer + -> Camera -> Capture -> Use photo: live feed shows, then body pointer-events is not 'none', the composer accepts typing and + reopens its menu (regression: separate Radix DismissableLayer copies froze the page)
+- [x] camera-02: Composer + -> Camera -> Capture -> Escape closes the dialog and leaves the page clickable (same regression)
+- [x] camera-03: Camera -> Capture -> Retake -> Capture -> Use photo leaves the page clickable and a message can still be sent
+
+---
+
+## Journey 88: Create Agent Category Wheel Scroll (1 checkpoint) — `journeys/88-create-agent-category-wheel-scroll.spec.ts`
+
+**Source files:** `components/modals/create-mentor-form.tsx`
+
+Regression: the Category popover is portaled outside the Create Agent dialog, whose scroll lock swallowed wheel events. Page object: `page-objects/create-mentor.page.ts` (`categoryList`).
+
+- [x] catscroll-01: Admin opens Create Agent, opens the Category picker and wheels the list: scrollTop increases and a lower category can be selected

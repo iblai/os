@@ -20,6 +20,7 @@ export class CreateMentorPage {
   readonly descriptionInput: Locator;
   readonly categoryCombobox: Locator;
   readonly visibilityCombobox: Locator;
+  readonly categoryList: Locator;
   readonly imageUploadButton: Locator;
   readonly nextButton: Locator;
   readonly saveButton: Locator;
@@ -40,6 +41,7 @@ export class CreateMentorPage {
     this.categoryCombobox = this.dialog.getByRole('combobox', {
       name: /category/i,
     });
+    this.categoryList = page.locator('[cmdk-list]').last();
     this.visibilityCombobox = this.dialog.getByRole('combobox', {
       name: /visibility/i,
     });
