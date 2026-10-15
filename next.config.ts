@@ -173,6 +173,12 @@ const nextConfig: NextConfig = {
     '@iblai/web-utils',
     '@iblai/data-layer',
     '@iblai/web-containers',
+    // react-gravatar (used by the SDK's UserAvatar) is now externalized by
+    // web-containers (>=1.44.3). It is ES5 CJS doing
+    // `_interopRequireDefault(require('query-string')).default.stringify(...)`;
+    // Next must transpile it so that interop resolves correctly — otherwise the
+    // avatar throws "g.default.stringify is not a function" and crashes the page.
+    'react-gravatar',
   ],
 };
 const sentryWebpackPluginOptions = {
