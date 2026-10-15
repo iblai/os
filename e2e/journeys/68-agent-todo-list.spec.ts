@@ -149,16 +149,16 @@ test.describe('Journey 68: Agent Task List', () => {
     await expect(items.nth(0).getByText('Done', { exact: true })).toHaveClass(
       /\bsr-only\b/,
     );
-    await expect(
-      items.nth(1).getByText('In progress', { exact: true }),
-    ).toHaveClass(/\bsr-only\b/);
+    // A step still in progress when the turn ended reads as "To do" and
+    // stops shimmering (SDK 2.38.0+): nothing is working on it any more.
+    // The live "In progress" state is covered by the streaming test below.
+    await expect(items.nth(1).getByText('To do', { exact: true })).toHaveClass(
+      /\bsr-only\b/,
+    );
+    await expect(items.nth(1).locator('.todo-shimmer')).toHaveCount(0);
     await expect(items.nth(2).getByText('To do', { exact: true })).toHaveClass(
       /\bsr-only\b/,
     );
-
-    // Bonus (component behaviour, not gated on streaming state): the
-    // in-progress row's text carries the shimmer sweep class.
-    await expect(items.nth(1).locator('.todo-shimmer')).toHaveCount(1);
 
     // Checkpoint 7: write_todos never appears in the generic "Used N
     // tools" indicator — with no other tool call present, that indicator
@@ -399,6 +399,9 @@ test.describe('Journey 68: Agent Task List', () => {
     await expect(items.nth(1)).toHaveAttribute('data-status', 'in_progress');
     // Checkpoint 8: the in-progress row shimmers while streaming.
     await expect(items.nth(1).locator('.todo-shimmer')).toHaveCount(1);
+    await expect(
+      items.nth(1).getByText('In progress', { exact: true }),
+    ).toHaveClass(/\bsr-only\b/);
 
     // Second write_todos call — Plan B, a DIFFERENT id, completely
     // different content and count.
