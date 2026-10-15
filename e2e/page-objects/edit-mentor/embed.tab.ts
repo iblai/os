@@ -8,6 +8,7 @@ export class EmbedTab {
   readonly embedCodeBlock: Locator;
   readonly copyButton: Locator;
   readonly showCatalogueToggle: Locator;
+  readonly allowFullscreenToggle: Locator;
   readonly optimizePageContextToggle: Locator;
   readonly websiteUrlInput: Locator;
   readonly websiteUrlError: Locator;
@@ -44,6 +45,9 @@ export class EmbedTab {
     this.showCatalogueToggle = dialog.getByRole('switch', {
       name: /show catalogue/i,
     });
+    this.allowFullscreenToggle = dialog.getByTestId(
+      'embed-allow-fullscreen-switch',
+    );
     this.optimizePageContextToggle = dialog.getByRole('switch', {
       name: /optimize page context tokens/i,
     });
@@ -190,6 +194,42 @@ export class EmbedTab {
     return (await this.embedCodeBlock.textContent()) ?? '';
   }
 
+  /**
+   * Submits the embed form (filling the Website URL first, when the mentor
+   * is non-anonymous and the field renders) and returns the REAL generated
+   * widget snippet from the "Embedded Code" dialog's own `<pre>`.
+   *
+   * Deliberately NOT the same as `getEmbedCode()`/`embedCodeBlock`, which
+   * resolve the FIRST `<pre>` inside the Edit Agent dialog — before a
+   * submit, the real `embedCode` state is empty and that `<pre>` doesn't
+   * exist yet (`useEmbedTab.ts`'s `onSubmit` is the only thing that sets
+   * it), so `embedCodeBlock` instead matches whatever OTHER `<pre>` happens
+   * to render first — observed in practice to be the SSO redirect-token URL
+   * block for a mentor with SSO configured, which `getEmbedCode()` then
+   * returns as if it were the widget snippet. The real snippet's `<pre>`
+   * also lives inside a SEPARATE Radix Dialog portal (`embedCodeDialog`),
+   * not inside `dialog`, once it exists. Dismisses the dialog afterwards,
+   * same as `submit()`.
+   */
+  async createAndGetEmbedCode(
+    websiteUrl = 'https://example.com',
+  ): Promise<string> {
+    // Wait for the form to render before probing for the URL field: right
+    // after a tab switch the field isn't mounted yet, and a short probe then
+    // skips it and "Create Embed" fails validation.
+    await expect(this.submitButton).toBeVisible({ timeout: 10_000 });
+    if (await this.websiteUrlInput.isVisible()) {
+      const current = await this.websiteUrlInput.inputValue();
+      if (!current) await this.fillWebsiteUrl(websiteUrl);
+    }
+    await this.submitButton.click();
+    await expect(this.embedCodeDialog).toBeVisible({ timeout: 30_000 });
+    const code =
+      (await this.embedCodeDialog.locator('pre').first().textContent()) ?? '';
+    await this.dismissEmbedCodeDialog();
+    return code;
+  }
+
   async copyEmbedCode(): Promise<void> {
     await expect(this.copyButton).toBeVisible({ timeout: 5_000 });
     await this.copyButton.click();
@@ -219,6 +259,37 @@ export class EmbedTab {
         { timeout: 5_000 },
       );
     }
+  }
+
+  /** Ensures the Allow Full Screen switch (URL-only, never saved) matches `enabled`. */
+  async setAllowFullscreen(enabled: boolean): Promise<void> {
+    await expect(this.allowFullscreenToggle).toBeVisible({ timeout: 10_000 });
+    const current =
+      (await this.allowFullscreenToggle.getAttribute('aria-checked')) ===
+      'true';
+    if (current !== enabled) {
+      await this.allowFullscreenToggle.click();
+    }
+    await expect(this.allowFullscreenToggle).toHaveAttribute(
+      'aria-checked',
+      enabled ? 'true' : 'false',
+      { timeout: 5_000 },
+    );
+  }
+
+  /**
+   * Clicks "Create Embed", reads the generated snippet from the "Embedded
+   * Code" dialog, then dismisses the dialog.
+   */
+  async createEmbedAndReadCode(): Promise<string> {
+    await expect(this.submitButton).toBeVisible({ timeout: 10_000 });
+    await this.submitButton.click();
+    const block = this.embedCodeDialog.locator('pre');
+    await expect(block).toBeVisible({ timeout: 30_000 });
+    await expect(block).toContainText('iframe.src', { timeout: 10_000 });
+    const code = (await block.textContent()) ?? '';
+    await this.dismissEmbedCodeDialog();
+    return code;
   }
 
   /**

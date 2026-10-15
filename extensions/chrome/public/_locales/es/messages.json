@@ -93,5 +93,8 @@
   },
   "tokenLimit": {
     "message": "Detenido: la ejecución agotó su presupuesto de tokens."
+  },
+  "noScriptablePage": {
+    "message": "No puedo leer esta página: el navegador no lo permite. Abre la página con la que quieres que trabaje e inténtalo de nuevo."
   }
 }

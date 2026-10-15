@@ -1,10 +1,10 @@
 {
   "version": 1,
-  "lastUpdated": "2026-10-13",
+  "lastUpdated": "2026-10-14",
   "summary": {
-    "totalCheckpoints": 54,
+    "totalCheckpoints": 58,
     "coveredCheckpoints": 22,
-    "pendingCheckpoints": 31,
+    "pendingCheckpoints": 35,
     "deprecatedCheckpoints": 1,
     "notReproducibleCheckpoints": 0,
     "percent": 100,
@@ -62,7 +62,7 @@
       "checkpoints": [
         {
           "id": "odm-01",
-          "description": "The LLM picker lists on-device (local) models first, then the provider's cloud models, in one list; each group is ranked by availability",
+          "description": "The LLM picker merges on-device (local) models with the provider's cloud models in one availability-ranked list",
           "status": "pending"
         },
         {
@@ -87,17 +87,12 @@
         },
         {
           "id": "odm-06",
-          "description": "The nav-bar on-device badge reflects the selected local model, with its name cased as written (not lowercased)",
+          "description": "The nav-bar on-device badge reflects the selected local model",
           "status": "pending"
         },
         {
           "id": "odm-07",
           "description": "Busy default ports at launch degrade to allocated ones: the MCP bridge and the offline server each bind a free port (preferring 8000/3457) and every consumer follows — local chat still streams, the offline cache still serves",
-          "status": "pending"
-        },
-        {
-          "id": "odm-08",
-          "description": "Downloading an on-device model with Local Models off turns Local Models on first, which sets up and starts the Model Manager (with a one-time setup notice when it was never installed), then starts the pull; a failed setup turns Local Models back off and a failed or cancelled setup starts no pull",
           "status": "pending"
         }
       ]
@@ -119,7 +114,8 @@
         "src-tauri/src/code_agent_installer.rs",
         "src-tauri/src/code_agent_models.rs",
         "components/chat-input-form/code-agents.ts",
-        "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/agent-model-selector.tsx"
+        "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/agent-model-selector.tsx",
+        "components/chat/sdk-chat.tsx"
       ],
       "checkpoints": [
         {
@@ -234,7 +230,7 @@
         },
         {
           "id": "code-23",
-          "description": "Code starts in Automatic (nothing saved), shown as an icon beside the microphone; its menu switches to Ask Me, which is saved and holds in every chat until switched back",
+          "description": "The Code popover asks for an approval mode on first use and stores the answer against the signed-in user (so it follows them to another machine)",
           "status": "pending"
         },
         {
@@ -331,6 +327,31 @@
         },
         {
           "id": "code-42",
+          "description": "While a Code turn runs, the line under the reply says in plain words what the agent is doing right now (“Changing about/page.tsx…”, “Installing what the app needs…”) on opencode, Codex and Claude Code alike, never a raw tool name; it stands down while a permission card waits, and each new step restarts its 20-second reassurance clock",
+          "status": "pending"
+        },
+        {
+          "id": "code-43",
+          "description": "A Code turn's steps fold into one quiet “N steps” row that opens to one plain-words sentence per step with a done / didn't-go-through / stopped mark, files by their last two path segments and web pages by their site, with the exact command, file or address one click away; after Stop or a crash-respawn nothing keeps looking busy",
+          "status": "pending"
+        },
+        {
+          "id": "code-44",
+          "description": "The task list the agent keeps (Claude Code's and Codex's plan updates, opencode's todo tool) shows as the reply's checklist and ticks off as it works",
+          "status": "pending"
+        },
+        {
+          "id": "code-45",
+          "description": "A permission card leads with what Code wants to do in plain words above the exact command or file, with no tool-kind chip, from the request's tool call on desktop and from the permission name on a paired phone; a Browse prompt keeps its own description",
+          "status": "pending"
+        },
+        {
+          "id": "code-46",
+          "description": "A failed Code turn's toast says what went wrong in plain words (stopped unexpectedly, took too long, no model picked, couldn't start, signed out) instead of the raw agent error",
+          "status": "pending"
+        },
+        {
+          "id": "code-47",
           "description": "An Ask Me permission card's Switch to Automatic answers it, saves Automatic (the composer's approvals icon and the Code popover show it), clears every other waiting card, and no later request in that turn raises a card — on the desktop and on a paired phone; each new card plays a short chime",
           "status": "pending"
         }

@@ -5,6 +5,18 @@ export class PromptsTab {
   readonly dialog: Locator;
 
   readonly systemPromptTextarea: Locator;
+  /**
+   * The "Edit" button scoped to the System Prompt card specifically — NOT a
+   * page-wide `.first()` "Edit" button. The System Prompt card is only
+   * rendered for mentors that are not connected claw-sandbox agents
+   * (`prompts-tab.tsx`: "System Prompt — hidden for connected claw-sandbox
+   * mentors, where behavior is driven by the sandbox agent config instead").
+   * A claw-sandbox mentor instead renders Proactive/Guided Prompt cards
+   * first, so an unscoped `.first()` click silently opens the WRONG "Edit"
+   * dialog on such a mentor. Scoping to the heading's ancestor card avoids
+   * that regardless of which mentor happens to be current.
+   */
+  readonly systemPromptEditButton: Locator;
   readonly saveButton: Locator;
   readonly addNewPromptButton: Locator;
   readonly suggestedPromptsSection: Locator;
@@ -42,6 +54,10 @@ export class PromptsTab {
       .getByRole('textbox')
       .or(dialog.locator('textarea'))
       .first();
+    this.systemPromptEditButton = dialog
+      .getByRole('heading', { name: 'System Prompt', exact: true })
+      .locator('xpath=ancestor::div[3]')
+      .getByRole('button', { name: 'Edit', exact: true });
     this.saveButton = dialog.getByRole('button', { name: /save/i }).first();
     this.addNewPromptButton = dialog.getByRole('button', {
       name: 'Add New Prompt',

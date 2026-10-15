@@ -105,44 +105,6 @@
     "noMatchingGroupsFound": "未找到匹配的群组。",
     "groupSearchHint": "请输入至少两个字符以搜索并将群组分配到此角色。"
   },
-  "accessibilityAccessibilityToolbar": {
-    "accessibilityMenu": "无障碍菜单",
-    "contrastPlus": "对比度 +",
-    "highlightLinks": "高亮链接",
-    "biggerText": "放大文字",
-    "textSpacing": "文字间距",
-    "pauseAnimations": "暂停动画",
-    "hideImages": "隐藏图片",
-    "dyslexiaFriendly": "阅读障碍友好",
-    "cursor": "光标",
-    "tooltips": "工具提示",
-    "lineHeight": "行高",
-    "textAlign": "文字对齐",
-    "saturation": "饱和度",
-    "resetAllAccessibilitySettings": "重置所有无障碍设置",
-    "contrastInvertColors": "反转颜色",
-    "contrastDark": "深色对比",
-    "contrastLight": "浅色对比",
-    "textSizeNormal": "正常文字",
-    "textSizeLarge": "大号文字",
-    "textSizeLarger": "更大文字",
-    "spacingLight": "轻度间距",
-    "spacingModerate": "适中间距",
-    "spacingHeavy": "宽松间距",
-    "dyslexiaFont": "阅读障碍字体",
-    "legibleFont": "易读字体",
-    "alignLeft": "左对齐",
-    "alignCenter": "居中对齐",
-    "alignRight": "右对齐",
-    "justify": "两端对齐",
-    "saturationNormal": "正常饱和度",
-    "saturationHigh": "高饱和度",
-    "saturationLow": "低饱和度"
-  },
-  "accessibilityFloatingAccessibilityButton": {
-    "openAccessibilityMenu": "打开无障碍菜单",
-    "accessibilityIconAlt": "无障碍"
-  },
   "advancedChatExpandTab": {
     "expand": "展开"
   },
@@ -1435,14 +1397,15 @@
     "closeSidebar": "关闭侧边栏",
     "openSidebar": "打开侧边栏",
     "toggleSidebar": "切换侧边栏",
-    "startNewChat": "与 {mentorName} 开始新对话",
     "help": "帮助",
     "support": "支持",
     "openMenuOptions": "打开菜单选项",
-    "menuOptions": "菜单选项",
-    "openSettingsMenu": "打开设置菜单",
-    "settingsMenu": "设置菜单",
-    "closeChat": "关闭聊天"
+    "closeChat": "关闭聊天",
+    "newChat": "新对话",
+    "incognito": "无痕模式",
+    "incognitoChat": "无痕对话",
+    "enterFullscreen": "全屏",
+    "exitFullscreen": "退出全屏"
   },
   "navBarIndex": {
     "logIn": "登录",
@@ -1611,6 +1574,11 @@
     "allowMentorSelectionTooltip": "允许已登录的访问者从嵌入中打开探索并切换到其他智能体。",
     "allowMentorSelectionEnabled": "选择智能体已启用",
     "allowMentorSelectionDisabled": "选择智能体已禁用",
+    "allowFullscreenLabel": "允许全屏",
+    "moreInfoAllowFullscreen": "有关全屏的更多信息",
+    "allowFullscreenTooltip": "在聊天中显示一个按钮，可在小窗口和全屏之间切换。",
+    "allowFullscreenEnabled": "全屏已启用",
+    "allowFullscreenDisabled": "全屏已禁用",
     "shareableLinkLabel": "可分享链接",
     "moreInfoShareableLink": "关于生成可分享链接的更多信息",
     "shareableLinkTooltip": "生成一个链接，用户可以使用它匿名与此智能体聊天",
@@ -1914,6 +1882,7 @@
     "tabBasic": "基本",
     "tabDiscovery": "发现",
     "tabCapabilities": "功能",
+    "tabWelcomeScreen": "欢迎界面",
     "nameLabel": "名称",
     "agentNamePlaceholder": "智能体名称",
     "agentNameRequired": "智能体名称为必填项",
@@ -2009,7 +1978,9 @@
     "perSurfaceHeading": "按界面功能",
     "perSurfaceNote": "分别为应用内聊天和嵌入式挂件单独设置。",
     "inAppChatNote": "应用内托管的对话，即用户在此打开的聊天。",
-    "embedWidgetNote": "你使用“嵌入”标签页中的代码片段嵌入到自己网站上的挂件。"
+    "embedWidgetNote": "你使用“嵌入”标签页中的代码片段嵌入到自己网站上的挂件。",
+    "inChatModelChangeLabel": "允许在聊天中更换模型",
+    "inChatModelChangeTooltip": "允许用户为自己的聊天选择其他 AI 模型。智能体的模型不会改变，新聊天仍从该模型开始。此设置只有一个值，因此同时适用于应用内聊天和嵌入式小组件。"
   },
   "tabsMcpTab": {
     "infoBox": "通过 MCP 服务器将您的智能体连接到您自己的系统，让它能够在对话中直接访问您的数据和服务。"

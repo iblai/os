@@ -2286,7 +2286,7 @@ describe('Chat', () => {
       // cachedSessionId is found. We need to mock local storage to have a cached session.
       const { useLocalStorage } = await import('@/hooks/use-local-storage');
       (useLocalStorage as any).mockReturnValue([
-        { 'mentor-123': 'cached-session' },
+        { 'test-tenant:mentor-123': 'cached-session' },
         vi.fn(),
       ]);
 
@@ -2354,7 +2354,7 @@ describe('Chat', () => {
     it('shows the spinner and hides the welcome while a cached session is loading', async () => {
       const { useLocalStorage } = await import('@/hooks/use-local-storage');
       (useLocalStorage as any).mockReturnValue([
-        { 'mentor-123': 'cached-session' },
+        { 'test-tenant:mentor-123': 'cached-session' },
         vi.fn(),
       ]);
 
@@ -2391,7 +2391,7 @@ describe('Chat', () => {
     it('shows the welcome (not the spinner) for an empty cached session once loading completes', async () => {
       const { useLocalStorage } = await import('@/hooks/use-local-storage');
       (useLocalStorage as any).mockReturnValue([
-        { 'mentor-123': 'cached-session' },
+        { 'test-tenant:mentor-123': 'cached-session' },
         vi.fn(),
       ]);
 
@@ -2411,7 +2411,7 @@ describe('Chat', () => {
     it('hides the spinner once messages arrive for a cached session', async () => {
       const { useLocalStorage } = await import('@/hooks/use-local-storage');
       (useLocalStorage as any).mockReturnValue([
-        { 'mentor-123': 'cached-session' },
+        { 'test-tenant:mentor-123': 'cached-session' },
         vi.fn(),
       ]);
 
@@ -2447,7 +2447,7 @@ describe('Chat', () => {
     it('does not render the spinner in advanced mode even when a cached session is loading', async () => {
       const { useLocalStorage } = await import('@/hooks/use-local-storage');
       (useLocalStorage as any).mockReturnValue([
-        { 'mentor-123': 'cached-session' },
+        { 'test-tenant:mentor-123': 'cached-session' },
         vi.fn(),
       ]);
 
@@ -2829,7 +2829,7 @@ describe('Chat', () => {
     it('should use cached session id from local storage', async () => {
       const { useLocalStorage } = await import('@/hooks/use-local-storage');
       (useLocalStorage as any).mockReturnValue([
-        { 'mentor-123': 'cached-session-456' },
+        { 'test-tenant:mentor-123': 'cached-session-456' },
         vi.fn(),
       ]);
 
@@ -3903,7 +3903,7 @@ describe('Chat', () => {
 
       // Session ID should be cached
       expect(mockSaveCachedSessionId).toHaveBeenCalledWith({
-        'mentor-123': 'popup-session-abc',
+        'test-tenant:mentor-123': 'popup-session-abc',
       });
     });
 
@@ -3951,7 +3951,7 @@ describe('Chat', () => {
 
       // Session ID should be cached
       expect(mockSaveCachedSessionId).toHaveBeenCalledWith({
-        'mentor-123': 'popup-session-xyz',
+        'test-tenant:mentor-123': 'popup-session-xyz',
       });
     });
 
@@ -10221,6 +10221,119 @@ describe('Chat', () => {
     });
   });
 
+  describe('onSessionNotFound callback (#2536 self-heal)', () => {
+    const defaultAdvancedChatReturn = {
+      changeTab: vi.fn(),
+      activeTab: 'chat',
+      currentStreamingMessage: null,
+      enabledGuidedPrompts: [],
+      isStreaming: false,
+      mentorName: 'Test Mentor',
+      messages: [],
+      profileImage: '/avatar.png',
+      sendMessage: vi.fn(),
+      setMessage: vi.fn(),
+      stopGenerating: vi.fn(),
+      uniqueMentorId: 'unique-mentor-123',
+      sessionId: 'session-123',
+      startNewChat: vi.fn(),
+      enableSafetyDisclaimer: false,
+      isPending: false,
+      isLoadingChats: false,
+    };
+
+    it('passes a tenant-scoped sessionKey to useAdvancedChat', async () => {
+      let capturedOptions: any;
+      const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
+      (useAdvancedChat as any).mockImplementation((options: any) => {
+        capturedOptions = options;
+        return defaultAdvancedChatReturn;
+      });
+
+      renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+
+      // Default mocked params: tenantKey='test-tenant', mentorId='mentor-123'.
+      expect(capturedOptions.sessionKey).toBe('test-tenant:mentor-123');
+    });
+
+    it('produces distinct sessionKeys for the same mentor under different tenants', async () => {
+      const { useParams } = await import('next/navigation');
+      (useParams as any).mockReturnValue({
+        tenantKey: 'tenant-b',
+        mentorId: 'mentor-123',
+      });
+
+      let capturedOptions: any;
+      const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
+      (useAdvancedChat as any).mockImplementation((options: any) => {
+        capturedOptions = options;
+        return defaultAdvancedChatReturn;
+      });
+
+      renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+
+      expect(capturedOptions.sessionKey).toBe('tenant-b:mentor-123');
+      expect(capturedOptions.sessionKey).not.toBe('test-tenant:mentor-123');
+    });
+
+    it('removes only the tenant-scoped entry when it still equals the dead id', async () => {
+      let capturedOnSessionNotFound: ((sessionId: string) => void) | undefined;
+      const mockSaveCachedSessionId = vi.fn();
+
+      const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
+      (useAdvancedChat as any).mockImplementation((options: any) => {
+        capturedOnSessionNotFound = options.onSessionNotFound;
+        return defaultAdvancedChatReturn;
+      });
+
+      const { useLocalStorage } = await import('@/hooks/use-local-storage');
+      (useLocalStorage as any).mockReturnValue([{}, mockSaveCachedSessionId]);
+
+      renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+
+      expect(capturedOnSessionNotFound).toBeDefined();
+      capturedOnSessionNotFound!('dead-session-id');
+
+      expect(mockSaveCachedSessionId).toHaveBeenCalledTimes(1);
+      const updater = mockSaveCachedSessionId.mock.calls[0][0];
+      expect(typeof updater).toBe('function');
+
+      // The dead id still matches the tenant-scoped entry -> removed, other
+      // entries (e.g. a different mentor/tenant) are left untouched.
+      expect(
+        updater({
+          'test-tenant:mentor-123': 'dead-session-id',
+          'other-tenant:other-mentor': 'unrelated-session',
+        }),
+      ).toEqual({ 'other-tenant:other-mentor': 'unrelated-session' });
+    });
+
+    it('does not clobber a newer id written between the failure and the callback running', async () => {
+      let capturedOnSessionNotFound: ((sessionId: string) => void) | undefined;
+      const mockSaveCachedSessionId = vi.fn();
+
+      const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
+      (useAdvancedChat as any).mockImplementation((options: any) => {
+        capturedOnSessionNotFound = options.onSessionNotFound;
+        return defaultAdvancedChatReturn;
+      });
+
+      const { useLocalStorage } = await import('@/hooks/use-local-storage');
+      (useLocalStorage as any).mockReturnValue([{}, mockSaveCachedSessionId]);
+
+      renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+
+      capturedOnSessionNotFound!('stale-dead-session-id');
+
+      const updater = mockSaveCachedSessionId.mock.calls[0][0];
+      // A fresher session id was already written under the same key by the
+      // time this callback's updater runs against the latest persisted
+      // value — it must be returned untouched, not overwritten.
+      const latest = { 'test-tenant:mentor-123': 'fresher-session-id' };
+      expect(updater(latest)).toBe(latest);
+    });
+  });
+
   describe('onOfflineWithoutLocalLLM callback', () => {
     it('should be passed to useAdvancedChat', async () => {
       let capturedOnOfflineCallback: (() => void) | null = null;
@@ -11288,7 +11401,7 @@ describe('Chat', () => {
     it('should use cached session ID when available', async () => {
       const { useLocalStorage } = await import('@/hooks/use-local-storage');
       (useLocalStorage as any).mockReturnValue([
-        { 'mentor-123': 'cached-session-456' },
+        { 'test-tenant:mentor-123': 'cached-session-456' },
         vi.fn(),
       ]);
 
@@ -12965,7 +13078,7 @@ describe('Chat', () => {
 
       // Mock cached session to make isNewSession.current = false
       (useLocalStorage as any).mockReturnValue([
-        { 'mentor-123': 'cached-session-id' },
+        { 'test-tenant:mentor-123': 'cached-session-id' },
         vi.fn(),
       ]);
 

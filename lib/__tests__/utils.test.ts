@@ -45,6 +45,7 @@ import {
   formatRelativeTime,
   getMentorIdFromUrl,
   getTenantKeyFromUrl,
+  sessionCacheKey,
   isStripeActivated,
   getCurrentArtifactTitle,
   getFirstMessageWithContent,
@@ -1700,6 +1701,20 @@ describe('getTenantKeyFromUrl function', () => {
       configurable: true,
     });
     expect(getTenantKeyFromUrl()).toBe('tenant-123-abc');
+  });
+});
+
+describe('sessionCacheKey function', () => {
+  it('joins tenant key and mentor id with a colon', () => {
+    expect(sessionCacheKey('acme', 'mentor-1')).toBe('acme:mentor-1');
+  });
+
+  it('produces distinct keys for the same mentor under different tenants', () => {
+    const key1 = sessionCacheKey('tenant-a', 'mentor-1');
+    const key2 = sessionCacheKey('tenant-b', 'mentor-1');
+    expect(key1).not.toBe(key2);
+    expect(key1).toBe('tenant-a:mentor-1');
+    expect(key2).toBe('tenant-b:mentor-1');
   });
 });
 

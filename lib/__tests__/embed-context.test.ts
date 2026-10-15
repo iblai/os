@@ -69,6 +69,14 @@ describe('reading embed context from the live URL', () => {
     );
   });
 
+  it('carries the LTI launch flag forward with the rest of the context', () => {
+    setUrl('/platform/acme/bot-1?embed=true&lti=true');
+    expect(getEmbedContext()).toEqual({ embed: 'true', lti: 'true' });
+    expect(appendEmbedContext('/platform/acme/bot-2')).toBe(
+      '/platform/acme/bot-2?embed=true&lti=true',
+    );
+  });
+
   it('omits keys that are not present in the URL', () => {
     setUrl('/platform/acme/bot-1?embed=true&mode=anonymous');
     expect(embedContextQuery()).toBe('?embed=true&mode=anonymous');
@@ -105,6 +113,19 @@ describe('surviving a hard navigation that wipes the query (the bug)', () => {
   });
 });
 
+describe('host display flags survive navigation', () => {
+  it('carries allow-fullscreen through a hard navigation', () => {
+    framed();
+    setUrl('/platform/acme/bot-1?embed=true&allow-fullscreen=true');
+    persistEmbedContextFromUrl();
+    setUrl('/');
+    expect(getEmbedContext()?.['allow-fullscreen']).toBe('true');
+    expect(appendEmbedContext('/platform/acme/bot-2')).toBe(
+      '/platform/acme/bot-2?embed=true&allow-fullscreen=true',
+    );
+  });
+});
+
 describe('appendEmbedContext', () => {
   beforeEach(() => setUrl(EMBED_URL));
 
@@ -134,6 +155,12 @@ describe('appendEmbedContext', () => {
 });
 
 describe('resilience', () => {
+  it('returns nothing when framed with an empty store', () => {
+    framed();
+    setUrl('/');
+    expect(getEmbedContext()).toBeNull();
+  });
+
   it('ignores a stored copy whose embed flag is not "true"', () => {
     framed();
     setUrl('/');
@@ -142,6 +169,19 @@ describe('resilience', () => {
       JSON.stringify({ embed: 'false', mode: 'anonymous' }),
     );
     expect(isEmbedMode()).toBe(false);
+    expect(getEmbedContext()).toBeNull();
+  });
+
+  it('is not embedded when framed with nothing stored', () => {
+    framed();
+    setUrl('/');
+    expect(getEmbedContext()).toBeNull();
+  });
+
+  it('ignores a stored JSON null', () => {
+    framed();
+    setUrl('/');
+    window.sessionStorage.setItem('ibl:embed-context', 'null');
     expect(getEmbedContext()).toBeNull();
   });
 

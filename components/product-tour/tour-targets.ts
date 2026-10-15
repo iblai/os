@@ -18,6 +18,24 @@ export type TourTargetId = (typeof TOUR_TARGET)[keyof typeof TOUR_TARGET];
 
 export const tourSelector = (id: TourTargetId): string => `[data-tour="${id}"]`;
 
+/**
+ * The SDK chat composer carries no `data-tour` hook: anchor on the card that
+ * wraps its textarea together with its action buttons (the layout differs
+ * between the classic and redesigned composer, so no fixed depth is assumed).
+ */
+export function resolvePromptInputTarget(
+  root: ParentNode = document,
+): HTMLElement | null {
+  const hooked = root.querySelector<HTMLElement>(
+    tourSelector(TOUR_TARGET.promptInput),
+  );
+  if (hooked) return hooked;
+  let node: HTMLElement | null =
+    root.querySelector<HTMLTextAreaElement>('textarea')?.parentElement ?? null;
+  while (node && !node.querySelector('button')) node = node.parentElement;
+  return node;
+}
+
 /** Whether a modal dialog (Radix `Dialog` / `AlertDialog`) is open. */
 export function isBlockingDialogOpen(root: ParentNode = document): boolean {
   return !!root.querySelector(

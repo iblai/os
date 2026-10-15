@@ -7,8 +7,9 @@
 //!
 //! Agent `session/update` notifications are translated into the SAME Tauri events
 //! the chat UI already renders for local models — `ollama:token` / `ollama:done` /
-//! `ollama:error` (keyed by `generation_id`) — plus `opencode:reasoning` and
-//! `opencode:tool_call` for thinking and tool activity.
+//! `ollama:error` (keyed by `generation_id`) — plus `opencode:reasoning`,
+//! `opencode:tool_call` and `opencode:plan` for thinking, tool activity and
+//! the agent's task list.
 //!
 //! This is hand-rolled (serde_json + tokio) rather than using the
 //! `agent-client-protocol` crate: the ACP surface we need is small and we want
@@ -2144,6 +2145,35 @@ fn command_of(tool_call: &Value) -> Option<String> {
     })
 }
 
+/// What the permission card gets. The whole ACP toolCall rides along so the card
+/// can say in plain words what is being asked (locations, diffs, rawInput);
+/// older frontends ignore it.
+fn permission_payload(
+    generation_id: &str,
+    session_id: &str,
+    request_id: &str,
+    tool_call: &Value,
+    allow: &Option<String>,
+    reject: &Option<String>,
+    options: &Value,
+) -> Value {
+    json!({
+        "generation_id": generation_id,
+        // Which chat is waiting. The card itself scopes by generation_id (it renders
+        // in the streaming message that produced it); this is what lets the sidebar
+        // badge a chat the user isn't currently looking at.
+        "session_id": session_id,
+        "request_id": request_id,
+        "title": tool_call.get("title").cloned().unwrap_or(Value::Null),
+        "kind": tool_call.get("kind").cloned().unwrap_or(Value::Null),
+        "command": command_of(tool_call),
+        "allow_option_id": allow,
+        "reject_option_id": reject,
+        "options": options,
+        "tool_call": tool_call,
+    })
+}
+
 /// Handle one `session/request_permission`.
 ///
 /// In manual mode every request becomes an inline card and the person reading it decides.
@@ -2190,20 +2220,15 @@ async fn handle_permission_request(
     let generation_id = turn.lock().await.generation_id.clone();
     let _ = app.emit(
         "opencode:permission_request",
-        json!({
-            "generation_id": generation_id,
-            // Which chat is waiting. The card itself scopes by generation_id (it renders
-            // in the streaming message that produced it); this is what lets the sidebar
-            // badge a chat the user isn't currently looking at.
-            "session_id": session_id,
-            "request_id": request_id,
-            "title": tool_call.get("title").cloned().unwrap_or(Value::Null),
-            "kind": tool_call.get("kind").cloned().unwrap_or(Value::Null),
-            "command": command_of(&tool_call),
-            "allow_option_id": allow,
-            "reject_option_id": reject.clone(),
-            "options": options,
-        }),
+        permission_payload(
+            &generation_id,
+            session_id,
+            &request_id,
+            &tool_call,
+            &allow,
+            &reject,
+            &options,
+        ),
     );
 
     let app = app.clone();
@@ -2337,6 +2362,31 @@ async fn reader_gone(session_id: &str, pending: &Arc<Mutex<HashMap<i64, oneshot:
     pending.lock().await.clear();
 }
 
+/// Session updates the webview gets verbatim, by the event they ride: tool
+/// progress on `opencode:tool_call`, the agent's task list on `opencode:plan`.
+/// A tool update carrying nothing but `_meta` (Codex's output chunks, Claude's
+/// heartbeat beats) is dropped: the chat shows none of it, and each one made
+/// the SDK rename the call to "tool" and re-render every bubble.
+fn forwarded_update(generation_id: &str, update: &Value) -> Option<(&'static str, Value)> {
+    let event = match update.get("sessionUpdate")?.as_str()? {
+        "tool_call_update" if carries_only_meta(update) => return None,
+        "tool_call_update" => "opencode:tool_call",
+        "plan" => "opencode:plan",
+        _ => return None,
+    };
+    Some((
+        event,
+        json!({ "generation_id": generation_id, "update": update }),
+    ))
+}
+
+fn carries_only_meta(update: &Value) -> bool {
+    update.as_object().is_some_and(|o| {
+        o.keys()
+            .all(|k| matches!(k.as_str(), "sessionUpdate" | "toolCallId" | "_meta"))
+    })
+}
+
 async fn handle_update(app: &AppHandle, v: &Value, turn: &Arc<Mutex<TurnState>>) {
     // No generation in flight → this is the `session/load` history replay at
     // spawn time (or a stray post-turn notification): drop it, never re-stream
@@ -2410,14 +2460,12 @@ async fn handle_update(app: &AppHandle, v: &Value, turn: &Arc<Mutex<TurnState>>)
                 json!({ "generation_id": gid, "update": update }),
             );
         }
-        "tool_call_update" => {
+        _ => {
             let gid = turn.lock().await.generation_id.clone();
-            let _ = app.emit(
-                "opencode:tool_call",
-                json!({ "generation_id": gid, "update": update }),
-            );
+            if let Some((event, payload)) = forwarded_update(&gid, update) {
+                let _ = app.emit(event, payload);
+            }
         }
-        _ => {}
     }
 }
 
@@ -5522,6 +5570,49 @@ mod tests {
         assert_eq!(ts.final_reply(), "", "reset clears the narration too");
     }
 
+    /// Plans ride to the webview whole on `opencode:plan` and tool progress on
+    /// `opencode:tool_call`; the agent's bookkeeping — usage, mode and command
+    /// lists, and tool updates carrying nothing but `_meta` (Codex's output
+    /// chunks, Claude's heartbeats) — never becomes an event.
+    #[test]
+    fn plans_reach_the_webview_and_agent_bookkeeping_does_not() {
+        let plan = serde_json::json!({
+            "sessionUpdate": "plan",
+            "entries": [{ "content": "Add the page", "status": "in_progress", "priority": "medium" }]
+        });
+        let (event, payload) = forwarded_update("g1", &plan).expect("plans are forwarded");
+        assert_eq!(event, "opencode:plan");
+        assert_eq!(payload["generation_id"], "g1");
+        assert_eq!(payload["update"], plan, "the whole update rides along");
+
+        let done = serde_json::json!({
+            "sessionUpdate": "tool_call_update",
+            "toolCallId": "t1",
+            "status": "completed",
+            "_meta": { "claudeCode": { "toolName": "Bash" } }
+        });
+        assert_eq!(
+            forwarded_update("g1", &done).map(|(event, _)| event),
+            Some("opencode:tool_call")
+        );
+
+        for update in [
+            serde_json::json!({ "sessionUpdate": "tool_call_update", "toolCallId": "t1",
+                "_meta": { "terminal_output_delta": { "data": "…", "terminal_id": "x" } } }),
+            serde_json::json!({ "sessionUpdate": "tool_call_update", "toolCallId": "t1",
+                "_meta": { "claudeCode": { "toolResponse": { "elapsedTimeSeconds": 3 } } } }),
+            serde_json::json!({ "sessionUpdate": "usage_update", "used": 1, "size": 2 }),
+            serde_json::json!({ "sessionUpdate": "current_mode_update", "currentModeId": "read-only" }),
+            serde_json::json!({ "sessionUpdate": "available_commands_update", "availableCommands": [] }),
+            serde_json::json!({ "entries": [] }),
+        ] {
+            assert!(
+                forwarded_update("g1", &update).is_none(),
+                "not an event: {update}"
+            );
+        }
+    }
+
     /// The spawn-time `session/load` replay window: no generation in flight →
     /// updates are dropped; a reset opens the gate.
     #[test]
@@ -5725,6 +5816,48 @@ mod tests {
         ] {
             assert!(!stripped.iter().any(|k| k == kept), "{kept} must survive");
         }
+    }
+
+    #[test]
+    fn permission_payloads_carry_the_whole_tool_call() {
+        let tool_call = json!({
+            "toolCallId": "call-1",
+            "title": "Terminal",
+            "kind": "execute",
+            "rawInput": { "command": "pnpm install" },
+            "locations": [{ "path": "/w/app/package.json" }]
+        });
+        let payload = permission_payload(
+            "opencode-7",
+            "chat-1",
+            "perm-1",
+            &tool_call,
+            &Some("allow".to_string()),
+            &Some("reject".to_string()),
+            &json!([{ "optionId": "allow", "kind": "allow_once" }]),
+        );
+        assert_eq!(payload["tool_call"], tool_call);
+        assert_eq!(payload["title"], "Terminal");
+        assert_eq!(payload["kind"], "execute");
+        assert_eq!(payload["command"], "pnpm install");
+        assert_eq!(payload["generation_id"], "opencode-7");
+        assert_eq!(payload["allow_option_id"], "allow");
+        assert_eq!(payload["reject_option_id"], "reject");
+
+        // No toolCall at all: the card still comes up, with nothing to describe.
+        let bare = permission_payload(
+            "opencode-7",
+            "chat-1",
+            "perm-2",
+            &Value::Null,
+            &None,
+            &None,
+            &Value::Null,
+        );
+        assert_eq!(bare["tool_call"], Value::Null);
+        assert_eq!(bare["title"], Value::Null);
+        assert_eq!(bare["command"], Value::Null);
+        assert_eq!(bare["allow_option_id"], Value::Null);
     }
 
     /// The exact-kind pick: Claude's ExitPlanMode lists `allow_always` mode

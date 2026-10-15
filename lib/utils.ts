@@ -1575,6 +1575,15 @@ export function getTenantKeyFromUrl() {
   return match ? match[1] : null;
 }
 
+// Namespaces the `LOCAL_STORAGE_KEYS.SESSION_ID` cache (and the redux
+// session-id map it seeds) by tenant + mentor. Without this, the cache key
+// is mentor-only, so a session id minted under one tenant gets reused when
+// the same mentor is visited under a different tenant, and the backend
+// 404s every request against it (issue #2536).
+export function sessionCacheKey(tenantKey: string, mentorId: string) {
+  return `${tenantKey}:${mentorId}`;
+}
+
 export function isStripeActivated(currentTenant: Tenant) {
   return (
     config.stripeEnabled() === 'true' &&

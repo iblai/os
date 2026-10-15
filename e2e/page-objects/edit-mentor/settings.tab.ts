@@ -19,6 +19,8 @@ export class SettingsTab {
   readonly copyMentorButton: Locator;
   readonly chatAccessCombobox: Locator;
   readonly verboseReasoningToggle: Locator;
+  /** Capabilities sub-tab: "Allow in-chat model change" (#2633). */
+  readonly inChatModelChangeToggle: Locator;
   readonly enhanceDocumentRetrievalToggle: Locator;
   readonly enhanceDocumentRetrievalTooltipTrigger: Locator;
   readonly promptCachingToggle: Locator;
@@ -137,6 +139,9 @@ export class SettingsTab {
     // depending on current state.
     this.verboseReasoningToggle = dialog.getByRole('switch', {
       name: /^Enable Verbose Reasoning /i,
+    });
+    this.inChatModelChangeToggle = dialog.getByRole('switch', {
+      name: /^Allow in-chat model change (enabled|disabled)$/i,
     });
     // Capabilities sub-tab. Visible label "Enhanced Document Retrieval"
     // (source: messages/en.json `enhancedDocRetrievalLabel`); the SDK switch
@@ -289,7 +294,7 @@ export class SettingsTab {
    * to target only the inner sub-tab without extra filters.
    */
   async selectSubTab(
-    name: 'Basic' | 'Discovery' | 'Capabilities',
+    name: 'Basic' | 'Discovery' | 'Capabilities' | 'Welcome Screen',
   ): Promise<void> {
     // Restore the Settings segment first — a preceding page-object call may
     // have switched the modal to another category (LtiTab activates
@@ -306,6 +311,54 @@ export class SettingsTab {
         timeout: 5_000,
       });
     }
+  }
+
+  /** Welcome screen sub-tab (#2586); saved with the agent since #2626. */
+  get welcomePreview(): Locator {
+    return this.dialog.getByTestId('welcome-preview');
+  }
+
+  get welcomePreviewHeading(): Locator {
+    return this.welcomePreview.getByTestId('welcome-preview-heading');
+  }
+
+  get welcomePreviewViewMore(): Locator {
+    return this.welcomePreview.getByTestId('welcome-preview-view-more');
+  }
+
+  async pickWelcomeOption(
+    control: 'heading' | 'prompt-source' | 'prompt-count',
+    option: string,
+  ): Promise<void> {
+    await this.selectSubTab('Welcome Screen');
+    await this.dialog.getByTestId(`welcome-${control}-select`).click();
+    await this.page.getByRole('option', { name: option, exact: true }).click();
+  }
+
+  /** Saves the Settings tab and returns the request body that carried `field`. */
+  async saveAndCaptureField(field: string): Promise<string> {
+    await expect(this.saveButton).toBeEnabled({ timeout: 10_000 });
+    const [request] = await Promise.all([
+      this.page.waitForRequest(
+        (req) =>
+          ['PUT', 'PATCH'].includes(req.method()) &&
+          (req.postData() ?? '').includes(field),
+        { timeout: 30_000 },
+      ),
+      this.saveButton.click(),
+    ]);
+    await expect(
+      this.page.getByText(/Agent updated successfully/i).first(),
+    ).toBeVisible({ timeout: 30_000 });
+    return request.postData() ?? '';
+  }
+
+  async showWelcomePreview(
+    surface: 'Desktop' | 'Mobile' | 'Embed',
+  ): Promise<void> {
+    await this.dialog
+      .getByRole('radio', { name: surface, exact: true })
+      .click();
   }
 
   async copyUniqueId(): Promise<void> {
@@ -403,6 +456,42 @@ export class SettingsTab {
     // Small buffer to let the post-mutation refetch land and React re-render
     // with fresh mentor data before the caller closes/reopens the dialog.
     await this.page.waitForTimeout(500);
+  }
+
+  /**
+   * Sets "Allow in-chat model change" and saves, returning the settings
+   * request's body, or `null` when the toggle was already in that state.
+   */
+  async setInChatModelChange(target: boolean): Promise<string | null> {
+    await this.selectSubTab('Capabilities');
+    await expect(this.inChatModelChangeToggle).toBeVisible({
+      timeout: 10_000,
+    });
+    const isChecked =
+      (await this.inChatModelChangeToggle.getAttribute('aria-checked')) ===
+      'true';
+    if (isChecked === target) return null;
+    await this.inChatModelChangeToggle.click();
+    await expect(this.inChatModelChangeToggle).toHaveAttribute(
+      'aria-checked',
+      String(target),
+      { timeout: 10_000 },
+    );
+    await expect(this.saveButton).toBeEnabled({ timeout: 10_000 });
+    const [request] = await Promise.all([
+      this.page.waitForRequest(
+        (req) =>
+          ['PUT', 'PATCH'].includes(req.method()) &&
+          (req.postData() ?? '').includes('enable_in_chat_llm_change'),
+        { timeout: 30_000 },
+      ),
+      this.saveButton.click(),
+    ]);
+    await expect(
+      this.page.getByText(/Agent updated successfully/i).first(),
+    ).toBeVisible({ timeout: 30_000 });
+    await this.page.waitForTimeout(500);
+    return request.postData() ?? '';
   }
 
   /**
