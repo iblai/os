@@ -344,6 +344,10 @@ fn carries_diff(update: &Value) -> bool {
         })
 }
 
+fn is_failed(status: Option<&Value>) -> bool {
+    status.and_then(Value::as_str) == Some("failed")
+}
+
 /// Per-turn streaming accumulator, shared between the reader task and the command.
 struct TurnState {
     generation_id: String,
@@ -402,8 +406,7 @@ impl TurnState {
             return true;
         };
         let known = self.tool_shapes.get(id);
-        let failed =
-            known.is_some_and(|k| k.get("status").and_then(Value::as_str) == Some("failed"));
+        let failed = known.is_some_and(|k| is_failed(k.get("status")));
         let fields = TOOL_VISIBLE_FIELDS
             .iter()
             .copied()
@@ -423,6 +426,53 @@ impl TurnState {
             }
         }
         admit
+    }
+
+    /// The event an admitted update becomes: the update minus what the chat never
+    /// reads — `rawOutput`, output text (kept only as a failed call's error) and
+    /// `_meta` beyond the tool name. opencode sends a finished call's whole output
+    /// in `content` and `rawOutput` both.
+    fn forward_tool_update(&mut self, update: &Value) -> Option<Value> {
+        if !self.admit_tool_update(update) {
+            return None;
+        }
+        let obj = update.as_object()?;
+        let failed = is_failed(update.get("status"))
+            || update
+                .get("toolCallId")
+                .and_then(Value::as_str)
+                .and_then(|id| self.tool_shapes.get(id))
+                .is_some_and(|shape| is_failed(shape.get("status")));
+        let mut out = serde_json::Map::with_capacity(obj.len());
+        for (k, v) in obj {
+            match k.as_str() {
+                "rawOutput" => {}
+                "content" if !failed => {
+                    let diffs: Vec<Value> = v
+                        .as_array()
+                        .map(|items| {
+                            items
+                                .iter()
+                                .filter(|i| i.get("type").and_then(Value::as_str) == Some("diff"))
+                                .cloned()
+                                .collect()
+                        })
+                        .unwrap_or_default();
+                    if !diffs.is_empty() {
+                        out.insert(k.clone(), Value::Array(diffs));
+                    }
+                }
+                "_meta" => {
+                    if let Some(name) = v.pointer("/claudeCode/toolName") {
+                        out.insert(k.clone(), json!({ "claudeCode": { "toolName": name } }));
+                    }
+                }
+                _ => {
+                    out.insert(k.clone(), v.clone());
+                }
+            }
+        }
+        Some(Value::Object(out))
     }
 
     /// Batch thought deltas as `pending_delta` batches reply text: the first flushes
@@ -2603,20 +2653,20 @@ async fn handle_update(emit: Emit<'_>, v: &Value, turn: &Arc<Mutex<TurnState>>) 
             }
         }
         "tool_call" | "tool_call_update" => {
-            let (gid, admit, retract, reasoning) = {
+            let (gid, forward, retract, reasoning) = {
                 let mut ts = turn.lock().await;
-                let admit = ts.admit_tool_update(update);
+                let forward = ts.forward_tool_update(update);
                 // Pre-tool text is process narration: it moves to the reasoning
                 // section and the reply bubble is retracted (the frontend replaces
                 // its content with `full_content`).
                 let retract = kind == "tool_call" && ts.narration_to_reasoning();
                 // Batched thoughts precede the call they led to.
-                let reasoning = if admit || retract {
+                let reasoning = if forward.is_some() || retract {
                     ts.take_reasoning(now)
                 } else {
                     None
                 };
-                (ts.generation_id.clone(), admit, retract, reasoning)
+                (ts.generation_id.clone(), forward, retract, reasoning)
             };
             if let Some(delta) = reasoning {
                 emit(
@@ -2630,7 +2680,7 @@ async fn handle_update(emit: Emit<'_>, v: &Value, turn: &Arc<Mutex<TurnState>>) 
                     json!({ "generation_id": gid, "token": "", "full_content": "" }),
                 );
             }
-            if admit {
+            if let Some(update) = forward {
                 emit(
                     "opencode:tool_call",
                     json!({ "generation_id": gid, "update": update }),
@@ -5812,6 +5862,79 @@ mod tests {
         assert!(ts.admit_tool_update(&completed), "a new turn starts over");
     }
 
+    /// An admitted update goes out without what the chat never reads: `rawOutput`,
+    /// output text (kept only as a failed call's error) and `_meta` beyond the tool
+    /// name — opencode's finished call carries its whole output twice.
+    #[test]
+    fn admitted_updates_carry_only_what_the_chat_reads() {
+        let mut ts = TurnState::new();
+        ts.reset("g1".to_string());
+        let pending = json!({
+            "sessionUpdate": "tool_call", "toolCallId": "c1", "title": "Edit", "kind": "edit",
+            "status": "pending"
+        });
+        assert_eq!(
+            ts.forward_tool_update(&pending),
+            Some(pending.clone()),
+            "nothing to leave out"
+        );
+        let diff = json!({ "type": "diff", "path": "/w/a.ts", "oldText": "a", "newText": "b" });
+        let output = "x".repeat(30_000);
+        let completed = json!({
+            "sessionUpdate": "tool_call_update", "toolCallId": "c1", "status": "completed",
+            "rawInput": { "file_path": "/w/a.ts" },
+            "content": [
+                { "type": "content", "content": { "type": "text", "text": output } },
+                diff
+            ],
+            "rawOutput": { "output": output },
+            "_meta": { "claudeCode": { "toolName": "Edit", "toolResponse": { "originalFile": output } } }
+        });
+        assert_eq!(
+            ts.forward_tool_update(&completed),
+            Some(json!({
+                "sessionUpdate": "tool_call_update", "toolCallId": "c1", "status": "completed",
+                "rawInput": { "file_path": "/w/a.ts" },
+                "content": [diff],
+                "_meta": { "claudeCode": { "toolName": "Edit" } }
+            })),
+            "the diff, the input and the tool name are all the chat reads"
+        );
+        let more_output = json!({
+            "sessionUpdate": "tool_call_update", "toolCallId": "c1", "status": "completed",
+            "content": [{ "type": "content", "content": { "type": "text", "text": output } }],
+            "rawOutput": { "output": output }
+        });
+        assert_eq!(
+            ts.forward_tool_update(&more_output),
+            None,
+            "nothing new, nothing shown"
+        );
+        let failed = json!({
+            "sessionUpdate": "tool_call_update", "toolCallId": "c2", "status": "failed",
+            "content": [{ "type": "content", "content": { "type": "text", "text": "exit 1" } }],
+            "rawOutput": { "error": "exit 1" }
+        });
+        let shown = ts
+            .forward_tool_update(&failed)
+            .expect("the failure is shown");
+        assert_eq!(
+            shown["content"], failed["content"],
+            "a failed call's text is its error"
+        );
+        assert!(shown.get("rawOutput").is_none());
+        let error_text = json!({
+            "sessionUpdate": "tool_call_update", "toolCallId": "c2",
+            "content": [{ "type": "content", "content": { "type": "text", "text": "Permission denied: rm" } }]
+        });
+        assert_eq!(
+            ts.forward_tool_update(&error_text)
+                .map(|u| u["content"].clone()),
+            Some(error_text["content"].clone()),
+            "later error text for a failed call is kept"
+        );
+    }
+
     /// Thought deltas stream at token rate; they are batched like reply text — the
     /// first at once, then one per window — and flushed before what must follow.
     #[test]
@@ -5889,8 +6012,9 @@ mod tests {
     }
 
     /// The wiring behind the gate, through `handle_update` itself: a chatty
-    /// command's output growth is no event, a plan rides whole, and batched
-    /// thoughts land ahead of the tool call and the reply text they led to.
+    /// command's output growth is no event and its finished call ships without the
+    /// output, a plan rides whole, and batched thoughts land ahead of the tool call
+    /// and the reply text they led to.
     #[tokio::test]
     async fn handle_update_forwards_only_what_the_webview_renders() {
         let turn = Arc::new(Mutex::new(TurnState::new()));
@@ -5934,7 +6058,11 @@ mod tests {
                 "sessionUpdate": "plan",
                 "entries": [{ "content": "Install", "status": "in_progress", "priority": "medium" }]
             })),
-            notification(json!({ "sessionUpdate": "tool_call_update", "toolCallId": "c1", "status": "completed" })),
+            notification(json!({
+                "sessionUpdate": "tool_call_update", "toolCallId": "c1", "status": "completed",
+                "content": [{ "type": "content", "content": { "type": "text", "text": "x".repeat(30_000) } }],
+                "rawOutput": { "output": "x".repeat(30_000) }
+            })),
             thought("Done; summarising."),
             notification(json!({
                 "sessionUpdate": "agent_message_chunk",
@@ -5988,6 +6116,18 @@ mod tests {
                 ("ollama:token", "Installed.".to_string()),
             ],
             "50 output chunks, a Codex delta and the usage update are not events"
+        );
+        let completed = events
+            .iter()
+            .find(|(event, payload)| {
+                *event == "opencode:tool_call" && payload["update"]["status"] == "completed"
+            })
+            .map(|(_, payload)| &payload["update"])
+            .expect("the finished call is shown");
+        assert!(
+            completed.get("rawOutput").is_none() && completed.get("content").is_none(),
+            "a finished call's output never reaches the chat: {:?}",
+            completed.as_object().map(|o| o.keys().collect::<Vec<_>>())
         );
     }
 
