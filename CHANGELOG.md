@@ -4,43 +4,43 @@
 
 ### Bug Fixes
 
-* **ext:** vendor agent-ai with allow-downloads in the iframe sandbox ([04a6cfb](https://github.com/iblai/os/commit/04a6cfb2366be02842a41fefa8fc3434f02d37fa)), closes [iblai-web-frontend#2144](https://github.com/iblai/iblai-web-frontend/issues/2144)
+- **ext:** vendor agent-ai with allow-downloads in the iframe sandbox ([04a6cfb](https://github.com/iblai/os/commit/04a6cfb2366be02842a41fefa8fc3434f02d37fa)), closes [iblai-web-frontend#2144](https://github.com/iblai/iblai-web-frontend/issues/2144)
 
 ### Chores
 
-* **ext:** bump Chrome extension to 1.1.6 ([f861814](https://github.com/iblai/os/commit/f86181455251742423aac34c01015926ea6c7f63)), closes [#577](https://github.com/iblai/os/issues/577)
+- **ext:** bump Chrome extension to 1.1.6 ([f861814](https://github.com/iblai/os/commit/f86181455251742423aac34c01015926ea6c7f63)), closes [#577](https://github.com/iblai/os/issues/577)
 
 ### Tests
 
-* **e2e:** expect a finished turn's in_progress todo to render as to do ([ba87528](https://github.com/iblai/os/commit/ba8752871fd5ab93a7e093932ba6496ff16159e0))
-* **e2e:** journey 86 covers chat download through the agent-ai launcher ([438f51a](https://github.com/iblai/os/commit/438f51abeffd84d53e222d8a080779cc2bc1d665))
-* **e2e:** reopen the Edit Agent dialog when it closes during journey 45 setup ([5b04e4f](https://github.com/iblai/os/commit/5b04e4f16f970a3a86b68e589cc1c8b2aabd96a6))
-* **e2e:** run journey 86 in CI with an e2e copy of the launcher ([9b521da](https://github.com/iblai/os/commit/9b521da13e7babe40d3b0ef109994cb96a3aa6d9))
-* **e2e:** serve the agent-ai launcher from the embed harness ([b22642e](https://github.com/iblai/os/commit/b22642ee758276f1bf0b497d8442398f5b369048))
-* **e2e:** wait for the settings saves in journey 13's Show Catalogue tests ([dff3eae](https://github.com/iblai/os/commit/dff3eaee1b0925c42631ed0c68211921adab44a3))
+- **e2e:** expect a finished turn's in_progress todo to render as to do ([ba87528](https://github.com/iblai/os/commit/ba8752871fd5ab93a7e093932ba6496ff16159e0))
+- **e2e:** journey 86 covers chat download through the agent-ai launcher ([438f51a](https://github.com/iblai/os/commit/438f51abeffd84d53e222d8a080779cc2bc1d665))
+- **e2e:** reopen the Edit Agent dialog when it closes during journey 45 setup ([5b04e4f](https://github.com/iblai/os/commit/5b04e4f16f970a3a86b68e589cc1c8b2aabd96a6))
+- **e2e:** run journey 86 in CI with an e2e copy of the launcher ([9b521da](https://github.com/iblai/os/commit/9b521da13e7babe40d3b0ef109994cb96a3aa6d9))
+- **e2e:** serve the agent-ai launcher from the embed harness ([b22642e](https://github.com/iblai/os/commit/b22642ee758276f1bf0b497d8442398f5b369048))
+- **e2e:** wait for the settings saves in journey 13's Show Catalogue tests ([dff3eae](https://github.com/iblai/os/commit/dff3eaee1b0925c42631ed0c68211921adab44a3))
 
 ## [0.171.3](https://github.com/iblai/os/compare/v0.171.2...v0.171.3) (2026-10-15)
 
 ### Bug Fixes
 
-* adopt iblai-js 2.40.6 + transpile react-gravatar (prod avatar crash) ([0e14c76](https://github.com/iblai/os/commit/0e14c768bcf99cb8c22788250ee30a072cc57f34))
+- adopt iblai-js 2.40.6 + transpile react-gravatar (prod avatar crash) ([0e14c76](https://github.com/iblai/os/commit/0e14c768bcf99cb8c22788250ee30a072cc57f34))
 
 ## [0.171.2](https://github.com/iblai/os/compare/v0.171.1...v0.171.2) (2026-10-15)
 
 ### Performance
 
-* adopt @iblai/iblai-js 2.40.1 (tree-shakeable web-containers) ([bbed213](https://github.com/iblai/os/commit/bbed2139670c21ee6237c8c1f26773832045fda3))
-* trim first-load JS off error/404 and non-chat routes ([44f4d71](https://github.com/iblai/os/commit/44f4d717e90aa38a57dabbf88cd9903340a7adcf))
+- adopt @iblai/iblai-js 2.40.1 (tree-shakeable web-containers) ([bbed213](https://github.com/iblai/os/commit/bbed2139670c21ee6237c8c1f26773832045fda3))
+- trim first-load JS off error/404 and non-chat routes ([44f4d71](https://github.com/iblai/os/commit/44f4d717e90aa38a57dabbf88cd9903340a7adcf))
 
 ### Tests
 
-* retire the web-utils iOS local-LLM gate guard (shipped in the SDK) ([71a39c3](https://github.com/iblai/os/commit/71a39c3c847628856e0386f36fbf7da0a5a1659a))
+- retire the web-utils iOS local-LLM gate guard (shipped in the SDK) ([71a39c3](https://github.com/iblai/os/commit/71a39c3c847628856e0386f36fbf7da0a5a1659a))
 
 ## [0.171.1](https://github.com/iblai/os/compare/v0.171.0-patch.2...v0.171.1) (2026-10-15)
 
 ### Chores
 
-* iblai js bump 2.40.4 > patch version update ([eeae31e](https://github.com/iblai/os/commit/eeae31e82c6b9bbc038c33531893859a672f40fc))
+- iblai js bump 2.40.4 > patch version update ([eeae31e](https://github.com/iblai/os/commit/eeae31e82c6b9bbc038c33531893859a672f40fc))
 
 ## [0.171.0](https://github.com/iblai/os/compare/v0.170.0...v0.171.0) (2026-10-15)
 
