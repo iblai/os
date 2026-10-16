@@ -1,10 +1,10 @@
 {
   "version": 1,
-  "lastUpdated": "2026-09-29",
+  "lastUpdated": "2026-10-14",
   "summary": {
-    "totalCheckpoints": 52,
+    "totalCheckpoints": 57,
     "coveredCheckpoints": 22,
-    "pendingCheckpoints": 29,
+    "pendingCheckpoints": 34,
     "deprecatedCheckpoints": 1,
     "notReproducibleCheckpoints": 0,
     "percent": 100,
@@ -114,7 +114,8 @@
         "src-tauri/src/code_agent_installer.rs",
         "src-tauri/src/code_agent_models.rs",
         "components/chat-input-form/code-agents.ts",
-        "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/agent-model-selector.tsx"
+        "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/agent-model-selector.tsx",
+        "components/chat/sdk-chat.tsx"
       ],
       "checkpoints": [
         {
@@ -322,6 +323,31 @@
         {
           "id": "code-41",
           "description": "A Code turn runs on the picked model: the handshake applies it with session/set_config_option right after the mode pin, a live session takes a new pick without a respawn, and a model the agent refuses fails the turn naming the picker",
+          "status": "pending"
+        },
+        {
+          "id": "code-42",
+          "description": "While a Code turn runs, the line under the reply says in plain words what the agent is doing right now (“Changing about/page.tsx…”, “Installing what the app needs…”) on opencode, Codex and Claude Code alike, never a raw tool name; it stands down while a permission card waits, and each new step restarts its 20-second reassurance clock",
+          "status": "pending"
+        },
+        {
+          "id": "code-43",
+          "description": "A Code turn's steps fold into one quiet “N steps” row that opens to one plain-words sentence per step with a done / didn't-go-through / stopped mark, files by their last two path segments and web pages by their site, with the exact command, file or address one click away; after Stop or a crash-respawn nothing keeps looking busy",
+          "status": "pending"
+        },
+        {
+          "id": "code-44",
+          "description": "The task list the agent keeps (Claude Code's and Codex's plan updates, opencode's todo tool) shows as the reply's checklist and ticks off as it works",
+          "status": "pending"
+        },
+        {
+          "id": "code-45",
+          "description": "A permission card leads with what Code wants to do in plain words above the exact command or file, with no tool-kind chip, from the request's tool call on desktop and from the permission name on a paired phone; a Browse prompt keeps its own description",
+          "status": "pending"
+        },
+        {
+          "id": "code-46",
+          "description": "A failed Code turn's toast says what went wrong in plain words (stopped unexpectedly, took too long, no model picked, couldn't start, signed out) instead of the raw agent error",
           "status": "pending"
         }
       ]

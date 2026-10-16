@@ -8,7 +8,7 @@ import { render } from '@testing-library/react';
 import { describe, it } from 'vitest';
 import { readFileSync, writeFileSync, readdirSync } from 'node:fs';
 import Markdown from '@/components/markdown';
-import { markdownToHtml } from '@/lib/utils';
+import { markdownToHtml } from '@/lib/markdown-engine';
 import { GALLERY } from './gallery-cases';
 
 const esc = (s: string) =>

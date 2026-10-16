@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import Markdown from '@/components/markdown';
-import { parsePrompt } from '@/lib/utils';
+import { parsePrompt } from '@/lib/markdown-engine';
 
 type Props = {
   isOpen: boolean;

@@ -41,12 +41,11 @@ import eventBus from '@/lib/eventBus';
 import { useAppSelector } from '@/lib/hooks';
 import { TenantKeyMentorIdParams } from '@/lib/types';
 import {
-  htmlToMarkdown,
   isInIframe,
-  markdownToHtml,
   redirectToAuthSpa,
   redirectToAuthSpaJoinTenant,
 } from '@/lib/utils';
+import { htmlToMarkdown, markdownToHtml } from '@/lib/markdown-engine';
 import { isTauriApp } from '@/types/tauri';
 
 // The SDK chat renders messages with its own port of the OS markdown renderer;

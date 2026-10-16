@@ -149,16 +149,18 @@ test.describe('Journey 68: Agent Task List', () => {
     await expect(items.nth(0).getByText('Done', { exact: true })).toHaveClass(
       /\bsr-only\b/,
     );
-    await expect(
-      items.nth(1).getByText('In progress', { exact: true }),
-    ).toHaveClass(/\bsr-only\b/);
+    // The turn is over, so its unfinished step reads as To do (data-status
+    // keeps the raw in_progress above); "In progress" is a live-turn word.
+    await expect(items.nth(1).getByText('To do', { exact: true })).toHaveClass(
+      /\bsr-only\b/,
+    );
     await expect(items.nth(2).getByText('To do', { exact: true })).toHaveClass(
       /\bsr-only\b/,
     );
 
-    // Bonus (component behaviour, not gated on streaming state): the
-    // in-progress row's text carries the shimmer sweep class.
-    await expect(items.nth(1).locator('.todo-shimmer')).toHaveCount(1);
+    // The shimmer belongs to a live turn (checkpoint 8 in the streaming test);
+    // a finished turn's unfinished row must not keep it.
+    await expect(items.nth(1).locator('.todo-shimmer')).toHaveCount(0);
 
     // Checkpoint 7: write_todos never appears in the generic "Used N
     // tools" indicator — with no other tool call present, that indicator
