@@ -646,9 +646,18 @@ describe('Journey 3: Code Mode (opencode)', () => {
          permission_payloads_carry_the_whole_tool_call */
     });
 
-    it.skip('code-46: a failed Code turn’s toast says what went wrong in plain words instead of the raw agent error', () => {
+    it.skip('code-46: a failed Code turn raises one toast, saying what went wrong in plain words instead of the raw agent error', () => {
       /* pending — same harness gap; covered meanwhile by the SDK's
-         code-error-text.test.ts and toast-error-message.test.tsx */
+         code-error-text.test.ts and toast-error-message.test.tsx, and the
+         Rust a_failed_turn_is_reported_once (opencode_acp.rs) */
+    });
+
+    it.skip('code-48: the app keeps answering while a Code turn streams a chatty command — a build’s output never reaches the chat as events', () => {
+      /* pending — same harness gap; covered meanwhile by the Rust
+         output_only_tool_updates_never_reach_the_webview,
+         admitted_updates_carry_only_what_the_chat_reads,
+         reasoning_chunks_are_batched_per_window and
+         handle_update_forwards_only_what_the_webview_renders (opencode_acp.rs) */
     });
   });
 

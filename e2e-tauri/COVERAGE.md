@@ -1,6 +1,6 @@
 # Tauri Desktop E2E Coverage — Journey Checklist
 
-> Last updated: 2026-10-14 | 57 checkpoints (22 covered, 34 pending, 1 deprecated) | 3 journeys | 100% of reproducible checkpoints covered | Driver: WebdriverIO + tauri-driver
+> Last updated: 2026-10-15 | 58 checkpoints (22 covered, 35 pending, 1 deprecated) | 3 journeys | 100% of reproducible checkpoints covered | Driver: WebdriverIO + tauri-driver
 
 This is the desktop counterpart to the web `e2e/COVERAGE.md`. It tracks only what
 is exercised by driving the **built desktop binary** through `tauri-driver` (see
@@ -97,7 +97,7 @@ two vendored release workflows and are exercised by real releases.
 
 ---
 
-## Journey 3: Code Mode (opencode) (46 checkpoints: 15 covered, 30 pending, 1 deprecated) — `journeys/03-code-mode.spec.ts`
+## Journey 3: Code Mode (opencode) (47 checkpoints: 15 covered, 31 pending, 1 deprecated) — `journeys/03-code-mode.spec.ts`
 
 > **Partly covered.** The installer and per-chat state (code-01…07) run against
 > the REAL compiled binary through the live Tauri IPC bridge (`window.__TAURI__`):
@@ -199,4 +199,5 @@ two vendored release workflows and are exercised by real releases.
 - [ ] `code-43` A Code turn's steps fold into one quiet “N steps” row that opens to one plain-words sentence per step with a done / didn't-go-through / stopped mark, files by their last two path segments and web pages by their site, with the exact command, file or address one click away; after Stop or a crash-respawn nothing keeps looking busy _(needs a tool-calling model driving real turns, the same harness gap as code-08..10/15/28; covered meanwhile by the describer table and the `CodeActivity` cases in the SDK's `code-activity.test.tsx`)_
 - [ ] `code-44` The task list the agent keeps (Claude Code's and Codex's plan updates, opencode's todo tool) shows as the reply's checklist and ticks off as it works _(needs a tool-calling model driving real turns, the same harness gap as code-08..10/15/28; covered meanwhile by the store's plan cases in the SDK's `code-activity.test.tsx`, the task-list cases in `ai-message-bubble.os-parity.test.tsx` and the Rust `plans_reach_the_webview_and_agent_bookkeeping_does_not`)_
 - [ ] `code-45` A permission card leads with what Code wants to do in plain words above the exact command or file, with no tool-kind chip, from the request's tool call on desktop and from the permission name on a paired phone; a Browse prompt keeps its own description _(needs a tool-calling model driving real turns, the same harness gap as code-08..10/15/28; covered meanwhile by the SDK's `code-permission-card.test.tsx` and the Rust `permission_payloads_carry_the_whole_tool_call`)_
-- [ ] `code-46` A failed Code turn's toast says what went wrong in plain words (stopped unexpectedly, took too long, no model picked, couldn't start, signed out) instead of the raw agent error _(needs a tool-calling model driving real turns, the same harness gap as code-08..10/15/28; covered meanwhile by the SDK's `code-error-text.test.ts` and `toast-error-message.test.tsx`)_
+- [ ] `code-46` A failed Code turn raises one toast, saying what went wrong in plain words (stopped unexpectedly, took too long, no model picked, couldn't start, signed out) instead of the raw agent error _(needs a tool-calling model driving real turns, the same harness gap as code-08..10/15/28; covered meanwhile by the SDK's `code-error-text.test.ts` and `toast-error-message.test.tsx`, and the Rust `a_failed_turn_is_reported_once`)_
+- [ ] `code-48` The app keeps answering while a Code turn streams a chatty command: a build's output never reaches the chat as events, only a tool call's visible changes do _(needs a tool-calling model; covered meanwhile by the Rust `output_only_tool_updates_never_reach_the_webview`, `admitted_updates_carry_only_what_the_chat_reads`, `reasoning_chunks_are_batched_per_window` and `handle_update_forwards_only_what_the_webview_renders`)_
