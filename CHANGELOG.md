@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.171.4](https://github.com/iblai/os/compare/v0.171.3...v0.171.4) (2026-10-16)
+
+### Bug Fixes
+
+* **ext:** vendor agent-ai with allow-downloads in the iframe sandbox ([04a6cfb](https://github.com/iblai/os/commit/04a6cfb2366be02842a41fefa8fc3434f02d37fa)), closes [iblai-web-frontend#2144](https://github.com/iblai/iblai-web-frontend/issues/2144)
+
+### Chores
+
+* **ext:** bump Chrome extension to 1.1.6 ([f861814](https://github.com/iblai/os/commit/f86181455251742423aac34c01015926ea6c7f63)), closes [#577](https://github.com/iblai/os/issues/577)
+
+### Tests
+
+* **e2e:** expect a finished turn's in_progress todo to render as to do ([ba87528](https://github.com/iblai/os/commit/ba8752871fd5ab93a7e093932ba6496ff16159e0))
+* **e2e:** journey 86 covers chat download through the agent-ai launcher ([438f51a](https://github.com/iblai/os/commit/438f51abeffd84d53e222d8a080779cc2bc1d665))
+* **e2e:** reopen the Edit Agent dialog when it closes during journey 45 setup ([5b04e4f](https://github.com/iblai/os/commit/5b04e4f16f970a3a86b68e589cc1c8b2aabd96a6))
+* **e2e:** run journey 86 in CI with an e2e copy of the launcher ([9b521da](https://github.com/iblai/os/commit/9b521da13e7babe40d3b0ef109994cb96a3aa6d9))
+* **e2e:** serve the agent-ai launcher from the embed harness ([b22642e](https://github.com/iblai/os/commit/b22642ee758276f1bf0b497d8442398f5b369048))
+* **e2e:** wait for the settings saves in journey 13's Show Catalogue tests ([dff3eae](https://github.com/iblai/os/commit/dff3eaee1b0925c42631ed0c68211921adab44a3))
+
 ## [0.171.3](https://github.com/iblai/os/compare/v0.171.2...v0.171.3) (2026-10-15)
 
 ### Bug Fixes
