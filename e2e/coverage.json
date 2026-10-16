@@ -1,15 +1,15 @@
 {
   "version": 2,
-  "lastUpdated": "2026-10-15",
+  "lastUpdated": "2026-10-16",
   "summary": {
-    "totalCheckpoints": 939,
-    "coveredCheckpoints": 895,
+    "totalCheckpoints": 942,
+    "coveredCheckpoints": 897,
     "deprecatedCheckpoints": 17,
     "notReproducibleCheckpoints": 17,
-    "pendingCheckpoints": 10,
+    "pendingCheckpoints": 11,
     "percent": 100,
-    "totalJourneys": 96,
-    "activeJourneys": 95
+    "totalJourneys": 97,
+    "activeJourneys": 96
   },
   "journeys": [
     {
@@ -5946,6 +5946,33 @@
         {
           "id": "aa-02",
           "description": "Negative control: with the iframe reloaded under the pre-fix sandbox (no allow-downloads) the same export yields no download event, proving aa-01 detects the silently blocked download",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "read-aloud-voice-sources",
+      "name": "Read Aloud Across Voice Sources",
+      "spec": "90-read-aloud-voice-sources.spec.ts",
+      "sourceFiles": [
+        "components/chat/ai-message-speak.tsx",
+        "hooks/use-speech.ts",
+        "components/modals/edit-mentor-modal/tabs/voice-tab.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "rav-01",
+          "description": "Admin switches the agent's voice source from Browser to each other source in Settings \u2192 Voice and saves it (\"Voice saved\")",
+          "status": "covered"
+        },
+        {
+          "id": "rav-02",
+          "description": "For each server voice source, clicking Read Aloud on a fresh reply fetches the chat-message /tts/ audio (2xx, audio/*) and audio starts playing within 7s (the budget past which useSpeech reports TtsSlowFirstAudioError to Sentry)",
+          "status": "pending"
+        },
+        {
+          "id": "rav-03",
+          "description": "After switching back to Browser, clicking Read Aloud on a fresh reply starts speech synthesis within 30s",
           "status": "covered"
         }
       ]
