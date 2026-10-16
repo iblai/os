@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.171.5](https://github.com/iblai/os/compare/v0.171.4...v0.171.5) (2026-10-16)
+
+### Bug Fixes
+
+* **code:** drop output-only ACP updates, emit on main, bump opencode to 1.19.0 ([ea2f045](https://github.com/iblai/os/commit/ea2f0450a705c54e68402a30f7f30b030af2e9e9))
+* **code:** flush thoughts before reply and error, one bounded flush exit, test the wiring ([e629383](https://github.com/iblai/os/commit/e629383f74e122fe6b9b6648c8ddce640bf55146))
+* **code:** forward admitted tool updates without the output the chat never reads ([5f56e36](https://github.com/iblai/os/commit/5f56e369d77c0785f064b1f5fac828bb11d47e04))
+* **code:** one toast per failed Code turn, renumber code-48, round-3 review fixes ([79b5d7c](https://github.com/iblai/os/commit/79b5d7c9c92a46fb18c32a1fa838d89a0affb916))
+
+### Chores
+
+* **tauri:** release app-v0.95.27 ([c857256](https://github.com/iblai/os/commit/c8572567219a37cc070c64837619f2f36f9fe96a))
+
+### Tests
+
+* retry the two port re-binds that race the parallel cargo suite ([2136de9](https://github.com/iblai/os/commit/2136de9f9d71b144c4a7e789e61da61e6ae54ad0))
+
 ## [0.171.4](https://github.com/iblai/os/compare/v0.171.3...v0.171.4) (2026-10-16)
 
 ### Bug Fixes
