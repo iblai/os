@@ -155,23 +155,25 @@ pub async fn opencode_permission_respond(
     Ok(())
 }
 
-/// Whether operations are approved automatically.
+/// Whether operations are approved automatically — one mode for every chat.
 ///
 /// Seeded from `settings.json` on first read rather than at startup, so a turn
-/// that begins before any UI has asked still honours the saved choice. Never
-/// chosen → manual, which is the safe direction: the user gets asked.
+/// that begins before any UI has asked still honours the saved choice.
 fn permission_auto() -> &'static AtomicBool {
     static AUTO: OnceLock<AtomicBool> = OnceLock::new();
-    AUTO.get_or_init(|| AtomicBool::new(saved_permission_mode().as_deref() == Some("auto")))
+    AUTO.get_or_init(|| AtomicBool::new(permission_mode() == "auto"))
 }
 
-/// The saved approval mode, or `None` when the user has never chosen one.
-fn saved_permission_mode() -> Option<String> {
-    read_settings()
-        .get(SETTINGS_PERMISSION_MODE)
-        .and_then(|v| v.as_str())
-        .filter(|m| *m == "manual" || *m == "auto")
-        .map(str::to_string)
+/// The saved approval mode. No settings file, or no mode in it, is `"auto"`
+/// (Automatic); a saved `"auto"` too. Anything else — Ask Me, a garbled value,
+/// or a file that exists but can't be read or parsed — is `"manual"`, so damage
+/// can only make Code ask more, never less.
+fn permission_mode() -> &'static str {
+    match read_settings().get(SETTINGS_PERMISSION_MODE) {
+        None => "auto",
+        Some(v) if v.as_str() == Some("auto") => "auto",
+        Some(_) => "manual",
+    }
 }
 
 /// Answer every open card as allowed — for the moment the user switches to auto.
@@ -193,11 +195,26 @@ async fn allow_all_pending() {
     }
 }
 
-/// The saved approval mode: `"manual"`, `"auto"`, or `null` when never chosen
-/// (the frontend takes null as "ask the user which they want").
+/// Queue a request for its card — unless the mode is Automatic and the request
+/// can be allowed, when the allow option comes back for the caller to send.
+/// Decided under the lock `allow_all_pending` sweeps with, so a switch to
+/// Automatic can't land between the check and the queueing and leave a card up.
+async fn queue_unless_auto(request_id: &str, pending: PendingPermission) -> Option<String> {
+    let mut map = permissions().lock().await;
+    if permission_auto().load(Ordering::SeqCst) {
+        if let Some(opt) = pending.allow_option_id.clone() {
+            return Some(opt);
+        }
+    }
+    map.insert(request_id.to_string(), pending);
+    None
+}
+
+/// The saved approval mode, `"manual"` or `"auto"` — never null, which an older
+/// web app takes as "ask which they want" and raises a dialog.
 #[command]
-pub async fn get_opencode_permission_mode() -> Result<Option<String>, String> {
-    Ok(saved_permission_mode())
+pub async fn get_opencode_permission_mode() -> Result<String, String> {
+    Ok(permission_mode().to_string())
 }
 
 /// Every live session of one backend, by chat id — the targets of a setting
@@ -250,7 +267,7 @@ pub(crate) async fn push_config_option(
     Ok(())
 }
 
-/// Record the approval mode and apply it to running sessions immediately.
+/// Save the approval mode and apply it to running sessions immediately.
 #[command]
 pub async fn set_opencode_permission_mode(mode: String) -> Result<(), String> {
     let auto = match mode.as_str() {
@@ -260,9 +277,9 @@ pub async fn set_opencode_permission_mode(mode: String) -> Result<(), String> {
         // security posture on the user's behalf.
         other => return Err(format!("unknown permission mode: {other}")),
     };
-    let mut settings = read_settings();
-    settings.insert(SETTINGS_PERMISSION_MODE.to_string(), json!(mode));
-    write_settings(&settings)?;
+    update_settings(|settings| {
+        settings.insert(SETTINGS_PERMISSION_MODE.to_string(), json!(mode));
+    })?;
     let was_auto = permission_auto().swap(auto, Ordering::SeqCst);
     if auto {
         allow_all_pending().await;
@@ -1279,12 +1296,63 @@ fn settings_file() -> PathBuf {
 
 // pub(crate): the model proxy persists its minted platform API key here too
 // (same read-modify-write-the-whole-object discipline keeps owners apart).
+/// Ask Me and nothing else: what a file we could read but not parse comes
+/// back as, so a mode lost to damage can only ask more, never less.
+fn asks_only() -> serde_json::Map<String, Value> {
+    let mut asks = serde_json::Map::new();
+    asks.insert(SETTINGS_PERMISSION_MODE.into(), json!("manual"));
+    asks
+}
+
+/// The settings, or why they could not be read at all.
+///
+/// A missing file is empty. One that is there but unparseable is
+/// [`asks_only`]. Anything else — no permission, an I/O error, a directory in
+/// its place — is an error, so [`update_settings`] refuses to write over a
+/// file it never saw: that write would discard the saved workspaces, the
+/// per-agent models and the minted platform key along with the mode.
+fn try_read_settings() -> Result<serde_json::Map<String, Value>, String> {
+    let raw = match std::fs::read_to_string(settings_file()) {
+        Ok(raw) => raw,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(serde_json::Map::new()),
+        Err(e) => return Err(format!("failed reading settings: {e}")),
+    };
+    Ok(match serde_json::from_str::<Value>(&raw) {
+        Ok(Value::Object(map)) => map,
+        _ => asks_only(),
+    })
+}
+
+/// Read-only view. An unreadable file reads as Ask Me here, like a damaged
+/// one: a read can never grant more than the user chose.
 pub(crate) fn read_settings() -> serde_json::Map<String, Value> {
-    std::fs::read_to_string(settings_file())
-        .ok()
-        .and_then(|s| serde_json::from_str::<Value>(&s).ok())
-        .and_then(|v| v.as_object().cloned())
-        .unwrap_or_default()
+    try_read_settings().unwrap_or_else(|_| asks_only())
+}
+
+/// Serializes every read-change-write of the settings file.
+///
+/// Four owners share it: the approval mode, the mentor workspaces, the
+/// per-agent models and the minted platform key. Each reads the whole object,
+/// changes one key and writes it all back, so two interleaving dropped one's
+/// change entirely — the atomic rename makes the loser's stale snapshot the
+/// whole file rather than merging it. A mode saved while a turn recorded its
+/// workspace came back wrong at the next launch, with the in-memory
+/// `permission_auto()` flag still disagreeing. Held only across the
+/// synchronous read, change and write, never across an await.
+// `Mutex` unqualified in this file is tokio's async lock; this one is held
+// across a synchronous read-change-write, so it is deliberately std's.
+static SETTINGS_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+/// Read the settings, apply `change` and write them back, atomically with
+/// respect to every other owner. Hands back what `change` returns.
+pub(crate) fn update_settings<T>(
+    change: impl FnOnce(&mut serde_json::Map<String, Value>) -> T,
+) -> Result<T, String> {
+    let _serial = SETTINGS_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+    let mut settings = try_read_settings()?;
+    let out = change(&mut settings);
+    write_settings(&settings)?;
+    Ok(out)
 }
 
 pub(crate) fn write_settings(map: &serde_json::Map<String, Value>) -> Result<(), String> {
@@ -1294,13 +1362,25 @@ pub(crate) fn write_settings(map: &serde_json::Map<String, Value>) -> Result<(),
     }
     let out =
         serde_json::to_string_pretty(&Value::Object(map.clone())).map_err(|e| e.to_string())?;
-    std::fs::write(&f, out).map_err(|e| format!("failed writing settings: {e}"))
+    // Written aside and renamed into place, so a reader (or a crash) never
+    // finds the file cut short — an unparseable file reads as Ask Me.
+    static SEQ: AtomicUsize = AtomicUsize::new(0);
+    let tmp = f.with_extension(format!(
+        "json.{}-{}.tmp",
+        std::process::id(),
+        SEQ.fetch_add(1, Ordering::Relaxed)
+    ));
+    std::fs::write(&tmp, out).map_err(|e| format!("failed writing settings: {e}"))?;
+    std::fs::rename(&tmp, &f).map_err(|e| {
+        let _ = std::fs::remove_file(&tmp);
+        format!("failed writing settings: {e}")
+    })
 }
 
 /// Settings key holding `{ "<tenant>/<mentor>": "<workspace path>" }`.
 const SETTINGS_WORKSPACES: &str = "workspaces";
 
-/// Settings key holding `"manual"` or `"auto"`; absent until the user chooses.
+/// Settings key holding `"manual"` or `"auto"`; absent means Automatic.
 const SETTINGS_PERMISSION_MODE: &str = "permission_mode";
 
 /// Word pools for [`workspace_slug`]. Sized so a mentor's folder name is
@@ -1447,15 +1527,15 @@ fn mint_workspace_dir(taken: &[String]) -> PathBuf {
 
 /// Record which folder a mentor works in.
 fn record_mentor_workspace(tenant: &str, mentor: &str, dir: &Path) -> Result<(), String> {
-    let mut settings = read_settings();
-    let mut workspaces = settings
-        .get(SETTINGS_WORKSPACES)
-        .and_then(|v| v.as_object())
-        .cloned()
-        .unwrap_or_default();
-    workspaces.insert(workspace_key(tenant, mentor), json!(dir.to_string_lossy()));
-    settings.insert(SETTINGS_WORKSPACES.to_string(), Value::Object(workspaces));
-    write_settings(&settings)
+    update_settings(|settings| {
+        let mut workspaces = settings
+            .get(SETTINGS_WORKSPACES)
+            .and_then(|v| v.as_object())
+            .cloned()
+            .unwrap_or_default();
+        workspaces.insert(workspace_key(tenant, mentor), json!(dir.to_string_lossy()));
+        settings.insert(SETTINGS_WORKSPACES.to_string(), Value::Object(workspaces));
+    })
 }
 
 /// This mentor's workspace, generating and recording one the first time.
@@ -2142,8 +2222,8 @@ fn permission_payload(
 /// What opencode asks about is decided by the `permission` block we write into its config
 /// (`edit`/`bash`/`webfetch` all `"ask"`) — that stays pinned in both modes, so the mode
 /// is enforced here rather than by relaxing opencode's own policy on disk. In manual mode
-/// this is the boundary; in auto mode the OS sandbox is, which is why the mode is an
-/// explicit, deliberate choice rather than a default.
+/// this is the boundary; in auto mode — the default unless the user chose Ask Me — the
+/// OS sandbox is.
 ///
 /// The wait runs in its own task so the turn keeps streaming while a card is up —
 /// blocking the reader loop would freeze the reasoning/tool output the user needs in
@@ -2161,27 +2241,21 @@ async fn handle_permission_request(
     let allow = pick_option(&options, "allow_once", "allow");
     let reject = pick_option(&options, "reject_once", "reject");
 
-    // Auto mode answers without involving the user at all. A request that
-    // somehow offers no allow option falls through to a card rather than being
-    // guessed at.
-    if permission_auto().load(Ordering::SeqCst) {
-        if let Some(opt) = allow.clone() {
-            let _ = write_line(stdin, &permission_result(&id, Some(opt))).await;
-            return;
-        }
-    }
-
     static NEXT_REQ: AtomicI64 = AtomicI64::new(1);
     let request_id = format!("perm-{}", NEXT_REQ.fetch_add(1, Ordering::SeqCst));
     let (tx, rx) = oneshot::channel();
-    permissions().lock().await.insert(
-        request_id.clone(),
-        PendingPermission {
-            session_id: session_id.to_string(),
-            allow_option_id: allow.clone(),
-            tx,
-        },
-    );
+    let pending = PendingPermission {
+        session_id: session_id.to_string(),
+        allow_option_id: allow.clone(),
+        tx,
+    };
+    // Auto mode answers without involving the user at all. A request that
+    // somehow offers no allow option falls through to a card rather than being
+    // guessed at.
+    if let Some(opt) = queue_unless_auto(&request_id, pending).await {
+        let _ = write_line(stdin, &permission_result(&id, Some(opt))).await;
+        return;
+    }
 
     let generation_id = turn.lock().await.generation_id.clone();
     let _ = app.emit(
@@ -2754,8 +2828,9 @@ pub(crate) fn apply_opencode_model(
 /// Codex's own approval mode for the OS setting. Ask Me → `read-only`: Codex's
 /// sandbox blocks every write and network command, so each becomes an
 /// escalation request the card can show — the closest match to opencode's
-/// ask-everything policy. Automatic → `agent-full-access`: no Codex sandbox
-/// and no requests; the OS sandbox is the boundary, exactly as for opencode.
+/// ask-everything policy. Automatic (also what an unset mode means) →
+/// `agent-full-access`: no Codex sandbox and no requests; the OS sandbox is
+/// the boundary, exactly as for opencode.
 fn codex_mode(auto: bool) -> &'static str {
     if auto {
         "agent-full-access"
@@ -4675,11 +4750,11 @@ mod tests {
     fn settings_keys_do_not_clobber_each_other() {
         with_scratch_data_dir("settings", || {
             assert_eq!(read_settings().len(), 0, "no file yet reads as empty");
-            assert_eq!(saved_permission_mode(), None, "and no mode is chosen");
+            assert_eq!(permission_mode(), "auto", "and no mode chosen is Automatic");
 
             let mut seeded = read_settings();
             seeded.insert("some_future_key".into(), json!("keep me"));
-            seeded.insert(SETTINGS_PERMISSION_MODE.into(), json!("auto"));
+            seeded.insert(SETTINGS_PERMISSION_MODE.into(), json!("manual"));
             write_settings(&seeded).unwrap();
 
             record_mentor_workspace("acme", "mentor-1", Path::new("/ws/one")).unwrap();
@@ -4687,7 +4762,7 @@ mod tests {
 
             let settings = read_settings();
             assert_eq!(settings["some_future_key"], json!("keep me"));
-            assert_eq!(saved_permission_mode().as_deref(), Some("auto"));
+            assert_eq!(permission_mode(), "manual");
             let ws = settings[SETTINGS_WORKSPACES].as_object().unwrap();
             assert_eq!(ws[&workspace_key("acme", "mentor-1")], json!("/ws/one"));
             assert_eq!(
@@ -4698,7 +4773,7 @@ mod tests {
 
             // …and writing the mode back leaves the workspaces alone.
             let mut settings = read_settings();
-            settings.insert(SETTINGS_PERMISSION_MODE.into(), json!("manual"));
+            settings.insert(SETTINGS_PERMISSION_MODE.into(), json!("auto"));
             write_settings(&settings).unwrap();
             assert_eq!(
                 read_settings()[SETTINGS_WORKSPACES]
@@ -4710,16 +4785,96 @@ mod tests {
         });
     }
 
-    /// A garbled or hand-edited mode must read as "never chosen" so the app
-    /// asks again, rather than silently picking a security posture.
+    /// Only an absent mode means Automatic: a garbled or hand-edited value asks,
+    /// and so does a file cut short mid-write, so damage can never quietly
+    /// grant more than the user chose.
     #[test]
-    fn an_unrecognised_saved_mode_reads_as_unset() {
+    fn a_garbled_saved_mode_asks_and_only_absence_means_automatic() {
         with_scratch_data_dir("settings-bad", || {
+            assert_eq!(permission_mode(), "auto", "no file at all");
+
             let mut settings = serde_json::Map::new();
             settings.insert(SETTINGS_PERMISSION_MODE.into(), json!("YOLO"));
             write_settings(&settings).unwrap();
-            assert_eq!(saved_permission_mode(), None);
+            assert_eq!(permission_mode(), "manual");
+
+            settings.insert(SETTINGS_PERMISSION_MODE.into(), json!("manual"));
+            write_settings(&settings).unwrap();
+            assert_eq!(permission_mode(), "manual");
+
+            std::fs::write(settings_file(), "{\"permission_mode\": \"man").unwrap();
+            assert_eq!(permission_mode(), "manual", "a file cut short asks");
+            std::fs::write(settings_file(), "").unwrap();
+            assert_eq!(permission_mode(), "manual", "an emptied file asks");
+
+            // An unreadable file is NOT damage: it is unknown. Writing over it
+            // would discard the workspaces, the per-agent models and the
+            // minted platform key along with the mode, so the write is refused.
+            std::fs::remove_file(settings_file()).unwrap();
+            std::fs::create_dir(settings_file()).unwrap();
+            assert!(
+                update_settings(|s| s.insert("x".into(), json!(1))).is_err(),
+                "a file we could not read is never written over"
+            );
+            assert!(settings_file().is_dir(), "and is left exactly as it was");
+            std::fs::remove_dir(settings_file()).unwrap();
+
+            std::fs::write(settings_file(), "{\"permission_mode\": \"man").unwrap();
+            // …and keeps asking after another key is saved over the damage.
+            record_mentor_workspace("acme", "mentor-1", Path::new("/ws/one")).unwrap();
+            assert_eq!(permission_mode(), "manual");
         });
+    }
+
+    /// The bug this pins: with no mode saved, Code asked at every step and
+    /// Codex started read-only. Unset is Automatic — operations go through
+    /// without a card and Codex starts with full access.
+    #[test]
+    fn no_saved_mode_means_automatic() {
+        with_scratch_data_dir("settings-default", || {
+            assert_eq!(permission_mode(), "auto");
+            let auto = permission_mode() == "auto";
+            let codex = agent_launch(
+                Backend::Codex,
+                Path::new("/tmp/ws"),
+                Path::new("/tmp/cfg/agent-skills"),
+                Path::new("/tmp/cfg"),
+                "GUIDE",
+                auto,
+            );
+            assert_eq!(
+                codex
+                    .env
+                    .iter()
+                    .find(|(k, _)| *k == "INITIAL_AGENT_MODE")
+                    .unwrap()
+                    .1,
+                "agent-full-access"
+            );
+            assert_eq!(
+                session_mode(Backend::Codex, auto),
+                Some("agent-full-access")
+            );
+        });
+    }
+
+    /// The web app reads the mode before its first chat: unset must come back
+    /// as "auto", never null (an older web app takes null as "ask which they
+    /// want"). A typo must never pick a mode for the user, so set refuses it
+    /// and the saved choice stays.
+    #[tokio::test]
+    async fn the_mode_commands_default_to_auto_and_refuse_unknown_modes() {
+        let _scratch = ScratchDataDir::new("opencode-mode-commands");
+        assert_eq!(get_opencode_permission_mode().await.unwrap(), "auto");
+
+        let mut settings = serde_json::Map::new();
+        settings.insert(SETTINGS_PERMISSION_MODE.into(), json!("manual"));
+        write_settings(&settings).unwrap();
+        let err = set_opencode_permission_mode("YOLO".into())
+            .await
+            .unwrap_err();
+        assert!(err.contains("YOLO"), "{err}");
+        assert_eq!(get_opencode_permission_mode().await.unwrap(), "manual");
     }
 
     /// The mentor keeps one folder across chats, and a fresh one is genuinely
@@ -4752,6 +4907,7 @@ mod tests {
     /// too: leaving those cards up would be incoherent.
     #[tokio::test]
     async fn switching_to_auto_answers_the_cards_already_waiting() {
+        let _serial = PERMISSION_TEST_LOCK.lock().await;
         let (tx_allow, rx_allow) = oneshot::channel();
         let (tx_none, rx_none) = oneshot::channel();
         {
@@ -4786,6 +4942,60 @@ mod tests {
             "a card with no allow option is left for the user, not guessed at"
         );
         drop(rx_none);
+    }
+
+    /// `permission_auto()` and the pending map are process-wide, and
+    /// `allow_all_pending()` sweeps EVERY queued card rather than just the
+    /// caller's, so tests touching them must not interleave: Rust runs them in
+    /// parallel threads, and a neighbour otherwise loses its entry or reads
+    /// the wrong mode.
+    static PERMISSION_TEST_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+
+    /// The race this pins: a switch to Automatic landing between a request's
+    /// auto check and its queueing left that card up in Automatic. The check now
+    /// runs under the sweep's lock, so a request is either answered by Automatic
+    /// or queued where the switch's sweep answers it.
+    #[tokio::test]
+    async fn a_request_is_answered_by_automatic_or_queued_for_its_sweep() {
+        let _serial = PERMISSION_TEST_LOCK.lock().await;
+        let auto = permission_auto();
+        let before = auto.load(Ordering::SeqCst);
+
+        auto.store(true, Ordering::SeqCst);
+        let (tx, _rx) = oneshot::channel();
+        let answered = queue_unless_auto(
+            "perm-race-auto",
+            PendingPermission {
+                session_id: "chat-race".into(),
+                allow_option_id: Some("allow-auto".into()),
+                tx,
+            },
+        )
+        .await;
+        assert_eq!(answered.as_deref(), Some("allow-auto"));
+        assert!(
+            !permissions().lock().await.contains_key("perm-race-auto"),
+            "nothing is queued in Automatic"
+        );
+
+        auto.store(false, Ordering::SeqCst);
+        let (tx, rx) = oneshot::channel();
+        let answered = queue_unless_auto(
+            "perm-race-ask",
+            PendingPermission {
+                session_id: "chat-race".into(),
+                allow_option_id: Some("allow-ask".into()),
+                tx,
+            },
+        )
+        .await;
+        assert!(answered.is_none(), "Ask Me queues it for its card");
+        // The switch itself: flip, then sweep.
+        auto.store(true, Ordering::SeqCst);
+        allow_all_pending().await;
+        assert_eq!(rx.await.unwrap().as_deref(), Some("allow-ask"));
+
+        auto.store(before, Ordering::SeqCst);
     }
 
     /// Workspaces are keyed by (tenant, mentor), and the ids are opaque backend

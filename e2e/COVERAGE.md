@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-10-15 | 939 checkpoints (895 covered, 10 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 96 journeys (95 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-10-15 | 940 checkpoints (896 covered, 10 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 96 journeys (95 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -1388,7 +1388,7 @@ Because the toggle mutates the mentor's attached tools — the same fields Journ
 
 ---
 
-## Journey 67: Agent Skills (26 checkpoints) — `journeys/67-agent-skills.spec.ts`
+## Journey 67: Agent Skills (27 checkpoints) — `journeys/67-agent-skills.spec.ts`
 
 **Source files:** `hooks/use-mentor-segments.ts`, `components/modals/edit-mentor-modal/tabs/skills-tab.tsx`, `components/chat-input-form.tsx`, `components/auto-resize-text-area.tsx`
 
@@ -1465,6 +1465,7 @@ surfaces:
 - [x] slash-12: Multiple skill invocations in one message are each highlighted; unknown or disabled slugs never highlight
 - [x] slash-13: Typing "/" while the assignments fetch (the composer's only skill source) is still in flight shows the "Loading skills…" popover (`slash-skill-loading`, `role=status`), which yields to the picker once the list resolves
 - [x] slash-16: Skills row inside the composer's "+" menu lists enabled skills as name stacked over `/slug` (column layout — full name, never truncated; geometry-asserted); selecting inserts the token AT THE CARET with context-aware spacing — no separate skill chip exists in the #2586 redesign, so the armed state shows only as the composer token, a checked row in the Skills menu, and a count badge on the menu trigger; removing (re-selecting the skill, or deleting its token text) clears all three; arming another replaces (single selection); `/`-picker arming marks the same skill checked in the Skills menu — one composer-text source of truth
+- [x] slash-17: On a phone-width composer (360px) the Skills button collapses into the ••• menu like the other tool pills; its ••• entry expands the skills list in place (scrolling, inside the viewport), and picking a skill arms its `/slug` token
 - [x] slash-15: NON-ADMIN — with the assignments endpoint readable (mocked granted state; a 403 degrades to an inactive picker) the "/" picker offers skills; selecting completes the token and the sent invocation message receives a live AI reply — skips when the environment denies the non-admin CHAT permission entirely (composer disabled with a "you don't have permission to chat" placeholder): the picker rides on top of chat access
 - [x] slash-14: A "/" token typed after existing text (caret-adjacent, preceded by whitespace) opens the picker; selecting completes the invocation at that index keeping the sentence. A "/" glued inside a word (and/or, URLs) never triggers
 

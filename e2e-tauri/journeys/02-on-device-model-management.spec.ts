@@ -264,13 +264,24 @@ describe('Journey 2: On-device Model Management', () => {
     });
 
     it(
-      'odm-01: the LLM picker merges on-device models with the provider cloud models in one list',
+      'odm-01: the LLM picker lists on-device models first, then the provider cloud models, in one list',
     );
     it(
       'odm-04: starting a second on-device download while one is in flight shows the "already downloading" guard',
     );
-    it('odm-06: the nav-bar on-device badge reflects the selected local model');
+    it(
+      'odm-06: the nav-bar on-device badge reflects the selected local model, cased as written',
+    );
   });
+
+  // Pending: needs a machine where the Model Manager (Ollama) is NOT installed,
+  // while every other checkpoint here requires it running. The picker runs the
+  // SDK's own useModelDownload, so this is covered meanwhile by the SDK Vitest
+  // suite "useModelDownload startDownload with Local Models off"
+  // (@iblai/web-containers src/hooks/__tests__/use-model-download.test.ts).
+  it(
+    'odm-08: downloading an on-device model with Local Models off turns Local Models on first, which sets up the Model Manager (with a one-time notice when it was never installed), then starts the pull',
+  );
 
   // Pending: needs a harness that occupies 8000/3457 BEFORE launching the
   // binary. Covered meanwhile by the Rust port tests

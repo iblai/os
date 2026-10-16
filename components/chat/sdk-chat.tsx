@@ -37,6 +37,7 @@ import {
 import { useNavigate } from '@/hooks/user-navigate';
 import { useShowFreeTrialDialog } from '@/hooks/user-user-actions';
 import { config as appConfig } from '@/lib/config';
+import { isAppInBackground, playAttentionChime } from '@/lib/attention-chime';
 import eventBus from '@/lib/eventBus';
 import { useAppSelector } from '@/lib/hooks';
 import { TenantKeyMentorIdParams } from '@/lib/types';
@@ -105,6 +106,37 @@ function useInTauri(): boolean {
     return () => clearInterval(timer);
   }, []);
   return inTauri;
+}
+
+/**
+ * Chime for a Code permission card while the user is in another app.
+ *
+ * The SDK renders its own permission cards and does not chime, and the OS
+ * card that does is not mounted in this chat, so the sound has to come from
+ * here. Drop this once the SDK card carries the chime itself.
+ */
+function usePermissionChime(inTauri: boolean): void {
+  useEffect(() => {
+    if (!inTauri) return;
+    let stop: (() => void) | undefined;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const { listen } = await import('@tauri-apps/api/event');
+        const unlisten = await listen('opencode:permission_request', () => {
+          if (isAppInBackground()) playAttentionChime();
+        });
+        if (cancelled) unlisten();
+        else stop = unlisten;
+      } catch {
+        /* a courtesy only: the card on screen is the prompt itself */
+      }
+    })();
+    return () => {
+      cancelled = true;
+      stop?.();
+    };
+  }, [inTauri]);
 }
 
 function toOrigin(value: string | null | undefined): string | null {
@@ -198,6 +230,7 @@ export function SdkChat({
 
   // Code mode (Tauri only): the pill and the skill sync it reports on.
   const inTauri = useInTauri();
+  usePermissionChime(inTauri);
   const sessionId = useAppSelector(selectSessionId);
   const { data: mentorSettings } = useMentorSettings();
   const skillSync = useOpencodeSkillSync({

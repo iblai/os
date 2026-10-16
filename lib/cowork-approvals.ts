@@ -2,9 +2,7 @@
  * Whether Cowork checks with the user before it acts.
  *
  * Mirrors Code mode's `permission_mode` (`components/chat-input-form/
- * coding-mode-button.tsx`), with one deliberate difference: Code has no default
- * because either answer picks a security posture for the user, while Cowork
- * defaults to `auto`. The confirm gate it silences is structural rather than
+ * coding-mode-button.tsx`); both default to `auto`. The confirm gate it silences is structural rather than
  * risk-based — `needsConfirm` in the extension asks about ANY form submission,
  * so a plain search box prompted — and being asked on every search made the
  * feature unusable.

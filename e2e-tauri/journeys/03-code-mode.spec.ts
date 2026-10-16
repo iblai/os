@@ -539,10 +539,9 @@ describe('Journey 3: Code Mode (opencode)', () => {
       ).toBe(fresh);
     });
 
-    it.skip('code-23: the Code popover asks for an approval mode on first use and stores the answer against the signed-in user', () => {
+    it.skip('code-23: Code starts in Automatic, shown beside the microphone, and an Ask Me picked there holds in every chat until switched back', () => {
       /* pending — needs an authenticated UI session (like code-14) to render
-         the popover and reach the user-metadata endpoint; covered meanwhile by
-         the coding-mode-button Vitest cases */
+         the composer; covered meanwhile by the coding-mode-button Vitest cases */
     });
 
     it.skip('code-24: the popover offers New Workspace and a platform-named Open Folder button', () => {
@@ -799,6 +798,12 @@ describe('Journey 3: Code Mode (opencode)', () => {
          (opencode_acp.rs), an_unknown_model_is_refused_before_it_is_saved and
          the_model_choice_lists_the_agents_offer_with_default_and_selection
          (code_agent_models.rs) */
+    });
+
+    it.skip('code-47: Switch to Automatic on a permission card answers it, saves Automatic, clears the other waiting cards and asks nothing more in that turn', () => {
+      /* pending — needs an authenticated UI session and a tool-calling turn
+         (like code-08/code-10); covered meanwhile by the code-permission-card
+         Vitest cases and the Rust queue/switch tests */
     });
   });
 });

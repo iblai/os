@@ -16,7 +16,7 @@
 
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Mutex, OnceLock};
 
 use futures_util::{StreamExt, TryStreamExt};
@@ -34,10 +34,88 @@ static CONFIG_PATH: OnceLock<PathBuf> = OnceLock::new();
 /// id, so `opencode_permission_respond` can address the reply.
 static PENDING_PERMISSIONS: Mutex<Option<HashMap<String, String>>> = Mutex::new(None);
 
+/// Serializes every read-change-write of the config file. Writers that each
+/// read the file, change one field and write the whole thing back undo each
+/// other when they interleave: a mode saved mid-turn vanished under that
+/// turn's own `in_flight` bookkeeping and came back wrong at the next
+/// launch. Held only across the synchronous read, change and write, never
+/// across an await.
+static CONFIG_LOCK: Mutex<()> = Mutex::new(());
+
+/// Read the config, apply `change` and write it back, atomically with
+/// respect to every other writer. Hands back what `change` returns.
+fn update_config<T>(change: impl FnOnce(&mut HostConfig) -> T) -> Result<T, String> {
+    let _serial = CONFIG_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+    let mut cfg = read_config();
+    let out = change(&mut cfg);
+    write_config(&cfg)?;
+    Ok(out)
+}
+
+/// Same, for a change that often has nothing to do: `change` reports whether
+/// it touched anything and the file is only rewritten when it did. A phone
+/// runs `migrate_chat_key` on every turn, so writing unconditionally meant
+/// serializing and renaming the whole config each time for nothing.
+fn update_config_if(change: impl FnOnce(&mut HostConfig) -> bool) -> Result<bool, String> {
+    let _serial = CONFIG_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+    let mut cfg = read_config();
+    if !change(&mut cfg) {
+        return Ok(false);
+    }
+    write_config(&cfg)?;
+    Ok(true)
+}
+
 /// `"auto"` short-circuits permission events with an immediate allow, exactly
-/// like the desktop's auto mode. Kept in the config file; defaults to manual.
+/// like the desktop's auto mode. Kept in the config file; see [`permission_mode`].
 const MODE_AUTO: &str = "auto";
 const MODE_MANUAL: &str = "manual";
+
+/// The approval mode in force, matching the desktop: nothing saved, or a saved
+/// `"auto"`, is Automatic; Ask Me only when chosen. A garbled value asks, so a
+/// corrupted file can only make Code ask more, never less.
+fn permission_mode(cfg: &HostConfig) -> &'static str {
+    match cfg.permission_mode.as_deref() {
+        None | Some(MODE_AUTO) => MODE_AUTO,
+        Some(_) => MODE_MANUAL,
+    }
+}
+
+/// The approval mode in force: read from disk once, then kept by
+/// `save_permission_mode`, so a request never reads the file while another
+/// chat is rewriting it.
+fn phone_auto() -> &'static AtomicBool {
+    static AUTO: OnceLock<AtomicBool> = OnceLock::new();
+    AUTO.get_or_init(|| AtomicBool::new(permission_mode(&read_config()) == MODE_AUTO))
+}
+
+/// Queue a permission for its card unless the mode is Automatic (true: answer
+/// it now). Checked per request, not once per turn, so a switch mid-turn holds
+/// for the rest of it, and under the lock `save_permission_mode` drains with,
+/// so a switch can't slip between the check and the queueing.
+fn queue_unless_auto(per_id: &str, remote: &str) -> bool {
+    let mut map = PENDING_PERMISSIONS.lock().expect("permissions lock");
+    if phone_auto().load(Ordering::SeqCst) {
+        return true;
+    }
+    map.get_or_insert_with(HashMap::new)
+        .insert(per_id.to_string(), remote.to_string());
+    false
+}
+
+/// Save the mode. On a switch to Automatic, hand back every permission still
+/// waiting (per_id, remote session) for the caller to answer: those cards are
+/// exactly what the user just said to stop asking about.
+fn save_permission_mode(mode: &str) -> Result<Vec<(String, String)>, String> {
+    let mut map = PENDING_PERMISSIONS.lock().expect("permissions lock");
+    update_config(|cfg| cfg.permission_mode = Some(mode.to_string()))?;
+    phone_auto().store(mode == MODE_AUTO, Ordering::SeqCst);
+    Ok(if mode == MODE_AUTO {
+        map.get_or_insert_with(HashMap::new).drain().collect()
+    } else {
+        Vec::new()
+    })
+}
 
 /// Hard cap on one turn; a phone must never hold an SSE stream forever.
 const TURN_TIMEOUT_SECS: u64 = 30 * 60;
@@ -122,20 +200,17 @@ struct InFlight(String);
 
 impl InFlight {
     fn mark(remote: &str, dir: Option<&str>) -> Self {
-        let mut cfg = read_config();
-        cfg.in_flight
-            .insert(remote.to_string(), dir.unwrap_or("").to_string());
-        let _ = write_config(&cfg);
+        let _ = update_config(|cfg| {
+            cfg.in_flight
+                .insert(remote.to_string(), dir.unwrap_or("").to_string());
+        });
         Self(remote.to_string())
     }
 }
 
 impl Drop for InFlight {
     fn drop(&mut self) {
-        let mut cfg = read_config();
-        if cfg.in_flight.remove(&self.0).is_some() {
-            let _ = write_config(&cfg);
-        }
+        let _ = update_config_if(|cfg| cfg.in_flight.remove(&self.0).is_some());
     }
 }
 
@@ -168,11 +243,11 @@ pub async fn abort_abandoned_turns() {
     }
     // Forget only what was handled: a turn started while the desktop was
     // being asked is this run's, and stays recorded.
-    let mut cfg = read_config();
-    for remote in abandoned.keys() {
-        cfg.in_flight.remove(remote);
-    }
-    let _ = write_config(&cfg);
+    let _ = update_config(|cfg| {
+        for remote in abandoned.keys() {
+            cfg.in_flight.remove(remote);
+        }
+    });
 }
 
 /// Coalesces streamed token deltas so the webview re-renders at a bounded
@@ -300,25 +375,45 @@ pub fn init(config_dir: PathBuf) {
     let _ = CONFIG_PATH.set(config_dir.join("remote_code.json"));
 }
 
+/// No file is a fresh default (Automatic). A file that exists but can't be read
+/// or parsed comes back as Ask Me, so the next write of any field saves Ask Me
+/// with it — damage can only make Code ask more, never less.
 fn read_config() -> HostConfig {
     let Some(path) = CONFIG_PATH.get() else {
         return HostConfig::default();
     };
-    std::fs::read_to_string(path)
-        .ok()
-        .and_then(|s| serde_json::from_str(&s).ok())
-        .unwrap_or_default()
+    let parsed = match std::fs::read_to_string(path) {
+        Ok(raw) => serde_json::from_str(&raw).ok(),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return HostConfig::default(),
+        Err(_) => None,
+    };
+    parsed.unwrap_or_else(|| HostConfig {
+        permission_mode: Some(MODE_MANUAL.into()),
+        ..HostConfig::default()
+    })
 }
 
 fn write_config(cfg: &HostConfig) -> Result<(), String> {
     let path = CONFIG_PATH
         .get()
         .ok_or("remote code storage not initialized")?;
+    // Written aside and renamed into place, so a reader (or a crash) never
+    // finds the file cut short.
+    static SEQ: AtomicU64 = AtomicU64::new(0);
+    let tmp = path.with_extension(format!(
+        "json.{}-{}.tmp",
+        std::process::id(),
+        SEQ.fetch_add(1, Ordering::Relaxed)
+    ));
     std::fs::write(
-        path,
+        &tmp,
         serde_json::to_string_pretty(cfg).map_err(|e| e.to_string())?,
     )
-    .map_err(|e| e.to_string())
+    .map_err(|e| e.to_string())?;
+    std::fs::rename(&tmp, path).map_err(|e| {
+        let _ = std::fs::remove_file(&tmp);
+        e.to_string()
+    })
 }
 
 /// The paired host's base URL + password, or a user-actionable error.
@@ -529,7 +624,6 @@ pub async fn remote_code_set_host(
         }
     }
 
-    let mut cfg = read_config();
     // Session and folder maps hold ids/absolute paths that belong to ONE
     // desktop. Re-pairing with another machine (scanning desktop B's QR
     // while A is unreachable never passes through clear_host) must drop
@@ -543,34 +637,35 @@ pub async fn remote_code_set_host(
         .map(|u| normalize_url(u))
         .chain(std::iter::once(url.clone()))
         .collect();
-    let same_desktop = cfg.url.is_none()
-        || cfg.url.as_deref() == Some(url.as_str())
-        || cfg.alt_urls.contains(&url)
-        || cfg
-            .url
-            .as_ref()
-            .is_some_and(|stored| known_addresses.iter().any(|u| u == stored));
-    if !same_desktop {
-        println!("[RemoteCode] pairing moved to another desktop; forgetting its folders");
-        cfg.sessions.clear();
-        cfg.session_dirs.clear();
-        cfg.directories.clear();
-        cfg.mentor_directories.clear();
-    }
-    cfg.url = Some(url.clone());
-    cfg.password = Some(password);
-    cfg.mgmt = mgmt_url;
-    // Remember the OTHER candidate addresses of this desktop (a QR carries
-    // one address per network interface) so the pairing can heal itself
-    // when the current address stops being the reachable one.
-    cfg.alt_urls = urls
-        .unwrap_or_default()
-        .iter()
-        .map(|u| normalize_url(u))
-        .filter(|u| !u.is_empty() && *u != url)
-        .collect();
-    cfg.alt_mgmt = mgmt_candidates;
-    write_config(&cfg)?;
+    update_config(|cfg| {
+        let same_desktop = cfg.url.is_none()
+            || cfg.url.as_deref() == Some(url.as_str())
+            || cfg.alt_urls.contains(&url)
+            || cfg
+                .url
+                .as_ref()
+                .is_some_and(|stored| known_addresses.iter().any(|u| u == stored));
+        if !same_desktop {
+            println!("[RemoteCode] pairing moved to another desktop; forgetting its folders");
+            cfg.sessions.clear();
+            cfg.session_dirs.clear();
+            cfg.directories.clear();
+            cfg.mentor_directories.clear();
+        }
+        cfg.url = Some(url.clone());
+        cfg.password = Some(password);
+        cfg.mgmt = mgmt_url;
+        // Remember the OTHER candidate addresses of this desktop (a QR carries
+        // one address per network interface) so the pairing can heal itself
+        // when the current address stops being the reachable one.
+        cfg.alt_urls = urls
+            .unwrap_or_default()
+            .iter()
+            .map(|u| normalize_url(u))
+            .filter(|u| !u.is_empty() && *u != url)
+            .collect();
+        cfg.alt_mgmt = mgmt_candidates;
+    })?;
     Ok(json!({ "ok": true, "url": url, "directory": directory }))
 }
 
@@ -625,7 +720,13 @@ pub async fn remote_code_get_host() -> Result<Value, String> {
             cfg.alt_urls.push(url.clone());
             cfg.url = Some(alt.clone());
             cfg.mgmt = new_mgmt;
-            let _ = write_config(&cfg);
+            // Only the address fields: the snapshot above predates the
+            // probes, and whatever was saved meanwhile must survive.
+            let _ = update_config(|c| {
+                c.url = cfg.url.clone();
+                c.mgmt = cfg.mgmt.clone();
+                c.alt_urls = cfg.alt_urls.clone();
+            });
             url = alt;
             break;
         }
@@ -651,20 +752,20 @@ pub async fn remote_code_get_host() -> Result<Value, String> {
 
 #[command]
 pub async fn remote_code_clear_host() -> Result<(), String> {
-    let mut cfg = read_config();
-    cfg.url = None;
-    cfg.password = None;
-    cfg.mgmt = None;
-    cfg.alt_urls.clear();
-    cfg.alt_mgmt.clear();
-    cfg.sessions.clear();
-    // Folder maps hold ABSOLUTE paths on the unpaired desktop; carried into
-    // a pairing with a different machine they point at folders that do not
-    // exist there, and every session lands in a broken directory.
-    cfg.directories.clear();
-    cfg.mentor_directories.clear();
-    cfg.session_dirs.clear();
-    write_config(&cfg)
+    update_config(|cfg| {
+        cfg.url = None;
+        cfg.password = None;
+        cfg.mgmt = None;
+        cfg.alt_urls.clear();
+        cfg.alt_mgmt.clear();
+        cfg.sessions.clear();
+        // Folder maps hold ABSOLUTE paths on the unpaired desktop; carried into
+        // a pairing with a different machine they point at folders that do not
+        // exist there, and every session lands in a broken directory.
+        cfg.directories.clear();
+        cfg.mentor_directories.clear();
+        cfg.session_dirs.clear();
+    })
 }
 
 // ---------- opencode_* command surface (mobile) ----------
@@ -673,8 +774,13 @@ pub async fn remote_code_clear_host() -> Result<(), String> {
 /// phone-side auto-allow in [`run_turn`], mirroring desktop semantics.
 #[cfg(any(target_os = "ios", target_os = "android"))]
 #[command]
-pub async fn get_opencode_permission_mode() -> Result<Option<String>, String> {
-    Ok(read_config().permission_mode)
+pub async fn get_opencode_permission_mode() -> Result<String, String> {
+    Ok(if phone_auto().load(Ordering::SeqCst) {
+        MODE_AUTO
+    } else {
+        MODE_MANUAL
+    }
+    .to_string())
 }
 
 #[cfg(any(target_os = "ios", target_os = "android"))]
@@ -683,9 +789,38 @@ pub async fn set_opencode_permission_mode(mode: String) -> Result<(), String> {
     if mode != MODE_AUTO && mode != MODE_MANUAL {
         return Err(format!("unknown permission mode: {mode}"));
     }
-    let mut cfg = read_config();
-    cfg.permission_mode = Some(mode);
-    write_config(&cfg)
+    // Resolve the desktop BEFORE the mode is saved: saving takes every waiting
+    // card out of the map, and a failure after that point left cards on screen
+    // whose buttons answered an id Rust had already forgotten, so the turn hung
+    // to its timeout.
+    let desktop = if mode == MODE_AUTO {
+        Some(host()?)
+    } else {
+        None
+    };
+    let waiting = save_permission_mode(&mode)?;
+    let Some((base, pw)) = desktop else {
+        return Ok(());
+    };
+    for (per_id, remote) in waiting {
+        let sent = post_json(
+            &base,
+            &pw,
+            &format!("/session/{remote}/permissions/{per_id}"),
+            &json!({ "response": "once" }),
+        )
+        .await;
+        // Put back what the desktop never got, so its card can still answer it
+        // and the turn can end.
+        if sent.is_err() {
+            PENDING_PERMISSIONS
+                .lock()
+                .expect("permissions lock")
+                .get_or_insert_with(HashMap::new)
+                .insert(per_id, remote);
+        }
+    }
+    Ok(())
 }
 
 /// The workspace shown in the Code popover: this chat's chosen desktop folder,
@@ -717,8 +852,7 @@ fn record_directory(
     mentor: Option<&str>,
     dir: &str,
 ) -> Result<(), String> {
-    let mut cfg = read_config();
-    match (tenant, mentor) {
+    update_config(|cfg| match (tenant, mentor) {
         (Some(t), Some(m)) if !m.is_empty() => {
             cfg.mentor_directories
                 .insert(mentor_key(t, m), dir.to_string());
@@ -727,8 +861,7 @@ fn record_directory(
             cfg.directories
                 .insert(session_id.to_string(), dir.to_string());
         }
-    }
-    write_config(&cfg)
+    })
 }
 
 /// The folder this chat runs in, minting a fresh `phone-<id>` one on the
@@ -767,19 +900,19 @@ fn set_chat_directory(
     mentor: Option<&str>,
     dir: &str,
 ) -> Result<(), String> {
-    let mut cfg = read_config();
-    match (tenant, mentor) {
-        (Some(t), Some(m)) if !m.is_empty() => {
-            cfg.mentor_directories
-                .insert(mentor_key(t, m), dir.to_string());
+    update_config(|cfg| {
+        match (tenant, mentor) {
+            (Some(t), Some(m)) if !m.is_empty() => {
+                cfg.mentor_directories
+                    .insert(mentor_key(t, m), dir.to_string());
+            }
+            _ => {
+                cfg.directories
+                    .insert(session_id.to_string(), dir.to_string());
+            }
         }
-        _ => {
-            cfg.directories
-                .insert(session_id.to_string(), dir.to_string());
-        }
-    }
-    cfg.sessions.remove(session_id);
-    write_config(&cfg)
+        cfg.sessions.remove(session_id);
+    })
 }
 
 #[cfg(any(target_os = "ios", target_os = "android"))]
@@ -979,23 +1112,22 @@ fn migrate_chat_key(session_id: &str, new_chat_key: Option<&str>) {
     let Some(prior) = new_chat_key.filter(|k| *k != session_id) else {
         return;
     };
-    let mut cfg = read_config();
-    let mut changed = false;
-    if !cfg.sessions.contains_key(session_id) {
-        if let Some(remote) = cfg.sessions.remove(prior) {
-            cfg.sessions.insert(session_id.to_string(), remote);
-            changed = true;
+    let _ = update_config_if(|cfg| {
+        let mut changed = false;
+        if !cfg.sessions.contains_key(session_id) {
+            if let Some(remote) = cfg.sessions.remove(prior) {
+                cfg.sessions.insert(session_id.to_string(), remote);
+                changed = true;
+            }
         }
-    }
-    if !cfg.directories.contains_key(session_id) {
-        if let Some(dir) = cfg.directories.remove(prior) {
-            cfg.directories.insert(session_id.to_string(), dir);
-            changed = true;
+        if !cfg.directories.contains_key(session_id) {
+            if let Some(dir) = cfg.directories.remove(prior) {
+                cfg.directories.insert(session_id.to_string(), dir);
+                changed = true;
+            }
         }
-    }
-    if changed {
-        let _ = write_config(&cfg);
-    }
+        changed
+    });
 }
 
 /// The chat's server session, creating (and persisting) one on first use.
@@ -1051,17 +1183,17 @@ async fn ensure_session(
     // creating its session, a folder pick, a re-pair) was silently undone —
     // that chat's next turn found no session and minted a second one, and
     // its conversation was gone.
-    let mut cfg = read_config();
-    cfg.sessions.insert(session_id.to_string(), remote.clone());
-    match &dir {
-        Some(d) => {
-            cfg.session_dirs.insert(session_id.to_string(), d.clone());
+    update_config(|cfg| {
+        cfg.sessions.insert(session_id.to_string(), remote.clone());
+        match &dir {
+            Some(d) => {
+                cfg.session_dirs.insert(session_id.to_string(), d.clone());
+            }
+            None => {
+                cfg.session_dirs.remove(session_id);
+            }
         }
-        None => {
-            cfg.session_dirs.remove(session_id);
-        }
-    }
-    write_config(&cfg)?;
+    })?;
     Ok(remote)
 }
 
@@ -1456,7 +1588,6 @@ async fn catch_up(
     pw: &str,
     remote: &str,
     dir: Option<&str>,
-    auto_mode: bool,
     text: &mut TokenCoalescer,
     reasoning: &mut TokenCoalescer,
     seen_tools: &mut HashMap<String, bool>,
@@ -1531,7 +1662,7 @@ async fn catch_up(
             if per_id.is_empty() {
                 continue;
             }
-            if auto_mode {
+            if queue_unless_auto(&per_id, remote) {
                 let _ = post_json(
                     base,
                     pw,
@@ -1541,11 +1672,6 @@ async fn catch_up(
                 .await;
                 continue;
             }
-            PENDING_PERMISSIONS
-                .lock()
-                .expect("permissions lock")
-                .get_or_insert_with(HashMap::new)
-                .insert(per_id.clone(), remote.to_string());
             awaiting_permissions.insert(per_id.clone());
             let patterns = req["patterns"]
                 .as_array()
@@ -1703,7 +1829,6 @@ async fn run_turn_inner(
         }
     }
 
-    let auto_mode = read_config().permission_mode.as_deref() == Some(MODE_AUTO);
     // Streamed text and reasoning are batched by TokenCoalescer (first delta
     // immediately, then an adaptive 200ms→1s window) — the same policy the
     // embedded local-LLM stream uses, in one implementation.
@@ -1766,7 +1891,6 @@ async fn run_turn_inner(
                 &pw,
                 &remote,
                 turn_dir.as_deref(),
-                auto_mode,
                 &mut text,
                 &mut reasoning,
                 &mut seen_tools,
@@ -1988,7 +2112,7 @@ async fn run_turn_inner(
                     if per_id.is_empty() {
                         continue;
                     }
-                    if auto_mode {
+                    if queue_unless_auto(&per_id, &remote) {
                         let _ = post_json(
                             &base,
                             &pw,
@@ -1998,11 +2122,6 @@ async fn run_turn_inner(
                         .await;
                         continue;
                     }
-                    PENDING_PERMISSIONS
-                        .lock()
-                        .expect("permissions lock")
-                        .get_or_insert_with(HashMap::new)
-                        .insert(per_id.clone(), remote.clone());
                     awaiting_permissions.insert(per_id.clone());
                     let patterns = props
                         .get("patterns")
@@ -2167,6 +2286,133 @@ mod tests {
             ..HostConfig::default()
         };
         write_config(&cfg).unwrap();
+    }
+
+    /// The bug this pins: the phone read the mode once per turn, so a switch
+    /// to Automatic mid-turn left the waiting cards up and kept asking for the
+    /// rest of the turn. The switch now hands back every waiting card to be
+    /// answered, and the next request is answered without one.
+    #[tokio::test]
+    async fn switching_to_automatic_answers_the_waiting_cards_and_stops_asking() {
+        let _serial = CONFIG_TEST_LOCK.lock().await;
+        test_config("http://127.0.0.1:9");
+        save_permission_mode(MODE_MANUAL).unwrap();
+        assert!(
+            !queue_unless_auto("per-switch-1", "ses-switch"),
+            "Ask Me queues it for its card"
+        );
+
+        let waiting = save_permission_mode(MODE_AUTO).unwrap();
+        assert!(waiting.contains(&("per-switch-1".to_string(), "ses-switch".to_string())));
+        assert!(
+            queue_unless_auto("per-switch-2", "ses-switch"),
+            "Automatic answers the next one itself"
+        );
+        let map = PENDING_PERMISSIONS.lock().unwrap();
+        assert!(!map
+            .as_ref()
+            .is_some_and(|m| m.contains_key("per-switch-1") || m.contains_key("per-switch-2")));
+    }
+
+    /// The bug this pins: `save_permission_mode` and a turn's `in_flight`
+    /// bookkeeping each read the file, changed one field and wrote the whole
+    /// thing back, so a mode switched while a turn ran (the only time the
+    /// card's Switch to Automatic exists) was undone by that turn's own
+    /// start or end, and the next launch opened in the old mode.
+    #[tokio::test]
+    async fn a_mode_saved_mid_turn_survives_the_turns_own_bookkeeping() {
+        let _serial = CONFIG_TEST_LOCK.lock().await;
+        test_config("http://127.0.0.1:9");
+        let turns = std::thread::spawn(|| {
+            (0..40)
+                .map(|i| InFlight::mark(&format!("ses-race-{i}"), None))
+                .collect::<Vec<_>>()
+        });
+        let switches = std::thread::spawn(|| {
+            for i in 0..40 {
+                let mode = if i % 2 == 0 { MODE_AUTO } else { MODE_MANUAL };
+                save_permission_mode(mode).unwrap();
+            }
+        });
+        switches.join().unwrap();
+        let guards = turns.join().unwrap();
+
+        let cfg = read_config();
+        assert_eq!(
+            cfg.permission_mode.as_deref(),
+            Some(MODE_MANUAL),
+            "the last switch holds"
+        );
+        assert_eq!(cfg.in_flight.len(), 40, "no turn lost its mark");
+        drop(guards);
+        assert!(read_config().in_flight.is_empty());
+        save_permission_mode(MODE_AUTO).unwrap();
+    }
+
+    /// A phone runs this on every turn, so a migration with nothing to move
+    /// must not rewrite the whole config file.
+    #[tokio::test]
+    async fn a_migration_with_nothing_to_move_does_not_rewrite_the_config() {
+        let _serial = CONFIG_TEST_LOCK.lock().await;
+        test_config("http://127.0.0.1:9");
+        let path = CONFIG_PATH.get().unwrap().clone();
+        let before = std::fs::metadata(&path).unwrap().modified().unwrap();
+
+        migrate_chat_key("chat-new", Some("chat-old"));
+        assert_eq!(
+            std::fs::metadata(&path).unwrap().modified().unwrap(),
+            before,
+            "nothing moved, so nothing was written"
+        );
+
+        let mut cfg = read_config();
+        cfg.sessions.insert("chat-old".into(), "ses-old".into());
+        write_config(&cfg).unwrap();
+        migrate_chat_key("chat-new", Some("chat-old"));
+        assert_eq!(
+            read_config().sessions.get("chat-new").map(String::as_str),
+            Some("ses-old"),
+            "a real migration still lands"
+        );
+    }
+
+    /// Only a missing file means Automatic: a file cut short mid-write asks.
+    #[tokio::test]
+    async fn a_damaged_config_asks_and_only_a_missing_one_means_automatic() {
+        let _serial = CONFIG_TEST_LOCK.lock().await;
+        test_config("http://127.0.0.1:9");
+        let path = CONFIG_PATH.get().unwrap().clone();
+
+        std::fs::write(&path, "{\"url\": \"http://127.0").unwrap();
+        assert_eq!(
+            permission_mode(&read_config()),
+            MODE_MANUAL,
+            "a file cut short asks"
+        );
+        // …and keeps asking after another field is saved over the damage.
+        let mut cfg = read_config();
+        cfg.url = Some("http://127.0.0.1:9".into());
+        write_config(&cfg).unwrap();
+        assert_eq!(permission_mode(&read_config()), MODE_MANUAL);
+
+        std::fs::remove_file(&path).unwrap();
+        assert_eq!(permission_mode(&read_config()), MODE_AUTO, "no file at all");
+
+        test_config("http://127.0.0.1:9");
+    }
+
+    #[test]
+    fn the_phone_defaults_to_automatic_like_the_desktop() {
+        let mode = |saved: Option<&str>| {
+            permission_mode(&HostConfig {
+                permission_mode: saved.map(str::to_string),
+                ..HostConfig::default()
+            })
+        };
+        assert_eq!(mode(None), MODE_AUTO, "nothing saved is Automatic");
+        assert_eq!(mode(Some("auto")), MODE_AUTO);
+        assert_eq!(mode(Some("manual")), MODE_MANUAL, "Ask Me only when chosen");
+        assert_eq!(mode(Some("YOLO")), MODE_MANUAL, "a garbled value asks");
     }
 
     #[test]
@@ -2764,6 +3010,16 @@ mod tests {
         tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
 
         test_config(&format!("http://{addr}"));
+        // This turn pins the approval card, which only Ask Me shows; Automatic
+        // comes back however the test ends.
+        struct BackToAutomatic;
+        impl Drop for BackToAutomatic {
+            fn drop(&mut self) {
+                let _ = save_permission_mode(MODE_AUTO);
+            }
+        }
+        save_permission_mode(MODE_MANUAL).unwrap();
+        let _automatic_after = BackToAutomatic;
 
         let sink = Arc::new(VecSink(Mutex::new(Vec::new())));
         run_turn(

@@ -3,6 +3,7 @@ import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { CodingModeButton } from '../coding-mode-button';
+import { resetApprovalModeForTests } from '../code-approvals-button';
 import type { OpencodeSkillSync } from '@/hooks/use-opencode-skill-sync';
 
 /**
@@ -27,6 +28,7 @@ const {
   tauriPlatform,
   toastError,
   userOS,
+  permissionRequests,
 } = vi.hoisted(() => ({
   invoke: vi.fn(),
   /** Tauri event listeners the component registered, by event name. */
@@ -43,6 +45,8 @@ const {
   platformMetadata: { current: undefined as unknown },
   saveMetadata: vi.fn(),
   userOS: { current: 'Linux' },
+  /** Code permission cards the SDK store is holding (the waiting prompts). */
+  permissionRequests: { current: [] as unknown[] },
   tauriPlatform: { current: 'linux' },
   scannerState: {
     permission: 'granted' as string,
@@ -99,6 +103,23 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
   useGetUserPlatformMetadataQuery: () => ({ data: platformMetadata.current }),
   useUpdateUserPlatformMetadataMutation: () => [saveMetadata],
 }));
+vi.mock('@iblai/iblai-js/web-containers/next', () => ({
+  useCodePermissionRequests: () => permissionRequests.current,
+}));
+vi.mock('@iblai/iblai-js/web-containers', () => ({
+  // Catalog names for the ids used here; anything else gets each word capitalized.
+  localModelDisplayName: (ref?: string | null) => {
+    const names: Record<string, string> = { qwen3: 'Qwen 3' };
+    const id = (ref ?? '').replace(/:latest$/i, '');
+    return (
+      names[id] ??
+      id.replace(
+        /(^|\s)(\S)/g,
+        (_: string, gap: string, c: string) => gap + c.toUpperCase(),
+      )
+    );
+  },
+}));
 vi.mock('@/lib/utils', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/utils')>();
   return { ...actual, getUserOS: () => userOS.current };
@@ -127,7 +148,7 @@ function backend(
     local?: unknown;
     /** Linux: probed name of the inode/directory handler; null = unknown. */
     fileManager?: string | null;
-    /** The locally cached approval mode; null = never chosen. */
+    /** The saved approval mode; null = an older desktop's never chosen. */
     permissionMode?: string | null;
     /** Phone↔desktop pairing state (Tauri mobile). */
     remoteHost?: unknown;
@@ -160,10 +181,10 @@ function backend(
       case 'new_opencode_workspace':
         return '/home/tester/code/fresh';
       case 'get_opencode_permission_mode':
-        // `??` would swallow an explicit null, which is the "never chosen" case.
+        // What the desktop reports when no mode is saved.
         return 'permissionMode' in overrides
           ? overrides.permissionMode
-          : 'manual';
+          : 'auto';
       case 'check_code_local_model':
         return overrides.local;
       case 'remote_code_get_host':
@@ -233,12 +254,14 @@ describe('CodingModeButton', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
+    resetApprovalModeForTests();
     mentorSettings.current = { llmProvider: 'openai', llmName: 'gpt-4o' };
     offlineMode.current = false;
     platformMetadata.current = undefined;
     saveMetadata.mockReturnValue({ unwrap: async () => ({}) });
     userOS.current = 'Linux';
     tauriPlatform.current = 'linux';
+    permissionRequests.current = [];
     scannerState.permission = 'granted';
     scannerState.requested = 'granted';
     scannerState.cancelled = false;
@@ -356,6 +379,7 @@ describe('CodingModeButton', () => {
       // forever. Mobile turns are cloud-only, so the local verdict must not
       // gate the switch there at all.
       localStorage.setItem('ibl_local_llm_enabled', 'true');
+      localStorage.setItem('ibl_local_llm_model', 'qwen3');
       backend({
         remoteHost: {
           configured: true,
@@ -1264,7 +1288,7 @@ describe('CodingModeButton', () => {
       await openPopover();
 
       expect(
-        await screen.findByText(/doesn't support tool calling/),
+        await screen.findByText(/Gemma3 can't change files or run commands/),
       ).toBeInTheDocument();
       expect(screen.getByRole('switch')).toBeDisabled();
     });
@@ -1296,6 +1320,7 @@ describe('CodingModeButton', () => {
 
     it('warns without blocking when tool support is unknown (Foundry)', async () => {
       offlineMode.current = true;
+      localStorage.setItem('ibl_local_llm_model', 'phi-4');
       backend({
         local: {
           runtime: 'foundry',
@@ -1310,7 +1335,7 @@ describe('CodingModeButton', () => {
       await openPopover();
 
       expect(
-        await screen.findByText(/doesn't report tool-calling support/),
+        await screen.findByText(/We couldn't confirm Phi-4 can change files/),
       ).toBeInTheDocument();
       expect(screen.getByRole('switch')).toBeEnabled();
     });
@@ -1390,6 +1415,21 @@ describe('CodingModeButton', () => {
     });
   });
 
+  describe('layout', () => {
+    it('scrolls inside the popover on a short window so every section stays reachable', async () => {
+      renderButton();
+      await openPopover();
+
+      const popover = (await screen.findByRole('switch')).closest(
+        '[role="dialog"]',
+      );
+      expect(popover).toHaveClass('overflow-y-auto');
+      expect(popover).toHaveClass(
+        'max-h-[var(--radix-popover-content-available-height)]',
+      );
+    });
+  });
+
   describe('toggling', () => {
     it('forces a deliberate folder choice the first time Code is switched on', async () => {
       localStorage.setItem('ibl_coding_mode_enabled', 'false');
@@ -1441,8 +1481,6 @@ describe('CodingModeButton', () => {
         if (cmd === 'install_opencode') return new Promise(() => {});
         if (cmd === 'check_opencode_status') return { sandboxed: false };
         if (cmd === 'get_opencode_workspace') return '/home/tester/code/demo';
-        // Already chosen, so the first-run dialog stays out of the way.
-        if (cmd === 'get_opencode_permission_mode') return 'manual';
         return undefined;
       });
       renderButton();
@@ -1575,7 +1613,7 @@ describe('CodingModeButton', () => {
       invoke.mockImplementation(async (cmd: string) => {
         if (cmd === 'check_opencode_status') return { sandboxed: false };
         if (cmd === 'install_opencode') throw new Error('download failed');
-        if (cmd === 'get_opencode_permission_mode') return 'manual';
+        if (cmd === 'get_opencode_permission_mode') return 'auto';
         return '/home/tester/code/demo';
       });
       renderButton();
@@ -1591,140 +1629,439 @@ describe('CodingModeButton', () => {
   });
 
   /**
-   * The approval mode decides whether the agent asks before touching files, so
-   * neither answer may be assumed: unknown means ask, and the answer has to
-   * reach both the backend that enforces it and DM, which carries it to the
-   * user's other machines.
+   * The approval mode decides whether the agent asks before touching files.
+   * One mode for every chat, saved by the desktop: Automatic until the user
+   * picks Ask Me, which then holds in every chat until they switch back.
    */
   describe('approval mode', () => {
-    const openDialogEl = () =>
-      screen.findByTestId('code-permission-mode-dialog');
-
-    it('asks on first engagement when no mode has ever been chosen', async () => {
-      localStorage.setItem('tenant', 'acme');
-      backend({ permissionMode: null });
-      renderButton();
-      await openPopover();
-
-      await openDialogEl();
+    const approvalsButton = () => screen.findByTestId('code-approvals-button');
+    /** Render with the spot beside the microphone the approvals button portals into. */
+    const renderWithApprovalsSlot = (sessionId = SESSION_ID) => {
+      const slot = document.createElement('div');
+      document.body.appendChild(slot);
+      const ui = (id: string) => (
+        <TooltipProvider>
+          <CodingModeButton sessionId={id} approvalsSlot={slot} />
+        </TooltipProvider>
+      );
+      const view = render(ui(sessionId));
+      return { ...view, rerenderFor: (id: string) => view.rerender(ui(id)) };
+    };
+    const pickFromApprovalsMenu = async (mode: 'manual' | 'auto') => {
+      await userEvent.click(await approvalsButton());
       await userEvent.click(
-        screen.getByRole('button', { name: /Approve automatically/ }),
+        await screen.findByTestId(`code-approvals-option-${mode}`),
       );
+    };
+
+    it('shows Automatic when nothing was chosen and never pushes a mode on its own', async () => {
+      localStorage.setItem('ibl_coding_mode_enabled', 'true');
+      backend();
+      renderWithApprovalsSlot();
 
       await waitFor(() =>
-        expect(invoke).toHaveBeenCalledWith('set_opencode_permission_mode', {
-          mode: 'auto',
-        }),
+        expect(invoke).toHaveBeenCalledWith(
+          'get_opencode_permission_mode',
+          undefined,
+        ),
       );
-      // …and it follows the user to their other devices.
-      expect(saveMetadata).toHaveBeenCalledWith({
-        tenantKey: 'acme',
-        metadata: { code_mode: { permission_mode: 'auto' } },
+      // Ask Me until the read lands, then the saved default: claiming
+      // Automatic before we know would promise a user who chose Ask Me that
+      // Code may act unasked.
+      await waitFor(() =>
+        expect(approvalsButton()).resolves.toHaveAccessibleName(
+          'Approvals: Automatic',
+        ),
+      );
+      expect(invoke).not.toHaveBeenCalledWith(
+        'set_opencode_permission_mode',
+        expect.anything(),
+      );
+    });
+
+    it('says Ask Me, not Automatic, before the desktop has answered', async () => {
+      localStorage.setItem('ibl_coding_mode_enabled', 'true');
+      backend();
+      extend({
+        get_opencode_permission_mode: () => new Promise<string>(() => {}),
       });
+      renderWithApprovalsSlot();
+
+      expect(await approvalsButton()).toHaveAccessibleName('Approvals: Ask Me');
+    });
+
+    it('shows the Ask Me the desktop has saved', async () => {
+      localStorage.setItem('ibl_coding_mode_enabled', 'true');
+      backend({ permissionMode: 'manual' });
+      renderWithApprovalsSlot();
+
       await waitFor(() =>
-        expect(
-          screen.queryByTestId('code-permission-mode-dialog'),
-        ).not.toBeInTheDocument(),
+        expect(approvalsButton()).resolves.toHaveAccessibleName(
+          'Approvals: Ask Me',
+        ),
       );
     });
 
-    it('does not ask again once a mode is saved', async () => {
-      backend({ permissionMode: 'manual' });
-      renderButton();
-      await openPopover();
-
-      await screen.findByRole('radio', { name: /Ask Me/ });
-      expect(
-        screen.queryByTestId('code-permission-mode-dialog'),
-      ).not.toBeInTheDocument();
-      expect(screen.getByRole('radio', { name: /Ask Me/ })).toBeChecked();
-    });
-
-    it('lets DM override a stale local copy and re-applies it to the backend', async () => {
-      backend({ permissionMode: 'manual' });
-      platformMetadata.current = {
-        metadata: { code_mode: { permission_mode: 'auto' } },
-      };
-      renderButton();
-      await openPopover();
+    it('shows Ask Me when an older desktop says nothing was chosen', async () => {
+      // An older desktop answers null in that state — and asks at every step.
+      localStorage.setItem('ibl_coding_mode_enabled', 'true');
+      backend({ permissionMode: null });
+      renderWithApprovalsSlot();
 
       await waitFor(() =>
-        expect(invoke).toHaveBeenCalledWith('set_opencode_permission_mode', {
-          mode: 'auto',
-        }),
+        expect(approvalsButton()).resolves.toHaveAccessibleName(
+          'Approvals: Ask Me',
+        ),
       );
-      expect(await screen.findByTestId('code-auto-mode-hint')).toBeVisible();
     });
 
-    it('keeps the choice when DM refuses to store it', async () => {
-      const err = vi.spyOn(console, 'error').mockImplementation(() => {});
-      localStorage.setItem('tenant', 'acme');
-      saveMetadata.mockReturnValue({
-        unwrap: async () => {
-          throw new Error('offline');
+    it('shows Ask Me when the desktop cannot report its mode', async () => {
+      // Builds before the command existed still ask at every step.
+      localStorage.setItem('ibl_coding_mode_enabled', 'true');
+      backend();
+      extend({
+        get_opencode_permission_mode: () => {
+          throw new Error('command get_opencode_permission_mode not found');
         },
       });
-      backend({ permissionMode: 'manual' });
-      renderButton();
-      await openPopover();
+      renderWithApprovalsSlot();
 
-      await userEvent.click(
-        await screen.findByRole('radio', { name: /Automatic/ }),
+      await waitFor(() =>
+        expect(approvalsButton()).resolves.toHaveAccessibleName(
+          'Approvals: Ask Me',
+        ),
       );
-
-      await waitFor(() => expect(err).toHaveBeenCalled());
-      // Reverting under the user would be worse than a failed sync.
-      expect(screen.getByRole('radio', { name: /Automatic/ })).toBeChecked();
-      err.mockRestore();
     });
 
-    it('records "ask me each time" from the first-engagement dialog', async () => {
-      localStorage.setItem('tenant', 'acme');
-      backend({ permissionMode: null });
-      renderButton();
-      await openPopover();
+    it('shows the mode beside the microphone and switches it from its menu', async () => {
+      localStorage.setItem('ibl_coding_mode_enabled', 'true');
+      backend();
+      renderWithApprovalsSlot();
 
-      await openDialogEl();
-      await userEvent.click(
-        screen.getByRole('button', { name: /Ask me each time/ }),
+      const button = await approvalsButton();
+      await waitFor(() =>
+        expect(button).toHaveAccessibleName('Approvals: Automatic'),
       );
+
+      await userEvent.click(button);
+      expect(
+        await screen.findByTestId('code-approvals-option-auto'),
+      ).toHaveAttribute('aria-checked', 'true');
+      expect(
+        screen.getByTestId('code-approvals-option-auto'),
+      ).toHaveTextContent(/without asking/);
+      expect(
+        screen.getByTestId('code-approvals-option-manual'),
+      ).toHaveTextContent(/checks with you before/);
+
+      await userEvent.click(screen.getByTestId('code-approvals-option-manual'));
 
       await waitFor(() =>
         expect(invoke).toHaveBeenCalledWith('set_opencode_permission_mode', {
           mode: 'manual',
         }),
       );
-      expect(saveMetadata).toHaveBeenCalledWith({
-        tenantKey: 'acme',
-        metadata: { code_mode: { permission_mode: 'manual' } },
-      });
+      expect(await approvalsButton()).toHaveAccessibleName('Approvals: Ask Me');
+      await waitFor(() =>
+        expect(
+          screen.queryByTestId('code-approvals-option-manual'),
+        ).not.toBeInTheDocument(),
+      );
     });
 
-    it('keeps the choice when the backend refuses it, and skips DM when signed out', async () => {
-      const err = vi.spyOn(console, 'error').mockImplementation(() => {});
+    it('explains what each mode means under the Approvals switch', async () => {
+      backend();
+      renderButton();
+      await openPopover();
+
+      expect(
+        await screen.findByTestId('code-auto-mode-hint'),
+      ).toHaveTextContent(/without asking/);
+      await userEvent.click(screen.getByRole('radio', { name: /Ask Me/ }));
+      expect(
+        await screen.findByTestId('code-manual-mode-hint'),
+      ).toHaveTextContent(/checks with you before/);
+    });
+
+    it('keeps Ask Me in the next chat until it is switched back', async () => {
+      localStorage.setItem('ibl_coding_mode_enabled', 'true');
+      backend();
+      const { rerenderFor } = renderWithApprovalsSlot('chat-a');
+      await pickFromApprovalsMenu('manual');
+      await waitFor(() =>
+        expect(approvalsButton()).resolves.toHaveAccessibleName(
+          'Approvals: Ask Me',
+        ),
+      );
+      invoke.mockClear();
+
+      rerenderFor('chat-b');
+
+      expect(await approvalsButton()).toHaveAccessibleName('Approvals: Ask Me');
+      expect(invoke).not.toHaveBeenCalledWith(
+        'set_opencode_permission_mode',
+        expect.anything(),
+      );
+    });
+
+    it('keeps Ask Me when the composer remounts', async () => {
+      // The first send swaps the welcome composer for the chat's own, and a
+      // canvas swaps it again; neither may reset the mode.
+      localStorage.setItem('ibl_coding_mode_enabled', 'true');
+      backend({ permissionMode: 'auto' });
+      const first = renderWithApprovalsSlot('chat-a');
+      await pickFromApprovalsMenu('manual');
+      first.unmount();
+      // The desktop now holds what was just saved.
       backend({ permissionMode: 'manual' });
+      invoke.mockClear();
+
+      renderWithApprovalsSlot('chat-a');
+
+      expect(await approvalsButton()).toHaveAccessibleName('Approvals: Ask Me');
+      expect(invoke).not.toHaveBeenCalledWith(
+        'set_opencode_permission_mode',
+        expect.anything(),
+      );
+    });
+
+    it('lets a pick win over a read that was still on its way', async () => {
+      localStorage.setItem('ibl_coding_mode_enabled', 'true');
+      let answer: (mode: string) => void = () => {};
+      backend();
       extend({
-        set_opencode_permission_mode: () => {
-          throw new Error('config locked');
+        get_opencode_permission_mode: () =>
+          new Promise<string>((resolve) => {
+            answer = resolve;
+          }),
+      });
+      renderWithApprovalsSlot();
+
+      await pickFromApprovalsMenu('manual');
+      await act(async () => answer('auto'));
+
+      expect(await approvalsButton()).toHaveAccessibleName('Approvals: Ask Me');
+    });
+
+    it('shows the same mode in every composer on screen', async () => {
+      // A canvas keeps two composers mounted; both must show what is enforced.
+      localStorage.setItem('ibl_coding_mode_enabled', 'true');
+      backend();
+      const slots = [0, 1].map(() => {
+        const slot = document.createElement('div');
+        document.body.appendChild(slot);
+        return slot;
+      });
+      render(
+        <TooltipProvider>
+          <CodingModeButton sessionId="chat-a" approvalsSlot={slots[0]} />
+          <CodingModeButton sessionId="chat-a" approvalsSlot={slots[1]} />
+        </TooltipProvider>,
+      );
+      const inSlot = (i: number) =>
+        within(slots[i]).findByTestId('code-approvals-button');
+
+      await userEvent.click(await inSlot(0));
+      await userEvent.click(
+        await screen.findByTestId('code-approvals-option-manual'),
+      );
+
+      expect(await inSlot(1)).toHaveAccessibleName('Approvals: Ask Me');
+      expect(await inSlot(0)).toHaveAccessibleName('Approvals: Ask Me');
+    });
+
+    it('shows the approvals button inline when the composer gives no slot', async () => {
+      // The SDK composer has no approvals slot, so without the inline branch
+      // the mentor chat shows no approvals control at all.
+      localStorage.setItem('ibl_coding_mode_enabled', 'true');
+      backend({ permissionMode: 'manual' });
+      renderButton();
+
+      await waitFor(() =>
+        expect(approvalsButton()).resolves.toHaveAccessibleName(
+          'Approvals: Ask Me',
+        ),
+      );
+    });
+
+    it('follows a switch to Automatic made from the SDK permission card', async () => {
+      // That card cannot reach this store, so it announces the mode on the
+      // window; without this the composer would keep showing Ask Me after a
+      // switch the user just made.
+      localStorage.setItem('ibl_coding_mode_enabled', 'true');
+      backend({ permissionMode: 'manual' });
+      renderWithApprovalsSlot();
+      await waitFor(() =>
+        expect(approvalsButton()).resolves.toHaveAccessibleName(
+          'Approvals: Ask Me',
+        ),
+      );
+
+      act(() => {
+        window.dispatchEvent(
+          new CustomEvent('ibl:code-approval-mode-changed', {
+            detail: { mode: 'auto' },
+          }),
+        );
+      });
+
+      expect(await approvalsButton()).toHaveAccessibleName(
+        'Approvals: Automatic',
+      );
+    });
+
+    // The SDK renders the cards and has no button on them, so the offer lives
+    // in the composer. Switching answers every waiting card in Rust, so this
+    // is a real answer to the prompt, not just a setting.
+    it('offers Switch to Automatic while a Code card is waiting, and applies it', async () => {
+      localStorage.setItem('ibl_coding_mode_enabled', 'true');
+      backend({ permissionMode: 'manual' });
+      permissionRequests.current = [
+        { request_id: 'perm-1', allow_option_id: 'allow-once' },
+      ];
+      renderButton();
+
+      await userEvent.click(
+        await screen.findByTestId('code-switch-to-automatic'),
+      );
+
+      await waitFor(() =>
+        expect(invoke).toHaveBeenCalledWith('set_opencode_permission_mode', {
+          mode: 'auto',
+        }),
+      );
+    });
+
+    it('does not offer it with nothing waiting, nor for a Browse prompt', async () => {
+      localStorage.setItem('ibl_coding_mode_enabled', 'true');
+      backend({ permissionMode: 'manual' });
+      const { unmount } = renderButton();
+      await waitFor(() =>
+        expect(approvalsButton()).resolves.toHaveAccessibleName(
+          'Approvals: Ask Me',
+        ),
+      );
+      expect(
+        screen.queryByTestId('code-switch-to-automatic'),
+      ).not.toBeInTheDocument();
+      unmount();
+
+      // A Browse run answers through its own responder and follows Cowork's
+      // own Approvals setting.
+      permissionRequests.current = [
+        {
+          request_id: 'perm-2',
+          allow_option_id: 'allow-once',
+          respond: () => {},
+        },
+      ];
+      renderButton();
+      await waitFor(() =>
+        expect(approvalsButton()).resolves.toHaveAccessibleName(
+          'Approvals: Ask Me',
+        ),
+      );
+      expect(
+        screen.queryByTestId('code-switch-to-automatic'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('hides the approvals button while Code is off', async () => {
+      localStorage.setItem('ibl_coding_mode_enabled', 'false');
+      backend();
+      renderWithApprovalsSlot();
+      await openPopover();
+
+      expect(
+        screen.queryByTestId('code-approvals-button'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('puts the mode back and says so when the desktop cannot save the choice', async () => {
+      // Shown as chosen but never saved, Code would keep approving on its own
+      // behind an "Ask Me" label.
+      const err = vi.spyOn(console, 'error').mockImplementation(() => {});
+      backend();
+      extend({
+        set_opencode_permission_mode: (args: unknown) => {
+          if ((args as { mode?: string })?.mode === 'manual') {
+            throw new Error('config locked');
+          }
+          return undefined;
         },
       });
       renderButton();
       await openPopover();
 
       await userEvent.click(
-        await screen.findByRole('radio', { name: /Automatic/ }),
+        await screen.findByRole('radio', { name: /Ask Me/ }),
       );
 
       await waitFor(() =>
-        expect(err).toHaveBeenCalledWith(
-          '[coding-mode] could not apply permission mode',
-          expect.any(Error),
+        expect(toastError).toHaveBeenCalledWith(
+          'The approval setting could not be saved. Code still uses the previous setting.',
         ),
       );
       expect(screen.getByRole('radio', { name: /Automatic/ })).toBeChecked();
-      // No tenant → nothing to sync to DM.
+      expect(screen.getByRole('radio', { name: /Ask Me/ })).not.toBeChecked();
+      expect(err).toHaveBeenCalledWith(
+        '[coding-mode] could not apply permission mode',
+        expect.any(Error),
+      );
       expect(saveMetadata).not.toHaveBeenCalled();
       err.mockRestore();
+    });
+  });
+
+  describe('on-device model warning', () => {
+    it('uses the cloud model while Local Models is on but no on-device model is picked', async () => {
+      localStorage.setItem('ibl_local_llm_enabled', 'true');
+      backend();
+      renderButton();
+      await openPopover();
+
+      await waitFor(() =>
+        expect(screen.getByRole('switch')).not.toBeDisabled(),
+      );
+      expect(
+        screen.queryByTestId('code-local-model-warning'),
+      ).not.toBeInTheDocument();
+      expect(invoke).not.toHaveBeenCalledWith(
+        'check_code_local_model',
+        expect.anything(),
+      );
+    });
+
+    it('asks for an on-device model when the app is offline and none is picked', async () => {
+      offlineMode.current = true;
+      backend();
+      renderButton();
+      await openPopover();
+
+      expect(
+        await screen.findByTestId('code-local-model-warning'),
+      ).toHaveTextContent(/Pick an on-device model first/);
+    });
+
+    it('names the model the way the model list does when it cannot run Code', async () => {
+      localStorage.setItem('ibl_local_llm_enabled', 'true');
+      localStorage.setItem('ibl_local_llm_model', 'qwen3:latest');
+      backend({
+        local: {
+          runtime: 'ollama',
+          spec: 'ollama/qwen3:latest',
+          model: 'qwen3:latest',
+          running: true,
+          tools_supported: false,
+          reason: "qwen3:latest doesn't support tool calling",
+        },
+      });
+      renderButton();
+      await openPopover();
+
+      const warning = await screen.findByTestId('code-local-model-warning');
+      await waitFor(() => expect(warning).toHaveTextContent('Qwen 3'));
+      expect(warning).not.toHaveTextContent('qwen3:latest');
     });
   });
 
@@ -2092,6 +2429,7 @@ describe('CodingModeButton', () => {
 
     it('lets an agent run while an on-device model without tool calling is selected', async () => {
       localStorage.setItem('ibl_local_llm_enabled', 'true');
+      localStorage.setItem('ibl_local_llm_model', 'tiny');
       localStorage.setItem('ibl_coding_mode_agent', 'codex');
       backend({
         agents: READY,
@@ -2643,8 +2981,9 @@ describe('CodingModeButton', () => {
 });
 
 describe('CodingModeButton pill label on phone widths', () => {
-  // The label is CSS-hidden below 520px ONLY while Code is off; once it is
-  // on the name always shows so the user can see what is selected.
+  // The label is CSS-hidden below 520px while Code is off; once it is on the
+  // name shows, unless the composer row is too narrow even for Code beside
+  // the ••• (`compact`), where the blue fill alone marks it as on.
   const labelSpan = () => {
     const button = screen.getByRole('button', { name: /Code/i });
     return Array.from(button.querySelectorAll('span')).find(
@@ -2659,10 +2998,21 @@ describe('CodingModeButton pill label on phone widths', () => {
     expect(labelSpan().className).toContain('max-[520px]:hidden');
   });
 
-  it('always shows the label once Code is on', async () => {
+  it('shows the label once Code is on', async () => {
     localStorage.setItem('ibl_coding_mode_enabled', 'true');
     renderButton();
     await screen.findByRole('button', { name: /Code/i });
     expect(labelSpan().className).not.toContain('max-[520px]:hidden');
+  });
+
+  it('drops the label, on or off, when the row is too narrow for it', async () => {
+    localStorage.setItem('ibl_coding_mode_enabled', 'true');
+    render(
+      <TooltipProvider>
+        <CodingModeButton sessionId={SESSION_ID} compact />
+      </TooltipProvider>,
+    );
+    await screen.findByRole('button', { name: /Code/i });
+    expect(labelSpan()).toHaveClass('hidden');
   });
 });
