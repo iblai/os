@@ -14,7 +14,7 @@
  */
 import 'katex/dist/katex.min.css';
 import { configureCanvasMarkdown } from '@iblai/iblai-js/web-containers';
-import { htmlToMarkdown, markdownToHtml } from '@/lib/utils';
+import { htmlToMarkdown, markdownToHtml } from '@/lib/markdown-engine';
 
 // Wrapped, not passed by reference: the converters are read when a canvas
 // converts, not when the app boots.

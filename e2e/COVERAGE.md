@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-10-08 | 938 checkpoints (894 covered, 10 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 95 journeys (94 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-10-15 | 940 checkpoints (896 covered, 10 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 96 journeys (95 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -2185,3 +2185,14 @@ Regression: the camera dialog opened from the "+" menu item left `<body style="p
 Regression: the Category popover is portaled outside the Create Agent dialog, whose scroll lock swallowed wheel events. Page object: `page-objects/create-mentor.page.ts` (`categoryList`).
 
 - [x] catscroll-01: Admin opens Create Agent, opens the Category picker and wheels the list: scrollTop increases and a lower category can be selected
+
+---
+
+## Journey 89: agent-ai Launcher Chat Download (2 checkpoints) — `journeys/89-agent-ai-launcher-chat-download.spec.ts`
+
+**Source files:** `extensions/chrome/public/vendor/agent-ai.umd.js`, `extensions/chrome/public/manifest.json`, `e2e/utils/embed-harness-server.mjs`
+
+Regression guard for [iblai-platform#2680](https://github.com/iblai/iblai-platform/issues/2680): Chrome silently blocks a download from a sandboxed iframe lacking `allow-downloads`, and the `<agent-ai>` web component rendered its chat iframe without it, so chat export did nothing in launcher embeds. The spec loads the VENDORED bundle through the harness's `/agent-ai` page (second origin, session taken from the host page's localStorage via `authrelyonhost`) with a mocked chat WebSocket on the tenant's default agent; nothing is created. The harness serves `e2e/fixtures/agent-ai.umd.js`, a copy pinned to the vendored file by `scripts/agent-ai-vendor-copy.test.ts`, because the CI e2e image carries only `e2e/`.
+
+- [x] aa-01: The launcher's chat iframe sandbox includes `allow-downloads`, and "Download this chat" > Download inside the frame yields a `chat-*.txt` containing both conversation turns
+- [x] aa-02: Negative control: reloading the iframe under the pre-fix sandbox (no `allow-downloads`) yields no download within 5s, so aa-01 detects the bug
