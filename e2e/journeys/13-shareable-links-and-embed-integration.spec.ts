@@ -85,7 +85,20 @@ async function createEmbedWithShowCatalogue(
     timeout: 15_000,
   });
   await editMentorPage.embed.setShowCatalogue(enabled);
+  const settingsSaved = page.waitForResponse(
+    (res) =>
+      res.request().method() === 'PUT' &&
+      /\/mentors\/[^/]+\/settings\/?$/.test(new URL(res.url()).pathname) &&
+      res.ok(),
+    { timeout: 30_000 },
+  );
   await editMentorPage.embed.submit();
+  // submit() swallows a missing "Embedded code" dialog, so assert the save here.
+  await settingsSaved.catch(() => {
+    throw new Error(
+      `Create Embed (showCatalogue=${enabled}) never produced a successful settings PUT`,
+    );
+  });
   await editMentorPage.close();
 }
 
@@ -296,8 +309,18 @@ test.describe('Journey 13: Shareable Links & Embed Integration', () => {
         .getByRole('button', { name: /save/i })
         .first();
       await expect(saveBtn).toBeEnabled({ timeout: 5_000 });
+      // A navigation before the PUT lands aborts it, leaving the mentor non-anonymous.
+      const settingsSaved = page.waitForResponse(
+        (res) =>
+          res.request().method() === 'PUT' &&
+          new RegExp(`/mentors/${mentorId}/settings/?$`).test(
+            new URL(res.url()).pathname,
+          ) &&
+          res.ok(),
+        { timeout: 30_000 },
+      );
       await saveBtn.click();
-      await page.waitForTimeout(1_500);
+      await settingsSaved;
       await editMentorPage.close();
     });
 
