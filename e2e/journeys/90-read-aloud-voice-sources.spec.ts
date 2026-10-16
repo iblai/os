@@ -5,7 +5,7 @@ import type { EditMentorPage } from '../page-objects/edit-mentor/edit-mentor.pag
 import type { VoiceProviderId } from '../page-objects/edit-mentor/voice.tab';
 
 /**
- * Journey 87 — Read Aloud plays real audio for every voice source.
+ * Journey 90 — Read Aloud plays real audio for every voice source.
  *
  * Unlike journey 40 (which stubs speechSynthesis), nothing is mocked: the
  * agent's voice source is switched in Settings → Voice, a fresh reply is read
@@ -95,7 +95,7 @@ async function setVoiceSource(
 // Up to five legs, each a chat reply plus up to 30s of playback (7s for server voices).
 test.describe.configure({ timeout: 12 * 60_000 });
 
-test.describe('Journey 87: Read Aloud across voice sources', () => {
+test.describe('Journey 90: Read Aloud across voice sources', () => {
   test.beforeEach(async ({ page, createMentorPage }) => {
     await trackPlayback(page);
     await navigateToMentorApp(page);

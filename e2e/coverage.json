@@ -1,15 +1,15 @@
 {
   "version": 2,
-  "lastUpdated": "2026-10-12",
+  "lastUpdated": "2026-10-16",
   "summary": {
-    "totalCheckpoints": 936,
-    "coveredCheckpoints": 891,
+    "totalCheckpoints": 942,
+    "coveredCheckpoints": 897,
     "deprecatedCheckpoints": 17,
     "notReproducibleCheckpoints": 17,
     "pendingCheckpoints": 11,
     "percent": 100,
-    "totalJourneys": 94,
-    "activeJourneys": 93
+    "totalJourneys": 97,
+    "activeJourneys": 96
   },
   "journeys": [
     {
@@ -4397,7 +4397,7 @@
       "checkpoints": [
         {
           "id": "atl-01",
-          "description": "The task list renders as a real <ol> with one <li> per todo; status communicated via data-status + a sr-only status word + a distinct icon shape per status — no visible status text on the row itself (issue #2216)",
+          "description": "The task list renders as a real <ol> with one <li> per todo; status communicated via data-status + a sr-only status word + a distinct icon shape per status — no visible status text on the row itself; once the turn is over, an in_progress step reads as To do with the pending icon (data-status keeps in_progress) (issue #2216)",
           "status": "covered"
         },
         {
@@ -4432,7 +4432,7 @@
         },
         {
           "id": "atl-08",
-          "description": "The in-progress row's text carries the .todo-shimmer left-to-right sweep class",
+          "description": "The in-progress row's text carries the .todo-shimmer left-to-right sweep class while the turn streams, and loses it once the turn is over",
           "status": "covered"
         },
         {
@@ -5818,33 +5818,6 @@
       ]
     },
     {
-      "id": "read-aloud-voice-sources",
-      "name": "Read Aloud Across Voice Sources",
-      "spec": "87-read-aloud-voice-sources.spec.ts",
-      "sourceFiles": [
-        "components/chat/ai-message-speak.tsx",
-        "hooks/use-speech.ts",
-        "components/modals/edit-mentor-modal/tabs/voice-tab.tsx"
-      ],
-      "checkpoints": [
-        {
-          "id": "rav-01",
-          "description": "Admin switches the agent's voice source from Browser to each other source in Settings \u2192 Voice and saves it (\"Voice saved\")",
-          "status": "covered"
-        },
-        {
-          "id": "rav-02",
-          "description": "For each server voice source, clicking Read Aloud on a fresh reply fetches the chat-message /tts/ audio (2xx, audio/*) and audio starts playing within 7s (the budget past which useSpeech reports TtsSlowFirstAudioError to Sentry)",
-          "status": "pending"
-        },
-        {
-          "id": "rav-03",
-          "description": "After switching back to Browser, clicking Read Aloud on a fresh reply starts speech synthesis within 30s",
-          "status": "covered"
-        }
-      ]
-    },
-    {
       "id": "accessibility-fab-draggable",
       "name": "Draggable Accessibility Button",
       "spec": "86-accessibility-fab-draggable.spec.ts",
@@ -5915,6 +5888,91 @@
         {
           "id": "fab-13",
           "description": "Mobile: default button position does not overlap the composer Send button",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "camera-dialog-pointer-events",
+      "name": "Camera Dialog Leaves Page Clickable",
+      "spec": "87-camera-dialog-pointer-events.spec.ts",
+      "sourceFiles": ["components/chat/sdk-chat.tsx"],
+      "checkpoints": [
+        {
+          "id": "camera-01",
+          "description": "Composer + -> Camera -> Capture -> Use photo: live feed shows, then body pointer-events is not 'none', the composer accepts typing and + reopens its menu (regression: separate Radix DismissableLayer copies froze the page)",
+          "status": "covered"
+        },
+        {
+          "id": "camera-02",
+          "description": "Composer + -> Camera -> Capture -> Escape closes the dialog and leaves the page clickable (same regression)",
+          "status": "covered"
+        },
+        {
+          "id": "camera-03",
+          "description": "Camera -> Capture -> Retake -> Capture -> Use photo leaves the page clickable and a message can still be sent",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "create-agent-category-wheel-scroll",
+      "name": "Create Agent Category Wheel Scroll",
+      "spec": "88-create-agent-category-wheel-scroll.spec.ts",
+      "sourceFiles": ["components/modals/create-mentor-form.tsx"],
+      "checkpoints": [
+        {
+          "id": "catscroll-01",
+          "description": "Admin opens Create Agent, opens the Category picker and wheels the list: scrollTop increases and a lower category can be selected (regression: dialog scroll lock swallowed wheel events on the portaled popover)",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "agent-ai-launcher-chat-download",
+      "name": "agent-ai Launcher Chat Download",
+      "spec": "89-agent-ai-launcher-chat-download.spec.ts",
+      "sourceFiles": [
+        "extensions/chrome/public/vendor/agent-ai.umd.js",
+        "extensions/chrome/public/manifest.json",
+        "e2e/utils/embed-harness-server.mjs"
+      ],
+      "checkpoints": [
+        {
+          "id": "aa-01",
+          "description": "The <agent-ai> launcher (vendored @iblai/agent-ai bundle on the second-origin harness /agent-ai page) renders its chat iframe with a sandbox containing allow-downloads, and \"Download this chat\" > Download inside the frame produces a chat-*.txt file holding both conversation turns (iblai-platform#2680)",
+          "status": "covered"
+        },
+        {
+          "id": "aa-02",
+          "description": "Negative control: with the iframe reloaded under the pre-fix sandbox (no allow-downloads) the same export yields no download event, proving aa-01 detects the silently blocked download",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "read-aloud-voice-sources",
+      "name": "Read Aloud Across Voice Sources",
+      "spec": "90-read-aloud-voice-sources.spec.ts",
+      "sourceFiles": [
+        "components/chat/ai-message-speak.tsx",
+        "hooks/use-speech.ts",
+        "components/modals/edit-mentor-modal/tabs/voice-tab.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "rav-01",
+          "description": "Admin switches the agent's voice source from Browser to each other source in Settings \u2192 Voice and saves it (\"Voice saved\")",
+          "status": "covered"
+        },
+        {
+          "id": "rav-02",
+          "description": "For each server voice source, clicking Read Aloud on a fresh reply fetches the chat-message /tts/ audio (2xx, audio/*) and audio starts playing within 7s (the budget past which useSpeech reports TtsSlowFirstAudioError to Sentry)",
+          "status": "pending"
+        },
+        {
+          "id": "rav-03",
+          "description": "After switching back to Browser, clicking Read Aloud on a fresh reply starts speech synthesis within 30s",
           "status": "covered"
         }
       ]

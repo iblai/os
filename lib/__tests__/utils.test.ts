@@ -31,10 +31,7 @@ import {
   getProviderName,
   sendMessageToParentWebsite,
   isLoggedIn,
-  htmlToMarkdown,
   isHtml,
-  parsePrompt,
-  markdownToHtml,
   getUserOS,
   isMobileOS,
   saveUserObjectToLocalStorage,
@@ -54,6 +51,11 @@ import {
   isSafariBrowser,
   onAccountDeleted,
 } from '@/lib/utils';
+import {
+  htmlToMarkdown,
+  parsePrompt,
+  markdownToHtml,
+} from '@/lib/markdown-engine';
 import { LOCAL_STORAGE_KEYS, QUERY_PARAMS } from '@/lib/constants';
 import { config } from '@/lib/config';
 

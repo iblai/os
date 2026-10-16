@@ -1,5 +1,108 @@
 # Changelog
 
+## [0.171.5](https://github.com/iblai/os/compare/v0.171.4...v0.171.5) (2026-10-16)
+
+### Bug Fixes
+
+* **code:** drop output-only ACP updates, emit on main, bump opencode to 1.19.0 ([ea2f045](https://github.com/iblai/os/commit/ea2f0450a705c54e68402a30f7f30b030af2e9e9))
+* **code:** flush thoughts before reply and error, one bounded flush exit, test the wiring ([e629383](https://github.com/iblai/os/commit/e629383f74e122fe6b9b6648c8ddce640bf55146))
+* **code:** forward admitted tool updates without the output the chat never reads ([5f56e36](https://github.com/iblai/os/commit/5f56e369d77c0785f064b1f5fac828bb11d47e04))
+* **code:** one toast per failed Code turn, renumber code-48, round-3 review fixes ([79b5d7c](https://github.com/iblai/os/commit/79b5d7c9c92a46fb18c32a1fa838d89a0affb916))
+
+### Chores
+
+* **tauri:** release app-v0.95.27 ([c857256](https://github.com/iblai/os/commit/c8572567219a37cc070c64837619f2f36f9fe96a))
+
+### Tests
+
+* retry the two port re-binds that race the parallel cargo suite ([2136de9](https://github.com/iblai/os/commit/2136de9f9d71b144c4a7e789e61da61e6ae54ad0))
+
+## [0.171.4](https://github.com/iblai/os/compare/v0.171.3...v0.171.4) (2026-10-16)
+
+### Bug Fixes
+
+* **ext:** vendor agent-ai with allow-downloads in the iframe sandbox ([04a6cfb](https://github.com/iblai/os/commit/04a6cfb2366be02842a41fefa8fc3434f02d37fa)), closes [iblai-web-frontend#2144](https://github.com/iblai/iblai-web-frontend/issues/2144)
+
+### Chores
+
+* **ext:** bump Chrome extension to 1.1.6 ([f861814](https://github.com/iblai/os/commit/f86181455251742423aac34c01015926ea6c7f63)), closes [#577](https://github.com/iblai/os/issues/577)
+
+### Tests
+
+* **e2e:** expect a finished turn's in_progress todo to render as to do ([ba87528](https://github.com/iblai/os/commit/ba8752871fd5ab93a7e093932ba6496ff16159e0))
+* **e2e:** journey 86 covers chat download through the agent-ai launcher ([438f51a](https://github.com/iblai/os/commit/438f51abeffd84d53e222d8a080779cc2bc1d665))
+* **e2e:** reopen the Edit Agent dialog when it closes during journey 45 setup ([5b04e4f](https://github.com/iblai/os/commit/5b04e4f16f970a3a86b68e589cc1c8b2aabd96a6))
+* **e2e:** run journey 86 in CI with an e2e copy of the launcher ([9b521da](https://github.com/iblai/os/commit/9b521da13e7babe40d3b0ef109994cb96a3aa6d9))
+* **e2e:** serve the agent-ai launcher from the embed harness ([b22642e](https://github.com/iblai/os/commit/b22642ee758276f1bf0b497d8442398f5b369048))
+* **e2e:** wait for the settings saves in journey 13's Show Catalogue tests ([dff3eae](https://github.com/iblai/os/commit/dff3eaee1b0925c42631ed0c68211921adab44a3))
+
+## [0.171.3](https://github.com/iblai/os/compare/v0.171.2...v0.171.3) (2026-10-15)
+
+### Bug Fixes
+
+* adopt iblai-js 2.40.6 + transpile react-gravatar (prod avatar crash) ([0e14c76](https://github.com/iblai/os/commit/0e14c768bcf99cb8c22788250ee30a072cc57f34))
+
+## [0.171.2](https://github.com/iblai/os/compare/v0.171.1...v0.171.2) (2026-10-15)
+
+### Performance
+
+* adopt @iblai/iblai-js 2.40.1 (tree-shakeable web-containers) ([bbed213](https://github.com/iblai/os/commit/bbed2139670c21ee6237c8c1f26773832045fda3))
+* trim first-load JS off error/404 and non-chat routes ([44f4d71](https://github.com/iblai/os/commit/44f4d717e90aa38a57dabbf88cd9903340a7adcf))
+
+### Tests
+
+* retire the web-utils iOS local-LLM gate guard (shipped in the SDK) ([71a39c3](https://github.com/iblai/os/commit/71a39c3c847628856e0386f36fbf7da0a5a1659a))
+
+## [0.171.1](https://github.com/iblai/os/compare/v0.171.0-patch.2...v0.171.1) (2026-10-15)
+
+### Chores
+
+* iblai js bump 2.40.4 > patch version update ([eeae31e](https://github.com/iblai/os/commit/eeae31e82c6b9bbc038c33531893859a672f40fc))
+
+## [0.171.0](https://github.com/iblai/os/compare/v0.170.0...v0.171.0) (2026-10-15)
+
+### Features
+
+- **code-mode:** describe every Code-turn step, card, line and error in plain words ([20541fe](https://github.com/iblai/os/commit/20541fe7ee4b276fc92db7d1f5e2867a8c2bec98))
+
+### Bug Fixes
+
+- **code-mode:** keep task-list items plain, test the permission payload, fix the ledger notes ([616116a](https://github.com/iblai/os/commit/616116ab09cdec38c2f43b96e1a2483b68d88c37))
+- **e2e:** read an unfinished task of a finished turn as To do ([c3dbc91](https://github.com/iblai/os/commit/c3dbc91202a952f0b2194ff3b6e5861fb6e58502))
+
+### Chores
+
+- **code-mode:** move the plain-words Code-turn UI to the SDK and pin @iblai/iblai-js 2.38.0 ([a441380](https://github.com/iblai/os/commit/a4413800b5b7221d5dac62a131c3268be218723c))
+- **tauri:** release app-v0.95.26 ([1e6fd4b](https://github.com/iblai/os/commit/1e6fd4b5bdfa573ff487a899790288da13806e04))
+
+## [0.170.0](https://github.com/iblai/os/compare/v0.169.3...v0.170.0) (2026-10-15)
+
+### Features
+
+- **ui:** let PopoverContent portal into a given container ([90f76a8](https://github.com/iblai/os/commit/90f76a834ec9ebd08fe7dd980050077db88a4a4c))
+
+### Bug Fixes
+
+- **create-agent:** portal the category list into the dialog so the wheel scrolls it ([4d1e221](https://github.com/iblai/os/commit/4d1e221436a14a42e36230b97b3f5e168fdbe699))
+
+### Chores
+
+- **deps:** bump @iblai/iblai-js to 2.39.1 for the camera dialog fix ([45fc836](https://github.com/iblai/os/commit/45fc836e23d0d301b3b61f8bf9b553438fda2b07))
+
+### Documentation
+
+- **e2e:** add journeys 87 and 88 to coverage ([00a8aa0](https://github.com/iblai/os/commit/00a8aa0f18458fa21e6e9b15c28b1c50c911339c))
+
+### Styles
+
+- prettier-format CHANGELOG bullets ([1084e1d](https://github.com/iblai/os/commit/1084e1d3420c41dc7b3121097f6f65de2139cb6f))
+
+### Tests
+
+- **create-agent:** cover wheel scrolling the category list inside the dialog ([49ec699](https://github.com/iblai/os/commit/49ec699fe94969ae8237b12be54cf4528b884aed))
+- **e2e:** journey 87 — closing the camera dialog keeps the page clickable ([4733088](https://github.com/iblai/os/commit/4733088d227b1aaf19539c50aefdebd7be39814d))
+- **e2e:** journey 88 — Create Agent category list scrolls with the wheel ([e939893](https://github.com/iblai/os/commit/e9398938833b901be991eb2a7b7c8cfc273f4c37))
+
 ## [0.169.3](https://github.com/iblai/os/compare/v0.169.2...v0.169.3) (2026-10-14)
 
 ### Bug Fixes

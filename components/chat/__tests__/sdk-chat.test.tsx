@@ -125,6 +125,8 @@ vi.mock('@/lib/utils', () => ({
   isInIframe: () => inIframe,
   redirectToAuthSpa,
   redirectToAuthSpaJoinTenant,
+}));
+vi.mock('@/lib/markdown-engine', () => ({
   markdownToHtml,
   htmlToMarkdown,
 }));

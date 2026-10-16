@@ -12,7 +12,7 @@ describe('canvas markdown engine registration', () => {
     "hands the SDK canvas this app's markdown converters on import",
     { timeout: 30_000 },
     async () => {
-      const utils = await import('@/lib/utils');
+      const mdEngine = await import('@/lib/markdown-engine');
       await import('@/lib/canvas-markdown-engine');
 
       expect(mocks.configureCanvasMarkdown).toHaveBeenCalledTimes(1);
@@ -24,10 +24,10 @@ describe('canvas markdown engine registration', () => {
       );
       expect(engine.markdownToHtml('$x^2$')).toContain('class="katex"');
       expect(engine.markdownToHtml('# Title')).toBe(
-        utils.markdownToHtml('# Title'),
+        mdEngine.markdownToHtml('# Title'),
       );
       expect(engine.htmlToMarkdown('<h1>Title</h1>')).toBe(
-        utils.htmlToMarkdown('<h1>Title</h1>'),
+        mdEngine.htmlToMarkdown('<h1>Title</h1>'),
       );
     },
   );
