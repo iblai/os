@@ -22,7 +22,12 @@ export const PERMISSION_MODE_ICONS: Record<PermissionMode, LucideIcon> = {
 // control on screen, so two composers (the canvas split) never disagree and a
 // composer mounting mid-chat shows the mode in force. `picks` counts the
 // user's choices, so a read that started before one never overwrites it.
-let approvalMode: PermissionMode = 'auto';
+//
+// Seeded to Ask Me, NOT to the saved default: until the desktop answers we do
+// not know the mode, and claiming Automatic in that window tells a user who
+// chose Ask Me that Code may act unasked. Rust holds the same invariant from
+// the other side, where damage can only make Code ask more, never less.
+let approvalMode: PermissionMode = 'manual';
 let picks = 0;
 const subscribers = new Set<() => void>();
 
@@ -31,10 +36,33 @@ function publish(mode: PermissionMode) {
   subscribers.forEach((notify) => notify());
 }
 
+/**
+ * The SDK's permission card owns the Switch to Automatic the mentor chat
+ * shows, and it cannot reach into this store, so it announces the new mode on
+ * the window instead. Must stay equal to `CODE_APPROVAL_MODE_EVENT` exported
+ * from `@iblai/iblai-js/web-containers`; import it from there once the SDK
+ * carrying it is pinned.
+ */
+const CODE_APPROVAL_MODE_EVENT = 'ibl:code-approval-mode-changed';
+
+function onModeAnnounced(event: Event) {
+  const mode = (event as CustomEvent<{ mode?: string }>).detail?.mode;
+  if (mode === 'auto' || mode === 'manual') setApprovalMode(mode);
+}
+
+// Bound while anything is watching the mode, so the listener's lifetime is the
+// store's own rather than a module-load side effect (which would also run on
+// the server).
 function subscribe(notify: () => void) {
+  if (subscribers.size === 0 && typeof window !== 'undefined') {
+    window.addEventListener(CODE_APPROVAL_MODE_EVENT, onModeAnnounced);
+  }
   subscribers.add(notify);
   return () => {
     subscribers.delete(notify);
+    if (subscribers.size === 0 && typeof window !== 'undefined') {
+      window.removeEventListener(CODE_APPROVAL_MODE_EVENT, onModeAnnounced);
+    }
   };
 }
 
@@ -42,7 +70,7 @@ export function useApprovalMode(): PermissionMode {
   return useSyncExternalStore(
     subscribe,
     () => approvalMode,
-    () => 'auto',
+    () => 'manual',
   );
 }
 
@@ -90,7 +118,7 @@ export async function loadApprovalMode(
 /** Test support only: the mode outlives every component by design. */
 export function resetApprovalModeForTests() {
   picks = 0;
-  publish('auto');
+  publish('manual');
 }
 
 /**
@@ -124,7 +152,7 @@ export function CodeApprovalsButton({
             type="button"
             data-testid="code-approvals-button"
             aria-label={t('approvalsAria', { mode: name(mode) })}
-            className="group absolute top-0 right-0 z-10 flex h-8 cursor-pointer items-center rounded-lg border border-transparent px-[7px] text-sm font-medium text-[#38A1E5] transition-colors duration-200 hover:border-[#D0E0FF] hover:bg-[#F5F8FF] hover:delay-150 focus-visible:border-[#D0E0FF] focus-visible:bg-[#F5F8FF] focus-visible:outline-none data-[state=open]:border-[#D0E0FF] data-[state=open]:bg-[#F5F8FF]"
+            className="group absolute top-0 right-0 z-10 flex h-8 cursor-pointer items-center rounded-lg border border-transparent px-[7px] text-sm font-medium text-gray-400 transition-colors duration-200 hover:border-gray-200 hover:bg-gray-100 hover:text-gray-600 hover:delay-150 focus-visible:border-gray-200 focus-visible:bg-gray-100 focus-visible:outline-none data-[state=open]:border-gray-200 data-[state=open]:bg-gray-100"
           >
             <Icon className="size-4 shrink-0" aria-hidden="true" />
             <span className="max-w-0 overflow-hidden whitespace-nowrap opacity-0 transition-all duration-200 ease-out group-hover:ml-1.5 group-hover:max-w-28 group-hover:opacity-100 group-hover:delay-150 group-focus-visible:ml-1.5 group-focus-visible:max-w-28 group-focus-visible:opacity-100 group-data-[state=open]:ml-1.5 group-data-[state=open]:max-w-28 group-data-[state=open]:opacity-100">
@@ -162,28 +190,24 @@ export function CodeApprovalsButton({
                   setOpen(false);
                 }}
                 className={`flex w-full cursor-pointer items-start gap-2.5 rounded-md px-2 py-2 text-left transition-colors ${
-                  selected ? 'bg-[#F5F8FF]' : 'hover:bg-gray-50'
+                  selected ? 'bg-gray-100' : 'hover:bg-gray-50'
                 }`}
               >
                 <ModeIcon
                   className={`mt-0.5 h-4 w-4 shrink-0 ${
-                    selected ? 'text-[#38A1E5]' : 'text-gray-500'
+                    selected ? 'text-gray-900' : 'text-gray-500'
                   }`}
                   aria-hidden="true"
                 />
                 <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                  <span
-                    className={`text-sm font-medium ${
-                      selected ? 'text-[#38A1E5]' : 'text-gray-900'
-                    }`}
-                  >
+                  <span className="text-sm font-medium text-gray-900">
                     {name(m)}
                   </span>
                   <span className="text-xs text-gray-500">{hint(m)}</span>
                 </span>
                 {selected && (
                   <Check
-                    className="mt-0.5 h-4 w-4 shrink-0 text-[#38A1E5]"
+                    className="mt-0.5 h-4 w-4 shrink-0 text-gray-500"
                     aria-hidden="true"
                   />
                 )}

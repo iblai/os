@@ -3,8 +3,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslations } from 'next-intl';
-import { Code2, Folder, Info, Loader2, X } from 'lucide-react';
+import { Code2, Folder, Info, Loader2, X, Zap } from 'lucide-react';
 import { localModelDisplayName } from '@iblai/iblai-js/web-containers';
+import { useCodePermissionRequests } from '@iblai/iblai-js/web-containers/next';
 import {
   Popover,
   PopoverContent,
@@ -179,6 +180,18 @@ export function CodingModeButton({
   // One mode for every chat, saved by the desktop: Automatic until the user
   // picks Ask Me, which then holds in every chat until they switch back.
   const permissionMode = useApprovalMode();
+  // The card that offers "Switch to Automatic" is the SDK's, and it has no
+  // such button, so the offer lives here instead: the composer is the one spot
+  // the host can render into (`composerExtraControls`). Switching is a real
+  // answer, not just a setting — Rust's `allow_all_pending` answers every card
+  // already waiting — so this is only shown while a Code card is waiting for
+  // one. A Browse run follows Cowork's own Approvals setting, and a prompt
+  // with nothing to allow can't be approved. Drop this once the SDK card
+  // carries the button itself.
+  const waitingCards = useCodePermissionRequests();
+  const offerAutomatic =
+    permissionMode === 'manual' &&
+    waitingCards.some((r) => !r.respond && !!r.allow_option_id);
   // Tauri mobile: Code runs against a paired desktop's opencode server. The
   // pairing state gates everything; the SDK reads the mirrored localStorage
   // flag (ibl_remote_code_ready) at send time.
@@ -1692,16 +1705,44 @@ export function CodingModeButton({
           )}
         </PopoverContent>
       </Popover>
-      {approvalsSlot &&
-        enabled &&
+      {enabled && !blocked && offerAutomatic && (
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          data-testid="code-switch-to-automatic"
+          title={t('permissionModeAutoHint')}
+          className="h-8 shrink-0 gap-1 px-2 text-xs text-[#38A1E5] hover:bg-[#F5F8FF] hover:text-[#38A1E5]"
+          onClick={() => void chooseMode('auto')}
+        >
+          <Zap className="h-3 w-3" aria-hidden="true" />
+          {t('switchToAutomatic')}
+        </Button>
+      )}
+      {/* The SDK composer has no approvals slot yet, so without the inline
+          branch the mentor chat shows no approvals control at all and the
+          mode can only be reached through the Code popover. A composer that
+          DOES own a slot passes it as null until its node mounts, so only an
+          absent prop renders inline — otherwise the button would appear here
+          for a frame and then jump into the slot. Remove the branch once the
+          slot ships in the SDK composer. */}
+      {enabled &&
         !blocked &&
-        createPortal(
+        (approvalsSlot === undefined ? (
           <CodeApprovalsButton
             mode={permissionMode}
             onChange={(mode) => void chooseMode(mode)}
-          />,
-          approvalsSlot,
-        )}
+          />
+        ) : (
+          approvalsSlot &&
+          createPortal(
+            <CodeApprovalsButton
+              mode={permissionMode}
+              onChange={(mode) => void chooseMode(mode)}
+            />,
+            approvalsSlot,
+          )
+        ))}
       {/* Fullscreen QR-scanner overlay — portaled to <body> so it survives
           the globals.css rule that hides every other body child while the
           camera renders behind the transparent webview. The close button

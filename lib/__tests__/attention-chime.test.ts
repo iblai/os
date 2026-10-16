@@ -63,12 +63,27 @@ describe('playAttentionChime', () => {
     expect(tones).toHaveLength(4);
   });
 
-  it('counts the app as in the background when its window lost focus or is hidden', () => {
-    const hasFocus = vi.spyOn(document, 'hasFocus').mockReturnValue(true);
+  it('counts the app as in the background once its window blurred, and in front again on focus', () => {
     expect(isAppInBackground()).toBe(false);
-    hasFocus.mockReturnValue(false);
+    window.dispatchEvent(new Event('blur'));
     expect(isAppInBackground()).toBe(true);
+    window.dispatchEvent(new Event('focus'));
+    expect(isAppInBackground()).toBe(false);
+  });
+
+  // A Tauri webview reports no document focus whenever focus sits outside the
+  // document (native chrome, iOS WKWebView) with the window still frontmost;
+  // chiming there dings at someone reading the card.
+  it('stays in front when only the document lost focus', () => {
+    const hasFocus = vi.spyOn(document, 'hasFocus').mockReturnValue(false);
+    expect(isAppInBackground()).toBe(false);
     hasFocus.mockRestore();
+  });
+
+  it('counts a hidden page as the background', () => {
+    const hidden = vi.spyOn(document, 'hidden', 'get').mockReturnValue(true);
+    expect(isAppInBackground()).toBe(true);
+    hidden.mockRestore();
   });
 
   it('does nothing where the browser has no audio', () => {

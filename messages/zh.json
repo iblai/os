@@ -1428,7 +1428,7 @@
     "user": "用户",
     "admin": "管理员",
     "signUpForFree": "免费注册",
-    "onDevice": "本机"
+    "onDevice": "设备端"
   },
   "projectsCreateProjectModal": {
     "title": "新建项目",
@@ -2249,7 +2249,8 @@
     "cameraDenied": "相机访问被拒绝 — 请手动输入地址。",
     "notAPairingCode": "该二维码不是 Code 配对码。",
     "closeScanner": "关闭扫描器",
-    "scanHint": "将相机对准电脑上显示的配对二维码。"
+    "scanHint": "将相机对准电脑上显示的配对二维码。",
+    "switchToAutomatic": "切换为自动批准"
   },
   "chatCodePermissionCard": {
     "title": "代码模式需要你的许可",

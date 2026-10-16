@@ -41,11 +41,23 @@ export function useSelectedLocalModel(): SelectedLocalModel {
     const read = () => {
       const enabled = isLocalLLMEnabled();
       const id = getLocalLLMModel();
-      // Ignore the ":tag" and case, like the SDK picker does, so a stored
-      // "qwen3:latest" still resolves to the "Qwen 3" catalog entry.
-      const base = (ref: string) => ref.toLowerCase().split(':')[0];
-      const model = id
-        ? (LOCAL_MODELS.find((m) => base(m.id) === base(id)) ?? null)
+      // The SDK's rule: a missing or "latest" tag is a wildcard, but two
+      // explicit tags must agree. Dropping the tag outright matched a stored
+      // "gpt-oss:120b" to the catalog's "gpt-oss:20b", so the badge named the
+      // wrong model and the self-heal below wrote that entry's tool support.
+      const parse = (ref: string) => {
+        const [base, tag] = ref.toLowerCase().split(':');
+        return { base, tag: !tag || tag === 'latest' ? null : tag };
+      };
+      const want = id ? parse(id) : null;
+      const model = want
+        ? (LOCAL_MODELS.find((m) => {
+            const have = parse(m.id);
+            return (
+              have.base === want.base &&
+              (want.tag === null || have.tag === null || have.tag === want.tag)
+            );
+          }) ?? null)
         : null;
       // Self-heal the derived tool-support cache. Local chat routes on
       // `ibl_local_llm_tool_support` (SDK ollama-client), but an older selection

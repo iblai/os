@@ -654,10 +654,11 @@ async fn answers(url: &str) -> bool {
 }
 
 pub fn server_url() -> Option<String> {
-    SERVER
-        .lock()
-        .ok()
-        .and_then(|s| s.as_ref().map(|s| s.url.clone()))
+    // Recovered, not swallowed: a poisoned slot used to read as "no server"
+    // forever, so every later call bound and spawned another one that was
+    // never recorded. `stop_into` already recovers it.
+    let slot = SERVER.lock().unwrap_or_else(|e| e.into_inner());
+    slot.as_ref().map(|s| s.url.clone())
 }
 
 /// Start the embedded server on its own thread (own runtime, so it works no
@@ -720,7 +721,8 @@ fn start_into(
         })
         .map_err(|e| e.to_string())?;
 
-    if let Ok(mut slot) = slot.lock() {
+    {
+        let mut slot = slot.lock().unwrap_or_else(|e| e.into_inner());
         *slot = Some(Server {
             url: url.clone(),
             shutdown,

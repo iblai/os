@@ -1069,7 +1069,14 @@ async fn download_ollama_model(app: AppHandle, model: String) -> Result<(), Stri
         // Wait for it to actually become ready (it can take several seconds; a
         // fixed short delay raced the server and made downloads fail).
         if !wait_for_ollama_ready(30).await {
-            return Err("Could not start Ollama server. Please start Ollama manually.".to_string());
+            // The model service runs inside the app on a phone, so there is
+            // nothing there for the user to start by hand.
+            #[cfg(any(target_os = "ios", target_os = "android"))]
+            let message =
+                "The built-in model service could not be reached. Close the app and open it again.";
+            #[cfg(not(any(target_os = "ios", target_os = "android")))]
+            let message = "Could not start Ollama server. Please start Ollama manually.";
+            return Err(message.to_string());
         }
 
         emit_on_main(

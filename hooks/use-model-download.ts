@@ -36,6 +36,24 @@ function setLocalModelsEnabled(enabled: boolean) {
   window.dispatchEvent(new Event(LOCAL_LLM_CHANGED_EVENT));
 }
 
+/**
+ * Foundry keeps its own selection, but an online turn only goes to the device
+ * when a model is IN USE, which the SDK reads from `ibl_local_llm_model`
+ * (web-utils 2.9's send rule). Foundry never wrote that key, so a Foundry user
+ * with Local Models on had every online chat answered by the cloud until they
+ * opened Profile then Advanced, where the SDK mirrors the pick. Same guards as
+ * that mirror: only with Local Models on, only into an empty key, and never
+ * over a pending download's choice.
+ */
+const PENDING_LOCAL_CHANGE_KEY = 'ibl_local_llm_download_pending';
+
+function mirrorFoundryPickIntoLocalModel(modelId: string) {
+  if (localStorage.getItem(LOCAL_LLM_ENABLED_KEY) !== 'true') return;
+  if (localStorage.getItem(LOCAL_LLM_MODEL_KEY)) return;
+  if (localStorage.getItem(PENDING_LOCAL_CHANGE_KEY)) return;
+  setSelectedLocalModel(modelId);
+}
+
 function setSelectedLocalModel(modelId: string | null) {
   if (modelId) localStorage.setItem(LOCAL_LLM_MODEL_KEY, modelId);
   else localStorage.removeItem(LOCAL_LLM_MODEL_KEY);
@@ -453,6 +471,7 @@ export function useModelDownload() {
                   '[useModelDownload] ✓ Model loaded successfully:',
                   modelToLoadObj.foundry_id,
                 );
+                mirrorFoundryPickIntoLocalModel(modelToLoad);
               } else {
                 console.log(
                   '[useModelDownload] Model selected but not downloaded yet, skipping auto-load:',
@@ -762,7 +781,7 @@ export function useModelDownload() {
         reselect();
       }
     },
-    [isAvailable, invoke, setState, setOllamaStatus, installOllama],
+    [isAvailable, invoke, setState, setOllamaStatus, installOllama, t],
   );
 
   /**

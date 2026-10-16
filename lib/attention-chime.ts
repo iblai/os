@@ -51,17 +51,39 @@ export function playAttentionChime(): void {
   }
 }
 
+let blurred = false;
+let watchingFocus = false;
+
+function watchFocus(): void {
+  if (watchingFocus || typeof window === 'undefined') return;
+  watchingFocus = true;
+  window.addEventListener('focus', () => {
+    blurred = false;
+  });
+  window.addEventListener('blur', () => {
+    blurred = true;
+  });
+}
+
 /**
  * The user isn't looking at the app: another app is in front, or this window
  * is hidden or minimised. In front of it, the card on screen is the signal.
+ *
+ * Taken from the window's own blur, NOT `document.hasFocus()`: in a Tauri
+ * webview that reads false whenever focus sits outside the document — after a
+ * click on native chrome, and always on iOS WKWebView — even with the window
+ * frontmost, so it chimed at a user looking straight at the card. Nothing is
+ * assumed before the first blur, so an unknown state stays silent.
  */
 export function isAppInBackground(): boolean {
   if (typeof document === 'undefined') return false;
-  return document.hidden || !document.hasFocus();
+  watchFocus();
+  return document.hidden || blurred;
 }
 
 /** Test support only: the throttle and the context outlive any one test. */
 export function resetAttentionChimeForTests(): void {
   context = null;
   lastPlayedAt = Number.NEGATIVE_INFINITY;
+  blurred = false;
 }

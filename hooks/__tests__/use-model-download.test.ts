@@ -713,6 +713,109 @@ describe('useModelDownload hook', () => {
     });
   });
 
+  // web-utils 2.9 sends an online turn to the device only when a model is in
+  // USE (`ibl_local_llm_model`), not merely when Local Models is on. Foundry
+  // keeps its own selection and never wrote that key, so a Foundry user with
+  // Local Models on had every online chat answered by the cloud until they
+  // opened Profile then Advanced, where the SDK mirrors the pick.
+  describe('Foundry selection reaches the shared on-device key', () => {
+    const LOCAL_MODELS_ENABLED = 'ibl_local_llm_enabled';
+    const SELECTED_LOCAL_MODEL = 'ibl_local_llm_model';
+    const PENDING_CHANGE = 'ibl_local_llm_download_pending';
+
+    function stubFoundry({ downloaded = true } = {}) {
+      mockInvoke.mockImplementation(async (cmd: string) => {
+        switch (cmd) {
+          case 'check_foundry_local_status':
+            return {
+              is_supported: true,
+              has_models: true,
+              models: [
+                {
+                  id: 'phi-4-mini',
+                  foundry_id: 'phi-4-mini-cpu',
+                  is_downloaded: downloaded,
+                },
+              ],
+            };
+          case 'get_selected_foundry_model':
+            return 'phi-4-mini';
+          default:
+            return null;
+        }
+      });
+    }
+
+    async function mountAndSettle() {
+      const hook = renderHook(() => useModelDownload());
+      await waitFor(() => {
+        expect(mockInvoke).toHaveBeenCalledWith('check_foundry_local_status');
+      });
+      return hook;
+    }
+
+    beforeEach(() => {
+      localStorage.removeItem(LOCAL_MODELS_ENABLED);
+      localStorage.removeItem(SELECTED_LOCAL_MODEL);
+      localStorage.removeItem(PENDING_CHANGE);
+    });
+
+    it('puts the loaded Foundry model in use so online chats stay on the device', async () => {
+      localStorage.setItem(LOCAL_MODELS_ENABLED, 'true');
+      stubFoundry();
+      await mountAndSettle();
+
+      await waitFor(() =>
+        expect(localStorage.getItem(SELECTED_LOCAL_MODEL)).toBe('phi-4-mini'),
+      );
+    });
+
+    it('leaves the key alone while Local Models is off', async () => {
+      stubFoundry();
+      await mountAndSettle();
+
+      await waitFor(() =>
+        expect(mockInvoke).toHaveBeenCalledWith('get_selected_foundry_model'),
+      );
+      expect(localStorage.getItem(SELECTED_LOCAL_MODEL)).toBeNull();
+    });
+
+    it('never overwrites a model the user already has in use', async () => {
+      localStorage.setItem(LOCAL_MODELS_ENABLED, 'true');
+      localStorage.setItem(SELECTED_LOCAL_MODEL, 'qwen3');
+      stubFoundry();
+      await mountAndSettle();
+
+      await waitFor(() =>
+        expect(mockInvoke).toHaveBeenCalledWith('get_selected_foundry_model'),
+      );
+      expect(localStorage.getItem(SELECTED_LOCAL_MODEL)).toBe('qwen3');
+    });
+
+    it('stands aside while a download is choosing the model', async () => {
+      localStorage.setItem(LOCAL_MODELS_ENABLED, 'true');
+      localStorage.setItem(PENDING_CHANGE, 'qwen3');
+      stubFoundry();
+      await mountAndSettle();
+
+      await waitFor(() =>
+        expect(mockInvoke).toHaveBeenCalledWith('get_selected_foundry_model'),
+      );
+      expect(localStorage.getItem(SELECTED_LOCAL_MODEL)).toBeNull();
+    });
+
+    it('waits until the model is actually downloaded', async () => {
+      localStorage.setItem(LOCAL_MODELS_ENABLED, 'true');
+      stubFoundry({ downloaded: false });
+      await mountAndSettle();
+
+      await waitFor(() =>
+        expect(mockInvoke).toHaveBeenCalledWith('get_selected_foundry_model'),
+      );
+      expect(localStorage.getItem(SELECTED_LOCAL_MODEL)).toBeNull();
+    });
+  });
+
   describe('First launch prompt', () => {
     it('should track first launch prompt state', () => {
       const { result } = renderHook(() => useModelDownload());

@@ -277,9 +277,9 @@ pub async fn set_opencode_permission_mode(mode: String) -> Result<(), String> {
         // security posture on the user's behalf.
         other => return Err(format!("unknown permission mode: {other}")),
     };
-    let mut settings = read_settings();
-    settings.insert(SETTINGS_PERMISSION_MODE.to_string(), json!(mode));
-    write_settings(&settings)?;
+    update_settings(|settings| {
+        settings.insert(SETTINGS_PERMISSION_MODE.to_string(), json!(mode));
+    })?;
     let was_auto = permission_auto().swap(auto, Ordering::SeqCst);
     if auto {
         allow_all_pending().await;
@@ -1296,23 +1296,63 @@ fn settings_file() -> PathBuf {
 
 // pub(crate): the model proxy persists its minted platform API key here too
 // (same read-modify-write-the-whole-object discipline keeps owners apart).
-/// A file that exists but can't be read as an object comes back as Ask Me
-/// alone, so the next read-modify-write of any key saves Ask Me with it
-/// instead of dropping the mode — a missing mode means Automatic.
-pub(crate) fn read_settings() -> serde_json::Map<String, Value> {
-    let parsed = match std::fs::read_to_string(settings_file()) {
-        Ok(raw) => serde_json::from_str::<Value>(&raw).ok(),
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return serde_json::Map::new(),
-        Err(_) => None,
+/// Ask Me and nothing else: what a file we could read but not parse comes
+/// back as, so a mode lost to damage can only ask more, never less.
+fn asks_only() -> serde_json::Map<String, Value> {
+    let mut asks = serde_json::Map::new();
+    asks.insert(SETTINGS_PERMISSION_MODE.into(), json!("manual"));
+    asks
+}
+
+/// The settings, or why they could not be read at all.
+///
+/// A missing file is empty. One that is there but unparseable is
+/// [`asks_only`]. Anything else — no permission, an I/O error, a directory in
+/// its place — is an error, so [`update_settings`] refuses to write over a
+/// file it never saw: that write would discard the saved workspaces, the
+/// per-agent models and the minted platform key along with the mode.
+fn try_read_settings() -> Result<serde_json::Map<String, Value>, String> {
+    let raw = match std::fs::read_to_string(settings_file()) {
+        Ok(raw) => raw,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(serde_json::Map::new()),
+        Err(e) => return Err(format!("failed reading settings: {e}")),
     };
-    match parsed {
-        Some(Value::Object(map)) => map,
-        _ => {
-            let mut asks = serde_json::Map::new();
-            asks.insert(SETTINGS_PERMISSION_MODE.into(), json!("manual"));
-            asks
-        }
-    }
+    Ok(match serde_json::from_str::<Value>(&raw) {
+        Ok(Value::Object(map)) => map,
+        _ => asks_only(),
+    })
+}
+
+/// Read-only view. An unreadable file reads as Ask Me here, like a damaged
+/// one: a read can never grant more than the user chose.
+pub(crate) fn read_settings() -> serde_json::Map<String, Value> {
+    try_read_settings().unwrap_or_else(|_| asks_only())
+}
+
+/// Serializes every read-change-write of the settings file.
+///
+/// Four owners share it: the approval mode, the mentor workspaces, the
+/// per-agent models and the minted platform key. Each reads the whole object,
+/// changes one key and writes it all back, so two interleaving dropped one's
+/// change entirely — the atomic rename makes the loser's stale snapshot the
+/// whole file rather than merging it. A mode saved while a turn recorded its
+/// workspace came back wrong at the next launch, with the in-memory
+/// `permission_auto()` flag still disagreeing. Held only across the
+/// synchronous read, change and write, never across an await.
+// `Mutex` unqualified in this file is tokio's async lock; this one is held
+// across a synchronous read-change-write, so it is deliberately std's.
+static SETTINGS_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+/// Read the settings, apply `change` and write them back, atomically with
+/// respect to every other owner. Hands back what `change` returns.
+pub(crate) fn update_settings<T>(
+    change: impl FnOnce(&mut serde_json::Map<String, Value>) -> T,
+) -> Result<T, String> {
+    let _serial = SETTINGS_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+    let mut settings = try_read_settings()?;
+    let out = change(&mut settings);
+    write_settings(&settings)?;
+    Ok(out)
 }
 
 pub(crate) fn write_settings(map: &serde_json::Map<String, Value>) -> Result<(), String> {
@@ -1487,15 +1527,15 @@ fn mint_workspace_dir(taken: &[String]) -> PathBuf {
 
 /// Record which folder a mentor works in.
 fn record_mentor_workspace(tenant: &str, mentor: &str, dir: &Path) -> Result<(), String> {
-    let mut settings = read_settings();
-    let mut workspaces = settings
-        .get(SETTINGS_WORKSPACES)
-        .and_then(|v| v.as_object())
-        .cloned()
-        .unwrap_or_default();
-    workspaces.insert(workspace_key(tenant, mentor), json!(dir.to_string_lossy()));
-    settings.insert(SETTINGS_WORKSPACES.to_string(), Value::Object(workspaces));
-    write_settings(&settings)
+    update_settings(|settings| {
+        let mut workspaces = settings
+            .get(SETTINGS_WORKSPACES)
+            .and_then(|v| v.as_object())
+            .cloned()
+            .unwrap_or_default();
+        workspaces.insert(workspace_key(tenant, mentor), json!(dir.to_string_lossy()));
+        settings.insert(SETTINGS_WORKSPACES.to_string(), Value::Object(workspaces));
+    })
 }
 
 /// This mentor's workspace, generating and recording one the first time.
@@ -4767,6 +4807,19 @@ mod tests {
             std::fs::write(settings_file(), "").unwrap();
             assert_eq!(permission_mode(), "manual", "an emptied file asks");
 
+            // An unreadable file is NOT damage: it is unknown. Writing over it
+            // would discard the workspaces, the per-agent models and the
+            // minted platform key along with the mode, so the write is refused.
+            std::fs::remove_file(settings_file()).unwrap();
+            std::fs::create_dir(settings_file()).unwrap();
+            assert!(
+                update_settings(|s| s.insert("x".into(), json!(1))).is_err(),
+                "a file we could not read is never written over"
+            );
+            assert!(settings_file().is_dir(), "and is left exactly as it was");
+            std::fs::remove_dir(settings_file()).unwrap();
+
+            std::fs::write(settings_file(), "{\"permission_mode\": \"man").unwrap();
             // …and keeps asking after another key is saved over the damage.
             record_mentor_workspace("acme", "mentor-1", Path::new("/ws/one")).unwrap();
             assert_eq!(permission_mode(), "manual");
@@ -4854,6 +4907,7 @@ mod tests {
     /// too: leaving those cards up would be incoherent.
     #[tokio::test]
     async fn switching_to_auto_answers_the_cards_already_waiting() {
+        let _serial = PERMISSION_TEST_LOCK.lock().await;
         let (tx_allow, rx_allow) = oneshot::channel();
         let (tx_none, rx_none) = oneshot::channel();
         {
@@ -4890,12 +4944,20 @@ mod tests {
         drop(rx_none);
     }
 
+    /// `permission_auto()` and the pending map are process-wide, and
+    /// `allow_all_pending()` sweeps EVERY queued card rather than just the
+    /// caller's, so tests touching them must not interleave: Rust runs them in
+    /// parallel threads, and a neighbour otherwise loses its entry or reads
+    /// the wrong mode.
+    static PERMISSION_TEST_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+
     /// The race this pins: a switch to Automatic landing between a request's
     /// auto check and its queueing left that card up in Automatic. The check now
     /// runs under the sweep's lock, so a request is either answered by Automatic
     /// or queued where the switch's sweep answers it.
     #[tokio::test]
     async fn a_request_is_answered_by_automatic_or_queued_for_its_sweep() {
+        let _serial = PERMISSION_TEST_LOCK.lock().await;
         let auto = permission_auto();
         let before = auto.load(Ordering::SeqCst);
 

@@ -28,6 +28,7 @@ const {
   tauriPlatform,
   toastError,
   userOS,
+  permissionRequests,
 } = vi.hoisted(() => ({
   invoke: vi.fn(),
   /** Tauri event listeners the component registered, by event name. */
@@ -44,6 +45,8 @@ const {
   platformMetadata: { current: undefined as unknown },
   saveMetadata: vi.fn(),
   userOS: { current: 'Linux' },
+  /** Code permission cards the SDK store is holding (the waiting prompts). */
+  permissionRequests: { current: [] as unknown[] },
   tauriPlatform: { current: 'linux' },
   scannerState: {
     permission: 'granted' as string,
@@ -99,6 +102,9 @@ vi.mock('sonner', () => ({
 vi.mock('@iblai/iblai-js/data-layer', () => ({
   useGetUserPlatformMetadataQuery: () => ({ data: platformMetadata.current }),
   useUpdateUserPlatformMetadataMutation: () => [saveMetadata],
+}));
+vi.mock('@iblai/iblai-js/web-containers/next', () => ({
+  useCodePermissionRequests: () => permissionRequests.current,
 }));
 vi.mock('@iblai/iblai-js/web-containers', () => ({
   // Catalog names for the ids used here; anything else gets each word capitalized.
@@ -255,6 +261,7 @@ describe('CodingModeButton', () => {
     saveMetadata.mockReturnValue({ unwrap: async () => ({}) });
     userOS.current = 'Linux';
     tauriPlatform.current = 'linux';
+    permissionRequests.current = [];
     scannerState.permission = 'granted';
     scannerState.requested = 'granted';
     scannerState.cancelled = false;
@@ -1658,13 +1665,29 @@ describe('CodingModeButton', () => {
           undefined,
         ),
       );
-      expect(await approvalsButton()).toHaveAccessibleName(
-        'Approvals: Automatic',
+      // Ask Me until the read lands, then the saved default: claiming
+      // Automatic before we know would promise a user who chose Ask Me that
+      // Code may act unasked.
+      await waitFor(() =>
+        expect(approvalsButton()).resolves.toHaveAccessibleName(
+          'Approvals: Automatic',
+        ),
       );
       expect(invoke).not.toHaveBeenCalledWith(
         'set_opencode_permission_mode',
         expect.anything(),
       );
+    });
+
+    it('says Ask Me, not Automatic, before the desktop has answered', async () => {
+      localStorage.setItem('ibl_coding_mode_enabled', 'true');
+      backend();
+      extend({
+        get_opencode_permission_mode: () => new Promise<string>(() => {}),
+      });
+      renderWithApprovalsSlot();
+
+      expect(await approvalsButton()).toHaveAccessibleName('Approvals: Ask Me');
     });
 
     it('shows the Ask Me the desktop has saved', async () => {
@@ -1716,7 +1739,9 @@ describe('CodingModeButton', () => {
       renderWithApprovalsSlot();
 
       const button = await approvalsButton();
-      expect(button).toHaveAccessibleName('Approvals: Automatic');
+      await waitFor(() =>
+        expect(button).toHaveAccessibleName('Approvals: Automatic'),
+      );
 
       await userEvent.click(button);
       expect(
@@ -1843,6 +1868,102 @@ describe('CodingModeButton', () => {
 
       expect(await inSlot(1)).toHaveAccessibleName('Approvals: Ask Me');
       expect(await inSlot(0)).toHaveAccessibleName('Approvals: Ask Me');
+    });
+
+    it('shows the approvals button inline when the composer gives no slot', async () => {
+      // The SDK composer has no approvals slot, so without the inline branch
+      // the mentor chat shows no approvals control at all.
+      localStorage.setItem('ibl_coding_mode_enabled', 'true');
+      backend({ permissionMode: 'manual' });
+      renderButton();
+
+      await waitFor(() =>
+        expect(approvalsButton()).resolves.toHaveAccessibleName(
+          'Approvals: Ask Me',
+        ),
+      );
+    });
+
+    it('follows a switch to Automatic made from the SDK permission card', async () => {
+      // That card cannot reach this store, so it announces the mode on the
+      // window; without this the composer would keep showing Ask Me after a
+      // switch the user just made.
+      localStorage.setItem('ibl_coding_mode_enabled', 'true');
+      backend({ permissionMode: 'manual' });
+      renderWithApprovalsSlot();
+      await waitFor(() =>
+        expect(approvalsButton()).resolves.toHaveAccessibleName(
+          'Approvals: Ask Me',
+        ),
+      );
+
+      act(() => {
+        window.dispatchEvent(
+          new CustomEvent('ibl:code-approval-mode-changed', {
+            detail: { mode: 'auto' },
+          }),
+        );
+      });
+
+      expect(await approvalsButton()).toHaveAccessibleName(
+        'Approvals: Automatic',
+      );
+    });
+
+    // The SDK renders the cards and has no button on them, so the offer lives
+    // in the composer. Switching answers every waiting card in Rust, so this
+    // is a real answer to the prompt, not just a setting.
+    it('offers Switch to Automatic while a Code card is waiting, and applies it', async () => {
+      localStorage.setItem('ibl_coding_mode_enabled', 'true');
+      backend({ permissionMode: 'manual' });
+      permissionRequests.current = [
+        { request_id: 'perm-1', allow_option_id: 'allow-once' },
+      ];
+      renderButton();
+
+      await userEvent.click(
+        await screen.findByTestId('code-switch-to-automatic'),
+      );
+
+      await waitFor(() =>
+        expect(invoke).toHaveBeenCalledWith('set_opencode_permission_mode', {
+          mode: 'auto',
+        }),
+      );
+    });
+
+    it('does not offer it with nothing waiting, nor for a Browse prompt', async () => {
+      localStorage.setItem('ibl_coding_mode_enabled', 'true');
+      backend({ permissionMode: 'manual' });
+      const { unmount } = renderButton();
+      await waitFor(() =>
+        expect(approvalsButton()).resolves.toHaveAccessibleName(
+          'Approvals: Ask Me',
+        ),
+      );
+      expect(
+        screen.queryByTestId('code-switch-to-automatic'),
+      ).not.toBeInTheDocument();
+      unmount();
+
+      // A Browse run answers through its own responder and follows Cowork's
+      // own Approvals setting.
+      permissionRequests.current = [
+        {
+          request_id: 'perm-2',
+          allow_option_id: 'allow-once',
+          respond: () => {},
+        },
+      ];
+      renderButton();
+      await waitFor(() =>
+        expect(approvalsButton()).resolves.toHaveAccessibleName(
+          'Approvals: Ask Me',
+        ),
+      );
+      expect(
+        screen.queryByTestId('code-switch-to-automatic'),
+      ).not.toBeInTheDocument();
     });
 
     it('hides the approvals button while Code is off', async () => {

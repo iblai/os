@@ -52,6 +52,20 @@ fn update_config<T>(change: impl FnOnce(&mut HostConfig) -> T) -> Result<T, Stri
     Ok(out)
 }
 
+/// Same, for a change that often has nothing to do: `change` reports whether
+/// it touched anything and the file is only rewritten when it did. A phone
+/// runs `migrate_chat_key` on every turn, so writing unconditionally meant
+/// serializing and renaming the whole config each time for nothing.
+fn update_config_if(change: impl FnOnce(&mut HostConfig) -> bool) -> Result<bool, String> {
+    let _serial = CONFIG_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+    let mut cfg = read_config();
+    if !change(&mut cfg) {
+        return Ok(false);
+    }
+    write_config(&cfg)?;
+    Ok(true)
+}
+
 /// `"auto"` short-circuits permission events with an immediate allow, exactly
 /// like the desktop's auto mode. Kept in the config file; see [`permission_mode`].
 const MODE_AUTO: &str = "auto";
@@ -196,7 +210,7 @@ impl InFlight {
 
 impl Drop for InFlight {
     fn drop(&mut self) {
-        let _ = update_config(|cfg| cfg.in_flight.remove(&self.0));
+        let _ = update_config_if(|cfg| cfg.in_flight.remove(&self.0).is_some());
     }
 }
 
@@ -775,19 +789,36 @@ pub async fn set_opencode_permission_mode(mode: String) -> Result<(), String> {
     if mode != MODE_AUTO && mode != MODE_MANUAL {
         return Err(format!("unknown permission mode: {mode}"));
     }
+    // Resolve the desktop BEFORE the mode is saved: saving takes every waiting
+    // card out of the map, and a failure after that point left cards on screen
+    // whose buttons answered an id Rust had already forgotten, so the turn hung
+    // to its timeout.
+    let desktop = if mode == MODE_AUTO {
+        Some(host()?)
+    } else {
+        None
+    };
     let waiting = save_permission_mode(&mode)?;
-    if waiting.is_empty() {
+    let Some((base, pw)) = desktop else {
         return Ok(());
-    }
-    let (base, pw) = host()?;
+    };
     for (per_id, remote) in waiting {
-        let _ = post_json(
+        let sent = post_json(
             &base,
             &pw,
             &format!("/session/{remote}/permissions/{per_id}"),
             &json!({ "response": "once" }),
         )
         .await;
+        // Put back what the desktop never got, so its card can still answer it
+        // and the turn can end.
+        if sent.is_err() {
+            PENDING_PERMISSIONS
+                .lock()
+                .expect("permissions lock")
+                .get_or_insert_with(HashMap::new)
+                .insert(per_id, remote);
+        }
     }
     Ok(())
 }
@@ -1081,17 +1112,21 @@ fn migrate_chat_key(session_id: &str, new_chat_key: Option<&str>) {
     let Some(prior) = new_chat_key.filter(|k| *k != session_id) else {
         return;
     };
-    let _ = update_config(|cfg| {
+    let _ = update_config_if(|cfg| {
+        let mut changed = false;
         if !cfg.sessions.contains_key(session_id) {
             if let Some(remote) = cfg.sessions.remove(prior) {
                 cfg.sessions.insert(session_id.to_string(), remote);
+                changed = true;
             }
         }
         if !cfg.directories.contains_key(session_id) {
             if let Some(dir) = cfg.directories.remove(prior) {
                 cfg.directories.insert(session_id.to_string(), dir);
+                changed = true;
             }
         }
+        changed
     });
 }
 
@@ -2312,6 +2347,33 @@ mod tests {
         drop(guards);
         assert!(read_config().in_flight.is_empty());
         save_permission_mode(MODE_AUTO).unwrap();
+    }
+
+    /// A phone runs this on every turn, so a migration with nothing to move
+    /// must not rewrite the whole config file.
+    #[tokio::test]
+    async fn a_migration_with_nothing_to_move_does_not_rewrite_the_config() {
+        let _serial = CONFIG_TEST_LOCK.lock().await;
+        test_config("http://127.0.0.1:9");
+        let path = CONFIG_PATH.get().unwrap().clone();
+        let before = std::fs::metadata(&path).unwrap().modified().unwrap();
+
+        migrate_chat_key("chat-new", Some("chat-old"));
+        assert_eq!(
+            std::fs::metadata(&path).unwrap().modified().unwrap(),
+            before,
+            "nothing moved, so nothing was written"
+        );
+
+        let mut cfg = read_config();
+        cfg.sessions.insert("chat-old".into(), "ses-old".into());
+        write_config(&cfg).unwrap();
+        migrate_chat_key("chat-new", Some("chat-old"));
+        assert_eq!(
+            read_config().sessions.get("chat-new").map(String::as_str),
+            Some("ses-old"),
+            "a real migration still lands"
+        );
     }
 
     /// Only a missing file means Automatic: a file cut short mid-write asks.

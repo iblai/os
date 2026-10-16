@@ -2249,7 +2249,8 @@
     "cameraDenied": "Se denegó el acceso a la cámara: ingresa la dirección manualmente.",
     "notAPairingCode": "Ese código QR no es un código de emparejamiento de Code.",
     "closeScanner": "Cerrar escáner",
-    "scanHint": "Apunta la cámara al código QR de emparejamiento que se muestra en tu computadora."
+    "scanHint": "Apunta la cámara al código QR de emparejamiento que se muestra en tu computadora.",
+    "switchToAutomatic": "Cambiar a Automático"
   },
   "chatCodePermissionCard": {
     "title": "Código necesita tu permiso",
