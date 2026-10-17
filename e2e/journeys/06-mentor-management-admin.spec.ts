@@ -506,10 +506,11 @@ test.describe('Journey 6: Mentor Management — Admin', () => {
       // that provider has no backend logo it renders the same placeholder
       // `<span role="img">` (single-letter initial) as the LLM tab's cards,
       // which `toHaveText` on the whole button would fold into the text.
-      // The label is always the LAST `<span>` in the row.
-      await expect(modelButton.locator('span').last()).toHaveText(
-        expectedLabel,
-      );
+      // The label is the last VISIBLE `<span>`: an unavailable row adds its
+      // reason after it, hidden on mouse devices (`pointer-fine:hidden`).
+      await expect(
+        modelButton.locator('span').filter({ visible: true }).last(),
+      ).toHaveText(expectedLabel);
     }
 
     await page.keyboard.press('Escape');
@@ -688,7 +689,10 @@ test.describe('Journey 6: Mentor Management — Admin', () => {
       'byok_missing',
     );
     await expect(rejected).toHaveAttribute('title', azureMessage);
-    await expect(rejected).not.toContainText(azureMessage);
+    // The reason line is in the DOM for touch screens but CSS-hidden here.
+    await expect(rejected).not.toContainText(azureMessage, {
+      useInnerText: true,
+    });
     await expect(accepted).toBeEnabled();
     await expect(accepted).toHaveAttribute('data-unavailable', 'false');
     await expect(accepted).not.toHaveAttribute('title', /.+/);
