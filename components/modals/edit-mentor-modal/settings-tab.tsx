@@ -191,6 +191,10 @@ export function SettingsTab() {
         label: t('inChatModelChangeLabel'),
         tooltip: t('inChatModelChangeTooltip'),
       },
+      showLastConversation: {
+        label: t('showLastConversationLabel'),
+        tooltip: t('showLastConversationTooltip'),
+      },
       promptCaching: {
         label: t('enablePromptCachingLabel'),
         tooltip: t('enablePromptCachingTooltip'),

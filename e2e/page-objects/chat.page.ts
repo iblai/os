@@ -509,6 +509,23 @@ export class ChatPage {
     }, mentorId);
   }
 
+  /** Drops `mentorId`'s entry from the device session cache so the next open must look the conversation up. */
+  async forgetCachedSession(mentorId: string): Promise<void> {
+    await this.page.evaluate((mid: string) => {
+      try {
+        const cache = JSON.parse(
+          window.localStorage.getItem('session_id') ?? '{}',
+        ) as Record<string, string>;
+        for (const key of Object.keys(cache)) {
+          if (key.endsWith(`:${mid}`)) delete cache[key];
+        }
+        window.localStorage.setItem('session_id', JSON.stringify(cache));
+      } catch {
+        window.localStorage.removeItem('session_id');
+      }
+    }, mentorId);
+  }
+
   // ── Deterministic message rendering via the shared-chat REST seam ──────────
   //
   // Journey 61 (LaTeX/math rendering) needs a FIXED assistant markdown
