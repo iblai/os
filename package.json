@@ -1,6 +1,6 @@
 {
   "name": "ibl-web-nextjs-mentor-spa",
-  "version": "0.151.0",
+  "version": "0.171.5",
   "private": false,
   "packageManager": "pnpm@10.11.1",
   "engines": {
@@ -45,7 +45,7 @@
   },
   "dependencies": {
     "@iblai/iblai-api": "4.166.0-ai",
-    "@iblai/iblai-js": "2.13.1",
+    "@iblai/iblai-js": "2.40.6",
     "@iblai/iblai-web-mentor": "1.3.4",
     "@livekit/components-react": "2.8.1",
     "@livekit/components-styles": "1.1.4",
@@ -98,7 +98,7 @@
     "@tiptap/react": "2.11.7",
     "@tiptap/starter-kit": "2.11.7",
     "@ziloen/remark-math": "0.1.1",
-    "axios": "1.18.1",
+    "axios": "1.20.0",
     "class-variance-authority": "0.7.1",
     "clsx": "2.1.1",
     "cmdk": "1.1.1",
@@ -128,6 +128,7 @@
     "react-gravatar": "2.6.3",
     "react-hook-form": "7.72.0",
     "react-hotkeys-hook": "5.2.4",
+    "react-joyride": "3.2.0",
     "react-katex": "3.1.0",
     "react-paginate": "8.3.0",
     "react-redux": "9.2.0",
@@ -163,6 +164,7 @@
   "devDependencies": {
     "@ai-sdk/openai-compatible": "3.0.5",
     "@axe-core/playwright": "4.10.2",
+    "@next/bundle-analyzer": "15.5.4",
     "@commitlint/cli": "20.5.0",
     "@commitlint/config-conventional": "20.5.0",
     "@eslint/eslintrc": "3.3.5",

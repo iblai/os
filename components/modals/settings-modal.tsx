@@ -22,8 +22,11 @@ import { useIsAdmin, useUserIsStudent, useUsername } from '@/hooks/use-user';
 import { useAppSelector } from '@/lib/hooks';
 import { selectRbacPermissions } from '@/features/rbac/rbac-slice';
 import { checkRbacPermission } from '@/hoc/withPermissions';
-import { formatDateString, getLLMModelDisplayName } from '@/lib/utils';
-import { useLlmProviderCatalogue } from '@/hooks/use-llm-provider-details';
+import { formatDateString } from '@/lib/utils';
+import {
+  getLLMModelDisplayName,
+  useLlmProviderCatalogue,
+} from '@iblai/iblai-js/web-containers';
 import { useNavigate } from '@/hooks/user-navigate';
 import { MODALS } from '@/lib/constants';
 import { IblPagination } from '@/components/ibl-pagination';

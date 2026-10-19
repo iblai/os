@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 
 const mockUseParams = vi.fn();
 const mockUsePathname = vi.fn();
@@ -19,12 +19,21 @@ vi.mock('next/navigation', () => ({
 vi.mock('@iblai/iblai-js/web-containers', () => ({
   AnalyticsLayout: (props: {
     excludeTabs: string[];
+    currentPath: string;
+    basePath: string;
+    onTabChange: (tabValue: string) => void;
     children: React.ReactNode;
   }) => {
     analyticsLayoutSpy(props);
     return (
       <div data-testid="analytics-layout">
         <span data-testid="exclude-tabs">{props.excludeTabs.join(',')}</span>
+        <button type="button" onClick={() => props.onTabChange('users')}>
+          users tab
+        </button>
+        <button type="button" onClick={() => props.onTabChange('')}>
+          overview tab
+        </button>
         {props.children}
       </div>
     );
@@ -143,6 +152,62 @@ describe('AnalyticsLayoutWrapper', () => {
     expect(mockCheckRbacPermission).toHaveBeenCalledWith(
       expect.anything(),
       '/mentors/99/#view_audit_logs',
+    );
+  });
+
+  it('passes the mentor-scoped basePath and current pathname to AnalyticsLayout', () => {
+    mockCheckRbacPermission.mockReturnValue(true);
+    mockUsePathname.mockReturnValue(
+      '/platform/test-tenant/test-mentor/analytics/users',
+    );
+
+    render(
+      <AnalyticsLayoutWrapper>
+        <div>child</div>
+      </AnalyticsLayoutWrapper>,
+    );
+
+    expect(analyticsLayoutSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        basePath: '/platform/test-tenant/test-mentor/analytics',
+        currentPath: '/platform/test-tenant/test-mentor/analytics/users',
+      }),
+    );
+  });
+
+  it('navigates to the tab route when a named tab is selected', () => {
+    const push = vi.fn();
+    mockUseRouter.mockReturnValue({ push });
+    mockCheckRbacPermission.mockReturnValue(true);
+
+    render(
+      <AnalyticsLayoutWrapper>
+        <div>child</div>
+      </AnalyticsLayoutWrapper>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'users tab' }));
+
+    expect(push).toHaveBeenCalledWith(
+      '/platform/test-tenant/test-mentor/analytics/users',
+    );
+  });
+
+  it('navigates to the analytics root when the overview tab is selected', () => {
+    const push = vi.fn();
+    mockUseRouter.mockReturnValue({ push });
+    mockCheckRbacPermission.mockReturnValue(true);
+
+    render(
+      <AnalyticsLayoutWrapper>
+        <div>child</div>
+      </AnalyticsLayoutWrapper>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'overview tab' }));
+
+    expect(push).toHaveBeenCalledWith(
+      '/platform/test-tenant/test-mentor/analytics',
     );
   });
 });

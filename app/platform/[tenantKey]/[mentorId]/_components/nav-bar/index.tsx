@@ -41,6 +41,8 @@ import { UserProfileModal } from '@iblai/iblai-js/web-containers/next';
 import { CreateMentorModal } from '@/components/modals/create-mentor-modal';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { LLMProviderSelectionModal } from '@/components/modals/llm-provider-selection-modal';
+import { AgentModelSelector } from './agent-model-selector';
+import { useCodeAgent } from '@/components/chat-input-form/code-agents';
 import {
   useGetMentorSettingsQuery,
   useForkMentorMutation,
@@ -66,6 +68,7 @@ import {
   redirectToAuthSpaJoinTenant,
 } from '@/lib/utils';
 import { UserProfile } from './user-profile';
+import { TOUR_TARGET } from '@/components/product-tour/tour-targets';
 import { useSidebar } from '@/components/ui/sidebar';
 import { LearnerModeSwitch } from './learner-mode-switch';
 import { useShowFreeTrialDialog } from '@/hooks/user-user-actions';
@@ -80,8 +83,10 @@ import {
   selectSelectedMentor,
 } from '@/features/analytics/slice';
 import { useMentorSettings } from '@/hooks/use-mentors/use-mentor-settings';
-import { useLlmDisplayName } from '@/hooks/use-llm-display-name';
-import { useLlmProviderCatalogue } from '@/hooks/use-llm-provider-details';
+import {
+  useLlmDisplayName,
+  useLlmProviderCatalogue,
+} from '@iblai/iblai-js/web-containers';
 import { config } from '@/lib/config';
 import { MentorVisibilityEnum } from '@iblai/iblai-api';
 import { toast } from 'sonner';
@@ -142,6 +147,9 @@ export const ANALYTICS_NAV_ITEM: MentorSegment = {
 
 export function NavBar() {
   const t = useTranslations('navBarIndex');
+  // While Code runs on Codex or Claude Code, the top-left shows that agent's
+  // own model list instead of the mentor's LLM (which neither agent uses).
+  const codeAgent = useCodeAgent();
   // Segment labels + category titles live in the shared `header` namespace
   // (same keys header.tsx uses) so both nav surfaces stay in sync.
   const tHeader = useTranslations('header');
@@ -448,11 +456,26 @@ export function NavBar() {
   // there. The project chat route (/platform/<tenant>/projects/<id>/<mentorId>) is
   // still a chat page and keeps them.
   const isProjectsIndexPage = /\/projects\/?$/.test(pathname);
+  // Tenant-wide analytics (/platform/<tenant>/analytics[/<tab>]) has no agent in
+  // the URL, so the chat-only controls — LLM selector, on-device model badge,
+  // Incognito chip — would render with nothing to act on. Anchored on the
+  // third segment so the per-agent section (/platform/<tenant>/<mentorId>/
+  // analytics) keeps full navbar parity (issue #2248).
+  const isTenantAnalyticsPage = /^\/platform\/[^/]+\/analytics(\/|$)/.test(
+    pathname,
+  );
+  // Notifications is an inbox, not a chat surface — the same holds whether it
+  // is reached tenant-scoped (/platform/<tenant>/notifications), per-agent
+  // (/platform/<tenant>/<mentorId>/notifications) or on a single
+  // notification's detail route, so all three drop the chat-only controls.
+  const isNotificationsPage = pathname.includes('/notifications');
   const isOnChatPage =
     !isPromptGalleryPage &&
     !pathname.includes('/explore') &&
     !isWorkflowsPage &&
-    !isProjectsIndexPage;
+    !isProjectsIndexPage &&
+    !isTenantAnalyticsPage &&
+    !isNotificationsPage;
   // Narrower than `isOnChatPage`: whether the chat component (the only
   // `RemoteEvents.newChat` listener) is actually mounted on this route.
   // Mirrors `isChatPage` in the sidebar so both "New Chat" affordances agree.
@@ -566,13 +589,19 @@ export function NavBar() {
           )}
 
           <div className="flex items-center pl-2 md:pl-4">
+            {/* Code on Codex / Claude Code: the agent's own model picker takes
+                the top-left; the cloud selector and the on-device badge below
+                step aside (the same `!codeAgent` guard on both). */}
+            {isOnChatPage && codeAgent && (
+              <AgentModelSelector key={codeAgent} backend={codeAgent} />
+            )}
             {/* On-device (local) model indicator. Shown while local mode is on;
                 it replaces the cloud model selector below (hidden via the same
                 `selectedLocal.isLocal` condition). For users who can switch LLMs
                 it is ALSO the entry point to the model picker — click to open it
                 and choose a different model (cloud or local) without first
                 disabling local mode. */}
-            {isOnChatPage && selectedLocal.isLocal && (
+            {isOnChatPage && !codeAgent && selectedLocal.isLocal && (
               <Tooltip>
                 <TooltipTrigger asChild>
                   {canChooseLlm ? (
@@ -606,6 +635,7 @@ export function NavBar() {
             )}
 
             {isOnChatPage &&
+              !codeAgent &&
               isAdmin &&
               !userIsStudent &&
               !selectedLocal.isLocal && (
@@ -741,6 +771,15 @@ export function NavBar() {
                   <span className="hidden sm:block">{selectedMentorName}</span>
                 </Button>
               ))}
+
+            {/* Tenant-wide analytics has no agent in the URL, so the agent
+                dropdown above never renders there. The section title stands in
+                for it, naming what the page is reporting on. */}
+            {isTenantAnalyticsPage && (
+              <span className="text-md pl-0 font-semibold text-[#484848] md:pl-[18px]">
+                {tHeader('analytics')}
+              </span>
+            )}
           </div>
         </div>
 
@@ -768,12 +807,14 @@ export function NavBar() {
           )}
           <div className="flex items-center gap-2">
             {isOnChatPage && visibleToLoggedInUsersOnly && tenantKey && (
-              <ChatPrivacyToggle
-                org={tenantKey}
-                userId={username ?? ''}
-                mentor={mentorId}
-                className="inline-flex max-md:[&>span]:hidden"
-              />
+              <div data-tour={TOUR_TARGET.privacyMode} className="flex">
+                <ChatPrivacyToggle
+                  org={tenantKey}
+                  userId={username ?? ''}
+                  mentor={mentorId}
+                  className="inline-flex max-md:[&>span]:hidden"
+                />
+              </div>
             )}
             {creditBalanceComponentIsDisplayed && (
               <CreditBalance
@@ -793,7 +834,11 @@ export function NavBar() {
                 onViewNotifications={handleViewNotifications}
               />
             )}
-            {visibleToLoggedInUsersOnly && <UserProfile />}
+            {visibleToLoggedInUsersOnly && (
+              <div data-tour={TOUR_TARGET.profile} className="flex">
+                <UserProfile />
+              </div>
+            )}
           </div>
 
           {!isLoggedIn() && (

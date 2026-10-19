@@ -105,44 +105,6 @@
     "noMatchingGroupsFound": "未找到匹配的群组。",
     "groupSearchHint": "请输入至少两个字符以搜索并将群组分配到此角色。"
   },
-  "accessibilityAccessibilityToolbar": {
-    "accessibilityMenu": "无障碍菜单",
-    "contrastPlus": "对比度 +",
-    "highlightLinks": "高亮链接",
-    "biggerText": "放大文字",
-    "textSpacing": "文字间距",
-    "pauseAnimations": "暂停动画",
-    "hideImages": "隐藏图片",
-    "dyslexiaFriendly": "阅读障碍友好",
-    "cursor": "光标",
-    "tooltips": "工具提示",
-    "lineHeight": "行高",
-    "textAlign": "文字对齐",
-    "saturation": "饱和度",
-    "resetAllAccessibilitySettings": "重置所有无障碍设置",
-    "contrastInvertColors": "反转颜色",
-    "contrastDark": "深色对比",
-    "contrastLight": "浅色对比",
-    "textSizeNormal": "正常文字",
-    "textSizeLarge": "大号文字",
-    "textSizeLarger": "更大文字",
-    "spacingLight": "轻度间距",
-    "spacingModerate": "适中间距",
-    "spacingHeavy": "宽松间距",
-    "dyslexiaFont": "阅读障碍字体",
-    "legibleFont": "易读字体",
-    "alignLeft": "左对齐",
-    "alignCenter": "居中对齐",
-    "alignRight": "右对齐",
-    "justify": "两端对齐",
-    "saturationNormal": "正常饱和度",
-    "saturationHigh": "高饱和度",
-    "saturationLow": "低饱和度"
-  },
-  "accessibilityFloatingAccessibilityButton": {
-    "openAccessibilityMenu": "打开无障碍菜单",
-    "accessibilityIconAlt": "无障碍"
-  },
   "advancedChatExpandTab": {
     "expand": "展开"
   },
@@ -156,35 +118,6 @@
     "languageEnglish": "英语",
     "languageFrenchFrance": "法语（法国）",
     "languageSpanish": "西班牙语（Español）"
-  },
-  "apiTabApiKeyModal": {
-    "dialogTitle": "API 密钥",
-    "dialogDescription": "复制并粘贴 API 密钥。",
-    "securityWarning": "请复制您的 API 密钥并将其存储在安全的位置。出于安全原因，此密钥仅显示一次，离开此页面后将无法再次获取。",
-    "lostKeyWarning": "如果您丢失了 API 密钥，您需要重新生成一个。"
-  },
-  "apiTabCreateApiModal": {
-    "apiKeyNameRequired": "API 密钥名称为必填项",
-    "apiKeyNameInvalidChars": "只能包含字母、数字和连字符",
-    "apiKeyCreatedSuccess": "API 密钥创建成功",
-    "apiKeyCreatedError": "创建 API 密钥失败",
-    "dialogDescriptionSrOnly": "创建 API 密钥",
-    "dialogTitle": "创建 API 密钥",
-    "apiKeyNameLabel": "API 密钥名称",
-    "apiKeyNamePlaceholder": "API 密钥名称",
-    "expirationDateLabel": "到期日期",
-    "pickADate": "选择日期",
-    "submitting": "提交中...",
-    "submit": "提交"
-  },
-  "apiTabDeleteApiModal": {
-    "title": "删除 API 密钥",
-    "confirmationMessage": "您确定要删除名为 <bold>{name}</bold> 的 API 密钥吗？此操作无法撤销。",
-    "cancel": "取消",
-    "delete": "删除",
-    "deleting": "正在删除...",
-    "deleteSuccess": "API 密钥已成功删除",
-    "deleteError": "删除 API 密钥失败"
   },
   "appSidebarIndex": {
     "addAgentToProjectFirst": "请先向此项目添加一个智能体。",
@@ -581,9 +514,6 @@
     "settings": "设置",
     "language": "语言"
   },
-  "componentsAddResourceButton": {
-    "addResource": "添加资源"
-  },
   "componentsAdvancedChartWithTooltip": {
     "monthlyRevenue": "月度收入",
     "revenueLabel": "收入"
@@ -596,11 +526,6 @@
     "areYouSure": "您确定吗？",
     "cancel": "取消",
     "continue": "继续"
-  },
-  "componentsDatasetTab": {
-    "dataset": "数据集",
-    "addResource": "添加资源",
-    "noResourcesAddedYet": "尚未添加任何资源"
   },
   "componentsFileUpload": {
     "dropFilesHere": "将文件拖放到此处",
@@ -650,64 +575,6 @@
     "poweredBy": "技术支持来自",
     "inNewYork": "于纽约"
   },
-  "datasetsTabAddResourceModal": {
-    "addResources": "添加资源",
-    "description": "添加知识以帮助您的智能体提供更相关的见解。拥有编辑权限的其他用户可以将这些来源重复用于更多主题。",
-    "googleDrivePickerError": "Google Drive 选择器错误",
-    "forceClosePicker": "强制关闭选择器",
-    "notConfigured": "未为此租户配置"
-  },
-  "datasetsTabDatasetItem": {
-    "trainingDocumentUpdatedSuccess": "训练文档更新成功",
-    "trainingDocumentUpdateFailed": "更新训练文档失败",
-    "scheduleRetrain": "安排重新训练",
-    "documentCannotBeRetrained": "此文档无法重新训练",
-    "scheduleAutomaticRetraining": "为此数据集安排自动重新训练",
-    "makePublic": "设为公开",
-    "makePrivate": "设为私有",
-    "inProgress": "进行中",
-    "disableTrainingForDocument": "禁用文档训练",
-    "enableTrainingForDocument": "启用文档训练"
-  },
-  "datasetsTabDeleteDatasetModal": {
-    "deleteSuccess": "训练文档已成功删除",
-    "deleteError": "删除训练文档失败",
-    "dialogTitle": "删除数据集",
-    "confirmationText": "您已成功取消训练数据集，是否要将其删除？此操作无法撤销。",
-    "cancelButton": "取消",
-    "deletingButton": "删除中...",
-    "deleteButton": "删除"
-  },
-  "datasetsTabIndex": {
-    "infoBox": "用您自己的资料训练智能体。上传文档、文件或链接，它就会依据这些内容作答——基于您的内容，而不是凭空猜测。",
-    "heading": "数据集",
-    "subheading": "管理训练数据集和知识来源。",
-    "searchPlaceholder": "搜索数据集...",
-    "addResource": "添加资源",
-    "columnName": "名称",
-    "columnType": "类型",
-    "columnTokens": "TOKENS",
-    "columnInterval": "间隔",
-    "columnVisibility": "可见性",
-    "columnStatus": "状态"
-  },
-  "datasetsTabRetrainScheduleModal": {
-    "toastSuccess": "重新训练间隔更新成功",
-    "toastError": "重新训练间隔更新失败",
-    "dialogTitle": "计划重新训练",
-    "dialogDescription": "为以下内容配置自动重新训练计划",
-    "retrainIntervalLabel": "重新训练间隔",
-    "presetDaily": "每天（1 天）",
-    "presetWeekly": "每周（7 天）",
-    "presetMonthly": "每月（30 天）",
-    "customIntervalLabel": "自定义间隔（天）",
-    "customIntervalPlaceholder": "输入天数",
-    "retrainIntervalHint": "数据集将每 {days} {unit}重新训练一次",
-    "dayUnit": "天",
-    "daysUnit": "天",
-    "cancelButton": "取消",
-    "submitButton": "计划重新训练"
-  },
   "disclaimersTabEditDisclaimerModal": {
     "editAdvisory": "编辑公告",
     "advisoryContent": "公告内容",
@@ -729,22 +596,32 @@
     "heading": "免责声明",
     "subheading": "为您的智能体配置免责声明设置。",
     "userAgreementTitle": "用户协议",
-    "userAgreementInfoAriaLabel": "关于用户协议的更多信息",
     "userAgreementTooltip": "控制用户协议",
     "active": "已启用",
     "inactive": "已禁用",
-    "userAgreementSwitchAriaLabel": "用户协议{status}",
-    "userAgreementContentAriaLabel": "用户协议内容",
     "editButton": "编辑",
     "advisoryTitle": "建议",
-    "advisoryInfoAriaLabel": "关于建议的更多信息",
     "advisoryTooltip": "控制建议",
-    "advisoryContentAriaLabel": "建议内容",
     "agentUpdatedSuccess": "智能体更新成功",
     "agentUpdatedError": "更新智能体失败",
     "userAgreementUpdatedSuccess": "用户协议更新成功",
     "userAgreementUpdatedError": "更新用户协议失败",
-    "userAgreementToggledSuccess": "用户协议已{status}成功"
+    "userAgreementToggledSuccess": "用户协议已{status}成功",
+    "viewAgreements": "查看同意记录"
+  },
+  "disclaimersTabAgreements": {
+    "title": "同意记录",
+    "dialogDescription": "已接受此智能体用户协议的用户。",
+    "totalAgreements": "共 {count} 条同意记录",
+    "searchPlaceholder": "按用户名搜索",
+    "searchAriaLabel": "按用户名搜索同意记录",
+    "columnUser": "用户",
+    "columnAgreedAt": "同意时间",
+    "summaryDescription": "查看已接受此智能体用户协议的用户。每条记录显示用户的姓名、邮箱和同意时间。尚未接受的用户不会列出。搜索需与用户名完全匹配。",
+    "empty": "尚无同意记录",
+    "emptyDescription": "接受用户协议的用户将与其同意时间一起显示在此处。",
+    "noMatches": "没有匹配的用户",
+    "noMatchesDescription": "搜索需与用户名完全匹配，请尝试输入完整的用户名。"
   },
   "editMentorModalIndex": {
     "dialogDescription": "编辑代理设置、提示词、工具、安全、流程、历史记录、数据集和 API 密钥",
@@ -765,20 +642,17 @@
     "seeMore": "查看更多"
   },
   "exploreCustomMentorsSection": {
-    "sectionHeading": "自定义",
-    "listAriaLabel": "自定义智能体",
-    "loadMoreAriaLabel": "加载更多自定义智能体",
+    "sectionHeading": "我的智能体",
+    "listAriaLabel": "我的智能体",
+    "loadMoreAriaLabel": "加载更多我的智能体",
     "loadingMore": "加载中",
     "seeMore": "查看更多",
     "createAgentAriaLabel": "创建自定义智能体",
     "createAgentHeading": "创建自定义智能体",
-    "createAgentDescription": "构建专属于您学习需求的自定义智能体",
-    "getStartedToday": "立即开始"
+    "createAgentDescription": "构建专属于您学习需求的自定义智能体"
   },
   "exploreDefaultMentorsSection": {
     "loadingAgents": "正在加载智能体...",
-    "createAgentAriaLabel": "创建新智能体",
-    "createAgentButton": "创建智能体",
     "allAgentsListAriaLabel": "所有智能体",
     "exploreAgentAriaLabel": "探索智能体：{name}",
     "loadMoreAriaLabel": "加载更多智能体",
@@ -789,27 +663,30 @@
     "llmProviderTitle": "{provider} 智能体",
     "llmProviderSubtext": "探索由 {provider} 驱动的智能体。",
     "allAgentsTitle": "所有智能体",
-    "allAgentsSubtext": "探索智能体及专业学习助手。"
+    "allAgentsSubtext": "探索智能体及专业学习助手。",
+    "searchResultsTitle": "“{query}”的搜索结果",
+    "searchResultsSubtext": "{count, plural, =0 {没有符合搜索条件的智能体。} other {共有 # 个智能体符合搜索条件。}}",
+    "emptyStateHint": "请尝试其他搜索词或清除筛选条件。"
   },
   "exploreExplorePageContent": {
     "skipToMainContent": "跳转到主要内容",
     "agentExplorationPage": "代理探索页面",
     "discoverAndCreateAgents": "探索和创建结合学科专业知识、资源与技能的代理",
     "searchAgentsLabel": "搜索代理",
-    "searchPlaceholder": "搜索",
-    "searchAgentsInputLabel": "搜索代理"
+    "searchPlaceholder": "搜索智能体",
+    "searchAgentsInputLabel": "搜索代理",
+    "pageTitle": "探索智能体",
+    "clearSearch": "清除搜索",
+    "createAgentButton": "创建智能体",
+    "createAgentAriaLabel": "创建新智能体"
   },
   "exploreFeaturedMentorsSection": {
     "heading": "精选",
     "loadMoreAriaLabel": "加载更多精选智能体",
     "loadingMore": "加载更多",
-    "seeMore": "查看更多",
-    "emptyStateTitle": "精选智能体",
-    "emptyStateDescription": "探索由我们社区推荐的精心挑选的智能体",
-    "emptyStateNoAgents": "暂无精选智能体"
+    "seeMore": "查看更多"
   },
   "exploreMentorCategories": {
-    "promotion": "推广",
     "featured": "精选",
     "category": "分类",
     "subject": "主题",
@@ -834,9 +711,17 @@
     "loadingMore": "加载更多",
     "seeMore": "查看更多",
     "addToFavoritesCardAriaLabel": "添加到收藏夹 - 注册后即可收藏助手",
-    "addToFavoritesTitle": "添加到收藏夹",
     "addToFavoritesDescription": "收藏您喜爱的助手，以便在此快速访问",
     "noFavoritesYet": "暂无收藏"
+  },
+  "exploreSection": {
+    "countAriaLabel": "{count, plural, other {# 个智能体}}"
+  },
+  "exploreMentorCard": {
+    "featured": "精选",
+    "addToFavorites": "添加到收藏夹",
+    "removeFromFavorites": "从收藏夹中移除",
+    "updatedOn": "更新于 {date}"
   },
   "flaggedPromptsDeleteModerationLogModal": {
     "title": "删除审核日志",
@@ -1367,6 +1252,8 @@
       "cancel": "取消",
       "inUse": "使用中",
       "downloadFailedRetry": "下载失败——重试",
+      "downloadFailed": "下载失败",
+      "retry": "重试",
       "ariaDownload": "下载 {modelName}，{modelSize}，设备端模型",
       "ariaStarting": "正在开始下载 {modelName}",
       "ariaDownloading": "取消下载 {modelName}，{percent}%",
@@ -1495,14 +1382,15 @@
     "closeSidebar": "关闭侧边栏",
     "openSidebar": "打开侧边栏",
     "toggleSidebar": "切换侧边栏",
-    "startNewChat": "与 {mentorName} 开始新对话",
     "help": "帮助",
     "support": "支持",
     "openMenuOptions": "打开菜单选项",
-    "menuOptions": "菜单选项",
-    "openSettingsMenu": "打开设置菜单",
-    "settingsMenu": "设置菜单",
-    "closeChat": "关闭聊天"
+    "closeChat": "关闭聊天",
+    "newChat": "新对话",
+    "incognito": "无痕模式",
+    "incognitoChat": "无痕对话",
+    "enterFullscreen": "全屏",
+    "exitFullscreen": "退出全屏"
   },
   "navBarIndex": {
     "logIn": "登录",
@@ -1514,6 +1402,10 @@
     "toggleSidebar": "切换侧边栏",
     "llmModelSelector": "LLM 模型选择器",
     "selectModel": "选择模型",
+    "agentModelSelector": "代码智能体模型",
+    "agentModelDefault": "默认",
+    "agentModelLoading": "正在加载模型…",
+    "agentModelError": "无法加载模型",
     "selectedAgentDropdownButton": "已选智能体下拉按钮",
     "newChat": "新对话",
     "modify": "修改",
@@ -1543,34 +1435,6 @@
     "toastDeleteSuccess": "项目已成功删除",
     "toastDeleteError": "删除项目失败"
   },
-  "projectsMinimumMentorAlert": {
-    "cannotRemoveAgent": "无法移除代理",
-    "minimumAgentWarning": "一个项目必须至少有一个代理。请在移除此代理之前添加另一个代理。",
-    "cancel": "取消"
-  },
-  "projectsProjectFilesModal": {
-    "projectFiles": "项目文件",
-    "searchDatasetsPlaceholder": "搜索数据集...",
-    "addFiles": "添加文件",
-    "columnName": "名称",
-    "columnType": "类型",
-    "columnTokens": "TOKENS",
-    "columnInterval": "间隔",
-    "columnVisibility": "可见性",
-    "columnStatus": "状态"
-  },
-  "projectsProjectInstructionsModal": {
-    "title": "说明",
-    "description": "您可以要求助手专注于某些主题，或要求其使用特定的语气或格式进行回答。",
-    "placeholder": "例如：“请参考最新的 JavaScript 文档。保持回答简洁且有针对性。”",
-    "cancelAriaLabel": "取消编辑说明",
-    "cancel": "取消",
-    "saveAriaLabel": "保存项目说明",
-    "saving": "保存中...",
-    "save": "保存",
-    "saveSuccess": "说明更新成功",
-    "saveError": "更新说明失败"
-  },
   "projectsRenameProjectModal": {
     "title": "重命名项目",
     "projectNameLabel": "项目名称",
@@ -1580,65 +1444,6 @@
     "renameButton": "重命名项目",
     "renameSuccess": "项目重命名成功",
     "renameError": "重命名项目失败"
-  },
-  "resourceModalGithubFileUploadModal": {
-    "failedToFetchBranches": "获取分支失败",
-    "unknownError": "发生未知错误",
-    "agentNotFound": "未找到代理",
-    "documentQueued": "文档已加入训练队列",
-    "errorAddingDocument": "添加训练文档时出错",
-    "githubRepoUrlPlaceholder": "Github 仓库 URL",
-    "selectBranchPlaceholder": "选择分支",
-    "submit": "提交"
-  },
-  "resourceModalLocalFileUploadModal": {
-    "fileNotFound": "未找到文件",
-    "documentQueued": "文档已加入训练队列",
-    "errorAddingDocument": "添加训练文档时出错",
-    "fileSizeExceeds": "文件大小超过 {value} {unit}",
-    "dragAndDrop": "将文件拖放到此处",
-    "or": "或",
-    "browseFiles": "浏览文件",
-    "maxFileSize": "最大文件大小：{value} {unit}",
-    "descriptionLabel": "描述（可选）",
-    "descriptionPlaceholder": "为此图片添加描述...",
-    "submitting": "提交中",
-    "submit": "提交"
-  },
-  "resourceModalUrlUploadModel": {
-    "documentQueuedForTraining": "文档已加入训练队列",
-    "errorAddingTrainingDocument": "添加训练文档时出错",
-    "invalidYouTubeUrl": "无效的 YouTube URL",
-    "invalidBlackboardUrl": "无效的 Blackboard URL",
-    "invalidUrl": "无效的 URL",
-    "urlPlaceholder": "URL",
-    "submitButton": "提交"
-  },
-  "resourceModalWebsiteCrawlModal": {
-    "title": "网络爬虫配置",
-    "description": "配置您的网络爬虫设置和 URL 模式",
-    "formAriaLabel": "网络爬虫配置表单",
-    "urlLabel": "URL",
-    "urlRequired": "URL 为必填项",
-    "invalidUrl": "无效的 URL",
-    "maxCrawlDepthLabel": "最大爬取深度",
-    "fieldRequired": "此字段为必填项",
-    "mustBeGreaterThanZero": "必须大于 0",
-    "mustBeLessThan10000": "必须小于 10000",
-    "maxPagesLimitLabel": "最大页面数限制",
-    "patternTypeLabel": "模式类型",
-    "selectPatternTypeAriaLabel": "选择模式类型",
-    "globPattern": "Glob 模式",
-    "regularExpression": "正则表达式",
-    "crawlerMatchPatternsLabel": "爬虫匹配模式",
-    "addPatternAriaLabel": "添加模式",
-    "patternHelpText": "按 Enter 键或点击加号按钮以添加模式",
-    "addedPatternsAriaLabel": "已添加的爬虫匹配模式",
-    "noPatternsAdded": "未添加任何模式",
-    "removePatternAriaLabel": "删除模式：{pattern}",
-    "submitting": "提交中...",
-    "submit": "提交",
-    "formBeingSubmitted": "表单正在提交"
   },
   "settingsTabCopyMentorModal": {
     "defaultCopyNamePrefix": "副本",
@@ -1670,22 +1475,6 @@
     "deleting": "正在删除...",
     "deleteSuccess": "智能体已成功删除",
     "deleteError": "删除智能体失败"
-  },
-  "tabsApiTab": {
-    "infoBox": "在您自己的应用中使用该智能体。在此创建 API 密钥，以便通过编程方式调用它，并将其集成到您的产品或工作流程中。",
-    "apiHeading": "API",
-    "manageApiKeysDescription": "管理 API 密钥和集成。",
-    "secretKeysListedBelow": "您的私密 API 密钥列于下方。请注意，生成后我们将不再显示您的私密 API 密钥。",
-    "doNotShareApiKey": "请勿与他人共享您的 API 密钥，也不要在浏览器或其他客户端代码中暴露它。为保护您账户的安全，IBL 还可能自动轮换我们发现已公开泄露的 API 密钥。",
-    "columnName": "名称",
-    "columnCreated": "创建时间",
-    "columnExpires": "到期时间",
-    "columnActions": "操作",
-    "noApiKeysFound": "未找到 API 密钥",
-    "noPermissionToViewApiKeys": "您没有权限查看 API 密钥",
-    "notAvailable": "N/A",
-    "deleteApiKey": "删除 API 密钥",
-    "createNew": "新建"
   },
   "tabsAuditLogTab": {
     "infoBox": "保留操作记录。查看该智能体的变更日志——谁在何时更改了什么——便于排查问题并保持合规。",
@@ -1764,6 +1553,16 @@
     "showCatalogueTooltip": "在聊天界面中显示目录",
     "showCatalogueEnabled": "显示目录已启用",
     "showCatalogueDisabled": "显示目录已禁用",
+    "allowMentorSelectionLabel": "允许选择智能体",
+    "moreInfoAllowMentorSelection": "有关选择智能体的更多信息",
+    "allowMentorSelectionTooltip": "允许已登录的访问者从嵌入中打开探索并切换到其他智能体。",
+    "allowMentorSelectionEnabled": "选择智能体已启用",
+    "allowMentorSelectionDisabled": "选择智能体已禁用",
+    "allowFullscreenLabel": "允许全屏",
+    "moreInfoAllowFullscreen": "有关全屏的更多信息",
+    "allowFullscreenTooltip": "在聊天中显示一个按钮，可在小窗口和全屏之间切换。",
+    "allowFullscreenEnabled": "全屏已启用",
+    "allowFullscreenDisabled": "全屏已禁用",
     "shareableLinkLabel": "可分享链接",
     "moreInfoShareableLink": "关于生成可分享链接的更多信息",
     "shareableLinkTooltip": "生成一个链接，用户可以使用它匿名与此智能体聊天",
@@ -1837,6 +1636,7 @@
     "sentimentPositive": "积极",
     "sentimentNeutral": "中性",
     "sentimentNegative": "消极",
+    "userSentiment": "用户情绪",
     "filterBySentiment": "按情感筛选",
     "allTopics": "所有主题",
     "filterByTopic": "按主题筛选",
@@ -1853,7 +1653,8 @@
     "hideConversationMemory": "隐藏对话记忆",
     "showConversationMemory": "显示对话记忆",
     "noConversationMemory": "暂无对话记忆。",
-    "selectConversationPrompt": "选择对话以查看详情。"
+    "selectConversationPrompt": "选择对话以查看详情。",
+    "documentsChip": "文档 · {count}"
   },
   "tabsLlmTab": {
     "infoBox": "这是您智能体的大脑——为每次回复提供动力的 AI 模型。更大的模型在处理复杂问题时推理能力更强；更轻量的模型则更快、成本更低。不确定？默认模型是可靠的全能之选。",
@@ -2065,6 +1866,7 @@
     "tabBasic": "基本",
     "tabDiscovery": "发现",
     "tabCapabilities": "功能",
+    "tabWelcomeScreen": "欢迎界面",
     "nameLabel": "名称",
     "agentNamePlaceholder": "智能体名称",
     "agentNameRequired": "智能体名称为必填项",
@@ -2093,10 +1895,17 @@
     "whoCanChatTooltip": "控制谁可以与此智能体聊天。",
     "selectWhoCanChat": "选择谁可以聊天",
     "anyoneOption": "任何人",
+    "administratorsOption": "管理员",
+    "usersOption": "用户",
+    "enableVerboseReasoningLabel": "启用详细推理",
+    "enableVerboseReasoningTooltip": "在智能体响应时显示其推理步骤。此设置只有一个值，因此同时适用于应用内聊天和嵌入式小组件。",
     "authenticatedUsersOption": "已认证用户",
     "highlightFeaturedLabel": "在精选列表中突出显示",
     "highlightFeaturedInfoAriaLabel": "关于在精选列表中突出显示的更多信息",
     "highlightFeaturedTooltip": "将此智能体设为精选，使其在列表中突出显示。",
+    "showAdditionalAgentsLabel": "显示其他智能体",
+    "showAdditionalAgentsInfoAriaLabel": "关于显示其他智能体的更多信息",
+    "showAdditionalAgentsTooltip": "在此智能体的欢迎界面上显示“其他智能体”部分。",
     "enableLtiLabel": "启用 LTI 启动",
     "enableLtiInfoAriaLabel": "关于启用 LTI 启动的更多信息",
     "enableLtiTooltip": "启用后，此智能体可通过 LTI 启动访问。取消选择将立即撤销所有通过 LTI 启动访问此智能体的用户的访问权限。",
@@ -2153,7 +1962,9 @@
     "perSurfaceHeading": "按界面功能",
     "perSurfaceNote": "分别为应用内聊天和嵌入式挂件单独设置。",
     "inAppChatNote": "应用内托管的对话，即用户在此打开的聊天。",
-    "embedWidgetNote": "你使用“嵌入”标签页中的代码片段嵌入到自己网站上的挂件。"
+    "embedWidgetNote": "你使用“嵌入”标签页中的代码片段嵌入到自己网站上的挂件。",
+    "inChatModelChangeLabel": "允许在聊天中更换模型",
+    "inChatModelChangeTooltip": "允许用户为自己的聊天选择其他 AI 模型。智能体的模型不会改变，新聊天仍从该模型开始。此设置只有一个值，因此同时适用于应用内聊天和嵌入式小组件。"
   },
   "tabsMcpTab": {
     "infoBox": "通过 MCP 服务器将您的智能体连接到您自己的系统，让它能够在对话中直接访问您的数据和服务。"
@@ -2162,15 +1973,6 @@
     "heading": "技能",
     "description": "此基础智能体可发现并遵循的可复用操作手册。",
     "infoBox": "智能体技能是可附加到基础智能体的可复用操作手册——针对单一任务的书面指令（可附带参考文件），例如在网上调研主题或审查代码。智能体只在相关时才会阅读技能，因此你可以为它添加多种能力而不会让每次对话变得臃肿。在聊天中输入 / 即可查看此智能体的技能并选择一个来启动。"
-  },
-  "tabsToolsTab": {
-    "infoBox": "为您的智能体赋予“双手”。工具让它能够超越单纯的聊天——查找信息、调用 API、触发操作——从而真正为用户完成工作。",
-    "heading": "工具",
-    "subheading": "为您的智能体配置工具和集成。",
-    "moreInfoAbout": "关于 {name} 的更多信息",
-    "switchAriaLabel": "{name} {state}",
-    "enabled": "已启用",
-    "disabled": "已禁用"
   },
   "topTrialBannerTopTrialBanner": {
     "defaultBannerText": "升级以创建您自己的智能体。无需信用卡 😎",
@@ -2383,6 +2185,17 @@
     "permissionModeManual": "每次询问",
     "permissionModeAuto": "自动批准",
     "permissionModeAutoHint": "Code 将直接编辑文件并执行命令，不再询问。请仅在受信任的文件夹中使用。",
+    "agentLabel": "智能体",
+    "agentNotInstalled": "未安装",
+    "agentInstall": "安装",
+    "agentInstalling": "正在安装…",
+    "agentSignedOutCodex": "未登录——请在 ChatGPT 应用中登录 Codex。",
+    "agentSignedOutClaude": "未登录——请在终端中运行 <code>claude</code>。",
+    "agentCheckAgain": "重新检查",
+    "agentReady": "就绪",
+    "agentUnsupported": "此电脑上不可用",
+    "authRequiredCodex": "Codex 未登录",
+    "authRequiredClaude": "Claude Code 未登录",
     "newWorkspace": "新建工作区",
     "openInFinder": "在访达中打开",
     "openInExplorer": "在资源管理器中打开",
@@ -2443,5 +2256,25 @@
     "updateNow": "立即更新",
     "updating": "正在更新…",
     "later": "稍后"
+  },
+  "productTour": {
+    "back": "上一步",
+    "close": "关闭导览",
+    "done": "完成",
+    "next": "下一步",
+    "skip": "跳过导览",
+    "progress": "第 {current} 步，共 {total} 步",
+    "profileTitle": "你的个人资料",
+    "profileContent": "在此菜单中打开个人资料、切换组织、获取帮助或退出登录。",
+    "privacyModeTitle": "隐私模式",
+    "privacyModeContent": "开启隐私模式后，对话不会保存到聊天记录中。开启后，该对话将一直保持隐私模式。",
+    "promptInputTitle": "随便问",
+    "promptInputContent": "在这里输入发给智能体的消息。可使用输入框下方的按钮附加文件或开启工具。",
+    "conversationStartersTitle": "对话开场",
+    "conversationStartersContent": "不知道从哪里开始？选择一个开场白，将其作为第一条消息发送。",
+    "agentsTitle": "探索智能体",
+    "agentsContent": "在“智能体”菜单中浏览可用的智能体，或创建和管理你自己的智能体。",
+    "accountTitle": "管理你的组织",
+    "accountContent": "使用侧边栏底部的工具邀请成员、管理用户和群组、连接集成以及更改高级设置。"
   }
 }

@@ -76,14 +76,20 @@ export function installChromeStub() {
       },
     },
     scripting: {
+      // One result, tagged with the frame it was asked for: the page (frame 0)
+      // unless the injection named another. Tests stack more frames on top.
       executeScript: vi.fn(
         async ({
+          target,
           func,
           args = [],
         }: {
+          target?: { frameIds?: number[]; allFrames?: boolean };
           func: (...a: unknown[]) => unknown;
           args?: unknown[];
-        }) => [{ result: await func(...args) }],
+        }) => [
+          { frameId: target?.frameIds?.[0] ?? 0, result: await func(...args) },
+        ],
       ),
     },
     storage: {

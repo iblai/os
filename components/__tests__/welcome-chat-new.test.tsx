@@ -16,6 +16,7 @@ const {
   mockUseParams,
   mockUseGetUserProjectDetailsQuery,
   mockUseWelcome,
+  mockUseMentorSettings,
   mockConfig,
 } = vi.hoisted(() => ({
   mockUseEmbedMode: vi.fn(),
@@ -23,11 +24,14 @@ const {
   mockUseParams: vi.fn(),
   mockUseGetUserProjectDetailsQuery: vi.fn(),
   mockUseWelcome: vi.fn(),
+  mockUseMentorSettings: vi.fn(),
   mockConfig: {
     mainTenantKey: vi.fn(),
     showAppBanner: vi.fn(),
     baseWsUrl: vi.fn(),
     iblTemplateMentor: vi.fn(() => 'default-mentor'),
+    disabedDatasets: vi.fn(() => 'zip|courses'),
+    mentorTrainingMaximumFileSize: vi.fn(() => '25'),
   },
 }));
 
@@ -64,6 +68,10 @@ vi.mock('@/hooks/use-welcome-message', () => ({
   default: (args: any) => mockUseWelcome(args),
 }));
 
+vi.mock('@/hooks/use-mentors/use-mentor-settings', () => ({
+  useMentorSettings: () => mockUseMentorSettings(),
+}));
+
 vi.mock('@/lib/config', () => ({
   config: mockConfig,
 }));
@@ -96,6 +104,15 @@ vi.mock('@iblai/iblai-js/web-containers', () => ({
     <div data-testid="project-landing-page">
       <div data-testid="project-name">{props.project?.name}</div>
       <div data-testid="session-id">{props.sessionId}</div>
+      <div data-testid="project-show-explore-mentors">
+        {String(props.showExploreMentors)}
+      </div>
+      <div data-testid="project-disabled-resource-types">
+        {JSON.stringify(props.disabledResourceTypes)}
+      </div>
+      <div data-testid="project-max-upload-size-mb">
+        {String(props.maxUploadSizeMb)}
+      </div>
     </div>
   ),
 }));
@@ -319,6 +336,9 @@ describe('WelcomeChatNew', () => {
       error: undefined,
     });
     mockUseWelcome.mockReturnValue({ welcomeMessage: 'Welcome message' });
+    mockUseMentorSettings.mockReturnValue({
+      data: { showExploreMentors: true },
+    });
     mockConfig.mainTenantKey.mockReturnValue('main');
     mockConfig.showAppBanner.mockReturnValue('true');
     mockConfig.baseWsUrl.mockReturnValue('wss://example.com');
@@ -388,6 +408,30 @@ describe('WelcomeChatNew', () => {
       );
       expect(screen.queryByTestId('welcome-chat')).not.toBeInTheDocument();
     });
+
+    // ProjectLandingPage's `showExploreMentors` gates the Project Agents list
+    // and Add Agent button, not the welcome-screen Explore section, so the
+    // mentor setting must never turn it off.
+    it.each([true, false])(
+      'should always pass showExploreMentors=true to ProjectLandingPage (mentor setting %s)',
+      (showExploreMentors) => {
+        mockUseParams.mockReturnValue({ projectId: '1' });
+        mockUseGetUserProjectDetailsQuery.mockReturnValue({
+          data: defaultProject,
+          isLoading: false,
+          error: undefined,
+        });
+        mockUseMentorSettings.mockReturnValue({
+          data: { showExploreMentors },
+        });
+
+        renderWithRedux(<WelcomeChatNew {...defaultProps} />);
+
+        expect(
+          screen.getByTestId('project-show-explore-mentors'),
+        ).toHaveTextContent('true');
+      },
+    );
 
     it('should return null when projectId exists but project data is not available', () => {
       mockUseParams.mockReturnValue({ projectId: '1' });
@@ -705,13 +749,29 @@ describe('WelcomeChatNew', () => {
       expect(mockOnSubmit).toHaveBeenCalledWith('template 1');
     });
 
-    it('should render ExploreMentors component', () => {
+    it('should render ExploreMentors component when show_explore_mentors is on', () => {
       mockUseEmbedMode.mockReturnValue(false);
       mockUseParams.mockReturnValue({ projectId: undefined });
+      mockUseMentorSettings.mockReturnValue({
+        data: { showExploreMentors: true },
+      });
 
       renderWithRedux(<WelcomeChatNew {...defaultProps} />);
 
       expect(screen.getByTestId('explore-mentors')).toBeInTheDocument();
+    });
+
+    it('should hide ExploreMentors when show_explore_mentors is off', () => {
+      mockUseEmbedMode.mockReturnValue(false);
+      mockUseParams.mockReturnValue({ projectId: undefined });
+      mockUseMentorSettings.mockReturnValue({
+        data: { showExploreMentors: false },
+      });
+
+      renderWithRedux(<WelcomeChatNew {...defaultProps} />);
+
+      expect(screen.queryByTestId('explore-mentors')).not.toBeInTheDocument();
+      expect(screen.getByTestId('conversation-starters')).toBeInTheDocument();
     });
   });
 
@@ -988,6 +1048,12 @@ describe('WelcomeChatNew', () => {
         'Test Project',
       );
       expect(screen.getByTestId('session-id')).toHaveTextContent('session-123');
+      expect(
+        screen.getByTestId('project-disabled-resource-types'),
+      ).toHaveTextContent('["zip","courses"]');
+      expect(
+        screen.getByTestId('project-max-upload-size-mb'),
+      ).toHaveTextContent('25');
     });
 
     it('should pass all props to WelcomeChat in embed mode', () => {

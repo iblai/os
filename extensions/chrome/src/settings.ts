@@ -84,8 +84,30 @@ export function apiBases(): string[] {
  * the Web Store and the PDF viewer, so anything outside http(s) would throw
  * instead of failing with a message the model can act on.
  */
+/**
+ * Pages Chrome refuses to let ANY extension touch even though they are
+ * ordinary https — scripting one fails with Chrome's own "The extensions
+ * gallery cannot be scripted."
+ *
+ * The Web Store is the one users actually land on, because reloading an
+ * extension leaves it as the active tab: the next run then read the gallery
+ * instead of their page, and bounced Chrome's wording into the chat.
+ */
+export function blockedByBrowser(url: string | undefined): boolean {
+  if (!url) return false;
+  try {
+    const { hostname, pathname } = new URL(url);
+    if (hostname === 'chromewebstore.google.com') return true;
+    // The pre-2024 gallery, still reachable; only the /webstore tree is blocked.
+    return hostname === 'chrome.google.com' && pathname.startsWith('/webstore');
+  } catch {
+    return false;
+  }
+}
+
 export function injectable(url: string | undefined): url is string {
   if (!url) return false;
+  if (blockedByBrowser(url)) return false;
   try {
     const { protocol } = new URL(url);
     return protocol === 'https:' || protocol === 'http:';

@@ -26,7 +26,7 @@ import { MentorTracker } from '../utils/mentor-cleanup';
  *
  * ── Capability-gate refactor ─────────────────────────────────────────────
  *
- * The "Enable voice calls" (`show_voice_call`) toggle used to live in
+ * The "Enable Voice Calls" (`show_voice_call`) toggle used to live in
  * Settings → Capabilities and gate the Voice top-level tab's visibility. It
  * now lives inline at the top of the Voice tab itself via the shared
  * `CapabilityGate` component (`data-testid="voice-capability-toggle"`), and
@@ -236,13 +236,13 @@ test.describe('Journey 47: Mentor Voice Tab', () => {
   });
 
   // VO-11: The Voice top-level tab is now ALWAYS visible — the
-  // `is_lti_accessible`-style gate on "Enable voice calls" was removed from
+  // `is_lti_accessible`-style gate on "Enable Voice Calls" was removed from
   // `hooks/use-mentor-segments.ts`. Turning voice calls off in the Voice
   // tab's own capability toggle grays/inerts the sub-tabs instead of hiding
   // the whole tab. Each test runs against its own freshly created mentor
   // (see the beforeEach + file-level serial note), so this disable can
   // never be stomped by a parallel writer re-enabling the flag.
-  test('Voice tab stays visible and its content grays when "Enable voice calls" is off', async ({
+  test('Voice tab stays visible and its content grays when "Enable Voice Calls" is off', async ({
     editMentorPage,
   }) => {
     await expect(editMentorPage.voice.tabLink).toBeVisible({ timeout: 5_000 });
@@ -262,8 +262,8 @@ test.describe('Journey 47: Mentor Voice Tab', () => {
     await editMentorPage.close();
   });
 
-  // VO-12: Re-enabling "Enable voice calls" ungates the sub-tab content.
-  test('enabling "Enable voice calls" ungates the Voice tab content', async ({
+  // VO-12: Re-enabling "Enable Voice Calls" ungates the sub-tab content.
+  test('enabling "Enable Voice Calls" ungates the Voice tab content', async ({
     editMentorPage,
   }) => {
     // Drive to a known-off state first, confirm the content is grayed, then

@@ -22,7 +22,7 @@ import {
 
 import { ChatRow, chatRowLabel } from './chat-row-label';
 import { ChatRowItem } from './chat-row';
-import { useCodePermissionSessions } from '@/components/chat/code-permission-card';
+import { useCodePermissionSessions } from '@iblai/iblai-js/web-containers/next';
 import { useRecentChats } from './use-recent-chats';
 
 const NAV_MUTED = '#5f5f61';

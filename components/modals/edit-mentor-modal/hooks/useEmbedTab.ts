@@ -31,8 +31,10 @@ import { useUsername } from '@/hooks/use-user';
 import { ANONYMOUS_USERNAME } from '@/lib/constants';
 import { useAppDispatch } from '@/lib/hooks';
 
+// No `custom_css` here: the Advanced CSS editor (embed-tab.tsx) owns and saves
+// it. A form copy was never updated by that editor, so Create Embed wrote the
+// stale value back over whatever the editor had just saved.
 export interface EmbedFormValues {
-  custom_css: string;
   description: string;
   website_url: string;
   mode: ChatMode;
@@ -84,7 +86,6 @@ export interface CustomFloatingBubbleConfig {
 }
 
 const defaultEmbedFormValues: EmbedFormValues = {
-  custom_css: '',
   description: '',
   website_url: '',
   mode: 'default',
@@ -121,6 +122,8 @@ const SETTINGS_OWNED_FIELDS = [
 
 const useEmbedTab = () => {
   const [embedCode, setEmbedCode] = useState('');
+  const [allowMentorSelection, setAllowMentorSelection] = useState(false);
+  const [allowFullscreen, setAllowFullscreen] = useState(false);
   const { getMentorId } = useNavigate();
   const username = useUsername();
   const params = useParams<{ tenantKey: string; mentorId: string }>();
@@ -218,12 +221,17 @@ const useEmbedTab = () => {
       formValues.is_context_aware = true;
     }
 
+    // The form keys `is_context_aware` / `auto_open` feed the snippet builder,
+    // but the backend fields are `embed_is_context_aware` /
+    // `embed_open_by_default`; it silently drops the raw keys (#2592).
+    const { is_context_aware, auto_open, ...settingsValues } = formValues;
+
     // Update mentor settings
     const valid_values = Object.fromEntries(
-      Object.entries(formValues).filter(
+      Object.entries(settingsValues).filter(
         ([key, value]) =>
           !(SETTINGS_OWNED_FIELDS as readonly string[]).includes(key) &&
-          (value !== '' || key === 'custom_css'),
+          value !== '',
       ),
     );
 
@@ -277,6 +285,8 @@ const useEmbedTab = () => {
       formData: {
         ...valid_values,
         metadata: { safety_disclaimer: valid_values.safety_disclaimer },
+        embed_is_context_aware: is_context_aware,
+        embed_open_by_default: auto_open,
         embed_icon_selection_data,
         // Only include the image key when we have a new File to upload so an
         // unchanged (already-persisted) image is left untouched by the backend.
@@ -410,7 +420,6 @@ const useEmbedTab = () => {
       ...defaultEmbedFormValues,
       slug: mentorId,
       generateShareableLink: false,
-      custom_css: mentorPublicSettings?.custom_css ?? '',
       // `show_catalogue` is exposed by the backend but not yet reflected in the
       // published MentorSettingsPublic type — read it via a narrow cast.
       show_catalogue:
@@ -444,6 +453,15 @@ const useEmbedTab = () => {
       strip_page_content_html:
         (mentorSettings as { strip_page_content_html?: boolean } | undefined)
           ?.strip_page_content_html ?? false,
+      // Form keys differ from the backend fields (#2592); map on load.
+      is_context_aware:
+        mentorSettings?.embed_is_context_aware ??
+        mentorPublicSettings?.embed_is_context_aware ??
+        false,
+      auto_open:
+        mentorSettings?.embed_open_by_default ??
+        mentorPublicSettings?.embed_open_by_default ??
+        false,
     },
     onSubmit: async ({ value }) => {
       const syncResult = await syncEmbedSettings();
@@ -454,7 +472,12 @@ const useEmbedTab = () => {
       const embed = await getEmbedCode(
         params.tenantKey,
         // @ts-expect-error - value is not typed correctly
-        { ...value, allow_anonymous: allowAnonymous },
+        {
+          ...value,
+          allow_anonymous: allowAnonymous,
+          allow_mentor_selection: allowMentorSelection,
+          allow_fullscreen: allowFullscreen,
+        },
         syncResult.redirectToken ?? '',
         value.icon_selection === 'custom',
         customFloatingBubbleConfig,
@@ -548,6 +571,10 @@ const useEmbedTab = () => {
 
   return {
     allowAnonymous,
+    allowMentorSelection,
+    setAllowMentorSelection,
+    allowFullscreen,
+    setAllowFullscreen,
     createTokenHandler,
     form,
     createTokenError,

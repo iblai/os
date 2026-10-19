@@ -41,11 +41,11 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { MentorSelectionGrid } from '@/components/mentors/mentor-selection-grid';
-import { DatasetsTab } from '@/components/modals/edit-mentor-modal/tabs/datasets-tab';
+import { AgentDatasetsTabWrapper } from '@/components/modals/edit-mentor-modal/tabs/datasets-tab/agent-datasets-tab';
 import WithFormPermissions from '@/hoc/withPermissions';
 import { pushModal, popModal } from '@/features/navigation/slice';
 import { useUsername } from '@/hooks/use-user';
-import { useToggleTools } from '@/hooks/use-tools/use-toggle-tools';
+import { useToggleTools } from '@iblai/iblai-js/web-containers/next';
 import { useAppDispatch } from '@/lib/hooks';
 import { McpTab } from '@/components/modals/edit-mentor-modal/tabs/mcp-tab';
 import type { MCPServer } from '@iblai/iblai-js/data-layer';
@@ -1136,22 +1136,7 @@ export function NodeConfigPanel({
       updateNodeConfig({ fileSearchQuery: value });
     };
 
-    const openDatasetDialog = () => {
-      // Push mentor context so DatasetsTab (via useDatasetsWithPagination -> getMentorId())
-      // and its AddResourceModal both use the entry_mentor_id
-      if (defaultMentorId) {
-        dispatch(
-          pushModal({ name: 'SELECT_DATASET', mentorId: defaultMentorId }),
-        );
-      }
-      setShowDatasetDialog(true);
-    };
-
-    const closeDatasetDialog = () => {
-      setShowDatasetDialog(false);
-      // Clean up the mentor context we pushed
-      dispatch(popModal(undefined));
-    };
+    const openDatasetDialog = () => setShowDatasetDialog(true);
 
     return (
       <>
@@ -1240,13 +1225,8 @@ export function NodeConfigPanel({
           </div>
         </div>
 
-        {/* Dataset Selection Dialog - reuses existing DatasetsTab component */}
-        <Dialog
-          open={showDatasetDialog}
-          onOpenChange={(open) => {
-            if (!open) closeDatasetDialog();
-          }}
-        >
+        {/* Dataset Selection Dialog - the SDK datasets tab in picker mode */}
+        <Dialog open={showDatasetDialog} onOpenChange={setShowDatasetDialog}>
           <DialogContent
             className="flex max-h-[80vh] w-[90vw] max-w-3xl flex-col gap-0 overflow-hidden p-0"
             onClick={(e) => e.stopPropagation()}
@@ -1255,9 +1235,11 @@ export function NodeConfigPanel({
             <DialogHeader className="sr-only">
               <DialogTitle>{t('selectDatasetDialogTitle')}</DialogTitle>
             </DialogHeader>
-            <DatasetsTab
+            <AgentDatasetsTabWrapper
+              mentorId={defaultMentorId}
               onSelect={handleDatasetSelect}
               selectedDatasetId={datasetId}
+              syncToUrl={false}
             />
           </DialogContent>
         </Dialog>

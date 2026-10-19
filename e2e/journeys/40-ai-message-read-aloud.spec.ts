@@ -55,9 +55,10 @@ async function mockSpeechSynthesis(page: Page): Promise<void> {
 }
 
 test.describe('Journey 40: AI Message Read Aloud', () => {
-  test.beforeEach(async ({ page }) => {
+  test.beforeEach(async ({ page, createMentorPage }) => {
     await mockSpeechSynthesis(page);
     await navigateToMentorApp(page);
+    await createMentorPage.openAndCreate();
   });
 
   test('admin sends a message and sees the Read Aloud button on the AI response', async ({

@@ -29,6 +29,11 @@ export const QUERY_PARAMS = {
   INTERNAL_PREVIEW: 'internalPreview',
   MODE: 'mode',
   SHOW_CLOSE_BUTTON: 'show-close-button',
+  SHOW_USER_PROFILE: 'show-user-profile',
+  /** Set on LTI launch URLs (with `embed=true`): the chat is inside an LMS course. */
+  LTI: 'lti',
+  ALLOW_MENTOR_SELECTION: 'allow-mentor-selection',
+  ALLOW_FULLSCREEN: 'allow-fullscreen',
 };
 
 // URL patterns
@@ -213,18 +218,3 @@ export const CSS_CLASS_NAMES = {
 // Caps the length of the auto-submitted `?prompt=` deep-link payload so an
 // attacker-crafted link cannot smuggle an oversized prompt into the chat.
 export const MAX_PROMPT_PARAM_LENGTH = 4000;
-
-export const DROPBOX_EXTENSIONS = [
-  '.ppt',
-  '.pptx',
-  '.pdf',
-  '.doc',
-  '.docx',
-  '.txt',
-  '.png',
-  '.jpeg',
-  '.mp3',
-  '.wav',
-  '.m4a',
-  '.jpg',
-];

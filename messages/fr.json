@@ -105,44 +105,6 @@
     "noMatchingGroupsFound": "Aucun groupe correspondant trouvé.",
     "groupSearchHint": "Saisissez au moins deux caractères pour rechercher et assigner des groupes à ce rôle."
   },
-  "accessibilityAccessibilityToolbar": {
-    "accessibilityMenu": "Menu d'accessibilité",
-    "contrastPlus": "Contraste +",
-    "highlightLinks": "Mettre les liens en évidence",
-    "biggerText": "Texte plus grand",
-    "textSpacing": "Espacement du texte",
-    "pauseAnimations": "Mettre les animations en pause",
-    "hideImages": "Masquer les images",
-    "dyslexiaFriendly": "Adapté à la dyslexie",
-    "cursor": "Curseur",
-    "tooltips": "Infobulles",
-    "lineHeight": "Hauteur de ligne",
-    "textAlign": "Alignement du texte",
-    "saturation": "Saturation",
-    "resetAllAccessibilitySettings": "Réinitialiser tous les paramètres d'accessibilité",
-    "contrastInvertColors": "Inverser les couleurs",
-    "contrastDark": "Contraste sombre",
-    "contrastLight": "Contraste clair",
-    "textSizeNormal": "Texte normal",
-    "textSizeLarge": "Grand texte",
-    "textSizeLarger": "Texte très grand",
-    "spacingLight": "Espacement léger",
-    "spacingModerate": "Espacement modéré",
-    "spacingHeavy": "Espacement important",
-    "dyslexiaFont": "Police dyslexie",
-    "legibleFont": "Police lisible",
-    "alignLeft": "Aligner à gauche",
-    "alignCenter": "Centrer",
-    "alignRight": "Aligner à droite",
-    "justify": "Justifier",
-    "saturationNormal": "Saturation normale",
-    "saturationHigh": "Haute saturation",
-    "saturationLow": "Faible saturation"
-  },
-  "accessibilityFloatingAccessibilityButton": {
-    "openAccessibilityMenu": "Ouvrir le menu d'accessibilité",
-    "accessibilityIconAlt": "Accessibilité"
-  },
   "advancedChatExpandTab": {
     "expand": "Développer"
   },
@@ -156,35 +118,6 @@
     "languageEnglish": "Anglais",
     "languageFrenchFrance": "Français (France)",
     "languageSpanish": "Espagnol (Español)"
-  },
-  "apiTabApiKeyModal": {
-    "dialogTitle": "Clé API",
-    "dialogDescription": "Copiez et collez la clé API.",
-    "securityWarning": "Veuillez copier votre clé API et la stocker dans un endroit sécurisé. Pour des raisons de sécurité, cette clé ne sera affichée qu'une seule fois et ne pourra pas être récupérée après avoir quitté cette page.",
-    "lostKeyWarning": "Si vous perdez votre clé API, vous devrez en générer une nouvelle."
-  },
-  "apiTabCreateApiModal": {
-    "apiKeyNameRequired": "Le nom de la clé API est requis",
-    "apiKeyNameInvalidChars": "ne peut contenir que des lettres, des chiffres et des tirets",
-    "apiKeyCreatedSuccess": "Clé API créée avec succès",
-    "apiKeyCreatedError": "Échec de la création de la clé API",
-    "dialogDescriptionSrOnly": "Créer une clé API",
-    "dialogTitle": "Créer une clé API",
-    "apiKeyNameLabel": "Nom de la clé API",
-    "apiKeyNamePlaceholder": "Nom de la clé API",
-    "expirationDateLabel": "Date d'expiration",
-    "pickADate": "Choisir une date",
-    "submitting": "Envoi en cours...",
-    "submit": "Soumettre"
-  },
-  "apiTabDeleteApiModal": {
-    "title": "Supprimer la clé API",
-    "confirmationMessage": "Êtes-vous sûr de vouloir supprimer la clé API nommée <bold>{name}</bold> ? Cette action est irréversible.",
-    "cancel": "Annuler",
-    "delete": "Supprimer",
-    "deleting": "Suppression...",
-    "deleteSuccess": "Clé API supprimée avec succès",
-    "deleteError": "Échec de la suppression de la clé API"
   },
   "appSidebarIndex": {
     "addAgentToProjectFirst": "Ajoutez d'abord un agent à ce projet.",
@@ -581,9 +514,6 @@
     "settings": "Paramètres",
     "language": "Langue"
   },
-  "componentsAddResourceButton": {
-    "addResource": "Ajouter une ressource"
-  },
   "componentsAdvancedChartWithTooltip": {
     "monthlyRevenue": "Revenus mensuels",
     "revenueLabel": "Revenus"
@@ -596,11 +526,6 @@
     "areYouSure": "Êtes-vous sûr ?",
     "cancel": "Annuler",
     "continue": "Continuer"
-  },
-  "componentsDatasetTab": {
-    "dataset": "Ensemble de données",
-    "addResource": "Ajouter une ressource",
-    "noResourcesAddedYet": "Aucune ressource ajoutée pour l'instant"
   },
   "componentsFileUpload": {
     "dropFilesHere": "Déposez vos fichiers ici",
@@ -650,64 +575,6 @@
     "poweredBy": "Propulsé par",
     "inNewYork": "à New York"
   },
-  "datasetsTabAddResourceModal": {
-    "addResources": "Ajouter des ressources",
-    "description": "Ajoutez des connaissances pour aider votre agent à fournir des informations plus pertinentes. Les autres utilisateurs disposant d'un accès en modification peuvent réutiliser ces sources pour d'autres sujets.",
-    "googleDrivePickerError": "Erreur du sélecteur Google Drive",
-    "forceClosePicker": "Forcer la fermeture du sélecteur",
-    "notConfigured": "Non configuré pour ce locataire"
-  },
-  "datasetsTabDatasetItem": {
-    "trainingDocumentUpdatedSuccess": "Document d'entraînement mis à jour avec succès",
-    "trainingDocumentUpdateFailed": "Échec de la mise à jour du document d'entraînement",
-    "scheduleRetrain": "Planifier le réentraînement",
-    "documentCannotBeRetrained": "Ce document ne peut pas être réentraîné",
-    "scheduleAutomaticRetraining": "Planifier le réentraînement automatique pour ce jeu de données",
-    "makePublic": "Rendre public",
-    "makePrivate": "Rendre privé",
-    "inProgress": "En cours",
-    "disableTrainingForDocument": "Désactiver l'entraînement pour le document",
-    "enableTrainingForDocument": "Activer l'entraînement pour le document"
-  },
-  "datasetsTabDeleteDatasetModal": {
-    "deleteSuccess": "Document d'entraînement supprimé avec succès",
-    "deleteError": "Échec de la suppression du document d'entraînement",
-    "dialogTitle": "Supprimer le jeu de données",
-    "confirmationText": "Vous avez désappris un jeu de données avec succès, voulez-vous le supprimer ? Cette action est irréversible.",
-    "cancelButton": "Annuler",
-    "deletingButton": "Suppression...",
-    "deleteButton": "Supprimer"
-  },
-  "datasetsTabIndex": {
-    "infoBox": "Formez votre agent avec vos propres contenus. Importez des documents, des fichiers ou des liens, et il y puisera ses réponses — en s'appuyant sur votre contenu plutôt qu'en devinant.",
-    "heading": "Jeux de données",
-    "subheading": "Gérez les jeux de données d'entraînement et les sources de connaissances.",
-    "searchPlaceholder": "Rechercher des jeux de données...",
-    "addResource": "Ajouter une ressource",
-    "columnName": "NOM",
-    "columnType": "TYPE",
-    "columnTokens": "TOKENS",
-    "columnInterval": "INTERVALLE",
-    "columnVisibility": "VISIBILITÉ",
-    "columnStatus": "STATUT"
-  },
-  "datasetsTabRetrainScheduleModal": {
-    "toastSuccess": "Intervalle de ré-entraînement mis à jour avec succès",
-    "toastError": "Échec de la mise à jour de l'intervalle de ré-entraînement",
-    "dialogTitle": "Planifier le ré-entraînement",
-    "dialogDescription": "Configurer le calendrier de ré-entraînement automatique pour",
-    "retrainIntervalLabel": "Intervalle de ré-entraînement",
-    "presetDaily": "Quotidien (1 jour)",
-    "presetWeekly": "Hebdomadaire (7 jours)",
-    "presetMonthly": "Mensuel (30 jours)",
-    "customIntervalLabel": "Intervalle personnalisé (jours)",
-    "customIntervalPlaceholder": "Entrer le nombre de jours",
-    "retrainIntervalHint": "Le jeu de données sera ré-entraîné toutes les {days} {unit}",
-    "dayUnit": "jour",
-    "daysUnit": "jours",
-    "cancelButton": "Annuler",
-    "submitButton": "Planifier le ré-entraînement"
-  },
   "disclaimersTabEditDisclaimerModal": {
     "editAdvisory": "Modifier l'avertissement",
     "advisoryContent": "Contenu de l'avertissement",
@@ -729,22 +596,32 @@
     "heading": "Avertissements",
     "subheading": "Configurez les paramètres d'avertissement pour votre agent.",
     "userAgreementTitle": "Accord utilisateur",
-    "userAgreementInfoAriaLabel": "Plus d'informations sur l'accord utilisateur",
     "userAgreementTooltip": "Contrôle l'accord utilisateur",
     "active": "Actif",
     "inactive": "Inactif",
-    "userAgreementSwitchAriaLabel": "Accord utilisateur {status}",
-    "userAgreementContentAriaLabel": "Contenu de l'accord utilisateur",
     "editButton": "Modifier",
     "advisoryTitle": "Avis",
-    "advisoryInfoAriaLabel": "Plus d'informations sur l'avis",
     "advisoryTooltip": "Contrôle l'avis",
-    "advisoryContentAriaLabel": "Contenu de l'avis",
     "agentUpdatedSuccess": "Agent mis à jour avec succès",
     "agentUpdatedError": "Échec de la mise à jour de l'agent",
     "userAgreementUpdatedSuccess": "Accord utilisateur mis à jour avec succès",
     "userAgreementUpdatedError": "Échec de la mise à jour de l'accord utilisateur",
-    "userAgreementToggledSuccess": "Accord utilisateur {status} avec succès"
+    "userAgreementToggledSuccess": "Accord utilisateur {status} avec succès",
+    "viewAgreements": "Voir les acceptations"
+  },
+  "disclaimersTabAgreements": {
+    "title": "Acceptations",
+    "dialogDescription": "Utilisateurs ayant accepté l'Accord utilisateur de cet agent.",
+    "totalAgreements": "{count} acceptations au total",
+    "searchPlaceholder": "Rechercher par nom d'utilisateur",
+    "searchAriaLabel": "Rechercher les acceptations par nom d'utilisateur",
+    "columnUser": "Utilisateur",
+    "columnAgreedAt": "Accepté le",
+    "summaryDescription": "Consultez les utilisateurs ayant accepté l'Accord utilisateur de cet agent. Chaque entrée indique le nom et l'e-mail de l'utilisateur ainsi que la date de son acceptation. Les utilisateurs qui ne l'ont pas encore accepté n'apparaissent pas. La recherche correspond au nom d'utilisateur exact.",
+    "empty": "Aucune acceptation pour le moment",
+    "emptyDescription": "Les utilisateurs qui acceptent l'Accord utilisateur apparaîtront ici avec l'heure de leur acceptation.",
+    "noMatches": "Aucun utilisateur ne correspond à votre recherche",
+    "noMatchesDescription": "La recherche correspond au nom d'utilisateur exact : essayez le nom d'utilisateur complet."
   },
   "editMentorModalIndex": {
     "dialogDescription": "Modifier les paramètres de l'agent, les invites, les outils, la sécurité, le flux, l'historique, les ensembles de données et les clés API",
@@ -765,20 +642,17 @@
     "seeMore": "Voir plus"
   },
   "exploreCustomMentorsSection": {
-    "sectionHeading": "Personnalisé",
-    "listAriaLabel": "Agents personnalisés",
-    "loadMoreAriaLabel": "Charger plus d'agents personnalisés",
+    "sectionHeading": "Mes agents",
+    "listAriaLabel": "Mes agents",
+    "loadMoreAriaLabel": "Charger plus de mes agents",
     "loadingMore": "Chargement en cours",
     "seeMore": "Voir plus",
     "createAgentAriaLabel": "Créer un agent personnalisé",
     "createAgentHeading": "Créer un agent personnalisé",
-    "createAgentDescription": "Créez votre propre agent personnalisé adapté à vos besoins d'apprentissage spécifiques",
-    "getStartedToday": "Commencez dès aujourd'hui"
+    "createAgentDescription": "Créez votre propre agent personnalisé adapté à vos besoins d'apprentissage spécifiques"
   },
   "exploreDefaultMentorsSection": {
     "loadingAgents": "Chargement des agents...",
-    "createAgentAriaLabel": "Créer un nouvel agent",
-    "createAgentButton": "Créer un agent",
     "allAgentsListAriaLabel": "Tous les agents",
     "exploreAgentAriaLabel": "Explorer l'agent : {name}",
     "loadMoreAriaLabel": "Charger plus d'agents",
@@ -789,27 +663,30 @@
     "llmProviderTitle": "Agents {provider}",
     "llmProviderSubtext": "Explorez les agents propulsés par {provider}.",
     "allAgentsTitle": "Tous les agents",
-    "allAgentsSubtext": "Explorez les agents et les assistants d'apprentissage spécialisés."
+    "allAgentsSubtext": "Explorez les agents et les assistants d'apprentissage spécialisés.",
+    "searchResultsTitle": "Résultats pour « {query} »",
+    "searchResultsSubtext": "{count, plural, =0 {Aucun agent ne correspond à votre recherche.} one {# agent correspond à votre recherche.} other {# agents correspondent à votre recherche.}}",
+    "emptyStateHint": "Essayez un autre terme de recherche ou effacez vos filtres."
   },
   "exploreExplorePageContent": {
     "skipToMainContent": "Passer au contenu principal",
     "agentExplorationPage": "Page d'exploration des agents",
     "discoverAndCreateAgents": "Découvrez et créez des agents qui combinent expertise thématique, ressources et compétences",
     "searchAgentsLabel": "Rechercher des agents",
-    "searchPlaceholder": "Rechercher",
-    "searchAgentsInputLabel": "Rechercher des agents"
+    "searchPlaceholder": "Rechercher des agents",
+    "searchAgentsInputLabel": "Rechercher des agents",
+    "pageTitle": "Explorer les agents",
+    "clearSearch": "Effacer la recherche",
+    "createAgentButton": "Créer un agent",
+    "createAgentAriaLabel": "Créer un nouvel agent"
   },
   "exploreFeaturedMentorsSection": {
     "heading": "À la une",
     "loadMoreAriaLabel": "Charger plus d'agents en vedette",
     "loadingMore": "Chargement en cours",
-    "seeMore": "Voir plus",
-    "emptyStateTitle": "Agents en vedette",
-    "emptyStateDescription": "Découvrez des agents sélectionnés recommandés par notre communauté",
-    "emptyStateNoAgents": "Aucun agent en vedette disponible"
+    "seeMore": "Voir plus"
   },
   "exploreMentorCategories": {
-    "promotion": "Promotion",
     "featured": "À la une",
     "category": "Catégorie",
     "subject": "Sujet",
@@ -834,9 +711,17 @@
     "loadingMore": "Chargement en cours",
     "seeMore": "Voir plus",
     "addToFavoritesCardAriaLabel": "Ajouter aux favoris - Inscrivez-vous pour marquer des agents",
-    "addToFavoritesTitle": "Ajouter aux favoris",
     "addToFavoritesDescription": "Marquez vos agents favoris pour y accéder rapidement ici",
     "noFavoritesYet": "Aucun favori pour l'instant"
+  },
+  "exploreSection": {
+    "countAriaLabel": "{count, plural, one {# agent} other {# agents}}"
+  },
+  "exploreMentorCard": {
+    "featured": "À la une",
+    "addToFavorites": "Ajouter aux favoris",
+    "removeFromFavorites": "Retirer des favoris",
+    "updatedOn": "Mis à jour le {date}"
   },
   "flaggedPromptsDeleteModerationLogModal": {
     "title": "Supprimer le journal de modération",
@@ -1367,6 +1252,8 @@
       "cancel": "Annuler",
       "inUse": "Utilisé",
       "downloadFailedRetry": "Échec du téléchargement — réessayer",
+      "downloadFailed": "Échec du téléchargement",
+      "retry": "Réessayer",
       "ariaDownload": "Télécharger {modelName}, {modelSize}, modèle sur l''appareil",
       "ariaStarting": "Démarrage du téléchargement de {modelName}",
       "ariaDownloading": "Annuler le téléchargement de {modelName}, {percent} pour cent",
@@ -1495,14 +1382,15 @@
     "closeSidebar": "Fermer la barre latérale",
     "openSidebar": "Ouvrir la barre latérale",
     "toggleSidebar": "Basculer la barre latérale",
-    "startNewChat": "Démarrer une nouvelle conversation avec {mentorName}",
     "help": "Aide",
     "support": "Support",
     "openMenuOptions": "Ouvrir les options du menu",
-    "menuOptions": "Options du menu",
-    "openSettingsMenu": "Ouvrir le menu des paramètres",
-    "settingsMenu": "Menu des paramètres",
-    "closeChat": "Fermer le chat"
+    "closeChat": "Fermer le chat",
+    "newChat": "Nouvelle discussion",
+    "incognito": "Mode incognito",
+    "incognitoChat": "Discussion incognito",
+    "enterFullscreen": "Plein écran",
+    "exitFullscreen": "Quitter le plein écran"
   },
   "navBarIndex": {
     "logIn": "Se connecter",
@@ -1514,6 +1402,10 @@
     "toggleSidebar": "Basculer la barre latérale",
     "llmModelSelector": "Sélecteur de modèle LLM",
     "selectModel": "Sélectionner un modèle",
+    "agentModelSelector": "Modèle de l’agent Code",
+    "agentModelDefault": "Par défaut",
+    "agentModelLoading": "Chargement des modèles…",
+    "agentModelError": "Impossible de charger les modèles",
     "selectedAgentDropdownButton": "Bouton déroulant de l'agent sélectionné",
     "newChat": "Nouvelle conversation",
     "modify": "Modifier",
@@ -1543,34 +1435,6 @@
     "toastDeleteSuccess": "Projet supprimé avec succès",
     "toastDeleteError": "Échec de la suppression du projet"
   },
-  "projectsMinimumMentorAlert": {
-    "cannotRemoveAgent": "Impossible de supprimer l'agent",
-    "minimumAgentWarning": "Un projet doit avoir au moins un agent. Veuillez ajouter un autre agent avant de supprimer celui-ci.",
-    "cancel": "Annuler"
-  },
-  "projectsProjectFilesModal": {
-    "projectFiles": "Fichiers du projet",
-    "searchDatasetsPlaceholder": "Rechercher des jeux de données...",
-    "addFiles": "Ajouter des fichiers",
-    "columnName": "NOM",
-    "columnType": "TYPE",
-    "columnTokens": "TOKENS",
-    "columnInterval": "INTERVALLE",
-    "columnVisibility": "VISIBILITÉ",
-    "columnStatus": "STATUT"
-  },
-  "projectsProjectInstructionsModal": {
-    "title": "Instructions",
-    "description": "Vous pouvez demander à l'agent de se concentrer sur certains sujets, ou de répondre avec un certain ton ou format.",
-    "placeholder": "Ex. : \"Référencez la dernière documentation JavaScript. Gardez les réponses courtes et ciblées.\"",
-    "cancelAriaLabel": "Annuler la modification des instructions",
-    "cancel": "Annuler",
-    "saveAriaLabel": "Enregistrer les instructions du projet",
-    "saving": "Enregistrement...",
-    "save": "Enregistrer",
-    "saveSuccess": "Instructions mises à jour avec succès",
-    "saveError": "Échec de la mise à jour des instructions"
-  },
   "projectsRenameProjectModal": {
     "title": "Renommer le projet",
     "projectNameLabel": "Nom du projet",
@@ -1580,65 +1444,6 @@
     "renameButton": "Renommer le projet",
     "renameSuccess": "Projet renommé avec succès",
     "renameError": "Échec du renommage du projet"
-  },
-  "resourceModalGithubFileUploadModal": {
-    "failedToFetchBranches": "Échec de la récupération des branches",
-    "unknownError": "Une erreur inconnue s'est produite",
-    "agentNotFound": "Agent introuvable",
-    "documentQueued": "Le document a été mis en file d'attente pour l'entraînement",
-    "errorAddingDocument": "Erreur lors de l'ajout du document d'entraînement",
-    "githubRepoUrlPlaceholder": "URL du dépôt Github",
-    "selectBranchPlaceholder": "Sélectionner une branche",
-    "submit": "Soumettre"
-  },
-  "resourceModalLocalFileUploadModal": {
-    "fileNotFound": "Fichier introuvable",
-    "documentQueued": "Le document a été mis en file d'attente pour l'entraînement",
-    "errorAddingDocument": "Erreur lors de l'ajout du document d'entraînement",
-    "fileSizeExceeds": "La taille du fichier dépasse {value} {unit}",
-    "dragAndDrop": "Glissez-déposez votre fichier ici",
-    "or": "ou",
-    "browseFiles": "Parcourir les fichiers",
-    "maxFileSize": "Taille maximale du fichier : {value} {unit}",
-    "descriptionLabel": "Description (facultative)",
-    "descriptionPlaceholder": "Ajoutez une description pour cette image...",
-    "submitting": "Envoi en cours",
-    "submit": "Soumettre"
-  },
-  "resourceModalUrlUploadModel": {
-    "documentQueuedForTraining": "Le document a été mis en file d'attente pour l'entraînement",
-    "errorAddingTrainingDocument": "Erreur lors de l'ajout du document d'entraînement",
-    "invalidYouTubeUrl": "URL YouTube invalide",
-    "invalidBlackboardUrl": "URL Blackboard invalide",
-    "invalidUrl": "URL invalide",
-    "urlPlaceholder": "URL",
-    "submitButton": "Soumettre"
-  },
-  "resourceModalWebsiteCrawlModal": {
-    "title": "Configuration du robot d'exploration web",
-    "description": "Configurez les paramètres de votre robot d'exploration web et les modèles d'URL",
-    "formAriaLabel": "Formulaire de configuration du robot d'exploration web",
-    "urlLabel": "URL",
-    "urlRequired": "L'URL est requise",
-    "invalidUrl": "URL invalide",
-    "maxCrawlDepthLabel": "Profondeur maximale d'exploration",
-    "fieldRequired": "Ce champ est obligatoire",
-    "mustBeGreaterThanZero": "Doit être supérieur à 0",
-    "mustBeLessThan10000": "Doit être inférieur à 10 000",
-    "maxPagesLimitLabel": "Limite maximale de pages",
-    "patternTypeLabel": "Type de modèle",
-    "selectPatternTypeAriaLabel": "Sélectionner le type de modèle",
-    "globPattern": "Modèle Glob",
-    "regularExpression": "Expression régulière",
-    "crawlerMatchPatternsLabel": "Modèles de correspondance du robot",
-    "addPatternAriaLabel": "Ajouter un modèle",
-    "patternHelpText": "Appuyez sur Entrée ou cliquez sur le bouton plus pour ajouter un modèle",
-    "addedPatternsAriaLabel": "Modèles de correspondance du robot ajoutés",
-    "noPatternsAdded": "Aucun modèle ajouté",
-    "removePatternAriaLabel": "Supprimer le modèle : {pattern}",
-    "submitting": "Envoi en cours...",
-    "submit": "Envoyer",
-    "formBeingSubmitted": "Le formulaire est en cours d'envoi"
   },
   "settingsTabCopyMentorModal": {
     "defaultCopyNamePrefix": "Copie de",
@@ -1670,22 +1475,6 @@
     "deleting": "Suppression en cours...",
     "deleteSuccess": "Agent supprimé avec succès",
     "deleteError": "Échec de la suppression de l'agent"
-  },
-  "tabsApiTab": {
-    "infoBox": "Utilisez cet agent depuis vos propres applications. Créez ici des clés API pour l'appeler par programmation et l'intégrer à votre produit ou à votre flux de travail.",
-    "apiHeading": "API",
-    "manageApiKeysDescription": "Gérer les clés API et les intégrations.",
-    "secretKeysListedBelow": "Vos clés API secrètes sont listées ci-dessous. Veuillez noter que nous n'affichons plus vos clés API secrètes après leur génération.",
-    "doNotShareApiKey": "Ne partagez pas votre clé API avec d'autres personnes et ne l'exposez pas dans le navigateur ou dans tout autre code côté client. Afin de protéger la sécurité de votre compte, IBL peut également faire pivoter automatiquement toute clé API dont la fuite a été détectée publiquement.",
-    "columnName": "NOM",
-    "columnCreated": "CRÉÉE",
-    "columnExpires": "EXPIRE",
-    "columnActions": "Actions",
-    "noApiKeysFound": "Aucune clé API trouvée",
-    "noPermissionToViewApiKeys": "Vous n'avez pas la permission de consulter les clés API",
-    "notAvailable": "N/A",
-    "deleteApiKey": "Supprimer la clé API",
-    "createNew": "Créer nouveau"
   },
   "tabsAuditLogTab": {
     "infoBox": "Gardez une trace écrite. Consultez le journal indiquant qui a modifié quoi et quand pour cet agent — pratique pour le dépannage et le respect de la conformité.",
@@ -1764,6 +1553,16 @@
     "showCatalogueTooltip": "Afficher le catalogue dans l'interface de chat",
     "showCatalogueEnabled": "Affichage du catalogue activé",
     "showCatalogueDisabled": "Affichage du catalogue désactivé",
+    "allowMentorSelectionLabel": "Autoriser la sélection d'agent",
+    "moreInfoAllowMentorSelection": "Plus d'informations sur la sélection d'agent",
+    "allowMentorSelectionTooltip": "Permettre aux visiteurs connectés d'ouvrir Explorer depuis l'intégration et de passer à un autre agent.",
+    "allowMentorSelectionEnabled": "Sélection d'agent activée",
+    "allowMentorSelectionDisabled": "Sélection d'agent désactivée",
+    "allowFullscreenLabel": "Autoriser le plein écran",
+    "moreInfoAllowFullscreen": "Plus d'informations sur le plein écran",
+    "allowFullscreenTooltip": "Affiche un bouton dans le chat pour passer de la petite fenêtre au plein écran.",
+    "allowFullscreenEnabled": "Plein écran activé",
+    "allowFullscreenDisabled": "Plein écran désactivé",
     "shareableLinkLabel": "Lien partageable",
     "moreInfoShareableLink": "Plus d'informations sur la génération d'un lien partageable",
     "shareableLinkTooltip": "Générer un lien que les utilisateurs peuvent utiliser pour chatter avec cet agent anonymement",
@@ -1837,6 +1636,7 @@
     "sentimentPositive": "Positif",
     "sentimentNeutral": "Neutre",
     "sentimentNegative": "Négatif",
+    "userSentiment": "Sentiment de l'utilisateur",
     "filterBySentiment": "Filtrer par sentiment",
     "allTopics": "Tous les sujets",
     "filterByTopic": "Filtrer par sujet",
@@ -1853,7 +1653,8 @@
     "hideConversationMemory": "Masquer la mémoire de conversation",
     "showConversationMemory": "Afficher la mémoire de conversation",
     "noConversationMemory": "Aucune mémoire de conversation disponible.",
-    "selectConversationPrompt": "Sélectionnez une conversation pour afficher les détails."
+    "selectConversationPrompt": "Sélectionnez une conversation pour afficher les détails.",
+    "documentsChip": "Documents · {count}"
   },
   "tabsLlmTab": {
     "infoBox": "C'est le cerveau de votre agent — le modèle d'IA qui alimente chaque réponse. Les modèles plus grands raisonnent mieux sur les questions complexes ; les plus légers sont plus rapides et moins coûteux. Pas sûr ? Le modèle par défaut est un excellent choix polyvalent.",
@@ -2065,6 +1866,7 @@
     "tabBasic": "Basique",
     "tabDiscovery": "Découverte",
     "tabCapabilities": "Capacités",
+    "tabWelcomeScreen": "Écran d'accueil",
     "nameLabel": "Nom",
     "agentNamePlaceholder": "Nom de l'agent",
     "agentNameRequired": "Le nom de l'agent est requis",
@@ -2093,10 +1895,17 @@
     "whoCanChatTooltip": "Contrôlez qui peut discuter avec cet agent.",
     "selectWhoCanChat": "Sélectionner qui peut discuter",
     "anyoneOption": "Tout le monde",
+    "administratorsOption": "Administrateurs",
+    "usersOption": "Utilisateurs",
+    "enableVerboseReasoningLabel": "Activer le raisonnement détaillé",
+    "enableVerboseReasoningTooltip": "Afficher les étapes de raisonnement de l'agent pendant qu'il répond. Ce paramètre a une seule valeur ; il s'applique donc à la fois au chat dans l'application et au widget intégré.",
     "authenticatedUsersOption": "Utilisateurs authentifiés",
     "highlightFeaturedLabel": "Mettre en avant dans les listings",
     "highlightFeaturedInfoAriaLabel": "Plus d'infos sur la mise en avant dans les listings",
     "highlightFeaturedTooltip": "Mettez cet agent en avant pour le faire ressortir dans les listings.",
+    "showAdditionalAgentsLabel": "Afficher les agents supplémentaires",
+    "showAdditionalAgentsInfoAriaLabel": "Plus d'infos sur l'affichage des agents supplémentaires",
+    "showAdditionalAgentsTooltip": "Affiche la section des agents supplémentaires sur l'écran d'accueil de cet agent.",
     "enableLtiLabel": "Activer les lancements LTI",
     "enableLtiInfoAriaLabel": "Plus d'infos sur l'activation des lancements LTI",
     "enableLtiTooltip": "Permet à cet agent d'être accessible via des lancements LTI. Décocher cette option supprimera immédiatement l'accès pour tous les utilisateurs ayant lancé cet agent via LTI.",
@@ -2153,7 +1962,9 @@
     "perSurfaceHeading": "Capacites par surface",
     "perSurfaceNote": "A configurer independamment pour le chat dans l'application et le widget integre.",
     "inAppChatNote": "Les conversations hebergees dans l'application : le chat que vos utilisateurs ouvrent ici.",
-    "embedWidgetNote": "Le widget que vous integrez a votre propre site avec l'extrait de l'onglet Integration."
+    "embedWidgetNote": "Le widget que vous integrez a votre propre site avec l'extrait de l'onglet Integration.",
+    "inChatModelChangeLabel": "Autoriser le changement de modèle dans le chat",
+    "inChatModelChangeTooltip": "Permet de choisir un autre modèle d’IA pour son propre chat. Le modèle de l’agent ne change pas, et les nouveaux chats démarrent avec lui. Ce réglage n’a qu’une valeur : il s’applique au chat de l’application et au widget intégré."
   },
   "tabsMcpTab": {
     "infoBox": "Connectez votre agent à vos propres systèmes via des serveurs MCP, afin qu'il puisse accéder à vos données et services directement au sein d'une conversation."
@@ -2162,15 +1973,6 @@
     "heading": "Compétences",
     "description": "Guides réutilisables que cet Agent de Base peut découvrir et suivre.",
     "infoBox": "Les Compétences d'Agent sont des guides réutilisables que vous pouvez attacher à un Agent de Base : des instructions écrites (plus des fichiers de référence facultatifs) pour une tâche, comme rechercher un sujet sur le web ou relire du code. L'agent ne lit une compétence que lorsqu'elle est pertinente, vous pouvez donc lui donner de nombreuses capacités sans alourdir chaque conversation. Dans le chat, tapez / pour voir les compétences de cet agent et en choisir une pour la lancer."
-  },
-  "tabsToolsTab": {
-    "infoBox": "Donnez des mains à votre agent. Les outils lui permettent d'aller au-delà de la simple conversation — rechercher une information, appeler une API, déclencher une action — pour qu'il accomplisse réellement des tâches pour les utilisateurs.",
-    "heading": "Outils",
-    "subheading": "Configurez les outils et les intégrations pour votre agent.",
-    "moreInfoAbout": "Plus d'informations sur {name}",
-    "switchAriaLabel": "{name} {state}",
-    "enabled": "activé",
-    "disabled": "désactivé"
   },
   "topTrialBannerTopTrialBanner": {
     "defaultBannerText": "Passez à la version supérieure pour créer vos propres agents. Aucune carte de crédit requise 😎",
@@ -2383,6 +2185,17 @@
     "permissionModeManual": "Me demander",
     "permissionModeAuto": "Automatique",
     "permissionModeAutoHint": "Code modifie des fichiers et exécute des commandes sans demander. À utiliser uniquement dans des dossiers de confiance.",
+    "agentLabel": "Agent",
+    "agentNotInstalled": "Non installé",
+    "agentInstall": "Installer",
+    "agentInstalling": "Installation…",
+    "agentSignedOutCodex": "Non connecté — connectez-vous à Codex dans l’app ChatGPT.",
+    "agentSignedOutClaude": "Non connecté — exécutez <code>claude</code> dans un terminal.",
+    "agentCheckAgain": "Vérifier à nouveau",
+    "agentReady": "Prêt",
+    "agentUnsupported": "Non disponible sur cet ordinateur",
+    "authRequiredCodex": "Codex n’est pas connecté",
+    "authRequiredClaude": "Claude Code n’est pas connecté",
     "newWorkspace": "Nouvel espace de travail",
     "openInFinder": "Ouvrir dans le Finder",
     "openInExplorer": "Ouvrir dans l’Explorateur",
@@ -2443,5 +2256,25 @@
     "updateNow": "Mettre à jour",
     "updating": "Mise à jour…",
     "later": "Plus tard"
+  },
+  "productTour": {
+    "back": "Retour",
+    "close": "Fermer la visite",
+    "done": "Terminé",
+    "next": "Suivant",
+    "skip": "Passer la visite",
+    "progress": "{current} sur {total}",
+    "profileTitle": "Votre profil",
+    "profileContent": "Ouvrez votre profil, changez d’organisation, obtenez de l’aide ou déconnectez-vous depuis ce menu.",
+    "privacyModeTitle": "Mode privé",
+    "privacyModeContent": "Activez le mode privé pour qu’une conversation ne soit pas enregistrée dans votre historique. Une fois activé, il le reste pour cette conversation.",
+    "promptInputTitle": "Posez votre question",
+    "promptInputContent": "Écrivez ici votre message à l’agent. Joignez des fichiers ou activez des outils avec les boutons sous la zone de saisie.",
+    "conversationStartersTitle": "Idées pour commencer",
+    "conversationStartersContent": "Vous ne savez pas par où commencer ? Choisissez une idée pour l’envoyer comme premier message.",
+    "agentsTitle": "Explorez les agents",
+    "agentsContent": "Parcourez les agents disponibles, et créez ou gérez les vôtres, depuis le menu Agents.",
+    "accountTitle": "Gérez votre organisation",
+    "accountContent": "Invitez des personnes, gérez les utilisateurs et les groupes, connectez des intégrations et modifiez les paramètres avancés avec les outils en bas de la barre latérale."
   }
 }

@@ -23,7 +23,7 @@ async function createMentorAndEnableTools(
   await waitForPageReady(page);
   await editMentorPage.tools.enableTool('Screen Sharing');
 
-  // Enable voice call — the "Enable voice calls" master toggle now lives
+  // Enable voice call — the "Enable Voice Calls" master toggle now lives
   // in-tab on the Voice tab itself (feat/2040 — moved off Settings →
   // Capabilities) and auto-saves on click.
   await editMentorPage.navigateToTab('Voice');

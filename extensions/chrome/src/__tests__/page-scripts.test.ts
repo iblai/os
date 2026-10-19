@@ -82,6 +82,19 @@ describe('extractPageContent', () => {
     expect(content.href).toBe(location.href);
     expect(content.text).toContain('Welcome to Acme');
   });
+
+  // A display:none iframe's document: innerText there is the whole textContent.
+  it('returns no text for a document that is not rendered', () => {
+    Object.defineProperty(document.body, 'checkVisibility', {
+      configurable: true,
+      value: () => false,
+    });
+    try {
+      expect(extractPageContent().text).toBe('');
+    } finally {
+      delete (document.body as { checkVisibility?: unknown }).checkVisibility;
+    }
+  });
 });
 
 describe('snapshotPage', () => {
@@ -105,9 +118,7 @@ describe('snapshotPage', () => {
       '[11] textbox "Search" (value: "hello world")',
       '[12] button "Pay now"',
     ]);
-    expect(snapshot.text).toContain('[4] button "Continue" (submit)');
-    expect(snapshot.text).toContain('--- text ---');
-    expect(snapshot.text).toContain('Welcome to Acme');
+    expect(snapshot.excerpt).toContain('Welcome to Acme');
     expect(agentMap()?.get(4)).toBe(
       document.querySelector('button[type=submit]'),
     );
@@ -119,9 +130,31 @@ describe('snapshotPage', () => {
     const snapshot = snapshotPage(3, 12);
     expect(snapshot.items).toHaveLength(3);
     expect(agentMap()?.size).toBe(3);
-    const excerpt = snapshot.text.split('--- text ---\n')[1];
-    expect(excerpt.length).toBeLessThanOrEqual(12);
-    expect(excerpt.endsWith('…')).toBe(true);
+    expect(snapshot.excerpt.length).toBeLessThanOrEqual(12);
+    expect(snapshot.excerpt.endsWith('…')).toBe(true);
+  });
+
+  it('lists controls inside open shadow roots in place, named within their root, and not closed ones', () => {
+    const host = document.createElement('div');
+    host.attachShadow({ mode: 'open' }).innerHTML =
+      '<button>Shadow btn</button><span id="l">Lbl</span><input aria-labelledby="l">';
+    const sealed = document.createElement('div');
+    sealed.attachShadow({ mode: 'closed' }).innerHTML =
+      '<button>Sealed</button>';
+    document.querySelector('main')!.append(host, sealed);
+    const snapshot = snapshotPage(200, 100);
+    const names = snapshot.items.map(
+      (item) => `${item.n}:${item.role}:${item.name}`,
+    );
+    expect(names).toContain('13:button:Shadow btn');
+    expect(names).toContain('14:textbox:Lbl');
+    expect(names.join()).not.toContain('Sealed');
+    const onClick = vi.fn();
+    host
+      .shadowRoot!.querySelector('button')!
+      .addEventListener('click', onClick);
+    expect(actOnPage(13, 'click', '', false)).toEqual({ ok: true });
+    expect(onClick).toHaveBeenCalledTimes(1);
   });
 
   it('uses checkVisibility when the browser has it', () => {

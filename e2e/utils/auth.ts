@@ -2,6 +2,7 @@ import { Page, Locator, expect } from '@playwright/test';
 import { safeWaitForURL } from './navigation';
 import { waitForPageReady } from './resilient';
 import { SignupPage } from '../page-objects/signup.page';
+import { dismissProductTourIfShown } from './product-tour';
 import { logger } from '@iblai/iblai-js/playwright';
 
 const MENTOR_NEXTJS_HOST = process.env.MENTOR_NEXTJS_HOST || '';
@@ -341,6 +342,8 @@ export async function signUpNewUserOnMain(
   await expect(
     page.getByRole('button', { name: 'Selected agent dropdown button' }),
   ).toBeVisible({ timeout: 60_000 });
+
+  await dismissProductTourIfShown(page);
 
   logger.info(`[signUpNewUserOnMain] landed on main tenant: ${page.url()}`);
   return { email };

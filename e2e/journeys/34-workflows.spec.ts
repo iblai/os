@@ -15,6 +15,13 @@ import {
   publishWorkflow,
   getWorkflowStatus,
 } from '../utils/workflows';
+import {
+  seedDatasetsForMentor,
+  waitForDatasetsReady,
+  deleteDatasetDocumentsByStamp,
+} from '../utils/dataset-seeding';
+import { deleteMentorById } from '../utils/mentor-cleanup';
+import { logger } from '@iblai/iblai-js/playwright';
 
 test.describe('Journey 34: Workflows', () => {
   test.beforeEach(async ({ page }) => {
@@ -367,5 +374,154 @@ test.describe('Journey 34: Workflows', () => {
       .toBe('Draft');
 
     await deleteCurrentWorkflow(page);
+  });
+
+  // ── File Search node: dataset picker dialog ────────────────────────────────
+  // The File Search node's "Select" button opens the workflow's ENTRY
+  // mentor's Datasets tab in picker mode (`AgentDatasetsTabWrapper` with
+  // `syncToUrl={false}` — see `components/workflows/node-config-panel.tsx`),
+  // unlike the edit-mentor modal's Datasets tab, which drives page/search off
+  // the URL. This checkpoint asserts that distinction holds: searching/paging
+  // inside the picker must NOT touch `datasetsPage`/`datasetsSearch`.
+  //
+  // IMPORTANT: the entry mentor is NOT whichever mentor is active in the
+  // browser when "Create Workflow" is clicked — verified live (2026-09-28)
+  // that creating a fresh mentor first and immediately creating a workflow
+  // still yields a DIFFERENT id in the resulting `/workflows/{mentorId}/...`
+  // route. The backend auto-provisions a dedicated entry mentor per workflow
+  // (the canvas's default "Agent" node's backing mentor). So this test reads
+  // the REAL entry mentor id off the post-creation URL and seeds datasets
+  // there — not onto a mentor it created itself.
+  //
+  // Cleanup: `deleteCurrentWorkflow` appears to cascade-delete the entry
+  // mentor (verified empirically — residue delta was 0 after it). `
+  // registerMentor` can't be used here to double-track it: it derives the
+  // mentor id by parsing `page.url()` as `/platform/{tenant}/{mentorId}`,
+  // which misreads this route's `/platform/{tenant}/workflows/{mentorId}/...`
+  // shape (it took the literal segment "workflows" as the id). So the
+  // fallback instead calls `deleteMentorById(page, entryMentorId)` directly
+  // (explicit id, no URL parsing) in a `finally`, in case the workflow delete
+  // itself ever fails.
+
+  test('admin adds a File Search node and picks a dataset from its picker dialog without touching the URL', async ({
+    page,
+  }) => {
+    test.setTimeout(240_000);
+
+    await navigateToWorkflowsPage(page);
+    await createWorkflow(page);
+    await waitForWorkflowEditorReady(page);
+
+    const entryMentorId = new URL(page.url()).pathname
+      .split('/workflows/')[1]
+      ?.split('/')[0];
+    expect(
+      entryMentorId,
+      'Could not parse entry mentor id from workflow URL',
+    ).toBeTruthy();
+
+    const stamp = `wf16-${Date.now()}`;
+    const seedCount = 6; // > 5/page, so pagination actually renders (see below)
+    await seedDatasetsForMentor(page, entryMentorId, seedCount, { stamp });
+    await waitForDatasetsReady(page, entryMentorId, seedCount);
+
+    const fileSearchItem = page.getByRole('button', { name: 'File Search' });
+    await expect(fileSearchItem).toBeVisible({ timeout: 15_000 });
+    await fileSearchItem.click();
+
+    const canvas = page.locator('[data-testid="workflow-canvas"]');
+    const fileSearchNode = canvas.getByText('File Search', { exact: true });
+    await expect(fileSearchNode).toBeVisible({ timeout: 10_000 });
+    await fileSearchNode.click();
+
+    const configPanel = page.locator('div.absolute.top-4.right-4');
+    const selectButton = configPanel.getByRole('button', { name: 'Select' });
+    await expect(selectButton).toBeVisible({ timeout: 10_000 });
+
+    const urlBeforeOpen = page.url();
+    await selectButton.click();
+
+    const pickerDialog = page.getByRole('dialog', { name: 'Select Dataset' });
+    await expect(pickerDialog).toBeVisible({ timeout: 10_000 });
+
+    const searchInput = pickerDialog.getByPlaceholder(/search datasets/i);
+    await expect(searchInput).toBeVisible({ timeout: 10_000 });
+
+    // 6 seeded rows at 5/page means pagination must render — assert on it
+    // rather than conditionally skipping (this is a self-seeded fixture, so
+    // "no pagination" would itself be a real regression, not a data gap).
+    const paginationNav = pickerDialog.getByRole('navigation', {
+      name: /pagination/i,
+    });
+    await expect(paginationNav).toBeVisible({ timeout: 10_000 });
+
+    const page2Link = paginationNav.locator('a').filter({ hasText: /^2$/ });
+    await page2Link.click();
+    await page.waitForTimeout(1_000);
+    expect(new URL(page.url()).searchParams.get('datasetsPage')).toBeNull();
+    expect(page.url()).toBe(urlBeforeOpen);
+    logger.info(
+      'File Search picker: paging did not add a datasetsPage URL param',
+    );
+
+    await searchInput.fill('e2e-dataset');
+    await page.waitForTimeout(1_000);
+    expect(new URL(page.url()).searchParams.get('datasetsSearch')).toBeNull();
+    expect(page.url()).toBe(urlBeforeOpen);
+    logger.info(
+      'File Search picker: searching did not add a datasetsSearch URL param',
+    );
+    await searchInput.fill('');
+    await page.waitForTimeout(500);
+
+    const firstRow = pickerDialog.getByRole('row').nth(1); // nth(0) is the header row
+    const rowText = await firstRow.innerText();
+    await firstRow.click();
+
+    await expect(pickerDialog).not.toBeVisible({ timeout: 10_000 });
+    const changeButton = configPanel.getByRole('button', { name: 'Change' });
+    await expect(changeButton).toBeVisible({ timeout: 10_000 });
+    const datasetNameShown = configPanel
+      .locator('p')
+      .filter({ hasText: rowText.split('\t')[0] });
+    await expect(datasetNameShown).toBeVisible({ timeout: 5_000 });
+
+    // Reopening highlights the previously selected row.
+    await changeButton.click();
+    const reopenedDialog = page.getByRole('dialog', { name: 'Select Dataset' });
+    await expect(reopenedDialog).toBeVisible({ timeout: 10_000 });
+    const selectedRow = reopenedDialog
+      .getByRole('row')
+      .filter({ hasText: rowText.split('\t')[0] });
+    await expect(selectedRow).toHaveClass(/bg-blue-50/, { timeout: 10_000 });
+    await page.keyboard.press('Escape');
+    await expect(reopenedDialog).not.toBeVisible({ timeout: 5_000 });
+
+    // Close the node config panel before deleting the workflow so its X
+    // button doesn't intercept the "More workflow options" click.
+    const closePanelButton = configPanel
+      .getByRole('button')
+      .filter({ has: page.locator('svg.lucide-x') });
+    await closePanelButton.click();
+    await expect(configPanel).not.toBeVisible({ timeout: 5_000 });
+
+    try {
+      await deleteCurrentWorkflow(page);
+    } finally {
+      // Best-effort fallback: deleteCurrentWorkflow appears to already
+      // cascade-delete the entry mentor (verified empirically), but delete it
+      // explicitly too in case the workflow delete itself fails.
+      await deleteMentorById(page, entryMentorId).catch(() => {});
+    }
+
+    // Best-effort: remove exactly the documents this test added, in case the
+    // mentor itself somehow survived.
+    await deleteDatasetDocumentsByStamp(page, entryMentorId, stamp).catch(
+      () => {},
+    );
+
+    logger.info(
+      'File Search node: dataset picked, URL untouched, selection persisted and highlighted on reopen',
+    );
   });
 });

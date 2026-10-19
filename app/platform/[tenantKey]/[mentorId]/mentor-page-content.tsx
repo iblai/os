@@ -10,10 +10,10 @@ import {
 } from '@iblai/iblai-js/web-utils';
 
 import ErrorBoundary from '@/components/error-boundary';
-import { DocumentSidebar } from '@/components/document-sidebar';
+import { DocumentSidebar } from '@iblai/iblai-js/web-containers';
 
 import './page.css';
-import { Chat } from '@/components/chat';
+import { SdkChat } from '@/components/chat/sdk-chat';
 import { useAppDispatch, useAppSelector } from '@/lib/hooks';
 import { useIsPreviewMode } from '@/hooks/use-is-preview-mode';
 import { useChatMode } from '@/hooks/use-chat-mode';
@@ -165,7 +165,7 @@ export default function MentorPageContent() {
     <ErrorBoundary>
       <div className="flex min-h-0 flex-1">
         <div className="flex min-h-0 w-full flex-1 flex-col px-1 md:px-4">
-          <Chat isPreviewMode={isPreviewMode} mode={chatMode} />
+          <SdkChat isPreviewMode={isPreviewMode} mode={chatMode} />
         </div>
         {!isMobile && <DocumentSidebar sessionId={sessionId} />}
       </div>

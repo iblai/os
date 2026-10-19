@@ -41,6 +41,8 @@ const mockUpdateConfig = vi.fn();
 const mockUpdateMultipleConfig = vi.fn();
 const mockFormHandleSubmit = vi.fn();
 const mockRemoveCustomImage = vi.fn();
+const mockSetAllowMentorSelection = vi.fn();
+const mockSetAllowFullscreen = vi.fn();
 
 // next/navigation
 vi.mock('next/navigation', () => ({
@@ -83,6 +85,23 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
     mockEditMentor,
     { isLoading: mockEditMentorLoading() },
   ],
+  // Only reached when a test swaps in the REAL useEmbedTab hook (#2592).
+  useGetMentorPublicSettingsQuery: () => ({ data: undefined }),
+  useCreateRedirectTokenMutation: () => [vi.fn(), { isLoading: false }],
+  useEditMentorJsonMutation: () => [vi.fn()],
+  mentorApiSlice: { util: { invalidateTags: vi.fn() } },
+}));
+
+vi.mock('@/features/auth/api-slice', () => ({
+  useGetIntegratedSsoProvidersQuery: () => ({ data: [], isError: false }),
+}));
+
+vi.mock('@/features/utils', () => ({
+  getUserName: () => 'testuser',
+}));
+
+vi.mock('@/lib/hooks', () => ({
+  useAppDispatch: () => vi.fn(),
 }));
 
 vi.mock('@iblai/iblai-js/web-utils', () => ({
@@ -323,6 +342,10 @@ function buildUseEmbedTabReturn(overrides: Partial<any> = {}) {
     // an embed form field. The tab reads it off the hook to gate the website
     // URL / redirect-token controls.
     allowAnonymous: true,
+    allowMentorSelection: false,
+    setAllowMentorSelection: mockSetAllowMentorSelection,
+    allowFullscreen: false,
+    setAllowFullscreen: mockSetAllowFullscreen,
     form: makeForm(overrides.formValues ?? {}),
     createTokenHandler: mockCreateTokenHandler,
     createTokenError: '',
@@ -827,6 +850,37 @@ describe('EmbedTab', () => {
     expect(mockSetFocusEditCustomFloatingBubble).toHaveBeenCalledWith(true);
   });
 
+  it.each([
+    ['bottom-left', 'bottom-4 left-4'],
+    ['top-right', 'top-4 right-4'],
+    ['top-left', 'top-4 left-4'],
+  ])('previews a %s launcher in that corner', (position, classes) => {
+    const { container } = renderEmbedTab(
+      {
+        customFloatingBubbleConfig: {
+          ...defaultFloatingBubbleConfig,
+          position,
+          shadow: false,
+          title: '',
+          subtitle: '',
+          image: '',
+        },
+      },
+      { ...defaultFormValues, icon_selection: 'custom' },
+    );
+    expect(
+      container.querySelector(`[class*="${classes}"]`),
+    ).toBeInTheDocument();
+    expect(screen.queryByText('Assistant')).not.toBeInTheDocument();
+  });
+
+  it('labels the shareable link switch as enabled when the field is on', () => {
+    renderEmbedTab({}, { ...defaultFormValues, generateShareableLink: true });
+    expect(
+      screen.getByLabelText('Generate / Revoke shareable link enabled'),
+    ).toBeInTheDocument();
+  });
+
   // Regression for issue #789: the Icon Selection Select must be *controlled*
   // (bound via `value`, not `defaultValue`) so that when the form field is
   // hydrated to 'custom' asynchronously after settings load, the trigger label
@@ -1233,6 +1287,58 @@ describe('EmbedTab', () => {
     expect(handleChange).toHaveBeenCalledWith(true);
   });
 
+  it('renders the Allow Agent Selection toggle off by default', () => {
+    renderEmbedTab();
+    expect(screen.getByText('Allow Agent Selection')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'Let signed-in visitors open Explore from the embed and switch to another agent.',
+      ),
+    ).toBeInTheDocument();
+    const toggle = screen.getByTestId('embed-allow-mentor-selection-switch');
+    expect(toggle).not.toBeChecked();
+    expect(toggle).toHaveAccessibleName('Agent selection disabled');
+  });
+
+  it('turns agent selection on via the hook setter', () => {
+    renderEmbedTab();
+    fireEvent.click(screen.getByTestId('embed-allow-mentor-selection-switch'));
+    expect(mockSetAllowMentorSelection).toHaveBeenCalledWith(true);
+  });
+
+  it('renders the Allow Agent Selection toggle checked when on', () => {
+    renderEmbedTab({ allowMentorSelection: true });
+    const toggle = screen.getByTestId('embed-allow-mentor-selection-switch');
+    expect(toggle).toBeChecked();
+    expect(toggle).toHaveAccessibleName('Agent selection enabled');
+  });
+
+  it('renders the Allow Full Screen toggle off by default', () => {
+    renderEmbedTab();
+    expect(screen.getByText('Allow Full Screen')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'Show a button in the chat that switches between the small window and full screen.',
+      ),
+    ).toBeInTheDocument();
+    const toggle = screen.getByTestId('embed-allow-fullscreen-switch');
+    expect(toggle).not.toBeChecked();
+    expect(toggle).toHaveAccessibleName('Full screen disabled');
+  });
+
+  it('turns full screen on via the hook setter', () => {
+    renderEmbedTab();
+    fireEvent.click(screen.getByTestId('embed-allow-fullscreen-switch'));
+    expect(mockSetAllowFullscreen).toHaveBeenCalledWith(true);
+  });
+
+  it('renders the Allow Full Screen toggle checked when on', () => {
+    renderEmbedTab({ allowFullscreen: true });
+    const toggle = screen.getByTestId('embed-allow-fullscreen-switch');
+    expect(toggle).toBeChecked();
+    expect(toggle).toHaveAccessibleName('Full screen enabled');
+  });
+
   // ==========================================================================
   // ISSUE #2153: toggling / regenerating a shareable link must NOT run the
   // embed-settings sync (which validates website_url and shows the spurious
@@ -1344,5 +1450,100 @@ describe('EmbedTab', () => {
     expect(
       screen.queryByText('Please specify a valid Website URL'),
     ).not.toBeInTheDocument();
+  });
+});
+
+// #2592: drive the REAL useEmbedTab hook so the switches reflect what the
+// settings GET returns, not a hand-built form. Pre-fix both were hardcoded off.
+describe('EmbedTab context-aware / open-by-default hydration (#2592)', () => {
+  // importActual cold-loads the real hook; under a full-suite run that alone
+  // can exceed the 15s default.
+  beforeEach(async () => {
+    cleanup();
+    vi.clearAllMocks();
+    const { default: realUseEmbedTab } = await vi.importActual<
+      typeof import('../../hooks/useEmbedTab')
+    >('../../hooks/useEmbedTab');
+    mockUseEmbedTab.mockImplementation(realUseEmbedTab);
+
+    mockUseParams.mockReturnValue({
+      tenantKey: 'test-tenant',
+      mentorId: 'test-mentor',
+    });
+    mockGetMentorId.mockReturnValue(null);
+    mockUseGetShareableLinkQuery.mockReturnValue({ data: undefined });
+    mockEditMentorLoading.mockReturnValue(false);
+    mockUseTenantMetadata.mockReturnValue({ metadata: undefined });
+    mockSupportEmail.mockReturnValue('support@ibl.ai');
+  }, 30_000);
+
+  afterEach(() => {
+    cleanup();
+  });
+
+  it('renders both switches checked when the saved settings are true', () => {
+    mockGetMentorSettingsQuery.mockReturnValue({
+      data: {
+        ...defaultMentorSettings,
+        embed_is_context_aware: true,
+        embed_open_by_default: true,
+      },
+      isLoading: false,
+    });
+
+    render(<EmbedTab />);
+
+    expect(
+      screen.getByRole('checkbox', { name: 'Context awareness enabled' }),
+    ).toBeChecked();
+    expect(
+      screen.getByRole('checkbox', { name: 'Open by default enabled' }),
+    ).toBeChecked();
+  });
+
+  it('renders both switches unchecked when the saved settings lack them', () => {
+    mockGetMentorSettingsQuery.mockReturnValue({
+      data: defaultMentorSettings,
+      isLoading: false,
+    });
+
+    render(<EmbedTab />);
+
+    expect(
+      screen.getByRole('checkbox', { name: 'Context awareness disabled' }),
+    ).not.toBeChecked();
+    expect(
+      screen.getByRole('checkbox', { name: 'Open by default disabled' }),
+    ).not.toBeChecked();
+  });
+
+  it('toggles Allow Agent Selection with the real hook', () => {
+    mockGetMentorSettingsQuery.mockReturnValue({
+      data: defaultMentorSettings,
+      isLoading: false,
+    });
+
+    render(<EmbedTab />);
+
+    const toggle = screen.getByTestId('embed-allow-mentor-selection-switch');
+    expect(toggle).not.toBeChecked();
+    fireEvent.click(toggle);
+    expect(
+      screen.getByTestId('embed-allow-mentor-selection-switch'),
+    ).toBeChecked();
+  });
+
+  it('toggles Allow Full Screen with the real hook', () => {
+    mockGetMentorSettingsQuery.mockReturnValue({
+      data: defaultMentorSettings,
+      isLoading: false,
+    });
+
+    render(<EmbedTab />);
+
+    const toggle = screen.getByTestId('embed-allow-fullscreen-switch');
+    expect(toggle).not.toBeChecked();
+    fireEvent.click(toggle);
+    expect(screen.getByTestId('embed-allow-fullscreen-switch')).toBeChecked();
   });
 });

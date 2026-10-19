@@ -23,6 +23,7 @@ import {
 import { useAppDispatch, useAppSelector } from '@/lib/hooks';
 import { useLocalStorage } from '@/hooks/use-local-storage';
 import { LOCAL_STORAGE_KEYS } from '@/lib/constants';
+import { sessionCacheKey } from '@/lib/utils';
 import { getUserName } from '@/features/utils';
 import { ProjectPageParams } from '@/lib/types';
 import eventBus, { RemoteEvents } from '@/lib/eventBus';
@@ -127,13 +128,13 @@ export function useRecentChats({
     [recentInfiniteData],
   );
 
-  // Pinned — same shape; `sessionId` arg is the cache key the SDK uses
-  // for invalidation, not a row filter.
+  // Pinned — same shape. The list is user-wide and the SDK keys its cache on
+  // the full args, so these args (and every patch below) must stay exactly
+  // `{ org, userId }` to share AppProvider's refetch entry.
   const { data: pinnedMessages, refetch: refetchPinned } =
     useGetPinnedMessagesQuery(
       {
         org: tenantKey,
-        sessionId: appSessionId,
         // @ts-ignore — userId is required at the URL path level
         userId: resolvedUserId,
       },
@@ -259,7 +260,7 @@ export function useRecentChats({
       if (mentorId) {
         saveCachedSessionId({
           ...cachedSessionId,
-          [mentorId]: row.session_id,
+          [sessionCacheKey(tenantKey, mentorId)]: row.session_id,
         });
       }
     }
@@ -295,7 +296,6 @@ export function useRecentChats({
           'getPinnedMessages',
           {
             org: tenantKey,
-            sessionId: appSessionId,
             userId: resolvedUserId,
           },
           (draft) => {
@@ -336,7 +336,6 @@ export function useRecentChats({
           'getPinnedMessages',
           {
             org: tenantKey,
-            sessionId: appSessionId,
             userId: resolvedUserId,
           },
           (draft) => {
@@ -369,7 +368,6 @@ export function useRecentChats({
           'getPinnedMessages',
           {
             org: tenantKey,
-            sessionId: appSessionId,
             userId: resolvedUserId,
           },
           (draft) => {

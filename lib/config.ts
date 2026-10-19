@@ -78,6 +78,9 @@ export const getEnv = (key: keyof typeof env, fallback = ''): string => {
 const domain = () => getEnv('NEXT_PUBLIC_PLATFORM_BASE_DOMAIN', 'iblai.app');
 
 export const config = {
+  // Namespaces per-app user state shared with sibling SPAs (e.g. the
+  // `<appName>-product-tour` key on the user's public_metadata).
+  appName: () => 'os',
   environment: () => getEnv('NODE_ENV', 'development'),
   authUrl: () => getEnv('NEXT_PUBLIC_AUTH_URL', `https://auth.${domain()}/`),
   lmsUrl: () => {

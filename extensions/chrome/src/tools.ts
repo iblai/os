@@ -4,7 +4,7 @@ import {
   scrollPage,
   snapshotPage,
   type ActResult,
-  type Snapshot,
+  type FrameSnapshot,
   type SnapshotItem,
 } from './page-scripts';
 import { injectable } from './settings';
@@ -33,6 +33,21 @@ export interface BrowserToolsContext {
   /** Asks the user; resolves false when they decline or the run is aborted. */
   confirm: (description: string, signal?: AbortSignal) => Promise<boolean>;
   log: (entry: LogEntry) => void;
+}
+
+export interface Snapshot {
+  url: string;
+  title: string;
+  /** Every frame's items, renumbered into one sequence for the model. */
+  items: SnapshotItem[];
+  /** What the model reads: URL and title, one line per item, the frames' text. */
+  text: string;
+}
+
+/** Where a snapshot number lives: the frame, and the frame's own number for it. */
+export interface FrameRef {
+  frameId: number;
+  n: number;
 }
 
 export interface BrowserTools {
@@ -94,21 +109,78 @@ const ELEMENT = {
   description: 'Element number from the latest snapshot',
 } as const;
 
+/**
+ * Merges the frames' snapshots into the one numbered list the model reads.
+ * Frame 0 (the page itself) comes first, then subframes by id — Chrome returns
+ * them in no particular order — and a subframe with nothing to act on
+ * contributes nothing: hidden helper frames and tracking pixels would only add
+ * their text as noise. The page always contributes its URL, title and text.
+ *
+ * ponytail: per-frame caps only (MAX_ITEMS and textChars each); a page with many
+ * content iframes multiplies the snapshot — add a total budget if that shows up.
+ */
+export function mergeFrames(
+  results: { frameId: number; result?: FrameSnapshot }[],
+): { snapshot: Snapshot; targets: Map<number, FrameRef> } {
+  const frames = results
+    .filter((frame): frame is { frameId: number; result: FrameSnapshot } =>
+      Boolean(frame.result),
+    )
+    .sort((a, b) => a.frameId - b.frameId);
+  const [page] = frames;
+  if (!page || page.frameId !== 0)
+    throw new Error('The page returned no snapshot.');
+  const targets = new Map<number, FrameRef>();
+  const items: SnapshotItem[] = [];
+  const excerpts: string[] = [];
+  for (const { frameId, result } of frames) {
+    if (frameId !== 0 && result.items.length === 0) continue;
+    for (const item of result.items) {
+      const n = items.length + 1;
+      targets.set(n, { frameId, n: item.n });
+      items.push({ ...item, n });
+    }
+    if (result.excerpt) excerpts.push(result.excerpt);
+  }
+  const lines = items.map(
+    (item) =>
+      `[${item.n}] ${item.role} "${item.name}"${item.state ? ` (${item.state})` : ''}`,
+  );
+  const { url, title } = page.result;
+  const text = `${url}  "${title}"\n${lines.join('\n')}\n--- text ---\n${excerpts.join('\n\n')}`;
+  return { snapshot: { url, title, items, text }, targets };
+}
+
 async function inject<Args extends unknown[], Result>(
   tabId: number,
   func: (...args: Args) => Result,
   args: Args,
+  frameId = 0,
 ): Promise<Awaited<Result>> {
   const [injection] = await chrome.scripting.executeScript({
-    target: { tabId },
+    target: { tabId, frameIds: [frameId] },
     func,
     args,
   });
   return injection?.result as Awaited<Result>;
 }
 
+/** Runs `func` in every frame of the tab the extension can reach, silently skipping the rest. */
+function injectAll<Args extends unknown[], Result>(
+  tabId: number,
+  func: (...args: Args) => Result,
+  args: Args,
+) {
+  return chrome.scripting.executeScript({
+    target: { tabId, allFrames: true },
+    func,
+    args,
+  });
+}
+
 export function createBrowserTools(ctx: BrowserToolsContext): BrowserTools {
   let last: Snapshot | null = null;
+  let targets = new Map<number, FrameRef>();
   let queue: Promise<unknown> = Promise.resolve();
 
   // The AI SDK runs a step's tool calls concurrently; one page can only take
@@ -120,11 +192,18 @@ export function createBrowserTools(ctx: BrowserToolsContext): BrowserTools {
   };
 
   const snapshot = async (textChars = STEP_CHARS): Promise<Snapshot> => {
-    last = await inject(ctx.tabId, snapshotPage, [MAX_ITEMS, textChars]);
+    const merged = mergeFrames(
+      await injectAll(ctx.tabId, snapshotPage, [MAX_ITEMS, textChars]),
+    );
+    last = merged.snapshot;
+    targets = merged.targets;
     return last;
   };
   const item = (n: number) =>
     last?.items.find((candidate) => candidate.n === n);
+  // A number outside the snapshot goes to the page itself, whose own map
+  // answers "not in the current snapshot" — the same error as ever.
+  const ref = (n: number): FrameRef => targets.get(n) ?? { frameId: 0, n };
   const currentUrl = async () => (await chrome.tabs.get(ctx.tabId)).url ?? '';
   // Not a policy check: chrome.scripting cannot inject anywhere but http(s),
   // so this turns a thrown injection error into something the model can act on.
@@ -160,7 +239,10 @@ export function createBrowserTools(ctx: BrowserToolsContext): BrowserTools {
     tool: string;
     target: string;
     outcome: string;
-    step: () => Promise<ActResult>;
+    /** The snapshot number the action is on, if any. */
+    element?: number;
+    /** Given where that number lives; frame 0 and no number without one. */
+    step: (at: FrameRef) => Promise<ActResult>;
     /** When set, the user is asked first. */
     confirmText?: string;
     signal?: AbortSignal;
@@ -177,14 +259,19 @@ export function createBrowserTools(ctx: BrowserToolsContext): BrowserTools {
           if (!ok)
             throw new Refusal('declined', 'User declined. Ask how to proceed.');
         }
-        const result = await p.step();
+        // Resolved now, not when the tool was called: the numbers belong to
+        // whichever snapshot the queue ahead of this action left behind, which
+        // is also what each frame's own map holds.
+        const at =
+          p.element === undefined ? { frameId: 0, n: 0 } : ref(p.element);
+        const result = await p.step(at);
         if (!result.ok) {
           const message = result.error ?? 'Action failed.';
           if (/^Refused:/.test(message))
             throw new Refusal('refused', message.replace(/^Refused:\s*/, ''));
           throw new Error(message);
         }
-        await settle(ctx.tabId);
+        await settle(ctx.tabId, { frameId: at.frameId });
         // A click or back may have left the allowed sites; never read what is there.
         assertAllowed(await currentUrl());
         const page = await snapshot(p.textChars);
@@ -215,7 +302,14 @@ export function createBrowserTools(ctx: BrowserToolsContext): BrowserTools {
           tool: 'click',
           target,
           outcome: `Clicked ${target}.`,
-          step: () => inject(ctx.tabId, actOnPage, [n, 'click', '', false]),
+          element: n,
+          step: (at) =>
+            inject(
+              ctx.tabId,
+              actOnPage,
+              [at.n, 'click', '', false],
+              at.frameId,
+            ),
           confirmText: needsConfirm('click', item(n))
             ? `Click ${target} on "${last?.title ?? ''}"`
             : undefined,
@@ -255,13 +349,14 @@ export function createBrowserTools(ctx: BrowserToolsContext): BrowserTools {
           tool: 'type',
           target,
           outcome: `Typed into ${target}${doSubmit ? ' and submitted' : ''}.`,
-          step: () =>
-            inject(ctx.tabId, actOnPage, [
-              n,
-              'type',
-              String(text ?? ''),
-              doSubmit,
-            ]),
+          element: n,
+          step: (at) =>
+            inject(
+              ctx.tabId,
+              actOnPage,
+              [at.n, 'type', String(text ?? ''), doSubmit],
+              at.frameId,
+            ),
           confirmText: needsConfirm('type', item(n), doSubmit)
             ? `Type into ${target} and submit on "${last?.title ?? ''}"`
             : undefined,
@@ -289,13 +384,14 @@ export function createBrowserTools(ctx: BrowserToolsContext): BrowserTools {
           tool: 'select',
           target,
           outcome: `Selected "${String(value)}" in ${target}.`,
-          step: () =>
-            inject(ctx.tabId, actOnPage, [
-              n,
-              'select',
-              String(value ?? ''),
-              false,
-            ]),
+          element: n,
+          step: (at) =>
+            inject(
+              ctx.tabId,
+              actOnPage,
+              [at.n, 'select', String(value ?? ''), false],
+              at.frameId,
+            ),
         });
       },
     }),
@@ -322,7 +418,14 @@ export function createBrowserTools(ctx: BrowserToolsContext): BrowserTools {
             tool: 'scroll',
             target,
             outcome: `Scrolled to ${target}.`,
-            step: () => inject(ctx.tabId, actOnPage, [n, 'scroll', '', false]),
+            element: n,
+            step: (at) =>
+              inject(
+                ctx.tabId,
+                actOnPage,
+                [at.n, 'scroll', '', false],
+                at.frameId,
+              ),
           });
         }
         const dir = direction === 'up' ? 'up' : 'down';

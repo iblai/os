@@ -54,6 +54,8 @@ export default function AnalyticsLayoutWrapper({
     excludeTabs.push('audit');
   }
 
+  // The jump to the tenant-wide section lives in the navbar (next to the agent
+  // dropdown), not here — see `_components/nav-bar/analytics-scope-switch`.
   return (
     <AnalyticsLayout
       excludeTabs={excludeTabs}

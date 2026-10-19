@@ -62,6 +62,8 @@ describe('MentorCardWithStar', () => {
     description?: string;
     updated_at?: string;
     starred?: boolean;
+    is_featured?: boolean;
+    categories?: Array<string | { name?: string | null }> | null;
   };
 
   const renderWithContext = (
@@ -131,6 +133,76 @@ describe('MentorCardWithStar', () => {
       });
 
       expect(screen.queryByText(/Updated on/)).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Featured badge and category chip', () => {
+    it('renders neither badge nor chip when not featured and uncategorized', () => {
+      renderWithContext({ ...mockMentor, categories: null });
+
+      expect(screen.queryByText('Featured')).not.toBeInTheDocument();
+      // The badge row is the heading's only sibling; it is omitted entirely.
+      expect(
+        screen.getByRole('heading', { name: 'Test Mentor' }).nextElementSibling,
+      ).toBeNull();
+    });
+
+    it('renders the featured badge when is_featured is true', () => {
+      renderWithContext({ ...mockMentor, is_featured: true });
+
+      expect(screen.getByText('Featured')).toBeInTheDocument();
+    });
+
+    it('renders the first category when the search endpoint sends names', () => {
+      renderWithContext({ ...mockMentor, categories: ['Science', 'Math'] });
+
+      expect(screen.getByText('Science')).toBeInTheDocument();
+      expect(screen.queryByText('Math')).not.toBeInTheDocument();
+      expect(screen.queryByText('Featured')).not.toBeInTheDocument();
+    });
+
+    it('renders the category name when categories are SDK objects', () => {
+      renderWithContext({ ...mockMentor, categories: [{ name: 'History' }] });
+
+      expect(screen.getByText('History')).toBeInTheDocument();
+    });
+
+    it('skips blank and nameless categories to find the first usable one', () => {
+      renderWithContext({
+        ...mockMentor,
+        categories: [
+          null as unknown as { name?: string | null },
+          { name: null },
+          { name: '' },
+          '',
+          'Biology',
+        ],
+      });
+
+      expect(screen.getByText('Biology')).toBeInTheDocument();
+    });
+
+    it('renders no chip when every category is blank', () => {
+      renderWithContext({
+        ...mockMentor,
+        categories: [{ name: null }, ''],
+      });
+
+      // The badge row is the heading's only sibling; it is omitted entirely.
+      expect(
+        screen.getByRole('heading', { name: 'Test Mentor' }).nextElementSibling,
+      ).toBeNull();
+    });
+
+    it('renders the badge and the chip together', () => {
+      renderWithContext({
+        ...mockMentor,
+        is_featured: true,
+        categories: ['Science'],
+      });
+
+      expect(screen.getByText('Featured')).toBeInTheDocument();
+      expect(screen.getByText('Science')).toBeInTheDocument();
     });
   });
 
@@ -223,8 +295,8 @@ describe('MentorCardWithStar', () => {
         name: /Remove from favorites/i,
       });
       const starIcon = starButton.querySelector('svg');
-      expect(starIcon).toHaveClass('text-[#38A1E5]');
-      expect(starIcon).toHaveClass('fill-current');
+      expect(starIcon).toHaveClass('fill-amber-400');
+      expect(starIcon).toHaveClass('text-amber-400');
     });
 
     it('prevents event propagation when star button is clicked', async () => {

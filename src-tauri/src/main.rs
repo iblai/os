@@ -8,6 +8,10 @@ mod foundry_installer;
 mod foundry_manager;
 // Mobile-only catalog (`local_llm::resolve`) that `model_manager::required_space_gb`
 // consults; the engine inside is cfg-gated so this compiles on desktop like lib.rs.
+#[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+mod code_agent_installer;
+#[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+mod code_agent_models;
 #[allow(dead_code)]
 mod local_llm;
 mod mcp_bridge_installer;
@@ -24,6 +28,7 @@ mod opencode_installer;
 #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
 mod opencode_proxy;
 mod remote_code;
+mod telemetry;
 mod web_cache;
 
 use foundry_installer::{
@@ -63,6 +68,18 @@ const OAUTH_URL_PATTERNS: &[&str] = &[
     "appleid.apple.com",
     "/auth/login/apple",
     "/login/apple",
+    // Microsoft / Azure AD OAuth. Azure AD refuses to run inside an embedded
+    // webview when it is the MAIN window, so — like Google and Apple — the
+    // provider URL and the Microsoft login domains it redirects to are matched
+    // here and opened in the in-app OAuth popup instead.
+    "login.microsoftonline.com",
+    "login.live.com",
+    "azuread-oauth2",
+    "/auth/login/azuread",
+    "/login/azuread",
+    "microsoft-graph",
+    "/auth/login/microsoft-graph",
+    "/login/microsoft-graph",
 ];
 
 fn is_oauth_url(url: &str) -> bool {
@@ -107,7 +124,12 @@ where
     if let Err(err) = app.run_on_main_thread(move || {
         let _ = handle.emit(event, payload);
     }) {
-        eprintln!("[emit_on_main] could not schedule '{event}' on main thread: {err}");
+        // The event name stays out of the grouping key: one issue for "the
+        // webview-mutex scheduling path failed", not one per event name.
+        telemetry::report_once(
+            "[emit_on_main] could not schedule an event on the main thread",
+            format!("'{event}' — {err}"),
+        );
     }
 }
 
@@ -2160,7 +2182,17 @@ async fn foundry_chat(
 /// creation must run on the main thread.
 #[command]
 async fn open_external_url(app: AppHandle, url: String) -> Result<(), String> {
-    if let Some(title) = in_app_popup_title(&url) {
+    // OAuth sign-in (Google / Apple / Microsoft) opens in the in-app "Sign In"
+    // popup — the same window the main-frame navigation interceptor uses — so the
+    // experience is identical no matter whether the frontend invokes this command
+    // or falls back to a plain navigation. Everything else is matched by
+    // IN_APP_URL_PATTERNS (e.g. Stripe); anything unmatched opens in the browser.
+    let popup_title = if is_oauth_url(&url) {
+        Some("Sign In")
+    } else {
+        in_app_popup_title(&url)
+    };
+    if let Some(title) = popup_title {
         println!("[ibl.ai] Opening URL in in-app window: {}", url);
         let app_for_main = app.clone();
         let title = title.to_string();
@@ -2220,6 +2252,13 @@ fn main() {
         }
     }
 
+    // Rust-side error reporting. After the dotenv loads (so a dev build can be
+    // aimed at a scratch project from .env.local) and before the builder, so
+    // `setup()` and every task spawned there is already covered — that is where
+    // the failures worth knowing about happen. The guard MUST stay bound for
+    // the life of the process: dropping it discards every queued event.
+    let _sentry = telemetry::init();
+
     // CrabNebula DevTools (debug builds only) — initialize before the builder so
     // its tracing subscriber is installed first.
     #[cfg(debug_assertions)]
@@ -2251,13 +2290,25 @@ fn main() {
                 opencode_installer::ensure_opencode_current(opencode_handle).await;
             });
 
+            // The subscription agents (Codex, Claude Code) install themselves in
+            // the background on every launch — a pinned Node plus the pinned
+            // adapters — so the Code popover only ever shows them loading, never
+            // a download the user has to start. Never blocks: ibl.ai turns run
+            // meanwhile, and a failure surfaces in the popover with a retry.
+            let agents_handle = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                code_agent_installer::ensure_agents_current(agents_handle).await;
+            });
+
             // Vibe skills track the latest GitHub release with no freshness
             // window — resolve-and-sync in the background on every launch, so
             // Coding Mode always starts from the newest published set (and a
             // fresh machine has them before Code is ever enabled).
             let vibe_handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {
-                let _ = opencode_installer::ensure_vibe_skills(vibe_handle).await;
+                if let Err(e) = opencode_installer::ensure_vibe_skills(vibe_handle).await {
+                    telemetry::report("[vibe] skills sync failed at startup", e);
+                }
             });
 
             // Initialize web cache with app data directory
@@ -2881,6 +2932,10 @@ fn main() {
             opencode_acp::check_code_local_model,
             opencode_acp::set_opencode_learner,
             opencode_acp::ensure_opencode_platform_key,
+            code_agent_installer::check_code_agent_status,
+            code_agent_installer::install_code_agent,
+            code_agent_models::list_code_agent_models,
+            code_agent_models::set_code_agent_model,
             remote_code::remote_code_status,
             remote_code::remote_code_enable,
             remote_code::remote_code_disable,
@@ -2896,4 +2951,55 @@ fn main() {
                 remote_code::shutdown_sync();
             }
         });
+}
+
+#[cfg(test)]
+mod oauth_url_tests {
+    use super::{in_app_popup_title, is_oauth_url};
+
+    // The in-app "Sign In" popup opens for exactly these URLs; Azure AD is the
+    // regression this guards (it used to fall through to the system browser /
+    // a blocked main-window navigation while Google and Apple did not).
+    fn opens_oauth_popup(url: &str) -> bool {
+        is_oauth_url(url) || in_app_popup_title(url) == Some("Sign In")
+    }
+
+    #[test]
+    fn microsoft_oauth_opens_in_app_like_google() {
+        for url in [
+            "https://learn.iblai.app/auth/login/azuread-oauth2/?auth_entry=login&next=%2F",
+            "https://learn.iblai.app/auth/login/microsoft-graph/?auth_entry=login&next=%2F",
+            "https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=x",
+            "https://login.live.com/oauth20_authorize.srf",
+        ] {
+            assert!(is_oauth_url(url), "microsoft url should be oauth: {url}");
+            assert!(
+                opens_oauth_popup(url),
+                "microsoft url should open in-app: {url}"
+            );
+        }
+    }
+
+    #[test]
+    fn google_and_apple_still_open_in_app() {
+        for url in [
+            "https://learn.iblai.app/auth/login/google-oauth2/?auth_entry=login",
+            "https://accounts.google.com/o/oauth2/v2/auth?client_id=x",
+            "https://learn.iblai.app/auth/login/apple/?auth_entry=login",
+        ] {
+            assert!(opens_oauth_popup(url), "should open in-app: {url}");
+        }
+    }
+
+    #[test]
+    fn non_oauth_urls_do_not_open_the_sign_in_popup() {
+        // Stripe keeps its own in-app popup; plain pages open in the browser.
+        assert!(!is_oauth_url("https://checkout.stripe.com/pay/cs_test_123"));
+        assert_eq!(
+            in_app_popup_title("https://checkout.stripe.com/pay/cs_test_123"),
+            Some("Checkout")
+        );
+        assert!(!opens_oauth_popup("https://example.com/docs"));
+        assert!(!is_oauth_url("https://os.ibl.ai/platform/acme/bot"));
+    }
 }

@@ -228,6 +228,9 @@ vi.mock('@iblai/iblai-js/web-containers/next', () => ({
         <span data-testid="show-learner-mode-switch">
           {String(props.showLearnerModeSwitch)}
         </span>
+        <span data-testid="show-logout-button">
+          {String(props.showLogoutButton)}
+        </span>
         <span data-testid="billing-enabled">
           {String(props.billingEnabled)}
         </span>
@@ -356,6 +359,27 @@ describe('UserProfile', () => {
 
   afterEach(() => {
     vi.useRealTimers();
+  });
+
+  describe('embed mode', () => {
+    it('shows logout by default (non-embed)', () => {
+      render(<UserProfile />);
+
+      expect(screen.getByTestId('show-logout-button')).toHaveTextContent(
+        'true',
+      );
+    });
+
+    it('hides logout and the learner-mode switch when embed', () => {
+      render(<UserProfile embed />);
+
+      expect(screen.getByTestId('show-logout-button')).toHaveTextContent(
+        'false',
+      );
+      expect(screen.getByTestId('show-learner-mode-switch')).toHaveTextContent(
+        'false',
+      );
+    });
   });
 
   describe('rendering', () => {

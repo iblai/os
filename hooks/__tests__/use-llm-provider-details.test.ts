@@ -2,11 +2,17 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
 
 const mockUseGetLlmsQuery = vi.fn();
+const mockUseGetCredentialsSchemaQuery = vi.fn();
 vi.mock('@iblai/iblai-js/data-layer', () => ({
   useGetLlmsQuery: (...args: unknown[]) => mockUseGetLlmsQuery(...args),
+  useGetCredentialsSchemaQuery: (...args: unknown[]) =>
+    mockUseGetCredentialsSchemaQuery(...args),
 }));
 
-import { useLlmProviderCatalogue } from '../use-llm-provider-details';
+import {
+  useCredentialsSchemaLogos,
+  useLlmProviderCatalogue,
+} from '../use-llm-provider-details';
 
 const args = { org: 'org-1', userId: 'alice', mentorId: 'mentor-1' };
 
@@ -113,5 +119,118 @@ describe('useLlmProviderCatalogue', () => {
     });
     const { result } = renderHook(() => useLlmProviderCatalogue(args));
     expect(result.current('openai').displayName).toBe('OpenAI');
+  });
+});
+
+// Rows as `GET /api/ai-account/orgs/{org}/credential/schema/` returns them
+const credentialsSchemas = [
+  {
+    name: 'openai',
+    schema: {},
+    service_info: {
+      id: 1,
+      name: 'openai',
+      display_name: 'OpenAI',
+      logo: 'https://cdn.example.com/openai.jpg',
+    },
+  },
+  {
+    name: 'azure_openai',
+    schema: {},
+    service_info: {
+      id: 2,
+      name: 'azure_openai',
+      display_name: 'Microsoft',
+      logo: 'https://cdn.example.com/azure.png',
+    },
+  },
+  // A tool credential with no service_info
+  { name: 'serper', schema: {} },
+  {
+    name: 'groq',
+    schema: {},
+    service_info: { id: 3, name: 'groq', display_name: 'Groq', logo: null },
+  },
+];
+
+describe('useCredentialsSchemaLogos', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockUseGetCredentialsSchemaQuery.mockReturnValue({
+      data: credentialsSchemas,
+    });
+  });
+
+  it('queries the tenant schema when enabled', () => {
+    renderHook(() =>
+      useCredentialsSchemaLogos({ org: 'org-1', enabled: true }),
+    );
+    expect(mockUseGetCredentialsSchemaQuery).toHaveBeenCalledWith(
+      { org: 'org-1' },
+      { skip: false },
+    );
+  });
+
+  it.each([
+    ['disabled (not a signed-in admin)', { org: 'org-1', enabled: false }],
+    ['missing the org', { org: undefined, enabled: true }],
+  ])('skips the query when %s', (_label, hookArgs) => {
+    renderHook(() => useCredentialsSchemaLogos(hookArgs));
+    expect(mockUseGetCredentialsSchemaQuery).toHaveBeenCalledWith(
+      expect.anything(),
+      { skip: true },
+    );
+  });
+
+  it('resolves a logo by service_info.display_name, not the schema name', () => {
+    const { result } = renderHook(() =>
+      useCredentialsSchemaLogos({ org: 'org-1', enabled: true }),
+    );
+    expect(result.current('OpenAI')).toBe('https://cdn.example.com/openai.jpg');
+    // The facet says "Microsoft" for the azure_openai credential
+    expect(result.current('Microsoft')).toBe(
+      'https://cdn.example.com/azure.png',
+    );
+    expect(result.current('openai')).toBeNull();
+  });
+
+  it('resolves to null for unknown names, rows without a logo, and no name', () => {
+    const { result } = renderHook(() =>
+      useCredentialsSchemaLogos({ org: 'org-1', enabled: true }),
+    );
+    expect(result.current('Anthropic')).toBeNull();
+    expect(result.current('Groq')).toBeNull();
+    expect(result.current(null)).toBeNull();
+    expect(result.current(undefined)).toBeNull();
+  });
+
+  it('resolves everything to null while the schema is not loaded', () => {
+    mockUseGetCredentialsSchemaQuery.mockReturnValue({ data: undefined });
+    const { result } = renderHook(() =>
+      useCredentialsSchemaLogos({ org: 'org-1', enabled: true }),
+    );
+    expect(result.current('OpenAI')).toBeNull();
+  });
+
+  it('resolves a duplicated display name to its first row', () => {
+    mockUseGetCredentialsSchemaQuery.mockReturnValue({
+      data: [
+        ...credentialsSchemas,
+        {
+          name: 'openai_legacy',
+          schema: {},
+          service_info: {
+            id: 9,
+            name: 'openai_legacy',
+            display_name: 'OpenAI',
+            logo: 'https://cdn.example.com/other.png',
+          },
+        },
+      ],
+    });
+    const { result } = renderHook(() =>
+      useCredentialsSchemaLogos({ org: 'org-1', enabled: true }),
+    );
+    expect(result.current('OpenAI')).toBe('https://cdn.example.com/openai.jpg');
   });
 });

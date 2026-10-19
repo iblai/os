@@ -186,13 +186,12 @@ describe('StarredMentorsSection', () => {
 
       renderWithContext();
 
-      expect(screen.getByText('Add to Favorites')).toBeInTheDocument();
+      expect(screen.getByText('No favorites yet')).toBeInTheDocument();
       expect(
         screen.getByText(
           'Star your favorite agents to quickly access them here',
         ),
       ).toBeInTheDocument();
-      expect(screen.getByText('No favorites yet')).toBeInTheDocument();
     });
 
     it('shows empty state card when no starred mentors', () => {
@@ -203,13 +202,12 @@ describe('StarredMentorsSection', () => {
 
       renderWithContext();
 
-      expect(screen.getByText('Add to Favorites')).toBeInTheDocument();
+      expect(screen.getByText('No favorites yet')).toBeInTheDocument();
       expect(
         screen.getByText(
           'Star your favorite agents to quickly access them here',
         ),
       ).toBeInTheDocument();
-      expect(screen.getByText('No favorites yet')).toBeInTheDocument();
     });
 
     it('renders mentors in a list with proper role', () => {
@@ -567,8 +565,11 @@ describe('StarredMentorsSection', () => {
     it('has proper heading structure', () => {
       renderWithContext();
 
-      const heading = screen.getByRole('heading', { name: /Favorites/i });
-      expect(heading).toHaveAttribute('aria-level', '2');
+      const heading = screen.getByRole('heading', {
+        name: /Favorites/i,
+        level: 2,
+      });
+      expect(heading.tagName).toBe('H2');
     });
 
     it('has proper list role and label', () => {
@@ -629,16 +630,20 @@ describe('StarredMentorsSection', () => {
       );
     });
 
-    it('does not redirect when logged in and empty state card is clicked', async () => {
+    it('does not present the hint as a button to signed-in users', async () => {
       const user = userEvent.setup();
       mockIsLoggedIn.mockReturnValue(true);
 
       renderWithContext();
 
-      const emptyCard = screen.getByRole('button', {
-        name: /Add to Favorites/i,
-      });
-      await user.click(emptyCard);
+      // Signed in, the hint is guidance only: a button that does nothing
+      // would be announced as an action and leave the user stuck.
+      expect(
+        screen.queryByRole('button', { name: /Add to Favorites/i }),
+      ).not.toBeInTheDocument();
+      const hint = screen.getByTestId('favorites-card');
+      expect(hint).not.toHaveAttribute('tabindex');
+      await user.click(hint);
 
       expect(mockRedirectToAuthSpaJoinTenant).not.toHaveBeenCalled();
     });
@@ -677,7 +682,8 @@ describe('StarredMentorsSection', () => {
       );
     });
 
-    it('empty state card is keyboard accessible', () => {
+    it('empty state card is keyboard accessible when signed out', () => {
+      mockIsLoggedIn.mockReturnValue(false);
       renderWithContext();
 
       const emptyCard = screen.getByRole('button', {

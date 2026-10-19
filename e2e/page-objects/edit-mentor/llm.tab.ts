@@ -120,6 +120,20 @@ export class LlmTab {
     return infos;
   }
 
+  /** A model row in the LLM Selection dialog by its wire key (`data-model`). */
+  modelRowByName(llmName: string): Locator {
+    return this.llmSelectionDialog.locator(`button[data-model="${llmName}"]`);
+  }
+
+  /** Wire keys of every model row, in render order. */
+  async getModelRowOrder(): Promise<string[]> {
+    return this.llmSelectionDialog
+      .locator('button[data-model]')
+      .evaluateAll((els) =>
+        els.map((el) => el.getAttribute('data-model') ?? ''),
+      );
+  }
+
   /**
    * Select a provider and a chat model for the mentor.
    *
@@ -172,6 +186,22 @@ export class LlmTab {
       `[data-model="${modelKey}"]`,
     );
     await expect(modelButton).toBeVisible({ timeout: 10_000 });
+
+    // The SDK disables the active model's row (llm-provider-modal.tsx), so
+    // re-selecting the current model can never click through.
+    const alreadyActive = await modelButton.evaluate(
+      (el) =>
+        (el as HTMLButtonElement).disabled &&
+        el.classList.contains('border-blue-500'),
+    );
+    if (alreadyActive) {
+      await this.page.keyboard.press('Escape');
+      await expect(this.llmSelectionDialog).not.toBeVisible({
+        timeout: 10_000,
+      });
+      return;
+    }
+
     await modelButton.click();
 
     // The selection is persisted via the edit-mentor mutation and confirmed

@@ -16,6 +16,7 @@ import { MENTOR_VISIBILITY } from '@/lib/constants';
 import { selectRbacPermissions } from '@/features/rbac/rbac-slice';
 import { useAppSelector } from '@/lib/hooks';
 import { TenantKeyMentorIdParams } from '@/lib/types';
+import { useLlmProviderModalLabels } from './llm-provider-modal-labels';
 
 type Props = {
   showConfigurationHeader?: boolean;
@@ -38,7 +39,7 @@ type Props = {
  */
 export function LLMTab({ showConfigurationHeader = true }: Props) {
   const t = useTranslations('tabsLlmTab');
-  const tProviderModal = useTranslations('modalsLlmProviderModal');
+  const providerModal = useLlmProviderModalLabels();
 
   const { tenantKey, mentorId } = useParams<TenantKeyMentorIdParams>();
   const { getMentorId } = useNavigate();
@@ -73,56 +74,7 @@ export function LLMTab({ showConfigurationHeader = true }: Props) {
       updateSuccess: t('llmUpdatedSuccessfully'),
       updateError: t('failedToUpdateLlm'),
     },
-    providerModal: {
-      title: tProviderModal('title'),
-      description: (providerName) =>
-        tProviderModal('dialogDescription', { providerName }),
-      searchPlaceholder: tProviderModal('searchPlaceholder'),
-      // OS calls this string the modal's "subtitle"; the SDK calls it helpText.
-      helpText: tProviderModal('subtitle'),
-      providerIconAlt: (providerName) =>
-        tProviderModal('providerIconAlt', { providerName }),
-      tooLargeTitle: tProviderModal('tooLargeTitle'),
-      tooLargeDescription: (modelName, modelSize) =>
-        tProviderModal('tooLargeDescription', { modelName, modelSize }),
-      cancel: tProviderModal('cancel'),
-      downloadAnyway: tProviderModal('downloadAnyway'),
-      alreadyDownloadingTitle: tProviderModal('alreadyDownloadingTitle'),
-      unnamedModel: tProviderModal('unnamedModel'),
-      alreadyDownloadingDescription: (modelName) =>
-        tProviderModal('alreadyDownloadingDescription', { modelName }),
-      gotIt: tProviderModal('gotIt'),
-      announceDownloaded: (modelName) =>
-        tProviderModal('announceDownloaded', { modelName }),
-      announceCancelled: tProviderModal('announceCancelled'),
-      announceFailed: tProviderModal('announceFailed'),
-      announceStarted: (modelName) =>
-        tProviderModal('announceStarted', { modelName }),
-      localModel: {
-        onDevice: tProviderModal('localModel.onDevice'),
-        starting: tProviderModal('localModel.starting'),
-        cancel: tProviderModal('localModel.cancel'),
-        inUse: tProviderModal('localModel.inUse'),
-        downloadFailedRetry: tProviderModal('localModel.downloadFailedRetry'),
-        ariaDownload: (modelName, modelSize) =>
-          tProviderModal('localModel.ariaDownload', { modelName, modelSize }),
-        ariaStarting: (modelName) =>
-          tProviderModal('localModel.ariaStarting', { modelName }),
-        ariaDownloading: (modelName, percent) =>
-          tProviderModal('localModel.ariaDownloading', { modelName, percent }),
-        ariaInstalled: (modelName) =>
-          tProviderModal('localModel.ariaInstalled', { modelName }),
-        ariaSelected: (modelName) =>
-          tProviderModal('localModel.ariaSelected', { modelName }),
-        ariaError: (modelName) =>
-          tProviderModal('localModel.ariaError', { modelName }),
-        ariaErrorWithReason: (modelName, reason) =>
-          tProviderModal('localModel.ariaErrorWithReason', {
-            modelName,
-            reason,
-          }),
-      },
-    },
+    providerModal,
   };
 
   return (

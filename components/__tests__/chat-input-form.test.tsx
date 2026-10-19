@@ -173,12 +173,6 @@ vi.mock('@/components/chat-input-form/voice-chat-button', () => ({
   ),
 }));
 
-vi.mock('@/components/retrieved-documents-button', () => ({
-  RetrievedDocumentsButton: () => (
-    <button data-testid="retrieved-docs-button">Docs</button>
-  ),
-}));
-
 vi.mock('@/hooks/use-embed-mode', () => ({
   useEmbedMode: vi.fn(() => mockEmbedMode),
 }));
@@ -296,6 +290,9 @@ vi.mock('@iblai/iblai-js/web-containers', async () => {
   const actual = await vi.importActual('@iblai/iblai-js/web-containers');
   return {
     ...actual,
+    RetrievedDocumentsButton: () => (
+      <button data-testid="retrieved-docs-button">Docs</button>
+    ),
     useChatPrivacy: () => ({ effective: undefined, isEffectiveReady: false }),
   };
 });
@@ -570,6 +567,14 @@ describe('ChatInputForm', () => {
     it('should render submit button', () => {
       renderWithRedux(<ChatInputForm {...defaultProps} />);
       expect(screen.getByTestId('submit-button')).toBeInTheDocument();
+    });
+
+    it('marks the prompt input, and only the prompt input, for the product tour', () => {
+      renderWithRedux(<ChatInputForm {...defaultProps} />);
+      expect(
+        screen.getByTestId('auto-resize-textarea').closest('[data-tour]'),
+      ).toHaveAttribute('data-tour', 'prompt-input');
+      expect(document.querySelectorAll('[data-tour]')).toHaveLength(1);
     });
 
     it('should render upload menu', () => {

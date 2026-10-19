@@ -211,8 +211,9 @@ test.describe('Journey 12: Chat Sharing', () => {
     const TEST_MESSAGE =
       'Hello, this is a test message for downloading the chat transcript.';
 
-    test.beforeEach(async ({ page }) => {
+    test.beforeEach(async ({ page, createMentorPage }) => {
       await navigateToMentorApp(page);
+      await createMentorPage.openAndCreate();
     });
 
     /** Sends `TEST_MESSAGE` and waits for a complete AI reply. */

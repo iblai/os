@@ -27,25 +27,22 @@ import {
   clearCookies,
   handleLogout,
   handleTenantSwitch,
-  convertFromBytes,
   formatRelativeDate,
-  getLLMModelDisplayName,
   getProviderName,
   sendMessageToParentWebsite,
   isLoggedIn,
-  htmlToMarkdown,
   isHtml,
-  parsePrompt,
-  markdownToHtml,
   getUserOS,
   isMobileOS,
   saveUserObjectToLocalStorage,
   maxDatasetFileSizeInMegaBytes,
+  disabledDatasetResourceTypes,
   formatDateToYYYYMMDD,
   formatDateToShortFormat,
   formatRelativeTime,
   getMentorIdFromUrl,
   getTenantKeyFromUrl,
+  sessionCacheKey,
   isStripeActivated,
   getCurrentArtifactTitle,
   getFirstMessageWithContent,
@@ -54,6 +51,11 @@ import {
   isSafariBrowser,
   onAccountDeleted,
 } from '@/lib/utils';
+import {
+  htmlToMarkdown,
+  parsePrompt,
+  markdownToHtml,
+} from '@/lib/markdown-engine';
 import { LOCAL_STORAGE_KEYS, QUERY_PARAMS } from '@/lib/constants';
 import { config } from '@/lib/config';
 
@@ -84,6 +86,7 @@ vi.mock('@/lib/config', () => ({
     authUrl: () => 'https://auth.example.com',
     iblPlatform: () => 'mentor',
     mentorTrainingMaximumFileSize: () => '60',
+    disabedDatasets: vi.fn(() => 'zip|courses'),
     stripeEnabled: vi.fn(() => 'true'),
   },
 }));
@@ -520,6 +523,37 @@ describe('redirectToAuthSpaJoinTenant function', () => {
     const customUrl = 'https://custom.com/path';
     redirectToAuthSpaJoinTenant('tenant-key', customUrl);
     expect(locationHrefSpy).toContain(encodeURIComponent(customUrl));
+  });
+
+  it('saves the current path and query as redirect-to before joining', () => {
+    localStorageMock.clear();
+    Object.defineProperty(window, 'localStorage', {
+      value: localStorageMock,
+      writable: true,
+      configurable: true,
+    });
+    Object.defineProperty(window, 'location', {
+      value: {
+        pathname: '/platform/test-tenant/mentor',
+        search: '?ref=email',
+        set href(value: string) {
+          locationHrefSpy = value;
+        },
+        get href() {
+          return 'https://example.com/platform/test-tenant/mentor?ref=email';
+        },
+      },
+      writable: true,
+      configurable: true,
+    });
+
+    redirectToAuthSpaJoinTenant('my-tenant');
+
+    // The join round-trip loses the original location, so it's stored first and
+    // read back on return.
+    expect(localStorageMock.getItem(LOCAL_STORAGE_KEYS.REDIRECT_TO)).toBe(
+      '/platform/test-tenant/mentor?ref=email',
+    );
   });
 
   it('should fall back to redirectToAuthSpa when no tenant key is resolved', async () => {
@@ -1012,46 +1046,6 @@ describe('clearCookies function', () => {
   });
 });
 
-describe('convertFromBytes function', () => {
-  it('should return 0 B for 0 bytes', () => {
-    expect(convertFromBytes(0)).toEqual({ value: 0, unit: 'B' });
-  });
-
-  it('should convert bytes to KB', () => {
-    expect(convertFromBytes(1024)).toEqual({ value: 1, unit: 'KB' });
-  });
-
-  it('should convert bytes to MB', () => {
-    expect(convertFromBytes(1024 * 1024)).toEqual({ value: 1, unit: 'MB' });
-  });
-
-  it('should convert bytes to GB', () => {
-    expect(convertFromBytes(1024 * 1024 * 1024)).toEqual({
-      value: 1,
-      unit: 'GB',
-    });
-  });
-
-  it('should convert bytes to TB', () => {
-    expect(convertFromBytes(1024 * 1024 * 1024 * 1024)).toEqual({
-      value: 1,
-      unit: 'TB',
-    });
-  });
-
-  it('should handle decimal values', () => {
-    const result = convertFromBytes(1536);
-    expect(result.value).toBe(1.5);
-    expect(result.unit).toBe('KB');
-  });
-
-  it('should round to 2 decimal places', () => {
-    const result = convertFromBytes(1234567);
-    expect(result.value).toBe(1.18);
-    expect(result.unit).toBe('MB');
-  });
-});
-
 describe('formatRelativeDate function', () => {
   it('should format today as time only', () => {
     const now = new Date();
@@ -1080,57 +1074,6 @@ describe('formatRelativeDate function', () => {
     date.setFullYear(date.getFullYear() - 1);
     const result = formatRelativeDate(date.toISOString());
     expect(result).toMatch(/[A-Z][a-z]{2} \d{1,2}, \d{4}/);
-  });
-});
-
-describe('getLLMModelDisplayName function', () => {
-  it('maps the ibl.ai model key onto its brand spelling', () => {
-    // Mentor settings persist `iblai`; the nav bar badge rendered that raw.
-    expect(getLLMModelDisplayName('iblai')).toBe('ibl.ai');
-  });
-
-  it('accepts the spellings that normalise onto the same key', () => {
-    expect(getLLMModelDisplayName('IBLAI')).toBe('ibl.ai');
-    expect(getLLMModelDisplayName('ibl.ai')).toBe('ibl.ai');
-    expect(getLLMModelDisplayName('ibl-ai')).toBe('ibl.ai');
-  });
-
-  it('keeps the variant when the key names one', () => {
-    // The picker labels these `ibl.ai Pro` / `ibl.ai Fast` from the API's
-    // display_name; settings persist only the wire key, so the badge has to
-    // rebuild the same label or the two surfaces disagree.
-    expect(getLLMModelDisplayName('iblai-pro')).toBe('ibl.ai Pro');
-    expect(getLLMModelDisplayName('iblai-fast')).toBe('ibl.ai Fast');
-    expect(getLLMModelDisplayName('IBLAI-FAST')).toBe('ibl.ai Fast');
-    expect(getLLMModelDisplayName('ibl-ai-pro')).toBe('ibl.ai Pro');
-    expect(getLLMModelDisplayName('IBL AI Pro')).toBe('ibl.ai Pro');
-  });
-
-  it('renders the bare brand when the key has no variant', () => {
-    expect(getLLMModelDisplayName('ibl')).toBe('ibl.ai');
-    expect(getLLMModelDisplayName('ibl-ai')).toBe('ibl.ai');
-  });
-
-  it('does not rewrite unrelated names that merely contain `ibl`', () => {
-    expect(getLLMModelDisplayName('flexible-model')).toBe('flexible-model');
-    expect(getLLMModelDisplayName('convertible')).toBe('convertible');
-  });
-
-  it('passes through keys that are already presentable', () => {
-    // Only unpresentable keys are mapped; everything else is left alone rather
-    // than enumerated, so new models need no code change.
-    expect(getLLMModelDisplayName('gpt-4.1')).toBe('gpt-4.1');
-    expect(getLLMModelDisplayName('claude-opus-4-7')).toBe('claude-opus-4-7');
-    expect(getLLMModelDisplayName('amazon.nova-2-lite-v1:0')).toBe(
-      'amazon.nova-2-lite-v1:0',
-    );
-  });
-
-  it('never returns undefined for a missing model', () => {
-    // The nav bar renders this directly; undefined would print "undefined".
-    expect(getLLMModelDisplayName(undefined)).toBe('');
-    expect(getLLMModelDisplayName(null)).toBe('');
-    expect(getLLMModelDisplayName('')).toBe('');
   });
 });
 
@@ -1540,6 +1483,17 @@ describe('maxDatasetFileSizeInMegaBytes function', () => {
   });
 });
 
+describe('disabledDatasetResourceTypes function', () => {
+  it('splits the pipe-separated env value', () => {
+    expect(disabledDatasetResourceTypes()).toEqual(['zip', 'courses']);
+  });
+
+  it('returns an empty list when the env value is empty', () => {
+    vi.mocked(config.disabedDatasets).mockReturnValueOnce('');
+    expect(disabledDatasetResourceTypes()).toEqual([]);
+  });
+});
+
 describe('formatDateToYYYYMMDD function', () => {
   it('should format date correctly', () => {
     const date = new Date('2024-01-15');
@@ -1751,6 +1705,20 @@ describe('getTenantKeyFromUrl function', () => {
       configurable: true,
     });
     expect(getTenantKeyFromUrl()).toBe('tenant-123-abc');
+  });
+});
+
+describe('sessionCacheKey function', () => {
+  it('joins tenant key and mentor id with a colon', () => {
+    expect(sessionCacheKey('acme', 'mentor-1')).toBe('acme:mentor-1');
+  });
+
+  it('produces distinct keys for the same mentor under different tenants', () => {
+    const key1 = sessionCacheKey('tenant-a', 'mentor-1');
+    const key2 = sessionCacheKey('tenant-b', 'mentor-1');
+    expect(key1).not.toBe(key2);
+    expect(key1).toBe('tenant-a:mentor-1');
+    expect(key2).toBe('tenant-b:mentor-1');
   });
 });
 

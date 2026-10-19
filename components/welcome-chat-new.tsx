@@ -6,6 +6,10 @@ import { useGetUserProjectDetailsQuery } from '@iblai/iblai-js/data-layer';
 import { Message } from '@iblai/iblai-js/web-utils';
 import { CHAT_AREA_SIZE } from '@iblai/iblai-js/web-utils';
 import { config } from '@/lib/config';
+import {
+  disabledDatasetResourceTypes,
+  maxDatasetFileSizeInMegaBytes,
+} from '@/lib/utils';
 import { useEmbedMode } from '@/hooks/use-embed-mode';
 import { WelcomeChat } from './welcome-chat';
 import { WelcomeMessage } from '@/components/welcome-chat/welcome-message';
@@ -16,6 +20,7 @@ import { ProjectLandingPage } from '@iblai/iblai-js/web-containers';
 import { useUserIsStudent } from '@/hooks/use-user';
 import { useNavigate } from '@/hooks/user-navigate';
 import { useAccessingPublicRoute } from '@/hooks/use-anonymous-mentor';
+import { useMentorSettings } from '@/hooks/use-mentors/use-mentor-settings';
 
 type Props = {
   mentorName: string;
@@ -96,6 +101,9 @@ export function WelcomeChatNew({
   const userIsStudent = useUserIsStudent();
   const isPublicRoute = useAccessingPublicRoute();
   const { navigateToProject } = useNavigate();
+  const {
+    data: { showExploreMentors },
+  } = useMentorSettings();
 
   const { data: project } = useGetUserProjectDetailsQuery(
     {
@@ -169,6 +177,8 @@ export function WelcomeChatNew({
         isPublicRoute={isPublicRoute}
         navigateToProject={navigateToProject}
         showExploreMentors
+        disabledResourceTypes={disabledDatasetResourceTypes()}
+        maxUploadSizeMb={maxDatasetFileSizeInMegaBytes()}
       />
     );
   }
@@ -248,9 +258,11 @@ export function WelcomeChatNew({
         </div>
 
         {/* Explore Mentors */}
-        <div className="mb-12">
-          <ExploreMentors />
-        </div>
+        {showExploreMentors && (
+          <div className="mb-12">
+            <ExploreMentors />
+          </div>
+        )}
 
         {/* Tools Section */}
         {/*

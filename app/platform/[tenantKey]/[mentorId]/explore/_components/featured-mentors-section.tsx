@@ -1,15 +1,14 @@
 'use client';
 
 import React from 'react';
-import { Award } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { useGetAiSearchMentorsQuery } from '@iblai/iblai-js/data-layer';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { Spinner } from '@/components/spinner';
 import { useExplorePageContext } from './explore-page-context';
 import { MentorCardWithStar } from './mentor-card-with-star';
+import { MENTOR_GRID_CLASSNAME, SectionHeader } from './section';
 
 const FEATURED_MENTORS_LIMIT = 6;
 
@@ -69,75 +68,50 @@ export function FeaturedMentorsSection() {
     return featuredMentorsData.results as MentorWithProfile[];
   }, [featuredMentorsData]);
 
-  // Don't render the section if there are no featured mentors
-  if (featuredMentors.length === 0 && !featuredMentorsFetching) {
+  const headingId = React.useId();
+
+  // Featured agents are optional per tenant, so the section only appears once
+  // there is something to show — never a placeholder that claims "none".
+  if (featuredMentors.length === 0) {
     return null;
   }
 
   return (
-    <div>
-      <h2
-        className="mb-4 text-lg font-medium text-gray-900"
-        role="heading"
-        aria-level={2}
-      >
-        {t('heading')}
-      </h2>
-      {featuredMentors.length > 0 ? (
-        <>
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-            {featuredMentors.map((mentor) => (
-              <MentorCardWithStar key={mentor.id} mentor={mentor} />
-            ))}
-          </div>
-          {featuredMentorsData?.next && (
-            <div className="mt-6 flex justify-center">
-              <Button
-                variant="outline"
-                onClick={() =>
-                  setNumberOfFeaturedMentors(
-                    numberOfFeaturedMentors + FEATURED_MENTORS_LIMIT,
-                  )
-                }
-                disabled={featuredMentorsFetching}
-                aria-label={t('loadMoreAriaLabel')}
-              >
-                {featuredMentorsFetching ? (
-                  <div className="flex items-center gap-2">
-                    <Spinner className="h-4 w-4" aria-hidden="true" />
-                    <span>{t('loadingMore')}</span>
-                  </div>
-                ) : (
-                  t('seeMore')
-                )}
-              </Button>
-            </div>
-          )}
-        </>
-      ) : (
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-          <Card className="rounded-lg border border-[#D0E0FF] bg-[#F5F8FF] md:col-span-2 lg:col-span-3">
-            <CardContent className="p-6">
-              <div className="flex items-start gap-4">
-                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-[#D0E0FF]">
-                  <Award className="h-6 w-6 text-[#38A1E5]" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <h3 className="mb-2 text-sm font-medium text-gray-900">
-                    {t('emptyStateTitle')}
-                  </h3>
-                  <p className="mb-3 text-sm leading-relaxed text-gray-600">
-                    {t('emptyStateDescription')}
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    {t('emptyStateNoAgents')}
-                  </p>
-                </div>
+    <section aria-labelledby={headingId}>
+      <SectionHeader
+        id={headingId}
+        title={t('heading')}
+        count={featuredMentorsData?.count}
+      />
+      <div className={MENTOR_GRID_CLASSNAME}>
+        {featuredMentors.map((mentor) => (
+          <MentorCardWithStar key={mentor.id} mentor={mentor} />
+        ))}
+      </div>
+      {featuredMentorsData?.next && (
+        <div className="mt-6 flex justify-center">
+          <Button
+            variant="outline"
+            className="rounded-full px-5"
+            onClick={() =>
+              setNumberOfFeaturedMentors(
+                numberOfFeaturedMentors + FEATURED_MENTORS_LIMIT,
+              )
+            }
+            disabled={featuredMentorsFetching}
+            aria-label={t('loadMoreAriaLabel')}
+          >
+            {featuredMentorsFetching ? (
+              <div className="flex items-center gap-2">
+                <Spinner className="h-4 w-4" aria-hidden="true" />
+                <span>{t('loadingMore')}</span>
               </div>
-            </CardContent>
-          </Card>
+            ) : (
+              t('seeMore')
+            )}
+          </Button>
         </div>
       )}
-    </div>
+    </section>
   );
 }

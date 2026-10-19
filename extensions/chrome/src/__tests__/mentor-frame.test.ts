@@ -1,13 +1,21 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  embedRedirectPath,
   installSession,
   mentorIframe,
   readActiveTab,
+  refreshHostAuthCache,
   removeWidgetSpinner,
   startContextFeed,
   watchAndInstallSession,
+  watchTenantSwitch,
 } from '../mentor-frame';
-import { SESSION, installChromeStub, type ChromeStub } from './chrome.stub';
+import {
+  SESSION,
+  installChromeStub,
+  sessionRedirect,
+  type ChromeStub,
+} from './chrome.stub';
 
 let chromeStub: ChromeStub;
 
@@ -79,6 +87,179 @@ describe('installSession', () => {
   });
 });
 
+describe('installSession with an explicit redirect path (tenant switch)', () => {
+  it('re-routes to sso-login-complete with the given path, even from a chat URL', () => {
+    const { host, iframe } = makeHost(
+      'https://os.ibl.ai/platform/acme/bot?embed=true&mode=anonymous',
+    );
+    expect(installSession(host, '/?embed=true&mode=anonymous')).toBe(true);
+    const url = new URL(iframe.src);
+    expect(url.pathname).toBe('/sso-login-complete');
+    expect(url.searchParams.get('redirect-path')).toBe(
+      '/?embed=true&mode=anonymous',
+    );
+  });
+});
+
+describe('watchTenantSwitch', () => {
+  it('re-auths into the requested tenant and re-installs via sso-login-complete', async () => {
+    const { host, iframe } = makeHost(
+      'https://os.ibl.ai/platform/acme/bot?embed=true&mode=anonymous',
+    );
+    const stop = watchTenantSwitch(host);
+    window.dispatchEvent(
+      new MessageEvent('message', {
+        data: { tenantSwitch: true, tenant: 'beta' },
+      }),
+    );
+    await vi.waitFor(() =>
+      expect(chromeStub.stub.identity.launchWebAuthFlow).toHaveBeenCalled(),
+    );
+    const [{ url }] = chromeStub.stub.identity.launchWebAuthFlow.mock
+      .calls[0] as unknown as [{ url: string }];
+    expect(url).toContain('tenant=beta');
+    await vi.waitFor(() => expect(iframe.src).toContain('/sso-login-complete'));
+    const routed = new URL(iframe.src);
+    // Lands on root (embed params preserved), not the old tenant's path.
+    expect(routed.searchParams.get('redirect-path')).toBe(
+      '/?embed=true&mode=anonymous',
+    );
+    stop();
+  });
+
+  it('captures the return path BEFORE auth, so a mid-flight navigation cannot degrade it to bare /', async () => {
+    const { host, iframe } = makeHost(
+      'https://os.ibl.ai/platform/acme/bot?embed=true&mode=anonymous',
+    );
+    // Simulate the app navigating the iframe to a /sso-login-complete URL while
+    // the auth round-trip is in flight (its query has only data/redirect-path/
+    // tenant — everything embedRedirectPath would strip to "/").
+    chromeStub.stub.identity.launchWebAuthFlow.mockImplementationOnce(
+      async () => {
+        iframe.setAttribute(
+          'src',
+          'https://os.ibl.ai/sso-login-complete?data=x&redirect-path=%2F&tenant=old',
+        );
+        return sessionRedirect(SESSION);
+      },
+    );
+    const stop = watchTenantSwitch(host);
+    window.dispatchEvent(
+      new MessageEvent('message', {
+        data: { tenantSwitch: true, tenant: 'beta' },
+      }),
+    );
+    await vi.waitFor(() =>
+      expect(iframe.src).toContain('redirect-path=%2F%3Fembed'),
+    );
+    const routed = new URL(iframe.src);
+    // The captured pre-auth embed params win, not the mid-flight bare "/".
+    expect(routed.searchParams.get('redirect-path')).toBe(
+      '/?embed=true&mode=anonymous',
+    );
+    stop();
+  });
+
+  it('strips the stale session data, redirect-path and tenant from the return path', async () => {
+    // By switch time the iframe is a previously-installed /sso-login-complete
+    // result whose query still holds a full `data` blob; it must not be carried
+    // into the next redirect-path (that nests + overflows the request line).
+    const { host, iframe } = makeHost(
+      'https://os.ibl.ai/?embed=true&mode=anonymous' +
+        '&data=%7B%22axd_token%22%3A%22stale%22%7D' +
+        '&redirect-path=%2Fplatform%2Facme%2Fbot&tenant=acme',
+    );
+    const stop = watchTenantSwitch(host);
+    window.dispatchEvent(
+      new MessageEvent('message', {
+        data: { tenantSwitch: true, tenant: 'beta' },
+      }),
+    );
+    await vi.waitFor(() => expect(iframe.src).toContain('/sso-login-complete'));
+    const routed = new URL(iframe.src);
+    // Only the embed params survive — no nested data / redirect-path / old tenant.
+    expect(routed.searchParams.get('redirect-path')).toBe(
+      '/?embed=true&mode=anonymous',
+    );
+    stop();
+  });
+
+  it('refreshes agent-ai cached host auth so its re-broadcast cannot revert the switch', async () => {
+    const { host, iframe } = makeHost(
+      'https://os.ibl.ai/platform/acme/bot?embed=true&mode=anonymous',
+    );
+    // Simulate agent-ai's stale mount-time cache (a different/old session).
+    (host as unknown as { iblData: string }).iblData = JSON.stringify({
+      axd_token: 'stale-old',
+      tenant: 'old',
+    });
+    const stop = watchTenantSwitch(host);
+    window.dispatchEvent(
+      new MessageEvent('message', {
+        data: { tenantSwitch: true, tenant: 'beta' },
+      }),
+    );
+    await vi.waitFor(() => expect(iframe.src).toContain('/sso-login-complete'));
+    const cached = JSON.parse((host as unknown as { iblData: string }).iblData);
+    // Cache now mirrors the freshly-installed session, not the stale old one.
+    expect(cached.axd_token).toBe(localStorage.getItem('axd_token'));
+    expect(cached.tenant).toBe(localStorage.getItem('tenant'));
+    expect(cached.axd_token).not.toBe('stale-old');
+    stop();
+  });
+
+  it('ignores messages that are not a tenant switch', async () => {
+    const { host, iframe } = makeHost();
+    const before = iframe.src;
+    const stop = watchTenantSwitch(host);
+    window.dispatchEvent(
+      new MessageEvent('message', { data: { loaded: true } }),
+    );
+    await Promise.resolve();
+    expect(chromeStub.stub.identity.launchWebAuthFlow).not.toHaveBeenCalled();
+    expect(iframe.src).toBe(before);
+    stop();
+  });
+});
+
+describe('refreshHostAuthCache', () => {
+  it('writes the current session into agent-ai iblData in its expected shape', () => {
+    const { host } = makeHost();
+    localStorage.setItem('axd_token', 'A');
+    localStorage.setItem('tenant', 'beta');
+    localStorage.setItem('current_tenant', '{"key":"beta"}');
+    refreshHostAuthCache(host);
+    const cached = JSON.parse((host as unknown as { iblData: string }).iblData);
+    expect(cached).toMatchObject({
+      axd_token: 'A',
+      tenant: 'beta',
+      current_tenant: '{"key":"beta"}',
+    });
+    // Missing keys are present as null (the shape agent-ai rebuilds from).
+    expect(cached).toHaveProperty('edx_jwt_token');
+  });
+});
+
+describe('embedRedirectPath', () => {
+  it('keeps embed params but drops auth/routing params', () => {
+    const { host } = makeHost(
+      'https://os.ibl.ai/?embed=true&data=x&redirect-path=/y&tenant=acme',
+    );
+    expect(embedRedirectPath(host)).toBe('/?embed=true');
+  });
+
+  it('returns root when there are no query params', () => {
+    const { host } = makeHost('https://os.ibl.ai/');
+    expect(embedRedirectPath(host)).toBe('/');
+  });
+
+  it('returns root when there is no iframe or the src is unparseable', () => {
+    expect(embedRedirectPath(document.createElement('agent-ai'))).toBe('/');
+    const { host } = makeHost(':::not-a-url');
+    expect(embedRedirectPath(host)).toBe('/');
+  });
+});
+
 describe('watchAndInstallSession', () => {
   // The widget sets the iframe's src while React is still committing, so
   // waiting even one tick lets that first (unauthenticated, thrown-away)
@@ -127,6 +308,39 @@ describe('removeWidgetSpinner', () => {
 });
 
 describe('readActiveTab', () => {
+  // The Web Store is ordinary https, so the old protocol check waved it
+  // through and `executeScript` failed inside Chrome instead — which left the
+  // panel silently holding the PREVIOUS page's text, since a failed read
+  // neither pushes nor clears.
+  it('skips the Chrome Web Store, which no extension may read', async () => {
+    for (const url of [
+      'https://chromewebstore.google.com/detail/foo/abc',
+      'https://chrome.google.com/webstore/detail/foo/abc',
+    ]) {
+      chromeStub.stub.tabs.query.mockResolvedValueOnce([
+        { id: 1, url, active: true },
+      ]);
+      await expect(readActiveTab()).resolves.toBeNull();
+    }
+    expect(chromeStub.stub.scripting.executeScript).not.toHaveBeenCalled();
+  });
+
+  // Undocked DevTools is a window of its own, so `lastFocusedWindow` resolved
+  // to it while debugging and the read came back empty. The browse bridge
+  // already resolves by window id for exactly this reason.
+  it('asks for the active tab of THIS window, not the last-focused one', async () => {
+    chromeStub.stub.tabs.query.mockResolvedValueOnce([
+      { id: 1, url: 'https://example.com', active: true },
+    ]);
+    await readActiveTab();
+    expect(chromeStub.stub.tabs.query).toHaveBeenCalledWith(
+      expect.objectContaining({ active: true, windowId: 1 }),
+    );
+    expect(chromeStub.stub.tabs.query).not.toHaveBeenCalledWith(
+      expect.objectContaining({ lastFocusedWindow: true }),
+    );
+  });
+
   it('skips browser pages and swallows injection failures', async () => {
     chromeStub.stub.tabs.query.mockResolvedValueOnce([
       { id: 1, url: 'chrome://extensions', active: true },
@@ -153,6 +367,38 @@ describe('readActiveTab', () => {
       title: 'Page',
       text: expect.stringContaining('Hello page'),
     });
+  });
+
+  it("feeds every frame's text, page first, and skips frames with none", async () => {
+    document.body.innerHTML = '<p>Hello page</p>';
+    document.title = 'Page';
+    const original =
+      chromeStub.stub.scripting.executeScript.getMockImplementation()!;
+    chromeStub.stub.scripting.executeScript.mockImplementationOnce(
+      async (injection) => [
+        {
+          frameId: 4,
+          result: {
+            title: 'Chat',
+            href: 'https://chat.acme.com/frame',
+            text: 'hi from chat',
+          },
+        },
+        {
+          frameId: 2,
+          result: { title: 'Pixel', href: 'https://ads.example/px', text: '' },
+        },
+        ...(await original(injection)),
+      ],
+    );
+    const content = await readActiveTab();
+    expect(content).toMatchObject({ title: 'Page', href: location.href });
+    expect(content!.text).toMatch(/Hello page\n\nhi from chat$/);
+  });
+
+  it('returns null when the page answered with no frames', async () => {
+    chromeStub.stub.scripting.executeScript.mockResolvedValueOnce([]);
+    await expect(readActiveTab()).resolves.toBeNull();
   });
 });
 

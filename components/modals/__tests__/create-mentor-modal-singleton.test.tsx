@@ -87,6 +87,21 @@ vi.mock('@sentry/nextjs', () => ({
   captureException: vi.fn(),
 }));
 
+// SettingsModal labels its provider column through the SDK's catalogue hook,
+// which queries llmsApiSlice inside the SDK bundle (out of reach of the
+// data-layer mock below); the test store does not mount that slice.
+vi.mock('@iblai/iblai-js/web-containers', async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import('@iblai/iblai-js/web-containers')>();
+  return {
+    ...actual,
+    useLlmProviderCatalogue: () => (key?: string | null) => ({
+      logo: null,
+      displayName: key ?? '',
+    }),
+  };
+});
+
 vi.mock('@iblai/iblai-js/data-layer', async (importOriginal) => {
   const actual =
     await importOriginal<typeof import('@iblai/iblai-js/data-layer')>();

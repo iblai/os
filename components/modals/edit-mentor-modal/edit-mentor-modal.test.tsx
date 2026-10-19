@@ -204,9 +204,6 @@ vi.mock('./tabs', () => ({
   PrivacyTab: () => <div data-testid="privacy-tab">Privacy Tab</div>,
   TasksTab: () => <div data-testid="tasks-tab">Tasks Tab</div>,
   HistoryTab: () => <div data-testid="history-tab">History Tab</div>,
-  // Local DatasetsTab still lives on the barrel (used by the workflows
-  // node-config-panel); the modal now mounts the SDK wrapper below.
-  DatasetsTab: () => <div data-testid="local-datasets-tab">Datasets Tab</div>,
   EvaluationTab: () => <div data-testid="evaluation-tab">Evaluation Tab</div>,
   ApiTab: () => <div data-testid="api-tab">API Tab</div>,
   EmbedTab: () => <div data-testid="embed-tab">Embed Tab</div>,
@@ -236,7 +233,7 @@ vi.mock('./tabs/memory-tab', () => ({
   MemoryTab: () => <div data-testid="memory-tab">Memory Tab</div>,
 }));
 
-vi.mock('./tabs/disclaimers-tab', () => ({
+vi.mock('./disclaimers-tab', () => ({
   DisclaimersTab: () => (
     <div data-testid="disclaimers-tab">Disclaimers Tab</div>
   ),

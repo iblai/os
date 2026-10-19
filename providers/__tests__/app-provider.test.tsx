@@ -49,6 +49,8 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
 }));
 
 vi.mock('@iblai/iblai-js/web-containers', () => ({
+  // AppProvider registers the app's markdown engine with the SDK canvas.
+  configureCanvasMarkdown: vi.fn(),
   useIframeMessageHandler: (opts: {
     handlers?: Record<string, (event: MessageEvent) => unknown>;
     defaultHandler?: (data: Record<string, unknown>) => void;
@@ -57,6 +59,12 @@ vi.mock('@iblai/iblai-js/web-containers', () => ({
   },
 }));
 
+// The launcher reads navigation and user hooks; AppProvider only mounts it.
+vi.mock('../agent-settings-launcher', () => ({
+  AgentSettingsLauncher: ({ children }: { children: React.ReactNode }) => (
+    <>{children}</>
+  ),
+}));
 vi.mock('../message-bridge-provider', () => ({
   MessageBridgeProvider: ({ children }: { children?: React.ReactNode }) => (
     <div data-testid="message-bridge-provider">{children}</div>
@@ -195,13 +203,14 @@ describe('AppProvider', () => {
       });
     });
 
-    it('fetches pinned messages with tenant, session, and user name', async () => {
+    it('fetches pinned messages with tenant and user name', async () => {
       await invokeMentorResponded({
         data: { value: { sessionId: 'session-4' } },
       });
+      // iblai-js 2.33.1 dropped sessionId from PinnedMessagesArgs — pinned
+      // messages are scoped by org + user, not by session.
       expect(mockGetPinnedMessages).toHaveBeenCalledWith({
         org: 'tenant-xyz',
-        sessionId: 'session-4',
         userId: 'user-name-abc',
       });
     });

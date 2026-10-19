@@ -1,6 +1,11 @@
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import { render, act } from '@testing-library/react';
 import React from 'react';
+import {
+  beginAuthRecoveryRoundTrip,
+  clearAuthRecovery,
+  resolveAuthRecovery,
+} from '@/lib/auth-recovery-lock';
 
 // ── controllable mocks ──────────────────────────────────────────────────────
 
@@ -18,6 +23,13 @@ let mockPathname = '/';
 let mockSearchParams = new URLSearchParams();
 let mockRouter = { push: mockPush, replace: mockReplace };
 
+// AppProvider mounts the agent-settings launcher, which reads navigation and
+// user hooks this suite does not set up; it has its own tests.
+vi.mock('../agent-settings-launcher', () => ({
+  AgentSettingsLauncher: ({ children }: { children: React.ReactNode }) => (
+    <>{children}</>
+  ),
+}));
 vi.mock('next/navigation', () => ({
   useParams: () => mockParams,
   usePathname: () => mockPathname,
@@ -235,6 +247,8 @@ let capturedIframeMessageHandler: {
 let pendingIframeMessages: Record<string, unknown>[] = [];
 
 vi.mock('@iblai/iblai-js/web-containers', () => ({
+  // AppProvider registers the app's markdown engine with the SDK canvas.
+  configureCanvasMarkdown: vi.fn(),
   sanitizeCss: (css: string) => css,
   useIframeMessageHandler: (opts: {
     handlers?: unknown;
@@ -277,6 +291,7 @@ vi.mock('@iblai/iblai-js/web-utils', () => ({
   useTenantSwitchSync: vi.fn(),
   refreshTenantSwitchLock: vi.fn(),
   isTenantSwitchInProgress: vi.fn(() => false),
+  AUTH_TOKENS_UPDATED_EVENT: 'ibl:auth-tokens-updated',
   useTenantMetadata: () => ({
     metadata: mockMetadata,
     platformName: null,
@@ -453,6 +468,13 @@ describe('Providers', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     resetState();
+    // The auth-recovery lock is a real module singleton; reset its state so a
+    // round-trip or in-progress flag from one test can't leak into the next.
+    resolveAuthRecovery(false);
+    clearAuthRecovery();
+    // clearAllMocks wipes call history but not implementations set via
+    // mockReturnValue, so restore the non-iframe default that most tests assume.
+    mockIsInIframe.mockReturnValue(false);
   });
 
   // ── basic rendering ─────────────────────────────────────────────────────
@@ -499,7 +521,18 @@ describe('Providers', () => {
           401: expect.any(Function),
           402: expect.any(Function),
         }),
+        undefined,
+        // Standalone (not iframed): no refreshAuthToken, so the data layer uses
+        // its own edX-session mint.
+        undefined,
       );
+    });
+
+    it('passes a refreshAuthToken (host round-trip) when iframed', () => {
+      mockIsInIframe.mockReturnValue(true);
+      renderProviders();
+      const call = mockInitializeDataLayer.mock.calls.at(-1)!;
+      expect(call[6]).toEqual(expect.any(Function));
     });
 
     it('creates a script element when __ENV__ is not defined', () => {
@@ -742,20 +775,57 @@ describe('Providers', () => {
       expect(capturedIframeMessageHandler.defaultHandler).toBeDefined();
     });
 
-    it('default handler saves user data and reloads when axd_token present', () => {
+    it('default handler saves user data and re-hydrates in place (no reload) when axd_token present', () => {
+      const reloadSpy = vi.fn();
+      const originalLocation = window.location;
+      Object.defineProperty(window, 'location', {
+        configurable: true,
+        value: { ...originalLocation, reload: reloadSpy },
+      });
+      const eventSpy = vi.fn();
+      window.addEventListener('ibl:auth-tokens-updated', eventSpy);
       // Queue a message with axd_token to be processed by the defaultHandler during render
       pendingIframeMessages = [{ axd_token: 'test-token' }];
       renderProviders();
       expect(mockSaveUserObjectToLocalStorage).toHaveBeenCalledWith({
         axd_token: 'test-token',
       });
+      // Fresh tokens arrived in this window; the handler fires the
+      // token-update event so the AuthProvider re-checks and renders
+      // authenticated IN PLACE — no full reload (which re-downloads assets).
+      expect(eventSpy).toHaveBeenCalledTimes(1);
+      expect(reloadSpy).not.toHaveBeenCalled();
+      window.removeEventListener('ibl:auth-tokens-updated', eventSpy);
+      Object.defineProperty(window, 'location', {
+        configurable: true,
+        value: originalLocation,
+      });
+    });
+
+    it('default handler resolves a pending data-layer round-trip when tokens arrive', async () => {
+      const eventSpy = vi.fn();
+      window.addEventListener('ibl:auth-tokens-updated', eventSpy);
+      // A data-layer 401 is awaiting fresh tokens from the host.
+      const roundTrip = beginAuthRecoveryRoundTrip();
+      pendingIframeMessages = [{ axd_token: 'test-token' }];
+      renderProviders();
+      // The token-update event still fires (so a separately-blocked
+      // AuthProvider recovers too), AND the awaited round-trip resolves true so
+      // the failed request replays with the new tokens.
+      expect(eventSpy).toHaveBeenCalledTimes(1);
+      await expect(roundTrip).resolves.toBe(true);
+      window.removeEventListener('ibl:auth-tokens-updated', eventSpy);
     });
 
     it('default handler does nothing when axd_token is absent', () => {
+      const eventSpy = vi.fn();
+      window.addEventListener('ibl:auth-tokens-updated', eventSpy);
       // Queue a message without axd_token
       pendingIframeMessages = [{ some_other_data: true }];
       renderProviders();
       expect(mockSaveUserObjectToLocalStorage).not.toHaveBeenCalled();
+      expect(eventSpy).not.toHaveBeenCalled();
+      window.removeEventListener('ibl:auth-tokens-updated', eventSpy);
     });
   });
 
@@ -1053,6 +1123,42 @@ describe('Providers', () => {
         capturedMentorProviderProps.redirectToNoMentorsPage as Function;
       fn();
       expect(mockPush).not.toHaveBeenCalled();
+    });
+  });
+
+  // ── tenant-wide analytics short-circuits in MentorProvider callbacks ──
+
+  describe('tenant-wide analytics MentorProvider callbacks', () => {
+    it('does not redirect to a default agent on the tenant analytics overview', () => {
+      mockPathname = '/platform/test-tenant/analytics';
+      renderProviders();
+
+      (capturedMentorProviderProps.redirectToMentor as Function)('t', 'm');
+      (capturedMentorProviderProps.redirectToNoMentorsPage as Function)();
+
+      expect(mockPush).not.toHaveBeenCalled();
+      expect(capturedMentorProviderProps.requestedMentorId).toBeUndefined();
+    });
+
+    it('does not redirect on a tenant analytics tab', () => {
+      mockPathname = '/platform/test-tenant/analytics/users';
+      renderProviders();
+
+      (capturedMentorProviderProps.redirectToMentor as Function)('t', 'm');
+
+      expect(mockPush).not.toHaveBeenCalled();
+    });
+
+    it('still runs the mentor check on the per-agent analytics section', () => {
+      mockPathname = '/platform/test-tenant/mentor-123/analytics';
+      renderProviders();
+
+      (capturedMentorProviderProps.redirectToMentor as Function)(
+        'test-tenant',
+        'mentor-123',
+      );
+
+      expect(mockPush).toHaveBeenCalledWith('/platform/test-tenant/mentor-123');
     });
   });
 
@@ -1819,6 +1925,15 @@ describe('Providers', () => {
     it('passes true for enableStorageSync in normal mode', () => {
       renderProviders();
       expect(capturedAuthProviderProps.enableStorageSync).toBe(true);
+    });
+
+    it('disables storage sync in an embed so stale host cookies cannot revert the session', () => {
+      // Cross-SPA cookie sync inside an iframe reads the host's shared cookies
+      // back over the embed's own localStorage session (e.g. reverting a tenant
+      // switch to the previous tenant).
+      mockIsInIframe.mockReturnValue(true);
+      renderProviders();
+      expect(capturedAuthProviderProps.enableStorageSync).toBe(false);
     });
   });
 

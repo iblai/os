@@ -42,6 +42,7 @@
     "e2e",
     "e2e-tauri",
     "src-tauri/target",
-    "extensions"
+    "extensions",
+    "seed.spec.ts"
   ]
 }

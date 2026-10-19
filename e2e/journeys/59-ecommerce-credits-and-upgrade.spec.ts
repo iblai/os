@@ -13,6 +13,7 @@ import {
   MENTOR_NEXTJS_HOST,
 } from '../fixtures/test-data';
 import { parsePlatformUrl, safeWaitForURL } from '../utils/navigation';
+import { dismissProductTourIfShown } from '../utils/product-tour';
 import {
   closeCreditBalanceDropdown,
   creditBalancePanel,
@@ -337,6 +338,7 @@ test.describe('Journey 59: Ecommerce Credits & Upgrade', () => {
               name: 'Selected agent dropdown button',
             }),
           ).toBeVisible({ timeout: 60_000 });
+          await dismissProductTourIfShown(page);
           logger.info(`[ecommerce] landed on main tenant: ${page.url()}`);
         },
       );

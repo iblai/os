@@ -1,7 +1,7 @@
 import { test, expect } from '../fixtures/mentor-test';
 import { navigateToMentorApp, checkAdminStatus } from '../utils/auth';
 import { waitForPageReady } from '../utils/resilient';
-import { generateProjectName } from '../fixtures/test-data';
+import { E2E_LLM_NAME, generateProjectName } from '../fixtures/test-data';
 import { deleteProjectByName } from '../utils/project-cleanup';
 
 // ─── Journey 26: Projects ───────────────────────────────────────────────────
@@ -211,10 +211,19 @@ test.describe('Journey 26-B: Projects — Landing Page', () => {
     page,
     chatPage,
     projectPage,
+    editMentorPage,
     testProject,
   }) => {
     await projectPage.openProjectChatFromIndex(testProject.name);
     await waitForPageReady(page);
+
+    // The project's attached agent is picked implicitly (createFromSidebar
+    // selects the first agent card) and may still default to `iblai-pro` —
+    // pin it to the suite-wide test LLM (issue #2534) so the send below
+    // doesn't depend on that provider's shared quota.
+    await editMentorPage.open('LLM');
+    await editMentorPage.llm.selectProviderAndModel('ibl.ai', E2E_LLM_NAME);
+    await editMentorPage.close();
 
     // Verify chat input is present (project chat page)
     await expect(chatPage.chatInput).toBeVisible({ timeout: 15_000 });

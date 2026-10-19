@@ -83,6 +83,7 @@ describe('useMentorSettings', () => {
     embed_show_voice_record: false,
     show_catalogue: false,
     show_reasoning: true,
+    show_explore_mentors: true,
     llm_config: { temperature: 0.7 },
   };
 
@@ -213,6 +214,7 @@ describe('useMentorSettings', () => {
         embedShowVoiceRecord: false,
         showCatalogue: false,
         showReasoning: true,
+        showExploreMentors: true,
         llmConfig: { temperature: 0.7 },
       });
     });
@@ -251,6 +253,90 @@ describe('useMentorSettings', () => {
       const { result } = renderHook(() => useMentorSettings());
 
       expect(result.current.data.showReasoning).toBe(false);
+    });
+
+    it('should ignore an RBAC-redacted "" show_reasoning and use the public value', () => {
+      mockUseGetMentorSettingsQuery.mockReturnValue({
+        data: { ...mockMentorSettings, show_reasoning: '' },
+        isLoading: false,
+      });
+      mockUseGetMentorPublicSettingsQuery.mockReturnValue({
+        data: { ...mockPublicSettings, show_reasoning: true },
+        isLoading: false,
+      });
+
+      const { result } = renderHook(() => useMentorSettings());
+
+      expect(result.current.data.showReasoning).toBe(true);
+    });
+
+    it('should fall back to public settings show_explore_mentors when absent from mentor settings', () => {
+      const mentorWithoutExplore = { ...mockMentorSettings };
+      delete (mentorWithoutExplore as { show_explore_mentors?: boolean })
+        .show_explore_mentors;
+      mockUseGetMentorSettingsQuery.mockReturnValue({
+        data: mentorWithoutExplore,
+        isLoading: false,
+      });
+      mockUseGetMentorPublicSettingsQuery.mockReturnValue({
+        data: { ...mockPublicSettings, show_explore_mentors: true },
+        isLoading: false,
+      });
+
+      const { result } = renderHook(() => useMentorSettings());
+
+      expect(result.current.data.showExploreMentors).toBe(true);
+    });
+
+    it('should default showExploreMentors to false when absent from both settings', () => {
+      const mentorWithoutExplore = { ...mockMentorSettings };
+      delete (mentorWithoutExplore as { show_explore_mentors?: boolean })
+        .show_explore_mentors;
+      mockUseGetMentorSettingsQuery.mockReturnValue({
+        data: mentorWithoutExplore,
+        isLoading: false,
+      });
+      mockUseGetMentorPublicSettingsQuery.mockReturnValue({
+        data: { ...mockPublicSettings },
+        isLoading: false,
+      });
+
+      const { result } = renderHook(() => useMentorSettings());
+
+      expect(result.current.data.showExploreMentors).toBe(false);
+    });
+
+    // Field-level RBAC: a logged-in non-owner still gets a 200 from
+    // /settings/ but unreadable fields come back as "" — that must not
+    // shadow the public value.
+    it('should ignore an RBAC-redacted "" show_explore_mentors and use the public value', () => {
+      mockUseGetMentorSettingsQuery.mockReturnValue({
+        data: { ...mockMentorSettings, show_explore_mentors: '' },
+        isLoading: false,
+      });
+      mockUseGetMentorPublicSettingsQuery.mockReturnValue({
+        data: { ...mockPublicSettings, show_explore_mentors: true },
+        isLoading: false,
+      });
+
+      const { result } = renderHook(() => useMentorSettings());
+
+      expect(result.current.data.showExploreMentors).toBe(true);
+    });
+
+    it('should stay false when show_explore_mentors is redacted and public is false', () => {
+      mockUseGetMentorSettingsQuery.mockReturnValue({
+        data: { ...mockMentorSettings, show_explore_mentors: '' },
+        isLoading: false,
+      });
+      mockUseGetMentorPublicSettingsQuery.mockReturnValue({
+        data: { ...mockPublicSettings, show_explore_mentors: false },
+        isLoading: false,
+      });
+
+      const { result } = renderHook(() => useMentorSettings());
+
+      expect(result.current.data.showExploreMentors).toBe(false);
     });
   });
 

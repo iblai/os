@@ -16,21 +16,18 @@ describe('EmptyState component', () => {
     expect(screen.getByText('Custom empty message')).toBeInTheDocument();
   });
 
-  it('should have correct container structure', () => {
+  it('should render a hint under the message when given', () => {
+    render(<EmptyState hint="Try a different search term." />);
+
+    expect(screen.getByText('Sorry, no agents found!')).toBeInTheDocument();
+    expect(
+      screen.getByText('Try a different search term.'),
+    ).toBeInTheDocument();
+  });
+
+  it('should not render a hint when none is given', () => {
     const { container } = render(<EmptyState />);
 
-    // Check for the outer container
-    const outerDiv = container.firstChild as HTMLElement;
-    expect(outerDiv).toHaveClass(
-      'flex',
-      'h-60',
-      'w-full',
-      'items-center',
-      'justify-center',
-    );
-
-    // Check for the inner rounded container
-    const innerDiv = outerDiv.firstChild as HTMLElement;
-    expect(innerDiv).toHaveClass('rounded-lg', 'bg-[#F8F8FB]', 'text-center');
+    expect(container.querySelectorAll('p')).toHaveLength(1);
   });
 });

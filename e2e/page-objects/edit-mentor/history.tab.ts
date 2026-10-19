@@ -1,6 +1,10 @@
 import { Page, Locator, expect } from '@playwright/test';
 import { isVisibleWithin } from '../../utils/resilient';
 
+/** Raw chat markup that a history row's title/preview must never show: LaTeX
+ *  delimiters and commands, and markdown bold. Rows render plain text. */
+export const RAW_CHAT_MARKUP = /\\\(|\\\)|\\\[|\\\]|\\text\{|\\textbf\{|\*\*/;
+
 export class HistoryTab {
   readonly page: Page;
   readonly dialog: Locator;
@@ -12,11 +16,65 @@ export class HistoryTab {
   readonly sentimentFilter: Locator;
   readonly topicFilter: Locator;
   readonly previewPanel: Locator;
+  /** The scrollable conversation list (rows are its direct children). */
+  readonly conversationList: Locator;
+  /** Owner label of each list row: a "View profile for …" button when the
+   *  user has a platform profile, else a plain span (LTI-only / Anonymous). */
+  readonly rowOwners: Locator;
+  readonly linkedRowOwners: Locator;
+  /** Owner label of the selected conversation in the preview pane/dialog. */
+  readonly previewOwner: Locator;
+  /** The shared Profile viewer an owner link opens (same as Management → Users). */
+  readonly ownerProfileDialog: Locator;
+  /** "Tools · N" chips on list rows. */
+  readonly rollupBadges: Locator;
+  /** "Documents · N" chips on list rows: the chat's documents dialog, one click away. */
+  readonly documentsChips: Locator;
+  /** The chat's "Retrieved Documents" dialog (opened by any sources control). */
+  readonly retrievedDocumentsDialog: Locator;
+  /** Per-turn "Show Details" / "Hide Details" toggles in the transcript. */
+  readonly turnDetailsToggles: Locator;
+  readonly turnDetailsPanels: Locator;
+  /** The chat's "Open Canvas" cards for the selected conversation's canvases
+   *  (absent when the conversation produced none). */
+  readonly canvasCards: Locator;
+  readonly openCanvasButtons: Locator;
+  /** The chat's canvas, read-only, in a dialog. */
+  readonly canvasDialog: Locator;
 
   constructor(page: Page, dialog: Locator) {
     this.page = page;
     this.dialog = dialog;
-    this.conversationRows = dialog.locator('[class*="cursor-pointer"]');
+    this.conversationList = dialog.getByRole('region', {
+      name: /conversation list/i,
+    });
+    this.conversationRows = this.conversationList.getByTestId(
+      'history-conversation-row',
+    );
+    this.rowOwners = this.conversationList.getByTestId(
+      'history-conversation-owner',
+    );
+    this.linkedRowOwners = this.conversationList.getByRole('button', {
+      name: /^view profile for /i,
+    });
+    this.previewOwner = dialog.getByTestId('history-preview-owner');
+    this.ownerProfileDialog = page.getByTestId('user-profile-link-dialog');
+    this.rollupBadges = this.conversationList.getByTestId(
+      'transcript-rollup-badges',
+    );
+    this.documentsChips = this.conversationList.getByTestId(
+      'retrieved-documents-button',
+    );
+    this.retrievedDocumentsDialog = page
+      .getByRole('dialog')
+      .filter({ hasText: /retrieved documents/i });
+    this.turnDetailsToggles = dialog.getByRole('button', {
+      name: /^(show|hide) details$/i,
+    });
+    this.turnDetailsPanels = dialog.getByTestId('transcript-turn-details');
+    this.canvasCards = dialog.getByTestId('canvas-message-preview');
+    this.openCanvasButtons = dialog.getByTestId('canvas-open-button');
+    this.canvasDialog = page.getByTestId('canvas-dialog');
     this.emptyState = dialog.getByText(/no conversations/i);
     this.nextButton = dialog.getByRole('button', { name: /next/i });
     this.exportButton = dialog.getByRole('button', { name: /export/i });
@@ -33,6 +91,12 @@ export class HistoryTab {
 
   async hasConversations(): Promise<boolean> {
     return isVisibleWithin(this.conversationRows.first(), 15_000);
+  }
+
+  /** The text of every list row that still shows raw markdown/LaTeX. */
+  async rowsShowingRawMarkup(): Promise<string[]> {
+    const texts = await this.conversationRows.allInnerTexts();
+    return texts.filter((text) => RAW_CHAT_MARKUP.test(text));
   }
 
   async clickFirstRow(): Promise<void> {

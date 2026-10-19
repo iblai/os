@@ -6,10 +6,14 @@ import { Star } from 'lucide-react';
 
 import { useGetAiSearchMentorsQuery } from '@iblai/iblai-js/data-layer';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { Spinner } from '@/components/spinner';
 import { useExplorePageContext } from './explore-page-context';
 import { MentorCardWithStar } from './mentor-card-with-star';
+import {
+  MENTOR_GRID_CLASSNAME,
+  MentorGridSkeleton,
+  SectionHeader,
+} from './section';
 import { isLoggedIn, redirectToAuthSpaJoinTenant } from '@/lib/utils';
 
 const FAVORITE_MENTORS_LIMIT = 6;
@@ -54,6 +58,7 @@ export function StarredMentorsSection() {
         llm: filters.llm_providers || undefined,
         types: filters.types || undefined,
         subjects: filters.subjects || undefined,
+        featured: filters.is_featured === 'true' ? true : undefined,
         query: debouncedSearch || undefined,
         order_direction: 'desc',
         include_main_public_mentors: includeMainPublicMentors,
@@ -78,19 +83,25 @@ export function StarredMentorsSection() {
     }
   }, [tenantKey]);
 
+  const headingId = React.useId();
+  const isInitialLoad = !starredMentorsData && starredMentorsFetching;
+  // Signed-out users can act on the hint (it sends them to sign in); for
+  // signed-in users it is only guidance, so it isn't announced as a button.
+  const signedOut = !isLoggedIn();
+
   return (
-    <div>
-      <h2
-        className="mb-4 text-lg font-medium text-gray-900"
-        role="heading"
-        aria-level={2}
-      >
-        {t('favoritesHeading')}
-      </h2>
-      {favoriteMentors.length > 0 ? (
+    <section aria-labelledby={headingId}>
+      <SectionHeader
+        id={headingId}
+        title={t('favoritesHeading')}
+        count={starredMentorsData?.count}
+      />
+      {isInitialLoad ? (
+        <MentorGridSkeleton count={3} />
+      ) : favoriteMentors.length > 0 ? (
         <>
           <div
-            className="grid grid-cols-1 gap-6 md:grid-cols-2"
+            className={MENTOR_GRID_CLASSNAME}
             data-testid="favorites-card-list"
             role="list"
             aria-label={t('favoriteAgentsList')}
@@ -105,6 +116,7 @@ export function StarredMentorsSection() {
             <div className="mt-6 flex justify-center">
               <Button
                 variant="outline"
+                className="rounded-full px-5"
                 onClick={() =>
                   setNumberOfFavoriteMentors(
                     numberOfFavoriteMentors + FAVORITE_MENTORS_LIMIT,
@@ -127,40 +139,39 @@ export function StarredMentorsSection() {
           )}
         </>
       ) : (
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-          <Card
-            data-testid="favorites-card"
-            className="cursor-pointer rounded-lg border border-[#D0E0FF] bg-[#F5F8FF] transition-shadow duration-200 hover:shadow-md md:col-span-2 lg:col-span-3"
-            onClick={handleFavoriteCardClick}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => {
+        <div
+          data-testid="favorites-card"
+          className={`flex items-center gap-3 rounded-xl border border-dashed border-gray-300 bg-gray-50/70 px-4 py-3 ${
+            signedOut
+              ? 'cursor-pointer transition-colors hover:border-[#38A1E5]/50 hover:bg-[#F5F8FF] focus-visible:ring-2 focus-visible:ring-[#38A1E5] focus-visible:outline-none'
+              : ''
+          }`}
+          {...(signedOut && {
+            role: 'button',
+            tabIndex: 0,
+            onClick: handleFavoriteCardClick,
+            onKeyDown: (e: React.KeyboardEvent) => {
               if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault();
                 handleFavoriteCardClick();
               }
-            }}
-            aria-label={t('addToFavoritesCardAriaLabel')}
-          >
-            <CardContent className="p-6">
-              <div className="flex items-start gap-4">
-                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-[#D0E0FF]">
-                  <Star className="h-6 w-6 text-[#38A1E5]" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <h3 className="mb-2 text-sm font-medium text-gray-900">
-                    {t('addToFavoritesTitle')}
-                  </h3>
-                  <p className="mb-3 text-sm leading-relaxed text-gray-600">
-                    {t('addToFavoritesDescription')}
-                  </p>
-                  <p className="text-xs text-gray-500">{t('noFavoritesYet')}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+            },
+            'aria-label': t('addToFavoritesCardAriaLabel'),
+          })}
+        >
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white ring-1 ring-gray-200">
+            <Star className="h-4 w-4 text-amber-400" aria-hidden="true" />
+          </span>
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-gray-900">
+              {t('noFavoritesYet')}
+            </p>
+            <p className="text-sm text-gray-600">
+              {t('addToFavoritesDescription')}
+            </p>
+          </div>
         </div>
       )}
-    </div>
+    </section>
   );
 }

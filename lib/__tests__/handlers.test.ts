@@ -223,6 +223,21 @@ describe('useIframeHandlers', () => {
       expect(styleElements[styleElements.length - 1].innerText).toBe(mockCss);
     });
 
+    it('ignores a message carrying no CSS instead of throwing', () => {
+      const { result } = renderHook(() => useIframeHandlers());
+      const before = document.head.querySelectorAll('style').length;
+
+      for (const css of [undefined, null, 123, {}]) {
+        expect(() =>
+          result.current['MENTOR:CSS_INJECT'](undefined, {
+            data: { css },
+          } as MessageEvent),
+        ).not.toThrow();
+      }
+
+      expect(document.head.querySelectorAll('style').length).toBe(before);
+    });
+
     it('should inject multiple CSS blocks', () => {
       const { result } = renderHook(() => useIframeHandlers());
       const css1 = 'body { color: blue; }';
@@ -239,6 +254,21 @@ describe('useIframeHandlers', () => {
       expect(styleElements.length).toBe(2);
       expect(styleElements[0].innerText).toBe(css1);
       expect(styleElements[1].innerText).toBe(css2);
+    });
+
+    it('should not re-inject a stylesheet it already has', () => {
+      const { result } = renderHook(() => useIframeHandlers());
+      const css = 'body { background: red; }';
+
+      // Hosts push the same sheet on a burst because an early push can be
+      // lost; each repeat used to leave another copy in the head.
+      for (let i = 0; i < 5; i++) {
+        result.current['MENTOR:CSS_INJECT'](undefined, {
+          data: { css },
+        } as MessageEvent);
+      }
+
+      expect(document.head.querySelectorAll('style').length).toBe(1);
     });
 
     it('should handle empty CSS string', () => {

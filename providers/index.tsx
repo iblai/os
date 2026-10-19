@@ -32,6 +32,14 @@ import {
   useLazyGetMentorPublicSettingsQuery,
 } from '@iblai/iblai-js/data-layer';
 import { redirectToAuthSpa } from '@/lib/utils';
+import {
+  beginAuthRecoveryRoundTrip,
+  clearAuthRecovery,
+  isAuthRecoveryInProgress,
+  isAuthRecoveryPending,
+  markAuthRecovery,
+  resolveAuthRecovery,
+} from '@/lib/auth-recovery-lock';
 import AppProvider from './app-provider';
 import { useEffect, useMemo, useState } from 'react';
 import Script from 'next/script';
@@ -43,6 +51,7 @@ import {
   useTenantSwitchSync,
   refreshTenantSwitchLock,
   isTenantSwitchInProgress,
+  AUTH_TOKENS_UPDATED_EVENT,
 } from '@iblai/iblai-js/web-utils';
 import {
   AuthProvider,
@@ -87,6 +96,7 @@ import { isTauriApp } from '@/types/tauri';
 import { hideInitialLoader } from '@/lib/initial-loader';
 import { useOpencodeLearner } from '@/hooks/use-opencode-learner';
 import { useOpencode402 } from '@/hooks/use-opencode-402';
+import { useOpencodeAuthRequired } from '@/hooks/use-opencode-auth-required';
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   const { handle402Error } = use402ErrorCheck();
@@ -97,6 +107,8 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   useOpencodeLearner();
   // Desktop only: a Code-turn 402 (insufficient credit) gets normal chat's UX.
   useOpencode402();
+  // Desktop only: a Code turn on a signed-out Codex / Claude Code says how to sign in.
+  useOpencodeAuthRequired();
 
   // Mirror the embed-context params into sessionStorage on first load so embed
   // mode survives later navigations that rebuild the URL without them — notably
@@ -155,8 +167,26 @@ export default function Providers({ children }: { children: React.ReactNode }) {
         return;
       }
 
+      // A new session arrived (e.g. the host's answer to our `authExpired`) —
+      // release the recovery lock so a later expiry can recover again.
+      clearAuthRecovery();
       saveUserObjectToLocalStorage(payload);
-      window.location.reload();
+
+      // Fresh tokens just landed in THIS window. The browser's `storage` event
+      // only fires in OTHER windows, and a refresh often leaves `username`
+      // unchanged (the user was already known — e.g. an LTI launch seeds user
+      // data early and only the tokens were missing), so the AuthProvider's
+      // username-keyed check would never re-run and the embed would stay stuck
+      // on its loading fallback. Tell the provider to re-check in place; this
+      // replaces the full page reload we used to do here (which re-downloaded
+      // every asset).
+      window.dispatchEvent(new Event(AUTH_TOKENS_UPDATED_EVENT));
+
+      // If a data-layer refresh round-trip is awaiting this reply, resolve it so
+      // the failed request REPLAYS with the new tokens.
+      if (isAuthRecoveryPending()) {
+        resolveAuthRecovery(true);
+      }
     },
   });
 
@@ -185,12 +215,35 @@ export default function Providers({ children }: { children: React.ReactNode }) {
             );
             return;
           }
+          // Single-flight: a burst of concurrent 401s should recover ONCE.
+          // The first 401 starts recovery; the rest are suppressed until new
+          // tokens arrive (clears the lock) or the TTL lapses. Without this,
+          // each 401 posts its own `authExpired` (iframed) / triggers its own
+          // redirect, and the embed recovers once per failed request.
+          if (isAuthRecoveryInProgress()) {
+            console.log(
+              '[auth-redirect] auth recovery already in progress — skipping duplicate 401',
+            );
+            return;
+          }
+          markAuthRecovery();
           console.log('[auth-redirect] API returned 401 Unauthorized');
           redirectToAuthSpa(undefined, undefined, true);
         },
         402: () =>
           handle402Error({ error: SUBSCRIPTION_CREDIT_LIMIT_ERROR_MESSAGE }),
       },
+      undefined,
+      isInIframe()
+        ? () => {
+            // Embedded: recover by asking the host for fresh tokens and awaiting
+            // the reply, so the data layer replays the failed request instead of
+            // reloading the page. Standalone leaves this undefined, keeping the
+            // data layer's own edX-session mint.
+            sendMessageToParentWebsite({ authExpired: true });
+            return beginAuthRecoveryRoundTrip();
+          }
+        : undefined,
     );
     setReady(true);
   };
@@ -286,9 +339,18 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   // check. Match the index path only — the project chat route
   // (/platform/<tenant>/projects/<projectId>/<mentorId>) still needs the mentor check.
   const isProjectsIndexPage = /\/projects\/?$/.test(pathname);
+  // Tenant-wide analytics (/platform/<tenant>/analytics[/<tab>]) reports on the
+  // whole tenant, so it deliberately carries no mentor in the URL and would
+  // otherwise be redirected to the default agent's chat page — same trap as the
+  // Projects index. Anchored on the third segment so the per-agent section
+  // (/platform/<tenant>/<mentorId>/analytics) still gets the mentor check.
+  const isTenantAnalyticsPage = /^\/platform\/[^/]+\/analytics(\/|$)/.test(
+    pathname,
+  );
   // Pages that own their mentor context and must not be redirected away when the
   // URL has no mentorId segment.
-  const skipMentorCheck = isWorkflowPage || isProjectsIndexPage;
+  const skipMentorCheck =
+    isWorkflowPage || isProjectsIndexPage || isTenantAnalyticsPage;
 
   // Use the same offline check (already computed above)
   const isTauriOffline = isTauriOfflineEarly;
@@ -568,7 +630,16 @@ export default function Providers({ children }: { children: React.ReactNode }) {
         token={searchParams.get('token') ?? undefined}
         storageService={LocalStorageService.getInstance()}
         enableStorageSync={
-          !showingSharedChat && !isTauriOffline && !searchParams.get('token')
+          !showingSharedChat &&
+          !isTauriOffline &&
+          !searchParams.get('token') &&
+          // Never in an embed. The embed owns its session in localStorage
+          // (installed via /sso-login-complete); the shared base-domain cookies
+          // belong to the HOST. Cross-SPA sync here reads the host's stale
+          // cookies back over a freshly-installed session — e.g. after a tenant
+          // switch it reverts the embed to the previous tenant's tokens. This
+          // mirrors the write-side guard in saveUserObjectToLocalStorage.
+          !isInIframe()
         }
         fallback={
           isPreviewMode ? null : (

@@ -1,15 +1,15 @@
 {
   "version": 2,
-  "lastUpdated": "2026-09-14",
+  "lastUpdated": "2026-10-15",
   "summary": {
-    "totalCheckpoints": 741,
-    "coveredCheckpoints": 698,
+    "totalCheckpoints": 939,
+    "coveredCheckpoints": 895,
     "deprecatedCheckpoints": 17,
-    "notReproducibleCheckpoints": 15,
-    "pendingCheckpoints": 11,
+    "notReproducibleCheckpoints": 17,
+    "pendingCheckpoints": 10,
     "percent": 100,
-    "totalJourneys": 77,
-    "activeJourneys": 76
+    "totalJourneys": 96,
+    "activeJourneys": 95
   },
   "journeys": [
     {
@@ -92,8 +92,13 @@
         },
         {
           "id": "nav-08",
-          "description": "Clicking 'New Chat' once fires exactly ONE create-session POST (issue #1002 regression guard — duplicate eventBus listener caused two POSTs in the old code)",
-          "status": "pending"
+          "description": "Clicking 'New Chat' once fires exactly ONE create-session POST (issue #1002 regression guard — duplicate eventBus listener caused two POSTs in the old code); verified against the SDK Chat (issue #2586)",
+          "status": "covered"
+        },
+        {
+          "id": "nav-09",
+          "description": "A freshly created mentor's session lifecycle stays at exactly ONE session through its first message and through navigating away (Explore) and back (issue #2586 SDK Chat migration) — complements nav-08 by covering the mount-time auto-create path",
+          "status": "covered"
         }
       ]
     },
@@ -222,6 +227,11 @@
           "id": "prof-16",
           "description": "Tenant admin opens ANOTHER user's profile via the sidebar Management → Users search → 'View profile for …' row action: the nested 'User profile' dialog is in preview mode (no Security tab) yet offers the History tab (SDK canViewOtherUsersChatHistory: tenant admins + watchers) and loads that user's history (rows or empty state) rather than the 403 permission notice — skips when PLAYWRIGHT_NONADMIN_USERNAME is unset or the RBAC-gated Management entry is unavailable",
           "status": "covered"
+        },
+        {
+          "id": "prof-17",
+          "description": "History tab on the user's OWN profile (SDK ChatHistoryTab): every conversation row on the first page shows its title and first-AI-reply preview as plain text (LaTeX converted to readable text, markdown stripped): no raw \\(, \\), \\[, \\], \\text{, \\textbf{ or ** in any row",
+          "status": "covered"
         }
       ]
     },
@@ -231,7 +241,16 @@
       "spec": "05-mentor-discovery-explore-page.spec.ts",
       "sourceFiles": [
         "app/platform/[tenantKey]/[mentorId]/explore/page.tsx",
-        "app/platform/[tenantKey]/explore/page.tsx"
+        "app/platform/[tenantKey]/explore/page.tsx",
+        "app/platform/[tenantKey]/[mentorId]/explore/_components/explore-page-content.tsx",
+        "app/platform/[tenantKey]/[mentorId]/explore/_components/mentor-categories.tsx",
+        "app/platform/[tenantKey]/[mentorId]/explore/_components/section.tsx",
+        "app/platform/[tenantKey]/[mentorId]/explore/_components/mentor-card-with-star.tsx",
+        "app/platform/[tenantKey]/[mentorId]/explore/_components/custom-mentors-section.tsx",
+        "app/platform/[tenantKey]/[mentorId]/explore/_components/default-mentors-section.tsx",
+        "app/platform/[tenantKey]/[mentorId]/explore/_components/featured-mentors-section.tsx",
+        "app/platform/[tenantKey]/[mentorId]/explore/_components/starred-mentors-section.tsx",
+        "app/platform/[tenantKey]/[mentorId]/explore/_components/empty-state.tsx"
       ],
       "checkpoints": [
         {
@@ -298,6 +317,21 @@
           "id": "exp-13",
           "description": "Star/unstar a mentor updates the Favorites section",
           "status": "covered"
+        },
+        {
+          "id": "exp-14",
+          "description": "Header Create Agent button opens the create dialog for admins",
+          "status": "covered"
+        },
+        {
+          "id": "exp-15",
+          "description": "Clear search button empties the search box",
+          "status": "covered"
+        },
+        {
+          "id": "exp-16",
+          "description": "Featured filter toggles on and off with a single click",
+          "status": "covered"
         }
       ]
     },
@@ -312,8 +346,6 @@
         "hooks/use-mentors.ts",
         "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx",
         "components/modals/edit-mentor-modal/llm-tab.tsx",
-        "hooks/use-llm-display-name.ts",
-        "hooks/use-llm-provider-details.ts",
         "lib/utils.ts",
         "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx"
       ],
@@ -335,7 +367,7 @@
         },
         {
           "id": "mgmt-04",
-          "description": "Admin can toggle tools on/off",
+          "description": "Admin sees the Tools tab render with at least one tool (light smoke check on the shared account mentor; real toggle-on/off + persistence + a11y coverage moved to journey 77's tools-01..05 on disposable per-test mentors, to avoid mutating tool_slugs on a mentor other tests/suites share)",
           "status": "covered"
         },
         {
@@ -415,7 +447,7 @@
         },
         {
           "id": "mgmt-20",
-          "description": "Issue #2502: LLM tab provider card labels and logos are backend-owned \u2014 captures the live mentor-llms GET response and asserts every rendered card's label equals display_name ?? name, and its logo <img src> equals the backend logo URL (or the llm-provider-logo-placeholder testid renders when logo is null)",
+          "description": "Issue #2502: LLM tab provider card labels and logos are backend-owned — captures the live mentor-llms GET response and asserts every rendered card's label equals display_name ?? name, and its logo <img src> equals the backend logo URL (or the llm-provider-logo-placeholder testid renders when logo is null)",
           "status": "covered"
         },
         {
@@ -426,6 +458,11 @@
         {
           "id": "mgmt-22",
           "description": "Issue #2502: no network requests are made for the 15 deleted static /llm-*-provider.* images while opening the LLM tab and its model picker",
+          "status": "covered"
+        },
+        {
+          "id": "mgmt-23",
+          "description": "Issue #2638: LLM model availability is decided per model from route-mocked mentor-llms (availability wins over has_credentials, legacy shape falls back to provider flags) — provider card data-disabled only when every model is unavailable; unavailable model rows are disabled with data-availability-status, the backend message as a title tooltip only (no inline text) and sort after available ones; byok_main_fallback model is selectable",
           "status": "covered"
         }
       ]
@@ -626,10 +663,7 @@
       "name": "Canvas — AI Document Editor",
       "spec": "10-canvas-ai-document-editor.spec.ts",
       "sourceFiles": [
-        "components/canvas/canvas-controls.tsx",
-        "components/canvas/canvas-view.tsx",
-        "components/canvas/binary-canvas-component.tsx",
-        "components/canvas/binary-artifact-utils.ts",
+        "lib/canvas-markdown-engine.ts",
         "components/chat/chat-messages/canvas-message-preview.tsx",
         "components/chat/chat-messages/message-preview.tsx",
         "components/chat/chat-messages/types.ts",
@@ -710,6 +744,11 @@
           "id": "cvs-15",
           "description": "Binary canvas preview paths beyond pdf: image/svg inline preview (data-testid=\"binary-canvas-image\"), the non-previewable-type fallback message for zip/xlsx/docx/… (data-testid=\"binary-canvas-fallback\"), the preview-error state for a malformed file (data-testid=\"binary-canvas-preview-error\", invalid SVG XML / non-PDF bytes / image decode failure), and the loading/error/retry states — unit-covered in binary-canvas-component.test.tsx, canvas-view.test.tsx, and binary-artifact-utils.test.ts; not e2e-reproducible because there is no deterministic way to make a live agent produce these specific shapes (Journey 71 shares a .txt file, which takes the text-canvas path and never reaches the binary canvas at all)",
           "status": "not-reproducible"
+        },
+        {
+          "id": "cvs-16",
+          "description": "Opening the canvas for an agent artifact never sends a session update (PUT sessions/{id}/) without `tools` — the canvas panel used to re-send `{ enable_artifacts: true }` alone, which wiped the session's active tools (mcp, grading, …); the canvas is opened deterministically via the `artifact-stream-start` window event, no live LLM turn needed",
+          "status": "covered"
         }
       ]
     },
@@ -813,7 +852,7 @@
         },
         {
           "id": "emb-02",
-          "description": "Authenticated embed chat sends a message and receives AI response",
+          "description": "Authenticated embed chat sends a message and receives a response — runs against a real EMBED_URL when configured, otherwise (default) against the local second-origin embed harness (issue #2586) with the chat WebSocket mocked",
           "status": "covered"
         },
         {
@@ -854,7 +893,7 @@
         {
           "id": "emb-10",
           "description": "Optimize Page Context Tokens toggle: visible label present, tooltip ('Strips HTML tags from page context') reachable on hover, and the setting flips and persists after submit + modal reopen via GET /settings/ round-trip",
-          "status": "pending"
+          "status": "covered"
         },
         {
           "id": "emb-11",
@@ -894,6 +933,26 @@
         {
           "id": "emb-18",
           "description": "Issue #2476 regression guard: saving the Embed tab's own form does not overwrite mentor_visibility set via Settings -> Discovery — the two tabs used to write the same backend field from independent forms, so an Embed save could silently revert a Settings change",
+          "status": "covered"
+        },
+        {
+          "id": "emb-19",
+          "description": "Issue #2665: Embed tab Allow Full Screen switch is present and off by default; Create Embed adds `allow-fullscreen=true` plus the host handler only when it is on, and leaves the snippet unchanged when off",
+          "status": "covered"
+        },
+        {
+          "id": "emb-20",
+          "description": "Issue #2665: inside an iframe host built from the real generated snippet, the embedded chat's maximize button makes the host widget fill the window and hides the bubble; a second click restores the small widget and bubble",
+          "status": "covered"
+        },
+        {
+          "id": "emb-21",
+          "description": "Issue #2665: closing the embedded chat while full screen restores normal size, so it reopens small with the button back to 'Full screen'",
+          "status": "covered"
+        },
+        {
+          "id": "emb-22",
+          "description": "Issue #2665: an embedded chat generated without allow-fullscreen renders no full screen button",
           "status": "covered"
         }
       ]
@@ -1033,7 +1092,8 @@
         "app/platform/[tenantKey]/[mentorId]/notifications/page.tsx",
         "app/platform/[tenantKey]/[mentorId]/notifications/[notificationId]/page.tsx",
         "app/platform/[tenantKey]/notifications/page.tsx",
-        "app/platform/[tenantKey]/notifications/[notificationId]/page.tsx"
+        "app/platform/[tenantKey]/notifications/[notificationId]/page.tsx",
+        "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx"
       ],
       "checkpoints": [
         {
@@ -1064,6 +1124,11 @@
         {
           "id": "notif-06",
           "description": "Alerts tab auto-opens when inbox is empty",
+          "status": "covered"
+        },
+        {
+          "id": "notif-07",
+          "description": "Navbar drops the chat-only chrome (LLM Model Selector, on-device model badge, privacy chip) on the notifications inbox — tenant-scoped, per-agent and single-notification routes alike; an inbox is not a chat surface",
           "status": "covered"
         }
       ]
@@ -1219,11 +1284,12 @@
       "name": "Dataset Management",
       "spec": "20-dataset-management.spec.ts",
       "sourceFiles": [
-        "components/modals/edit-mentor-modal/tabs/datasets-tab/index.tsx",
-        "components/modals/edit-mentor-modal/tabs/datasets-tab/resource-types.tsx",
         "components/modals/edit-mentor-modal/tabs/datasets-tab/agent-datasets-tab.tsx",
+        "components/workflows/node-config-panel.tsx",
         "hooks/user-navigate.ts",
-        "lib/constants.ts"
+        "lib/constants.ts",
+        "lib/config.ts",
+        "lib/utils.ts"
       ],
       "checkpoints": [
         {
@@ -1288,7 +1354,7 @@
         },
         {
           "id": "ds-13",
-          "description": "PDF file can be uploaded",
+          "description": "PDF file can be uploaded (exercised by journey 75's du-09 on a fresh mentor; the in-place placeholder here was a dead commented-out test prior to this change)",
           "status": "covered"
         },
         {
@@ -1354,6 +1420,26 @@
         {
           "id": "ds-26",
           "description": "Reloading the page while paginated restores datasetsPage and the active page (self-seeded multi-page mentor)",
+          "status": "covered"
+        },
+        {
+          "id": "ds-27",
+          "description": "Train-or-Delete modal shows the Train/Delete choice, description text, and (for an uploaded-file dataset) no User-Agent field, for a deterministically self-seeded untrained dataset",
+          "status": "covered"
+        },
+        {
+          "id": "ds-28",
+          "description": "Untraining a trained dataset fires the underlying PUT (train:false) immediately, before the auto-opened delete confirmation — verified via the network request (self-seeded)",
+          "status": "covered"
+        },
+        {
+          "id": "ds-29",
+          "description": "Retrain schedule interval is set via Weekly, persists across closing and reopening the modal, and can be cleared back to no schedule (self-seeded crawlable URL dataset — retrain scheduling is disabled for every uploaded-file type)",
+          "status": "covered"
+        },
+        {
+          "id": "ds-30",
+          "description": "Train-or-Delete modal's User-Agent field is present for a web-crawler dataset and absent for an uploaded-file dataset (self-seeded pair, same mentor)",
           "status": "covered"
         }
       ]
@@ -1466,9 +1552,7 @@
       "name": "Disclaimers & User Agreement",
       "spec": "22-disclaimers-and-user-agreement.spec.ts",
       "sourceFiles": [
-        "components/modals/edit-mentor-modal/tabs/disclaimers-tab/index.tsx",
-        "components/modals/edit-mentor-modal/tabs/disclaimers-tab/edit-disclaimer-modal.tsx",
-        "components/modals/edit-mentor-modal/tabs/disclaimers-tab/edit-user-agreement-modal.tsx",
+        "components/modals/edit-mentor-modal/disclaimers-tab.tsx",
         "components/modals/disclaimer-modal.tsx",
         "hooks/use-user-agreement.ts",
         "constants/disclaimer.ts"
@@ -1543,6 +1627,31 @@
           "id": "disc-14",
           "description": "User Agreement Edit modal opens with the correct title",
           "status": "covered"
+        },
+        {
+          "id": "disc-15",
+          "description": "View Agreements button appears/disappears in step with the User Agreement switch",
+          "status": "covered"
+        },
+        {
+          "id": "disc-16",
+          "description": "Agreements dialog shows a 0-count empty state when nobody has agreed yet, and Escape closes only the dialog",
+          "status": "covered"
+        },
+        {
+          "id": "disc-17",
+          "description": "Agreements dialog lists the non-admin who accepted, with a hoverable agreed-at tooltip",
+          "status": "covered"
+        },
+        {
+          "id": "disc-18",
+          "description": "Agreements dialog search filters by exact username, including the no-match state",
+          "status": "covered"
+        },
+        {
+          "id": "disc-19",
+          "description": "Non-admin has no menu path to the Edit Agent modal, so never sees the View Agreements button",
+          "status": "covered"
         }
       ]
     },
@@ -1577,6 +1686,26 @@
         {
           "id": "hist-05",
           "description": "Chat history can be exported",
+          "status": "covered"
+        },
+        {
+          "id": "hist-06",
+          "description": "Every conversation row labels its owner via the shared identity rule (a real full name first, else email → username → 'Anonymous'); an owner with a platform profile is a 'View profile for …' link that opens the shared Profile viewer (same modal as Management → Users) without selecting the row, and closes on Escape",
+          "status": "covered"
+        },
+        {
+          "id": "hist-07",
+          "description": "Rows whose turns carry retrieved documents / tool calls show 'Documents · N' / 'Tools · N' chips with N > 0 (never an empty chip container); a Documents chip opens the chat's 'Retrieved Documents' dialog listing what the conversation retrieved (closes on Escape); the transcript offers a 'Show Details' per-turn panel (retrieved documents / tool calls / metadata / request context) only for turns with extended data, and no panel at all otherwise",
+          "status": "covered"
+        },
+        {
+          "id": "hist-08",
+          "description": "A conversation that produced a canvas shows the chat's own 'Open Canvas' card in the preview (none otherwise); the card opens the chat's canvas read-only in a dialog — title and Export only, no formatting toolbar, rename, version switch or editable content — which closes on Escape",
+          "status": "covered"
+        },
+        {
+          "id": "hist-09",
+          "description": "Every conversation row on the first page shows its title and first-AI-reply preview as plain text (LaTeX converted to readable text, markdown stripped): no raw \\(, \\), \\[, \\], \\text{, \\textbf{ or ** in any row",
           "status": "covered"
         }
       ]
@@ -2092,7 +2221,11 @@
       "id": "mobile-view",
       "name": "Mobile View",
       "spec": "31-mobile-view.spec.ts",
-      "sourceFiles": ["app/platform/[tenantKey]/[mentorId]/page.tsx"],
+      "sourceFiles": [
+        "app/platform/[tenantKey]/[mentorId]/page.tsx",
+        "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/user-profile.tsx",
+        "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/learner-mode-switch.tsx"
+      ],
       "checkpoints": [
         {
           "id": "mob-01",
@@ -2127,6 +2260,11 @@
         {
           "id": "mob-07",
           "description": "Dataset upload and untrain/delete flow works on mobile",
+          "status": "covered"
+        },
+        {
+          "id": "mob-08",
+          "description": "Admin on mobile sees Admin/User labels (not Instructor/Learner) on the profile dropdown's learner-mode row, and the label flips correctly when the switch is toggled (#2592)",
           "status": "covered"
         }
       ]
@@ -2318,6 +2456,11 @@
         {
           "id": "wf-15",
           "description": "Workflow can be published; active workflow can be deactivated back to Draft",
+          "status": "covered"
+        },
+        {
+          "id": "wf-16",
+          "description": "File Search node's dataset picker dialog: opening/searching/paging never touch datasetsPage/datasetsSearch URL params (syncToUrl=false, unlike the edit-mentor modal's Datasets tab); picking a row closes the dialog and shows the dataset name with a Change button; reopening highlights the previously selected row (self-seeded mentor)",
           "status": "covered"
         }
       ]
@@ -2865,7 +3008,7 @@
         },
         {
           "id": "claw-17",
-          "description": "Issue #2502: on a Claw-connected mentor, opening the agent's \"Select Provider\" picker and choosing a provider opens the \"LLM Selection\" model picker ON TOP while the provider picker stays MOUNTED underneath (the PR description's stated fix \u2014 previously it unmounted). The provider dialog is marked aria-hidden by Radix while the model picker is on top, so the assertion uses a `getByRole('dialog', { includeHidden: true })` locator and `toBeAttached()` to prove it is still mounted rather than a plain `toBeVisible()` (which would incorrectly resolve to 0 elements). Escape on the model picker reveals the still-mounted provider picker again (now visible, no longer aria-hidden); a second Escape closes it. Skips gracefully if no connectable OpenClaw instance or no LLM providers are available.",
+          "description": "Issue #2502: on a Claw-connected mentor, opening the agent's \"Select Provider\" picker and choosing a provider opens the \"LLM Selection\" model picker ON TOP while the provider picker stays MOUNTED underneath (the PR description's stated fix — previously it unmounted). The provider dialog is marked aria-hidden by Radix while the model picker is on top, so the assertion uses a `getByRole('dialog', { includeHidden: true })` locator and `toBeAttached()` to prove it is still mounted rather than a plain `toBeVisible()` (which would incorrectly resolve to 0 elements). Escape on the model picker reveals the still-mounted provider picker again (now visible, no longer aria-hidden); a second Escape closes it. Skips gracefully if no connectable OpenClaw instance or no LLM providers are available.",
           "status": "covered"
         }
       ]
@@ -2946,7 +3089,7 @@
         },
         {
           "id": "cam-02",
-          "description": "Disabling the 'Enable file attachments' toggle hides the + (Attach file) button entirely",
+          "description": "Disabling the 'Enable File Attachments' toggle hides the + (Attach file) button entirely",
           "status": "covered"
         },
         {
@@ -3041,12 +3184,12 @@
         },
         {
           "id": "VO-11",
-          "description": "Voice tab stays visible (always mounted — no longer gated on show_voice_call) and its content grays (capability-gate-content data-enabled=\"false\") when the in-tab \"Enable voice calls\" capability toggle is off",
+          "description": "Voice tab stays visible (always mounted — no longer gated on show_voice_call) and its content grays (capability-gate-content data-enabled=\"false\") when the in-tab \"Enable Voice Calls\" capability toggle is off",
           "status": "covered"
         },
         {
           "id": "VO-12",
-          "description": "Re-enabling the in-tab \"Enable voice calls\" capability toggle ungates the Voice tab's sub-tab content (data-enabled=\"true\")",
+          "description": "Re-enabling the in-tab \"Enable Voice Calls\" capability toggle ungates the Voice tab's sub-tab content (data-enabled=\"true\")",
           "status": "covered"
         }
       ]
@@ -3140,7 +3283,8 @@
       "spec": "50-chat-privacy.spec.ts",
       "sourceFiles": [
         "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx",
-        "components/modals/edit-mentor-modal/tabs/settings-tab.tsx"
+        "components/modals/edit-mentor-modal/tabs/settings-tab.tsx",
+        "components/modals/edit-mentor-modal/tabs/privacy-tab.tsx"
       ],
       "checkpoints": [
         {
@@ -3150,37 +3294,47 @@
         },
         {
           "id": "cp-tenant-02",
-          "description": "Disabling the tenant gate hides the header Private Mode toggle across the app",
+          "description": "Disabling the tenant gate hides the header Incognito toggle across the app",
           "status": "covered"
         },
         {
           "id": "cp-tenant-03",
-          "description": "Enabling the tenant gate shows the header Private Mode toggle",
+          "description": "Enabling the tenant gate shows the header Incognito toggle",
           "status": "covered"
         },
         {
           "id": "cp-tenant-04",
-          "description": "Private Mode profile tab visibility tracks the tenant gate: hidden when off, visible when on",
+          "description": "Incognito profile tab visibility tracks the tenant gate: hidden when off, visible when on",
           "status": "covered"
         },
         {
           "id": "cp-agent-01",
-          "description": "Enable private mode row is visible in Edit Mentor Settings Capabilities sub-tab for admins",
+          "description": "Incognito sub-tab (Users Decide / Always Incognito / Never Incognito radio cards) is visible in the Edit Mentor Privacy tab for admins",
           "status": "covered"
         },
         {
           "id": "cp-agent-02",
-          "description": "Saving Enable private mode ON persists across modal close and re-open",
+          "description": "Saving Always Incognito persists across modal close and re-open",
           "status": "covered"
         },
         {
           "id": "cp-agent-03",
-          "description": "Saving Enable private mode ON locks the header toggle to data-state=on data-source=mentor without a page refresh (regression: chatPrivacyApiSlice.util.invalidateTags wiring in settings-tab.tsx)",
+          "description": "Saving Always Incognito locks the header toggle to data-state=on data-source=mentor without a page refresh (regression: chatPrivacyApiSlice.util.invalidateTags wiring in the Privacy tab)",
           "status": "covered"
         },
         {
           "id": "cp-agent-04",
-          "description": "Saving Enable private mode OFF removes the mentor lock from the header toggle; data-source is no longer mentor",
+          "description": "Saving back to Users Decide removes the mentor lock from the header toggle; data-source is no longer mentor",
+          "status": "covered"
+        },
+        {
+          "id": "cp-lock-01",
+          "description": "Incognito offers Users Decide, Always Incognito and Never Incognito, with Users Decide selected by default",
+          "status": "covered"
+        },
+        {
+          "id": "cp-lock-02",
+          "description": "Saving Never Incognito (disable_privacy_mode) hides the header Incognito toggle live (no refresh) and across a reload; Users Decide brings the toggle back unlocked",
           "status": "covered"
         },
         {
@@ -3205,7 +3359,7 @@
         },
         {
           "id": "cp-header-05",
-          "description": "Confirming enable-private-mode mid-session locks the session as on (aria-disabled) — session is one-way per spec",
+          "description": "Confirming the mid-session dialog turns Incognito on for the same conversation (data-state=on, data-source=session); the pill stays actionable (no aria-disabled) because the flip is reversible (iblai-dm-pro #3093)",
           "status": "covered"
         },
         {
@@ -3214,23 +3368,33 @@
           "status": "covered"
         },
         {
+          "id": "cp-header-07",
+          "description": "Turning Incognito off mid-conversation on a chat switched on via the dialog: one click, no dialog, POST disable-chathistory {disable_chathistory:false} answers 200; the toggle settles to data-state=off with data-source no longer session and the cached session id is unchanged — history resumes on the same conversation (iblai-dm-pro #3093)",
+          "status": "covered"
+        },
+        {
+          "id": "cp-header-08",
+          "description": "A chat started in Incognito stays locked on (data-state=on, aria-disabled) after a message is sent — the backend creates it without an owner, so it can never resume history",
+          "status": "covered"
+        },
+        {
           "id": "cp-profile-01",
-          "description": "Private Mode tab is visible in UserProfileModal when the tenant gate is on; all three cards render",
+          "description": "Privacy tab is visible in UserProfileModal when the tenant gate is on; all three cards render",
           "status": "covered"
         },
         {
           "id": "cp-profile-02",
-          "description": "Private Mode tab is hidden in UserProfileModal when the tenant gate is off",
+          "description": "Privacy tab is hidden in UserProfileModal when the tenant gate is off",
           "status": "covered"
         },
         {
           "id": "cp-profile-03",
-          "description": "All three radio cards (Normal, Anonymized, Disabled) render after switching to the Private Mode tab",
+          "description": "All three radio cards (Normal, Anonymized, Incognito) render after switching to the profile Privacy tab",
           "status": "covered"
         },
         {
           "id": "cp-profile-04",
-          "description": "Selecting Disabled propagates to the header toggle as data-source=user on a fresh unlocked chat (user-tier precedence)",
+          "description": "Selecting the Incognito card (mode disabled) propagates to the header toggle as data-source=user on a fresh unlocked chat (user-tier precedence)",
           "status": "covered"
         },
         {
@@ -3240,23 +3404,23 @@
         },
         {
           "id": "cp-chat-01",
-          "description": "Admin enables private mode via the header toggle on a fresh chat (data-state=on, data-source=session), sends a message, and still receives an assistant reply; private mode stays on across the round-trip",
+          "description": "Admin enables incognito via the header toggle on a fresh chat (data-state=on, data-source=session), sends a message, and still receives an assistant reply; incognito stays on across the round-trip",
           "status": "covered"
         },
         {
           "id": "cp-chat-02",
-          "description": "Non-admin (separate browser context) enables private mode via the header toggle on a fresh chat, sends a message, and receives an assistant reply; private mode stays on across the round-trip",
+          "description": "Non-admin (separate browser context) enables incognito via the header toggle on a fresh chat, sends a message, and receives an assistant reply; incognito stays on across the round-trip",
           "status": "covered"
         },
         {
           "id": "cp-chat-04",
-          "description": "Prompt Gallery (admin-curated, mentor-keyed) still opens and renders cards in private mode; AI guided/suggested prompts row is visible on a fresh private chat after the AI replies",
+          "description": "Prompt Gallery (admin-curated, mentor-keyed) still opens and renders cards in incognito; AI guided/suggested prompts row is visible on a fresh private chat after the AI replies",
           "status": "pending",
           "note": "Assertion (a) Prompt Gallery passes today. Assertion (b) guided prompts row is a live gate awaiting backend fix: backend must generate guided prompts for disable_chathistory sessions (endpoint: GET .../sessions/{session_id}/guided-prompts/)"
         },
         {
           "id": "cp-chat-05",
-          "description": "Voice call dialog opens in private mode (empty-chat path) and does NOT show 'Failed to initiate call' error toast; Chromium fake-media only",
+          "description": "Voice call dialog opens in incognito (empty-chat path) and does NOT show 'Failed to initiate call' error toast; Chromium fake-media only",
           "status": "pending",
           "note": "Live gate awaiting backend fix: backend must mint LiveKit credentials for disable_chathistory sessions (POST /create-call-credentials/); empty-chat path may already pass since the session IS persisted server-side"
         },
@@ -3268,25 +3432,25 @@
         },
         {
           "id": "cp-chat-07",
-          "description": "File attachment (drag-drop) works in private mode: attachment chip appears, message sends with attachment, and assistant replies; pins that selectSessionId follows the private session id through the upload path",
+          "description": "File attachment (drag-drop) works in incognito: attachment chip appears, message sends with attachment, and assistant replies; pins that selectSessionId follows the private session id through the upload path",
           "status": "pending",
           "note": "Expected to pass today (analysis: upload path reads selectSessionId which startPrivateChat updates via chatActions.updateSessionIds — byte-identical to normal mode). Included as regression gate."
         },
         {
           "id": "cp-chat-08",
-          "description": "Memory button is hidden while private mode is on (data-state=on) and reappears when private mode is off (frontend gate: chat-input-form.tsx derives chatPrivacyActive from useChatPrivacy and passes isPrivate into InsideButtons, which drops Memory from the inline row and the overflow dropdown)",
+          "description": "Memory button is hidden while incognito is on (data-state=on) and reappears when incognito is off (frontend gate: chat-input-form.tsx derives chatPrivacyActive from useChatPrivacy and passes isPrivate into InsideButtons, which drops Memory from the inline row and the overflow dropdown)",
           "status": "covered",
           "note": "Frontend gate implemented in components/chat-input-form.tsx (useChatPrivacy -> isPrivate prop) + components/chat-input-form/inside-buttons.tsx; deterministic regression coverage in components/chat-input-form/__tests__/inside-buttons.test.tsx ('Memory button private-mode gating')"
         },
         {
           "id": "cp-chat-09",
-          "description": "Share-chat button in the AI message bubble is hidden in private mode (a private session is a temporary, non-persisted chat with no durable session to share); visible in normal mode and gated out while effective mode is disabled",
+          "description": "Share-chat button in the AI message bubble is hidden in incognito (a private session is a temporary, non-persisted chat with no durable session to share); visible in normal mode and gated out while effective mode is disabled",
           "status": "covered",
-          "note": "Frontend gate implemented in components/chat/ai-message-bubble.tsx (useChatPrivacy -> chatPrivacyActive gates the <AIMessageShare> render alongside !showingSharedChat); deterministic regression coverage in components/chat/__tests__/ai-message-bubble.test.tsx ('chat private mode active' share-button cases)"
+          "note": "Frontend gate implemented in components/chat/ai-message-bubble.tsx (useChatPrivacy -> chatPrivacyActive gates the <AIMessageShare> render alongside !showingSharedChat); deterministic regression coverage in components/chat/__tests__/ai-message-bubble.test.tsx ('chat incognito active' share-button cases)"
         },
         {
           "id": "cp-chat-10",
-          "description": "Download-chat button in the AI message bubble is hidden in private mode (same gate as cp-chat-09: a private session has no durable record to export); visible in normal mode",
+          "description": "Download-chat button in the AI message bubble is hidden in incognito (same gate as cp-chat-09: a private session has no durable record to export); visible in normal mode",
           "status": "covered",
           "note": "Frontend gate implemented in components/chat/ai-message-bubble.tsx (useChatPrivacy -> chatPrivacyActive gates the <AIMessageDownload> render alongside !showingSharedChat, right after <AIMessageShare>)"
         }
@@ -3302,7 +3466,7 @@
       "checkpoints": [
         {
           "id": "pc-01",
-          "description": "Fresh mentor: Settings → Capabilities — \"Enable prompt caching\" switch is visible with aria-checked=false (default off) and tooltip trigger is present",
+          "description": "Fresh mentor: Settings → Capabilities — \"Enable Prompt Caching\" switch is visible with aria-checked=false (default off) and tooltip trigger is present",
           "status": "covered"
         },
         {
@@ -3322,9 +3486,7 @@
       "name": "Tool Call Indicator & Reasoning Section",
       "spec": "52-tool-call-indicator-and-reasoning.spec.ts",
       "sourceFiles": [
-        "components/chat/tool-call-indicator.tsx",
         "components/chat/tool-call-item.tsx",
-        "components/chat/tool-call-utils.ts",
         "components/chat/reasoning-section.tsx",
         "components/chat/ai-message-bubble.tsx",
         "components/chat/chat-messages/index.tsx",
@@ -3369,7 +3531,7 @@
         },
         {
           "id": "tcr-08",
-          "description": "Tool call indicator and reasoning section are gated by the Enable verbose reasoning setting — hidden when the toggle is off, shown when on",
+          "description": "Tool call indicator and reasoning section are gated by the Enable Verbose Reasoning setting — hidden when the toggle is off, shown when on",
           "status": "covered"
         }
       ]
@@ -3379,7 +3541,8 @@
       "name": "Recent Chats Refresh",
       "spec": "53-recent-chats-refresh.spec.ts",
       "sourceFiles": [
-        "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx"
+        "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx",
+        "components/chat/index.tsx"
       ],
       "checkpoints": [
         {
@@ -3391,6 +3554,12 @@
           "id": "rcr-02",
           "description": "Clicking an existing Recent chat row loads the conversation in the chat panel (regression guard for issue #1881: handleSelectRow must write cachedSessionId[mentorId] to localStorage so the message loader re-fires)",
           "status": "covered"
+        },
+        {
+          "id": "rcr-03",
+          "description": "Reopening a Recent chat restores that session's own options: a chat that had Canvas enabled shows the Canvas toggle active again (aria-pressed=true) after switching to a new chat with Canvas off and back. The SDK tools hook (useMentorTools) restores tools + canvas from the session detail (my-chat-history/{session_id}) and the chat no longer sends a session update turning canvas off on the chat being opened",
+          "status": "pending",
+          "note": "Needs an SDK build that includes the useMentorTools session restore (web-utils); red until the app picks that build up"
         }
       ]
     },
@@ -3421,7 +3590,7 @@
         },
         {
           "id": "pta-04",
-          "description": "Pasting an oversized file triggers a sonner validation error toast and no attachment chip is added",
+          "description": "Pasting an oversized file triggers a sonner validation error toast AND a rejected attachment chip (data-status=\"too-large\") — updated for issue #2586's file-card redesign, which added the too-large chip state alongside the toast (see journey 79's cr-06)",
           "status": "covered"
         }
       ]
@@ -3959,7 +4128,7 @@
         },
         {
           "id": "anp-02",
-          "description": "Full navbar parity: LLM Model Selector and Private Mode chip are both visible on /analytics, matching the regular chat page baseline captured in the same test (isOnChatPage no longer excludes /analytics)",
+          "description": "Full navbar parity: LLM Model Selector and Incognito chip are both visible on /analytics, matching the regular chat page baseline captured in the same test (isOnChatPage no longer excludes /analytics)",
           "status": "covered"
         },
         {
@@ -4126,12 +4295,27 @@
         },
         {
           "id": "slash-02",
-          "description": "Mentor with skills: composer textarea gets role=combobox wiring and typing \"/\" opens the slash-skill-picker listing only enabled skills (disabled filtered out) as name + slug — no descriptions (assignment rows carry none; the platform-wide agent-skills catalog is never fetched from chat)",
+          "description": "Mentor with skills: composer textarea gets role=combobox wiring and typing \"/\" opens the slash-skill-picker listing only enabled skills (disabled filtered out) as the skill NAME ONLY (no /slug line, no \"Skills\" header) in a compact (~300px) left-aligned popover ABOVE the composer (picker bottom <= composer top, geometry-asserted) — no descriptions (assignment rows carry none; the platform-wide agent-skills catalog is never fetched from chat)",
+          "status": "covered"
+        },
+        {
+          "id": "slash-02b",
+          "description": "A long skill name wraps onto multiple lines inside the compact \"/\" picker (within the picker width) — never clipped or ellipsized",
+          "status": "covered"
+        },
+        {
+          "id": "slash-02d",
+          "description": "Conversation state (mocked chat socket): the \"/\" picker opens fully visible (not clipped by the chat's scrolling composer wrapper) above the bottom-pinned composer",
+          "status": "covered"
+        },
+        {
+          "id": "slash-02c",
+          "description": "Mobile (390px): the \"/\" picker opens above the bottom-pinned composer without covering the input and fits the viewport",
           "status": "covered"
         },
         {
           "id": "slash-03",
-          "description": "Typing after \"/\" filters the picker by both skill name and slug as the query narrows; no match closes the picker",
+          "description": "Typing after \"/\" filters the picker by both skill name and slug (the slug still matches even though rows show only the name) as the query narrows; no match closes the picker",
           "status": "covered"
         },
         {
@@ -4196,7 +4380,7 @@
         },
         {
           "id": "slash-16",
-          "description": "Skills dropdown button (inside-buttons row, next to Canvas) lists the mentor's enabled skills as name + /slug (no descriptions); selecting inserts the /slug token AT THE CARET with context-aware spacing (highlighted in the composer) and the button shows the armed skill's name with the same ✕ affordance as other active tool pills (✕ disarms without opening the menu); toggling removes the token cleanly; arming another skill replaces the current one (single selection); arming via the \"/\" picker updates the button — both surfaces derive from the composer text so they stay in sync",
+          "description": "Skills row inside the composer's \"+\" menu lists the mentor's enabled skills as name + /slug (no descriptions); selecting inserts the /slug token AT THE CARET with context-aware spacing (highlighted in the composer) — there is no separate skill chip in the #2586 redesign, so the armed state shows only as the composer token, a checked row in the Skills menu, and its count badge on the menu trigger; removing (re-selecting the armed skill, or deleting its token text) clears all three; arming another skill replaces the current one (single selection); arming via the \"/\" picker marks the same skill checked in the Skills menu — both surfaces derive from the composer text so they stay in sync",
           "status": "covered"
         }
       ]
@@ -4208,13 +4392,12 @@
       "sourceFiles": [
         "components/chat/agent-todo-list.tsx",
         "components/chat/ai-message-bubble.tsx",
-        "components/chat/tool-call-indicator.tsx",
         "app/globals.css"
       ],
       "checkpoints": [
         {
           "id": "atl-01",
-          "description": "The task list renders as a real <ol> with one <li> per todo; status communicated via data-status + a sr-only status word + a distinct icon shape per status — no visible status text on the row itself (issue #2216)",
+          "description": "The task list renders as a real <ol> with one <li> per todo; status communicated via data-status + a sr-only status word + a distinct icon shape per status — no visible status text on the row itself; once the turn is over, an in_progress step reads as To do with the pending icon (data-status keeps in_progress) (issue #2216)",
           "status": "covered"
         },
         {
@@ -4249,7 +4432,7 @@
         },
         {
           "id": "atl-08",
-          "description": "The in-progress row's text carries the .todo-shimmer left-to-right sweep class",
+          "description": "The in-progress row's text carries the .todo-shimmer left-to-right sweep class while the turn streams, and loses it once the turn is over",
           "status": "covered"
         },
         {
@@ -4404,10 +4587,7 @@
       "name": "VM Sandbox File Artifact — Canvas Preview",
       "spec": "71-vm-sandbox-txt-file-canvas.spec.ts",
       "sourceFiles": [
-        "components/canvas/binary-canvas-component.tsx",
-        "components/canvas/binary-artifact-utils.ts",
-        "components/canvas/canvas-view.tsx",
-        "components/canvas/canvas-component.tsx",
+        "lib/canvas-markdown-engine.ts",
         "components/chat/chat-messages/canvas-message-preview.tsx",
         "components/chat/chat-messages/message-preview.tsx",
         "components/chat/index.tsx",
@@ -4493,9 +4673,10 @@
         "components/chat/chat-messages/index.tsx",
         "components/chat/index.tsx",
         "components/chat/reasoning-section.tsx",
-        "components/chat/tool-call-indicator.tsx",
         "lib/constants.ts",
-        "app/globals.css"
+        "app/globals.css",
+        "components/markdown.tsx",
+        "components/chat/chat-messages/message-preview.tsx"
       ],
       "checkpoints": [
         {
@@ -4541,6 +4722,16 @@
         {
           "id": "awi-09",
           "description": "Exactly one avatar/name/timestamp agent message frame is ever on screen per turn (never two stacked), including across a write_todos turn where AgentTodoList also renders",
+          "status": "covered"
+        },
+        {
+          "id": "awi-10",
+          "description": "Issue #2400: a reply interrupted by tool calls renders each step as its own paragraph (no glued 'com.The'/'yet.The') and the email autolinker stops at the domain instead of swallowing the following sentence into the mailto link; the tool-call chip still counts unique tool names",
+          "status": "covered"
+        },
+        {
+          "id": "awi-11",
+          "description": "Issue #2400 control: the same text chunks joined with no tool_call frame between them concatenate byte-for-byte (no inserted paragraph break) — proves the fix is scoped to tool-call boundaries only, not applied everywhere",
           "status": "covered"
         }
       ]
@@ -4641,10 +4832,8 @@
       "name": "Dataset Cloud Pickers",
       "spec": "74-dataset-cloud-pickers.spec.ts",
       "sourceFiles": [
-        "hooks/use-google-drive-picker.ts",
-        "hooks/use-one-drive-picker.ts",
-        "hooks/use-dropdox-picker.ts",
-        "components/modals/edit-mentor-modal/tabs/datasets-tab/add-resource-modal.tsx"
+        "components/workflows/node-config-panel.tsx",
+        "components/modals/edit-mentor-modal/tabs/datasets-tab/agent-datasets-tab.tsx"
       ],
       "checkpoints": [
         {
@@ -4669,8 +4858,8 @@
       "name": "Dataset Upload Types",
       "spec": "75-dataset-upload-types.spec.ts",
       "sourceFiles": [
-        "components/modals/edit-mentor-modal/tabs/datasets-tab/add-resource-modal.tsx",
-        "components/modals/edit-mentor-modal/tabs/datasets-tab/resource-types.tsx"
+        "components/modals/edit-mentor-modal/tabs/datasets-tab/agent-datasets-tab.tsx",
+        "e2e/utils/dataset-resource-gating.ts"
       ],
       "checkpoints": [
         {
@@ -4711,6 +4900,1052 @@
         {
           "id": "du-08",
           "description": "Admin uploads an Excel (.xlsx) file via the Add Resources modal and the file row appears in the dataset list",
+          "status": "covered"
+        },
+        {
+          "id": "du-09",
+          "description": "Admin uploads a PDF file via the Add Resources modal and the file row appears in the dataset list",
+          "status": "covered"
+        },
+        {
+          "id": "du-10",
+          "description": "Admin submits a URL resource via the Add Resources modal and the row appears in the dataset list",
+          "status": "covered"
+        },
+        {
+          "id": "du-11",
+          "description": "Admin submits a YouTube resource via the Add Resources modal and the row appears in the dataset list",
+          "status": "covered"
+        },
+        {
+          "id": "du-12",
+          "description": "Admin submits a GitHub repo resource (URL + branch) via the Add Resources modal and the row appears in the dataset list",
+          "status": "covered"
+        },
+        {
+          "id": "du-13",
+          "description": "Admin submits a Web Crawler resource with a User-Agent filled in; the create request carries crawler_extra_headers with the value",
+          "status": "covered"
+        },
+        {
+          "id": "du-14",
+          "description": "Admin submits a Web Crawler resource with the User-Agent left blank; the create request omits crawler_extra_headers",
+          "status": "covered"
+        },
+        {
+          "id": "du-15",
+          "description": "ZIP resource button's enabled/disabled state matches NEXT_PUBLIC_DISABLED_DATASETS as resolved from the running build's env files (default: disabled) — full upload flow runs only when enabled",
+          "status": "covered"
+        },
+        {
+          "id": "du-16",
+          "description": "Course resource button's enabled/disabled state matches NEXT_PUBLIC_DISABLED_DATASETS as resolved from the running build's env files (default: disabled) — full upload flow runs only when enabled",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "tenant-analytics",
+      "name": "Tenant-wide Analytics",
+      "spec": "76-tenant-analytics.spec.ts",
+      "sourceFiles": [
+        "app/platform/[tenantKey]/analytics/page.tsx",
+        "app/platform/[tenantKey]/analytics/users/page.tsx",
+        "app/platform/[tenantKey]/analytics/topics/page.tsx",
+        "app/platform/[tenantKey]/analytics/transcripts/page.tsx",
+        "app/platform/[tenantKey]/analytics/memory/page.tsx",
+        "app/platform/[tenantKey]/analytics/financial/page.tsx",
+        "app/platform/[tenantKey]/analytics/audit/page.tsx",
+        "app/platform/[tenantKey]/analytics/reports/page.tsx",
+        "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx",
+        "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "tanl-01",
+          "description": "Tenant-wide analytics overview (/platform/{tenantKey}/analytics, no agent segment) renders the tab strip inside the platform shell — the sidebar proves the layout supplies the shell itself",
+          "status": "covered"
+        },
+        {
+          "id": "tanl-02",
+          "description": "Clicking a tab from the tenant-wide overview routes to /platform/{tenantKey}/analytics/{tab} and never reintroduces an agent id",
+          "status": "covered"
+        },
+        {
+          "id": "tanl-03",
+          "description": "Tenant-wide Users, Topics, Transcripts and Costs tabs are reachable by direct URL",
+          "status": "covered"
+        },
+        {
+          "id": "tanl-04",
+          "description": "Tenant-wide Memory page loads with no agent scope (the tab opens on global / all-agent memories)",
+          "status": "covered"
+        },
+        {
+          "id": "tanl-05",
+          "description": "Tenant-wide Data Reports page loads and shows the Data Reports tab",
+          "status": "covered"
+        },
+        {
+          "id": "tanl-06",
+          "description": "Tenant-wide Audit page loads — with no agent to check `view_audit_logs` against, the API is the authority and the container renders its own no-permission card on a 403",
+          "status": "covered"
+        },
+        {
+          "id": "tanl-07",
+          "description": "Sidebar Analytics entry opens the tenant-wide section whether or not an agent is in the URL — the per-agent section is reached from the navbar agent dropdown instead",
+          "status": "covered"
+        },
+        {
+          "id": "tanl-08",
+          "description": "Navbar on the tenant-wide section drops the chat-only chrome (LLM Model Selector, agent dropdown, privacy chip) and shows the \"Analytics\" section title instead; the per-agent analytics page keeps full parity (Journey 65)",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "show-additional-agents-toggle",
+      "name": "Show Additional Agents Toggle",
+      "spec": "76-show-additional-agents-toggle.spec.ts",
+      "sourceFiles": [
+        "components/modals/edit-mentor-modal/settings-tab.tsx",
+        "components/welcome-chat-new.tsx",
+        "components/welcome-chat/explore-mentors.tsx",
+        "hooks/use-mentors/use-mentor-settings.ts"
+      ],
+      "checkpoints": [
+        {
+          "id": "sem-01",
+          "description": "Admin sees the \"Show Additional Agents\" switch under Settings > Capabilities > Advanced, with the right label, data-testid, and tooltip info button",
+          "status": "covered"
+        },
+        {
+          "id": "sem-02",
+          "description": "Toggling the switch ON and saving PUTs show_explore_mentors=true and the value persists across closing and reopening the Edit Agent dialog",
+          "status": "covered"
+        },
+        {
+          "id": "sem-03",
+          "description": "Toggling the switch OFF and saving PUTs show_explore_mentors=false and the value persists across closing and reopening the Edit Agent dialog",
+          "status": "covered"
+        },
+        {
+          "id": "sem-04",
+          "description": "With the setting ON, the admin's own welcome screen shows the \"Explore Agents\" section",
+          "status": "covered"
+        },
+        {
+          "id": "sem-05",
+          "description": "With the setting ON, a non-admin non-owner viewer of the same agent also sees the \"Explore Agents\" section (regression guard for the field-level-RBAC redacted-empty-string bug in use-mentor-settings.ts)",
+          "status": "covered"
+        },
+        {
+          "id": "sem-06",
+          "description": "With the setting OFF, the welcome screen hides the \"Explore Agents\" section",
+          "status": "covered"
+        },
+        {
+          "id": "sem-07",
+          "description": "With the setting ON, the \"Explore Agents\" section sits below the first screen in two columns, and the \"Explore Agents\" hint scrolls it into view",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "mentor-tools-tab",
+      "name": "Mentor Tools Tab",
+      "spec": "77-mentor-tools-tab.spec.ts",
+      "sourceFiles": ["components/modals/edit-mentor-modal/tabs/tools-tab.tsx"],
+      "checkpoints": [
+        {
+          "id": "tools-01",
+          "description": "Admin opens the Tools tab and sees the header, description, and the tools-info-box copy",
+          "status": "covered"
+        },
+        {
+          "id": "tools-02",
+          "description": "Admin toggles a tool on (aria-checked + success toast) and it persists across a close + full page reload + reopen; toggling it back off persists the same way; skips gracefully on an empty tenant tool catalogue",
+          "status": "covered"
+        },
+        {
+          "id": "tools-03",
+          "description": "A tool's info icon exposes \"More info about {name}\" and its tooltip shows the description on both hover and keyboard focus",
+          "status": "covered"
+        },
+        {
+          "id": "tools-04",
+          "description": "A tool switch's accessible name flips between \"{name} disabled\" and \"{name} enabled\" as it is toggled",
+          "status": "covered"
+        },
+        {
+          "id": "tools-05",
+          "description": "Non-admin does not see the Tools tab in the Edit Mentor modal (dropdown has no Settings item; falls back to a direct tab-absence check)",
+          "status": "covered"
+        },
+        {
+          "id": "tools-06",
+          "description": "Read-only mentor_tools field permission (WithFormPermissions) disables every tool switch; not reproducible in this environment — NEXT_PUBLIC_ENABLE_RBAC is unset (defaults false) and no fixture seeds a permissions.field.mentor_tools write:false response",
+          "status": "not-reproducible"
+        },
+        {
+          "id": "tools-07",
+          "description": "Tools tab copy renders correctly in a non-English locale (e.g. es); not reproducible — no journey in this repo has an established, reliable mechanism to switch the live app locale and assert on translated text",
+          "status": "not-reproducible"
+        }
+      ]
+    },
+    {
+      "id": "mentor-api-tab",
+      "name": "Mentor API Tab",
+      "spec": "78-mentor-api-tab.spec.ts",
+      "sourceFiles": ["components/modals/edit-mentor-modal/tabs/api-tab.tsx"],
+      "checkpoints": [
+        {
+          "id": "api-01",
+          "description": "Admin opens the API tab and sees the header, description, info box (with disclaimer text), and Create New button",
+          "status": "covered"
+        },
+        {
+          "id": "api-02",
+          "description": "Admin opens Create, opens the expiration date calendar, navigates to the next month, and picks a day — the Create dialog stays open (regression guard for the popover click-through bug fixed via pointer-events-auto in the SDK's ui/popover.tsx) and the trigger shows the picked PPP date; submitting shows the success toast + reveal dialog, and the new row's EXPIRES cell shows that exact date",
+          "status": "covered"
+        },
+        {
+          "id": "api-03",
+          "description": "Creating an API key without picking an expiration date leaves its EXPIRES cell showing \"N/A\"",
+          "status": "covered"
+        },
+        {
+          "id": "api-04",
+          "description": "Create dialog validates the API key name (required / letters-numbers-hyphens-underscores only) and keeps Submit disabled until the name is valid",
+          "status": "covered"
+        },
+        {
+          "id": "api-05",
+          "description": "The reveal (\"API Key\") dialog's copy button flips its accessible name from \"Copy API key\" to \"Copied\" once clicked",
+          "status": "covered"
+        },
+        {
+          "id": "api-06",
+          "description": "Pagination appears once more than 10 keys exist (bulk-seeded via the API), page 2's rows differ from page 1's, and creating a key through the UI returns the view to page 1",
+          "status": "covered"
+        },
+        {
+          "id": "api-07",
+          "description": "Deleting the only remaining row on a paginated page (page > 1) steps the view back a page and the pagination control disappears once everything fits on one page — exercised against a mocked (page.route) dataset, since the real tenant's true last page is always foreign, protected data (verified live: the backend ignores any client-supplied `created` timestamp and always server-stamps \"now\", so a test-created key can never sort to the tail)",
+          "status": "covered"
+        },
+        {
+          "id": "api-08",
+          "description": "Admin deletes an API key via the UI: the confirmation dialog names the key by name, and confirming removes its row",
+          "status": "covered"
+        },
+        {
+          "id": "api-09",
+          "description": "Non-admin does not see the API tab in the Edit Mentor modal (Settings menu item itself is unreachable; falls back to a direct tab-absence check)",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "virtual-machine-network-and-secrets",
+      "name": "Virtual Machine Network Policies & Secrets",
+      "spec": "79-virtual-machine-network-and-secrets.spec.ts",
+      "sourceFiles": [
+        "components/modals/edit-mentor-modal/tabs/sandbox-tab.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "vmn-01",
+          "description": "Admin reaches the tenant Virtual Machine settings through the User Profile dialog (More options, then the platform name, then the SDK Account rail's admin-only \"Virtual Machine\" entry) which hosts the SDK VirtualMachineAdminTab: the info box plus the Network Policies and Secrets sub-tabs, each hosting its table with a New button",
+          "status": "covered"
+        },
+        {
+          "id": "vmn-02",
+          "description": "Admin creates a network policy through the SDK dialog: hosts are entered with the keyboard-driven chip input (Enter commits, Backspace on an empty box removes the last chip, every chip has a labelled Remove button) and the client-side host:port check refuses a scheme/path entry and a reserved host inline via the aria-live line without adding a chip; saving shows the \"Network policy created\" toast and the new row lists the host",
+          "status": "covered"
+        },
+        {
+          "id": "vmn-03",
+          "description": "Admin edits the policy: adding a host and removing the original shows the removed-hosts warning (a secret sent to a removed host would stop working; the backend does not block the edit); saving shows \"Network policy updated\" and the row reflects the replaced host list",
+          "status": "covered"
+        },
+        {
+          "id": "vmn-04",
+          "description": "Admin creates a VM secret from a pasted value: an IP literal is refused inline (hostnames only), the source is a choice between \"Enter a Value\" (default) and an integration credential, the value box is a password field, and values shorter than 8 characters or masked-looking (sk-****) are rejected before any request; saving shows \"VM secret created\" and the row shows name, hosts and the \"Stored Value\" source, never the value",
+          "status": "covered"
+        },
+        {
+          "id": "vmn-05",
+          "description": "On edit the env var is read-only, the value box is blank with the \"Leave blank to keep the current value\" hint, and switching to the credential source offers the org's credentials (or the no-credentials notice) without ever showing a masked value; deleting confirms that every agent using the secret loses it, shows \"VM secret deleted\" and removes the row",
+          "status": "covered"
+        },
+        {
+          "id": "vmn-06",
+          "description": "Admin deletes a network policy they just created (bound to no agent): the row is found on whichever page of the org-wide table it landed, the confirmation dialog names the policy, Cancel leaves it in place, and confirming shows \"Network policy deleted\", closes the dialog and leaves no page of the table listing it",
+          "status": "covered"
+        },
+        {
+          "id": "vmn-07",
+          "description": "With the Virtual Machine Shell kind selected on a dedicated agent, the Sandbox tab renders the Network Access section: the billing notice ($1 per 10 minutes by default, prorated per second) and a labelled \"Egress Profile\" radio group with the four labelled options (No Network / Package Registries / Public Internet / Custom Allowlist); a fresh agent defaults to No Network, so neither picker renders and Save is disabled",
+          "status": "covered"
+        },
+        {
+          "id": "vmn-08",
+          "description": "The secrets multi-select renders only under Public or Custom (with one checkbox per org secret) and the policy picker only under Custom; neither renders under No Network or Package Registries",
+          "status": "covered"
+        },
+        {
+          "id": "vmn-09",
+          "description": "Custom requires a policy: the picker shows the \"The Custom profile needs a network policy.\" message and Save stays disabled until one is chosen; the \"Create Policy\" shortcut opens the SDK network policy dialog in place; picking a policy lists the hosts it allows",
+          "status": "covered"
+        },
+        {
+          "id": "vmn-10",
+          "description": "Binding a secret whose host the chosen policy does not allow lists the gap (\"ENV needs host, which policy doesn't allow.\"), keeps Save disabled, and \"Add Hosts to {policy} and Save\" patches the policy (\"Hosts added to {policy}\") and then saves the settings (\"Network settings saved\") in one go",
+          "status": "covered"
+        },
+        {
+          "id": "vmn-11",
+          "description": "The saved configuration persists across closing and reopening the Edit Agent dialog: Custom selected, the policy chosen (now also allowing the secret's host) and the secret still bound",
+          "status": "covered"
+        },
+        {
+          "id": "vmn-12",
+          "description": "Narrowing the profile to No Network while a secret is bound opens the \"Unbind Secrets?\" confirmation naming the secret count; confirming saves with the secrets unbound, and the reopened agent is on No Network with the secret unchecked under Public",
+          "status": "covered"
+        },
+        {
+          "id": "vmn-13",
+          "description": "A non-admin never reaches the tenant Virtual Machine settings: the platform entry is missing from More options, does nothing when clicked, or the tenant settings dialog it opens lists no Virtual Machine section (the SDK Account rail filters it on isAdmin)",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "product-tour",
+      "name": "First-Visit Product Tour",
+      "spec": "79-product-tour.spec.ts",
+      "sourceFiles": [
+        "components/product-tour/product-tour.tsx",
+        "components/product-tour/tour-steps.ts",
+        "components/product-tour/tour-targets.ts",
+        "components/product-tour/tour-tooltip.tsx",
+        "components/product-tour/tour-runner.tsx",
+        "components/product-tour/use-tour-completion.ts"
+      ],
+      "checkpoints": [
+        {
+          "id": "tour-01",
+          "description": "Admin opens the chat page with ?tour=1 and the tour starts on the prompt input step, with no Back button and with Next, Skip tour and Close tour",
+          "status": "covered"
+        },
+        {
+          "id": "tour-02",
+          "description": "Admin clicks Next and Back and the tour moves between steps (prompt-input, then profile, then the next) with matching \"n of N\" progress text",
+          "status": "covered"
+        },
+        {
+          "id": "tour-03",
+          "description": "Admin walks every step in order and the account step comes last, with Done instead of Skip tour",
+          "status": "covered"
+        },
+        {
+          "id": "tour-04",
+          "description": "Non-admin walks every step and never sees the account step",
+          "status": "covered"
+        },
+        {
+          "id": "tour-05",
+          "description": "Admin finishes the tour with Done, a 2xx metadata POST carries status finished (version 1), and the tour does not auto-start on the next visit without ?tour=1",
+          "status": "covered"
+        },
+        {
+          "id": "tour-06",
+          "description": "Admin closes the tour with the X and the skipped outcome is POSTed to the user metadata",
+          "status": "covered"
+        },
+        {
+          "id": "tour-07",
+          "description": "Admin clicks Skip tour and the skipped outcome is POSTed to the user metadata",
+          "status": "covered"
+        },
+        {
+          "id": "tour-08",
+          "description": "Admin presses Escape and the tour is skipped (skipped outcome POSTed)",
+          "status": "covered"
+        },
+        {
+          "id": "tour-09",
+          "description": "Admin opens the chat page with ?tour=1&embed=true and no tour is shown",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "sdk-chat-migration-stage-1",
+      "name": "SDK Chat Migration — Stage 1",
+      "spec": "77-sdk-chat-migration-stage-1.spec.ts",
+      "sourceFiles": [
+        "components/chat/sdk-chat.tsx",
+        "app/platform/[tenantKey]/[mentorId]/mentor-page-content.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "scm-01",
+          "description": "The composer's Attach-file dropdown exposes the Upload File and Camera options",
+          "status": "covered"
+        },
+        {
+          "id": "scm-02",
+          "description": "Enabling/disabling the Web Search session tool flips the chip's aria-pressed state and PUTs the tools array to the session-update REST endpoint (tools are session-scoped, not resent on the WS frame)",
+          "status": "covered"
+        },
+        {
+          "id": "scm-02b",
+          "description": "A single click of the redesigned Tools-submenu checkbox item fires exactly ONE session-tools PUT with the correct tools array — issue #2586 follow-up guard against the classic composer chip's nested-button double-PUT hazard, confirmed not to reproduce in the redesigned menuitemcheckbox/switch row",
+          "status": "covered"
+        },
+        {
+          "id": "scm-03",
+          "description": "Attaching a file and sending carries the prompt, session id, and a file_references entry (file_id/file_key/file_name/content_type/file_size) in the outgoing WebSocket frame",
+          "status": "covered"
+        },
+        {
+          "id": "scm-04",
+          "description": "An attached file's chip visibly transitions from uploading (spinner) to done (no retry affordance, Remove enabled)",
+          "status": "covered"
+        },
+        {
+          "id": "scm-05",
+          "description": "A failed upload (mocked 500 on the presigned-URL request) drives the file chip to its error/retry affordance",
+          "status": "covered"
+        },
+        {
+          "id": "scm-06",
+          "description": "Clicking Stop mid-stream opens the dedicated stop-generation socket with the matching generation_id; once it replies, streaming ends and the composer re-enables, and a frame arriving on the paused main socket right after Stop never renders",
+          "status": "covered"
+        },
+        {
+          "id": "scm-07",
+          "description": "The server closing the WebSocket mid-stream (no eos/error frame) leaves the streaming state and re-enables the composer, and the user can send again on a freshly (re)opened socket",
+          "status": "covered"
+        },
+        {
+          "id": "scm-08",
+          "description": "Regression (issue #2586 fix): toggling a tool immediately after New Chat, before that chat's create-session POST resolves, queues the toggle (chip renders optimistically, zero PUTs) and PUTs it exactly once to the NEW session id once the session exists — never to the previous session, never lost",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "embed-second-origin-harness",
+      "name": "Embed Second-Origin Harness",
+      "spec": "78-embed-second-origin-harness.spec.ts",
+      "sourceFiles": [
+        "hooks/use-embed-mode.ts",
+        "components/chat/sdk-chat.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "ehh-01",
+          "description": "The second-origin embed test harness (127.0.0.1:4599) serves a visible placeholder page when no ?src= is given",
+          "status": "covered"
+        },
+        {
+          "id": "ehh-02",
+          "description": "The harness, loaded from a genuinely different origin than the mentor app, renders the embedded mentor chat inside its iframe (issue #2586; reusable scaffolding for issue #2590's origin-allowlist work)",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "composer-redesign",
+      "name": "Composer Redesign",
+      "spec": "79-composer-redesign.spec.ts",
+      "sourceFiles": ["components/chat/sdk-chat.tsx"],
+      "checkpoints": [
+        {
+          "id": "cr-01",
+          "description": "The empty-state chat screen renders name, welcome text, disclaimer and the composer directly below it, in that DOM order (issue #2586)",
+          "status": "covered"
+        },
+        {
+          "id": "cr-02",
+          "description": "On a phone-width viewport the empty-state composer is pinned to the bottom of the screen instead of centred with the name/welcome block",
+          "status": "covered"
+        },
+        {
+          "id": "cr-03",
+          "description": "The composer's single \"+\" menu opens and exposes Upload File, Camera and (when the mentor has tools enabled) a Tools submenu trigger",
+          "status": "covered"
+        },
+        {
+          "id": "cr-04",
+          "description": "Escape closes the \"+\" menu and returns focus to its trigger",
+          "status": "covered"
+        },
+        {
+          "id": "cr-05",
+          "description": "Toggling tools from the \"+\" menu's Tools submenu renders them as chips, with 4+ active tools collapsing the overflow into a \"+N\" button that opens an active list (\"Clear all\" included)",
+          "status": "covered"
+        },
+        {
+          "id": "cr-06",
+          "description": "The composer's file card renders every upload state — uploading, done, failed (with Retry) and too-large — via mocked upload responses",
+          "status": "covered"
+        },
+        {
+          "id": "cr-07",
+          "description": "Screen share, dictate, voice call and Send remain independent composer controls, never nested inside the \"+\" menu",
+          "status": "covered"
+        },
+        {
+          "id": "cr-08",
+          "description": "Guided prompts on the main chat stay visible while the user types, including a \"/\" skill command",
+          "status": "covered"
+        },
+        {
+          "id": "cr-09",
+          "description": "On a phone-width viewport the floating accessibility button does not overlap the composer's Send button",
+          "status": "covered"
+        },
+        {
+          "id": "cr-11",
+          "description": "The Canvas pill matches the active tool chips: when on it is the same pale-blue pill (#F5F8FF fill, #D0E0FF border, 32px) with a \"Turn off Canvas\" x that turns Canvas off; when off it is a plain one-click toggle with no x",
+          "status": "covered"
+        },
+        {
+          "id": "cr-12",
+          "description": "Regression (issue #2586): clicking Canvas on a brand-new chat before its create-session POST resolves shows the pill on with its x at once, then PUTs enable_artifacts: true exactly once to the NEW session id (never to sessions// or the previous session), and the choice survives the new session's default",
+          "status": "covered"
+        },
+        {
+          "id": "cr-13",
+          "description": "On a phone-width viewport (390px) the main chat's guided prompts are at most four full-width rows stacked above the composer, matching its left/right edges with no sideways scrolling, and stay visible while typing; desktop keeps the wrapped chips (issue #2586)",
+          "status": "covered"
+        },
+        {
+          "id": "cr-14",
+          "description": "Mobile: the composer's \"+\" menu opens as a bottom sheet with Upload/Camera tiles and Tools/Skills/Prompts/Memory rows; drilling into Tools toggles an available tool to an active chip, and the sheet closes via Escape and via a backdrop click",
+          "status": "covered"
+        },
+        {
+          "id": "cr-15",
+          "description": "The Memory row in the \"+\" menu never shows a trailing chevron (unlike Tools and Skills, both of which open a sub-page/submenu) on desktop or mobile, and clicking it opens the Memory panel (\"Your Memory\")",
+          "status": "covered"
+        },
+        {
+          "id": "cr-16",
+          "description": "The composer in CONVERSATION state (after a mocked reply) still shows an active tool chip, the Canvas \"Turn off Canvas\" x pill, and the \"/\" skill picker positioned above the composer; a 320-390px viewport in that state has no horizontal overflow with Send visible",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "embed-and-lti-redesign",
+      "name": "Embed Header + LTI Redesign",
+      "spec": "80-embed-and-lti-redesign.spec.ts",
+      "sourceFiles": [
+        "components/chat/sdk-chat.tsx",
+        "hooks/use-embed-mode.ts",
+        "hooks/use-is-lti-launch.ts",
+        "lib/embed-context.ts",
+        "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/embed-nav-bar.tsx",
+        "app/platform/[tenantKey]/[mentorId]/_components/accessibility-fab/index.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "emb-hdr-01",
+          "description": "The embed header shows the agent's avatar and name as plain text (not a button), a dedicated New chat button, the ? menu trigger and Close, on a genuinely cross-origin embed harness (issue #2586)",
+          "status": "covered"
+        },
+        {
+          "id": "emb-hdr-02",
+          "description": "The embed composer's \"+\" menu never offers Prompts or Memory, even for an authenticated (admin) embed session where they would otherwise render",
+          "status": "covered"
+        },
+        {
+          "id": "emb-hdr-03",
+          "description": "The embed's stacked suggested-prompt rows stay visible while typing, like the main chat's guided prompts (cr-08)",
+          "status": "covered"
+        },
+        {
+          "id": "emb-lti-01",
+          "description": "An LTI launch (?lti=true) hides the embed's Close button and Escape becomes a no-op",
+          "status": "covered"
+        },
+        {
+          "id": "emb-lti-02",
+          "description": "The LTI embed composer is capped at 680px wide even as its iframe widens",
+          "status": "covered"
+        },
+        {
+          "id": "emb-hdr-04",
+          "description": "Regression (issue #2586): the embed's suggested prompts are at most four full-width rows stacked above the composer, each matching the composer's left/right edges, with no horizontal overflow at 320px and still shown while typing",
+          "status": "covered"
+        },
+        {
+          "id": "emb-lti-03",
+          "description": "Regression (issue #2586): in a 320px LTI frame the composer stays inside the frame: the Canvas pill (on, with its x) gives way, the toolbar never overflows, and every action button including Send is fully visible",
+          "status": "covered"
+        },
+        {
+          "id": "emb-lti-04",
+          "description": "Regression (issue #2586): in a 300px LTI frame the composer placeholder stays on one line and ellipsizes (white-space nowrap, ::placeholder text-overflow ellipsis, content under two lines, not clipped), while typed text still wraps",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "project-page-redesign",
+      "name": "Project Page Redesign",
+      "spec": "81-project-page-redesign.spec.ts",
+      "sourceFiles": [
+        "app/platform/[tenantKey]/projects/[projectId]/[mentorId]/page.tsx",
+        "components/welcome-chat-new.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "pjr-01",
+          "description": "The redesigned project landing page renders a small label with the PROJECT name (title tooltip), the gradient AGENT-name h1 like the main chat (project name as its accessible description), the composer, and the Files/Instructions context cards in that order; both card subtitles wrap to a 2-line clamp and the cards share a row at equal height (issue #2586)",
+          "status": "covered"
+        },
+        {
+          "id": "pjr-02",
+          "description": "\"Project agents\" shows a count badge, an \"Add agent\" button, and the currently selected agent marked aria-current",
+          "status": "covered"
+        },
+        {
+          "id": "pjr-03",
+          "description": "Removing the last remaining agent from a project is blocked by a \"Cannot Remove Agent\" guard dialog, with no mutation performed",
+          "status": "covered"
+        },
+        {
+          "id": "pjr-04",
+          "description": "Mobile (390px): the project-name label / agent-name heading order holds, the composer is pinned to the viewport bottom instead of flowing after the context cards, and the Files/Instructions cards stack as one bordered list sharing the same 2-line subtitle clamp as desktop's 2-up grid",
+          "status": "covered"
+        },
+        {
+          "id": "pjr-05",
+          "description": "Mobile (390px): the per-agent \"More actions\" trigger opens a bottom actions sheet (instead of the desktop dropdown) showing the agent name and \"Remove from project\"; removing the last remaining agent through it is still blocked by the \"Cannot Remove Agent\" guard",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "embed-redesign-conversation-and-controls",
+      "name": "Embed Mode Redesign — Conversation & Controls",
+      "spec": "82-embed-redesign-conversation-and-controls.spec.ts",
+      "sourceFiles": [
+        "components/modals/edit-mentor-modal/hooks/useEmbedTab.ts",
+        "components/modals/edit-mentor-modal/tabs/embed-tab.tsx",
+        "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/embed-nav-bar.tsx",
+        "hooks/use-is-lti-launch.ts",
+        "e2e/utils/embed-harness-server.mjs",
+        "e2e/utils/embed-harness-client.ts"
+      ],
+      "checkpoints": [
+        {
+          "id": "er-01",
+          "description": "The REAL generated embed snippet (getEmbedCode(), dropped into a fake customer page) behaves like a real launcher: the bubble is visible and never overlaps the host page's own composer-shaped content, clicking it opens the panel with the chat, the embed header's Close button hides the widget via its closeEmbed postMessage, and reopening the bubble restores the SAME widget rather than recreating it",
+          "status": "covered"
+        },
+        {
+          "id": "er-02",
+          "description": "A scripted embed conversation (mocked chat WebSocket): sending a message renders the user bubble and the AI reply, the suggested-prompt rows disappear once the conversation has started, and the disclaimer (when present) stays directly above the composer mid-conversation",
+          "status": "covered"
+        },
+        {
+          "id": "er-03",
+          "description": "Clicking a suggested-prompt row in the embed sends it immediately (EmbedStarterPrompts wires onPromptSelect straight to handleSubmit), not just filling the composer",
+          "status": "covered"
+        },
+        {
+          "id": "er-04",
+          "description": "The embed composer's \"+\" menu offers Upload/Camera/Tools/Skills but never Prompts/Memory; toggling a tool from the Tools submenu renders an active \"Turn off {name}\" chip, and turning Canvas on shows the matching \"Turn off Canvas\" x pill",
+          "status": "covered"
+        },
+        {
+          "id": "er-05",
+          "description": "The embed composer's \"/\" skill picker opens ABOVE the composer (data-placement=\"above\") and, in the redesign variant, shows only the skill name — never the /slug line",
+          "status": "covered"
+        },
+        {
+          "id": "er-06",
+          "description": "Mocked file-card states inside the embed — uploading, done, failed (with Retry) and too-large — render the same as the main chat (journey 79 cr-06), scoped to the cross-origin iframe",
+          "status": "covered"
+        },
+        {
+          "id": "er-07",
+          "description": "A 390px full-screen embed has no horizontal overflow (document or toolbar) and keeps Send fully visible, including with a widened toolbar (Canvas on)",
+          "status": "covered"
+        },
+        {
+          "id": "er-08",
+          "description": "Embed header controls: borderless on the empty chat and a hairline once a reply lands; New chat clears the conversation back to the empty state; the ? menu lists Incognito (when offered) then Help/Support, and its Incognito row turns an empty chat Incognito (header shows \"Incognito chat\") and back off; the hamburger (mobile) opens the minimal sidebar",
+          "status": "covered"
+        },
+        {
+          "id": "er-09",
+          "description": "A logged-out visitor on an anonymous (publicly chattable) mentor gets the embed chat and can send (mocked), but sees no \"+\" menu, Screen Sharing, Voice input (dictation) or Voice call controls (chat-input-form.tsx's visibleToLoggedInUsersOnly gate)",
+          "status": "covered"
+        },
+        {
+          "id": "er-10",
+          "description": "For an agent with the Screen Sharing capability enabled, a logged-in embed user sees the Screen Sharing button and clicking it opens the in-panel LiveKit modal path; selectEnableChatActionsPopup has no dispatch call site anywhere in the OS/web-containers/web-utils source in this build, so the parent-postMessage chat-action-popup path is documented as unreachable rather than tested",
+          "status": "covered"
+        },
+        {
+          "id": "er-11",
+          "description": "For the same Screen-Sharing-enabled agent, the Voice call button is present for a logged-in embed user",
+          "status": "covered"
+        },
+        {
+          "id": "er-12",
+          "description": "An LTI embed (?embed=true&lti=true) keeps the Close button absent and Escape a no-op after New chat and after opening a prior chat from history — the lti flag persists across in-app navigation via the embed-context localStorage cache",
+          "status": "covered"
+        },
+        {
+          "id": "er-13",
+          "description": "The Embed tab's own live preview iframe (Edit Agent -> Embed) renders the redesigned embed's empty-state gradient agent-name heading",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "settings-welcome-screen",
+      "name": "Settings Welcome Screen Sub-Tab",
+      "spec": "83-settings-welcome-screen.spec.ts",
+      "sourceFiles": [
+        "components/modals/edit-mentor-modal/settings-tab.tsx",
+        "e2e/page-objects/edit-mentor/settings.tab.ts"
+      ],
+      "checkpoints": [
+        {
+          "id": "wss-01",
+          "description": "The Settings tab shows a fourth Welcome screen sub-tab after Basic, Discovery and Capabilities; it opens on the main-app live preview with the agent's name as the heading",
+          "status": "covered"
+        },
+        {
+          "id": "wss-02",
+          "description": "The Number of guided prompts control shows only when Guided prompts is picked; Suggested hides it and Off also empties the preview's prompts",
+          "status": "covered"
+        },
+        {
+          "id": "wss-03",
+          "description": "Picking 10 guided prompts shows the first 4 plus View more (6); View more expands to all 10 and Show less folds back to 4",
+          "status": "covered"
+        },
+        {
+          "id": "wss-04",
+          "description": "The Embed and Mobile previews show the prompts as stacked full-width rows, with the same View more expansion",
+          "status": "covered"
+        },
+        {
+          "id": "wss-05",
+          "description": "Picking Personal greeting switches the preview heading to a time-of-day greeting, and Preview as a logged-out visitor shows Hi there",
+          "status": "covered"
+        },
+        {
+          "id": "wss-06",
+          "description": "Save sends the Welcome screen choices (welcome_heading_style, guided_prompts_count) now that the backend stores them (iblai-platform#2626); on the tenant's default agent the save request is intercepted and aborted so the real agent is untouched",
+          "status": "covered"
+        },
+        {
+          "id": "wss-07",
+          "description": "On a throw-away agent, Save sends welcome_heading_style=personal_greeting, Settings reopens on Personal greeting, and the new-chat heading greets the signed-in user by first name (\"Good morning|afternoon|evening, <First name>\")",
+          "status": "covered"
+        },
+        {
+          "id": "wss-08",
+          "description": "The embed view of an agent with Personal greeting shows the same first-name greeting as its new-chat heading",
+          "status": "covered"
+        },
+        {
+          "id": "wss-09",
+          "description": "A full name that fails the first-name rule (\"#12345\", \"user_8812\") gets the nameless greeting, and \"john#4821 Doe\" is greeted as \"John\"; the heading never shows a # tag",
+          "status": "covered"
+        },
+        {
+          "id": "wss-10",
+          "description": "Every Welcome screen control changes the preview: heading Personal greeting then back to the agent name, guided count 1/3/4/5/10 shows min(count,4) chips with a \"View more (count-4)\" button only above 4, Off removes every chip and Guided brings 4 back",
+          "status": "covered"
+        },
+        {
+          "id": "wss-11",
+          "description": "On a throw-away agent, Save sends guided_prompts_count=3 with Agent name + Guided prompts; after a reload the three controls still show them and the preview has 3 chips (needs the #2626 SDK rebuild)",
+          "status": "covered"
+        },
+        {
+          "id": "wss-12",
+          "description": "With Agent name + 3 guided prompts saved, both the admin's and a student's new chat show the agent name (no greeting) and at most 3 prompt chips (needs the #2626 SDK rebuild)",
+          "status": "covered"
+        },
+        {
+          "id": "wss-13",
+          "description": "Admin saves Personal greeting + Off: both persist after a reload, then the new chat greets by first name, shows no prompt chips and fires no guided-prompts request (needs the #2626 SDK rebuild)",
+          "status": "covered"
+        },
+        {
+          "id": "wss-14",
+          "description": "A student opening the same agent sees the admin's Personal greeting with the student's own first name and no prompt chips (needs the #2626 SDK rebuild)",
+          "status": "covered"
+        },
+        {
+          "id": "wss-15",
+          "description": "Admin saves Suggested prompts (yours) with Agent name: both persist after a reload and the guided-prompt count select is hidden (needs the #2626 SDK rebuild)",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "in-chat-model-picker",
+      "name": "In-chat Model Picker",
+      "spec": "84-in-chat-model-picker.spec.ts",
+      "sourceFiles": [
+        "components/modals/edit-mentor-modal/settings-tab.tsx",
+        "e2e/page-objects/chat.page.ts",
+        "e2e/page-objects/edit-mentor/settings.tab.ts"
+      ],
+      "checkpoints": [
+        {
+          "id": "icm-01",
+          "description": "An admin turns on \"Allow in-chat model change\" under Settings > Capabilities; Save sends enable_in_chat_llm_change=true and it reads back on after reopening",
+          "status": "covered"
+        },
+        {
+          "id": "icm-02",
+          "description": "With the setting on, a user picks a model via + > Model > provider > model: the Model row names the model in use, later turns carry llm_provider/llm_name on the chat socket, and a chip plus a \"Switched to X for this chat\" notice show it",
+          "status": "covered"
+        },
+        {
+          "id": "icm-03",
+          "description": "The chip's x goes back to the agent's model, sent explicitly on the next turn (the backend keeps a session's last pick); a new chat drops the chip and the notices and sends no model fields",
+          "status": "covered"
+        },
+        {
+          "id": "icm-04",
+          "description": "On a phone the + sheet goes Model > provider page (with Back) > model, closes, and shows the model chip",
+          "status": "covered"
+        },
+        {
+          "id": "icm-05",
+          "description": "With the setting off (Save sends enable_in_chat_llm_change=false), the + menu has no Model row",
+          "status": "covered"
+        },
+        {
+          "id": "icm-06",
+          "description": "Per-model credentials (iblai-platform#2638): a model whose availability requires a key is disabled in + > Model > provider and shows the backend's reason; clicking it picks nothing, while a usable model in the same provider stays enabled",
+          "status": "covered"
+        },
+        {
+          "id": "icm-07",
+          "description": "A tenant with a single usable provider: + > Model lists that provider's models straight away, with no provider step",
+          "status": "covered"
+        },
+        {
+          "id": "icm-08",
+          "description": "Per-model credentials (iblai-platform#2638): a provider whose every model requires a key is left out of the + > Model provider list",
+          "status": "covered"
+        },
+        {
+          "id": "icm-09",
+          "description": "When the chat socket rejects the picked model (400 \"The selected model is not available.\"), the error shows, the chip goes away, the picker is back on the agent's model and the message text is back in the composer",
+          "status": "covered"
+        },
+        {
+          "id": "icm-10",
+          "description": "A student (non-admin) opens + > Model through the UI and picks the first model they can use (no model name hard-coded; skips the one the chat is already on): the chip names it, turns carry llm_provider/llm_name on the chat socket with no \"not available\" error, and the chip's x (\"Back to ibl.ai Fast\", the agent model) sends the agent's model again",
+          "status": "covered"
+        },
+        {
+          "id": "icm-11",
+          "description": "A student's pick is per chat: a new chat drops the chip and sends no model fields, and the admin's chat on the same agent never shows the student's pick",
+          "status": "covered"
+        },
+        {
+          "id": "icm-12",
+          "description": "On a phone a student picks the first usable model through the + sheet, the chip shows it and the next turn carries it",
+          "status": "covered"
+        },
+        {
+          "id": "icm-13",
+          "description": "With the setting off, a student's composer has no model picker",
+          "status": "covered"
+        },
+        {
+          "id": "icm-14",
+          "description": "A student whose model catalogue has a single provider sees + > Model list its models straight away with no provider step, picks the first usable one, the chip shows it and the turn carries it",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "stale-session-id-self-heal",
+      "name": "Stale Session Id Self-Heal",
+      "spec": "85-stale-session-id-self-heal.spec.ts",
+      "sourceFiles": [
+        "components/chat/sdk-chat.tsx",
+        "lib/utils.ts",
+        "hooks/user-navigate.ts",
+        "lib/logger.tsx",
+        "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/chats/use-recent-chats.ts",
+        "app/share/chat/[sessionId]/share-chat-redirect-content.tsx",
+        "e2e/page-objects/chat.page.ts"
+      ],
+      "checkpoints": [
+        {
+          "id": "sess-01",
+          "description": "A dead session id seeded into the tenant-scoped `session_id` cache is fetched exactly 4 times (1 initial + 3 retries, retries unchanged), all before the POST .../sessions/ that mints the replacement and never after it; no \"Session not found\" toast; the chat stays usable (real send + reply)",
+          "status": "covered"
+        },
+        {
+          "id": "sess-02",
+          "description": "A legacy cache entry keyed by the bare mentorId is never looked up; the app mints and uses a session under the `${tenantKey}:${mentorId}` key",
+          "status": "covered"
+        },
+        {
+          "id": "sess-03",
+          "description": "A WS \"Session not found: <id>\" frame mid-chat self-heals with no error toast: the working indicator clears, a fresh session replaces the dead id, and a follow-up message on it succeeds",
+          "status": "covered"
+        },
+        {
+          "id": "sess-04",
+          "description": "In embed mode (`?embed=true`) a dead session id self-heals with no manual New chat, fetching the dead id exactly 4 times, all before the mint",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "accessibility-fab-draggable",
+      "name": "Draggable Accessibility Button",
+      "spec": "86-accessibility-fab-draggable.spec.ts",
+      "sourceFiles": [
+        "app/platform/[tenantKey]/[mentorId]/_components/accessibility-fab/index.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "fab-01",
+          "description": "User clicks the accessibility button to open the menu; a drag past 5px does not open it; a click right after a drag still opens it",
+          "status": "covered"
+        },
+        {
+          "id": "fab-02",
+          "description": "Mouse drag left of centre snaps the button to the left edge and right of centre to the right edge, keeping its vertical position; the spot persists across reload (localStorage accessibility-fab-position:v2)",
+          "status": "covered"
+        },
+        {
+          "id": "fab-03",
+          "description": "Regression: during a mouse drag no dragstart/dragenter/dragover events fire and the chat file-drop overlay never appears (native <img> drag used to fire pointercancel and trigger the drop zone)",
+          "status": "covered"
+        },
+        {
+          "id": "fab-04",
+          "description": "Keyboard: ArrowUp/ArrowDown move the focused button 16px (Shift 64px), ArrowLeft/ArrowRight switch sides, and the live region announces 'Accessibility button moved to the {side} edge, N pixels from the bottom.'",
+          "status": "covered"
+        },
+        {
+          "id": "fab-05",
+          "description": "With normal motion the inline transition contains cubic-bezier(0.34, 1.56, 0.64, 1) after release and is empty mid-drag",
+          "status": "covered"
+        },
+        {
+          "id": "fab-06",
+          "description": "Button stays on screen on its side after the viewport shrinks and returns to its stored spot when it grows back",
+          "status": "covered"
+        },
+        {
+          "id": "fab-07",
+          "description": "An off-screen stored position is pulled back on screen on load",
+          "status": "covered"
+        },
+        {
+          "id": "fab-08",
+          "description": "Move-to-corner buttons in the menu place the button in each of the four corners (8px margin) and announce the move",
+          "status": "covered"
+        },
+        {
+          "id": "fab-09",
+          "description": "Reset Button Position is hidden until the button has been moved, and clicking it restores the default spot and clears storage",
+          "status": "covered"
+        },
+        {
+          "id": "fab-10",
+          "description": "Reset All Accessibility Settings also clears the stored button position",
+          "status": "covered"
+        },
+        {
+          "id": "fab-11",
+          "description": "Mobile (390x844, touch): tap opens the menu; a touch drag does not open it and a following tap does",
+          "status": "covered"
+        },
+        {
+          "id": "fab-12",
+          "description": "Mobile (touch, CDP): touch drag snaps to the nearest edge, keeps height, and persists across reload",
+          "status": "covered"
+        },
+        {
+          "id": "fab-13",
+          "description": "Mobile: default button position does not overlap the composer Send button",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "camera-dialog-pointer-events",
+      "name": "Camera Dialog Leaves Page Clickable",
+      "spec": "87-camera-dialog-pointer-events.spec.ts",
+      "sourceFiles": ["components/chat/sdk-chat.tsx"],
+      "checkpoints": [
+        {
+          "id": "camera-01",
+          "description": "Composer + -> Camera -> Capture -> Use photo: live feed shows, then body pointer-events is not 'none', the composer accepts typing and + reopens its menu (regression: separate Radix DismissableLayer copies froze the page)",
+          "status": "covered"
+        },
+        {
+          "id": "camera-02",
+          "description": "Composer + -> Camera -> Capture -> Escape closes the dialog and leaves the page clickable (same regression)",
+          "status": "covered"
+        },
+        {
+          "id": "camera-03",
+          "description": "Camera -> Capture -> Retake -> Capture -> Use photo leaves the page clickable and a message can still be sent",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "create-agent-category-wheel-scroll",
+      "name": "Create Agent Category Wheel Scroll",
+      "spec": "88-create-agent-category-wheel-scroll.spec.ts",
+      "sourceFiles": ["components/modals/create-mentor-form.tsx"],
+      "checkpoints": [
+        {
+          "id": "catscroll-01",
+          "description": "Admin opens Create Agent, opens the Category picker and wheels the list: scrollTop increases and a lower category can be selected (regression: dialog scroll lock swallowed wheel events on the portaled popover)",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "agent-ai-launcher-chat-download",
+      "name": "agent-ai Launcher Chat Download",
+      "spec": "89-agent-ai-launcher-chat-download.spec.ts",
+      "sourceFiles": [
+        "extensions/chrome/public/vendor/agent-ai.umd.js",
+        "extensions/chrome/public/manifest.json",
+        "e2e/utils/embed-harness-server.mjs"
+      ],
+      "checkpoints": [
+        {
+          "id": "aa-01",
+          "description": "The <agent-ai> launcher (vendored @iblai/agent-ai bundle on the second-origin harness /agent-ai page) renders its chat iframe with a sandbox containing allow-downloads, and \"Download this chat\" > Download inside the frame produces a chat-*.txt file holding both conversation turns (iblai-platform#2680)",
+          "status": "covered"
+        },
+        {
+          "id": "aa-02",
+          "description": "Negative control: with the iframe reloaded under the pre-fix sandbox (no allow-downloads) the same export yields no download event, proving aa-01 detects the silently blocked download",
           "status": "covered"
         }
       ]

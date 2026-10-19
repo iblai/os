@@ -6,9 +6,9 @@ import { useParams, useSearchParams } from 'next/navigation';
 import {
   AgentDatasetsTab,
   AgentSettingsProvider,
+  type Dataset,
 } from '@iblai/iblai-js/web-containers/next';
 
-import IblPagination from '@/components/ibl-pagination';
 import { selectRbacPermissions } from '@/features/rbac/rbac-slice';
 import { useAppSelector } from '@/lib/hooks';
 import { useUsername } from '@/hooks/use-user';
@@ -17,8 +17,10 @@ import { useShowFreeTrialDialog } from '@/hooks/user-user-actions';
 import { config } from '@/lib/config';
 import { DATASETS_TAB_URL_PARAMS } from '@/lib/constants';
 import { TenantKeyMentorIdParams } from '@/lib/types';
-
-import { AddResourceModal } from './add-resource-modal';
+import {
+  disabledDatasetResourceTypes,
+  maxDatasetFileSizeInMegaBytes,
+} from '@/lib/utils';
 
 // URL query keys the datasets tab owns (shared with useNavigate's close/tab
 // logic so they're cleared together with the modal).
@@ -32,12 +34,27 @@ const parsePageParam = (value: string | null): number => {
   return parsed;
 };
 
+interface AgentDatasetsTabWrapperProps {
+  /** Mentor whose datasets are listed; defaults to the active/route mentor. */
+  mentorId?: string;
+  /** Picker mode: called when a dataset row is clicked. */
+  onSelect?: (dataset: Dataset) => void;
+  /** Picker mode: highlights the row with this id. */
+  selectedDatasetId?: string;
+  /**
+   * Drive page/search from the URL (default). Pass `false` when embedded
+   * outside the edit-mentor modal (e.g. a picker dialog) so the SDK keeps
+   * page/search in local state instead.
+   */
+  syncToUrl?: boolean;
+}
+
 /**
  * OS host wrapper for the SDK `AgentDatasetsTab`. The SDK component reads
  * tenant/mentor/username/RBAC from the nearest `<AgentSettingsProvider>` and
- * injects OS-specific pagination + add-resource UI via props (they have deep
- * standalone dependencies, so the SDK does not bundle them). This mirrors the
- * already-converged `EvaluationTab` / `TasksTab` wrappers.
+ * renders its own pagination + Add Resources modal; the host only passes the
+ * env-driven config (disabled resource types, max upload size). This mirrors
+ * the already-converged `EvaluationTab` / `TasksTab` wrappers.
  *
  * The SDK tab keeps page/search state internally unless driven by controlled
  * props. We drive them from the URL (`datasetsPage` / `datasetsSearch`) so the
@@ -46,13 +63,18 @@ const parsePageParam = (value: string | null): number => {
  * page param — the SDK's page-reset contract: firing `onSearchChange` implies a
  * reset to page 1, which the host performs by removing `datasetsPage`.
  */
-export function AgentDatasetsTabWrapper() {
+export function AgentDatasetsTabWrapper({
+  mentorId: mentorIdOverride,
+  onSelect,
+  selectedDatasetId,
+  syncToUrl = true,
+}: AgentDatasetsTabWrapperProps = {}) {
   const { tenantKey, mentorId } = useParams<TenantKeyMentorIdParams>();
   const username = useUsername();
   const { getMentorId, navigateWithSearchParams } = useNavigate();
-  // The datasets hooks resolve the active mentor via `getMentorId()`, falling
-  // back to the route param (matches the local DatasetsTab it replaces).
-  const activeMentorId = getMentorId() || mentorId;
+  // An explicit `mentorId` (picker mode) wins; otherwise the active modal
+  // mentor via `getMentorId()`, falling back to the route param.
+  const activeMentorId = mentorIdOverride || getMentorId() || mentorId;
   const rbacPermissions = useAppSelector(selectRbacPermissions);
   const { executeWithTrialCheck } = useShowFreeTrialDialog();
 
@@ -90,12 +112,18 @@ export function AgentDatasetsTabWrapper() {
       executeGatedAction={executeWithTrialCheck}
     >
       <AgentDatasetsTab
-        page={page}
-        search={search}
-        onPageChange={handlePageChange}
-        onSearchChange={handleSearchChange}
-        PaginationComponent={IblPagination}
-        AddResourceModal={AddResourceModal}
+        {...(syncToUrl
+          ? {
+              page,
+              search,
+              onPageChange: handlePageChange,
+              onSearchChange: handleSearchChange,
+            }
+          : {})}
+        onSelect={onSelect}
+        selectedDatasetId={selectedDatasetId}
+        disabledResourceTypes={disabledDatasetResourceTypes()}
+        maxUploadSizeMb={maxDatasetFileSizeInMegaBytes()}
       />
     </AgentSettingsProvider>
   );

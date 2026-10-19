@@ -759,7 +759,7 @@ pub async fn remote_code_enable(
                 return;
             };
             if let Err(e) = axum::serve(listener, companion_router).await {
-                eprintln!("[RemoteCode] companion exited: {e}");
+                crate::telemetry::report("[RemoteCode] companion exited", e);
             }
         });
         let child = Command::new(opencode_program())
@@ -954,9 +954,16 @@ mod tests {
     #[test]
     fn free_port_is_bindable() {
         let _guard = PORT_TEST_LOCK.lock().unwrap();
-        let port = free_port().expect("some port is free");
-        // Usable, not merely returned: bind proves opencode could too.
-        drop(TcpListener::bind(("0.0.0.0", port)).expect("picked port binds"));
+        // Retried: `free_port` releases its probe, and any parallel test may take the
+        // port before this re-bind; five misses in a row is a real bug.
+        for _ in 0..5 {
+            let port = free_port().expect("some port is free");
+            // Usable, not merely returned: bind proves opencode could too.
+            if TcpListener::bind(("0.0.0.0", port)).is_ok() {
+                return;
+            }
+        }
+        panic!("a picked port never bound");
     }
 
     #[test]
@@ -1010,6 +1017,11 @@ mod tests {
     /// that list then shows.
     #[tokio::test(flavor = "multi_thread")]
     async fn companion_lists_and_mints_workspaces_behind_auth() {
+        // Both handlers resolve `iblai_data_dir()`, which reads the process-global
+        // `XDG_DATA_HOME`: hold the lock the acp settings tests repoint it under, or
+        // mint and list can land in different roots (`data_dir_lock` documents the
+        // race). Held across the awaits on purpose, like the installer tests.
+        let _data_dir = crate::opencode_acp::data_dir_lock();
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
         let addr = listener.local_addr().unwrap();
         let router = companion_router("pw-test".into());
@@ -1059,9 +1071,10 @@ mod tests {
             .iter()
             .filter_map(|w| w["path"].as_str())
             .collect();
-        assert!(names.contains(&path), "minted folder must be listed");
-
+        // Clean up before asserting: a red run must not leave a `phone-*` folder in
+        // the user's real workspaces root.
         let _ = std::fs::remove_dir_all(path);
+        assert!(names.contains(&path), "minted folder must be listed");
     }
 
     #[test]

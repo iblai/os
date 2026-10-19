@@ -6,12 +6,14 @@ import { SubscriptionWrapper } from '../[tenantKey]/[mentorId]/_components/subsc
 import { HotKeysWrapper } from '../[tenantKey]/[mentorId]/_components/hot-keys-wrapper';
 import { AppSidebar } from '../[tenantKey]/[mentorId]/_components/app-sidebar';
 import { NavBar } from '../[tenantKey]/[mentorId]/_components/nav-bar';
-import { AccessibilityProvider } from '@/contexts/accessibility-contexts';
+import { AccessibilityProvider } from '@iblai/iblai-js/web-containers/next';
 import { AccessibilityFab } from '../[tenantKey]/[mentorId]/_components/accessibility-fab';
 import { useMentorSettings } from '@/hooks/use-mentors/use-mentor-settings';
 import { useParams, useSearchParams } from 'next/navigation';
 import { TenantKeyMentorIdParams } from '@/lib/types';
 import { isTauriApp } from '@/types/tauri';
+import { isLoggedIn } from '@/lib/utils';
+import { ProductTour } from '@/components/product-tour';
 import {
   isTauriOfflineMode,
   isOfflineServerOrigin,
@@ -68,6 +70,7 @@ export default function AppLayout({ children, defaultOpen }: AppLayoutProps) {
       <SidebarProvider defaultOpen={defaultOpen}>
         <HotKeysWrapper />
         <AppSidebar />
+        {isLoggedIn() && <ProductTour />}
         <SidebarInset asChild className="flex h-dvh flex-col overflow-hidden">
           <div>
             <NavBar />

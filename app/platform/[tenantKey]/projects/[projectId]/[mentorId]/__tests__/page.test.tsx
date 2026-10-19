@@ -18,12 +18,22 @@ vi.mock('@/components/error-boundary', () => ({
   ),
 }));
 
-vi.mock('@/components/document-sidebar', () => ({
-  DocumentSidebar: () => <div data-testid="document-sidebar" />,
-}));
+vi.mock('@iblai/iblai-js/web-containers', async () => {
+  const actual = await vi.importActual<
+    typeof import('@iblai/iblai-js/web-containers')
+  >('@iblai/iblai-js/web-containers');
+  return {
+    ...actual,
+    DocumentSidebar: () => <div data-testid="document-sidebar" />,
+  };
+});
 
-vi.mock('@/components/chat', () => ({
-  Chat: () => <div data-testid="chat" />,
+const mockSdkChat = vi.fn();
+vi.mock('@/components/chat/sdk-chat', () => ({
+  SdkChat: (props: Record<string, unknown>) => {
+    mockSdkChat(props);
+    return <div data-testid="chat" />;
+  },
 }));
 
 vi.mock('@iblai/iblai-js/web-utils', () => ({
@@ -84,6 +94,7 @@ describe('projects [mentorId] page', () => {
     vi.clearAllMocks();
     mockUseParams.mockReturnValue({
       tenantKey: 'test-tenant',
+      projectId: '42',
       mentorId: 'mentor-123',
     });
     mockTokenParam = null;
@@ -103,6 +114,17 @@ describe('projects [mentorId] page', () => {
   it('renders the chat when a mentorId is present', () => {
     render(<Page />);
     expect(screen.getByTestId('chat')).toBeInTheDocument();
+  });
+
+  it('renders the SDK chat scoped to the project from the URL, borderless', () => {
+    render(<Page />);
+    expect(mockSdkChat).toHaveBeenCalledWith(
+      expect.objectContaining({
+        projectId: '42',
+        hasBorder: false,
+        isPreviewMode: false,
+      }),
+    );
   });
 
   it('redirects to projects and renders no chat when mentorId is empty', () => {

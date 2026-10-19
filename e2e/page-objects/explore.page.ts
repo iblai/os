@@ -25,6 +25,12 @@ export class ExplorePage {
   readonly typeFilterTrigger: Locator;
   readonly createdByFilterTrigger: Locator;
   readonly clearFiltersButton: Locator;
+  /** The "×" inside the search box; only rendered once there is a query. */
+  readonly clearSearchButton: Locator;
+  /** One-click Featured filter chip (`aria-pressed` reflects its state). */
+  readonly featuredToggle: Locator;
+  /** Page-header "Create Agent" CTA (only for users allowed to create). */
+  readonly headerCreateAgentButton: Locator;
   /**
    * `DefaultMentorsSection` short-circuits to `<EmptyState />` (rendered by
    * `app/.../explore/_components/empty-state.tsx`) when the mentors query
@@ -84,7 +90,19 @@ export class ExplorePage {
     this.createdByFilterTrigger = page
       .getByRole('button', { name: /created by/i })
       .first();
-    this.clearFiltersButton = page.getByRole('button', { name: /clear/i });
+    this.clearFiltersButton = page.getByRole('button', { name: /clear all/i });
+    this.clearSearchButton = page.getByRole('button', {
+      name: 'Clear search',
+      exact: true,
+    });
+    this.featuredToggle = page.getByRole('button', {
+      name: 'Featured',
+      exact: true,
+    });
+    this.headerCreateAgentButton = page.getByRole('button', {
+      name: 'Create new agent',
+      exact: true,
+    });
     // Empty-state text rendered by `EmptyState` when DefaultMentorsSection
     // has nothing to show.
     this.emptyState = page.getByText(/sorry, no agents found/i);

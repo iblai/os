@@ -28,6 +28,7 @@ const unpinMessageMock = vi.fn(() => ({ unwrap: () => Promise.resolve({}) }));
 const deleteMessageMock = vi.fn(() => ({ unwrap: () => Promise.resolve({}) }));
 const exportMessagesToXlsxMock = vi.fn();
 const eventBusEmitMock = vi.fn();
+const pinnedQueryArgsMock = vi.fn();
 const updateQueryDataMock = vi.fn(
   (_endpoint: string, _args: unknown, recipe: (draft: any) => void) => {
     const draft: { results: any[] } = { results: [] };
@@ -43,6 +44,8 @@ const updateQueryDataMock = vi.fn(
 let mockIsStreaming = false;
 let mockNumberOfActiveChatMessages = 0;
 let mockActiveChatMessages: Array<{ role?: string }> = [];
+let mockCachedSessionId: Record<string, string> = {};
+const saveCachedSessionIdMock = vi.fn();
 
 let mockRecentInfinite: any = {
   pages: [{ results: [] }],
@@ -74,7 +77,7 @@ vi.mock('@/lib/hooks', () => ({
 }));
 
 vi.mock('@/hooks/use-local-storage', () => ({
-  useLocalStorage: () => [{}, vi.fn()],
+  useLocalStorage: () => [mockCachedSessionId, saveCachedSessionIdMock],
 }));
 
 vi.mock('@/features/utils', () => ({
@@ -121,9 +124,10 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
     isFetchingNextPage: mockIsFetchingNextPage,
   }),
   useGetPinnedMessagesQuery: (
-    _args: unknown,
+    args: unknown,
     options?: { skip?: boolean; selectFromResult?: (state: any) => any },
   ) => {
+    pinnedQueryArgsMock(args);
     const state = {
       data: options?.skip ? undefined : mockPinnedPages,
       isError: false,
@@ -188,6 +192,7 @@ beforeEach(() => {
   mockPinnedPages = { results: [] };
   mockHasNextPage = false;
   mockIsFetchingNextPage = false;
+  mockCachedSessionId = {};
 });
 
 describe('useRecentChats', () => {
@@ -316,6 +321,29 @@ describe('useRecentChats', () => {
     expect(refetchPinnedMock).toHaveBeenCalled();
   });
 
+  it('reads and patches one user-wide pinned cache entry, never keyed by session', async () => {
+    // The pin-message list is user-wide and the SDK keys its cache on the full
+    // args, so a sessionId here splits the entry from AppProvider's refetch.
+    const pinnedCacheKey = { org: 'tenant-a', userId: 'admin-user' };
+    const row = { session_id: 'row-1', mentor: { unique_id: 'mentor-1' } };
+    const { result } = renderHook(() => useRecentChats(baseArgs));
+
+    await act(async () => {
+      await result.current.handlePin(row);
+      await result.current.handleUnpin(row);
+      await result.current.handleDelete(row);
+    });
+
+    expect(pinnedQueryArgsMock).toHaveBeenLastCalledWith(pinnedCacheKey);
+    const pinnedPatches = updateQueryDataMock.mock.calls.filter(
+      ([endpoint]) => endpoint === 'getPinnedMessages',
+    );
+    expect(pinnedPatches).toHaveLength(3);
+    for (const [, args] of pinnedPatches) {
+      expect(args).toEqual(pinnedCacheKey);
+    }
+  });
+
   it('handleUnpin unpins a row and refetches both lists', async () => {
     const row = { session_id: 'unpin-me', mentor: { unique_id: 'mentor-1' } };
     const { result } = renderHook(() => useRecentChats(baseArgs));
@@ -355,6 +383,34 @@ describe('useRecentChats', () => {
     // Different session than the active one => state is torn down / repointed.
     expect(dispatchMock).toHaveBeenCalled();
     expect(onAfterNav).toHaveBeenCalled();
+  });
+
+  it('handleSelectRow writes the localStorage session_id cache under a tenant-scoped key (#2536)', () => {
+    const row = { session_id: 'new-sess', mentor: { unique_id: 'mentor-1' } };
+    const { result } = renderHook(() => useRecentChats(baseArgs));
+
+    act(() => {
+      result.current.handleSelectRow(row);
+    });
+
+    expect(saveCachedSessionIdMock).toHaveBeenCalledWith({
+      'tenant-a:mentor-1': 'new-sess',
+    });
+  });
+
+  it('handleSelectRow keeps sessions from other tenants distinct for the same mentor id (#2536)', () => {
+    mockCachedSessionId = { 'tenant-b:mentor-1': 'other-tenant-session' };
+    const row = { session_id: 'new-sess', mentor: { unique_id: 'mentor-1' } };
+    const { result } = renderHook(() => useRecentChats(baseArgs));
+
+    act(() => {
+      result.current.handleSelectRow(row);
+    });
+
+    expect(saveCachedSessionIdMock).toHaveBeenCalledWith({
+      'tenant-b:mentor-1': 'other-tenant-session',
+      'tenant-a:mentor-1': 'new-sess',
+    });
   });
 
   it('refetches recent after the first assistant reply lands', () => {
