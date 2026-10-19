@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.173.0](https://github.com/iblai/os/compare/v0.172.0...v0.173.0) (2026-10-19)
+
+### Features
+
+* **edit-mentor:** label the Reopen last conversation setting ([abec7b4](https://github.com/iblai/os/commit/abec7b4304ee1307d9ba12c44469fe1e8b56ec52))
+
+### Chores
+
+* **deps:** bump @iblai/iblai-js to 2.42.0 ([b4ac9b3](https://github.com/iblai/os/commit/b4ac9b377d4457227a1fabc8520e0d7db206d039))
+
+### Tests
+
+* **e2e:** cover reopening the last conversation (journey 90) ([1c371b5](https://github.com/iblai/os/commit/1c371b55c2ce161dee3621ee290908b811e33f36))
+* **e2e:** read J6 model rows past the touch-only unavailable reason ([40fa358](https://github.com/iblai/os/commit/40fa3587a41775bd1ec41f038609f5e16440c9e4)), closes [#2146](https://github.com/iblai/os/issues/2146)
+
 ## [0.172.0](https://github.com/iblai/os/compare/v0.171.5...v0.172.0) (2026-10-19)
 
 ### Features

@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-10-16 | 942 checkpoints (897 covered, 11 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 97 journeys (96 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-10-16 | 952 checkpoints (907 covered, 11 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 98 journeys (97 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -2198,7 +2198,26 @@ Regression guard for [iblai-platform#2680](https://github.com/iblai/iblai-platfo
 
 ---
 
-## Journey 90: Read Aloud Across Voice Sources (3 checkpoints, 1 pending) — `journeys/90-read-aloud-voice-sources.spec.ts`
+## Journey 90: Reopen Last Conversation (10 checkpoints) — `journeys/90-reopen-last-conversation.spec.ts`
+
+**Source files:** `components/modals/edit-mentor-modal/settings-tab.tsx`, `components/chat/sdk-chat.tsx`, `messages/en.json`, `e2e/page-objects/edit-mentor/settings.tab.ts` (the reopen lookup lives in the SDK Chat and `@iblai/web-utils` / `@iblai/data-layer`)
+
+Per-agent `show_last_conversation` ([iblai-platform#2629](https://github.com/iblai/iblai-platform/issues/2629)): with the setting on and no session held in memory, opening the agent's chat reads the first row of the sidebar's own `GET .../recent-messages/?limit=10&offset=0&mentor=<id>` query (no dedicated `limit=1` request) and reopens that session instead of minting one. Two throw-away agents (cheap ibl.ai model, tracked and deleted); two real messages in total. rlc-08..10 protect the main chat: default-off agents, shared links and session-id links never reopen the last conversation (proved by behavior: fresh chat or the linked conversation, no wrong session shown, and no `limit=1` request).
+
+- [x] rlc-01: Admin turns on "Reopen last conversation" under Settings › Capabilities on a new agent; Save sends show_last_conversation=true, the save succeeds and the toggle is still on after reopening the dialog
+- [x] rlc-02: With no session held (device cache cleared) and the setting on, reopening the agent uses the first row of the offset-0 recent-messages request (no limit=1 request) and shows the previous conversation without a POST .../sessions/
+- [x] rlc-03: "New Chat" starts a fresh chat: welcome screen, no old message, composer ready
+- [x] rlc-04: With two conversations, the newest one reopens and the older one's message is not shown
+- [x] rlc-05: Turning the setting off keeps the chat that is open; after clearing the device cache the next open is fresh and mints a session (no limit=1 request)
+- [x] rlc-06: An agent with the setting on and no history opens the welcome screen with no error toast (the offset-0 request runs and finds nothing)
+- [x] rlc-07: A member (non-admin) can read the agent's public settings but PUT settings is refused with 403
+- [x] rlc-08: Main-chat guard: an agent whose setting was never touched (default null) makes no limit=1 request, shows no previous conversation, mints a new session as before, and the composer is usable
+- [x] rlc-09: With the setting on, opening a shared chat link (mocked shared transcript) shows the shared conversation, not the last one, and mints no session, with no limit=1 request
+- [x] rlc-10: With the setting on, a link carrying chat-action and session-id opens that conversation (cached session = the URL's), not the latest, and mints no session, with no limit=1 request
+
+---
+
+## Journey 91: Read Aloud Across Voice Sources (3 checkpoints, 1 pending) — `journeys/91-read-aloud-voice-sources.spec.ts`
 
 **Source files:** `components/chat/ai-message-speak.tsx`, `hooks/use-speech.ts`, `components/modals/edit-mentor-modal/tabs/voice-tab.tsx`
 

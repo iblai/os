@@ -1964,7 +1964,9 @@
     "inAppChatNote": "应用内托管的对话，即用户在此打开的聊天。",
     "embedWidgetNote": "你使用“嵌入”标签页中的代码片段嵌入到自己网站上的挂件。",
     "inChatModelChangeLabel": "允许在聊天中更换模型",
-    "inChatModelChangeTooltip": "允许用户为自己的聊天选择其他 AI 模型。智能体的模型不会改变，新聊天仍从该模型开始。此设置只有一个值，因此同时适用于应用内聊天和嵌入式小组件。"
+    "inChatModelChangeTooltip": "允许用户为自己的聊天选择其他 AI 模型。智能体的模型不会改变，新聊天仍从该模型开始。此设置只有一个值，因此同时适用于应用内聊天和嵌入式小组件。",
+    "showLastConversationLabel": "重新打开上次对话",
+    "showLastConversationTooltip": "用户打开此智能体时，显示他们的上一次对话，方便从上次中断的地方继续。此设置只有一个值，因此同时适用于应用内聊天和嵌入式小组件。"
   },
   "tabsMcpTab": {
     "infoBox": "通过 MCP 服务器将您的智能体连接到您自己的系统，让它能够在对话中直接访问您的数据和服务。"
