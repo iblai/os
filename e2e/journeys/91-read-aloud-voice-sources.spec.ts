@@ -14,11 +14,17 @@ import type { VoiceProviderId } from '../page-objects/edit-mentor/voice.tab';
  * into an `Audio` element and must start within 7s; Browser uses
  * speechSynthesis. Runs on a fresh mentor, so the tenant must hold the voice
  * provider keys.
+ *
+ * The CI image (Playwright's Linux Docker image, headless) has no speech
+ * engine, so Chromium reports no voices and an utterance never fires `start`.
+ * There the Browser leg only checks that the reply was handed to
+ * speechSynthesis.speak(); on a machine with voices it waits for speech.
  */
 
 type PlaybackWindow = Window & {
   __readAloudAudio: HTMLMediaElement[];
   __speechStarts: number;
+  __spokenTexts: string[];
 };
 
 const PLAYBACK_TIMEOUT = 30_000;
@@ -38,6 +44,7 @@ async function trackPlayback(page: Page): Promise<void> {
     const w = window as unknown as PlaybackWindow;
     w.__readAloudAudio = [];
     w.__speechStarts = 0;
+    w.__spokenTexts = [];
 
     const play = HTMLMediaElement.prototype.play;
     HTMLMediaElement.prototype.play = function (this: HTMLMediaElement) {
@@ -49,6 +56,7 @@ async function trackPlayback(page: Page): Promise<void> {
       const synth = window.speechSynthesis;
       const speak = synth.speak.bind(synth);
       synth.speak = (utterance: SpeechSynthesisUtterance) => {
+        w.__spokenTexts.push(utterance.text);
         utterance.addEventListener('start', () => {
           w.__speechStarts += 1;
         });
@@ -62,6 +70,7 @@ async function resetPlaybackTracking(page: Page): Promise<number> {
   return page.evaluate(() => {
     const w = window as unknown as PlaybackWindow;
     w.__readAloudAudio = [];
+    w.__spokenTexts = [];
     return w.__speechStarts;
   });
 }
@@ -78,6 +87,37 @@ async function speechStartsSince(page: Page, baseline: number) {
   return page.evaluate(
     (b) => (window as unknown as PlaybackWindow).__speechStarts - b,
     baseline,
+  );
+}
+
+async function spokenTexts(page: Page): Promise<string[]> {
+  return page.evaluate(
+    () => (window as unknown as PlaybackWindow).__spokenTexts,
+  );
+}
+
+// Chromium fills the voice list asynchronously, so an empty first read is
+// not final until `voiceschanged` fires or a short grace period passes.
+async function hasSpeechVoices(page: Page): Promise<boolean> {
+  return page.evaluate(
+    () =>
+      new Promise<boolean>((resolve) => {
+        if (!('speechSynthesis' in window)) return resolve(false);
+        const synth = window.speechSynthesis;
+        if (synth.getVoices().length > 0) return resolve(true);
+        const timer = setTimeout(
+          () => resolve(synth.getVoices().length > 0),
+          3_000,
+        );
+        synth.addEventListener(
+          'voiceschanged',
+          () => {
+            clearTimeout(timer);
+            resolve(synth.getVoices().length > 0);
+          },
+          { once: true },
+        );
+      }),
   );
 }
 
@@ -171,11 +211,32 @@ test.describe('Journey 91: Read Aloud across voice sources', () => {
 
         if (provider === 'browser') {
           await softExpect
-            .poll(() => speechStartsSince(page, speechBaseline), {
-              message: `browser: speech synthesis started speaking within ${budgetLabel}`,
-              timeout: budget,
+            .poll(async () => (await spokenTexts(page)).length, {
+              message:
+                'browser: Read Aloud handed the reply to speechSynthesis',
+              timeout: 10_000,
             })
             .toBeGreaterThan(0);
+          const [spoken = ''] = await spokenTexts(page);
+          softExpect(
+            spoken.trim(),
+            'browser: the spoken text is the reply',
+          ).not.toBe('');
+
+          if (await hasSpeechVoices(page)) {
+            await softExpect
+              .poll(() => speechStartsSince(page, speechBaseline), {
+                message: `browser: speech synthesis started speaking within ${budgetLabel}`,
+                timeout: budget,
+              })
+              .toBeGreaterThan(0);
+          } else {
+            test.info().annotations.push({
+              type: 'no-speech-voices',
+              description:
+                'This browser has no speech voices, so Browser playback was checked only up to speechSynthesis.speak()',
+            });
+          }
         } else {
           const request = await ttsRequest;
           softExpect(

@@ -6035,7 +6035,7 @@
         },
         {
           "id": "rav-03",
-          "description": "After switching back to Browser, clicking Read Aloud on a fresh reply starts speech synthesis within 30s",
+          "description": "After switching back to Browser, clicking Read Aloud on a fresh reply hands the reply to speechSynthesis and, where the browser has voices, starts speaking within 30s",
           "status": "covered"
         }
       ]
