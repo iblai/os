@@ -1,15 +1,15 @@
 {
   "version": 2,
-  "lastUpdated": "2026-10-15",
+  "lastUpdated": "2026-10-16",
   "summary": {
-    "totalCheckpoints": 939,
-    "coveredCheckpoints": 895,
+    "totalCheckpoints": 949,
+    "coveredCheckpoints": 905,
     "deprecatedCheckpoints": 17,
     "notReproducibleCheckpoints": 17,
     "pendingCheckpoints": 10,
     "percent": 100,
-    "totalJourneys": 96,
-    "activeJourneys": 95
+    "totalJourneys": 97,
+    "activeJourneys": 96
   },
   "journeys": [
     {
@@ -5946,6 +5946,69 @@
         {
           "id": "aa-02",
           "description": "Negative control: with the iframe reloaded under the pre-fix sandbox (no allow-downloads) the same export yields no download event, proving aa-01 detects the silently blocked download",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "reopen-last-conversation",
+      "name": "Reopen Last Conversation",
+      "spec": "90-reopen-last-conversation.spec.ts",
+      "sourceFiles": [
+        "components/modals/edit-mentor-modal/settings-tab.tsx",
+        "components/chat/sdk-chat.tsx",
+        "messages/en.json",
+        "e2e/page-objects/edit-mentor/settings.tab.ts"
+      ],
+      "checkpoints": [
+        {
+          "id": "rlc-01",
+          "description": "Admin turns on \"Reopen last conversation\" under Settings › Capabilities on a new agent; Save sends show_last_conversation=true, the save succeeds and the toggle is still on after reopening the dialog",
+          "status": "covered"
+        },
+        {
+          "id": "rlc-02",
+          "description": "With no session held (device cache cleared) and the setting on, reopening the agent uses the first row of the offset-0 recent-messages request (no limit=1 request) and shows the previous conversation without a POST .../sessions/",
+          "status": "covered"
+        },
+        {
+          "id": "rlc-03",
+          "description": "\"New Chat\" starts a fresh chat: welcome screen, no old message, composer ready",
+          "status": "covered"
+        },
+        {
+          "id": "rlc-04",
+          "description": "With two conversations, the newest one reopens and the older one's message is not shown",
+          "status": "covered"
+        },
+        {
+          "id": "rlc-05",
+          "description": "Turning the setting off keeps the chat that is open; after clearing the device cache the next open is fresh and mints a session (no limit=1 request)",
+          "status": "covered"
+        },
+        {
+          "id": "rlc-06",
+          "description": "An agent with the setting on and no history opens the welcome screen with no error toast (the offset-0 request runs and finds nothing)",
+          "status": "covered"
+        },
+        {
+          "id": "rlc-07",
+          "description": "A member (non-admin) can read the agent's public settings but PUT settings is refused with 403",
+          "status": "covered"
+        },
+        {
+          "id": "rlc-08",
+          "description": "Main-chat guard: an agent whose setting was never touched (default null) makes no limit=1 request, shows no previous conversation, mints a new session as before, and the composer is usable",
+          "status": "covered"
+        },
+        {
+          "id": "rlc-09",
+          "description": "With the setting on, opening a shared chat link (mocked shared transcript) shows the shared conversation, not the last one, and mints no session, with no limit=1 request",
+          "status": "covered"
+        },
+        {
+          "id": "rlc-10",
+          "description": "With the setting on, a link carrying chat-action and session-id opens that conversation (cached session = the URL's), not the latest, and mints no session, with no limit=1 request",
           "status": "covered"
         }
       ]

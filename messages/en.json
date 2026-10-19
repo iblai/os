@@ -1964,7 +1964,9 @@
     "inAppChatNote": "Conversations hosted inside the app — the chat your users open here.",
     "embedWidgetNote": "The widget you embed on your own site using the snippet from the Embed tab.",
     "inChatModelChangeLabel": "Allow in-chat model change",
-    "inChatModelChangeTooltip": "Let people pick a different AI model for their own chat. The agent’s model doesn’t change, and new chats start on it. This setting has one value, so it applies to both in-app chat and the embed widget."
+    "inChatModelChangeTooltip": "Let people pick a different AI model for their own chat. The agent’s model doesn’t change, and new chats start on it. This setting has one value, so it applies to both in-app chat and the embed widget.",
+    "showLastConversationLabel": "Reopen last conversation",
+    "showLastConversationTooltip": "When someone opens this agent, show their last conversation so they can pick up where they left off. This setting has one value, so it applies to both in-app chat and the embed widget."
   },
   "tabsMcpTab": {
     "infoBox": "Connect your agent to your own systems through MCP servers, so it can reach your data and services right inside a conversation."
