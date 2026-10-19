@@ -1,5 +1,29 @@
 # Changelog
 
+## [0.172.0](https://github.com/iblai/os/compare/v0.171.5...v0.172.0) (2026-10-19)
+
+### Features
+
+* **auth:** wire mentorai to per-tab authStorage (flag off) + bump iblai-js 2.7.3 ([fe7c60b](https://github.com/iblai/os/commit/fe7c60b4da8a366645113bb2725271ec1960ec5a))
+
+### Bug Fixes
+
+* **auth:** fill only empty stores on Tauri offline restore (no clobber) ([4629ac5](https://github.com/iblai/os/commit/4629ac529c8ebc7cb62d5407f9812b0e2d8976a6))
+* **auth:** per-tab Tauri offline restore writes each store independently ([ac05304](https://github.com/iblai/os/commit/ac053048e8f6aae038111ea7f583419ef19d51b2))
+* **auth:** route per-tab authStorage through an RSC-safe app-local module ([77b20cd](https://github.com/iblai/os/commit/77b20cd730e37cfdadafc3ffeb79d78c384a9af1))
+* **per-tab-auth:** guard storage reads when getItem isn't a function ([e67ba4f](https://github.com/iblai/os/commit/e67ba4f0923f743dca2cc7ad5ba3c4f51399c3de))
+* **per-tab-auth:** route main's new localStorage auth reads through the per-tab store ([be846cc](https://github.com/iblai/os/commit/be846cc5be8fb84039123b0456ae2b4fc7cd2681)), closes [#467](https://github.com/iblai/os/issues/467)
+
+### Chores
+
+* **auth:** expose NEXT_PUBLIC_IBL_PER_TAB_AUTH in runtime env.js ([a70931c](https://github.com/iblai/os/commit/a70931cc91093312fd0f50e86cb723569b0b6476))
+* **deps:** bump @iblai/iblai-js to 2.13.1 ([0a5f399](https://github.com/iblai/os/commit/0a5f3991f2f61a0b5ea33d2939a27e4f0ef12860))
+* **tauri:** release app-v0.95.28 ([18cea5b](https://github.com/iblai/os/commit/18cea5be30a0b6cb928872e51b80f61126bcdccb))
+
+### Tests
+
+* **auth:** fix web-utils mocks for per-tab authStorage imports ([79beade](https://github.com/iblai/os/commit/79beade8e7e2d42d59b43404cf060ce73282c0a4))
+
 ## [0.171.5](https://github.com/iblai/os/compare/v0.171.4...v0.171.5) (2026-10-16)
 
 ### Bug Fixes

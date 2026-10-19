@@ -46,6 +46,7 @@ import Script from 'next/script';
 import { useTenantKey } from '@/hooks/use-tenants';
 import { TenantKeyMentorIdParams } from '@/lib/types';
 import { handleTenantSwitch } from '@/lib/utils';
+import { getAuthItem, getPerTabAuthSnapshot } from '@/lib/auth-storage';
 import {
   useTenantSwitchSync,
   refreshTenantSwitchLock,
@@ -125,7 +126,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     refreshTenantSwitchLock();
     sendMessageToParentWebsite({
       loaded: true,
-      auth: { ...localStorage },
+      auth: getPerTabAuthSnapshot(),
     });
   }, []);
 
@@ -159,9 +160,9 @@ export default function Providers({ children }: { children: React.ReactNode }) {
       // again. Acting on an identical payload therefore loops forever: save,
       // reload, receive the same data, save. Only act on a real change.
       const unchanged =
-        localStorage.getItem('axd_token') === payload.axd_token &&
-        localStorage.getItem('dm_token') === payload.dm_token &&
-        localStorage.getItem('tenant') === payload.tenant;
+        getAuthItem('axd_token') === payload.axd_token &&
+        getAuthItem('dm_token') === payload.dm_token &&
+        getAuthItem('tenant') === payload.tenant;
       if (unchanged) {
         return;
       }
@@ -772,7 +773,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
               onAuthSuccess={() =>
                 sendMessageToParentWebsite({
                   loaded: true,
-                  auth: { ...localStorage },
+                  auth: getPerTabAuthSnapshot(),
                 })
               }
               fallback={

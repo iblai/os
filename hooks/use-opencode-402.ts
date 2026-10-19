@@ -3,6 +3,7 @@
 import { useCallback, useEffect } from 'react';
 import { useLazyGetAccountBillingInfoQuery } from '@iblai/iblai-js/data-layer';
 import type { Error402MessageData } from '@iblai/iblai-js/web-utils';
+import { getAuthItem } from '@/lib/auth-storage';
 import { use402ErrorCheck } from '@/hooks/subscription/use-402-error-check';
 import { isTauriApp } from '@/types/tauri';
 
@@ -50,7 +51,7 @@ export function useOpencode402() {
         !data.pricing_table?.publishable_key
       ) {
         try {
-          const tenant = localStorage.getItem('tenant') || '';
+          const tenant = getAuthItem('tenant') || '';
           if (tenant) {
             const billing = await fetchBilling(
               { platform_key: tenant },
