@@ -193,26 +193,21 @@ pub(crate) fn extract(archive: &Path, dir: &Path) -> Result<(), String> {
     }
 }
 
-/// If the binary landed one directory deep, move it up to `target`.
+/// The archive unpacks the engine under its own name, flat or one directory
+/// deep; move it to `target`, our name for it — over an older copy on an upgrade.
 fn hoist_binary(bin_dir: &Path, target: &Path) -> Result<(), String> {
-    if target.exists() {
-        return Ok(());
-    }
-    let name = match target.file_name() {
-        Some(n) => n.to_owned(),
-        None => return Ok(()),
-    };
+    let asset = crate::opencode_acp::ENGINE_BINARY;
+    let mut candidates = vec![bin_dir.join(asset)];
     if let Ok(rd) = std::fs::read_dir(bin_dir) {
-        for e in rd.flatten() {
-            let p = e.path();
-            if p.is_dir() {
-                let cand = p.join(&name);
-                if cand.exists() {
-                    std::fs::rename(&cand, target).map_err(|x| x.to_string())?;
-                    return Ok(());
-                }
-            }
-        }
+        candidates.extend(
+            rd.flatten()
+                .map(|e| e.path())
+                .filter(|p| p.is_dir())
+                .map(|p| p.join(asset)),
+        );
+    }
+    if let Some(found) = candidates.into_iter().find(|p| p.is_file()) {
+        std::fs::rename(&found, target).map_err(|x| x.to_string())?;
     }
     Ok(())
 }
@@ -565,7 +560,7 @@ pub async fn install_opencode(app: AppHandle) -> Result<String, String> {
         log(&app, "opencode not found — downloading");
         download_and_install(&app).await?;
         if !opencode_installed() {
-            return Err("opencode still not runnable after install".to_string());
+            return Err("Code couldn't be set up on this computer.".to_string());
         }
     } else {
         log(&app, "opencode already installed");
@@ -610,6 +605,7 @@ fn needs_managed_upgrade(managed_version: Option<&str>, pin: &str) -> bool {
 /// `install_opencode`: that acts only when opencode is NOT runnable, this only
 /// when the managed copy IS present — disjoint conditions.
 pub async fn ensure_opencode_current(app: AppHandle) {
+    crate::opencode_acp::adopt_legacy_state();
     let pin = pinned_version();
     let managed = managed_opencode_version();
     if !needs_managed_upgrade(managed.as_deref(), &pin) {
@@ -743,6 +739,30 @@ mod tests {
         fn drop(&mut self) {
             let _ = std::fs::remove_dir_all(&self.0);
         }
+    }
+
+    /// Flat or one directory deep, the engine's binary ends up under our name,
+    /// replacing the copy an earlier launch left there.
+    #[test]
+    fn hoist_renames_the_engine_to_our_name_over_an_older_copy() {
+        let s = Scratch::new("hoist");
+        let bin_dir = s.path().join("bin");
+        let target = bin_dir.join("iblai-code");
+        std::fs::create_dir_all(bin_dir.join("nested")).unwrap();
+        std::fs::write(&target, b"old").unwrap();
+        std::fs::write(bin_dir.join("nested").join("opencode"), b"new").unwrap();
+        hoist_binary(&bin_dir, &target).unwrap();
+        assert_eq!(std::fs::read(&target).unwrap(), b"new");
+        assert!(!bin_dir.join("nested").join("opencode").exists());
+
+        std::fs::write(bin_dir.join("opencode"), b"newer").unwrap();
+        hoist_binary(&bin_dir, &target).unwrap();
+        assert_eq!(std::fs::read(&target).unwrap(), b"newer");
+        assert!(!bin_dir.join("opencode").exists());
+
+        // Nothing to hoist is not an error.
+        hoist_binary(&bin_dir, &target).unwrap();
+        assert_eq!(std::fs::read(&target).unwrap(), b"newer");
     }
 
     #[test]

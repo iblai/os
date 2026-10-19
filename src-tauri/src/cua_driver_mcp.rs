@@ -385,7 +385,18 @@ fn force_screenshot_off_line(line: String, flagged: &Mutex<HashSet<String>>) -> 
 /// DriverAuthorizationHost. Until that is wired up this flag IS the consent —
 /// and the Cowork consent dialog's browser-access sentence is true because of
 /// it. Neither flag may change silently, in either direction.
-const DRIVER_ARGV: [&str; 4] = ["mcp", "--direct", "--grant", "existing-profile"];
+pub(crate) const DRIVER_ARGV: [&str; 4] = ["mcp", "--direct", "--grant", "existing-profile"];
+
+/// The driver binary a Code session's agent spawns: the one on the augmented
+/// PATH (a system install wins, as in `cua_driver_program`), else our managed
+/// copy when it exists.
+pub(crate) fn resolved_driver_path() -> Option<PathBuf> {
+    let name = cua_driver_program();
+    std::env::split_paths(&crate::opencode_acp::augmented_path())
+        .map(|d| d.join(&name))
+        .find(|p| p.is_file())
+        .or_else(|| Some(cua_driver_bin()).filter(|p| p.is_file()))
+}
 
 /// The live `cua-driver mcp` child and a handle to its stdin.
 struct DriverProc {
@@ -415,6 +426,9 @@ pub async fn cua_driver_start(app: AppHandle) -> Result<(), String> {
             support.reason.unwrap_or_default()
         ));
     }
+
+    // One driver owns the screen: a Code chat's own driver goes first.
+    crate::opencode_acp::close_cowork_sessions(None).await;
 
     let mut guard = slot().lock().map_err(|_| "cua-driver lock poisoned")?;
 
@@ -502,14 +516,22 @@ pub async fn cua_driver_send(line: String) -> Result<(), String> {
 }
 
 /// Kill the driver child (best-effort). Safe to call when not running.
-#[command]
-pub async fn cua_driver_stop() -> Result<(), String> {
-    let mut guard = slot().lock().map_err(|_| "cua-driver lock poisoned")?;
+pub(crate) fn stop_driver() {
+    let Ok(mut guard) = slot().lock() else {
+        return;
+    };
     if let Some(mut proc) = guard.take() {
         println!("[cua-driver] stopping (pid {:?})", proc.child.id());
         let _ = proc.child.kill();
         let _ = proc.child.wait();
     }
+}
+
+/// Cowork switched off: the webview's driver and every Code chat's driver go.
+#[command]
+pub async fn cua_driver_stop() -> Result<(), String> {
+    stop_driver();
+    crate::opencode_acp::close_cowork_sessions(None).await;
     Ok(())
 }
 

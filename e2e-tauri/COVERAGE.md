@@ -1,6 +1,6 @@
 # Tauri Desktop E2E Coverage — Journey Checklist
 
-> Last updated: 2026-10-15 | 58 checkpoints (22 covered, 35 pending, 1 deprecated) | 3 journeys | 100% of reproducible checkpoints covered | Driver: WebdriverIO + tauri-driver
+> Last updated: 2026-10-20 | 61 checkpoints (22 covered, 38 pending, 1 deprecated) | 3 journeys | 100% of reproducible checkpoints covered | Driver: WebdriverIO + tauri-driver
 
 This is the desktop counterpart to the web `e2e/COVERAGE.md`. It tracks only what
 is exercised by driving the **built desktop binary** through `tauri-driver` (see
@@ -97,7 +97,7 @@ two vendored release workflows and are exercised by real releases.
 
 ---
 
-## Journey 3: Code Mode (opencode) (47 checkpoints: 15 covered, 31 pending, 1 deprecated) — `journeys/03-code-mode.spec.ts`
+## Journey 3: Code Mode (opencode) (50 checkpoints: 15 covered, 34 pending, 1 deprecated) — `journeys/03-code-mode.spec.ts`
 
 > **Partly covered.** The installer and per-chat state (code-01…07) run against
 > the REAL compiled binary through the live Tauri IPC bridge (`window.__TAURI__`):
@@ -201,3 +201,6 @@ two vendored release workflows and are exercised by real releases.
 - [ ] `code-45` A permission card leads with what Code wants to do in plain words above the exact command or file, with no tool-kind chip, from the request's tool call on desktop and from the permission name on a paired phone; a Browse prompt keeps its own description _(needs a tool-calling model driving real turns, the same harness gap as code-08..10/15/28; covered meanwhile by the SDK's `code-permission-card.test.tsx` and the Rust `permission_payloads_carry_the_whole_tool_call`)_
 - [ ] `code-46` A failed Code turn raises one toast, saying what went wrong in plain words (stopped unexpectedly, took too long, no model picked, couldn't start, signed out) instead of the raw agent error _(needs a tool-calling model driving real turns, the same harness gap as code-08..10/15/28; covered meanwhile by the SDK's `code-error-text.test.ts` and `toast-error-message.test.tsx`, and the Rust `a_failed_turn_is_reported_once`)_
 - [ ] `code-48` The app keeps answering while a Code turn streams a chatty command: a build's output never reaches the chat as events, only a tool call's visible changes do _(needs a tool-calling model; covered meanwhile by the Rust `output_only_tool_updates_never_reach_the_webview`, `admitted_updates_carry_only_what_the_chat_reads`, `reasoning_chunks_are_batched_per_window` and `handle_update_forwards_only_what_the_webview_renders`)_
+- [ ] `code-49` Local Models + Code: a Code turn on the picked on-device model (the pill stores the prefixed `ollama/<id>` spec) runs on the on-device provider and asks before writing a file _(needs a tool-capable on-device model and a signed-in session; `qwen3:0.6b` is the smallest that calls tools; covered meanwhile by the Vitest `accepts a tool-capable on-device model and persists its prefixed spec` and the Rust `the_model_string_picks_the_backend`)_
+- [ ] `code-50` Code + Cowork on macOS: with both on, the turn's `session/new` carries the `cowork` screen driver, the step list shows a connector step, Ask Me raises a card for the click, Stop ends the action, and switching Cowork off ends the driver _(needs the Accessibility and Screen Recording grants and macOS; covered meanwhile by the Rust `the_screen_tools_reach_session_new_and_session_load`, `a_live_session_is_reused_only_for_the_same_model_and_cowork_setting` and `closing_cowork_sessions_spares_plain_code_and_the_newcomer`, and the SDK's `tells the desktop whether Cowork is on`)_
+- [ ] `code-51` Local Models + Cowork: with both on, the turn runs the Cowork loop on the on-device model through `local_llm_openai_stream`, and Stop ends the stream on the desktop _(needs the grants and a tool-capable on-device model; covered meanwhile by the Rust `local_llm_openai` tests and the SDK's `runs a Local Models turn through the Cowork loop when Cowork is on`)_

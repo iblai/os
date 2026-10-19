@@ -74,7 +74,7 @@ pub(crate) fn display_name(backend: Backend) -> &'static str {
     match backend {
         Backend::Codex => "Codex",
         Backend::Claude => "Claude Code",
-        Backend::Opencode => "opencode",
+        Backend::Opencode => "ibl.ai",
     }
 }
 

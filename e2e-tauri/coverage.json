@@ -2,9 +2,9 @@
   "version": 1,
   "lastUpdated": "2026-10-15",
   "summary": {
-    "totalCheckpoints": 58,
+    "totalCheckpoints": 61,
     "coveredCheckpoints": 22,
-    "pendingCheckpoints": 35,
+    "pendingCheckpoints": 38,
     "deprecatedCheckpoints": 1,
     "notReproducibleCheckpoints": 0,
     "percent": 100,
@@ -353,6 +353,21 @@
         {
           "id": "code-48",
           "description": "The app keeps answering while a Code turn streams a chatty command: a build's output never reaches the chat as events, only a tool call's visible changes do",
+          "status": "pending"
+        },
+        {
+          "id": "code-49",
+          "description": "Local Models + Code: a Code turn on the picked on-device model runs on the on-device provider and asks before writing a file",
+          "status": "pending"
+        },
+        {
+          "id": "code-50",
+          "description": "Code + Cowork on macOS: the turn's session/new carries the cowork screen driver, the step list shows a connector step, Ask Me raises a card for the click, Stop ends the action, and switching Cowork off ends the driver",
+          "status": "pending"
+        },
+        {
+          "id": "code-51",
+          "description": "Local Models + Cowork: the turn runs the Cowork loop on the on-device model through local_llm_openai_stream, and Stop ends the stream on the desktop",
           "status": "pending"
         }
       ]

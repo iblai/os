@@ -390,7 +390,7 @@ fn ct_eq(a: &[u8], b: &[u8]) -> bool {
 /// alone: the reaper used to kill any listener whose argv merely contained
 /// "opencode".
 fn is_our_serve(cmdline: &str, port: u16) -> bool {
-    cmdline.contains("opencode")
+    cmdline.contains("iblai-code")
         && cmdline.contains("serve")
         && cmdline.contains("--hostname 0.0.0.0")
         && cmdline.contains(&format!("--port {port}"))
@@ -430,7 +430,7 @@ fn reap_stale_serve() {
         .args(["-p", &pid.to_string(), "-o", "command="])
         .output()
         .ok()
-        .map(|o| String::from_utf8_lossy(&o.stdout).contains("opencode"))
+        .map(|o| String::from_utf8_lossy(&o.stdout).contains("iblai-code"))
         .unwrap_or(false);
     if looks_like_ours {
         let _ = Command::new("kill").arg(pid.to_string()).output();
@@ -776,12 +776,14 @@ pub async fn remote_code_enable(
                 "XDG_CONFIG_HOME",
                 crate::opencode_acp::config_home(SERVE_CONFIG_KEY),
             )
+            .env("XDG_DATA_HOME", crate::opencode_acp::agent_data_home())
+            .env("XDG_CACHE_HOME", crate::opencode_acp::agent_cache_home())
             .env("OPENCODE_SERVER_PASSWORD", &password)
             .stdin(Stdio::null())
             .stdout(Stdio::null())
             .stderr(Stdio::null())
             .spawn()
-            .map_err(|e| format!("could not start opencode serve: {e}"))?;
+            .map_err(|e| format!("Phone access couldn't start: {e}"))?;
         let _ = std::fs::write(serve_pid_file(), child.id().to_string());
         host.replace(Host {
             child,
@@ -807,7 +809,7 @@ pub async fn remote_code_enable(
                 let _secret = h.teardown(); // secret_guard unregisters on return
             }
         }
-        return Err("opencode serve did not come up (is opencode installed?)".to_string());
+        return Err("Phone access didn't start on this computer.".to_string());
     }
 
     // Only a CONFIRMED-serving host is remembered as enabled: recording it
@@ -983,15 +985,15 @@ mod tests {
         // A developer's own `opencode serve` (default port 4096) or TUI on
         // the same port must never be killed — only our exact spawn shape.
         assert!(is_our_serve(
-            "opencode serve --hostname 0.0.0.0 --port 4096",
+            "iblai-code serve --hostname 0.0.0.0 --port 4096",
             4096
         ));
         assert!(!is_our_serve(
-            "opencode serve --hostname 0.0.0.0 --port 4096",
+            "iblai-code serve --hostname 0.0.0.0 --port 4096",
             4097
         ));
-        assert!(!is_our_serve("opencode serve --port 4096", 4096)); // theirs
-        assert!(!is_our_serve("opencode --port 4096", 4096)); // TUI
+        assert!(!is_our_serve("iblai-code serve --port 4096", 4096)); // theirs
+        assert!(!is_our_serve("iblai-code --port 4096", 4096)); // TUI
         assert!(!is_our_serve("node some-opencode-tool", 4096));
     }
 

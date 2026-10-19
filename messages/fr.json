@@ -2187,6 +2187,7 @@
     "permissionModeManual": "Me demander",
     "permissionModeAuto": "Automatique",
     "permissionModeAutoHint": "Code modifie des fichiers et exécute des commandes sans demander. À utiliser uniquement dans des dossiers de confiance.",
+    "permissionModeAutoCoworkHint": "Avec Cowork activé, il agit aussi sur votre écran sans demander.",
     "agentLabel": "Agent",
     "agentNotInstalled": "Non installé",
     "agentInstall": "Installer",

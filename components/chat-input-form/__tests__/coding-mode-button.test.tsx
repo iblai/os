@@ -1656,6 +1656,29 @@ describe('CodingModeButton', () => {
       expect(await screen.findByTestId('code-auto-mode-hint')).toBeVisible();
     });
 
+    it('says the screen is included when Cowork is on and Automatic is chosen', async () => {
+      backend({ permissionMode: 'auto' });
+      localStorage.setItem('ibl_cowork_enabled', 'true');
+      renderButton();
+      await openPopover();
+
+      expect(
+        await screen.findByTestId('code-auto-mode-hint'),
+      ).toHaveTextContent(
+        'With Cowork on, it also acts on your screen without asking.',
+      );
+    });
+
+    it('keeps the Automatic hint to files and commands while Cowork is off', async () => {
+      backend({ permissionMode: 'auto' });
+      renderButton();
+      await openPopover();
+
+      expect(
+        await screen.findByTestId('code-auto-mode-hint'),
+      ).not.toHaveTextContent('screen');
+    });
+
     it('keeps the choice when DM refuses to store it', async () => {
       const err = vi.spyOn(console, 'error').mockImplementation(() => {});
       localStorage.setItem('tenant', 'acme');

@@ -659,6 +659,29 @@ describe('Journey 3: Code Mode (opencode)', () => {
          reasoning_chunks_are_batched_per_window and
          handle_update_forwards_only_what_the_webview_renders (opencode_acp.rs) */
     });
+
+    it.skip('code-49: Local Models + Code — a Code turn on the picked on-device model runs on the on-device provider and asks before writing a file', () => {
+      /* pending — needs a tool-capable on-device model (qwen3:0.6b is the
+         smallest that calls tools) and a signed-in session; covered meanwhile
+         by the Vitest "accepts a tool-capable on-device model and persists its
+         prefixed spec" and the Rust the_model_string_picks_the_backend */
+    });
+
+    it.skip('code-50: Code + Cowork — the turn’s session/new carries the cowork screen driver, the step list shows a connector step, Ask Me raises a card for the click, Stop ends the action and switching Cowork off ends the driver', () => {
+      /* pending — needs the Accessibility and Screen Recording grants on
+         macOS; covered meanwhile by the Rust
+         the_screen_tools_reach_session_new_and_session_load,
+         a_live_session_is_reused_only_for_the_same_model_and_cowork_setting and
+         closing_cowork_sessions_spares_plain_code_and_the_newcomer, and the
+         SDK's "tells the desktop whether Cowork is on" (opencode-client.test.ts) */
+    });
+
+    it.skip('code-51: Local Models + Cowork — the turn runs the Cowork loop on the on-device model through local_llm_openai_stream, and Stop ends the stream on the desktop', () => {
+      /* pending — needs the grants and a tool-capable on-device model;
+         covered meanwhile by the Rust local_llm_openai tests and the SDK's
+         "runs a Local Models turn through the Cowork loop when Cowork is on"
+         (use-chat-v2.test.ts) */
+    });
   });
 
   // The subscription agents: Codex and Claude Code run next to opencode

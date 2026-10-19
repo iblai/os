@@ -33,6 +33,8 @@
     "allow-cua-driver-start",
     "allow-cua-driver-send",
     "allow-cua-driver-stop",
+    "allow-local-llm-openai-stream",
+    "allow-local-llm-openai-stream-cancel",
     "allow-opencode-chat-stream",
     "allow-opencode-stop",
     "allow-opencode-permission-respond",

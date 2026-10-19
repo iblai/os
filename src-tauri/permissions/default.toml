@@ -393,3 +393,15 @@ identifier = "allow-open-app-settings"
 description = "Enables opening the app's page in the Settings app, where the user re-enables Local Network access (phone)"
 [permission.commands]
 allow = ["open_app_settings"]
+
+[[permission]]
+identifier = "allow-local-llm-openai-stream"
+description = "Streams one chat completion from the on-device model for the webview's Cowork loop"
+[permission.commands]
+allow = ["local_llm_openai_stream"]
+
+[[permission]]
+identifier = "allow-local-llm-openai-stream-cancel"
+description = "Stops an in-flight on-device completion the page started"
+[permission.commands]
+allow = ["local_llm_openai_stream_cancel"]

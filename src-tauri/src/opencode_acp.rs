@@ -550,6 +550,9 @@ struct Session {
     /// Which agent this process runs: opencode, Codex or Claude Code. Fixed at
     /// spawn — switching agents changes `requested_model`, which respawns.
     backend: Backend,
+    /// Spawned with the screen tools (Cowork on). Fixed at spawn — a flip
+    /// respawns, like a model switch.
+    cowork: bool,
     /// Throwaway key this session uses against the loopback model proxy (cloud only).
     /// The real DM token lives in the proxy, keyed by this.
     proxy_secret: Option<String>,
@@ -573,8 +576,8 @@ struct Session {
 /// `Session::request`'s error prefixes when the child vanished mid-request
 /// (died before responding, or before the write even landed). The mid-turn
 /// crash-retry keys on these, so they live as consts the check can't drift from.
-const CHILD_GONE: &str = "opencode closed before responding";
-const CHILD_WRITE_FAILED: &str = "failed writing to opencode";
+const CHILD_GONE: &str = "Code stopped before answering.";
+const CHILD_WRITE_FAILED: &str = "Code stopped taking input.";
 /// Prefix of the error a signed-out subscription agent produces (ACP
 /// `authRequired`, JSON-RPC `-32000`). Disjoint from the two crash prefixes on
 /// purpose: `should_retry` must never respawn a process for it.
@@ -626,7 +629,7 @@ fn rpc_error(method: &str, err: &Value) -> String {
     if err.get("code").and_then(|c| c.as_i64()) == Some(-32000) {
         format!("{AUTH_REQUIRED} ({method}): {err}")
     } else {
-        format!("opencode error on {method}: {err}")
+        format!("Code error on {method}: {err}")
     }
 }
 
@@ -841,24 +844,82 @@ impl Drop for ScratchDataDir {
     }
 }
 
-/// Managed opencode binary: `~/.local/share/iblai/bin/opencode[.exe]`.
+/// The engine's binary name as its archives ship it.
+pub(crate) const ENGINE_BINARY: &str = if cfg!(target_os = "windows") {
+    "opencode.exe"
+} else {
+    "opencode"
+};
+
+/// The managed Code engine, under our name: `~/.local/share/iblai/bin/iblai-code[.exe]`.
 pub fn opencode_bin() -> PathBuf {
     let name = if cfg!(target_os = "windows") {
-        "opencode.exe"
+        "iblai-code.exe"
     } else {
-        "opencode"
+        "iblai-code"
     };
     iblai_data_dir().join("bin").join(name)
 }
 
-/// The opencode program to spawn: the bare name, resolved off PATH.
-///
-/// Paired with [`augmented_path`], which appends our managed `bin` dir — so a user's own
-/// `opencode` wins and the one we download is the zero-install fallback. Anything that
-/// runs this program (spawn, `--version` probes) must use that PATH, or the managed
-/// binary is invisible and the app concludes opencode isn't installed.
+/// The program every Code spawn and `--version` probe runs: the managed copy,
+/// by absolute path. Nothing on the user's PATH is used — the pin is what was
+/// tested, and the process shows under our name.
 pub fn opencode_program() -> String {
-    "opencode".to_string()
+    opencode_bin().to_string_lossy().into_owned()
+}
+
+/// Where the engine keeps its own state (`<here>/opencode/…`): inside our data
+/// dir, so nothing of it shows under the engine's name or in a user's own copy.
+pub fn agent_data_home() -> PathBuf {
+    iblai_data_dir().join("agents")
+}
+
+/// The engine's cache (the models registry, the provider package), under ours.
+pub fn agent_cache_home() -> PathBuf {
+    std::env::var_os("XDG_CACHE_HOME")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| home_dir().unwrap_or_default().join(".cache"))
+        .join("iblai")
+}
+
+/// One-time, at launch: what an earlier version left under the engine's own
+/// name — our managed binary, its state, its cache — moves to where this
+/// version looks, so a resumable chat and the cached provider package survive
+/// the update (offline, there is no fetching the package again). The state and
+/// cache dirs are left alone when the user runs the engine's CLI themselves:
+/// those hold their logins and sessions too.
+pub fn adopt_legacy_state() {
+    let home = home_dir().unwrap_or_default();
+    adopt_legacy_dir(
+        &iblai_data_dir().join("bin").join(ENGINE_BINARY),
+        &opencode_bin(),
+    );
+    let theirs = std::env::var_os("PATH")
+        .map(|p| has_executable(&p, ENGINE_BINARY))
+        .unwrap_or(false);
+    if theirs {
+        return;
+    }
+    adopt_legacy_dir(
+        &home.join(".local/share/opencode"),
+        &agent_data_home().join("opencode"),
+    );
+    adopt_legacy_dir(
+        &home.join(".cache/opencode"),
+        &agent_cache_home().join("opencode"),
+    );
+}
+
+/// `old` becomes `new` when `old` exists and `new` doesn't; a failure leaves
+/// both as they were, and the next launch tries again.
+fn adopt_legacy_dir(old: &Path, new: &Path) -> bool {
+    if !old.exists() || new.exists() {
+        return false;
+    }
+    if let Some(parent) = new.parent() {
+        let _ = std::fs::create_dir_all(parent);
+    }
+    std::fs::rename(old, new).is_ok()
 }
 
 /// Bin dirs appended to the child `PATH`, existence-gated.
@@ -941,12 +1002,12 @@ pub fn augmented_path() -> std::ffi::OsString {
 /// Write-allowed dirs, relative to `$HOME`, pre-created when missing
 /// ([`ensure_write_dirs`]) — Code can't function without them. `.cache` is the
 /// umbrella every XDG-caching tool shares (pip, pnpm, corepack, uv,
-/// go-build…); `.local/share/opencode` is opencode's own state.
+/// go-build…); `.local/share/iblai/agents` holds the engine's own state.
 const WRITE_DIRS_CORE: &[&str] = &[
     ".cache",
     ".npm",
     ".local/share/pnpm",
-    ".local/share/opencode",
+    ".local/share/iblai/agents",
 ];
 
 /// macOS extras: the native caches root and the mac pnpm store.
@@ -1349,8 +1410,9 @@ fn populate_decoy(
     Ok(())
 }
 
-/// Whether the executable `name` sits on `path_var` — the bwrap preflight.
-#[cfg(target_os = "linux")]
+/// Whether the executable `name` sits on `path_var` — the bwrap preflight, and
+/// the user's-own-engine check before the legacy state moves.
+#[cfg(unix)]
 fn has_executable(path_var: &std::ffi::OsStr, name: &str) -> bool {
     use std::os::unix::fs::PermissionsExt;
     std::env::split_paths(path_var).any(|d| {
@@ -1359,6 +1421,11 @@ fn has_executable(path_var: &std::ffi::OsStr, name: &str) -> bool {
             .map(|m| m.is_file() && m.permissions().mode() & 0o111 != 0)
             .unwrap_or(false)
     })
+}
+
+#[cfg(not(unix))]
+fn has_executable(path_var: &std::ffi::OsStr, name: &str) -> bool {
+    std::env::split_paths(path_var).any(|d| d.join(name).is_file())
 }
 
 /// Is the OS sandbox available? Linux needs bubblewrap on PATH; macOS ships
@@ -2966,14 +3033,18 @@ pub(crate) fn apply_opencode_model(
     let home = config_home(session_id);
     crate::opencode_installer::ensure_opencode_config_at(&home)?;
     let path = home.join("opencode").join("opencode.json");
-    let text = std::fs::read_to_string(&path)
-        .map_err(|e| format!("opencode config not found ({}): {e}", path.display()))?;
-    let mut cfg: Value =
-        serde_json::from_str(&text).map_err(|e| format!("bad opencode config: {e}"))?;
+    let text = std::fs::read_to_string(&path).map_err(|e| {
+        format!(
+            "Code's settings could not be read ({}): {e}",
+            path.display()
+        )
+    })?;
+    let mut cfg: Value = serde_json::from_str(&text)
+        .map_err(|e| format!("Code's settings could not be read: {e}"))?;
 
     let root = cfg
         .as_object_mut()
-        .ok_or("opencode config is not a JSON object")?;
+        .ok_or("Code's settings could not be read: not an object")?;
     root.insert(
         "model".to_string(),
         json!(format!("{}/{}", spec.provider, spec.model)),
@@ -2997,12 +3068,12 @@ pub(crate) fn apply_opencode_model(
         .entry("provider")
         .or_insert_with(|| json!({}))
         .as_object_mut()
-        .ok_or("opencode config `provider` is not an object")?;
+        .ok_or("Code's settings could not be read: `provider` is not an object")?;
     let entry = providers
         .entry(spec.provider.to_string())
         .or_insert_with(|| json!({}))
         .as_object_mut()
-        .ok_or("opencode provider entry is not an object")?;
+        .ok_or("Code's settings could not be read: the provider entry is not an object")?;
 
     // Reset to JUST the active model each spawn (no accumulation across sessions).
     let mut models = serde_json::Map::new();
@@ -3019,7 +3090,7 @@ pub(crate) fn apply_opencode_model(
     );
 
     let out = serde_json::to_string_pretty(&cfg).map_err(|e| e.to_string())?;
-    std::fs::write(&path, out).map_err(|e| format!("failed writing opencode config: {e}"))
+    std::fs::write(&path, out).map_err(|e| format!("Code's settings could not be written: {e}"))
 }
 
 /// Codex's own approval mode for the OS setting. Ask Me → `read-only`: Codex's
@@ -3096,7 +3167,7 @@ const PROBE_TIMEOUT: Duration = Duration::from_secs(30);
 /// another probe.
 pub(crate) async fn probe_config_options(backend: Backend) -> Result<Value, String> {
     if backend == Backend::Opencode {
-        return Err("opencode has no agent model list.".to_string());
+        return Err("ibl.ai has no agent model list.".to_string());
     }
     crate::code_agent_installer::agent_ready(backend)?;
     if !login_dir_present(backend, &home_dir().unwrap_or_default()) {
@@ -3140,7 +3211,7 @@ async fn probe_in(
     skills: &Path,
     cfg: &Path,
 ) -> Result<Value, String> {
-    let launch = agent_launch(backend, ws, skills, cfg, "", false);
+    let launch = agent_launch(backend, ws, skills, cfg, "", false, None);
     let mut cmd = sandboxed_command(key, ws, backend)?;
     wire_agent_command(&mut cmd, &launch, ws, backend);
     let mut child = cmd
@@ -3168,6 +3239,7 @@ async fn probe_in(
         acp_session_id: String::new(),
         requested_model: None,
         backend,
+        cowork: false,
         proxy_secret: None,
         turn: Arc::new(Mutex::new(TurnState::new())),
         last_used: Mutex::new(Instant::now()),
@@ -3184,6 +3256,103 @@ async fn probe_in(
             crate::code_agent_installer::display_name(backend)
         )
     })
+}
+
+/// The screen driver as an ACP MCP server, for a Code chat with Cowork on: the
+/// agent spawns it as its own child with the argv the webview's Cowork uses
+/// (`cua_driver_mcp::DRIVER_ARGV`), so its tools ride the agent's permission
+/// policy. `args` and `env` are always present — the adapters spread the one
+/// and map the other.
+fn cowork_mcp_server(driver: &Path) -> Value {
+    json!({
+        "name": "cowork",
+        "command": driver.to_string_lossy(),
+        "args": crate::cua_driver_mcp::DRIVER_ARGV,
+        "env": [],
+    })
+}
+
+/// What Cowork adds to a Code session's guidance: the screen rules the webview's
+/// Cowork prompt carries (`remote-ai-client.ts`), plus the one difference on
+/// this path — no screenshot reaches a Code agent, so the element list is the
+/// whole picture.
+const COWORK_GUIDANCE: &str = "\
+## Screen tools (Cowork)
+You can control the user's computer through the `cowork` tools to complete tasks on their behalf.
+Work by discovery, never by guesswork: use list_apps or list_windows to find the target, then call get_window_state for that pid and window_id to read its elements before you act on it.
+Always pass include_screenshot: false — screenshots are not available here; the element list is the whole picture.
+Prefer the element_token that get_window_state returns for anything you click, type into or set — it is exact.
+A token belongs to the snapshot that produced it, and the next get_window_state on that window invalidates every earlier one: take a snapshot right before you act, and a fresh one before each further action on that window.
+If a call comes back saying the token is stale, do not retry it: take a new snapshot, find the element again, and use the new token.
+Keep each snapshot small: pass `query` to get_window_state to project the tree to the rows you care about, and `max_elements` on large or web-based windows.
+In the reply, say what you did on the screen in everyday words.
+";
+
+/// The guidance a session is spawned with: the ibl.ai guidance, plus the screen
+/// rules when Cowork is on.
+fn with_cowork_guidance(guidance: String, cowork: bool) -> String {
+    if cowork {
+        format!("{guidance}\n\n{COWORK_GUIDANCE}")
+    } else {
+        guidance
+    }
+}
+
+/// Why a Code turn with Cowork on can't run here, decided before anything is
+/// spawned; `Ok` is the driver the agent will spawn. macOS only for now: under
+/// bwrap the apps the driver opens would get the decoy `$HOME` and die with the
+/// chat. Codex is left out until its approvals are known to cover MCP tools —
+/// otherwise Ask Me would let it act on the screen without a card.
+fn cowork_preflight(backend: Backend) -> Result<PathBuf, String> {
+    if !cfg!(target_os = "macos") {
+        return Err(
+            "Cowork inside Code isn't available on Linux yet — turn Cowork off to use Code here."
+                .to_string(),
+        );
+    }
+    if backend == Backend::Codex {
+        return Err(
+            "Cowork doesn't work with Codex yet — switch the agent to ibl.ai or Claude Code, or turn Cowork off."
+                .to_string(),
+        );
+    }
+    let support =
+        crate::cua_driver_mcp::session_support(&crate::cua_driver_mcp::current_session_env());
+    if !support.supported {
+        return Err("Cowork isn't supported on this desktop session.".to_string());
+    }
+    crate::cua_driver_mcp::resolved_driver_path().ok_or_else(|| {
+        "Cowork isn't set up on this computer yet — turn Cowork on from the chat to install it."
+            .to_string()
+    })
+}
+
+/// A live session serves the next turn only when it was spawned for the same
+/// model and the same Cowork setting; either change is a respawn, and the
+/// conversation survives it through `session/load`.
+fn reusable(s: &Session, model: Option<&str>, cowork: bool) -> bool {
+    s.requested_model.as_deref() == model && s.cowork == cowork
+}
+
+/// The chats whose session was spawned with the screen tools, minus `except`.
+fn cowork_session_ids<'a>(
+    sessions: impl Iterator<Item = (&'a String, &'a Arc<Session>)>,
+    except: Option<&str>,
+) -> Vec<String> {
+    sessions
+        .filter(|(id, s)| s.cowork && except != Some(id.as_str()))
+        .map(|(id, _)| id.clone())
+        .collect()
+}
+
+/// Close every session spawned with the screen tools except `except`. The
+/// driver owns the screen, so a new Cowork session — or the webview's own
+/// driver — must not run beside an older one's.
+pub(crate) async fn close_cowork_sessions(except: Option<&str>) {
+    let ids = cowork_session_ids(registry().lock().await.iter(), except);
+    for id in ids {
+        close_session(&id).await;
+    }
 }
 
 /// The `session/new` params per backend. Codex and Claude get the per-spawn
@@ -3216,8 +3385,14 @@ fn agent_launch(
     config_home: &Path,
     guidance: &str,
     auto: bool,
+    // The screen driver for a Cowork session, as the one MCP server every
+    // backend receives in `session/new` (and `session/load`).
+    cowork_driver: Option<&Path>,
 ) -> AgentLaunch {
-    let session = session_params(backend, workspace, skills_root, guidance);
+    let mut session = session_params(backend, workspace, skills_root, guidance);
+    if let Some(driver) = cowork_driver {
+        session["mcpServers"] = json!([cowork_mcp_server(driver)]);
+    }
     let node_launch = |env: Vec<(&'static str, String)>| AgentLaunch {
         program: crate::code_agent_installer::node_bin(),
         args: vec![crate::code_agent_installer::adapter_entry(backend)
@@ -3233,10 +3408,21 @@ fn agent_launch(
                 .iter()
                 .map(|s| s.to_string())
                 .collect(),
-            env: vec![(
-                "XDG_CONFIG_HOME",
-                config_home.to_string_lossy().into_owned(),
-            )],
+            env: vec![
+                (
+                    "XDG_CONFIG_HOME",
+                    config_home.to_string_lossy().into_owned(),
+                ),
+                // Its state and cache live under our name, not the engine's.
+                (
+                    "XDG_DATA_HOME",
+                    agent_data_home().to_string_lossy().into_owned(),
+                ),
+                (
+                    "XDG_CACHE_HOME",
+                    agent_cache_home().to_string_lossy().into_owned(),
+                ),
+            ],
             session,
         },
         // The guidance rides Codex's real `developer_instructions` config key,
@@ -3429,6 +3615,7 @@ async fn spawn_session(
     mentor: Option<String>,
     generation_id: &str,
     resume: Option<String>,
+    cowork: bool,
 ) -> Result<Arc<Session>, String> {
     ensure_workspace(workspace)?;
 
@@ -3482,6 +3669,19 @@ async fn spawn_session(
     // developer instructions and Claude as a system-prompt append (both in
     // `agent_launch`), each with its own wording where opencode's doesn't fit.
     let guidance = crate::opencode_proxy::guidance_for(backend, tenant).await?;
+
+    // Cowork on: the screen driver rides the session as an MCP server and the
+    // screen rules ride the guidance. One driver owns the screen, so any other
+    // Cowork session and the webview's own driver go first.
+    let cowork_driver = if cowork {
+        let driver = cowork_preflight(backend)?;
+        close_cowork_sessions(Some(session_id)).await;
+        crate::cua_driver_mcp::stop_driver();
+        Some(driver)
+    } else {
+        None
+    };
+    let guidance = with_cowork_guidance(guidance, cowork);
 
     // opencode's model provider: on-device runtimes talk straight to their own
     // local endpoint; cloud goes through the loopback proxy, which holds the
@@ -3562,6 +3762,7 @@ async fn spawn_session(
         &config_home(session_id),
         &guidance,
         auto,
+        cowork_driver.as_deref(),
     );
     let mut cmd = sandboxed_command(session_id, workspace, backend)?;
     wire_agent_command(&mut cmd, &launch, workspace, backend);
@@ -3591,9 +3792,11 @@ async fn spawn_session(
 
     let mut child = cmd.spawn().map_err(|e| match backend {
         Backend::Opencode if cfg!(target_os = "linux") => {
-            format!("failed to launch the sandboxed `opencode acp` (is bubblewrap (bwrap) installed?): {e}")
+            format!(
+                "Code couldn't start inside its sandbox (is bubblewrap (bwrap) installed?): {e}"
+            )
         }
-        Backend::Opencode => format!("failed to launch `opencode acp` (is opencode installed?): {e}"),
+        Backend::Opencode => format!("Code couldn't start on this computer: {e}"),
         other => format!("failed to launch the {} agent: {e}", other.id()),
     })?;
 
@@ -3633,6 +3836,7 @@ async fn spawn_session(
         acp_session_id: String::new(),
         requested_model: model,
         backend,
+        cowork,
         proxy_secret,
         turn,
         last_used: Mutex::new(Instant::now()),
@@ -3842,12 +4046,13 @@ async fn get_or_spawn(
     mentor: Option<String>,
     generation_id: &str,
     resume: Option<String>,
+    cowork: bool,
 ) -> Result<Arc<Session>, String> {
     let live = { registry().lock().await.get(session_id).cloned() };
     if let Some(s) = live {
         // A dead child can sit here for a beat before its reader's EOF cleanup
         // lands — never hand it out; fall through to the respawn below.
-        if !child_exited(&s).await && s.requested_model.as_deref() == model.as_deref() {
+        if !child_exited(&s).await && reusable(&s, model.as_deref(), cowork) {
             *s.last_used.lock().await = Instant::now();
             if let Some(secret) = &s.proxy_secret {
                 crate::opencode_proxy::set_token(secret, token).await;
@@ -3855,7 +4060,7 @@ async fn get_or_spawn(
             return Ok(s);
         }
     }
-    // Missing, dead, or the model switched → (re)spawn.
+    // Missing, dead, the model switched or Cowork flipped → (re)spawn.
     close_session(session_id).await;
     evict_for_new_session(session_id).await;
     start_reaper();
@@ -3870,6 +4075,7 @@ async fn get_or_spawn(
         mentor,
         generation_id,
         resume,
+        cowork,
     )
     .await?;
     registry()
@@ -4093,6 +4299,9 @@ pub async fn opencode_chat_stream(
     // turn's workspace (and reap its process) so the chat keeps ONE folder.
     // Absent with an older SDK: no migration.
     new_chat_key: Option<String>,
+    // Cowork is on in the chat: the agent gets the screen tools. Absent with
+    // an older SDK: plain Code.
+    cowork: Option<bool>,
 ) -> Result<(), String> {
     let res = chat_stream(
         app.clone(),
@@ -4106,6 +4315,7 @@ pub async fn opencode_chat_stream(
         workspace,
         mentor,
         new_chat_key,
+        cowork.unwrap_or(false),
     )
     .await;
     // The SDK drops its listeners the moment `invoke` resolves: every emit of the
@@ -4127,6 +4337,7 @@ async fn chat_stream(
     workspace: Option<String>,
     mentor: Option<String>,
     new_chat_key: Option<String>,
+    cowork: bool,
 ) -> Result<(), String> {
     if crate::opencode_installer::is_sandboxed() {
         return Err("Code isn't available in the sandboxed Mac App Store build.".to_string());
@@ -4152,7 +4363,7 @@ async fn chat_stream(
         resolve_workspace_for(Some(tenant.as_str()), mentor.as_deref(), &session_id)
     });
 
-    let prompt_text = last_user_text(&messages).ok_or("no user message to send to opencode")?;
+    let prompt_text = last_user_text(&messages).ok_or("no user message to send to Code")?;
     let backend = Backend::of(model.as_deref().unwrap_or(""));
 
     // An on-device turn can sit silent for minutes the first time: opencode refreshes
@@ -4198,6 +4409,7 @@ async fn chat_stream(
             mentor.clone(),
             &generation_id,
             resume.take(),
+            cowork,
         )
         .await
         {
@@ -4498,7 +4710,7 @@ mod tests {
             !text.trim().is_empty(),
             "an empty prompt falsy-restores opencode's built-in narration prompt"
         );
-        assert!(text.starts_with("You are OpenCode"), "{text}");
+        assert!(text.starts_with("You are ibl.ai Code"), "{text}");
         assert!(
             text.contains("between tool calls"),
             "the stub's second line — the top-slot silence rule — must survive edits: {text}"
@@ -5432,6 +5644,7 @@ mod tests {
             acp_session_id: "acp-test".to_string(),
             requested_model: Some("m".to_string()),
             backend: Backend::Opencode,
+            cowork: false,
             proxy_secret: None,
             turn: Arc::new(Mutex::new(TurnState::new())),
             last_used: Mutex::new(Instant::now()),
@@ -6198,14 +6411,20 @@ mod tests {
         let skills = Path::new("/tmp/cfg/agent-skills");
         let cfg = Path::new("/tmp/cfg");
 
-        let oc = agent_launch(Backend::Opencode, ws, skills, cfg, "GUIDE", false);
-        assert_eq!(oc.program, PathBuf::from("opencode"));
+        let oc = agent_launch(Backend::Opencode, ws, skills, cfg, "GUIDE", false, None);
+        assert_eq!(oc.program, PathBuf::from(opencode_program()));
+        assert!(oc.program.ends_with("bin/iblai-code"), "{:?}", oc.program);
         assert_eq!(oc.args, ["acp", "--print-logs", "--log-level", "INFO"]);
-        assert_eq!(oc.env, vec![("XDG_CONFIG_HOME", "/tmp/cfg".to_string())]);
+        assert_eq!(oc.env[0], ("XDG_CONFIG_HOME", "/tmp/cfg".to_string()));
+        assert_eq!(
+            oc.env[1..].iter().map(|(k, _)| *k).collect::<Vec<_>>(),
+            ["XDG_DATA_HOME", "XDG_CACHE_HOME"],
+            "the engine's state and cache live under our dirs"
+        );
         assert_eq!(oc.session, json!({ "cwd": "/tmp/ws", "mcpServers": [] }));
         assert_eq!(session_mode(Backend::Opencode, false), None);
 
-        let codex = agent_launch(Backend::Codex, ws, skills, cfg, "GUIDE", false);
+        let codex = agent_launch(Backend::Codex, ws, skills, cfg, "GUIDE", false, None);
         assert!(codex.program.ends_with("bin/node"), "{:?}", codex.program);
         assert!(
             codex.args[0].ends_with("@agentclientprotocol/codex-acp/dist/index.js"),
@@ -6240,7 +6459,7 @@ mod tests {
             session_mode(Backend::Codex, true),
             Some("agent-full-access")
         );
-        let auto = agent_launch(Backend::Codex, ws, skills, cfg, "GUIDE", true);
+        let auto = agent_launch(Backend::Codex, ws, skills, cfg, "GUIDE", true, None);
         assert_eq!(
             auto.env
                 .iter()
@@ -6250,7 +6469,7 @@ mod tests {
             "agent-full-access"
         );
 
-        let claude = agent_launch(Backend::Claude, ws, skills, cfg, "GUIDE", false);
+        let claude = agent_launch(Backend::Claude, ws, skills, cfg, "GUIDE", false, None);
         assert!(claude.program.ends_with("bin/node"));
         assert!(claude.args[0].ends_with("@agentclientprotocol/claude-agent-acp/dist/index.js"));
         assert!(claude.env.is_empty(), "{:?}", claude.env);
@@ -6462,10 +6681,7 @@ mod tests {
             "session/new",
             &json!({ "code": -32602, "message": "bad params" }),
         );
-        assert!(
-            other.starts_with("opencode error on session/new"),
-            "{other}"
-        );
+        assert!(other.starts_with("Code error on session/new"), "{other}");
         assert!(!other.starts_with(AUTH_REQUIRED));
 
         assert_eq!(auth_hint(Backend::Opencode, &auth), None);
@@ -6940,6 +7156,16 @@ mod tests {
         backend: Backend,
         fault: Option<&str>,
     ) -> Arc<Session> {
+        stub_session(script, log, backend, fault, false)
+    }
+
+    fn stub_session(
+        script: &Path,
+        log: &Path,
+        backend: Backend,
+        fault: Option<&str>,
+        cowork: bool,
+    ) -> Arc<Session> {
         let mut child = Command::new("sh")
             .arg(script)
             .env("LOG", log)
@@ -6962,6 +7188,7 @@ mod tests {
             acp_session_id: String::new(),
             requested_model: Some(format!("{}/default", backend.id())),
             backend,
+            cowork,
             proxy_secret: None,
             turn: Arc::new(Mutex::new(TurnState::new())),
             last_used: Mutex::new(Instant::now()),
@@ -7001,6 +7228,181 @@ while IFS= read -r l; do
   printf '{"jsonrpc":"2.0","id":%s,"result":%s}\n' "$id" "$r"
 done
 "#;
+
+    #[test]
+    fn a_legacy_dir_moves_once_and_never_over_a_newer_one() {
+        let scratch = std::env::temp_dir().join(format!("opencode-adopt-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&scratch);
+        let old = scratch.join("old");
+        let new = scratch.join("nest/new");
+        assert!(!adopt_legacy_dir(&old, &new), "nothing to move");
+        std::fs::create_dir_all(&old).unwrap();
+        std::fs::write(old.join("state"), b"x").unwrap();
+        assert!(adopt_legacy_dir(&old, &new));
+        assert!(!old.exists());
+        assert_eq!(std::fs::read(new.join("state")).unwrap(), b"x");
+        std::fs::create_dir_all(&old).unwrap();
+        assert!(
+            !adopt_legacy_dir(&old, &new),
+            "a newer home is never replaced"
+        );
+        assert!(old.exists());
+        let _ = std::fs::remove_dir_all(&scratch);
+    }
+
+    #[test]
+    fn cowork_mcp_server_has_command_args_and_env() {
+        let server = cowork_mcp_server(Path::new("/opt/x/cua-driver"));
+        assert_eq!(server["name"], json!("cowork"));
+        assert_eq!(server["command"], json!("/opt/x/cua-driver"));
+        assert_eq!(
+            server["args"],
+            json!(["mcp", "--direct", "--grant", "existing-profile"])
+        );
+        assert_eq!(server["env"], json!([]));
+    }
+
+    /// Every backend's `session/new` params carry the driver when Cowork is on
+    /// and nothing extra when it is off.
+    #[test]
+    fn the_screen_tools_ride_the_launch_only_with_cowork_on() {
+        let (ws, skills, cfg) = (Path::new("/ws"), Path::new("/skills"), Path::new("/cfg"));
+        for backend in [Backend::Opencode, Backend::Codex, Backend::Claude] {
+            let plain = agent_launch(backend, ws, skills, cfg, "G", false, None);
+            assert_eq!(plain.session["mcpServers"], json!([]), "{}", backend.id());
+            let driver = Path::new("/d/cua-driver");
+            let with = agent_launch(backend, ws, skills, cfg, "G", false, Some(driver));
+            assert_eq!(
+                with.session["mcpServers"],
+                json!([cowork_mcp_server(driver)]),
+                "{}",
+                backend.id()
+            );
+        }
+    }
+
+    /// A resumed Cowork chat keeps its screen: the load carries the entry too.
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn the_screen_tools_reach_session_new_and_session_load() {
+        let scratch =
+            std::env::temp_dir().join(format!("opencode-cowork-agent-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&scratch);
+        std::fs::create_dir_all(&scratch).unwrap();
+        let script = scratch.join("agent.sh");
+        std::fs::write(&script, STUB_AGENT).unwrap();
+        let ws = scratch.join("ws");
+        let skills = scratch.join("cfg/agent-skills");
+        let driver = scratch.join("cua-driver");
+        for (resume, method) in [
+            (None, "session/new"),
+            (Some("prev-session"), "session/load"),
+        ] {
+            let log = scratch.join(format!("{}.log", method.replace('/', "-")));
+            let session = piped_agent(&script, &log, Backend::Opencode);
+            let launch = agent_launch(
+                Backend::Opencode,
+                &ws,
+                &skills,
+                &scratch,
+                "G",
+                false,
+                Some(&driver),
+            );
+            handshake(&session, &launch.session, resume, None, None)
+                .await
+                .unwrap();
+            let seen = std::fs::read_to_string(&log).unwrap();
+            let lines: Vec<Value> = seen
+                .lines()
+                .map(|l| serde_json::from_str(l).unwrap())
+                .collect();
+            assert_eq!(lines[1]["method"], json!(method), "{seen}");
+            assert_eq!(
+                lines[1]["params"]["mcpServers"],
+                json!([cowork_mcp_server(&driver)]),
+                "{seen}"
+            );
+            let _ = session.child.lock().await.start_kill();
+        }
+        let _ = std::fs::remove_dir_all(&scratch);
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn a_live_session_is_reused_only_for_the_same_model_and_cowork_setting() {
+        let scratch =
+            std::env::temp_dir().join(format!("opencode-reusable-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&scratch);
+        std::fs::create_dir_all(&scratch).unwrap();
+        let script = scratch.join("agent.sh");
+        std::fs::write(&script, STUB_AGENT).unwrap();
+        let session = piped_agent(&script, &scratch.join("a.log"), Backend::Opencode);
+        assert!(reusable(&session, Some("opencode/default"), false));
+        assert!(
+            !reusable(&session, Some("opencode/default"), true),
+            "a Cowork flip respawns"
+        );
+        assert!(
+            !reusable(&session, Some("openai/gpt-5.5"), false),
+            "a model switch respawns"
+        );
+        let _ = session.child.lock().await.start_kill();
+        let _ = std::fs::remove_dir_all(&scratch);
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn closing_cowork_sessions_spares_plain_code_and_the_newcomer() {
+        let scratch =
+            std::env::temp_dir().join(format!("opencode-cowork-close-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&scratch);
+        std::fs::create_dir_all(&scratch).unwrap();
+        let script = scratch.join("agent.sh");
+        std::fs::write(&script, STUB_AGENT).unwrap();
+        let sessions: HashMap<String, Arc<Session>> =
+            [("plain", false), ("screen", true), ("newcomer", true)]
+                .into_iter()
+                .map(|(id, cowork)| {
+                    let log = scratch.join(format!("{id}.log"));
+                    (
+                        id.to_string(),
+                        stub_session(&script, &log, Backend::Opencode, None, cowork),
+                    )
+                })
+                .collect();
+        let ids = cowork_session_ids(sessions.iter(), Some("newcomer"));
+        assert_eq!(ids, ["screen"]);
+        let mut all = cowork_session_ids(sessions.iter(), None);
+        all.sort();
+        assert_eq!(all, ["newcomer", "screen"]);
+        for s in sessions.values() {
+            let _ = s.child.lock().await.start_kill();
+        }
+        let _ = std::fs::remove_dir_all(&scratch);
+    }
+
+    #[test]
+    fn cowork_guidance_is_appended_only_when_on() {
+        assert_eq!(with_cowork_guidance("G".into(), false), "G");
+        let on = with_cowork_guidance("G".into(), true);
+        assert!(on.starts_with("G\n\n## Screen tools"), "{on}");
+        assert!(on.contains("include_screenshot: false"), "{on}");
+    }
+
+    #[cfg(not(target_os = "macos"))]
+    #[test]
+    fn cowork_inside_code_is_refused_off_macos() {
+        let err = cowork_preflight(Backend::Opencode).unwrap_err();
+        assert!(err.contains("Linux"), "{err}");
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn cowork_inside_code_is_refused_on_codex() {
+        let err = cowork_preflight(Backend::Codex).unwrap_err();
+        assert!(err.contains("Codex"), "{err}");
+    }
 
     /// The wire contract against a scripted agent: Claude's load/new params
     /// carry the guidance append and the skills view and are followed by the
@@ -7292,6 +7694,7 @@ done
                 &scratch,
                 "# ibl.ai guidance\n",
                 false,
+                None,
             );
             let mut cmd = Command::new(&launch.program);
             cmd.args(&launch.args)
@@ -7329,6 +7732,7 @@ done
                 acp_session_id: String::new(),
                 requested_model: Some(format!("{}/default", backend.id())),
                 backend,
+                cowork: false,
                 proxy_secret: None,
                 turn: Arc::new(Mutex::new(TurnState::new())),
                 last_used: Mutex::new(Instant::now()),

@@ -625,7 +625,7 @@ esac"#,
             crate::opencode_acp::probe_config_options(Backend::Opencode)
                 .await
                 .unwrap_err(),
-            "opencode has no agent model list."
+            "ibl.ai has no agent model list."
         );
     }
 }
