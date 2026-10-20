@@ -1658,6 +1658,10 @@
   },
   "tabsLlmTab": {
     "infoBox": "C'est le cerveau de votre agent — le modèle d'IA qui alimente chaque réponse. Les modèles plus grands raisonnent mieux sur les questions complexes ; les plus légers sont plus rapides et moins coûteux. Pas sûr ? Le modèle par défaut est un excellent choix polyvalent.",
+    "inChatModelChangeLabel": "Autoriser le changement de modèle dans le chat",
+    "inChatModelChangeDescription": "Permet aux utilisateurs de passer à un autre modèle d’IA pour leur propre session de chat uniquement. Le modèle de l’agent revient quand ils démarrent un nouveau chat.",
+    "inChatModelChangeTooltip": "Les utilisateurs peuvent choisir un autre modèle pendant qu’ils discutent. Le changement ne s’applique qu’à leur propre session : le modèle de l’agent reste le même pour tout le monde, et chaque nouveau chat repart sur lui. S’applique au chat de l’application comme au widget intégré.",
+    "inChatModelChangeTooltipAriaLabel": "En savoir plus sur le changement de modèle dans le chat",
     "llmUpdatedSuccessfully": "LLM mis à jour avec succès",
     "failedToUpdateLlm": "Échec de la mise à jour du LLM",
     "llmConfiguration": "Configuration LLM",
@@ -1963,8 +1967,6 @@
     "perSurfaceNote": "A configurer independamment pour le chat dans l'application et le widget integre.",
     "inAppChatNote": "Les conversations hebergees dans l'application : le chat que vos utilisateurs ouvrent ici.",
     "embedWidgetNote": "Le widget que vous integrez a votre propre site avec l'extrait de l'onglet Integration.",
-    "inChatModelChangeLabel": "Autoriser le changement de modèle dans le chat",
-    "inChatModelChangeTooltip": "Permet de choisir un autre modèle d’IA pour son propre chat. Le modèle de l’agent ne change pas, et les nouveaux chats démarrent avec lui. Ce réglage n’a qu’une valeur : il s’applique au chat de l’application et au widget intégré.",
     "showLastConversationLabel": "Rouvrir la dernière conversation",
     "showLastConversationTooltip": "Quand quelqu’un ouvre cet agent, sa dernière conversation s’affiche pour qu’il reprenne là où il s’était arrêté. Ce réglage n’a qu’une valeur : il s’applique au chat de l’application et au widget intégré."
   },

@@ -1658,6 +1658,10 @@
   },
   "tabsLlmTab": {
     "infoBox": "This is the brain behind your agent — the AI model that powers every reply. Bigger models reason better on tricky questions; lighter ones are faster and cost less. Not sure? The default is a solid all-rounder.",
+    "inChatModelChangeLabel": "Allow In-Chat Model Change",
+    "inChatModelChangeDescription": "Let users switch to a different AI model for their own chat session only. It resets to the agent's model when they start a new chat.",
+    "inChatModelChangeTooltip": "Users can pick another model while they chat. The change only applies to their own session — the agent's model stays the same for everyone, and each new chat starts on it again. Applies to both in-app chat and the embed widget.",
+    "inChatModelChangeTooltipAriaLabel": "More about allowing in-chat model change",
     "llmUpdatedSuccessfully": "LLM updated successfully",
     "failedToUpdateLlm": "Failed to update LLM",
     "llmConfiguration": "LLM Configuration",
@@ -1963,8 +1967,6 @@
     "perSurfaceNote": "Set independently for in-app chat and the embed widget.",
     "inAppChatNote": "Conversations hosted inside the app — the chat your users open here.",
     "embedWidgetNote": "The widget you embed on your own site using the snippet from the Embed tab.",
-    "inChatModelChangeLabel": "Allow in-chat model change",
-    "inChatModelChangeTooltip": "Let people pick a different AI model for their own chat. The agent’s model doesn’t change, and new chats start on it. This setting has one value, so it applies to both in-app chat and the embed widget.",
     "showLastConversationLabel": "Reopen last conversation",
     "showLastConversationTooltip": "When someone opens this agent, show their last conversation so they can pick up where they left off. This setting has one value, so it applies to both in-app chat and the embed widget."
   },

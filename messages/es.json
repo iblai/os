@@ -1658,6 +1658,10 @@
   },
   "tabsLlmTab": {
     "infoBox": "Este es el cerebro de tu agente: el modelo de IA que impulsa cada respuesta. Los modelos más grandes razonan mejor las preguntas complejas; los más ligeros son más rápidos y cuestan menos. ¿No estás seguro? El predeterminado es una opción versátil y confiable.",
+    "inChatModelChangeLabel": "Permitir cambiar el modelo en el chat",
+    "inChatModelChangeDescription": "Permite que los usuarios cambien a otro modelo de IA solo en su propia sesión de chat. Vuelve al modelo del agente cuando empiezan un chat nuevo.",
+    "inChatModelChangeTooltip": "Los usuarios pueden elegir otro modelo mientras chatean. El cambio solo se aplica a su propia sesión: el modelo del agente sigue siendo el mismo para todos y cada chat nuevo vuelve a empezar con él. Se aplica tanto al chat de la app como al widget integrado.",
+    "inChatModelChangeTooltipAriaLabel": "Más información sobre permitir cambiar el modelo en el chat",
     "llmUpdatedSuccessfully": "LLM actualizado correctamente",
     "failedToUpdateLlm": "Error al actualizar el LLM",
     "llmConfiguration": "Configuración LLM",
@@ -1963,8 +1967,6 @@
     "perSurfaceNote": "Se configuran de forma independiente para el chat en la aplicacion y el widget incrustado.",
     "inAppChatNote": "Conversaciones alojadas dentro de la aplicacion: el chat que tus usuarios abren aqui.",
     "embedWidgetNote": "El widget que incrustas en tu propio sitio con el fragmento de la pestana Insertar.",
-    "inChatModelChangeLabel": "Permitir cambiar el modelo en el chat",
-    "inChatModelChangeTooltip": "Permite elegir otro modelo de IA para su propio chat. El modelo del agente no cambia y los chats nuevos empiezan con él. Este ajuste tiene un solo valor, así que se aplica al chat de la app y al widget integrado.",
     "showLastConversationLabel": "Reabrir la última conversación",
     "showLastConversationTooltip": "Cuando alguien abre este agente, le muestra su última conversación para que pueda seguir donde la dejó. Este ajuste tiene un solo valor, así que se aplica al chat de la app y al widget integrado."
   },

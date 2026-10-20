@@ -9,7 +9,7 @@ import {
 } from '@iblai/iblai-js/web-containers/next';
 
 import { useNavigate } from '@/hooks/user-navigate';
-import { useUsername } from '@/hooks/use-user';
+import { useIsAdmin, useUserIsStudent, useUsername } from '@/hooks/use-user';
 import { useShowFreeTrialDialog } from '@/hooks/user-user-actions';
 import { config } from '@/lib/config';
 import { MENTOR_VISIBILITY } from '@/lib/constants';
@@ -46,6 +46,12 @@ export function LLMTab({ showConfigurationHeader = true }: Props) {
   const username = useUsername();
   const rbacPermissions = useAppSelector(selectRbacPermissions);
   const { executeWithTrialCheck } = useShowFreeTrialDialog();
+  // Same live-admin gate as the sidebar's admin cluster: an admin browsing in
+  // User mode is not an admin here (useUserIsStudent). Only the edit-agent slot
+  // (with its header) offers the tenant-wide Users Models editor, not the nav-bar dialog.
+  const isAdmin = useIsAdmin();
+  const userIsStudent = useUserIsStudent();
+  const isTenantAdmin = isAdmin && !userIsStudent && showConfigurationHeader;
 
   // The nav-bar's "LLM Providers" dialog can target a mentor other than the
   // one in the route (the modal-stack mentor id), exactly as the OS monolith
@@ -66,6 +72,12 @@ export function LLMTab({ showConfigurationHeader = true }: Props) {
       description: t('configureLanguageModelSettings'),
     },
     infoBox: t('infoBox'),
+    inChatModelChange: {
+      label: t('inChatModelChangeLabel'),
+      description: t('inChatModelChangeDescription'),
+      tooltip: t('inChatModelChangeTooltip'),
+      tooltipAriaLabel: t('inChatModelChangeTooltipAriaLabel'),
+    },
     search: {
       placeholder: t('searchProviders'),
     },
@@ -96,6 +108,7 @@ export function LLMTab({ showConfigurationHeader = true }: Props) {
         // describing the route mentor rather than the nav-selected one.
         mentorId={activeMentorId}
         labels={labels}
+        isTenantAdmin={isTenantAdmin}
       />
     </AgentSettingsProvider>
   );
