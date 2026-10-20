@@ -2187,6 +2187,7 @@
     "permissionModeManual": "每次询问",
     "permissionModeAuto": "自动批准",
     "permissionModeAutoHint": "Code 将直接编辑文件并执行命令，不再询问。请仅在受信任的文件夹中使用。",
+    "permissionModeAutoCoworkHint": "开启 Cowork 后，它还会直接操作你的屏幕，不再询问。",
     "agentLabel": "智能体",
     "agentNotInstalled": "未安装",
     "agentInstall": "安装",

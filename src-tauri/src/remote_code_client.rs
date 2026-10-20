@@ -1633,7 +1633,7 @@ async fn run_turn_inner(
     new_chat_key: Option<&str>,
 ) -> Result<(), String> {
     let (base, pw) = host()?;
-    let text = last_user_text(messages).ok_or("no user message to send to opencode")?;
+    let text = last_user_text(messages).ok_or("no user message to send to Code")?;
     // Key migration FIRST: resolving the directory before it minted a fresh
     // folder under the chat's real id while the server session stayed in
     // the ephemeral id's folder — the turn then prompted one project and

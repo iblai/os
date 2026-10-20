@@ -10,6 +10,8 @@ mod cua_driver_mcp;
 // the same arrangement as `foundry_manager` below.
 #[allow(dead_code)]
 mod local_llm;
+#[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+mod local_llm_openai;
 // Only the phone asks; desktop builds carry the module unused.
 #[cfg_attr(not(any(target_os = "ios", target_os = "android")), allow(dead_code))]
 mod local_network;
@@ -3162,6 +3164,8 @@ pub fn run() {
         cua_driver_mcp::cua_driver_start,
         cua_driver_mcp::cua_driver_send,
         cua_driver_mcp::cua_driver_stop,
+        local_llm_openai::local_llm_openai_stream,
+        local_llm_openai::local_llm_openai_stream_cancel,
         check_disk_space_for_model,
         get_system_memory,
         download_phi3_model,

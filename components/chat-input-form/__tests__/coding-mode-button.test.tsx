@@ -1174,6 +1174,17 @@ describe('CodingModeButton', () => {
     expect(screen.getByRole('switch')).toBeDisabled();
   });
 
+  it('caps the popover to the room Radix reports and scrolls inside, so the switch at its top stays in view on a short window', async () => {
+    renderButton();
+    await openPopover();
+    const content = screen.getByRole('dialog');
+    expect(content).toContainElement(screen.getByRole('switch'));
+    expect(content.className).toContain(
+      'max-h-[var(--radix-popover-content-available-height)]',
+    );
+    expect(content.className).toContain('overflow-y-auto');
+  });
+
   describe('default on', () => {
     it('turns Code on once for a signed-in desktop user', async () => {
       localStorage.setItem('tenant', 'acme');
@@ -1654,6 +1665,29 @@ describe('CodingModeButton', () => {
         }),
       );
       expect(await screen.findByTestId('code-auto-mode-hint')).toBeVisible();
+    });
+
+    it('says the screen is included when Cowork is on and Automatic is chosen', async () => {
+      backend({ permissionMode: 'auto' });
+      localStorage.setItem('ibl_cowork_enabled', 'true');
+      renderButton();
+      await openPopover();
+
+      expect(
+        await screen.findByTestId('code-auto-mode-hint'),
+      ).toHaveTextContent(
+        'With Cowork on, it also acts on your screen without asking.',
+      );
+    });
+
+    it('keeps the Automatic hint to files and commands while Cowork is off', async () => {
+      backend({ permissionMode: 'auto' });
+      renderButton();
+      await openPopover();
+
+      expect(
+        await screen.findByTestId('code-auto-mode-hint'),
+      ).not.toHaveTextContent('screen');
     });
 
     it('keeps the choice when DM refuses to store it', async () => {

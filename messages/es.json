@@ -2187,6 +2187,7 @@
     "permissionModeManual": "Preguntarme",
     "permissionModeAuto": "Automático",
     "permissionModeAutoHint": "Code edita archivos y ejecuta comandos sin preguntar. Úsalo solo en carpetas de confianza.",
+    "permissionModeAutoCoworkHint": "Con Cowork activado, también actúa en tu pantalla sin preguntar.",
     "agentLabel": "Agente",
     "agentNotInstalled": "No instalado",
     "agentInstall": "Instalar",

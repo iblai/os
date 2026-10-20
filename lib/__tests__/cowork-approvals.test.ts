@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
+  coworkEnabled,
   coworkPrefSet,
   readCoworkApprovals,
   writeCoworkApprovals,
@@ -65,5 +66,22 @@ describe('coworkPrefSet', () => {
       throw new Error('blocked');
     });
     expect(coworkPrefSet()).toBe(false);
+  });
+});
+
+describe('coworkEnabled', () => {
+  it('is on only for the SDK pill’s explicit "true"', () => {
+    expect(coworkEnabled()).toBe(false);
+    window.localStorage.setItem(ENABLED_KEY, 'false');
+    expect(coworkEnabled()).toBe(false);
+    window.localStorage.setItem(ENABLED_KEY, 'true');
+    expect(coworkEnabled()).toBe(true);
+  });
+
+  it('reads unusable storage as off', () => {
+    vi.spyOn(window.localStorage, 'getItem').mockImplementation(() => {
+      throw new Error('blocked');
+    });
+    expect(coworkEnabled()).toBe(false);
   });
 });

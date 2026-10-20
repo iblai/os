@@ -34,6 +34,7 @@ import { Switch } from '@/components/ui/switch';
 import { useMentorSettings } from '@/hooks/use-mentors/use-mentor-settings';
 import { isTauriOfflineMode } from '@/hooks/use-tauri-offline';
 import { config } from '@/lib/config';
+import { coworkEnabled } from '@/lib/cowork-approvals';
 import { getUserOS } from '@/lib/utils';
 import { isTauriMobile } from '@/types/tauri';
 import type { OpencodeSkillSync } from '@/hooks/use-opencode-skill-sync';
@@ -189,6 +190,11 @@ export function CodingModeButton({
   // default, probed by the backend); null → generic "Open Folder" label.
   const [fileManager, setFileManager] = useState<string | null>(null);
   // undefined = not read yet, null = never chosen (→ first-run dialog).
+  // Cowork's pill writes its key without an event, so read it as the popover opens.
+  const [coworkOn, setCoworkOn] = useState(false);
+  useEffect(() => {
+    if (isOpen) setCoworkOn(coworkEnabled());
+  }, [isOpen]);
   const [permissionMode, setPermissionMode] = useState<
     PermissionMode | null | undefined
   >(undefined);
@@ -1265,7 +1271,8 @@ export function CodingModeButton({
         </Tooltip>
         <PopoverContent
           align="start"
-          className="w-96 max-w-[calc(100vw-2rem)] rounded-lg border border-gray-200 bg-white p-4 shadow-xl"
+          collisionPadding={8}
+          className="max-h-[var(--radix-popover-content-available-height)] w-96 max-w-[calc(100vw-2rem)] overflow-y-auto rounded-lg border border-gray-200 bg-white p-4 shadow-xl"
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -1353,6 +1360,7 @@ export function CodingModeButton({
               className="mt-1 text-[11px] text-gray-400"
             >
               {t('permissionModeAutoHint')}
+              {coworkOn && <> {t('permissionModeAutoCoworkHint')}</>}
             </p>
           )}
 
