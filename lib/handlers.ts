@@ -6,8 +6,15 @@ import {
   darkModeUpdated,
   // iframeCloseButtonEnabled,
 } from '@/features/navigation/slice';
-import { chatActions, selectLessonCompletion } from '@iblai/iblai-js/web-utils';
-import { sendMessageToParentWebsite } from './utils';
+import {
+  chatActions,
+  selectLessonCompletion,
+  AUTH_TOKENS_UPDATED_EVENT,
+} from '@iblai/iblai-js/web-utils';
+import {
+  sendMessageToParentWebsite,
+  saveUserObjectToLocalStorage,
+} from './utils';
 import { clearAuthRecovery } from './auth-recovery-lock';
 import {
   enableChatActionsPopup,
@@ -86,26 +93,53 @@ export function useIframeHandlers() {
 
   const handleTokenMessage = (tokenData: string) => {
     console.log('[useIframeHandlers] tokenData', tokenData);
+    let payload: Record<string, any>;
     try {
-      tokenData = JSON.parse(tokenData);
+      payload = JSON.parse(tokenData);
     } catch (error) {
       console.error('Error parsing token data:', error);
       console.error(JSON.stringify({ tenant: tenantKey, error }));
+      return;
     }
-    Object.entries(tokenData).forEach(([key, value]) => {
-      setAuthItem(key, value as string);
-    });
 
+    // The host re-sends its auth every time we announce ourselves
+    // (`ready`/`loaded`). Acting on an identical payload re-runs the auth check
+    // for nothing (and used to re-trigger the reload loop). Only act on a real
+    // change.
+    const unchanged =
+      getAuthItem('axd_token') === payload.axd_token &&
+      getAuthItem('dm_token') === payload.dm_token &&
+      getAuthItem('tenant') === payload.tenant;
+    if (unchanged) return;
+
+    // New tokens installed — release the recovery lock so a later 401 can recover.
+    clearAuthRecovery();
+
+    // Save reactively: saveUserObjectToLocalStorage dispatches `local-storage`
+    // events per key, which the reactive auth hooks (useUsername, useUserData,
+    // useCurrentTenant) listen for — so the UI flips to the new auth in place.
+    saveUserObjectToLocalStorage(payload);
+
+    // saveUserObjectToLocalStorage clears storage first, so re-derive the
+    // current tenant when the payload didn't carry one.
     if (!getAuthItem('current_tenant')) {
       const tenants = JSON.parse(getAuthItem('tenants') || '[]');
       const tenant = getAuthItem('tenant');
       const selectedTenant = tenants.find((t: any) => t.key === tenant);
       setAuthItem('current_tenant', JSON.stringify(selectedTenant));
-      setAuthItem('tenants', JSON.stringify(tenants));
+      window.dispatchEvent(
+        new StorageEvent('local-storage', { key: 'current_tenant' }),
+      );
     }
-    // New tokens installed — release the recovery lock so a later 401 can recover.
-    clearAuthRecovery();
-    window.location.reload();
+
+    // Re-run the auth check IN PLACE instead of a full page reload (which
+    // re-downloaded every asset — the embed-widget startup delay). Mirrors the
+    // agent-ai default handler in providers/index.tsx: the browser's `storage`
+    // event only fires in OTHER windows, and a token refresh often leaves
+    // `username` unchanged, so the AuthProvider's username-keyed check would
+    // not otherwise re-run. The data layer reads tokens per-request, so new
+    // requests pick up the new tokens with no reload.
+    window.dispatchEvent(new Event(AUTH_TOKENS_UPDATED_EVENT));
   };
 
   const handlers = {
