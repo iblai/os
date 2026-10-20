@@ -7,9 +7,6 @@ onlyBuiltDependencies:
   - sharp
   - unrs-resolver
 overrides:
-  '@iblai/iblai-js': 'file:../../sdk/modes-together/.pack/iblai-iblai-js-2.42.0.1792435792.tgz'
-  '@iblai/web-utils': 'file:../../sdk/modes-together/.pack/iblai-web-utils-2.11.0.1792435792.tgz'
-  '@iblai/web-containers': 'file:../../sdk/modes-together/.pack/iblai-web-containers-1.46.0.1792435792.tgz'
   vite: '>=7.3.2'
   # GHSA-c475-qrg2-pj4r — quadratic-time CPU DoS in Client.list()'s Unix
   # directory-listing parser (RE_LINE backtracking), affecting <=6.2.0; 6.2.1 is

@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-10-16 | 949 checkpoints (905 covered, 10 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 97 journeys (96 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-10-16 | 952 checkpoints (907 covered, 11 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 98 journeys (97 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -85,10 +85,10 @@ When adding a new page or modifying an existing user flow:
 
 **Source files:** `app/platform/[tenantKey]/[mentorId]/explore/page.tsx`, `app/platform/[tenantKey]/[mentorId]/explore/_components/explore-page-content.tsx`, `app/platform/[tenantKey]/[mentorId]/explore/_components/search-section.tsx`, `app/platform/[tenantKey]/[mentorId]/explore/_components/mentor-categories.tsx`, `app/platform/[tenantKey]/[mentorId]/explore/_components/section.tsx`, `app/platform/[tenantKey]/[mentorId]/explore/_components/mentor-card-with-star.tsx`, `app/platform/[tenantKey]/[mentorId]/explore/_components/custom-mentors-section.tsx`, `app/platform/[tenantKey]/[mentorId]/explore/_components/default-mentors-section.tsx`, `app/platform/[tenantKey]/[mentorId]/explore/_components/featured-mentors-section.tsx`, `app/platform/[tenantKey]/[mentorId]/explore/_components/starred-mentors-section.tsx`, `app/platform/[tenantKey]/[mentorId]/explore/_components/empty-state.tsx`
 
-- [x] Explore page title ("Explore agents") and description are visible
+- [x] Explore page title ("Explore Agents") and description are visible
 - [x] Mentor cards display correct information
 - [x] Search input filters the mentor list
-- [x] "See more" button loads additional mentors
+- [x] "See More" button loads additional mentors
 - [x] Featured section is displayed when configured
 - [x] Filter by LLM Provider narrows results
 - [x] Filter by Subject narrows results
@@ -2214,3 +2214,15 @@ Per-agent `show_last_conversation` ([iblai-platform#2629](https://github.com/ibl
 - [x] rlc-08: Main-chat guard: an agent whose setting was never touched (default null) makes no limit=1 request, shows no previous conversation, mints a new session as before, and the composer is usable
 - [x] rlc-09: With the setting on, opening a shared chat link (mocked shared transcript) shows the shared conversation, not the last one, and mints no session, with no limit=1 request
 - [x] rlc-10: With the setting on, a link carrying chat-action and session-id opens that conversation (cached session = the URL's), not the latest, and mints no session, with no limit=1 request
+
+---
+
+## Journey 91: Read Aloud Across Voice Sources (3 checkpoints, 1 pending) — `journeys/91-read-aloud-voice-sources.spec.ts`
+
+**Source files:** `components/chat/ai-message-speak.tsx`, `hooks/use-speech.ts`, `components/modals/edit-mentor-modal/tabs/voice-tab.tsx`
+
+Unlike Journey 40, nothing is stubbed: playback is detected by wrapping `HTMLMediaElement.prototype.play` (server voices stream from the chat-message `/tts/` endpoint into a detached `Audio` element) and counting speechSynthesis utterance `start` events (Browser). The CI image has no speech engine, so headless Chromium reports no voices and never fires `start`; there the Browser leg checks only that the reply reached `speechSynthesis.speak()` and records a `no-speech-voices` annotation. The voice sources are read from the rendered provider cards, so a new source is exercised without a spec change. Assertions are soft, so one failing source doesn't hide the rest, and each failure names the outcome (HTTP status, `net::ERR_FAILED`, or still pending at the deadline). Server voices get 7s from the click — the same budget past which `useSpeech` reports a `TtsSlowFirstAudioError` to Sentry — and Browser gets 30s. Runs on a fresh mentor, so the admin account's tenant must hold the voice provider keys (Google / ibl.ai / OpenAI). rav-02 stays pending: on 2026-10-12 ibl.ai and OpenAI passed while Google TTS returned 502 after 60s at the API itself.
+
+- [x] rav-01: Admin switches the agent's voice source from Browser to each other source in Settings → Voice and saves it ("Voice saved")
+- [ ] rav-02: For each server voice source, clicking Read Aloud on a fresh reply fetches the chat-message `/tts/` audio (2xx, `audio/*`) and audio starts playing within 7s _(pending: Google TTS 502s at the API; ibl.ai and OpenAI pass)_
+- [x] rav-03: After switching back to Browser, clicking Read Aloud on a fresh reply hands the reply to speechSynthesis and, where the browser has voices, starts speaking within 30s
