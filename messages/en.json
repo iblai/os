@@ -1967,7 +1967,7 @@
     "perSurfaceNote": "Set independently for in-app chat and the embed widget.",
     "inAppChatNote": "Conversations hosted inside the app — the chat your users open here.",
     "embedWidgetNote": "The widget you embed on your own site using the snippet from the Embed tab.",
-    "showLastConversationLabel": "Reopen last conversation",
+    "showLastConversationLabel": "Reopen Last Conversation",
     "showLastConversationTooltip": "When someone opens this agent, show their last conversation so they can pick up where they left off. This setting has one value, so it applies to both in-app chat and the embed widget."
   },
   "tabsMcpTab": {
