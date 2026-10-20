@@ -1,5 +1,6 @@
 'use client';
 
+import * as Sentry from '@sentry/nextjs';
 import { useCallback, useEffect, useSyncExternalStore } from 'react';
 
 import type { Message } from '@iblai/iblai-js/web-utils';
@@ -11,6 +12,34 @@ import { useUsername } from '@/providers/use-user';
 import { useMentorSettings } from './use-mentors/use-mentor-settings';
 
 const DEFAULT_TTS_MIME = 'audio/mpeg';
+export const FIRST_AUDIO_BUDGET_MS = 7_000;
+
+export class TtsSlowFirstAudioError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'TtsSlowFirstAudioError';
+  }
+}
+
+function reportSlowFirstAudio(
+  tenant: string,
+  voiceProvider: string | undefined,
+  chatMessageId: string,
+) {
+  Sentry.captureException(
+    new TtsSlowFirstAudioError(
+      `Read Aloud audio did not start within ${FIRST_AUDIO_BUDGET_MS / 1000}s`,
+    ),
+    {
+      tags: {
+        subsystem: 'tts',
+        tenant,
+        voiceProvider: voiceProvider ?? 'unknown',
+      },
+      extra: { chatMessageId, budgetMs: FIRST_AUDIO_BUDGET_MS },
+    },
+  );
+}
 
 function normalizeAudioMime(contentType: string | null): string {
   const mime = (contentType ?? '').split(';')[0].trim().toLowerCase();
@@ -295,6 +324,17 @@ export function useSpeech({ mentorId, tenantKey }: Props = {}) {
         update({ currentMessageId: null, isSpeaking: false });
       };
 
+      // Fires while still waiting, so a request that never delivers audio is
+      // reported too, not only one that is eventually slow.
+      const slowFirstAudio = setTimeout(
+        () =>
+          reportSlowFirstAudio(tenantKey, voiceProvider, String(message.id)),
+        FIRST_AUDIO_BUDGET_MS,
+      );
+      controller.signal.addEventListener('abort', () =>
+        clearTimeout(slowFirstAudio),
+      );
+
       try {
         const isAudio = await loadTtsAudio(
           audio,
@@ -302,7 +342,7 @@ export function useSpeech({ mentorId, tenantKey }: Props = {}) {
           username,
           String(message.id),
           controller.signal,
-        );
+        ).finally(() => clearTimeout(slowFirstAudio));
         if (!isAudio) {
           speakViaBrowser(message);
           return;
@@ -315,7 +355,7 @@ export function useSpeech({ mentorId, tenantKey }: Props = {}) {
         resetSpeech();
       }
     },
-    [username, tenantKey, speakViaBrowser],
+    [username, tenantKey, voiceProvider, speakViaBrowser],
   );
 
   const speak = useCallback(

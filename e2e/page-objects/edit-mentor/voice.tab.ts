@@ -10,7 +10,10 @@ import {
   getCallConfigForm,
   expectCallConfigVisible,
   selectCallMode,
+  saveVoiceSettings,
 } from '@iblai/iblai-js/playwright';
+
+export type VoiceProviderId = Parameters<typeof selectVoiceProvider>[1];
 
 /**
  * Page object for the Voice tab inside the Edit Mentor dialog.
@@ -159,6 +162,27 @@ export class VoiceTab {
     provider: 'browser' | 'openai' | 'google',
   ): Promise<void> {
     await expectVoiceProviderSelected(this.dialog, provider);
+  }
+
+  /** Provider ids in the order their cards render. */
+  async availableProviders(): Promise<VoiceProviderId[]> {
+    const cards = this.dialog.locator(
+      '[role="radiogroup"] [data-voice-provider]',
+    );
+    await expect(cards.first()).toBeVisible({ timeout: 10_000 });
+    const ids = await cards.evaluateAll((els) =>
+      els.map((el) => el.getAttribute('data-voice-provider') ?? ''),
+    );
+    // The SDK's VoiceProvider union lags the cards it renders (ibl.ai is
+    // missing), so trust the DOM over the type.
+    return ids.filter(Boolean) as VoiceProviderId[];
+  }
+
+  async saveVoiceSettings(): Promise<void> {
+    await saveVoiceSettings(this.dialog);
+    await expect(this.page.getByText('Voice saved').first()).toBeVisible({
+      timeout: 15_000,
+    });
   }
 
   /** Trigger that opens the modal voice picker for the mentor voice. */
