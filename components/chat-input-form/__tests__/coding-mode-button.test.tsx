@@ -1174,6 +1174,17 @@ describe('CodingModeButton', () => {
     expect(screen.getByRole('switch')).toBeDisabled();
   });
 
+  it('caps the popover to the room Radix reports and scrolls inside, so the switch at its top stays in view on a short window', async () => {
+    renderButton();
+    await openPopover();
+    const content = screen.getByRole('dialog');
+    expect(content).toContainElement(screen.getByRole('switch'));
+    expect(content.className).toContain(
+      'max-h-[var(--radix-popover-content-available-height)]',
+    );
+    expect(content.className).toContain('overflow-y-auto');
+  });
+
   describe('default on', () => {
     it('turns Code on once for a signed-in desktop user', async () => {
       localStorage.setItem('tenant', 'acme');

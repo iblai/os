@@ -19,14 +19,19 @@
 //!
 //! The child is deliberately NOT detached (no `setsid` / new process group): it
 //! must stay a well-attached child of the app to inherit those grants.
+//!
+//! A Code chat with Cowork on gets the same driver through the app's own daemon
+//! (`ensure_driver_daemon`): the agent only runs the driver's stdio proxy, since
+//! a driver it spawned itself would sit inside its sandbox.
 
 #![cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
 
 use std::collections::HashSet;
 use std::io::{BufRead, BufReader, Write};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::{Child, ChildStdin, Command, Stdio};
 use std::sync::{Mutex, OnceLock};
+use std::time::{Duration, Instant};
 
 use serde::Serialize;
 use serde_json::Value;
@@ -398,6 +403,174 @@ pub(crate) fn resolved_driver_path() -> Option<PathBuf> {
         .or_else(|| Some(cua_driver_bin()).filter(|p| p.is_file()))
 }
 
+/// The daemon's socket, in our data dir; the agent's proxy is handed the path.
+pub(crate) fn daemon_socket() -> PathBuf {
+    iblai_data_dir().join("cua-driver.sock")
+}
+
+/// `cua-driver serve` as the app's embedded daemon: `--embedded` keeps it in
+/// the app's TCC chain (no disclaim re-exec, no permission gate of its own),
+/// `--parent-liveness-stdio` ends it when our stdin pipe closes, `--no-overlay`
+/// matches the `--direct` child, and the launch grant lives here — a proxy
+/// can't add one to a running daemon.
+fn daemon_argv(socket: &Path, host_bundle_id: &str) -> Vec<String> {
+    [
+        "serve",
+        "--embedded",
+        "--socket",
+        &socket.to_string_lossy(),
+        "--parent-liveness-stdio",
+        "--host-bundle-id",
+        host_bundle_id,
+        "--no-overlay",
+        "--grant",
+        "existing-profile",
+    ]
+    .iter()
+    .map(|s| s.to_string())
+    .collect()
+}
+
+/// The agent's MCP server command: the driver's stdio proxy to the daemon.
+pub(crate) fn proxy_argv(socket: &Path) -> Vec<String> {
+    ["mcp", "--embedded", "--socket", &socket.to_string_lossy()]
+        .iter()
+        .map(|s| s.to_string())
+        .collect()
+}
+
+/// The live daemon; its stdin is held open because EOF there stops it.
+struct DaemonProc {
+    child: Child,
+    _stdin: ChildStdin,
+    socket: PathBuf,
+}
+
+static DAEMON: OnceLock<Mutex<Option<DaemonProc>>> = OnceLock::new();
+
+fn daemon_slot() -> &'static Mutex<Option<DaemonProc>> {
+    DAEMON.get_or_init(|| Mutex::new(None))
+}
+
+const DAEMON_START_TIMEOUT: Duration = Duration::from_secs(10);
+
+/// Start (or reuse) the driver daemon a Code session's agent talks to, and
+/// return its socket. A direct child of the app, like the webview's driver:
+/// spawned by the agent instead, it would run inside the agent's sandbox —
+/// decoy `$HOME`, no writes, and keystrokes that never land.
+pub(crate) fn ensure_driver_daemon(driver: &Path, host_bundle_id: &str) -> Result<PathBuf, String> {
+    ensure_driver_daemon_within(
+        driver,
+        &daemon_socket(),
+        host_bundle_id,
+        DAEMON_START_TIMEOUT,
+    )
+}
+
+fn ensure_driver_daemon_within(
+    driver: &Path,
+    socket: &Path,
+    host_bundle_id: &str,
+    timeout: Duration,
+) -> Result<PathBuf, String> {
+    let mut guard = daemon_slot()
+        .lock()
+        .map_err(|_| "cua-driver daemon lock poisoned")?;
+    if let Some(proc) = guard.as_mut() {
+        match proc.child.try_wait() {
+            Ok(None) => return Ok(proc.socket.clone()),
+            _ => *guard = None,
+        }
+    }
+
+    // An embedded daemon refuses to start over a leftover socket file.
+    clear_stale_socket(socket)?;
+    let mut cmd = Command::new(driver);
+    cmd.args(daemon_argv(socket, host_bundle_id))
+        .env("PATH", crate::opencode_acp::augmented_path())
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
+    let mut child = cmd
+        .spawn()
+        .map_err(|e| format!("Cowork's screen driver didn't start: {e}"))?;
+    let stdin = child
+        .stdin
+        .take()
+        .ok_or("cua-driver daemon: no stdin handle")?;
+    if let Some(out) = child.stdout.take() {
+        log_daemon(out);
+    }
+    if let Some(err) = child.stderr.take() {
+        log_daemon(err);
+    }
+    if let Err(e) = wait_for_socket(socket, timeout) {
+        let _ = child.kill();
+        let _ = child.wait();
+        return Err(e);
+    }
+    println!(
+        "[cua-driver daemon] listening on {} (pid {:?})",
+        socket.display(),
+        child.id()
+    );
+    *guard = Some(DaemonProc {
+        child,
+        _stdin: stdin,
+        socket: socket.to_path_buf(),
+    });
+    Ok(socket.to_path_buf())
+}
+
+fn log_daemon(stream: impl std::io::Read + Send + 'static) {
+    std::thread::spawn(move || {
+        for line in BufReader::new(stream).lines().map_while(Result::ok) {
+            eprintln!("[cua-driver daemon] {line}");
+        }
+    });
+}
+
+fn clear_stale_socket(socket: &Path) -> Result<(), String> {
+    match std::fs::remove_file(socket) {
+        Err(e) if e.kind() != std::io::ErrorKind::NotFound => Err(format!(
+            "Cowork's screen driver couldn't reset its socket: {e}"
+        )),
+        _ => Ok(()),
+    }
+}
+
+#[cfg(unix)]
+fn wait_for_socket(socket: &Path, timeout: Duration) -> Result<(), String> {
+    let deadline = Instant::now() + timeout;
+    loop {
+        if std::os::unix::net::UnixStream::connect(socket).is_ok() {
+            return Ok(());
+        }
+        if Instant::now() >= deadline {
+            return Err("Cowork's screen driver didn't start.".to_string());
+        }
+        std::thread::sleep(Duration::from_millis(100));
+    }
+}
+
+#[cfg(not(unix))]
+fn wait_for_socket(_socket: &Path, _timeout: Duration) -> Result<(), String> {
+    Err("Cowork inside Code isn't available on Windows.".to_string())
+}
+
+/// Stop the daemon (best-effort) and drop its socket file.
+pub(crate) fn stop_driver_daemon() {
+    let Ok(mut guard) = daemon_slot().lock() else {
+        return;
+    };
+    if let Some(mut proc) = guard.take() {
+        println!("[cua-driver daemon] stopping (pid {:?})", proc.child.id());
+        let _ = proc.child.kill();
+        let _ = proc.child.wait();
+        let _ = std::fs::remove_file(&proc.socket);
+    }
+}
+
 /// The live `cua-driver mcp` child and a handle to its stdin.
 struct DriverProc {
     child: Child,
@@ -427,8 +600,9 @@ pub async fn cua_driver_start(app: AppHandle) -> Result<(), String> {
         ));
     }
 
-    // One driver owns the screen: a Code chat's own driver goes first.
+    // One driver owns the screen: the Code chats' daemon goes first.
     crate::opencode_acp::close_cowork_sessions(None).await;
+    stop_driver_daemon();
 
     let mut guard = slot().lock().map_err(|_| "cua-driver lock poisoned")?;
 
@@ -532,6 +706,7 @@ pub(crate) fn stop_driver() {
 pub async fn cua_driver_stop() -> Result<(), String> {
     stop_driver();
     crate::opencode_acp::close_cowork_sessions(None).await;
+    stop_driver_daemon();
     Ok(())
 }
 
@@ -842,5 +1017,99 @@ mod tests {
         let guard = flagged.lock().unwrap();
         assert!(guard.contains("fresh_tool"));
         assert!(!guard.contains("stale_tool"));
+    }
+
+    // --- the daemon a Code session's agent talks to ---
+
+    fn scratch(tag: &str) -> PathBuf {
+        let dir = std::env::temp_dir().join(format!("{tag}-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
+    #[test]
+    fn the_daemon_argv_keeps_the_hosts_tcc_chain() {
+        let argv = daemon_argv(Path::new("/s/cua-driver.sock"), "ai.ibl.test");
+        assert_eq!(argv[0], "serve");
+        for flag in ["--embedded", "--parent-liveness-stdio", "--no-overlay"] {
+            assert!(argv.iter().any(|a| a == flag), "{flag}");
+        }
+        for pair in [
+            ["--socket", "/s/cua-driver.sock"],
+            ["--host-bundle-id", "ai.ibl.test"],
+            ["--grant", "existing-profile"],
+        ] {
+            assert!(argv.windows(2).any(|w| w == pair), "{pair:?}");
+        }
+        assert!(!argv.iter().any(|a| a == "--direct"));
+    }
+
+    #[test]
+    fn the_agents_proxy_carries_no_grant_and_owns_no_runtime() {
+        // A proxy with `--grant` is refused by a daemon that already listens,
+        // and `--direct` would put the runtime back inside the agent's sandbox.
+        let argv = proxy_argv(Path::new("/s/cua-driver.sock"));
+        assert_eq!(
+            argv,
+            ["mcp", "--embedded", "--socket", "/s/cua-driver.sock"]
+        );
+    }
+
+    #[test]
+    fn a_stale_socket_file_is_cleared_before_the_daemon_spawns() {
+        // An embedded daemon exits instead of unlinking a leftover endpoint.
+        let dir = scratch("cua-stale");
+        let sock = dir.join("cua-driver.sock");
+        std::fs::write(&sock, "").unwrap();
+        clear_stale_socket(&sock).unwrap();
+        assert!(!sock.exists());
+        clear_stale_socket(&sock).unwrap();
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn the_socket_wait_ends_when_something_listens_and_times_out_otherwise() {
+        let dir = scratch("cua-wait");
+        let sock = dir.join("d.sock");
+        assert!(wait_for_socket(&sock, Duration::from_millis(250)).is_err());
+        let _listener = std::os::unix::net::UnixListener::bind(&sock).unwrap();
+        assert!(wait_for_socket(&sock, Duration::from_millis(250)).is_ok());
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn a_missing_driver_fails_the_daemon_loudly() {
+        let dir = scratch("cua-missing");
+        let err = ensure_driver_daemon_within(
+            &dir.join("no-such-cua-driver"),
+            &dir.join("cua-driver.sock"),
+            "ai.ibl.test",
+            Duration::from_millis(100),
+        )
+        .unwrap_err();
+        assert!(err.contains("didn't start"), "{err}");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_driver_that_never_listens_is_killed_and_reported() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = scratch("cua-silent");
+        let stub = dir.join("cua-driver");
+        std::fs::write(&stub, "#!/bin/sh\nsleep 30\n").unwrap();
+        std::fs::set_permissions(&stub, std::fs::Permissions::from_mode(0o755)).unwrap();
+        let err = ensure_driver_daemon_within(
+            &stub,
+            &dir.join("cua-driver.sock"),
+            "ai.ibl.test",
+            Duration::from_millis(300),
+        )
+        .unwrap_err();
+        assert!(err.contains("didn't start"), "{err}");
+        assert!(daemon_slot().lock().unwrap().is_none());
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }

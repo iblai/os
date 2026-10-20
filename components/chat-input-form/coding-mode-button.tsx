@@ -1271,7 +1271,8 @@ export function CodingModeButton({
         </Tooltip>
         <PopoverContent
           align="start"
-          className="w-96 max-w-[calc(100vw-2rem)] rounded-lg border border-gray-200 bg-white p-4 shadow-xl"
+          collisionPadding={8}
+          className="max-h-[var(--radix-popover-content-available-height)] w-96 max-w-[calc(100vw-2rem)] overflow-y-auto rounded-lg border border-gray-200 bg-white p-4 shadow-xl"
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">

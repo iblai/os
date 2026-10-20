@@ -198,7 +198,8 @@ mod tests {
             .collect();
         assert_eq!(data, body);
         assert_eq!(events.last().unwrap()["kind"], "end");
-        assert!(in_flight().lock().unwrap().is_empty());
+        // Own id only: the map is process-global and the other tests stream too.
+        assert!(!in_flight().lock().unwrap().contains_key("r1"));
     }
 
     #[tokio::test]

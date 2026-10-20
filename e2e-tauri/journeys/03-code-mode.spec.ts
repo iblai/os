@@ -682,6 +682,32 @@ describe('Journey 3: Code Mode (opencode)', () => {
          "runs a Local Models turn through the Cowork loop when Cowork is on"
          (use-chat-v2.test.ts) */
     });
+
+    it.skip('code-52: at a short window the Code popover caps itself to the room above the composer and scrolls, keeping the on/off switch in view', () => {
+      /* pending — needs an authenticated UI session (like code-23) plus a
+         window resize through the driver; covered meanwhile by the
+         coding-mode-button Vitest case "caps the popover to the room Radix
+         reports and scrolls inside" */
+    });
+
+    it.skip('code-53: Code + Cowork on Codex — the turn’s session/new carries the cowork screen driver, Ask Me shows Codex’s own card for the first screen action and Allow lands it, Automatic lands it without a card, and switching Cowork off ends the driver', () => {
+      /* pending — needs the Accessibility and Screen Recording grants on
+         macOS and a Codex sign-in; covered meanwhile by the Rust
+         cowork_preflight_refuses_only_an_unsupported_session_or_a_missing_driver
+         and the_screen_tools_ride_the_launch_only_with_cowork_on (every agent) */
+    });
+
+    it.skip('code-54: Code + Cowork on Claude Code — the turn’s session/new carries the cowork screen driver, Ask Me shows Claude’s own card for the first screen action and Allow lands it, Automatic lands it without a card, and switching Cowork off ends the driver', () => {
+      /* pending — needs the grants on macOS and a Claude Code sign-in;
+         covered meanwhile by the same Rust tests as code-53 */
+    });
+
+    it.skip('code-55: Code + Cowork on Linux — on an X11, Sway or GNOME-with-helper session the driver runs as the app’s own child outside the agent’s sandbox, the sandboxed agent’s proxy reaches it, typing lands, and switching Cowork off ends the driver', () => {
+      /* pending — needs a supported Linux session with the driver installed
+         (the Linux e2e run itself is blocked by the dead tauri-driver shim);
+         covered meanwhile by the same Rust tests as code-53 and the bwrap
+         socket proof recorded in the knowledge base */
+    });
   });
 
   // The subscription agents: Codex and Claude Code run next to opencode

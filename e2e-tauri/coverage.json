@@ -2,9 +2,9 @@
   "version": 1,
   "lastUpdated": "2026-10-15",
   "summary": {
-    "totalCheckpoints": 61,
+    "totalCheckpoints": 65,
     "coveredCheckpoints": 22,
-    "pendingCheckpoints": 38,
+    "pendingCheckpoints": 42,
     "deprecatedCheckpoints": 1,
     "notReproducibleCheckpoints": 0,
     "percent": 100,
@@ -368,6 +368,26 @@
         {
           "id": "code-51",
           "description": "Local Models + Cowork: the turn runs the Cowork loop on the on-device model through local_llm_openai_stream, and Stop ends the stream on the desktop",
+          "status": "pending"
+        },
+        {
+          "id": "code-52",
+          "description": "At a short window the Code popover caps itself to the room above the composer and scrolls, keeping the on/off switch in view",
+          "status": "pending"
+        },
+        {
+          "id": "code-53",
+          "description": "Code + Cowork on Codex: the turn's session/new carries the cowork screen driver, Ask Me shows Codex's own card for the first screen action and Allow lands it, Automatic lands it without a card, and switching Cowork off ends the driver",
+          "status": "pending"
+        },
+        {
+          "id": "code-54",
+          "description": "Code + Cowork on Claude Code: the turn's session/new carries the cowork screen driver, Ask Me shows Claude's own card for the first screen action and Allow lands it, Automatic lands it without a card, and switching Cowork off ends the driver",
+          "status": "pending"
+        },
+        {
+          "id": "code-55",
+          "description": "Code + Cowork on Linux: on an X11, Sway or GNOME-with-helper session the driver runs as the app's own child outside the agent's sandbox, the sandboxed agent's proxy reaches it, typing lands, and switching Cowork off ends the driver",
           "status": "pending"
         }
       ]

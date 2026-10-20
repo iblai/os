@@ -894,9 +894,7 @@ pub fn adopt_legacy_state() {
         &iblai_data_dir().join("bin").join(ENGINE_BINARY),
         &opencode_bin(),
     );
-    let theirs = std::env::var_os("PATH")
-        .map(|p| has_executable(&p, ENGINE_BINARY))
-        .unwrap_or(false);
+    let theirs = has_executable(&augmented_path(), ENGINE_BINARY);
     if theirs {
         return;
     }
@@ -3259,15 +3257,15 @@ async fn probe_in(
 }
 
 /// The screen driver as an ACP MCP server, for a Code chat with Cowork on: the
-/// agent spawns it as its own child with the argv the webview's Cowork uses
-/// (`cua_driver_mcp::DRIVER_ARGV`), so its tools ride the agent's permission
-/// policy. `args` and `env` are always present — the adapters spread the one
-/// and map the other.
-fn cowork_mcp_server(driver: &Path) -> Value {
+/// agent spawns the driver's stdio proxy (`cua_driver_mcp::proxy_argv`) to the
+/// app's own daemon, so the tools ride the agent's permission policy while the
+/// driver keeps the app's grants. `args` and `env` are always present — the
+/// adapters spread the one and map the other.
+fn cowork_mcp_server(driver: &Path, socket: &Path) -> Value {
     json!({
         "name": "cowork",
         "command": driver.to_string_lossy(),
-        "args": crate::cua_driver_mcp::DRIVER_ARGV,
+        "args": crate::cua_driver_mcp::proxy_argv(socket),
         "env": [],
     })
 }
@@ -3299,29 +3297,29 @@ fn with_cowork_guidance(guidance: String, cowork: bool) -> String {
 }
 
 /// Why a Code turn with Cowork on can't run here, decided before anything is
-/// spawned; `Ok` is the driver the agent will spawn. macOS only for now: under
-/// bwrap the apps the driver opens would get the decoy `$HOME` and die with the
-/// chat. Codex is left out until its approvals are known to cover MCP tools —
-/// otherwise Ask Me would let it act on the screen without a card.
-fn cowork_preflight(backend: Backend) -> Result<PathBuf, String> {
-    if !cfg!(target_os = "macos") {
-        return Err(
-            "Cowork inside Code isn't available on Linux yet — turn Cowork off to use Code here."
-                .to_string(),
-        );
+/// spawned; `Ok` is the driver whose proxy the agent runs. Every agent and both
+/// desktop platforms qualify: the driver is the app's own daemon, outside the
+/// agent's sandbox, and opencode, Codex and Claude Code each ask before a
+/// screen tool runs.
+fn cowork_preflight() -> Result<PathBuf, String> {
+    if cfg!(target_os = "windows") {
+        return Err("Cowork inside Code isn't available on Windows.".to_string());
     }
-    if backend == Backend::Codex {
-        return Err(
-            "Cowork doesn't work with Codex yet — switch the agent to ibl.ai or Claude Code, or turn Cowork off."
-                .to_string(),
-        );
-    }
-    let support =
-        crate::cua_driver_mcp::session_support(&crate::cua_driver_mcp::current_session_env());
+    cowork_preflight_with(
+        &crate::cua_driver_mcp::session_support(&crate::cua_driver_mcp::current_session_env()),
+        crate::cua_driver_mcp::resolved_driver_path(),
+    )
+}
+
+/// The decision itself, with the environment read by the caller.
+fn cowork_preflight_with(
+    support: &crate::cua_driver_mcp::DriverSupport,
+    driver: Option<PathBuf>,
+) -> Result<PathBuf, String> {
     if !support.supported {
         return Err("Cowork isn't supported on this desktop session.".to_string());
     }
-    crate::cua_driver_mcp::resolved_driver_path().ok_or_else(|| {
+    driver.ok_or_else(|| {
         "Cowork isn't set up on this computer yet — turn Cowork on from the chat to install it."
             .to_string()
     })
@@ -3385,13 +3383,13 @@ fn agent_launch(
     config_home: &Path,
     guidance: &str,
     auto: bool,
-    // The screen driver for a Cowork session, as the one MCP server every
-    // backend receives in `session/new` (and `session/load`).
-    cowork_driver: Option<&Path>,
+    // The screen driver and its daemon's socket for a Cowork session, as the
+    // one MCP server every backend receives in `session/new` (and `session/load`).
+    cowork_driver: Option<(&Path, &Path)>,
 ) -> AgentLaunch {
     let mut session = session_params(backend, workspace, skills_root, guidance);
-    if let Some(driver) = cowork_driver {
-        session["mcpServers"] = json!([cowork_mcp_server(driver)]);
+    if let Some((driver, socket)) = cowork_driver {
+        session["mcpServers"] = json!([cowork_mcp_server(driver, socket)]);
     }
     let node_launch = |env: Vec<(&'static str, String)>| AgentLaunch {
         program: crate::code_agent_installer::node_bin(),
@@ -3674,10 +3672,12 @@ async fn spawn_session(
     // screen rules ride the guidance. One driver owns the screen, so any other
     // Cowork session and the webview's own driver go first.
     let cowork_driver = if cowork {
-        let driver = cowork_preflight(backend)?;
+        let driver = cowork_preflight()?;
         close_cowork_sessions(Some(session_id)).await;
         crate::cua_driver_mcp::stop_driver();
-        Some(driver)
+        let socket =
+            crate::cua_driver_mcp::ensure_driver_daemon(&driver, &app.config().identifier)?;
+        Some((driver, socket))
     } else {
         None
     };
@@ -3762,7 +3762,9 @@ async fn spawn_session(
         &config_home(session_id),
         &guidance,
         auto,
-        cowork_driver.as_deref(),
+        cowork_driver
+            .as_ref()
+            .map(|(driver, socket)| (driver.as_path(), socket.as_path())),
     );
     let mut cmd = sandboxed_command(session_id, workspace, backend)?;
     wire_agent_command(&mut cmd, &launch, workspace, backend);
@@ -7252,12 +7254,17 @@ done
 
     #[test]
     fn cowork_mcp_server_has_command_args_and_env() {
-        let server = cowork_mcp_server(Path::new("/opt/x/cua-driver"));
+        let server = cowork_mcp_server(
+            Path::new("/opt/x/cua-driver"),
+            Path::new("/d/iblai/cua-driver.sock"),
+        );
         assert_eq!(server["name"], json!("cowork"));
         assert_eq!(server["command"], json!("/opt/x/cua-driver"));
+        // The proxy, never the runtime: `--direct` would put the driver inside
+        // the agent's sandbox, and the grant belongs to the daemon.
         assert_eq!(
             server["args"],
-            json!(["mcp", "--direct", "--grant", "existing-profile"])
+            json!(["mcp", "--embedded", "--socket", "/d/iblai/cua-driver.sock"])
         );
         assert_eq!(server["env"], json!([]));
     }
@@ -7270,11 +7277,11 @@ done
         for backend in [Backend::Opencode, Backend::Codex, Backend::Claude] {
             let plain = agent_launch(backend, ws, skills, cfg, "G", false, None);
             assert_eq!(plain.session["mcpServers"], json!([]), "{}", backend.id());
-            let driver = Path::new("/d/cua-driver");
-            let with = agent_launch(backend, ws, skills, cfg, "G", false, Some(driver));
+            let (driver, socket) = (Path::new("/d/cua-driver"), Path::new("/d/cua-driver.sock"));
+            let with = agent_launch(backend, ws, skills, cfg, "G", false, Some((driver, socket)));
             assert_eq!(
                 with.session["mcpServers"],
-                json!([cowork_mcp_server(driver)]),
+                json!([cowork_mcp_server(driver, socket)]),
                 "{}",
                 backend.id()
             );
@@ -7294,6 +7301,7 @@ done
         let ws = scratch.join("ws");
         let skills = scratch.join("cfg/agent-skills");
         let driver = scratch.join("cua-driver");
+        let socket = scratch.join("cua-driver.sock");
         for (resume, method) in [
             (None, "session/new"),
             (Some("prev-session"), "session/load"),
@@ -7307,7 +7315,7 @@ done
                 &scratch,
                 "G",
                 false,
-                Some(&driver),
+                Some((&driver, &socket)),
             );
             handshake(&session, &launch.session, resume, None, None)
                 .await
@@ -7320,7 +7328,7 @@ done
             assert_eq!(lines[1]["method"], json!(method), "{seen}");
             assert_eq!(
                 lines[1]["params"]["mcpServers"],
-                json!([cowork_mcp_server(&driver)]),
+                json!([cowork_mcp_server(&driver, &socket)]),
                 "{seen}"
             );
             let _ = session.child.lock().await.start_kill();
@@ -7390,18 +7398,23 @@ done
         assert!(on.contains("include_screenshot: false"), "{on}");
     }
 
-    #[cfg(not(target_os = "macos"))]
     #[test]
-    fn cowork_inside_code_is_refused_off_macos() {
-        let err = cowork_preflight(Backend::Opencode).unwrap_err();
-        assert!(err.contains("Linux"), "{err}");
-    }
-
-    #[cfg(target_os = "macos")]
-    #[test]
-    fn cowork_inside_code_is_refused_on_codex() {
-        let err = cowork_preflight(Backend::Codex).unwrap_err();
-        assert!(err.contains("Codex"), "{err}");
+    fn cowork_preflight_refuses_only_an_unsupported_session_or_a_missing_driver() {
+        use crate::cua_driver_mcp::DriverSupport;
+        let ok = DriverSupport {
+            supported: true,
+            reason: None,
+        };
+        let driver = PathBuf::from("/opt/x/cua-driver");
+        assert_eq!(cowork_preflight_with(&ok, Some(driver.clone())), Ok(driver));
+        let kde = DriverSupport {
+            supported: false,
+            reason: Some("kde".into()),
+        };
+        let err = cowork_preflight_with(&kde, Some(PathBuf::from("/d"))).unwrap_err();
+        assert!(err.contains("desktop session"), "{err}");
+        let err = cowork_preflight_with(&ok, None).unwrap_err();
+        assert!(err.contains("isn't set up"), "{err}");
     }
 
     /// The wire contract against a scripted agent: Claude's load/new params
