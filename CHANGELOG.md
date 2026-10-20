@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.174.0](https://github.com/iblai/os/compare/v0.173.0...v0.174.0) (2026-10-20)
+
+### Features
+
+* now logging than 7s TTS response latency + playwright testing patch ([02bcb3d](https://github.com/iblai/os/commit/02bcb3d6e4e443c90d1394b4d43ba3987ee8da1d))
+* playwright tts coverage + explore page capitalization ([02292ca](https://github.com/iblai/os/commit/02292ca53071022f39ec3448db50951c5c3ca073))
+* playwright tts test coverage update ([51dab1f](https://github.com/iblai/os/commit/51dab1f4573cda9b7141affe16de65e69368356e))
+
 ## [0.173.0](https://github.com/iblai/os/compare/v0.172.0...v0.173.0) (2026-10-19)
 
 ### Features
