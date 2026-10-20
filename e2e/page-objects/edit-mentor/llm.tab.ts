@@ -28,6 +28,8 @@ export class LlmTab {
    * logo `<img>`, which excludes the dialog's own Close (X icon) button.
    */
   readonly modelRows: Locator;
+  /** "Allow in-chat model change" (#2633); saves on its own, with no Save button. */
+  readonly inChatModelChangeToggle: Locator;
 
   constructor(page: Page, dialog: Locator) {
     this.page = page;
@@ -44,6 +46,41 @@ export class LlmTab {
     this.modelRows = this.llmSelectionDialog
       .getByRole('button')
       .filter({ has: page.locator('img') });
+    this.inChatModelChangeToggle = dialog.getByTestId(
+      'llm-in-chat-model-change-toggle',
+    );
+  }
+
+  /**
+   * Flips "Allow in-chat model change" and returns the save request's body,
+   * or `null` when the toggle was already in that state.
+   */
+  async setInChatModelChange(target: boolean): Promise<string | null> {
+    await expect(this.inChatModelChangeToggle).toBeVisible({
+      timeout: 10_000,
+    });
+    const isChecked =
+      (await this.inChatModelChangeToggle.getAttribute('aria-checked')) ===
+      'true';
+    if (isChecked === target) return null;
+    const [request] = await Promise.all([
+      this.page.waitForRequest(
+        (req) =>
+          ['PUT', 'PATCH'].includes(req.method()) &&
+          (req.postData() ?? '').includes('enable_in_chat_llm_change'),
+        { timeout: 30_000 },
+      ),
+      this.inChatModelChangeToggle.click(),
+    ]);
+    await expect(
+      this.page.getByText(/LLM updated successfully/i).first(),
+    ).toBeVisible({ timeout: 30_000 });
+    await expect(this.inChatModelChangeToggle).toHaveAttribute(
+      'aria-checked',
+      String(target),
+      { timeout: 10_000 },
+    );
+    return request.postData() ?? '';
   }
 
   /**

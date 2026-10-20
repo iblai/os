@@ -66,6 +66,12 @@ export function LLMTab({ showConfigurationHeader = true }: Props) {
       description: t('configureLanguageModelSettings'),
     },
     infoBox: t('infoBox'),
+    inChatModelChange: {
+      label: t('inChatModelChangeLabel'),
+      description: t('inChatModelChangeDescription'),
+      tooltip: t('inChatModelChangeTooltip'),
+      tooltipAriaLabel: t('inChatModelChangeTooltipAriaLabel'),
+    },
     search: {
       placeholder: t('searchProviders'),
     },

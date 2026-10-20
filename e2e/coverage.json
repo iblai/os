@@ -5704,14 +5704,14 @@
       "name": "In-chat Model Picker",
       "spec": "84-in-chat-model-picker.spec.ts",
       "sourceFiles": [
-        "components/modals/edit-mentor-modal/settings-tab.tsx",
+        "components/modals/edit-mentor-modal/llm-tab.tsx",
         "e2e/page-objects/chat.page.ts",
-        "e2e/page-objects/edit-mentor/settings.tab.ts"
+        "e2e/page-objects/edit-mentor/llm.tab.ts"
       ],
       "checkpoints": [
         {
           "id": "icm-01",
-          "description": "An admin turns on \"Allow in-chat model change\" under Settings > Capabilities; Save sends enable_in_chat_llm_change=true and it reads back on after reopening",
+          "description": "An admin turns on \"Allow in-chat model change\" on the LLM tab; it saves enable_in_chat_llm_change=true and it reads back on after reopening",
           "status": "covered"
         },
         {
@@ -5731,7 +5731,7 @@
         },
         {
           "id": "icm-05",
-          "description": "With the setting off (Save sends enable_in_chat_llm_change=false), the + menu has no Model row",
+          "description": "With the setting off (the LLM tab saves enable_in_chat_llm_change=false), the + menu has no Model row",
           "status": "covered"
         },
         {
