@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-10-16 | 952 checkpoints (907 covered, 11 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 98 journeys (97 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-10-20 | 970 checkpoints (925 covered, 11 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 99 journeys (98 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -2035,15 +2035,15 @@ The Welcome screen sub-tab (#2586) saves heading style, starter-prompt source an
 
 ## Journey 84: In-chat Model Picker (14 checkpoints) — `journeys/84-in-chat-model-picker.spec.ts`
 
-**Source files:** `components/modals/edit-mentor-modal/settings-tab.tsx`, `e2e/page-objects/chat.page.ts`, `e2e/page-objects/edit-mentor/settings.tab.ts` (UI lives in the SDK composer "+" menu → Model, `useComposerModels`, and the web-utils chat socket payload)
+**Source files:** `components/modals/edit-mentor-modal/settings-tab.tsx`, `e2e/page-objects/chat.page.ts`, `e2e/page-objects/edit-mentor/llm.tab.ts` (UI lives in the SDK composer "+" menu → Model, `useComposerModels`, and the web-utils chat socket payload)
 
 iblai/iblai-platform#2633: with the agent's `enable_in_chat_llm_change` on, a user picks a model for the current chat only. Runs on its own throw-away agent on the cheap ibl.ai model and only ever picks ibl.ai models.
 
-- [x] icm-01: An admin turns on "Allow in-chat model change" under Settings > Capabilities; Save sends enable_in_chat_llm_change=true and it reads back on after reopening
+- [x] icm-01: An admin turns on "Allow In-Chat Model Change" at the top of the LLM tab; the immediate save sends enable_in_chat_llm_change=true and it reads back on after reopening
 - [x] icm-02: With the setting on, a user picks a model via + > Model > provider > model: the Model row names the model in use, later turns carry llm_provider/llm_name on the chat socket, and a chip plus a "Switched to X for this chat" notice show it
 - [x] icm-03: The chip's x goes back to the agent's model, sent explicitly on the next turn (the backend keeps a session's last pick); a new chat drops the chip and the notices and sends no model fields
 - [x] icm-04: On a phone the + sheet goes Model > provider page (with Back) > model, closes, and shows the model chip
-- [x] icm-05: With the setting off (Save sends enable_in_chat_llm_change=false), the + menu has no Model row
+- [x] icm-05: With the setting off (the LLM tab switch saves enable_in_chat_llm_change=false), the + menu has no Model row
 - [x] icm-06: Per-model credentials (iblai-platform#2638): a model whose availability requires a key is disabled in + > Model > provider and shows the backend's reason; clicking it picks nothing, while a usable model in the same provider stays enabled
 - [x] icm-07: A tenant with a single usable provider: + > Model lists that provider's models straight away, with no provider step
 - [x] icm-08: Per-model credentials (iblai-platform#2638): a provider whose every model requires a key is left out of the + > Model provider list
@@ -2226,3 +2226,30 @@ Unlike Journey 40, nothing is stubbed: playback is detected by wrapping `HTMLMed
 - [x] rav-01: Admin switches the agent's voice source from Browser to each other source in Settings → Voice and saves it ("Voice saved")
 - [ ] rav-02: For each server voice source, clicking Read Aloud on a fresh reply fetches the chat-message `/tts/` audio (2xx, `audio/*`) and audio starts playing within 7s _(pending: Google TTS 502s at the API; ibl.ai and OpenAI pass)_
 - [x] rav-03: After switching back to Browser, clicking Read Aloud on a fresh reply hands the reply to speechSynthesis and, where the browser has voices, starts speaking within 30s
+
+---
+
+## Journey 92: User Models (18 checkpoints) — `journeys/92-users-models.spec.ts`
+
+**Source files:** `components/modals/edit-mentor-modal/llm-tab.tsx`
+
+Tenant admins choose which models users may use ([iblai-platform#2675](https://github.com/iblai/iblai-platform/issues/2675)) from the LLM tab's User Models button, which shows (tenant admins only) once the agent's "Allow In-Chat Model Change" switch is on; the switch itself moved from Settings > Capabilities to the top of the LLM tab. The agent-settings route is mocked too so the real agent's switch is never touched; every tick auto-saves the full list. Both `rbac/llm-access` routes are mocked in every test (the tenant is real) and POST bodies are asserted; nothing is created and the agent's model is never changed.
+
+- [x] um-01: Admin sees the User Models button on the LLM tab; it opens the dialog with provider cards showing "All allowed" under a saved llms/ (llm-access routes mocked, no POST)
+- [x] um-02: Ticking models auto-saves the full replaced list on every tick (captured POST bodies); unticking the last model asks to confirm (Cancel sends nothing, Save anyway posts [])
+- [x] um-03: "Allow all" saves llms/<provider>/ and the card shows "All allowed"
+- [x] um-04: A partial selection shows "N of M allowed" on the card and the saved list shows again on reopen
+- [x] um-05: Rapid ticks are saved one at a time (first POST delayed) and the last state wins
+- [x] um-06: A 400 reverts the tick and shows the rejected-entry notice with "Remove it"
+- [x] um-07: A 403 on save reverts the tick and toasts the admins-only message
+- [x] um-08: A 500 on save reverts the tick and toasts the could-not-save message
+- [x] um-09: A 403 loading the saved list shows the forbidden notice instead of cards
+- [x] um-10: A 404 loading the saved list shows the unavailable notice instead of cards
+- [x] um-11: A 500 loading the saved list shows the load-error notice instead of cards
+- [x] um-12: Escape closes the dialog; the LLM tab outside it has no counts or checkboxes
+- [x] um-13: A non-admin opening the agent LLM tab sees no User Models button
+- [x] um-14: The in-chat model change switch is at the top of the LLM tab and is no longer under Settings > Capabilities
+- [x] um-15: Switch off: no Models Users Can Pick box or User Models button; flipping on saves enable_in_chat_llm_change=true (mocked PUT) and shows the box with "All models allowed for users" and the button; flipping off saves false and hides it
+- [x] um-16: The box counts the models allowed for users ("0 models allowed for users")
+- [x] um-17: Real (unmocked): the admin allows two models through the User Models dialog, and a non-admin opening chat with that agent sees exactly those models in the in-chat model picker (not another model of the same provider, not the previously allowed one)
+- [x] um-18: Real (unmocked): after the admin unticks a model in User Models, the non-admin no longer sees it in the in-chat model picker while the other allowed model stays
