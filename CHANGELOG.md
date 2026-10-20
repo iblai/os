@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.174.1](https://github.com/iblai/os/compare/v0.174.0...v0.174.1) (2026-10-20)
+
+### Bug Fixes
+
+* **embed:** re-hydrate in place on MENTOR:AUTH_UPDATE instead of reloading ([810ce65](https://github.com/iblai/os/commit/810ce654a9d30a218aca5921131b8ff72fefb9b6))
+
 ## [0.174.0](https://github.com/iblai/os/compare/v0.173.0...v0.174.0) (2026-10-20)
 
 ### Features

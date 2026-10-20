@@ -29,6 +29,7 @@ const mockUseAppSelector = vi.hoisted(() =>
   vi.fn((selector: (state: unknown) => unknown) => selector({})),
 );
 const mockSendMessageToParentWebsite = vi.hoisted(() => vi.fn());
+const mockSaveUserObjectToLocalStorage = vi.hoisted(() => vi.fn());
 const mockSetMetadata = vi.hoisted(() =>
   vi.fn((value) => ({ type: 'chat/setMetadata', payload: value })),
 );
@@ -44,6 +45,7 @@ vi.mock('@/lib/hooks', () => ({
 
 vi.mock('../utils', () => ({
   sendMessageToParentWebsite: mockSendMessageToParentWebsite,
+  saveUserObjectToLocalStorage: mockSaveUserObjectToLocalStorage,
 }));
 
 vi.mock('@/features/navigation/slice', () => ({
@@ -62,6 +64,7 @@ vi.mock('@iblai/iblai-js/web-utils', () => ({
     setMetadata: mockSetMetadata,
   },
   selectLessonCompletion: mockSelectLessonCompletion,
+  AUTH_TOKENS_UPDATED_EVENT: 'ibl:auth-tokens-updated',
 }));
 
 vi.mock('@/features/chat/chatSlice', () => ({
@@ -320,24 +323,57 @@ describe('useIframeHandlers', () => {
   });
 
   describe('MENTOR:AUTH_UPDATE handler', () => {
-    it('should parse JSON authData and store in localStorage', () => {
+    const authUpdatedDispatched = (spy: ReturnType<typeof vi.spyOn>) =>
+      spy.mock.calls.some(
+        ([e]) => (e as Event)?.type === 'ibl:auth-tokens-updated',
+      );
+
+    it('saves auth reactively and re-checks in place without reloading', () => {
+      const dispatchSpy = vi.spyOn(window, 'dispatchEvent');
       const { result } = renderHook(() => useIframeHandlers());
-      const authData = JSON.stringify({
-        token: 'test-token',
-        user: 'test-user',
+      const payload = {
+        axd_token: 'axd-1',
+        dm_token: 'dm-1',
         tenant: 'test-tenant',
-      });
-      const mockEvent = { data: { authData } } as MessageEvent;
+        user: 'test-user',
+      };
+      const mockEvent = {
+        data: { authData: JSON.stringify(payload) },
+      } as MessageEvent;
 
       result.current['MENTOR:AUTH_UPDATE'](undefined, mockEvent);
 
-      expect(localStorage.setItem).toHaveBeenCalledWith('token', 'test-token');
-      expect(localStorage.setItem).toHaveBeenCalledWith('user', 'test-user');
-      expect(localStorage.setItem).toHaveBeenCalledWith(
-        'tenant',
-        'test-tenant',
-      );
-      expect(window.location.reload).toHaveBeenCalled();
+      // Saved reactively (dispatches `local-storage` events) so the auth hooks
+      // flip in place...
+      expect(mockSaveUserObjectToLocalStorage).toHaveBeenCalledWith(payload);
+      // ...and the provider re-checks via the token-update event, with NO full
+      // page reload (which used to re-download every asset).
+      expect(authUpdatedDispatched(dispatchSpy)).toBe(true);
+      expect(window.location.reload).not.toHaveBeenCalled();
+    });
+
+    it('does nothing when the incoming tokens are unchanged', () => {
+      vi.mocked(localStorage.getItem).mockImplementation((key: string) => {
+        if (key === 'axd_token') return 'axd-1';
+        if (key === 'dm_token') return 'dm-1';
+        if (key === 'tenant') return 'test-tenant';
+        return null;
+      });
+      const dispatchSpy = vi.spyOn(window, 'dispatchEvent');
+      const { result } = renderHook(() => useIframeHandlers());
+      const authData = JSON.stringify({
+        axd_token: 'axd-1',
+        dm_token: 'dm-1',
+        tenant: 'test-tenant',
+      });
+
+      result.current['MENTOR:AUTH_UPDATE'](undefined, {
+        data: { authData },
+      } as MessageEvent);
+
+      expect(mockSaveUserObjectToLocalStorage).not.toHaveBeenCalled();
+      expect(authUpdatedDispatched(dispatchSpy)).toBe(false);
+      expect(window.location.reload).not.toHaveBeenCalled();
     });
 
     it('should handle invalid JSON gracefully', () => {
@@ -353,6 +389,8 @@ describe('useIframeHandlers', () => {
         'Error parsing token data:',
         expect.any(Error),
       );
+      expect(mockSaveUserObjectToLocalStorage).not.toHaveBeenCalled();
+      expect(window.location.reload).not.toHaveBeenCalled();
     });
 
     it('should set current_tenant if not present and tenants exist', () => {
@@ -416,14 +454,16 @@ describe('useIframeHandlers', () => {
       }).not.toThrow();
     });
 
-    it('should always reload the window', () => {
+    it('re-hydrates in place and never reloads the window', () => {
+      const dispatchSpy = vi.spyOn(window, 'dispatchEvent');
       const { result } = renderHook(() => useIframeHandlers());
-      const authData = JSON.stringify({ token: 'test-token' });
+      const authData = JSON.stringify({ axd_token: 'axd-1' });
       const mockEvent = { data: { authData } } as MessageEvent;
 
       result.current['MENTOR:AUTH_UPDATE'](undefined, mockEvent);
 
-      expect(window.location.reload).toHaveBeenCalledTimes(1);
+      expect(window.location.reload).not.toHaveBeenCalled();
+      expect(authUpdatedDispatched(dispatchSpy)).toBe(true);
     });
   });
 
