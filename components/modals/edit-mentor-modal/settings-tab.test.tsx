@@ -320,6 +320,10 @@ describe('SettingsTab', () => {
         label: 'inChatModelChangeLabel',
         tooltip: 'inChatModelChangeTooltip',
       });
+      expect(labels.fields.showLastConversation).toEqual({
+        label: 'showLastConversationLabel',
+        tooltip: 'showLastConversationTooltip',
+      });
       expect(labels.fields.promptCaching.label).toBe(
         'enablePromptCachingLabel',
       );

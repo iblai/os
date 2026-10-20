@@ -21,6 +21,8 @@ export class SettingsTab {
   readonly verboseReasoningToggle: Locator;
   /** Capabilities sub-tab: "Allow in-chat model change" (#2633). */
   readonly inChatModelChangeToggle: Locator;
+  /** Capabilities sub-tab: "Reopen last conversation" (#2629), `show_last_conversation`. */
+  readonly showLastConversationToggle: Locator;
   readonly enhanceDocumentRetrievalToggle: Locator;
   readonly enhanceDocumentRetrievalTooltipTrigger: Locator;
   readonly promptCachingToggle: Locator;
@@ -143,6 +145,9 @@ export class SettingsTab {
     this.inChatModelChangeToggle = dialog.getByRole('switch', {
       name: /^Allow in-chat model change (enabled|disabled)$/i,
     });
+    this.showLastConversationToggle = dialog.getByTestId(
+      'settings-show-last-conversation-switch',
+    );
     // Capabilities sub-tab. Visible label "Enhanced Document Retrieval"
     // (source: messages/en.json `enhancedDocRetrievalLabel`); the SDK switch
     // appends the state, so the aria-label reads "Enhanced Document Retrieval
@@ -456,6 +461,48 @@ export class SettingsTab {
     // Small buffer to let the post-mutation refetch land and React re-render
     // with fresh mentor data before the caller closes/reopens the dialog.
     await this.page.waitForTimeout(500);
+  }
+
+  /**
+   * Sets "Reopen last conversation" and saves. Returns the PUT/PATCH request
+   * that carried `show_last_conversation`, or null when already in `target`.
+   */
+  async setShowLastConversation(
+    target: boolean,
+  ): Promise<{ body: string; url: string; ok: boolean } | null> {
+    await this.selectSubTab('Capabilities');
+    await expect(this.showLastConversationToggle).toBeVisible({
+      timeout: 10_000,
+    });
+    const isChecked =
+      (await this.showLastConversationToggle.getAttribute('aria-checked')) ===
+      'true';
+    if (isChecked === target) return null;
+    await this.showLastConversationToggle.click();
+    await expect(this.showLastConversationToggle).toHaveAttribute(
+      'aria-checked',
+      String(target),
+      { timeout: 10_000 },
+    );
+    await expect(this.saveButton).toBeEnabled({ timeout: 10_000 });
+    const [request] = await Promise.all([
+      this.page.waitForRequest(
+        (req) =>
+          ['PUT', 'PATCH'].includes(req.method()) &&
+          (req.postData() ?? '').includes('show_last_conversation'),
+        { timeout: 30_000 },
+      ),
+      this.saveButton.click(),
+    ]);
+    const response = await request.response();
+    await expect(
+      this.page.getByText(/Agent updated successfully/i).first(),
+    ).toBeVisible({ timeout: 30_000 });
+    return {
+      body: request.postData() ?? '',
+      url: request.url(),
+      ok: !!response && response.ok(),
+    };
   }
 
   /**

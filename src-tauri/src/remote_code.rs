@@ -1011,9 +1011,16 @@ mod tests {
     #[test]
     fn free_port_is_bindable() {
         let _guard = PORT_TEST_LOCK.lock().unwrap();
-        let port = free_port().expect("some port is free");
-        // Usable, not merely returned: bind proves opencode could too.
-        drop(TcpListener::bind(("0.0.0.0", port)).expect("picked port binds"));
+        // Retried: `free_port` releases its probe, and any parallel test may take the
+        // port before this re-bind; five misses in a row is a real bug.
+        for _ in 0..5 {
+            let port = free_port().expect("some port is free");
+            // Usable, not merely returned: bind proves opencode could too.
+            if TcpListener::bind(("0.0.0.0", port)).is_ok() {
+                return;
+            }
+        }
+        panic!("a picked port never bound");
     }
 
     #[test]

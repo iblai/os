@@ -1,5 +1,75 @@
 # Changelog
 
+## [0.174.1](https://github.com/iblai/os/compare/v0.174.0...v0.174.1) (2026-10-20)
+
+### Bug Fixes
+
+* **embed:** re-hydrate in place on MENTOR:AUTH_UPDATE instead of reloading ([810ce65](https://github.com/iblai/os/commit/810ce654a9d30a218aca5921131b8ff72fefb9b6))
+
+## [0.174.0](https://github.com/iblai/os/compare/v0.173.0...v0.174.0) (2026-10-20)
+
+### Features
+
+* now logging than 7s TTS response latency + playwright testing patch ([02bcb3d](https://github.com/iblai/os/commit/02bcb3d6e4e443c90d1394b4d43ba3987ee8da1d))
+* playwright tts coverage + explore page capitalization ([02292ca](https://github.com/iblai/os/commit/02292ca53071022f39ec3448db50951c5c3ca073))
+* playwright tts test coverage update ([51dab1f](https://github.com/iblai/os/commit/51dab1f4573cda9b7141affe16de65e69368356e))
+
+## [0.173.0](https://github.com/iblai/os/compare/v0.172.0...v0.173.0) (2026-10-19)
+
+### Features
+
+* **edit-mentor:** label the Reopen last conversation setting ([abec7b4](https://github.com/iblai/os/commit/abec7b4304ee1307d9ba12c44469fe1e8b56ec52))
+
+### Chores
+
+* **deps:** bump @iblai/iblai-js to 2.42.0 ([b4ac9b3](https://github.com/iblai/os/commit/b4ac9b377d4457227a1fabc8520e0d7db206d039))
+
+### Tests
+
+* **e2e:** cover reopening the last conversation (journey 90) ([1c371b5](https://github.com/iblai/os/commit/1c371b55c2ce161dee3621ee290908b811e33f36))
+* **e2e:** read J6 model rows past the touch-only unavailable reason ([40fa358](https://github.com/iblai/os/commit/40fa3587a41775bd1ec41f038609f5e16440c9e4)), closes [#2146](https://github.com/iblai/os/issues/2146)
+
+## [0.172.0](https://github.com/iblai/os/compare/v0.171.5...v0.172.0) (2026-10-19)
+
+### Features
+
+* **auth:** wire mentorai to per-tab authStorage (flag off) + bump iblai-js 2.7.3 ([fe7c60b](https://github.com/iblai/os/commit/fe7c60b4da8a366645113bb2725271ec1960ec5a))
+
+### Bug Fixes
+
+* **auth:** fill only empty stores on Tauri offline restore (no clobber) ([4629ac5](https://github.com/iblai/os/commit/4629ac529c8ebc7cb62d5407f9812b0e2d8976a6))
+* **auth:** per-tab Tauri offline restore writes each store independently ([ac05304](https://github.com/iblai/os/commit/ac053048e8f6aae038111ea7f583419ef19d51b2))
+* **auth:** route per-tab authStorage through an RSC-safe app-local module ([77b20cd](https://github.com/iblai/os/commit/77b20cd730e37cfdadafc3ffeb79d78c384a9af1))
+* **per-tab-auth:** guard storage reads when getItem isn't a function ([e67ba4f](https://github.com/iblai/os/commit/e67ba4f0923f743dca2cc7ad5ba3c4f51399c3de))
+* **per-tab-auth:** route main's new localStorage auth reads through the per-tab store ([be846cc](https://github.com/iblai/os/commit/be846cc5be8fb84039123b0456ae2b4fc7cd2681)), closes [#467](https://github.com/iblai/os/issues/467)
+
+### Chores
+
+* **auth:** expose NEXT_PUBLIC_IBL_PER_TAB_AUTH in runtime env.js ([a70931c](https://github.com/iblai/os/commit/a70931cc91093312fd0f50e86cb723569b0b6476))
+* **deps:** bump @iblai/iblai-js to 2.13.1 ([0a5f399](https://github.com/iblai/os/commit/0a5f3991f2f61a0b5ea33d2939a27e4f0ef12860))
+* **tauri:** release app-v0.95.28 ([18cea5b](https://github.com/iblai/os/commit/18cea5be30a0b6cb928872e51b80f61126bcdccb))
+
+### Tests
+
+* **auth:** fix web-utils mocks for per-tab authStorage imports ([79beade](https://github.com/iblai/os/commit/79beade8e7e2d42d59b43404cf060ce73282c0a4))
+
+## [0.171.5](https://github.com/iblai/os/compare/v0.171.4...v0.171.5) (2026-10-16)
+
+### Bug Fixes
+
+* **code:** drop output-only ACP updates, emit on main, bump opencode to 1.19.0 ([ea2f045](https://github.com/iblai/os/commit/ea2f0450a705c54e68402a30f7f30b030af2e9e9))
+* **code:** flush thoughts before reply and error, one bounded flush exit, test the wiring ([e629383](https://github.com/iblai/os/commit/e629383f74e122fe6b9b6648c8ddce640bf55146))
+* **code:** forward admitted tool updates without the output the chat never reads ([5f56e36](https://github.com/iblai/os/commit/5f56e369d77c0785f064b1f5fac828bb11d47e04))
+* **code:** one toast per failed Code turn, renumber code-48, round-3 review fixes ([79b5d7c](https://github.com/iblai/os/commit/79b5d7c9c92a46fb18c32a1fa838d89a0affb916))
+
+### Chores
+
+* **tauri:** release app-v0.95.27 ([c857256](https://github.com/iblai/os/commit/c8572567219a37cc070c64837619f2f36f9fe96a))
+
+### Tests
+
+* retry the two port re-binds that race the parallel cargo suite ([2136de9](https://github.com/iblai/os/commit/2136de9f9d71b144c4a7e789e61da61e6ae54ad0))
+
 ## [0.171.4](https://github.com/iblai/os/compare/v0.171.3...v0.171.4) (2026-10-16)
 
 ### Bug Fixes

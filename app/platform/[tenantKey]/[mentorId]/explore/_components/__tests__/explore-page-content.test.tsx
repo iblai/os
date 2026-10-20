@@ -783,7 +783,7 @@ describe('ExplorePageContent', () => {
       renderComponent();
 
       const heading = screen.getByRole('heading', { level: 1 });
-      expect(heading).toHaveTextContent('Explore agents');
+      expect(heading).toHaveTextContent('Explore Agents');
       expect(heading).toHaveTextContent(/Discover and create agents/i);
     });
 
@@ -815,7 +815,7 @@ describe('ExplorePageContent', () => {
         screen.queryByRole('button', { name: 'Create new agent' }),
       ).not.toBeInTheDocument();
       expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(
-        'Explore agents',
+        'Explore Agents',
       );
     });
 

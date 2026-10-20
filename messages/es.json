@@ -1981,7 +1981,9 @@
     "inAppChatNote": "Conversaciones alojadas dentro de la aplicacion: el chat que tus usuarios abren aqui.",
     "embedWidgetNote": "El widget que incrustas en tu propio sitio con el fragmento de la pestana Insertar.",
     "inChatModelChangeLabel": "Permitir cambiar el modelo en el chat",
-    "inChatModelChangeTooltip": "Permite elegir otro modelo de IA para su propio chat. El modelo del agente no cambia y los chats nuevos empiezan con él. Este ajuste tiene un solo valor, así que se aplica al chat de la app y al widget integrado."
+    "inChatModelChangeTooltip": "Permite elegir otro modelo de IA para su propio chat. El modelo del agente no cambia y los chats nuevos empiezan con él. Este ajuste tiene un solo valor, así que se aplica al chat de la app y al widget integrado.",
+    "showLastConversationLabel": "Reabrir la última conversación",
+    "showLastConversationTooltip": "Cuando alguien abre este agente, le muestra su última conversación para que pueda seguir donde la dejó. Este ajuste tiene un solo valor, así que se aplica al chat de la app y al widget integrado."
   },
   "tabsMcpTab": {
     "infoBox": "Conecta tu agente a tus propios sistemas mediante servidores MCP, para que pueda acceder a tus datos y servicios directamente dentro de una conversación."

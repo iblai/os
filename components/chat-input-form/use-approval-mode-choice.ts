@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import { invoke } from '@tauri-apps/api/core';
+import { getAuthItem } from '@/lib/auth-storage';
 import {
   useGetUserPlatformMetadataQuery,
   useUpdateUserPlatformMetadataMutation,
@@ -28,7 +29,7 @@ const METADATA_KEY = 'code_mode';
 export function useApprovalModeChoice(active = true) {
   const t = useTranslations('chatInputFormCodingModeButton');
   const tenantKey =
-    typeof window === 'undefined' ? '' : localStorage.getItem('tenant') || '';
+    typeof window === 'undefined' ? '' : getAuthItem('tenant') || '';
   const { data: platformMetadata } = useGetUserPlatformMetadataQuery(
     { tenantKey },
     { skip: !active || !tenantKey },

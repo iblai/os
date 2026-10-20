@@ -457,10 +457,16 @@ mod tests {
         let squatter = TcpListener::bind((BRIDGE_HOST, 0)).unwrap();
         let taken = squatter.local_addr().unwrap().port();
 
-        let picked = pick_port(taken).expect("a busy port must not stop us");
-        assert_ne!(picked, taken, "the occupied port cannot be handed out");
-        // Usable, not merely different: bind it to prove the bridge could too.
-        drop(TcpListener::bind((BRIDGE_HOST, picked)).expect("picked port is bindable"));
+        // Retried like the test above: `pick_port` releases its probe before the re-bind.
+        for _ in 0..5 {
+            let picked = pick_port(taken).expect("a busy port must not stop us");
+            assert_ne!(picked, taken, "the occupied port cannot be handed out");
+            // Usable, not merely different: bind it to prove the bridge could too.
+            if TcpListener::bind((BRIDGE_HOST, picked)).is_ok() {
+                return;
+            }
+        }
+        panic!("a picked port was never bindable");
     }
 
     /// A *connect* probe would call the squatter "our bridge" — the old bug

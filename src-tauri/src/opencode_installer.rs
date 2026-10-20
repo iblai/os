@@ -17,7 +17,7 @@ use crate::opencode_acp::{iblai_data_dir, opencode_bin, opencode_program};
 
 /// Pinned opencode version → GitHub release tag `v<VERSION>`. Bump ONLY after
 /// testing ACP + config against it. Override at runtime with `IBL_OPENCODE_VERSION`.
-const OPENCODE_VERSION: &str = "1.18.13";
+const OPENCODE_VERSION: &str = "1.19.0";
 
 /// The opencode version this run wants: the runtime override, or the pin.
 fn pinned_version() -> String {
@@ -1038,7 +1038,7 @@ mod tests {
 
         /// A proven-working OpenAI-compatible SSE completion (one "ok" chunk, a
         /// stop chunk, then [DONE]) — what @ai-sdk/openai-compatible inside
-        /// opencode v1.18.13 accepts. Close-delimited body (no content-length),
+        /// opencode v1.19.0 accepts. Close-delimited body (no content-length),
         /// so the stub shuts the socket after writing.
         const STUB_SSE: &str = "HTTP/1.1 200 OK\r\ncontent-type: text/event-stream\r\nconnection: close\r\n\r\n\
 data: {\"id\":\"c1\",\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"ok\"},\"finish_reason\":null}]}\n\n\
@@ -1148,7 +1148,7 @@ data: [DONE]\n\n";
 
         /// One real `opencode run` turn under a fully scratch HOME/XDG world.
         ///
-        /// `env_clear` plus upstream's own hermetic-harness recipe (v1.18.13),
+        /// `env_clear` plus upstream's own hermetic-harness recipe (v1.19.0),
         /// so the child can never read or write the developer's real
         /// config/state and never phones home (no update check, no models.dev
         /// fetch, no auth file). PATH passes through — opencode needs its

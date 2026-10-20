@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-10-20 | 942 checkpoints (896 covered, 12 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 96 journeys (95 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-10-20 | 959 checkpoints (912 covered, 13 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 98 journeys (97 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -85,10 +85,10 @@ When adding a new page or modifying an existing user flow:
 
 **Source files:** `app/platform/[tenantKey]/[mentorId]/explore/page.tsx`, `app/platform/[tenantKey]/[mentorId]/explore/_components/explore-page-content.tsx`, `app/platform/[tenantKey]/[mentorId]/explore/_components/search-section.tsx`, `app/platform/[tenantKey]/[mentorId]/explore/_components/mentor-categories.tsx`, `app/platform/[tenantKey]/[mentorId]/explore/_components/section.tsx`, `app/platform/[tenantKey]/[mentorId]/explore/_components/mentor-card-with-star.tsx`, `app/platform/[tenantKey]/[mentorId]/explore/_components/custom-mentors-section.tsx`, `app/platform/[tenantKey]/[mentorId]/explore/_components/default-mentors-section.tsx`, `app/platform/[tenantKey]/[mentorId]/explore/_components/featured-mentors-section.tsx`, `app/platform/[tenantKey]/[mentorId]/explore/_components/starred-mentors-section.tsx`, `app/platform/[tenantKey]/[mentorId]/explore/_components/empty-state.tsx`
 
-- [x] Explore page title ("Explore agents") and description are visible
+- [x] Explore page title ("Explore Agents") and description are visible
 - [x] Mentor cards display correct information
 - [x] Search input filters the mentor list
-- [x] "See more" button loads additional mentors
+- [x] "See More" button loads additional mentors
 - [x] Featured section is displayed when configured
 - [x] Filter by LLM Provider narrows results
 - [x] Filter by Subject narrows results
@@ -2198,3 +2198,34 @@ Regression guard for [iblai-platform#2680](https://github.com/iblai/iblai-platfo
 
 - [x] aa-01: The launcher's chat iframe sandbox includes `allow-downloads`, and "Download this chat" > Download inside the frame yields a `chat-*.txt` containing both conversation turns
 - [x] aa-02: Negative control: reloading the iframe under the pre-fix sandbox (no `allow-downloads`) yields no download within 5s, so aa-01 detects the bug
+
+---
+
+## Journey 90: Reopen Last Conversation (10 checkpoints) — `journeys/90-reopen-last-conversation.spec.ts`
+
+**Source files:** `components/modals/edit-mentor-modal/settings-tab.tsx`, `components/chat/sdk-chat.tsx`, `messages/en.json`, `e2e/page-objects/edit-mentor/settings.tab.ts` (the reopen lookup lives in the SDK Chat and `@iblai/web-utils` / `@iblai/data-layer`)
+
+Per-agent `show_last_conversation` ([iblai-platform#2629](https://github.com/iblai/iblai-platform/issues/2629)): with the setting on and no session held in memory, opening the agent's chat reads the first row of the sidebar's own `GET .../recent-messages/?limit=10&offset=0&mentor=<id>` query (no dedicated `limit=1` request) and reopens that session instead of minting one. Two throw-away agents (cheap ibl.ai model, tracked and deleted); two real messages in total. rlc-08..10 protect the main chat: default-off agents, shared links and session-id links never reopen the last conversation (proved by behavior: fresh chat or the linked conversation, no wrong session shown, and no `limit=1` request).
+
+- [x] rlc-01: Admin turns on "Reopen last conversation" under Settings › Capabilities on a new agent; Save sends show_last_conversation=true, the save succeeds and the toggle is still on after reopening the dialog
+- [x] rlc-02: With no session held (device cache cleared) and the setting on, reopening the agent uses the first row of the offset-0 recent-messages request (no limit=1 request) and shows the previous conversation without a POST .../sessions/
+- [x] rlc-03: "New Chat" starts a fresh chat: welcome screen, no old message, composer ready
+- [x] rlc-04: With two conversations, the newest one reopens and the older one's message is not shown
+- [x] rlc-05: Turning the setting off keeps the chat that is open; after clearing the device cache the next open is fresh and mints a session (no limit=1 request)
+- [x] rlc-06: An agent with the setting on and no history opens the welcome screen with no error toast (the offset-0 request runs and finds nothing)
+- [x] rlc-07: A member (non-admin) can read the agent's public settings but PUT settings is refused with 403
+- [x] rlc-08: Main-chat guard: an agent whose setting was never touched (default null) makes no limit=1 request, shows no previous conversation, mints a new session as before, and the composer is usable
+- [x] rlc-09: With the setting on, opening a shared chat link (mocked shared transcript) shows the shared conversation, not the last one, and mints no session, with no limit=1 request
+- [x] rlc-10: With the setting on, a link carrying chat-action and session-id opens that conversation (cached session = the URL's), not the latest, and mints no session, with no limit=1 request
+
+---
+
+## Journey 91: Read Aloud Across Voice Sources (3 checkpoints, 1 pending) — `journeys/91-read-aloud-voice-sources.spec.ts`
+
+**Source files:** `components/chat/ai-message-speak.tsx`, `hooks/use-speech.ts`, `components/modals/edit-mentor-modal/tabs/voice-tab.tsx`
+
+Unlike Journey 40, nothing is stubbed: playback is detected by wrapping `HTMLMediaElement.prototype.play` (server voices stream from the chat-message `/tts/` endpoint into a detached `Audio` element) and counting speechSynthesis utterance `start` events (Browser). The CI image has no speech engine, so headless Chromium reports no voices and never fires `start`; there the Browser leg checks only that the reply reached `speechSynthesis.speak()` and records a `no-speech-voices` annotation. The voice sources are read from the rendered provider cards, so a new source is exercised without a spec change. Assertions are soft, so one failing source doesn't hide the rest, and each failure names the outcome (HTTP status, `net::ERR_FAILED`, or still pending at the deadline). Server voices get 7s from the click — the same budget past which `useSpeech` reports a `TtsSlowFirstAudioError` to Sentry — and Browser gets 30s. Runs on a fresh mentor, so the admin account's tenant must hold the voice provider keys (Google / ibl.ai / OpenAI). rav-02 stays pending: on 2026-10-12 ibl.ai and OpenAI passed while Google TTS returned 502 after 60s at the API itself.
+
+- [x] rav-01: Admin switches the agent's voice source from Browser to each other source in Settings → Voice and saves it ("Voice saved")
+- [ ] rav-02: For each server voice source, clicking Read Aloud on a fresh reply fetches the chat-message `/tts/` audio (2xx, `audio/*`) and audio starts playing within 7s _(pending: Google TTS 502s at the API; ibl.ai and OpenAI pass)_
+- [x] rav-03: After switching back to Browser, clicking Read Aloud on a fresh reply hands the reply to speechSynthesis and, where the browser has voices, starts speaking within 30s
