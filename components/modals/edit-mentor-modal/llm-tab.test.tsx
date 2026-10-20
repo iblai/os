@@ -130,6 +130,27 @@ describe('LLMTab', () => {
       (providerValue().executeGatedAction as (f: () => unknown) => unknown)(fn);
       expect(mockExecuteWithTrialCheck).toHaveBeenCalledWith(fn);
     });
+
+    it('passes the action result through when the paywall lets it run', async () => {
+      mockExecuteWithTrialCheck.mockReturnValueOnce(Promise.resolve('saved'));
+      render(<LLMTab />);
+      const gate = providerValue().executeGatedAction as (
+        f: () => unknown,
+      ) => unknown;
+      await expect(gate(vi.fn())).resolves.toBe('saved');
+    });
+
+    it('never settles when the paywall blocks the action, so no success toast fires', async () => {
+      mockExecuteWithTrialCheck.mockReturnValueOnce(null);
+      render(<LLMTab />);
+      const gate = providerValue().executeGatedAction as (
+        f: () => unknown,
+      ) => unknown;
+      const settled = vi.fn();
+      Promise.resolve(gate(vi.fn())).then(settled, settled);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(settled).not.toHaveBeenCalled();
+    });
   });
 
   describe('showConfigurationHeader', () => {

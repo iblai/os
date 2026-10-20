@@ -77,7 +77,6 @@ test.describe.serial('Journey 84: In-chat model picker', () => {
     await editMentorPage.llm.selectProviderAndModel('ibl.ai', AGENT_MODEL);
 
     const body = await editMentorPage.llm.setInChatModelChange(true);
-    expect(body, 'the toggle starts off on a new agent').not.toBeNull();
     expect(body).toMatch(
       /name="enable_in_chat_llm_change"\r?\n\r?\ntrue|"enable_in_chat_llm_change"\s*:\s*true/,
     );

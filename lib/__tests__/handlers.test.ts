@@ -333,10 +333,7 @@ describe('useIframeHandlers', () => {
   describe('MENTOR:AUTH_UPDATE handler', () => {
     const authUpdatedDispatched = (
       spy: MockInstance<typeof window.dispatchEvent>,
-    ) =>
-      spy.mock.calls.some(
-        ([e]) => (e as Event)?.type === 'ibl:auth-tokens-updated',
-      );
+    ) => spy.mock.calls.some(([e]) => e.type === 'ibl:auth-tokens-updated');
 
     it('saves auth reactively and re-checks in place without reloading', () => {
       const dispatchSpy = vi.spyOn(window, 'dispatchEvent');

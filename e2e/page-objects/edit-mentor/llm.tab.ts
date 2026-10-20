@@ -52,17 +52,20 @@ export class LlmTab {
   }
 
   /**
-   * Flips "Allow in-chat model change" and returns the save request's body,
-   * or `null` when the toggle was already in that state.
+   * Flips "Allow in-chat model change" from `!target` to `target` and returns
+   * the save request's body. Waiting for the starting state first keeps a
+   * click from landing before the agent's settings load and the switch shows
+   * its saved value.
    */
-  async setInChatModelChange(target: boolean): Promise<string | null> {
-    await expect(this.inChatModelChangeToggle).toBeVisible({
+  async setInChatModelChange(target: boolean): Promise<string> {
+    await expect(this.inChatModelChangeToggle).toBeEnabled({
       timeout: 10_000,
     });
-    const isChecked =
-      (await this.inChatModelChangeToggle.getAttribute('aria-checked')) ===
-      'true';
-    if (isChecked === target) return null;
+    await expect(this.inChatModelChangeToggle).toHaveAttribute(
+      'aria-checked',
+      String(!target),
+      { timeout: 10_000 },
+    );
     const [request] = await Promise.all([
       this.page.waitForRequest(
         (req) =>
@@ -72,9 +75,8 @@ export class LlmTab {
       ),
       this.inChatModelChangeToggle.click(),
     ]);
-    await expect(
-      this.page.getByText(/LLM updated successfully/i).first(),
-    ).toBeVisible({ timeout: 30_000 });
+    const response = await request.response();
+    expect(response?.ok(), 'the setting saved').toBe(true);
     await expect(this.inChatModelChangeToggle).toHaveAttribute(
       'aria-checked',
       String(target),
