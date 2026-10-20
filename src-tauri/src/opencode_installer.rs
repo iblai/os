@@ -518,15 +518,23 @@ pub async fn ensure_vibe_skills(app: AppHandle) -> Result<serde_json::Value, Str
 /// Write the ibl.ai opencode config into `config_home` if missing. Public so the ACP
 /// spawn path can materialise a session's own copy — the config ships embedded in the app
 /// (CONFIG_TEMPLATE), not as a loose file on the user's disk.
+///
+/// Through the link-safe config-home calls: the sandboxed agent can write this
+/// folder, so a link it left at `opencode/` or `opencode.json` must be
+/// replaced, never written through.
 pub fn ensure_opencode_config_at(config_home: &Path) -> Result<(), String> {
-    let path = config_home.join("opencode").join("opencode.json");
-    if path.exists() {
+    use crate::opencode_acp::{make_real_dirs, read_config_file, write_config_file};
+    make_real_dirs(config_home, Path::new("opencode"))
+        .map_err(|e| format!("config dir failed: {e}"))?;
+    let rel = Path::new("opencode").join("opencode.json");
+    if read_config_file(config_home, &rel)
+        .map_err(|e| format!("config read failed: {e}"))?
+        .is_some()
+    {
         return Ok(());
     }
-    if let Some(parent) = path.parent() {
-        std::fs::create_dir_all(parent).map_err(|e| format!("config dir failed: {e}"))?;
-    }
-    std::fs::write(&path, CONFIG_TEMPLATE).map_err(|e| format!("config write failed: {e}"))
+    write_config_file(config_home, &rel, CONFIG_TEMPLATE.as_bytes())
+        .map_err(|e| format!("config write failed: {e}"))
 }
 
 /// The canonical copy, kept only so `check_opencode_status` can answer "is Code set up at

@@ -500,7 +500,7 @@ fn unix_now() -> u64 {
 /// than the renewal margin left. Pure over the settings map so the freshness
 /// rule is testable. Entries without `expires_at` (an older build's format)
 /// read as absent — one harmless re-mint.
-fn stored_platform_key(
+pub(crate) fn stored_platform_key(
     settings: &serde_json::Map<String, serde_json::Value>,
     base: &str,
     tenant: &str,
@@ -523,7 +523,7 @@ fn stored_platform_key(
 
 /// Record a freshly minted key in its slot, leaving every other settings owner
 /// (and every other slot) untouched.
-fn record_platform_key(
+pub(crate) fn record_platform_key(
     settings: &mut serde_json::Map<String, serde_json::Value>,
     base: &str,
     tenant: &str,

@@ -769,9 +769,10 @@
     "memory": "Memory",
     "evals": "Evals",
     "lti": "LTI",
-    "configurations": "Configurations",
+    "setup": "Setup",
+    "policies": "Policies",
     "integrations": "Integrations",
-    "runtime": "Runtime",
+    "activity": "Activity",
     "changeLanguage": "Change language"
   },
   "headerProfileButton": {
@@ -2249,8 +2250,8 @@
     "cameraDenied": "Camera access was denied — enter the address manually.",
     "notAPairingCode": "That QR code isn't a Code pairing code.",
     "closeScanner": "Close Scanner",
-    "scanHint": "Point your camera at the pairing QR code shown on your computer.",
-    "switchToAutomatic": "Switch to Automatic"
+    "turnOffCode": "Turn off Code",
+    "scanHint": "Point your camera at the pairing QR code shown on your computer."
   },
   "chatCodePermissionCard": {
     "title": "Code needs your permission",

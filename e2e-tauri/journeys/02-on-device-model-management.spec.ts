@@ -201,6 +201,30 @@ describe('Journey 2: On-device Model Management', () => {
     removeTestModel();
   });
 
+  // Must run before odm-03: its cancel restarts Ollama through
+  // start_ollama_server, which also starts the bridge and would hide the
+  // fresh-launch state (no bridge recorded) this checkpoint needs.
+  it('odm-09: on a fresh launch the first local chat reaches the MCP bridge (warmed up at launch or started by the chat) instead of failing', async () => {
+    await waitForOllama();
+    let error = '';
+    try {
+      await invokeCmd('ollama_chat', {
+        messages: [{ role: 'user', content: 'hi' }],
+        model: TEST_MODEL,
+        toolSupport: true,
+      });
+    } catch (err) {
+      error = String(err);
+    }
+    // The test model can't call tools and may not be pulled yet, so Ollama can
+    // refuse the request — an error relayed from it still proves the chat
+    // reached a running bridge.
+    if (error) {
+      expect(error).not.toContain('turn Local Models off and on');
+      expect(error).toContain('Ollama returned error');
+    }
+  });
+
   it('odm-02: a not-installed on-device model starts a real pull with live progress', async () => {
     await waitForOllama();
     removeTestModel(); // force a genuine pull, not an instant fake-complete
@@ -289,5 +313,18 @@ describe('Journey 2: On-device Model Management', () => {
   // `mcp_bridge_manager.rs`, `offline_server.rs` and `model_manager.rs`.
   it(
     'odm-07: busy default ports at launch degrade to allocated ones — the MCP bridge and offline server bind free ports and every consumer follows',
+  );
+
+  // Pending: stopping Ollama under the running binary would starve every
+  // other checkpoint here, which needs it up. Covered meanwhile by the
+  // `post_local_chat_with` 503 Rust tests in `model_manager.rs`.
+  it(
+    'odm-10: quitting Ollama while the app stays open does not break local chat — the next message starts it again and is answered',
+  );
+
+  // Pending: needs a model slow enough to stream past 5 minutes. Covered
+  // meanwhile by the `streaming_chat_client` Rust test in `main.rs`.
+  it(
+    'odm-11: a local reply streaming for longer than 5 minutes is not cut off — only 5 minutes of silence ends it',
   );
 });

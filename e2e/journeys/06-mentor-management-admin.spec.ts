@@ -881,8 +881,10 @@ test.describe('Journey 6: Mentor Management — Admin', () => {
   // rbacResource-gated tabs (Settings, LLM, Prompts, …) are therefore NOT
   // guaranteed; what IS guaranteed for an admin is the ungated set
   // (Voice, Screen, Skills, Privacy — no `rbacResource` in
-  // `MENTOR_SEGMENTS`). So the regression guard is: the sidebar renders
-  // MORE than just Privacy, and whatever tab comes first actually works.
+  // `MENTOR_SEGMENTS`). The sidebar lists only the active category, and the
+  // modal opens on Setup, which for an admin always holds the ungated Voice
+  // and Screen tabs. So the regression guard is: the sidebar renders MORE
+  // than one tab, and whatever tab comes first actually works.
   // When the picked mentor does grant Settings, the original strong
   // canary pair (Settings + LLM) is asserted too.
   test('admin opens edit mentor from My Agents and sees the full segment sidebar', async ({
@@ -941,6 +943,41 @@ test.describe('Journey 6: Mentor Management — Admin', () => {
           ),
       ).toBeVisible({ timeout: 10_000 });
     }
+
+    await editMentorPage.close();
+  });
+
+  // Equal quarters of the 320px desktop sidebar (~71px) cut "Integrations"
+  // off; each pill must take its title's width so all four fit one row.
+  test('admin goes to edit mentor modal and sees the Setup, Policies, Integrations and Activity categories on one row with every title shown in full', async ({
+    page,
+    editMentorPage,
+  }) => {
+    await editMentorPage.open();
+    await waitForPageReady(page);
+
+    const categoryTabs = editMentorPage.dialog
+      .getByRole('tablist', { name: 'Agent settings categories', exact: true })
+      .and(editMentorPage.dialog.locator(':visible'))
+      .getByRole('tab');
+    await expect(categoryTabs).toHaveText([
+      'Setup',
+      'Policies',
+      'Integrations',
+      'Activity',
+    ]);
+    const rowTops = new Set<number>();
+    for (const tab of await categoryTabs.all()) {
+      await expect(tab).toBeVisible();
+      expect(
+        await tab.evaluate((el) => el.scrollWidth <= el.clientWidth),
+        `the ${await tab.textContent()} title is cut off`,
+      ).toBe(true);
+      rowTops.add(Math.round((await tab.boundingBox())!.y));
+    }
+    expect(rowTops.size, 'the category pills wrap onto more than one row').toBe(
+      1,
+    );
 
     await editMentorPage.close();
   });

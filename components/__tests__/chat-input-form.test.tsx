@@ -615,7 +615,7 @@ describe('ChatInputForm', () => {
       expect(screen.getByTestId('voice-chat-button')).toBeInTheDocument();
     });
 
-    it('puts the Code approvals button beside the microphone, not under the box', async () => {
+    it('puts the Code approvals button first in the composer’s right-hand action group, not under the box', async () => {
       renderWithRedux(<ChatInputForm {...defaultProps} />);
 
       const slot = (await screen.findByTestId('code-approvals-marker'))

@@ -1,11 +1,11 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type SyntheticEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslations } from 'next-intl';
-import { Code2, Folder, Info, Loader2, X, Zap } from 'lucide-react';
+import { Code2, Folder, Info, Loader2, X } from 'lucide-react';
 import { localModelDisplayName } from '@iblai/iblai-js/web-containers';
-import { useCodePermissionRequests } from '@iblai/iblai-js/web-containers/next';
+import { useComposerToolPill } from '@iblai/iblai-js/web-containers/next';
 import {
   Popover,
   PopoverContent,
@@ -42,11 +42,12 @@ import {
   CodeApprovalsButton,
   PERMISSION_MODES,
   PERMISSION_MODE_ICONS,
-  applyApprovalMode,
   loadApprovalMode,
+  seedApprovalMode,
   useApprovalMode,
-  type PermissionMode,
+  useOfferApprovals,
 } from './code-approvals-button';
+import { useApprovalModeChoice } from './use-approval-mode-choice';
 
 const MODEL_KEY = 'ibl_coding_mode_model';
 const FOLDER_CHOSEN_KEY = 'ibl_coding_mode_folder_chosen';
@@ -154,8 +155,11 @@ export function CodingModeButton({
   sessionId?: string;
   /** Skill sync state from useOpencodeSkillSync (mounted by the composer). */
   skillSync?: OpencodeSkillSync;
-  /** Spot beside the composer's microphone where the approvals button renders. */
-  approvalsSlot?: HTMLElement | null;
+  /**
+   * The spot first in the composer's right-hand action group, where the
+   * approvals button renders; null renders none here.
+   */
+  approvalsSlot: HTMLElement | null;
   /** The composer row is too narrow for the pill's label (`useOverflowFit`). */
   compact?: boolean;
 }) {
@@ -177,21 +181,7 @@ export function CodingModeButton({
   // Linux: name of the app that actually opens folders (the inode/directory
   // default, probed by the backend); null → generic "Open Folder" label.
   const [fileManager, setFileManager] = useState<string | null>(null);
-  // One mode for every chat, saved by the desktop: Automatic until the user
-  // picks Ask Me, which then holds in every chat until they switch back.
   const permissionMode = useApprovalMode();
-  // The card that offers "Switch to Automatic" is the SDK's, and it has no
-  // such button, so the offer lives here instead: the composer is the one spot
-  // the host can render into (`composerExtraControls`). Switching is a real
-  // answer, not just a setting — Rust's `allow_all_pending` answers every card
-  // already waiting — so this is only shown while a Code card is waiting for
-  // one. A Browse run follows Cowork's own Approvals setting, and a prompt
-  // with nothing to allow can't be approved. Drop this once the SDK card
-  // carries the button itself.
-  const waitingCards = useCodePermissionRequests();
-  const offerAutomatic =
-    permissionMode === 'manual' &&
-    waitingCards.some((r) => !r.respond && !!r.allow_option_id);
   // Tauri mobile: Code runs against a paired desktop's opencode server. The
   // pairing state gates everything; the SDK reads the mirrored localStorage
   // flag (ibl_remote_code_ready) at send time.
@@ -232,11 +222,14 @@ export function CodingModeButton({
   const [folderBusy, setFolderBusy] = useState(false);
 
   const t = useTranslations('chatInputFormCodingModeButton');
+  const tCommon = useTranslations('common');
 
   const tenantKey =
     typeof window === 'undefined' ? '' : localStorage.getItem('tenant') || '';
   const mentorUniqueId =
     typeof window === 'undefined' ? '' : localStorage.getItem(MENTOR_KEY) || '';
+
+  const { chooseMode, profileCodeMode } = useApprovalModeChoice();
 
   const { data: mentorSettings } = useMentorSettings();
   const llmProvider = mentorSettings?.llmProvider;
@@ -278,6 +271,9 @@ export function CodingModeButton({
     const sync = () => {
       setLocalMode(readLocalMode());
       setLocalModelId(localStorage.getItem(LOCAL_LLM_MODEL_KEY) || '');
+      // The canvas split mounts a pill per composer: one left on after the
+      // other switched Code off would keep offering the approvals button.
+      setEnabled(localStorage.getItem(ENABLED_KEY) === 'true');
     };
     sync();
     window.addEventListener('storage', sync);
@@ -695,33 +691,53 @@ export function CodingModeButton({
     );
   }, []);
 
-  const chooseMode = (mode: PermissionMode) =>
-    applyApprovalMode(
-      mode,
-      (chosen) => callTauri('set_opencode_permission_mode', { mode: chosen }),
-      (e) => {
-        console.error('[coding-mode] could not apply permission mode', e);
-        toast.error(t('permissionModeSaveFailed'));
-      },
+  // Once: the PATCH in chooseMode refetches the profile, and seeding from that
+  // copy again would only repeat what this machine already holds.
+  const seededFromProfile = useRef(false);
+  useEffect(() => {
+    if (seededFromProfile.current || !profileCodeMode) return;
+    seededFromProfile.current = true;
+    const mode = profileCodeMode.permission_mode;
+    if (mode !== 'auto' && mode !== 'manual') return;
+    void seedApprovalMode(() =>
+      callTauri('seed_opencode_permission_mode', { mode }),
     );
+  }, [profileCodeMode]);
 
   // Force Code off whenever it can't run (runtime down, an on-device model with no
-  // tool calling, or a Linux host missing bubblewrap) — the send path (SDK) reads
-  // this flag, so clearing it routes back to normal chat instead of failing every turn.
+  // tool calling or none picked, or a Linux host missing bubblewrap) — the send
+  // path (SDK) reads this flag, so clearing it routes back to normal chat instead
+  // of failing every turn.
   useEffect(() => {
     // On mobile, an un-paired (or unreachable) desktop also forces Code off:
     // sends would fail every turn otherwise.
     const mobileDisconnected =
       mobile && remoteHost !== null && !remoteHost.connected;
+    const noLocalModel =
+      isLocal &&
+      sandboxed === false &&
+      !mobile &&
+      !(localModelId || localStorage.getItem(LOCAL_LLM_MODEL_KEY));
     if (
-      (localVerdictBad || !sandboxReady || mobileDisconnected) &&
+      (localVerdictBad ||
+        !sandboxReady ||
+        mobileDisconnected ||
+        noLocalModel) &&
       localStorage.getItem(ENABLED_KEY) === 'true'
     ) {
       localStorage.setItem(ENABLED_KEY, 'false');
       window.dispatchEvent(new Event('local-storage'));
       setEnabled(false);
     }
-  }, [localVerdictBad, sandboxReady, mobile, remoteHost]);
+  }, [
+    localVerdictBad,
+    sandboxReady,
+    mobile,
+    remoteHost,
+    isLocal,
+    sandboxed,
+    localModelId,
+  ]);
 
   // On-device: ask the backend which runtime serves the selected local model and
   // whether it can drive Code. Rust auto-detects Ollama vs Foundry Local.
@@ -1122,6 +1138,23 @@ export function CodingModeButton({
             run: () => checkAgent(agent),
           };
 
+  const codeOn = !sandboxed && enabled && !blocked;
+  useOfferApprovals(codeOn);
+  const { showName } = useComposerToolPill(codeOn);
+
+  const dismissFromX = (
+    e: SyntheticEvent<SVGSVGElement>,
+    { refocus }: { refocus: boolean },
+  ) => {
+    e.stopPropagation();
+    if (codeOn) void toggle(false);
+    setIsOpen(false);
+    // From the keyboard only: the x goes away with this, and focus would fall
+    // back to the page. A tap must not, or the pill's tooltip opens on focus
+    // and, on a touch screen, stays up.
+    if (refocus) e.currentTarget.closest('button')?.focus();
+  };
+
   // Hidden where opencode can never be spawned: the sandboxed Mac App Store build
   // and unsupported platforms (Windows). (Desktop-only gating happens in the parent,
   // which won't mount this outside Tauri.)
@@ -1137,7 +1170,19 @@ export function CodingModeButton({
                 variant="ghost"
                 size="sm"
                 type="button"
+                // Named outright: from its content the name would take in the
+                // x's own label ("Code Turn off Code").
+                aria-label={t('code')}
                 aria-busy={skillsLoading}
+                // Only from a closed popover: switching Code off in it and then
+                // tapping the pill to put it away must not turn Code back on.
+                // Only once the platform is known, too: until then a phone
+                // would take the desktop's folder choice.
+                onClick={() => {
+                  if (!isOpen && !codeOn && sandboxed === false) {
+                    void toggle(true);
+                  }
+                }}
                 className={`flex h-8 items-center gap-1.5 rounded-lg px-2 text-sm transition-all duration-200 ${
                   active
                     ? 'border border-[#D0E0FF] bg-[#F5F8FF] text-[#38A1E5]'
@@ -1158,24 +1203,39 @@ export function CodingModeButton({
                     composer row never pushes the send button off-screen;
                     once Code is on (or its popover is open) the label shows
                     too, unless the row is too narrow for it (`compact`) —
-                    the blue fill then marks it as on. */}
+                    the blue fill then marks it as on. In the SDK composer's
+                    tool row the row decides instead (only the one tool that
+                    is on keeps its name), but an open popover always shows
+                    it. */}
                 <span
                   className={
                     compact
                       ? 'hidden'
-                      : active
-                        ? undefined
-                        : 'max-[520px]:hidden'
+                      : !showName && !isOpen
+                        ? 'sr-only'
+                        : active
+                          ? undefined
+                          : 'max-[520px]:hidden'
                   }
                 >
                   {t('code')}
                 </span>
-                {isOpen && (
+                {(codeOn || isOpen) && (
                   <X
+                    role="button"
+                    tabIndex={0}
+                    aria-label={codeOn ? t('turnOffCode') : tCommon('close')}
                     className="ml-1 h-3 w-3 cursor-pointer"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setIsOpen(false);
+                    // Keeps a tap from focusing the x, which would open the
+                    // pill's tooltip.
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={(e) => dismissFromX(e, { refocus: false })}
+                    onKeyDown={(e) => {
+                      if (e.key !== 'Enter' && e.key !== ' ') return;
+                      // Also keeps the pill's own button from taking the key
+                      // as a click of its own.
+                      e.preventDefault();
+                      dismissFromX(e, { refocus: true });
                     }}
                   />
                 )}
@@ -1191,11 +1251,14 @@ export function CodingModeButton({
         <PopoverContent
           align="start"
           collisionPadding={8}
-          // Short windows: cap to the room Radix reports and scroll inside, so the
-          // lower sections (Workspace, Phone Access) stay reachable.
-          className="max-h-[var(--radix-popover-content-available-height)] w-96 max-w-[calc(100vw-2rem)] overflow-y-auto overscroll-contain rounded-lg border border-gray-200 bg-white p-4 shadow-xl"
+          // Capped to the room Radix reports on its side; only the body
+          // scrolls, so the Code switch stays in view.
+          className="flex max-h-[var(--radix-popover-content-available-height)] w-96 max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-lg border border-gray-200 bg-white p-0 shadow-xl"
         >
-          <div className="flex items-center justify-between">
+          <div
+            data-testid="code-popover-header"
+            className="flex shrink-0 items-center justify-between px-4 pt-4"
+          >
             <div className="flex items-center gap-2">
               <Code2 className="h-4 w-4 text-[#38A1E5]" />
               <span className="text-sm font-medium text-gray-900">
@@ -1208,541 +1271,517 @@ export function CodingModeButton({
               onCheckedChange={toggle}
             />
           </div>
-          <p className="mt-1 text-xs text-gray-500">{t('description')}</p>
+          <div
+            data-testid="code-popover-body"
+            className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-4"
+          >
+            <p className="mt-1 text-xs text-gray-500">{t('description')}</p>
 
-          {/* Only the states that need acting on. Which model Code uses is already the
+            {/* Only the states that need acting on. Which model Code uses is already the
             mentor LLM shown in the top-left, so repeating it here was noise — but a
             model that will FAIL every turn still has to say so. A missing bwrap
             outranks the model states: nothing can spawn until it's installed. */}
-          {!sandboxReady ? (
-            <div
-              data-testid="code-sandbox-missing"
-              className="mt-2 flex items-start gap-1.5 text-[11px] text-gray-400"
-            >
-              <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-              <span>{t('sandboxMissing')}</span>
-            </div>
-          ) : isLocal && blocked ? (
-            <div
-              data-testid="code-local-model-warning"
-              className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-2.5 text-xs text-amber-700"
-            >
-              {!localModelId ? (
-                t('pickLocalModel')
-              ) : local?.tools_supported === false ? (
-                <>
-                  {t('localModelCantEdit', { model: localModelName })}
-                  {t('tryToolCapableModel')}
-                </>
-              ) : (
-                local?.reason || t('checkingLocalModel')
-              )}
-            </div>
-          ) : isLocal ? (
-            <div className="mt-2 text-[11px] text-gray-400">
-              <div>{t('firstRunSlow')}</div>
-              {local?.tools_supported === null && (
-                <div className="mt-1 text-amber-600">
-                  {t('localModelUnknown', { model: localModelName })}
-                </div>
-              )}
-            </div>
-          ) : agent === 'opencode' && resolvedModel && !modelMatched ? (
-            <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-2.5 text-xs text-amber-700">
-              <span className="font-mono">{resolvedModel}</span>{' '}
-              {t('modelUnavailable')}
-            </div>
-          ) : null}
+            {!sandboxReady ? (
+              <div
+                data-testid="code-sandbox-missing"
+                className="mt-2 flex items-start gap-1.5 text-[11px] text-gray-400"
+              >
+                <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                <span>{t('sandboxMissing')}</span>
+              </div>
+            ) : isLocal && blocked ? (
+              <div
+                data-testid="code-local-model-warning"
+                className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-2.5 text-xs text-amber-700"
+              >
+                {!localModelId ? (
+                  t('pickLocalModel')
+                ) : local?.tools_supported === false ? (
+                  <>
+                    {t('localModelCantEdit', { model: localModelName })}
+                    {t('tryToolCapableModel')}
+                  </>
+                ) : (
+                  local?.reason || t('checkingLocalModel')
+                )}
+              </div>
+            ) : isLocal ? (
+              <div className="mt-2 text-[11px] text-gray-400">
+                <div>{t('firstRunSlow')}</div>
+                {local?.tools_supported === null && (
+                  <div className="mt-1 text-amber-600">
+                    {t('localModelUnknown', { model: localModelName })}
+                  </div>
+                )}
+              </div>
+            ) : agent === 'opencode' && resolvedModel && !modelMatched ? (
+              <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-2.5 text-xs text-amber-700">
+                <span className="font-mono">{resolvedModel}</span>{' '}
+                {t('modelUnavailable')}
+              </div>
+            ) : null}
 
-          {/* Approvals. A quiet segmented pair rather than a second Switch: the
+            {/* Approvals. A quiet segmented pair rather than a second Switch: the
             two modes have names worth showing, and this row must not compete
             with the on/off control above it. */}
-          <div className="mt-3 flex items-center justify-between gap-2">
-            <span className="text-xs font-medium text-gray-600">
-              {t('permissionModeLabel')}
-            </span>
-            <div
-              role="radiogroup"
-              aria-label={t('permissionModeLabel')}
-              className="flex items-center gap-0.5 rounded-md border border-gray-200 p-0.5"
-            >
-              {PERMISSION_MODES.map((mode) => {
-                const ModeIcon = PERMISSION_MODE_ICONS[mode];
-                return (
-                  <button
-                    key={mode}
-                    type="button"
-                    role="radio"
-                    aria-checked={permissionMode === mode}
-                    onClick={() => void chooseMode(mode)}
-                    className={`flex h-6 items-center gap-1 rounded px-2 text-[11px] transition-colors ${
-                      permissionMode === mode
-                        ? 'bg-gray-100 text-gray-900'
-                        : 'text-gray-500 hover:text-gray-700'
-                    }`}
-                  >
-                    <ModeIcon className="h-3 w-3" aria-hidden="true" />
-                    {mode === 'manual'
-                      ? t('permissionModeManual')
-                      : t('permissionModeAuto')}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-          <p
-            data-testid={
-              permissionMode === 'auto'
-                ? 'code-auto-mode-hint'
-                : 'code-manual-mode-hint'
-            }
-            className="mt-1 text-[11px] text-gray-400"
-          >
-            {permissionMode === 'auto'
-              ? t('permissionModeAutoHint')
-              : t('permissionModeManualHint')}
-          </p>
-
-          {/* Agent: the same quiet segmented control as Approvals, and only
-            once the backend has answered for at least one agent this computer
-            can run (never on phones, never on a desktop build without the
-            commands, never below the agents' macOS). */}
-          {shownAgents.some((a) => a !== 'opencode' && agentStatus[a]) && (
-            <>
-              <div className="mt-3 flex items-center justify-between gap-2">
-                <span className="text-xs font-medium text-gray-600">
-                  {t('agentLabel')}
-                </span>
-                <div
-                  role="radiogroup"
-                  aria-label={t('agentLabel')}
-                  className="flex items-center gap-0.5 rounded-md border border-gray-200 p-0.5"
-                >
-                  {/* An agent the desktop is still installing (it does that
-                      by itself at launch) spins and can't be chosen; ibl.ai
-                      and any finished agent stay selectable. */}
-                  {shownAgents.map((a) => (
+            <div className="mt-3 flex items-center justify-between gap-2">
+              <span className="text-xs font-medium text-gray-600">
+                {t('permissionModeLabel')}
+              </span>
+              <div
+                role="radiogroup"
+                aria-label={t('permissionModeLabel')}
+                className="flex items-center gap-0.5 rounded-md border border-gray-200 p-0.5"
+              >
+                {PERMISSION_MODES.map((mode) => {
+                  const ModeIcon = PERMISSION_MODE_ICONS[mode];
+                  return (
                     <button
-                      key={a}
+                      key={mode}
                       type="button"
                       role="radio"
-                      aria-checked={agent === a}
-                      aria-busy={agentStatus[a]?.installing || undefined}
-                      disabled={agentStatus[a]?.installing}
-                      onClick={() => chooseAgent(a)}
-                      className={`inline-flex h-6 items-center gap-1 rounded px-2 text-[11px] transition-colors disabled:cursor-default ${
-                        agent === a
+                      aria-checked={permissionMode === mode}
+                      onClick={() => void chooseMode(mode)}
+                      className={`flex h-6 items-center gap-1 rounded px-2 text-[11px] transition-colors ${
+                        permissionMode === mode
                           ? 'bg-gray-100 text-gray-900'
                           : 'text-gray-500 hover:text-gray-700'
                       }`}
                     >
-                      {agentStatus[a]?.installing && (
-                        <Loader2
-                          aria-hidden
-                          className="h-3 w-3 shrink-0 animate-spin"
-                        />
-                      )}
-                      {AGENT_LABELS[a]}
+                      <ModeIcon className="h-3 w-3" aria-hidden="true" />
+                      {mode === 'manual'
+                        ? t('permissionModeManual')
+                        : t('permissionModeAuto')}
                     </button>
-                  ))}
-                </div>
+                  );
+                })}
               </div>
-              {agentSt && (
-                <div
-                  data-testid="code-agent-status"
-                  className="mt-1 flex items-center justify-between gap-2 text-[11px] text-gray-400"
-                >
-                  {!agentSt.supported ? (
-                    <span>{agentSt.reason || t('agentUnsupported')}</span>
-                  ) : agentNext ? (
-                    <>
-                      <span className="min-w-0">{agentNext.text}</span>
-                      {agentNext.label && (
+            </div>
+            <p
+              data-testid={
+                permissionMode === 'auto'
+                  ? 'code-auto-mode-hint'
+                  : 'code-manual-mode-hint'
+              }
+              className="mt-1 text-[11px] text-gray-400"
+            >
+              {permissionMode === 'auto'
+                ? t('permissionModeAutoHint')
+                : t('permissionModeManualHint')}
+            </p>
+
+            {/* Agent: the same quiet segmented control as Approvals, and only
+            once the backend has answered for at least one agent this computer
+            can run (never on phones, never on a desktop build without the
+            commands, never below the agents' macOS). */}
+            {shownAgents.some((a) => a !== 'opencode' && agentStatus[a]) && (
+              <>
+                <div className="mt-3 flex items-center justify-between gap-2">
+                  <span className="text-xs font-medium text-gray-600">
+                    {t('agentLabel')}
+                  </span>
+                  <div
+                    role="radiogroup"
+                    aria-label={t('agentLabel')}
+                    className="flex items-center gap-0.5 rounded-md border border-gray-200 p-0.5"
+                  >
+                    {/* An agent the desktop is still installing (it does that
+                      by itself at launch) spins and can't be chosen; ibl.ai
+                      and any finished agent stay selectable. */}
+                    {shownAgents.map((a) => (
+                      <button
+                        key={a}
+                        type="button"
+                        role="radio"
+                        aria-checked={agent === a}
+                        aria-busy={agentStatus[a]?.installing || undefined}
+                        disabled={agentStatus[a]?.installing}
+                        onClick={() => chooseAgent(a)}
+                        className={`inline-flex h-6 items-center gap-1 rounded px-2 text-[11px] transition-colors disabled:cursor-default ${
+                          agent === a
+                            ? 'bg-gray-100 text-gray-900'
+                            : 'text-gray-500 hover:text-gray-700'
+                        }`}
+                      >
+                        {agentStatus[a]?.installing && (
+                          <Loader2
+                            aria-hidden
+                            className="h-3 w-3 shrink-0 animate-spin"
+                          />
+                        )}
+                        {AGENT_LABELS[a]}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {agentSt && (
+                  <div
+                    data-testid="code-agent-status"
+                    className="mt-1 flex items-center justify-between gap-2 text-[11px] text-gray-400"
+                  >
+                    {!agentSt.supported ? (
+                      <span>{agentSt.reason || t('agentUnsupported')}</span>
+                    ) : agentNext ? (
+                      <>
+                        <span className="min-w-0">{agentNext.text}</span>
+                        {agentNext.label && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            type="button"
+                            className="h-6 shrink-0 px-2 text-[11px]"
+                            disabled={agentBusy !== null}
+                            onClick={() => void agentNext.run()}
+                          >
+                            {agentNext.label}
+                          </Button>
+                        )}
+                      </>
+                    ) : (
+                      <span className="flex min-w-0 items-center gap-1.5">
+                        <span
+                          aria-hidden
+                          className="h-1.5 w-1.5 shrink-0 rounded-full bg-gray-300"
+                        />
+                        <span className="truncate">
+                          {agentSt.account || t('agentReady')}
+                        </span>
+                      </span>
+                    )}
+                  </div>
+                )}
+              </>
+            )}
+
+            {mobile ? (
+              /* Phone: Code runs on a paired desktop. This section IS the
+              workspace story here — connect, see the folder, disconnect. */
+              <div
+                data-testid="code-remote-host"
+                className="mt-3 rounded-md border border-gray-200 p-3"
+              >
+                <div className="flex items-center gap-1.5 text-xs font-medium text-gray-600">
+                  <Folder className="h-3.5 w-3.5" />
+                  {t('connectTitle')}
+                </div>
+                {remoteHost?.configured && remoteHost.connected ? (
+                  <>
+                    <div className="mt-2 text-xs text-gray-600">
+                      {t('connectedTo')}
+                    </div>
+                    <div className="mt-1 font-mono text-xs break-all text-gray-800">
+                      {remoteHost.url}
+                    </div>
+                    <div className="mt-2 text-xs text-gray-600">
+                      {t('workspace')}
+                    </div>
+                    <div
+                      data-testid="code-remote-workspace"
+                      className="mt-1 font-mono text-[11px] break-all text-gray-800"
+                    >
+                      {workspace || '—'}
+                    </div>
+                    {folderList !== null && (
+                      <div
+                        data-testid="code-remote-folder-list"
+                        className="mt-2 max-h-40 overflow-y-auto rounded-md border border-gray-200"
+                      >
+                        {folderList.length === 0 ? (
+                          <div className="p-2 text-[11px] text-gray-400">—</div>
+                        ) : (
+                          folderList.map((f) => (
+                            <button
+                              key={f.path}
+                              type="button"
+                              className="block w-full truncate px-2 py-1.5 text-left font-mono text-[11px] text-gray-700 hover:bg-gray-50"
+                              disabled={folderBusy}
+                              onClick={() => void chooseRemoteFolder(f.path)}
+                            >
+                              {f.name}
+                            </button>
+                          ))
+                        )}
+                      </div>
+                    )}
+                    <div className="mt-3 flex flex-col gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        type="button"
+                        data-testid="code-remote-select-folder"
+                        className="h-7 w-full text-xs"
+                        disabled={folderBusy || !sessionId}
+                        onClick={() =>
+                          folderList === null
+                            ? void openFolderPicker()
+                            : setFolderList(null)
+                        }
+                      >
+                        {t('selectWorkspace')}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        type="button"
+                        data-testid="code-remote-new-folder"
+                        className="h-7 w-full text-xs"
+                        disabled={folderBusy || !sessionId}
+                        onClick={() => void newRemoteFolder()}
+                      >
+                        {t('newWorkspace')}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        type="button"
+                        className="h-7 w-full text-xs"
+                        onClick={() => void disconnectFromDesktop()}
+                      >
+                        {t('disconnect')}
+                      </Button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <p className="mt-2 text-[11px] text-gray-500">
+                      {t('connectHint')}
+                    </p>
+                    {remoteHost?.configured &&
+                      !remoteHost.connected &&
+                      localNetwork !== 'denied' && (
+                        <p
+                          data-testid="code-remote-unreachable"
+                          className="mt-1 text-[11px] text-amber-600"
+                        >
+                          {t('desktopUnreachable')}
+                        </p>
+                      )}
+                    {localNetwork === 'denied' ? (
+                      // No pairing can work without Local Network access, so
+                      // the scan and the fields are pointless: say why, and
+                      // put the one useful action in their place.
+                      <>
+                        <p
+                          data-testid="code-local-network-denied"
+                          className="mt-1 text-[11px] text-amber-600"
+                        >
+                          {t('localNetworkDenied')}
+                        </p>
                         <Button
                           variant="outline"
                           size="sm"
                           type="button"
-                          className="h-6 shrink-0 px-2 text-[11px]"
-                          disabled={agentBusy !== null}
-                          onClick={() => void agentNext.run()}
+                          data-testid="code-open-app-settings"
+                          className="mt-2 h-8 w-full text-xs"
+                          onClick={() => void openAppSettings()}
                         >
-                          {agentNext.label}
+                          {t('openSettings')}
                         </Button>
-                      )}
-                    </>
-                  ) : (
-                    <span className="flex min-w-0 items-center gap-1.5">
-                      <span
-                        aria-hidden
-                        className="h-1.5 w-1.5 shrink-0 rounded-full bg-gray-300"
-                      />
-                      <span className="truncate">
-                        {agentSt.account || t('agentReady')}
-                      </span>
-                    </span>
-                  )}
-                </div>
-              )}
-            </>
-          )}
-
-          {mobile ? (
-            /* Phone: Code runs on a paired desktop. This section IS the
-              workspace story here — connect, see the folder, disconnect. */
-            <div
-              data-testid="code-remote-host"
-              className="mt-3 rounded-md border border-gray-200 p-3"
-            >
-              <div className="flex items-center gap-1.5 text-xs font-medium text-gray-600">
-                <Folder className="h-3.5 w-3.5" />
-                {t('connectTitle')}
-              </div>
-              {remoteHost?.configured && remoteHost.connected ? (
-                <>
-                  <div className="mt-2 text-xs text-gray-600">
-                    {t('connectedTo')}
-                  </div>
-                  <div className="mt-1 font-mono text-xs break-all text-gray-800">
-                    {remoteHost.url}
-                  </div>
-                  <div className="mt-2 text-xs text-gray-600">
-                    {t('workspace')}
-                  </div>
-                  <div
-                    data-testid="code-remote-workspace"
-                    className="mt-1 font-mono text-[11px] break-all text-gray-800"
-                  >
-                    {workspace || '—'}
-                  </div>
-                  {folderList !== null && (
-                    <div
-                      data-testid="code-remote-folder-list"
-                      className="mt-2 max-h-40 overflow-y-auto rounded-md border border-gray-200"
-                    >
-                      {folderList.length === 0 ? (
-                        <div className="p-2 text-[11px] text-gray-400">—</div>
-                      ) : (
-                        folderList.map((f) => (
-                          <button
-                            key={f.path}
-                            type="button"
-                            className="block w-full truncate px-2 py-1.5 text-left font-mono text-[11px] text-gray-700 hover:bg-gray-50"
-                            disabled={folderBusy}
-                            onClick={() => void chooseRemoteFolder(f.path)}
+                      </>
+                    ) : (
+                      <>
+                        {localNetwork === 'checking' && (
+                          <p
+                            data-testid="code-local-network-checking"
+                            className="mt-1 text-[11px] text-gray-500"
                           >
-                            {f.name}
-                          </button>
-                        ))
-                      )}
-                    </div>
-                  )}
-                  <div className="mt-3 flex flex-col gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      type="button"
-                      data-testid="code-remote-select-folder"
-                      className="h-7 w-full text-xs"
-                      disabled={folderBusy || !sessionId}
-                      onClick={() =>
-                        folderList === null
-                          ? void openFolderPicker()
-                          : setFolderList(null)
-                      }
-                    >
-                      {t('selectWorkspace')}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      type="button"
-                      data-testid="code-remote-new-folder"
-                      className="h-7 w-full text-xs"
-                      disabled={folderBusy || !sessionId}
-                      onClick={() => void newRemoteFolder()}
-                    >
-                      {t('newWorkspace')}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      type="button"
-                      className="h-7 w-full text-xs"
-                      onClick={() => void disconnectFromDesktop()}
-                    >
-                      {t('disconnect')}
-                    </Button>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <p className="mt-2 text-[11px] text-gray-500">
-                    {t('connectHint')}
-                  </p>
-                  {remoteHost?.configured &&
-                    !remoteHost.connected &&
-                    localNetwork !== 'denied' && (
-                      <p
-                        data-testid="code-remote-unreachable"
-                        className="mt-1 text-[11px] text-amber-600"
-                      >
-                        {t('desktopUnreachable')}
-                      </p>
+                            {t('localNetworkChecking')}
+                          </p>
+                        )}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          type="button"
+                          data-testid="code-remote-scan"
+                          className="mt-2 h-8 w-full text-xs"
+                          disabled={connecting || localNetwork === 'checking'}
+                          onClick={() => void scanPairingQr()}
+                        >
+                          {t('scanQr')}
+                        </Button>
+                        <p className="mt-2 text-center text-[10px] text-gray-400">
+                          {t('orTypeManually')}
+                        </p>
+                        <input
+                          data-testid="code-remote-url"
+                          className="mt-2 h-8 w-full rounded-md border border-gray-200 px-2 font-mono text-xs"
+                          placeholder="http://192.168.0.10:4096"
+                          value={hostUrl}
+                          onChange={(e) => setHostUrl(e.target.value)}
+                          autoCapitalize="none"
+                          autoCorrect="off"
+                        />
+                        <input
+                          data-testid="code-remote-password"
+                          className="mt-2 h-8 w-full rounded-md border border-gray-200 px-2 font-mono text-xs"
+                          placeholder={t('hostPasswordLabel')}
+                          type="password"
+                          value={hostPassword}
+                          onChange={(e) => setHostPassword(e.target.value)}
+                        />
+                        {connectError && (
+                          <p className="mt-1 text-[11px] break-all text-red-600">
+                            {connectError}
+                          </p>
+                        )}
+                        {connecting && (
+                          <p
+                            data-testid="code-remote-connecting-hint"
+                            className="mt-1 text-[11px] text-gray-500"
+                          >
+                            {t('localNetworkHint')}
+                          </p>
+                        )}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          type="button"
+                          className="mt-2 h-7 w-full text-xs"
+                          disabled={
+                            connecting ||
+                            localNetwork === 'checking' ||
+                            !hostUrl.trim() ||
+                            !hostPassword
+                          }
+                          onClick={() => void connectToDesktop()}
+                        >
+                          {connecting ? t('connecting') : t('connect')}
+                        </Button>
+                      </>
                     )}
-                  {localNetwork === 'denied' ? (
-                    // No pairing can work without Local Network access, so
-                    // the scan and the fields are pointless: say why, and
-                    // put the one useful action in their place.
-                    <>
-                      <p
-                        data-testid="code-local-network-denied"
-                        className="mt-1 text-[11px] text-amber-600"
-                      >
-                        {t('localNetworkDenied')}
-                      </p>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        type="button"
-                        data-testid="code-open-app-settings"
-                        className="mt-2 h-8 w-full text-xs"
-                        onClick={() => void openAppSettings()}
-                      >
-                        {t('openSettings')}
-                      </Button>
-                    </>
-                  ) : (
-                    <>
-                      {localNetwork === 'checking' && (
-                        <p
-                          data-testid="code-local-network-checking"
-                          className="mt-1 text-[11px] text-gray-500"
-                        >
-                          {t('localNetworkChecking')}
-                        </p>
-                      )}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        type="button"
-                        data-testid="code-remote-scan"
-                        className="mt-2 h-8 w-full text-xs"
-                        disabled={connecting || localNetwork === 'checking'}
-                        onClick={() => void scanPairingQr()}
-                      >
-                        {t('scanQr')}
-                      </Button>
-                      <p className="mt-2 text-center text-[10px] text-gray-400">
-                        {t('orTypeManually')}
-                      </p>
-                      <input
-                        data-testid="code-remote-url"
-                        className="mt-2 h-8 w-full rounded-md border border-gray-200 px-2 font-mono text-xs"
-                        placeholder="http://192.168.0.10:4096"
-                        value={hostUrl}
-                        onChange={(e) => setHostUrl(e.target.value)}
-                        autoCapitalize="none"
-                        autoCorrect="off"
-                      />
-                      <input
-                        data-testid="code-remote-password"
-                        className="mt-2 h-8 w-full rounded-md border border-gray-200 px-2 font-mono text-xs"
-                        placeholder={t('hostPasswordLabel')}
-                        type="password"
-                        value={hostPassword}
-                        onChange={(e) => setHostPassword(e.target.value)}
-                      />
-                      {connectError && (
-                        <p className="mt-1 text-[11px] break-all text-red-600">
-                          {connectError}
-                        </p>
-                      )}
-                      {connecting && (
-                        <p
-                          data-testid="code-remote-connecting-hint"
-                          className="mt-1 text-[11px] text-gray-500"
-                        >
-                          {t('localNetworkHint')}
-                        </p>
-                      )}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        type="button"
-                        className="mt-2 h-7 w-full text-xs"
-                        disabled={
-                          connecting ||
-                          localNetwork === 'checking' ||
-                          !hostUrl.trim() ||
-                          !hostPassword
-                        }
-                        onClick={() => void connectToDesktop()}
-                      >
-                        {connecting ? t('connecting') : t('connect')}
-                      </Button>
-                    </>
-                  )}
-                </>
-              )}
-            </div>
-          ) : (
-            <div className="mt-3 rounded-md border border-gray-200 p-3">
-              <div className="flex items-center gap-1.5 text-xs font-medium text-gray-600">
-                <Folder className="h-3.5 w-3.5" />
-                {t('workspace')}
+                  </>
+                )}
               </div>
-              <div className="mt-2 font-mono text-xs break-all text-gray-800">
-                {workspace || '—'}
-              </div>
-              {/* Stacked full-width so all three stay the same size in every
-              locale — the es/fr labels don't fit equal columns in one row. */}
-              <div className="mt-3 flex flex-col gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  type="button"
-                  className="h-7 w-full text-xs"
-                  disabled={!workspace}
-                  onClick={openWorkspace}
-                >
-                  {openFolderLabel()}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  type="button"
-                  className="h-7 w-full text-xs"
-                  onClick={pickFolder}
-                >
-                  {t('selectWorkspace')}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  type="button"
-                  className="h-7 w-full text-xs"
-                  disabled={!sessionId}
-                  onClick={startNewWorkspace}
-                >
-                  {t('newWorkspace')}
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {/* Desktop: let a phone pair with this machine. Hidden until the
-            backend answers (older backends don't have the commands). */}
-          {!mobile && phoneAccess !== null && (
-            <div
-              data-testid="code-phone-access"
-              className="mt-3 rounded-md border border-gray-200 p-3"
-            >
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-xs font-medium text-gray-600">
-                  {t('phoneAccess')}
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  type="button"
-                  className="h-6 px-2 text-[11px]"
-                  disabled={phoneAccessBusy}
-                  onClick={() => void togglePhoneAccess()}
-                >
-                  {phoneAccess.running
-                    ? t('phoneAccessDisable')
-                    : t('phoneAccessEnable')}
-                </Button>
-              </div>
-              {phoneAccess.running ? (
-                <div className="mt-2 space-y-1">
-                  {pairingQr && (
-                    <div className="flex justify-center py-1">
-                      <img
-                        data-testid="code-pairing-qr"
-                        alt={t('phoneAccess')}
-                        className="h-40 w-40 rounded bg-white"
-                        src={`data:image/svg+xml;utf8,${encodeURIComponent(pairingQr)}`}
-                      />
-                    </div>
-                  )}
-                  <div className="text-[11px] text-gray-500">
-                    {t('phoneAccessAddress')}
-                  </div>
-                  <div className="font-mono text-xs break-all text-gray-800">
-                    {phoneAccess.urls[0] || '—'}
-                  </div>
-                  <div className="text-[11px] text-gray-500">
-                    {t('hostPasswordLabel')}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono text-xs break-all text-gray-800">
-                      {phoneAccess.password || '—'}
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-gray-400">
-                    {t('phoneAccessHint')}
-                  </p>
+            ) : (
+              <div className="mt-3 rounded-md border border-gray-200 p-3">
+                <div className="flex items-center gap-1.5 text-xs font-medium text-gray-600">
+                  <Folder className="h-3.5 w-3.5" />
+                  {t('workspace')}
                 </div>
-              ) : (
-                <p className="mt-1 text-[11px] text-gray-400">
-                  {t('phoneAccessOffHint')}
-                </p>
-              )}
-            </div>
-          )}
+                <div className="mt-2 font-mono text-xs break-all text-gray-800">
+                  {workspace || '—'}
+                </div>
+                {/* Stacked full-width so all three stay the same size in every
+              locale — the es/fr labels don't fit equal columns in one row. */}
+                <div className="mt-3 flex flex-col gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    type="button"
+                    className="h-7 w-full text-xs"
+                    disabled={!workspace}
+                    onClick={openWorkspace}
+                  >
+                    {openFolderLabel()}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    type="button"
+                    className="h-7 w-full text-xs"
+                    onClick={pickFolder}
+                  >
+                    {t('selectWorkspace')}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    type="button"
+                    className="h-7 w-full text-xs"
+                    disabled={!sessionId}
+                    onClick={startNewWorkspace}
+                  >
+                    {t('newWorkspace')}
+                  </Button>
+                </div>
+              </div>
+            )}
 
-          {/* Error-only surface: the happy path adds no UI, but a failed skill
+            {/* Desktop: let a phone pair with this machine. Hidden until the
+            backend answers (older backends don't have the commands). */}
+            {!mobile && phoneAccess !== null && (
+              <div
+                data-testid="code-phone-access"
+                className="mt-3 rounded-md border border-gray-200 p-3"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-medium text-gray-600">
+                    {t('phoneAccess')}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    type="button"
+                    className="h-6 px-2 text-[11px]"
+                    disabled={phoneAccessBusy}
+                    onClick={() => void togglePhoneAccess()}
+                  >
+                    {phoneAccess.running
+                      ? t('phoneAccessDisable')
+                      : t('phoneAccessEnable')}
+                  </Button>
+                </div>
+                {phoneAccess.running ? (
+                  <div className="mt-2 space-y-1">
+                    {pairingQr && (
+                      <div className="flex justify-center py-1">
+                        <img
+                          data-testid="code-pairing-qr"
+                          alt={t('phoneAccess')}
+                          className="h-40 w-40 rounded bg-white"
+                          src={`data:image/svg+xml;utf8,${encodeURIComponent(pairingQr)}`}
+                        />
+                      </div>
+                    )}
+                    <div className="text-[11px] text-gray-500">
+                      {t('phoneAccessAddress')}
+                    </div>
+                    <div className="font-mono text-xs break-all text-gray-800">
+                      {phoneAccess.urls[0] || '—'}
+                    </div>
+                    <div className="text-[11px] text-gray-500">
+                      {t('hostPasswordLabel')}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-xs break-all text-gray-800">
+                        {phoneAccess.password || '—'}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-gray-400">
+                      {t('phoneAccessHint')}
+                    </p>
+                  </div>
+                ) : (
+                  <p className="mt-1 text-[11px] text-gray-400">
+                    {t('phoneAccessOffHint')}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Error-only surface: the happy path adds no UI, but a failed skill
             sync (skills catalog 403s for some users, network, vibe missing
             with no cache) must not leave the agent silently skill-less. */}
-          {enabled && skillSync?.state === 'error' && (
-            <div
-              data-testid="code-skills-sync"
-              className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-2.5 text-xs text-amber-700"
-            >
-              {t('skillsSyncFailed')}
-            </div>
-          )}
+            {enabled && skillSync?.state === 'error' && (
+              <div
+                data-testid="code-skills-sync"
+                className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-2.5 text-xs text-amber-700"
+              >
+                {t('skillsSyncFailed')}
+              </div>
+            )}
+          </div>
         </PopoverContent>
       </Popover>
-      {enabled && !blocked && offerAutomatic && (
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          data-testid="code-switch-to-automatic"
-          title={t('permissionModeAutoHint')}
-          className="h-8 shrink-0 gap-1 px-2 text-xs text-[#38A1E5] hover:bg-[#F5F8FF] hover:text-[#38A1E5]"
-          onClick={() => void chooseMode('auto')}
-        >
-          <Zap className="h-3 w-3" aria-hidden="true" />
-          {t('switchToAutomatic')}
-        </Button>
-      )}
-      {/* The SDK composer has no approvals slot yet, so without the inline
-          branch the mentor chat shows no approvals control at all and the
-          mode can only be reached through the Code popover. A composer that
-          DOES own a slot passes it as null until its node mounts, so only an
-          absent prop renders inline — otherwise the button would appear here
-          for a frame and then jump into the slot. Remove the branch once the
-          slot ships in the SDK composer. */}
-      {enabled &&
-        !blocked &&
-        (approvalsSlot === undefined ? (
+      {codeOn &&
+        approvalsSlot &&
+        createPortal(
           <CodeApprovalsButton
             mode={permissionMode}
             onChange={(mode) => void chooseMode(mode)}
-          />
-        ) : (
-          approvalsSlot &&
-          createPortal(
-            <CodeApprovalsButton
-              mode={permissionMode}
-              onChange={(mode) => void chooseMode(mode)}
-            />,
-            approvalsSlot,
-          )
-        ))}
+          />,
+          approvalsSlot,
+        )}
       {/* Fullscreen QR-scanner overlay — portaled to <body> so it survives
           the globals.css rule that hides every other body child while the
           camera renders behind the transparent webview. The close button

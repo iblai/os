@@ -143,7 +143,7 @@ export const ANALYTICS_NAV_ITEM: MentorSegment = {
     MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
     MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
   ],
-  navCategory: 'runtime',
+  navCategory: 'activity',
 };
 
 export function NavBar() {
@@ -416,12 +416,12 @@ export function NavBar() {
   });
 
   // Map MentorSegment → SDK CategorizedItem. The SDK's
-  // `CategorizedDropdownMenu` owns the 3-column / mobile-accordion layout
+  // `CategorizedDropdownMenu` owns the column / mobile-accordion layout
   // and the in-section state — we just hand it items + per-category
   // metadata. New Chat is a `topAction` and Modify (fork) is a
   // `footerAction`, both rendered outside the category columns.
   const categorizedDropdownItems = React.useMemo<CategorizedItem[]>(() => {
-    // `analytics` is now a canonical segment in `MENTOR_SEGMENTS` (Runtime
+    // `analytics` is now a canonical segment in `MENTOR_SEGMENTS` (Activity
     // category), so `filteredSegments` already includes it — no need to append
     // the legacy ad-hoc `ANALYTICS_NAV_ITEM`. Clicking it is still routed to
     // the full-page analytics view in `handleSegmentClick` below.

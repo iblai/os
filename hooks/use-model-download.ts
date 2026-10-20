@@ -68,6 +68,12 @@ function setSelectedLocalModel(modelId: string | null) {
 // a permanent "loading" state — then fall back to a fresh backend status check.
 let didResetPersistedState = false;
 
+// Local chat runs through a bridge that lives only as long as the app process,
+// so each launch with Local Models on starts it in the background — before the
+// first message has to wait for it. Once per page load: every hook instance
+// mounts this effect.
+let didWarmUpLocalChat = false;
+
 /**
  * Hook to manage Phi3 Mini model download via Ollama through Tauri
  *
@@ -314,6 +320,16 @@ export function useModelDownload() {
       }
 
       checkStatus();
+
+      if (
+        !didWarmUpLocalChat &&
+        localStorage.getItem(LOCAL_LLM_ENABLED_KEY) === 'true'
+      ) {
+        didWarmUpLocalChat = true;
+        invoke(TAURI_COMMANDS.WARM_UP_LOCAL_CHAT).catch((err) =>
+          console.error('Failed to warm up local chat:', err),
+        );
+      }
 
       // Get OS type
       invoke<OsType>(TAURI_COMMANDS.GET_OS_TYPE)

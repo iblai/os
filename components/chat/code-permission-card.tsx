@@ -30,12 +30,9 @@
 import { useSyncExternalStore } from 'react';
 import { useTranslations } from 'next-intl';
 import { ShieldCheck } from 'lucide-react';
-import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import {
-  PERMISSION_MODE_ICONS,
-  applyApprovalMode,
-} from '@/components/chat-input-form/code-approvals-button';
+import { PERMISSION_MODE_ICONS } from '@/components/chat-input-form/code-approvals-button';
+import { useApprovalModeChoice } from '@/components/chat-input-form/use-approval-mode-choice';
 import { isAppInBackground, playAttentionChime } from '@/lib/attention-chime';
 
 export interface PermissionRequest {
@@ -189,6 +186,9 @@ export function CodePermissionCards({
   const t = useTranslations('chatCodePermissionCard');
   const tModes = useTranslations('chatInputFormCodingModeButton');
   const AutomaticIcon = PERMISSION_MODE_ICONS.auto;
+  const { chooseMode } = useApprovalModeChoice(
+    requests.length > 0 && isTauriApp(),
+  );
 
   const answer = async (
     request: PermissionRequest,
@@ -219,17 +219,7 @@ export function CodePermissionCards({
   // action, which is what the click asked for.
   const switchToAutomatic = async (request: PermissionRequest) => {
     drop(request.request_id);
-    await applyApprovalMode(
-      'auto',
-      async (mode) => {
-        const { invoke } = await import('@tauri-apps/api/core');
-        await invoke('set_opencode_permission_mode', { mode });
-      },
-      (e) => {
-        console.error('[code-permission] could not switch to Automatic', e);
-        toast.error(tModes('permissionModeSaveFailed'));
-      },
-    );
+    await chooseMode('auto');
     await answer(request, request.allow_option_id);
   };
 

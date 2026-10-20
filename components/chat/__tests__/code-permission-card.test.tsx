@@ -26,10 +26,11 @@ import { toast } from 'sonner';
  * one request — Rust forgets the id as soon as the first one lands.
  */
 
-const { listeners, unlisten, invoke } = vi.hoisted(() => ({
+const { listeners, unlisten, invoke, saveMetadata } = vi.hoisted(() => ({
   listeners: new Map<string, (evt: { payload: unknown }) => void>(),
   unlisten: vi.fn(),
   invoke: vi.fn(),
+  saveMetadata: vi.fn(),
 }));
 
 vi.mock('@tauri-apps/api/event', () => ({
@@ -54,6 +55,13 @@ vi.mock('@/lib/attention-chime', () => ({
 }));
 
 vi.mock('sonner', () => ({ toast: { error: vi.fn() } }));
+
+vi.mock('@iblai/iblai-js/data-layer', () => ({
+  useGetUserPlatformMetadataQuery: () => ({
+    data: { metadata: { code_mode: { permission_mode: 'manual' } } },
+  }),
+  useUpdateUserPlatformMetadataMutation: () => [saveMetadata],
+}));
 
 const GENERATION = 'opencode-1';
 
@@ -84,11 +92,14 @@ describe('CodePermissionCards', () => {
     appInBackground.current = true;
     vi.clearAllMocks();
     invoke.mockResolvedValue(undefined);
+    saveMetadata.mockReturnValue({ unwrap: async () => ({}) });
+    localStorage.setItem('tenant', 'acme');
     (window as unknown as Record<string, unknown>).__TAURI__ = {};
   });
 
   afterEach(() => {
     delete (window as unknown as Record<string, unknown>).__TAURI__;
+    localStorage.removeItem('tenant');
   });
 
   it('renders nothing until the backend asks for permission', () => {
@@ -157,14 +168,26 @@ describe('CodePermissionCards', () => {
     );
 
     await waitFor(() =>
-      expect(invoke).toHaveBeenCalledWith('set_opencode_permission_mode', {
-        mode: 'auto',
+      expect(invoke).toHaveBeenCalledWith('opencode_permission_respond', {
+        requestId: 'perm-1',
+        optionId: 'allow-once',
       }),
     );
-    expect(invoke).toHaveBeenCalledWith('opencode_permission_respond', {
-      requestId: 'perm-1',
-      optionId: 'allow-once',
+    expect(invoke).toHaveBeenCalledWith('set_opencode_permission_mode', {
+      mode: 'auto',
     });
+    // Saved to the profile like a pick in the composer, so a computer with no
+    // mode saved starts on it too.
+    expect(saveMetadata).toHaveBeenCalledWith({
+      tenantKey: 'acme',
+      metadata: { code_mode: { permission_mode: 'auto' } },
+    });
+    const setModeCall = invoke.mock.calls.findIndex(
+      ([cmd]) => cmd === 'set_opencode_permission_mode',
+    );
+    expect(invoke.mock.invocationCallOrder[setModeCall]).toBeLessThan(
+      saveMetadata.mock.invocationCallOrder[0],
+    );
     expect(screen.queryByText('Run a shell command')).not.toBeInTheDocument();
     expect(renderHook(() => useApprovalMode()).result.current).toBe('auto');
   });
@@ -194,6 +217,7 @@ describe('CodePermissionCards', () => {
     expect(toast.error).toHaveBeenCalledWith(
       'The approval setting could not be saved. Code still uses the previous setting.',
     );
+    expect(saveMetadata).not.toHaveBeenCalled();
     expect(screen.queryByText('Run a shell command')).not.toBeInTheDocument();
     err.mockRestore();
   });

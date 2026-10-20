@@ -12,6 +12,7 @@ permissions = [
     "allow-get-locked-tenant",
     "allow-install-ollama",
     "allow-stop-ollama",
+    "allow-warm-up-local-chat",
     "allow-check-ollama-status",
     "allow-check-disk-space-for-model",
     "allow-download-phi3-model",
@@ -111,6 +112,12 @@ identifier = "allow-stop-ollama"
 description = "Enables stopping the Ollama model manager server"
 [permission.commands]
 allow = ["stop_ollama"]
+
+[[permission]]
+identifier = "allow-warm-up-local-chat"
+description = "Enables starting local chat in the background at launch"
+[permission.commands]
+allow = ["warm_up_local_chat"]
 
 [[permission]]
 identifier = "allow-check-ollama-status"
@@ -333,6 +340,12 @@ identifier = "allow-set-opencode-permission-mode"
 description = "Enables choosing whether Coding Mode asks before each operation or approves automatically"
 [permission.commands]
 allow = ["set_opencode_permission_mode"]
+
+[[permission]]
+identifier = "allow-seed-opencode-permission-mode"
+description = "Enables saving the approval mode chosen on the platform, only on a machine with none saved yet"
+[permission.commands]
+allow = ["seed_opencode_permission_mode"]
 
 [[permission]]
 identifier = "allow-remote-code-status"

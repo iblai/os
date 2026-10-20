@@ -769,9 +769,10 @@
     "memory": "记忆",
     "evals": "评估",
     "lti": "LTI",
-    "configurations": "配置",
+    "setup": "配置",
+    "policies": "策略",
     "integrations": "集成",
-    "runtime": "运行时",
+    "activity": "活动",
     "changeLanguage": "切换语言"
   },
   "headerProfileButton": {
@@ -2249,8 +2250,8 @@
     "cameraDenied": "相机访问被拒绝 — 请手动输入地址。",
     "notAPairingCode": "该二维码不是 Code 配对码。",
     "closeScanner": "关闭扫描器",
-    "scanHint": "将相机对准电脑上显示的配对二维码。",
-    "switchToAutomatic": "切换为自动批准"
+    "turnOffCode": "关闭代码",
+    "scanHint": "将相机对准电脑上显示的配对二维码。"
   },
   "chatCodePermissionCard": {
     "title": "代码模式需要你的许可",

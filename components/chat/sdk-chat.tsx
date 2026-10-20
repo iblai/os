@@ -17,7 +17,13 @@ import {
 } from '@iblai/iblai-js/web-containers/next';
 import { selectSessionId } from '@iblai/iblai-js/web-utils';
 
+import {
+  CodeApprovalsButton,
+  useApprovalMode,
+  useApprovalsOffered,
+} from '@/components/chat-input-form/code-approvals-button';
 import { CodingModeButton } from '@/components/chat-input-form/coding-mode-button';
+import { useApprovalModeChoice } from '@/components/chat-input-form/use-approval-mode-choice';
 import { useServiceWorker } from '@/components/service-worker-provider';
 import { useAccessingPublicRoute } from '@/hooks/use-anonymous-mentor';
 import { useBrowseRun } from '@/hooks/use-browse-run';
@@ -193,7 +199,7 @@ type Props = {
  * OS wiring for the SDK `Chat`. The chat UI and behaviour live in the SDK;
  * this wrapper only supplies identity, environment, the host-owned hooks
  * (paywall, 402 credits UX, Browse in the Chrome extension, service-worker
- * connectivity, the shared event bus) and the Tauri-only Code pill.
+ * connectivity, the shared event bus) and the Tauri-only Code controls.
  */
 export function SdkChat({
   mode = 'default',
@@ -228,7 +234,8 @@ export function SdkChat({
   const inExtensionPanel = useInExtensionPanel();
   const browse = useBrowseRun();
 
-  // Code mode (Tauri only): the pill and the skill sync it reports on.
+  // Code mode (Tauri only): the pill, the skill sync it reports on, and the
+  // approval mode its controls and the permission cards change.
   const inTauri = useInTauri();
   usePermissionChime(inTauri);
   const sessionId = useAppSelector(selectSessionId);
@@ -237,6 +244,9 @@ export function SdkChat({
     org: tenantKey,
     mentorUniqueId: mentorSettings?.mentorUniqueId,
   });
+  const approvalMode = useApprovalMode();
+  const approvalsOffered = useApprovalsOffered();
+  const { chooseMode } = useApprovalModeChoice(inTauri);
 
   const messages = useMessages() as Record<string, unknown>;
   const labels = useMemo(
@@ -293,6 +303,9 @@ export function SdkChat({
       stop: browse.stop,
     },
     suppressChatErrorToast: wasRecent402,
+    onSwitchToAutomatic: inTauri
+      ? () => chooseMode('auto', { quiet: true })
+      : undefined,
     isOnline: swStatus.isOnline,
     // Canvas (group: canvas): the OS GFM + KaTeX pipeline, so the canvas
     // editor/export/preview render tables and math like the OS canvas did.
@@ -336,8 +349,24 @@ export function SdkChat({
       showExploreMentors
       slots={{
         composerExtraControls: inTauri ? (
-          <CodingModeButton sessionId={sessionId} skillSync={skillSync} />
+          <CodingModeButton
+            sessionId={sessionId}
+            skillSync={skillSync}
+            approvalsSlot={null}
+          />
         ) : undefined,
+        // Rendered here rather than portaled from the pill: the SDK renders
+        // each slot once per composer and the canvas split mounts two, so one
+        // shared target would put both pills' buttons in the same composer.
+        // Passed only while a pill offers it, because the SDK's action row
+        // spaces its buttons with a gap that even an empty slot would take.
+        composerActionControls:
+          inTauri && approvalsOffered ? (
+            <CodeApprovalsButton
+              mode={approvalMode}
+              onChange={(mode) => void chooseMode(mode)}
+            />
+          ) : undefined,
       }}
     />
   );

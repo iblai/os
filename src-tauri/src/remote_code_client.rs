@@ -82,8 +82,9 @@ fn permission_mode(cfg: &HostConfig) -> &'static str {
 }
 
 /// The approval mode in force: read from disk once, then kept by
-/// `save_permission_mode`, so a request never reads the file while another
-/// chat is rewriting it.
+/// `save_permission_mode` and `seed_permission_mode` (both under the
+/// permissions lock), so a request never reads the file while another chat is
+/// rewriting it.
 fn phone_auto() -> &'static AtomicBool {
     static AUTO: OnceLock<AtomicBool> = OnceLock::new();
     AUTO.get_or_init(|| AtomicBool::new(permission_mode(&read_config()) == MODE_AUTO))
@@ -115,6 +116,60 @@ fn save_permission_mode(mode: &str) -> Result<Vec<(String, String)>, String> {
     } else {
         Vec::new()
     })
+}
+
+/// The desktop's `seed_opencode_permission_mode`: save the Ask Me the user
+/// chose on the platform only when this phone has no mode saved. A damaged or
+/// unreadable config already reads as Ask Me saved ([`read_config`]), so it is
+/// kept like any saved choice and nothing is written. Hands back the mode in
+/// force. Never takes a card out of the waiting ones: it can only switch to
+/// Ask Me.
+fn seed_permission_mode(mode: &str) -> Result<&'static str, String> {
+    if mode != MODE_AUTO && mode != MODE_MANUAL {
+        return Err(format!("unknown permission mode: {mode}"));
+    }
+    // The lock `save_permission_mode` holds, so a switch landing at the same
+    // time can't leave the flag disagreeing with the file.
+    let _switch = PENDING_PERMISSIONS.lock().expect("permissions lock");
+    let seeded = update_config_if(|cfg| {
+        // A platform Automatic is never saved: nothing saved already runs
+        // Automatic, and saving it would shut this phone to a later Ask Me.
+        if mode == MODE_AUTO || cfg.permission_mode.is_some() {
+            return false;
+        }
+        cfg.permission_mode = Some(MODE_MANUAL.to_string());
+        true
+    })?;
+    let auto = phone_auto();
+    if seeded {
+        auto.store(false, Ordering::SeqCst);
+    }
+    Ok(if auto.load(Ordering::SeqCst) {
+        MODE_AUTO
+    } else {
+        MODE_MANUAL
+    })
+}
+
+async fn allow_on_desktop(base: &str, pw: &str, waiting: Vec<(String, String)>) {
+    for (per_id, remote) in waiting {
+        let sent = post_json(
+            base,
+            pw,
+            &format!("/session/{remote}/permissions/{per_id}"),
+            &json!({ "response": "once" }),
+        )
+        .await;
+        // Put back what the desktop never got, so its card can still answer it
+        // and the turn can end.
+        if sent.is_err() {
+            PENDING_PERMISSIONS
+                .lock()
+                .expect("permissions lock")
+                .get_or_insert_with(HashMap::new)
+                .insert(per_id, remote);
+        }
+    }
 }
 
 /// Hard cap on one turn; a phone must never hold an SSE stream forever.
@@ -802,25 +857,14 @@ pub async fn set_opencode_permission_mode(mode: String) -> Result<(), String> {
     let Some((base, pw)) = desktop else {
         return Ok(());
     };
-    for (per_id, remote) in waiting {
-        let sent = post_json(
-            &base,
-            &pw,
-            &format!("/session/{remote}/permissions/{per_id}"),
-            &json!({ "response": "once" }),
-        )
-        .await;
-        // Put back what the desktop never got, so its card can still answer it
-        // and the turn can end.
-        if sent.is_err() {
-            PENDING_PERMISSIONS
-                .lock()
-                .expect("permissions lock")
-                .get_or_insert_with(HashMap::new)
-                .insert(per_id, remote);
-        }
-    }
+    allow_on_desktop(&base, &pw, waiting).await;
     Ok(())
+}
+
+#[cfg(any(target_os = "ios", target_os = "android"))]
+#[command]
+pub async fn seed_opencode_permission_mode(mode: String) -> Result<String, String> {
+    seed_permission_mode(&mode).map(str::to_string)
 }
 
 /// The workspace shown in the Code popover: this chat's chosen desktop folder,
@@ -2316,9 +2360,8 @@ mod tests {
 
     /// The bug this pins: `save_permission_mode` and a turn's `in_flight`
     /// bookkeeping each read the file, changed one field and wrote the whole
-    /// thing back, so a mode switched while a turn ran (the only time the
-    /// card's Switch to Automatic exists) was undone by that turn's own
-    /// start or end, and the next launch opened in the old mode.
+    /// thing back, so a mode switched while a turn ran was undone by that
+    /// turn's own start or end, and the next launch opened in the old mode.
     #[tokio::test]
     async fn a_mode_saved_mid_turn_survives_the_turns_own_bookkeeping() {
         let _serial = CONFIG_TEST_LOCK.lock().await;
@@ -2413,6 +2456,257 @@ mod tests {
         assert_eq!(mode(Some("auto")), MODE_AUTO);
         assert_eq!(mode(Some("manual")), MODE_MANUAL, "Ask Me only when chosen");
         assert_eq!(mode(Some("YOLO")), MODE_MANUAL, "a garbled value asks");
+    }
+
+    /// Puts the phone's process-wide approval flag back however the test ends.
+    struct RestorePhoneAuto(bool);
+
+    impl RestorePhoneAuto {
+        fn new() -> Self {
+            Self(phone_auto().load(Ordering::SeqCst))
+        }
+    }
+
+    impl Drop for RestorePhoneAuto {
+        fn drop(&mut self) {
+            phone_auto().store(self.0, Ordering::SeqCst);
+        }
+    }
+
+    fn config_snapshot() -> (Vec<u8>, std::time::SystemTime) {
+        let path = CONFIG_PATH.get().unwrap();
+        let modified = std::fs::metadata(path).unwrap().modified().unwrap();
+        (std::fs::read(path).unwrap(), modified)
+    }
+
+    /// Moved into the past first, so a rewrite can't keep the same timestamp.
+    fn backdated_config_snapshot() -> (Vec<u8>, std::time::SystemTime) {
+        let past = std::time::UNIX_EPOCH + std::time::Duration::from_secs(1_000_000_000);
+        std::fs::File::options()
+            .write(true)
+            .open(CONFIG_PATH.get().unwrap())
+            .unwrap()
+            .set_modified(past)
+            .unwrap();
+        config_snapshot()
+    }
+
+    /// A phone with no approval mode saved already runs Automatic, so the
+    /// platform's Automatic writes nothing and leaves the phone open to a later
+    /// Ask Me, which is saved and in force at once. A seed never takes a card
+    /// out of the waiting ones.
+    #[tokio::test]
+    async fn a_phone_with_no_mode_saved_takes_the_platform_choice() {
+        let _serial = CONFIG_TEST_LOCK.lock().await;
+        let _restore = RestorePhoneAuto::new();
+        test_config("http://127.0.0.1:9");
+        phone_auto().store(true, Ordering::SeqCst);
+
+        let before = backdated_config_snapshot();
+        assert_eq!(seed_permission_mode(MODE_AUTO).unwrap(), MODE_AUTO);
+        assert_eq!(
+            config_snapshot(),
+            before,
+            "nothing is written for Automatic"
+        );
+        assert!(
+            phone_auto().load(Ordering::SeqCst),
+            "Automatic stays in force"
+        );
+
+        assert_eq!(seed_permission_mode(MODE_MANUAL).unwrap(), MODE_MANUAL);
+        let cfg = read_config();
+        assert_eq!(cfg.permission_mode.as_deref(), Some(MODE_MANUAL));
+        assert_eq!(
+            cfg.url.as_deref(),
+            Some("http://127.0.0.1:9"),
+            "the pairing stays"
+        );
+        assert!(!phone_auto().load(Ordering::SeqCst), "Ask Me is in force");
+
+        assert!(
+            !queue_unless_auto("per-seed", "ses-seed"),
+            "Ask Me queues it"
+        );
+        for platform in [MODE_AUTO, MODE_MANUAL] {
+            assert_eq!(seed_permission_mode(platform).unwrap(), MODE_MANUAL);
+        }
+        let still_waiting = PENDING_PERMISSIONS
+            .lock()
+            .unwrap()
+            .as_mut()
+            .and_then(|m| m.remove("per-seed"));
+        assert_eq!(
+            still_waiting.as_deref(),
+            Some("ses-seed"),
+            "the card is still waiting"
+        );
+        test_config("http://127.0.0.1:9");
+    }
+
+    /// A mode saved on this phone is its own choice: Automatic, Ask Me, a
+    /// garbled value or a damaged config (both ask) is never replaced by the
+    /// platform's, and the config is not even rewritten. A mode the app
+    /// doesn't know is refused.
+    #[tokio::test]
+    async fn a_mode_saved_on_the_phone_is_never_replaced_by_the_platform_choice() {
+        let _serial = CONFIG_TEST_LOCK.lock().await;
+        let _restore = RestorePhoneAuto::new();
+        for saved in [MODE_AUTO, MODE_MANUAL, "YOLO"] {
+            test_config("http://127.0.0.1:9");
+            let mut cfg = read_config();
+            cfg.permission_mode = Some(saved.to_string());
+            write_config(&cfg).unwrap();
+            let in_force = permission_mode(&read_config());
+            phone_auto().store(in_force == MODE_AUTO, Ordering::SeqCst);
+            let before = backdated_config_snapshot();
+            for platform in [MODE_AUTO, MODE_MANUAL] {
+                let now = seed_permission_mode(platform).unwrap();
+                assert_eq!(now, in_force, "saved {saved}, platform {platform}");
+            }
+            assert_eq!(config_snapshot(), before, "saved {saved}: config untouched");
+        }
+
+        std::fs::write(CONFIG_PATH.get().unwrap(), "{\"url\": \"http://127.0").unwrap();
+        phone_auto().store(false, Ordering::SeqCst);
+        let before = backdated_config_snapshot();
+        assert_eq!(
+            seed_permission_mode(MODE_MANUAL).unwrap(),
+            MODE_MANUAL,
+            "a config cut short asks, and keeps asking"
+        );
+        assert_eq!(config_snapshot(), before);
+
+        test_config("http://127.0.0.1:9");
+        let before = backdated_config_snapshot();
+        let err = seed_permission_mode("YOLO").unwrap_err();
+        assert!(err.contains("YOLO"), "{err}");
+        assert_eq!(
+            config_snapshot(),
+            before,
+            "nothing saved for an unknown mode"
+        );
+    }
+
+    /// A config this process may not read is kept like a damaged one: the
+    /// platform's choice is not saved over it and nothing is written.
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn the_platform_choice_is_never_saved_over_an_unreadable_config() {
+        use std::os::unix::fs::PermissionsExt;
+        struct Readable(PathBuf);
+        impl Drop for Readable {
+            fn drop(&mut self) {
+                let _ = std::fs::set_permissions(&self.0, std::fs::Permissions::from_mode(0o600));
+            }
+        }
+
+        let _serial = CONFIG_TEST_LOCK.lock().await;
+        let _restore = RestorePhoneAuto::new();
+        test_config("http://127.0.0.1:9");
+        let path = CONFIG_PATH.get().unwrap().clone();
+        let original = std::fs::read(&path).unwrap();
+        phone_auto().store(false, Ordering::SeqCst);
+        {
+            std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o000)).unwrap();
+            let _readable_after = Readable(path.clone());
+            if std::fs::read(&path).is_ok() {
+                eprintln!("skipped: this process reads a 0o000 file anyway (root?)");
+                return;
+            }
+            assert_eq!(seed_permission_mode(MODE_MANUAL).unwrap(), MODE_MANUAL);
+        }
+        assert_eq!(std::fs::read(&path).unwrap(), original);
+        test_config("http://127.0.0.1:9");
+    }
+
+    /// An answer the desktop never got is put back among the waiting ones, so
+    /// its card can still answer it and the turn can end; one the desktop took
+    /// is gone.
+    #[tokio::test]
+    async fn answers_the_desktop_never_got_are_put_back_for_their_cards() {
+        fn clear_pending() {
+            *PENDING_PERMISSIONS.lock().unwrap() = None;
+        }
+        struct ClearAfter;
+        impl Drop for ClearAfter {
+            fn drop(&mut self) {
+                clear_pending();
+            }
+        }
+        let pending = || {
+            PENDING_PERMISSIONS
+                .lock()
+                .unwrap()
+                .clone()
+                .unwrap_or_default()
+        };
+        let entry = |per: &str, ses: &str| (per.to_string(), ses.to_string());
+
+        let _serial = CONFIG_TEST_LOCK.lock().await;
+        clear_pending();
+        let _clear_after = ClearAfter;
+
+        let dead = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let dead_url = format!("http://{}", dead.local_addr().unwrap());
+        drop(dead);
+        allow_on_desktop(
+            &dead_url,
+            "pw",
+            vec![entry("per_a", "ses_a"), entry("per_b", "ses_b")],
+        )
+        .await;
+        assert_eq!(
+            pending(),
+            HashMap::from([entry("per_a", "ses_a"), entry("per_b", "ses_b")]),
+            "a desktop that is gone got none of them"
+        );
+        clear_pending();
+
+        let got = Arc::new(Mutex::new(Vec::new()));
+        let seen = got.clone();
+        let app = Router::new().route(
+            "/session/{sid}/permissions/{pid}",
+            post(
+                move |axum::extract::Path((sid, pid)): axum::extract::Path<(String, String)>,
+                      Json(body): Json<Value>| {
+                    let seen = seen.clone();
+                    async move {
+                        let ok = pid == "per_ok";
+                        seen.lock()
+                            .unwrap()
+                            .push((format!("/session/{sid}/permissions/{pid}"), body));
+                        if ok {
+                            (axum::http::StatusCode::OK, Json(json!(true)))
+                        } else {
+                            (
+                                axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                                Json(json!("refused")),
+                            )
+                        }
+                    }
+                },
+            ),
+        );
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let url = format!("http://{}", listener.local_addr().unwrap());
+        tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
+
+        allow_on_desktop(
+            &url,
+            "pw",
+            vec![entry("per_ok", "ses_ok"), entry("per_bad", "ses_bad")],
+        )
+        .await;
+        assert_eq!(
+            pending(),
+            HashMap::from([entry("per_bad", "ses_bad")]),
+            "only the answer the desktop refused is put back"
+        );
+        assert!(got.lock().unwrap().contains(&(
+            "/session/ses_ok/permissions/per_ok".to_string(),
+            json!({ "response": "once" })
+        )));
     }
 
     #[test]

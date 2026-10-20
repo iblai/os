@@ -893,6 +893,15 @@ async fn stop_ollama(app: AppHandle) -> Result<(), String> {
     Ok(())
 }
 
+/// Starts local chat in the background at launch while Local Models is on —
+/// a switch only the webview knows, so it asks. Mobile chats against its
+/// embedded server directly, with no bridge to start.
+#[command]
+async fn warm_up_local_chat() {
+    #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+    model_manager::warm_up_local_chat().await;
+}
+
 /// Emit an app-wide event to the frontend WITHOUT racing the main thread's
 /// webview-manager mutex.
 ///
@@ -1477,11 +1486,9 @@ async fn ollama_chat(
     let model = model.unwrap_or_else(|| "phi3:mini".to_string());
     #[cfg(any(target_os = "ios", target_os = "android"))]
     crate::local_llm::ensure_answering().await?;
-    let base = model_manager::chat_base_url(tool_support.unwrap_or(false))?;
-    let ollama_url = format!("{base}/api/chat");
 
     println!(
-        "[MentorAI] Proxying Ollama chat ({} messages) from {base}",
+        "[MentorAI] Proxying Ollama chat ({} messages)",
         messages.len()
     );
 
@@ -1496,13 +1503,8 @@ async fn ollama_chat(
         "stream": false
     });
 
-    let response = client
-        .post(ollama_url)
-        .header("Content-Type", "application/json")
-        .json(&body)
-        .send()
-        .await
-        .map_err(|e| format!("Failed to connect to Ollama: {}. Is Ollama running?", e))?;
+    let response =
+        model_manager::post_local_chat(&client, &body, tool_support.unwrap_or(false)).await?;
 
     if !response.status().is_success() {
         let status = response.status();
@@ -1532,11 +1534,9 @@ async fn ollama_chat_stream(
     let model = model.unwrap_or_else(|| "phi3:mini".to_string());
     #[cfg(any(target_os = "ios", target_os = "android"))]
     crate::local_llm::ensure_answering().await?;
-    let base = model_manager::chat_base_url(tool_support.unwrap_or(false))?;
-    let ollama_url = format!("{base}/api/chat");
 
     println!(
-        "[MentorAI] Streaming Ollama chat ({} messages) from {base}",
+        "[MentorAI] Streaming Ollama chat ({} messages)",
         messages.len()
     );
 
@@ -1555,13 +1555,8 @@ async fn ollama_chat_stream(
         "stream": true
     });
 
-    let response = client
-        .post(ollama_url)
-        .header("Content-Type", "application/json")
-        .json(&body)
-        .send()
-        .await
-        .map_err(|e| format!("Failed to connect to Ollama: {}. Is Ollama running?", e))?;
+    let response =
+        model_manager::post_local_chat(&client, &body, tool_support.unwrap_or(false)).await?;
 
     if !response.status().is_success() {
         let status = response.status();
@@ -3146,6 +3141,7 @@ pub fn run() {
     let builder = builder.invoke_handler(tauri::generate_handler![
         install_ollama,
         stop_ollama,
+        warm_up_local_chat,
         check_ollama_status,
         get_mcp_config_path,
         cua_driver_installer::install_cua_driver,
@@ -3189,6 +3185,7 @@ pub fn run() {
         opencode_acp::new_opencode_workspace,
         opencode_acp::get_opencode_permission_mode,
         opencode_acp::set_opencode_permission_mode,
+        opencode_acp::seed_opencode_permission_mode,
         opencode_acp::set_opencode_skills,
         opencode_acp::begin_opencode_skills_sync,
         opencode_installer::install_opencode,
@@ -3214,6 +3211,7 @@ pub fn run() {
     let builder = builder.invoke_handler(tauri::generate_handler![
         install_ollama,
         stop_ollama,
+        warm_up_local_chat,
         check_ollama_status,
         check_disk_space_for_model,
         get_system_memory,
@@ -3239,6 +3237,7 @@ pub fn run() {
         remote_code_client::opencode_permission_respond,
         remote_code_client::get_opencode_permission_mode,
         remote_code_client::set_opencode_permission_mode,
+        remote_code_client::seed_opencode_permission_mode,
         remote_code_client::get_opencode_workspace,
         remote_code_client::set_opencode_workspace,
         remote_code_client::new_opencode_workspace,
@@ -3258,6 +3257,7 @@ pub fn run() {
             #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
             if let tauri::RunEvent::Exit = _event {
                 remote_code::shutdown_sync();
+                mcp_bridge_manager::shutdown();
             }
             // Phone back in the foreground: the OS reclaims a suspended
             // app's sockets, so a Code turn streaming from the desktop

@@ -32,6 +32,13 @@ vi.mock('@iblai/iblai-js/web-containers', () => ({
       size: '3.3 GB',
       tool_support: false,
     },
+    {
+      name: 'Ministral 3 14B',
+      provider: 'Mistral',
+      id: 'ministral-3:14b',
+      size: '9.1 GB',
+      tool_support: true,
+    },
   ],
 }));
 
@@ -62,6 +69,32 @@ describe('useSelectedLocalModel', () => {
     expect(result.current.model?.name).toBe('Qwen 3');
     expect(result.current.modelId).toBe('Qwen3:latest');
   });
+
+  it('never resolves to a different size of the same model, nor writes its tool support', () => {
+    sdk.enabled = true;
+    sdk.modelId = 'ministral-3:8b';
+    sdk.toolSupport = false;
+    const { result } = renderHook(() => useSelectedLocalModel());
+
+    expect(result.current).toEqual({
+      isLocal: true,
+      model: null,
+      modelId: 'ministral-3:8b',
+    });
+    expect(sdk.setToolSupport).not.toHaveBeenCalled();
+  });
+
+  it.each(['ministral-3:14b', 'Ministral-3', 'ministral-3:latest'])(
+    'resolves a stored "%s" to the tagged catalog entry',
+    (stored) => {
+      sdk.enabled = true;
+      sdk.modelId = stored;
+      sdk.toolSupport = true;
+      const { result } = renderHook(() => useSelectedLocalModel());
+
+      expect(result.current.model?.id).toBe('ministral-3:14b');
+    },
+  );
 
   it('keeps the raw id, with no catalog model, for an id the catalog does not know', () => {
     sdk.enabled = true;

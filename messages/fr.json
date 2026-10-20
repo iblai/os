@@ -769,9 +769,10 @@
     "memory": "Mémoire",
     "evals": "Évaluations",
     "lti": "LTI",
-    "configurations": "Configurations",
+    "setup": "Configuration",
+    "policies": "Politiques",
     "integrations": "Intégrations",
-    "runtime": "Exécution",
+    "activity": "Activité",
     "changeLanguage": "Changer de langue"
   },
   "headerProfileButton": {
@@ -2249,8 +2250,8 @@
     "cameraDenied": "Accès à la caméra refusé — saisissez l'adresse manuellement.",
     "notAPairingCode": "Ce code QR n'est pas un code d'appairage Code.",
     "closeScanner": "Fermer le scanner",
-    "scanHint": "Pointez la caméra vers le code QR d'appairage affiché sur votre ordinateur.",
-    "switchToAutomatic": "Passer en Automatique"
+    "turnOffCode": "Désactiver Code",
+    "scanHint": "Pointez la caméra vers le code QR d'appairage affiché sur votre ordinateur."
   },
   "chatCodePermissionCard": {
     "title": "Code a besoin de votre autorisation",

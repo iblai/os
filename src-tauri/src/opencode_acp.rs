@@ -267,33 +267,112 @@ pub(crate) async fn push_config_option(
     Ok(())
 }
 
+fn parse_permission_mode(mode: &str) -> Result<bool, String> {
+    match mode {
+        "auto" => Ok(true),
+        "manual" => Ok(false),
+        // Loud rather than defaulting: a typo here would silently pick a
+        // security posture on the user's behalf.
+        other => Err(format!("unknown permission mode: {other}")),
+    }
+}
+
+/// Held from saving an approval mode through moving the in-memory flag and
+/// sweeping the cards, so two changes landing together can't leave the flag
+/// disagreeing with the saved file. Never held across a Codex pin, which can
+/// take 10s per session: a switch to Ask Me must not wait behind one.
+static MODE_CHANGE: Mutex<()> = Mutex::const_new(());
+
+/// Serializes every Codex mode pin, each sending the flag as it is once its
+/// turn comes, so the last pin a session gets is the mode in force.
+static CODEX_PIN: Mutex<()> = Mutex::const_new(());
+
 /// Save the approval mode and apply it to running sessions immediately.
 #[command]
 pub async fn set_opencode_permission_mode(mode: String) -> Result<(), String> {
-    let auto = match mode.as_str() {
-        "auto" => true,
-        "manual" => false,
-        // Loud rather than defaulting: a typo here would silently pick a
-        // security posture on the user's behalf.
-        other => return Err(format!("unknown permission mode: {other}")),
+    let auto = parse_permission_mode(&mode)?;
+    let was_auto = {
+        let _change = MODE_CHANGE.lock().await;
+        update_settings(|settings| {
+            settings.insert(SETTINGS_PERMISSION_MODE.to_string(), json!(mode));
+        })?;
+        apply_permission_mode(auto).await
     };
-    update_settings(|settings| {
-        settings.insert(SETTINGS_PERMISSION_MODE.to_string(), json!(mode));
-    })?;
+    repin_codex_sessions(auto, was_auto && !auto).await;
+    Ok(())
+}
+
+/// Save the Ask Me the user chose on the platform, but only on a machine with
+/// no mode saved: there, nothing saved would otherwise run Automatic for
+/// someone who chose Ask Me. Any saved value — a garbled one included, which
+/// reads as Ask Me — is this machine's own choice and stays, with the file
+/// left untouched. Returns the mode in force, as
+/// [`get_opencode_permission_mode`] reports it.
+#[command]
+pub async fn seed_opencode_permission_mode(mode: String) -> Result<String, String> {
+    let auto = parse_permission_mode(&mode)?;
+    let was_auto = {
+        let _change = MODE_CHANGE.lock().await;
+        let seeded = update_settings_if(|settings| {
+            // A platform Automatic is never saved: nothing saved already runs
+            // Automatic, and saving it would shut this machine to a later Ask Me
+            // chosen on another machine or tenant.
+            if auto || settings.contains_key(SETTINGS_PERMISSION_MODE) {
+                return false;
+            }
+            settings.insert(SETTINGS_PERMISSION_MODE.to_string(), json!(mode));
+            true
+        })?;
+        if seeded && permission_auto().load(Ordering::SeqCst) != auto {
+            Some(apply_permission_mode(auto).await)
+        } else {
+            None
+        }
+    };
+    if let Some(was_auto) = was_auto {
+        repin_codex_sessions(auto, was_auto && !auto).await;
+    }
+    Ok(permission_mode().to_string())
+}
+
+/// Move the flag and, on a switch to Automatic, answer the waiting cards.
+/// Hands back whether Automatic was in force before.
+async fn apply_permission_mode(auto: bool) -> bool {
     let was_auto = permission_auto().swap(auto, Ordering::SeqCst);
     if auto {
         allow_all_pending().await;
     }
-    // Codex carries its own approval mode (see `codex_mode`): repoint every live
-    // Codex session so the flip applies mid-session; one that doesn't confirm
-    // is closed (`pin_codex_mode`). opencode and Claude need nothing — they are
-    // governed by how this app answers their requests.
+    was_auto
+}
+
+/// Codex carries its own approval mode (see `codex_mode`): repoint every live
+/// Codex session so the flip applies mid-session; one that doesn't confirm is
+/// closed (`pin_codex_mode`). opencode and Claude need nothing — they are
+/// governed by how this app answers their requests.
+async fn repin_codex_sessions(auto: bool, stop_running: bool) {
+    let _pin = CODEX_PIN.lock().await;
     for (session_id, s) in live_sessions(Backend::Codex).await {
-        if let Err(e) = pin_codex_mode(&session_id, &s, auto, was_auto && !auto).await {
+        // A newer change moved the flag meanwhile; its own repin follows.
+        if permission_auto().load(Ordering::SeqCst) != auto {
+            return;
+        }
+        if let Err(e) = pin_codex_mode(&session_id, &s, auto, stop_running).await {
             crate::telemetry::report("[code-agent] could not pin the Codex approval mode", e);
         }
     }
-    Ok(())
+}
+
+/// Pin a just-spawned Codex session to the mode in force. Waits for any pin
+/// already running, so a switch made during the spawn can't be overtaken.
+async fn pin_new_codex_session(session_id: &str, s: &Session) -> Result<(), String> {
+    let _pin = CODEX_PIN.lock().await;
+    pin_codex_mode(
+        session_id,
+        s,
+        permission_auto().load(Ordering::SeqCst),
+        false,
+    )
+    .await
 }
 
 /// Point a live Codex session at the approval mode. codex-acp applies a mode
@@ -533,7 +612,9 @@ const STRIPPED_ENV_NAMES: &[&str] = &["CLAUDECODE", "MODEL_PROVIDER", "DEFAULT_A
 
 /// The subset of `keys` [`strip_agent_env`] removes — pure, so the test can
 /// feed it a fixed list.
-fn stripped_env(keys: impl Iterator<Item = std::ffi::OsString>) -> Vec<std::ffi::OsString> {
+pub(crate) fn stripped_env(
+    keys: impl Iterator<Item = std::ffi::OsString>,
+) -> Vec<std::ffi::OsString> {
     keys.filter(|k| {
         let k = k.to_string_lossy();
         STRIPPED_ENV_PREFIXES.iter().any(|p| k.starts_with(p))
@@ -569,7 +650,7 @@ fn create_command(program: &str) -> Command {
 }
 
 /// Home directory (HOME on unix, USERPROFILE on Windows).
-fn home_dir() -> Option<PathBuf> {
+pub(crate) fn home_dir() -> Option<PathBuf> {
     std::env::var_os("HOME")
         .or_else(|| std::env::var_os("USERPROFILE"))
         .map(PathBuf::from)
@@ -637,6 +718,44 @@ pub(crate) fn data_dir_lock() -> std::sync::MutexGuard<'static, ()> {
     L.lock().unwrap_or_else(|e| e.into_inner())
 }
 
+/// A fresh path no sandbox may write, for tests that run the real wrapper:
+/// this crate's `target` folder, which any test runner can write, unless the
+/// checkout itself sits under a temp root; then the real home.
+#[cfg(all(test, unix))]
+pub(crate) fn outside_the_sandbox(tag: &str) -> PathBuf {
+    let nanos = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    let name = format!("serve-sbx-{tag}-{}-{nanos}", std::process::id());
+    let manifest = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let manifest = manifest
+        .canonicalize()
+        .unwrap_or_else(|_| manifest.to_path_buf());
+    let mut temp_roots: Vec<PathBuf> = [
+        "/tmp",
+        "/var/tmp",
+        "/private/tmp",
+        "/private/var/tmp",
+        "/private/var/folders",
+    ]
+    .iter()
+    .map(PathBuf::from)
+    .collect();
+    temp_roots.extend(std::env::var_os("TMPDIR").map(PathBuf::from));
+    temp_roots.push(std::env::temp_dir());
+    let in_temp = temp_roots.iter().any(|t| {
+        manifest.starts_with(t) || t.canonicalize().is_ok_and(|t| manifest.starts_with(t))
+    });
+    if in_temp {
+        home_dir()
+            .expect("a home dir")
+            .join(format!(".iblai-{name}"))
+    } else {
+        manifest.join("target").join(name)
+    }
+}
+
 /// A test's own data dir: takes [`data_dir_lock`], points `XDG_DATA_HOME` at
 /// a fresh `temp_dir()/<tag>-<pid>`, and on drop — a panic included, unlike
 /// the restore-by-hand pattern — puts the env back and removes the dir. The
@@ -674,6 +793,13 @@ impl Drop for ScratchDataDir {
         }
         let _ = std::fs::remove_dir_all(&self.path);
     }
+}
+
+/// Every folder Code makes for a chat or a phone. The phone's serve runs with
+/// this whole root as its sandbox workspace, so a phone turn can change files
+/// here but not elsewhere in the home.
+pub(crate) fn workspaces_root() -> PathBuf {
+    iblai_data_dir().join("workspaces")
 }
 
 /// Managed opencode binary: `~/.local/share/iblai/bin/opencode[.exe]`.
@@ -776,12 +902,15 @@ pub fn augmented_path() -> std::ffi::OsString {
 /// Write-allowed dirs, relative to `$HOME`, pre-created when missing
 /// ([`ensure_write_dirs`]) — Code can't function without them. `.cache` is the
 /// umbrella every XDG-caching tool shares (pip, pnpm, corepack, uv,
-/// go-build…); `.local/share/opencode` is opencode's own state.
+/// go-build…); `.local/share/opencode` and `.local/state/opencode` are
+/// opencode's own state — it creates the state dir at startup and exits with
+/// EPERM when it can't, and `serve` keeps its locks there.
 const WRITE_DIRS_CORE: &[&str] = &[
     ".cache",
     ".npm",
     ".local/share/pnpm",
     ".local/share/opencode",
+    ".local/state/opencode",
 ];
 
 /// macOS extras: the native caches root and the mac pnpm store.
@@ -1033,9 +1162,9 @@ fn sbpl_quote(p: &Path) -> String {
 
 /// SBPL profile for `sandbox-exec` on macOS: allow everything, deny ALL
 /// writes, re-allow them for the write list, and deny the real credential
-/// paths outright. Later rules win in SBPL, so the order IS the policy — the
-/// trailing secrets deny keeps `~/.cargo/credentials.toml` blocked inside the
-/// allowed `~/.cargo`.
+/// paths outright. Among rules for the same operation the later one wins, so
+/// the order IS the policy — the trailing secrets deny keeps
+/// `~/.cargo/credentials.toml` blocked inside the allowed `~/.cargo`.
 ///
 /// sandbox-exec can only deny (EPERM) — the fake-empty view comes from the
 /// decoy home ([`build_decoy_home`]); the secret denies are the enforcement
@@ -1087,7 +1216,11 @@ fn sandbox_profile_macos(
         p.push_str(&sbpl_quote(&home.join(rel)));
         p.push(')');
     }
-    p.push_str(")\n(deny file*");
+    // `file-write*` named on its own: a rule for a narrower operation beats a
+    // wildcard one whatever the order, so a bare `file*` deny lost to the
+    // `file-write*` allow above — it hid `~/.cargo/credentials.toml` from
+    // reads, but the agent could still overwrite, rename or create it.
+    p.push_str(")\n(deny file* file-write*");
     for rel in SECRET_DIRS.iter().chain(SECRET_DIRS_MACOS) {
         if backend.own().contains(rel) || backend.own_macos().contains(rel) {
             continue;
@@ -1117,6 +1250,20 @@ fn sandbox_profile_macos(
         }
         p.push_str(")\n");
     }
+    // The workspace and config home themselves can't be removed, renamed or
+    // replaced, only what is in them, as on Linux where they are mount
+    // points. The phone's workspace is the whole workspaces root: a turn that
+    // swapped it for a link would have the unsandboxed app create chat
+    // folders and `git init` wherever the link points. Create and unlink, not
+    // `file-write*`: the template skill's `cp -a <template>/. .` sets the
+    // times and xattrs of a desktop chat's own folder.
+    p.push_str("(deny file-write-create file-write-unlink");
+    for abs in [workspace, config_home] {
+        p.push_str("\n  (literal ");
+        p.push_str(&sbpl_quote(abs));
+        p.push(')');
+    }
+    p.push_str(")\n");
     p
 }
 
@@ -1205,53 +1352,119 @@ pub fn sandbox_ready() -> bool {
     true
 }
 
-/// The sandboxed Command for a session's agent spawn: the wrapper program plus
-/// its sandbox argv for `backend`, ending where the agent program goes. The
-/// caller appends the program and its args, then layers cwd, env and stdio on
-/// top.
-fn sandboxed_command(
-    _session_id: &str,
-    workspace: &Path,
+/// Why Code can't run on this machine, in words for the person using it, or
+/// `None` when it can. Desktop chats and phone Code share it: neither may run
+/// outside the OS sandbox.
+pub(crate) fn code_unavailable() -> Option<&'static str> {
+    unavailable_reason(
+        crate::opencode_installer::is_sandboxed(),
+        cfg!(target_os = "windows"),
+        sandbox_ready(),
+    )
+}
+
+fn unavailable_reason(app_store: bool, windows: bool, sandbox_ready: bool) -> Option<&'static str> {
+    if app_store {
+        return Some("Code isn't available in the sandboxed Mac App Store build.");
+    }
+    if windows {
+        return Some("Code isn't available on Windows.");
+    }
+    if !sandbox_ready {
+        return Some(
+            "Code needs bubblewrap (bwrap) — install it with your package manager, then reopen the app.",
+        );
+    }
+    None
+}
+
+/// The three places the sandbox policy is built around. Named fields, not
+/// positional `&Path`s: a swapped workspace and config home still compiles,
+/// and would build the decoy home inside the user's project.
+pub(crate) struct SandboxPaths {
+    pub(crate) home: PathBuf,
+    pub(crate) workspace: PathBuf,
+    pub(crate) config_home: PathBuf,
+}
+
+/// The OS sandbox around one agent process: the wrapper program and its argv
+/// (the confined program and its args go after them) plus the env the wrapper
+/// needs. The one policy for desktop chats ([`sandboxed_command`]) and the
+/// phone's `opencode serve` (`remote_code`, a std `Command`).
+pub(crate) struct SandboxWrapper {
+    pub(crate) program: &'static str,
+    pub(crate) args: Vec<String>,
+    pub(crate) env: Vec<(&'static str, PathBuf)>,
+}
+
+pub(crate) fn sandbox_wrapper(
+    paths: &SandboxPaths,
     backend: Backend,
-) -> Result<Command, String> {
+) -> Result<SandboxWrapper, String> {
+    let SandboxPaths {
+        home,
+        workspace,
+        config_home,
+    } = paths;
     #[cfg(target_os = "linux")]
     {
-        let home = home_dir().unwrap_or_default();
-        ensure_write_dirs(&home);
-        freeze_missing(&home, backend)?;
+        ensure_write_dirs(home);
+        freeze_missing(home, backend)?;
         let tmpdir = std::env::var_os("TMPDIR").map(PathBuf::from);
-        let mut cmd = create_command("bwrap");
-        cmd.args(bwrap_args(
-            &home,
-            workspace,
-            &config_home(_session_id),
-            tmpdir.as_deref(),
-            backend,
-        ));
-        return Ok(cmd);
+        return Ok(SandboxWrapper {
+            program: "bwrap",
+            args: bwrap_args(home, workspace, config_home, tmpdir.as_deref(), backend),
+            env: Vec::new(),
+        });
     }
     #[cfg(target_os = "macos")]
     {
-        let home = home_dir().unwrap_or_default();
-        ensure_write_dirs(&home);
+        ensure_write_dirs(home);
         // Named so `echo $HOME` doesn't give the game away.
-        let fake_home = config_home(_session_id).join("code-mode-home");
-        build_decoy_home(&home, &fake_home, backend)?;
-        let mut cmd = create_command("/usr/bin/sandbox-exec");
-        cmd.args([
-            "-p",
-            &sandbox_profile_macos(&home, workspace, &config_home(_session_id), backend),
-        ]);
-        // The fake layer: $HOME-respecting tools see the fake home; the SBPL
-        // denies above catch anything that resolves the real one.
-        cmd.env("HOME", fake_home);
-        return Ok(cmd);
+        let fake_home = config_home.join("code-mode-home");
+        build_decoy_home(home, &fake_home, backend)?;
+        return Ok(SandboxWrapper {
+            program: "/usr/bin/sandbox-exec",
+            args: vec![
+                "-p".to_string(),
+                sandbox_profile_macos(home, workspace, config_home, backend),
+            ],
+            // The fake layer: $HOME-respecting tools see the fake home; the
+            // SBPL denies catch anything that resolves the real one.
+            env: vec![("HOME", fake_home)],
+        });
     }
     #[cfg(target_os = "windows")]
     {
-        let _ = (workspace, backend);
+        let _ = (home, workspace, config_home, backend);
         Err("Code isn't available on Windows.".to_string())
     }
+}
+
+fn session_sandbox_paths(session_id: &str, workspace: &Path) -> SandboxPaths {
+    SandboxPaths {
+        home: home_dir().unwrap_or_default(),
+        workspace: workspace.to_path_buf(),
+        config_home: config_home(session_id),
+    }
+}
+
+/// The sandboxed Command for a session's agent spawn, ending where the agent
+/// program goes. The caller appends the program and its args, then layers cwd,
+/// env and stdio on top.
+fn sandboxed_command(
+    session_id: &str,
+    workspace: &Path,
+    backend: Backend,
+) -> Result<Command, String> {
+    sandboxed_command_in(&session_sandbox_paths(session_id, workspace), backend)
+}
+
+fn sandboxed_command_in(paths: &SandboxPaths, backend: Backend) -> Result<Command, String> {
+    let wrapper = sandbox_wrapper(paths, backend)?;
+    let mut cmd = create_command(wrapper.program);
+    cmd.args(&wrapper.args).envs(wrapper.env);
+    Ok(cmd)
 }
 
 /// Chat → workspace folder, persisted as `~/.local/share/iblai/workspaces.json`.
@@ -1355,6 +1568,20 @@ pub(crate) fn update_settings<T>(
     Ok(out)
 }
 
+/// Same, for a change that may have nothing to do: `change` reports whether
+/// it touched anything, and the file is only rewritten when it did.
+fn update_settings_if(
+    change: impl FnOnce(&mut serde_json::Map<String, Value>) -> bool,
+) -> Result<bool, String> {
+    let _serial = SETTINGS_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+    let mut settings = try_read_settings()?;
+    if !change(&mut settings) {
+        return Ok(false);
+    }
+    write_settings(&settings)?;
+    Ok(true)
+}
+
 pub(crate) fn write_settings(map: &serde_json::Map<String, Value>) -> Result<(), String> {
     let f = settings_file();
     if let Some(parent) = f.parent() {
@@ -1434,12 +1661,15 @@ fn is_empty_project(dir: &Path) -> bool {
 }
 
 /// The first (name-sorted, for determinism) recyclable workspace under `root`.
+/// A link is never one: the phone's sandboxed serve can write the whole root,
+/// and a link it leaves there would hand the next chat its target.
 fn find_empty_workspace(root: &Path) -> Option<PathBuf> {
     let mut candidates: Vec<PathBuf> = std::fs::read_dir(root)
         .ok()?
         .flatten()
+        .filter(|e| e.file_type().is_ok_and(|t| t.is_dir()))
         .map(|e| e.path())
-        .filter(|p| p.is_dir() && is_empty_project(p))
+        .filter(|p| is_empty_project(p))
         .collect();
     candidates.sort();
     candidates.into_iter().next()
@@ -1458,7 +1688,7 @@ pub fn resolve_workspace(session_id: &str) -> PathBuf {
             return PathBuf::from(path);
         }
     }
-    let root = iblai_data_dir().join("workspaces");
+    let root = workspaces_root();
     if let Some(dir) = find_empty_workspace(&root) {
         map.insert(session_id.to_string(), json!(dir.to_string_lossy()));
         let _ = write_workspace_map(&map);
@@ -1518,7 +1748,7 @@ fn claimed_workspaces() -> Vec<String> {
 /// Collisions are astronomically unlikely but cheap to rule out, and one would
 /// silently hand two owners the same folder.
 fn mint_workspace_dir(taken: &[String]) -> PathBuf {
-    let root = iblai_data_dir().join("workspaces");
+    let root = workspaces_root();
     std::iter::repeat_with(workspace_slug)
         .map(|slug| root.join(slug))
         .find(|d| !d.exists() && !taken.iter().any(|t| Path::new(t) == d))
@@ -1560,7 +1790,7 @@ fn mentor_workspace(tenant: &str, mentor: &str) -> PathBuf {
     // `resolve_workspace` does it: otherwise every launch that never writes
     // anything strands one more empty folder.
     let taken = claimed_workspaces();
-    let root = iblai_data_dir().join("workspaces");
+    let root = workspaces_root();
     let dir = find_empty_workspace(&root)
         .filter(|d| !taken.iter().any(|t| Path::new(t) == d))
         .unwrap_or_else(|| mint_workspace_dir(&taken));
@@ -1700,7 +1930,24 @@ pub async fn new_opencode_workspace(
 /// git. The snapshots themselves were revert-safety for the auto-approve era — now that
 /// every write is individually approved they only added noise to the user's history, and
 /// two concurrent sessions would have collided on `.git/index.lock`.
+///
+/// A link or file sitting where a folder of the managed root should be is
+/// replaced by a real folder (its target is never touched): the phone's
+/// sandboxed serve can write the whole root, `git` here runs outside any
+/// sandbox, and the folder becomes the next chat's writable workspace.
+/// Anything outside the root is the user's own pick and is used as it is, and
+/// so is the root itself when the user has made it a link (say, to another
+/// drive): a sandboxed turn can't, since the sandbox never lets it remove or
+/// replace the root itself (`sandbox_profile_macos`, the Linux bind mount).
 pub(crate) fn ensure_workspace(dir: &PathBuf) -> Result<(), String> {
+    let root = workspaces_root();
+    if let (Some(parent), Some(name)) = (dir.parent(), dir.file_name()) {
+        if parent == root {
+            let real_root = root.canonicalize().unwrap_or(root);
+            make_real_dirs(&real_root, Path::new(name))
+                .map_err(|e| format!("workspace create failed: {e}"))?;
+        }
+    }
     std::fs::create_dir_all(dir).map_err(|e| format!("workspace create failed: {e}"))?;
     if !dir.join(".git").exists() {
         let _ = std::process::Command::new("git")
@@ -2059,20 +2306,268 @@ fn link_skills(dest: &Path, vibe_dir: &Path, mentor_dir: Option<&Path>) -> Resul
 /// end-to-end guidance test writes the per-turn AGENTS.md through this exact
 /// production writer, never a hand-rolled copy.
 pub(crate) fn write_iblai_guidance(config_home: &Path, text: Option<&str>) -> Result<(), String> {
-    let path = config_home.join("opencode").join("AGENTS.md");
+    let rel = Path::new("opencode").join("AGENTS.md");
+    let path = config_home.join(&rel);
     match text {
-        Some(t) => std::fs::write(&path, t)
+        Some(t) => write_config_file(config_home, &rel, t.as_bytes())
             .map_err(|e| format!("failed writing ibl.ai guidance ({}): {e}", path.display())),
-        None => match std::fs::remove_file(&path) {
-            Ok(()) => Ok(()),
-            Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
-            Err(e) => Err(format!(
+        None => remove_config_file(config_home, &rel).map_err(|e| {
+            format!(
                 "failed clearing stale ibl.ai guidance ({}): {e}",
                 path.display()
-            )),
-        },
+            )
+        }),
     }
 }
+
+/// The app's own reads and writes inside a folder a sandboxed agent can also
+/// write (a config home, the workspaces root). The agent can swap any entry
+/// there for a link (or a fifo) aimed outside its sandbox, and the app runs
+/// unsandboxed, so these never follow one: each walks down from `root` one
+/// folder at a time without following a link, writes through a fresh temp
+/// file renamed into place (a rename replaces a link, a plain write goes
+/// through it), and reads only a regular file. `root`'s own parent is
+/// trusted: no sandbox can write it.
+#[cfg(unix)]
+mod config_file {
+    use std::ffi::{CString, OsStr, OsString};
+    use std::io::{Error, ErrorKind, Read, Result, Write};
+    use std::os::fd::{AsRawFd, FromRawFd, OwnedFd};
+    use std::os::unix::ffi::OsStrExt;
+    use std::path::{Component, Path};
+
+    fn c_name(name: &OsStr) -> Result<CString> {
+        CString::new(name.as_bytes()).map_err(|_| Error::from(ErrorKind::InvalidInput))
+    }
+
+    fn fd_or_error(fd: libc::c_int) -> Result<OwnedFd> {
+        if fd < 0 {
+            return Err(Error::last_os_error());
+        }
+        // SAFETY: a non-negative return from open/openat is a new descriptor
+        // nothing else owns.
+        Ok(unsafe { OwnedFd::from_raw_fd(fd) })
+    }
+
+    const DIR_FLAGS: libc::c_int =
+        libc::O_RDONLY | libc::O_DIRECTORY | libc::O_NOFOLLOW | libc::O_CLOEXEC;
+
+    fn open_root(root: &Path) -> Result<OwnedFd> {
+        let c = c_name(root.as_os_str())?;
+        // SAFETY: `c` is a valid NUL-terminated path for the whole call.
+        fd_or_error(unsafe { libc::open(c.as_ptr(), DIR_FLAGS) })
+    }
+
+    fn open_dir_in(dir: &OwnedFd, name: &OsStr) -> Result<OwnedFd> {
+        let c = c_name(name)?;
+        // SAFETY: as above; `dir` is an open directory descriptor.
+        fd_or_error(unsafe { libc::openat(dir.as_raw_fd(), c.as_ptr(), DIR_FLAGS) })
+    }
+
+    fn unlink_in(dir: &OwnedFd, name: &OsStr) -> Result<()> {
+        let c = c_name(name)?;
+        // SAFETY: as above.
+        if unsafe { libc::unlinkat(dir.as_raw_fd(), c.as_ptr(), 0) } < 0 {
+            return Err(Error::last_os_error());
+        }
+        Ok(())
+    }
+
+    fn mkdir_in(dir: &OwnedFd, name: &OsStr) -> Result<()> {
+        let c = c_name(name)?;
+        // SAFETY: as above.
+        if unsafe { libc::mkdirat(dir.as_raw_fd(), c.as_ptr(), 0o777) } < 0 {
+            let e = Error::last_os_error();
+            if e.kind() != ErrorKind::AlreadyExists {
+                return Err(e);
+            }
+        }
+        Ok(())
+    }
+
+    fn parts(rel: &Path) -> Result<Vec<&OsStr>> {
+        rel.components()
+            .map(|c| match c {
+                Component::Normal(n) => Ok(n),
+                _ => Err(Error::from(ErrorKind::InvalidInput)),
+            })
+            .collect()
+    }
+
+    /// A link (ELOOP) or a non-folder (ENOTDIR) where a folder was expected.
+    fn not_a_real_dir(e: &Error) -> bool {
+        matches!(e.raw_os_error(), Some(libc::ELOOP) | Some(libc::ENOTDIR))
+    }
+
+    /// The folder holding `rel`'s last component, and that component's name.
+    fn parent_of(root: &Path, rel: &Path) -> Result<(OwnedFd, OsString)> {
+        let mut parts = parts(rel)?;
+        let name = parts.pop().ok_or(Error::from(ErrorKind::InvalidInput))?;
+        let mut dir = open_root(root)?;
+        for part in parts {
+            dir = open_dir_in(&dir, part)?;
+        }
+        Ok((dir, name.to_os_string()))
+    }
+
+    /// `root` and every folder of `rel` as real folders: missing ones are
+    /// made, and a link or file in the way is removed (never its target).
+    pub(crate) fn make_dirs(root: &Path, rel: &Path) -> Result<()> {
+        match std::fs::symlink_metadata(root) {
+            Ok(m) if m.is_dir() => {}
+            Ok(_) => std::fs::remove_file(root)?,
+            Err(e) if e.kind() == ErrorKind::NotFound => {}
+            Err(e) => return Err(e),
+        }
+        std::fs::create_dir_all(root)?;
+        let mut dir = open_root(root)?;
+        for part in parts(rel)? {
+            dir = match open_dir_in(&dir, part) {
+                Ok(next) => next,
+                Err(e) if e.kind() == ErrorKind::NotFound => {
+                    mkdir_in(&dir, part)?;
+                    open_dir_in(&dir, part)?
+                }
+                Err(e) if not_a_real_dir(&e) => {
+                    unlink_in(&dir, part)?;
+                    mkdir_in(&dir, part)?;
+                    open_dir_in(&dir, part)?
+                }
+                Err(e) => return Err(e),
+            };
+        }
+        Ok(())
+    }
+
+    pub(crate) fn write(root: &Path, rel: &Path, bytes: &[u8]) -> Result<()> {
+        use std::sync::atomic::{AtomicU64, Ordering};
+        static SEQ: AtomicU64 = AtomicU64::new(0);
+        let (dir, name) = parent_of(root, rel)?;
+        let nanos = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_nanos())
+            .unwrap_or_default();
+        let mut tmp = OsString::from(".");
+        tmp.push(&name);
+        tmp.push(format!(
+            ".{}-{}-{nanos}.tmp",
+            std::process::id(),
+            SEQ.fetch_add(1, Ordering::Relaxed)
+        ));
+        let c_tmp = c_name(&tmp)?;
+        let c_dst = c_name(&name)?;
+        // O_EXCL refuses anything already at the temp name, a link included.
+        // SAFETY: as above; the mode is the variadic argument O_CREAT reads.
+        let fd = fd_or_error(unsafe {
+            libc::openat(
+                dir.as_raw_fd(),
+                c_tmp.as_ptr(),
+                libc::O_WRONLY | libc::O_CREAT | libc::O_EXCL | libc::O_NOFOLLOW | libc::O_CLOEXEC,
+                0o666 as libc::c_uint,
+            )
+        })?;
+        let written = std::fs::File::from(fd).write_all(bytes);
+        let placed = written.and_then(|()| {
+            // SAFETY: as above.
+            let r = unsafe {
+                libc::renameat(
+                    dir.as_raw_fd(),
+                    c_tmp.as_ptr(),
+                    dir.as_raw_fd(),
+                    c_dst.as_ptr(),
+                )
+            };
+            if r < 0 {
+                Err(Error::last_os_error())
+            } else {
+                Ok(())
+            }
+        });
+        if placed.is_err() {
+            let _ = unlink_in(&dir, &tmp);
+        }
+        placed
+    }
+
+    /// `None` when there is no regular file there: missing, a link, a
+    /// folder, or a fifo (O_NONBLOCK, so opening one cannot hang the app).
+    pub(crate) fn read(root: &Path, rel: &Path) -> Result<Option<String>> {
+        let missing = |e: &Error| e.kind() == ErrorKind::NotFound || not_a_real_dir(e);
+        let (dir, name) = match parent_of(root, rel) {
+            Ok(found) => found,
+            Err(e) if missing(&e) => return Ok(None),
+            Err(e) => return Err(e),
+        };
+        let c = c_name(&name)?;
+        // SAFETY: as above.
+        let fd = match fd_or_error(unsafe {
+            libc::openat(
+                dir.as_raw_fd(),
+                c.as_ptr(),
+                libc::O_RDONLY | libc::O_NOFOLLOW | libc::O_NONBLOCK | libc::O_CLOEXEC,
+            )
+        }) {
+            Ok(fd) => fd,
+            Err(e) if missing(&e) => return Ok(None),
+            Err(e) => return Err(e),
+        };
+        let mut file = std::fs::File::from(fd);
+        if !file.metadata()?.is_file() {
+            return Ok(None);
+        }
+        let mut text = String::new();
+        file.read_to_string(&mut text)?;
+        Ok(Some(text))
+    }
+
+    pub(crate) fn remove(root: &Path, rel: &Path) -> Result<()> {
+        let (dir, name) = match parent_of(root, rel) {
+            Ok(found) => found,
+            Err(e) if e.kind() == ErrorKind::NotFound => return Ok(()),
+            Err(e) => return Err(e),
+        };
+        match unlink_in(&dir, &name) {
+            Err(e) if e.kind() == ErrorKind::NotFound => Ok(()),
+            other => other,
+        }
+    }
+}
+
+/// Windows never runs Code (see [`code_unavailable`]), so no sandboxed agent
+/// shares these folders there: plain file calls.
+#[cfg(not(unix))]
+mod config_file {
+    use std::io::{ErrorKind, Result};
+    use std::path::Path;
+
+    pub(crate) fn make_dirs(root: &Path, rel: &Path) -> Result<()> {
+        std::fs::create_dir_all(root.join(rel))
+    }
+
+    pub(crate) fn write(root: &Path, rel: &Path, bytes: &[u8]) -> Result<()> {
+        std::fs::write(root.join(rel), bytes)
+    }
+
+    pub(crate) fn read(root: &Path, rel: &Path) -> Result<Option<String>> {
+        let path = root.join(rel);
+        if !path.is_file() {
+            return Ok(None);
+        }
+        std::fs::read_to_string(path).map(Some)
+    }
+
+    pub(crate) fn remove(root: &Path, rel: &Path) -> Result<()> {
+        match std::fs::remove_file(root.join(rel)) {
+            Err(e) if e.kind() == ErrorKind::NotFound => Ok(()),
+            other => other,
+        }
+    }
+}
+
+pub(crate) use config_file::{
+    make_dirs as make_real_dirs, read as read_config_file, remove as remove_config_file,
+    write as write_config_file,
+};
 
 /// Extract the latest user-message text from the frontend `messages` array.
 /// opencode keeps its own conversation state, so we only forward the newest turn.
@@ -2764,13 +3259,34 @@ pub(crate) fn apply_opencode_model(
     display_name: &str,
     guidance: Option<&str>,
 ) -> Result<(), String> {
+    apply_opencode_model_at(
+        &config_home(session_id),
+        mentor,
+        spec,
+        base_url,
+        api_key,
+        display_name,
+        guidance,
+    )
+}
+
+fn apply_opencode_model_at(
+    home: &Path,
+    mentor: Option<&str>,
+    spec: &ModelSpec,
+    base_url: &str,
+    api_key: &str,
+    display_name: &str,
+    guidance: Option<&str>,
+) -> Result<(), String> {
     // The config ships embedded in the app and is materialized on first use — make
     // sure this session's copy is on disk before we patch it.
-    let home = config_home(session_id);
-    crate::opencode_installer::ensure_opencode_config_at(&home)?;
-    let path = home.join("opencode").join("opencode.json");
-    let text = std::fs::read_to_string(&path)
-        .map_err(|e| format!("opencode config not found ({}): {e}", path.display()))?;
+    crate::opencode_installer::ensure_opencode_config_at(home)?;
+    let rel = Path::new("opencode").join("opencode.json");
+    let path = home.join(&rel);
+    let text = read_config_file(home, &rel)
+        .map_err(|e| format!("opencode config not found ({}): {e}", path.display()))?
+        .ok_or_else(|| format!("opencode config not found ({})", path.display()))?;
     let mut cfg: Value =
         serde_json::from_str(&text).map_err(|e| format!("bad opencode config: {e}"))?;
 
@@ -2794,7 +3310,7 @@ pub(crate) fn apply_opencode_model(
     apply_skills_config(root, &vibe_skills_dir(), mentor_dir.as_deref());
     // The ibl.ai guidance, as the per-session AGENTS.md opencode reads on
     // every model call — see `write_iblai_guidance`.
-    write_iblai_guidance(&home, guidance)?;
+    write_iblai_guidance(home, guidance)?;
 
     let providers = root
         .entry("provider")
@@ -2822,7 +3338,8 @@ pub(crate) fn apply_opencode_model(
     );
 
     let out = serde_json::to_string_pretty(&cfg).map_err(|e| e.to_string())?;
-    std::fs::write(&path, out).map_err(|e| format!("failed writing opencode config: {e}"))
+    write_config_file(home, &rel, out.as_bytes())
+        .map_err(|e| format!("failed writing opencode config: {e}"))
 }
 
 /// Codex's own approval mode for the OS setting. Ask Me → `read-only`: Codex's
@@ -3694,13 +4211,7 @@ async fn get_or_spawn(
     // A mode switch during the spawn found no session to repoint, and the
     // handshake pinned the mode read before it: pin what is stored now.
     if s.backend == Backend::Codex {
-        pin_codex_mode(
-            session_id,
-            &s,
-            permission_auto().load(Ordering::SeqCst),
-            false,
-        )
-        .await?;
+        pin_new_codex_session(session_id, &s).await?;
     }
     Ok(s)
 }
@@ -3909,19 +4420,10 @@ pub async fn opencode_chat_stream(
     // Absent with an older SDK: no migration.
     new_chat_key: Option<String>,
 ) -> Result<(), String> {
-    if crate::opencode_installer::is_sandboxed() {
-        return Err("Code isn't available in the sandboxed Mac App Store build.".to_string());
-    }
-    if cfg!(target_os = "windows") {
-        return Err("Code isn't available on Windows.".to_string());
-    }
     // Belt for the UI gate: on Linux the pill is disabled while bwrap is missing,
     // but a stale flag or an older frontend could still send.
-    if !sandbox_ready() {
-        return Err(
-            "Code needs bubblewrap (bwrap) — install it with your package manager, then reopen the app."
-                .to_string(),
-        );
+    if let Some(why) = code_unavailable() {
+        return Err(why.to_string());
     }
     // BEFORE workspace resolution, so the real id resolves to the migrated dir.
     if let Some(prior) = new_chat_key.as_deref() {
@@ -4498,8 +5000,32 @@ mod tests {
         assert!(p.contains("(subpath \"/Users/dev/Library/Keychains\")"));
         assert!(p.contains("(literal \"/Users/dev/.netrc\")"));
         assert!(p.contains("(literal \"/Users/dev/.cargo/credentials.toml\")"));
-        // Later rules win: the secrets deny must come after the write allows.
+        // Later rules win: the secrets deny must come after the write allows,
+        // and name `file-write*` itself, or the narrower allow beats it.
+        assert!(p.contains("(deny file* file-write*"));
         assert!(p.find("(deny file*").unwrap() > p.find("(allow file-write*").unwrap());
+    }
+
+    /// The workspace and config home are allowed as subpaths, so without a
+    /// later deny the folders themselves could be removed and replaced by a
+    /// link. The deny closes the profile, after every allow, and names only
+    /// create and unlink, so the folder's own times and xattrs stay writable.
+    #[test]
+    fn the_macos_profile_keeps_the_workspace_and_config_home_themselves() {
+        let keep = "(deny file-write-create file-write-unlink\n  \
+                    (literal \"/Users/dev/proj\")\n  \
+                    (literal \"/Users/dev/.config/iblai/agents/sessions/k\"))\n";
+        for backend in [Backend::Opencode, Backend::Claude, Backend::Codex] {
+            let p = sandbox_profile_macos(
+                Path::new("/Users/dev"),
+                Path::new("/Users/dev/proj"),
+                Path::new("/Users/dev/.config/iblai/agents/sessions/k"),
+                backend,
+            );
+            assert!(p.ends_with(keep), "{p}");
+            assert!(p.rfind(keep).unwrap() > p.rfind("(allow file-write*").unwrap());
+            assert_eq!(p.matches("(literal \"/Users/dev/proj\")").count(), 1);
+        }
     }
 
     /// A home path containing SBPL string metacharacters cannot break out of
@@ -4536,6 +5062,372 @@ mod tests {
         assert!(has_executable(&path_var, "bwrap"));
 
         let _ = std::fs::remove_dir_all(&scratch);
+    }
+
+    /// Every refusal in the person's words, and none when Code can run: a
+    /// missing bubblewrap must refuse, never fall back to running unsandboxed.
+    #[test]
+    fn code_is_refused_wherever_the_sandbox_cannot_run() {
+        let bwrap = "Code needs bubblewrap (bwrap) — install it with your package manager, then reopen the app.";
+        let windows = "Code isn't available on Windows.";
+        let app_store = "Code isn't available in the sandboxed Mac App Store build.";
+        assert_eq!(unavailable_reason(false, false, false), Some(bwrap));
+        assert_eq!(unavailable_reason(false, true, false), Some(windows));
+        assert_eq!(unavailable_reason(false, true, true), Some(windows));
+        for (windows, ready) in [(false, false), (false, true), (true, false), (true, true)] {
+            assert_eq!(unavailable_reason(true, windows, ready), Some(app_store));
+        }
+        assert_eq!(unavailable_reason(false, false, true), None);
+    }
+
+    #[test]
+    fn a_desktop_chat_is_sandboxed_around_its_own_folders() {
+        let ws = Path::new("/projects/site");
+        let paths = session_sandbox_paths("chat-1", ws);
+        assert_eq!(paths.workspace, ws);
+        assert_eq!(paths.config_home, config_home("chat-1"));
+        assert_eq!(paths.home, home_dir().unwrap_or_default());
+    }
+
+    /// How the desktop command is put together: the decoy home is built in
+    /// the config home (never the user's project) and the wrapper's env is
+    /// applied, so `$HOME` is the decoy.
+    #[cfg(any(target_os = "macos", target_os = "linux"))]
+    #[test]
+    fn the_desktop_command_carries_the_wrapper_and_its_env() {
+        let scratch = std::env::temp_dir().join(format!("opencode-sbx-cmd-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&scratch);
+        let paths = SandboxPaths {
+            home: scratch.join("home"),
+            workspace: scratch.join("project"),
+            config_home: scratch.join("config"),
+        };
+        for d in [&paths.home, &paths.workspace, &paths.config_home] {
+            std::fs::create_dir_all(d).unwrap();
+        }
+        let cmd = sandboxed_command_in(&paths, Backend::Opencode).unwrap();
+        let std_cmd = cmd.as_std();
+        let args: Vec<String> = std_cmd
+            .get_args()
+            .map(|a| a.to_string_lossy().into_owned())
+            .collect();
+        let home_env = std_cmd
+            .get_envs()
+            .find(|(k, _)| *k == "HOME")
+            .and_then(|(_, v)| v.map(PathBuf::from));
+        let decoy_in_config = paths.config_home.join("code-mode-home").is_dir();
+        let decoy_in_project = paths.workspace.join("code-mode-home").exists();
+        let _ = std::fs::remove_dir_all(&scratch);
+
+        #[cfg(target_os = "macos")]
+        {
+            assert_eq!(std_cmd.get_program(), "/usr/bin/sandbox-exec");
+            assert_eq!(args[0], "-p");
+            let subpath = |p: &Path| format!("(subpath \"{}\")", p.display());
+            assert!(args[1].contains(&subpath(&paths.workspace)), "{}", args[1]);
+            assert!(
+                args[1].contains(&subpath(&paths.config_home)),
+                "{}",
+                args[1]
+            );
+            assert_eq!(home_env, Some(paths.config_home.join("code-mode-home")));
+            assert!(
+                decoy_in_config,
+                "the decoy home is built in the config home"
+            );
+        }
+        #[cfg(target_os = "linux")]
+        {
+            assert_eq!(std_cmd.get_program(), "bwrap");
+            let bound = |p: &Path| {
+                let p = p.to_string_lossy();
+                args.windows(3)
+                    .any(|w| w[0] == "--bind-try" && w[1] == p && w[2] == p)
+            };
+            assert!(bound(&paths.workspace), "{args:?}");
+            assert!(bound(&paths.config_home), "{args:?}");
+            assert_eq!(home_env, None);
+            assert!(!decoy_in_config);
+        }
+        assert!(!decoy_in_project, "never inside the user's project");
+    }
+
+    /// A desktop chat, really sandboxed, does its ordinary work in its own
+    /// folder, the template skill's `cp -a <template>/. .` included (it sets
+    /// the folder's own times), and still can't remove or move that folder.
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn a_desktop_chat_works_in_its_folder_but_cannot_remove_it() {
+        let scratch = outside_the_sandbox("desktop");
+        let paths = SandboxPaths {
+            home: scratch.join("home"),
+            workspace: scratch.join("project"),
+            config_home: scratch.join("config"),
+        };
+        let template = scratch.join("template");
+        for d in [
+            &paths.home,
+            &paths.workspace,
+            &paths.config_home,
+            &template.join("app"),
+        ] {
+            std::fs::create_dir_all(d).unwrap();
+        }
+        std::fs::write(template.join("app").join("page.tsx"), "x").unwrap();
+        let cmd = sandboxed_command_in(&paths, Backend::Opencode).unwrap();
+        let cmd = cmd.as_std();
+        let script = format!(
+            "git init -q && echo GIT-INIT
+             echo x > a.txt && git add a.txt \
+               && git -c user.name=t -c user.email=t@t commit -qm t && echo GIT-COMMIT
+             git checkout -qb side && echo GIT-CHECKOUT
+             mkdir sub && rm -r sub && echo SUBFOLDER
+             echo y > b.txt && rm b.txt && echo FILES
+             cp -a '{}/.' . && echo TEMPLATE-COPIED
+             cd ..
+             mv '{ws}' '{cfg}/moved' && echo GONE-MOVED
+             rm -rf '{ws}'
+             rmdir '{ws}' && echo GONE-REMOVED
+             true",
+            template.display(),
+            ws = paths.workspace.display(),
+            cfg = paths.config_home.display(),
+        );
+        let mut sh = std::process::Command::new(cmd.get_program());
+        sh.args(cmd.get_args())
+            .args(["/bin/sh", "-c", &script])
+            .current_dir(&paths.workspace);
+        for (key, value) in cmd.get_envs() {
+            match value {
+                Some(v) => sh.env(key, v),
+                None => sh.env_remove(key),
+            };
+        }
+        let out = sh.output().expect("run a shell the way a chat runs");
+        let stdout = String::from_utf8_lossy(&out.stdout);
+        let stderr = String::from_utf8_lossy(&out.stderr);
+        let kept = std::fs::symlink_metadata(&paths.workspace).is_ok_and(|m| m.is_dir());
+        let _ = std::fs::remove_dir_all(&scratch);
+
+        assert!(
+            !stderr.contains("sandbox_apply"),
+            "sandbox-exec could not start here, so this proves nothing: {stderr}"
+        );
+        for done in [
+            "GIT-INIT",
+            "GIT-COMMIT",
+            "GIT-CHECKOUT",
+            "SUBFOLDER",
+            "FILES",
+            "TEMPLATE-COPIED",
+        ] {
+            assert!(stdout.contains(done), "{done}: {stdout}\n{stderr}");
+        }
+        assert!(!stdout.contains("GONE-"), "{stdout}\n{stderr}");
+        assert!(kept, "the chat's folder is still a real folder");
+    }
+
+    /// A config home the sandboxed agent wrote into, with a link where each
+    /// app-written entry should be, aimed at `outside`.
+    #[cfg(unix)]
+    struct PlantedConfigHome {
+        scratch: PathBuf,
+        config_home: PathBuf,
+        outside: PathBuf,
+    }
+
+    #[cfg(unix)]
+    impl PlantedConfigHome {
+        fn new(tag: &str) -> Self {
+            let scratch =
+                std::env::temp_dir().join(format!("opencode-planted-{tag}-{}", std::process::id()));
+            let _ = std::fs::remove_dir_all(&scratch);
+            let config_home = scratch.join("config");
+            let outside = scratch.join("outside");
+            std::fs::create_dir_all(&outside).unwrap();
+            Self {
+                scratch,
+                config_home,
+                outside,
+            }
+        }
+
+        fn outside_entries(&self) -> Vec<(String, String)> {
+            let mut entries: Vec<(String, String)> = std::fs::read_dir(&self.outside)
+                .unwrap()
+                .flatten()
+                .map(|e| {
+                    (
+                        e.file_name().to_string_lossy().into_owned(),
+                        std::fs::read_to_string(e.path()).unwrap_or_default(),
+                    )
+                })
+                .collect();
+            entries.sort();
+            entries
+        }
+
+        fn apply(&self) -> Result<(), String> {
+            let spec = ModelSpec {
+                provider: "iblai",
+                model: "openai/gpt-4o".to_string(),
+                local: false,
+            };
+            apply_opencode_model_at(
+                &self.config_home,
+                None,
+                &spec,
+                "http://127.0.0.1:1/v1",
+                "proxy-secret",
+                "ibl.ai",
+                Some("guidance"),
+            )
+        }
+
+        fn assert_real_files(&self) {
+            for name in ["opencode.json", "AGENTS.md"] {
+                let path = self.config_home.join("opencode").join(name);
+                let meta = std::fs::symlink_metadata(&path).unwrap();
+                assert!(meta.file_type().is_file(), "{name} is a regular file");
+            }
+            assert!(std::fs::symlink_metadata(&self.config_home)
+                .unwrap()
+                .is_dir());
+            assert!(std::fs::symlink_metadata(self.config_home.join("opencode"))
+                .unwrap()
+                .is_dir());
+        }
+    }
+
+    #[cfg(unix)]
+    impl Drop for PlantedConfigHome {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_dir_all(&self.scratch);
+        }
+    }
+
+    /// The app writes the config home from outside any sandbox, and the agent
+    /// inside can leave links there: none of them may carry the app's writes
+    /// (or reads) out to their target.
+    #[cfg(unix)]
+    #[test]
+    fn the_app_never_writes_through_a_link_in_a_config_home() {
+        use std::os::unix::fs::symlink;
+
+        let files = PlantedConfigHome::new("files");
+        std::fs::create_dir_all(files.config_home.join("opencode")).unwrap();
+        let config_json = r#"{"provider":{"iblai":{"models":{}}},"secret":"theirs"}"#;
+        std::fs::write(files.outside.join("auth.json"), config_json).unwrap();
+        std::fs::write(files.outside.join("AGENTS.md"), "theirs").unwrap();
+        symlink(
+            files.outside.join("auth.json"),
+            files.config_home.join("opencode/opencode.json"),
+        )
+        .unwrap();
+        symlink(
+            files.outside.join("AGENTS.md"),
+            files.config_home.join("opencode/AGENTS.md"),
+        )
+        .unwrap();
+        let before = files.outside_entries();
+        files.apply().unwrap();
+        assert_eq!(files.outside_entries(), before);
+        files.assert_real_files();
+        let written =
+            std::fs::read_to_string(files.config_home.join("opencode/opencode.json")).unwrap();
+        assert!(
+            !written.contains("theirs"),
+            "a linked file is never read into the agent's reach: {written}"
+        );
+
+        let folder = PlantedConfigHome::new("folder");
+        std::fs::create_dir_all(&folder.config_home).unwrap();
+        symlink(&folder.outside, folder.config_home.join("opencode")).unwrap();
+        folder.apply().unwrap();
+        assert_eq!(folder.outside_entries(), []);
+        folder.assert_real_files();
+
+        let root = PlantedConfigHome::new("root");
+        symlink(&root.outside, &root.config_home).unwrap();
+        root.apply().unwrap();
+        assert_eq!(root.outside_entries(), []);
+        root.assert_real_files();
+    }
+
+    /// The guidance refresh runs while the serve is up, against whatever the
+    /// agent left: a linked folder fails the write instead of following it,
+    /// and clearing never removes the link's target.
+    #[cfg(unix)]
+    #[test]
+    fn the_guidance_is_never_written_or_cleared_through_a_link() {
+        let planted = PlantedConfigHome::new("guidance");
+        std::fs::create_dir_all(&planted.config_home).unwrap();
+        std::fs::write(planted.outside.join("AGENTS.md"), "theirs").unwrap();
+        std::os::unix::fs::symlink(&planted.outside, planted.config_home.join("opencode")).unwrap();
+        assert!(write_iblai_guidance(&planted.config_home, Some("ours")).is_err());
+        let _ = write_iblai_guidance(&planted.config_home, None);
+        assert_eq!(
+            planted.outside_entries(),
+            [("AGENTS.md".to_string(), "theirs".to_string())]
+        );
+    }
+
+    /// A fifo left where the config should be reads as missing at once
+    /// instead of blocking the app forever.
+    #[cfg(unix)]
+    #[test]
+    fn a_fifo_in_a_config_home_reads_as_missing() {
+        let planted = PlantedConfigHome::new("fifo");
+        std::fs::create_dir_all(planted.config_home.join("opencode")).unwrap();
+        let fifo = planted.config_home.join("opencode/opencode.json");
+        let c = std::ffi::CString::new(fifo.to_string_lossy().as_bytes()).unwrap();
+        // SAFETY: a valid NUL-terminated path.
+        assert_eq!(unsafe { libc::mkfifo(c.as_ptr(), 0o600) }, 0);
+        let rel = Path::new("opencode").join("opencode.json");
+        assert_eq!(read_config_file(&planted.config_home, &rel).unwrap(), None);
+        planted.apply().unwrap();
+        planted.assert_real_files();
+    }
+
+    /// The phone's serve can write the whole workspaces root, so a link it
+    /// leaves there is never recycled for a desktop chat (whose sandbox
+    /// would then make the target writable) nor `git init`-ed by the app.
+    #[cfg(unix)]
+    #[test]
+    fn a_link_in_the_workspaces_root_is_never_used_as_a_workspace() {
+        let data = ScratchDataDir::new("opencode-ws-links");
+        let root = workspaces_root();
+        let outside = data.path.join("outside");
+        std::fs::create_dir_all(outside.join(".git")).unwrap();
+        std::fs::create_dir_all(&root).unwrap();
+        std::os::unix::fs::symlink(&outside, root.join("a-link")).unwrap();
+        assert_eq!(find_empty_workspace(&root), None);
+
+        let bare = data.path.join("bare");
+        std::fs::create_dir_all(&bare).unwrap();
+        std::os::unix::fs::symlink(&bare, root.join("phone")).unwrap();
+        ensure_workspace(&root.join("phone")).unwrap();
+        assert!(!bare.join(".git").exists(), "git never runs in the target");
+        let phone = std::fs::symlink_metadata(root.join("phone")).unwrap();
+        assert!(phone.is_dir(), "a real folder took the link's place");
+
+        let moved = data.path.join("moved-root");
+        std::fs::rename(&root, &moved).unwrap();
+        std::os::unix::fs::symlink(&moved, &root).unwrap();
+        ensure_workspace(&root.join("phone-abc123")).unwrap();
+        assert!(
+            root.is_symlink(),
+            "a root the user linked elsewhere is kept"
+        );
+        assert!(moved.join("phone-abc123").join(".git").is_dir());
+
+        let picked = data.path.join("picked-link");
+        std::os::unix::fs::symlink(&bare, &picked).unwrap();
+        ensure_workspace(&picked).unwrap();
+        assert!(
+            picked.is_symlink(),
+            "a folder the user picked outside the root is used as it is"
+        );
     }
 
     /// Untouched workspaces (nothing beyond `.git`/`.DS_Store`) are
@@ -4875,6 +5767,500 @@ mod tests {
             .unwrap_err();
         assert!(err.contains("YOLO"), "{err}");
         assert_eq!(get_opencode_permission_mode().await.unwrap(), "manual");
+    }
+
+    /// Puts the process-wide approval flag back however the test ends.
+    struct RestoreAuto(bool);
+
+    impl RestoreAuto {
+        fn new() -> Self {
+            Self(permission_auto().load(Ordering::SeqCst))
+        }
+    }
+
+    impl Drop for RestoreAuto {
+        fn drop(&mut self) {
+            permission_auto().store(self.0, Ordering::SeqCst);
+        }
+    }
+
+    fn settings_snapshot() -> (Vec<u8>, std::time::SystemTime) {
+        let f = settings_file();
+        let modified = std::fs::metadata(&f).unwrap().modified().unwrap();
+        (std::fs::read(&f).unwrap(), modified)
+    }
+
+    /// Moved into the past first, so a rewrite can't keep the same timestamp.
+    fn backdated_settings_snapshot() -> (Vec<u8>, std::time::SystemTime) {
+        let past = std::time::UNIX_EPOCH + Duration::from_secs(1_000_000_000);
+        std::fs::File::options()
+            .write(true)
+            .open(settings_file())
+            .unwrap()
+            .set_modified(past)
+            .unwrap();
+        settings_snapshot()
+    }
+
+    /// A machine with no approval mode saved already runs Automatic, so the
+    /// platform's Automatic writes nothing and leaves the machine open to a
+    /// later Ask Me — from another machine or tenant — which is saved and in
+    /// force at once.
+    #[tokio::test]
+    async fn a_machine_with_no_mode_saved_takes_the_platform_choice() {
+        let _serial = PERMISSION_TEST_LOCK.lock().await;
+        let _scratch = ScratchDataDir::new("opencode-seed-empty");
+        let _restore = RestoreAuto::new();
+        permission_auto().store(true, Ordering::SeqCst);
+
+        assert_eq!(
+            seed_opencode_permission_mode("auto".into()).await.unwrap(),
+            "auto"
+        );
+        assert!(
+            !settings_file().exists(),
+            "no file is written for Automatic"
+        );
+
+        let mut others = serde_json::Map::new();
+        others.insert("some_future_key".into(), json!("keep me"));
+        write_settings(&others).unwrap();
+        let before = backdated_settings_snapshot();
+        assert_eq!(
+            seed_opencode_permission_mode("auto".into()).await.unwrap(),
+            "auto"
+        );
+        assert_eq!(
+            settings_snapshot(),
+            before,
+            "nor is the file rewritten for it"
+        );
+        assert!(
+            permission_auto().load(Ordering::SeqCst),
+            "Automatic stays in force"
+        );
+
+        assert_eq!(
+            seed_opencode_permission_mode("manual".into())
+                .await
+                .unwrap(),
+            "manual"
+        );
+        let settings = read_settings();
+        assert_eq!(settings[SETTINGS_PERMISSION_MODE], json!("manual"));
+        assert_eq!(settings["some_future_key"], json!("keep me"));
+        assert!(
+            !permission_auto().load(Ordering::SeqCst),
+            "Ask Me is in force"
+        );
+        assert_eq!(get_opencode_permission_mode().await.unwrap(), "manual");
+    }
+
+    /// An Ask Me taken from the platform holds each request for its card, and
+    /// a later platform Automatic doesn't release it; the user's own switch to
+    /// Automatic answers it with its allow option.
+    #[tokio::test]
+    async fn a_card_held_by_a_seeded_ask_me_is_answered_by_the_users_switch() {
+        let _serial = PERMISSION_TEST_LOCK.lock().await;
+        let _scratch = ScratchDataDir::new("opencode-seed-cards");
+        let _restore = RestoreAuto::new();
+        permission_auto().store(true, Ordering::SeqCst);
+
+        seed_opencode_permission_mode("manual".into())
+            .await
+            .unwrap();
+        let (tx, mut rx) = oneshot::channel();
+        let answered = queue_unless_auto(
+            "perm-seed-card",
+            PendingPermission {
+                session_id: "chat-seed".into(),
+                allow_option_id: Some("allow-seed".into()),
+                tx,
+            },
+        )
+        .await;
+        assert!(answered.is_none(), "Ask Me queues it for its card");
+
+        assert_eq!(
+            seed_opencode_permission_mode("auto".into()).await.unwrap(),
+            "manual"
+        );
+        assert!(rx.try_recv().is_err(), "the card is still waiting");
+
+        set_opencode_permission_mode("auto".into()).await.unwrap();
+        let answer = tokio::time::timeout(Duration::from_secs(5), rx)
+            .await
+            .expect("the switch answers the waiting card");
+        assert_eq!(answer.unwrap().as_deref(), Some("allow-seed"));
+    }
+
+    /// Each change of mode finishes saving and moving the flag before the next
+    /// one starts, so the in-memory flag always matches the saved mode.
+    #[tokio::test]
+    async fn a_mode_change_waits_for_the_one_already_running() {
+        let _serial = PERMISSION_TEST_LOCK.lock().await;
+        let _scratch = ScratchDataDir::new("opencode-mode-change");
+        let _restore = RestoreAuto::new();
+        permission_auto().store(true, Ordering::SeqCst);
+
+        let running = MODE_CHANGE.lock().await;
+        let seed = tokio::spawn(seed_opencode_permission_mode("manual".into()));
+        let set = tokio::spawn(set_opencode_permission_mode("auto".into()));
+        tokio::time::sleep(Duration::from_millis(200)).await;
+        assert!(
+            !settings_file().exists(),
+            "nothing is saved while another change runs"
+        );
+        assert!(
+            permission_auto().load(Ordering::SeqCst),
+            "nor is the flag moved"
+        );
+
+        drop(running);
+        seed.await.unwrap().unwrap();
+        set.await.unwrap().unwrap();
+        assert_eq!(
+            permission_auto().load(Ordering::SeqCst),
+            permission_mode() == "auto",
+            "the flag matches the saved mode"
+        );
+    }
+
+    /// Codex can take up to 10s to confirm a pin. A switch to Ask Me made
+    /// meanwhile takes hold at once, and the session ends pinned to Ask Me.
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn a_switch_to_ask_me_never_waits_behind_a_slow_codex_pin() {
+        let _serial = PERMISSION_TEST_LOCK.lock().await;
+        let scratch = ScratchDataDir::new("opencode-slow-pin");
+        let _restore = RestoreAuto::new();
+        permission_auto().store(false, Ordering::SeqCst);
+        let script = scratch.path.join("agent.sh");
+        std::fs::write(&script, FAULTY_AGENT).unwrap();
+        let id = format!("pin-slow-{}", std::process::id());
+        let slow = faulty_agent(
+            &script,
+            &scratch.path.join("slow.log"),
+            Backend::Codex,
+            Some("mode-slow"),
+        );
+        registry().lock().await.insert(id.clone(), slow);
+        let log = || std::fs::read_to_string(scratch.path.join("slow.log")).unwrap_or_default();
+
+        let to_auto = tokio::spawn(set_opencode_permission_mode("auto".into()));
+        let start = Instant::now();
+        while !log().contains("agent-full-access") {
+            assert!(start.elapsed() < Duration::from_secs(5), "{}", log());
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+        let to_ask = tokio::spawn(set_opencode_permission_mode("manual".into()));
+        let start = Instant::now();
+        while permission_auto().load(Ordering::SeqCst) {
+            assert!(
+                start.elapsed() < Duration::from_millis(500),
+                "Ask Me takes hold while Codex is still confirming Automatic"
+            );
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+        assert_eq!(permission_mode(), "manual");
+
+        to_auto.await.unwrap().unwrap();
+        to_ask.await.unwrap().unwrap();
+        let last_pin = log()
+            .lines()
+            .rfind(|l| l.contains("session/set_mode"))
+            .map(str::to_string)
+            .unwrap_or_default();
+        assert!(last_pin.contains(r#""modeId":"read-only""#), "{}", log());
+        close_session(&id).await;
+    }
+
+    /// A Codex session spawned while a switch is pinning the others is pinned
+    /// after it, to the mode in force then — never to one read before.
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn a_new_codex_session_is_pinned_to_the_mode_in_force_after_a_running_pin() {
+        let _serial = PERMISSION_TEST_LOCK.lock().await;
+        let scratch = ScratchDataDir::new("opencode-new-pin");
+        let _restore = RestoreAuto::new();
+        permission_auto().store(true, Ordering::SeqCst);
+        let script = scratch.path.join("agent.sh");
+        std::fs::write(&script, FAULTY_AGENT).unwrap();
+        let id = format!("pin-new-{}", std::process::id());
+        let fresh = piped_agent(&script, &scratch.path.join("new.log"), Backend::Codex);
+        registry().lock().await.insert(id.clone(), fresh.clone());
+
+        let running = CODEX_PIN.lock().await;
+        let pin = tokio::spawn({
+            let (id, fresh) = (id.clone(), fresh.clone());
+            async move { pin_new_codex_session(&id, &fresh).await }
+        });
+        tokio::time::sleep(Duration::from_millis(100)).await;
+        permission_auto().store(false, Ordering::SeqCst);
+        drop(running);
+        pin.await.unwrap().unwrap();
+
+        let log = std::fs::read_to_string(scratch.path.join("new.log")).unwrap();
+        assert!(log.contains(r#""modeId":"read-only""#), "{log}");
+        assert!(!log.contains("agent-full-access"), "{log}");
+        close_session(&id).await;
+    }
+
+    /// A mode saved on this machine is its own choice: Automatic, Ask Me or a
+    /// garbled value (which asks) is never replaced by the platform's, in the
+    /// file or in force. A mode the app doesn't know is refused.
+    #[tokio::test]
+    async fn a_saved_mode_is_never_replaced_by_the_platform_choice() {
+        let _serial = PERMISSION_TEST_LOCK.lock().await;
+        let _scratch = ScratchDataDir::new("opencode-seed-saved");
+        let _restore = RestoreAuto::new();
+
+        for (saved, in_force) in [
+            (json!("auto"), "auto"),
+            (json!("manual"), "manual"),
+            (json!("YOLO"), "manual"),
+            (Value::Null, "manual"),
+        ] {
+            let mut settings = serde_json::Map::new();
+            settings.insert(SETTINGS_PERMISSION_MODE.into(), saved.clone());
+            write_settings(&settings).unwrap();
+            let before = backdated_settings_snapshot();
+            for platform in ["auto", "manual"] {
+                let flag = in_force == "auto";
+                permission_auto().store(flag, Ordering::SeqCst);
+                assert_eq!(
+                    seed_opencode_permission_mode(platform.into())
+                        .await
+                        .unwrap(),
+                    in_force,
+                    "saved {saved}, platform {platform}"
+                );
+                assert_eq!(
+                    permission_auto().load(Ordering::SeqCst),
+                    flag,
+                    "saved {saved}, platform {platform}: the mode in force stays"
+                );
+            }
+            assert_eq!(settings_snapshot(), before, "saved {saved}: file untouched");
+        }
+
+        std::fs::write(settings_file(), "{\"permission_mode\": \"au").unwrap();
+        permission_auto().store(false, Ordering::SeqCst);
+        let before = backdated_settings_snapshot();
+        assert_eq!(
+            seed_opencode_permission_mode("auto".into()).await.unwrap(),
+            "manual",
+            "a file cut short asks, and keeps asking"
+        );
+        assert!(!permission_auto().load(Ordering::SeqCst));
+        assert_eq!(settings_snapshot(), before);
+
+        std::fs::remove_file(settings_file()).unwrap();
+        let err = seed_opencode_permission_mode("YOLO".into())
+            .await
+            .unwrap_err();
+        assert!(err.contains("YOLO"), "{err}");
+        assert!(
+            !settings_file().exists(),
+            "nothing saved for an unknown mode"
+        );
+    }
+
+    /// A settings file this process may not read, for as long as it lives.
+    #[cfg(unix)]
+    struct Unreadable(PathBuf);
+
+    #[cfg(unix)]
+    impl Unreadable {
+        /// `None` when the process reads it anyway, as root does.
+        fn new(path: PathBuf) -> Option<Self> {
+            use std::os::unix::fs::PermissionsExt;
+            std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o000)).unwrap();
+            let guard = Self(path);
+            if std::fs::read(&guard.0).is_ok() {
+                eprintln!("skipped: this process reads a 0o000 file anyway (root?)");
+                return None;
+            }
+            Some(guard)
+        }
+    }
+
+    #[cfg(unix)]
+    impl Drop for Unreadable {
+        fn drop(&mut self) {
+            use std::os::unix::fs::PermissionsExt;
+            let _ = std::fs::set_permissions(&self.0, std::fs::Permissions::from_mode(0o600));
+        }
+    }
+
+    /// A settings file that is there but can't be read is unknown, not
+    /// damage: writing over it would discard the workspaces, the per-agent
+    /// models and the minted platform key along with the mode.
+    #[cfg(unix)]
+    #[test]
+    fn an_unreadable_settings_file_is_never_written_over() {
+        let _scratch = ScratchDataDir::new("opencode-settings-unreadable");
+        let mut settings = serde_json::Map::new();
+        settings.insert(
+            SETTINGS_WORKSPACES.into(),
+            json!({ workspace_key("acme", "mentor-1"): "/ws/one" }),
+        );
+        settings.insert(SETTINGS_PERMISSION_MODE.into(), json!("auto"));
+        write_settings(&settings).unwrap();
+        let original = std::fs::read(settings_file()).unwrap();
+        {
+            let Some(_unreadable) = Unreadable::new(settings_file()) else {
+                return;
+            };
+            assert!(update_settings(|s| s.insert("x".into(), json!(1))).is_err());
+            assert!(
+                record_mentor_workspace("acme", "mentor-2", Path::new("/ws/two")).is_err(),
+                "a real writer is refused too"
+            );
+        }
+        assert_eq!(
+            std::fs::read(settings_file()).unwrap(),
+            original,
+            "the file keeps every byte"
+        );
+    }
+
+    /// The platform's choice is never saved over a settings file that can't
+    /// be read: the refusal comes back and the file keeps every byte.
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn a_seed_over_an_unreadable_settings_file_is_refused() {
+        let _serial = PERMISSION_TEST_LOCK.lock().await;
+        let _scratch = ScratchDataDir::new("opencode-seed-unreadable");
+        let _restore = RestoreAuto::new();
+        let mut settings = serde_json::Map::new();
+        settings.insert(
+            SETTINGS_WORKSPACES.into(),
+            json!({ workspace_key("acme", "mentor-1"): "/ws/one" }),
+        );
+        write_settings(&settings).unwrap();
+        let original = std::fs::read(settings_file()).unwrap();
+        {
+            let Some(_unreadable) = Unreadable::new(settings_file()) else {
+                return;
+            };
+            assert!(seed_opencode_permission_mode("manual".into())
+                .await
+                .is_err());
+        }
+        assert_eq!(std::fs::read(settings_file()).unwrap(), original);
+    }
+
+    /// Every settings owner reads the whole file, changes its own key and
+    /// writes it all back. Run at once, each owner's every write must survive
+    /// the others'.
+    #[test]
+    fn concurrent_settings_writers_never_lose_a_write() {
+        const ROUNDS: usize = 40;
+        const DM: &str = "https://dm.race.test";
+        const EXPIRES: u64 = 4_000_000_000;
+        let _scratch = ScratchDataDir::new("opencode-settings-race");
+        let start = std::sync::Barrier::new(7);
+        std::thread::scope(|s| {
+            let start = &start;
+            for t in 0..2 {
+                s.spawn(move || {
+                    start.wait();
+                    for i in 0..ROUNDS {
+                        let dir = format!("/ws/{t}/{i}");
+                        record_mentor_workspace("race", &format!("m{t}-{i}"), Path::new(&dir))
+                            .unwrap();
+                    }
+                });
+                s.spawn(move || {
+                    start.wait();
+                    for i in 0..ROUNDS {
+                        update_settings(|settings| {
+                            crate::opencode_proxy::record_platform_key(
+                                settings,
+                                DM,
+                                &format!("tenant-{t}-{i}"),
+                                &format!("key-{t}-{i}"),
+                                EXPIRES,
+                            );
+                        })
+                        .unwrap();
+                    }
+                });
+            }
+            s.spawn(move || {
+                start.wait();
+                for i in 0..ROUNDS {
+                    let backend = if i % 2 == 0 {
+                        Backend::Codex
+                    } else {
+                        Backend::Claude
+                    };
+                    crate::code_agent_models::save(backend, Some(&format!("model-{i}"))).unwrap();
+                }
+            });
+            s.spawn(move || {
+                start.wait();
+                for i in 0..ROUNDS {
+                    let mode = if i % 2 == 0 { "manual" } else { "auto" };
+                    update_settings(|settings| {
+                        settings.insert(SETTINGS_PERMISSION_MODE.to_string(), json!(mode));
+                    })
+                    .unwrap();
+                }
+            });
+            s.spawn(move || {
+                start.wait();
+                for i in 0..ROUNDS {
+                    update_settings_if(|settings| {
+                        if i % 2 == 1 {
+                            return false;
+                        }
+                        settings.insert(format!("only-if-{i}"), json!(i));
+                        true
+                    })
+                    .unwrap();
+                }
+            });
+        });
+
+        let settings = read_settings();
+        let workspaces = settings
+            .get(SETTINGS_WORKSPACES)
+            .and_then(|v| v.as_object())
+            .cloned()
+            .unwrap_or_default();
+        let mut lost = Vec::new();
+        for t in 0..2 {
+            for i in 0..ROUNDS {
+                let key = workspace_key("race", &format!("m{t}-{i}"));
+                if workspaces.get(&key) != Some(&json!(format!("/ws/{t}/{i}"))) {
+                    lost.push(key);
+                }
+                let tenant = format!("tenant-{t}-{i}");
+                if crate::opencode_proxy::stored_platform_key(&settings, DM, &tenant, 0)
+                    != Some((format!("key-{t}-{i}"), EXPIRES))
+                {
+                    lost.push(tenant);
+                }
+            }
+        }
+        for i in (0..ROUNDS).step_by(2) {
+            let key = format!("only-if-{i}");
+            if settings.get(&key) != Some(&json!(i)) {
+                lost.push(key);
+            }
+        }
+        assert!(lost.is_empty(), "{} writes lost: {lost:?}", lost.len());
+        assert_eq!(
+            crate::code_agent_models::saved(Backend::Codex),
+            Some(format!("model-{}", ROUNDS - 2))
+        );
+        assert_eq!(
+            crate::code_agent_models::saved(Backend::Claude),
+            Some(format!("model-{}", ROUNDS - 1))
+        );
+        assert_eq!(settings.get(SETTINGS_PERMISSION_MODE), Some(&json!("auto")));
     }
 
     /// The mentor keeps one folder across chats, and a fresh one is genuinely
@@ -6940,6 +8326,7 @@ while IFS= read -r l; do
     *'"session/set_mode"'*)
       case "$FAULT" in
         mode-refused) printf '{"jsonrpc":"2.0","id":%s,"error":{"code":-32602,"message":"no such mode"}}\n' "$id"; continue ;;
+        mode-slow) sleep 1; r='{}' ;;
         *) r='{}' ;;
       esac ;;
     *) r='{}' ;;

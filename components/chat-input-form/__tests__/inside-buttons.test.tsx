@@ -170,6 +170,7 @@ describe('InsideButtons', () => {
     studyMode: false,
     artifactsEnabled: false,
     containerWidth: 1000,
+    codeApprovalsSlot: null,
   };
 
   beforeEach(() => {
@@ -1159,7 +1160,7 @@ describe('InsideButtons', () => {
       );
     });
 
-    it('hands the Code button the spot beside the microphone for its approvals button', () => {
+    it('hands the Code button the composer’s spot for its approvals button', () => {
       mockIsTauri = true;
       const slot = document.createElement('div');
       slot.id = 'code-approvals-slot';
@@ -2102,6 +2103,7 @@ describe('InsideButtons progressive overflow (measured)', () => {
     // Wide by the breakpoint rule, so every pill starts inline and gets
     // measured; the measured fit then decides.
     containerWidth: 1000,
+    codeApprovalsSlot: null,
   };
   const widths = { Canvas: 80, Prompts: 90, 'Deep Research': 130 };
 
@@ -2243,6 +2245,7 @@ describe('Skills pill label on phone widths', () => {
     skills,
     onToggleSkill: vi.fn(),
     onClearSkills: vi.fn(),
+    codeApprovalsSlot: null,
   };
 
   const labelSpan = () =>

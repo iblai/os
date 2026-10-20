@@ -176,30 +176,88 @@ describe('useMentorSegments', () => {
     expect(MENTOR_SEGMENTS).toHaveLength(26);
   });
 
-  it('places the Billing (spend caps) segment right after LLM', () => {
-    const llmIndex = MENTOR_SEGMENTS.findIndex((s) => s.label === 'LLM');
-    expect(MENTOR_SEGMENTS[llmIndex + 1]?.label).toBe('Billing');
+  it('places the Billing (spend caps) segment right after Access in Policies', () => {
+    const policyLabels = MENTOR_SEGMENTS.filter(
+      (s) => s.navCategory === 'policies',
+    ).map((s) => s.label);
+    expect(policyLabels[policyLabels.indexOf('Access') + 1]).toBe('Billing');
   });
 
-  it('places the Sandbox segment right after Settings', () => {
-    const settingsIndex = MENTOR_SEGMENTS.findIndex(
-      (s) => s.label === 'Settings',
-    );
-    expect(MENTOR_SEGMENTS[settingsIndex + 1]?.label).toBe('Sandbox');
+  it('leads Integrations with Tools, then MCP, then Sandbox', () => {
+    const integrationLabels = MENTOR_SEGMENTS.filter(
+      (s) => s.navCategory === 'integrations',
+    ).map((s) => s.label);
+    expect(integrationLabels.slice(0, 3)).toEqual(['Tools', 'MCP', 'Sandbox']);
   });
 
   it('places the Skills segment right after Prompts', () => {
-    const promptsIndex = MENTOR_SEGMENTS.findIndex(
-      (s) => s.label === 'Prompts',
-    );
-    expect(MENTOR_SEGMENTS[promptsIndex + 1]?.label).toBe('Skills');
+    const setupLabels = MENTOR_SEGMENTS.filter(
+      (s) => s.navCategory === 'setup',
+    ).map((s) => s.label);
+    expect(setupLabels[setupLabels.indexOf('Prompts') + 1]).toBe('Skills');
   });
 
-  it('places Grader then Screen at the end of the Configurations category', () => {
-    const configurationLabels = MENTOR_SEGMENTS.filter(
-      (s) => s.navCategory === 'configurations',
+  it('places Voice then Screen at the end of the Setup category', () => {
+    const setupLabels = MENTOR_SEGMENTS.filter(
+      (s) => s.navCategory === 'setup',
     ).map((s) => s.label);
-    expect(configurationLabels.slice(-2)).toEqual(['Grader', 'Screen']);
+    expect(setupLabels.slice(-2)).toEqual(['Voice', 'Screen']);
+  });
+
+  it('orders the nav categories Setup, Policies, Integrations, Activity', () => {
+    expect(MENTOR_SEGMENT_NAV_CATEGORIES.map((c) => c.key)).toEqual([
+      'setup',
+      'policies',
+      'integrations',
+      'activity',
+    ]);
+    expect(MENTOR_SEGMENT_NAV_CATEGORIES.map((c) => c.title)).toEqual([
+      'Setup',
+      'Policies',
+      'Integrations',
+      'Activity',
+    ]);
+  });
+
+  it('puts exactly these segments in each category, in array order', () => {
+    const labelsIn = (category: string) =>
+      MENTOR_SEGMENTS.filter((s) => s.navCategory === category).map(
+        (s) => s.label,
+      );
+    expect(labelsIn('setup')).toEqual([
+      'Settings',
+      'LLM',
+      'Prompts',
+      'Skills',
+      'Datasets',
+      'Grader',
+      'Voice',
+      'Screen',
+    ]);
+    expect(labelsIn('policies')).toEqual([
+      'Access',
+      'Billing',
+      'Privacy',
+      'Safety',
+      'Disclaimers',
+    ]);
+    expect(labelsIn('integrations')).toEqual([
+      'Tools',
+      'MCP',
+      'Sandbox',
+      'Embed',
+      'LTI',
+      'API',
+    ]);
+    expect(labelsIn('activity')).toEqual([
+      'History',
+      'Memory',
+      'Support',
+      'Tasks',
+      'Evals',
+      'Audit',
+      'Analytics',
+    ]);
   });
 
   describe('Sandbox & Skills visibility (always visible for admins)', () => {
@@ -390,10 +448,10 @@ describe('useMentorSegments', () => {
   });
 
   describe('LTI segment', () => {
-    it('orders LTI immediately before Embed', () => {
-      const ltiIndex = MENTOR_SEGMENTS.findIndex((s) => s.label === 'LTI');
-      expect(ltiIndex).toBeGreaterThanOrEqual(0);
-      expect(MENTOR_SEGMENTS[ltiIndex + 1]?.label).toBe('Embed');
+    it('orders LTI immediately after Embed', () => {
+      const embedIndex = MENTOR_SEGMENTS.findIndex((s) => s.label === 'Embed');
+      expect(embedIndex).toBeGreaterThanOrEqual(0);
+      expect(MENTOR_SEGMENTS[embedIndex + 1]?.label).toBe('LTI');
     });
 
     it('is NOT gated on is_lti_accessible (no enabledThroughConfig)', () => {

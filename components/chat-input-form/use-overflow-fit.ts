@@ -152,8 +152,9 @@ export function useOverflowFit(
           previous !== undefined &&
           full !== undefined
         ) {
-          // Compact to compact: whatever came or went (the ✕ of an open
-          // popover) is not the label, so the full width moves with it.
+          // Compact to compact: whatever came or went (the ✕, shown while
+          // Code is on or its popover open) is not the label, so the full
+          // width moves with it.
           fullWidthsRef.current.set(key, full + width - previous);
         }
         measuredCompactRef.current.set(key, compactRef.current);

@@ -1,36 +1,80 @@
 import React from 'react';
-import { act, render, screen } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
+import { toast } from 'sonner';
 
 const chatSpy = vi.fn();
 const setChatMarkdownTelemetry = vi.hoisted(() => vi.fn());
 vi.mock('@sentry/nextjs', () => ({ captureException: vi.fn() }));
-vi.mock('@iblai/iblai-js/web-containers/next', () => ({
-  setChatMarkdownTelemetry,
-  Chat: (props: Record<string, unknown>) => {
-    chatSpy(props);
-    return (
-      <div data-testid="sdk-chat">
-        {
-          (props.slots as { composerExtraControls?: React.ReactNode })
-            ?.composerExtraControls
-        }
-      </div>
-    );
-  },
-}));
+vi.mock('@iblai/iblai-js/web-containers/next', async (importOriginal) => {
+  const {
+    ApprovalsModeButton,
+    createApprovalModeStore,
+    PERMISSION_MODES,
+    PERMISSION_MODE_ICONS,
+  } =
+    await importOriginal<
+      typeof import('@iblai/iblai-js/web-containers/next')
+    >();
+  return {
+    // Real, not stubbed: the OS's Code approvals button and store are built on
+    // them.
+    ApprovalsModeButton,
+    createApprovalModeStore,
+    PERMISSION_MODES,
+    PERMISSION_MODE_ICONS,
+    setChatMarkdownTelemetry,
+    // The two host slots where the SDK composer puts them: the extra controls in
+    // the tool row, the action controls first in the right-hand action group.
+    Chat: (props: Record<string, unknown>) => {
+      chatSpy(props);
+      const slots = props.slots as {
+        composerExtraControls?: React.ReactNode;
+        composerActionControls?: React.ReactNode;
+      };
+      return (
+        <div data-testid="sdk-chat">
+          <div data-testid="composer-extra-controls">
+            {slots?.composerExtraControls}
+          </div>
+          <div data-testid="composer-actions">
+            {slots?.composerActionControls && (
+              <div data-testid="composer-action-controls">
+                {slots.composerActionControls}
+              </div>
+            )}
+            <button data-testid="voice-chat-button">Microphone</button>
+            <button data-testid="voice-call-button">Voice call</button>
+            <button data-testid="submit-message-button">Send</button>
+          </div>
+        </div>
+      );
+    },
+  };
+});
 
 vi.mock('@iblai/iblai-js/web-utils', () => ({
   selectSessionId: (state: { sessionId: string }) => state.sessionId,
 }));
 
-vi.mock('next-intl', () => ({
-  useMessages: () => ({
-    chatIndex: { dropFilesHere: 'Suelta aquí' },
-    uiDialog: { close: 'Cerrar' },
-    unrelatedNamespace: { x: 'y' },
-  }),
-}));
+vi.mock('next-intl', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('next-intl')>();
+  const enMessages = (await import('../../../messages/en.json')).default;
+  return {
+    useMessages: () => ({
+      chatIndex: { dropFilesHere: 'Suelta aquí' },
+      uiDialog: { close: 'Cerrar' },
+      unrelatedNamespace: { x: 'y' },
+    }),
+    useTranslations: (namespace: string) =>
+      actual.createTranslator({
+        locale: 'en',
+        messages: enMessages as Record<string, unknown>,
+        namespace: namespace as any,
+      }),
+  };
+});
 
 const routerPush = vi.fn();
 let searchQuery = 'a=1';
@@ -41,10 +85,36 @@ vi.mock('next/navigation', () => ({
   useSearchParams: () => new URLSearchParams(searchQuery),
 }));
 
-vi.mock('@/components/chat-input-form/coding-mode-button', () => ({
-  CodingModeButton: ({ sessionId }: { sessionId?: string }) => (
-    <button data-testid="code-pill">{sessionId}</button>
-  ),
+const pillProps = vi.fn();
+/** Whether the Code pill is on and so offers the approvals button. */
+let codeOn = false;
+vi.mock('@/components/chat-input-form/coding-mode-button', async () => {
+  const { useOfferApprovals } = await import(
+    '@/components/chat-input-form/code-approvals-button'
+  );
+  return {
+    CodingModeButton: (props: {
+      sessionId?: string;
+      approvalsSlot: HTMLElement | null;
+    }) => {
+      pillProps(props);
+      useOfferApprovals(codeOn);
+      return <button data-testid="code-pill">{props.sessionId}</button>;
+    },
+  };
+});
+const invoke = vi.fn();
+vi.mock('@tauri-apps/api/core', () => ({
+  invoke: (...args: unknown[]) => invoke(...args),
+}));
+const metadataQuery = vi.fn();
+const saveMetadata = vi.fn();
+vi.mock('@iblai/iblai-js/data-layer', () => ({
+  useGetUserPlatformMetadataQuery: (...args: unknown[]) => {
+    metadataQuery(...args);
+    return { data: { metadata: { code_mode: { permission_mode: 'manual' } } } };
+  },
+  useUpdateUserPlatformMetadataMutation: () => [saveMetadata],
 }));
 vi.mock('@/components/service-worker-provider', () => ({
   useServiceWorker: () => ({ status: { isOnline: false } }),
@@ -122,6 +192,7 @@ const markdownToHtml = vi.fn();
 const htmlToMarkdown = vi.fn();
 let inIframe = false;
 vi.mock('@/lib/utils', () => ({
+  cn: (...classes: unknown[]) => classes.filter(Boolean).join(' '),
   isInIframe: () => inIframe,
   redirectToAuthSpa,
   redirectToAuthSpaJoinTenant,
@@ -133,8 +204,32 @@ vi.mock('@/lib/markdown-engine', () => ({
 let tauri = false;
 vi.mock('@/types/tauri', () => ({ isTauriApp: () => tauri }));
 
+const unlisten = vi.fn();
+const listen = vi.fn();
+/** Handlers the chat registered, by Tauri event name. */
+const tauriHandlers: Record<string, (() => void) | undefined> = {};
+/** Set to hold `listen` open until the test settles it. */
+let listenGate: Promise<void> | undefined;
+vi.mock('@tauri-apps/api/event', () => ({
+  listen: async (event: string, handler: () => void) => {
+    listen(event);
+    tauriHandlers[event] = handler;
+    await listenGate;
+    return unlisten;
+  },
+}));
+let inBackground = false;
+const playAttentionChime = vi.fn();
+vi.mock('@/lib/attention-chime', () => ({
+  isAppInBackground: () => inBackground,
+  playAttentionChime,
+}));
+
 const { SdkChat, CHAT_LABEL_NAMESPACES, resolveChatMessageOrigins } =
   await import('../sdk-chat');
+const { resetApprovalModeForTests, useOfferApprovals } = await import(
+  '@/components/chat-input-form/code-approvals-button'
+);
 
 const lastProps = () =>
   chatSpy.mock.calls[chatSpy.mock.calls.length - 1][0] as Record<string, any>;
@@ -150,6 +245,14 @@ describe('SdkChat', () => {
     tauri = false;
     showAppBanner = 'true';
     mentorIdFromNav = 'nav-mentor';
+    codeOn = false;
+    pillProps.mockClear();
+    invoke.mockReset();
+    metadataQuery.mockClear();
+    saveMetadata.mockReset();
+    saveMetadata.mockReturnValue({ unwrap: async () => ({}) });
+    localStorage.setItem('tenant', 'acme');
+    resetApprovalModeForTests();
   });
   afterEach(() => {
     vi.useRealTimers();
@@ -312,6 +415,267 @@ describe('SdkChat', () => {
     });
     expect(screen.getByTestId('code-pill')).toBeInTheDocument();
   });
+
+  describe('Code approvals', () => {
+    it('puts the approvals button first in the action group, before the microphone, and not beside the Code pill', async () => {
+      tauri = true;
+      codeOn = true;
+      render(<SdkChat isPreviewMode={false} />);
+
+      const actions = await screen.findByTestId('composer-actions');
+      await waitFor(() =>
+        expect(
+          within(actions).getByTestId('code-approvals-button'),
+        ).toBeInTheDocument(),
+      );
+      expect(
+        Array.from(actions.children).map((el) =>
+          el.getAttribute('data-testid'),
+        ),
+      ).toEqual([
+        'composer-action-controls',
+        'voice-chat-button',
+        'voice-call-button',
+        'submit-message-button',
+      ]);
+      expect(
+        within(screen.getByTestId('composer-action-controls')).getByTestId(
+          'code-approvals-button',
+        ),
+      ).toBeInTheDocument();
+      expect(
+        within(screen.getByTestId('composer-extra-controls')).queryByTestId(
+          'code-approvals-button',
+        ),
+      ).not.toBeInTheDocument();
+      expect(pillProps).toHaveBeenLastCalledWith(
+        expect.objectContaining({ approvalsSlot: null }),
+      );
+    });
+
+    it('saves a pick from the approvals button on this machine and the profile', async () => {
+      tauri = true;
+      codeOn = true;
+      render(<SdkChat isPreviewMode={false} />);
+
+      await userEvent.click(await screen.findByTestId('code-approvals-button'));
+      await userEvent.click(
+        await screen.findByTestId('code-approvals-option-auto'),
+      );
+
+      await waitFor(() =>
+        expect(saveMetadata).toHaveBeenCalledWith({
+          tenantKey: 'acme',
+          metadata: { code_mode: { permission_mode: 'auto' } },
+        }),
+      );
+      expect(invoke).toHaveBeenCalledWith('set_opencode_permission_mode', {
+        mode: 'auto',
+      });
+    });
+
+    it('adds nothing to the action group while Code is off', () => {
+      tauri = true;
+      render(<SdkChat isPreviewMode={false} />);
+
+      expect(screen.getByTestId('code-pill')).toBeInTheDocument();
+      expect(lastProps().slots.composerActionControls).toBeUndefined();
+      expect(
+        screen.queryByTestId('composer-action-controls'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('switches to Automatic from a permission card the way the approvals button does', async () => {
+      tauri = true;
+      codeOn = true;
+      render(<SdkChat isPreviewMode={false} />);
+
+      await act(() => lastProps().config.onSwitchToAutomatic());
+
+      expect(invoke).toHaveBeenCalledWith('set_opencode_permission_mode', {
+        mode: 'auto',
+      });
+      expect(saveMetadata).toHaveBeenCalledWith({
+        tenantKey: 'acme',
+        metadata: { code_mode: { permission_mode: 'auto' } },
+      });
+      expect(
+        await screen.findByRole('button', { name: 'Approvals: Automatic' }),
+      ).toBeInTheDocument();
+    });
+
+    // The SDK card tells the user itself, so a toast here would be a second one.
+    it('tells a permission card when Automatic was not saved, and shows no notice of its own', async () => {
+      tauri = true;
+      const err = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const toastError = vi.spyOn(toast, 'error');
+      invoke.mockImplementation(async (cmd: string) => {
+        if (cmd === 'set_opencode_permission_mode')
+          throw new Error('settings unreadable');
+        return cmd === 'get_opencode_permission_mode' ? 'manual' : undefined;
+      });
+      render(<SdkChat isPreviewMode={false} />);
+
+      let saved: unknown;
+      await act(async () => {
+        saved = await lastProps().config.onSwitchToAutomatic();
+      });
+
+      expect(saved).toBe(false);
+      expect(toastError).not.toHaveBeenCalled();
+      expect(saveMetadata).not.toHaveBeenCalled();
+      toastError.mockRestore();
+      err.mockRestore();
+    });
+
+    it('holds a permission card’s Switch to Automatic until this machine has saved it', async () => {
+      // The SDK card awaits this before allowing its own action, so the save
+      // lands first and answers every other card still waiting.
+      tauri = true;
+      let finishSave!: () => void;
+      invoke.mockImplementation((cmd: string) =>
+        cmd === 'set_opencode_permission_mode'
+          ? new Promise<void>((resolve) => {
+              finishSave = resolve;
+            })
+          : Promise.resolve(undefined),
+      );
+      render(<SdkChat isPreviewMode={false} />);
+
+      let switching: unknown;
+      act(() => {
+        switching = lastProps().config.onSwitchToAutomatic();
+      });
+      expect(switching).toBeInstanceOf(Promise);
+      let settled = false;
+      void (switching as Promise<unknown>).then(() => {
+        settled = true;
+      });
+      await waitFor(() =>
+        expect(invoke).toHaveBeenCalledWith('set_opencode_permission_mode', {
+          mode: 'auto',
+        }),
+      );
+      await act(async () => {});
+      expect(settled).toBe(false);
+
+      await act(async () => {
+        finishSave();
+        await switching;
+      });
+      expect(settled).toBe(true);
+    });
+
+    it('offers neither the approvals slot nor Switch to Automatic outside Tauri', async () => {
+      vi.useFakeTimers();
+      codeOn = true;
+      // A pill offering it anywhere on screen still adds nothing outside Tauri.
+      const OfferingPill = () => {
+        useOfferApprovals(true);
+        return null;
+      };
+      render(
+        <>
+          <SdkChat isPreviewMode={false} />
+          <OfferingPill />
+        </>,
+      );
+      act(() => {
+        vi.advanceTimersByTime(6000);
+      });
+
+      expect(lastProps().slots.composerActionControls).toBeUndefined();
+      expect(
+        screen.queryByTestId('code-approvals-button'),
+      ).not.toBeInTheDocument();
+      expect(lastProps().config.onSwitchToAutomatic).toBeUndefined();
+      expect(metadataQuery).toHaveBeenLastCalledWith(
+        { tenantKey: 'acme' },
+        { skip: true },
+      );
+    });
+  });
+
+  describe('chime for a Code permission card', () => {
+    const PERMISSION_EVENT = 'opencode:permission_request';
+    const requestArrives = () => act(() => tauriHandlers[PERMISSION_EVENT]?.());
+
+    beforeEach(() => {
+      listen.mockClear();
+      unlisten.mockClear();
+      playAttentionChime.mockClear();
+      delete tauriHandlers[PERMISSION_EVENT];
+      listenGate = undefined;
+      inBackground = false;
+    });
+
+    it('chimes once when a card arrives while the app is in the background', async () => {
+      tauri = true;
+      render(<SdkChat isPreviewMode={false} />);
+      await waitFor(() =>
+        expect(listen).toHaveBeenCalledWith(PERMISSION_EVENT),
+      );
+
+      inBackground = true;
+      requestArrives();
+
+      expect(playAttentionChime).toHaveBeenCalledTimes(1);
+    });
+
+    it('stays quiet while the user is in the app', async () => {
+      tauri = true;
+      render(<SdkChat isPreviewMode={false} />);
+      await waitFor(() =>
+        expect(listen).toHaveBeenCalledWith(PERMISSION_EVENT),
+      );
+
+      requestArrives();
+
+      expect(playAttentionChime).not.toHaveBeenCalled();
+    });
+
+    it('never listens outside Tauri', async () => {
+      vi.useFakeTimers();
+      render(<SdkChat isPreviewMode={false} />);
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(6000);
+      });
+
+      expect(listen).not.toHaveBeenCalled();
+    });
+
+    it('stops listening once the chat unmounts', async () => {
+      tauri = true;
+      const { unmount } = render(<SdkChat isPreviewMode={false} />);
+      await waitFor(() =>
+        expect(listen).toHaveBeenCalledWith(PERMISSION_EVENT),
+      );
+      await act(async () => {});
+
+      unmount();
+
+      expect(unlisten).toHaveBeenCalledTimes(1);
+    });
+
+    it('stops listening even when the chat unmounts before the listener is in place', async () => {
+      tauri = true;
+      let openGate: () => void = () => {};
+      listenGate = new Promise((resolve) => {
+        openGate = resolve;
+      });
+      const { unmount } = render(<SdkChat isPreviewMode={false} />);
+      await waitFor(() =>
+        expect(listen).toHaveBeenCalledWith(PERMISSION_EVENT),
+      );
+
+      unmount();
+      expect(unlisten).not.toHaveBeenCalled();
+      await act(async () => openGate());
+
+      expect(unlisten).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe('postMessage origins (security)', () => {
     const own = window.location.origin;
     const setAncestors = (origins: string[] | undefined) =>

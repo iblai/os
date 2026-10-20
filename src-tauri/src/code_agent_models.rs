@@ -38,7 +38,7 @@ pub(crate) fn saved(backend: Backend) -> Option<String> {
         .map(str::to_string)
 }
 
-fn save(backend: Backend, model: Option<&str>) -> Result<(), String> {
+pub(crate) fn save(backend: Backend, model: Option<&str>) -> Result<(), String> {
     update_settings(|settings| {
         let mut map = settings
             .get(SETTINGS_KEY)

@@ -152,8 +152,11 @@ interface InsideButtonsProps {
    * Drives the Code pill's spinner while syncing and its popover's error note.
    */
   skillSync?: OpencodeSkillSync;
-  /** Spot beside the composer's microphone for Code's approvals button. */
-  codeApprovalsSlot?: HTMLElement | null;
+  /**
+   * Spot first in the composer's right-hand action group for Code's approvals
+   * button.
+   */
+  codeApprovalsSlot: HTMLElement | null;
 }
 
 export const InsideButtons = ({
