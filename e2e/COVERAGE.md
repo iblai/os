@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-10-15 | 939 checkpoints (895 covered, 10 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 96 journeys (95 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-10-15 | 940 checkpoints (896 covered, 10 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 96 journeys (95 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -617,7 +617,7 @@ The "Remember past conversations" (`enable_memory_component`) master toggle move
 
 ---
 
-## Journey 31: Mobile View (8 checkpoints) — `journeys/31-mobile-view.spec.ts`
+## Journey 31: Mobile View (9 checkpoints) — `journeys/31-mobile-view.spec.ts`
 
 **Source files:** `app/platform/[tenantKey]/[mentorId]/page.tsx`, `app/platform/[tenantKey]/[mentorId]/explore/page.tsx`, `components/modals/edit-mentor-modal/tabs/datasets-tab/agent-datasets-tab.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/user-profile.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/learner-mode-switch.tsx`
 
@@ -629,6 +629,7 @@ The "Remember past conversations" (`enable_memory_component`) master toggle move
 - [x] Search and mentor cards work correctly on mobile
 - [x] Dataset upload and untrain/delete flow works on mobile
 - [x] Admin on mobile sees Admin/User labels (not Instructor/Learner) on the profile dropdown's learner-mode row, and the label flips correctly when the switch is toggled (#2592)
+- [x] Issue #121: on an iPhone 14 viewport the chat page's html and body have `overscroll-behavior: none` (computed), so swiping up cannot scroll the app shell and leave a blank gap
 
 ---
 
