@@ -277,8 +277,17 @@ fn unreachable_chat(e: reqwest::Error) -> String {
 /// Models is on; that switch lives in its storage, not here.
 #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
 pub async fn warm_up_local_chat() {
-    if check_ollama_installed() {
-        start_local_chat_runtime().await;
+    warm_up_local_chat_with(check_ollama_installed, start_local_chat_runtime).await
+}
+
+#[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+async fn warm_up_local_chat_with<F, Fut>(ollama_installed: impl Fn() -> bool, start: F)
+where
+    F: Fn() -> Fut,
+    Fut: std::future::Future<Output = ()>,
+{
+    if ollama_installed() {
+        start().await;
     }
 }
 
@@ -293,17 +302,42 @@ static LOCAL_CHAT_START: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(
 /// failure to the first request.
 #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
 async fn start_local_chat_runtime() {
-    let _one_start = LOCAL_CHAT_START.lock().await;
-    if !is_ollama_running().await {
-        match tokio::task::spawn_blocking(start_ollama_server).await {
-            Ok(Ok(())) => {
-                wait_for_ollama_ready(20).await;
+    start_local_chat_runtime_with(
+        is_ollama_running,
+        || async {
+            match tokio::task::spawn_blocking(start_ollama_server).await {
+                Ok(Ok(())) => {
+                    wait_for_ollama_ready(20).await;
+                }
+                Ok(Err(e)) => println!("[McpBridge] Couldn't start Ollama for local chat: {e}"),
+                Err(e) => println!("[McpBridge] Ollama start task failed: {e}"),
             }
-            Ok(Err(e)) => println!("[McpBridge] Couldn't start Ollama for local chat: {e}"),
-            Err(e) => println!("[McpBridge] Ollama start task failed: {e}"),
-        }
+        },
+        || async {
+            let _ = tokio::task::spawn_blocking(crate::mcp_bridge_manager::start_bridge).await;
+        },
+    )
+    .await
+}
+
+#[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+async fn start_local_chat_runtime_with<R, RFut, O, OFut, B, BFut>(
+    ollama_running: R,
+    start_ollama: O,
+    start_bridge: B,
+) where
+    R: Fn() -> RFut,
+    RFut: std::future::Future<Output = bool>,
+    O: Fn() -> OFut,
+    OFut: std::future::Future<Output = ()>,
+    B: Fn() -> BFut,
+    BFut: std::future::Future<Output = ()>,
+{
+    let _one_start = LOCAL_CHAT_START.lock().await;
+    if !ollama_running().await {
+        start_ollama().await;
     }
-    let _ = tokio::task::spawn_blocking(crate::mcp_bridge_manager::start_bridge).await;
+    start_bridge().await;
 }
 
 /// Get the current timestamp in RFC3339 format
@@ -1362,6 +1396,74 @@ mod tests {
         });
 
         assert!(ollama_answers(&format!("http://127.0.0.1:{port}"), OLLAMA_CHECK_TIMEOUT).await);
+    }
+
+    /// The launch half of odm-09: with Ollama installed, the warm-up brings
+    /// local chat up before anyone sends a message.
+    #[tokio::test]
+    async fn the_launch_warm_up_starts_local_chat_when_ollama_is_installed() {
+        let starts = AtomicUsize::new(0);
+        warm_up_local_chat_with(
+            || true,
+            || async {
+                starts.fetch_add(1, Ordering::SeqCst);
+            },
+        )
+        .await;
+        assert_eq!(starts.load(Ordering::SeqCst), 1);
+    }
+
+    /// Without Ollama there is nothing to warm up, and starting the bridge
+    /// would only fail in front of nothing.
+    #[tokio::test]
+    async fn the_launch_warm_up_starts_nothing_without_ollama() {
+        warm_up_local_chat_with(|| false, never_started).await;
+    }
+
+    #[tokio::test]
+    async fn local_chat_brings_ollama_up_before_the_bridge() {
+        let order = std::sync::Mutex::new(Vec::new());
+        start_local_chat_runtime_with(
+            || async { false },
+            || async { order.lock().unwrap().push("ollama") },
+            || async { order.lock().unwrap().push("bridge") },
+        )
+        .await;
+        assert_eq!(*order.lock().unwrap(), ["ollama", "bridge"]);
+    }
+
+    #[tokio::test]
+    async fn a_running_ollama_is_not_started_again_but_the_bridge_is() {
+        let bridge_starts = AtomicUsize::new(0);
+        start_local_chat_runtime_with(
+            || async { true },
+            never_started,
+            || async {
+                bridge_starts.fetch_add(1, Ordering::SeqCst);
+            },
+        )
+        .await;
+        assert_eq!(bridge_starts.load(Ordering::SeqCst), 1);
+    }
+
+    /// The launch warm-up and a chat that beats it overlap; the later one
+    /// must wait for the start in flight instead of racing it.
+    #[tokio::test]
+    async fn overlapping_starts_run_one_at_a_time() {
+        let running = AtomicUsize::new(0);
+        let overlapped = AtomicBool::new(false);
+        let start = || async {
+            if running.fetch_add(1, Ordering::SeqCst) > 0 {
+                overlapped.store(true, Ordering::SeqCst);
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+            running.fetch_sub(1, Ordering::SeqCst);
+        };
+        tokio::join!(
+            start_local_chat_runtime_with(|| async { true }, never_started, start),
+            start_local_chat_runtime_with(|| async { true }, never_started, start),
+        );
+        assert!(!overlapped.load(Ordering::SeqCst));
     }
 
     /// The pre-existing rule: a model without tool support can't use the

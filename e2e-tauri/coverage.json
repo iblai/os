@@ -104,7 +104,7 @@
           "id": "odm-09",
           "description": "On a freshly launched app with Local Models already on, the first local chat reaches the MCP bridge — warmed up at launch, or started by the chat itself — with no 'turn Local Models off and on' error",
           "status": "pending",
-          "note": "Live test, not a stub: needs ollama-mcp-bridge installed on the e2e host (turning Local Models on once installs it); covered meanwhile by the post_local_chat_with and launch warm-up Rust tests in model_manager.rs"
+          "note": "Live test, never run yet: tauri-driver has no macOS support and no CI job runs this suite. It skips itself on a host without ollama-mcp-bridge (turning Local Models on once installs it), where the 'turn Local Models off and on' error is the intended answer. Covered meanwhile by the model_manager.rs Rust tests a_chat_after_a_relaunch_starts_the_bridge_instead_of_failing (started by the chat), the_launch_warm_up_starts_local_chat_when_ollama_is_installed, the_launch_warm_up_starts_nothing_without_ollama, local_chat_brings_ollama_up_before_the_bridge and overlapping_starts_run_one_at_a_time (warmed up at launch), and the Vitest hooks/__tests__/use-model-download-warm-up.test.ts (the launch call while Local Models is on)"
         },
         {
           "id": "odm-10",

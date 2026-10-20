@@ -4393,7 +4393,7 @@
           "id": "slash-17",
           "description": "On a phone-width composer (360px) the Skills button collapses into the ••• menu like the other tool pills; its ••• entry expands the skills list in place (scrolling, inside the viewport), and picking a skill arms its /slug token",
           "status": "pending",
-          "note": "Only the OS composer (components/chat-input-form/inside-buttons.tsx) collapses Skills into •••; the mentor route renders the SDK composer (SdkChat), which keeps Skills as its own pill. test.fixme until the SDK composer carries it"
+          "note": "No route renders a Skills button that could collapse: the mentor route renders the SDK composer (SdkChat), where Skills sits inside the '+' menu at every width, and the workflow preview renders the OS composer (components/chat-input-form.tsx) in compactMode, which has no tool row (inside-buttons.tsx) and so no Skills. test.fixme until a route renders the OS composer's tool row; covered meanwhile by the inside-buttons Vitest case 'moves into the ••• menu when the row is too narrow, and expands its list there'"
         }
       ]
     },
@@ -5456,7 +5456,7 @@
           "id": "cr-17",
           "description": "Below 520px the composer's tool pills keep one line: Canvas off shows only its icon (its name kept as the accessible name), Canvas on alone shows its name and its \"Turn off Canvas\" x; from 520px up the name shows on or off",
           "status": "pending",
-          "note": "Written as test.fixme and never run: needs the SDK build with the composer tool row (useComposerToolPill), which the app only has from a local build so far, and an authenticated session the local env lacks (no PLAYWRIGHT_USERNAME / PLAYWRIGHT_PASSWORD). The two-pills-on case needs the desktop app's Code or Cowork pill; covered meanwhile by the SDK's composer-tool-row and chat-input-form 'tool pills on phone widths' Vitest cases and the OS coding-mode-button 'in the SDK composer's tool row' cases"
+          "note": "Written as test.fixme and never run: needs an authenticated session (PLAYWRIGHT_USERNAME / PLAYWRIGHT_PASSWORD), which no env it has run in had. The pinned SDK (web-containers 1.48.0) has the tool row it tests; the SDK measures the row rather than the window, so its 390px step still needs checking on the first run. The two-pills-on case needs the desktop app's Code or Cowork pill; covered meanwhile by the SDK's composer-tool-row and chat-input-form 'tool pills on phone widths' Vitest cases and the OS coding-mode-button 'in the SDK composer's tool row' cases"
         }
       ]
     },
@@ -5722,14 +5722,14 @@
       "name": "In-chat Model Picker",
       "spec": "84-in-chat-model-picker.spec.ts",
       "sourceFiles": [
-        "components/modals/edit-mentor-modal/settings-tab.tsx",
+        "components/modals/edit-mentor-modal/llm-tab.tsx",
         "e2e/page-objects/chat.page.ts",
-        "e2e/page-objects/edit-mentor/settings.tab.ts"
+        "e2e/page-objects/edit-mentor/llm.tab.ts"
       ],
       "checkpoints": [
         {
           "id": "icm-01",
-          "description": "An admin turns on \"Allow in-chat model change\" under Settings > Capabilities; Save sends enable_in_chat_llm_change=true and it reads back on after reopening",
+          "description": "An admin turns on \"Allow in-chat model change\" on the LLM tab; it saves enable_in_chat_llm_change=true and it reads back on after reopening",
           "status": "covered"
         },
         {
@@ -5749,7 +5749,7 @@
         },
         {
           "id": "icm-05",
-          "description": "With the setting off (Save sends enable_in_chat_llm_change=false), the + menu has no Model row",
+          "description": "With the setting off (the LLM tab saves enable_in_chat_llm_change=false), the + menu has no Model row",
           "status": "covered"
         },
         {

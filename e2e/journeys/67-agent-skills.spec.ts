@@ -1372,9 +1372,11 @@ test.describe('Journey 67: Agent Skills — chat composer slash skill picker', (
   // row has no room for it; there its entry expands the same list in place
   // (a side submenu has no room on a phone), inside the viewport.
   //
-  // FIXME: only the OS composer (`inside-buttons.tsx`) collapses Skills into
-  // •••, and the mentor route renders the SDK's composer (`SdkChat`), which
-  // keeps Skills as its own pill. Re-enable once the SDK composer carries it.
+  // FIXME: no route renders a Skills button that could collapse. The mentor
+  // route renders the SDK's composer (`SdkChat`), where Skills sits inside the
+  // "+" menu at every width, and the workflow preview renders the OS composer
+  // in `compactMode`, which drops the tool row (`inside-buttons.tsx`) and its
+  // Skills. Re-enable once a route renders that tool row.
 
   test.fixme(
     'Skills moves into the ••• menu on a phone-width composer and still arms a skill',

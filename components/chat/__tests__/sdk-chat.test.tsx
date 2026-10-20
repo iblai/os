@@ -58,15 +58,17 @@ vi.mock('@iblai/iblai-js/web-utils', () => ({
   selectSessionId: (state: { sessionId: string }) => state.sessionId,
 }));
 
+let intlMessages: Record<string, unknown> | undefined;
 vi.mock('next-intl', async (importOriginal) => {
   const actual = await importOriginal<typeof import('next-intl')>();
   const enMessages = (await import('../../../messages/en.json')).default;
   return {
-    useMessages: () => ({
-      chatIndex: { dropFilesHere: 'Suelta aquí' },
-      uiDialog: { close: 'Cerrar' },
-      unrelatedNamespace: { x: 'y' },
-    }),
+    useMessages: () =>
+      intlMessages ?? {
+        chatIndex: { dropFilesHere: 'Suelta aquí' },
+        uiDialog: { close: 'Cerrar' },
+        unrelatedNamespace: { x: 'y' },
+      },
     useTranslations: (namespace: string) =>
       actual.createTranslator({
         locale: 'en',
@@ -259,6 +261,7 @@ describe('SdkChat', () => {
     vi.restoreAllMocks();
     inIframe = false;
     searchQuery = 'a=1';
+    intlMessages = undefined;
   });
 
   it('passes identity from the OS hooks to the SDK Chat', () => {
@@ -305,6 +308,27 @@ describe('SdkChat', () => {
     // #2586 redesigned composer ("+" menu, chips, file cards).
     expect(CHAT_LABEL_NAMESPACES).toContain('chatComposer');
   });
+
+  // The card must name Code the way the approvals popover does
+  // (permissionModeAutoHint / permissionModeSaveFailed); the SDK catalog's
+  // es/zh wording says "Código" / "代码模式".
+  it.each(['en', 'es', 'fr', 'zh'])(
+    'gives the permission card the approvals popover’s name for Code in its title, hint and failure notice (%s)',
+    async (locale) => {
+      intlMessages = (await import(`../../../messages/${locale}.json`))
+        .default as Record<string, unknown>;
+      render(<SdkChat isPreviewMode={false} />);
+      const card = lastProps().labels.chatCodePermissionCard;
+      for (const key of [
+        'title',
+        'switchToAutomaticHint',
+        'switchToAutomaticFailed',
+      ]) {
+        expect(card[key]).toMatch(/\bCode\b/);
+        expect(card[key]).not.toMatch(/Código|代码模式/);
+      }
+    },
+  );
 
   it('builds the config from the OS environment and host hooks', () => {
     render(<SdkChat isPreviewMode={false} />);

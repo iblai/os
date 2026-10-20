@@ -1680,7 +1680,11 @@
     "llmConfiguration": "LLM Configuration",
     "configureLanguageModelSettings": "Configure the language model settings for your agent.",
     "searchProviders": "Search Providers",
-    "providerLogoAlt": "{providerName} logo"
+    "providerLogoAlt": "{providerName} logo",
+    "inChatModelChangeLabel": "Allow in-chat model change",
+    "inChatModelChangeDescription": "Let people switch to another AI model for their own chat. New chats start on the agent’s model again.",
+    "inChatModelChangeTooltip": "Let people pick a different AI model for their own chat. The agent’s model doesn’t change, and new chats start on it. This setting has one value, so it applies to both in-app chat and the embed widget.",
+    "inChatModelChangeTooltipAriaLabel": "More about allowing in-chat model change"
   },
   "tabsPromptsTab": {
     "heading": "Prompts",
@@ -1980,8 +1984,6 @@
     "perSurfaceNote": "Set independently for in-app chat and the embed widget.",
     "inAppChatNote": "Conversations hosted inside the app — the chat your users open here.",
     "embedWidgetNote": "The widget you embed on your own site using the snippet from the Embed tab.",
-    "inChatModelChangeLabel": "Allow in-chat model change",
-    "inChatModelChangeTooltip": "Let people pick a different AI model for their own chat. The agent’s model doesn’t change, and new chats start on it. This setting has one value, so it applies to both in-app chat and the embed widget.",
     "showLastConversationLabel": "Reopen last conversation",
     "showLastConversationTooltip": "When someone opens this agent, show their last conversation so they can pick up where they left off. This setting has one value, so it applies to both in-app chat and the embed widget."
   },
@@ -2193,8 +2195,8 @@
     "description": "An agentic coding tool that edits files, runs commands, and commits changes in the folder you choose.",
     "checkingLocalModel": "Checking whether your on-device model can run Code…",
     "pickLocalModel": "Pick an on-device model first: open the model list and choose one marked On-Device.",
-    "localModelCantEdit": "{model} can't change files or run commands, so Code can't use it.",
-    "localModelUnknown": "We couldn't confirm {model} can change files or run commands, so Code may not work with it.",
+    "localModelCantEdit": "{model} can’t change files or run commands, so Code can’t use it.",
+    "localModelUnknown": "We couldn’t confirm {model} can change files or run commands, so Code may not work with it.",
     "tryToolCapableModel": " Try a model that can, such as Qwen 3, Llama 3.2 or Phi-4 Mini.",
     "firstRunSlow": "First run can take a few minutes while the model loads.",
     "modelUnavailable": "isn’t available for Code — turns will fail. Pick a different model in the top-left.",
@@ -2271,7 +2273,9 @@
     },
     "allow": "Allow",
     "deny": "Deny",
-    "switchToAutomatic": "Switch to Automatic"
+    "switchToAutomatic": "Switch to Automatic",
+    "switchToAutomaticHint": "Code changes files and runs commands without asking, in every chat. Use it only in folders you trust.",
+    "switchToAutomaticFailed": "The approval setting could not be saved. Code still uses the previous setting."
   },
   "appUpdatePrompt": {
     "title": "Update Available",

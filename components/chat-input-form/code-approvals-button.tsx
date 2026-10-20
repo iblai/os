@@ -11,16 +11,8 @@ import {
 
 export { PERMISSION_MODES, PERMISSION_MODE_ICONS, type PermissionMode };
 
-// One mode for every chat, saved by the desktop and shared by every Code
-// control on screen, so two composers (the canvas split) never disagree and a
-// composer mounting mid-chat shows the mode in force. `picks` counts the
-// user's choices and `seeds` the profile's mode taking effect, so a read that
-// started before either never overwrites it.
-//
-// Seeded to Ask Me, NOT to the saved default: until the desktop answers we do
-// not know the mode, and claiming Automatic in that window tells a user who
-// chose Ask Me that Code may act unasked. Rust holds the same invariant from
-// the other side, where damage can only make Code ask more, never less.
+// Module-level: one mode for every chat, shared by every Code control on
+// screen, so the canvas split's two composers never disagree.
 const codeApprovalModeStore = createApprovalModeStore();
 
 export const {

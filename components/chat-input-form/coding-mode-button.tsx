@@ -1199,14 +1199,8 @@ export function CodingModeButton({
                     <Code2 className="h-4 w-4" />
                   )}
                 </span>
-                {/* On phone widths an INACTIVE pill is icon-only so the
-                    composer row never pushes the send button off-screen;
-                    once Code is on (or its popover is open) the label shows
-                    too, unless the row is too narrow for it (`compact`) —
-                    the blue fill then marks it as on. In the SDK composer's
-                    tool row the row decides instead (only the one tool that
-                    is on keeps its name), but an open popover always shows
-                    it. */}
+                {/* Icon-only while off on narrow rows, so the pill never
+                    pushes Send off-screen; an open popover always names it. */}
                 <span
                   className={
                     compact

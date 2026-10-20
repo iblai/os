@@ -21,7 +21,9 @@ overrides:
   # Dev-only reach: @release-it/conventional-changelog > conventional-changelog
   # > conventional-changelog-writer > handlebars. Upper bound keeps the 4.x line.
   handlebars: '>=4.7.10 <5'
-  follow-redirects: '>=1.16.0'
+  # GHSA-q3jh-wrc6-jgq8, GHSA-8r9p-f939-6h3c — credential headers survive a
+  # cross-origin redirect, affecting >=1.16.0 <1.16.1. Reach: axios.
+  follow-redirects: '>=1.16.1'
   defu: '>=6.1.5'
   lodash-es: '>=4.18.0'
   lodash: '>=4.18.0'

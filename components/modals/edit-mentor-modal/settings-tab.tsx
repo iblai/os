@@ -187,10 +187,6 @@ export function SettingsTab() {
         label: t('enhancedDocRetrievalLabel'),
         tooltip: t('enhancedDocRetrievalTooltip'),
       },
-      inChatModelChange: {
-        label: t('inChatModelChangeLabel'),
-        tooltip: t('inChatModelChangeTooltip'),
-      },
       showLastConversation: {
         label: t('showLastConversationLabel'),
         tooltip: t('showLastConversationTooltip'),

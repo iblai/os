@@ -1,5 +1,8 @@
 /// <reference types="@wdio/globals/types" />
 import { spawnSync } from 'node:child_process';
+import { statSync } from 'node:fs';
+import { homedir } from 'node:os';
+import { delimiter, join } from 'node:path';
 import { loginIfNeeded } from '../support/login';
 
 /**
@@ -63,6 +66,24 @@ async function waitForOllama(timeoutMs = 30_000): Promise<void> {
     await new Promise((res) => setTimeout(res, 500));
   }
   throw new Error('Ollama did not become reachable on :11434 within timeout');
+}
+
+/** Same lookup as `find_bridge_bin` in `mcp_bridge_manager.rs`. */
+function bridgeInstalled(): boolean {
+  const exe =
+    process.platform === 'win32'
+      ? 'ollama-mcp-bridge.exe'
+      : 'ollama-mcp-bridge';
+  const dirs = (process.env.PATH ?? '').split(delimiter).filter(Boolean);
+  dirs.push(join(homedir(), '.local', 'bin'));
+  if (process.platform !== 'win32') dirs.push(join(homedir(), '.cargo', 'bin'));
+  return dirs.some((dir) => {
+    try {
+      return statSync(join(dir, exe)).isFile();
+    } catch {
+      return false;
+    }
+  });
 }
 
 /** Remove the test model host-side so the next pull is real, not a fake-complete. */
@@ -204,7 +225,10 @@ describe('Journey 2: On-device Model Management', () => {
   // Must run before odm-03: its cancel restarts Ollama through
   // start_ollama_server, which also starts the bridge and would hide the
   // fresh-launch state (no bridge recorded) this checkpoint needs.
-  it('odm-09: on a fresh launch the first local chat reaches the MCP bridge (warmed up at launch or started by the chat) instead of failing', async () => {
+  it('odm-09: on a fresh launch the first local chat reaches the MCP bridge (warmed up at launch or started by the chat) instead of failing', async function () {
+    // Without the bridge the "turn Local Models off and on" error is the
+    // intended answer, not this bug.
+    if (!bridgeInstalled()) this.skip();
     await waitForOllama();
     let error = '';
     try {

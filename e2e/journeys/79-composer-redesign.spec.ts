@@ -924,10 +924,14 @@ test.describe('Journey 79: Composer Redesign', () => {
   // the only such pill (Code and Cowork are desktop-app pills), so this covers
   // off and on alone; from 520px up the name always shows.
   //
-  // FIXME: pending, never run. It needs the SDK build with the composer tool
-  // row (`useComposerToolPill`), which the app only has from a local build so
-  // far, and an authenticated session, which the local env lacks (no
-  // PLAYWRIGHT_USERNAME / PLAYWRIGHT_PASSWORD).
+  // The SDK measures the tool row itself, not the viewport, and the row is
+  // always narrower than the window: the wide step uses 1280px for that, and
+  // a row under 300px (`CRAMPED_ROW_WIDTH`) hides the name even when on, so
+  // the 390px step assumes the row stays 300px or wider there.
+  //
+  // FIXME: pending, never run. It needs an authenticated session
+  // (PLAYWRIGHT_USERNAME / PLAYWRIGHT_PASSWORD), which no env this has run in
+  // had; the pinned SDK (web-containers 1.48.0) has the tool row it tests.
   test.fixme(
     'Canvas pill on a phone-width composer: icon only while off, its name and × once on; wider screens keep the name',
     async ({ page, chatPage }) => {
@@ -970,8 +974,8 @@ test.describe('Journey 79: Composer Redesign', () => {
       await expect(canvasName).toBeVisible();
       await expect(turnOff).toBeVisible();
 
-      // 520px and up: the name shows, on or off.
-      await page.setViewportSize({ width: 520, height: 844 });
+      // A row 520px and up: the name shows, on or off.
+      await page.setViewportSize({ width: 1280, height: 800 });
       await expect(canvasName).not.toHaveClass(srOnly);
       await turnOff.click();
       await expect(chatPage.canvasToggle).toHaveAttribute(
@@ -980,8 +984,6 @@ test.describe('Journey 79: Composer Redesign', () => {
         { timeout: 10_000 },
       );
       await expect(canvasName).not.toHaveClass(srOnly);
-
-      await page.setViewportSize({ width: 1280, height: 800 });
     },
   );
 });

@@ -1402,7 +1402,7 @@ describe('CodingModeButton', () => {
       await openPopover();
 
       expect(
-        await screen.findByText(/Gemma3 can't change files or run commands/),
+        await screen.findByText(/Gemma3 can’t change files or run commands/),
       ).toBeInTheDocument();
       expect(screen.getByRole('switch')).toBeDisabled();
     });
@@ -1449,7 +1449,7 @@ describe('CodingModeButton', () => {
       await openPopover();
 
       expect(
-        await screen.findByText(/We couldn't confirm Phi-4 can change files/),
+        await screen.findByText(/We couldn’t confirm Phi-4 can change files/),
       ).toBeInTheDocument();
       expect(screen.getByRole('switch')).toBeEnabled();
     });
