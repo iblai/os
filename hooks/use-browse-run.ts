@@ -5,7 +5,7 @@ import { chatActions, selectActiveTab } from '@iblai/iblai-js/web-utils';
 import {
   addPermissionRequest,
   dropPermissionRequest,
-} from '@/components/chat/code-permission-card';
+} from '@iblai/iblai-js/web-containers/next';
 import { readCoworkApprovals } from '@/lib/cowork-approvals';
 import { useAppDispatch, useAppSelector } from '@/lib/hooks';
 
@@ -97,6 +97,8 @@ export function useBrowseRun() {
             chatActions.addToolCall({
               id: `${generation.current}-${tools.current++}`,
               name: 'browse',
+              // The row's label: the indicator reads `input.text`, never `log`.
+              input: { text: frame.text },
               log: frame.text,
               result: frame.ok ? 'ok' : 'failed',
             }),

@@ -75,6 +75,12 @@ vi.mock('@iblai/iblai-js/web-containers', async () => {
   >('@iblai/iblai-js/web-containers');
   return {
     ...actual,
+    // The SDK's markdown/LaTeX-to-text conversion has its own tests; a
+    // recognizable stub shows the row preview goes through it, independent of
+    // whether the installed SDK build ships it yet.
+    chatTextPreview: vi.fn((text: string | null | undefined) =>
+      text?.trim() ? `PREVIEW:${text}` : '',
+    ),
     RetrievedDocumentsButton: ({ documents, sessionId, label }: any) => (
       <button
         type="button"
@@ -90,6 +96,31 @@ vi.mock('@iblai/iblai-js/web-containers', async () => {
           `Retrieved Documents${documents ? ` (${documents.length})` : ''}`}
       </button>
     ),
+    // The session's canvases (placement hook + the chat's cards + read-only
+    // canvas dialog) are the SDK's and covered by its tests; the stubs show
+    // which turns the tab asks about and whose session it names.
+    useSessionCanvases: () => ({
+      forTurn: (index: number) =>
+        index === 0
+          ? [
+              {
+                artifact: { id: 7, title: 'Doc' },
+                versionNumber: 1,
+                isCurrent: true,
+              },
+            ]
+          : [],
+      hasCanvases: true,
+    }),
+    SessionCanvasCards: ({ artifacts, org, username, sessionId }: any) =>
+      artifacts.length ? (
+        <div
+          data-testid="session-canvas-cards"
+          data-org={org ?? ''}
+          data-username={username ?? ''}
+          data-session-id={sessionId ?? ''}
+        />
+      ) : null,
     // The panel's internals (documents button, tool record, model badge,
     // file cards) come from the SDK bundle and are covered by its tests; the
     // stub exposes what the tab hands it.
@@ -650,6 +681,30 @@ describe('HistoryTab', () => {
     render(<HistoryTab />);
     fireEvent.click(screen.getByText('Hello there mentor'));
     expect(screen.getByTestId('preview-dialog')).toBeInTheDocument();
+  });
+
+  it("lists the opened conversation's canvases under its owner, on desktop and in the mobile preview", () => {
+    const { unmount } = render(<HistoryTab />);
+    // Nothing is asked for until a conversation is open.
+    expect(
+      screen.queryByTestId('session-canvas-cards'),
+    ).not.toBeInTheDocument();
+    fireEvent.click(screen.getByText('Hello there mentor'));
+    const canvases = screen.getByTestId('session-canvas-cards');
+    expect(canvases).toHaveAttribute('data-org', 'test-tenant');
+    // The session owner's platform username — artifacts are stored per user.
+    expect(canvases).toHaveAttribute('data-username', 's1');
+    expect(canvases).toHaveAttribute('data-session-id', 'conv-1');
+    unmount();
+
+    window.innerWidth = 500;
+    render(<HistoryTab />);
+    fireEvent.click(screen.getByText('Hello there mentor'));
+    const dialog = screen.getByTestId('preview-dialog');
+    expect(within(dialog).getByTestId('session-canvas-cards')).toHaveAttribute(
+      'data-session-id',
+      'conv-1',
+    );
   });
 
   it('renders the avatar initial fallback "A" for anonymous selected conversation', () => {
@@ -1295,5 +1350,102 @@ describe('HistoryTab', () => {
     render(<HistoryTab />);
     fireEvent.click(screen.getByText('Hello there mentor'));
     expect(screen.queryByTestId('history-attachments')).not.toBeInTheDocument();
+  });
+
+  // ==========================================================================
+  // Rows: the profile tab's date pattern and the Transcripts sentiment line
+  // ==========================================================================
+  describe('conversation rows', () => {
+    it('dates the row like the profile History tab and shows the sentiment line under the title', () => {
+      render(<HistoryTab />);
+      const list = screen.getByLabelText('Conversation list');
+      expect(
+        within(list).getByText(
+          /^[A-Z][a-z]{2} \d{1,2}, \d{4}, \d{1,2}:\d{2} [AP]M · .+ ago$/,
+        ),
+      ).toBeInTheDocument();
+      const chips = within(list).getByTestId('conversation-topics');
+      const mark = within(chips).getByTestId('conversation-sentiment');
+      expect(mark).toHaveAttribute('data-compact', 'true');
+      expect(mark).toHaveAttribute('data-sentiment', 'positive');
+      expect(mark).toHaveTextContent('Positive User Sentiment');
+      expect(chips.firstElementChild).toBe(mark);
+    });
+  });
+
+  describe('title and topics', () => {
+    it("prefers the backend's title over the first message, and shows the topics as chips", () => {
+      mockUseHistoryWithPagination.mockReturnValue(
+        defaultHistory({
+          chatHistory: {
+            results: [
+              {
+                ...baseConversation,
+                title: 'Everyday Analogy',
+                topics: [{ name: 'Biology' }],
+              },
+            ],
+          },
+        }),
+      );
+      render(<HistoryTab />);
+      const list = screen.getByLabelText('Conversation list');
+      expect(within(list).getByText('Everyday Analogy')).toBeInTheDocument();
+      expect(
+        within(list).queryByText('Hello there mentor'),
+      ).not.toBeInTheDocument();
+      expect(within(list).getByTestId('conversation-topics')).toHaveTextContent(
+        'Biology',
+      );
+    });
+  });
+
+  describe('row preview text', () => {
+    const rawReply = '**Bold** answer: \\(x^2\\) and \\[\\text{area}\\]';
+
+    function withFirstReply(ai: string) {
+      mockUseHistoryWithPagination.mockReturnValue(
+        defaultHistory({
+          chatHistory: {
+            results: [
+              {
+                ...baseConversation,
+                messages: [
+                  { human: 'Hello there mentor', ai },
+                  { human: 'And then?', ai: 'A later reply' },
+                ],
+              },
+            ],
+          },
+        }),
+      );
+    }
+
+    it('previews the first AI reply as plain text (markdown and LaTeX converted), never the raw reply', () => {
+      withFirstReply(rawReply);
+      render(<HistoryTab />);
+      const list = screen.getByLabelText('Conversation list');
+      expect(within(list).getByText(`PREVIEW:${rawReply}`)).toBeInTheDocument();
+      expect(within(list).queryByText(rawReply)).not.toBeInTheDocument();
+      expect(within(list).queryByText(/A later reply/)).not.toBeInTheDocument();
+    });
+
+    it('falls back to "No response available" when the reply has no text to preview', () => {
+      withFirstReply('   ');
+      render(<HistoryTab />);
+      const list = screen.getByLabelText('Conversation list');
+      expect(
+        within(list).getByText('No response available'),
+      ).toBeInTheDocument();
+    });
+
+    it('marks each row with its session id for the e2e row locators', () => {
+      withFirstReply(rawReply);
+      render(<HistoryTab />);
+      const list = screen.getByLabelText('Conversation list');
+      const row = within(list).getByTestId('history-conversation-row');
+      expect(row).toHaveAttribute('data-session-id', 'conv-1');
+      expect(row).toHaveTextContent(`PREVIEW:${rawReply}`);
+    });
   });
 });

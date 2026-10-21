@@ -3,8 +3,12 @@ import {
   MCP_SERVER_LIST_PATH,
   type CreatedMcpServer,
 } from '../utils/mcp-servers';
+import { ChatPage } from './chat.page';
 
 export const MENTOR_SETTINGS_PATH = /\/mentors\/([^/]+)\/settings\/$/;
+/** The user's on/off for a server in one conversation (guide §5.13). */
+export const MCP_SESSION_PREFERENCE_PATH =
+  /\/mcp-servers\/(\d+)\/session-preference\/$/;
 
 export interface McpRbacActions {
   list?: boolean;
@@ -25,27 +29,31 @@ const isFocused = (locator: Locator) =>
   locator.evaluate((el) => el === document.activeElement).catch(() => false);
 
 /**
- * The composer's MCP pill and the MCP Servers menu it opens (SDK
- * `McpServersButton` / `McpServersMenu`, rendered by
- * `components/chat-input-form/inside-buttons.tsx`). Every menu element is
- * resolved from the menu root, never from the page.
+ * The composer "+" menu's MCP row and the MCP panel it opens (SDK
+ * `ComposerPlusMenu` → `McpServersMenu`, `chat-input-form/composer-plus-menu.tsx`).
+ * On desktop the panel is a popover beside the menu (`composer-mcp-popover`);
+ * on phones it is a page of the "+" bottom sheet. Like Memory, the row only
+ * exists while the "+" menu is open, so every path here goes through
+ * `ChatPage.openPlusMenu()`. Every panel element is resolved from the panel
+ * root, never from the page.
  */
 export class ChatMcpMenuPage {
   static readonly LABELS = {
-    pill: 'MCP',
-    heading: 'MCP Servers',
-    searchPlaceholder: 'Search Servers',
-    add: 'Add Server',
+    row: 'MCP',
+    heading: 'MCP',
+    /** The "+" trigger keeps its historical accessible name. */
+    plusMenu: 'Attach file',
+    searchPlaceholder: 'Search MCP',
+    add: 'Add Connector',
     close: 'Close',
     connect: 'Connect',
     disconnect: 'Disconnect',
-    featuredTab: 'Featured',
-    customTab: 'Custom',
+    featuredTab: 'Featured Connectors',
+    customTab: 'Connectors',
     userScope: 'User',
-    noSearchMatch: 'No servers match your search.',
-    failedToLoad: "Couldn't load MCP servers.",
+    noSearchMatch: 'No connectors found matching your search.',
+    failedToLoad: 'Failed to load featured connectors',
     retry: 'Retry',
-    moreOptions: 'More options',
     addConnectorDialog: 'Add MCP Connector',
     connectorNamePlaceholder: 'Enter connector name',
     connectorServerPlaceholder: 'https://api.example.com/mcp',
@@ -58,14 +66,13 @@ export class ChatMcpMenuPage {
   } as const;
 
   readonly page: Page;
-  readonly insideButtonsRow: Locator;
-  readonly pill: Locator;
-  /** The composer's ••• trigger — the navbar has its own "More options" button. */
-  readonly overflowTrigger: Locator;
-  readonly overflowMenu: Locator;
-  readonly overflowMenuItem: Locator;
+  readonly chat: ChatPage;
+  /** The "+" trigger (`composer-plus-button`). */
+  readonly plusMenuButton: Locator;
+  /** The MCP row inside the OPEN "+" menu (desktop dropdown or phone sheet). */
+  readonly row: Locator;
   readonly menu: Locator;
-  /** The popover around the menu, which is what has to fit the viewport. */
+  /** The popover (desktop) or sheet (phones) around the panel: what has to fit the viewport. */
   readonly panel: Locator;
   readonly heading: Locator;
   readonly search: Locator;
@@ -86,18 +93,11 @@ export class ChatMcpMenuPage {
   constructor(page: Page) {
     const { LABELS } = ChatMcpMenuPage;
     this.page = page;
-    this.insideButtonsRow = page.getByTestId('inside-buttons-row');
-    this.pill = this.insideButtonsRow
+    this.chat = new ChatPage(page);
+    this.plusMenuButton = this.chat.plusMenuButton;
+    this.row = this.openPlusMenu()
       .getByTestId('chat-mcp-button')
-      .and(page.getByRole('button', { name: LABELS.pill, exact: true }));
-    this.overflowTrigger = this.insideButtonsRow.getByRole('button', {
-      name: LABELS.moreOptions,
-    });
-    this.overflowMenu = page.getByRole('menu');
-    this.overflowMenuItem = this.overflowMenu.getByRole('menuitem', {
-      name: LABELS.pill,
-      exact: true,
-    });
+      .filter({ hasText: new RegExp(`^${LABELS.row}$`) });
     this.menu = page.getByTestId('mcp-servers-menu');
     this.panel = page.getByRole('dialog').filter({ has: this.menu });
     this.heading = this.menu.getByRole('heading', {
@@ -136,11 +136,39 @@ export class ChatMcpMenuPage {
     return `e2e-mcp-${Date.now()}-${parallelIndex}-${rand}`;
   }
 
+  /** The desktop "+" dropdown's OPEN content. */
+  plusMenuContent(): Locator {
+    return this.page.locator(
+      '[data-testid="composer-plus-menu"][data-state="open"]',
+    );
+  }
+
+  /** The phone "+" sheet's OPEN content (any page). */
+  plusMenuSheet(): Locator {
+    return this.page.locator(
+      '[data-testid="composer-plus-sheet"][data-state="open"]',
+    );
+  }
+
+  /** Whichever "+" surface is open — the two are exclusive by viewport. */
+  openPlusMenu(): Locator {
+    return this.plusMenuContent().or(this.plusMenuSheet());
+  }
+
   serverRow(serverId: number): Locator {
     return this.menu.getByTestId(`mcp-server-row-${serverId}`);
   }
 
+  /**
+   * The on/off for this chat: shown on every server the agent uses (locked when the
+   * server is required by the organization).
+   */
   serverToggle(serverId: number): Locator {
+    return this.menu.getByTestId(`mcp-server-session-toggle-${serverId}`);
+  }
+
+  /** The manager-only switch that attaches a server the agent does not use yet. */
+  attachToggle(serverId: number): Locator {
     return this.menu.getByTestId(`mcp-server-toggle-${serverId}`);
   }
 
@@ -148,7 +176,7 @@ export class ChatMcpMenuPage {
     return this.menu.getByTestId(`mcp-server-connect-${serverId}`);
   }
 
-  /** The tappable name area of a row; only rendered when the user may edit the server. */
+  /** The tappable name of a row; only rendered when the user may edit the server. */
   editButton(serverId: number): Locator {
     return this.menu.getByTestId(`mcp-server-edit-${serverId}`);
   }
@@ -162,37 +190,35 @@ export class ChatMcpMenuPage {
     return this.menu.getByTestId(`mcp-server-disconnect-${serverId}`);
   }
 
-  async openFromPill(): Promise<void> {
-    await this.pill.click();
+  /** Opens the "+" menu and chooses its MCP row. */
+  async openFromPlusMenu(): Promise<void> {
+    await this.chat.openPlusMenu();
+    await expect(this.row).toBeVisible({ timeout: 10_000 });
+    await this.row.click();
     await expect(this.heading).toBeVisible({ timeout: 10_000 });
   }
 
-  async openFromOverflow(): Promise<void> {
-    await this.overflowTrigger.click();
-    await expect(this.overflowMenu).toBeVisible({ timeout: 5_000 });
-    await this.overflowMenuItem.click();
-    // A ••• menu left open keeps its modal focus trap over the MCP panel.
-    await expect(this.overflowMenu).toBeHidden({ timeout: 5_000 });
-    await expect(this.heading).toBeVisible({ timeout: 10_000 });
-  }
-
-  /** ••• via Enter, End to the MCP item (always the last one), Enter. */
-  async openFromOverflowByKeyboard(): Promise<void> {
-    await this.overflowTrigger.focus();
+  /** "+" via Enter, End to the MCP row (always the last one), Enter. */
+  async openByKeyboard(): Promise<void> {
+    await this.plusMenuButton.focus();
     await this.page.keyboard.press('Enter');
-    await expect(this.overflowMenu).toBeVisible({ timeout: 5_000 });
+    await expect(this.plusMenuContent()).toBeVisible({ timeout: 5_000 });
     // Radix moves focus into the menu after it paints; End pressed earlier
     // lands on the trigger and does nothing.
     await expect
       .poll(() =>
-        this.overflowMenu.evaluate((el) => el.contains(document.activeElement)),
+        this.plusMenuContent().evaluate((el) =>
+          el.contains(document.activeElement),
+        ),
       )
       .toBe(true);
     await this.page.keyboard.press('End');
-    await expect(this.overflowMenuItem).toBeFocused();
+    await expect(this.row).toBeFocused();
     await this.page.keyboard.press('Enter');
 
-    await expect(this.overflowMenu).toBeHidden({ timeout: 5_000 });
+    // The dropdown closes (its focus trap would cover the panel) and the
+    // panel itself takes focus, so Tab reaches the search box.
+    await expect(this.plusMenuContent()).toBeHidden({ timeout: 5_000 });
     await expect(this.heading).toBeVisible({ timeout: 10_000 });
     await expect
       .poll(() =>
@@ -208,28 +234,19 @@ export class ChatMcpMenuPage {
     await expect(target).toBeFocused();
   }
 
-  /**
-   * Opens the menu from wherever MCP currently sits. MCP is the LAST pill in
-   * the row, so whenever anything has collapsed into ••• it has too — the
-   * pill and the trigger are never both on screen.
-   */
+  /** Opens the panel unless it is already showing. */
   async open(): Promise<void> {
     if (await this.heading.isVisible()) return;
-    await expect(this.pill.or(this.overflowTrigger).first()).toBeVisible({
-      timeout: 30_000,
-    });
+    await expect(this.plusMenuButton).toBeVisible({ timeout: 30_000 });
     // Retried: right after the Add MCP Connector dialog closes, a click can
     // land while the popover is still tearing down and get swallowed.
     await expect(async () => {
       if (await this.heading.isVisible()) return;
-      if (await this.pill.isVisible()) {
-        await this.openFromPill();
-      } else {
-        await this.openFromOverflow();
-      }
+      await this.openFromPlusMenu();
     }).toPass({ timeout: 30_000 });
   }
 
+  /** The panel's own close: back to the composer (desktop) or the sheet's main page (phones). */
   async close(): Promise<void> {
     await this.closeButton.click();
     await expect(this.menu).toBeHidden({ timeout: 10_000 });
@@ -242,14 +259,14 @@ export class ChatMcpMenuPage {
     const viewport = this.page.viewportSize();
     const box = await this.panel.boundingBox();
     expect(viewport, 'the page has a fixed viewport').not.toBeNull();
-    expect(box, 'the MCP Servers panel has a layout box').not.toBeNull();
+    expect(box, 'the MCP panel has a layout box').not.toBeNull();
     expect(box!.x).toBeGreaterThanOrEqual(0);
     expect(box!.y).toBeGreaterThanOrEqual(0);
     expect(box!.x + box!.width).toBeLessThanOrEqual(viewport!.width + 1);
     expect(box!.y + box!.height).toBeLessThanOrEqual(viewport!.height + 1);
   }
 
-  /** Servers added through Add Server are custom ones; the menu opens on Featured. */
+  /** Servers added through Add Connector are custom ones; the panel opens on Featured Connectors. */
   async showCustomServers(): Promise<void> {
     await this.customTab.click();
     await expect(this.customTab).toHaveAttribute('data-state', 'active');
@@ -257,7 +274,7 @@ export class ChatMcpMenuPage {
 
   /**
    * Searches for `name` and returns its row. Scrolls the list while the row
-   * is still missing, in case the menu loads servers page by page.
+   * is still missing, in case the panel loads servers page by page.
    */
   async revealServer(name: string): Promise<Locator> {
     await this.showCustomServers();
@@ -303,8 +320,8 @@ export class ChatMcpMenuPage {
   }
 
   /**
-   * Taps the server's row, which opens the shared "Edit MCP Connector" dialog
-   * prefilled with its name, renames it and saves (PUT on the server).
+   * Taps the server's name, which opens the shared "Edit MCP Connector" dialog
+   * prefilled with it, renames it and saves (PUT on the server).
    */
   async renameServer(
     serverId: number,
@@ -339,7 +356,7 @@ export class ChatMcpMenuPage {
   }
 
   /**
-   * Creates a no-auth server scoped to this agent through Add Server (the
+   * Creates a no-auth server scoped to this agent through Add Connector (the
    * shared `ConnectorDialogs` "Add MCP Connector" dialog), checks it was
    * auto-attached to the same agent, and returns its id.
    */
@@ -429,19 +446,28 @@ export class ChatMcpMenuPage {
     return id;
   }
 
+  /** Switches the server on or off for this chat and waits for the session preference save. */
   async setServerEnabled(serverId: number, enabled: boolean): Promise<void> {
     const toggle = this.serverToggle(serverId);
     await expect(toggle).toHaveAttribute('aria-checked', String(!enabled));
     const saved = this.page.waitForResponse(
-      (res) => isCall(res, 'PUT', MENTOR_SETTINGS_PATH),
+      (res) =>
+        isCall(res, 'PUT', MCP_SESSION_PREFERENCE_PATH) &&
+        MCP_SESSION_PREFERENCE_PATH.exec(new URL(res.url()).pathname)?.[1] ===
+          String(serverId),
       { timeout: 30_000 },
     );
     await toggle.click();
     const response = await saved;
     expect(
       response.ok(),
-      `saving the agent's MCP servers returned HTTP ${response.status()}`,
+      `saving the server's on/off for this chat returned HTTP ${response.status()}`,
     ).toBe(true);
+    const { is_enabled: sent, session_id: sessionId } = response
+      .request()
+      .postDataJSON() as { is_enabled?: boolean; session_id?: string };
+    expect(sent).toBe(enabled);
+    expect(sessionId, 'the save names the open conversation').toBeTruthy();
     await expect(toggle).toHaveAttribute('aria-checked', String(enabled));
   }
 
@@ -518,34 +544,16 @@ export class ChatMcpMenuPage {
   }
 
   /**
-   * A non-waiting count, sampled over `windowMs`: `toHaveCount(0)` alone
-   * passes at once, before a late re-render could add the pill.
+   * With the "+" menu open: a non-waiting count, sampled over `windowMs`.
+   * `toHaveCount(0)` alone passes at once, before a late re-render could add
+   * the row.
    */
-  async expectPillStaysAbsent(windowMs = 3_000): Promise<void> {
+  async expectRowStaysAbsent(windowMs = 3_000): Promise<void> {
+    await expect(this.openPlusMenu()).toBeVisible();
     const until = Date.now() + windowMs;
     do {
-      expect(await this.pill.count(), 'the MCP pill rendered').toBe(0);
+      expect(await this.row.count(), 'the MCP row rendered').toBe(0);
       await this.page.waitForTimeout(250);
     } while (Date.now() < until);
-  }
-
-  /**
-   * Narrows the viewport step by step until the row overflows into •••.
-   * Which width that takes depends on how many tools the agent has on.
-   */
-  async collapseIntoOverflow(
-    widths: number[] = [520, 430, 390, 360, 320],
-  ): Promise<number> {
-    for (const width of widths) {
-      await this.page.setViewportSize({ width, height: 900 });
-      const collapsed = await this.overflowTrigger
-        .waitFor({ state: 'visible', timeout: 5_000 })
-        .then(() => true)
-        .catch(() => false);
-      if (collapsed) return width;
-    }
-    throw new Error(
-      `The composer's tool row never overflowed into ••• at widths ${widths.join(', ')}`,
-    );
   }
 }

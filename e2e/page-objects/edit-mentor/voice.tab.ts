@@ -10,7 +10,10 @@ import {
   getCallConfigForm,
   expectCallConfigVisible,
   selectCallMode,
+  saveVoiceSettings,
 } from '@iblai/iblai-js/playwright';
+
+export type VoiceProviderId = Parameters<typeof selectVoiceProvider>[1];
 
 /**
  * Page object for the Voice tab inside the Edit Mentor dialog.
@@ -42,7 +45,7 @@ export class VoiceTab {
   /** Sub-tab pill for the Voice call (call configuration) sub-tab. */
   readonly callConfigSubTab: Locator;
   /**
-   * "Enable voice calls" (`show_voice_call`) master toggle. Used to live in
+   * "Enable Voice Calls" (`show_voice_call`) master toggle. Used to live in
    * Settings → Capabilities and gate the whole tab's visibility; it now lives
    * inline at the top of this tab via the shared `CapabilityGate` and the
    * Voice tab is always mounted (`hooks/use-mentor-segments.ts` no longer
@@ -99,7 +102,7 @@ export class VoiceTab {
 
   // ── Capability gate ───────────────────────────────────────────────────────
 
-  /** Whether the "Enable voice calls" capability toggle is currently on. */
+  /** Whether the "Enable Voice Calls" capability toggle is currently on. */
   async isCapabilityEnabled(): Promise<boolean> {
     const attr = await this.capabilityToggle
       .getAttribute('aria-checked')
@@ -108,7 +111,7 @@ export class VoiceTab {
   }
 
   /**
-   * Idempotently set the "Enable voice calls" capability toggle to the
+   * Idempotently set the "Enable Voice Calls" capability toggle to the
    * target state. Auto-saves on click (optimistic local state) — no footer
    * Save button involved. Waits for both the toggle's `aria-checked` and the
    * gated content's `data-enabled` attribute to reflect the target state.
@@ -159,6 +162,27 @@ export class VoiceTab {
     provider: 'browser' | 'openai' | 'google',
   ): Promise<void> {
     await expectVoiceProviderSelected(this.dialog, provider);
+  }
+
+  /** Provider ids in the order their cards render. */
+  async availableProviders(): Promise<VoiceProviderId[]> {
+    const cards = this.dialog.locator(
+      '[role="radiogroup"] [data-voice-provider]',
+    );
+    await expect(cards.first()).toBeVisible({ timeout: 10_000 });
+    const ids = await cards.evaluateAll((els) =>
+      els.map((el) => el.getAttribute('data-voice-provider') ?? ''),
+    );
+    // The SDK's VoiceProvider union lags the cards it renders (ibl.ai is
+    // missing), so trust the DOM over the type.
+    return ids.filter(Boolean) as VoiceProviderId[];
+  }
+
+  async saveVoiceSettings(): Promise<void> {
+    await saveVoiceSettings(this.dialog);
+    await expect(this.page.getByText('Voice saved').first()).toBeVisible({
+      timeout: 15_000,
+    });
   }
 
   /** Trigger that opens the modal voice picker for the mentor voice. */

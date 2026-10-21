@@ -17,7 +17,8 @@ export interface SnapshotItem {
   name: string;
   state: string;
   submit: boolean;
-  password: boolean;
+  /** A password, one-time-code or payment field: never typed into, never read back. */
+  secret: boolean;
 }
 
 /** One frame's view of itself; the worker merges the frames into what the model reads. */
@@ -32,6 +33,9 @@ export interface FrameSnapshot {
 export interface ActResult {
   ok: boolean;
   error?: string;
+  /** Viewport coordinates of the element's centre, from `locate`. */
+  x?: number;
+  y?: number;
 }
 
 /** The Chat tab's context feed (unchanged from the original panel.js). */
@@ -59,6 +63,7 @@ export function extractPageContent(): {
 export function snapshotPage(
   maxItems: number,
   textChars: number,
+  secretTokens: string[] = [],
 ): FrameSnapshot {
   const SELECTOR = [
     'a[href]',
@@ -78,6 +83,9 @@ export function snapshotPage(
     '[role~="option"]',
     '[role~="combobox"]',
     '[role~="switch"]',
+    // A div or paragraph a script made focusable is clickable too: custom
+    // dropdowns list their choices this way, with no role at all.
+    '[tabindex]:not([tabindex^="-"])',
     'h1',
     'h2',
     'h3',
@@ -102,7 +110,15 @@ export function snapshotPage(
   };
   const nameOf = (el: Element): string => {
     const aria = el.getAttribute('aria-label');
-    if (aria && aria.trim()) return collapse(aria, 80);
+    if (aria && aria.trim()) {
+      // Siblings often share one label ("select option"); the element's own
+      // words are what the user would say, so they ride along when they differ.
+      const label = collapse(aria, 80);
+      const own = collapse(textOf(el), 80);
+      return own && /[\p{L}\p{N}]/u.test(own) && !label.includes(own)
+        ? collapse(`${label}: ${own}`, 80)
+        : label;
+    }
     const labelledBy = el.getAttribute('aria-labelledby');
     if (labelledBy) {
       // Ids are scoped to the element's own tree: a shadow root's or the document's.
@@ -159,8 +175,11 @@ export function snapshotPage(
         return 'button';
       }
       if (type === 'checkbox' || type === 'radio') return type;
+      return 'textbox';
     }
-    return 'textbox';
+    if (tag === 'textarea' || el.getAttribute('contenteditable') === 'true')
+      return 'textbox';
+    return el.hasAttribute('tabindex') ? 'focusable' : 'textbox';
   };
   const isSubmit = (el: Element): boolean => {
     if (el instanceof HTMLInputElement)
@@ -169,11 +188,20 @@ export function snapshotPage(
       return el.type === 'submit' && Boolean(el.form);
     return false;
   };
-  const stateOf = (el: Element, role: string, password: boolean): string => {
+  // The fields the agent never types into are never read back either: what
+  // the user typed there is theirs alone.
+  const isSecret = (el: Element): boolean => {
+    if (el instanceof HTMLInputElement && el.type === 'password') return true;
+    const tokens = (el.getAttribute('autocomplete') || '')
+      .toLowerCase()
+      .split(/\s+/);
+    return tokens.some((token) => (secretTokens || []).includes(token));
+  };
+  const stateOf = (el: Element, role: string, secret: boolean): string => {
     const parts: string[] = [];
     if (role === 'textbox' || role === 'searchbox') {
-      if (password) {
-        parts.push('password');
+      if (secret) {
+        parts.push('secret');
       } else {
         const value =
           el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement
@@ -226,16 +254,16 @@ export function snapshotPage(
     if (el instanceof HTMLInputElement && el.type === 'hidden') continue;
     if (!visible(el) || el.closest('[aria-hidden="true"]')) continue;
     const role = roleOf(el);
-    const password = el instanceof HTMLInputElement && el.type === 'password';
+    const secret = isSecret(el);
     const n = items.length + 1;
     map.set(n, el);
     items.push({
       n,
       role,
       name: nameOf(el),
-      state: stateOf(el, role, password),
+      state: stateOf(el, role, secret),
       submit: isSubmit(el),
-      password,
+      secret,
     });
   }
   (globalThis as { __agentMap?: Map<number, Element> }).__agentMap = map;
@@ -255,6 +283,7 @@ export function actOnPage(
   action: string,
   value: string,
   submit: boolean,
+  secretTokens: string[] = [],
 ): ActResult {
   const map = (globalThis as { __agentMap?: Map<number, Element> }).__agentMap;
   const el = map ? map.get(n) : undefined;
@@ -273,47 +302,85 @@ export function actOnPage(
 
   if (action === 'scroll') return { ok: true };
 
+  const rect = html.getBoundingClientRect();
+  const centre = {
+    x: rect.left + rect.width / 2,
+    y: rect.top + rect.height / 2,
+  };
+
+  if (action === 'locate') return { ok: true, ...centre };
+
   if (action === 'click') {
     if (typeof html.focus === 'function') html.focus();
+    // Widgets that act on the press rather than the click (menus, drag
+    // handles) see the sequence a mouse sends; click() stays last so links
+    // navigate and submit buttons submit natively.
+    for (const type of ['pointerdown', 'mousedown', 'pointerup', 'mouseup']) {
+      const Ctor =
+        type.startsWith('pointer') && typeof PointerEvent === 'function'
+          ? PointerEvent
+          : MouseEvent;
+      el.dispatchEvent(
+        new Ctor(type, {
+          bubbles: true,
+          cancelable: true,
+          composed: true,
+          clientX: centre.x,
+          clientY: centre.y,
+          button: 0,
+          buttons: type.endsWith('down') ? 1 : 0,
+        }),
+      );
+    }
     html.click();
     return { ok: true };
   }
 
-  if (action === 'type') {
-    // Everything the user has to type themselves. The prompt tells the model
-    // not to touch these; this is what makes it true, and it is the only thing
-    // that does — Approvals = Automatic raises no card, and a `type` without
-    // `submit` raises none in either mode.
-    //
-    // `autocomplete` is a TOKEN LIST: an optional `section-*`, then an optional
-    // `shipping`/`billing`, then the field name, optionally `webauthn`. So
-    // `billing cc-number` is as ordinary as `cc-number` on a real checkout, and
-    // testing the attribute as a whole let it through.
-    const SECRET_FIELDS = [
-      'current-password',
-      'new-password',
-      'one-time-code',
-      'cc-number',
-      'cc-csc',
-      'cc-exp',
-      'cc-exp-month',
-      'cc-exp-year',
-      'cc-name',
-      'cc-type',
-    ];
-    const tokens = (el.getAttribute('autocomplete') || '')
-      .toLowerCase()
-      .split(/\s+/);
-    const secret =
-      (el instanceof HTMLInputElement && el.type === 'password') ||
-      tokens.some((token) => SECRET_FIELDS.includes(token));
-    if (secret) {
-      return {
-        ok: false,
-        error:
-          'Refused: this field takes a password or payment secret. Ask the user to type it themselves, then continue.',
-      };
+  // Everything the user has to type themselves. The prompt tells the model
+  // not to touch these; this is what makes it true, and it is the only thing
+  // that does — Approvals = Automatic raises no card, and a `type` without
+  // `submit` raises none in either mode.
+  //
+  // `autocomplete` is a TOKEN LIST: an optional `section-*`, then an optional
+  // `shipping`/`billing`, then the field name, optionally `webauthn`. So
+  // `billing cc-number` is as ordinary as `cc-number` on a real checkout, and
+  // testing the attribute as a whole let it through.
+  const tokens = (el.getAttribute('autocomplete') || '')
+    .toLowerCase()
+    .split(/\s+/);
+  const secret =
+    (el instanceof HTMLInputElement && el.type === 'password') ||
+    tokens.some((token) => (secretTokens || []).includes(token));
+  const refused: ActResult = {
+    ok: false,
+    error:
+      'Refused: this field takes a password or payment secret. Ask the user to type it themselves, then continue.',
+  };
+
+  // Real typing replaces a selection, so the field is focused and selected
+  // whole here, behind the same refusal as `type`.
+  if (action === 'prepare-type') {
+    if (secret) return refused;
+    if (typeof html.focus === 'function') html.focus();
+    if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
+      el.select();
+    } else if (
+      html.isContentEditable ||
+      el.getAttribute('contenteditable') === 'true'
+    ) {
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      const selection = window.getSelection();
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+    } else {
+      return { ok: false, error: 'Element cannot receive text.' };
     }
+    return { ok: true };
+  }
+
+  if (action === 'type') {
+    if (secret) return refused;
     if (typeof html.focus === 'function') html.focus();
     if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
       // React tracks the value through the prototype setter; a plain `el.value =`
@@ -432,4 +499,36 @@ export function waitForQuiet(quietMs: number, capMs: number): Promise<string> {
     });
     arm();
   });
+}
+
+/**
+ * Draws each listed element's number on the page for the picture: `pairs` are
+ * [the frame's own number, the number the model sees]. Returns how many were
+ * drawn. `unmarkPage` takes the layer down again.
+ */
+export function markPage(pairs: Array<[number, number]>): number {
+  const map = (globalThis as { __agentMap?: Map<number, Element> }).__agentMap;
+  document.getElementById('__ibl_marks')?.remove();
+  if (!map) return 0;
+  const layer = document.createElement('div');
+  layer.id = '__ibl_marks';
+  layer.style.cssText =
+    'position:fixed;inset:0;pointer-events:none;z-index:2147483647;font:bold 11px/14px sans-serif';
+  let drawn = 0;
+  for (const [local, shown] of pairs) {
+    const el = map.get(local);
+    if (!el || !el.isConnected) continue;
+    const rect = el.getBoundingClientRect();
+    const badge = document.createElement('span');
+    badge.textContent = String(shown);
+    badge.style.cssText = `position:absolute;left:${Math.max(0, rect.left)}px;top:${Math.max(0, rect.top - 14)}px;padding:0 3px;background:#111;color:#fff;border-radius:3px`;
+    layer.appendChild(badge);
+    drawn += 1;
+  }
+  (document.body || document.documentElement).appendChild(layer);
+  return drawn;
+}
+
+export function unmarkPage(): void {
+  document.getElementById('__ibl_marks')?.remove();
 }

@@ -506,10 +506,11 @@ test.describe('Journey 6: Mentor Management — Admin', () => {
       // that provider has no backend logo it renders the same placeholder
       // `<span role="img">` (single-letter initial) as the LLM tab's cards,
       // which `toHaveText` on the whole button would fold into the text.
-      // The label is always the LAST `<span>` in the row.
-      await expect(modelButton.locator('span').last()).toHaveText(
-        expectedLabel,
-      );
+      // The label is the last VISIBLE `<span>`: an unavailable row adds its
+      // reason after it, hidden on mouse devices (`pointer-fine:hidden`).
+      await expect(
+        modelButton.locator('span').filter({ visible: true }).last(),
+      ).toHaveText(expectedLabel);
     }
 
     await page.keyboard.press('Escape');
@@ -556,6 +557,166 @@ test.describe('Journey 6: Mentor Management — Admin', () => {
       badRequests,
       `unexpected requests for deleted static provider images: ${badRequests.join(', ')}`,
     ).toEqual([]);
+    await editMentorPage.close();
+  });
+
+  // Issue #2638: model availability is decided PER MODEL from the mentor-llms
+  // response (availability wins over has_credentials; a provider card greys
+  // only when EVERY model is unavailable). The catalogue is route-mocked so
+  // the result is independent of the tenant's real keys; nothing is saved.
+  test('admin goes to edit mentor LLM tab and model availability is decided per model, greying a provider card only when every model is unavailable', async ({
+    page,
+    editMentorPage,
+  }) => {
+    const azureMessage = 'Add your Azure OpenAI API key to use this model.';
+    // Synthetic key: the SDK never greys the ACTIVE provider's card, so the
+    // all-unavailable provider must be one that can never be the mentor's.
+    const allMissingKey = 'e2e-all-byok-missing';
+    const missing = {
+      status: 'byok_missing',
+      requires_credential: true,
+      message: azureMessage,
+    };
+    const available = (status: string) => ({
+      status,
+      requires_credential: false,
+      message: null,
+    });
+    const provider = (
+      name: string,
+      display_name: string,
+      chat_models: Array<Record<string, unknown>>,
+      extra: Record<string, unknown> = {},
+    ) => ({
+      id: name,
+      name,
+      display_name,
+      logo: null,
+      has_credentials: true,
+      can_use_main_keys: true,
+      main_has_credentials: false,
+      chat_models: chat_models.map(({ llm_name, ...rest }) => ({
+        llm_name,
+        display_name: llm_name,
+        ...rest,
+      })),
+      ...extra,
+    });
+    const catalogue = [
+      provider('azure_openai', 'Azure OpenAI', [
+        {
+          llm_name: 'gpt-4o',
+          has_credentials: false,
+          availability: missing,
+        },
+        {
+          llm_name: 'gpt-4.1',
+          has_credentials: true,
+          availability: available('byok_configured'),
+        },
+      ]),
+      provider(
+        'openai',
+        'OpenAI',
+        [
+          {
+            llm_name: 'chat-latest',
+            has_credentials: false,
+            main_has_credentials: true,
+            availability: available('byok_main_fallback'),
+          },
+        ],
+        { has_credentials: false },
+      ),
+      provider(
+        allMissingKey,
+        'E2E All Missing',
+        [
+          { llm_name: 'missing-a', availability: missing },
+          { llm_name: 'missing-b', availability: missing },
+        ],
+        { has_credentials: false },
+      ),
+      // Legacy shape: no per-model fields, falls back to provider flags.
+      provider('mistralai', 'Mistral', [{ llm_name: 'mistral-legacy' }]),
+    ];
+    await page.route('**/mentor-llms/**', (route) =>
+      route.request().method() === 'GET'
+        ? route.fulfill({ json: catalogue })
+        : route.continue(),
+    );
+    // beforeEach already warmed the RTK Query cache with the real catalogue;
+    // a fresh load after the route is registered makes the app re-fetch it.
+    await navigateToMentorApp(page);
+
+    await editMentorPage.open('LLM');
+    await waitForPageReady(page);
+    const llm = editMentorPage.llm;
+    await expect(llm.providerCardByKey('azure_openai')).toBeVisible({
+      timeout: 15_000,
+    });
+
+    for (const [key, disabled] of [
+      ['azure_openai', 'false'],
+      ['openai', 'false'],
+      [allMissingKey, 'true'],
+      ['mistralai', 'false'],
+    ]) {
+      await expect(llm.providerCardByKey(key)).toHaveAttribute(
+        'data-disabled',
+        disabled,
+      );
+    }
+
+    const openProvider = async (key: string) => {
+      await llm.providerCardByKey(key).click();
+      await expect(llm.llmSelectionDialog).toBeVisible({ timeout: 10_000 });
+    };
+    const closePicker = async () => {
+      await page.keyboard.press('Escape');
+      await expect(llm.llmSelectionDialog).not.toBeVisible({
+        timeout: 10_000,
+      });
+    };
+
+    await openProvider('azure_openai');
+    const rejected = llm.modelRowByName('gpt-4o');
+    const accepted = llm.modelRowByName('gpt-4.1');
+    await expect(rejected).toBeDisabled();
+    await expect(rejected).toHaveAttribute('data-unavailable', 'true');
+    await expect(rejected).toHaveAttribute(
+      'data-availability-status',
+      'byok_missing',
+    );
+    await expect(rejected).toHaveAttribute('title', azureMessage);
+    // The reason line is in the DOM for touch screens but CSS-hidden here.
+    await expect(rejected).not.toContainText(azureMessage, {
+      useInnerText: true,
+    });
+    await expect(accepted).toBeEnabled();
+    await expect(accepted).toHaveAttribute('data-unavailable', 'false');
+    await expect(accepted).not.toHaveAttribute('title', /.+/);
+    expect(await llm.getModelRowOrder()).toEqual(['gpt-4.1', 'gpt-4o']);
+    await closePicker();
+
+    await openProvider('openai');
+    const fallback = llm.modelRowByName('chat-latest');
+    await expect(fallback).toBeEnabled();
+    await expect(fallback).toHaveAttribute(
+      'data-availability-status',
+      'byok_main_fallback',
+    );
+    await closePicker();
+
+    await openProvider(allMissingKey);
+    await expect(llm.modelRowByName('missing-a')).toBeDisabled();
+    await expect(llm.modelRowByName('missing-b')).toBeDisabled();
+    await closePicker();
+
+    await openProvider('mistralai');
+    await expect(llm.modelRowByName('mistral-legacy')).toBeEnabled();
+    await closePicker();
+
     await editMentorPage.close();
   });
 
@@ -641,18 +802,40 @@ test.describe('Journey 6: Mentor Management — Admin', () => {
   test('admin goes to edit mentor prompts tab and edits the system prompt', async ({
     page,
     editMentorPage,
+    createMentorPage,
   }) => {
+    // The System Prompt card is hidden for mentors connected to a claw
+    // sandbox (its behavior is driven by the sandbox agent config instead —
+    // see prompts-tab.tsx), so whatever mentor the page happened to land on
+    // may not have one at all. This test owns a freshly created mentor
+    // (never claw-enabled) so the System Prompt card is guaranteed to exist,
+    // mirroring the "deletes a mentor" test below.
+    let created = false;
+    for (let attempt = 0; attempt < 3 && !created; attempt++) {
+      try {
+        await createMentorPage.open();
+        created = true;
+      } catch {
+        await page.keyboard.press('Escape');
+      }
+    }
+    expect(created).toBe(true);
+    await createMentorPage.createWithName();
+    await waitForPageReady(page);
+
     await editMentorPage.open('Prompts');
     await waitForPageReady(page);
 
-    await editMentorPage.prompts.page
-      .getByRole('button', { name: 'Edit', exact: true })
-      .first()
-      .click();
+    await editMentorPage.prompts.systemPromptEditButton.click();
     await editMentorPage.prompts.setSystemPrompt(
       'You are a helpful E2E test assistant.',
     );
-    await editMentorPage.close();
+
+    // Clean up the mentor this test created.
+    await editMentorPage.open('Settings');
+    await waitForPageReady(page);
+    await editMentorPage.settings.deleteMentor();
+    await expect(page).toHaveURL(/\/platform\//, { timeout: 15_000 });
   });
 
   // fixme: flaky — LLM response time can exceed test timeout on remote server

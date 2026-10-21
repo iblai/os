@@ -26,24 +26,26 @@ vi.mock('@/hooks/use-embed-mode', () => ({
   useEmbedMode: () => mockUseEmbedMode(),
 }));
 
-// Mock child components
-vi.mock('@/components/accessibility/floating-accessibility-button', () => ({
-  FloatingAccessibilityButton: () => (
-    <div data-testid="floating-accessibility-button">Floating Button</div>
-  ),
-}));
-
-vi.mock('@/components/accessibility/accessibility-toolbar', () => ({
-  AccessibilityToolbar: () => (
-    <div data-testid="accessibility-toolbar">Toolbar</div>
+vi.mock('@iblai/iblai-js/web-containers/next', () => ({
+  AccessibilityFab: ({
+    defaultPositionClassName,
+  }: {
+    defaultPositionClassName?: string;
+  }) => (
+    <>
+      <div className={defaultPositionClassName} data-testid="accessibility-fab">
+        <div data-testid="floating-accessibility-button">Floating Button</div>
+      </div>
+      <div data-testid="accessibility-toolbar">Toolbar</div>
+    </>
   ),
 }));
 
 // Create a mock Redux store
-function createMockStore() {
+function createMockStore(chat: unknown[] = []) {
   return configureStore({
     reducer: {
-      chatSliceShared: (state = { chats: { chat: [] }, activeTab: 'chat' }) =>
+      chatSliceShared: (state = { chats: { chat }, activeTab: 'chat' }) =>
         state,
     },
   });
@@ -60,7 +62,7 @@ describe('AccessibilityFab', () => {
   });
 
   describe('Rendering behavior', () => {
-    it('renders both FloatingAccessibilityButton and AccessibilityToolbar when conditions are met', () => {
+    it('renders the SDK AccessibilityFab when conditions are met', () => {
       mockUseEmbedMode.mockReturnValue(false);
       mockUseTenantMetadata.mockReturnValue({
         metadata: { accessibility_menu: true },
@@ -330,6 +332,30 @@ describe('AccessibilityFab', () => {
     });
   });
 
+  describe('Default position', () => {
+    it.each([
+      ['an empty chat', { chats: { chat: [] }, activeTab: 'chat' }],
+      ['chats that are not loaded yet', {}],
+    ])('sits at bottom-4 for %s', (_, chatState) => {
+      mockUseTenantMetadata.mockReturnValue({
+        metadata: { accessibility_menu: true },
+      });
+      const store = configureStore({
+        reducer: { chatSliceShared: (state = chatState) => state },
+      });
+
+      const { container } = render(
+        <Provider store={store}>
+          <AccessibilityFab />
+        </Provider>,
+      );
+
+      const wrapperDiv = container.querySelector('div.fixed');
+      expect(wrapperDiv).toHaveClass('bottom-4', 'mb-10', 'right-4');
+      expect(wrapperDiv).not.toHaveClass('bottom-[21rem]');
+    });
+  });
+
   describe('Hook integration', () => {
     it('calls useParams with correct type', () => {
       const store = createMockStore();
@@ -474,6 +500,61 @@ describe('AccessibilityFab', () => {
 
       // Should be null because accessibility_menu is false
       expect(container.firstChild).toBeNull();
+    });
+  });
+
+  // #2586 review: on phones the new-chat composer is pinned to the bottom, and
+  // the floating button used to sit on top of its Send button.
+  describe('Position', () => {
+    beforeEach(() => {
+      mockUseTenantMetadata.mockReturnValue({
+        metadata: { accessibility_menu: true },
+      });
+    });
+
+    it('sits above the pinned phone composer on the new-chat screen', () => {
+      render(
+        <Provider store={createMockStore()}>
+          <AccessibilityFab />
+        </Provider>,
+      );
+
+      const fab = screen.getByTestId('accessibility-fab');
+      expect(fab).toHaveClass(
+        'bottom-4',
+        'max-md:bottom-[22rem]',
+        'max-md:mb-0',
+      );
+      expect(fab).not.toHaveClass('bottom-[21rem]');
+    });
+
+    it('treats a tab with no chat entry as the new-chat screen', () => {
+      const store = configureStore({
+        reducer: {
+          chatSliceShared: (state = { chats: {}, activeTab: 'chat' }) => state,
+        },
+      });
+      render(
+        <Provider store={store}>
+          <AccessibilityFab />
+        </Provider>,
+      );
+
+      expect(screen.getByTestId('accessibility-fab')).toHaveClass(
+        'max-md:bottom-[22rem]',
+      );
+    });
+
+    it('keeps its raised conversation position once messages exist', () => {
+      render(
+        <Provider store={createMockStore([{ role: 'user', content: 'hi' }])}>
+          <AccessibilityFab />
+        </Provider>,
+      );
+
+      const fab = screen.getByTestId('accessibility-fab');
+      expect(fab).toHaveClass('bottom-[21rem]');
+      expect(fab).not.toHaveClass('max-md:bottom-[22rem]');
     });
   });
 });

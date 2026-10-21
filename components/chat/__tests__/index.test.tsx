@@ -2286,7 +2286,7 @@ describe('Chat', () => {
       // cachedSessionId is found. We need to mock local storage to have a cached session.
       const { useLocalStorage } = await import('@/hooks/use-local-storage');
       (useLocalStorage as any).mockReturnValue([
-        { 'mentor-123': 'cached-session' },
+        { 'test-tenant:mentor-123': 'cached-session' },
         vi.fn(),
       ]);
 
@@ -2354,7 +2354,7 @@ describe('Chat', () => {
     it('shows the spinner and hides the welcome while a cached session is loading', async () => {
       const { useLocalStorage } = await import('@/hooks/use-local-storage');
       (useLocalStorage as any).mockReturnValue([
-        { 'mentor-123': 'cached-session' },
+        { 'test-tenant:mentor-123': 'cached-session' },
         vi.fn(),
       ]);
 
@@ -2391,7 +2391,7 @@ describe('Chat', () => {
     it('shows the welcome (not the spinner) for an empty cached session once loading completes', async () => {
       const { useLocalStorage } = await import('@/hooks/use-local-storage');
       (useLocalStorage as any).mockReturnValue([
-        { 'mentor-123': 'cached-session' },
+        { 'test-tenant:mentor-123': 'cached-session' },
         vi.fn(),
       ]);
 
@@ -2411,7 +2411,7 @@ describe('Chat', () => {
     it('hides the spinner once messages arrive for a cached session', async () => {
       const { useLocalStorage } = await import('@/hooks/use-local-storage');
       (useLocalStorage as any).mockReturnValue([
-        { 'mentor-123': 'cached-session' },
+        { 'test-tenant:mentor-123': 'cached-session' },
         vi.fn(),
       ]);
 
@@ -2447,7 +2447,7 @@ describe('Chat', () => {
     it('does not render the spinner in advanced mode even when a cached session is loading', async () => {
       const { useLocalStorage } = await import('@/hooks/use-local-storage');
       (useLocalStorage as any).mockReturnValue([
-        { 'mentor-123': 'cached-session' },
+        { 'test-tenant:mentor-123': 'cached-session' },
         vi.fn(),
       ]);
 
@@ -2829,7 +2829,7 @@ describe('Chat', () => {
     it('should use cached session id from local storage', async () => {
       const { useLocalStorage } = await import('@/hooks/use-local-storage');
       (useLocalStorage as any).mockReturnValue([
-        { 'mentor-123': 'cached-session-456' },
+        { 'test-tenant:mentor-123': 'cached-session-456' },
         vi.fn(),
       ]);
 
@@ -3903,7 +3903,7 @@ describe('Chat', () => {
 
       // Session ID should be cached
       expect(mockSaveCachedSessionId).toHaveBeenCalledWith({
-        'mentor-123': 'popup-session-abc',
+        'test-tenant:mentor-123': 'popup-session-abc',
       });
     });
 
@@ -3951,7 +3951,7 @@ describe('Chat', () => {
 
       // Session ID should be cached
       expect(mockSaveCachedSessionId).toHaveBeenCalledWith({
-        'mentor-123': 'popup-session-xyz',
+        'test-tenant:mentor-123': 'popup-session-xyz',
       });
     });
 
@@ -10221,6 +10221,119 @@ describe('Chat', () => {
     });
   });
 
+  describe('onSessionNotFound callback (#2536 self-heal)', () => {
+    const defaultAdvancedChatReturn = {
+      changeTab: vi.fn(),
+      activeTab: 'chat',
+      currentStreamingMessage: null,
+      enabledGuidedPrompts: [],
+      isStreaming: false,
+      mentorName: 'Test Mentor',
+      messages: [],
+      profileImage: '/avatar.png',
+      sendMessage: vi.fn(),
+      setMessage: vi.fn(),
+      stopGenerating: vi.fn(),
+      uniqueMentorId: 'unique-mentor-123',
+      sessionId: 'session-123',
+      startNewChat: vi.fn(),
+      enableSafetyDisclaimer: false,
+      isPending: false,
+      isLoadingChats: false,
+    };
+
+    it('passes a tenant-scoped sessionKey to useAdvancedChat', async () => {
+      let capturedOptions: any;
+      const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
+      (useAdvancedChat as any).mockImplementation((options: any) => {
+        capturedOptions = options;
+        return defaultAdvancedChatReturn;
+      });
+
+      renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+
+      // Default mocked params: tenantKey='test-tenant', mentorId='mentor-123'.
+      expect(capturedOptions.sessionKey).toBe('test-tenant:mentor-123');
+    });
+
+    it('produces distinct sessionKeys for the same mentor under different tenants', async () => {
+      const { useParams } = await import('next/navigation');
+      (useParams as any).mockReturnValue({
+        tenantKey: 'tenant-b',
+        mentorId: 'mentor-123',
+      });
+
+      let capturedOptions: any;
+      const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
+      (useAdvancedChat as any).mockImplementation((options: any) => {
+        capturedOptions = options;
+        return defaultAdvancedChatReturn;
+      });
+
+      renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+
+      expect(capturedOptions.sessionKey).toBe('tenant-b:mentor-123');
+      expect(capturedOptions.sessionKey).not.toBe('test-tenant:mentor-123');
+    });
+
+    it('removes only the tenant-scoped entry when it still equals the dead id', async () => {
+      let capturedOnSessionNotFound: ((sessionId: string) => void) | undefined;
+      const mockSaveCachedSessionId = vi.fn();
+
+      const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
+      (useAdvancedChat as any).mockImplementation((options: any) => {
+        capturedOnSessionNotFound = options.onSessionNotFound;
+        return defaultAdvancedChatReturn;
+      });
+
+      const { useLocalStorage } = await import('@/hooks/use-local-storage');
+      (useLocalStorage as any).mockReturnValue([{}, mockSaveCachedSessionId]);
+
+      renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+
+      expect(capturedOnSessionNotFound).toBeDefined();
+      capturedOnSessionNotFound!('dead-session-id');
+
+      expect(mockSaveCachedSessionId).toHaveBeenCalledTimes(1);
+      const updater = mockSaveCachedSessionId.mock.calls[0][0];
+      expect(typeof updater).toBe('function');
+
+      // The dead id still matches the tenant-scoped entry -> removed, other
+      // entries (e.g. a different mentor/tenant) are left untouched.
+      expect(
+        updater({
+          'test-tenant:mentor-123': 'dead-session-id',
+          'other-tenant:other-mentor': 'unrelated-session',
+        }),
+      ).toEqual({ 'other-tenant:other-mentor': 'unrelated-session' });
+    });
+
+    it('does not clobber a newer id written between the failure and the callback running', async () => {
+      let capturedOnSessionNotFound: ((sessionId: string) => void) | undefined;
+      const mockSaveCachedSessionId = vi.fn();
+
+      const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
+      (useAdvancedChat as any).mockImplementation((options: any) => {
+        capturedOnSessionNotFound = options.onSessionNotFound;
+        return defaultAdvancedChatReturn;
+      });
+
+      const { useLocalStorage } = await import('@/hooks/use-local-storage');
+      (useLocalStorage as any).mockReturnValue([{}, mockSaveCachedSessionId]);
+
+      renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+
+      capturedOnSessionNotFound!('stale-dead-session-id');
+
+      const updater = mockSaveCachedSessionId.mock.calls[0][0];
+      // A fresher session id was already written under the same key by the
+      // time this callback's updater runs against the latest persisted
+      // value — it must be returned untouched, not overwritten.
+      const latest = { 'test-tenant:mentor-123': 'fresher-session-id' };
+      expect(updater(latest)).toBe(latest);
+    });
+  });
+
   describe('onOfflineWithoutLocalLLM callback', () => {
     it('should be passed to useAdvancedChat', async () => {
       let capturedOnOfflineCallback: (() => void) | null = null;
@@ -11288,7 +11401,7 @@ describe('Chat', () => {
     it('should use cached session ID when available', async () => {
       const { useLocalStorage } = await import('@/hooks/use-local-storage');
       (useLocalStorage as any).mockReturnValue([
-        { 'mentor-123': 'cached-session-456' },
+        { 'test-tenant:mentor-123': 'cached-session-456' },
         vi.fn(),
       ]);
 
@@ -12965,7 +13078,7 @@ describe('Chat', () => {
 
       // Mock cached session to make isNewSession.current = false
       (useLocalStorage as any).mockReturnValue([
-        { 'mentor-123': 'cached-session-id' },
+        { 'test-tenant:mentor-123': 'cached-session-id' },
         vi.fn(),
       ]);
 
@@ -14308,7 +14421,10 @@ describe('Chat', () => {
   });
 
   describe('session change with artifacts enabled', () => {
-    it('should disable canvas tool when session changes and artifacts are enabled', async () => {
+    // Regression: switching chats used to toggle the canvas tool, which sent a
+    // session update turning canvas OFF on the chat being opened and writing
+    // the previous chat's tools onto it.
+    it('should not update the session tools when the session changes', async () => {
       const mockUpdateSessionTools = vi.fn().mockResolvedValue(undefined);
 
       const { useAdvancedChat, useMentorTools } = await import(
@@ -14388,104 +14504,10 @@ describe('Chat', () => {
       await waitFor(() => {
         expect(screen.getByTestId('chat-messages')).toBeInTheDocument();
       });
-    });
-  });
-
-  describe('updateSessionTools error handling', () => {
-    it('should handle error when updateSessionTools fails on session change', async () => {
-      const consoleSpy = vi
-        .spyOn(console, 'error')
-        .mockImplementation(() => {});
-      const mockUpdateSessionTools = vi
-        .fn()
-        .mockRejectedValue(new Error('Failed to update tools'));
-
-      const { useAdvancedChat, useMentorTools } = await import(
-        '@iblai/iblai-js/web-utils'
+      expect(mockAdvancedChatFn.mock.results.at(-1)?.value.sessionId).toBe(
+        'session-2',
       );
-
-      let currentSessionId = 'session-1';
-      const mockAdvancedChatFn = vi.fn(() => ({
-        changeTab: vi.fn(),
-        activeTab: 'chat',
-        currentStreamingMessage: null,
-        enabledGuidedPrompts: [],
-        isStreaming: false,
-        mentorName: 'Test Mentor',
-        messages: [
-          {
-            id: '1',
-            role: 'user',
-            content: 'Hello',
-            timestamp: new Date().toISOString(),
-            visible: true,
-          },
-        ],
-        profileImage: '/avatar.png',
-        sendMessage: vi.fn(),
-        setMessage: vi.fn(),
-        stopGenerating: vi.fn(),
-        uniqueMentorId: 'unique-mentor-123',
-        sessionId: currentSessionId,
-        startNewChat: vi.fn(),
-        enableSafetyDisclaimer: false,
-        isPending: false,
-        isLoadingChats: false,
-      }));
-
-      (useAdvancedChat as any).mockImplementation(mockAdvancedChatFn);
-
-      (useMentorTools as any).mockReturnValue({
-        enableWebBrowsing: true,
-        updateSessionTools: mockUpdateSessionTools,
-        setSessionTools: vi.fn().mockResolvedValue(undefined),
-        activeTools: [],
-        screenSharing: true,
-        deepResearch: true,
-        imageGeneration: true,
-        codeInterpreter: true,
-        promptsIsEnabled: true,
-        googleSlidesIsEnabled: true,
-        googleDocumentIsEnabled: true,
-        artifactsEnabled: true,
-      });
-
-      const { rerender } = renderWithRedux(
-        <Chat mode="default" isPreviewMode={false} />,
-      );
-
-      // Change sessionId
-      currentSessionId = 'session-2';
-
-      // Re-render with updated session
-      rerender(
-        <Provider
-          store={configureStore({
-            reducer: {
-              files: (state = { attachedFiles: [] }) => state,
-              chat: (state = {}) => state,
-              chatInput: chatInputSliceReducer,
-            },
-          })}
-        >
-          <Chat mode="default" isPreviewMode={false} />
-        </Provider>,
-      );
-
-      // Wait for effect to run and error to be caught
-      await waitFor(() => {
-        expect(mockUpdateSessionTools).toHaveBeenCalled();
-      });
-
-      // The error should be caught and logged (line 910)
-      await waitFor(() => {
-        expect(consoleSpy).toHaveBeenCalledWith(
-          '[Chat] Failed to disable canvas on session change:',
-          expect.any(Error),
-        );
-      });
-
-      consoleSpy.mockRestore();
+      expect(mockUpdateSessionTools).not.toHaveBeenCalled();
     });
   });
 
@@ -14792,109 +14814,6 @@ describe('Chat', () => {
       }
 
       // The callback at line 1430-1435 should execute
-    });
-  });
-
-  describe('updateSessionTools error handling', () => {
-    it('should handle updateSessionTools rejection when session changes with artifacts enabled', async () => {
-      const consoleErrorSpy = vi
-        .spyOn(console, 'error')
-        .mockImplementation(() => {});
-      const mockRejectedUpdateSessionTools = vi
-        .fn()
-        .mockRejectedValue(new Error('Update failed'));
-
-      const { useAdvancedChat, useMentorTools } = await import(
-        '@iblai/iblai-js/web-utils'
-      );
-
-      // We need to simulate a session change scenario
-      // First render with session-1, then session changes to session-2
-      let sessionIdRef = 'session-1';
-
-      (useAdvancedChat as any).mockImplementation(() => ({
-        changeTab: vi.fn(),
-        activeTab: 'chat',
-        currentStreamingMessage: null,
-        enabledGuidedPrompts: [],
-        isStreaming: false,
-        mentorName: 'Test Mentor',
-        messages: [
-          {
-            id: '1',
-            role: 'user',
-            content: 'Hello',
-            timestamp: new Date().toISOString(),
-            visible: true,
-          },
-        ],
-        profileImage: '/avatar.png',
-        sendMessage: vi.fn(),
-        setMessage: vi.fn(),
-        stopGenerating: vi.fn(),
-        uniqueMentorId: 'unique-mentor-123',
-        sessionId: sessionIdRef,
-        startNewChat: vi.fn(),
-        enableSafetyDisclaimer: false,
-        isPending: false,
-        isLoadingChats: false,
-      }));
-
-      (useMentorTools as any).mockReturnValue({
-        enableWebBrowsing: true,
-        updateSessionTools: mockRejectedUpdateSessionTools,
-        setSessionTools: vi.fn().mockResolvedValue(undefined),
-        activeTools: [],
-        screenSharing: true,
-        deepResearch: true,
-        imageGeneration: true,
-        codeInterpreter: true,
-        promptsIsEnabled: true,
-        googleSlidesIsEnabled: true,
-        googleDocumentIsEnabled: true,
-        artifactsEnabled: true,
-      });
-
-      const { rerender } = renderWithRedux(
-        <Chat mode="default" isPreviewMode={false} />,
-      );
-
-      // Change session ID
-      sessionIdRef = 'session-2';
-
-      // Force re-render with new session
-      rerender(
-        <Provider
-          store={configureStore({
-            reducer: {
-              files: (state = { attachedFiles: [] }) => state,
-              chat: (state = {}) => state,
-              chatInput: chatInputSliceReducer,
-            },
-          })}
-        >
-          <Chat mode="default" isPreviewMode={false} />
-        </Provider>,
-      );
-
-      // Wait for the effect to run and the error to be caught
-      await waitFor(
-        () => {
-          expect(mockRejectedUpdateSessionTools).toHaveBeenCalled();
-        },
-        { timeout: 2000 },
-      );
-
-      // Give time for the catch block to execute
-      await new Promise((resolve) => setTimeout(resolve, 100));
-
-      // Verify console.error was called with the error
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        '[Chat] Failed to disable canvas on session change:',
-        expect.any(Error),
-      );
-
-      consoleErrorSpy.mockRestore();
     });
   });
 
@@ -16775,88 +16694,6 @@ describe('Chat', () => {
       fireEvent.click(screen.getByText('Close'));
 
       expect(window.close).toHaveBeenCalled();
-    });
-  });
-
-  describe('Strategy 12: artifactsEnabled on session change', () => {
-    it('should call updateSessionTools when session changes and artifactsEnabled is true', async () => {
-      const mockUpdateSessionTools = vi.fn().mockResolvedValue(undefined);
-      const { useAdvancedChat, useMentorTools } = await import(
-        '@iblai/iblai-js/web-utils'
-      );
-
-      (useMentorTools as any).mockReturnValue({
-        enableWebBrowsing: true,
-        updateSessionTools: mockUpdateSessionTools,
-        setSessionTools: vi.fn().mockResolvedValue(undefined),
-        activeTools: [],
-        screenSharing: true,
-        deepResearch: true,
-        imageGeneration: true,
-        codeInterpreter: true,
-        promptsIsEnabled: true,
-        googleSlidesIsEnabled: true,
-        googleDocumentIsEnabled: true,
-        artifactsEnabled: true, // Artifacts enabled
-      });
-
-      // First render with session-123
-      (useAdvancedChat as any).mockReturnValue({
-        changeTab: vi.fn(),
-        activeTab: 'chat',
-        currentStreamingMessage: null,
-        enabledGuidedPrompts: [],
-        isStreaming: false,
-        mentorName: 'Test Mentor',
-        messages: [],
-        profileImage: '/avatar.png',
-        sendMessage: vi.fn(),
-        setMessage: vi.fn(),
-        stopGenerating: vi.fn(),
-        uniqueMentorId: 'unique-mentor-123',
-        sessionId: 'session-123',
-        startNewChat: vi.fn(),
-        enableSafetyDisclaimer: false,
-        isPending: false,
-        isLoadingChats: false,
-      });
-
-      const { rerender } = render(
-        <Provider store={createMockStore()}>
-          <Chat mode="default" isPreviewMode={false} />
-        </Provider>,
-      );
-
-      // Now change session to session-456
-      (useAdvancedChat as any).mockReturnValue({
-        changeTab: vi.fn(),
-        activeTab: 'chat',
-        currentStreamingMessage: null,
-        enabledGuidedPrompts: [],
-        isStreaming: false,
-        mentorName: 'Test Mentor',
-        messages: [],
-        profileImage: '/avatar.png',
-        sendMessage: vi.fn(),
-        setMessage: vi.fn(),
-        stopGenerating: vi.fn(),
-        uniqueMentorId: 'unique-mentor-123',
-        sessionId: 'session-456', // Changed session
-        startNewChat: vi.fn(),
-        enableSafetyDisclaimer: false,
-        isPending: false,
-        isLoadingChats: false,
-      });
-
-      rerender(
-        <Provider store={createMockStore()}>
-          <Chat mode="default" isPreviewMode={false} />
-        </Provider>,
-      );
-
-      await waitFor(() => {
-        expect(mockUpdateSessionTools).toHaveBeenCalled();
-      });
     });
   });
 

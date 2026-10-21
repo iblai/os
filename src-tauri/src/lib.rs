@@ -19,6 +19,10 @@ mod nav_guard;
 // `get_foundry_service_endpoint` to reach Foundry Local's OpenAI-compatible API.
 // The rest of the module is exercised by the desktop bin (see main.rs).
 #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+mod code_agent_installer;
+#[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+mod code_agent_models;
+#[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
 #[allow(dead_code)]
 mod foundry_manager;
 mod mcp_bridge_installer;
@@ -42,6 +46,7 @@ mod remote_code;
 // commands are registered only on mobile.
 #[allow(dead_code)]
 mod remote_code_client;
+mod telemetry;
 #[cfg(not(any(target_os = "ios", target_os = "android")))]
 mod web_cache;
 
@@ -163,6 +168,15 @@ const OAUTH_URL_PATTERNS: &[&str] = &[
     "appleid.apple.com",
     "/auth/login/apple",
     "/login/apple",
+    // Microsoft / Azure AD OAuth (kept in sync with main.rs).
+    "login.microsoftonline.com",
+    "login.live.com",
+    "azuread-oauth2",
+    "/auth/login/azuread",
+    "/login/azuread",
+    "microsoft-graph",
+    "/auth/login/microsoft-graph",
+    "/login/microsoft-graph",
 ];
 
 fn is_oauth_url(url: &str) -> bool {
@@ -911,7 +925,12 @@ where
     if let Err(err) = app.run_on_main_thread(move || {
         let _ = handle.emit(&name, payload);
     }) {
-        eprintln!("[emit_on_main] could not schedule '{event}' on main thread: {err}");
+        // The event name stays out of the grouping key: one issue for "the
+        // webview-mutex scheduling path failed", not one per event name.
+        telemetry::report_once(
+            "[emit_on_main] could not schedule an event on the main thread",
+            format!("'{event}' — {err}"),
+        );
     }
 }
 
@@ -2007,7 +2026,7 @@ const URL_MONITOR_SCRIPT_ONLINE: &str = r#"
 
             var context = {};
             for (var i = 0; i < keysToSave.length; i++) {
-                var value = localStorage.getItem(keysToSave[i]);
+                var value = (sessionStorage.getItem(keysToSave[i]) || localStorage.getItem(keysToSave[i]));
                 if (value) {
                     context[keysToSave[i]] = value;
                 }
@@ -2017,7 +2036,7 @@ const URL_MONITOR_SCRIPT_ONLINE: &str = r#"
             for (var j = 0; j < localStorage.length; j++) {
                 var key = localStorage.key(j);
                 if (key && (key.indexOf('ibl') !== -1 || key.indexOf('token') !== -1 || key.indexOf('user') !== -1)) {
-                    context[key] = localStorage.getItem(key);
+                    context[key] = (sessionStorage.getItem(key) || localStorage.getItem(key));
                 }
             }
 
@@ -2167,12 +2186,22 @@ const URL_MONITOR_SCRIPT_OFFLINE: &str = r#"
                         // Restore all saved localStorage keys
                         for (var key in context) {
                             if (context.hasOwnProperty(key)) {
-                                var existingValue = localStorage.getItem(key);
-                                // Only restore if the value doesn't exist or is different
-                                if (!existingValue || existingValue !== context[key]) {
-                                    localStorage.setItem(key, context[key]);
+                                // Fill only empty stores, each independently. The
+                                // localStorage seed may already hold the key while this
+                                // tab's sessionStorage source-of-truth is empty (or vice
+                                // versa) — restore the missing one without clobbering a
+                                // live value the running tab already set.
+                                var localHas = localStorage.getItem(key) !== null;
+                                var sessionHas = sessionStorage.getItem(key) !== null;
+                                if (!localHas || !sessionHas) {
+                                    if (!localHas) {
+                                        localStorage.setItem(key, context[key]);
+                                    }
+                                    if (!sessionHas) {
+                                        sessionStorage.setItem(key, context[key]);
+                                    }
                                     restoredCount++;
-                                    console.log('[OfflineMode] Restored localStorage key:', key);
+                                    console.log('[OfflineMode] Restored key:', key);
                                 }
                             }
                         }
@@ -2305,6 +2334,13 @@ pub fn run() {
         }
     }
 
+    // Rust-side error reporting. After the dotenv loads (so a dev build can be
+    // aimed at a scratch project from .env.local) and before the builder, so
+    // `setup()` and every task spawned there is already covered — that is where
+    // the failures worth knowing about happen. The guard MUST stay bound for
+    // the life of the process: dropping it discards every queued event.
+    let _sentry = telemetry::init();
+
     // CrabNebula DevTools (debug builds only) — initialize before the builder so
     // its tracing subscriber is installed first.
     #[cfg(debug_assertions)]
@@ -2383,6 +2419,10 @@ pub fn run() {
                                 println!("[ibl.ai] dev origin capability added for {origin}");
                             }
                         }
+                        // Left as a print: this whole block is
+                        // `#[cfg(debug_assertions)]`, and reporting is off in
+                        // debug builds — a `report` here would only look like
+                        // coverage it does not have.
                         Err(e) => eprintln!("[ibl.ai] default capability unreadable: {e}"),
                     }
                 }
@@ -2428,7 +2468,7 @@ pub fn run() {
                 match app.path().app_data_dir() {
                     Ok(dir) => {
                         if let Err(e) = local_llm::start(dir.join("models")) {
-                            eprintln!("[LocalLLM] failed to start embedded server: {e}");
+                            telemetry::report("[LocalLLM] failed to start embedded server", e);
                         }
                         // Phone Code: pairing + per-chat session map storage.
                         remote_code_client::init(dir.clone());
@@ -2437,7 +2477,7 @@ pub fn run() {
                         // force-quit or killed) is stopped on the desktop.
                         tauri::async_runtime::spawn(remote_code_client::abort_abandoned_turns());
                     }
-                    Err(e) => eprintln!("[LocalLLM] no app data dir: {e}"),
+                    Err(e) => telemetry::report("[LocalLLM] no app data dir", e),
                 }
                 // Ask for Local Network access at first open (iOS prompts
                 // once), so the first pairing scan is not the first thing
@@ -2462,13 +2502,25 @@ pub fn run() {
                     opencode_installer::ensure_opencode_current(opencode_handle).await;
                 });
 
+                // The subscription agents (Codex, Claude Code) install themselves in
+                // the background on every launch — a pinned Node plus the pinned
+                // adapters — so the Code popover only ever shows them loading, never
+                // a download the user has to start. Never blocks: ibl.ai turns run
+                // meanwhile, and a failure surfaces in the popover with a retry.
+                let agents_handle = app.handle().clone();
+                tauri::async_runtime::spawn(async move {
+                    code_agent_installer::ensure_agents_current(agents_handle).await;
+                });
+
                 // Vibe skills track the latest GitHub release with no freshness
                 // window — resolve-and-sync in the background on every launch, so
                 // Coding Mode always starts from the newest published set (and a
                 // fresh machine has them before Code is ever enabled).
                 let vibe_handle = app.handle().clone();
                 tauri::async_runtime::spawn(async move {
-                    let _ = opencode_installer::ensure_vibe_skills(vibe_handle).await;
+                    if let Err(e) = opencode_installer::ensure_vibe_skills(vibe_handle).await {
+                        telemetry::report("[vibe] skills sync failed at startup", e);
+                    }
                 });
 
                 // Initialize web cache with app data directory
@@ -2761,7 +2813,15 @@ pub fn run() {
             url.includes('google-oauth2') ||
             url.includes('appleid.apple.com') ||
             url.includes('/auth/login/apple') ||
-            url.includes('/login/apple')
+            url.includes('/login/apple') ||
+            url.includes('login.microsoftonline.com') ||
+            url.includes('login.live.com') ||
+            url.includes('azuread-oauth2') ||
+            url.includes('/auth/login/azuread') ||
+            url.includes('/login/azuread') ||
+            url.includes('microsoft-graph') ||
+            url.includes('/auth/login/microsoft-graph') ||
+            url.includes('/login/microsoft-graph')
         );
     }
 
@@ -3145,6 +3205,10 @@ pub fn run() {
         opencode_acp::check_code_local_model,
         opencode_acp::set_opencode_learner,
         opencode_acp::ensure_opencode_platform_key,
+        code_agent_installer::check_code_agent_status,
+        code_agent_installer::install_code_agent,
+        code_agent_models::list_code_agent_models,
+        code_agent_models::set_code_agent_model,
         app_update::check_app_update,
         app_update::install_app_update,
         remote_code::remote_code_status,

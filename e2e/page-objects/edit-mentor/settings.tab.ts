@@ -19,6 +19,8 @@ export class SettingsTab {
   readonly copyMentorButton: Locator;
   readonly chatAccessCombobox: Locator;
   readonly verboseReasoningToggle: Locator;
+  /** Capabilities sub-tab: "Reopen last conversation" (#2629), `show_last_conversation`. */
+  readonly showLastConversationToggle: Locator;
   readonly enhanceDocumentRetrievalToggle: Locator;
   readonly enhanceDocumentRetrievalTooltipTrigger: Locator;
   readonly promptCachingToggle: Locator;
@@ -29,10 +31,10 @@ export class SettingsTab {
    * locator survives label rewrites in the host.
    */
   readonly useFunctionCallingForRagToggle: Locator;
-  /** "Enable file attachments" toggle (Capabilities sub-tab, feat/1902) */
+  /** "Enable File Attachments" toggle (Capabilities sub-tab, feat/1902) */
   readonly allowFileAttachmentsToggle: Locator;
   /**
-   * "Show additional agents" toggle (Capabilities sub-tab, Advanced section
+   * "Show Additional Agents" toggle (Capabilities sub-tab, Advanced section
    * — issue #2544). Persists `show_explore_mentors`, which gates the OS
    * "Explore Agents" section on this agent's own (non-project) welcome
    * screen. Resolved via `data-testid`, like the RAG toggle, so the locator
@@ -120,7 +122,7 @@ export class SettingsTab {
       .locator('[data-testid="advanced-js-editor"]')
       .or(dialog.locator('.cm-editor').nth(1));
     // Renamed in the Capabilities sub-tab: aria-label is now
-    // "Enable copies" (no enabled/disabled
+    // "Enable Copies" (no enabled/disabled
     // suffix — state is exposed via aria-checked).
     this.allowCopiesToggle = dialog.getByRole('switch', {
       name: /enable copies/i,
@@ -132,24 +134,27 @@ export class SettingsTab {
     this.chatAccessCombobox = dialog.getByRole('combobox', {
       name: 'Select who can chat',
     });
-    // Capabilities sub-tab. The "Enable verbose reasoning" toggle (show_reasoning);
-    // aria-label is "Enable verbose reasoning enabled" / "Enable verbose reasoning disabled"
+    // Capabilities sub-tab. The "Enable Verbose Reasoning" toggle (show_reasoning);
+    // aria-label is "Enable Verbose Reasoning enabled" / "Enable Verbose Reasoning disabled"
     // depending on current state.
     this.verboseReasoningToggle = dialog.getByRole('switch', {
-      name: /^Enable verbose reasoning /i,
+      name: /^Enable Verbose Reasoning /i,
     });
-    // Capabilities sub-tab. Visible label "Enhanced document retrieval"
+    this.showLastConversationToggle = dialog.getByTestId(
+      'settings-show-last-conversation-switch',
+    );
+    // Capabilities sub-tab. Visible label "Enhanced Document Retrieval"
     // (source: messages/en.json `enhancedDocRetrievalLabel`); the SDK switch
-    // appends the state, so the aria-label reads "Enhanced document retrieval
+    // appends the state, so the aria-label reads "Enhanced Document Retrieval
     // enabled" / "... disabled". Anchored at the start so it does not also
-    // match the sibling "Smart document retrieval" switch.
+    // match the sibling "Smart Document Retrieval" switch.
     this.enhanceDocumentRetrievalToggle = dialog.getByRole('switch', {
-      name: /^Enhanced document retrieval\b/i,
+      name: /^Enhanced Document Retrieval\b/i,
     });
     this.enhanceDocumentRetrievalTooltipTrigger = dialog.getByRole('button', {
       name: 'More info about enhanced document retrieval',
     });
-    // Capabilities sub-tab. Label: "Enable prompt caching".
+    // Capabilities sub-tab. Label: "Enable Prompt Caching".
     this.promptCachingToggle = dialog.getByRole('switch', {
       name: /enable prompt caching/i,
     });
@@ -159,7 +164,7 @@ export class SettingsTab {
     this.useFunctionCallingForRagToggle = dialog.getByTestId(
       'settings-use-function-calling-for-rag-switch',
     );
-    // Capabilities sub-tab. Labelled "Enable file attachments" (feat/1902).
+    // Capabilities sub-tab. Labelled "Enable File Attachments" (feat/1902).
     this.allowFileAttachmentsToggle = dialog.getByRole('switch', {
       name: /enable file attachments/i,
     });
@@ -289,7 +294,7 @@ export class SettingsTab {
    * to target only the inner sub-tab without extra filters.
    */
   async selectSubTab(
-    name: 'Basic' | 'Discovery' | 'Capabilities',
+    name: 'Basic' | 'Discovery' | 'Capabilities' | 'Welcome Screen',
   ): Promise<void> {
     // Restore the Settings segment first — a preceding page-object call may
     // have switched the modal to another category (LtiTab activates
@@ -306,6 +311,54 @@ export class SettingsTab {
         timeout: 5_000,
       });
     }
+  }
+
+  /** Welcome screen sub-tab (#2586); saved with the agent since #2626. */
+  get welcomePreview(): Locator {
+    return this.dialog.getByTestId('welcome-preview');
+  }
+
+  get welcomePreviewHeading(): Locator {
+    return this.welcomePreview.getByTestId('welcome-preview-heading');
+  }
+
+  get welcomePreviewViewMore(): Locator {
+    return this.welcomePreview.getByTestId('welcome-preview-view-more');
+  }
+
+  async pickWelcomeOption(
+    control: 'heading' | 'prompt-source' | 'prompt-count',
+    option: string,
+  ): Promise<void> {
+    await this.selectSubTab('Welcome Screen');
+    await this.dialog.getByTestId(`welcome-${control}-select`).click();
+    await this.page.getByRole('option', { name: option, exact: true }).click();
+  }
+
+  /** Saves the Settings tab and returns the request body that carried `field`. */
+  async saveAndCaptureField(field: string): Promise<string> {
+    await expect(this.saveButton).toBeEnabled({ timeout: 10_000 });
+    const [request] = await Promise.all([
+      this.page.waitForRequest(
+        (req) =>
+          ['PUT', 'PATCH'].includes(req.method()) &&
+          (req.postData() ?? '').includes(field),
+        { timeout: 30_000 },
+      ),
+      this.saveButton.click(),
+    ]);
+    await expect(
+      this.page.getByText(/Agent updated successfully/i).first(),
+    ).toBeVisible({ timeout: 30_000 });
+    return request.postData() ?? '';
+  }
+
+  async showWelcomePreview(
+    surface: 'Desktop' | 'Mobile' | 'Embed',
+  ): Promise<void> {
+    await this.dialog
+      .getByRole('radio', { name: surface, exact: true })
+      .click();
   }
 
   async copyUniqueId(): Promise<void> {
@@ -406,7 +459,49 @@ export class SettingsTab {
   }
 
   /**
-   * Returns true when the Enable verbose reasoning toggle is ON (aria-checked="true").
+   * Sets "Reopen last conversation" and saves. Returns the PUT/PATCH request
+   * that carried `show_last_conversation`, or null when already in `target`.
+   */
+  async setShowLastConversation(
+    target: boolean,
+  ): Promise<{ body: string; url: string; ok: boolean } | null> {
+    await this.selectSubTab('Capabilities');
+    await expect(this.showLastConversationToggle).toBeVisible({
+      timeout: 10_000,
+    });
+    const isChecked =
+      (await this.showLastConversationToggle.getAttribute('aria-checked')) ===
+      'true';
+    if (isChecked === target) return null;
+    await this.showLastConversationToggle.click();
+    await expect(this.showLastConversationToggle).toHaveAttribute(
+      'aria-checked',
+      String(target),
+      { timeout: 10_000 },
+    );
+    await expect(this.saveButton).toBeEnabled({ timeout: 10_000 });
+    const [request] = await Promise.all([
+      this.page.waitForRequest(
+        (req) =>
+          ['PUT', 'PATCH'].includes(req.method()) &&
+          (req.postData() ?? '').includes('show_last_conversation'),
+        { timeout: 30_000 },
+      ),
+      this.saveButton.click(),
+    ]);
+    const response = await request.response();
+    await expect(
+      this.page.getByText(/Agent updated successfully/i).first(),
+    ).toBeVisible({ timeout: 30_000 });
+    return {
+      body: request.postData() ?? '',
+      url: request.url(),
+      ok: !!response && response.ok(),
+    };
+  }
+
+  /**
+   * Returns true when the Enable Verbose Reasoning toggle is ON (aria-checked="true").
    */
   async isVerboseReasoningEnabled(): Promise<boolean> {
     await this.selectSubTab('Capabilities');
@@ -419,7 +514,7 @@ export class SettingsTab {
   }
 
   /**
-   * Sets the Enable verbose reasoning toggle to the desired state and saves the form.
+   * Sets the Enable Verbose Reasoning toggle to the desired state and saves the form.
    * A no-op if the toggle is already in the desired state. Save is called
    * internally (same as setMemoryEnabled) and we block on the success toast so
    * callers can immediately send a chat message that relies on the new setting.
@@ -539,7 +634,7 @@ export class SettingsTab {
   }
 
   /**
-   * Enables "Enable file attachments" and saves the form.
+   * Enables "Enable File Attachments" and saves the form.
    * A no-op if the toggle is already on. (feat/1902)
    */
   async enableFileAttachments(): Promise<void> {
@@ -568,7 +663,7 @@ export class SettingsTab {
   }
 
   /**
-   * Disables "Enable file attachments" and saves the form.
+   * Disables "Enable File Attachments" and saves the form.
    * A no-op if the toggle is already off. (feat/1902)
    */
   async disableFileAttachments(): Promise<void> {
@@ -596,7 +691,7 @@ export class SettingsTab {
     }
   }
 
-  /** Whether the "Show additional agents" toggle is currently on (issue #2544). */
+  /** Whether the "Show Additional Agents" toggle is currently on (issue #2544). */
   async isShowExploreMentorsEnabled(): Promise<boolean> {
     await this.selectSubTab('Capabilities');
     await expect(this.showExploreMentorsToggle).toBeVisible({
@@ -610,7 +705,7 @@ export class SettingsTab {
   }
 
   /**
-   * Sets the "Show additional agents" toggle to the desired state and saves
+   * Sets the "Show Additional Agents" toggle to the desired state and saves
    * the form (issue #2544). Always clicks Save — mirroring
    * `setPromptCaching`/`setVerboseReasoning` — so callers observing the
    * resulting settings PUT via `page.waitForRequest` reliably see one fire,

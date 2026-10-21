@@ -63,6 +63,13 @@ describe('logLine', () => {
     ).toBe('Click [3] button — Element 3 is not in the current snapshot.');
   });
 
+  // A refused element number has no detail of its own; it must not read as a success.
+  it('says a failure without a reason did not work', () => {
+    expect(logLine({ tool: 'click', target: '', ok: false })).toBe(
+      'Click — Didn’t work.',
+    );
+  });
+
   it('omits a missing host or detail rather than printing undefined', () => {
     expect(
       logLine({

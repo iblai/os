@@ -28,6 +28,8 @@ export class LlmTab {
    * logo `<img>`, which excludes the dialog's own Close (X icon) button.
    */
   readonly modelRows: Locator;
+  /** "Allow in-chat model change" (#2633); saves on its own, with no Save button. */
+  readonly inChatModelChangeToggle: Locator;
 
   constructor(page: Page, dialog: Locator) {
     this.page = page;
@@ -44,6 +46,43 @@ export class LlmTab {
     this.modelRows = this.llmSelectionDialog
       .getByRole('button')
       .filter({ has: page.locator('img') });
+    this.inChatModelChangeToggle = dialog.getByTestId(
+      'llm-in-chat-model-change-toggle',
+    );
+  }
+
+  /**
+   * Flips "Allow in-chat model change" from `!target` to `target` and returns
+   * the save request's body. Waiting for the starting state first keeps a
+   * click from landing before the agent's settings load and the switch shows
+   * its saved value.
+   */
+  async setInChatModelChange(target: boolean): Promise<string> {
+    await expect(this.inChatModelChangeToggle).toBeEnabled({
+      timeout: 10_000,
+    });
+    await expect(this.inChatModelChangeToggle).toHaveAttribute(
+      'aria-checked',
+      String(!target),
+      { timeout: 10_000 },
+    );
+    const [request] = await Promise.all([
+      this.page.waitForRequest(
+        (req) =>
+          ['PUT', 'PATCH'].includes(req.method()) &&
+          (req.postData() ?? '').includes('enable_in_chat_llm_change'),
+        { timeout: 30_000 },
+      ),
+      this.inChatModelChangeToggle.click(),
+    ]);
+    const response = await request.response();
+    expect(response?.ok(), 'the setting saved').toBe(true);
+    await expect(this.inChatModelChangeToggle).toHaveAttribute(
+      'aria-checked',
+      String(target),
+      { timeout: 10_000 },
+    );
+    return request.postData() ?? '';
   }
 
   /**
@@ -118,6 +157,20 @@ export class LlmTab {
       infos.push({ provider, disabled, label });
     }
     return infos;
+  }
+
+  /** A model row in the LLM Selection dialog by its wire key (`data-model`). */
+  modelRowByName(llmName: string): Locator {
+    return this.llmSelectionDialog.locator(`button[data-model="${llmName}"]`);
+  }
+
+  /** Wire keys of every model row, in render order. */
+  async getModelRowOrder(): Promise<string[]> {
+    return this.llmSelectionDialog
+      .locator('button[data-model]')
+      .evaluateAll((els) =>
+        els.map((el) => el.getAttribute('data-model') ?? ''),
+      );
   }
 
   /**

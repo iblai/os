@@ -139,7 +139,11 @@ test.describe('Journey 38: Tenant Memory System toggle', () => {
       await closeAccountDialog(accountDialog, page);
       await waitForPageReady(page);
 
+      // Memory now lives inside the composer's "+" menu (issue #2586) — open
+      // it before asserting the Memory row's presence/absence.
+      await chatPage.openPlusMenu();
       await expect(chatPage.memoryButton).not.toBeVisible({ timeout: 10_000 });
+      await chatPage.closePlusMenu();
 
       // --- Re-enable Memory System at tenant level ---
       accountDialog = await openAdvancedTab(page);
@@ -147,7 +151,9 @@ test.describe('Journey 38: Tenant Memory System toggle', () => {
       await closeAccountDialog(accountDialog, page);
       await waitForPageReady(page);
 
+      await chatPage.openPlusMenu();
       await expect(chatPage.memoryButton).toBeVisible({ timeout: 10_000 });
+      await chatPage.closePlusMenu();
     } finally {
       // Restore tenant state.
       const restoreDialog = await openAdvancedTab(page).catch(() => null);

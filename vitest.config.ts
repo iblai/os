@@ -78,12 +78,17 @@ export default defineConfig({
     // node_modules; without this exclusion Vitest walks into them and runs
     // another branch's suite against this branch's setup, failing the
     // pre-push hook on tests that do not belong to this checkout.
+    //
+    // `seed.spec.ts` is the placeholder the Playwright agent tools drop in the
+    // repo root (git-ignored). It is a Playwright file, so Vitest collecting
+    // it fails with "did not expect test.describe() to be called here".
     exclude: [
       ...configDefaults.exclude,
       'e2e/**',
       'e2e-tauri/**',
       'scripts/build-gallery.test.tsx',
       '.claude/**',
+      'seed.spec.ts',
     ],
     server: {
       deps: {

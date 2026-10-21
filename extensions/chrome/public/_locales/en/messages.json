@@ -89,9 +89,21 @@
     "message": "Sign-in failed. Try again."
   },
   "stepLimit": {
-    "message": "Stopped after the maximum number of steps."
+    "message": "I stopped here: that’s as many steps as I take in one go. Send “continue” and I’ll pick up where I left off, as long as this panel stays open."
   },
   "tokenLimit": {
-    "message": "Stopped: the run used up its token budget."
+    "message": "I stopped here: that’s as much as I can read in one go. Send “continue” and I’ll pick up where I left off, as long as this panel stays open."
+  },
+  "noScriptablePage": {
+    "message": "I can’t read this page — the browser doesn’t allow it. Open the page you’d like me to work on and try again."
+  },
+  "actionFailed": {
+    "message": "Didn’t work."
+  },
+  "errorRealClicksBusy": {
+    "message": "Real clicks can’t start while the developer tools are open on this tab. Close them and try again."
+  },
+  "errorRealClicksOff": {
+    "message": "Real clicks were stopped from the bar on the tab or by the developer tools, so the run ended. Try again."
   }
 }

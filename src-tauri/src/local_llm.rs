@@ -643,7 +643,7 @@ fn start_into(
                 let listener =
                     tokio::net::TcpListener::from_std(listener).expect("local llm listener");
                 if let Err(e) = axum::serve(listener, router(models_dir)).await {
-                    eprintln!("[LocalLLM] server exited: {e}");
+                    crate::telemetry::report("[LocalLLM] server exited", e);
                 }
             });
         })
