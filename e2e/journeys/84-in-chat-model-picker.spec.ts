@@ -56,7 +56,7 @@ test.describe.serial('Journey 84: In-chat model picker', () => {
 
   let mentorUrl = '';
 
-  test('icm-01: admin turns on "Allow in-chat model change" under Settings › Capabilities and Save sends enable_in_chat_llm_change=true', async ({
+  test('icm-01: admin turns on "Allow in-chat model change" on the LLM tab and it saves enable_in_chat_llm_change=true', async ({
     page,
     editMentorPage,
     createMentorPage,
@@ -76,22 +76,20 @@ test.describe.serial('Journey 84: In-chat model picker', () => {
     await waitForPageReady(page);
     await editMentorPage.llm.selectProviderAndModel('ibl.ai', AGENT_MODEL);
 
-    await editMentorPage.open('Settings');
-    await waitForPageReady(page);
-    const body = await editMentorPage.settings.setInChatModelChange(true);
-    expect(body, 'the toggle starts off on a new agent').not.toBeNull();
+    const body = await editMentorPage.llm.setInChatModelChange(true);
     expect(body).toMatch(
       /name="enable_in_chat_llm_change"\r?\n\r?\ntrue|"enable_in_chat_llm_change"\s*:\s*true/,
     );
     await editMentorPage.close();
 
     await navigateToMentorApp(page, mentorUrl);
-    await editMentorPage.open('Settings');
+    await editMentorPage.open('LLM');
     await waitForPageReady(page);
-    await editMentorPage.settings.selectSubTab('Capabilities');
-    await expect(
-      editMentorPage.settings.inChatModelChangeToggle,
-    ).toHaveAttribute('aria-checked', 'true', { timeout: 10_000 });
+    await expect(editMentorPage.llm.inChatModelChangeToggle).toHaveAttribute(
+      'aria-checked',
+      'true',
+      { timeout: 10_000 },
+    );
     await editMentorPage.close();
   });
 
@@ -526,9 +524,9 @@ test.describe.serial('Journey 84: In-chat model picker', () => {
   }) => {
     test.skip(!mentorUrl, 'icm-01 setup did not run');
     await navigateToMentorApp(page, mentorUrl);
-    await editMentorPage.open('Settings');
+    await editMentorPage.open('LLM');
     await waitForPageReady(page);
-    const body = await editMentorPage.settings.setInChatModelChange(false);
+    const body = await editMentorPage.llm.setInChatModelChange(false);
     expect(body).toMatch(
       /name="enable_in_chat_llm_change"\r?\n\r?\nfalse|"enable_in_chat_llm_change"\s*:\s*false/,
     );

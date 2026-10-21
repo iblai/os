@@ -1663,7 +1663,11 @@
     "llmConfiguration": "LLM 配置",
     "configureLanguageModelSettings": "为您的智能体配置语言模型设置。",
     "searchProviders": "搜索提供商",
-    "providerLogoAlt": "{providerName} 徽标"
+    "providerLogoAlt": "{providerName} 徽标",
+    "inChatModelChangeLabel": "允许在聊天中更换模型",
+    "inChatModelChangeDescription": "允许用户在自己的聊天中换用其他 AI 模型。新聊天会重新使用智能体的模型。",
+    "inChatModelChangeTooltip": "允许用户为自己的聊天选择其他 AI 模型。智能体的模型不会改变，新聊天仍从该模型开始。此设置只有一个值，因此同时适用于应用内聊天和嵌入式小组件。",
+    "inChatModelChangeTooltipAriaLabel": "了解在聊天中更换模型"
   },
   "tabsPromptsTab": {
     "heading": "提示词",
@@ -1963,8 +1967,6 @@
     "perSurfaceNote": "分别为应用内聊天和嵌入式挂件单独设置。",
     "inAppChatNote": "应用内托管的对话，即用户在此打开的聊天。",
     "embedWidgetNote": "你使用“嵌入”标签页中的代码片段嵌入到自己网站上的挂件。",
-    "inChatModelChangeLabel": "允许在聊天中更换模型",
-    "inChatModelChangeTooltip": "允许用户为自己的聊天选择其他 AI 模型。智能体的模型不会改变，新聊天仍从该模型开始。此设置只有一个值，因此同时适用于应用内聊天和嵌入式小组件。",
     "showLastConversationLabel": "重新打开上次对话",
     "showLastConversationTooltip": "用户打开此智能体时，显示他们的上一次对话，方便从上次中断的地方继续。此设置只有一个值，因此同时适用于应用内聊天和嵌入式小组件。"
   },

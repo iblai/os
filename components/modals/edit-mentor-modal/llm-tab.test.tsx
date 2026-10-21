@@ -130,6 +130,27 @@ describe('LLMTab', () => {
       (providerValue().executeGatedAction as (f: () => unknown) => unknown)(fn);
       expect(mockExecuteWithTrialCheck).toHaveBeenCalledWith(fn);
     });
+
+    it('passes the action result through when the paywall lets it run', async () => {
+      mockExecuteWithTrialCheck.mockReturnValueOnce(Promise.resolve('saved'));
+      render(<LLMTab />);
+      const gate = providerValue().executeGatedAction as (
+        f: () => unknown,
+      ) => unknown;
+      await expect(gate(vi.fn())).resolves.toBe('saved');
+    });
+
+    it('never settles when the paywall blocks the action, so no success toast fires', async () => {
+      mockExecuteWithTrialCheck.mockReturnValueOnce(null);
+      render(<LLMTab />);
+      const gate = providerValue().executeGatedAction as (
+        f: () => unknown,
+      ) => unknown;
+      const settled = vi.fn();
+      Promise.resolve(gate(vi.fn())).then(settled, settled);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(settled).not.toHaveBeenCalled();
+    });
   });
 
   describe('showConfigurationHeader', () => {
@@ -191,6 +212,12 @@ describe('LLMTab', () => {
       expect(l.header.title).toBe('llmConfiguration');
       expect(l.header.description).toBe('configureLanguageModelSettings');
       expect(l.infoBox).toBe('infoBox');
+      expect(l.inChatModelChange).toEqual({
+        label: 'inChatModelChangeLabel',
+        description: 'inChatModelChangeDescription',
+        tooltip: 'inChatModelChangeTooltip',
+        tooltipAriaLabel: 'inChatModelChangeTooltipAriaLabel',
+      });
       expect(l.search.placeholder).toBe('searchProviders');
       expect(l.toasts.updateSuccess).toBe('llmUpdatedSuccessfully');
       expect(l.toasts.updateError).toBe('failedToUpdateLlm');
@@ -293,6 +320,10 @@ describe('LLMTab', () => {
         'configureLanguageModelSettings',
         'searchProviders',
         'providerLogoAlt',
+        'inChatModelChangeLabel',
+        'inChatModelChangeDescription',
+        'inChatModelChangeTooltip',
+        'inChatModelChangeTooltipAriaLabel',
       ];
       const modalKeys = [
         'dialogDescription',

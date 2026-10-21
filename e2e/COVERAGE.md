@@ -2035,15 +2035,15 @@ The Welcome screen sub-tab (#2586) saves heading style, starter-prompt source an
 
 ## Journey 84: In-chat Model Picker (14 checkpoints) — `journeys/84-in-chat-model-picker.spec.ts`
 
-**Source files:** `components/modals/edit-mentor-modal/settings-tab.tsx`, `e2e/page-objects/chat.page.ts`, `e2e/page-objects/edit-mentor/settings.tab.ts` (UI lives in the SDK composer "+" menu → Model, `useComposerModels`, and the web-utils chat socket payload)
+**Source files:** `components/modals/edit-mentor-modal/llm-tab.tsx`, `e2e/page-objects/chat.page.ts`, `e2e/page-objects/edit-mentor/llm.tab.ts` (UI lives in the SDK composer "+" menu → Model, `useComposerModels`, and the web-utils chat socket payload)
 
 iblai/iblai-platform#2633: with the agent's `enable_in_chat_llm_change` on, a user picks a model for the current chat only. Runs on its own throw-away agent on the cheap ibl.ai model and only ever picks ibl.ai models.
 
-- [x] icm-01: An admin turns on "Allow in-chat model change" under Settings > Capabilities; Save sends enable_in_chat_llm_change=true and it reads back on after reopening
+- [x] icm-01: An admin turns on "Allow in-chat model change" on the LLM tab; it saves enable_in_chat_llm_change=true and it reads back on after reopening
 - [x] icm-02: With the setting on, a user picks a model via + > Model > provider > model: the Model row names the model in use, later turns carry llm_provider/llm_name on the chat socket, and a chip plus a "Switched to X for this chat" notice show it
 - [x] icm-03: The chip's x goes back to the agent's model, sent explicitly on the next turn (the backend keeps a session's last pick); a new chat drops the chip and the notices and sends no model fields
 - [x] icm-04: On a phone the + sheet goes Model > provider page (with Back) > model, closes, and shows the model chip
-- [x] icm-05: With the setting off (Save sends enable_in_chat_llm_change=false), the + menu has no Model row
+- [x] icm-05: With the setting off (the LLM tab saves enable_in_chat_llm_change=false), the + menu has no Model row
 - [x] icm-06: Per-model credentials (iblai-platform#2638): a model whose availability requires a key is disabled in + > Model > provider and shows the backend's reason; clicking it picks nothing, while a usable model in the same provider stays enabled
 - [x] icm-07: A tenant with a single usable provider: + > Model lists that provider's models straight away, with no provider step
 - [x] icm-08: Per-model credentials (iblai-platform#2638): a provider whose every model requires a key is left out of the + > Model provider list
