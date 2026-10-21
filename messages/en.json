@@ -1663,7 +1663,11 @@
     "llmConfiguration": "LLM Configuration",
     "configureLanguageModelSettings": "Configure the language model settings for your agent.",
     "searchProviders": "Search Providers",
-    "providerLogoAlt": "{providerName} logo"
+    "providerLogoAlt": "{providerName} logo",
+    "inChatModelChangeLabel": "Allow in-chat model change",
+    "inChatModelChangeDescription": "Let people switch to another AI model for their own chat. New chats start on the agent’s model again.",
+    "inChatModelChangeTooltip": "Let people pick a different AI model for their own chat. The agent’s model doesn’t change, and new chats start on it. This setting has one value, so it applies to both in-app chat and the embed widget.",
+    "inChatModelChangeTooltipAriaLabel": "More about allowing in-chat model change"
   },
   "tabsPromptsTab": {
     "heading": "Prompts",
@@ -1963,8 +1967,6 @@
     "perSurfaceNote": "Set independently for in-app chat and the embed widget.",
     "inAppChatNote": "Conversations hosted inside the app — the chat your users open here.",
     "embedWidgetNote": "The widget you embed on your own site using the snippet from the Embed tab.",
-    "inChatModelChangeLabel": "Allow in-chat model change",
-    "inChatModelChangeTooltip": "Let people pick a different AI model for their own chat. The agent’s model doesn’t change, and new chats start on it. This setting has one value, so it applies to both in-app chat and the embed widget.",
     "showLastConversationLabel": "Reopen last conversation",
     "showLastConversationTooltip": "When someone opens this agent, show their last conversation so they can pick up where they left off. This setting has one value, so it applies to both in-app chat and the embed widget."
   },

@@ -316,10 +316,6 @@ describe('SettingsTab', () => {
       expect(labels.fields.enhancedDocRetrieval.label).toBe(
         'enhancedDocRetrievalLabel',
       );
-      expect(labels.fields.inChatModelChange).toEqual({
-        label: 'inChatModelChangeLabel',
-        tooltip: 'inChatModelChangeTooltip',
-      });
       expect(labels.fields.showLastConversation).toEqual({
         label: 'showLastConversationLabel',
         tooltip: 'showLastConversationTooltip',
