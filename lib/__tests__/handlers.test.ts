@@ -323,7 +323,7 @@ describe('useIframeHandlers', () => {
   });
 
   describe('MENTOR:AUTH_UPDATE handler', () => {
-    const authUpdatedDispatched = (spy: ReturnType<typeof vi.spyOn>) =>
+    const authUpdatedDispatched = (spy: { mock: { calls: unknown[][] } }) =>
       spy.mock.calls.some(
         ([e]) => (e as Event)?.type === 'ibl:auth-tokens-updated',
       );
