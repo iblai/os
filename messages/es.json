@@ -445,7 +445,7 @@
     "coworkNeedsScreenRecording": "Cowork necesita acceso de Grabación de pantalla para leer tus ventanas. Concédelo en Ajustes del Sistema › Privacidad y seguridad › Grabación de pantalla, reinicia la app y vuelve a activar Cowork.",
     "skills": "Habilidades",
     "coworkNeedsSession": "Inicia sesión primero: Cowork necesita tu sesión de la plataforma para acceder al modelo.",
-    "coworkTabNote": "Lee esta pestaña y actúa en ella por ti: nunca en campos de contraseña o de pago. Lo que lee se envía a ibl.ai para decidir el siguiente paso.",
+    "coworkTabNote": "Lee esta pestaña, le toma una foto y actúa en ella como lo harías tú — Chrome muestra una barra en la pestaña mientras trabaja. Nunca en campos de contraseña o de pago, y sin foto mientras haya uno en la página. Lo que lee se envía a ibl.ai para decidir el siguiente paso.",
     "coworkApprovalsLabel": "Aprobaciones",
     "coworkApprovalsManual": "Preguntarme",
     "coworkApprovalsAuto": "Automático",

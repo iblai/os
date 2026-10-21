@@ -1,8 +1,8 @@
 import { test, expect } from '../fixtures/mentor-test';
 import type { FrameLocator, Page } from '@playwright/test';
-import { navigateToMentorApp, getPlatformContext } from '../utils/auth';
+import { navigateToMentorApp } from '../utils/auth';
 import type { ChatPage } from '../page-objects/chat.page';
-import { EMBED_HARNESS_URL, MENTOR_NEXTJS_HOST } from '../fixtures/test-data';
+import { openLauncher } from '../utils/embed-harness-client';
 
 /**
  * Journey 89: `<agent-ai>` launcher — chat export (iblai-platform#2680)
@@ -26,51 +26,6 @@ const USER_MESSAGE = 'Please export this launcher chat as a transcript.';
 const AI_REPLY = 'Scripted launcher reply for the export test';
 
 type ChatSocket = Awaited<ReturnType<ChatPage['mockChatWebSocket']>>;
-
-const HOST_SESSION_KEYS = [
-  'axd_token',
-  'dm_token',
-  'tenants',
-  'tenant',
-  'current_tenant',
-  'userData',
-  'edx_jwt_token',
-  'axd_token_expires',
-  'dm_token_expires',
-];
-
-async function openLauncher(page: Page): Promise<void> {
-  const { tenantKey, mentorId } = await getPlatformContext(page);
-  // With no session of its own on the harness origin, agent-ai redirects to
-  // the login page; authrelyonhost makes it read the host's localStorage.
-  const session = await page.evaluate((keys) => {
-    const out: Record<string, string> = {};
-    for (const key of keys) {
-      const value = localStorage.getItem(key);
-      if (value !== null) out[key] = value;
-    }
-    return out;
-  }, HOST_SESSION_KEYS);
-  await page.addInitScript(
-    ({ origin, entries }) => {
-      if (location.origin !== origin) return;
-      for (const [key, value] of Object.entries(entries)) {
-        localStorage.setItem(key, value);
-      }
-    },
-    { origin: EMBED_HARNESS_URL, entries: session },
-  );
-  const params = new URLSearchParams({
-    mentorurl: MENTOR_NEXTJS_HOST,
-    tenant: tenantKey,
-    mentor: mentorId,
-    authrelyonhost: '1',
-  });
-  await page.goto(`${EMBED_HARNESS_URL}/agent-ai?${params}`, {
-    waitUntil: 'domcontentloaded',
-    timeout: 30_000,
-  });
-}
 
 function launcherFrame(page: Page): FrameLocator {
   return page.frameLocator('agent-ai iframe');

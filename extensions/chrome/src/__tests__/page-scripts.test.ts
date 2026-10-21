@@ -2,10 +2,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   actOnPage,
   extractPageContent,
+  markPage,
   scrollPage,
   snapshotPage,
+  unmarkPage,
   waitForQuiet,
 } from '../page-scripts';
+import { SECRET_FIELDS } from '../secret-fields';
 
 const FIXTURE = `
 <main>
@@ -23,7 +26,7 @@ const FIXTURE = `
   <input type="checkbox" id="c" checked><label for="c">Remember me</label>
   <div contenteditable="true" id="ed"></div>
   <button aria-expanded="false" title="Menu"><img alt="Open menu"></button>
-  <input id="cc" autocomplete="cc-number" placeholder="Card number">
+  <input id="cc" autocomplete="cc-number" placeholder="Card number" value="4242 4242 4242 4242">
   <span id="lbl">Search</span><input id="q" aria-labelledby="lbl" value="  hello   world  ">
   <button type="button">Pay now</button>
   <p>Welcome to Acme. Sign in to continue.</p>
@@ -60,6 +63,8 @@ describe('injected functions stay self-contained', () => {
     ['actOnPage', actOnPage],
     ['scrollPage', scrollPage],
     ['waitForQuiet', waitForQuiet],
+    ['markPage', markPage],
+    ['unmarkPage', unmarkPage],
   ])('%s re-evaluates in an empty scope', (_name, fn) => {
     const source = fn.toString();
     // Istanbul rewrites bodies with module-level counters under --coverage; the
@@ -99,7 +104,7 @@ describe('extractPageContent', () => {
 
 describe('snapshotPage', () => {
   it('numbers the visible interactive elements in order and stores the map', () => {
-    const snapshot = snapshotPage(200, 1500);
+    const snapshot = snapshotPage(200, 1500, SECRET_FIELDS);
     const lines = snapshot.items.map(
       (item) =>
         `[${item.n}] ${item.role} "${item.name}"${item.state ? ` (${item.state})` : ''}`,
@@ -107,14 +112,14 @@ describe('snapshotPage', () => {
     expect(lines).toEqual([
       '[1] heading "Sign in"',
       '[2] textbox "Email" (empty)',
-      '[3] textbox "Password" (password)',
+      '[3] textbox "Password" (secret)',
       '[4] button "Continue" (submit)',
       '[5] link "Forgot password?"',
       '[6] combobox "" (selected: "English")',
       '[7] checkbox "Remember me" (checked)',
       '[8] textbox "" (empty)',
       '[9] button "Menu" (collapsed)',
-      '[10] textbox "Card number" (empty)',
+      '[10] textbox "Card number" (secret)',
       '[11] textbox "Search" (value: "hello world")',
       '[12] button "Pay now"',
     ]);
@@ -122,8 +127,50 @@ describe('snapshotPage', () => {
     expect(agentMap()?.get(4)).toBe(
       document.querySelector('button[type=submit]'),
     );
-    expect(snapshot.items[2]).toMatchObject({ password: true, submit: false });
-    expect(snapshot.items[3]).toMatchObject({ password: false, submit: true });
+    expect(snapshot.items[2]).toMatchObject({ secret: true, submit: false });
+    expect(snapshot.items[3]).toMatchObject({ secret: false, submit: true });
+    // What the user typed into a payment field is theirs: never read back.
+    expect(JSON.stringify(snapshot)).not.toContain('4242');
+  });
+
+  // Custom dropdowns list their choices as focusable paragraphs with no role
+  // and one shared aria-label; the words the user would say must survive.
+  it('lists focusable elements as clickable, named by their own words beside a shared label', () => {
+    document.body.innerHTML = `
+      <span tabindex="0" role="button" aria-label="open dropdown options"></span>
+      <p tabindex="0" aria-label="select option">New residents - transfer license</p>
+      <p tabindex="0" aria-label="select option">CDL knowledge test</p>
+      <div tabindex="-1">Programmatic focus only</div>
+      <button aria-label="Close">×</button>
+      <span tabindex="0">Plain focusable</span>
+      <input type="text" tabindex="0" aria-label="Name" value="Name">`;
+    const names = snapshotPage(200, 100).items.map(
+      (item) => `${item.role}:${item.name}`,
+    );
+    expect(names).toEqual([
+      'button:open dropdown options',
+      'focusable:select option: New residents - transfer license',
+      'focusable:select option: CDL knowledge test',
+      'button:Close',
+      'focusable:Plain focusable',
+      'textbox:Name',
+    ]);
+  });
+
+  it('masks every secret field it is told about, and only those', () => {
+    document.body.innerHTML = `
+      <input id="a" autocomplete="billing cc-number" value="4111">
+      <input id="b" autocomplete="ONE-TIME-CODE" value="123456">
+      <input id="c" autocomplete="email" value="jane@example.com">`;
+    const states = snapshotPage(200, 100, SECRET_FIELDS).items.map(
+      (item) => item.state,
+    );
+    expect(states).toEqual(['secret', 'secret', 'value: "jane@example.com"']);
+    expect(snapshotPage(200, 100).items.map((item) => item.secret)).toEqual([
+      false,
+      false,
+      false,
+    ]);
   });
 
   it('caps the number of items and the text excerpt', () => {
@@ -253,6 +300,71 @@ describe('actOnPage', () => {
     expect(onClick).toHaveBeenCalledTimes(1);
   });
 
+  // Menus and drag handles act on the press, not the click.
+  it('sends the sequence a mouse sends before the click', () => {
+    snapshotPage(200, 100);
+    const seen: string[] = [];
+    const button = document.querySelector('button[type=submit]')!;
+    for (const type of [
+      'pointerdown',
+      'mousedown',
+      'pointerup',
+      'mouseup',
+      'click',
+    ])
+      button.addEventListener(type, (e) => {
+        seen.push(`${type}${e instanceof MouseEvent ? ':mouse' : ''}`);
+      });
+    actOnPage(4, 'click', '', false);
+    expect(seen).toEqual([
+      'pointerdown:mouse',
+      'mousedown:mouse',
+      'pointerup:mouse',
+      'mouseup:mouse',
+      'click:mouse',
+    ]);
+  });
+
+  it('locates an element by the centre of its box', () => {
+    snapshotPage(200, 100);
+    const link = document.querySelector('a')!;
+    Object.defineProperty(link, 'getBoundingClientRect', {
+      configurable: true,
+      value: () => ({ left: 10, top: 20, width: 100, height: 40 }),
+    });
+    expect(actOnPage(5, 'locate', '', false)).toEqual({
+      ok: true,
+      x: 60,
+      y: 40,
+    });
+  });
+
+  it('prepares a field for real typing: focused and selected whole, never a secret one', () => {
+    snapshotPage(200, 100, SECRET_FIELDS);
+    const email = document.querySelector<HTMLInputElement>('#email')!;
+    email.value = 'old';
+    expect(actOnPage(2, 'prepare-type', '', false)).toEqual({ ok: true });
+    expect(document.activeElement).toBe(email);
+    expect([email.selectionStart, email.selectionEnd]).toEqual([0, 3]);
+
+    expect(
+      actOnPage(3, 'prepare-type', '', false, SECRET_FIELDS).error,
+    ).toMatch(/^Refused:/);
+    expect(
+      actOnPage(10, 'prepare-type', '', false, SECRET_FIELDS).error,
+    ).toMatch(/^Refused:/);
+
+    const editor = document.querySelector('#ed')!;
+    editor.textContent = 'Draft';
+    expect(actOnPage(8, 'prepare-type', '', false)).toEqual({ ok: true });
+    expect(window.getSelection()?.toString()).toBe('Draft');
+
+    expect(actOnPage(4, 'prepare-type', '', false)).toEqual({
+      ok: false,
+      error: 'Element cannot receive text.',
+    });
+  });
+
   it('types through the native setter and fires input and change', () => {
     snapshotPage(200, 100);
     const input = document.querySelector<HTMLInputElement>('#email')!;
@@ -286,7 +398,9 @@ describe('actOnPage', () => {
     expect(document.querySelector<HTMLInputElement>('#pw')!.value).toBe(
       'secret',
     );
-    expect(actOnPage(10, 'type', '4242', false).error).toMatch(/^Refused:/);
+    expect(actOnPage(10, 'type', '4242', false, SECRET_FIELDS).error).toMatch(
+      /^Refused:/,
+    );
   });
 
   // `autocomplete` is a token list, so a checkout's `billing cc-number` has to
@@ -304,10 +418,14 @@ describe('actOnPage', () => {
     snapshotPage(200, 100);
 
     for (const n of [1, 2, 3, 4, 5, 6]) {
-      expect(actOnPage(n, 'type', 'x', false).error).toMatch(/^Refused:/);
+      expect(actOnPage(n, 'type', 'x', false, SECRET_FIELDS).error).toMatch(
+        /^Refused:/,
+      );
     }
     // Not everything carrying an autocomplete hint is a secret.
-    expect(actOnPage(7, 'type', 'jane@example.com', false).ok).toBe(true);
+    expect(
+      actOnPage(7, 'type', 'jane@example.com', false, SECRET_FIELDS).ok,
+    ).toBe(true);
     expect(document.querySelector<HTMLInputElement>('#g')!.value).toBe(
       'jane@example.com',
     );
@@ -430,5 +548,34 @@ describe('waitForQuiet', () => {
       if (original)
         Object.defineProperty(Document.prototype, 'readyState', original);
     }
+  });
+});
+
+describe('markPage and unmarkPage', () => {
+  it('draws one badge per pair, numbered as the model sees them, and takes them down', () => {
+    snapshotPage(200, 100);
+    expect(
+      markPage([
+        [4, 17],
+        [5, 18],
+        [99, 19],
+      ]),
+    ).toBe(2);
+    const layer = document.getElementById('__ibl_marks')!;
+    expect(layer.style.pointerEvents).toBe('none');
+    expect(
+      [...layer.querySelectorAll('span')].map((b) => b.textContent),
+    ).toEqual(['17', '18']);
+    // Drawing again replaces the layer rather than stacking a second one.
+    expect(markPage([[4, 1]])).toBe(1);
+    expect(document.querySelectorAll('#__ibl_marks')).toHaveLength(1);
+    unmarkPage();
+    expect(document.getElementById('__ibl_marks')).toBeNull();
+    unmarkPage();
+  });
+
+  it('draws nothing before a snapshot', () => {
+    expect(markPage([[1, 1]])).toBe(0);
+    expect(document.getElementById('__ibl_marks')).toBeNull();
   });
 });

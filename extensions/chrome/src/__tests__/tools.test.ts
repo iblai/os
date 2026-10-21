@@ -12,6 +12,7 @@ import {
   type BrowserToolsContext,
   type LogEntry,
 } from '../tools';
+import { SECRET_FIELDS } from '../secret-fields';
 import { installChromeStub, type ChromeStub } from './chrome.stub';
 
 vi.mock('../settle', () => ({
@@ -101,7 +102,7 @@ describe('helpers', () => {
       name: 'Details',
       state: '',
       submit: false,
-      password: false,
+      secret: false,
     };
     const submit = { ...plain, submit: true, name: 'Continue' };
     const pay = { ...plain, name: 'Pay now' };
@@ -113,9 +114,23 @@ describe('helpers', () => {
     expect(needsConfirm('click', undefined)).toBe(false);
   });
 
-  it('asElement accepts positive integers only', () => {
+  it('asElement accepts positive integers, digits sent as text included', () => {
     expect(asElement(3)).toBe(3);
-    for (const bad of [0, -1, 1.5, '3', null, undefined, NaN])
+    expect(asElement('3')).toBe(3);
+    expect(asElement(' 12 ')).toBe(12);
+    for (const bad of [
+      0,
+      -1,
+      1.5,
+      '1.5',
+      '0',
+      '',
+      'x',
+      '3a',
+      null,
+      undefined,
+      NaN,
+    ])
       expect(asElement(bad)).toBeNull();
   });
 
@@ -127,7 +142,7 @@ describe('helpers', () => {
         name: 'Go',
         state: '',
         submit: false,
-        password: false,
+        secret: false,
       }),
     ).toBe('[2] link "Go"');
     expect(describeItem(9, undefined)).toBe('[9]');
@@ -311,8 +326,9 @@ describe('createBrowserTools', () => {
     );
   });
 
-  it('rejects element numbers that are not numbers', async () => {
-    expect(await run('click', { element: '4' })).toMatch(
+  // A refused number costs the model a step; the user sees it as a failed row.
+  it('rejects element numbers that are not numbers, and logs each refusal', async () => {
+    expect(await run('click', { element: 'x' })).toMatch(
       /^Error: element must be a number/,
     );
     expect(await run('type', { element: 0, text: 'x' })).toMatch(
@@ -322,6 +338,17 @@ describe('createBrowserTools', () => {
       /^Error: element must be a number/,
     );
     expect(actCalls()).toHaveLength(0);
+    expect(ctx.log.mock.calls.map((call) => call[0])).toEqual([
+      { tool: 'click', target: '', ok: false },
+      { tool: 'type', target: '', ok: false },
+      { tool: 'select', target: '', ok: false },
+    ]);
+  });
+
+  it('acts on an element number sent as text', async () => {
+    const result = await run('click', { element: '5' });
+    expect(result).toMatch(/^Clicked \[5\] link "Forgot password\?"\./);
+    expect(actCalls()).toHaveLength(1);
   });
 
   it('navigates only to http(s) URLs', async () => {
@@ -450,7 +477,7 @@ describe('createBrowserTools', () => {
           name: 'Message',
           state: 'empty',
           submit: false,
-          password: false,
+          secret: false,
         },
         {
           n: 2,
@@ -458,7 +485,7 @@ describe('createBrowserTools', () => {
           name: 'Add reaction',
           state: '',
           submit: false,
-          password: false,
+          secret: false,
         },
       ],
       excerpt: 'hi from chat',
@@ -486,7 +513,7 @@ describe('createBrowserTools', () => {
     expect(actCalls()).toHaveLength(1);
     expect(actCalls()[0][0]).toMatchObject({
       target: { tabId: 7, frameIds: [5] },
-      args: [1, 'type', 'hi', false],
+      args: [1, 'type', 'hi', false, SECRET_FIELDS],
     });
     expect(settle).toHaveBeenLastCalledWith(7, { frameId: 5 });
     expect(document.querySelector<HTMLInputElement>('#email')!.value).toBe('');
@@ -506,7 +533,7 @@ describe('createBrowserTools', () => {
       name,
       state: '',
       submit: false,
-      password: false,
+      secret: false,
     });
     const { snapshot, targets } = mergeFrames([
       {
@@ -545,5 +572,198 @@ describe('createBrowserTools', () => {
     expect(await run('read_page', {})).toBe(
       'Error: The page returned no snapshot.',
     );
+  });
+});
+
+describe('the picture of the tab', () => {
+  const funcs = () =>
+    chromeStub.stub.scripting.executeScript.mock.calls.map(
+      (call) => (call[0] as { func: { name: string } }).func.name,
+    );
+  const rebuild = async (patch: Partial<BrowserToolsContext>) => {
+    Object.assign(ctx, patch);
+    current = createBrowserTools(ctx);
+    chromeStub.stub.scripting.executeScript.mockClear();
+    await current.snapshot();
+  };
+
+  it('captures the tab after each page read, with every number drawn on its element', async () => {
+    document.querySelector('#pw')!.remove();
+    await rebuild({ withPicture: true });
+    expect(current.picture()).toEqual({
+      dataUrl: 'data:image/jpeg;base64,xyz',
+    });
+    expect(chromeStub.stub.tabs.captureVisibleTab).toHaveBeenCalledWith(1, {
+      format: 'jpeg',
+      quality: 60,
+    });
+    expect(funcs()).toEqual(['snapshotPage', 'markPage', 'unmarkPage']);
+    const marks = chromeStub.stub.scripting.executeScript.mock
+      .calls[1][0] as unknown as {
+      target: { frameIds: number[] };
+      args: [Array<[number, number]>];
+    };
+    expect(marks.target.frameIds).toEqual([0]);
+    expect(marks.args[0][0]).toEqual([1, 1]);
+    expect(marks.args[0]).toHaveLength(7);
+
+    chromeStub.stub.scripting.executeScript.mockClear();
+    await run('click', { element: 5 });
+    expect(funcs()).toEqual([
+      'actOnPage',
+      'snapshotPage',
+      'markPage',
+      'unmarkPage',
+    ]);
+    expect(chromeStub.stub.tabs.captureVisibleTab).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps a page with a password or payment field out of the picture', async () => {
+    await rebuild({ withPicture: true });
+    expect(current.picture()).toEqual({
+      note: '(no picture: this page has a password or payment field)',
+    });
+    expect(chromeStub.stub.tabs.captureVisibleTab).not.toHaveBeenCalled();
+    expect(funcs()).toEqual(['snapshotPage']);
+  });
+
+  it('takes the numbers down even when the capture fails, and says why', async () => {
+    document.querySelector('#pw')!.remove();
+    chromeStub.stub.tabs.captureVisibleTab.mockRejectedValueOnce(
+      new Error('throttled'),
+    );
+    await rebuild({ withPicture: true });
+    expect(current.picture()).toEqual({ note: '(no picture: throttled)' });
+    expect(funcs()).toEqual(['snapshotPage', 'markPage', 'unmarkPage']);
+  });
+
+  it('takes no picture of a tab that is not in front', async () => {
+    document.querySelector('#pw')!.remove();
+    chromeStub.stub.tabs.get.mockResolvedValue({
+      id: 7,
+      url: 'https://app.acme.com/',
+      status: 'complete',
+      active: false,
+      windowId: 1,
+    });
+    await rebuild({ withPicture: true });
+    expect(current.picture()).toEqual({
+      note: '(no picture: the tab is not in front)',
+    });
+    expect(chromeStub.stub.tabs.captureVisibleTab).not.toHaveBeenCalled();
+  });
+
+  it('never captures unless asked to', async () => {
+    document.querySelector('#pw')!.remove();
+    await rebuild({});
+    await run('click', { element: 5 });
+    expect(current.picture()).toBeNull();
+    expect(chromeStub.stub.tabs.captureVisibleTab).not.toHaveBeenCalled();
+    expect(funcs()).not.toContain('markPage');
+  });
+});
+
+describe('real input', () => {
+  const real = () => ({
+    click: vi.fn(async () => undefined),
+    insertText: vi.fn(async () => undefined),
+    pressEnter: vi.fn(async () => undefined),
+  });
+  const rebuild = async (patch: Partial<BrowserToolsContext>) => {
+    Object.assign(ctx, patch);
+    current = createBrowserTools(ctx);
+    await current.snapshot();
+    chromeStub.stub.scripting.executeScript.mockClear();
+  };
+  const actions = () =>
+    actCalls().map((call) => (call[0] as { args: unknown[] }).args[1]);
+
+  it("clicks for real at the element's centre, never with a scripted click", async () => {
+    const input = real();
+    await rebuild({ real: input });
+    Object.defineProperty(
+      document.querySelector('a'),
+      'getBoundingClientRect',
+      {
+        configurable: true,
+        value: () => ({ left: 10, top: 20, width: 100, height: 40 }),
+      },
+    );
+    const result = await run('click', { element: 5 });
+    expect(result).toMatch(/^Clicked \[5\] link "Forgot password\?"\./);
+    expect(input.click).toHaveBeenCalledWith(60, 40);
+    expect(actions()).toEqual(['locate']);
+    expect(settle).toHaveBeenLastCalledWith(7, { frameId: 0 });
+  });
+
+  it('types for real: the field is prepared in the page, the text and Enter go through the protocol', async () => {
+    const input = real();
+    await rebuild({ real: input });
+    const result = await run('type', {
+      element: 2,
+      text: 'jane',
+      submit: true,
+    });
+    expect(result).toMatch(/^Typed into \[2\] textbox "Email" and submitted\./);
+    expect(actions()).toEqual(['prepare-type']);
+    expect(actCalls()[0][0]).toMatchObject({
+      args: [2, 'prepare-type', '', false, SECRET_FIELDS],
+    });
+    expect(input.insertText).toHaveBeenCalledWith('jane');
+    expect(input.pressEnter).toHaveBeenCalledTimes(1);
+    expect(JSON.stringify(ctx.log.mock.lastCall)).not.toContain('jane');
+  });
+
+  it('refuses a secret field before any real text is sent', async () => {
+    const input = real();
+    await rebuild({ real: input });
+    expect(await run('type', { element: 3, text: 'hunter2' })).toMatch(
+      /^Error: this field takes a password/,
+    );
+    expect(input.insertText).not.toHaveBeenCalled();
+    expect(input.pressEnter).not.toHaveBeenCalled();
+  });
+
+  // Real input knows only the page's own coordinates.
+  it('keeps the scripted click for an element inside a subframe', async () => {
+    const input = real();
+    const original =
+      chromeStub.stub.scripting.executeScript.getMockImplementation()!;
+    const chat: FrameSnapshot = {
+      url: 'https://chat.acme.com/frame',
+      title: 'Chat',
+      items: [
+        {
+          n: 1,
+          role: 'button',
+          name: 'Send',
+          state: '',
+          submit: false,
+          secret: false,
+        },
+      ],
+      excerpt: '',
+    };
+    chromeStub.stub.scripting.executeScript.mockImplementation(
+      async (injection) => {
+        const { func, target } = injection as {
+          func: { name: string };
+          target: { frameIds?: number[] };
+        };
+        if (func.name === 'snapshotPage')
+          return [...(await original(injection)), { frameId: 5, result: chat }];
+        if (target.frameIds?.[0] === 5)
+          return [{ frameId: 5, result: { ok: true } }];
+        return original(injection);
+      },
+    );
+    await rebuild({ real: input });
+    const result = await run('click', { element: 9 });
+    expect(result).toMatch(/^Clicked \[9\] button "Send"\./);
+    expect(input.click).not.toHaveBeenCalled();
+    expect(actCalls()[0][0]).toMatchObject({
+      target: { tabId: 7, frameIds: [5] },
+      args: [1, 'click', '', false],
+    });
   });
 });

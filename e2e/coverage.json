@@ -1,15 +1,15 @@
 {
   "version": 2,
-  "lastUpdated": "2026-10-20",
+  "lastUpdated": "2026-10-22",
   "summary": {
-    "totalCheckpoints": 959,
-    "coveredCheckpoints": 912,
+    "totalCheckpoints": 961,
+    "coveredCheckpoints": 914,
     "deprecatedCheckpoints": 17,
     "notReproducibleCheckpoints": 17,
     "pendingCheckpoints": 13,
     "percent": 100,
-    "totalJourneys": 98,
-    "activeJourneys": 97
+    "totalJourneys": 99,
+    "activeJourneys": 98
   },
   "journeys": [
     {
@@ -5953,7 +5953,8 @@
       "sourceFiles": [
         "extensions/chrome/public/vendor/agent-ai.umd.js",
         "extensions/chrome/public/manifest.json",
-        "e2e/utils/embed-harness-server.mjs"
+        "e2e/utils/embed-harness-server.mjs",
+        "e2e/utils/embed-harness-client.ts"
       ],
       "checkpoints": [
         {
@@ -6054,6 +6055,32 @@
         {
           "id": "rav-03",
           "description": "After switching back to Browser, clicking Read Aloud on a fresh reply hands the reply to speechSynthesis and, where the browser has voices, starts speaking within 30s",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "cowork-extension-panel",
+      "name": "Cowork in the Extension Panel",
+      "spec": "93-cowork-extension-panel.spec.ts",
+      "sourceFiles": [
+        "hooks/use-in-extension-panel.ts",
+        "hooks/use-browse-run.ts",
+        "lib/cowork-approvals.ts",
+        "components/chat/sdk-chat.tsx",
+        "messages/en.json",
+        "e2e/utils/embed-harness-client.ts",
+        "e2e/utils/embed-harness-server.mjs"
+      ],
+      "checkpoints": [
+        {
+          "id": "cw-01",
+          "description": "Answered by a (faked) side panel over postMessage, the app shows the Cowork pill pressed, and its popover holds the switch on, the disclosure note mentioning the picture of the tab, and Approvals = Automatic",
+          "status": "covered"
+        },
+        {
+          "id": "cw-02",
+          "description": "A goal sent in the panel becomes a MENTOR:BROWSE_RUN frame carrying auto: true; scripted worker frames (ack, three log lines — an action, the agent's narration, a failed call — the reply text, done with the cap note) render as one assistant turn whose \"Used 1 tool\" row expands to each line's text, whose body ends with the reply then the note, and after which Send is back",
           "status": "covered"
         }
       ]
