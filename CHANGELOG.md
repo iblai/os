@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.175.0](https://github.com/iblai/os/compare/v0.174.3...v0.175.0) (2026-10-21)
+
+### Features
+
+* **ext:** real clicks, a picture of the tab, focusable widgets, narration rows and a cap note ([47c19df](https://github.com/iblai/os/commit/47c19df806131e1df1466ce79b96bff691ea8660))
+
+### Chores
+
+* **ext:** bump Chrome extension to 1.1.7 ([5aefcf5](https://github.com/iblai/os/commit/5aefcf58e400e2ad83fc8237b0d456b0af6ed96f))
+
 ## [0.174.3](https://github.com/iblai/os/compare/v0.174.2...v0.174.3) (2026-10-21)
 
 ### Chores
