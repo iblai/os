@@ -1,0 +1,56 @@
+name: Release Watchdog
+
+# GitHub occasionally drops the push event for a merge to main: the merge gets no workflow
+# runs at all, so nothing is released or built until someone notices. Every push to main
+# gets a Release run (even when its job is skipped) and every release tag gets a Docker
+# Build run, so a main head or newest tag without one lost its event. Dispatch that run.
+on:
+  schedule:
+    # Off the top of the hour, when GitHub delays scheduled runs the most.
+    - cron: '4-59/10 * * * *'
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  group: release-watchdog
+  cancel-in-progress: false
+
+jobs:
+  watchdog:
+    if: github.repository == 'iblai/os'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      # Normal triggers create their run within seconds; give them that before stepping in.
+      GRACE_SECONDS: 300
+    steps:
+      - name: Dispatch runs whose push events were dropped
+        run: |
+          set -euo pipefail
+          age() { echo $(( $(date +%s) - $(date -d "$1" +%s) )); }
+
+          ensure_run() {
+            local workflow=$1 ref=$2 commit sha date runs
+            commit=$(gh api "repos/$GH_REPO/commits/$ref" --jq '.sha + " " + .commit.committer.date')
+            read -r sha date <<< "$commit"
+            runs=$(gh api "repos/$GH_REPO/actions/workflows/$workflow/runs?head_sha=$sha&per_page=1" --jq .total_count)
+            if [ "$runs" -gt 0 ]; then
+              echo "$ref@${sha:0:9} has a $workflow run"
+            elif [ "$(age "$date")" -lt "$GRACE_SECONDS" ]; then
+              echo "$ref@${sha:0:9} has no $workflow run yet (within the grace period)"
+            else
+              echo "::warning::$ref@${sha:0:9} never got a $workflow run; dispatching one"
+              gh workflow run "$workflow" --ref "$ref"
+            fi
+          }
+
+          ensure_run release.yml main
+          # Only release-it's own tags; a hand-cut tag (e.g. -patch.1) is not a release build.
+          tag=$(gh api "repos/$GH_REPO/git/matching-refs/tags/v" --jq '.[].ref | ltrimstr("refs/tags/")' |
+            grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -1)
+          ensure_run trigger-docker-build.yml "$tag"

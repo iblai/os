@@ -3,6 +3,9 @@ name: Release
 on:
   push:
     branches: [main]
+  # For release-watchdog.yml when a merge's push event never arrives. Safe to run at
+  # any time: it releases whatever is unreleased on main, or nothing.
+  workflow_dispatch:
 
 # Prevent concurrent releases
 concurrency:
@@ -15,7 +18,7 @@ permissions:
 jobs:
   release:
     # Skip our own release commits (loop) and tauri version bumps (separate track)
-    if: "!startsWith(github.event.head_commit.message, 'chore(release):') && !startsWith(github.event.head_commit.message, 'chore(tauri):')"
+    if: "github.ref == 'refs/heads/main' && !startsWith(github.event.head_commit.message, 'chore(release):') && !startsWith(github.event.head_commit.message, 'chore(tauri):')"
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
@@ -47,7 +50,19 @@ jobs:
           git fetch origin main
           git rebase origin/main
 
+      - name: Check for unreleased commits
+        id: pending
+        # A run can find its commits already released (by the run it queued behind, or a
+        # watchdog dispatch that raced a late push event). release-it would still cut an
+        # empty patch release, since the changelog preset recommends patch for no commits.
+        run: |
+          last=$(git describe --tags --abbrev=0 --match 'v*')
+          count=$(git log --format=%s "$last..HEAD" | grep -cvE '^chore\((release|tauri)\):' || true)
+          echo "$count unreleased commit(s) since $last"
+          echo "count=$count" >> "$GITHUB_OUTPUT"
+
       - name: Run release-it
+        if: steps.pending.outputs.count != '0'
         env:
           GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
           HUSKY: '0'
