@@ -5704,9 +5704,9 @@
       "name": "In-chat Model Picker",
       "spec": "84-in-chat-model-picker.spec.ts",
       "sourceFiles": [
-        "components/modals/edit-mentor-modal/settings-tab.tsx",
+        "components/modals/edit-mentor-modal/llm-tab.tsx",
         "e2e/page-objects/chat.page.ts",
-        "e2e/page-objects/edit-mentor/settings.tab.ts"
+        "e2e/page-objects/edit-mentor/llm.tab.ts"
       ],
       "checkpoints": [
         {

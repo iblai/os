@@ -258,6 +258,8 @@ export class LlmTab {
       ),
       this.inChatModelChangeToggle.click(),
     ]);
+    const response = await request.response();
+    expect(response?.ok(), 'the setting saved').toBe(true);
     await expect(this.inChatModelChangeToggle).toHaveAttribute(
       'aria-checked',
       String(target),

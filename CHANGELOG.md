@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.174.2](https://github.com/iblai/os/compare/v0.174.1...v0.174.2) (2026-10-21)
+
+### Bug Fixes
+
+* follow the in-chat model toggle to the LLM tab after the iblai-js 2.45.1 bump ([f457bfe](https://github.com/iblai/os/commit/f457bfe627eb340a177db429bff66e4ff40167c2))
+* **llm-tab:** no false success toast when the paywall blocks the in-chat toggle ([b9c4f58](https://github.com/iblai/os/commit/b9c4f588a77e054323953cabf31ae8c4b20a3563))
+
+### Chores
+
+* iblai-js bump to 2.45.1 ([60132a9](https://github.com/iblai/os/commit/60132a980c0309676939476759ba8eacd5a6774b))
+* iblai-js bump to 2.46.0 ([f70d2c7](https://github.com/iblai/os/commit/f70d2c7ac3fa809eb55680eb9041b502dc81325f))
+
+### Tests
+
+* expect the delayed blob URL revoke from web-containers 1.49 ([12c2fa6](https://github.com/iblai/os/commit/12c2fa6735674d2f1eed3dcab94b29872516c657))
+
 ## [0.174.1](https://github.com/iblai/os/compare/v0.174.0...v0.174.1) (2026-10-20)
 
 ### Bug Fixes
