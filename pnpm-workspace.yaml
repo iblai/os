@@ -7,7 +7,9 @@ onlyBuiltDependencies:
   - sharp
   - unrs-resolver
 overrides:
-  vite: '>=7.3.2'
+  # GHSA-587h-7wmj-h5pm — launch-editor's existence check can be bypassed on
+  # Windows, affecting >=8.0.0 <=8.1.5. Stays on the 8.1 line.
+  vite: '~8.1.6'
   # GHSA-c475-qrg2-pj4r — quadratic-time CPU DoS in Client.list()'s Unix
   # directory-listing parser (RE_LINE backtracking), affecting <=6.2.0; 6.2.1 is
   # the only patched release. Surfaced by `pnpm audit` (high), which blocks the
@@ -168,7 +170,8 @@ overrides:
   # Reached through @iblai/iblai-js > @iblai/web-containers > @tiptap/pm >
   # prosemirror-markdown, which asks for ^14. Upper bound is deliberate: a bare
   # '>=14.3.1' resolves to 15.x, a major that consumer does not declare.
-  markdown-it: '>=14.3.1 <15'
+  # GHSA-gfr2-rv44-r23c: 14.3.3 is the next patched release.
+  markdown-it: '>=14.3.3 <15'
   # GHSA-cp6q-959q-f8rh + GHSA-j95f-988m-3j2f (XSS via crafted editor
   # content), patched in 3.30.4/3.30.5. Scoped to the 3.x resolution
   # (@iblai/web-containers): the app itself pins the 2.x API for the canvas
