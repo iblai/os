@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-10-20 | 970 checkpoints (925 covered, 11 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 99 journeys (98 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-10-21 | 972 checkpoints (927 covered, 11 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 100 journeys (99 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -2253,3 +2253,14 @@ Tenant admins choose which models users may use ([iblai-platform#2675](https://g
 - [x] um-16: The box counts the models allowed for users ("0 models allowed for users")
 - [x] um-17: Real (unmocked): the admin allows two models through the User Models dialog, and a non-admin opening chat with that agent sees exactly those models in the in-chat model picker (not another model of the same provider, not the previously allowed one)
 - [x] um-18: Real (unmocked): after the admin unticks a model in User Models, the non-admin no longer sees it in the in-chat model picker while the other allowed model stays
+
+---
+
+## Journey 93: Cowork in the Extension Panel (2 checkpoints) — `journeys/93-cowork-extension-panel.spec.ts`
+
+**Source files:** `hooks/use-in-extension-panel.ts`, `hooks/use-browse-run.ts`, `lib/cowork-approvals.ts`, `components/chat/sdk-chat.tsx`, `messages/en.json`, `e2e/utils/embed-harness-client.ts`, `e2e/utils/embed-harness-server.mjs`
+
+The app half of the Chrome extension's Cowork mode, without loading the extension: everything the app does inside the side panel goes over `postMessage` with the panel, so the harness's second-origin `/agent-ai` page (journey 89's) stands in for it — an init script answers `MENTOR:BROWSE_HELLO` with `MENTOR:BROWSE_READY`, records each `MENTOR:BROWSE_RUN`, and posts worker frames back into the iframe the way `extensions/chrome/src/browse-bridge.ts` does. The agent's Show reasoning setting is patched on, since the action list renders only then. Chrome-only. The service worker's own behaviour — the snapshot (focusable elements, masked secret fields), the picture with numbered badges, real clicks through `chrome.debugger`, narration and refused calls as rows, the step cap's wording — is unit-tested under `extensions/chrome/src/__tests__` and is not reproducible here.
+
+- [x] cw-01: Answered by a (faked) side panel, the app shows the Cowork pill pressed; its popover holds the switch on, the disclosure note mentioning the picture of the tab, and Approvals = Automatic
+- [x] cw-02: A goal becomes a `MENTOR:BROWSE_RUN` frame carrying `auto: true`; scripted worker frames (ack, three log lines — an action, the agent's narration, a failed call — the reply, done with the cap note) render as one assistant turn whose "Used 1 tool" row expands to each line's text, whose body ends with the reply then the note, and after which Send is back

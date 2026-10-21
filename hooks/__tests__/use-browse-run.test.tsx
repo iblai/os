@@ -75,7 +75,11 @@ describe('useBrowseRun', () => {
     act(() => result.current.browse.run('open billing'));
 
     expect(sent()).toEqual([
-      { type: 'MENTOR:BROWSE_RUN', goal: 'open billing', auto: true },
+      {
+        type: 'MENTOR:BROWSE_RUN',
+        goal: 'open billing',
+        auto: true,
+      },
     ]);
     expect(result.current.browse.isRunning).toBe(true);
     expect(messages().at(-1)).toMatchObject({
@@ -112,9 +116,18 @@ describe('useBrowseRun', () => {
     act(() => frame({ type: 'log', text: 'Click [1] button "Pay"', ok: true }));
     act(() => frame({ type: 'log', text: 'Type into [2] textbox', ok: false }));
 
+    // `input.text` is what the row shows; the indicator never reads `log`.
     expect(state().currentStreamingMessage.toolCalls).toMatchObject([
-      { log: 'Click [1] button "Pay"', result: 'ok' },
-      { log: 'Type into [2] textbox', result: 'failed' },
+      {
+        log: 'Click [1] button "Pay"',
+        input: { text: 'Click [1] button "Pay"' },
+        result: 'ok',
+      },
+      {
+        log: 'Type into [2] textbox',
+        input: { text: 'Type into [2] textbox' },
+        result: 'failed',
+      },
     ]);
   });
 
