@@ -445,7 +445,7 @@
     "coworkNeedsScreenRecording": "Cowork needs Screen Recording access to read your windows. Grant it in System Settings › Privacy & Security › Screen Recording, then restart the app and turn Cowork on again.",
     "skills": "Skills",
     "coworkNeedsSession": "Sign in first — Cowork needs your platform session to reach the model.",
-    "coworkTabNote": "Reads this tab and acts on it for you — never password or payment fields. What it reads goes to ibl.ai to decide what to do next.",
+    "coworkTabNote": "Reads this tab, takes a picture of it, and acts on it the way you would — Chrome shows a bar on the tab while it works. Never password or payment fields, and no picture while one is on the page. What it reads goes to ibl.ai to decide what to do next.",
     "coworkApprovalsLabel": "Approvals",
     "coworkApprovalsManual": "Ask Me",
     "coworkApprovalsAuto": "Automatic",
