@@ -76,6 +76,7 @@ describe('AIMessageDownload', () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     vi.restoreAllMocks();
   });
 
@@ -124,13 +125,19 @@ describe('AIMessageDownload', () => {
   });
 
   it('downloads the whole conversation as a dated chat transcript', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout'] });
     openDialog();
     fireEvent.click(screen.getByRole('button', { name: 'Download' }));
 
     expect(createdBlobs).toHaveLength(1);
     expect(createdBlobs[0].type).toBe('text/plain;charset=utf-8');
     expect(downloadedNames).toEqual([`chat-Test Mentor-${today()}.txt`]);
+    // Safari reads the blob after click() returns, so the SDK keeps the URL
+    // alive for a while before revoking it.
+    expect(revoked).toEqual([]);
+    vi.advanceTimersByTime(40_000);
     expect(revoked).toEqual(['blob:mock-url']);
+    vi.useRealTimers();
 
     const text = await readBlob(createdBlobs[0]);
     expect(text).toBe(
