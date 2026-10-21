@@ -1,9 +1,13 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
+  coworkConsentGiven,
+  coworkPermissionAsked,
   coworkPrefSet,
   coworkSetupPending,
+  markCoworkPermissionAsked,
   readCoworkApprovals,
   writeCoworkApprovals,
+  writeCoworkConsent,
   writeCoworkSetupPending,
 } from '@/lib/cowork-approvals';
 
@@ -96,5 +100,68 @@ describe('cowork setup pending', () => {
     });
     expect(() => writeCoworkSetupPending(true)).not.toThrow();
     expect(coworkSetupPending()).toBe(false);
+  });
+});
+
+describe('cowork consent', () => {
+  it('is not given until the user turns Cowork on from the explanation', () => {
+    expect(coworkConsentGiven()).toBe(false);
+  });
+
+  it('is remembered once given', () => {
+    writeCoworkConsent();
+    expect(window.localStorage.getItem('ibl_cowork_consent')).toBe('true');
+    expect(coworkConsentGiven()).toBe(true);
+  });
+
+  it('reads anything but the saved value as not given', () => {
+    window.localStorage.setItem('ibl_cowork_consent', 'yes');
+    expect(coworkConsentGiven()).toBe(false);
+  });
+
+  it('reads unusable storage as not given, and swallows a blocked write', () => {
+    vi.spyOn(window.localStorage, 'getItem').mockImplementation(() => {
+      throw new Error('blocked');
+    });
+    vi.spyOn(window.localStorage, 'setItem').mockImplementation(() => {
+      throw new Error('blocked');
+    });
+    expect(() => writeCoworkConsent()).not.toThrow();
+    expect(coworkConsentGiven()).toBe(false);
+  });
+});
+
+describe('cowork permission asked', () => {
+  it('starts with neither grant asked for', () => {
+    expect(coworkPermissionAsked('accessibility')).toBe(false);
+    expect(coworkPermissionAsked('screen_recording')).toBe(false);
+  });
+
+  it('remembers each grant on its own', () => {
+    markCoworkPermissionAsked('accessibility');
+    expect(
+      window.localStorage.getItem('ibl_cowork_permission_asked_accessibility'),
+    ).toBe('true');
+    expect(coworkPermissionAsked('accessibility')).toBe(true);
+    expect(coworkPermissionAsked('screen_recording')).toBe(false);
+
+    markCoworkPermissionAsked('screen_recording');
+    expect(
+      window.localStorage.getItem(
+        'ibl_cowork_permission_asked_screen_recording',
+      ),
+    ).toBe('true');
+    expect(coworkPermissionAsked('screen_recording')).toBe(true);
+  });
+
+  it('reads unusable storage as never asked, and swallows a blocked write', () => {
+    vi.spyOn(window.localStorage, 'getItem').mockImplementation(() => {
+      throw new Error('blocked');
+    });
+    vi.spyOn(window.localStorage, 'setItem').mockImplementation(() => {
+      throw new Error('blocked');
+    });
+    expect(() => markCoworkPermissionAsked('accessibility')).not.toThrow();
+    expect(coworkPermissionAsked('accessibility')).toBe(false);
   });
 });

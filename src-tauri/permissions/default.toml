@@ -31,6 +31,8 @@ permissions = [
     "allow-cua-driver-stop",
     "allow-open-privacy-settings",
     "allow-relaunch-app",
+    "allow-request-cowork-permission",
+    "allow-bring-app-to-front",
     "allow-opencode-chat-stream",
     "allow-opencode-stop",
     "allow-opencode-permission-respond",
@@ -209,6 +211,18 @@ identifier = "allow-relaunch-app"
 description = "Enables relaunching the app so a new Screen Recording grant takes effect"
 [permission.commands]
 allow = ["relaunch_app"]
+
+[[permission]]
+identifier = "allow-request-cowork-permission"
+description = "Enables asking macOS for one of the grants Cowork needs (Accessibility or Screen Recording)"
+[permission.commands]
+allow = ["request_cowork_permission"]
+
+[[permission]]
+identifier = "allow-bring-app-to-front"
+description = "Enables bringing the app back in front once a Cowork grant lands in System Settings"
+[permission.commands]
+allow = ["bring_app_to_front"]
 
 [[permission]]
 identifier = "allow-cua-driver-start"

@@ -2,9 +2,9 @@
   "version": 1,
   "lastUpdated": "2026-10-16",
   "summary": {
-    "totalCheckpoints": 64,
-    "coveredCheckpoints": 24,
-    "pendingCheckpoints": 39,
+    "totalCheckpoints": 66,
+    "coveredCheckpoints": 25,
+    "pendingCheckpoints": 40,
     "deprecatedCheckpoints": 1,
     "notReproducibleCheckpoints": 0,
     "percent": 100,
@@ -357,10 +357,10 @@
       "name": "Cowork (Cua Driver)",
       "spec": "04-cowork.spec.ts",
       "sourceFiles": [
-        "src-tauri/src/cua_driver_mcp.rs",
         "components/chat-input-form/inside-buttons.tsx",
+        "lib/call-tauri.ts",
         "lib/cowork-approvals.ts",
-        "lib/call-tauri.ts"
+        "src-tauri/src/cua_driver_mcp.rs"
       ],
       "checkpoints": [
         {
@@ -375,17 +375,17 @@
         },
         {
           "id": "cowork-03",
-          "description": "Accepting the Cowork consent dialog with a macOS grant missing opens the setup dialog instead of a toast: one row per grant (Accessibility, Screen Recording) reading Allowed or offering Open System Settings, which opens that exact Privacy & Security pane; Cowork stays off and nothing is installed",
+          "description": "Switching Cowork on shows one dialog: first a plain explanation (Not Now / Turn On) that asks macOS for nothing; Turn On saves the consent, starts the driver download and moves the same dialog to a two-step checklist (Accessibility, then Screen Recording) where only the current step has a button",
           "status": "pending"
         },
         {
           "id": "cowork-04",
-          "description": "The setup dialog re-checks the grants by itself whenever the app regains focus, and turns Cowork on (install + “Cowork is on.” toast) the moment both are held",
+          "description": "The current step's Allow lets macOS show its own alert first (no System Settings on top of it); a later press opens the exact System Settings pane; the checklist re-reads the grants every second while open, brings ibl.ai back to the front once Accessibility is switched on, and turns Cowork on by itself (one install, one “Cowork is on.” toast) once both are held",
           "status": "pending"
         },
         {
           "id": "cowork-05",
-          "description": "While Screen Recording still reads denied the dialog explains it takes effect only after a relaunch and offers Relaunch App; the setup is remembered across that relaunch and finishes by itself on the next launch, or shows what is still missing, without prompting again; cancelling forgets it",
+          "description": "Once Screen Recording was asked for and still reads off, the checklist says to take macOS's Quit & Reopen and offers Restart ibl.ai; the setup resumes after the restart without asking macOS again; Not Now clears the setup but keeps the consent, so the next switch-on goes straight to what is still missing",
           "status": "pending"
         },
         {
@@ -396,6 +396,16 @@
         {
           "id": "cowork-07",
           "description": "The Mac App Store (sandboxed) build shows the Cowork pill disabled with the App Store reason instead of walking the user into grants that cannot work there",
+          "status": "pending"
+        },
+        {
+          "id": "cowork-08",
+          "description": "`request_cowork_permission` refuses an unknown kind, naming it, and resolves for both known kinds off macOS; `bring_app_to_front` resolves",
+          "status": "covered"
+        },
+        {
+          "id": "cowork-09",
+          "description": "A Cowork turn that drives the computer keeps the app responsive while the driver streams its replies and the page keeps calling the host (no frozen window / spinning cursor); the driver install's progress and log events behave the same",
           "status": "pending"
         }
       ]

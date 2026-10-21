@@ -85,3 +85,54 @@ export function writeCoworkSetupPending(pending: boolean): void {
     // Without storage the setup simply does not survive a relaunch.
   }
 }
+
+/**
+ * Set once the user has pressed Turn On in the Cowork explanation, so switching
+ * Cowork on later goes straight to whatever macOS still needs.
+ */
+const CONSENT_KEY = 'ibl_cowork_consent';
+
+export function coworkConsentGiven(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    return window.localStorage.getItem(CONSENT_KEY) === 'true';
+  } catch {
+    return false;
+  }
+}
+
+export function writeCoworkConsent(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(CONSENT_KEY, 'true');
+  } catch {
+    // Without storage the explanation simply shows again next time.
+  }
+}
+
+export type CoworkGrantKind = 'accessibility' | 'screen_recording';
+
+/**
+ * macOS shows its own alert only the first time an app asks for a grant. After
+ * that the only way through is System Settings, so the setup remembers which
+ * grants it has already asked for.
+ */
+const PERMISSION_ASKED_KEY = 'ibl_cowork_permission_asked_';
+
+export function coworkPermissionAsked(kind: CoworkGrantKind): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    return window.localStorage.getItem(PERMISSION_ASKED_KEY + kind) === 'true';
+  } catch {
+    return false;
+  }
+}
+
+export function markCoworkPermissionAsked(kind: CoworkGrantKind): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(PERMISSION_ASKED_KEY + kind, 'true');
+  } catch {
+    // Without storage every ask counts as the first one.
+  }
+}

@@ -35,6 +35,8 @@
     "allow-cua-driver-stop",
     "allow-open-privacy-settings",
     "allow-relaunch-app",
+    "allow-request-cowork-permission",
+    "allow-bring-app-to-front",
     "allow-opencode-chat-stream",
     "allow-opencode-stop",
     "allow-opencode-permission-respond",

@@ -30,7 +30,7 @@ use std::sync::{Mutex, OnceLock};
 
 use serde::Serialize;
 use serde_json::Value;
-use tauri::{command, AppHandle, Emitter};
+use tauri::{command, AppHandle, Manager};
 
 use crate::opencode_acp::iblai_data_dir;
 
@@ -233,21 +233,106 @@ pub fn current_session_env() -> SessionEnv {
 /// permissions plugin raises the system prompt once; after a refusal only the
 /// pane itself lets the user change their mind, so the panel links straight
 /// to it (the plugin's own full-disk request opens its pane the same way).
+///
+/// Screen Recording first makes sure the app is in that pane's list: macOS
+/// only lists an app once it has asked, and the plugin's request does not get
+/// through on macOS 26 (tccd logs only preflight checks for it).
 #[command]
-pub async fn open_privacy_settings(pane: String) -> Result<(), String> {
+pub async fn open_privacy_settings(app: AppHandle, pane: String) -> Result<(), String> {
     let anchor = privacy_pane_anchor(&pane)?;
     #[cfg(target_os = "macos")]
     {
-        Command::new("open")
-            .arg(format!(
-                "x-apple.systempreferences:com.apple.preference.security?{anchor}"
-            ))
-            .output()
-            .map_err(|e| e.to_string())?;
+        if pane == "screen_recording" {
+            ask_screen_recording(&app).await?;
+        }
+        open_pane(anchor)?;
     }
     #[cfg(not(target_os = "macos"))]
-    let _ = anchor;
+    let _ = (app, anchor);
     Ok(())
+}
+
+/// Ask macOS for one Cowork grant, the way the setup checklist does, and say
+/// whether it is held now. macOS shows its own alert only the first time an
+/// app asks, and that alert carries its own "Open System Settings" button, so
+/// the pane is opened only on a repeat ask (`open_settings`): opening it on the
+/// first ask puts System Settings over the alert, where nobody sees it.
+#[command]
+pub async fn request_cowork_permission(
+    app: AppHandle,
+    kind: String,
+    open_settings: bool,
+) -> Result<bool, String> {
+    let anchor = privacy_pane_anchor(&kind)?;
+    #[cfg(target_os = "macos")]
+    {
+        let granted = if kind == "accessibility" {
+            if !tauri_plugin_macos_permissions::check_accessibility_permission().await {
+                tauri_plugin_macos_permissions::request_accessibility_permission().await;
+            }
+            tauri_plugin_macos_permissions::check_accessibility_permission().await
+        } else {
+            ask_screen_recording(&app).await?
+        };
+        if !granted && open_settings {
+            open_pane(anchor)?;
+        }
+        Ok(granted)
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        let _ = (app, anchor, open_settings);
+        Ok(true)
+    }
+}
+
+/// Brings ibl.ai back in front once a grant lands while System Settings has
+/// the user's attention. Order matters: focusing a minimized or hidden window
+/// does nothing.
+#[command]
+pub async fn bring_app_to_front(app: AppHandle) {
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.unminimize();
+        let _ = window.show();
+        let _ = window.set_focus();
+    }
+}
+
+#[cfg(target_os = "macos")]
+fn open_pane(anchor: &str) -> Result<(), String> {
+    Command::new("open")
+        .arg(format!(
+            "x-apple.systempreferences:com.apple.preference.security?{anchor}"
+        ))
+        .output()
+        .map(|_| ())
+        .map_err(|e| e.to_string())
+}
+
+/// The Screen Recording request has to run on the main thread: off it (where
+/// the permissions plugin calls it) it never reaches tccd on macOS 26, so
+/// macOS neither asks nor lists the app.
+#[cfg(target_os = "macos")]
+async fn ask_screen_recording(app: &AppHandle) -> Result<bool, String> {
+    let (tx, rx) = tokio::sync::oneshot::channel();
+    app.run_on_main_thread(move || {
+        let _ = tx.send(macos_screen::ask());
+    })
+    .map_err(|e| e.to_string())?;
+    rx.await.map_err(|e| e.to_string())
+}
+
+#[cfg(target_os = "macos")]
+mod macos_screen {
+    #[link(name = "CoreGraphics", kind = "framework")]
+    extern "C" {
+        fn CGPreflightScreenCaptureAccess() -> bool;
+        fn CGRequestScreenCaptureAccess() -> bool;
+    }
+
+    pub fn ask() -> bool {
+        unsafe { CGPreflightScreenCaptureAccess() || CGRequestScreenCaptureAccess() }
+    }
 }
 
 /// The `x-apple.systempreferences` anchor of each pane the setup dialog links to.
@@ -506,12 +591,13 @@ pub async fn cua_driver_start(app: AppHandle) -> Result<(), String> {
             }
             let line = scrub_driver_line(line, screenshot_flag_tools());
             log_rpc("<-", &line);
-            let _ = reader_app.emit(EVENT_MESSAGE, line);
+            // Never `reader_app.emit` here: see `events_go_through_the_main_thread`.
+            crate::emit_on_main(&reader_app, EVENT_MESSAGE, line);
         }
         // stdout closed ⇒ the process is gone; tell the webview so it can drop
         // its cached session and reconnect on the next turn.
         println!("[cua-driver] process exited (stdout closed)");
-        let _ = reader_app.emit(EVENT_CLOSED, ());
+        crate::emit_on_main(&reader_app, EVENT_CLOSED, ());
     });
 
     println!(
@@ -594,6 +680,29 @@ mod tests {
             ..Default::default()
         };
         assert_eq!(session_support(&env), DriverSupport::no(reason::SANDBOXED));
+    }
+
+    /// A direct emit from the driver's reader thread froze the app during a
+    /// Cowork turn: Tauri's emit holds the webview lock while it waits for the
+    /// main thread, and the main thread was waiting for that lock to answer one
+    /// of the page's IPC calls. Every Cowork event goes through `emit_on_main`.
+    #[test]
+    fn events_go_through_the_main_thread() {
+        let direct = [".", "emit("].concat();
+        for (file, source) in [
+            ("cua_driver_mcp.rs", include_str!("cua_driver_mcp.rs")),
+            (
+                "cua_driver_installer.rs",
+                include_str!("cua_driver_installer.rs"),
+            ),
+        ] {
+            let offending: Vec<&str> = source
+                .lines()
+                .filter(|line| !line.trim_start().starts_with("//"))
+                .filter(|line| line.contains(&direct))
+                .collect();
+            assert!(offending.is_empty(), "{file} emits directly: {offending:?}");
+        }
     }
 
     /// The pane names are the exact strings the composer's setup dialog sends;

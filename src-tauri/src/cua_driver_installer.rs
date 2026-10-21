@@ -22,7 +22,7 @@ use std::time::Duration;
 
 use serde::Serialize;
 use serde_json::json;
-use tauri::{command, AppHandle, Emitter};
+use tauri::{command, AppHandle};
 
 use crate::cua_driver_mcp::{cua_driver_bin, cua_driver_program, session_support, DriverSupport};
 use crate::opencode_acp::iblai_data_dir;
@@ -58,7 +58,8 @@ const EVENT_INSTALLATION_LOG: &str = "cua-driver:installation-log";
 
 fn log(app: &AppHandle, message: &str) {
     println!("[cua-driver-install] {message}");
-    let _ = app.emit(
+    crate::emit_on_main(
+        app,
         EVENT_INSTALLATION_LOG,
         json!({
             "timestamp": chrono::Utc::now().to_rfc3339(),
@@ -69,7 +70,8 @@ fn log(app: &AppHandle, message: &str) {
 }
 
 fn progress(app: &AppHandle, status: &str, percentage: u8, message: &str) {
-    let _ = app.emit(
+    crate::emit_on_main(
+        app,
         EVENT_INSTALL_PROGRESS,
         json!({ "status": status, "percentage": percentage, "message": message }),
     );

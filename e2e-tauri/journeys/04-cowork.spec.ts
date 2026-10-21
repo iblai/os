@@ -7,7 +7,7 @@
  * REAL compiled binary through tauri-driver.
  *
  * Only the host side is exercised here: whether this session can run Cowork and
- * the two commands the macOS setup dialog relies on. The dialog itself needs
+ * the commands the macOS setup checklist relies on. The dialog itself needs
  * macOS — the Accessibility and Screen Recording grants exist nowhere else and
  * tauri-driver has no macOS support — so those checkpoints are `pending` in the
  * ledger and covered meanwhile by the `inside-buttons` Vitest cases and the Rust
@@ -126,5 +126,27 @@ describe('Journey 4: Cowork (Cua Driver)', () => {
     });
     expect(error).not.toBe(null);
     expect(error).toContain('camera');
+  });
+
+  it('cowork-08: request_cowork_permission takes only the two grants, and bring_app_to_front answers', async () => {
+    // Off macOS neither grant exists, so both kinds resolve as held and no
+    // System Settings pane is opened.
+    for (const kind of ['accessibility', 'screen_recording']) {
+      expect(
+        await invokeCmd<boolean>('request_cowork_permission', {
+          kind,
+          openSettings: true,
+        }),
+      ).toBe(true);
+    }
+
+    const error = await invokeExpectingFailure('request_cowork_permission', {
+      kind: 'camera',
+      openSettings: false,
+    });
+    expect(error).not.toBe(null);
+    expect(error).toContain('camera');
+
+    await invokeCmd('bring_app_to_front');
   });
 });

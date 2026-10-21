@@ -1400,6 +1400,19 @@ describe('CodingModeButton', () => {
     });
   });
 
+  it('keeps the panel inside the window and scrolls it when it is taller than the room left', async () => {
+    // Workspace + Phone Access made the panel taller than the space above the
+    // composer, and its top ran off the window.
+    renderButton();
+    await openPopover();
+
+    const panel = await screen.findByTestId('coding-mode-popover');
+    expect(panel.className).toContain(
+      'max-h-[var(--radix-popover-content-available-height)]',
+    );
+    expect(panel.className).toContain('overflow-y-auto');
+  });
+
   describe('toggling', () => {
     it('forces a deliberate folder choice the first time Code is switched on', async () => {
       localStorage.setItem('ibl_coding_mode_enabled', 'false');

@@ -1,7 +1,14 @@
 'use client';
 
 import type React from 'react';
-import { Fragment, useEffect, useId, useRef, useState } from 'react';
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+} from 'react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import {
@@ -19,8 +26,6 @@ import {
 import { Switch } from '@/components/ui/switch';
 import {
   AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
@@ -42,12 +47,17 @@ import type { EffectiveAgentSkill } from '@iblai/iblai-js/data-layer';
 import { toast } from 'sonner';
 import { DeepSearchIcon, CanvasIcon } from '@/components/icons/svg-icons';
 import {
+  coworkConsentGiven,
+  coworkPermissionAsked,
   coworkPrefSet,
   coworkSetupPending,
+  markCoworkPermissionAsked,
   readCoworkApprovals,
   writeCoworkApprovals,
+  writeCoworkConsent,
   writeCoworkSetupPending,
   type CoworkApprovals,
+  type CoworkGrantKind,
 } from '@/lib/cowork-approvals';
 import { callTauri } from '@/lib/call-tauri';
 import { coworkCanTakeTheTurn } from '@/lib/cowork-routing';
@@ -89,6 +99,39 @@ let coworkSetupOwner: symbol | null = null;
 // and the Local Models tab's "supported" indicator. modelSupportsCowork
 // gates size <= gb (strictly greater), so a model of exactly 12GB is also off.
 const COWORK_MIN_MODEL_GB = 12;
+
+interface CoworkGrants {
+  accessibility: boolean | null;
+  screenRecording: boolean | null;
+}
+
+const COWORK_GRANTS_UNREAD: CoworkGrants = {
+  accessibility: null,
+  screenRecording: null,
+};
+
+// Read straight from the host rather than through `useCuaDriver`: the app runs
+// against the published SDK, whose hook may predate what this setup needs.
+// Checking never prompts. The plugin exists only on macOS, so a rejection means
+// the grant does not apply here (`null`), never that it was denied.
+const readCoworkGrant = async (command: string): Promise<boolean | null> => {
+  try {
+    const granted = await callTauri<unknown>(command);
+    return typeof granted === 'boolean' ? granted : null;
+  } catch {
+    return null;
+  }
+};
+
+const readCoworkGrants = async (): Promise<CoworkGrants> => {
+  const [accessibility, screenRecording] = await Promise.all([
+    readCoworkGrant('plugin:macos-permissions|check_accessibility_permission'),
+    readCoworkGrant(
+      'plugin:macos-permissions|check_screen_recording_permission',
+    ),
+  ]);
+  return { accessibility, screenRecording };
+};
 
 interface InsideButtonsProps {
   /** The chat this input belongs to. Code keys its per-chat workspace on it. */
@@ -210,9 +253,6 @@ export const InsideButtons = ({
   // setCoworkEnabled.
   const cuaDriver = useCuaDriver();
   const [coworkOn, setCoworkOn] = useState(isCoworkEnabled);
-  // Switching Cowork ON explains itself first: it is about to read the contents
-  // of the user's windows and send them off-device. Open = awaiting that consent.
-  const [coworkConsentOpen, setCoworkConsentOpen] = useState(false);
   // The panel behind the pill in the extension, holding the on/off switch and
   // Approvals — the same shape as Code's popover, because it is the same choice.
   const [coworkPanelOpen, setCoworkPanelOpen] = useState(false);
@@ -230,6 +270,8 @@ export const InsideButtons = ({
     if (coworkOn) {
       setCoworkOn(false);
       setCoworkEnabled(false);
+      // So switching back on retries an install that failed this time.
+      ensuredDriverInstall.current = false;
       // Nothing to stop in the extension: the run ends with the port.
       if (!inExtensionPanel) cuaDriver.stop();
       return;
@@ -263,13 +305,31 @@ export const InsideButtons = ({
       );
       return;
     }
-    setCoworkConsentOpen(true);
+    // Switching Cowork on explains itself first, once: it is about to see the
+    // user's screen and send it off-device.
+    if (coworkConsentGiven()) void startCoworkSetup();
+    else showCoworkSetup('consent');
   };
 
-  // A setup still waiting on a macOS grant. Read from storage after mount so it
-  // survives the relaunch a Screen Recording grant needs — and never during
-  // render, which would mismatch the prerendered HTML during hydration.
+  // One dialog in two stages: what Cowork does (`consent`), then the macOS
+  // grants it still needs (`steps`). Open and stage are kept apart so a stage's
+  // content stays put while the dialog animates closed.
   const [coworkSetupOpen, setCoworkSetupOpen] = useState(false);
+  const [coworkSetupStage, setCoworkSetupStage] = useState<'consent' | 'steps'>(
+    'consent',
+  );
+  const coworkStepsOpen = coworkSetupOpen && coworkSetupStage === 'steps';
+  const [coworkGrants, setCoworkGrants] =
+    useState<CoworkGrants>(COWORK_GRANTS_UNREAD);
+  const [coworkGrantRequest, setCoworkGrantRequest] =
+    useState<CoworkGrantKind | null>(null);
+  // Mirrors the stored "asked" flags, so a blocked storage still moves a row on
+  // from Allow to Open Settings instead of re-sending a first ask forever.
+  const [coworkAsked, setCoworkAsked] = useState<
+    Record<CoworkGrantKind, boolean>
+  >({ accessibility: false, screen_recording: false });
+  const coworkAskedBefore = (kind: CoworkGrantKind) =>
+    coworkAsked[kind] || coworkPermissionAsked(kind);
   // When the desktop app is too old to open System Settings or relaunch itself
   // (the web app ships apart from it), the dialog says where to go instead.
   const [coworkManualHint, setCoworkManualHint] = useState<string | null>(null);
@@ -282,8 +342,28 @@ export const InsideButtons = ({
   const releaseCoworkSetup = () => {
     if (coworkSetupOwner === coworkSetupId) coworkSetupOwner = null;
   };
+
+  const showCoworkSetup = (stage: 'consent' | 'steps') => {
+    setCoworkSetupStage(stage);
+    setCoworkSetupOpen(true);
+  };
+
+  const updateCoworkGrants = useCallback(async () => {
+    const next = await readCoworkGrants();
+    setCoworkGrants((prev) =>
+      prev.accessibility === next.accessibility &&
+      prev.screenRecording === next.screenRecording
+        ? prev
+        : next,
+    );
+    return next;
+  }, []);
+
+  // A setup still waiting on a macOS grant survives the relaunch a Screen
+  // Recording grant needs. Read after mount, never during render, which would
+  // mismatch the prerendered HTML during hydration.
   useEffect(() => {
-    if (coworkSetupPending() && claimCoworkSetup()) setCoworkSetupOpen(true);
+    if (coworkSetupPending() && claimCoworkSetup()) showCoworkSetup('steps');
     return releaseCoworkSetup;
   }, []);
 
@@ -294,22 +374,60 @@ export const InsideButtons = ({
     releaseCoworkSetup();
   };
 
-  const openPrivacySettings = async (
-    pane: 'accessibility' | 'screen_recording',
+  const dismissCoworkSetup = () => {
+    if (coworkSetupStage === 'steps') closeCoworkSetup();
+    else setCoworkSetupOpen(false);
+  };
+
+  const coworkGrantLabel = (kind: CoworkGrantKind) =>
+    t(
+      kind === 'accessibility'
+        ? 'coworkGrantAccessibility'
+        : 'coworkGrantScreenRecording',
+    );
+
+  const requestCoworkGrant = async (
+    kind: CoworkGrantKind,
+    openSettings: boolean,
   ) => {
     try {
-      await callTauri('open_privacy_settings', { pane });
+      await callTauri('request_cowork_permission', { kind, openSettings });
+      return;
+    } catch {
+      // A desktop build older than this command: fall back to the plugin's own
+      // request and the Settings opener.
+    }
+    try {
+      await callTauri(
+        kind === 'accessibility'
+          ? 'plugin:macos-permissions|request_accessibility_permission'
+          : 'plugin:macos-permissions|request_screen_recording_permission',
+      );
+    } catch {
+      // Nothing more to ask with; the row offers Open Settings next time.
+    }
+    if (!openSettings) return;
+    try {
+      await callTauri('open_privacy_settings', { pane: kind });
     } catch {
       setCoworkManualHint(
-        t('coworkOpenSettingsManually', {
-          pane: t(
-            pane === 'accessibility'
-              ? 'coworkGrantAccessibility'
-              : 'coworkGrantScreenRecording',
-          ),
-        }),
+        t('coworkOpenSettingsManually', { pane: coworkGrantLabel(kind) }),
       );
     }
+  };
+
+  const askForCoworkGrant = async (kind: CoworkGrantKind) => {
+    if (coworkGrantRequest) return;
+    setCoworkGrantRequest(kind);
+    // macOS shows its own alert only the first time an app asks, and that alert
+    // has its own way into System Settings. Opening Settings on that first ask
+    // would bury the alert behind it, so only later asks open it.
+    const openSettings = coworkAskedBefore(kind);
+    markCoworkPermissionAsked(kind);
+    setCoworkAsked((prev) => ({ ...prev, [kind]: true }));
+    await requestCoworkGrant(kind, openSettings);
+    await updateCoworkGrants();
+    setCoworkGrantRequest(null);
   };
 
   const relaunchApp = async () => {
@@ -323,10 +441,13 @@ export const InsideButtons = ({
   const turnCoworkOn = () => {
     setCoworkOn(true);
     setCoworkEnabled(true);
-    // The reconcile effect below would otherwise see the host's stale
-    // `installed: false` on the next render and start a second install.
-    ensuredDriverInstall.current = true;
-    cuaDriver.install();
+    // Turn On may already have started the download, and the reconcile effect
+    // below would otherwise see the host's stale `installed: false` on the next
+    // render and start another.
+    if (!ensuredDriverInstall.current) {
+      ensuredDriverInstall.current = true;
+      cuaDriver.install();
+    }
     // Both pills may stay on; the chat hook then gives Cowork the turn, because
     // Code's agent never gets the screen tools. Say so once, here, rather than
     // leaving the user to wonder why Code went quiet.
@@ -338,87 +459,129 @@ export const InsideButtons = ({
     }
   };
 
-  /**
-   * The user accepted the explanation: ask for the OS grants, and switch Cowork
-   * on if it has them. A missing one opens the setup dialog instead of giving
-   * up — it walks the user into the exact System Settings pane and finishes by
-   * itself once the grants are there. Desktop only — the panel enables
-   * straight from its switch and never raises either dialog.
-   */
-  const acceptCoworkConsent = async () => {
-    setCoworkConsentOpen(false);
-    const { accessibility, screenRecording } =
-      await cuaDriver.requestDriverPermissions();
-
-    // `=== false` — checked and denied — never falsy. `null` means the host has
-    // no such concept (Linux, Windows), where Cowork works and these grants do
-    // not exist; treating that as denied would make it impossible to switch on
-    // precisely where upstream has proven the driver.
-    if (accessibility === false || screenRecording === false) {
-      writeCoworkSetupPending(true);
-      if (claimCoworkSetup()) setCoworkSetupOpen(true);
-      return;
-    }
+  const finishCoworkSetup = () => {
+    closeCoworkSetup();
+    toast.success(t('coworkReady'));
     turnCoworkOn();
   };
 
-  const coworkGrantMissing =
-    cuaDriver.accessibilityPermission === false ||
-    cuaDriver.screenRecordingPermission === false;
+  /**
+   * Switches Cowork on if macOS already has both grants, or shows the steps
+   * for what is missing. Never prompts by itself: each step asks macOS only
+   * when the user presses its button. Desktop only — the panel enables
+   * straight from its switch and never raises the dialog.
+   */
+  const coworkSetupStarting = useRef(false);
+  const startCoworkSetup = async () => {
+    if (coworkSetupStarting.current) return;
+    coworkSetupStarting.current = true;
+    try {
+      const { accessibility, screenRecording } = await updateCoworkGrants();
+      // `=== false` — checked and denied — never falsy. `null` means the host
+      // has no such grant (Linux, Windows), where Cowork works without one.
+      if (accessibility !== false && screenRecording !== false) {
+        finishCoworkSetup();
+        return;
+      }
+      writeCoworkSetupPending(true);
+      if (claimCoworkSetup()) showCoworkSetup('steps');
+      else setCoworkSetupOpen(false);
+    } finally {
+      coworkSetupStarting.current = false;
+    }
+  };
 
-  // Checking never prompts, so it is safe to do every time the user comes back
-  // from System Settings: the dialog's rows update on their own, with no
-  // "check again" button to find.
-  const { checkStatus: recheckDriver } = cuaDriver;
+  const acceptCoworkConsent = () => {
+    writeCoworkConsent();
+    // The download takes a while; starting it now means the driver is usually
+    // there by the time macOS is done.
+    if (cuaDriver.status?.installed !== true && !ensuredDriverInstall.current) {
+      ensuredDriverInstall.current = true;
+      cuaDriver.install();
+    }
+    void startCoworkSetup();
+  };
+
+  const coworkGrantMissing =
+    coworkGrants.accessibility === false ||
+    coworkGrants.screenRecording === false;
+
+  // Checking never prompts, so the steps follow System Settings live: a poll
+  // while they are open, plus focus / visibility for an instant update when the
+  // user comes back — no "check again" button to find.
   useEffect(() => {
-    if (!coworkSetupOpen) return;
+    if (!coworkStepsOpen) return;
+    void updateCoworkGrants();
+    const poll = setInterval(() => void updateCoworkGrants(), 1000);
     const recheck = () => {
-      if (document.visibilityState === 'visible') void recheckDriver();
+      if (document.visibilityState === 'visible') void updateCoworkGrants();
     };
     window.addEventListener('focus', recheck);
     document.addEventListener('visibilitychange', recheck);
     return () => {
+      clearInterval(poll);
       window.removeEventListener('focus', recheck);
       document.removeEventListener('visibilitychange', recheck);
     };
-  }, [coworkSetupOpen, recheckDriver]);
+  }, [coworkStepsOpen, updateCoworkGrants]);
 
-  // Finish the setup the moment nothing is missing any more — after the user
-  // comes back from System Settings, or on the first mount after the relaunch.
-  // Waits for the host to answer first: `null` on both means it has not yet,
-  // not that the grants do not apply (a setup only ever starts where they do).
+  // Accessibility is switched on in System Settings, which leaves the app
+  // behind it while the next step waits here.
+  const lastAccessibilityGrant = useRef<boolean | null>(null);
   useEffect(() => {
-    if (!coworkSetupOpen || inExtensionPanel) return;
-    const { accessibilityPermission: a, screenRecordingPermission: s } =
-      cuaDriver;
+    const was = lastAccessibilityGrant.current;
+    lastAccessibilityGrant.current = coworkGrants.accessibility;
+    if (coworkStepsOpen && was === false && coworkGrants.accessibility) {
+      callTauri('bring_app_to_front').catch(() => {});
+    }
+  }, [coworkStepsOpen, coworkGrants.accessibility]);
+
+  // Finish the setup the moment nothing is missing any more — while the steps
+  // are open, or on the first mount after the relaunch. Waits for the host to
+  // answer first: `null` on both means it has not yet, not that the grants do
+  // not apply (the steps only ever open where they do).
+  useEffect(() => {
+    if (!coworkStepsOpen || inExtensionPanel) return;
+    const { accessibility: a, screenRecording: s } = coworkGrants;
     if (a === null && s === null) return;
     if (a === false || s === false) return;
-    closeCoworkSetup();
-    toast.success(t('coworkReady'));
-    turnCoworkOn();
-  }, [coworkSetupOpen, inExtensionPanel, cuaDriver, t]);
+    finishCoworkSetup();
+  }, [coworkStepsOpen, inExtensionPanel, coworkGrants]);
 
   const grantLabelId = useId();
 
-  const coworkGrants: Array<{
-    pane: 'accessibility' | 'screen_recording';
+  const coworkSteps: Array<{
+    kind: CoworkGrantKind;
     label: string;
     hint: string;
-    granted: boolean;
+    askedHint: string;
+    grant: boolean | null;
   }> = [
     {
-      pane: 'accessibility',
+      kind: 'accessibility',
       label: t('coworkGrantAccessibility'),
       hint: t('coworkGrantAccessibilityHint'),
-      granted: cuaDriver.accessibilityPermission !== false,
+      askedHint: t('coworkStepAskedAccessibility'),
+      grant: coworkGrants.accessibility,
     },
     {
-      pane: 'screen_recording',
+      kind: 'screen_recording',
       label: t('coworkGrantScreenRecording'),
       hint: t('coworkGrantScreenRecordingHint'),
-      granted: cuaDriver.screenRecordingPermission !== false,
+      askedHint: t('coworkStepAskedScreenRecording'),
+      grant: coworkGrants.screenRecording,
     },
   ];
+  // Only the first missing grant gets a button, so two macOS alerts can never
+  // be on screen at once.
+  const currentCoworkStep = coworkSteps.findIndex(
+    (step) => step.grant === false,
+  );
+  // macOS applies a Screen Recording grant only after the app restarts.
+  const coworkNeedsRelaunch =
+    coworkSetupStage === 'steps' &&
+    coworkGrants.screenRecording === false &&
+    coworkAskedBefore('screen_recording');
 
   // Code (opencode over ACP) is desktop-only. Detected AFTER mount, never during
   // render: Tauri injects its globals into the remote origin some time after load, so a
@@ -1032,106 +1195,180 @@ export const InsideButtons = ({
       )}
 
       {/* Switching Cowork on grants it the run of the machine, so it says what
-          that means before any OS prompt appears. Dismissing leaves Cowork off
-          and asks the system for nothing. Desktop only: the extension panel
-          drives one tab, which Chrome already asked about at install time, and
-          says so in the panel instead of interrupting. */}
-      <AlertDialog open={coworkConsentOpen} onOpenChange={setCoworkConsentOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t('coworkConsentTitle')}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {t('coworkConsentBody')}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{t('coworkConsentCancel')}</AlertDialogCancel>
-            <AlertDialogAction onClick={acceptCoworkConsent}>
-              {t('coworkConsentConfirm')}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* A grant macOS said no to. Not a dead end: each row opens the exact
-          System Settings pane, the rows re-check themselves when the user
-          comes back, and Cowork turns on by itself once both read Allowed.
-          Only Screen Recording needs the relaunch, so that button shows only
-          while it still reads denied — and as a plain Button, because an
-          AlertDialogAction would close the dialog and cancel the setup. */}
+          that means before macOS is asked for anything; dismissing leaves Cowork
+          off. Then each missing grant is one step, asked only when the user
+          presses its button, and Cowork turns on by itself once both read
+          Allowed. Plain Buttons throughout, because an AlertDialogAction would
+          close the dialog mid-setup. Desktop only: the extension panel drives
+          one tab, which Chrome already asked about at install time. */}
       <AlertDialog
-        open={coworkSetupOpen && coworkGrantMissing}
+        open={
+          coworkSetupOpen &&
+          (coworkSetupStage === 'consent' || coworkGrantMissing)
+        }
         onOpenChange={(open) => {
-          if (!open) closeCoworkSetup();
+          if (!open) dismissCoworkSetup();
         }}
       >
-        <AlertDialogContent data-testid="cowork-setup-dialog">
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t('coworkSetupTitle')}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {t('coworkSetupBody')}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <ul className="space-y-2">
-            {coworkGrants.map((grant) => (
-              <li
-                key={grant.pane}
-                data-testid={`cowork-grant-${grant.pane}`}
-                className="flex items-center justify-between gap-3 rounded-lg border border-gray-200 px-3 py-2"
-              >
-                <div className="min-w-0">
-                  <p
-                    id={`${grantLabelId}-${grant.pane}`}
-                    className="text-sm font-medium text-gray-900"
-                  >
-                    {grant.label}
-                  </p>
-                  <p className="text-xs text-gray-500">{grant.hint}</p>
-                </div>
-                {grant.granted ? (
-                  <span className="flex shrink-0 items-center gap-1 text-xs text-green-600">
-                    <Check className="h-4 w-4" aria-hidden="true" />
-                    {t('coworkGrantAllowed')}
-                  </span>
-                ) : (
+        <AlertDialogContent
+          data-testid="cowork-setup-dialog"
+          data-stage={coworkSetupStage}
+        >
+          {coworkSetupStage === 'consent' ? (
+            <>
+              <AlertDialogHeader>
+                <AlertDialogTitle>{t('coworkConsentTitle')}</AlertDialogTitle>
+                <AlertDialogDescription>
+                  {t('coworkConsentBody')}
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <div className="text-sm text-gray-700">
+                <p className="font-medium text-gray-900">
+                  {t('coworkConsentKeepInMind')}
+                </p>
+                <ul className="mt-1 list-disc space-y-1 pl-5">
+                  <li>{t('coworkConsentTipUndo')}</li>
+                  <li>{t('coworkConsentTipPrivate')}</li>
+                </ul>
+              </div>
+              <AlertDialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="mt-2 sm:mt-0"
+                  onClick={dismissCoworkSetup}
+                >
+                  {t('coworkConsentCancel')}
+                </Button>
+                <Button type="button" onClick={acceptCoworkConsent}>
+                  {t('coworkConsentConfirm')}
+                </Button>
+              </AlertDialogFooter>
+            </>
+          ) : (
+            <>
+              <AlertDialogHeader>
+                <AlertDialogTitle>{t('coworkSetupTitle')}</AlertDialogTitle>
+                <AlertDialogDescription>
+                  {t('coworkSetupBody')}
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <ul className="divide-y divide-gray-200 rounded-lg border border-gray-200">
+                {coworkSteps.map((step, index) => {
+                  const state =
+                    currentCoworkStep === -1 || index < currentCoworkStep
+                      ? 'granted'
+                      : index === currentCoworkStep
+                        ? 'current'
+                        : 'upcoming';
+                  const asked =
+                    state === 'current' && coworkAskedBefore(step.kind);
+                  const labelId = `${grantLabelId}-${step.kind}`;
+                  return (
+                    <li
+                      key={step.kind}
+                      data-testid={`cowork-grant-${step.kind}`}
+                      data-state={state}
+                      className={`px-3 py-2 ${
+                        state === 'upcoming' ? 'opacity-60' : ''
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <span
+                          aria-hidden="true"
+                          className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-xs ${
+                            state === 'granted'
+                              ? 'bg-green-50 text-green-600'
+                              : state === 'current'
+                                ? 'bg-[#38A1E5] text-white'
+                                : 'bg-gray-100 text-gray-500'
+                          }`}
+                        >
+                          {state === 'granted' ? (
+                            <Check className="h-3 w-3" />
+                          ) : (
+                            index + 1
+                          )}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p
+                            id={labelId}
+                            className="text-sm font-medium text-gray-900"
+                          >
+                            {step.label}
+                          </p>
+                          <p className="text-xs text-gray-500">{step.hint}</p>
+                        </div>
+                        {state === 'granted' && (
+                          <span className="shrink-0 text-xs text-green-600">
+                            {t('coworkGrantAllowed')}
+                          </span>
+                        )}
+                        {state === 'current' && (
+                          <Button
+                            type="button"
+                            variant={asked ? 'outline' : 'default'}
+                            size="sm"
+                            className="shrink-0"
+                            disabled={coworkGrantRequest !== null}
+                            aria-describedby={labelId}
+                            onClick={() => void askForCoworkGrant(step.kind)}
+                          >
+                            {asked
+                              ? t('coworkOpenSettings')
+                              : t('coworkStepAllow')}
+                          </Button>
+                        )}
+                      </div>
+                      {asked && (
+                        <p
+                          data-testid="cowork-step-hint"
+                          className="mt-2 pl-8 text-xs text-gray-700"
+                        >
+                          {step.askedHint}
+                        </p>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+              {coworkManualHint && (
+                <p
+                  data-testid="cowork-setup-manual"
+                  className="text-xs text-gray-700"
+                >
+                  {coworkManualHint}
+                </p>
+              )}
+              {coworkNeedsRelaunch && (
+                <p
+                  data-testid="cowork-relaunch-hint"
+                  className="text-xs text-gray-500"
+                >
+                  {t('coworkRelaunchHint')}
+                </p>
+              )}
+              <AlertDialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="mt-2 sm:mt-0"
+                  onClick={dismissCoworkSetup}
+                >
+                  {t('coworkConsentCancel')}
+                </Button>
+                {coworkNeedsRelaunch && (
                   <Button
                     type="button"
                     variant="outline"
-                    size="sm"
-                    className="shrink-0"
-                    aria-describedby={`${grantLabelId}-${grant.pane}`}
-                    onClick={() => void openPrivacySettings(grant.pane)}
+                    onClick={() => void relaunchApp()}
                   >
-                    {t('coworkOpenSettings')}
+                    {t('coworkRelaunch')}
                   </Button>
                 )}
-              </li>
-            ))}
-          </ul>
-          {coworkManualHint && (
-            <p
-              data-testid="cowork-setup-manual"
-              className="text-xs text-gray-700"
-            >
-              {coworkManualHint}
-            </p>
+              </AlertDialogFooter>
+            </>
           )}
-          {cuaDriver.screenRecordingPermission === false && (
-            <p
-              data-testid="cowork-relaunch-hint"
-              className="text-xs text-gray-500"
-            >
-              {t('coworkRelaunchHint')}
-            </p>
-          )}
-          <AlertDialogFooter>
-            <AlertDialogCancel>{t('coworkConsentCancel')}</AlertDialogCancel>
-            {cuaDriver.screenRecordingPermission === false && (
-              <Button type="button" onClick={() => void relaunchApp()}>
-                {t('coworkRelaunch')}
-              </Button>
-            )}
-          </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
     </div>

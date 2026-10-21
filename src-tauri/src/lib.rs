@@ -3154,6 +3154,8 @@ pub fn run() {
         cua_driver_mcp::cua_driver_stop,
         cua_driver_mcp::open_privacy_settings,
         cua_driver_mcp::relaunch_app,
+        cua_driver_mcp::request_cowork_permission,
+        cua_driver_mcp::bring_app_to_front,
         check_disk_space_for_model,
         get_system_memory,
         download_phi3_model,
