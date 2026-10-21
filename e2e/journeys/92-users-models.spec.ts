@@ -130,11 +130,9 @@ async function mockLlmAccess(
   });
 
   // The settings query is already cached from the page load; reload so the
-  // mocked switch state is what the edit window reads.
-  if (options.inChat === false) {
-    await page.reload();
-    await waitForPageReady(page);
-  }
+  // mocked switch state is what the edit window reads, not the landing
+  // agent's real one (which other specs' agents can change mid-run).
+  await navigateToMentorApp(page, page.url());
 
   return mock;
 }
@@ -498,10 +496,10 @@ test.describe('Journey 92: User Models', () => {
     const modal = encodeURIComponent(
       JSON.stringify([{ name: 'edit_mentor', tab: 'llm' }]),
     );
-    await nonadminPage.goto(
+    await navigateToMentorApp(
+      nonadminPage,
       `${MENTOR_NEXTJS_HOST}/platform/${tenantKey}/${mentorId}?modal=${modal}`,
     );
-    await waitForPageReady(nonadminPage);
     await expect(
       nonadminPage.locator(
         'button[aria-label="Selected agent dropdown button"]',
@@ -515,10 +513,12 @@ test.describe('Journey 92: User Models', () => {
     } catch {
       editorOpened = false;
     }
+    // A non-admin may get only some tabs (e.g. MCP), not the LLM tab, so wait
+    // for whatever tab the editor shows before asserting the button is absent.
     if (editorOpened) {
-      await expect(
-        editDialog.getByPlaceholder(/search providers/i),
-      ).toBeVisible({ timeout: 30_000 });
+      await expect(editDialog.getByRole('tab').first()).toBeVisible({
+        timeout: 30_000,
+      });
     }
     await expect(
       nonadminPage.getByTestId('llm-users-models-button'),
