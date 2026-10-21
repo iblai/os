@@ -55,8 +55,9 @@ jobs:
         # A run can find its commits already released (by the run it queued behind, or a
         # watchdog dispatch that raced a late push event). release-it would still cut an
         # empty patch release, since the changelog preset recommends patch for no commits.
+        # Hand-cut tags (e.g. -patch.1) are not releases, so they never count as the base.
         run: |
-          last=$(git describe --tags --abbrev=0 --match 'v*')
+          last=$(git describe --tags --abbrev=0 --match 'v*' --exclude 'v*-*')
           count=$(git log --format=%s "$last..HEAD" | grep -cvE '^chore\((release|tauri)\):' || true)
           echo "$count unreleased commit(s) since $last"
           echo "count=$count" >> "$GITHUB_OUTPUT"

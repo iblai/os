@@ -12,12 +12,17 @@ run-name: 'Build os ${{ github.ref_name }}'
 permissions:
   contents: read
 
+# A late push event and a watchdog dispatch must not build and push the same tags at once.
+concurrency:
+  group: docker-build-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   prepare:
     name: 'Prepare'
-    # Tags only: a branch's package.json still carries the last released version, so a
-    # dispatch on a branch would overwrite that version's image with unreleased code.
-    if: startsWith(github.ref, 'refs/tags/')
+    # Release tags only, as in the push filter: any other ref's package.json still carries
+    # the last released version, so building it would overwrite that image with unreleased code.
+    if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.version.outputs.version }}
