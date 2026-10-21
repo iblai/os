@@ -6,9 +6,11 @@ import {
   pickModel,
   pruneOldSnapshots,
   runAgent,
+  wantsPicture,
   type AgentEvent,
   type Credentials,
 } from './agent';
+import { attach, detach, onDetach, realInput } from './real-input';
 import { t as translate, userLanguage } from './i18n';
 import { userTurn } from './prompt';
 import {
@@ -102,6 +104,10 @@ export function handleBrowsePort(port: chrome.runtime.Port): void {
     }
     controller = new AbortController();
     autoApprove = auto;
+    // The user closed Chrome's debug bar or opened DevTools mid-run: the run
+    // is aborted and ends saying so, never quietly on scripted clicks.
+    let lostRealInput = false;
+    let stopWatching: (() => void) | undefined;
     try {
       const settings = await loadSettings();
       // A model cached under a different preference is stale, not a choice: the
@@ -131,11 +137,25 @@ export function handleBrowsePort(port: chrome.runtime.Port): void {
         });
         return;
       }
-      const { tools, snapshot } = createBrowserTools({
+      // Real input for the whole run: Chrome shows its debug bar on the tab
+      // until the detach in `finally`.
+      try {
+        await attach(tabId);
+      } catch {
+        send({ type: 'error', message: translate('errorRealClicksBusy') });
+        return;
+      }
+      stopWatching = onDetach(tabId, () => {
+        lostRealInput = true;
+        controller?.abort();
+      });
+      const { tools, snapshot, picture } = createBrowserTools({
         tabId,
         confirm,
         log: (entry) =>
           send({ type: 'log', text: logLine(entry), ok: entry.ok }),
+        withPicture: wantsPicture(model),
+        real: realInput(tabId),
       });
       // The run's first sign of life. Reading the page and then waiting for
       // the model's first token is the longest stretch of a run with nothing to
@@ -164,14 +184,28 @@ export function handleBrowsePort(port: chrome.runtime.Port): void {
         tools,
         signal: controller.signal,
         language: await userLanguage(),
-        onEvent: (event) =>
-          send(
-            event.type === 'error'
-              ? { type: 'error', message: describeRunError(event) }
-              : { type: 'event', event },
-          ),
+        picture,
+        // Narration and a refused call are rows in the action list, like
+        // every action; only a failed model call ends the turn.
+        onEvent: (event) => {
+          if (event.type === 'error')
+            send({ type: 'error', message: describeRunError(event) });
+          else if (event.type === 'narration')
+            send({ type: 'log', text: event.text, ok: true });
+          else if (event.type === 'tool-error')
+            send({
+              type: 'log',
+              text: logLine({ tool: event.toolName, target: '', ok: false }),
+              ok: false,
+            });
+          else send({ type: 'event', event });
+        },
       });
       history = pruneOldSnapshots(result.messages);
+      if (lostRealInput) {
+        send({ type: 'error', message: translate('errorRealClicksOff') });
+        return;
+      }
       send({
         type: 'done',
         text: result.text,
@@ -180,6 +214,8 @@ export function handleBrowsePort(port: chrome.runtime.Port): void {
     } catch (err) {
       send({ type: 'error', message: message(err) });
     } finally {
+      stopWatching?.();
+      await detach(tabId);
       controller = null;
     }
   };

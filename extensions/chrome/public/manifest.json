@@ -25,7 +25,14 @@
   "side_panel": {
     "default_path": "panel.html"
   },
-  "permissions": ["sidePanel", "identity", "scripting", "tabs", "storage"],
+  "permissions": [
+    "sidePanel",
+    "identity",
+    "scripting",
+    "tabs",
+    "storage",
+    "debugger"
+  ],
   "host_permissions": [
     "https://*.iblai.app/*",
     "https://*.ibl.ai/*",

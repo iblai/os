@@ -1,12 +1,16 @@
 import { jsonSchema, tool, type ToolSet } from 'ai';
 import {
   actOnPage,
+  markPage,
   scrollPage,
   snapshotPage,
+  unmarkPage,
   type ActResult,
   type FrameSnapshot,
   type SnapshotItem,
 } from './page-scripts';
+import type { RealInput } from './real-input';
+import { SECRET_FIELDS } from './secret-fields';
 import { injectable } from './settings';
 import { settle, sleep } from './settle';
 
@@ -33,7 +37,14 @@ export interface BrowserToolsContext {
   /** Asks the user; resolves false when they decline or the run is aborted. */
   confirm: (description: string, signal?: AbortSignal) => Promise<boolean>;
   log: (entry: LogEntry) => void;
+  /** Capture the tab after every page read, numbers drawn on it. */
+  withPicture?: boolean;
+  /** Trusted mouse and keyboard input; absent means scripted events. */
+  real?: RealInput;
 }
+
+/** The latest capture, or why there is none this step. */
+export type Picture = { dataUrl: string } | { note: string };
 
 export interface Snapshot {
   url: string;
@@ -54,6 +65,7 @@ export interface BrowserTools {
   tools: ToolSet;
   /** The page as it is now; the first user turn carries it. */
   snapshot: () => Promise<Snapshot>;
+  picture: () => Picture | null;
 }
 
 class Refusal extends Error {
@@ -90,11 +102,13 @@ export function describeItem(
   return item ? `[${n}] ${item.role} "${item.name}"` : `[${n}]`;
 }
 
-/** Element numbers are positive integers from the latest snapshot; anything else is refused. */
+/** Element numbers are positive integers from the latest snapshot — digits sent as text count; anything else is refused. */
 export function asElement(value: unknown): number | null {
-  return typeof value === 'number' && Number.isInteger(value) && value > 0
-    ? value
-    : null;
+  const n =
+    typeof value === 'string' && /^\s*\d+\s*$/.test(value)
+      ? Number(value)
+      : value;
+  return typeof n === 'number' && Number.isInteger(n) && n > 0 ? n : null;
 }
 
 const NO_INPUT = jsonSchema<Record<string, never>>({
@@ -191,12 +205,59 @@ export function createBrowserTools(ctx: BrowserToolsContext): BrowserTools {
     return run;
   };
 
+  let latest: Picture | null = null;
+
+  // The viewport, with every listed number drawn on its element, so the model
+  // can match what it sees to what it can click. A page holding a password or
+  // payment field is never captured: what is on it is the user's alone.
+  const capture = async (): Promise<void> => {
+    if (!ctx.withPicture || !last) return;
+    if (last.items.some((item) => item.secret)) {
+      latest = {
+        note: '(no picture: this page has a password or payment field)',
+      };
+      return;
+    }
+    const tab = await chrome.tabs.get(ctx.tabId);
+    if (!tab.active) {
+      latest = { note: '(no picture: the tab is not in front)' };
+      return;
+    }
+    const byFrame = new Map<number, Array<[number, number]>>();
+    for (const [shown, ref] of targets) {
+      const pairs = byFrame.get(ref.frameId) ?? [];
+      pairs.push([ref.n, shown]);
+      byFrame.set(ref.frameId, pairs);
+    }
+    try {
+      for (const [frameId, pairs] of byFrame)
+        await inject(ctx.tabId, markPage, [pairs], frameId);
+      const dataUrl = await chrome.tabs.captureVisibleTab(tab.windowId, {
+        format: 'jpeg',
+        quality: 60,
+      });
+      latest = { dataUrl };
+    } catch (err) {
+      latest = {
+        note: `(no picture: ${err instanceof Error ? err.message : String(err)})`,
+      };
+    } finally {
+      for (const frameId of byFrame.keys())
+        await inject(ctx.tabId, unmarkPage, [], frameId).catch(() => undefined);
+    }
+  };
+
   const snapshot = async (textChars = STEP_CHARS): Promise<Snapshot> => {
     const merged = mergeFrames(
-      await injectAll(ctx.tabId, snapshotPage, [MAX_ITEMS, textChars]),
+      await injectAll(ctx.tabId, snapshotPage, [
+        MAX_ITEMS,
+        textChars,
+        SECRET_FIELDS,
+      ]),
     );
     last = merged.snapshot;
     targets = merged.targets;
+    await capture();
     return last;
   };
   const item = (n: number) =>
@@ -215,6 +276,14 @@ export function createBrowserTools(ctx: BrowserToolsContext): BrowserTools {
       'host_blocked',
       `${url} is not an http or https page, so it cannot be driven.`,
       url,
+    );
+  };
+
+  // A refused number is a spent step: logged, so the user sees it too.
+  const badElement = (tool: string): Promise<string> => {
+    ctx.log({ tool, target: '', ok: false });
+    return Promise.resolve(
+      'Error: element must be a number from the latest snapshot.',
     );
   };
 
@@ -293,23 +362,34 @@ export function createBrowserTools(ctx: BrowserToolsContext): BrowserTools {
       }),
       execute: ({ element }, { abortSignal }) => {
         const n = asElement(element);
-        if (n === null)
-          return Promise.resolve(
-            'Error: element must be a number from the latest snapshot.',
-          );
+        if (n === null) return badElement('click');
         const target = describeItem(n, item(n));
         return perform({
           tool: 'click',
           target,
           outcome: `Clicked ${target}.`,
           element: n,
-          step: (at) =>
-            inject(
+          // Real input knows the page's own coordinates only: an element in
+          // a subframe keeps the scripted click.
+          step: async (at) => {
+            if (ctx.real && at.frameId === 0) {
+              const found = await inject(ctx.tabId, actOnPage, [
+                at.n,
+                'locate',
+                '',
+                false,
+              ]);
+              if (!found.ok) return found;
+              await ctx.real.click(found.x ?? 0, found.y ?? 0);
+              return { ok: true };
+            }
+            return inject(
               ctx.tabId,
               actOnPage,
               [at.n, 'click', '', false],
               at.frameId,
-            ),
+            );
+          },
           confirmText: needsConfirm('click', item(n))
             ? `Click ${target} on "${last?.title ?? ''}"`
             : undefined,
@@ -339,24 +419,36 @@ export function createBrowserTools(ctx: BrowserToolsContext): BrowserTools {
       }),
       execute: ({ element, text, submit }, { abortSignal }) => {
         const n = asElement(element);
-        if (n === null)
-          return Promise.resolve(
-            'Error: element must be a number from the latest snapshot.',
-          );
+        if (n === null) return badElement('type');
         const target = describeItem(n, item(n));
         const doSubmit = submit === true;
+        const value = String(text ?? '');
         return perform({
           tool: 'type',
           target,
           outcome: `Typed into ${target}${doSubmit ? ' and submitted' : ''}.`,
           element: n,
-          step: (at) =>
-            inject(
+          step: async (at) => {
+            if (ctx.real && at.frameId === 0) {
+              const ready = await inject(ctx.tabId, actOnPage, [
+                at.n,
+                'prepare-type',
+                '',
+                false,
+                SECRET_FIELDS,
+              ]);
+              if (!ready.ok) return ready;
+              await ctx.real.insertText(value);
+              if (doSubmit) await ctx.real.pressEnter();
+              return { ok: true };
+            }
+            return inject(
               ctx.tabId,
               actOnPage,
-              [at.n, 'type', String(text ?? ''), doSubmit],
+              [at.n, 'type', value, doSubmit, SECRET_FIELDS],
               at.frameId,
-            ),
+            );
+          },
           confirmText: needsConfirm('type', item(n), doSubmit)
             ? `Type into ${target} and submit on "${last?.title ?? ''}"`
             : undefined,
@@ -375,10 +467,7 @@ export function createBrowserTools(ctx: BrowserToolsContext): BrowserTools {
       }),
       execute: ({ element, value }) => {
         const n = asElement(element);
-        if (n === null)
-          return Promise.resolve(
-            'Error: element must be a number from the latest snapshot.',
-          );
+        if (n === null) return badElement('select');
         const target = describeItem(n, item(n));
         return perform({
           tool: 'select',
@@ -409,10 +498,7 @@ export function createBrowserTools(ctx: BrowserToolsContext): BrowserTools {
       execute: ({ direction, element }) => {
         if (element !== undefined && element !== null) {
           const n = asElement(element);
-          if (n === null)
-            return Promise.resolve(
-              'Error: element must be a number from the latest snapshot.',
-            );
+          if (n === null) return badElement('scroll');
           const target = describeItem(n, item(n));
           return perform({
             tool: 'scroll',
@@ -521,5 +607,9 @@ export function createBrowserTools(ctx: BrowserToolsContext): BrowserTools {
     }),
   };
 
-  return { tools, snapshot: () => serial(() => snapshot()) };
+  return {
+    tools,
+    snapshot: () => serial(() => snapshot()),
+    picture: () => latest,
+  };
 }
