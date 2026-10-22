@@ -809,7 +809,7 @@ describe('real input', () => {
     };
     chromeStub.stub.scripting.executeScript.mockImplementation(
       async (injection) => {
-        const { func, target, args } = injection as {
+        const { func, target, args } = injection as unknown as {
           func: { name: string };
           target: { frameIds?: number[] };
           args: [number, string];

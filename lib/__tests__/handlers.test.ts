@@ -1,4 +1,12 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import {
+  type MockInstance,
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
 import { renderHook } from '@testing-library/react';
 
 // Hoist mocks before imports
@@ -323,10 +331,11 @@ describe('useIframeHandlers', () => {
   });
 
   describe('MENTOR:AUTH_UPDATE handler', () => {
-    const authUpdatedDispatched = (spy: ReturnType<typeof vi.spyOn>) =>
-      spy.mock.calls.some(
-        ([e]) => (e as Event)?.type === 'ibl:auth-tokens-updated',
-      );
+    // Typed by the spied method: `ReturnType<typeof vi.spyOn>` is the generic
+    // instance, which lib.dom's overloaded `dispatchEvent` spy is not.
+    const authUpdatedDispatched = (
+      spy: MockInstance<typeof window.dispatchEvent>,
+    ) => spy.mock.calls.some(([e]) => e?.type === 'ibl:auth-tokens-updated');
 
     it('saves auth reactively and re-checks in place without reloading', () => {
       const dispatchSpy = vi.spyOn(window, 'dispatchEvent');
