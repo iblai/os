@@ -34,6 +34,8 @@ export const QUERY_PARAMS = {
   LTI: 'lti',
   ALLOW_MENTOR_SELECTION: 'allow-mentor-selection',
   ALLOW_FULLSCREEN: 'allow-fullscreen',
+  /** Set by the Chrome extension's panel on its iframe URL: Cowork has a tab to drive here. */
+  ENABLE_COWORK: 'enable-cowork',
 };
 
 // URL patterns

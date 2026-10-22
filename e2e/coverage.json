@@ -6155,7 +6155,7 @@
       "checkpoints": [
         {
           "id": "cw-01",
-          "description": "Answered by a (faked) side panel over postMessage, the app shows the Cowork pill pressed, and its popover holds the switch on, the disclosure note mentioning the picture of the tab, and Approvals = Automatic",
+          "description": "Declared the panel by enable-cowork=true on its iframe URL (the vendored component's enablecowork attribute, what the extension's panel sets), the app shows the Cowork pill pressed, and its popover holds the switch on, the disclosure note mentioning the picture of the tab, and Approvals = Automatic; it sends no MENTOR:BROWSE_HELLO",
           "status": "covered"
         },
         {

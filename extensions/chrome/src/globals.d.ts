@@ -17,6 +17,7 @@ declare module 'react' {
         authrelyonhost?: string;
         showuserprofile?: string;
         allowmentorselection?: string;
+        enablecowork?: string;
       };
     }
   }

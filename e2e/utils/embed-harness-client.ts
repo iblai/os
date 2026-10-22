@@ -84,9 +84,13 @@ export const HOST_SESSION_KEYS = [
  * Opens the harness's `/agent-ai` page for the signed-in platform and agent.
  * With no session of its own on the harness origin, agent-ai redirects to the
  * login page; `authrelyonhost` makes it read the host's localStorage, which
- * this seeds from the app's. Shared by journeys 89 and 93.
+ * this seeds from the app's. Shared by journeys 89 and 93; `cowork` makes the
+ * page the extension's panel (`<agent-ai enablecowork>`).
  */
-export async function openLauncher(page: Page): Promise<void> {
+export async function openLauncher(
+  page: Page,
+  { cowork = false } = {},
+): Promise<void> {
   const { tenantKey, mentorId } = await getPlatformContext(page);
   const session = await page.evaluate((keys) => {
     const out: Record<string, string> = {};
@@ -110,6 +114,7 @@ export async function openLauncher(page: Page): Promise<void> {
     tenant: tenantKey,
     mentor: mentorId,
     authrelyonhost: '1',
+    ...(cowork ? { enablecowork: '1' } : {}),
   });
   await page.goto(`${EMBED_HARNESS_URL}/agent-ai?${params}`, {
     waitUntil: 'domcontentloaded',
