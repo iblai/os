@@ -1658,16 +1658,16 @@
   },
   "tabsLlmTab": {
     "infoBox": "这是您智能体的大脑——为每次回复提供动力的 AI 模型。更大的模型在处理复杂问题时推理能力更强；更轻量的模型则更快、成本更低。不确定？默认模型是可靠的全能之选。",
+    "inChatModelChangeLabel": "允许在聊天中更换模型",
+    "inChatModelChangeDescription": "允许用户仅在自己的聊天会话中切换到其他 AI 模型。开始新聊天时会恢复为智能体的模型。",
+    "inChatModelChangeTooltip": "用户可以在聊天时选择其他模型。此更改仅适用于其自己的会话——智能体的模型对所有人保持不变，每个新聊天都会重新从该模型开始。同时适用于应用内聊天和嵌入式小组件。",
+    "inChatModelChangeTooltipAriaLabel": "了解允许在聊天中更换模型",
     "llmUpdatedSuccessfully": "LLM 更新成功",
     "failedToUpdateLlm": "LLM 更新失败",
     "llmConfiguration": "LLM 配置",
     "configureLanguageModelSettings": "为您的智能体配置语言模型设置。",
     "searchProviders": "搜索提供商",
-    "providerLogoAlt": "{providerName} 徽标",
-    "inChatModelChangeLabel": "允许在聊天中更换模型",
-    "inChatModelChangeDescription": "允许用户在自己的聊天中换用其他 AI 模型。新聊天会重新使用智能体的模型。",
-    "inChatModelChangeTooltip": "允许用户为自己的聊天选择其他 AI 模型。智能体的模型不会改变，新聊天仍从该模型开始。此设置只有一个值，因此同时适用于应用内聊天和嵌入式小组件。",
-    "inChatModelChangeTooltipAriaLabel": "了解在聊天中更换模型"
+    "providerLogoAlt": "{providerName} 徽标"
   },
   "tabsPromptsTab": {
     "heading": "提示词",

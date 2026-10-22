@@ -12,6 +12,8 @@ import { MENTOR_VISIBILITY } from '@/lib/constants';
 const mockUseParams = vi.fn();
 const mockGetMentorId = vi.fn();
 const mockUseUsername = vi.fn();
+const mockUseIsAdmin = vi.fn();
+const mockUseUserIsStudent = vi.fn();
 const mockEnableRBAC = vi.fn();
 const mockExecuteWithTrialCheck = vi.fn();
 const mockRbacPermissions = { mentors: { '/x/': { read: true } } };
@@ -36,6 +38,8 @@ vi.mock('@/hooks/user-navigate', () => ({
 
 vi.mock('@/hooks/use-user', () => ({
   useUsername: () => mockUseUsername(),
+  useIsAdmin: () => mockUseIsAdmin(),
+  useUserIsStudent: () => mockUseUserIsStudent(),
 }));
 
 vi.mock('@/hooks/user-user-actions', () => ({
@@ -98,6 +102,8 @@ describe('LLMTab', () => {
     mockGetMentorId.mockReturnValue(null);
     mockUseUsername.mockReturnValue('jane');
     mockEnableRBAC.mockReturnValue(false);
+    mockUseIsAdmin.mockReturnValue(false);
+    mockUseUserIsStudent.mockReturnValue(true);
   });
 
   afterEach(() => cleanup());
@@ -150,6 +156,34 @@ describe('LLMTab', () => {
       Promise.resolve(gate(vi.fn())).then(settled, settled);
       await new Promise((resolve) => setTimeout(resolve, 0));
       expect(settled).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Users Models button (isTenantAdmin)', () => {
+    it('is on for a tenant admin in Admin mode', () => {
+      mockUseIsAdmin.mockReturnValue(true);
+      mockUseUserIsStudent.mockReturnValue(false);
+      render(<LLMTab />);
+      expect(tabProps().isTenantAdmin).toBe(true);
+    });
+
+    it('is off for a non-admin', () => {
+      mockUseUserIsStudent.mockReturnValue(false);
+      render(<LLMTab />);
+      expect(tabProps().isTenantAdmin).toBe(false);
+    });
+
+    it('is off for an admin browsing in User mode', () => {
+      mockUseIsAdmin.mockReturnValue(true);
+      render(<LLMTab />);
+      expect(tabProps().isTenantAdmin).toBe(false);
+    });
+
+    it('is off in the nav-bar dialog (no configuration header)', () => {
+      mockUseIsAdmin.mockReturnValue(true);
+      mockUseUserIsStudent.mockReturnValue(false);
+      render(<LLMTab showConfigurationHeader={false} />);
+      expect(tabProps().isTenantAdmin).toBe(false);
     });
   });
 

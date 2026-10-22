@@ -316,6 +316,7 @@ describe('SettingsTab', () => {
       expect(labels.fields.enhancedDocRetrieval.label).toBe(
         'enhancedDocRetrievalLabel',
       );
+      expect(labels.fields).not.toHaveProperty('inChatModelChange');
       expect(labels.fields.showLastConversation).toEqual({
         label: 'showLastConversationLabel',
         tooltip: 'showLastConversationTooltip',

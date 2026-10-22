@@ -2,14 +2,14 @@
   "version": 2,
   "lastUpdated": "2026-10-21",
   "summary": {
-    "totalCheckpoints": 954,
-    "coveredCheckpoints": 909,
+    "totalCheckpoints": 972,
+    "coveredCheckpoints": 927,
     "deprecatedCheckpoints": 17,
     "notReproducibleCheckpoints": 17,
     "pendingCheckpoints": 11,
     "percent": 100,
-    "totalJourneys": 99,
-    "activeJourneys": 98
+    "totalJourneys": 100,
+    "activeJourneys": 99
   },
   "journeys": [
     {
@@ -5711,7 +5711,7 @@
       "checkpoints": [
         {
           "id": "icm-01",
-          "description": "An admin turns on \"Allow in-chat model change\" on the LLM tab; it saves enable_in_chat_llm_change=true and it reads back on after reopening",
+          "description": "An admin turns on \"Allow In-Chat Model Change\" at the top of the LLM tab; the immediate save sends enable_in_chat_llm_change=true and it reads back on after reopening",
           "status": "covered"
         },
         {
@@ -5731,7 +5731,7 @@
         },
         {
           "id": "icm-05",
-          "description": "With the setting off (the LLM tab saves enable_in_chat_llm_change=false), the + menu has no Model row",
+          "description": "With the setting off (the LLM tab switch saves enable_in_chat_llm_change=false), the + menu has no Model row",
           "status": "covered"
         },
         {
@@ -6037,6 +6037,104 @@
         {
           "id": "rav-03",
           "description": "After switching back to Browser, clicking Read Aloud on a fresh reply hands the reply to speechSynthesis and, where the browser has voices, starts speaking within 30s",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "users-models",
+      "name": "User Models",
+      "spec": "92-users-models.spec.ts",
+      "sourceFiles": ["components/modals/edit-mentor-modal/llm-tab.tsx"],
+      "checkpoints": [
+        {
+          "id": "um-01",
+          "description": "Admin sees the User Models button on the LLM tab; it opens the dialog with provider cards showing \"All allowed\" under a saved llms/ (llm-access routes mocked, no POST)",
+          "status": "covered"
+        },
+        {
+          "id": "um-02",
+          "description": "Ticking models auto-saves the full replaced list on every tick (captured POST bodies); unticking the last model asks to confirm (Cancel sends nothing, Save anyway posts [])",
+          "status": "covered"
+        },
+        {
+          "id": "um-03",
+          "description": "\"Allow all\" saves llms/<provider>/ and the card shows \"All allowed\"",
+          "status": "covered"
+        },
+        {
+          "id": "um-04",
+          "description": "A partial selection shows \"N of M allowed\" on the card and the saved list shows again on reopen",
+          "status": "covered"
+        },
+        {
+          "id": "um-05",
+          "description": "Rapid ticks are saved one at a time (first POST delayed) and the last state wins",
+          "status": "covered"
+        },
+        {
+          "id": "um-06",
+          "description": "A 400 reverts the tick and shows the rejected-entry notice with \"Remove it\"",
+          "status": "covered"
+        },
+        {
+          "id": "um-07",
+          "description": "A 403 on save reverts the tick and toasts the admins-only message",
+          "status": "covered"
+        },
+        {
+          "id": "um-08",
+          "description": "A 500 on save reverts the tick and toasts the could-not-save message",
+          "status": "covered"
+        },
+        {
+          "id": "um-09",
+          "description": "A 403 loading the saved list shows the forbidden notice instead of cards",
+          "status": "covered"
+        },
+        {
+          "id": "um-10",
+          "description": "A 404 loading the saved list shows the unavailable notice instead of cards",
+          "status": "covered"
+        },
+        {
+          "id": "um-11",
+          "description": "A 500 loading the saved list shows the load-error notice instead of cards",
+          "status": "covered"
+        },
+        {
+          "id": "um-12",
+          "description": "Escape closes the dialog; the LLM tab outside it has no counts or checkboxes",
+          "status": "covered"
+        },
+        {
+          "id": "um-13",
+          "description": "A non-admin opening the agent LLM tab sees no User Models button",
+          "status": "covered"
+        },
+        {
+          "id": "um-14",
+          "description": "The in-chat model change switch is at the top of the LLM tab and is no longer under Settings > Capabilities",
+          "status": "covered"
+        },
+        {
+          "id": "um-15",
+          "description": "Switch off: no Models Users Can Pick box or User Models button; flipping on saves enable_in_chat_llm_change=true (mocked PUT) and shows the box with \"All models allowed for users\" and the button; flipping off saves false and hides it",
+          "status": "covered"
+        },
+        {
+          "id": "um-16",
+          "description": "The box counts the models allowed for users (\"0 models allowed for users\")",
+          "status": "covered"
+        },
+        {
+          "id": "um-17",
+          "description": "Real (unmocked): the admin allows two models through the User Models dialog (saved to the tenant list), and a non-admin opening chat with that agent sees exactly those models in the in-chat model picker, not another model of the same provider nor the previously allowed one",
+          "status": "covered"
+        },
+        {
+          "id": "um-18",
+          "description": "Real (unmocked): after the admin unticks a model in User Models, the non-admin no longer sees it in the in-chat model picker while the other allowed model stays",
           "status": "covered"
         }
       ]
