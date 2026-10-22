@@ -271,6 +271,13 @@ describe('snapshotPage', () => {
   });
 });
 
+/** A 100×40 box at (left, top) in this frame's viewport. */
+const box = (el: Element | null, left: number, top: number) =>
+  Object.defineProperty(el, 'getBoundingClientRect', {
+    configurable: true,
+    value: () => ({ left, top, width: 100, height: 40 }),
+  });
+
 describe('actOnPage', () => {
   it('refuses a number that is not in the current snapshot', () => {
     expect(actOnPage(1, 'click', '', false)).toMatchObject({ ok: false });
@@ -321,11 +328,6 @@ describe('actOnPage', () => {
     ]);
   });
 
-  const box = (el: Element | null, left: number, top: number) =>
-    Object.defineProperty(el, 'getBoundingClientRect', {
-      configurable: true,
-      value: () => ({ left, top, width: 100, height: 40 }),
-    });
   // jsdom's own elementFromPoint answers null, which reads as off-screen.
   const hitting = (el: Element | null) => {
     const hit = vi.fn<() => Element | null>(() => el);
@@ -393,14 +395,9 @@ describe('actOnPage', () => {
     expect(actOnPage(13, 'locate', '', false)).toHaveProperty('covered', true);
   });
 
-  // An embedded same-origin frame: its elements are placed in the tab's own
-  // viewport through the iframe's box, so a real click can reach them.
-  it('maps a same-origin frame into the tab viewport and gives up past a cross-origin one', () => {
-    const frame = document.createElement('iframe');
-    Object.defineProperty(frame, 'getBoundingClientRect', {
-      configurable: true,
-      value: () => ({ left: 100, top: 50, width: 300, height: 200 }),
-    });
+  // A same-origin frame chain: the window sits in `frameElement`, whose owner
+  // is the parent document; null stands for a cross-origin parent.
+  const inFrame = (frameElement: Element | null, fn: () => void) => {
     const outer = { top: null as unknown, parent: null as unknown };
     outer.top = outer;
     outer.parent = outer;
@@ -408,24 +405,38 @@ describe('actOnPage', () => {
     const saved = keys.map(
       (key) => [key, Object.getOwnPropertyDescriptor(window, key)] as const,
     );
-    const pretend = (frameElement: Element | null) => {
-      Object.defineProperty(window, 'top', {
-        configurable: true,
-        value: outer,
-      });
-      Object.defineProperty(window, 'parent', {
-        configurable: true,
-        value: outer,
-      });
-      Object.defineProperty(window, 'frameElement', {
-        configurable: true,
-        value: frameElement,
-      });
-    };
+    const values = { top: outer, parent: outer, frameElement };
     try {
-      pretend(frame);
-      box(document.querySelector('a'), 10, 20);
-      hitting(document.querySelector('a'));
+      for (const key of keys)
+        Object.defineProperty(window, key, {
+          configurable: true,
+          value: values[key],
+        });
+      fn();
+    } finally {
+      for (const [key, descriptor] of saved) {
+        if (descriptor) Object.defineProperty(window, key, descriptor);
+        else delete (window as unknown as Record<string, unknown>)[key];
+      }
+    }
+  };
+  // What a real click meets at each "x,y": the frame-local centre, and the
+  // point mapped into the parent, which in jsdom is this same document.
+  const hitsAt = (at: Record<string, Element | null>) =>
+    Object.defineProperty(document, 'elementFromPoint', {
+      configurable: true,
+      value: (x: number, y: number) => at[`${x},${y}`] ?? null,
+    });
+
+  // An embedded same-origin frame: its elements are placed in the tab's own
+  // viewport through the iframe's box, so a real click can reach them.
+  it('maps a same-origin frame into the tab viewport and gives up past a cross-origin one', () => {
+    const frame = document.createElement('iframe');
+    box(frame, 100, 50);
+    const link = document.querySelector('a')!;
+    box(link, 10, 20);
+    hitsAt({ '60,40': link, '160,90': frame });
+    inFrame(frame, () => {
       expect(snapshotPage(200, 100).items[4].rect).toEqual({
         x: 110,
         y: 70,
@@ -442,7 +453,8 @@ describe('actOnPage', () => {
         ok: true,
         top: true,
       });
-      pretend(null);
+    });
+    inFrame(null, () => {
       expect(snapshotPage(200, 100).items[4].rect).toBeUndefined();
       expect(actOnPage(5, 'locate', '', false)).toEqual({
         ok: true,
@@ -454,12 +466,68 @@ describe('actOnPage', () => {
         ok: true,
         top: false,
       });
-    } finally {
-      for (const [key, descriptor] of saved) {
-        if (descriptor) Object.defineProperty(window, key, descriptor);
-        else delete (window as unknown as Record<string, unknown>)[key];
-      }
-    }
+    });
+  });
+
+  // The frame's own document cannot see a banner or a backdrop the parent page
+  // lays over the iframe: the parent's hit test must return the iframe itself.
+  it('reports an element covered by the page around its frame', () => {
+    snapshotPage(200, 100);
+    const frame = document.createElement('iframe');
+    box(frame, 100, 50);
+    const link = document.querySelector('a')!;
+    const scrolls = scrollSpy(link);
+    box(link, 10, 20);
+    inFrame(frame, () => {
+      hitsAt({ '60,40': link, '160,90': document.querySelector('h1') });
+      expect(actOnPage(5, 'locate', '', false)).toEqual({
+        ok: true,
+        x: 160,
+        y: 90,
+        top: true,
+        covered: true,
+      });
+      expect(scrolls.map((s) => s.block)).toEqual(['nearest', 'center']);
+      hitsAt({ '60,40': link, '160,90': frame });
+      expect(actOnPage(5, 'locate', '', false)).not.toHaveProperty('covered');
+      // The frame itself is out of the parent's view: nothing at the point.
+      hitsAt({ '60,40': link });
+      expect(actOnPage(5, 'locate', '', false)).toHaveProperty('covered', true);
+    });
+  });
+
+  // `center` scrolls the parent page too, so the frame's box moves between the
+  // retry and the measurement; the offset must come from after that scroll.
+  it('measures the frame offset after the retry scroll', () => {
+    snapshotPage(200, 100);
+    const link = document.querySelector('a')!;
+    const scrolls = scrollSpy(link);
+    box(link, 10, 20);
+    const frame = document.createElement('iframe');
+    Object.defineProperty(frame, 'getBoundingClientRect', {
+      configurable: true,
+      value: () => ({
+        left: 100,
+        top: scrolls.some((s) => s.block === 'center') ? 250 : 50,
+        width: 300,
+        height: 200,
+      }),
+    });
+    // Something in the frame covers the link once; after the retry it is clear.
+    const inFrameHits = [document.querySelector('p'), link];
+    Object.defineProperty(document, 'elementFromPoint', {
+      configurable: true,
+      value: (x: number, y: number) =>
+        x === 60 && y === 40 ? (inFrameHits.shift() ?? link) : frame,
+    });
+    inFrame(frame, () => {
+      expect(actOnPage(5, 'locate', '', false)).toEqual({
+        ok: true,
+        x: 160,
+        y: 290,
+        top: true,
+      });
+    });
   });
 
   it('prepares a field for real typing: focused and selected whole, never a secret one', () => {
@@ -696,5 +764,16 @@ describe('the picture', () => {
       height: window.innerHeight,
     });
     expect(snapshot.items[4].rect).toEqual({ x: 10, y: 20, w: 100, h: 40 });
+  });
+
+  // Off the frame's screen, a number would land on whatever the tab shows at
+  // that position; jsdom's zero-size boxes at the origin count as on screen.
+  it("gives no place to an element off its frame's screen", () => {
+    box(document.querySelector('a'), 10, -100);
+    box(document.querySelector('#email'), window.innerWidth + 10, 20);
+    const snapshot = snapshotPage(200, 100);
+    expect(snapshot.items[4].rect).toBeUndefined();
+    expect(snapshot.items[1].rect).toBeUndefined();
+    expect(snapshot.items[0].rect).toEqual({ x: 0, y: 0, w: 0, h: 0 });
   });
 });

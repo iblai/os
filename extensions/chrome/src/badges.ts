@@ -1,14 +1,14 @@
 /**
  * Draws each listed element's number onto the capture, where the page would
- * have shown it, so nothing has to be added to the page itself. The capture is
- * in device pixels; `viewportWidth` (CSS px) gives the scale.
+ * have shown it, so nothing has to be added to the page itself, and returns the
+ * one JPEG the model gets. The capture is in device pixels; `viewportWidth`
+ * (CSS px) gives the scale.
  */
 export async function drawBadges(
   dataUrl: string,
   marks: Array<{ n: number; x: number; y: number }>,
   viewportWidth: number,
 ): Promise<string> {
-  if (!marks.length) return dataUrl;
   const bitmap = await createImageBitmap(await (await fetch(dataUrl)).blob());
   const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
   const c = canvas.getContext('2d');

@@ -69,10 +69,13 @@ describe('drawBadges', () => {
     expect(out).toBe(`data:image/jpeg;base64,${btoa('\x01\x02\x03')}`);
   });
 
-  it('returns the capture untouched when there is nothing to draw', async () => {
-    stubCanvas();
-    expect(await drawBadges(SHOT, [], 1024)).toBe(SHOT);
-    expect(fetch).not.toHaveBeenCalled();
+  it('encodes the capture once as JPEG even with nothing to draw', async () => {
+    const { calls } = stubCanvas();
+    expect(await drawBadges(SHOT, [], 1024)).toBe(
+      `data:image/jpeg;base64,${btoa('\x01\x02\x03')}`,
+    );
+    expect(fetch).toHaveBeenCalledWith(SHOT);
+    expect(calls).toEqual([['drawImage', { width: 2048, height: 1536 }, 0, 0]]);
   });
 
   it('fails loudly without a 2d context', async () => {

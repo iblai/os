@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { drawBadges } from '../badges';
 import type { ActResult, FrameSnapshot } from '../page-scripts';
 import { settle, sleep } from '../settle';
@@ -607,8 +607,7 @@ describe('the picture of the tab', () => {
       dataUrl: 'data:image/jpeg;base64,xyz#badged',
     });
     expect(chromeStub.stub.tabs.captureVisibleTab).toHaveBeenCalledWith(1, {
-      format: 'jpeg',
-      quality: 60,
+      format: 'png',
     });
     expect(funcs()).toEqual(['snapshotPage']);
     const [shot, marks, width] = vi.mocked(drawBadges).mock.calls[0];
@@ -717,6 +716,11 @@ describe('real input', () => {
   };
   const actions = () =>
     actCalls().map((call) => (call[0] as { args: unknown[] }).args[1]);
+  // jsdom's own elementFromPoint answers null, which reads as off-screen; the
+  // tests below put a hit there, and this takes it away again.
+  afterEach(() => {
+    delete (document as { elementFromPoint?: unknown }).elementFromPoint;
+  });
 
   it("clicks for real at the element's centre, never with a scripted click", async () => {
     const input = real();
@@ -726,7 +730,6 @@ describe('real input', () => {
       configurable: true,
       value: () => ({ left: 10, top: 20, width: 100, height: 40 }),
     });
-    // jsdom's own elementFromPoint answers null, which reads as off-screen.
     Object.defineProperty(document, 'elementFromPoint', {
       configurable: true,
       value: () => link,
@@ -736,7 +739,6 @@ describe('real input', () => {
     expect(input.click).toHaveBeenCalledWith(60, 40);
     expect(actions()).toEqual(['locate']);
     expect(settle).toHaveBeenLastCalledWith(7, { frameId: 0 });
-    delete (document as { elementFromPoint?: unknown }).elementFromPoint;
   });
 
   it('types for real: the field is prepared in the page, the text and Enter go through the protocol', async () => {
@@ -775,16 +777,12 @@ describe('real input', () => {
       configurable: true,
       value: () => document.querySelector('h1'),
     });
-    try {
-      const result = await run('click', { element: 5 });
-      expect(result).toMatch(
-        /^Clicked \[5\] link "Forgot password\?"\. \(something covers it, clicked directly\)\n/,
-      );
-      expect(input.click).not.toHaveBeenCalled();
-      expect(actions()).toEqual(['locate', 'click']);
-    } finally {
-      delete (document as { elementFromPoint?: unknown }).elementFromPoint;
-    }
+    const result = await run('click', { element: 5 });
+    expect(result).toMatch(
+      /^Clicked \[5\] link "Forgot password\?"\. \(something covers it, clicked directly\)\n/,
+    );
+    expect(input.click).not.toHaveBeenCalled();
+    expect(actions()).toEqual(['locate', 'click']);
   });
 
   // Frame 5 is not the jsdom document: it answers each action as told.

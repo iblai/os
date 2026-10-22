@@ -19,7 +19,7 @@ export interface SnapshotItem {
   submit: boolean;
   /** A password, one-time-code or payment field: never typed into, never read back. */
   secret: boolean;
-  /** Where it sits in the tab's viewport (CSS px); absent inside a cross-origin frame. */
+  /** Where it sits in the tab's viewport (CSS px); absent in a cross-origin frame or off its frame's screen. */
   rect?: { x: number; y: number; w: number; h: number };
 }
 
@@ -283,6 +283,13 @@ export function snapshotPage(
     const n = items.length + 1;
     map.set(n, el);
     const box = el.getBoundingClientRect();
+    // Only on this frame's screen: the number is drawn at the tab position, and
+    // an element scrolled out of the frame would put it on whatever shows there.
+    const shown =
+      box.left + box.width >= 0 &&
+      box.top + box.height >= 0 &&
+      box.left <= window.innerWidth &&
+      box.top <= window.innerHeight;
     items.push({
       n,
       role,
@@ -290,7 +297,7 @@ export function snapshotPage(
       state: stateOf(el, role, secret),
       submit: isSubmit(el),
       secret,
-      ...(offset
+      ...(offset && shown
         ? {
             rect: {
               x: offset.x + box.left,
@@ -363,25 +370,41 @@ export function actOnPage(
   const centre = centreOf();
 
   if (action === 'locate') {
-    const offset = frameOffset();
     // A real click lands on whatever is at the point: the element, something
-    // inside it or its shadow host is fine; anything else is in the way.
+    // inside it or its shadow host is fine; anything else is in the way. The
+    // parent page's overlays are not in this document, so each same-origin
+    // ancestor must show this frame at the point too.
     const covered = (): boolean => {
       if (typeof document.elementFromPoint !== 'function') return false;
       const at = centreOf();
       const hit = document.elementFromPoint(at.x, at.y);
-      for (let node: Node | null = el; node && hit; ) {
-        if (node === hit || node.contains(hit)) return false;
+      let own = false;
+      for (let node: Node | null = el; node && hit && !own; ) {
+        own = node === hit || node.contains(hit);
         const root = node.getRootNode();
         node = root instanceof ShadowRoot ? root.host : null;
       }
-      return true;
+      if (!own) return true;
+      let { x, y } = at;
+      for (let win: Window = window; win !== win.top; win = win.parent) {
+        const frame = win.frameElement as HTMLElement | null;
+        if (!frame) return false;
+        const box = frame.getBoundingClientRect();
+        x += box.left + frame.clientLeft;
+        y += box.top + frame.clientTop;
+        // ponytail: an iframe hosted in a shadow root reads as covered (the
+        // scripted click still lands); getRootNode().elementFromPoint if needed.
+        if (frame.ownerDocument.elementFromPoint(x, y) !== frame) return true;
+      }
+      return false;
     };
     let hidden = covered();
     if (hidden) {
       scrollTo('center');
       hidden = covered();
     }
+    // After the last scroll: `center` moves the parent page too.
+    const offset = frameOffset();
     const at = centreOf();
     return {
       ok: true,

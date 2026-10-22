@@ -209,8 +209,9 @@ export function createBrowserTools(ctx: BrowserToolsContext): BrowserTools {
   let latest: Picture | null = null;
 
   // The viewport, with every listed number drawn on its element here in the
-  // worker — nothing is added to the page, so nothing flashes. A page holding a
-  // password or payment field is never captured: what is on it is the user's alone.
+  // worker — nothing is added to the page, so nothing flashes. Captured as PNG:
+  // `drawBadges` does the one JPEG encode. A page holding a password or payment
+  // field is never captured: what is on it is the user's alone.
   const capture = async (): Promise<void> => {
     if (!ctx.withPicture || !last) return;
     if (last.items.some((item) => item.secret)) {
@@ -226,8 +227,7 @@ export function createBrowserTools(ctx: BrowserToolsContext): BrowserTools {
     }
     try {
       const shot = await chrome.tabs.captureVisibleTab(tab.windowId, {
-        format: 'jpeg',
-        quality: 60,
+        format: 'png',
       });
       const marks = last.items.flatMap((item) =>
         item.rect ? [{ n: item.n, x: item.rect.x, y: item.rect.y }] : [],

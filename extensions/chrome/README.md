@@ -89,9 +89,9 @@ drops the port that keeps the worker alive, which ends the run.
 the visible part of the tab (`chrome.tabs.captureVisibleTab`), draws each listed
 element's number onto that image in the worker — nothing is added to the page,
 so nothing flashes — and sends that one picture with the next model call, the
-latest only, never kept in the conversation. An element inside a cross-origin
-iframe stays in the list but gets no number on the picture: its place in the
-tab cannot be known from the page. No picture is taken while the tab is not in
+latest only, never kept in the conversation. An element that is not on screen,
+inside a cross-origin iframe or scrolled out of view, stays in the list but
+gets no number on the picture. No picture is taken while the tab is not in
 front or while a password or payment field is on the page.
 
 **Real clicks.** The worker attaches Chrome's debugger to the tab for every run
@@ -102,8 +102,9 @@ debugging this browser" bar on the tab for exactly that long: the worker
 detaches when the run ends. Closing the bar or opening DevTools on the tab ends
 the run with a message; so does a tab DevTools already holds. Before a real
 click the element is scrolled into view without animation and the point is
-checked: when something lies over it (a sticky header, a banner), the click goes
-to the element directly and the tool result says so. Elements inside
+checked in its own frame and in every frame above it: when something lies over
+it (a sticky header, a banner, a backdrop on the page around an iframe), the
+click goes to the element directly and the tool result says so. Elements inside
 same-origin iframes get real clicks and typing too, placed through the frame
 chain; cross-origin iframes keep the scripted click.
 
