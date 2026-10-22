@@ -7,7 +7,10 @@ onlyBuiltDependencies:
   - sharp
   - unrs-resolver
 overrides:
-  vite: '>=7.3.2'
+  # Floor raised 7.3.2 -> 8.1.6 for GHSA-587h-7wmj-h5pm (launch-editor's
+  # existence check bypassed on Windows), affecting >=8.0.0 <=8.1.5. Direct dev
+  # dependency, pinned to match.
+  vite: '>=8.1.6'
   # GHSA-c475-qrg2-pj4r — quadratic-time CPU DoS in Client.list()'s Unix
   # directory-listing parser (RE_LINE backtracking), affecting <=6.2.0; 6.2.1 is
   # the only patched release. Surfaced by `pnpm audit` (high), which blocks the
@@ -21,7 +24,10 @@ overrides:
   # Dev-only reach: @release-it/conventional-changelog > conventional-changelog
   # > conventional-changelog-writer > handlebars. Upper bound keeps the 4.x line.
   handlebars: '>=4.7.10 <5'
-  follow-redirects: '>=1.16.0'
+  # Floor raised 1.16.0 -> 1.16.1 for GHSA-8r9p-f939-6h3c (array-form headers
+  # bypass the cross-origin credential stripping) and GHSA-q3jh-wrc6-jgq8
+  # (sensitiveHeaders regex escaping). Reached through axios.
+  follow-redirects: '>=1.16.1'
   defu: '>=6.1.5'
   lodash-es: '>=4.18.0'
   lodash: '>=4.18.0'
@@ -62,10 +68,12 @@ overrides:
   # (fetch adapter ignores maxRedirects: 0). Direct dependency, pinned to match.
   axios: '>=1.20.0'
   prismjs: '>=1.30.0'
-  # Floor raised 3.4.12 -> 3.4.13 for GHSA-55q2-fjhq-7xh7: IN_PLACE hook removal
-  # leaves a detached subtree executable (XSS). Reached through
-  # @iblai/iblai-js > @iblai/web-containers.
-  dompurify: '>=3.4.13'
+  # Floor raised 3.4.13 -> 3.4.17 for GHSA-cg2g-xh64-v4q7 (SAFE_FOR_TEMPLATES
+  # bypass: split template expressions survive in attached shadow roots) and
+  # GHSA-mrv2-3pqr-j5jr, affecting <=3.4.16; 3.4.12 -> 3.4.13 before it for
+  # GHSA-55q2-fjhq-7xh7 (IN_PLACE hook removal leaves a detached subtree
+  # executable). Reached through @iblai/iblai-js > @iblai/web-containers.
+  dompurify: '>=3.4.17'
   # GHSA-j95f-988m-3j2f - quadratic ReDoS parsing block and inline Markdown
   # attributes, affecting >=3.7.0 <3.30.5. Scoped to the web-containers subtree
   # deliberately: this app depends on @tiptap/core 2.x directly and a bare
@@ -166,7 +174,9 @@ overrides:
   # Reached through @iblai/iblai-js > @iblai/web-containers > @tiptap/pm >
   # prosemirror-markdown, which asks for ^14. Upper bound is deliberate: a bare
   # '>=14.3.1' resolves to 15.x, a major that consumer does not declare.
-  markdown-it: '>=14.3.1 <15'
+  # Floor raised 14.3.1 -> 14.3.3 for GHSA-gfr2-rv44-r23c, affecting
+  # >=14.1.0 <14.3.3; the upper bound stays.
+  markdown-it: '>=14.3.3 <15'
   # GHSA-cp6q-959q-f8rh + GHSA-j95f-988m-3j2f (XSS via crafted editor
   # content), patched in 3.30.4/3.30.5. Scoped to the 3.x resolution
   # (@iblai/web-containers): the app itself pins the 2.x API for the canvas
