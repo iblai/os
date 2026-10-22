@@ -67,9 +67,10 @@ overrides:
   axios: '>=1.20.0'
   prismjs: '>=1.30.0'
   # Floor raised 3.4.12 -> 3.4.13 for GHSA-55q2-fjhq-7xh7: IN_PLACE hook removal
-  # leaves a detached subtree executable (XSS). Reached through
-  # @iblai/iblai-js > @iblai/web-containers.
-  dompurify: '>=3.4.13'
+  # leaves a detached subtree executable (XSS), then -> 3.4.17 for its
+  # incomplete fix (GHSA-mrv2-3pqr-j5jr) and GHSA-cg2g-xh64-v4q7. Reached
+  # through @iblai/iblai-js > @iblai/web-containers.
+  dompurify: '>=3.4.17'
   # GHSA-j95f-988m-3j2f - quadratic ReDoS parsing block and inline Markdown
   # attributes, affecting >=3.7.0 <3.30.5. Scoped to the web-containers subtree
   # deliberately: this app depends on @tiptap/core 2.x directly and a bare
