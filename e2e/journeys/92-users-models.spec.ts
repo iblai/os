@@ -496,16 +496,20 @@ test.describe('Journey 92: User Models', () => {
     const modal = encodeURIComponent(
       JSON.stringify([{ name: 'edit_mentor', tab: 'llm' }]),
     );
+    const editDialog = nonadminPage.getByRole('dialog', { name: 'Edit Agent' });
+    // The editor opens on load and hides the page behind it, so the default
+    // readiness check (the agent dropdown button by role) would never pass.
     await navigateToMentorApp(
       nonadminPage,
       `${MENTOR_NEXTJS_HOST}/platform/${tenantKey}/${mentorId}?modal=${modal}`,
+      editDialog
+        .or(
+          nonadminPage.getByRole('button', {
+            name: 'Selected agent dropdown button',
+          }),
+        )
+        .first(),
     );
-    await expect(
-      nonadminPage.locator(
-        'button[aria-label="Selected agent dropdown button"]',
-      ),
-    ).toBeVisible({ timeout: 30_000 });
-    const editDialog = nonadminPage.getByRole('dialog', { name: 'Edit Agent' });
     let editorOpened = false;
     try {
       await editDialog.waitFor({ state: 'visible', timeout: 15_000 });
