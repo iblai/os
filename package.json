@@ -158,7 +158,6 @@
     "unist-util-visit": "5.1.0",
     "use-debounce": "10.0.4",
     "vaul": "1.1.2",
-    "write-excel-file": "4.0.7",
     "zod": "3.25.76"
   },
   "devDependencies": {
