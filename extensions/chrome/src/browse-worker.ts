@@ -149,12 +149,13 @@ export function handleBrowsePort(port: chrome.runtime.Port): void {
         lostRealInput = true;
         controller?.abort();
       });
+      const withPicture = wantsPicture(model);
       const { tools, snapshot, picture } = createBrowserTools({
         tabId,
         confirm,
         log: (entry) =>
           send({ type: 'log', text: logLine(entry), ok: entry.ok }),
-        withPicture: wantsPicture(model),
+        withPicture,
         real: realInput(tabId),
       });
       // The run's first sign of life. Reading the page and then waiting for
@@ -185,6 +186,7 @@ export function handleBrowsePort(port: chrome.runtime.Port): void {
         signal: controller.signal,
         language: await userLanguage(),
         picture,
+        positions: withPicture,
         // Narration and a refused call are rows in the action list, like
         // every action; only a failed model call ends the turn.
         onEvent: (event) => {

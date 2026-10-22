@@ -299,12 +299,15 @@ describe('the browse port', () => {
     expect((await ctxOf()).withPicture).toBe(true);
     await vi.waitFor(() => expect(runAgent).toHaveBeenCalled());
     expect(runAgent.mock.calls[0][0].picture).toEqual(expect.any(Function));
+    expect(runAgent.mock.calls[0][0].positions).toBe(true);
 
     listModels.mockResolvedValue(['iblai/iblai-pro']);
     await chromeStub.stub.storage.local.set({ browse: { model: '' } });
     const second = openPort();
     second.emit({ type: 'run', tabId: 8, goal: 'go', creds });
     expect((await ctxOf(1)).withPicture).toBe(false);
+    await vi.waitFor(() => expect(runAgent).toHaveBeenCalledTimes(2));
+    expect(runAgent.mock.calls[1][0].positions).toBe(false);
   });
 
   it('sends the action log as text, already localized', async () => {

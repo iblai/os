@@ -1,10 +1,9 @@
 import { jsonSchema, tool, type ToolSet } from 'ai';
+import { drawBadges } from './badges';
 import {
   actOnPage,
-  markPage,
   scrollPage,
   snapshotPage,
-  unmarkPage,
   type ActResult,
   type FrameSnapshot,
   type SnapshotItem,
@@ -43,8 +42,8 @@ export interface BrowserToolsContext {
   real?: RealInput;
 }
 
-/** The latest capture, or why there is none this step. */
-export type Picture = { dataUrl: string } | { note: string };
+/** The latest capture, with its pixels per CSS px, or why there is none this step. */
+export type Picture = { dataUrl: string; scale: number } | { note: string };
 
 export interface Snapshot {
   url: string;
@@ -53,6 +52,8 @@ export interface Snapshot {
   items: SnapshotItem[];
   /** What the model reads: URL and title, one line per item, the frames' text. */
   text: string;
+  /** The page's viewport in CSS px, the picture's own size once scaled. */
+  viewport: { width: number; height: number };
 }
 
 /** Where a snapshot number lives: the frame, and the frame's own number for it. */
@@ -123,6 +124,12 @@ const ELEMENT = {
   description: 'Element number from the latest snapshot',
 } as const;
 
+const DOUBLE = {
+  type: 'boolean',
+  description:
+    'Click twice: opens what one click only selects, like a file in a list or a cell to edit',
+} as const;
+
 /**
  * Merges the frames' snapshots into the one numbered list the model reads.
  * Frame 0 (the page itself) comes first, then subframes by id — Chrome returns
@@ -147,6 +154,7 @@ export function mergeFrames(
   const targets = new Map<number, FrameRef>();
   const items: SnapshotItem[] = [];
   const excerpts: string[] = [];
+  let dropped = 0;
   for (const { frameId, result } of frames) {
     if (frameId !== 0 && result.items.length === 0) continue;
     for (const item of result.items) {
@@ -154,15 +162,19 @@ export function mergeFrames(
       targets.set(n, { frameId, n: item.n });
       items.push({ ...item, n });
     }
+    dropped += result.dropped ?? 0;
     if (result.excerpt) excerpts.push(result.excerpt);
   }
   const lines = items.map(
     (item) =>
       `[${item.n}] ${item.role} "${item.name}"${item.state ? ` (${item.state})` : ''}`,
   );
-  const { url, title } = page.result;
+  // Said rather than silent: the model's own rule for a missing element is to scroll.
+  if (dropped)
+    lines.push(`(+${dropped} more elements off screen: scroll to list them)`);
+  const { url, title, viewport } = page.result;
   const text = `${url}  "${title}"\n${lines.join('\n')}\n--- text ---\n${excerpts.join('\n\n')}`;
-  return { snapshot: { url, title, items, text }, targets };
+  return { snapshot: { url, title, items, text, viewport }, targets };
 }
 
 async function inject<Args extends unknown[], Result>(
@@ -207,9 +219,10 @@ export function createBrowserTools(ctx: BrowserToolsContext): BrowserTools {
 
   let latest: Picture | null = null;
 
-  // The viewport, with every listed number drawn on its element, so the model
-  // can match what it sees to what it can click. A page holding a password or
-  // payment field is never captured: what is on it is the user's alone.
+  // The viewport, with every listed number drawn on its element here in the
+  // worker — nothing is added to the page, so nothing flashes. Captured as PNG:
+  // `drawBadges` does the one JPEG encode. A page holding a password or payment
+  // field is never captured: what is on it is the user's alone.
   const capture = async (): Promise<void> => {
     if (!ctx.withPicture || !last) return;
     if (last.items.some((item) => item.secret)) {
@@ -223,27 +236,18 @@ export function createBrowserTools(ctx: BrowserToolsContext): BrowserTools {
       latest = { note: '(no picture: the tab is not in front)' };
       return;
     }
-    const byFrame = new Map<number, Array<[number, number]>>();
-    for (const [shown, ref] of targets) {
-      const pairs = byFrame.get(ref.frameId) ?? [];
-      pairs.push([ref.n, shown]);
-      byFrame.set(ref.frameId, pairs);
-    }
     try {
-      for (const [frameId, pairs] of byFrame)
-        await inject(ctx.tabId, markPage, [pairs], frameId);
-      const dataUrl = await chrome.tabs.captureVisibleTab(tab.windowId, {
-        format: 'jpeg',
-        quality: 60,
+      const shot = await chrome.tabs.captureVisibleTab(tab.windowId, {
+        format: 'png',
       });
-      latest = { dataUrl };
+      const marks = last.items.flatMap((item) =>
+        item.rect ? [{ n: item.n, x: item.rect.x, y: item.rect.y }] : [],
+      );
+      latest = await drawBadges(shot, marks, last.viewport.width);
     } catch (err) {
       latest = {
         note: `(no picture: ${err instanceof Error ? err.message : String(err)})`,
       };
-    } finally {
-      for (const frameId of byFrame.keys())
-        await inject(ctx.tabId, unmarkPage, [], frameId).catch(() => undefined);
     }
   };
 
@@ -312,8 +316,8 @@ export function createBrowserTools(ctx: BrowserToolsContext): BrowserTools {
     element?: number;
     /** Given where that number lives; frame 0 and no number without one. */
     step: (at: FrameRef) => Promise<ActResult>;
-    /** When set, the user is asked first. */
-    confirmText?: string;
+    /** When set, the user is asked first; a function looks at the page to decide (and may name the target then). */
+    confirmText?: string | (() => Promise<string | undefined>);
     signal?: AbortSignal;
     textChars?: number;
   }
@@ -323,8 +327,12 @@ export function createBrowserTools(ctx: BrowserToolsContext): BrowserTools {
     serial(async () => {
       try {
         assertAllowed(await currentUrl());
-        if (p.confirmText) {
-          const ok = await ctx.confirm(p.confirmText, p.signal);
+        const ask =
+          typeof p.confirmText === 'function'
+            ? await p.confirmText()
+            : p.confirmText;
+        if (ask) {
+          const ok = await ctx.confirm(ask, p.signal);
           if (!ok)
             throw new Refusal('declined', 'User declined. Ask how to proceed.');
         }
@@ -345,7 +353,7 @@ export function createBrowserTools(ctx: BrowserToolsContext): BrowserTools {
         assertAllowed(await currentUrl());
         const page = await snapshot(p.textChars);
         ctx.log({ tool: p.tool, target: p.target, ok: true });
-        return `${p.outcome}\n\n${page.text}`;
+        return `${p.outcome}${result.note ? ` ${result.note}` : ''}\n\n${page.text}`;
       } catch (err) {
         return fail(p.tool, p.target, err);
       }
@@ -354,44 +362,53 @@ export function createBrowserTools(ctx: BrowserToolsContext): BrowserTools {
   const tools: ToolSet = {
     click: tool({
       description: 'Click an element from the latest snapshot.',
-      inputSchema: jsonSchema<{ element: number }>({
+      inputSchema: jsonSchema<{ element: number; double?: boolean }>({
         type: 'object',
-        properties: { element: ELEMENT },
+        properties: { element: ELEMENT, double: DOUBLE },
         required: ['element'],
         additionalProperties: false,
       }),
-      execute: ({ element }, { abortSignal }) => {
+      execute: ({ element, double }, { abortSignal }) => {
+        const twice = double === true;
+        const name = twice ? 'double_click' : 'click';
         const n = asElement(element);
-        if (n === null) return badElement('click');
+        if (n === null) return badElement(name);
         const target = describeItem(n, item(n));
+        const verb = twice ? 'Double-click' : 'Click';
         return perform({
-          tool: 'click',
+          tool: name,
           target,
-          outcome: `Clicked ${target}.`,
+          outcome: `${verb}ed ${target}.`,
           element: n,
-          // Real input knows the page's own coordinates only: an element in
-          // a subframe keeps the scripted click.
+          // Trusted input lands by tab coordinates, which a cross-origin frame
+          // cannot give, and on whatever is at the point.
           step: async (at) => {
-            if (ctx.real && at.frameId === 0) {
-              const found = await inject(ctx.tabId, actOnPage, [
-                at.n,
-                'locate',
-                '',
-                false,
-              ]);
-              if (!found.ok) return found;
-              await ctx.real.click(found.x ?? 0, found.y ?? 0);
-              return { ok: true };
-            }
-            return inject(
+            const scripted = () =>
+              inject(
+                ctx.tabId,
+                actOnPage,
+                [at.n, twice ? 'dblclick' : 'click', '', false],
+                at.frameId,
+              );
+            if (!ctx.real) return scripted();
+            const found = await inject(
               ctx.tabId,
               actOnPage,
-              [at.n, 'click', '', false],
+              [at.n, 'locate', '', false],
               at.frameId,
             );
+            if (!found.ok) return found;
+            if (found.top && !found.covered) {
+              await ctx.real.click(found.x ?? 0, found.y ?? 0, twice ? 2 : 1);
+              return { ok: true };
+            }
+            const result = await scripted();
+            return found.covered
+              ? { ...result, note: '(something covers it, clicked directly)' }
+              : result;
           },
           confirmText: needsConfirm('click', item(n))
-            ? `Click ${target} on "${last?.title ?? ''}"`
+            ? `${verb} ${target} on "${last?.title ?? ''}"`
             : undefined,
           signal: abortSignal,
         });
@@ -429,25 +446,25 @@ export function createBrowserTools(ctx: BrowserToolsContext): BrowserTools {
           outcome: `Typed into ${target}${doSubmit ? ' and submitted' : ''}.`,
           element: n,
           step: async (at) => {
-            if (ctx.real && at.frameId === 0) {
-              const ready = await inject(ctx.tabId, actOnPage, [
-                at.n,
-                'prepare-type',
-                '',
-                false,
-                SECRET_FIELDS,
-              ]);
-              if (!ready.ok) return ready;
-              await ctx.real.insertText(value);
-              if (doSubmit) await ctx.real.pressEnter();
-              return { ok: true };
-            }
-            return inject(
+            const scripted = () =>
+              inject(
+                ctx.tabId,
+                actOnPage,
+                [at.n, 'type', value, doSubmit, SECRET_FIELDS],
+                at.frameId,
+              );
+            if (!ctx.real) return scripted();
+            const ready = await inject(
               ctx.tabId,
               actOnPage,
-              [at.n, 'type', value, doSubmit, SECRET_FIELDS],
+              [at.n, 'prepare-type', '', false, SECRET_FIELDS],
               at.frameId,
             );
+            if (!ready.ok) return ready;
+            if (!ready.top) return scripted();
+            await ctx.real.insertText(value);
+            if (doSubmit) await ctx.real.pressEnter();
+            return { ok: true };
           },
           confirmText: needsConfirm('type', item(n), doSubmit)
             ? `Type into ${target} and submit on "${last?.title ?? ''}"`
@@ -606,6 +623,169 @@ export function createBrowserTools(ctx: BrowserToolsContext): BrowserTools {
       },
     }),
   };
+
+  // With a picture, two more tools act on a point of it: what the model can
+  // see but the list does not hold — past its cap, or in a cross-origin frame.
+  const real = ctx.real;
+  if (ctx.withPicture && real) {
+    const PIXEL = {
+      type: 'number',
+      minimum: 0,
+      description: 'Pixel position on the picture',
+    } as const;
+    const badPoint = (tool: string, reason: string): Promise<string> => {
+      ctx.log({ tool, target: '', ok: false, detail: reason });
+      return Promise.resolve(`Error: ${reason}`);
+    };
+    // The point in viewport CSS px, or why it cannot be used.
+    const pointOf = (
+      x: unknown,
+      y: unknown,
+    ): { x: number; y: number } | string => {
+      if (!latest || !('dataUrl' in latest))
+        return 'No picture this step; use an element number.';
+      const px = Number(x);
+      const py = Number(y);
+      if (!Number.isFinite(px) || !Number.isFinite(py) || px < 0 || py < 0)
+        return 'x and y must be pixel positions on the picture.';
+      const point = { x: px / latest.scale, y: py / latest.scale };
+      if (
+        !last ||
+        point.x > last.viewport.width ||
+        point.y > last.viewport.height
+      )
+        return 'That point is outside the picture.';
+      return point;
+    };
+    // What is at the point, named as the user would name it.
+    const atPoint = async (point: { x: number; y: number }) =>
+      (
+        await inject(ctx.tabId, snapshotPage, [
+          MAX_ITEMS,
+          0,
+          SECRET_FIELDS,
+          point,
+        ])
+      )?.items[0];
+    const describeAt = (
+      hit: SnapshotItem | undefined,
+      x: unknown,
+      y: unknown,
+    ) =>
+      hit
+        ? `${hit.role} "${hit.name}" at (${String(x)}, ${String(y)})`
+        : `(${String(x)}, ${String(y)})`;
+
+    tools.click_at = tool({
+      description:
+        'Click a point of the picture of the tab, given as x and y pixels on the picture: for something you can see but that is not in the list.',
+      inputSchema: jsonSchema<{ x: number; y: number; double?: boolean }>({
+        type: 'object',
+        properties: { x: PIXEL, y: PIXEL, double: DOUBLE },
+        required: ['x', 'y'],
+        additionalProperties: false,
+      }),
+      execute: ({ x, y, double }, { abortSignal }) => {
+        const twice = double === true;
+        const name = twice ? 'double_click' : 'click';
+        const verb = twice ? 'Double-click' : 'Click';
+        const point = pointOf(x, y);
+        if (typeof point === 'string') return badPoint(name, point);
+        const p: Perform = {
+          tool: name,
+          target: describeAt(undefined, x, y),
+          outcome: '',
+          // Looked at before the confirmation, which needs the name.
+          confirmText: async () => {
+            const hit = await atPoint(point);
+            p.target = describeAt(hit, x, y);
+            p.outcome = `${verb}ed ${p.target}.`;
+            return needsConfirm('click', hit)
+              ? `${verb} ${p.target} on "${last?.title ?? ''}"`
+              : undefined;
+          },
+          step: async () => {
+            await real.click(point.x, point.y, twice ? 2 : 1);
+            return { ok: true };
+          },
+          signal: abortSignal,
+        };
+        return perform(p);
+      },
+    });
+    tools.type_at = tool({
+      description:
+        'Click a point of the picture and replace the text of the field that takes focus there with the given text. Set submit to true to press Enter afterwards. Never use it for passwords or payment details.',
+      inputSchema: jsonSchema<{
+        x: number;
+        y: number;
+        text: string;
+        submit?: boolean;
+      }>({
+        type: 'object',
+        properties: {
+          x: PIXEL,
+          y: PIXEL,
+          text: { type: 'string' },
+          submit: {
+            type: 'boolean',
+            description: 'Press Enter / submit the form afterwards',
+          },
+        },
+        required: ['x', 'y', 'text'],
+        additionalProperties: false,
+      }),
+      execute: ({ x, y, text, submit }, { abortSignal }) => {
+        const point = pointOf(x, y);
+        if (typeof point === 'string') return badPoint('type', point);
+        const doSubmit = submit === true;
+        const value = String(text ?? '');
+        const p: Perform = {
+          tool: 'type',
+          target: describeAt(undefined, x, y),
+          outcome: '',
+          confirmText: async () => {
+            const hit = await atPoint(point);
+            p.target = describeAt(hit, x, y);
+            p.outcome = `Typed into ${p.target}${doSubmit ? ' and submitted' : ''}.`;
+            return needsConfirm('type', hit, doSubmit)
+              ? `Type into ${p.target} and submit on "${last?.title ?? ''}"`
+              : undefined;
+          },
+          // The click focuses the field; the frame holding the focus prepares
+          // it, behind the secret-field refusal, and the text follows through
+          // the protocol, which reaches a cross-origin frame too.
+          step: async () => {
+            await real.click(point.x, point.y);
+            const answers = (
+              await injectAll(ctx.tabId, actOnPage, [
+                0,
+                'prepare-type',
+                '',
+                false,
+                SECRET_FIELDS,
+              ])
+            ).map((frame) => frame.result as ActResult | undefined);
+            const refused = answers.find((a) =>
+              /^Refused:/.test(a?.error ?? ''),
+            );
+            if (refused) return refused;
+            if (!answers.some((a) => a?.ok))
+              return {
+                ok: false,
+                error:
+                  'Nothing at that point takes text; click a field first or use an element number.',
+              };
+            await real.insertText(value);
+            if (doSubmit) await real.pressEnter();
+            return { ok: true };
+          },
+          signal: abortSignal,
+        };
+        return perform(p);
+      },
+    });
+  }
 
   return {
     tools,

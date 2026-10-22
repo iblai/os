@@ -33,6 +33,23 @@ describe('real input', () => {
     ]);
   });
 
+  // Chrome counts the clicks from the events themselves, so the second press
+  // and release are what make it a double click: no timing involved.
+  it('double-clicks with a second press and release that count as the second', async () => {
+    await realInput(7).click(60, 40, 2);
+    const press = (type: string, clickCount: number) => [
+      'Input.dispatchMouseEvent',
+      { type, x: 60, y: 40, button: 'left', clickCount },
+    ];
+    expect(commands()).toEqual([
+      ['Input.dispatchMouseEvent', { type: 'mouseMoved', x: 60, y: 40 }],
+      press('mousePressed', 1),
+      press('mouseReleased', 1),
+      press('mousePressed', 2),
+      press('mouseReleased', 2),
+    ]);
+  });
+
   it('types by inserting the text, and presses Enter as a key', async () => {
     const input = realInput(7);
     await input.insertText('jane');
