@@ -1,10 +1,9 @@
 import { jsonSchema, tool, type ToolSet } from 'ai';
+import { drawBadges } from './badges';
 import {
   actOnPage,
-  markPage,
   scrollPage,
   snapshotPage,
-  unmarkPage,
   type ActResult,
   type FrameSnapshot,
   type SnapshotItem,
@@ -53,6 +52,8 @@ export interface Snapshot {
   items: SnapshotItem[];
   /** What the model reads: URL and title, one line per item, the frames' text. */
   text: string;
+  /** The page's viewport in CSS px, the picture's own size once scaled. */
+  viewport: { width: number; height: number };
 }
 
 /** Where a snapshot number lives: the frame, and the frame's own number for it. */
@@ -160,9 +161,9 @@ export function mergeFrames(
     (item) =>
       `[${item.n}] ${item.role} "${item.name}"${item.state ? ` (${item.state})` : ''}`,
   );
-  const { url, title } = page.result;
+  const { url, title, viewport } = page.result;
   const text = `${url}  "${title}"\n${lines.join('\n')}\n--- text ---\n${excerpts.join('\n\n')}`;
-  return { snapshot: { url, title, items, text }, targets };
+  return { snapshot: { url, title, items, text, viewport }, targets };
 }
 
 async function inject<Args extends unknown[], Result>(
@@ -207,9 +208,9 @@ export function createBrowserTools(ctx: BrowserToolsContext): BrowserTools {
 
   let latest: Picture | null = null;
 
-  // The viewport, with every listed number drawn on its element, so the model
-  // can match what it sees to what it can click. A page holding a password or
-  // payment field is never captured: what is on it is the user's alone.
+  // The viewport, with every listed number drawn on its element here in the
+  // worker — nothing is added to the page, so nothing flashes. A page holding a
+  // password or payment field is never captured: what is on it is the user's alone.
   const capture = async (): Promise<void> => {
     if (!ctx.withPicture || !last) return;
     if (last.items.some((item) => item.secret)) {
@@ -223,27 +224,19 @@ export function createBrowserTools(ctx: BrowserToolsContext): BrowserTools {
       latest = { note: '(no picture: the tab is not in front)' };
       return;
     }
-    const byFrame = new Map<number, Array<[number, number]>>();
-    for (const [shown, ref] of targets) {
-      const pairs = byFrame.get(ref.frameId) ?? [];
-      pairs.push([ref.n, shown]);
-      byFrame.set(ref.frameId, pairs);
-    }
     try {
-      for (const [frameId, pairs] of byFrame)
-        await inject(ctx.tabId, markPage, [pairs], frameId);
-      const dataUrl = await chrome.tabs.captureVisibleTab(tab.windowId, {
+      const shot = await chrome.tabs.captureVisibleTab(tab.windowId, {
         format: 'jpeg',
         quality: 60,
       });
-      latest = { dataUrl };
+      const marks = last.items.flatMap((item) =>
+        item.rect ? [{ n: item.n, x: item.rect.x, y: item.rect.y }] : [],
+      );
+      latest = { dataUrl: await drawBadges(shot, marks, last.viewport.width) };
     } catch (err) {
       latest = {
         note: `(no picture: ${err instanceof Error ? err.message : String(err)})`,
       };
-    } finally {
-      for (const frameId of byFrame.keys())
-        await inject(ctx.tabId, unmarkPage, [], frameId).catch(() => undefined);
     }
   };
 
@@ -345,7 +338,7 @@ export function createBrowserTools(ctx: BrowserToolsContext): BrowserTools {
         assertAllowed(await currentUrl());
         const page = await snapshot(p.textChars);
         ctx.log({ tool: p.tool, target: p.target, ok: true });
-        return `${p.outcome}\n\n${page.text}`;
+        return `${p.outcome}${result.note ? ` ${result.note}` : ''}\n\n${page.text}`;
       } catch (err) {
         return fail(p.tool, p.target, err);
       }
@@ -369,26 +362,32 @@ export function createBrowserTools(ctx: BrowserToolsContext): BrowserTools {
           target,
           outcome: `Clicked ${target}.`,
           element: n,
-          // Real input knows the page's own coordinates only: an element in
-          // a subframe keeps the scripted click.
+          // Trusted input lands by tab coordinates, which a cross-origin frame
+          // cannot give, and on whatever is at the point.
           step: async (at) => {
-            if (ctx.real && at.frameId === 0) {
-              const found = await inject(ctx.tabId, actOnPage, [
-                at.n,
-                'locate',
-                '',
-                false,
-              ]);
-              if (!found.ok) return found;
+            const scripted = () =>
+              inject(
+                ctx.tabId,
+                actOnPage,
+                [at.n, 'click', '', false],
+                at.frameId,
+              );
+            if (!ctx.real) return scripted();
+            const found = await inject(
+              ctx.tabId,
+              actOnPage,
+              [at.n, 'locate', '', false],
+              at.frameId,
+            );
+            if (!found.ok) return found;
+            if (found.top && !found.covered) {
               await ctx.real.click(found.x ?? 0, found.y ?? 0);
               return { ok: true };
             }
-            return inject(
-              ctx.tabId,
-              actOnPage,
-              [at.n, 'click', '', false],
-              at.frameId,
-            );
+            const result = await scripted();
+            return found.covered
+              ? { ...result, note: '(something covers it, clicked directly)' }
+              : result;
           },
           confirmText: needsConfirm('click', item(n))
             ? `Click ${target} on "${last?.title ?? ''}"`
@@ -429,25 +428,25 @@ export function createBrowserTools(ctx: BrowserToolsContext): BrowserTools {
           outcome: `Typed into ${target}${doSubmit ? ' and submitted' : ''}.`,
           element: n,
           step: async (at) => {
-            if (ctx.real && at.frameId === 0) {
-              const ready = await inject(ctx.tabId, actOnPage, [
-                at.n,
-                'prepare-type',
-                '',
-                false,
-                SECRET_FIELDS,
-              ]);
-              if (!ready.ok) return ready;
-              await ctx.real.insertText(value);
-              if (doSubmit) await ctx.real.pressEnter();
-              return { ok: true };
-            }
-            return inject(
+            const scripted = () =>
+              inject(
+                ctx.tabId,
+                actOnPage,
+                [at.n, 'type', value, doSubmit, SECRET_FIELDS],
+                at.frameId,
+              );
+            if (!ctx.real) return scripted();
+            const ready = await inject(
               ctx.tabId,
               actOnPage,
-              [at.n, 'type', value, doSubmit, SECRET_FIELDS],
+              [at.n, 'prepare-type', '', false, SECRET_FIELDS],
               at.frameId,
             );
+            if (!ready.ok) return ready;
+            if (!ready.top) return scripted();
+            await ctx.real.insertText(value);
+            if (doSubmit) await ctx.real.pressEnter();
+            return { ok: true };
           },
           confirmText: needsConfirm('type', item(n), doSubmit)
             ? `Type into ${target} and submit on "${last?.title ?? ''}"`

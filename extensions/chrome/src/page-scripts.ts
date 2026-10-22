@@ -19,6 +19,8 @@ export interface SnapshotItem {
   submit: boolean;
   /** A password, one-time-code or payment field: never typed into, never read back. */
   secret: boolean;
+  /** Where it sits in the tab's viewport (CSS px); absent inside a cross-origin frame. */
+  rect?: { x: number; y: number; w: number; h: number };
 }
 
 /** One frame's view of itself; the worker merges the frames into what the model reads. */
@@ -28,6 +30,8 @@ export interface FrameSnapshot {
   items: SnapshotItem[];
   /** The frame's main text, collapsed and capped at `textChars`. */
   excerpt: string;
+  /** The frame's viewport in CSS px; the page's is what the picture shows. */
+  viewport: { width: number; height: number };
 }
 
 export interface ActResult {
@@ -36,6 +40,12 @@ export interface ActResult {
   /** Viewport coordinates of the element's centre, from `locate`. */
   x?: number;
   y?: number;
+  /** Whether x/y are the tab's own viewport; false inside a cross-origin frame. */
+  top?: boolean;
+  /** Something lies over the element even after scrolling: a real click would hit that. */
+  covered?: boolean;
+  /** Appended to the tool result the model reads. */
+  note?: string;
 }
 
 /** The Chat tab's context feed (unchanged from the original panel.js). */
@@ -197,6 +207,20 @@ export function snapshotPage(
       .split(/\s+/);
     return tokens.some((token) => (secretTokens || []).includes(token));
   };
+  // This frame's place in the tab's viewport, summed up the iframe chain; null
+  // past a cross-origin parent, whose layout is hidden from here.
+  const frameOffset = (): { x: number; y: number } | null => {
+    let x = 0;
+    let y = 0;
+    for (let win: Window = window; win !== win.top; win = win.parent) {
+      const frame = win.frameElement as HTMLElement | null;
+      if (!frame) return null;
+      const box = frame.getBoundingClientRect();
+      x += box.left + frame.clientLeft;
+      y += box.top + frame.clientTop;
+    }
+    return { x, y };
+  };
   const stateOf = (el: Element, role: string, secret: boolean): string => {
     const parts: string[] = [];
     if (role === 'textbox' || role === 'searchbox') {
@@ -249,6 +273,7 @@ export function snapshotPage(
 
   const map = new Map<number, Element>();
   const items: SnapshotItem[] = [];
+  const offset = frameOffset();
   for (const el of candidates) {
     if (items.length >= maxItems) break;
     if (el instanceof HTMLInputElement && el.type === 'hidden') continue;
@@ -257,6 +282,7 @@ export function snapshotPage(
     const secret = isSecret(el);
     const n = items.length + 1;
     map.set(n, el);
+    const box = el.getBoundingClientRect();
     items.push({
       n,
       role,
@@ -264,6 +290,16 @@ export function snapshotPage(
       state: stateOf(el, role, secret),
       submit: isSubmit(el),
       secret,
+      ...(offset
+        ? {
+            rect: {
+              x: offset.x + box.left,
+              y: offset.y + box.top,
+              w: box.width,
+              h: box.height,
+            },
+          }
+        : {}),
     });
   }
   (globalThis as { __agentMap?: Map<number, Element> }).__agentMap = map;
@@ -275,6 +311,7 @@ export function snapshotPage(
     title: document.title,
     items,
     excerpt: collapse(textOf(main), textChars),
+    viewport: { width: window.innerWidth, height: window.innerHeight },
   };
 }
 
@@ -296,19 +333,64 @@ export function actOnPage(
   const html = el as HTMLElement;
   const fire = (type: string) =>
     el.dispatchEvent(new Event(type, { bubbles: true }));
-  if (typeof html.scrollIntoView === 'function') {
-    html.scrollIntoView({ block: 'center', inline: 'nearest' });
-  }
+  // This frame's place in the tab's viewport, summed up the iframe chain; null
+  // past a cross-origin parent, whose layout is hidden from here.
+  const frameOffset = (): { x: number; y: number } | null => {
+    let x = 0;
+    let y = 0;
+    for (let win: Window = window; win !== win.top; win = win.parent) {
+      const frame = win.frameElement as HTMLElement | null;
+      if (!frame) return null;
+      const box = frame.getBoundingClientRect();
+      x += box.left + frame.clientLeft;
+      y += box.top + frame.clientTop;
+    }
+    return { x, y };
+  };
+  // Instant, never the page's smooth scroll: the box is measured right after.
+  const scrollTo = (block: ScrollLogicalPosition) => {
+    if (typeof html.scrollIntoView === 'function')
+      html.scrollIntoView({ block, inline: 'nearest', behavior: 'instant' });
+  };
+  scrollTo(action === 'scroll' ? 'center' : 'nearest');
 
   if (action === 'scroll') return { ok: true };
 
-  const rect = html.getBoundingClientRect();
-  const centre = {
-    x: rect.left + rect.width / 2,
-    y: rect.top + rect.height / 2,
+  const centreOf = () => {
+    const box = html.getBoundingClientRect();
+    return { x: box.left + box.width / 2, y: box.top + box.height / 2 };
   };
+  const centre = centreOf();
 
-  if (action === 'locate') return { ok: true, ...centre };
+  if (action === 'locate') {
+    const offset = frameOffset();
+    // A real click lands on whatever is at the point: the element, something
+    // inside it or its shadow host is fine; anything else is in the way.
+    const covered = (): boolean => {
+      if (typeof document.elementFromPoint !== 'function') return false;
+      const at = centreOf();
+      const hit = document.elementFromPoint(at.x, at.y);
+      for (let node: Node | null = el; node && hit; ) {
+        if (node === hit || node.contains(hit)) return false;
+        const root = node.getRootNode();
+        node = root instanceof ShadowRoot ? root.host : null;
+      }
+      return true;
+    };
+    let hidden = covered();
+    if (hidden) {
+      scrollTo('center');
+      hidden = covered();
+    }
+    const at = centreOf();
+    return {
+      ok: true,
+      x: (offset ? offset.x : 0) + at.x,
+      y: (offset ? offset.y : 0) + at.y,
+      top: offset !== null,
+      ...(hidden ? { covered: true } : {}),
+    };
+  }
 
   if (action === 'click') {
     if (typeof html.focus === 'function') html.focus();
@@ -376,7 +458,7 @@ export function actOnPage(
     } else {
       return { ok: false, error: 'Element cannot receive text.' };
     }
-    return { ok: true };
+    return { ok: true, top: frameOffset() !== null };
   }
 
   if (action === 'type') {
@@ -499,36 +581,4 @@ export function waitForQuiet(quietMs: number, capMs: number): Promise<string> {
     });
     arm();
   });
-}
-
-/**
- * Draws each listed element's number on the page for the picture: `pairs` are
- * [the frame's own number, the number the model sees]. Returns how many were
- * drawn. `unmarkPage` takes the layer down again.
- */
-export function markPage(pairs: Array<[number, number]>): number {
-  const map = (globalThis as { __agentMap?: Map<number, Element> }).__agentMap;
-  document.getElementById('__ibl_marks')?.remove();
-  if (!map) return 0;
-  const layer = document.createElement('div');
-  layer.id = '__ibl_marks';
-  layer.style.cssText =
-    'position:fixed;inset:0;pointer-events:none;z-index:2147483647;font:bold 11px/14px sans-serif';
-  let drawn = 0;
-  for (const [local, shown] of pairs) {
-    const el = map.get(local);
-    if (!el || !el.isConnected) continue;
-    const rect = el.getBoundingClientRect();
-    const badge = document.createElement('span');
-    badge.textContent = String(shown);
-    badge.style.cssText = `position:absolute;left:${Math.max(0, rect.left)}px;top:${Math.max(0, rect.top - 14)}px;padding:0 3px;background:#111;color:#fff;border-radius:3px`;
-    layer.appendChild(badge);
-    drawn += 1;
-  }
-  (document.body || document.documentElement).appendChild(layer);
-  return drawn;
-}
-
-export function unmarkPage(): void {
-  document.getElementById('__ibl_marks')?.remove();
 }

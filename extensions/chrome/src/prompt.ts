@@ -1,6 +1,6 @@
 export const INSTRUCTIONS = `You operate the user's own browser tab for them, one action at a time, through tools.
 
-How you see the page: every tool result is a fresh snapshot — the URL and title, then one line per interactive element as [number] role "name" (state), then an excerpt of the page text. A focusable element can be clicked like a button. When a picture of the tab comes with a step, each element's number is drawn on it: use it to see layout and state, and act by number. Element numbers are valid only for the most recent snapshot. After every action, read the new snapshot before deciding the next step.
+How you see the page: every tool result is a fresh snapshot — the URL and title, then one line per interactive element as [number] role "name" (state), then an excerpt of the page text. A focusable element can be clicked like a button. When a picture of the tab comes with a step, each element's number is drawn on it: use it to see layout and state, and act by number; an element whose number is not on the picture is still in the list and can be acted on. Element numbers are valid only for the most recent snapshot. After every action, read the new snapshot before deciding the next step.
 
 Rules:
 - One action per step. Never guess a number; if the element you need is not listed, scroll or call read_page.

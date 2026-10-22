@@ -2,10 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   actOnPage,
   extractPageContent,
-  markPage,
   scrollPage,
   snapshotPage,
-  unmarkPage,
   waitForQuiet,
 } from '../page-scripts';
 import { SECRET_FIELDS } from '../secret-fields';
@@ -63,8 +61,6 @@ describe('injected functions stay self-contained', () => {
     ['actOnPage', actOnPage],
     ['scrollPage', scrollPage],
     ['waitForQuiet', waitForQuiet],
-    ['markPage', markPage],
-    ['unmarkPage', unmarkPage],
   ])('%s re-evaluates in an empty scope', (_name, fn) => {
     const source = fn.toString();
     // Istanbul rewrites bodies with module-level counters under --coverage; the
@@ -325,25 +321,155 @@ describe('actOnPage', () => {
     ]);
   });
 
-  it('locates an element by the centre of its box', () => {
+  const box = (el: Element | null, left: number, top: number) =>
+    Object.defineProperty(el, 'getBoundingClientRect', {
+      configurable: true,
+      value: () => ({ left, top, width: 100, height: 40 }),
+    });
+  // jsdom's own elementFromPoint answers null, which reads as off-screen.
+  const hitting = (el: Element | null) => {
+    const hit = vi.fn<() => Element | null>(() => el);
+    Object.defineProperty(document, 'elementFromPoint', {
+      configurable: true,
+      value: hit,
+    });
+    return hit;
+  };
+  afterEach(() => {
+    delete (document as { elementFromPoint?: unknown }).elementFromPoint;
+  });
+  const scrollSpy = (el: Element) => {
+    const scrolls: ScrollIntoViewOptions[] = [];
+    Object.defineProperty(el, 'scrollIntoView', {
+      configurable: true,
+      value: (options: ScrollIntoViewOptions) => scrolls.push(options),
+    });
+    return scrolls;
+  };
+
+  it('locates an element by the centre of its box, after an instant scroll', () => {
     snapshotPage(200, 100);
     const link = document.querySelector('a')!;
-    Object.defineProperty(link, 'getBoundingClientRect', {
-      configurable: true,
-      value: () => ({ left: 10, top: 20, width: 100, height: 40 }),
-    });
+    const scrolls = scrollSpy(link);
+    box(link, 10, 20);
+    hitting(link);
     expect(actOnPage(5, 'locate', '', false)).toEqual({
       ok: true,
       x: 60,
       y: 40,
+      top: true,
     });
+    // Never the page's smooth scroll: the box is measured right after.
+    expect(scrolls).toEqual([
+      { block: 'nearest', inline: 'nearest', behavior: 'instant' },
+    ]);
+  });
+
+  // A sticky header or a banner over the element would take a real click.
+  it('reports an element something covers, after trying to scroll it clear', () => {
+    snapshotPage(200, 100);
+    const link = document.querySelector('a')!;
+    const scrolls = scrollSpy(link);
+    const hit = hitting(document.querySelector('p'));
+    expect(actOnPage(5, 'locate', '', false)).toMatchObject({
+      ok: true,
+      top: true,
+      covered: true,
+    });
+    expect(scrolls.map((s) => s.block)).toEqual(['nearest', 'center']);
+    // The element, anything inside it or its shadow host is no cover.
+    hit.mockReturnValue(link);
+    expect(actOnPage(5, 'locate', '', false)).not.toHaveProperty('covered');
+    hit.mockReturnValue(document.querySelector('button[type=submit]'));
+    expect(actOnPage(2, 'locate', '', false)).toHaveProperty('covered', true);
+    const host = document.createElement('div');
+    host.attachShadow({ mode: 'open' }).innerHTML = '<button>Inner</button>';
+    document.querySelector('main')!.append(host);
+    snapshotPage(200, 100);
+    hit.mockReturnValue(host);
+    expect(actOnPage(13, 'locate', '', false)).not.toHaveProperty('covered');
+    // Off-screen reads as covered too: a real click there would land anywhere.
+    hit.mockReturnValue(null);
+    expect(actOnPage(13, 'locate', '', false)).toHaveProperty('covered', true);
+  });
+
+  // An embedded same-origin frame: its elements are placed in the tab's own
+  // viewport through the iframe's box, so a real click can reach them.
+  it('maps a same-origin frame into the tab viewport and gives up past a cross-origin one', () => {
+    const frame = document.createElement('iframe');
+    Object.defineProperty(frame, 'getBoundingClientRect', {
+      configurable: true,
+      value: () => ({ left: 100, top: 50, width: 300, height: 200 }),
+    });
+    const outer = { top: null as unknown, parent: null as unknown };
+    outer.top = outer;
+    outer.parent = outer;
+    const keys = ['top', 'parent', 'frameElement'] as const;
+    const saved = keys.map(
+      (key) => [key, Object.getOwnPropertyDescriptor(window, key)] as const,
+    );
+    const pretend = (frameElement: Element | null) => {
+      Object.defineProperty(window, 'top', {
+        configurable: true,
+        value: outer,
+      });
+      Object.defineProperty(window, 'parent', {
+        configurable: true,
+        value: outer,
+      });
+      Object.defineProperty(window, 'frameElement', {
+        configurable: true,
+        value: frameElement,
+      });
+    };
+    try {
+      pretend(frame);
+      box(document.querySelector('a'), 10, 20);
+      hitting(document.querySelector('a'));
+      expect(snapshotPage(200, 100).items[4].rect).toEqual({
+        x: 110,
+        y: 70,
+        w: 100,
+        h: 40,
+      });
+      expect(actOnPage(5, 'locate', '', false)).toEqual({
+        ok: true,
+        x: 160,
+        y: 90,
+        top: true,
+      });
+      expect(actOnPage(2, 'prepare-type', '', false)).toEqual({
+        ok: true,
+        top: true,
+      });
+      pretend(null);
+      expect(snapshotPage(200, 100).items[4].rect).toBeUndefined();
+      expect(actOnPage(5, 'locate', '', false)).toEqual({
+        ok: true,
+        x: 60,
+        y: 40,
+        top: false,
+      });
+      expect(actOnPage(2, 'prepare-type', '', false)).toEqual({
+        ok: true,
+        top: false,
+      });
+    } finally {
+      for (const [key, descriptor] of saved) {
+        if (descriptor) Object.defineProperty(window, key, descriptor);
+        else delete (window as unknown as Record<string, unknown>)[key];
+      }
+    }
   });
 
   it('prepares a field for real typing: focused and selected whole, never a secret one', () => {
     snapshotPage(200, 100, SECRET_FIELDS);
     const email = document.querySelector<HTMLInputElement>('#email')!;
     email.value = 'old';
-    expect(actOnPage(2, 'prepare-type', '', false)).toEqual({ ok: true });
+    expect(actOnPage(2, 'prepare-type', '', false)).toEqual({
+      ok: true,
+      top: true,
+    });
     expect(document.activeElement).toBe(email);
     expect([email.selectionStart, email.selectionEnd]).toEqual([0, 3]);
 
@@ -356,7 +482,10 @@ describe('actOnPage', () => {
 
     const editor = document.querySelector('#ed')!;
     editor.textContent = 'Draft';
-    expect(actOnPage(8, 'prepare-type', '', false)).toEqual({ ok: true });
+    expect(actOnPage(8, 'prepare-type', '', false)).toEqual({
+      ok: true,
+      top: true,
+    });
     expect(window.getSelection()?.toString()).toBe('Draft');
 
     expect(actOnPage(4, 'prepare-type', '', false)).toEqual({
@@ -551,31 +680,21 @@ describe('waitForQuiet', () => {
   });
 });
 
-describe('markPage and unmarkPage', () => {
-  it('draws one badge per pair, numbered as the model sees them, and takes them down', () => {
-    snapshotPage(200, 100);
-    expect(
-      markPage([
-        [4, 17],
-        [5, 18],
-        [99, 19],
-      ]),
-    ).toBe(2);
-    const layer = document.getElementById('__ibl_marks')!;
-    expect(layer.style.pointerEvents).toBe('none');
-    expect(
-      [...layer.querySelectorAll('span')].map((b) => b.textContent),
-    ).toEqual(['17', '18']);
-    // Drawing again replaces the layer rather than stacking a second one.
-    expect(markPage([[4, 1]])).toBe(1);
-    expect(document.querySelectorAll('#__ibl_marks')).toHaveLength(1);
-    unmarkPage();
-    expect(document.getElementById('__ibl_marks')).toBeNull();
-    unmarkPage();
-  });
-
-  it('draws nothing before a snapshot', () => {
-    expect(markPage([[1, 1]])).toBe(0);
-    expect(document.getElementById('__ibl_marks')).toBeNull();
+describe('the picture', () => {
+  it("reports each element's place in the tab and the viewport, for the numbers drawn on it", () => {
+    Object.defineProperty(
+      document.querySelector('a'),
+      'getBoundingClientRect',
+      {
+        configurable: true,
+        value: () => ({ left: 10, top: 20, width: 100, height: 40 }),
+      },
+    );
+    const snapshot = snapshotPage(200, 100);
+    expect(snapshot.viewport).toEqual({
+      width: window.innerWidth,
+      height: window.innerHeight,
+    });
+    expect(snapshot.items[4].rect).toEqual({ x: 10, y: 20, w: 100, h: 40 });
   });
 });

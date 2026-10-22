@@ -86,11 +86,13 @@ the panel stays open — and **Stop** aborts it at any time. Closing the panel
 drops the port that keeps the worker alive, which ends the run.
 
 **The picture.** With a model that reads images, every page read also captures
-the visible part of the tab (`chrome.tabs.captureVisibleTab`), with each listed
-element's number drawn on it, and sends that one picture with the next model
-call — the latest only, never kept in the conversation. No picture is taken
-while the tab is not in front or while a password or payment field is on the
-page.
+the visible part of the tab (`chrome.tabs.captureVisibleTab`), draws each listed
+element's number onto that image in the worker — nothing is added to the page,
+so nothing flashes — and sends that one picture with the next model call, the
+latest only, never kept in the conversation. An element inside a cross-origin
+iframe stays in the list but gets no number on the picture: its place in the
+tab cannot be known from the page. No picture is taken while the tab is not in
+front or while a password or payment field is on the page.
 
 **Real clicks.** The worker attaches Chrome's debugger to the tab for every run
 and clicks and types through the DevTools protocol, so the page sees the events
@@ -98,8 +100,12 @@ a real mouse and keyboard send — menus that open on the press, editors that
 ignore scripted input, anything that needs a user gesture. Chrome shows its "is
 debugging this browser" bar on the tab for exactly that long: the worker
 detaches when the run ends. Closing the bar or opening DevTools on the tab ends
-the run with a message; so does a tab DevTools already holds. Elements inside
-iframes keep the scripted click.
+the run with a message; so does a tab DevTools already holds. Before a real
+click the element is scrolled into view without animation and the point is
+checked: when something lies over it (a sticky header, a banner), the click goes
+to the element directly and the tool result says so. Elements inside
+same-origin iframes get real clicks and typing too, placed through the frame
+chain; cross-origin iframes keep the scripted click.
 
 Every action is reported as it happens, the agent's own running commentary
 alongside; typed text is never shown.
@@ -131,8 +137,9 @@ src/settings.ts            the host constants and the cached model
 src/mentor-origin.ts       build-time: the mentor URL default and the manifest's CSP hole
 src/auth.ts                chrome.identity sign-in against the auth SPA
 src/mentor-frame.ts        installs the session into the mentor iframe; context feed
-src/page-scripts.ts        the functions injected into the tab (snapshot, act, settle, badges)
+src/page-scripts.ts        the functions injected into the tab (snapshot, act, settle)
 src/tools.ts               the agent's tools: gating, confirmations, execution, the picture
+src/badges.ts              the element numbers drawn onto the capture, in the worker
 src/real-input.ts          real clicks and typing through chrome.debugger
 src/secret-fields.ts       the autocomplete tokens never typed into nor read back
 src/agent.ts               the model loop (Vercel AI SDK, OpenAI-compatible endpoint)
