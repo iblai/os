@@ -169,6 +169,39 @@ describe('snapshotPage', () => {
     ]);
   });
 
+  // Google Drive's file viewer: the folder behind it keeps its layout, so its
+  // innerText read as the page and the agent believed it was back on the list.
+  it('leaves the page behind a modal out of the text', () => {
+    document.body.innerHTML = `
+      <div aria-hidden="true">
+        <h1>Shared with me</h1>
+        <p>Folder path. Name Owner Date modified.</p>
+      </div>
+      <div><button aria-label="Close"></button><h2>demo.webm</h2><p>Playing.</p></div>`;
+    const snapshot = snapshotPage(200, 300);
+    expect(snapshot.excerpt).toContain('demo.webm');
+    expect(snapshot.excerpt).toContain('Playing.');
+    expect(snapshot.excerpt).not.toContain('Shared with me');
+    expect(snapshot.excerpt).not.toContain('Folder path');
+    expect(snapshot.items.map((item) => item.name)).toEqual([
+      'Close',
+      'demo.webm',
+    ]);
+  });
+
+  // The same page with a <main>: it is the excerpt's source until a modal
+  // covers it, and then the body's own blocks are what is left on screen.
+  it('reads the overlay rather than a main the modal covers', () => {
+    document.body.innerHTML = `
+      <div aria-hidden="true"><main><p>Folder list.</p></main></div>
+      <div><p>Viewer.</p></div>`;
+    expect(snapshotPage(200, 300).excerpt).toBe('Viewer.');
+    document.body.innerHTML = `
+      <div><main><p>Folder list.</p></main></div>
+      <div aria-hidden="true"><p>Hidden helper.</p></div>`;
+    expect(snapshotPage(200, 300).excerpt).toBe('Folder list.');
+  });
+
   it('caps the number of items and the text excerpt', () => {
     const snapshot = snapshotPage(3, 12);
     expect(snapshot.items).toHaveLength(3);

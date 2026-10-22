@@ -363,13 +363,31 @@ export function snapshotPage(
   if (!at)
     (globalThis as { __agentMap?: Map<number, Element> }).__agentMap = map;
 
+  // A page behind a modal keeps its layout and its innerText, and only
+  // aria-hidden says it is out of reach, so the text skips those blocks too.
+  const readable = (root: Element): string =>
+    Array.from(root.childNodes)
+      .map((node) => {
+        if (node.nodeType === Node.TEXT_NODE) return node.nodeValue || '';
+        const el = node as Element;
+        return el.nodeType === Node.ELEMENT_NODE &&
+          el.getAttribute('aria-hidden') !== 'true' &&
+          visible(el)
+          ? textOf(el)
+          : '';
+      })
+      .join(' ');
   // What innerText makes of shadow content is Chrome's call, not ours.
-  const main = document.querySelector('main') || document.body;
+  const inMain = document.querySelector('main');
+  const main =
+    inMain && !inMain.closest('[aria-hidden="true"]') && visible(inMain)
+      ? inMain
+      : document.body;
   return {
     url: location.href,
     title: document.title,
     items,
-    excerpt: at ? '' : collapse(textOf(main), textChars),
+    excerpt: at ? '' : collapse(readable(main), textChars),
     viewport: { width: window.innerWidth, height: window.innerHeight },
     dropped: ordered.length - items.length,
   };

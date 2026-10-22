@@ -78,7 +78,9 @@ shadow roots are numbered like the page's own, and an action lands in the frame
 its element lives in; anything a script made focusable (a custom dropdown's
 choices) is listed too. The list holds at most 200 elements per frame, what is
 on screen first, and says how many more are off screen, so a compose window or
-a dialog opened over a long page is never what the cap leaves out. With a model
+a dialog opened over a long page is never what the cap leaves out. The page
+text it reads is what is on screen too: a viewer or dialog over the page marks
+what it covers out of reach, and that part is left out. With a model
 that reads images it can also click or type at a point of the picture (below),
 for what it can see but the list does not hold. **Approvals** in the Cowork panel decides whether it checks with
 you first: _Automatic_ (the default) acts without asking, _Ask Me_ raises an
