@@ -52,6 +52,14 @@ After any change to user-facing behavior, evaluate whether `e2e/coverage.json` a
 
 See `.claude/skills/e2e-coverage.md` for the full decision process.
 
+## UI terminology: "users" not "students", "agent" not "mentor"
+
+We moved from "student" to "user" and from "mentor" to "agent". This is a UI rule: everything a person reads (UI strings, all locales, toasts, errors, dialog titles) says "user(s)" and "agent(s)" — e.g. "User Models", "Edit Agent". It does NOT apply to API calls, endpoint paths, request/response fields, query params, or existing code identifiers (`mentor_id`, `useGetMentorsQuery`, `useUserIsStudent`, …) — never rename those to match the copy.
+
+## UI casing: match the screen you are extending
+
+The app has an established capitalization style per surface, and new UI must copy it — check the neighbouring labels before writing copy. Most labels a person clicks or scans (tab and dialog titles, section headings, field/toggle names, buttons, menu items) use Title Case, as in the agent settings tab: "User Models", "Search Providers", "Allow All OpenAI Models", "Save Anyway". Small joining words (a, an, the, of, to, in, on, for, and, or, with) stay lowercase unless first. Full sentences — descriptions, help text, errors, toasts, counts like "3 of 29 allowed" — stay in sentence case. Brand/model names keep their own casing (ibl.ai, GPT-4o mini). Where a surface already does it differently, follow that surface, not this default.
+
 ## The user has never coded
 
 Everything a user reads — UI strings, the Code agent's replies, errors we surface — is written for someone who has never coded: everyday words, what they get and what we need from them, never developer vocabulary (scaffold, repo, build, lint, typecheck, dependency, DNS, …) and never how something was made. For the Code agent that rule is the voice bullet of `IBLAI_INSTRUCTIONS` (`src-tauri/src/opencode_proxy.rs`), pinned by the `result-or-obstacle-only` guard; when a reply leaks jargon, extend that bullet — never a skill, and never the agent-facing text with words you would not want echoed. For the Code turn's own UI — the step list, the permission card's sentence, the working line — the text is built from ACP metadata by `describeStep` in the SDK (`@iblai/web-containers`, `src/components/chat/code-activity.tsx`), never from the reply — where the agent's own words do show (a step's short description, its task list) the step-label rule in `IBLAI_INSTRUCTIONS` keeps them plain; the OS only forwards the ACP events, so a new `sessionUpdate` kind reaches the webview only through `forwarded_update` (`opencode_acp.rs`), and a tool the describer cannot name falls back to "Finished a step" with the raw title behind the row's disclosure — extend the SDK's table rather than showing a raw title; developer-shaped Code errors map to plain sentences in the SDK's `code-error-text.ts`.

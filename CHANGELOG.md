@@ -1,5 +1,34 @@
 # Changelog
 
+## [0.176.1](https://github.com/iblai/os/compare/v0.176.0...v0.176.1) (2026-10-22)
+
+### Chores
+
+* bump @iblai/iblai-js to 2.48.0 ([32601a3](https://github.com/iblai/os/commit/32601a39bc452aad604d022f6cd54e78010aa63c))
+
+## [0.176.0](https://github.com/iblai/os/compare/v0.175.0...v0.176.0) (2026-10-22)
+
+### Features
+
+* **llm:** move in-chat model change to the LLM tab, add User Models ([0c88319](https://github.com/iblai/os/commit/0c8831963ad24df6aa0553f6f3dfba40aada1a74)), closes [iblai/iblai-platform#2675](https://github.com/iblai/iblai-platform/issues/2675)
+
+### Bug Fixes
+
+* **settings:** title-case the Reopen Last Conversation label ([ee985d7](https://github.com/iblai/os/commit/ee985d79fcf774098bec800a7e1ff821f8be5c1b))
+
+### Documentation
+
+* add UI terminology and casing rules to AGENTS.md ([87ee1c7](https://github.com/iblai/os/commit/87ee1c77c4948338531658a18f6c25aa8bc8a86a))
+
+### Tests
+
+* **e2e:** add journey 92 for User Models ([e2d3639](https://github.com/iblai/os/commit/e2d36395b3178e11f0c3e719cd37b025e2a4a0cf)), closes [iblai/iblai-platform#2675](https://github.com/iblai/iblai-platform/issues/2675)
+* **e2e:** drive the in-chat model change switch from the LLM tab ([75a7c37](https://github.com/iblai/os/commit/75a7c3762858750bd84bf9c0ec2163a76101bf01)), closes [iblai/iblai-platform#2675](https://github.com/iblai/iblai-platform/issues/2675)
+* **e2e:** journey 92 reads the mocked switch, not the landing agent's ([c502c89](https://github.com/iblai/os/commit/c502c8976c0c9c3538788e496195c266db306c2b))
+* **e2e:** let um-13 treat the open Edit Agent dialog as page-ready ([af93a09](https://github.com/iblai/os/commit/af93a098df9cdc8c6111a24ec00c9f1f82426366))
+* **e2e:** scope journey 17's create-notification dialog to its test id ([0cc1f99](https://github.com/iblai/os/commit/0cc1f99a63da3ebf75d0b40b2770ccb9e9bfa7bc))
+* **handlers:** type the dispatch-spy helper so typecheck passes ([2ad5b75](https://github.com/iblai/os/commit/2ad5b751eb8b5eab16e85c771cdc8ac2ad8674f1))
+
 ## [0.175.0](https://github.com/iblai/os/compare/v0.174.3...v0.175.0) (2026-10-21)
 
 ### Features
