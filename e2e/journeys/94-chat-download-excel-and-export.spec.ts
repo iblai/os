@@ -31,6 +31,7 @@ const PROMPTS = [
 ];
 const today = () => new Date().toISOString().slice(0, 10);
 const SESSION_GET = /\/sessions\/[^/]+\/(\?.*)?$/;
+const NEW_SESSION_POST = /\/sessions\/(\?.*)?$/;
 
 test.describe.serial('Journey 94: chat download Excel + sidebar export', () => {
   test.setTimeout(300_000);
@@ -53,12 +54,22 @@ test.describe.serial('Journey 94: chat download Excel + sidebar export', () => {
     await waitForPageReady(page);
   }
 
-  /** Reloads the agent and reopens the saved chat from the sidebar. */
-  async function reopenChat(
+  /**
+   * Opening the agent starts a fresh chat. If its POST lands after we switch
+   * to the saved chat, the app jumps to the fresh one and closes any open
+   * dialog, so wait it out (no wait if the app reused a cached chat).
+   */
+  async function openAgent(
     page: Page,
-    chatPage: ChatPage,
     sidebarPage: SidebarPage,
   ): Promise<void> {
+    const freshChat = page
+      .waitForResponse(
+        (r) =>
+          r.request().method() === 'POST' && NEW_SESSION_POST.test(r.url()),
+        { timeout: 30_000 },
+      )
+      .catch(() => undefined);
     await page.goto(chatUrl, {
       waitUntil: 'domcontentloaded',
       timeout: 60_000,
@@ -66,6 +77,16 @@ test.describe.serial('Journey 94: chat download Excel + sidebar export', () => {
     await waitForPageReady(page);
     // A cold reload can sit on the app's loading screen well past readyState.
     await sidebarPage.ensureExpanded(60_000);
+    await freshChat;
+  }
+
+  /** Reloads the agent and reopens the saved chat from the sidebar. */
+  async function reopenChat(
+    page: Page,
+    chatPage: ChatPage,
+    sidebarPage: SidebarPage,
+  ): Promise<void> {
+    await openAgent(page, sidebarPage);
     await sidebarPage.expandChatsSection();
     const row = sidebarPage.getRecentChatRowBySession(sessionId);
     await expect(row).toBeVisible({ timeout: 30_000 });
@@ -291,12 +312,7 @@ test.describe.serial('Journey 94: chat download Excel + sidebar export', () => {
     sidebarPage,
   }) => {
     await navigateToMentorApp(page);
-    await page.goto(chatUrl, {
-      waitUntil: 'domcontentloaded',
-      timeout: 60_000,
-    });
-    await waitForPageReady(page);
-    await sidebarPage.ensureExpanded(60_000);
+    await openAgent(page, sidebarPage);
     await sidebarPage.expandChatsSection();
     await expect(sidebarPage.getRecentChatRowBySession(sessionId)).toBeVisible({
       timeout: 30_000,
@@ -326,12 +342,7 @@ test.describe.serial('Journey 94: chat download Excel + sidebar export', () => {
     sidebarPage,
   }) => {
     await navigateToMentorApp(page);
-    await page.goto(chatUrl, {
-      waitUntil: 'domcontentloaded',
-      timeout: 60_000,
-    });
-    await waitForPageReady(page);
-    await sidebarPage.ensureExpanded(60_000);
+    await openAgent(page, sidebarPage);
     await sidebarPage.expandChatsSection();
     await expect(sidebarPage.getRecentChatRowBySession(sessionId)).toBeVisible({
       timeout: 30_000,
@@ -360,12 +371,7 @@ test.describe.serial('Journey 94: chat download Excel + sidebar export', () => {
     sidebarPage,
   }) => {
     await navigateToMentorApp(page);
-    await page.goto(chatUrl, {
-      waitUntil: 'domcontentloaded',
-      timeout: 60_000,
-    });
-    await waitForPageReady(page);
-    await sidebarPage.ensureExpanded(60_000);
+    await openAgent(page, sidebarPage);
     await sidebarPage.expandChatsSection();
     await expect(sidebarPage.getRecentChatRowBySession(sessionId)).toBeVisible({
       timeout: 30_000,
