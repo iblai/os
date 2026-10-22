@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, type SyntheticEvent } from 'react';
+import { useEffect, useRef, useState, type MouseEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslations } from 'next-intl';
 import { Code2, Folder, Info, Loader2, X } from 'lucide-react';
@@ -9,6 +9,7 @@ import { localModelDisplayName } from '@iblai/iblai-js/web-containers';
 import { useComposerToolPill } from '@iblai/iblai-js/web-containers/next';
 import {
   Popover,
+  PopoverAnchor,
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
@@ -560,6 +561,7 @@ export function CodingModeButton({
     };
   }, []);
   const phoneAccessRestoredRef = useRef(false);
+  const pillTriggerRef = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     if (mobile || sandboxed !== false || phoneAccessRestoredRef.current) return;
     const tenant = localStorage.getItem('tenant') || '';
@@ -1142,17 +1144,20 @@ export function CodingModeButton({
   useOfferApprovals(codeOn);
   const { showName } = useComposerToolPill(codeOn);
 
-  const dismissFromX = (
-    e: SyntheticEvent<SVGSVGElement>,
-    { refocus }: { refocus: boolean },
-  ) => {
-    e.stopPropagation();
+  const showX = codeOn || isOpen;
+  // With the popover closed the x waits for a hover (or keyboard focus), so
+  // at rest the pill reads like Cowork's; touch screens can't hover, so
+  // there it stays.
+  const xOnHover = !isOpen;
+  const revealX =
+    'group-hover:flex group-focus-within:flex [@media(hover:none)]:flex';
+  const dismissFromX = (e: MouseEvent<HTMLButtonElement>) => {
     if (codeOn) void toggle(false);
     setIsOpen(false);
-    // From the keyboard only: the x goes away with this, and focus would fall
-    // back to the page. A tap must not, or the pill's tooltip opens on focus
-    // and, on a touch screen, stays up.
-    if (refocus) e.currentTarget.closest('button')?.focus();
+    // From the keyboard only (a click with no pointer): the x goes away with
+    // this, and focus would fall back to the page. A tap must not, or the
+    // pill's tooltip opens on focus and, on a touch screen, stays up.
+    if (e.detail === 0) pillTriggerRef.current?.focus();
   };
 
   // Hidden where opencode can never be spawned: the sandboxed Mac App Store build
@@ -1163,85 +1168,99 @@ export function CodingModeButton({
   return (
     <>
       <Popover open={isOpen} onOpenChange={setIsOpen}>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <PopoverTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                type="button"
-                // Named outright: from its content the name would take in the
-                // x's own label ("Code Turn off Code").
-                aria-label={t('code')}
-                aria-busy={skillsLoading}
-                // Only from a closed popover: switching Code off in it and then
-                // tapping the pill to put it away must not turn Code back on.
-                // Only once the platform is known, too: until then a phone
-                // would take the desktop's folder choice.
-                onClick={() => {
-                  if (!isOpen && !codeOn && sandboxed === false) {
-                    void toggle(true);
-                  }
-                }}
-                className={`flex h-8 items-center gap-1.5 rounded-lg px-2 text-sm transition-all duration-200 ${
-                  active
-                    ? 'border border-[#D0E0FF] bg-[#F5F8FF] text-[#38A1E5]'
-                    : 'text-gray-600 hover:border hover:border-[#D0E0FF] hover:bg-[#F5F8FF]'
-                }`}
-              >
-                <span className={active ? 'text-[#38A1E5]' : 'text-gray-600'}>
-                  {skillsLoading ? (
-                    <Loader2
-                      data-testid="code-skills-loading"
-                      className="h-4 w-4 animate-spin"
-                    />
-                  ) : (
-                    <Code2 className="h-4 w-4" />
-                  )}
-                </span>
-                {/* Icon-only while off on narrow rows, so the pill never
-                    pushes Send off-screen; an open popover always names it. */}
-                <span
-                  className={
-                    compact
-                      ? 'hidden'
-                      : !showName && !isOpen
-                        ? 'sr-only'
-                        : active
-                          ? undefined
-                          : 'max-[520px]:hidden'
-                  }
-                >
-                  {t('code')}
-                </span>
-                {(codeOn || isOpen) && (
-                  <X
-                    role="button"
-                    tabIndex={0}
-                    aria-label={codeOn ? t('turnOffCode') : tCommon('close')}
-                    className="ml-1 h-3 w-3 cursor-pointer"
-                    // Keeps a tap from focusing the x, which would open the
-                    // pill's tooltip.
-                    onMouseDown={(e) => e.preventDefault()}
-                    onClick={(e) => dismissFromX(e, { refocus: false })}
-                    onKeyDown={(e) => {
-                      if (e.key !== 'Enter' && e.key !== ' ') return;
-                      // Also keeps the pill's own button from taking the key
-                      // as a click of its own.
-                      e.preventDefault();
-                      dismissFromX(e, { refocus: true });
+        {/* The x is the pill's sibling, not its child: the shared Button sets
+            pointer-events: none on every svg inside it, so a tap on an x
+            inside the pill reached the pill and opened the popover. */}
+        <PopoverAnchor asChild>
+          <span
+            data-testid="code-pill"
+            // The hover colours the ghost Button gave the whole pill before
+            // the x moved out of it.
+            className={`group hover:text-accent-foreground dark:hover:bg-accent/50 flex h-8 items-center rounded-lg text-sm transition-all duration-200 ${
+              active
+                ? 'hover:bg-accent border border-[#D0E0FF] bg-[#F5F8FF] text-[#38A1E5]'
+                : 'text-gray-600 hover:border hover:border-[#D0E0FF] hover:bg-[#F5F8FF]'
+            }`}
+          >
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <PopoverTrigger asChild>
+                  <Button
+                    ref={pillTriggerRef}
+                    variant="ghost"
+                    size="sm"
+                    type="button"
+                    aria-busy={skillsLoading}
+                    // Only from a closed popover: switching Code off in it and then
+                    // tapping the pill to put it away must not turn Code back on.
+                    // Only once the platform is known, too: until then a phone
+                    // would take the desktop's folder choice.
+                    onClick={() => {
+                      if (!isOpen && !codeOn && sandboxed === false) {
+                        void toggle(true);
+                      }
                     }}
-                  />
-                )}
-              </Button>
-            </PopoverTrigger>
-          </TooltipTrigger>
-          {!isOpen && (
-            <TooltipContent className="ibl-tooltip-content">
-              {t('tooltip')}
-            </TooltipContent>
-          )}
-        </Tooltip>
+                    className={`flex h-full items-center gap-1.5 rounded-lg bg-transparent pl-2 text-sm text-inherit hover:bg-transparent hover:text-inherit dark:hover:bg-transparent ${
+                      !showX
+                        ? 'pr-2'
+                        : xOnHover
+                          ? 'pr-2 group-focus-within:pr-0 group-hover:pr-0 [@media(hover:none)]:pr-0'
+                          : 'pr-0'
+                    }`}
+                  >
+                    <span
+                      className={active ? 'text-[#38A1E5]' : 'text-gray-600'}
+                    >
+                      {skillsLoading ? (
+                        <Loader2
+                          data-testid="code-skills-loading"
+                          className="h-4 w-4 animate-spin"
+                        />
+                      ) : (
+                        <Code2 className="h-4 w-4" />
+                      )}
+                    </span>
+                    {/* Icon-only while off on narrow rows, so the pill never
+                        pushes Send off-screen; an open popover always names it. */}
+                    <span
+                      className={
+                        compact
+                          ? 'hidden'
+                          : !showName && !isOpen
+                            ? 'sr-only'
+                            : active
+                              ? undefined
+                              : 'max-[520px]:hidden'
+                      }
+                    >
+                      {t('code')}
+                    </span>
+                  </Button>
+                </PopoverTrigger>
+              </TooltipTrigger>
+              {!isOpen && (
+                <TooltipContent className="ibl-tooltip-content">
+                  {t('tooltip')}
+                </TooltipContent>
+              )}
+            </Tooltip>
+            {showX && (
+              <button
+                type="button"
+                aria-label={codeOn ? t('turnOffCode') : tCommon('close')}
+                data-testid="code-pill-x"
+                className={`focus-visible:ring-ring/50 h-full cursor-pointer items-center rounded-r-lg pr-2 pl-1.5 outline-none focus-visible:ring-[3px] ${
+                  xOnHover ? `hidden ${revealX}` : 'flex'
+                }`}
+                // A tap must not focus the x; the keyboard still reaches it.
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={dismissFromX}
+              >
+                <X className="h-3 w-3 shrink-0" aria-hidden="true" />
+              </button>
+            )}
+          </span>
+        </PopoverAnchor>
         <PopoverContent
           align="start"
           collisionPadding={8}

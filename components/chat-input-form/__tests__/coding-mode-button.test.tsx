@@ -1837,6 +1837,42 @@ describe('CodingModeButton', () => {
         expect(container.querySelector('svg.lucide-x')).toBeNull();
       });
 
+      // The shared Button sets pointer-events: none on every svg inside it,
+      // so an x inside the pill sent every tap to the pill, which opened the
+      // popover instead of turning Code off.
+      it('is its own button beside the pill, never inside it', async () => {
+        localStorage.setItem('ibl_coding_mode_enabled', 'true');
+        renderButton();
+        await platformKnown();
+        const trigger = await pill();
+        const x = turnOffX()!;
+
+        expect(trigger.contains(x)).toBe(false);
+        expect(trigger.querySelector('svg.lucide-x')).toBeNull();
+        expect(screen.getByTestId('code-pill')).toContainElement(x);
+        expect(screen.getByTestId('code-pill')).toContainElement(trigger);
+      });
+
+      // At rest the pill reads like Cowork's, which has no x; touch screens
+      // can't hover, so there it stays.
+      it('waits for a hover or keyboard focus while the popover is closed, and always shows on touch screens and with the popover open', async () => {
+        localStorage.setItem('ibl_coding_mode_enabled', 'true');
+        renderButton();
+        await platformKnown();
+        expect(screen.getByTestId('code-pill')).toHaveClass('group');
+        expect(turnOffX()).toHaveClass(
+          'hidden',
+          'group-hover:flex',
+          'group-focus-within:flex',
+          '[@media(hover:none)]:flex',
+        );
+
+        await userEvent.click(await pill());
+        expect(await screen.findByRole('switch')).toBeChecked();
+        expect(turnOffX()).toHaveClass('flex');
+        expect(turnOffX()).not.toHaveClass('hidden');
+      });
+
       // Focus opens the pill's tooltip, and on a touch screen nothing closes it.
       it('turns Code off from a tap without focusing anything, so no tooltip opens', async () => {
         localStorage.setItem('ibl_coding_mode_enabled', 'true');
@@ -1845,7 +1881,8 @@ describe('CodingModeButton', () => {
         const x = turnOffX()!;
 
         expect(fireEvent.mouseDown(x)).toBe(false);
-        fireEvent.click(x);
+        // A tap or a mouse click counts clicks; only the keyboard sends 0.
+        fireEvent.click(x, { detail: 1 });
 
         await waitFor(() => expect(enabledFlag()).toBe('false'));
         expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
@@ -1858,7 +1895,8 @@ describe('CodingModeButton', () => {
         await platformKnown();
         const trigger = await pill();
         const x = turnOffX()!;
-        expect(x).toHaveAttribute('tabindex', '0');
+        expect(x.tagName).toBe('BUTTON');
+        expect(x).toHaveAttribute('type', 'button');
 
         act(() => trigger.focus());
         await userEvent.tab();
@@ -3914,8 +3952,11 @@ describe('CodingModeButton in the SDK composer’s tool row', () => {
     Array.from(trigger.querySelectorAll('span')).find(
       (span) => span.textContent === 'Code',
     )!;
+  // The x sits beside the pill's trigger, inside the same pill.
   const closeXIn = (trigger: HTMLElement) =>
-    trigger.querySelector('svg.lucide-x');
+    trigger
+      .closest('[data-testid="code-pill"]')!
+      .querySelector<HTMLButtonElement>('button:has(> svg.lucide-x)');
 
   beforeEach(() => {
     vi.clearAllMocks();
