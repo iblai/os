@@ -1,5 +1,30 @@
 # Changelog
 
+## [0.177.0](https://github.com/iblai/os/compare/v0.176.1...v0.177.0) (2026-10-22)
+
+### Features
+
+* **ext:** act by position on the picture, list on-screen elements first, picture at CSS size ([22ed461](https://github.com/iblai/os/commit/22ed461a8a6ab63907faf709a79bd64d2ae3b789))
+* **ext:** double clicks to open what one click only selects, selected state in the list ([c2bf565](https://github.com/iblai/os/commit/c2bf565ff60b74d57d4095aa563371aba4d4af83))
+
+### Bug Fixes
+
+* **ext:** badges on the picture, real clicks after an instant scroll, real clicks in same-origin iframes ([e985a04](https://github.com/iblai/os/commit/e985a04270221bf186cd34970c9e103960262490))
+* **ext:** cover check up the frame chain, offset after the retry, badges only on screen ([8911b6c](https://github.com/iblai/os/commit/8911b6c35309d7d9bdc428aa909af7319102928d))
+* **ext:** page text keeps display: contents blocks and leaves a block's hidden content out ([c96816b](https://github.com/iblai/os/commit/c96816bd248d47ab55953fb27d6c7bd5d2be776b))
+* **ext:** read the page text that is on screen, not what a modal covers ([36ce104](https://github.com/iblai/os/commit/36ce104cffaaf567049798bf3a556689beaa8db0))
+* **tests:** type the dispatch spy and cast the injection via unknown so typecheck passes ([f600290](https://github.com/iblai/os/commit/f6002909ce8eb92b6ee3dd899e25515e682d77e6))
+
+### Chores
+
+* **ext:** bump Chrome extension to 1.1.8 ([b50a43b](https://github.com/iblai/os/commit/b50a43bc7a8ea093903808026ecfd49f103f0262))
+
+## [0.176.1](https://github.com/iblai/os/compare/v0.176.0...v0.176.1) (2026-10-22)
+
+### Chores
+
+* bump @iblai/iblai-js to 2.48.0 ([32601a3](https://github.com/iblai/os/commit/32601a39bc452aad604d022f6cd54e78010aa63c))
+
 ## [0.176.0](https://github.com/iblai/os/compare/v0.175.0...v0.176.0) (2026-10-22)
 
 ### Features
