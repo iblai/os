@@ -6,7 +6,8 @@
 const PROTOCOL_VERSION = '1.3';
 
 export interface RealInput {
-  click(x: number, y: number): Promise<void>;
+  /** `count` 2 is a double click: each press carries its own click count. */
+  click(x: number, y: number, count?: number): Promise<void>;
   insertText(text: string): Promise<void>;
   pressEnter(): Promise<void>;
 }
@@ -38,12 +39,12 @@ export function onDetach(tabId: number, listener: () => void): () => void {
 
 export function realInput(tabId: number): RealInput {
   // Viewport CSS pixels, which is what `locate` measures.
-  const mouse = (type: string, x: number, y: number, pressing = false) =>
+  const mouse = (type: string, x: number, y: number, clickCount = 0) =>
     send(tabId, 'Input.dispatchMouseEvent', {
       type,
       x,
       y,
-      ...(pressing ? { button: 'left', clickCount: 1 } : {}),
+      ...(clickCount ? { button: 'left', clickCount } : {}),
     });
   const enter = (type: 'keyDown' | 'keyUp') =>
     send(tabId, 'Input.dispatchKeyEvent', {
@@ -54,10 +55,12 @@ export function realInput(tabId: number): RealInput {
       text: '\r',
     });
   return {
-    async click(x, y) {
+    async click(x, y, count = 1) {
       await mouse('mouseMoved', x, y);
-      await mouse('mousePressed', x, y, true);
-      await mouse('mouseReleased', x, y, true);
+      for (let i = 1; i <= count; i++) {
+        await mouse('mousePressed', x, y, i);
+        await mouse('mouseReleased', x, y, i);
+      }
     },
     async insertText(text) {
       await send(tabId, 'Input.insertText', { text });

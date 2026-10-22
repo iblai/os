@@ -5,6 +5,9 @@
   "actionClick": {
     "message": "Click"
   },
+  "actionDoubleClick": {
+    "message": "Double-click"
+  },
   "actionNavigate": {
     "message": "Open"
   },

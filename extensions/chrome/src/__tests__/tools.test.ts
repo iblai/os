@@ -199,6 +199,31 @@ describe('createBrowserTools', () => {
     });
   });
 
+  // A file in a list opens on a double click: the page's own way without
+  // real input, named as one in the result, the log and the confirmation.
+  it('double-clicks when asked, says so, and logs it as one', async () => {
+    const onDouble = vi.fn();
+    document.querySelector('a')!.addEventListener('dblclick', onDouble);
+    const result = await run('click', { element: 5, double: true });
+    expect(
+      result.startsWith('Double-clicked [5] link "Forgot password?".\n\n'),
+    ).toBe(true);
+    expect(actCalls()[0][0]).toMatchObject({
+      args: [5, 'dblclick', '', false],
+    });
+    expect(onDouble).toHaveBeenCalledTimes(1);
+    expect(ctx.log).toHaveBeenLastCalledWith({
+      tool: 'double_click',
+      target: '[5] link "Forgot password?"',
+      ok: true,
+    });
+    await run('click', { element: 4, double: true });
+    expect(ctx.confirm).toHaveBeenLastCalledWith(
+      'Double-click [4] button "Continue" on "Billing – Acme"',
+      undefined,
+    );
+  });
+
   it('asks before a submit button and before a risky name, passing the abort signal', async () => {
     const controller = new AbortController();
     await run(
@@ -774,9 +799,27 @@ describe('real input', () => {
     });
     const result = await run('click', { element: 5 });
     expect(result).toMatch(/^Clicked \[5\] link "Forgot password\?"\./);
-    expect(input.click).toHaveBeenCalledWith(60, 40);
+    expect(input.click).toHaveBeenCalledWith(60, 40, 1);
     expect(actions()).toEqual(['locate']);
     expect(settle).toHaveBeenLastCalledWith(7, { frameId: 0 });
+  });
+
+  it('double-clicks for real with two counted presses', async () => {
+    const input = real();
+    await rebuild({ real: input });
+    const link = document.querySelector('a')!;
+    Object.defineProperty(link, 'getBoundingClientRect', {
+      configurable: true,
+      value: () => ({ left: 10, top: 20, width: 100, height: 40 }),
+    });
+    Object.defineProperty(document, 'elementFromPoint', {
+      configurable: true,
+      value: () => link,
+    });
+    const result = await run('click', { element: 5, double: true });
+    expect(result).toMatch(/^Double-clicked \[5\] link "Forgot password\?"\./);
+    expect(input.click).toHaveBeenCalledWith(60, 40, 2);
+    expect(actions()).toEqual(['locate']);
   });
 
   it('types for real: the field is prepared in the page, the text and Enter go through the protocol', async () => {
@@ -869,7 +912,7 @@ describe('real input', () => {
     expect(await run('click', { element: 9 })).toMatch(
       /^Clicked \[9\] textbox "Message"\./,
     );
-    expect(input.click).toHaveBeenCalledWith(160, 90);
+    expect(input.click).toHaveBeenCalledWith(160, 90, 1);
     expect(await run('type', { element: 9, text: 'hi' })).toMatch(
       /^Typed into \[9\]/,
     );
@@ -951,7 +994,7 @@ describe('acting on a point of the picture', () => {
     expect(result).toMatch(
       /^Clicked link "Forgot password\?" at \(60, 40\)\.\n\n/,
     );
-    expect(input.click).toHaveBeenCalledWith(60, 40);
+    expect(input.click).toHaveBeenCalledWith(60, 40, 1);
     expect(injected()[0]).toEqual([
       'snapshotPage',
       200,
@@ -972,6 +1015,22 @@ describe('acting on a point of the picture', () => {
     });
   });
 
+  it('double-clicks a point when asked, and logs it as one', async () => {
+    const input = real();
+    await rebuild({ withPicture: true, real: input });
+    hitsAt({ '60,40': document.querySelector('a') });
+    const result = await run('click_at', { x: 60, y: 40, double: true });
+    expect(result).toMatch(
+      /^Double-clicked link "Forgot password\?" at \(60, 40\)\.\n\n/,
+    );
+    expect(input.click).toHaveBeenCalledWith(60, 40, 2);
+    expect(ctx.log).toHaveBeenLastCalledWith({
+      tool: 'double_click',
+      target: 'link "Forgot password?" at (60, 40)',
+      ok: true,
+    });
+  });
+
   // The model's x and y are the picture's pixels; the click takes CSS px.
   it('maps the point through the picture scale and refuses one off the picture', async () => {
     const input = real();
@@ -984,7 +1043,7 @@ describe('acting on a point of the picture', () => {
     expect(await run('click_at', { x: 30, y: 20 })).toMatch(
       /^Clicked link "Forgot password\?" at \(30, 20\)\./,
     );
-    expect(input.click).toHaveBeenCalledWith(60, 40);
+    expect(input.click).toHaveBeenCalledWith(60, 40, 1);
     expect(await run('click_at', { x: 5000, y: 10 })).toBe(
       'Error: That point is outside the picture.',
     );

@@ -254,6 +254,7 @@ export function snapshotPage(
     const expanded = el.getAttribute('aria-expanded');
     if (expanded === 'true') parts.push('expanded');
     else if (expanded === 'false') parts.push('collapsed');
+    if (el.getAttribute('aria-selected') === 'true') parts.push('selected');
     if (
       (el as HTMLButtonElement).disabled ||
       el.getAttribute('aria-disabled') === 'true'
@@ -482,12 +483,9 @@ export function actOnPage(
     };
   }
 
-  if (action === 'click') {
+  if (action === 'click' || action === 'dblclick') {
     if (typeof html.focus === 'function') html.focus();
-    // Widgets that act on the press rather than the click (menus, drag
-    // handles) see the sequence a mouse sends; click() stays last so links
-    // navigate and submit buttons submit natively.
-    for (const type of ['pointerdown', 'mousedown', 'pointerup', 'mouseup']) {
+    const mouse = (type: string, detail: number) => {
       const Ctor =
         type.startsWith('pointer') && typeof PointerEvent === 'function'
           ? PointerEvent
@@ -497,14 +495,24 @@ export function actOnPage(
           bubbles: true,
           cancelable: true,
           composed: true,
+          detail,
           clientX: centre.x,
           clientY: centre.y,
           button: 0,
           buttons: type.endsWith('down') ? 1 : 0,
         }),
       );
+    };
+    // Widgets that act on the press rather than the click (menus, drag
+    // handles) see the sequence a mouse sends; click() stays last so links
+    // navigate and submit buttons submit natively.
+    const clicks = action === 'dblclick' ? 2 : 1;
+    for (let detail = 1; detail <= clicks; detail++) {
+      for (const type of ['pointerdown', 'mousedown', 'pointerup', 'mouseup'])
+        mouse(type, detail);
+      html.click();
     }
-    html.click();
+    if (clicks === 2) mouse('dblclick', 2);
     return { ok: true };
   }
 

@@ -70,7 +70,8 @@ for, and there is no consent dialog to dismiss: Chrome asked at install time,
 and the panel states what Cowork does to the tab under its own switch. Switch it
 off and that is remembered; the pill's panel is also where you switch it back on.
 
-What the agent can do: click, type (never into password or payment fields — it
+What the agent can do: click (or double-click, to open what one click only
+selects: a file in a list), type (never into password or payment fields — it
 asks you to type those), select, scroll, open a URL, go back, read the page
 again, wait. Controls inside iframes (Gmail's Chat, an embedded editor) and open
 shadow roots are numbered like the page's own, and an action lands in the frame
@@ -98,8 +99,8 @@ that one picture with the next model call, the latest only, never kept in the
 conversation. A point on it is a point of the tab: `click_at` and `type_at`
 take x and y on the picture, look at what is there (the same confirmations
 apply, by that element's name, and the same refusal to type into a password or
-payment field, by the field that takes the focus) and click or type through
-the DevTools protocol — which reaches a cross-origin iframe too. An element
+payment field, by the field that takes the focus) and click (twice, if asked)
+or type through the DevTools protocol — which reaches a cross-origin iframe too. An element
 that is not on screen, inside a cross-origin iframe or scrolled out of view,
 stays in the list but gets no number on the picture. No picture is taken while
 the tab is not in front or while a password or payment field is on the page.

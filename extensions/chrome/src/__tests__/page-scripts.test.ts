@@ -253,12 +253,13 @@ describe('snapshotPage', () => {
     ]);
   });
 
-  it('reports switches, disabled controls and expanded state', () => {
+  it('reports switches, disabled controls, expanded and selected state', () => {
     document.body.innerHTML = `
       <div role="switch" aria-checked="true">Dark</div>
       <button disabled>Save</button>
       <button aria-disabled="true">Later</button>
       <button aria-expanded="true">More</button>
+      <div role="row" aria-selected="true" tabindex="0">Report.pdf</div>
       <div contenteditable="true">Draft text</div>`;
     const states = snapshotPage(200, 100).items.map((item) => item.state);
     expect(states).toEqual([
@@ -266,6 +267,7 @@ describe('snapshotPage', () => {
       'disabled',
       'disabled',
       'expanded',
+      'selected',
       'value: "Draft text"',
     ]);
   });
@@ -325,6 +327,27 @@ describe('actOnPage', () => {
       'pointerup:mouse',
       'mouseup:mouse',
       'click:mouse',
+    ]);
+  });
+
+  // A file in a list opens on the second click, which the page counts.
+  it('double-clicks: the sequence twice, counted, then dblclick', () => {
+    snapshotPage(200, 100);
+    const seen: string[] = [];
+    const button = document.querySelector('button[type=submit]')!;
+    for (const type of ['mousedown', 'mouseup', 'click', 'dblclick'])
+      button.addEventListener(type, (e) => {
+        seen.push(`${type}:${(e as MouseEvent).detail}`);
+      });
+    expect(actOnPage(4, 'dblclick', '', false)).toEqual({ ok: true });
+    expect(seen).toEqual([
+      'mousedown:1',
+      'mouseup:1',
+      'click:0',
+      'mousedown:2',
+      'mouseup:2',
+      'click:0',
+      'dblclick:2',
     ]);
   });
 

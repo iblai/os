@@ -124,6 +124,12 @@ const ELEMENT = {
   description: 'Element number from the latest snapshot',
 } as const;
 
+const DOUBLE = {
+  type: 'boolean',
+  description:
+    'Click twice: opens what one click only selects, like a file in a list or a cell to edit',
+} as const;
+
 /**
  * Merges the frames' snapshots into the one numbered list the model reads.
  * Frame 0 (the page itself) comes first, then subframes by id — Chrome returns
@@ -356,20 +362,23 @@ export function createBrowserTools(ctx: BrowserToolsContext): BrowserTools {
   const tools: ToolSet = {
     click: tool({
       description: 'Click an element from the latest snapshot.',
-      inputSchema: jsonSchema<{ element: number }>({
+      inputSchema: jsonSchema<{ element: number; double?: boolean }>({
         type: 'object',
-        properties: { element: ELEMENT },
+        properties: { element: ELEMENT, double: DOUBLE },
         required: ['element'],
         additionalProperties: false,
       }),
-      execute: ({ element }, { abortSignal }) => {
+      execute: ({ element, double }, { abortSignal }) => {
+        const twice = double === true;
+        const name = twice ? 'double_click' : 'click';
         const n = asElement(element);
-        if (n === null) return badElement('click');
+        if (n === null) return badElement(name);
         const target = describeItem(n, item(n));
+        const verb = twice ? 'Double-click' : 'Click';
         return perform({
-          tool: 'click',
+          tool: name,
           target,
-          outcome: `Clicked ${target}.`,
+          outcome: `${verb}ed ${target}.`,
           element: n,
           // Trusted input lands by tab coordinates, which a cross-origin frame
           // cannot give, and on whatever is at the point.
@@ -378,7 +387,7 @@ export function createBrowserTools(ctx: BrowserToolsContext): BrowserTools {
               inject(
                 ctx.tabId,
                 actOnPage,
-                [at.n, 'click', '', false],
+                [at.n, twice ? 'dblclick' : 'click', '', false],
                 at.frameId,
               );
             if (!ctx.real) return scripted();
@@ -390,7 +399,7 @@ export function createBrowserTools(ctx: BrowserToolsContext): BrowserTools {
             );
             if (!found.ok) return found;
             if (found.top && !found.covered) {
-              await ctx.real.click(found.x ?? 0, found.y ?? 0);
+              await ctx.real.click(found.x ?? 0, found.y ?? 0, twice ? 2 : 1);
               return { ok: true };
             }
             const result = await scripted();
@@ -399,7 +408,7 @@ export function createBrowserTools(ctx: BrowserToolsContext): BrowserTools {
               : result;
           },
           confirmText: needsConfirm('click', item(n))
-            ? `Click ${target} on "${last?.title ?? ''}"`
+            ? `${verb} ${target} on "${last?.title ?? ''}"`
             : undefined,
           signal: abortSignal,
         });
@@ -670,30 +679,33 @@ export function createBrowserTools(ctx: BrowserToolsContext): BrowserTools {
     tools.click_at = tool({
       description:
         'Click a point of the picture of the tab, given as x and y pixels on the picture: for something you can see but that is not in the list.',
-      inputSchema: jsonSchema<{ x: number; y: number }>({
+      inputSchema: jsonSchema<{ x: number; y: number; double?: boolean }>({
         type: 'object',
-        properties: { x: PIXEL, y: PIXEL },
+        properties: { x: PIXEL, y: PIXEL, double: DOUBLE },
         required: ['x', 'y'],
         additionalProperties: false,
       }),
-      execute: ({ x, y }, { abortSignal }) => {
+      execute: ({ x, y, double }, { abortSignal }) => {
+        const twice = double === true;
+        const name = twice ? 'double_click' : 'click';
+        const verb = twice ? 'Double-click' : 'Click';
         const point = pointOf(x, y);
-        if (typeof point === 'string') return badPoint('click', point);
+        if (typeof point === 'string') return badPoint(name, point);
         const p: Perform = {
-          tool: 'click',
+          tool: name,
           target: describeAt(undefined, x, y),
           outcome: '',
           // Looked at before the confirmation, which needs the name.
           confirmText: async () => {
             const hit = await atPoint(point);
             p.target = describeAt(hit, x, y);
-            p.outcome = `Clicked ${p.target}.`;
+            p.outcome = `${verb}ed ${p.target}.`;
             return needsConfirm('click', hit)
-              ? `Click ${p.target} on "${last?.title ?? ''}"`
+              ? `${verb} ${p.target} on "${last?.title ?? ''}"`
               : undefined;
           },
           step: async () => {
-            await real.click(point.x, point.y);
+            await real.click(point.x, point.y, twice ? 2 : 1);
             return { ok: true };
           },
           signal: abortSignal,

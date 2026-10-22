@@ -11,6 +11,13 @@ describe('logLine', () => {
     expect(
       logLine({ tool: 'click', target: '[1] button "Pay"', ok: true }),
     ).toBe('Click [1] button "Pay"');
+    expect(
+      logLine({
+        tool: 'double_click',
+        target: '[2] row "Report.pdf"',
+        ok: true,
+      }),
+    ).toBe('Double-click [2] row "Report.pdf"');
     expect(logLine({ tool: 'read_page', target: '', ok: true })).toBe(
       'Read page',
     );
