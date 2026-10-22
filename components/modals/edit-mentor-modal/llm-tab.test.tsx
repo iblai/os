@@ -12,6 +12,8 @@ import { MENTOR_VISIBILITY } from '@/lib/constants';
 const mockUseParams = vi.fn();
 const mockGetMentorId = vi.fn();
 const mockUseUsername = vi.fn();
+const mockUseIsAdmin = vi.fn();
+const mockUseUserIsStudent = vi.fn();
 const mockEnableRBAC = vi.fn();
 const mockExecuteWithTrialCheck = vi.fn();
 const mockRbacPermissions = { mentors: { '/x/': { read: true } } };
@@ -36,6 +38,8 @@ vi.mock('@/hooks/user-navigate', () => ({
 
 vi.mock('@/hooks/use-user', () => ({
   useUsername: () => mockUseUsername(),
+  useIsAdmin: () => mockUseIsAdmin(),
+  useUserIsStudent: () => mockUseUserIsStudent(),
 }));
 
 vi.mock('@/hooks/user-user-actions', () => ({
@@ -98,6 +102,8 @@ describe('LLMTab', () => {
     mockGetMentorId.mockReturnValue(null);
     mockUseUsername.mockReturnValue('jane');
     mockEnableRBAC.mockReturnValue(false);
+    mockUseIsAdmin.mockReturnValue(false);
+    mockUseUserIsStudent.mockReturnValue(true);
   });
 
   afterEach(() => cleanup());
@@ -129,6 +135,55 @@ describe('LLMTab', () => {
       const fn = vi.fn();
       (providerValue().executeGatedAction as (f: () => unknown) => unknown)(fn);
       expect(mockExecuteWithTrialCheck).toHaveBeenCalledWith(fn);
+    });
+
+    it('passes the action result through when the paywall lets it run', async () => {
+      mockExecuteWithTrialCheck.mockReturnValueOnce(Promise.resolve('saved'));
+      render(<LLMTab />);
+      const gate = providerValue().executeGatedAction as (
+        f: () => unknown,
+      ) => unknown;
+      await expect(gate(vi.fn())).resolves.toBe('saved');
+    });
+
+    it('never settles when the paywall blocks the action, so no success toast fires', async () => {
+      mockExecuteWithTrialCheck.mockReturnValueOnce(null);
+      render(<LLMTab />);
+      const gate = providerValue().executeGatedAction as (
+        f: () => unknown,
+      ) => unknown;
+      const settled = vi.fn();
+      Promise.resolve(gate(vi.fn())).then(settled, settled);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(settled).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Users Models button (isTenantAdmin)', () => {
+    it('is on for a tenant admin in Admin mode', () => {
+      mockUseIsAdmin.mockReturnValue(true);
+      mockUseUserIsStudent.mockReturnValue(false);
+      render(<LLMTab />);
+      expect(tabProps().isTenantAdmin).toBe(true);
+    });
+
+    it('is off for a non-admin', () => {
+      mockUseUserIsStudent.mockReturnValue(false);
+      render(<LLMTab />);
+      expect(tabProps().isTenantAdmin).toBe(false);
+    });
+
+    it('is off for an admin browsing in User mode', () => {
+      mockUseIsAdmin.mockReturnValue(true);
+      render(<LLMTab />);
+      expect(tabProps().isTenantAdmin).toBe(false);
+    });
+
+    it('is off in the nav-bar dialog (no configuration header)', () => {
+      mockUseIsAdmin.mockReturnValue(true);
+      mockUseUserIsStudent.mockReturnValue(false);
+      render(<LLMTab showConfigurationHeader={false} />);
+      expect(tabProps().isTenantAdmin).toBe(false);
     });
   });
 
@@ -191,6 +246,12 @@ describe('LLMTab', () => {
       expect(l.header.title).toBe('llmConfiguration');
       expect(l.header.description).toBe('configureLanguageModelSettings');
       expect(l.infoBox).toBe('infoBox');
+      expect(l.inChatModelChange).toEqual({
+        label: 'inChatModelChangeLabel',
+        description: 'inChatModelChangeDescription',
+        tooltip: 'inChatModelChangeTooltip',
+        tooltipAriaLabel: 'inChatModelChangeTooltipAriaLabel',
+      });
       expect(l.search.placeholder).toBe('searchProviders');
       expect(l.toasts.updateSuccess).toBe('llmUpdatedSuccessfully');
       expect(l.toasts.updateError).toBe('failedToUpdateLlm');
@@ -293,6 +354,10 @@ describe('LLMTab', () => {
         'configureLanguageModelSettings',
         'searchProviders',
         'providerLogoAlt',
+        'inChatModelChangeLabel',
+        'inChatModelChangeDescription',
+        'inChatModelChangeTooltip',
+        'inChatModelChangeTooltipAriaLabel',
       ];
       const modalKeys = [
         'dialogDescription',

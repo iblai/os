@@ -19,8 +19,6 @@ export class SettingsTab {
   readonly copyMentorButton: Locator;
   readonly chatAccessCombobox: Locator;
   readonly verboseReasoningToggle: Locator;
-  /** Capabilities sub-tab: "Allow in-chat model change" (#2633). */
-  readonly inChatModelChangeToggle: Locator;
   /** Capabilities sub-tab: "Reopen last conversation" (#2629), `show_last_conversation`. */
   readonly showLastConversationToggle: Locator;
   readonly enhanceDocumentRetrievalToggle: Locator;
@@ -141,9 +139,6 @@ export class SettingsTab {
     // depending on current state.
     this.verboseReasoningToggle = dialog.getByRole('switch', {
       name: /^Enable Verbose Reasoning /i,
-    });
-    this.inChatModelChangeToggle = dialog.getByRole('switch', {
-      name: /^Allow in-chat model change (enabled|disabled)$/i,
     });
     this.showLastConversationToggle = dialog.getByTestId(
       'settings-show-last-conversation-switch',
@@ -503,42 +498,6 @@ export class SettingsTab {
       url: request.url(),
       ok: !!response && response.ok(),
     };
-  }
-
-  /**
-   * Sets "Allow in-chat model change" and saves, returning the settings
-   * request's body, or `null` when the toggle was already in that state.
-   */
-  async setInChatModelChange(target: boolean): Promise<string | null> {
-    await this.selectSubTab('Capabilities');
-    await expect(this.inChatModelChangeToggle).toBeVisible({
-      timeout: 10_000,
-    });
-    const isChecked =
-      (await this.inChatModelChangeToggle.getAttribute('aria-checked')) ===
-      'true';
-    if (isChecked === target) return null;
-    await this.inChatModelChangeToggle.click();
-    await expect(this.inChatModelChangeToggle).toHaveAttribute(
-      'aria-checked',
-      String(target),
-      { timeout: 10_000 },
-    );
-    await expect(this.saveButton).toBeEnabled({ timeout: 10_000 });
-    const [request] = await Promise.all([
-      this.page.waitForRequest(
-        (req) =>
-          ['PUT', 'PATCH'].includes(req.method()) &&
-          (req.postData() ?? '').includes('enable_in_chat_llm_change'),
-        { timeout: 30_000 },
-      ),
-      this.saveButton.click(),
-    ]);
-    await expect(
-      this.page.getByText(/Agent updated successfully/i).first(),
-    ).toBeVisible({ timeout: 30_000 });
-    await this.page.waitForTimeout(500);
-    return request.postData() ?? '';
   }
 
   /**

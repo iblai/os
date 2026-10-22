@@ -1,5 +1,60 @@
 # Changelog
 
+## [0.176.0](https://github.com/iblai/os/compare/v0.175.0...v0.176.0) (2026-10-22)
+
+### Features
+
+* **llm:** move in-chat model change to the LLM tab, add User Models ([0c88319](https://github.com/iblai/os/commit/0c8831963ad24df6aa0553f6f3dfba40aada1a74)), closes [iblai/iblai-platform#2675](https://github.com/iblai/iblai-platform/issues/2675)
+
+### Bug Fixes
+
+* **settings:** title-case the Reopen Last Conversation label ([ee985d7](https://github.com/iblai/os/commit/ee985d79fcf774098bec800a7e1ff821f8be5c1b))
+
+### Documentation
+
+* add UI terminology and casing rules to AGENTS.md ([87ee1c7](https://github.com/iblai/os/commit/87ee1c77c4948338531658a18f6c25aa8bc8a86a))
+
+### Tests
+
+* **e2e:** add journey 92 for User Models ([e2d3639](https://github.com/iblai/os/commit/e2d36395b3178e11f0c3e719cd37b025e2a4a0cf)), closes [iblai/iblai-platform#2675](https://github.com/iblai/iblai-platform/issues/2675)
+* **e2e:** drive the in-chat model change switch from the LLM tab ([75a7c37](https://github.com/iblai/os/commit/75a7c3762858750bd84bf9c0ec2163a76101bf01)), closes [iblai/iblai-platform#2675](https://github.com/iblai/iblai-platform/issues/2675)
+* **e2e:** journey 92 reads the mocked switch, not the landing agent's ([c502c89](https://github.com/iblai/os/commit/c502c8976c0c9c3538788e496195c266db306c2b))
+* **e2e:** let um-13 treat the open Edit Agent dialog as page-ready ([af93a09](https://github.com/iblai/os/commit/af93a098df9cdc8c6111a24ec00c9f1f82426366))
+* **e2e:** scope journey 17's create-notification dialog to its test id ([0cc1f99](https://github.com/iblai/os/commit/0cc1f99a63da3ebf75d0b40b2770ccb9e9bfa7bc))
+* **handlers:** type the dispatch-spy helper so typecheck passes ([2ad5b75](https://github.com/iblai/os/commit/2ad5b751eb8b5eab16e85c771cdc8ac2ad8674f1))
+
+## [0.175.0](https://github.com/iblai/os/compare/v0.174.3...v0.175.0) (2026-10-21)
+
+### Features
+
+* **ext:** real clicks, a picture of the tab, focusable widgets, narration rows and a cap note ([47c19df](https://github.com/iblai/os/commit/47c19df806131e1df1466ce79b96bff691ea8660))
+
+### Chores
+
+* **ext:** bump Chrome extension to 1.1.7 ([5aefcf5](https://github.com/iblai/os/commit/5aefcf58e400e2ad83fc8237b0d456b0af6ed96f))
+
+## [0.174.3](https://github.com/iblai/os/compare/v0.174.2...v0.174.3) (2026-10-21)
+
+### Chores
+
+* iblai-js bump 2.47.0 ([6b0e6f9](https://github.com/iblai/os/commit/6b0e6f9cd8dd542e19da4abb0558edfcc2cf50fe))
+
+## [0.174.2](https://github.com/iblai/os/compare/v0.174.1...v0.174.2) (2026-10-21)
+
+### Bug Fixes
+
+* follow the in-chat model toggle to the LLM tab after the iblai-js 2.45.1 bump ([f457bfe](https://github.com/iblai/os/commit/f457bfe627eb340a177db429bff66e4ff40167c2))
+* **llm-tab:** no false success toast when the paywall blocks the in-chat toggle ([b9c4f58](https://github.com/iblai/os/commit/b9c4f588a77e054323953cabf31ae8c4b20a3563))
+
+### Chores
+
+* iblai-js bump to 2.45.1 ([60132a9](https://github.com/iblai/os/commit/60132a980c0309676939476759ba8eacd5a6774b))
+* iblai-js bump to 2.46.0 ([f70d2c7](https://github.com/iblai/os/commit/f70d2c7ac3fa809eb55680eb9041b502dc81325f))
+
+### Tests
+
+* expect the delayed blob URL revoke from web-containers 1.49 ([12c2fa6](https://github.com/iblai/os/commit/12c2fa6735674d2f1eed3dcab94b29872516c657))
+
 ## [0.174.1](https://github.com/iblai/os/compare/v0.174.0...v0.174.1) (2026-10-20)
 
 ### Bug Fixes
