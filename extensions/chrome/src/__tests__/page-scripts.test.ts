@@ -202,6 +202,47 @@ describe('snapshotPage', () => {
     expect(snapshotPage(200, 300).excerpt).toBe('Folder list.');
   });
 
+  // Chrome's checkVisibility() is false for display: contents (no box of its
+  // own), which read a whole app root, or a <main>, as hidden.
+  it('reads a display: contents block that checkVisibility calls hidden', () => {
+    document.body.innerHTML = `
+      <header>Header</header>
+      <main style="display: contents"><p>Main text.</p></main>`;
+    const hidden = { configurable: true, value: () => false };
+    Object.defineProperty(
+      document.querySelector('main')!,
+      'checkVisibility',
+      hidden,
+    );
+    expect(snapshotPage(200, 300).excerpt).toBe('Main text.');
+    document.body.innerHTML = `<div style="display: contents"><p>Root text.</p></div>`;
+    Object.defineProperty(
+      document.querySelector('div')!,
+      'checkVisibility',
+      hidden,
+    );
+    expect(snapshotPage(200, 300).excerpt).toBe('Root text.');
+  });
+
+  // Chrome's innerText of a block holding only hidden content is empty, and
+  // the textContent fallback read that hidden content as the page.
+  it('leaves out what a block does not render', () => {
+    document.body.innerHTML = `
+      <p>Real text.</p>
+      <div><div hidden>Hidden dialog.</div></div>
+      <div>Shown.</div>`;
+    const [, hiddenOnly, shown] = Array.from(document.body.children);
+    Object.defineProperty(hiddenOnly, 'innerText', {
+      configurable: true,
+      value: '',
+    });
+    Object.defineProperty(shown, 'innerText', {
+      configurable: true,
+      value: 'Shown.',
+    });
+    expect(snapshotPage(200, 300).excerpt).toBe('Real text. Shown.');
+  });
+
   it('caps the number of items and the text excerpt', () => {
     const snapshot = snapshotPage(3, 12);
     expect(snapshot.items).toHaveLength(3);

@@ -365,6 +365,15 @@ export function snapshotPage(
 
   // A page behind a modal keeps its layout and its innerText, and only
   // aria-hidden says it is out of reach, so the text skips those blocks too.
+  // A block with no box of its own (display: contents) is still on screen.
+  const onScreen = (el: Element): boolean =>
+    visible(el) || getComputedStyle(el).display === 'contents';
+  // Rendered text only: a block holding nothing but hidden content has an
+  // empty innerText, and textContent would read that hidden content back.
+  const rendered = (el: Element): string => {
+    const text = (el as HTMLElement).innerText;
+    return typeof text === 'string' ? text : el.textContent || '';
+  };
   const readable = (root: Element): string =>
     Array.from(root.childNodes)
       .map((node) => {
@@ -372,15 +381,15 @@ export function snapshotPage(
         const el = node as Element;
         return el.nodeType === Node.ELEMENT_NODE &&
           el.getAttribute('aria-hidden') !== 'true' &&
-          visible(el)
-          ? textOf(el)
+          onScreen(el)
+          ? rendered(el)
           : '';
       })
       .join(' ');
   // What innerText makes of shadow content is Chrome's call, not ours.
   const inMain = document.querySelector('main');
   const main =
-    inMain && !inMain.closest('[aria-hidden="true"]') && visible(inMain)
+    inMain && !inMain.closest('[aria-hidden="true"]') && onScreen(inMain)
       ? inMain
       : document.body;
   return {
