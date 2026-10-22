@@ -32,6 +32,8 @@ export interface FrameSnapshot {
   excerpt: string;
   /** The frame's viewport in CSS px; the page's is what the picture shows. */
   viewport: { width: number; height: number };
+  /** Elements the cap left out; what is on screen is listed first, so these are off it. */
+  dropped?: number;
 }
 
 export interface ActResult {
@@ -70,10 +72,15 @@ export function extractPageContent(): {
   };
 }
 
+/**
+ * The frame's elements, numbered from 1 — or, given `at` (viewport CSS px),
+ * just the element at that point as item 0, leaving the frame's numbers alone.
+ */
 export function snapshotPage(
   maxItems: number,
   textChars: number,
   secretTokens: string[] = [],
+  at?: { x: number; y: number },
 ): FrameSnapshot {
   const SELECTOR = [
     'a[href]',
@@ -189,7 +196,7 @@ export function snapshotPage(
     }
     if (tag === 'textarea' || el.getAttribute('contenteditable') === 'true')
       return 'textbox';
-    return el.hasAttribute('tabindex') ? 'focusable' : 'textbox';
+    return el.hasAttribute('tabindex') ? 'focusable' : tag;
   };
   const isSubmit = (el: Element): boolean => {
     if (el instanceof HTMLInputElement)
@@ -268,28 +275,71 @@ export function snapshotPage(
       if (el.shadowRoot) collect(el.shadowRoot, out);
     }
   };
+  // The element at a point of the viewport, through open shadow roots and
+  // same-origin iframes; a cross-origin frame is as deep as this document sees.
+  const elementAt = (x: number, y: number): Element | null => {
+    if (typeof document.elementFromPoint !== 'function') return null;
+    let el = document.elementFromPoint(x, y);
+    for (;;) {
+      const inner = el?.shadowRoot?.elementFromPoint(x, y);
+      if (inner && inner !== el) {
+        el = inner;
+        continue;
+      }
+      if (!el || el.tagName !== 'IFRAME') return el;
+      const child = (el as HTMLIFrameElement).contentDocument;
+      if (!child) return el;
+      const box = el.getBoundingClientRect();
+      x -= box.left + (el as HTMLElement).clientLeft;
+      y -= box.top + (el as HTMLElement).clientTop;
+      el = child.elementFromPoint(x, y);
+    }
+  };
   const candidates: Element[] = [];
-  collect(document, candidates);
+  if (at) {
+    const hit = elementAt(at.x, at.y);
+    if (hit) candidates.push(hit.closest(SELECTOR) ?? hit);
+  } else {
+    collect(document, candidates);
+  }
+
+  const usable = candidates.filter(
+    (el) =>
+      !(el instanceof HTMLInputElement && el.type === 'hidden') &&
+      visible(el) &&
+      !el.closest('[aria-hidden="true"]'),
+  );
+  const boxes = new Map(
+    usable.map((el) => [el, el.getBoundingClientRect()] as const),
+  );
+  // On this frame's screen: the number is drawn at the tab position, and an
+  // element scrolled out of the frame would put it on whatever shows there.
+  const shown = (el: Element): boolean => {
+    const box = boxes.get(el)!;
+    return (
+      box.left + box.width >= 0 &&
+      box.top + box.height >= 0 &&
+      box.left <= window.innerWidth &&
+      box.top <= window.innerHeight
+    );
+  };
+  // What is on screen comes first, so the cap cuts only what the user cannot
+  // see either — never a dialog appended at the end of the document behind a
+  // long list.
+  const ordered = [
+    ...usable.filter(shown),
+    ...usable.filter((el) => !shown(el)),
+  ];
 
   const map = new Map<number, Element>();
   const items: SnapshotItem[] = [];
   const offset = frameOffset();
-  for (const el of candidates) {
-    if (items.length >= maxItems) break;
-    if (el instanceof HTMLInputElement && el.type === 'hidden') continue;
-    if (!visible(el) || el.closest('[aria-hidden="true"]')) continue;
+  for (const el of ordered.slice(0, maxItems)) {
     const role = roleOf(el);
     const secret = isSecret(el);
-    const n = items.length + 1;
+    const n = at ? 0 : items.length + 1;
     map.set(n, el);
-    const box = el.getBoundingClientRect();
-    // Only on this frame's screen: the number is drawn at the tab position, and
-    // an element scrolled out of the frame would put it on whatever shows there.
-    const shown =
-      box.left + box.width >= 0 &&
-      box.top + box.height >= 0 &&
-      box.left <= window.innerWidth &&
-      box.top <= window.innerHeight;
+    const box = boxes.get(el)!;
     items.push({
       n,
       role,
@@ -297,7 +347,7 @@ export function snapshotPage(
       state: stateOf(el, role, secret),
       submit: isSubmit(el),
       secret,
-      ...(offset && shown
+      ...(offset && shown(el)
         ? {
             rect: {
               x: offset.x + box.left,
@@ -309,7 +359,8 @@ export function snapshotPage(
         : {}),
     });
   }
-  (globalThis as { __agentMap?: Map<number, Element> }).__agentMap = map;
+  if (!at)
+    (globalThis as { __agentMap?: Map<number, Element> }).__agentMap = map;
 
   // What innerText makes of shadow content is Chrome's call, not ours.
   const main = document.querySelector('main') || document.body;
@@ -317,8 +368,9 @@ export function snapshotPage(
     url: location.href,
     title: document.title,
     items,
-    excerpt: collapse(textOf(main), textChars),
+    excerpt: at ? '' : collapse(textOf(main), textChars),
     viewport: { width: window.innerWidth, height: window.innerHeight },
+    dropped: ordered.length - items.length,
   };
 }
 
@@ -330,11 +382,26 @@ export function actOnPage(
   secretTokens: string[] = [],
 ): ActResult {
   const map = (globalThis as { __agentMap?: Map<number, Element> }).__agentMap;
-  const el = map ? map.get(n) : undefined;
+  // 0 is whatever holds the focus here, through open shadow roots: the field a
+  // click by position has just focused. A frame without one answers so.
+  const focused = (): Element | null => {
+    let el = document.activeElement;
+    while (el?.shadowRoot?.activeElement) el = el.shadowRoot.activeElement;
+    return el &&
+      el !== document.body &&
+      el !== document.documentElement &&
+      el.tagName !== 'IFRAME'
+      ? el
+      : null;
+  };
+  const el = n === 0 ? focused() : map ? map.get(n) : undefined;
   if (!el || !el.isConnected) {
     return {
       ok: false,
-      error: `Element ${n} is not in the current snapshot; call read_page and use a fresh number.`,
+      error:
+        n === 0
+          ? 'Nothing is focused.'
+          : `Element ${n} is not in the current snapshot; call read_page and use a fresh number.`,
     };
   }
   const html = el as HTMLElement;

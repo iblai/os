@@ -768,12 +768,151 @@ describe('the picture', () => {
 
   // Off the frame's screen, a number would land on whatever the tab shows at
   // that position; jsdom's zero-size boxes at the origin count as on screen.
-  it("gives no place to an element off its frame's screen", () => {
+  it("lists what is off the frame's screen last, with no place", () => {
     box(document.querySelector('a'), 10, -100);
     box(document.querySelector('#email'), window.innerWidth + 10, 20);
     const snapshot = snapshotPage(200, 100);
-    expect(snapshot.items[4].rect).toBeUndefined();
-    expect(snapshot.items[1].rect).toBeUndefined();
+    const last = snapshot.items.slice(-2);
+    expect(last.map((item) => item.name)).toEqual([
+      'Email',
+      'Forgot password?',
+    ]);
+    expect(last.map((item) => item.rect)).toEqual([undefined, undefined]);
     expect(snapshot.items[0].rect).toEqual({ x: 0, y: 0, w: 0, h: 0 });
+    expect(snapshot.dropped).toBe(0);
+  });
+
+  // Gmail: fifty inbox rows come before the compose window in the document,
+  // and the cap used to cut the compose fields while listing rows nobody saw.
+  it('cuts what is off screen first under the cap, and counts it', () => {
+    box(document.querySelector('a'), 10, -100);
+    const snapshot = snapshotPage(11, 100);
+    expect(snapshot.items).toHaveLength(11);
+    expect(snapshot.items.map((item) => item.name)).not.toContain(
+      'Forgot password?',
+    );
+    expect(snapshot.dropped).toBe(1);
+    expect(agentMap()?.size).toBe(11);
+  });
+});
+
+describe('the element at a point', () => {
+  const hitsAt = (at: Record<string, Element | null>) =>
+    Object.defineProperty(document, 'elementFromPoint', {
+      configurable: true,
+      value: (x: number, y: number) => at[`${x},${y}`] ?? null,
+    });
+  afterEach(() => {
+    delete (document as { elementFromPoint?: unknown }).elementFromPoint;
+  });
+
+  it('describes it as item 0, by its nearest listed ancestor, leaving the numbers alone', () => {
+    snapshotPage(200, 100);
+    const map = agentMap();
+    hitsAt({
+      '60,40': document.querySelector('a'),
+      '5,5': document.querySelector('button[title="Menu"] img'),
+      '1,1': document.body,
+    });
+    const hit = snapshotPage(200, 100, SECRET_FIELDS, { x: 60, y: 40 });
+    expect(hit.items).toEqual([
+      {
+        n: 0,
+        role: 'link',
+        name: 'Forgot password?',
+        state: '',
+        submit: false,
+        secret: false,
+        rect: { x: 0, y: 0, w: 0, h: 0 },
+      },
+    ]);
+    expect(hit.excerpt).toBe('');
+    expect(hit.dropped).toBe(0);
+    expect(agentMap()).toBe(map);
+    expect(map?.get(0)).toBeUndefined();
+    expect(
+      snapshotPage(200, 100, SECRET_FIELDS, { x: 5, y: 5 }).items[0],
+    ).toMatchObject({ n: 0, role: 'button', name: 'Menu' });
+    expect(
+      snapshotPage(200, 100, SECRET_FIELDS, { x: 1, y: 1 }).items[0],
+    ).toMatchObject({ n: 0, role: 'body' });
+    expect(snapshotPage(200, 100, SECRET_FIELDS, { x: 9, y: 9 }).items).toEqual(
+      [],
+    );
+  });
+
+  it('looks through an open shadow root and into a same-origin frame, and stops at a cross-origin one', () => {
+    const host = document.createElement('div');
+    document.body.append(host);
+    const inner = document.createElement('button');
+    inner.textContent = 'Inner';
+    host.attachShadow({ mode: 'open' }).append(inner);
+    Object.defineProperty(host.shadowRoot, 'elementFromPoint', {
+      value: () => inner,
+    });
+    const frame = document.createElement('iframe');
+    document.body.append(frame);
+    box(frame, 100, 50);
+    const framed = frame.contentDocument!.createElement('button');
+    framed.textContent = 'Framed';
+    frame.contentDocument!.body.append(framed);
+    Object.defineProperty(framed, 'checkVisibility', { value: () => true });
+    Object.defineProperty(frame.contentDocument, 'elementFromPoint', {
+      value: (x: number, y: number) => (x === 60 && y === 40 ? framed : null),
+    });
+    const foreign = document.createElement('iframe');
+    foreign.title = 'Ad';
+    document.body.append(foreign);
+    Object.defineProperty(foreign, 'contentDocument', { value: null });
+    hitsAt({ '3,3': host, '160,90': frame, '7,7': foreign });
+    const at = (x: number, y: number) =>
+      snapshotPage(200, 100, SECRET_FIELDS, { x, y }).items[0];
+    expect(at(3, 3)).toMatchObject({ n: 0, role: 'button', name: 'Inner' });
+    expect(at(160, 90)).toMatchObject({ n: 0, role: 'button', name: 'Framed' });
+    expect(at(7, 7)).toMatchObject({ n: 0, role: 'iframe', name: 'Ad' });
+  });
+});
+
+describe('the focused element as number 0', () => {
+  it('prepares whatever holds the focus, through an open shadow root, behind the secret refusal', () => {
+    snapshotPage(200, 100);
+    expect(actOnPage(0, 'prepare-type', '', false)).toEqual({
+      ok: false,
+      error: 'Nothing is focused.',
+    });
+    const email = document.querySelector<HTMLInputElement>('#email')!;
+    email.value = 'old';
+    email.focus();
+    expect(actOnPage(0, 'prepare-type', '', false, SECRET_FIELDS)).toEqual({
+      ok: true,
+      top: true,
+    });
+    expect([email.selectionStart, email.selectionEnd]).toEqual([0, 3]);
+    document.querySelector<HTMLInputElement>('#pw')!.focus();
+    expect(
+      actOnPage(0, 'prepare-type', '', false, SECRET_FIELDS).error,
+    ).toMatch(/^Refused:/);
+    const host = document.createElement('div');
+    document.body.append(host);
+    const inner = document.createElement('input');
+    host.attachShadow({ mode: 'open' }).append(inner);
+    inner.focus();
+    expect(document.activeElement).toBe(host);
+    expect(actOnPage(0, 'prepare-type', '', false, SECRET_FIELDS)).toEqual({
+      ok: true,
+      top: true,
+    });
+    // The frame holding the focus answers for itself; here it is not a field.
+    const frame = document.createElement('iframe');
+    document.body.append(frame);
+    Object.defineProperty(document, 'activeElement', {
+      configurable: true,
+      get: () => frame,
+    });
+    try {
+      expect(actOnPage(0, 'prepare-type', '', false).ok).toBe(false);
+    } finally {
+      delete (document as { activeElement?: unknown }).activeElement;
+    }
   });
 });

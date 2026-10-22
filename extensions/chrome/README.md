@@ -75,7 +75,11 @@ asks you to type those), select, scroll, open a URL, go back, read the page
 again, wait. Controls inside iframes (Gmail's Chat, an embedded editor) and open
 shadow roots are numbered like the page's own, and an action lands in the frame
 its element lives in; anything a script made focusable (a custom dropdown's
-choices) is listed too. **Approvals** in the Cowork panel decides whether it checks with
+choices) is listed too. The list holds at most 200 elements per frame, what is
+on screen first, and says how many more are off screen, so a compose window or
+a dialog opened over a long page is never what the cap leaves out. With a model
+that reads images it can also click or type at a point of the picture (below),
+for what it can see but the list does not hold. **Approvals** in the Cowork panel decides whether it checks with
 you first: _Automatic_ (the default) acts without asking, _Ask Me_ raises an
 approve/deny card before a submit, a payment, a send or a delete. Neither mode
 lets it type into a password or payment field — that is refused outright, in the
@@ -88,11 +92,17 @@ drops the port that keeps the worker alive, which ends the run.
 **The picture.** With a model that reads images, every page read also captures
 the visible part of the tab (`chrome.tabs.captureVisibleTab`), draws each listed
 element's number onto that image in the worker — nothing is added to the page,
-so nothing flashes — and sends that one picture with the next model call, the
-latest only, never kept in the conversation. An element that is not on screen,
-inside a cross-origin iframe or scrolled out of view, stays in the list but
-gets no number on the picture. No picture is taken while the tab is not in
-front or while a password or payment field is on the page.
+so nothing flashes — scales it to the viewport's own size (at most 1568 px on
+its longer edge, past which the model's API would resize it itself) and sends
+that one picture with the next model call, the latest only, never kept in the
+conversation. A point on it is a point of the tab: `click_at` and `type_at`
+take x and y on the picture, look at what is there (the same confirmations
+apply, by that element's name, and the same refusal to type into a password or
+payment field, by the field that takes the focus) and click or type through
+the DevTools protocol — which reaches a cross-origin iframe too. An element
+that is not on screen, inside a cross-origin iframe or scrolled out of view,
+stays in the list but gets no number on the picture. No picture is taken while
+the tab is not in front or while a password or payment field is on the page.
 
 **Real clicks.** The worker attaches Chrome's debugger to the tab for every run
 and clicks and types through the DevTools protocol, so the page sees the events

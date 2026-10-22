@@ -1,20 +1,36 @@
 /**
+ * The longest edge the model's API takes as is: a bigger picture is downsized
+ * there, and a point the model picks on it would be off by the same factor.
+ */
+export const MAX_EDGE = 1568;
+
+export interface Badged {
+  dataUrl: string;
+  /** Picture px per CSS px: 1 unless the viewport's longer edge is over MAX_EDGE. */
+  scale: number;
+}
+
+/**
  * Draws each listed element's number onto the capture, where the page would
  * have shown it, so nothing has to be added to the page itself, and returns the
- * one JPEG the model gets. The capture is in device pixels; `viewportWidth`
- * (CSS px) gives the scale.
+ * one JPEG the model gets — at CSS size, so a point on it is a point of the
+ * viewport. The capture is in device pixels; `viewportWidth` (CSS px) gives
+ * its scale.
  */
 export async function drawBadges(
   dataUrl: string,
   marks: Array<{ n: number; x: number; y: number }>,
   viewportWidth: number,
-): Promise<string> {
+): Promise<Badged> {
   const bitmap = await createImageBitmap(await (await fetch(dataUrl)).blob());
-  const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+  const cssHeight = bitmap.height / (bitmap.width / viewportWidth);
+  const scale = Math.min(1, MAX_EDGE / Math.max(viewportWidth, cssHeight));
+  const width = Math.round(viewportWidth * scale);
+  const height = Math.round(cssHeight * scale);
+  const canvas = new OffscreenCanvas(width, height);
   const c = canvas.getContext('2d');
   if (!c) throw new Error('No 2d canvas in the worker.');
-  c.drawImage(bitmap, 0, 0);
-  const scale = bitmap.width / viewportWidth;
+  c.drawImage(bitmap, 0, 0, width, height);
   c.font = `bold ${11 * scale}px sans-serif`;
   c.textBaseline = 'top';
   for (const { n, x, y } of marks) {
@@ -31,5 +47,5 @@ export async function drawBadges(
   let binary = '';
   for (let i = 0; i < bytes.length; i += 0x8000)
     binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
-  return `data:image/jpeg;base64,${btoa(binary)}`;
+  return { dataUrl: `data:image/jpeg;base64,${btoa(binary)}`, scale };
 }
