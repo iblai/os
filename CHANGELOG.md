@@ -1,5 +1,35 @@
 # Changelog
 
+## [0.178.0](https://github.com/iblai/os/compare/v0.177.0...v0.178.0) (2026-10-23)
+
+### Features
+
+* **desktop:** save downloads through the desktop app when available ([1f06407](https://github.com/iblai/os/commit/1f06407791d89fa59a2e857fdd18867ea952df9f))
+* **tauri:** save chat files through the native save dialog ([26cd939](https://github.com/iblai/os/commit/26cd9392c4cd092ed7e0d6174909afd9a6b279fd))
+
+### Bug Fixes
+
+* **sidebar:** export the whole chat in Text or Excel ([c596e1a](https://github.com/iblai/os/commit/c596e1a8d6109cbbbe46e17e8e02f0a0c02be9e2))
+
+### Chores
+
+* **tauri:** release app-v0.95.29 ([2beec72](https://github.com/iblai/os/commit/2beec72e225f660cfc0f270e336ab3f1ffe8bfc4))
+
+### Documentation
+
+* **e2e:** update coverage for journey 94 ([a7929cb](https://github.com/iblai/os/commit/a7929cbcbf2e5269b323fe12fc1e0f1366ffdc3e))
+
+### Tests
+
+* **e2e:** cover chat download formats and whole-chat sidebar export ([16e13f0](https://github.com/iblai/os/commit/16e13f016e10e207d9a80b11aceb20a915129456))
+* **e2e:** wait for the agent's fresh chat before reopening in journey 94 ([25d5960](https://github.com/iblai/os/commit/25d596019156d39302abc8d0e177ce0d4054f29a))
+
+### Build
+
+* **deps:** bump next, @sentry/nextjs and the dompurify floor for new advisories ([71f22e6](https://github.com/iblai/os/commit/71f22e65402c82ec0587b8ccc2583c2b7301fe23))
+* **deps:** clear the high pnpm audit advisories ([9ae825a](https://github.com/iblai/os/commit/9ae825ad149ee08eba9b4e201b52a414311959df))
+* **deps:** drop write-excel-file, the SDK ships it ([03fed06](https://github.com/iblai/os/commit/03fed063af2c7cf9b7521ba065e47d4a692aafa3))
+
 ## [0.177.0](https://github.com/iblai/os/compare/v0.176.1...v0.177.0) (2026-10-22)
 
 ### Features
