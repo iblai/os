@@ -171,7 +171,9 @@ overrides:
   # Reached through @iblai/iblai-js > @iblai/web-containers > @tiptap/pm >
   # prosemirror-markdown, which asks for ^14. Upper bound is deliberate: a bare
   # '>=14.3.1' resolves to 15.x, a major that consumer does not declare.
-  markdown-it: '>=14.3.1 <15'
+  # Floor raised 14.3.1 -> 14.3.3 for GHSA-gfr2-rv44-r23c, affecting
+  # >=14.1.0 <14.3.3; the upper bound stays.
+  markdown-it: '>=14.3.3 <15'
   # GHSA-cp6q-959q-f8rh + GHSA-j95f-988m-3j2f (XSS via crafted editor
   # content), patched in 3.30.4/3.30.5. Scoped to the 3.x resolution
   # (@iblai/web-containers): the app itself pins the 2.x API for the canvas
@@ -268,9 +270,3 @@ auditConfig:
     # through tooling (mocha > chokidar; fast-glob > micromatch, also via the
     # SDK's rollup-plugin-copy runtime dep), on the repo's own glob patterns.
     - GHSA-vfj7-8cjw-p6xm
-    # markdown-it quadratic link-reference rendering (GHSA-gfr2-rv44-r23c),
-    # >=14.1.0 <14.3.3. Reached through @iblai/iblai-js > @iblai/web-containers
-    # > @tiptap/pm > prosemirror-markdown. TEMPORARY: 14.3.3 (published
-    # 2026-10-16) is younger than min-release-age=7 until 2026-10-23; then drop
-    # this entry and add an override `markdown-it: '>=14.3.3 <15'`.
-    - GHSA-gfr2-rv44-r23c

@@ -1217,42 +1217,6 @@ describe('InsideButtons', () => {
       expect(screen.queryByText('Cowork')).not.toBeInTheDocument();
     });
 
-    // Driving the tab is what the panel is for, so Cowork starts on — and the
-    // PREF is written, not just the local state: the SDK routes on
-    // `isCoworkEnabled()` and so does the submit in components/chat/index.tsx.
-    it('opens with Cowork already on and persists it', async () => {
-      const user = userEvent.setup();
-      render(<InsideButtons {...defaultProps} />);
-
-      expect(mockSetCoworkEnabled).toHaveBeenCalledWith(true);
-      expect(localStorage.getItem('ibl_cowork_enabled')).toBe('true');
-      expect(screen.getByTestId('cowork-pill')).toHaveAttribute(
-        'aria-pressed',
-        'true',
-      );
-      await user.click(screen.getByTestId('cowork-pill'));
-      expect(
-        within(screen.getByTestId('cowork-panel')).getByRole('switch'),
-      ).toHaveAttribute('aria-checked', 'true');
-      // Nothing was confirmed and nothing was asked of the OS.
-      expect(screen.queryByText('Let Cowork use your computer?')).toBeNull();
-      expect(mockRequestPermissions).not.toHaveBeenCalled();
-      expect(mockGhostInstall).not.toHaveBeenCalled();
-    });
-
-    // `setCoworkEnabled` writes "true"/"false", so an explicit off is a stored
-    // value rather than an absent one — the default must not talk over it.
-    it('stays off when the user has switched it off before', () => {
-      localStorage.setItem('ibl_cowork_enabled', 'false');
-      render(<InsideButtons {...defaultProps} />);
-
-      expect(mockSetCoworkEnabled).not.toHaveBeenCalled();
-      expect(screen.getByTestId('cowork-pill')).toHaveAttribute(
-        'aria-pressed',
-        'false',
-      );
-    });
-
     it('enables from the switch with no dialog and no Cua Driver', async () => {
       const user = userEvent.setup();
       localStorage.setItem('ibl_cowork_enabled', 'false');

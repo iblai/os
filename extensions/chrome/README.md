@@ -169,21 +169,20 @@ pnpm typecheck
 
 ## How Cowork is driven here
 
-The pill lives in the mentor app's own composer
-(`components/chat-input-form/inside-buttons.tsx`) and reads **Cowork** on every
-host — what changes in the panel is the driver, not the name. On the desktop app
-it is the Tauri Cua Driver; here it is this extension's service worker, and none
-of the Cua Driver's install or OS-permission calls are made.
-`hooks/use-in-extension-panel.ts` detects the panel with a handshake it answers,
-so the pill appears there and not in an ordinary tab.
+The pill lives in the SDK's composer (`SdkChat`, `components/chat/sdk-chat.tsx`
+in the app) and reads **Cowork** on every host — what changes in the panel is the
+driver, not the name. On the desktop app it is the Tauri Cua Driver; here it is
+this extension's service worker, and none of the Cua Driver's install or
+OS-permission calls are made. `<agent-ai enablecowork>` puts `enable-cowork=true`
+on the iframe URL, which is how `hooks/use-in-extension-panel.ts` knows it is in
+the panel before anything renders; an older extension, which sets no flag, is
+still detected over the `MENTOR:BROWSE_HELLO`/`MENTOR:BROWSE_READY` handshake.
 
-Being on means `ibl_cowork_enabled` is set, which is what already routes the
-turn through the DM's OpenAI-compatible endpoint — so the panel writes the pref
-rather than only its own state: the SDK (`shouldUseRemoteAiChat`, the Cowork tool
-list) and the submit in `components/chat/index.tsx` all read it back through
-`isCoworkEnabled()`. Only an unset pref defaults on, which is how an explicit off
-survives, and the panel's iframe has its own partitioned storage, so none of this
-reaches the same app in an ordinary tab. Submitting a goal goes to
+In the panel Cowork starts on, and its switch lives in session storage
+(`ibl_cowork_panel`, the SDK's): the iframe shares the site's localStorage with
+the user's ordinary tabs, so nothing the panel does reaches the same app in a
+plain tab — and a plain tab never routes a turn to the remote AI without a
+driver (`shouldUseRemoteAiChat`). Submitting a goal goes to
 `hooks/use-browse-run.ts` instead of the normal send:
 
     composer → postMessage → browse-bridge.ts → chrome.runtime port
@@ -207,4 +206,4 @@ workflow header). CI has no `.env.local`, so what it publishes always points at
 
 Copy a fresh `dist/index.umd.js` from the SDK's `packages/agent-ai` build over
 `public/vendor/agent-ai.umd.js` (the directory is prettier-ignored so it stays
-as published). Also copy it byte-for-byte to `e2e/fixtures/agent-ai.umd.js` (journey 89 serves that copy; `scripts/agent-ai-vendor-copy.test.ts` fails when they differ). Vendored: `@iblai/agent-ai` 2.13.1.
+as published). Also copy it byte-for-byte to `e2e/fixtures/agent-ai.umd.js` (journey 89 serves that copy; `scripts/agent-ai-vendor-copy.test.ts` fails when they differ). Vendored: `@iblai/agent-ai` 2.13.2.
