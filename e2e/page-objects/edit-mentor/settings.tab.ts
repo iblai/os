@@ -9,6 +9,10 @@ export class SettingsTab {
   readonly copyButton: Locator;
   readonly visibilityCombobox: Locator;
   readonly saveButton: Locator;
+  readonly adminOnlyVisibilityNote: Locator;
+  readonly adminVisibilityConfirm: Locator;
+  readonly adminVisibilityConfirmButton: Locator;
+  readonly adminVisibilityCancelButton: Locator;
   readonly deleteButton: Locator;
   readonly advancedCssSection: Locator;
   readonly advancedCssEditor: Locator;
@@ -104,6 +108,18 @@ export class SettingsTab {
       exact: true,
     });
     this.saveButton = dialog.getByRole('button', { name: /save/i }).first();
+    this.adminOnlyVisibilityNote = page.getByTestId(
+      'admin-only-visibility-note',
+    );
+    this.adminVisibilityConfirm = page.getByRole('alertdialog');
+    this.adminVisibilityConfirmButton = this.adminVisibilityConfirm.getByRole(
+      'button',
+      { name: 'Limit to Administrators', exact: true },
+    );
+    this.adminVisibilityCancelButton = this.adminVisibilityConfirm.getByRole(
+      'button',
+      { name: 'Cancel', exact: true },
+    );
     this.deleteButton = dialog.getByRole('button', { name: /delete/i }).first();
     this.advancedCssSection = dialog
       .getByText(/advanced css/i)
@@ -385,6 +401,36 @@ export class SettingsTab {
       await expect(fallback.first()).toBeVisible({ timeout: 5_000 });
       await fallback.first().click();
     }
+  }
+
+  async confirmAdminVisibility(): Promise<void> {
+    await expect(this.adminVisibilityConfirm).toBeVisible({ timeout: 10_000 });
+    await this.adminVisibilityConfirmButton.click();
+  }
+
+  async cancelAdminVisibility(): Promise<void> {
+    await expect(this.adminVisibilityConfirm).toBeVisible({ timeout: 10_000 });
+    await this.adminVisibilityCancelButton.click();
+    await expect(this.adminVisibilityConfirm).toBeHidden({ timeout: 10_000 });
+  }
+
+  /**
+   * Clicks Save and waits for the success toast, confirming the "Limit this
+   * agent to administrators?" prompt when this save triggers it (saved value
+   * was Users/Anyone and the form now says Administrators).
+   */
+  async saveConfirmingAdminVisibility(): Promise<void> {
+    await expect(this.saveButton).toBeEnabled({ timeout: 10_000 });
+    await this.saveButton.click();
+    const toast = this.page.getByText(/agent updated successfully/i).first();
+    await this.adminVisibilityConfirm.or(toast).first().waitFor({
+      state: 'visible',
+      timeout: 30_000,
+    });
+    if (await this.adminVisibilityConfirm.isVisible()) {
+      await this.adminVisibilityConfirmButton.click();
+    }
+    await expect(toast).toBeVisible({ timeout: 30_000 });
   }
 
   async setVisibilityAnyone(): Promise<void> {

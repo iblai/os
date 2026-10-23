@@ -1494,6 +1494,12 @@
     "deleteSuccess": "Agent supprimé avec succès",
     "deleteError": "Échec de la suppression de l'agent"
   },
+  "settingsTabAdminVisibilityConfirm": {
+    "title": "Limiter cet agent aux administrateurs ?",
+    "description": "Seuls les administrateurs pourront voir cet agent et discuter avec lui. Tous les autres perdront l'accès immédiatement.",
+    "cancel": "Annuler",
+    "confirm": "Limiter aux administrateurs"
+  },
   "tabsAuditLogTab": {
     "infoBox": "Gardez une trace écrite. Consultez le journal indiquant qui a modifié quoi et quand pour cet agent — pratique pour le dépannage et le respect de la conformité.",
     "heading": "Audit",
@@ -1911,6 +1917,7 @@
     "whoCanViewLabel": "Qui peut voir ?",
     "whoCanViewInfoAriaLabel": "Plus d'infos sur l'accès à la conversation",
     "whoCanViewTooltip": "Contrôlez qui peut voir cet agent.",
+    "whoCanViewAdminOnlyNote": "Seuls les administrateurs peuvent voir cet agent et discuter avec lui. Tous les autres perdent l'accès, y compris les personnes qui l'utilisent déjà.",
     "selectWhoCanView": "Sélectionner qui peut voir",
     "whoCanChatLabel": "Qui peut discuter ?",
     "whoCanChatInfoAriaLabel": "Plus d'infos sur l'accès à la conversation",

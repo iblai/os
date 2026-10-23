@@ -1,15 +1,15 @@
 {
   "version": 2,
-  "lastUpdated": "2026-10-21",
+  "lastUpdated": "2026-10-23",
   "summary": {
-    "totalCheckpoints": 980,
-    "coveredCheckpoints": 935,
+    "totalCheckpoints": 984,
+    "coveredCheckpoints": 939,
     "deprecatedCheckpoints": 17,
     "notReproducibleCheckpoints": 17,
     "pendingCheckpoints": 11,
     "percent": 100,
-    "totalJourneys": 101,
-    "activeJourneys": 100
+    "totalJourneys": 102,
+    "activeJourneys": 101
   },
   "journeys": [
     {
@@ -5048,6 +5048,16 @@
           "id": "sem-07",
           "description": "With the setting ON, the \"Explore Agents\" section sits below the first screen in two columns, and the \"Explore Agents\" hint scrolls it into view",
           "status": "covered"
+        },
+        {
+          "id": "sem-08",
+          "description": "The \"Explore Agents\" button scrolls to the section and back to the top, and its chevron flips up/down on clicks and on manual scrolling",
+          "status": "covered"
+        },
+        {
+          "id": "sem-09",
+          "description": "At phone width the \"Explore Agents\" button is not shown",
+          "status": "covered"
         }
       ]
     },
@@ -5814,6 +5824,16 @@
           "id": "sess-04",
           "description": "In embed mode (`?embed=true`) a dead session id self-heals with no manual New chat, fetching the dead id exactly 4 times, all before the mint",
           "status": "covered"
+        },
+        {
+          "id": "sess-05",
+          "description": "A 403 {error: \"You do not have permission to chat with this agent.\"} on the create-session POST toasts exactly that sentence; no raw JSON, status, [object Object] or \"Failed to start new chat\" (iblai-platform#2712; the logout redirect is held pending so the toast stays)",
+          "status": "covered"
+        },
+        {
+          "id": "sess-06",
+          "description": "A start-chat failure with no readable message (400 {}) toasts the fallback \"We couldn't start a new chat. Please try again.\" (iblai-platform#2712)",
+          "status": "covered"
         }
       ]
     },
@@ -6217,6 +6237,37 @@
         {
           "id": "ex-03",
           "description": "Sidebar Export as Text saves chat-<agent>-<date>.txt containing every turn",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "admin-visibility-confirmation",
+      "name": "Admin Visibility Confirmation",
+      "spec": "95-admin-visibility-confirmation.spec.ts",
+      "sourceFiles": [
+        "components/modals/edit-mentor-modal/settings-tab.tsx",
+        "messages/en.json"
+      ],
+      "checkpoints": [
+        {
+          "id": "avs-01",
+          "description": "Picking Administrators on a Users agent shows the admin-only note, and Save opens the \"Limit this agent to administrators?\" confirmation instead of saving",
+          "status": "covered"
+        },
+        {
+          "id": "avs-02",
+          "description": "Cancel on the confirmation closes it, sends no visibility save, keeps Administrators in the form, and the server still holds Users",
+          "status": "covered"
+        },
+        {
+          "id": "avs-03",
+          "description": "\"Limit to Administrators\" saves mentor_visibility=viewable_by_tenant_admins with the success toast; reopening shows Administrators with the note already visible",
+          "status": "covered"
+        },
+        {
+          "id": "avs-04",
+          "description": "Switching away from Administrators hides the note and saves without a prompt, and Users to Anyone also saves without a prompt",
           "status": "covered"
         }
       ]

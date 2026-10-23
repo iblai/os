@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-10-21 | 980 checkpoints (935 covered, 11 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 101 journeys (100 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-10-23 | 984 checkpoints (939 covered, 11 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 102 journeys (101 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -1902,6 +1902,8 @@ Covers issue #2544: a new `show_explore_mentors` mentor setting, exposed as a "S
 - [x] sem-05: With the setting ON, a non-admin non-owner viewer of the same agent also sees the "Explore Agents" section (RBAC-redaction regression guard)
 - [x] sem-06: With the setting OFF, the welcome screen hides the "Explore Agents" section
 - [x] sem-07: With the setting ON, the "Explore Agents" section sits below the first screen in two columns, and the "Explore Agents" hint scrolls it into view
+- [x] sem-08: The "Explore Agents" button scrolls to the section and back to the top, and its chevron flips up/down on clicks and on manual scrolling
+- [x] sem-09: At phone width the "Explore Agents" button is not shown
 
 ---
 
@@ -2056,7 +2058,7 @@ iblai/iblai-platform#2633: with the agent's `enable_in_chat_llm_change` on, a us
 
 ---
 
-## Journey 85: Stale Session Id Self-Heal (4 checkpoints) — `journeys/85-stale-session-id-self-heal.spec.ts`
+## Journey 85: Stale Session Id Self-Heal (6 checkpoints) — `journeys/85-stale-session-id-self-heal.spec.ts`
 
 **Source files:** `components/chat/sdk-chat.tsx`, `lib/utils.ts`, `hooks/user-navigate.ts`, `lib/logger.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/chats/use-recent-chats.ts`, `app/share/chat/[sessionId]/share-chat-redirect-content.tsx`, `e2e/page-objects/chat.page.ts` (the self-heal lives in the SDK Chat and `@iblai/web-utils` / `@iblai/data-layer`)
 
@@ -2066,6 +2068,8 @@ Regression guard for [iblai-platform#2536](https://github.com/iblai/iblai-platfo
 - [x] sess-02: A legacy cache entry keyed by the bare mentorId is never looked up; the app mints and uses a session under the `${tenantKey}:${mentorId}` key
 - [x] sess-03: A WS "Session not found: <id>" frame mid-chat self-heals with no error toast: the working indicator clears, a fresh session replaces the dead id, and a follow-up message on it succeeds
 - [x] sess-04: In embed mode (`?embed=true`) a dead session id self-heals with no manual New chat, fetching the dead id exactly 4 times, all before the mint
+- [x] sess-05: A 403 `{error: "You do not have permission to chat with this agent."}` on the create-session POST (iblai-platform#2712) toasts exactly that sentence, with no raw JSON, `status`, `[object Object]` or "Failed to start new chat"; the logout redirect is held pending so the toast stays
+- [x] sess-06: A start-chat failure with no readable message (400 `{}`) toasts the fallback "We couldn't start a new chat. Please try again."
 
 ---
 
@@ -2281,3 +2285,16 @@ The app half of the Chrome extension's Cowork mode, without loading the extensio
 - [x] ex-01: Sidebar row menu > Export opens "Export Chat" (same dialog) with only the File type dropdown (no scope radios), the "Getting the whole chat…" status and a disabled Export button until the history arrives
 - [x] ex-02: Sidebar Export as Excel of a 3-turn chat saves chat-<agent>-<date>.xlsx (not messages.xlsx) containing EVERY message (6 rows) with From = "You" / agent name — regression for the first-message-only export
 - [x] ex-03: Sidebar Export as Text saves chat-<agent>-<date>.txt containing every turn
+
+---
+
+## Journey 95: Admin Visibility Confirmation (4 checkpoints) — `journeys/95-admin-visibility-confirmation.spec.ts`
+
+**Source files:** `components/modals/edit-mentor-modal/settings-tab.tsx`, `messages/en.json`
+
+Issue #2731. Settings → Discovery → "Who Can View?": an admin-only note shows while Administrators is picked, and saving a change from Users/Anyone to Administrators asks "Limit this agent to administrators?" first. One throwaway agent (auto-deleted) is walked through the states by the serial checkpoints. The existing specs that pick Administrators then save (journeys 13 and 64) confirm the prompt through `saveConfirmingAdminVisibility()`.
+
+- [x] avs-01: Picking Administrators on a Users agent shows the admin-only note, and Save opens the "Limit this agent to administrators?" confirmation instead of saving
+- [x] avs-02: Cancel on the confirmation closes it, sends no visibility save, keeps Administrators in the form, and the server still holds Users
+- [x] avs-03: "Limit to Administrators" saves mentor_visibility=viewable_by_tenant_admins with the success toast; reopening shows Administrators with the note already visible
+- [x] avs-04: Switching away from Administrators hides the note and saves without a prompt, and Users to Anyone also saves without a prompt
