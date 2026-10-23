@@ -210,6 +210,13 @@ overrides:
   # subnet), reached through @iblai/iblai-js > @iblai/mcp >
   # @modelcontextprotocol/sdk > express. Patch release inside express's ^2.0.7.
   proxy-addr: '>=2.0.8 <3'
+  # GHSA-27r3-jxmh-p828, affecting >=2.0.0 <2.4.0; reached through the MCP
+  # SDK's express 5. Patch release inside express's ^2.
+  body-parser: '>=2.4.0 <3'
+  # GHSA-mrhx-c7xc-m3w5 (memory exhaustion on oversized constrained
+  # collections), patched in 4.6.6. Scoped to @iblai/mcp, which already uses
+  # zod 4; the zod 3 copies have no patched release (see auditConfig).
+  '@iblai/mcp>zod': '>=4.6.6 <5'
   # GHSA-6qxp-vccf-f47h (OAuth credentials sent to an MCP-server-chosen
   # authorization server). The published @iblai/mcp and @iblai/web-utils pin
   # 1.27.1; 1.31 is a minor bump within the same 1.x API.
@@ -270,3 +277,10 @@ auditConfig:
     # through tooling (mocha > chokidar; fast-glob > micromatch, also via the
     # SDK's rollup-plugin-copy runtime dep), on the repo's own glob patterns.
     - GHSA-vfj7-8cjw-p6xm
+    # zod memory exhaustion on oversized constrained collections
+    # (GHSA-mrhx-c7xc-m3w5) — patched only in zod 4 (>=4.6.6), with no zod 3
+    # release. @iblai/mcp's zod 4 copy is raised by the override above; the
+    # app's own zod 3 and @iblai/data-layer's exactly pinned zod 3.24.2 stay
+    # until both move to zod 4. Their schemas check the app's own forms and
+    # the platform's responses, not attacker-sized input.
+    - GHSA-mrhx-c7xc-m3w5
