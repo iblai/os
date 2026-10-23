@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-10-21 | 972 checkpoints (927 covered, 11 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 100 journeys (99 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-10-21 | 980 checkpoints (935 covered, 11 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 101 journeys (100 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -2264,3 +2264,20 @@ The app half of the Chrome extension's Cowork mode, without loading the extensio
 
 - [x] cw-01: Answered by a (faked) side panel, the app shows the Cowork pill pressed; its popover holds the switch on, the disclosure note mentioning the picture of the tab, and Approvals = Automatic
 - [x] cw-02: A goal becomes a `MENTOR:BROWSE_RUN` frame carrying `auto: true`; scripted worker frames (ack, three log lines — an action, the agent's narration, a failed call — the reply, done with the cap note) render as one assistant turn whose "Used 1 tool" row expands to each line's text, whose body ends with the reply then the note, and after which Send is back
+
+---
+
+## Journey 94: Chat Download as Excel + Sidebar Export (8 checkpoints) — `journeys/94-chat-download-excel-and-export.spec.ts`
+
+**Source files:** `components/chat/ai-message-download.tsx`, `components/chat/sdk-chat.tsx`, `app-sidebar/chats/chats-section.tsx`, `app-sidebar/chats/use-recent-chats.ts`, `messages/en.json`, `e2e/utils/xlsx.ts`
+
+[iblai-platform#2713](https://github.com/iblai/iblai-platform/issues/2713): one shared SDK dialog (`data-testid="chat-download-dialog"`) serves the reply's Download button and the sidebar row's Export. It reads the whole saved session when it opens, so the old first-message-only `messages.xlsx` export is covered by a real 3-turn chat. Serial; one throw-away agent (cheap ibl.ai model, tracked and deleted). The .xlsx is parsed by a small zip reader (`e2e/utils/xlsx.ts`, no new dependency). The canExport rule stays covered by chexp-03/04 (journey 57).
+
+- [x] dl-01: Download dialog (SDK ChatDownloadDialog) opens on Entire chat + File type "Text (.txt)" with its description; the File type dropdown lists Text and Excel each with a description, choosing Excel swaps the shown description, and reopening the dialog resets scope to Entire chat and file type to Text (iblai-platform#2713)
+- [x] dl-02: Download as Text saves chat-<agent>-<date>.txt holding every turn; This message only saves message-<agent>-<date>.txt without the earlier turns
+- [x] dl-03: Download as Excel saves chat-<agent>-<date>.xlsx whose first sheet has the header Time / From / Message and one row per message (From = "You" / agent name, Message = the text); This message only saves message-<agent>-<date>.xlsx with header + one row
+- [x] dl-04: While the session history request is held, the dialog footer shows "Getting the whole chat…" with a spinner and Download is disabled; after release the status clears and Download enables
+- [x] dl-05: When the session history request fails (500), the footer shows the "You can still download this message" error, Entire chat is disabled, This message only is selected and still downloads message-<agent>-<date>.txt
+- [x] ex-01: Sidebar row menu > Export opens "Export Chat" (same dialog) with only the File type dropdown (no scope radios), the "Getting the whole chat…" status and a disabled Export button until the history arrives
+- [x] ex-02: Sidebar Export as Excel of a 3-turn chat saves chat-<agent>-<date>.xlsx (not messages.xlsx) containing EVERY message (6 rows) with From = "You" / agent name — regression for the first-message-only export
+- [x] ex-03: Sidebar Export as Text saves chat-<agent>-<date>.txt containing every turn
