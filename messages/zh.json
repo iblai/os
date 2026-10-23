@@ -371,6 +371,7 @@
     "download": "下载",
     "dialogTitle": "下载聊天记录",
     "dialogDescription": "请选择要下载为文本文件的内容。",
+    "formatDialogDescription": "选择要下载的内容和文件类型。",
     "entireChat": "整个聊天",
     "entireChatDescription": "此对话中的所有消息。",
     "thisMessage": "仅此消息",
@@ -378,7 +379,24 @@
     "downloadButton": "下载",
     "transcriptHeader": "与 {mentorName} 的聊天",
     "roleUser": "你",
-    "roleAi": "AI"
+    "roleAi": "AI",
+    "scopeLabel": "要下载的内容",
+    "formatLabel": "文件类型",
+    "formatText": "文本 (.txt)",
+    "formatTextDescription": "可在任何地方打开的纯文本。",
+    "formatExcel": "Excel (.xlsx)",
+    "formatExcelDescription": "每条消息占一行的电子表格。",
+    "exportTitle": "导出聊天",
+    "exportButton": "导出",
+    "gettingWholeChat": "正在获取完整聊天…",
+    "preparingFile": "正在准备文件…",
+    "wholeChatError": "无法获取此聊天。请重试。",
+    "wholeChatErrorMessageStillWorks": "无法获取完整聊天。你仍然可以下载这条消息。",
+    "fileError": "无法创建 Excel 文件。请重试。",
+    "saveError": "无法保存文件。请重试。",
+    "columnTime": "时间",
+    "columnFrom": "发送者",
+    "columnMessage": "消息"
   },
   "chatIndex": {
     "youAreOffline": "您已离线",
@@ -1493,6 +1511,12 @@
     "deleteSuccess": "智能体已成功删除",
     "deleteError": "删除智能体失败"
   },
+  "settingsTabAdminVisibilityConfirm": {
+    "title": "将此智能体限制为仅管理员可用？",
+    "description": "只有管理员才能查看此智能体并与其聊天。其他所有人将立即失去访问权限。",
+    "cancel": "取消",
+    "confirm": "限制为管理员"
+  },
   "tabsAuditLogTab": {
     "infoBox": "保留操作记录。查看该智能体的变更日志——谁在何时更改了什么——便于排查问题并保持合规。",
     "heading": "审计",
@@ -1910,6 +1934,7 @@
     "whoCanViewLabel": "谁可以查看？",
     "whoCanViewInfoAriaLabel": "关于聊天访问权限的更多信息",
     "whoCanViewTooltip": "控制谁可以查看此智能体。",
+    "whoCanViewAdminOnlyNote": "只有管理员可以查看此智能体并与其聊天。其他所有人都将失去访问权限，包括已经在使用它的人。",
     "selectWhoCanView": "选择谁可以查看",
     "whoCanChatLabel": "谁可以聊天？",
     "whoCanChatInfoAriaLabel": "关于聊天访问权限的更多信息",

@@ -561,7 +561,7 @@ describe('runAgent', () => {
       tools: clickTools(),
       signal: new AbortController().signal,
       onEvent: () => undefined,
-      picture: () => ({ dataUrl: 'data:image/jpeg;base64,/9j/AAA=' }),
+      picture: () => ({ dataUrl: 'data:image/jpeg;base64,/9j/AAA=', scale: 1 }),
     });
     expect(prompts).toHaveLength(2);
     for (const prompt of prompts) {
@@ -666,6 +666,27 @@ describe('buildModel against the DM shim', () => {
     expect(body.messages[0]).toEqual({ role: 'system', content: INSTRUCTIONS });
     expect(body.messages[1]).toEqual({ role: 'user', content: 'hello' });
     expect(events.filter((event) => event.type === 'error')).toEqual([]);
+  });
+
+  it('tells the model about the position tools only when they are offered', async () => {
+    const prompts: unknown[][] = [];
+    const call = (positions?: boolean) =>
+      runAgent({
+        model: recordingModel(prompts, textStep()),
+        messages: [user('x')],
+        tools: {},
+        signal: new AbortController().signal,
+        onEvent: () => undefined,
+        positions,
+      });
+    await call(true);
+    await call();
+    const systems = prompts.map(
+      (prompt) => prompt[0] as { role: string; content: string },
+    );
+    expect(systems.map((system) => system.role)).toEqual(['system', 'system']);
+    expect(systems[0].content).toContain('click_at and type_at');
+    expect(systems[1].content).not.toContain('click_at');
   });
 
   // The user's language reaches the model as part of the system message and

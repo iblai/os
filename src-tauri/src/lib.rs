@@ -23,6 +23,8 @@ mod code_agent_installer;
 #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
 mod code_agent_models;
 #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+mod save_file;
+#[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
 #[allow(dead_code)]
 mod foundry_manager;
 mod mcp_bridge_installer;
@@ -3208,6 +3210,7 @@ pub fn run() {
         code_agent_installer::install_code_agent,
         code_agent_models::list_code_agent_models,
         code_agent_models::set_code_agent_model,
+        save_file::save_chat_file,
         app_update::check_app_update,
         app_update::install_app_update,
         remote_code::remote_code_status,

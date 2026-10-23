@@ -371,6 +371,7 @@
     "download": "Télécharger",
     "dialogTitle": "Télécharger la conversation",
     "dialogDescription": "Choisissez ce que vous souhaitez télécharger sous forme de fichier texte.",
+    "formatDialogDescription": "Choisissez ce que vous voulez télécharger et le type de fichier.",
     "entireChat": "Toute la conversation",
     "entireChatDescription": "Tous les messages de cette conversation.",
     "thisMessage": "Ce message uniquement",
@@ -378,7 +379,24 @@
     "downloadButton": "Télécharger",
     "transcriptHeader": "Conversation avec {mentorName}",
     "roleUser": "Vous",
-    "roleAi": "IA"
+    "roleAi": "IA",
+    "scopeLabel": "Que télécharger",
+    "formatLabel": "Type de fichier",
+    "formatText": "Texte (.txt)",
+    "formatTextDescription": "Du texte simple qui s'ouvre partout.",
+    "formatExcel": "Excel (.xlsx)",
+    "formatExcelDescription": "Une feuille de calcul avec une ligne par message.",
+    "exportTitle": "Exporter le chat",
+    "exportButton": "Exporter",
+    "gettingWholeChat": "Récupération du chat complet…",
+    "preparingFile": "Préparation de votre fichier…",
+    "wholeChatError": "Nous n'avons pas pu récupérer ce chat. Veuillez réessayer.",
+    "wholeChatErrorMessageStillWorks": "Nous n'avons pas pu récupérer le chat complet. Vous pouvez toujours télécharger ce message.",
+    "fileError": "Nous n'avons pas pu créer le fichier Excel. Veuillez réessayer.",
+    "saveError": "Nous n'avons pas pu enregistrer le fichier. Veuillez réessayer.",
+    "columnTime": "Heure",
+    "columnFrom": "De",
+    "columnMessage": "Message"
   },
   "chatIndex": {
     "youAreOffline": "Vous êtes hors ligne",
@@ -1493,6 +1511,12 @@
     "deleteSuccess": "Agent supprimé avec succès",
     "deleteError": "Échec de la suppression de l'agent"
   },
+  "settingsTabAdminVisibilityConfirm": {
+    "title": "Limiter cet agent aux administrateurs ?",
+    "description": "Seuls les administrateurs pourront voir cet agent et discuter avec lui. Tous les autres perdront l'accès immédiatement.",
+    "cancel": "Annuler",
+    "confirm": "Limiter aux administrateurs"
+  },
   "tabsAuditLogTab": {
     "infoBox": "Gardez une trace écrite. Consultez le journal indiquant qui a modifié quoi et quand pour cet agent — pratique pour le dépannage et le respect de la conformité.",
     "heading": "Audit",
@@ -1910,6 +1934,7 @@
     "whoCanViewLabel": "Qui peut voir ?",
     "whoCanViewInfoAriaLabel": "Plus d'infos sur l'accès à la conversation",
     "whoCanViewTooltip": "Contrôlez qui peut voir cet agent.",
+    "whoCanViewAdminOnlyNote": "Seuls les administrateurs peuvent voir cet agent et discuter avec lui. Tous les autres perdent l'accès, y compris les personnes qui l'utilisent déjà.",
     "selectWhoCanView": "Sélectionner qui peut voir",
     "whoCanChatLabel": "Qui peut discuter ?",
     "whoCanChatInfoAriaLabel": "Plus d'infos sur l'accès à la conversation",

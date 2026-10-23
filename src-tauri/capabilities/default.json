@@ -55,6 +55,7 @@
     "allow-install-code-agent",
     "allow-list-code-agent-models",
     "allow-set-code-agent-model",
+    "allow-save-chat-file",
     "core:webview:allow-internal-toggle-devtools",
     "core:default",
     "core:event:default",

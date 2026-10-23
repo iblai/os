@@ -240,6 +240,8 @@ export interface RunOptions {
   language?: string;
   /** The latest picture of the tab, sent with every model call. */
   picture?: () => Picture | null;
+  /** The tools act on a point of the picture too (click_at, type_at). */
+  positions?: boolean;
 }
 
 export interface RunResult {
@@ -273,7 +275,7 @@ export async function runAgent(options: RunOptions): Promise<RunResult> {
 
   const result = streamText({
     model: options.model,
-    instructions: instructions(options.language),
+    instructions: instructions(options.language, options.positions),
     messages: options.messages,
     tools: options.tools,
     abortSignal: options.signal,

@@ -47,6 +47,7 @@ export function SettingsTab() {
   const t = useTranslations('tabsSettingsTab');
   const tCopy = useTranslations('settingsTabCopyMentorModal');
   const tDelete = useTranslations('settingsTabDeleteMentorModal');
+  const tAdminVisibility = useTranslations('settingsTabAdminVisibilityConfirm');
 
   const { tenantKey, mentorId } = useParams<TenantKeyMentorIdParams>();
   const { getMentorId, closeEditMentorModal, navigateToMentor } = useNavigate();
@@ -138,6 +139,7 @@ export function SettingsTab() {
           students: visibilityLabels[MENTOR_VISIBILITY_VALUES.STUDENTS],
           anyone: visibilityLabels[MENTOR_VISIBILITY_VALUES.ANYONE],
         },
+        adminOnlyNote: t('whoCanViewAdminOnlyNote'),
       },
       whoCanChat: {
         label: t('whoCanChatLabel'),
@@ -225,6 +227,12 @@ export function SettingsTab() {
       confirming: tDelete('deleting'),
       successToast: tDelete('deleteSuccess'),
       errorToast: tDelete('deleteError'),
+    },
+    adminVisibilityConfirm: {
+      title: tAdminVisibility('title'),
+      description: tAdminVisibility('description'),
+      cancel: tAdminVisibility('cancel'),
+      confirm: tAdminVisibility('confirm'),
     },
     copyModal: {
       title: tCopy('dialogTitle'),

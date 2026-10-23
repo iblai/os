@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-10-22 | 979 checkpoints (932 covered, 13 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 100 journeys (99 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-10-23 | 995 checkpoints (948 covered, 13 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 102 journeys (101 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -1904,6 +1904,8 @@ Covers issue #2544: a new `show_explore_mentors` mentor setting, exposed as a "S
 - [x] sem-05: With the setting ON, a non-admin non-owner viewer of the same agent also sees the "Explore Agents" section (RBAC-redaction regression guard)
 - [x] sem-06: With the setting OFF, the welcome screen hides the "Explore Agents" section
 - [x] sem-07: With the setting ON, the "Explore Agents" section sits below the first screen in two columns, and the "Explore Agents" hint scrolls it into view
+- [x] sem-08: The "Explore Agents" button scrolls to the section and back to the top, and its chevron flips up/down on clicks and on manual scrolling
+- [x] sem-09: At phone width the "Explore Agents" button is not shown
 
 ---
 
@@ -2059,7 +2061,7 @@ iblai/iblai-platform#2633: with the agent's `enable_in_chat_llm_change` on, a us
 
 ---
 
-## Journey 85: Stale Session Id Self-Heal (4 checkpoints) — `journeys/85-stale-session-id-self-heal.spec.ts`
+## Journey 85: Stale Session Id Self-Heal (6 checkpoints) — `journeys/85-stale-session-id-self-heal.spec.ts`
 
 **Source files:** `components/chat/sdk-chat.tsx`, `lib/utils.ts`, `hooks/user-navigate.ts`, `lib/logger.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/chats/use-recent-chats.ts`, `app/share/chat/[sessionId]/share-chat-redirect-content.tsx`, `e2e/page-objects/chat.page.ts` (the self-heal lives in the SDK Chat and `@iblai/web-utils` / `@iblai/data-layer`)
 
@@ -2069,6 +2071,8 @@ Regression guard for [iblai-platform#2536](https://github.com/iblai/iblai-platfo
 - [x] sess-02: A legacy cache entry keyed by the bare mentorId is never looked up; the app mints and uses a session under the `${tenantKey}:${mentorId}` key
 - [x] sess-03: A WS "Session not found: <id>" frame mid-chat self-heals with no error toast: the working indicator clears, a fresh session replaces the dead id, and a follow-up message on it succeeds
 - [x] sess-04: In embed mode (`?embed=true`) a dead session id self-heals with no manual New chat, fetching the dead id exactly 4 times, all before the mint
+- [x] sess-05: A 403 `{error: "You do not have permission to chat with this agent."}` on the create-session POST (iblai-platform#2712) toasts exactly that sentence, with no raw JSON, `status`, `[object Object]` or "Failed to start new chat"; the logout redirect is held pending so the toast stays
+- [x] sess-06: A start-chat failure with no readable message (400 `{}`) toasts the fallback "We couldn't start a new chat. Please try again."
 
 ---
 
@@ -2263,7 +2267,37 @@ Tenant admins choose which models users may use ([iblai-platform#2675](https://g
 
 **Source files:** `hooks/use-in-extension-panel.ts`, `hooks/use-browse-run.ts`, `lib/cowork-approvals.ts`, `components/chat/sdk-chat.tsx`, `messages/en.json`, `e2e/utils/embed-harness-client.ts`, `e2e/utils/embed-harness-server.mjs`
 
-The app half of the Chrome extension's Cowork mode, without loading the extension: everything the app does inside the side panel goes over `postMessage` with the panel, so the harness's second-origin `/agent-ai` page (journey 89's) stands in for it — an init script answers `MENTOR:BROWSE_HELLO` with `MENTOR:BROWSE_READY`, records each `MENTOR:BROWSE_RUN`, and posts worker frames back into the iframe the way `extensions/chrome/src/browse-bridge.ts` does. The agent's Show reasoning setting is patched on, since the action list renders only then. Chrome-only. The service worker's own behaviour — the snapshot (focusable elements, masked secret fields), the picture with numbered badges, real clicks through `chrome.debugger`, narration and refused calls as rows, the step cap's wording — is unit-tested under `extensions/chrome/src/__tests__` and is not reproducible here.
+The app half of the Chrome extension's Cowork mode, without loading the extension: everything the app does inside the side panel goes over `postMessage` with the panel, so the harness's second-origin `/agent-ai` page (journey 89's) stands in for it — an init script answers `MENTOR:BROWSE_HELLO` with `MENTOR:BROWSE_READY`, records each `MENTOR:BROWSE_RUN`, and posts worker frames back into the iframe the way `extensions/chrome/src/browse-bridge.ts` does. The agent's Show reasoning setting is patched on, since the action list renders only then. Chrome-only. The service worker's own behaviour — the snapshot (focusable elements, on-screen ones first under the cap, masked secret fields, text that leaves out what a modal covers), the picture with numbered badges and the clicks and typing at a point of it, real clicks and double clicks through `chrome.debugger`, narration and refused calls as rows, the step cap's wording — is unit-tested under `extensions/chrome/src/__tests__` and is not reproducible here.
 
 - [x] cw-01: Answered by a (faked) side panel, the app shows the Cowork pill pressed; its popover holds the switch on, the disclosure note mentioning the picture of the tab, and Approvals = Automatic
 - [x] cw-02: A goal becomes a `MENTOR:BROWSE_RUN` frame carrying `auto: true`; scripted worker frames (ack, three log lines — an action, the agent's narration, a failed call — the reply, done with the cap note) render as one assistant turn whose "Used 1 tool" row expands to each line's text, whose body ends with the reply then the note, and after which Send is back
+
+---
+
+## Journey 94: Chat Download as Excel + Sidebar Export (8 checkpoints) — `journeys/94-chat-download-excel-and-export.spec.ts`
+
+**Source files:** `components/chat/ai-message-download.tsx`, `components/chat/sdk-chat.tsx`, `app-sidebar/chats/chats-section.tsx`, `app-sidebar/chats/use-recent-chats.ts`, `messages/en.json`, `e2e/utils/xlsx.ts`
+
+[iblai-platform#2713](https://github.com/iblai/iblai-platform/issues/2713): one shared SDK dialog (`data-testid="chat-download-dialog"`) serves the reply's Download button and the sidebar row's Export. It reads the whole saved session when it opens, so the old first-message-only `messages.xlsx` export is covered by a real 3-turn chat. Serial; one throw-away agent (cheap ibl.ai model, tracked and deleted). The .xlsx is parsed by a small zip reader (`e2e/utils/xlsx.ts`, no new dependency). The canExport rule stays covered by chexp-03/04 (journey 57).
+
+- [x] dl-01: Download dialog (SDK ChatDownloadDialog) opens on Entire chat + File type "Text (.txt)" with its description; the File type dropdown lists Text and Excel each with a description, choosing Excel swaps the shown description, and reopening the dialog resets scope to Entire chat and file type to Text (iblai-platform#2713)
+- [x] dl-02: Download as Text saves chat-<agent>-<date>.txt holding every turn; This message only saves message-<agent>-<date>.txt without the earlier turns
+- [x] dl-03: Download as Excel saves chat-<agent>-<date>.xlsx whose first sheet has the header Time / From / Message and one row per message (From = "You" / agent name, Message = the text); This message only saves message-<agent>-<date>.xlsx with header + one row
+- [x] dl-04: While the session history request is held, the dialog footer shows "Getting the whole chat…" with a spinner and Download is disabled; after release the status clears and Download enables
+- [x] dl-05: When the session history request fails (500), the footer shows the "You can still download this message" error, Entire chat is disabled, This message only is selected and still downloads message-<agent>-<date>.txt
+- [x] ex-01: Sidebar row menu > Export opens "Export Chat" (same dialog) with only the File type dropdown (no scope radios), the "Getting the whole chat…" status and a disabled Export button until the history arrives
+- [x] ex-02: Sidebar Export as Excel of a 3-turn chat saves chat-<agent>-<date>.xlsx (not messages.xlsx) containing EVERY message (6 rows) with From = "You" / agent name — regression for the first-message-only export
+- [x] ex-03: Sidebar Export as Text saves chat-<agent>-<date>.txt containing every turn
+
+---
+
+## Journey 95: Admin Visibility Confirmation (4 checkpoints) — `journeys/95-admin-visibility-confirmation.spec.ts`
+
+**Source files:** `components/modals/edit-mentor-modal/settings-tab.tsx`, `messages/en.json`
+
+Issue #2731. Settings → Discovery → "Who Can View?": an admin-only note shows while Administrators is picked, and saving a change from Users/Anyone to Administrators asks "Limit this agent to administrators?" first. One throwaway agent (auto-deleted) is walked through the states by the serial checkpoints. The existing specs that pick Administrators then save (journeys 13 and 64) confirm the prompt through `saveConfirmingAdminVisibility()`.
+
+- [x] avs-01: Picking Administrators on a Users agent shows the admin-only note, and Save opens the "Limit this agent to administrators?" confirmation instead of saving
+- [x] avs-02: Cancel on the confirmation closes it, sends no visibility save, keeps Administrators in the form, and the server still holds Users
+- [x] avs-03: "Limit to Administrators" saves mentor_visibility=viewable_by_tenant_admins with the success toast; reopening shows Administrators with the note already visible
+- [x] avs-04: Switching away from Administrators hides the note and saves without a prompt, and Users to Anyone also saves without a prompt
