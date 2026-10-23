@@ -1,6 +1,10 @@
 'use client';
 
+import { useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
+
+import { QUERY_PARAMS } from '@/lib/constants';
+import { getEmbedContext } from '@/lib/embed-context';
 
 export const BROWSE_HELLO = 'MENTOR:BROWSE_HELLO';
 export const BROWSE_READY = 'MENTOR:BROWSE_READY';
@@ -8,22 +12,27 @@ export const BROWSE_READY = 'MENTOR:BROWSE_READY';
 /**
  * Whether this app is running inside the ibl.ai Chrome extension's side panel.
  *
- * The panel answers `MENTOR:BROWSE_HELLO` with `MENTOR:BROWSE_READY`
- * (`extensions/chrome/src/browse-bridge.ts`), which is also the panel telling us
- * it can drive the browser — so a true here means the Browse pill has somewhere
- * to send a goal, not merely that we are in some iframe.
- *
- * Detected AFTER mount, never during render: the handshake is asynchronous, so a
- * render-time read would latch false forever and would mismatch prerendered HTML
- * during hydration. Same reason the Tauri gate in
- * `components/chat-input-form/inside-buttons.tsx` is written this way.
+ * The panel's `<agent-ai enablecowork>` puts `enable-cowork=true` on the iframe
+ * URL (kept in the embed context across navigations), so the answer is there on
+ * the first render — which the SDK's Cowork pill needs: it reads this once, when
+ * it mounts. An extension from before that flag still gets the handshake: it
+ * answers `MENTOR:BROWSE_HELLO` with `MENTOR:BROWSE_READY`
+ * (`extensions/chrome/src/browse-bridge.ts`), after mount. Either way a true
+ * means the Browse pill has somewhere to send a goal, not merely that we are in
+ * some iframe.
  */
 export function useInExtensionPanel(): boolean {
-  const [inPanel, setInPanel] = useState(false);
+  const searchParams = useSearchParams();
+  const flagged =
+    searchParams?.get(QUERY_PARAMS.ENABLE_COWORK) === 'true' ||
+    (typeof window !== 'undefined' &&
+      getEmbedContext()?.[QUERY_PARAMS.ENABLE_COWORK] === 'true');
+  const [answered, setAnswered] = useState(false);
 
   useEffect(() => {
-    // No parent to ask: a top-level tab is never the panel.
-    if (typeof window === 'undefined' || window.parent === window) return;
+    // The flag has answered; and a top-level tab has no parent to ask.
+    if (flagged || typeof window === 'undefined' || window.parent === window)
+      return;
 
     // `'*'` because the app cannot know the extension's `chrome-extension://<id>`
     // origin. Safe: the hello carries nothing, and the panel validates both the
@@ -42,7 +51,7 @@ export function useInExtensionPanel(): boolean {
       if (event.source !== window.parent) return;
       if ((event.data as { type?: unknown } | null)?.type !== BROWSE_READY)
         return;
-      setInPanel(true);
+      setAnswered(true);
       clearInterval(timer);
     };
     window.addEventListener('message', onMessage);
@@ -52,7 +61,7 @@ export function useInExtensionPanel(): boolean {
       window.removeEventListener('message', onMessage);
       clearInterval(timer);
     };
-  }, []);
+  }, [flagged]);
 
-  return inPanel;
+  return flagged || answered;
 }

@@ -43,7 +43,6 @@ import type { EffectiveAgentSkill } from '@iblai/iblai-js/data-layer';
 import { toast } from 'sonner';
 import { DeepSearchIcon, CanvasIcon } from '@/components/icons/svg-icons';
 import {
-  coworkPrefSet,
   readCoworkApprovals,
   writeCoworkApprovals,
   type CoworkApprovals,
@@ -357,25 +356,10 @@ export const InsideButtons = ({
   // must still require a session the driver can actually drive.
   const coworkAvailable = cuaDriver.isAvailable && cuaDriver.isSupported;
 
-  // On the desktop Cowork is deliberately opt-in: it reads the contents of the
-  // user's windows and sends them off-device, and switching it on raises OS
-  // permission prompts. Nothing enables it there but `toggleCowork`, behind the
-  // consent dialog. (Code mode still defaults itself on; it asks for no OS
-  // permissions, so it is left as it was.)
-  //
-  // The extension panel is the exception: driving the tab is what the panel is
-  // for, so Cowork starts on. The PREF is written, not just `coworkOn` — the SDK
-  // routes on `isCoworkEnabled()` (`shouldUseRemoteAiChat`, the Cowork tool list)
-  // and so does the submit in `components/chat/index.tsx`, so a UI-only default
-  // would show an active pill while the turn took the ordinary WebSocket path.
-  // Only an UNSET pref defaults on: `setCoworkEnabled` writes "true"/"false", so
-  // a user who switched it off is remembered. The panel's iframe has its own
-  // partitioned storage, so this never reaches the user's ordinary tabs.
-  useEffect(() => {
-    if (!inExtensionPanel || coworkPrefSet()) return;
-    setCoworkEnabled(true);
-    setCoworkOn(true);
-  }, [inExtensionPanel]);
+  // On the desktop Cowork is deliberately opt-in (`toggleCowork`, behind the
+  // consent dialog): it reads the user's windows and raises OS prompts. In the
+  // extension panel nothing writes the pref unasked: the site's localStorage is
+  // shared with the user's ordinary tabs.
 
   // The PREFERENCE persists across runs; the install does not. A user whose first
   // install failed comes back to a toggle that reads ON with no driver behind it,

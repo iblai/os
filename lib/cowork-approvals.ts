@@ -26,27 +26,6 @@ export function readCoworkApprovals(): CoworkApprovals {
   }
 }
 
-/**
- * The SDK's own Cowork on/off key. Read here — never written here — because
- * `isCoworkEnabled()` collapses "off" and "never chosen" into `false`, and the
- * extension panel needs to tell them apart: it defaults Cowork ON, but only
- * until the user says otherwise. `setCoworkEnabled` writes `String(enabled)`,
- * so an explicit off leaves `"false"` behind and this returns true for it.
- */
-const ENABLED_KEY = 'ibl_cowork_enabled';
-
-/** Whether the user has ever set Cowork on or off on this origin. */
-export function coworkPrefSet(): boolean {
-  if (typeof window === 'undefined') return false;
-  try {
-    return window.localStorage.getItem(ENABLED_KEY) !== null;
-  } catch {
-    // Unreadable storage cannot hold a choice either, so treat it as unset and
-    // let the caller apply its default.
-    return false;
-  }
-}
-
 export function writeCoworkApprovals(mode: CoworkApprovals): void {
   if (typeof window === 'undefined') return;
   try {
