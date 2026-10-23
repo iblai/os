@@ -1,15 +1,15 @@
 {
   "version": 2,
-  "lastUpdated": "2026-10-21",
+  "lastUpdated": "2026-10-23",
   "summary": {
-    "totalCheckpoints": 980,
-    "coveredCheckpoints": 935,
+    "totalCheckpoints": 984,
+    "coveredCheckpoints": 939,
     "deprecatedCheckpoints": 17,
     "notReproducibleCheckpoints": 17,
     "pendingCheckpoints": 11,
     "percent": 100,
-    "totalJourneys": 101,
-    "activeJourneys": 100
+    "totalJourneys": 102,
+    "activeJourneys": 101
   },
   "journeys": [
     {
@@ -6227,6 +6227,37 @@
         {
           "id": "ex-03",
           "description": "Sidebar Export as Text saves chat-<agent>-<date>.txt containing every turn",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "admin-visibility-confirmation",
+      "name": "Admin Visibility Confirmation",
+      "spec": "95-admin-visibility-confirmation.spec.ts",
+      "sourceFiles": [
+        "components/modals/edit-mentor-modal/settings-tab.tsx",
+        "messages/en.json"
+      ],
+      "checkpoints": [
+        {
+          "id": "avs-01",
+          "description": "Picking Administrators on a Users agent shows the admin-only note, and Save opens the \"Limit this agent to administrators?\" confirmation instead of saving",
+          "status": "covered"
+        },
+        {
+          "id": "avs-02",
+          "description": "Cancel on the confirmation closes it, sends no visibility save, keeps Administrators in the form, and the server still holds Users",
+          "status": "covered"
+        },
+        {
+          "id": "avs-03",
+          "description": "\"Limit to Administrators\" saves mentor_visibility=viewable_by_tenant_admins with the success toast; reopening shows Administrators with the note already visible",
+          "status": "covered"
+        },
+        {
+          "id": "avs-04",
+          "description": "Switching away from Administrators hides the note and saves without a prompt, and Users to Anyone also saves without a prompt",
           "status": "covered"
         }
       ]

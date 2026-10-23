@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-10-21 | 980 checkpoints (935 covered, 11 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 101 journeys (100 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-10-23 | 984 checkpoints (939 covered, 11 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 102 journeys (101 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -2283,3 +2283,16 @@ The app half of the Chrome extension's Cowork mode, without loading the extensio
 - [x] ex-01: Sidebar row menu > Export opens "Export Chat" (same dialog) with only the File type dropdown (no scope radios), the "Getting the whole chat…" status and a disabled Export button until the history arrives
 - [x] ex-02: Sidebar Export as Excel of a 3-turn chat saves chat-<agent>-<date>.xlsx (not messages.xlsx) containing EVERY message (6 rows) with From = "You" / agent name — regression for the first-message-only export
 - [x] ex-03: Sidebar Export as Text saves chat-<agent>-<date>.txt containing every turn
+
+---
+
+## Journey 95: Admin Visibility Confirmation (4 checkpoints) — `journeys/95-admin-visibility-confirmation.spec.ts`
+
+**Source files:** `components/modals/edit-mentor-modal/settings-tab.tsx`, `messages/en.json`
+
+Issue #2731. Settings → Discovery → "Who Can View?": an admin-only note shows while Administrators is picked, and saving a change from Users/Anyone to Administrators asks "Limit this agent to administrators?" first. One throwaway agent (auto-deleted) is walked through the states by the serial checkpoints. The existing specs that pick Administrators then save (journeys 13 and 64) confirm the prompt through `saveConfirmingAdminVisibility()`.
+
+- [x] avs-01: Picking Administrators on a Users agent shows the admin-only note, and Save opens the "Limit this agent to administrators?" confirmation instead of saving
+- [x] avs-02: Cancel on the confirmation closes it, sends no visibility save, keeps Administrators in the form, and the server still holds Users
+- [x] avs-03: "Limit to Administrators" saves mentor_visibility=viewable_by_tenant_admins with the success toast; reopening shows Administrators with the note already visible
+- [x] avs-04: Switching away from Administrators hides the note and saves without a prompt, and Users to Anyone also saves without a prompt
