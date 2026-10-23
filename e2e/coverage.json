@@ -5814,6 +5814,16 @@
           "id": "sess-04",
           "description": "In embed mode (`?embed=true`) a dead session id self-heals with no manual New chat, fetching the dead id exactly 4 times, all before the mint",
           "status": "covered"
+        },
+        {
+          "id": "sess-05",
+          "description": "A 403 {error: \"You do not have permission to chat with this agent.\"} on the create-session POST toasts exactly that sentence; no raw JSON, status, [object Object] or \"Failed to start new chat\" (iblai-platform#2712; the logout redirect is held pending so the toast stays)",
+          "status": "covered"
+        },
+        {
+          "id": "sess-06",
+          "description": "A start-chat failure with no readable message (400 {}) toasts the fallback \"We couldn't start a new chat. Please try again.\" (iblai-platform#2712)",
+          "status": "covered"
         }
       ]
     },

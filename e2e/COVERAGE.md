@@ -2056,7 +2056,7 @@ iblai/iblai-platform#2633: with the agent's `enable_in_chat_llm_change` on, a us
 
 ---
 
-## Journey 85: Stale Session Id Self-Heal (4 checkpoints) — `journeys/85-stale-session-id-self-heal.spec.ts`
+## Journey 85: Stale Session Id Self-Heal (6 checkpoints) — `journeys/85-stale-session-id-self-heal.spec.ts`
 
 **Source files:** `components/chat/sdk-chat.tsx`, `lib/utils.ts`, `hooks/user-navigate.ts`, `lib/logger.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/chats/use-recent-chats.ts`, `app/share/chat/[sessionId]/share-chat-redirect-content.tsx`, `e2e/page-objects/chat.page.ts` (the self-heal lives in the SDK Chat and `@iblai/web-utils` / `@iblai/data-layer`)
 
@@ -2066,6 +2066,8 @@ Regression guard for [iblai-platform#2536](https://github.com/iblai/iblai-platfo
 - [x] sess-02: A legacy cache entry keyed by the bare mentorId is never looked up; the app mints and uses a session under the `${tenantKey}:${mentorId}` key
 - [x] sess-03: A WS "Session not found: <id>" frame mid-chat self-heals with no error toast: the working indicator clears, a fresh session replaces the dead id, and a follow-up message on it succeeds
 - [x] sess-04: In embed mode (`?embed=true`) a dead session id self-heals with no manual New chat, fetching the dead id exactly 4 times, all before the mint
+- [x] sess-05: A 403 `{error: "You do not have permission to chat with this agent."}` on the create-session POST (iblai-platform#2712) toasts exactly that sentence, with no raw JSON, `status`, `[object Object]` or "Failed to start new chat"; the logout redirect is held pending so the toast stays
+- [x] sess-06: A start-chat failure with no readable message (400 `{}`) toasts the fallback "We couldn't start a new chat. Please try again."
 
 ---
 
