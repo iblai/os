@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.180.0](https://github.com/iblai/os/compare/v0.179.1...v0.180.0) (2026-10-23)
+
+### Features
+
+* read the panel's enable-cowork flag, bump iblai-js to 2.49.1 and agent-ai to 2.13.2 ([7e1ec55](https://github.com/iblai/os/commit/7e1ec557f9c777eb2f99a817a9db4f6feacd2052))
+
+### Chores
+
+* **deps:** audit fixes: next 15.5.28, @sentry/nextjs 10.75.2, vite 8.3.5, three override floors ([2ae6565](https://github.com/iblai/os/commit/2ae6565ab0ed4c01c5207ec6288cc665746da2ed))
+* **ext:** bump Chrome extension to 1.1.9 ([5147597](https://github.com/iblai/os/commit/51475975b05b8006f474472b1c43709311088596))
+
 ## [0.179.1](https://github.com/iblai/os/compare/v0.179.0...v0.179.1) (2026-10-23)
 
 ### Chores
