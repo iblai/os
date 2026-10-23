@@ -5048,6 +5048,16 @@
           "id": "sem-07",
           "description": "With the setting ON, the \"Explore Agents\" section sits below the first screen in two columns, and the \"Explore Agents\" hint scrolls it into view",
           "status": "covered"
+        },
+        {
+          "id": "sem-08",
+          "description": "The \"Explore Agents\" button scrolls to the section and back to the top, and its chevron flips up/down on clicks and on manual scrolling",
+          "status": "covered"
+        },
+        {
+          "id": "sem-09",
+          "description": "At phone width the \"Explore Agents\" button is not shown",
+          "status": "covered"
         }
       ]
     },

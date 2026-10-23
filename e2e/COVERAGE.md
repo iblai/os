@@ -1902,6 +1902,8 @@ Covers issue #2544: a new `show_explore_mentors` mentor setting, exposed as a "S
 - [x] sem-05: With the setting ON, a non-admin non-owner viewer of the same agent also sees the "Explore Agents" section (RBAC-redaction regression guard)
 - [x] sem-06: With the setting OFF, the welcome screen hides the "Explore Agents" section
 - [x] sem-07: With the setting ON, the "Explore Agents" section sits below the first screen in two columns, and the "Explore Agents" hint scrolls it into view
+- [x] sem-08: The "Explore Agents" button scrolls to the section and back to the top, and its chevron flips up/down on clicks and on manual scrolling
+- [x] sem-09: At phone width the "Explore Agents" button is not shown
 
 ---
 
