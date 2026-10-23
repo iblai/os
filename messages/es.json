@@ -1494,6 +1494,12 @@
     "deleteSuccess": "Agente eliminado correctamente",
     "deleteError": "Error al eliminar el agente"
   },
+  "settingsTabAdminVisibilityConfirm": {
+    "title": "¿Limitar este agente a los administradores?",
+    "description": "Solo los administradores podrán ver y chatear con este agente. Todos los demás perderán el acceso de inmediato.",
+    "cancel": "Cancelar",
+    "confirm": "Limitar a administradores"
+  },
   "tabsAuditLogTab": {
     "infoBox": "Mantén un registro. Consulta el historial de quién cambió qué y cuándo en este agente: útil para solucionar problemas y cumplir con la normativa.",
     "heading": "Auditoría",
@@ -1911,6 +1917,7 @@
     "whoCanViewLabel": "¿Quién puede ver?",
     "whoCanViewInfoAriaLabel": "Más información sobre el acceso al chat",
     "whoCanViewTooltip": "Controle quién puede ver este agente.",
+    "whoCanViewAdminOnlyNote": "Solo los administradores pueden ver y chatear con este agente. Todos los demás pierden el acceso, incluidas las personas que ya lo usan.",
     "selectWhoCanView": "Seleccionar quién puede ver",
     "whoCanChatLabel": "¿Quién puede chatear?",
     "whoCanChatInfoAriaLabel": "Más información sobre el acceso al chat",

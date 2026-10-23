@@ -1494,6 +1494,12 @@
     "deleteSuccess": "Agent deleted successfully",
     "deleteError": "Failed to delete agent"
   },
+  "settingsTabAdminVisibilityConfirm": {
+    "title": "Limit this agent to administrators?",
+    "description": "Only administrators will be able to see and chat with this agent. Everyone else will lose access right away.",
+    "cancel": "Cancel",
+    "confirm": "Limit to Administrators"
+  },
   "tabsAuditLogTab": {
     "infoBox": "Keep a paper trail. Review the log of who changed what and when for this agent — handy for troubleshooting and staying compliant.",
     "heading": "Audit",
@@ -1911,6 +1917,7 @@
     "whoCanViewLabel": "Who Can View?",
     "whoCanViewInfoAriaLabel": "More info about chat access",
     "whoCanViewTooltip": "Control who can view this agent.",
+    "whoCanViewAdminOnlyNote": "Only administrators can see and chat with this agent. Everyone else loses access, including people already using it.",
     "selectWhoCanView": "Select Who Can View",
     "whoCanChatLabel": "Who Can Chat?",
     "whoCanChatInfoAriaLabel": "More info about chat access",
