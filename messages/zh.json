@@ -1494,6 +1494,12 @@
     "deleteSuccess": "智能体已成功删除",
     "deleteError": "删除智能体失败"
   },
+  "settingsTabAdminVisibilityConfirm": {
+    "title": "将此智能体限制为仅管理员可用？",
+    "description": "只有管理员才能查看此智能体并与其聊天。其他所有人将立即失去访问权限。",
+    "cancel": "取消",
+    "confirm": "限制为管理员"
+  },
   "tabsAuditLogTab": {
     "infoBox": "保留操作记录。查看该智能体的变更日志——谁在何时更改了什么——便于排查问题并保持合规。",
     "heading": "审计",
@@ -1911,6 +1917,7 @@
     "whoCanViewLabel": "谁可以查看？",
     "whoCanViewInfoAriaLabel": "关于聊天访问权限的更多信息",
     "whoCanViewTooltip": "控制谁可以查看此智能体。",
+    "whoCanViewAdminOnlyNote": "只有管理员可以查看此智能体并与其聊天。其他所有人都将失去访问权限，包括已经在使用它的人。",
     "selectWhoCanView": "选择谁可以查看",
     "whoCanChatLabel": "谁可以聊天？",
     "whoCanChatInfoAriaLabel": "关于聊天访问权限的更多信息",
