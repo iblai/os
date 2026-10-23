@@ -305,8 +305,8 @@ export class SettingsTab {
    * Each interaction below auto-switches to the right sub-tab so callers
    * don't have to know the layout. No-op when already on the target tab.
    *
-   * The parent category Tabs use distinct names (Configurations /
-   * Integrations / Analytics), so an exact-name role match is sufficient
+   * The parent category Tabs use distinct names (Setup / Policies /
+   * Integrations / Activity), so an exact-name role match is sufficient
    * to target only the inner sub-tab without extra filters.
    */
   async selectSubTab(

@@ -17,7 +17,13 @@ import {
 } from '@iblai/iblai-js/web-containers/next';
 import { selectSessionId } from '@iblai/iblai-js/web-utils';
 
+import {
+  CodeApprovalsButton,
+  useApprovalMode,
+  useApprovalsOffered,
+} from '@/components/chat-input-form/code-approvals-button';
 import { CodingModeButton } from '@/components/chat-input-form/coding-mode-button';
+import { useApprovalModeChoice } from '@/components/chat-input-form/use-approval-mode-choice';
 import { useServiceWorker } from '@/components/service-worker-provider';
 import { useAccessingPublicRoute } from '@/hooks/use-anonymous-mentor';
 import { useBrowseRun } from '@/hooks/use-browse-run';
@@ -37,6 +43,7 @@ import {
 import { useNavigate } from '@/hooks/user-navigate';
 import { useShowFreeTrialDialog } from '@/hooks/user-user-actions';
 import { config as appConfig } from '@/lib/config';
+import { isAppInBackground, playAttentionChime } from '@/lib/attention-chime';
 import eventBus from '@/lib/eventBus';
 import { useAppSelector } from '@/lib/hooks';
 import { TenantKeyMentorIdParams } from '@/lib/types';
@@ -108,6 +115,37 @@ function useInTauri(): boolean {
   return inTauri;
 }
 
+/**
+ * Chime for a Code permission card while the user is in another app.
+ *
+ * The SDK renders its own permission cards and does not chime, and the OS
+ * card that does is not mounted in this chat, so the sound has to come from
+ * here. Drop this once the SDK card carries the chime itself.
+ */
+function usePermissionChime(inTauri: boolean): void {
+  useEffect(() => {
+    if (!inTauri) return;
+    let stop: (() => void) | undefined;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const { listen } = await import('@tauri-apps/api/event');
+        const unlisten = await listen('opencode:permission_request', () => {
+          if (isAppInBackground()) playAttentionChime();
+        });
+        if (cancelled) unlisten();
+        else stop = unlisten;
+      } catch {
+        /* a courtesy only: the card on screen is the prompt itself */
+      }
+    })();
+    return () => {
+      cancelled = true;
+      stop?.();
+    };
+  }, [inTauri]);
+}
+
 function toOrigin(value: string | null | undefined): string | null {
   try {
     const origin = value ? new URL(value).origin : '';
@@ -162,7 +200,7 @@ type Props = {
  * OS wiring for the SDK `Chat`. The chat UI and behaviour live in the SDK;
  * this wrapper only supplies identity, environment, the host-owned hooks
  * (paywall, 402 credits UX, Browse in the Chrome extension, service-worker
- * connectivity, the shared event bus) and the Tauri-only Code pill.
+ * connectivity, the shared event bus) and the Tauri-only Code controls.
  */
 export function SdkChat({
   mode = 'default',
@@ -197,14 +235,19 @@ export function SdkChat({
   const inExtensionPanel = useInExtensionPanel();
   const browse = useBrowseRun();
 
-  // Code mode (Tauri only): the pill and the skill sync it reports on.
+  // Code mode (Tauri only): the pill, the skill sync it reports on, and the
+  // approval mode its controls and the permission cards change.
   const inTauri = useInTauri();
+  usePermissionChime(inTauri);
   const sessionId = useAppSelector(selectSessionId);
   const { data: mentorSettings } = useMentorSettings();
   const skillSync = useOpencodeSkillSync({
     org: tenantKey,
     mentorUniqueId: mentorSettings?.mentorUniqueId,
   });
+  const approvalMode = useApprovalMode();
+  const approvalsOffered = useApprovalsOffered();
+  const { chooseMode } = useApprovalModeChoice(inTauri);
 
   const messages = useMessages() as Record<string, unknown>;
   const labels = useMemo(
@@ -261,6 +304,9 @@ export function SdkChat({
       stop: browse.stop,
     },
     suppressChatErrorToast: wasRecent402,
+    onSwitchToAutomatic: inTauri
+      ? () => chooseMode('auto', { quiet: true })
+      : undefined,
     // The macOS desktop WebView ignores browser downloads; save natively there.
     saveFile,
     isOnline: swStatus.isOnline,
@@ -306,8 +352,24 @@ export function SdkChat({
       showExploreMentors
       slots={{
         composerExtraControls: inTauri ? (
-          <CodingModeButton sessionId={sessionId} skillSync={skillSync} />
+          <CodingModeButton
+            sessionId={sessionId}
+            skillSync={skillSync}
+            approvalsSlot={null}
+          />
         ) : undefined,
+        // Rendered here rather than portaled from the pill: the SDK renders
+        // each slot once per composer and the canvas split mounts two, so one
+        // shared target would put both pills' buttons in the same composer.
+        // Passed only while a pill offers it, because the SDK's action row
+        // spaces its buttons with a gap that even an empty slot would take.
+        composerActionControls:
+          inTauri && approvalsOffered ? (
+            <CodeApprovalsButton
+              mode={approvalMode}
+              onChange={(mode) => void chooseMode(mode)}
+            />
+          ) : undefined,
       }}
     />
   );

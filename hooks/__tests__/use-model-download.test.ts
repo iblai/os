@@ -12,6 +12,8 @@ vi.mock('sonner', () => ({
     error: vi.fn(),
     warning: vi.fn(),
     info: vi.fn(),
+    loading: vi.fn(() => 'setup-toast'),
+    dismiss: vi.fn(),
   },
 }));
 vi.mock('@/types/tauri', async () => {
@@ -44,6 +46,7 @@ const localStorageMock = (() => {
 })();
 vi.stubGlobal('localStorage', localStorageMock);
 
+import { toast } from 'sonner';
 import { useModelDownload } from '../use-model-download';
 
 describe('useModelDownload hook', () => {
@@ -451,6 +454,365 @@ describe('useModelDownload hook', () => {
           await result.current.startDownload?.().catch(() => {});
         });
       }
+    });
+  });
+
+  describe('Downloading an on-device model', () => {
+    const LOCAL_MODELS_ENABLED = 'ibl_local_llm_enabled';
+    const SELECTED_LOCAL_MODEL = 'ibl_local_llm_model';
+    const managerMissing = {
+      installed: false,
+      running: false,
+      model_installed: false,
+      installed_models: [],
+    };
+    const managerRunning = {
+      ...managerMissing,
+      installed: true,
+      running: true,
+    };
+
+    function stubBackend({
+      installed,
+      install = async () => 'Model manager installed and started',
+    }: {
+      installed: boolean;
+      install?: () => Promise<string>;
+    }) {
+      let managerInstalled = installed;
+      mockInvoke.mockImplementation(async (cmd: string) => {
+        switch (cmd) {
+          case 'check_disk_space_for_model':
+            return true;
+          case 'check_ollama_status':
+            return managerInstalled ? managerRunning : managerMissing;
+          case 'install_ollama': {
+            const result = await install();
+            managerInstalled = true;
+            return result;
+          }
+          default:
+            return null;
+        }
+      });
+    }
+
+    async function renderAndSettle() {
+      const hook = renderHook(() => useModelDownload());
+      await waitFor(() => {
+        expect(mockInvoke).toHaveBeenCalledWith('check_ollama_status');
+      });
+      return hook;
+    }
+
+    const commandsInvoked = () => mockInvoke.mock.calls.map((call) => call[0]);
+
+    beforeEach(() => {
+      localStorage.removeItem(LOCAL_MODELS_ENABLED);
+      localStorage.removeItem(SELECTED_LOCAL_MODEL);
+    });
+
+    it('turns on Local Models, sets up the Model Manager, then downloads, telling the user about the one-time setup', async () => {
+      stubBackend({ installed: false });
+      const { result } = await renderAndSettle();
+
+      await act(async () => {
+        await result.current.startDownload('qwen3');
+      });
+
+      const commands = commandsInvoked();
+      expect(commands).toContain('install_ollama');
+      expect(commands.indexOf('install_ollama')).toBeLessThan(
+        commands.indexOf('download_model'),
+      );
+      expect(mockInvoke).toHaveBeenCalledWith('download_model', {
+        model: 'qwen3',
+      });
+      expect(toast.loading).toHaveBeenCalledWith(
+        'Setting up the Model Manager',
+        expect.objectContaining({
+          description: expect.stringContaining('first time'),
+        }),
+      );
+      expect(toast.dismiss).toHaveBeenCalledWith('setup-toast');
+      expect(localStorage.getItem(LOCAL_MODELS_ENABLED)).toBe('true');
+    });
+
+    it('turns Local Models on before downloading when it is off, even with the Model Manager installed', async () => {
+      stubBackend({ installed: true });
+      const { result } = await renderAndSettle();
+
+      await act(async () => {
+        await result.current.startDownload('qwen3');
+      });
+
+      const commands = commandsInvoked();
+      expect(localStorage.getItem(LOCAL_MODELS_ENABLED)).toBe('true');
+      expect(commands.indexOf('install_ollama')).toBeGreaterThan(-1);
+      expect(commands.indexOf('install_ollama')).toBeLessThan(
+        commands.indexOf('download_model'),
+      );
+      expect(toast.loading).not.toHaveBeenCalled();
+    });
+
+    it('downloads straight away when Local Models is on and the Model Manager is installed', async () => {
+      localStorage.setItem(LOCAL_MODELS_ENABLED, 'true');
+      stubBackend({ installed: true });
+      const { result } = await renderAndSettle();
+
+      await act(async () => {
+        await result.current.startDownload('qwen3');
+      });
+
+      expect(commandsInvoked()).not.toContain('install_ollama');
+      expect(mockInvoke).toHaveBeenCalledWith('download_model', {
+        model: 'qwen3',
+      });
+      expect(toast.loading).not.toHaveBeenCalled();
+    });
+
+    it('does not download when the Model Manager setup fails', async () => {
+      stubBackend({
+        installed: false,
+        install: async () => {
+          throw new Error('no internet connection');
+        },
+      });
+      const { result } = await renderAndSettle();
+
+      await act(async () => {
+        await result.current.startDownload('qwen3');
+      });
+
+      expect(commandsInvoked()).not.toContain('download_model');
+      expect(toast.error).toHaveBeenCalledWith(
+        'Failed to enable local models: no internet connection',
+      );
+      expect(toast.dismiss).toHaveBeenCalledWith('setup-toast');
+      expect(localStorage.getItem(LOCAL_MODELS_ENABLED)).toBe('false');
+    });
+
+    it('clears a leftover selection of the model being downloaded, then puts it back in use once the download finishes', async () => {
+      mockSetState.mockImplementation((update: any) => {
+        mockState = typeof update === 'function' ? update(mockState) : update;
+      });
+      localStorage.setItem(SELECTED_LOCAL_MODEL, 'qwen3');
+      stubBackend({ installed: true });
+      const backend = mockInvoke.getMockImplementation()!;
+      let selectedDuringDownload: string | null = 'not downloaded';
+      mockInvoke.mockImplementation(async (cmd: string, args?: unknown) => {
+        if (cmd === 'download_model') {
+          selectedDuringDownload = localStorage.getItem(SELECTED_LOCAL_MODEL);
+        }
+        return backend(cmd, args);
+      });
+      const { result } = await renderAndSettle();
+
+      await act(async () => {
+        await result.current.startDownload('qwen3');
+      });
+
+      expect(selectedDuringDownload).toBeNull();
+      expect(localStorage.getItem(SELECTED_LOCAL_MODEL)).toBe('qwen3');
+      expect(localStorage.getItem(LOCAL_MODELS_ENABLED)).toBe('true');
+    });
+
+    it('puts the model back in use when its re-download fails', async () => {
+      mockSetState.mockImplementation((update: any) => {
+        mockState = typeof update === 'function' ? update(mockState) : update;
+      });
+      localStorage.setItem(LOCAL_MODELS_ENABLED, 'true');
+      localStorage.setItem(SELECTED_LOCAL_MODEL, 'qwen3');
+      stubBackend({ installed: true });
+      const backend = mockInvoke.getMockImplementation()!;
+      mockInvoke.mockImplementation(async (cmd: string, args?: unknown) => {
+        if (cmd === 'download_model') throw new Error('connection reset');
+        return backend(cmd, args);
+      });
+      const { result } = await renderAndSettle();
+
+      await act(async () => {
+        await result.current.startDownload('qwen3');
+      });
+
+      expect(toast.error).toHaveBeenCalledWith(
+        expect.stringContaining('connection reset'),
+      );
+      expect(localStorage.getItem(SELECTED_LOCAL_MODEL)).toBe('qwen3');
+    });
+
+    it('puts the model back in use when its re-download is cancelled', async () => {
+      mockSetState.mockImplementation((update: any) => {
+        mockState = typeof update === 'function' ? update(mockState) : update;
+      });
+      localStorage.setItem(LOCAL_MODELS_ENABLED, 'true');
+      localStorage.setItem(SELECTED_LOCAL_MODEL, 'qwen3');
+      stubBackend({ installed: true });
+      const backend = mockInvoke.getMockImplementation()!;
+      mockInvoke.mockImplementation(async (cmd: string, args?: unknown) => {
+        if (cmd === 'download_model') {
+          // Cancel lands while the pull runs; the backend then resolves cleanly.
+          mockState = { ...mockState, status: 'cancelled' };
+          return null;
+        }
+        return backend(cmd, args);
+      });
+      const { result } = await renderAndSettle();
+
+      await act(async () => {
+        await result.current.startDownload('qwen3');
+      });
+
+      expect(toast.success).not.toHaveBeenCalled();
+      expect(localStorage.getItem(SELECTED_LOCAL_MODEL)).toBe('qwen3');
+    });
+
+    it('keeps a model picked during the download when the download ends', async () => {
+      mockSetState.mockImplementation((update: any) => {
+        mockState = typeof update === 'function' ? update(mockState) : update;
+      });
+      localStorage.setItem(LOCAL_MODELS_ENABLED, 'true');
+      localStorage.setItem(SELECTED_LOCAL_MODEL, 'qwen3');
+      stubBackend({ installed: true });
+      const backend = mockInvoke.getMockImplementation()!;
+      mockInvoke.mockImplementation(async (cmd: string, args?: unknown) => {
+        if (cmd === 'download_model') {
+          localStorage.setItem(SELECTED_LOCAL_MODEL, 'phi3:mini');
+          throw new Error('connection reset');
+        }
+        return backend(cmd, args);
+      });
+      const { result } = await renderAndSettle();
+
+      await act(async () => {
+        await result.current.startDownload('qwen3');
+      });
+
+      expect(localStorage.getItem(SELECTED_LOCAL_MODEL)).toBe('phi3:mini');
+    });
+
+    it('does not download when the user cancels while the Model Manager is being set up', async () => {
+      mockSetState.mockImplementation((update: any) => {
+        mockState = typeof update === 'function' ? update(mockState) : update;
+      });
+      stubBackend({
+        installed: false,
+        install: async () => {
+          mockState = { ...mockState, status: 'cancelled' };
+          return 'Model manager installed and started';
+        },
+      });
+      const { result } = await renderAndSettle();
+
+      await act(async () => {
+        await result.current.startDownload('qwen3');
+      });
+
+      expect(commandsInvoked()).toContain('install_ollama');
+      expect(commandsInvoked()).not.toContain('download_model');
+    });
+  });
+
+  // web-utils 2.9 sends an online turn to the device only when a model is in
+  // USE (`ibl_local_llm_model`), not merely when Local Models is on. Foundry
+  // keeps its own selection and never wrote that key, so a Foundry user with
+  // Local Models on had every online chat answered by the cloud until they
+  // opened Profile then Advanced, where the SDK mirrors the pick.
+  describe('Foundry selection reaches the shared on-device key', () => {
+    const LOCAL_MODELS_ENABLED = 'ibl_local_llm_enabled';
+    const SELECTED_LOCAL_MODEL = 'ibl_local_llm_model';
+    const PENDING_CHANGE = 'ibl_local_llm_download_pending';
+
+    function stubFoundry({ downloaded = true } = {}) {
+      mockInvoke.mockImplementation(async (cmd: string) => {
+        switch (cmd) {
+          case 'check_foundry_local_status':
+            return {
+              is_supported: true,
+              has_models: true,
+              models: [
+                {
+                  id: 'phi-4-mini',
+                  foundry_id: 'phi-4-mini-cpu',
+                  is_downloaded: downloaded,
+                },
+              ],
+            };
+          case 'get_selected_foundry_model':
+            return 'phi-4-mini';
+          default:
+            return null;
+        }
+      });
+    }
+
+    async function mountAndSettle() {
+      const hook = renderHook(() => useModelDownload());
+      await waitFor(() => {
+        expect(mockInvoke).toHaveBeenCalledWith('check_foundry_local_status');
+      });
+      return hook;
+    }
+
+    beforeEach(() => {
+      localStorage.removeItem(LOCAL_MODELS_ENABLED);
+      localStorage.removeItem(SELECTED_LOCAL_MODEL);
+      localStorage.removeItem(PENDING_CHANGE);
+    });
+
+    it('puts the loaded Foundry model in use so online chats stay on the device', async () => {
+      localStorage.setItem(LOCAL_MODELS_ENABLED, 'true');
+      stubFoundry();
+      await mountAndSettle();
+
+      await waitFor(() =>
+        expect(localStorage.getItem(SELECTED_LOCAL_MODEL)).toBe('phi-4-mini'),
+      );
+    });
+
+    it('leaves the key alone while Local Models is off', async () => {
+      stubFoundry();
+      await mountAndSettle();
+
+      await waitFor(() =>
+        expect(mockInvoke).toHaveBeenCalledWith('get_selected_foundry_model'),
+      );
+      expect(localStorage.getItem(SELECTED_LOCAL_MODEL)).toBeNull();
+    });
+
+    it('never overwrites a model the user already has in use', async () => {
+      localStorage.setItem(LOCAL_MODELS_ENABLED, 'true');
+      localStorage.setItem(SELECTED_LOCAL_MODEL, 'qwen3');
+      stubFoundry();
+      await mountAndSettle();
+
+      await waitFor(() =>
+        expect(mockInvoke).toHaveBeenCalledWith('get_selected_foundry_model'),
+      );
+      expect(localStorage.getItem(SELECTED_LOCAL_MODEL)).toBe('qwen3');
+    });
+
+    it('stands aside while a download is choosing the model', async () => {
+      localStorage.setItem(LOCAL_MODELS_ENABLED, 'true');
+      localStorage.setItem(PENDING_CHANGE, 'qwen3');
+      stubFoundry();
+      await mountAndSettle();
+
+      await waitFor(() =>
+        expect(mockInvoke).toHaveBeenCalledWith('get_selected_foundry_model'),
+      );
+      expect(localStorage.getItem(SELECTED_LOCAL_MODEL)).toBeNull();
+    });
+
+    it('waits until the model is actually downloaded', async () => {
+      localStorage.setItem(LOCAL_MODELS_ENABLED, 'true');
+      stubFoundry({ downloaded: false });
+      await mountAndSettle();
+
+      await waitFor(() =>
+        expect(mockInvoke).toHaveBeenCalledWith('get_selected_foundry_model'),
+      );
+      expect(localStorage.getItem(SELECTED_LOCAL_MODEL)).toBeNull();
     });
   });
 

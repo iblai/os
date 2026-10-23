@@ -37,39 +37,40 @@ import { ApiTab } from './api-tab';
  */
 const TAB_CATEGORY: Record<
   string,
-  'Configurations' | 'Integrations' | 'Runtime'
+  'Setup' | 'Policies' | 'Integrations' | 'Activity'
 > = {
-  // Configurations
-  Settings: 'Configurations',
-  LLM: 'Configurations',
-  Billing: 'Configurations',
-  Access: 'Configurations',
-  Prompts: 'Configurations',
-  Skills: 'Configurations',
-  Voice: 'Configurations',
-  Privacy: 'Configurations',
-  Safety: 'Configurations',
-  Disclaimers: 'Configurations',
-  Screen: 'Configurations',
-  Grader: 'Configurations',
+  // Setup
+  Settings: 'Setup',
+  LLM: 'Setup',
+  Voice: 'Setup',
+  Prompts: 'Setup',
+  Skills: 'Setup',
+  Datasets: 'Setup',
+  Grader: 'Setup',
+  Screen: 'Setup',
+  // Policies
+  Access: 'Policies',
+  Billing: 'Policies',
+  Privacy: 'Policies',
+  Safety: 'Policies',
+  Disclaimers: 'Policies',
   // Integrations
   Sandbox: 'Integrations',
   Tools: 'Integrations',
   MCP: 'Integrations',
-  Datasets: 'Integrations',
   API: 'Integrations',
   LTI: 'Integrations',
   Embed: 'Integrations',
-  // Runtime (renamed from Analytics)
-  Tasks: 'Runtime',
-  Memory: 'Runtime',
-  History: 'Runtime',
+  // Activity
+  Tasks: 'Activity',
+  Memory: 'Activity',
+  History: 'Activity',
   // Host sidebar label for the human-support segment is "Support" (see
   // hooks/use-mentor-segments.ts), not "Human Support".
-  Support: 'Runtime',
-  Audit: 'Runtime',
-  Analytics: 'Runtime',
-  Evals: 'Runtime',
+  Support: 'Activity',
+  Audit: 'Activity',
+  Evals: 'Activity',
+  Analytics: 'Activity',
 };
 
 export class EditMentorPage {
@@ -142,12 +143,12 @@ export class EditMentorPage {
 
     // Same story for Tasks: the SDK's `switchToTasksTab` helper predates the
     // category strip and expects the Tasks trigger to be in the DOM already —
-    // but Tasks lives in the Runtime category, which isn't mounted while the
-    // modal sits on its default Configurations view. Binding the tab nav lets
-    // `TasksTab.switchToTab()` activate Runtime first.
+    // but Tasks lives in the Activity category, which isn't mounted while the
+    // modal sits on its default Setup view. Binding the tab nav lets
+    // `TasksTab.switchToTab()` activate Activity first.
     this.tasks.bindTabNav(this.navigateToTab.bind(this));
 
-    // Human Support has the identical problem — it also lives in the Runtime
+    // Human Support has the identical problem — it also lives in the Activity
     // category and its SDK helper `switchToSupportTab` is category-blind.
     this.humanSupport.bindTabNav(this.navigateToTab.bind(this));
 
@@ -534,10 +535,15 @@ export class EditMentorPage {
     }
   }
 
-  private async attemptNavigateToTab(tabName: string): Promise<void> {
-    // The sidebar now renders only the segments belonging to the active
-    // category, so segment triggers outside that category aren't in the DOM
-    // yet. Switch to the segment's category first when known.
+  /**
+   * Best-effort switch to the sidebar category that holds `tabName`, without
+   * clicking the tab itself. The sidebar only renders the active category's
+   * segments, so a "tab is hidden" check must run in the tab's own category
+   * or it passes without testing anything. No-op for a tab missing from
+   * `TAB_CATEGORY`.
+   */
+  async activateCategoryOf(tabName: string): Promise<void> {
+    await this.waitForHydrated();
     const category = TAB_CATEGORY[tabName];
     if (category) {
       // Scope to the visible category pill. Each pill is rendered twice
@@ -551,7 +557,7 @@ export class EditMentorPage {
       // leaves a single category, the strip is dropped and every segment sits
       // in the one visible list already — so treat the category switch as
       // best-effort: wait a bounded time for the pill, and if it never
-      // appears, fall through to the segment lookup below.
+      // appears, leave the segment lookup to the caller.
       const hasStrip = await categoryTab
         .first()
         .waitFor({ state: 'visible', timeout: 15_000 })
@@ -576,6 +582,10 @@ export class EditMentorPage {
         }
       }
     }
+  }
+
+  private async attemptNavigateToTab(tabName: string): Promise<void> {
+    await this.activateCategoryOf(tabName);
 
     // Scope to the host sidebar trigger. The SDK's Voice tab renders its own
     // "Voice" sub-tab pill (also role="tab", same accessible name) inside the

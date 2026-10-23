@@ -2,11 +2,11 @@
   "version": 2,
   "lastUpdated": "2026-10-23",
   "summary": {
-    "totalCheckpoints": 984,
-    "coveredCheckpoints": 939,
+    "totalCheckpoints": 995,
+    "coveredCheckpoints": 948,
     "deprecatedCheckpoints": 17,
     "notReproducibleCheckpoints": 17,
-    "pendingCheckpoints": 11,
+    "pendingCheckpoints": 13,
     "percent": 100,
     "totalJourneys": 102,
     "activeJourneys": 101
@@ -341,6 +341,7 @@
       "spec": "06-mentor-management-admin.spec.ts",
       "sourceFiles": [
         "components/modals/edit-mentor-modal/index.tsx",
+        "hooks/use-mentor-segments.ts",
         "app/create-mentor/page.tsx",
         "components/modals/settings-modal.tsx",
         "hooks/use-mentors.ts",
@@ -463,6 +464,11 @@
         {
           "id": "mgmt-23",
           "description": "Issue #2638: LLM model availability is decided per model from route-mocked mentor-llms (availability wins over has_credentials, legacy shape falls back to provider flags) — provider card data-disabled only when every model is unavailable; unavailable model rows are disabled with data-availability-status, the backend message as a title tooltip only (no inline text) and sort after available ones; byok_main_fallback model is selectable",
+          "status": "covered"
+        },
+        {
+          "id": "mgmt-24",
+          "description": "Admin opens the Edit Agent modal at desktop width and its \"Agent settings categories\" tablist shows exactly four tabs in order — Setup, Policies, Integrations, Activity — all on one row, each visible with its title shown in full (scrollWidth <= clientWidth; equal quarters of the 320px sidebar cut \"Integrations\" off, so each pill takes its title's width)",
           "status": "covered"
         }
       ]
@@ -2958,12 +2964,12 @@
         },
         {
           "id": "claw-04",
-          "description": "Selecting claw turns off whichever kind (computational-runtime or virtual-machine) was previously active in the same PATCH (mutual exclusivity); no kind switch ever gets a persistent disabled state — each is only briefly disabled while its own save is in flight; Sandbox leads the Integrations category (feat/2040 moved it off Configurations)",
+          "description": "Selecting claw turns off whichever kind (computational-runtime or virtual-machine) was previously active in the same PATCH (mutual exclusivity); no kind switch ever gets a persistent disabled state — each is only briefly disabled while its own save is in flight; Integrations opens on Tools and Sandbox follows MCP",
           "status": "covered"
         },
         {
           "id": "claw-06",
-          "description": "Sandbox leads the Integrations category unconditionally (feat/2040 groups the sidebar into Configurations / Integrations / Runtime and moved Sandbox off Configurations)",
+          "description": "Sandbox follows Tools and MCP in the Integrations category unconditionally (the sidebar is grouped into Setup / Policies / Integrations / Activity)",
           "status": "covered"
         },
         {
@@ -4167,7 +4173,7 @@
       "checkpoints": [
         {
           "id": "grd-01",
-          "description": "Grader tab is visible in the Edit Mentor modal sidebar (Configurations category, always mounted for an admin with standard mentor-owner permissions)",
+          "description": "Grader tab is visible in the Edit Mentor modal sidebar (Setup category, always mounted for an admin with standard mentor-owner permissions)",
           "status": "covered"
         },
         {
@@ -4255,7 +4261,7 @@
       "checkpoints": [
         {
           "id": "ags-01",
-          "description": "Admin sees the Skills tab on a freshly-created (Base Agent) mentor, with the updated tab description (\"Reusable playbooks this Base Agent can discover and follow.\") and skills-info-box copy describing the / picker (feat/2215); Skills sits right after Prompts in the Configurations category (ordering moved here from journey 44) — full RBAC grant set forced via SkillsTab.grantAllSkillAssignmentPerms so the both-sub-tabs assert is rollout-independent",
+          "description": "Admin sees the Skills tab on a freshly-created (Base Agent) mentor, with the updated tab description (\"Reusable playbooks this Base Agent can discover and follow.\") and skills-info-box copy describing the / picker (feat/2215); Skills sits right after Prompts in the Setup category (ordering moved here from journey 44) — full RBAC grant set forced via SkillsTab.grantAllSkillAssignmentPerms so the both-sub-tabs assert is rollout-independent",
           "status": "covered"
         },
         {
@@ -4382,6 +4388,12 @@
           "id": "slash-16",
           "description": "Skills row inside the composer's \"+\" menu lists the mentor's enabled skills as name + /slug (no descriptions); selecting inserts the /slug token AT THE CARET with context-aware spacing (highlighted in the composer) — there is no separate skill chip in the #2586 redesign, so the armed state shows only as the composer token, a checked row in the Skills menu, and its count badge on the menu trigger; removing (re-selecting the armed skill, or deleting its token text) clears all three; arming another skill replaces the current one (single selection); arming via the \"/\" picker marks the same skill checked in the Skills menu — both surfaces derive from the composer text so they stay in sync",
           "status": "covered"
+        },
+        {
+          "id": "slash-17",
+          "description": "On a phone-width composer (360px) the Skills button collapses into the ••• menu like the other tool pills; its ••• entry expands the skills list in place (scrolling, inside the viewport), and picking a skill arms its /slug token",
+          "status": "pending",
+          "note": "No route renders a Skills button that could collapse: the mentor route renders the SDK composer (SdkChat), where Skills sits inside the '+' menu at every width, and the workflow preview renders the OS composer (components/chat-input-form.tsx) in compactMode, which has no tool row (inside-buttons.tsx) and so no Skills. test.fixme until a route renders the OS composer's tool row; covered meanwhile by the inside-buttons Vitest case 'moves into the ••• menu when the row is too narrow, and expands its list there'"
         }
       ]
     },
@@ -4466,7 +4478,7 @@
       "checkpoints": [
         {
           "id": "sc-01",
-          "description": "Admin sees the \"Billing\" tab in the Configurations category, positioned immediately after \"LLM\", and it opens on the \"This Agent\" sub-tab with \"Per User\" also present (AgentSpendCapsTab now has exactly these two sub-tabs — the old \"Workspace\" sub-tab moved to the tenant Billing tab, covered by journey 69)",
+          "description": "Admin sees the \"Billing\" tab in the Policies category, positioned immediately after \"Access\", and it opens on the \"This Agent\" sub-tab with \"Per User\" also present (AgentSpendCapsTab now has exactly these two sub-tabs — the old \"Workspace\" sub-tab moved to the tenant Billing tab, covered by journey 69)",
           "status": "covered"
         },
         {
@@ -5449,6 +5461,12 @@
           "id": "cr-16",
           "description": "The composer in CONVERSATION state (after a mocked reply) still shows an active tool chip, the Canvas \"Turn off Canvas\" x pill, and the \"/\" skill picker positioned above the composer; a 320-390px viewport in that state has no horizontal overflow with Send visible",
           "status": "covered"
+        },
+        {
+          "id": "cr-17",
+          "description": "Below 520px the composer's tool pills keep one line: Canvas off shows only its icon (its name kept as the accessible name), Canvas on alone shows its name and its \"Turn off Canvas\" x; from 520px up the name shows on or off",
+          "status": "pending",
+          "note": "Written as test.fixme and never run: needs an authenticated session (PLAYWRIGHT_USERNAME / PLAYWRIGHT_PASSWORD), which no env it has run in had. The pinned SDK (web-containers 1.48.0) has the tool row it tests; the SDK measures the row rather than the window, so its 390px step still needs checking on the first run. The two-pills-on case needs the desktop app's Code or Cowork pill; covered meanwhile by the SDK's composer-tool-row and chat-input-form 'tool pills on phone widths' Vitest cases and the OS coding-mode-button 'in the SDK composer's tool row' cases"
         }
       ]
     },

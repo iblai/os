@@ -51,7 +51,7 @@ export function VoiceChatButton({
           <Button
             variant="ghost"
             size="icon"
-            className="h-9 w-9 text-gray-400"
+            className="h-9 w-9 text-gray-400 max-[520px]:w-8"
             disabled={disabled || isPreviewMode || processing}
             type="button"
             aria-label={
