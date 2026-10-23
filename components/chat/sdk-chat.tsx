@@ -46,6 +46,7 @@ import {
   redirectToAuthSpaJoinTenant,
 } from '@/lib/utils';
 import { htmlToMarkdown, markdownToHtml } from '@/lib/markdown-engine';
+import { saveFile } from '@/lib/save-file';
 import { isTauriApp } from '@/types/tauri';
 
 // The SDK chat renders messages with its own port of the OS markdown renderer;
@@ -260,6 +261,8 @@ export function SdkChat({
       stop: browse.stop,
     },
     suppressChatErrorToast: wasRecent402,
+    // The macOS desktop WebView ignores browser downloads; save natively there.
+    saveFile,
     isOnline: swStatus.isOnline,
     // Canvas (group: canvas): the OS GFM + KaTeX pipeline, so the canvas
     // editor/export/preview render tables and math like the OS canvas did.

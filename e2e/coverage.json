@@ -1,15 +1,15 @@
 {
   "version": 2,
-  "lastUpdated": "2026-10-21",
+  "lastUpdated": "2026-10-23",
   "summary": {
-    "totalCheckpoints": 972,
-    "coveredCheckpoints": 927,
+    "totalCheckpoints": 984,
+    "coveredCheckpoints": 939,
     "deprecatedCheckpoints": 17,
     "notReproducibleCheckpoints": 17,
     "pendingCheckpoints": 11,
     "percent": 100,
-    "totalJourneys": 100,
-    "activeJourneys": 99
+    "totalJourneys": 102,
+    "activeJourneys": 101
   },
   "journeys": [
     {
@@ -5048,6 +5048,16 @@
           "id": "sem-07",
           "description": "With the setting ON, the \"Explore Agents\" section sits below the first screen in two columns, and the \"Explore Agents\" hint scrolls it into view",
           "status": "covered"
+        },
+        {
+          "id": "sem-08",
+          "description": "The \"Explore Agents\" button scrolls to the section and back to the top, and its chevron flips up/down on clicks and on manual scrolling",
+          "status": "covered"
+        },
+        {
+          "id": "sem-09",
+          "description": "At phone width the \"Explore Agents\" button is not shown",
+          "status": "covered"
         }
       ]
     },
@@ -5814,6 +5824,16 @@
           "id": "sess-04",
           "description": "In embed mode (`?embed=true`) a dead session id self-heals with no manual New chat, fetching the dead id exactly 4 times, all before the mint",
           "status": "covered"
+        },
+        {
+          "id": "sess-05",
+          "description": "A 403 {error: \"You do not have permission to chat with this agent.\"} on the create-session POST toasts exactly that sentence; no raw JSON, status, [object Object] or \"Failed to start new chat\" (iblai-platform#2712; the logout redirect is held pending so the toast stays)",
+          "status": "covered"
+        },
+        {
+          "id": "sess-06",
+          "description": "A start-chat failure with no readable message (400 {}) toasts the fallback \"We couldn't start a new chat. Please try again.\" (iblai-platform#2712)",
+          "status": "covered"
         }
       ]
     },
@@ -6161,6 +6181,93 @@
         {
           "id": "cw-02",
           "description": "A goal sent in the panel becomes a MENTOR:BROWSE_RUN frame carrying auto: true; scripted worker frames (ack, three log lines — an action, the agent's narration, a failed call — the reply text, done with the cap note) render as one assistant turn whose \"Used 1 tool\" row expands to each line's text, whose body ends with the reply then the note, and after which Send is back",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "chat-download-excel-and-export",
+      "name": "Chat Download as Excel + Sidebar Export",
+      "spec": "94-chat-download-excel-and-export.spec.ts",
+      "sourceFiles": [
+        "components/chat/ai-message-download.tsx",
+        "components/chat/sdk-chat.tsx",
+        "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/chats/chats-section.tsx",
+        "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/chats/use-recent-chats.ts",
+        "messages/en.json",
+        "e2e/page-objects/chat.page.ts",
+        "e2e/utils/xlsx.ts"
+      ],
+      "checkpoints": [
+        {
+          "id": "dl-01",
+          "description": "Download dialog (SDK ChatDownloadDialog) opens on Entire chat + File type \"Text (.txt)\" with its description; the File type dropdown lists Text and Excel each with a description, choosing Excel swaps the shown description, and reopening the dialog resets scope to Entire chat and file type to Text (iblai-platform#2713)",
+          "status": "covered"
+        },
+        {
+          "id": "dl-02",
+          "description": "Download as Text saves chat-<agent>-<date>.txt holding every turn; This message only saves message-<agent>-<date>.txt without the earlier turns",
+          "status": "covered"
+        },
+        {
+          "id": "dl-03",
+          "description": "Download as Excel saves chat-<agent>-<date>.xlsx whose first sheet has the header Time / From / Message and one row per message (From = \"You\" / agent name, Message = the text); This message only saves message-<agent>-<date>.xlsx with header + one row",
+          "status": "covered"
+        },
+        {
+          "id": "dl-04",
+          "description": "While the session history request is held, the dialog footer shows \"Getting the whole chat…\" with a spinner and Download is disabled; after release the status clears and Download enables",
+          "status": "covered"
+        },
+        {
+          "id": "dl-05",
+          "description": "When the session history request fails (500), the footer shows the \"You can still download this message\" error, Entire chat is disabled, This message only is selected and still downloads message-<agent>-<date>.txt",
+          "status": "covered"
+        },
+        {
+          "id": "ex-01",
+          "description": "Sidebar row menu > Export opens \"Export Chat\" (same dialog) with only the File type dropdown (no scope radios), the \"Getting the whole chat…\" status and a disabled Export button until the history arrives",
+          "status": "covered"
+        },
+        {
+          "id": "ex-02",
+          "description": "Sidebar Export as Excel of a 3-turn chat saves chat-<agent>-<date>.xlsx (not messages.xlsx) containing EVERY message (6 rows) with From = \"You\" / agent name — regression for the first-message-only export",
+          "status": "covered"
+        },
+        {
+          "id": "ex-03",
+          "description": "Sidebar Export as Text saves chat-<agent>-<date>.txt containing every turn",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "admin-visibility-confirmation",
+      "name": "Admin Visibility Confirmation",
+      "spec": "95-admin-visibility-confirmation.spec.ts",
+      "sourceFiles": [
+        "components/modals/edit-mentor-modal/settings-tab.tsx",
+        "messages/en.json"
+      ],
+      "checkpoints": [
+        {
+          "id": "avs-01",
+          "description": "Picking Administrators on a Users agent shows the admin-only note, and Save opens the \"Limit this agent to administrators?\" confirmation instead of saving",
+          "status": "covered"
+        },
+        {
+          "id": "avs-02",
+          "description": "Cancel on the confirmation closes it, sends no visibility save, keeps Administrators in the form, and the server still holds Users",
+          "status": "covered"
+        },
+        {
+          "id": "avs-03",
+          "description": "\"Limit to Administrators\" saves mentor_visibility=viewable_by_tenant_admins with the success toast; reopening shows Administrators with the note already visible",
+          "status": "covered"
+        },
+        {
+          "id": "avs-04",
+          "description": "Switching away from Administrators hides the note and saves without a prompt, and Users to Anyone also saves without a prompt",
           "status": "covered"
         }
       ]

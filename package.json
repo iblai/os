@@ -1,6 +1,6 @@
 {
   "name": "ibl-web-nextjs-mentor-spa",
-  "version": "0.177.0",
+  "version": "0.179.0",
   "private": false,
   "packageManager": "pnpm@10.11.1",
   "engines": {
@@ -45,7 +45,7 @@
   },
   "dependencies": {
     "@iblai/iblai-api": "4.166.0-ai",
-    "@iblai/iblai-js": "2.49.1",
+    "@iblai/iblai-js": "2.49.2",
     "@iblai/iblai-web-mentor": "1.3.4",
     "@livekit/components-react": "2.8.1",
     "@livekit/components-styles": "1.1.4",
@@ -158,7 +158,6 @@
     "unist-util-visit": "5.1.0",
     "use-debounce": "10.0.4",
     "vaul": "1.1.2",
-    "write-excel-file": "4.0.7",
     "zod": "3.25.76"
   },
   "devDependencies": {
@@ -215,7 +214,7 @@
     "tsx": "4.23.1",
     "turbo": "2.9.14",
     "typescript": "5.9.3",
-    "vite": "8.3.5",
+    "vite": "8.1.6",
     "vite-tsconfig-paths": "5.1.4",
     "vitest": "3.2.6",
     "vitest-axe": "0.1.0",

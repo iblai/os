@@ -7,10 +7,9 @@ onlyBuiltDependencies:
   - sharp
   - unrs-resolver
 overrides:
-  # Floor raised 7.3.2 -> 8.1.6 for GHSA-587h-7wmj-h5pm (launch-editor's
-  # existence check bypassed on Windows), affecting >=8.0.0 <=8.1.5. Direct dev
-  # dependency, pinned to match.
-  vite: '>=8.1.6'
+  # Floor raised to 8.1.6 for GHSA-587h-7wmj-h5pm (launch-editor existence
+  # check bypass on Windows, >=8.0.0 <=8.1.5). Dev server only.
+  vite: '>=8.1.6 <8.2'
   # GHSA-c475-qrg2-pj4r — quadratic-time CPU DoS in Client.list()'s Unix
   # directory-listing parser (RE_LINE backtracking), affecting <=6.2.0; 6.2.1 is
   # the only patched release. Surfaced by `pnpm audit` (high), which blocks the
@@ -24,9 +23,9 @@ overrides:
   # Dev-only reach: @release-it/conventional-changelog > conventional-changelog
   # > conventional-changelog-writer > handlebars. Upper bound keeps the 4.x line.
   handlebars: '>=4.7.10 <5'
-  # Floor raised 1.16.0 -> 1.16.1 for GHSA-8r9p-f939-6h3c (array-form headers
-  # bypass the cross-origin credential stripping) and GHSA-q3jh-wrc6-jgq8
-  # (sensitiveHeaders regex escaping). Reached through axios.
+  # Floor raised to 1.16.1 for GHSA-q3jh-wrc6-jgq8 and GHSA-8r9p-f939-6h3c
+  # (credential headers kept on cross-origin redirects, >=1.16.0 <1.16.1).
+  # Reached through axios.
   follow-redirects: '>=1.16.1'
   defu: '>=6.1.5'
   lodash-es: '>=4.18.0'
@@ -69,10 +68,8 @@ overrides:
   axios: '>=1.20.0'
   prismjs: '>=1.30.0'
   # Floor raised 3.4.13 -> 3.4.17 for GHSA-cg2g-xh64-v4q7 (SAFE_FOR_TEMPLATES
-  # bypass: split template expressions survive in attached shadow roots) and
-  # GHSA-mrv2-3pqr-j5jr, affecting <=3.4.16; 3.4.12 -> 3.4.13 before it for
-  # GHSA-55q2-fjhq-7xh7 (IN_PLACE hook removal leaves a detached subtree
-  # executable). Reached through @iblai/iblai-js > @iblai/web-containers.
+  # bypass) and GHSA-mrv2-3pqr-j5jr (IN_PLACE hook removal, incomplete fix for
+  # GHSA-55q2-fjhq-7xh7). Reached through @iblai/iblai-js > @iblai/web-containers.
   dompurify: '>=3.4.17'
   # GHSA-j95f-988m-3j2f - quadratic ReDoS parsing block and inline Markdown
   # attributes, affecting >=3.7.0 <3.30.5. Scoped to the web-containers subtree

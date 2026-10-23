@@ -371,6 +371,7 @@
     "download": "Descargar",
     "dialogTitle": "Descargar chat",
     "dialogDescription": "Elige qué quieres descargar como archivo de texto.",
+    "formatDialogDescription": "Elige qué descargar y el tipo de archivo.",
     "entireChat": "Todo el chat",
     "entireChatDescription": "Todos los mensajes de esta conversación.",
     "thisMessage": "Solo este mensaje",
@@ -378,7 +379,24 @@
     "downloadButton": "Descargar",
     "transcriptHeader": "Chat con {mentorName}",
     "roleUser": "Tú",
-    "roleAi": "IA"
+    "roleAi": "IA",
+    "scopeLabel": "Qué descargar",
+    "formatLabel": "Tipo de archivo",
+    "formatText": "Texto (.txt)",
+    "formatTextDescription": "Texto simple que se abre en cualquier lugar.",
+    "formatExcel": "Excel (.xlsx)",
+    "formatExcelDescription": "Una hoja de cálculo con una fila por mensaje.",
+    "exportTitle": "Exportar chat",
+    "exportButton": "Exportar",
+    "gettingWholeChat": "Obteniendo el chat completo…",
+    "preparingFile": "Preparando tu archivo…",
+    "wholeChatError": "No pudimos obtener este chat. Inténtalo de nuevo.",
+    "wholeChatErrorMessageStillWorks": "No pudimos obtener el chat completo. Aún puedes descargar este mensaje.",
+    "fileError": "No pudimos crear el archivo de Excel. Inténtalo de nuevo.",
+    "saveError": "No pudimos guardar el archivo. Inténtalo de nuevo.",
+    "columnTime": "Hora",
+    "columnFrom": "De",
+    "columnMessage": "Mensaje"
   },
   "chatIndex": {
     "youAreOffline": "Estás sin conexión",
@@ -1476,6 +1494,12 @@
     "deleteSuccess": "Agente eliminado correctamente",
     "deleteError": "Error al eliminar el agente"
   },
+  "settingsTabAdminVisibilityConfirm": {
+    "title": "¿Limitar este agente a los administradores?",
+    "description": "Solo los administradores podrán ver y chatear con este agente. Todos los demás perderán el acceso de inmediato.",
+    "cancel": "Cancelar",
+    "confirm": "Limitar a administradores"
+  },
   "tabsAuditLogTab": {
     "infoBox": "Mantén un registro. Consulta el historial de quién cambió qué y cuándo en este agente: útil para solucionar problemas y cumplir con la normativa.",
     "heading": "Auditoría",
@@ -1893,6 +1917,7 @@
     "whoCanViewLabel": "¿Quién puede ver?",
     "whoCanViewInfoAriaLabel": "Más información sobre el acceso al chat",
     "whoCanViewTooltip": "Controle quién puede ver este agente.",
+    "whoCanViewAdminOnlyNote": "Solo los administradores pueden ver y chatear con este agente. Todos los demás pierden el acceso, incluidas las personas que ya lo usan.",
     "selectWhoCanView": "Seleccionar quién puede ver",
     "whoCanChatLabel": "¿Quién puede chatear?",
     "whoCanChatInfoAriaLabel": "Más información sobre el acceso al chat",
