@@ -26,7 +26,7 @@ import { openLauncher } from '../utils/embed-harness-client';
 const GOAL = 'Open the billing page for me.';
 const REPLY = 'Done: the billing page is open.';
 const NOTE =
-  'I stopped here: that’s as many steps as I take in one go. Send “continue” and I’ll pick up where I left off, as long as this panel stays open.';
+  'I stopped here: that’s as long as I work in one go. Send “continue” and I’ll pick up where I left off, as long as this panel stays open.';
 const ROWS = {
   read: 'Read page app.acme.com',
   narration: 'Opening the menu to find billing.',

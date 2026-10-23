@@ -6180,7 +6180,7 @@
         },
         {
           "id": "cw-02",
-          "description": "A goal sent in the panel becomes a MENTOR:BROWSE_RUN frame carrying auto: true; scripted worker frames (ack, three log lines — an action, the agent's narration, a failed call — the reply text, done with the cap note) render as one assistant turn whose \"Used 1 tool\" row expands to each line's text, whose body ends with the reply then the note, and after which Send is back",
+          "description": "A goal sent in the panel becomes a MENTOR:BROWSE_RUN frame carrying auto: true; scripted worker frames (ack, three log lines — an action, the agent's narration, a failed call — the reply text, done with the time-limit note) render as one assistant turn whose \"Used 1 tool\" row expands to each line's text, whose body ends with the reply then the note, and after which Send is back",
           "status": "covered"
         }
       ]
