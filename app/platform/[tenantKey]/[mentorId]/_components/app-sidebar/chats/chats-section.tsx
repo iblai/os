@@ -22,7 +22,12 @@ import {
 
 import { ChatRow, chatRowLabel } from './chat-row-label';
 import { ChatRowItem } from './chat-row';
-import { useCodePermissionSessions } from '@/components/chat/code-permission-card';
+import {
+  ChatDownloadDialog,
+  useCodePermissionSessions,
+} from '@iblai/iblai-js/web-containers/next';
+import { useMentorSettings } from '@/hooks/use-mentors/use-mentor-settings';
+import { saveFile } from '@/lib/save-file';
 import { useRecentChats } from './use-recent-chats';
 
 const NAV_MUTED = '#5f5f61';
@@ -68,6 +73,8 @@ export function SidebarChatsSection({
     handleUnpin,
     handleDelete,
     handleExport,
+    exportingRow,
+    closeExport,
   } = useRecentChats({
     tenantKey,
     mentorId,
@@ -80,6 +87,7 @@ export function SidebarChatsSection({
   // Chats where Code is blocked on an answer. Its prompts render only in the chat that
   // raised them, so without this a background chat waits unseen until it times out.
   const awaitingPermission = useCodePermissionSessions();
+  const { data: mentorSettings } = useMentorSettings();
 
   // Render helpers -----------------------------------------------------
 
@@ -250,6 +258,15 @@ export function SidebarChatsSection({
           />
         </div>
       </CollapsibleContent>
+      <ChatDownloadDialog
+        open={!!exportingRow}
+        onOpenChange={(isOpen) => !isOpen && closeExport()}
+        mentorName={mentorSettings?.mentorName ?? ''}
+        tenantKey={tenantKey}
+        username={resolvedUserId}
+        sessionId={exportingRow?.session_id}
+        saveFile={saveFile}
+      />
     </Collapsible>
   );
 }

@@ -9,13 +9,14 @@ import {
 } from '@iblai/iblai-js/web-containers/next';
 
 import { useNavigate } from '@/hooks/user-navigate';
-import { useUsername } from '@/hooks/use-user';
+import { useIsAdmin, useUserIsStudent, useUsername } from '@/hooks/use-user';
 import { useShowFreeTrialDialog } from '@/hooks/user-user-actions';
 import { config } from '@/lib/config';
 import { MENTOR_VISIBILITY } from '@/lib/constants';
 import { selectRbacPermissions } from '@/features/rbac/rbac-slice';
 import { useAppSelector } from '@/lib/hooks';
 import { TenantKeyMentorIdParams } from '@/lib/types';
+import { useLlmProviderModalLabels } from './llm-provider-modal-labels';
 
 type Props = {
   showConfigurationHeader?: boolean;
@@ -32,19 +33,22 @@ type Props = {
  * Provider names and logos are backend-owned: the SDK grid renders each LLM
  * row's `display_name`/`logo` straight from the API, so nothing is passed for
  * them here.
- *
- * The OS-local `LLMTab` in `./tabs/llm-tab.tsx` is intentionally left in place
- * so this swap can be reverted by changing the two call sites back.
  */
 export function LLMTab({ showConfigurationHeader = true }: Props) {
   const t = useTranslations('tabsLlmTab');
-  const tProviderModal = useTranslations('modalsLlmProviderModal');
+  const providerModal = useLlmProviderModalLabels();
 
   const { tenantKey, mentorId } = useParams<TenantKeyMentorIdParams>();
   const { getMentorId } = useNavigate();
   const username = useUsername();
   const rbacPermissions = useAppSelector(selectRbacPermissions);
   const { executeWithTrialCheck } = useShowFreeTrialDialog();
+  // Same live-admin gate as the sidebar's admin cluster: an admin browsing in
+  // User mode is not an admin here (useUserIsStudent). Only the edit-agent slot
+  // (with its header) offers the tenant-wide Users Models editor, not the nav-bar dialog.
+  const isAdmin = useIsAdmin();
+  const userIsStudent = useUserIsStudent();
+  const isTenantAdmin = isAdmin && !userIsStudent && showConfigurationHeader;
 
   // The nav-bar's "LLM Providers" dialog can target a mentor other than the
   // one in the route (the modal-stack mentor id), exactly as the OS monolith
@@ -65,6 +69,12 @@ export function LLMTab({ showConfigurationHeader = true }: Props) {
       description: t('configureLanguageModelSettings'),
     },
     infoBox: t('infoBox'),
+    inChatModelChange: {
+      label: t('inChatModelChangeLabel'),
+      description: t('inChatModelChangeDescription'),
+      tooltip: t('inChatModelChangeTooltip'),
+      tooltipAriaLabel: t('inChatModelChangeTooltipAriaLabel'),
+    },
     search: {
       placeholder: t('searchProviders'),
     },
@@ -73,56 +83,7 @@ export function LLMTab({ showConfigurationHeader = true }: Props) {
       updateSuccess: t('llmUpdatedSuccessfully'),
       updateError: t('failedToUpdateLlm'),
     },
-    providerModal: {
-      title: tProviderModal('title'),
-      description: (providerName) =>
-        tProviderModal('dialogDescription', { providerName }),
-      searchPlaceholder: tProviderModal('searchPlaceholder'),
-      // OS calls this string the modal's "subtitle"; the SDK calls it helpText.
-      helpText: tProviderModal('subtitle'),
-      providerIconAlt: (providerName) =>
-        tProviderModal('providerIconAlt', { providerName }),
-      tooLargeTitle: tProviderModal('tooLargeTitle'),
-      tooLargeDescription: (modelName, modelSize) =>
-        tProviderModal('tooLargeDescription', { modelName, modelSize }),
-      cancel: tProviderModal('cancel'),
-      downloadAnyway: tProviderModal('downloadAnyway'),
-      alreadyDownloadingTitle: tProviderModal('alreadyDownloadingTitle'),
-      unnamedModel: tProviderModal('unnamedModel'),
-      alreadyDownloadingDescription: (modelName) =>
-        tProviderModal('alreadyDownloadingDescription', { modelName }),
-      gotIt: tProviderModal('gotIt'),
-      announceDownloaded: (modelName) =>
-        tProviderModal('announceDownloaded', { modelName }),
-      announceCancelled: tProviderModal('announceCancelled'),
-      announceFailed: tProviderModal('announceFailed'),
-      announceStarted: (modelName) =>
-        tProviderModal('announceStarted', { modelName }),
-      localModel: {
-        onDevice: tProviderModal('localModel.onDevice'),
-        starting: tProviderModal('localModel.starting'),
-        cancel: tProviderModal('localModel.cancel'),
-        inUse: tProviderModal('localModel.inUse'),
-        downloadFailedRetry: tProviderModal('localModel.downloadFailedRetry'),
-        ariaDownload: (modelName, modelSize) =>
-          tProviderModal('localModel.ariaDownload', { modelName, modelSize }),
-        ariaStarting: (modelName) =>
-          tProviderModal('localModel.ariaStarting', { modelName }),
-        ariaDownloading: (modelName, percent) =>
-          tProviderModal('localModel.ariaDownloading', { modelName, percent }),
-        ariaInstalled: (modelName) =>
-          tProviderModal('localModel.ariaInstalled', { modelName }),
-        ariaSelected: (modelName) =>
-          tProviderModal('localModel.ariaSelected', { modelName }),
-        ariaError: (modelName) =>
-          tProviderModal('localModel.ariaError', { modelName }),
-        ariaErrorWithReason: (modelName, reason) =>
-          tProviderModal('localModel.ariaErrorWithReason', {
-            modelName,
-            reason,
-          }),
-      },
-    },
+    providerModal,
   };
 
   return (
@@ -132,8 +93,12 @@ export function LLMTab({ showConfigurationHeader = true }: Props) {
       username={username}
       enableRBAC={config.enableRBAC()}
       rbacPermissions={rbacPermissions}
-      // Route every gated action through the OS paywall check.
-      executeGatedAction={(fn) => executeWithTrialCheck(fn)}
+      // The SDK toasts success as soon as the gate settles, but a blocked gate
+      // returns null without saving. Never settling keeps that false success
+      // toast away while the pricing modal shows, as the Settings tab does.
+      executeGatedAction={(fn) =>
+        executeWithTrialCheck(fn) ?? new Promise<never>(() => {})
+      }
       visibilityOptions={MENTOR_VISIBILITY}
     >
       <AgentLLMTab
@@ -144,6 +109,7 @@ export function LLMTab({ showConfigurationHeader = true }: Props) {
         // describing the route mentor rather than the nav-selected one.
         mentorId={activeMentorId}
         labels={labels}
+        isTenantAdmin={isTenantAdmin}
       />
     </AgentSettingsProvider>
   );

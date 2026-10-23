@@ -1,6 +1,6 @@
 # Tauri Desktop E2E Coverage — Journey Checklist
 
-> Last updated: 2026-09-03 | 39 checkpoints (20 covered, 19 pending) | 3 journeys | 100% of reproducible checkpoints covered | Driver: WebdriverIO + tauri-driver
+> Last updated: 2026-10-15 | 58 checkpoints (22 covered, 35 pending, 1 deprecated) | 3 journeys | 100% of reproducible checkpoints covered | Driver: WebdriverIO + tauri-driver
 
 This is the desktop counterpart to the web `e2e/COVERAGE.md`. It tracks only what
 is exercised by driving the **built desktop binary** through `tauri-driver` (see
@@ -97,7 +97,7 @@ two vendored release workflows and are exercised by real releases.
 
 ---
 
-## Journey 3: Code Mode (opencode) (28 checkpoints: 13 covered, 15 pending) — `journeys/03-code-mode.spec.ts`
+## Journey 3: Code Mode (opencode) (47 checkpoints: 15 covered, 31 pending, 1 deprecated) — `journeys/03-code-mode.spec.ts`
 
 > **Partly covered.** The installer and per-chat state (code-01…07) run against
 > the REAL compiled binary through the live Tauri IPC bridge (`window.__TAURI__`):
@@ -126,10 +126,33 @@ two vendored release workflows and are exercised by real releases.
 >   `components/chat-input-form/__tests__/coding-mode-button.test.tsx`) and the
 >   Rust `apply_skills_config` tests.
 >
-> Requires network access for the opencode + vibe downloads. No Ollama, no
-> credentials.
+> The subscription agents (code-29…38): `check_code_agent_status` and the
+> Claude Code sign-in refusal run against the real commands (code-29/31). The
+> live install of the managed Node plus both ACP adapters (code-30) is a ~700 MB
+> download, too heavy for the harness like code-26, and is covered meanwhile by
+> the `#[ignore]`d Rust `code_agent_pins_install_and_load`. The popover's Agent
+> choice and status line, Codex's browser sign-in, the signed-out toast and real
+> Codex / Claude Code turns (code-32…37) need an authenticated UI session or a
+> signed-in ChatGPT / Claude subscription; they are covered meanwhile by the
+> coding-mode-button and use-opencode-auth-required Vitest suites and the Rust
+> backend tests in `opencode_acp.rs` (`the_model_string_picks_the_backend`,
+> `each_backend_carries_guidance_and_skills_its_own_way`,
+> `a_scripted_agent_gets_our_session_params_and_a_signed_out_prompt_fails_loudly`).
+> The launch-time background install (code-38) is the same download as code-30
+> and is covered meanwhile by the coding-mode-button Vitest cases (an installing
+> agent spins and refuses the choice, a launch-time install followed to its end,
+> a failed launch-time install with Install to retry) and by the Rust
+> `an_installing_or_failed_agent_reports_its_phase`. The agents' model lists
+> (code-39) run against the real command; the top-left picker (code-40) and a
+> turn on the picked model (code-41) need a UI session or a signed-in
+> subscription and are covered meanwhile by the nav-bar and
+> agent-model-selector Vitest suites and the Rust
+> `a_scripted_agent_reports_its_models_and_takes_the_saved_one`.
+>
+> Requires network access for the opencode + vibe downloads (and, for code-30 by
+> hand, the Node + adapter downloads). No Ollama, no credentials.
 
-**Source files:** `src-tauri/src/opencode_acp.rs`, `src-tauri/src/opencode_installer.rs`, `src-tauri/src/opencode_proxy.rs`, `components/chat-input-form/coding-mode-button.tsx`, `components/chat/code-permission-card.tsx`, `hooks/use-opencode-skill-sync.ts`
+**Source files:** `src-tauri/src/opencode_acp.rs`, `src-tauri/src/opencode_installer.rs`, `src-tauri/src/opencode_proxy.rs`, `src-tauri/src/code_agent_installer.rs`, `components/chat-input-form/coding-mode-button.tsx`, `components/chat/code-permission-card.tsx`, `hooks/use-opencode-skill-sync.ts`, `hooks/use-opencode-auth-required.tsx`, `components/chat/sdk-chat.tsx`
 
 - [x] `code-01` `check_opencode_status` reports Code readiness (installed / version / config_ready / sandboxed / supported / sandbox_ready)
 - [x] `code-02` `install_opencode` downloads and installs the pinned opencode release binary (live)
@@ -159,3 +182,22 @@ two vendored release workflows and are exercised by real releases.
 - [ ] `code-26` A managed opencode older than the pinned version is re-downloaded at boot, and a user's own PATH copy is never replaced _(the upgrade downloads a ~100MB release, too heavy for the harness; the decision is covered by `only_a_present_and_outdated_managed_copy_wants_an_upgrade` in `opencode_installer.rs`)_
 - [ ] `code-27` A new web project walks the 3-step flow: the default-template question, then the local-preview question (dev server + browser open at http://localhost:3000 only on yes), then one deploy question per project (yes = deploy now and auto-redeploy on later changes, no = deploy only on request), and replies never name the hosting provider _(needs a tool-calling model driving real turns, the same harness gap as code-08..10/15; the instruction text is covered meanwhile by `the_iblai_guidance_keeps_its_load_bearing_lines` in `opencode_proxy.rs`)_
 - [ ] `code-28` Text the agent emits before a tool call lands in the thinking section, never the reply bubble; the visible reply is what follows the last tool call _(needs a tool-calling model driving real turns, the same harness gap as code-08..10/15; the reclassification is covered meanwhile by `pre_tool_text_is_reclassified_as_narration` in `opencode_acp.rs`)_
+- [x] `code-29` `check_code_agent_status` answers for Codex and Claude Code (installed / supported / signed_in, null when the probe can't tell) and refuses an unknown backend
+- [x] ~~`code-31` `code_agent_sign_in` for Claude Code refuses with the run-`claude`-in-a-terminal guidance instead of opening a browser (the app reuses the CLI login)~~ _(deprecated in #531 — the in-app sign-in was removed: Codex signs in in the ChatGPT app and Claude Code in a terminal, and the popover's line, the toast and the turn error say so)_
+- [ ] `code-30` `install_code_agent` installs the pinned Node runtime and each agent's ACP adapter (live), streaming progress on `model:installation-log` with source `code-agent`; status then reports installed with `node_version` and `adapter_version` _(a ~700 MB download, too heavy for the harness like code-26; covered meanwhile by the `#[ignore]`d `code_agent_pins_install_and_load` in `code_agent_installer.rs` and the pinning tests `adapters_are_pinned_exactly`, `node_assets_match_the_published_shasums`, `readiness_distinguishes_missing_stale_and_current`)_
+- [ ] `code-32` The Code popover's Agent choice (ibl.ai / Codex / Claude Code) routes turns through the model key (`codex/default`, `claude/default`), keeps the mentor-LLM and on-device writers off it, restores the platform model on switching back, and stays hidden on phones and on desktop builds without the agent commands _(needs an authenticated UI session like code-14/23/24; covered meanwhile by the coding-mode-button Vitest cases `choosing Codex routes Code to codex/default…`, `keeps the mentor LLM…`, `lets an agent run while an on-device model…`, `switching back to ibl.ai…`, `hides the agent choice…`, `never offers the agent choice on a phone…`, and the Rust `the_model_string_picks_the_backend`)_
+- [ ] `code-33` The popover shows the selected agent's one quiet status line: Install with live progress, the signed-out line saying where to sign in (Codex: the ChatGPT app; Claude Code: `claude` in a terminal) with Check Again, the account once signed in, and the reason where it can't run _(same gap; covered meanwhile by the coding-mode-button Vitest cases `installs a missing agent…`, `tells Codex users…`, `tells Claude Code users…`, `shows why an agent can’t run…`)_
+- [ ] `code-34` A Codex sign-in made in the ChatGPT app is picked up by Check Again and the status then names the account _(needs a real ChatGPT account and the ChatGPT app the harness can't drive; covered meanwhile by `tells Codex users to sign in in the ChatGPT app and checks again on request` and the Rust `claude_auth_status_maps_to_signed_in` / `adapter_version_output_parses_both_shapes` probe parsing)_
+- [ ] `code-35` A turn on a signed-out agent raises one sign-in toast saying where to sign in (Codex: the ChatGPT app; Claude Code: `claude` in a terminal) and no generic chat error toast _(needs a real agent turn; covered meanwhile by `hooks/__tests__/use-opencode-auth-required.test.tsx` and the Rust `sign_in_errors_become_one_sentence_and_never_retry` and `a_scripted_agent_gets_our_session_params_and_a_signed_out_prompt_fails_loudly`)_
+- [ ] `code-36` A Code turn on Codex streams into the same bubble (reply, thinking, tool calls, permission card) with the ibl.ai guidance delivered as `developer_instructions` and Codex's own mode following the Approvals toggle (read-only for Ask Me, full access for Automatic) _(needs a signed-in ChatGPT subscription; covered meanwhile by the Rust `each_backend_carries_guidance_and_skills_its_own_way`, `the_os_approval_mode_drives_codex_s_own_mode`, `permission_answers_pick_the_exact_once_kinds` and `each_agent_gets_its_own_wording` in `opencode_proxy.rs`)_
+- [ ] `code-37` A Code turn on Claude Code streams into the same bubble with the ibl.ai guidance appended via `systemPrompt.append` and the session pinned to Claude's default mode _(needs a signed-in Claude subscription; covered meanwhile by the Rust `each_backend_carries_guidance_and_skills_its_own_way`, `a_scripted_agent_gets_our_session_params_and_a_signed_out_prompt_fails_loudly` and `each_backend_sees_only_its_own_login`)_
+- [ ] `code-38` On launch the desktop installs the managed Node and both agents' ACP adapters by itself in the background (a pin bump reaches every desktop on its next launch); the Code popover shows an installing agent with a spinner and refuses the choice until it is ready while ibl.ai keeps working, and a failed install shows its reason with Install to retry _(the same ~700 MB download as code-30; covered meanwhile by the coding-mode-button Vitest cases `shows an installing agent with a spinner…`, `follows a launch-time install to its end…`, `shows why a launch-time install failed…` and the Rust `an_installing_or_failed_agent_reports_its_phase` plus the `stale_agents` asserts in `readiness_distinguishes_missing_stale_and_current`)_
+- [x] `code-39` `list_code_agent_models` answers each agent's models (id, name, description) with the agent's own default and the saved pick, or refuses naming install / sign-in; an unknown backend is refused
+- [ ] `code-40` The top-left model picker opens the SDK's LLM Selection dialog (`LLMProviderModal` in its `cloudOnly` mode, the same dialog the cloud picker opens behind a provider card) while Code runs on Codex / Claude Code (in place of the mentor's LLM selector and the on-device badge), lists Default with the agent's own default and the agent's models as cards, saves the pick per machine, and shows a failed list on the button with a click to retry _(needs an authenticated UI session like code-14/23/24; covered meanwhile by the nav-bar Vitest cases `shows the agent model picker instead of the LLM selector`, `keeps the LLM selector…` and `agent-model-selector.test.tsx`)_
+- [ ] `code-41` A Code turn runs on the picked model: the handshake applies it with `session/set_config_option` right after the mode pin, a live session takes a new pick without a respawn, and a model the agent refuses fails the turn naming the picker _(needs a signed-in ChatGPT / Claude subscription; covered meanwhile by the Rust `a_scripted_agent_reports_its_models_and_takes_the_saved_one`, `an_unknown_model_is_refused_before_it_is_saved` and `the_model_choice_lists_the_agents_offer_with_default_and_selection`)_
+- [ ] `code-42` While a Code turn runs, the line under the reply says in plain words what the agent is doing right now (“Changing about/page.tsx…”, “Installing what the app needs…”) on opencode, Codex and Claude Code alike, never a raw tool name; it stands down while a permission card waits, and each new step restarts its 20-second reassurance clock _(needs a tool-calling model driving real turns, the same harness gap as code-08..10/15/28; covered meanwhile by the `codeTurnPhase` cases in the SDK's `packages/web-containers/src/components/chat/__tests__/code-activity.test.tsx` , the Code-turn cases in `ai-message-bubble.os-parity.test.tsx` beside it and the reassurance-clock case in `working-indicator.test.tsx`)_
+- [ ] `code-43` A Code turn's steps fold into one quiet “N steps” row that opens to one plain-words sentence per step with a done / didn't-go-through / stopped mark, files by their last two path segments and web pages by their site, with the exact command, file or address one click away; after Stop or a crash-respawn nothing keeps looking busy _(needs a tool-calling model driving real turns, the same harness gap as code-08..10/15/28; covered meanwhile by the describer table and the `CodeActivity` cases in the SDK's `code-activity.test.tsx`)_
+- [ ] `code-44` The task list the agent keeps (Claude Code's and Codex's plan updates, opencode's todo tool) shows as the reply's checklist and ticks off as it works _(needs a tool-calling model driving real turns, the same harness gap as code-08..10/15/28; covered meanwhile by the store's plan cases in the SDK's `code-activity.test.tsx`, the task-list cases in `ai-message-bubble.os-parity.test.tsx` and the Rust `plans_reach_the_webview_and_agent_bookkeeping_does_not`)_
+- [ ] `code-45` A permission card leads with what Code wants to do in plain words above the exact command or file, with no tool-kind chip, from the request's tool call on desktop and from the permission name on a paired phone; a Browse prompt keeps its own description _(needs a tool-calling model driving real turns, the same harness gap as code-08..10/15/28; covered meanwhile by the SDK's `code-permission-card.test.tsx` and the Rust `permission_payloads_carry_the_whole_tool_call`)_
+- [ ] `code-46` A failed Code turn raises one toast, saying what went wrong in plain words (stopped unexpectedly, took too long, no model picked, couldn't start, signed out) instead of the raw agent error _(needs a tool-calling model driving real turns, the same harness gap as code-08..10/15/28; covered meanwhile by the SDK's `code-error-text.test.ts` and `toast-error-message.test.tsx`, and the Rust `a_failed_turn_is_reported_once`)_
+- [ ] `code-48` The app keeps answering while a Code turn streams a chatty command: a build's output never reaches the chat as events, only a tool call's visible changes do _(needs a tool-calling model; covered meanwhile by the Rust `output_only_tool_updates_never_reach_the_webview`, `admitted_updates_carry_only_what_the_chat_reads`, `reasoning_chunks_are_batched_per_window` and `handle_update_forwards_only_what_the_webview_renders`)_

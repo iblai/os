@@ -91,6 +91,9 @@ e2e/test-results.json
 playwright/.auth
 e2e/playwright/.auth
 e2e/.residue
+# Placeholder the Playwright agent tools drop in the repo root; the real
+# journeys live in e2e/journeys.
+/seed.spec.ts
 
 
 # harnesses

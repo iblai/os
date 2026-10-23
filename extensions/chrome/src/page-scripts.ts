@@ -17,7 +17,10 @@ export interface SnapshotItem {
   name: string;
   state: string;
   submit: boolean;
-  password: boolean;
+  /** A password, one-time-code or payment field: never typed into, never read back. */
+  secret: boolean;
+  /** Where it sits in the tab's viewport (CSS px); absent in a cross-origin frame or off its frame's screen. */
+  rect?: { x: number; y: number; w: number; h: number };
 }
 
 /** One frame's view of itself; the worker merges the frames into what the model reads. */
@@ -27,11 +30,24 @@ export interface FrameSnapshot {
   items: SnapshotItem[];
   /** The frame's main text, collapsed and capped at `textChars`. */
   excerpt: string;
+  /** The frame's viewport in CSS px; the page's is what the picture shows. */
+  viewport: { width: number; height: number };
+  /** Elements the cap left out; what is on screen is listed first, so these are off it. */
+  dropped?: number;
 }
 
 export interface ActResult {
   ok: boolean;
   error?: string;
+  /** Viewport coordinates of the element's centre, from `locate`. */
+  x?: number;
+  y?: number;
+  /** Whether x/y are the tab's own viewport; false inside a cross-origin frame. */
+  top?: boolean;
+  /** Something lies over the element even after scrolling: a real click would hit that. */
+  covered?: boolean;
+  /** Appended to the tool result the model reads. */
+  note?: string;
 }
 
 /** The Chat tab's context feed (unchanged from the original panel.js). */
@@ -56,9 +72,15 @@ export function extractPageContent(): {
   };
 }
 
+/**
+ * The frame's elements, numbered from 1 — or, given `at` (viewport CSS px),
+ * just the element at that point as item 0, leaving the frame's numbers alone.
+ */
 export function snapshotPage(
   maxItems: number,
   textChars: number,
+  secretTokens: string[] = [],
+  at?: { x: number; y: number },
 ): FrameSnapshot {
   const SELECTOR = [
     'a[href]',
@@ -78,6 +100,9 @@ export function snapshotPage(
     '[role~="option"]',
     '[role~="combobox"]',
     '[role~="switch"]',
+    // A div or paragraph a script made focusable is clickable too: custom
+    // dropdowns list their choices this way, with no role at all.
+    '[tabindex]:not([tabindex^="-"])',
     'h1',
     'h2',
     'h3',
@@ -102,7 +127,15 @@ export function snapshotPage(
   };
   const nameOf = (el: Element): string => {
     const aria = el.getAttribute('aria-label');
-    if (aria && aria.trim()) return collapse(aria, 80);
+    if (aria && aria.trim()) {
+      // Siblings often share one label ("select option"); the element's own
+      // words are what the user would say, so they ride along when they differ.
+      const label = collapse(aria, 80);
+      const own = collapse(textOf(el), 80);
+      return own && /[\p{L}\p{N}]/u.test(own) && !label.includes(own)
+        ? collapse(`${label}: ${own}`, 80)
+        : label;
+    }
     const labelledBy = el.getAttribute('aria-labelledby');
     if (labelledBy) {
       // Ids are scoped to the element's own tree: a shadow root's or the document's.
@@ -159,8 +192,11 @@ export function snapshotPage(
         return 'button';
       }
       if (type === 'checkbox' || type === 'radio') return type;
+      return 'textbox';
     }
-    return 'textbox';
+    if (tag === 'textarea' || el.getAttribute('contenteditable') === 'true')
+      return 'textbox';
+    return el.hasAttribute('tabindex') ? 'focusable' : tag;
   };
   const isSubmit = (el: Element): boolean => {
     if (el instanceof HTMLInputElement)
@@ -169,11 +205,34 @@ export function snapshotPage(
       return el.type === 'submit' && Boolean(el.form);
     return false;
   };
-  const stateOf = (el: Element, role: string, password: boolean): string => {
+  // The fields the agent never types into are never read back either: what
+  // the user typed there is theirs alone.
+  const isSecret = (el: Element): boolean => {
+    if (el instanceof HTMLInputElement && el.type === 'password') return true;
+    const tokens = (el.getAttribute('autocomplete') || '')
+      .toLowerCase()
+      .split(/\s+/);
+    return tokens.some((token) => (secretTokens || []).includes(token));
+  };
+  // This frame's place in the tab's viewport, summed up the iframe chain; null
+  // past a cross-origin parent, whose layout is hidden from here.
+  const frameOffset = (): { x: number; y: number } | null => {
+    let x = 0;
+    let y = 0;
+    for (let win: Window = window; win !== win.top; win = win.parent) {
+      const frame = win.frameElement as HTMLElement | null;
+      if (!frame) return null;
+      const box = frame.getBoundingClientRect();
+      x += box.left + frame.clientLeft;
+      y += box.top + frame.clientTop;
+    }
+    return { x, y };
+  };
+  const stateOf = (el: Element, role: string, secret: boolean): string => {
     const parts: string[] = [];
     if (role === 'textbox' || role === 'searchbox') {
-      if (password) {
-        parts.push('password');
+      if (secret) {
+        parts.push('secret');
       } else {
         const value =
           el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement
@@ -195,6 +254,7 @@ export function snapshotPage(
     const expanded = el.getAttribute('aria-expanded');
     if (expanded === 'true') parts.push('expanded');
     else if (expanded === 'false') parts.push('collapsed');
+    if (el.getAttribute('aria-selected') === 'true') parts.push('selected');
     if (
       (el as HTMLButtonElement).disabled ||
       el.getAttribute('aria-disabled') === 'true'
@@ -216,37 +276,129 @@ export function snapshotPage(
       if (el.shadowRoot) collect(el.shadowRoot, out);
     }
   };
+  // The element at a point of the viewport, through open shadow roots and
+  // same-origin iframes; a cross-origin frame is as deep as this document sees.
+  const elementAt = (x: number, y: number): Element | null => {
+    if (typeof document.elementFromPoint !== 'function') return null;
+    let el = document.elementFromPoint(x, y);
+    for (;;) {
+      const inner = el?.shadowRoot?.elementFromPoint(x, y);
+      if (inner && inner !== el) {
+        el = inner;
+        continue;
+      }
+      if (!el || el.tagName !== 'IFRAME') return el;
+      const child = (el as HTMLIFrameElement).contentDocument;
+      if (!child) return el;
+      const box = el.getBoundingClientRect();
+      x -= box.left + (el as HTMLElement).clientLeft;
+      y -= box.top + (el as HTMLElement).clientTop;
+      el = child.elementFromPoint(x, y);
+    }
+  };
   const candidates: Element[] = [];
-  collect(document, candidates);
+  if (at) {
+    const hit = elementAt(at.x, at.y);
+    if (hit) candidates.push(hit.closest(SELECTOR) ?? hit);
+  } else {
+    collect(document, candidates);
+  }
+
+  const usable = candidates.filter(
+    (el) =>
+      !(el instanceof HTMLInputElement && el.type === 'hidden') &&
+      visible(el) &&
+      !el.closest('[aria-hidden="true"]'),
+  );
+  const boxes = new Map(
+    usable.map((el) => [el, el.getBoundingClientRect()] as const),
+  );
+  // On this frame's screen: the number is drawn at the tab position, and an
+  // element scrolled out of the frame would put it on whatever shows there.
+  const shown = (el: Element): boolean => {
+    const box = boxes.get(el)!;
+    return (
+      box.left + box.width >= 0 &&
+      box.top + box.height >= 0 &&
+      box.left <= window.innerWidth &&
+      box.top <= window.innerHeight
+    );
+  };
+  // What is on screen comes first, so the cap cuts only what the user cannot
+  // see either — never a dialog appended at the end of the document behind a
+  // long list.
+  const ordered = [
+    ...usable.filter(shown),
+    ...usable.filter((el) => !shown(el)),
+  ];
 
   const map = new Map<number, Element>();
   const items: SnapshotItem[] = [];
-  for (const el of candidates) {
-    if (items.length >= maxItems) break;
-    if (el instanceof HTMLInputElement && el.type === 'hidden') continue;
-    if (!visible(el) || el.closest('[aria-hidden="true"]')) continue;
+  const offset = frameOffset();
+  for (const el of ordered.slice(0, maxItems)) {
     const role = roleOf(el);
-    const password = el instanceof HTMLInputElement && el.type === 'password';
-    const n = items.length + 1;
+    const secret = isSecret(el);
+    const n = at ? 0 : items.length + 1;
     map.set(n, el);
+    const box = boxes.get(el)!;
     items.push({
       n,
       role,
       name: nameOf(el),
-      state: stateOf(el, role, password),
+      state: stateOf(el, role, secret),
       submit: isSubmit(el),
-      password,
+      secret,
+      ...(offset && shown(el)
+        ? {
+            rect: {
+              x: offset.x + box.left,
+              y: offset.y + box.top,
+              w: box.width,
+              h: box.height,
+            },
+          }
+        : {}),
     });
   }
-  (globalThis as { __agentMap?: Map<number, Element> }).__agentMap = map;
+  if (!at)
+    (globalThis as { __agentMap?: Map<number, Element> }).__agentMap = map;
 
+  // A page behind a modal keeps its layout and its innerText, and only
+  // aria-hidden says it is out of reach, so the text skips those blocks too.
+  // A block with no box of its own (display: contents) is still on screen.
+  const onScreen = (el: Element): boolean =>
+    visible(el) || getComputedStyle(el).display === 'contents';
+  // Rendered text only: a block holding nothing but hidden content has an
+  // empty innerText, and textContent would read that hidden content back.
+  const rendered = (el: Element): string => {
+    const text = (el as HTMLElement).innerText;
+    return typeof text === 'string' ? text : el.textContent || '';
+  };
+  const readable = (root: Element): string =>
+    Array.from(root.childNodes)
+      .map((node) => {
+        if (node.nodeType === Node.TEXT_NODE) return node.nodeValue || '';
+        const el = node as Element;
+        return el.nodeType === Node.ELEMENT_NODE &&
+          el.getAttribute('aria-hidden') !== 'true' &&
+          onScreen(el)
+          ? rendered(el)
+          : '';
+      })
+      .join(' ');
   // What innerText makes of shadow content is Chrome's call, not ours.
-  const main = document.querySelector('main') || document.body;
+  const inMain = document.querySelector('main');
+  const main =
+    inMain && !inMain.closest('[aria-hidden="true"]') && onScreen(inMain)
+      ? inMain
+      : document.body;
   return {
     url: location.href,
     title: document.title,
     items,
-    excerpt: collapse(textOf(main), textChars),
+    excerpt: at ? '' : collapse(readable(main), textChars),
+    viewport: { width: window.innerWidth, height: window.innerHeight },
+    dropped: ordered.length - items.length,
   };
 }
 
@@ -255,65 +407,187 @@ export function actOnPage(
   action: string,
   value: string,
   submit: boolean,
+  secretTokens: string[] = [],
 ): ActResult {
   const map = (globalThis as { __agentMap?: Map<number, Element> }).__agentMap;
-  const el = map ? map.get(n) : undefined;
+  // 0 is whatever holds the focus here, through open shadow roots: the field a
+  // click by position has just focused. A frame without one answers so.
+  const focused = (): Element | null => {
+    let el = document.activeElement;
+    while (el?.shadowRoot?.activeElement) el = el.shadowRoot.activeElement;
+    return el &&
+      el !== document.body &&
+      el !== document.documentElement &&
+      el.tagName !== 'IFRAME'
+      ? el
+      : null;
+  };
+  const el = n === 0 ? focused() : map ? map.get(n) : undefined;
   if (!el || !el.isConnected) {
     return {
       ok: false,
-      error: `Element ${n} is not in the current snapshot; call read_page and use a fresh number.`,
+      error:
+        n === 0
+          ? 'Nothing is focused.'
+          : `Element ${n} is not in the current snapshot; call read_page and use a fresh number.`,
     };
   }
   const html = el as HTMLElement;
   const fire = (type: string) =>
     el.dispatchEvent(new Event(type, { bubbles: true }));
-  if (typeof html.scrollIntoView === 'function') {
-    html.scrollIntoView({ block: 'center', inline: 'nearest' });
-  }
+  // This frame's place in the tab's viewport, summed up the iframe chain; null
+  // past a cross-origin parent, whose layout is hidden from here.
+  const frameOffset = (): { x: number; y: number } | null => {
+    let x = 0;
+    let y = 0;
+    for (let win: Window = window; win !== win.top; win = win.parent) {
+      const frame = win.frameElement as HTMLElement | null;
+      if (!frame) return null;
+      const box = frame.getBoundingClientRect();
+      x += box.left + frame.clientLeft;
+      y += box.top + frame.clientTop;
+    }
+    return { x, y };
+  };
+  // Instant, never the page's smooth scroll: the box is measured right after.
+  const scrollTo = (block: ScrollLogicalPosition) => {
+    if (typeof html.scrollIntoView === 'function')
+      html.scrollIntoView({ block, inline: 'nearest', behavior: 'instant' });
+  };
+  scrollTo(action === 'scroll' ? 'center' : 'nearest');
 
   if (action === 'scroll') return { ok: true };
 
-  if (action === 'click') {
+  const centreOf = () => {
+    const box = html.getBoundingClientRect();
+    return { x: box.left + box.width / 2, y: box.top + box.height / 2 };
+  };
+  const centre = centreOf();
+
+  if (action === 'locate') {
+    // A real click lands on whatever is at the point: the element, something
+    // inside it or its shadow host is fine; anything else is in the way. The
+    // parent page's overlays are not in this document, so each same-origin
+    // ancestor must show this frame at the point too.
+    const covered = (): boolean => {
+      if (typeof document.elementFromPoint !== 'function') return false;
+      const at = centreOf();
+      const hit = document.elementFromPoint(at.x, at.y);
+      let own = false;
+      for (let node: Node | null = el; node && hit && !own; ) {
+        own = node === hit || node.contains(hit);
+        const root = node.getRootNode();
+        node = root instanceof ShadowRoot ? root.host : null;
+      }
+      if (!own) return true;
+      let { x, y } = at;
+      for (let win: Window = window; win !== win.top; win = win.parent) {
+        const frame = win.frameElement as HTMLElement | null;
+        if (!frame) return false;
+        const box = frame.getBoundingClientRect();
+        x += box.left + frame.clientLeft;
+        y += box.top + frame.clientTop;
+        // ponytail: an iframe hosted in a shadow root reads as covered (the
+        // scripted click still lands); getRootNode().elementFromPoint if needed.
+        if (frame.ownerDocument.elementFromPoint(x, y) !== frame) return true;
+      }
+      return false;
+    };
+    let hidden = covered();
+    if (hidden) {
+      scrollTo('center');
+      hidden = covered();
+    }
+    // After the last scroll: `center` moves the parent page too.
+    const offset = frameOffset();
+    const at = centreOf();
+    return {
+      ok: true,
+      x: (offset ? offset.x : 0) + at.x,
+      y: (offset ? offset.y : 0) + at.y,
+      top: offset !== null,
+      ...(hidden ? { covered: true } : {}),
+    };
+  }
+
+  if (action === 'click' || action === 'dblclick') {
     if (typeof html.focus === 'function') html.focus();
-    html.click();
+    const mouse = (type: string, detail: number) => {
+      const Ctor =
+        type.startsWith('pointer') && typeof PointerEvent === 'function'
+          ? PointerEvent
+          : MouseEvent;
+      el.dispatchEvent(
+        new Ctor(type, {
+          bubbles: true,
+          cancelable: true,
+          composed: true,
+          detail,
+          clientX: centre.x,
+          clientY: centre.y,
+          button: 0,
+          buttons: type.endsWith('down') ? 1 : 0,
+        }),
+      );
+    };
+    // Widgets that act on the press rather than the click (menus, drag
+    // handles) see the sequence a mouse sends; click() stays last so links
+    // navigate and submit buttons submit natively.
+    const clicks = action === 'dblclick' ? 2 : 1;
+    for (let detail = 1; detail <= clicks; detail++) {
+      for (const type of ['pointerdown', 'mousedown', 'pointerup', 'mouseup'])
+        mouse(type, detail);
+      html.click();
+    }
+    if (clicks === 2) mouse('dblclick', 2);
     return { ok: true };
   }
 
-  if (action === 'type') {
-    // Everything the user has to type themselves. The prompt tells the model
-    // not to touch these; this is what makes it true, and it is the only thing
-    // that does — Approvals = Automatic raises no card, and a `type` without
-    // `submit` raises none in either mode.
-    //
-    // `autocomplete` is a TOKEN LIST: an optional `section-*`, then an optional
-    // `shipping`/`billing`, then the field name, optionally `webauthn`. So
-    // `billing cc-number` is as ordinary as `cc-number` on a real checkout, and
-    // testing the attribute as a whole let it through.
-    const SECRET_FIELDS = [
-      'current-password',
-      'new-password',
-      'one-time-code',
-      'cc-number',
-      'cc-csc',
-      'cc-exp',
-      'cc-exp-month',
-      'cc-exp-year',
-      'cc-name',
-      'cc-type',
-    ];
-    const tokens = (el.getAttribute('autocomplete') || '')
-      .toLowerCase()
-      .split(/\s+/);
-    const secret =
-      (el instanceof HTMLInputElement && el.type === 'password') ||
-      tokens.some((token) => SECRET_FIELDS.includes(token));
-    if (secret) {
-      return {
-        ok: false,
-        error:
-          'Refused: this field takes a password or payment secret. Ask the user to type it themselves, then continue.',
-      };
+  // Everything the user has to type themselves. The prompt tells the model
+  // not to touch these; this is what makes it true, and it is the only thing
+  // that does — Approvals = Automatic raises no card, and a `type` without
+  // `submit` raises none in either mode.
+  //
+  // `autocomplete` is a TOKEN LIST: an optional `section-*`, then an optional
+  // `shipping`/`billing`, then the field name, optionally `webauthn`. So
+  // `billing cc-number` is as ordinary as `cc-number` on a real checkout, and
+  // testing the attribute as a whole let it through.
+  const tokens = (el.getAttribute('autocomplete') || '')
+    .toLowerCase()
+    .split(/\s+/);
+  const secret =
+    (el instanceof HTMLInputElement && el.type === 'password') ||
+    tokens.some((token) => (secretTokens || []).includes(token));
+  const refused: ActResult = {
+    ok: false,
+    error:
+      'Refused: this field takes a password or payment secret. Ask the user to type it themselves, then continue.',
+  };
+
+  // Real typing replaces a selection, so the field is focused and selected
+  // whole here, behind the same refusal as `type`.
+  if (action === 'prepare-type') {
+    if (secret) return refused;
+    if (typeof html.focus === 'function') html.focus();
+    if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
+      el.select();
+    } else if (
+      html.isContentEditable ||
+      el.getAttribute('contenteditable') === 'true'
+    ) {
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      const selection = window.getSelection();
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+    } else {
+      return { ok: false, error: 'Element cannot receive text.' };
     }
+    return { ok: true, top: frameOffset() !== null };
+  }
+
+  if (action === 'type') {
+    if (secret) return refused;
     if (typeof html.focus === 'function') html.focus();
     if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
       // React tracks the value through the prototype setter; a plain `el.value =`

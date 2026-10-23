@@ -1,6 +1,10 @@
 import { Page, Locator, expect } from '@playwright/test';
 import { isVisibleWithin } from '../../utils/resilient';
 
+/** Raw chat markup that a history row's title/preview must never show: LaTeX
+ *  delimiters and commands, and markdown bold. Rows render plain text. */
+export const RAW_CHAT_MARKUP = /\\\(|\\\)|\\\[|\\\]|\\text\{|\\textbf\{|\*\*/;
+
 export class HistoryTab {
   readonly page: Page;
   readonly dialog: Locator;
@@ -31,6 +35,12 @@ export class HistoryTab {
   /** Per-turn "Show Details" / "Hide Details" toggles in the transcript. */
   readonly turnDetailsToggles: Locator;
   readonly turnDetailsPanels: Locator;
+  /** The chat's "Open Canvas" cards for the selected conversation's canvases
+   *  (absent when the conversation produced none). */
+  readonly canvasCards: Locator;
+  readonly openCanvasButtons: Locator;
+  /** The chat's canvas, read-only, in a dialog. */
+  readonly canvasDialog: Locator;
 
   constructor(page: Page, dialog: Locator) {
     this.page = page;
@@ -38,10 +48,9 @@ export class HistoryTab {
     this.conversationList = dialog.getByRole('region', {
       name: /conversation list/i,
     });
-    // Rows are the list region's direct children. (Owner links and topic
-    // tags carry `cursor-pointer` too, so a class-based locator would match
-    // them first.)
-    this.conversationRows = this.conversationList.locator('> div');
+    this.conversationRows = this.conversationList.getByTestId(
+      'history-conversation-row',
+    );
     this.rowOwners = this.conversationList.getByTestId(
       'history-conversation-owner',
     );
@@ -63,6 +72,9 @@ export class HistoryTab {
       name: /^(show|hide) details$/i,
     });
     this.turnDetailsPanels = dialog.getByTestId('transcript-turn-details');
+    this.canvasCards = dialog.getByTestId('canvas-message-preview');
+    this.openCanvasButtons = dialog.getByTestId('canvas-open-button');
+    this.canvasDialog = page.getByTestId('canvas-dialog');
     this.emptyState = dialog.getByText(/no conversations/i);
     this.nextButton = dialog.getByRole('button', { name: /next/i });
     this.exportButton = dialog.getByRole('button', { name: /export/i });
@@ -79,6 +91,12 @@ export class HistoryTab {
 
   async hasConversations(): Promise<boolean> {
     return isVisibleWithin(this.conversationRows.first(), 15_000);
+  }
+
+  /** The text of every list row that still shows raw markdown/LaTeX. */
+  async rowsShowingRawMarkup(): Promise<string[]> {
+    const texts = await this.conversationRows.allInnerTexts();
+    return texts.filter((text) => RAW_CHAT_MARKUP.test(text));
   }
 
   async clickFirstRow(): Promise<void> {

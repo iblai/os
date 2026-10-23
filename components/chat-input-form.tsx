@@ -36,6 +36,7 @@ import {
   chatInputSliceSelectors,
 } from '@/features/chat-input/api-slice';
 import { useResponsive } from '@/hooks/use-responsive';
+import { TOUR_TARGET } from './product-tour/tour-targets';
 import { InsideButtons } from './chat-input-form/inside-buttons';
 import { VoiceCallButton } from './chat-input-form/voice-call-button';
 import { useMentorSettings } from '@/hooks/use-mentors/use-mentor-settings';
@@ -156,7 +157,7 @@ export function ChatInputForm({
   const mentorSettings = useMentorSettings();
   const showingSharedChat = useAppSelector(selectShowingSharedChat);
 
-  // Chat private mode signal — same source the nav-bar ChatPrivacyToggle uses.
+  // Chat incognito signal — same source the nav-bar ChatPrivacyToggle uses.
   // When the effective mode is 'disabled' the active session is private, so the
   // Memory button is hidden (memory is not stored for a private session). Gate
   // on `isEffectiveReady` so we don't flash-hide before the query resolves.
@@ -918,7 +919,7 @@ export function ChatInputForm({
             </div>
           )}
 
-          <div className="grid">
+          <div data-tour={TOUR_TARGET.promptInput} className="grid">
             <label
               id="chat-input-label"
               htmlFor="chat-input-textarea"

@@ -5,6 +5,9 @@
   "actionClick": {
     "message": "Clic en"
   },
+  "actionDoubleClick": {
+    "message": "Doble clic en"
+  },
   "actionNavigate": {
     "message": "Abrir"
   },
@@ -89,9 +92,21 @@
     "message": "No se pudo iniciar sesión. Inténtalo de nuevo."
   },
   "stepLimit": {
-    "message": "Detenido tras el número máximo de pasos."
+    "message": "Me detuve aquí: es el máximo de pasos que doy de una vez. Envía «continuar» y seguiré donde lo dejé, mientras este panel siga abierto."
   },
   "tokenLimit": {
-    "message": "Detenido: la ejecución agotó su presupuesto de tokens."
+    "message": "Me detuve aquí: es todo lo que puedo leer de una vez. Envía «continuar» y seguiré donde lo dejé, mientras este panel siga abierto."
+  },
+  "noScriptablePage": {
+    "message": "No puedo leer esta página: el navegador no lo permite. Abre la página con la que quieres que trabaje e inténtalo de nuevo."
+  },
+  "actionFailed": {
+    "message": "No funcionó."
+  },
+  "errorRealClicksBusy": {
+    "message": "Los clics reales no pueden empezar mientras las herramientas de desarrollo estén abiertas en esta pestaña. Ciérralas e inténtalo de nuevo."
+  },
+  "errorRealClicksOff": {
+    "message": "Los clics reales se detuvieron desde la barra de la pestaña o por las herramientas de desarrollo, así que la ejecución terminó. Inténtalo de nuevo."
   }
 }

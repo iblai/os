@@ -17,9 +17,10 @@ import {
   runAgent,
   transformBody,
   usedTokens,
+  wantsPicture,
   type AgentEvent,
 } from '../agent';
-import { INSTRUCTIONS } from '../prompt';
+import { INSTRUCTIONS, PAGE_MARK, PICTURE_NOTE } from '../prompt';
 
 const USAGE = {
   inputTokens: { total: 10, noCache: 10, cacheRead: 0, cacheWrite: 0 },
@@ -32,16 +33,27 @@ const finish = (unified: 'stop' | 'tool-calls') => ({
   usage: USAGE,
 });
 
-const toolStep = (input: unknown = { element: 5 }) => ({
+const toolStep = (
+  input: unknown = { element: 5 },
+  toolName = 'click',
+  said = '',
+) => ({
   stream: simulateReadableStream({
     chunks: [
       { type: 'stream-start', warnings: [] },
+      ...(said
+        ? [
+            { type: 'text-start', id: 't0' },
+            { type: 'text-delta', id: 't0', delta: said },
+            { type: 'text-end', id: 't0' },
+          ]
+        : []),
       // The provider spec streams tool input as JSON text.
       {
         type: 'tool-call',
         toolCallId: 'c1',
-        toolName: 'click',
-        input: JSON.stringify(input),
+        toolName,
+        input: typeof input === 'string' ? input : JSON.stringify(input),
       },
       finish('tool-calls'),
     ],
@@ -66,6 +78,20 @@ function mockModel(
   const queue = [...steps];
   return new MockLanguageModelV4({
     doStream: async () => (queue.shift() ?? textStep('')) as never,
+  });
+}
+
+/** Like mockModel, recording what each call was asked. */
+function recordingModel(
+  prompts: unknown[][],
+  ...steps: Array<ReturnType<typeof toolStep> | ReturnType<typeof textStep>>
+) {
+  const queue = [...steps];
+  return new MockLanguageModelV4({
+    doStream: async ({ prompt }) => {
+      prompts.push(prompt as unknown[]);
+      return (queue.shift() ?? textStep('')) as never;
+    },
   });
 }
 
@@ -117,25 +143,34 @@ describe('request shaping', () => {
   });
 
   it('picks the preferred model, else the first, else nothing', () => {
-    // iblai-pro heads the list: the DM seeds it globally and the shim reports it
-    // available for every platform, so it is the answer wherever it is listed.
+    // Models that read a picture and call tools come first; iblai-pro, the
+    // router every platform lists, is the answer only when nothing else is.
     expect(
       pickModel(['openai/gpt-5', 'anthropic/claude-opus-5', 'iblai/iblai-pro']),
-    ).toBe('iblai/iblai-pro');
+    ).toBe('anthropic/claude-opus-5');
     expect(
       pickModel([
         'openai/gpt-5',
         'anthropic/claude-sonnet-5',
         'anthropic/claude-opus-5',
       ]),
-    ).toBe('anthropic/claude-opus-5');
-    expect(pickModel(['openai/gpt-5', 'anthropic/claude-sonnet-5'])).toBe(
-      'anthropic/claude-sonnet-5',
-    );
+    ).toBe('anthropic/claude-sonnet-5');
+    expect(pickModel(['iblai/iblai-pro', 'openai/gpt-5'])).toBe('openai/gpt-5');
+    expect(pickModel(['bedrock/x', 'iblai/iblai-pro'])).toBe('iblai/iblai-pro');
     expect(pickModel(['bedrock/anthropic.claude-opus-5'])).toBe(
       'bedrock/anthropic.claude-opus-5',
     );
     expect(pickModel([])).toBe('');
+  });
+
+  // `/v1/models` says nothing about vision, so the provider decides.
+  it('sends a picture only to providers whose models read one', () => {
+    expect(wantsPicture('anthropic/claude-sonnet-5')).toBe(true);
+    expect(wantsPicture('openai/gpt-5')).toBe(true);
+    expect(wantsPicture('google/gemini-3')).toBe(true);
+    expect(wantsPicture('iblai/iblai-pro')).toBe(false);
+    expect(wantsPicture('bedrock/anthropic.claude-opus-5')).toBe(false);
+    expect(wantsPicture('')).toBe(false);
   });
 
   it('sums step usage and treats missing counts as zero', () => {
@@ -183,6 +218,29 @@ describe('pruneOldSnapshots', () => {
   it('is a no-op within the keep window', () => {
     const messages = [user('go'), toolMessage('1')];
     expect(pruneOldSnapshots(messages)).toEqual(messages);
+  });
+
+  // One numbering per request: the page a user turn carried is stale as soon
+  // as an action has produced a newer one, and only the latest result keeps its.
+  it("blanks a user turn's page once an action followed it, and keeps one tool result", () => {
+    const messages = [
+      user(`go${PAGE_MARK}[1] button "Pay"`),
+      toolMessage('1'),
+      toolMessage('2'),
+      user(`continue${PAGE_MARK}[1] button "Pay again"`),
+    ];
+    const pruned = pruneOldSnapshots(messages);
+    expect(pruned[0]).toEqual(
+      user(`go${PAGE_MARK}(earlier page state omitted)`),
+    );
+    const output = (index: number) =>
+      (pruned[index] as { content: Array<{ output: { value: unknown } }> })
+        .content[0].output.value;
+    expect(output(1)).toBe('(earlier page state omitted)');
+    expect(output(2)).toBe('page 2');
+    // The newest turn's page is the current one until an action follows it.
+    expect(pruned[3]).toBe(messages[3]);
+    expect(messages[0]).toEqual(user(`go${PAGE_MARK}[1] button "Pay"`));
   });
 });
 
@@ -435,9 +493,11 @@ describe('runAgent', () => {
     expect(events.some((event) => event.type === 'text')).toBe(false);
   });
 
-  it('reports a tool that throws as an error event', async () => {
+  // The SDK carries on after a tool fails — the failure goes back to the model
+  // as that call's result — so the run must not be torn down over it.
+  it('keeps going after a tool that throws, reporting it as a failed call', async () => {
     const { events, onEvent } = collect();
-    await runAgent({
+    const result = await runAgent({
       model: mockModel(toolStep(), textStep()),
       messages: [user('x')],
       tools: clickTools(
@@ -448,7 +508,100 @@ describe('runAgent', () => {
       signal: new AbortController().signal,
       onEvent,
     });
-    expect(events).toContainEqual({ type: 'error', message: 'tab closed' });
+    expect(events).toContainEqual({ type: 'tool-error', toolName: 'click' });
+    expect(events.filter((event) => event.type === 'error')).toEqual([]);
+    expect(result.text).toBe('Done.');
+  });
+
+  it('keeps going after a call it does not know', async () => {
+    const execute = clickExecute();
+    const { events, onEvent } = collect();
+    const result = await runAgent({
+      model: mockModel(toolStep({ element: 5 }, 'tap'), textStep()),
+      messages: [user('x')],
+      tools: clickTools(execute),
+      signal: new AbortController().signal,
+      onEvent,
+    });
+    expect(events).toContainEqual({ type: 'tool-error', toolName: 'tap' });
+    expect(events.filter((event) => event.type === 'error')).toEqual([]);
+    expect(execute).not.toHaveBeenCalled();
+    expect(result.text).toBe('Done.');
+  });
+
+  it('files words said before an action as narration, and only the last step as the reply', async () => {
+    const { events, onEvent } = collect();
+    const result = await runAgent({
+      model: mockModel(
+        toolStep({ element: 5 }, 'click', 'Opening billing.'),
+        textStep('Done.'),
+      ),
+      messages: [user('open billing')],
+      tools: clickTools(),
+      signal: new AbortController().signal,
+      onEvent,
+    });
+    expect(events.map((event) => event.type)).toEqual([
+      'narration',
+      'tool-call',
+      'tool-result',
+      'text',
+      'finish',
+    ]);
+    expect(events[0]).toEqual({ type: 'narration', text: 'Opening billing.' });
+    expect(events[3]).toEqual({ type: 'text', text: 'Done.' });
+    expect(result.text).toBe('Done.');
+  });
+
+  it('sends the latest picture on a trailing user message, and never keeps it', async () => {
+    const prompts: unknown[][] = [];
+    const result = await runAgent({
+      model: recordingModel(prompts, toolStep(), textStep()),
+      messages: [user('open billing')],
+      tools: clickTools(),
+      signal: new AbortController().signal,
+      onEvent: () => undefined,
+      picture: () => ({ dataUrl: 'data:image/jpeg;base64,/9j/AAA=', scale: 1 }),
+    });
+    expect(prompts).toHaveLength(2);
+    for (const prompt of prompts) {
+      const last = prompt[prompt.length - 1] as { role: string };
+      expect(last.role).toBe('user');
+      expect(JSON.stringify(last)).toContain('image/jpeg');
+      expect(JSON.stringify(last)).toContain(PICTURE_NOTE);
+    }
+    expect(JSON.stringify(result.messages)).not.toContain('image/jpeg');
+    expect(result.messages.filter((m) => m.role === 'user')).toHaveLength(1);
+  });
+
+  it('sends the reason when there is no picture, and nothing extra when none is expected', async () => {
+    const withNote: unknown[][] = [];
+    await runAgent({
+      model: recordingModel(withNote, textStep()),
+      messages: [user('x')],
+      tools: clickTools(),
+      signal: new AbortController().signal,
+      onEvent: () => undefined,
+      picture: () => ({ note: '(no picture: the tab is not in front)' }),
+    });
+    const last = withNote[0][withNote[0].length - 1] as { role: string };
+    expect(last.role).toBe('user');
+    expect(JSON.stringify(last)).toContain(
+      '(no picture: the tab is not in front)',
+    );
+    expect(JSON.stringify(last)).not.toContain('image/jpeg');
+
+    const without: unknown[][] = [];
+    await runAgent({
+      model: recordingModel(without, textStep()),
+      messages: [user('x')],
+      tools: clickTools(),
+      signal: new AbortController().signal,
+      onEvent: () => undefined,
+    });
+    expect(
+      without[0].filter((m) => (m as { role: string }).role === 'user'),
+    ).toHaveLength(1);
   });
 });
 
@@ -513,6 +666,27 @@ describe('buildModel against the DM shim', () => {
     expect(body.messages[0]).toEqual({ role: 'system', content: INSTRUCTIONS });
     expect(body.messages[1]).toEqual({ role: 'user', content: 'hello' });
     expect(events.filter((event) => event.type === 'error')).toEqual([]);
+  });
+
+  it('tells the model about the position tools only when they are offered', async () => {
+    const prompts: unknown[][] = [];
+    const call = (positions?: boolean) =>
+      runAgent({
+        model: recordingModel(prompts, textStep()),
+        messages: [user('x')],
+        tools: {},
+        signal: new AbortController().signal,
+        onEvent: () => undefined,
+        positions,
+      });
+    await call(true);
+    await call();
+    const systems = prompts.map(
+      (prompt) => prompt[0] as { role: string; content: string },
+    );
+    expect(systems.map((system) => system.role)).toEqual(['system', 'system']);
+    expect(systems[0].content).toContain('click_at and type_at');
+    expect(systems[1].content).not.toContain('click_at');
   });
 
   // The user's language reaches the model as part of the system message and

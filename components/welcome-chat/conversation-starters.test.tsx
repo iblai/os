@@ -156,6 +156,21 @@ describe('ConversationStarters', () => {
       ).toBeInTheDocument();
     });
 
+    it('marks the starters for the product tour', () => {
+      render(
+        <ConversationStarters
+          onTemplateSelect={mockOnTemplateSelect}
+          enabledGuidedPrompts={true}
+          sessionId="session-123"
+        />,
+      );
+
+      expect(
+        screen.getByRole('heading', { name: /Conversation Starters/i })
+          .parentElement,
+      ).toHaveAttribute('data-tour', 'conversation-starters');
+    });
+
     it('renders all guided prompts', () => {
       render(
         <ConversationStarters

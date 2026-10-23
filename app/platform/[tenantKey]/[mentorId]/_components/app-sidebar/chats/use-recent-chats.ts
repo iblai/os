@@ -23,10 +23,10 @@ import {
 import { useAppDispatch, useAppSelector } from '@/lib/hooks';
 import { useLocalStorage } from '@/hooks/use-local-storage';
 import { LOCAL_STORAGE_KEYS } from '@/lib/constants';
+import { sessionCacheKey } from '@/lib/utils';
 import { getUserName } from '@/features/utils';
 import { ProjectPageParams } from '@/lib/types';
 import eventBus, { RemoteEvents } from '@/lib/eventBus';
-import { exportMessagesToXlsx } from '../export-messages';
 
 import { ChatRow } from './chat-row-label';
 
@@ -127,13 +127,13 @@ export function useRecentChats({
     [recentInfiniteData],
   );
 
-  // Pinned — same shape; `sessionId` arg is the cache key the SDK uses
-  // for invalidation, not a row filter.
+  // Pinned — same shape. The list is user-wide and the SDK keys its cache on
+  // the full args, so these args (and every patch below) must stay exactly
+  // `{ org, userId }` to share AppProvider's refetch entry.
   const { data: pinnedMessages, refetch: refetchPinned } =
     useGetPinnedMessagesQuery(
       {
         org: tenantKey,
-        sessionId: appSessionId,
         // @ts-ignore — userId is required at the URL path level
         userId: resolvedUserId,
       },
@@ -259,7 +259,7 @@ export function useRecentChats({
       if (mentorId) {
         saveCachedSessionId({
           ...cachedSessionId,
-          [mentorId]: row.session_id,
+          [sessionCacheKey(tenantKey, mentorId)]: row.session_id,
         });
       }
     }
@@ -295,7 +295,6 @@ export function useRecentChats({
           'getPinnedMessages',
           {
             org: tenantKey,
-            sessionId: appSessionId,
             userId: resolvedUserId,
           },
           (draft) => {
@@ -336,7 +335,6 @@ export function useRecentChats({
           'getPinnedMessages',
           {
             org: tenantKey,
-            sessionId: appSessionId,
             userId: resolvedUserId,
           },
           (draft) => {
@@ -369,7 +367,6 @@ export function useRecentChats({
           'getPinnedMessages',
           {
             org: tenantKey,
-            sessionId: appSessionId,
             userId: resolvedUserId,
           },
           (draft) => {
@@ -396,11 +393,11 @@ export function useRecentChats({
     }
   };
 
-  const handleExport = (row: ChatRow) => {
-    // Delegate to the shared sibling helper — it uses `write-excel-file`
-    // (already a project dep) and is covered by `export-messages.test.ts`.
-    exportMessagesToXlsx(row.messages ?? []);
-  };
+  // The row only carries a summary of the chat (its opening message), so the
+  // export dialog reads the whole session itself.
+  const [exportingRow, setExportingRow] = React.useState<ChatRow | null>(null);
+  const handleExport = (row: ChatRow) => setExportingRow(row);
+  const closeExport = () => setExportingRow(null);
 
   return {
     pinned,
@@ -415,5 +412,7 @@ export function useRecentChats({
     handleUnpin,
     handleDelete,
     handleExport,
+    exportingRow,
+    closeExport,
   };
 }

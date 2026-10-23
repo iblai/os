@@ -325,6 +325,18 @@ export class SandboxTab {
    * mentor-settings PATCH response resolving OK, then the switch holding the
    * target aria-checked state (a rejected PATCH rolls the optimistic flip
    * back, so the state assertion would catch a real failure).
+   *
+   * It also waits for the settings REFETCH that save triggers. The save
+   * invalidates the mentor-settings query, so a settings GET goes out the
+   * moment the save fulfils — and when it lands, the SDK's VM Network Access
+   * section (mounted optimistically as soon as the Virtual Machine kind is
+   * switched on) re-seeds its whole unsaved draft from the server
+   * (`useEffect(resetDraft, [server, …])`). A caller that started editing
+   * egress / policy / secrets before that GET arrived would have the edit
+   * silently wiped. The section shows no skeleton for a refetch, so the
+   * response itself is the only signal. This wait is deliberately tolerant
+   * (it never fails the toggle): it exists to close that race, not to assert
+   * on the refetch.
    */
   async toggleKind(kind: SandboxKind): Promise<void> {
     const kindSwitch = this.kindSwitch(kind);
@@ -332,21 +344,42 @@ export class SandboxTab {
     await expect(kindSwitch).toBeEnabled({ timeout: 10_000 });
     const target = (await kindSwitch.getAttribute('aria-checked')) !== 'true';
 
-    // Register the response wait BEFORE clicking so the save can't win the
-    // race. The mentor-settings update is a PUT to .../mentors/{id}/settings/
+    const isSettingsUrl = (url: string) =>
+      url.includes('/api/ai-mentor/') && url.includes('/settings/');
+
+    // Register BOTH response waits BEFORE clicking so neither can be missed.
+    // The mentor-settings update is a PUT to .../mentors/{id}/settings/
     // (aiMentorOrgsUsersMentorsSettingsUpdate); accept PATCH too in case the
-    // API client ever switches to a partial update.
+    // API client ever switches to a partial update. `saveSeen` gates the
+    // refetch wait so only a settings GET that responds AFTER the save
+    // counts — never an earlier one still in flight.
+    let saveSeen = false;
     const saveDone = this.page.waitForResponse(
       (resp) => {
         const method = resp.request().method();
-        return (
-          (method === 'PUT' || method === 'PATCH') &&
-          resp.url().includes('/api/ai-mentor/') &&
-          resp.url().includes('/settings/')
-        );
+        const isSave =
+          (method === 'PUT' || method === 'PATCH') && isSettingsUrl(resp.url());
+        if (isSave) saveSeen = true;
+        return isSave;
       },
       { timeout: 20_000 },
     );
+    const refetchDone = this.page
+      .waitForResponse(
+        (resp) =>
+          saveSeen &&
+          resp.request().method() === 'GET' &&
+          isSettingsUrl(resp.url()),
+        { timeout: 15_000 },
+      )
+      // Tolerant by design (see the docstring): no refetch within the window
+      // is not a toggle failure.
+      .then(async (resp) => {
+        await resp.finished().catch(() => null);
+        return true;
+      })
+      .catch(() => false);
+
     await kindSwitch.click();
     const response = await saveDone;
     if (!response.ok()) {
@@ -354,6 +387,9 @@ export class SandboxTab {
         `Sandbox-kind save failed with ${response.status()} for ${kind}`,
       );
     }
+    // Let the post-save settings refetch land before returning, so callers
+    // never edit a draft that refetch would wipe.
+    await refetchDone;
     await expect(kindSwitch).toHaveAttribute('aria-checked', String(target), {
       timeout: 10_000,
     });

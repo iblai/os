@@ -1,9 +1,16 @@
 import { withSentryConfig } from '@sentry/nextjs';
 import createNextIntlPlugin from 'next-intl/plugin';
+import withBundleAnalyzer from '@next/bundle-analyzer';
 import type { NextConfig } from 'next';
 import type { RemotePattern } from 'next/dist/shared/lib/image-config';
 
 const withNextIntl = createNextIntlPlugin('./i18n/request.ts');
+
+// Opt-in bundle analyzer: `ANALYZE=true pnpm build` emits a treemap of every
+// chunk under .next/analyze/ so first-load weight is measured, not guessed.
+const withAnalyzer = withBundleAnalyzer({
+  enabled: process.env.ANALYZE === 'true',
+});
 
 // Sourcemap generation is heavy (multi-GB) and only pays off if the maps are
 // actually uploaded to Sentry — which requires SENTRY_AUTH_TOKEN at build time.
@@ -24,6 +31,8 @@ const rawPatterns = envPatterns
       'https://base.manager.ai.syr.edu',
       'https://api.iblai.org',
       'https://api.iblai.app',
+      'https://os.ibl.ai',
+      'https://mentorai.iblai.org',
     ];
 
 const remotePatterns = rawPatterns
@@ -164,6 +173,12 @@ const nextConfig: NextConfig = {
     '@iblai/web-utils',
     '@iblai/data-layer',
     '@iblai/web-containers',
+    // react-gravatar (used by the SDK's UserAvatar) is now externalized by
+    // web-containers (>=1.44.3). It is ES5 CJS doing
+    // `_interopRequireDefault(require('query-string')).default.stringify(...)`;
+    // Next must transpile it so that interop resolves correctly — otherwise the
+    // avatar throws "g.default.stringify is not a function" and crashes the page.
+    'react-gravatar',
   ],
 };
 const sentryWebpackPluginOptions = {
@@ -190,7 +205,6 @@ const sentryWebpackPluginOptions = {
   },
 };
 
-export default withSentryConfig(
-  withNextIntl(nextConfig),
-  sentryWebpackPluginOptions,
+export default withAnalyzer(
+  withSentryConfig(withNextIntl(nextConfig), sentryWebpackPluginOptions),
 );

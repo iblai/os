@@ -1,12 +1,21 @@
 import { useCallback, useEffect } from 'react';
 
 import { useAppDispatch, useAppSelector } from './hooks';
+import { getAuthItem, setAuthItem } from '@/lib/auth-storage';
 import {
   darkModeUpdated,
   // iframeCloseButtonEnabled,
 } from '@/features/navigation/slice';
-import { chatActions, selectLessonCompletion } from '@iblai/iblai-js/web-utils';
-import { sendMessageToParentWebsite } from './utils';
+import {
+  chatActions,
+  selectLessonCompletion,
+  AUTH_TOKENS_UPDATED_EVENT,
+} from '@iblai/iblai-js/web-utils';
+import {
+  sendMessageToParentWebsite,
+  saveUserObjectToLocalStorage,
+} from './utils';
+import { clearAuthRecovery } from './auth-recovery-lock';
 import {
   enableChatActionsPopup,
   setAutoplayLastAiMessage,
@@ -40,8 +49,40 @@ export function useIframeHandlers() {
     }
   };
 
+  // Host stylesheets arrive more than once by design: a `MENTOR:CSS_INJECT`
+  // that lands before this handler is live is lost, there is no ack, and so
+  // every embedder pushes its sheet on a burst — and again whenever this app
+  // re-announces itself. Appending a fresh <style> per message meant a themed
+  // embed accumulated dozens of copies of the same sheet. When that sheet
+  // opens with universal selectors (`*,::before,::after{...!important}`),
+  // every style recalculation in the frame pays for all of them, and the
+  // composer forces a synchronous recalc + layout on each keystroke
+  // (height:auto, then read scrollHeight) — so typing lagged in the embed
+  // while the same chat on os.ibl.ai, which is handed no host CSS, stayed
+  // instant.
+  //
+  // Keyed by the CSS itself rather than by one fixed element: a host may send
+  // several genuinely different sheets (base theme, chromeless chrome, focus
+  // mode), each of which still gets its own <style>. A repeat is a no-op.
+  const cssKey = (css: string): string => {
+    let hash = 5381;
+    for (let i = 0; i < css.length; i++) {
+      hash = ((hash * 33) ^ css.charCodeAt(i)) >>> 0;
+    }
+    return `${css.length}-${hash.toString(36)}`;
+  };
+
   const handleCssInjection = (css: string) => {
+    // `css` comes straight off an untrusted postMessage payload, so it can be
+    // absent. Assigning `undefined` to innerText used to be a harmless no-op;
+    // hashing it is not, so the guard has to be here rather than implied.
+    // An empty string is NOT excluded — it hashes fine and callers rely on it
+    // still producing a stylesheet.
+    if (typeof css !== 'string') return;
+    const key = cssKey(css);
+    if (document.head.querySelector(`style[data-host-css="${key}"]`)) return;
     const style = document.createElement('style');
+    style.setAttribute('data-host-css', key);
     style.innerText = css;
     document.head.appendChild(style);
   };
@@ -52,24 +93,53 @@ export function useIframeHandlers() {
 
   const handleTokenMessage = (tokenData: string) => {
     console.log('[useIframeHandlers] tokenData', tokenData);
+    let payload: Record<string, any>;
     try {
-      tokenData = JSON.parse(tokenData);
+      payload = JSON.parse(tokenData);
     } catch (error) {
       console.error('Error parsing token data:', error);
       console.error(JSON.stringify({ tenant: tenantKey, error }));
+      return;
     }
-    Object.entries(tokenData).forEach(([key, value]) => {
-      localStorage.setItem(key, value as string);
-    });
 
-    if (!localStorage.getItem('current_tenant')) {
-      const tenants = JSON.parse(localStorage.getItem('tenants') || '[]');
-      const tenant = localStorage.getItem('tenant');
+    // The host re-sends its auth every time we announce ourselves
+    // (`ready`/`loaded`). Acting on an identical payload re-runs the auth check
+    // for nothing (and used to re-trigger the reload loop). Only act on a real
+    // change.
+    const unchanged =
+      getAuthItem('axd_token') === payload.axd_token &&
+      getAuthItem('dm_token') === payload.dm_token &&
+      getAuthItem('tenant') === payload.tenant;
+    if (unchanged) return;
+
+    // New tokens installed — release the recovery lock so a later 401 can recover.
+    clearAuthRecovery();
+
+    // Save reactively: saveUserObjectToLocalStorage dispatches `local-storage`
+    // events per key, which the reactive auth hooks (useUsername, useUserData,
+    // useCurrentTenant) listen for — so the UI flips to the new auth in place.
+    saveUserObjectToLocalStorage(payload);
+
+    // saveUserObjectToLocalStorage clears storage first, so re-derive the
+    // current tenant when the payload didn't carry one.
+    if (!getAuthItem('current_tenant')) {
+      const tenants = JSON.parse(getAuthItem('tenants') || '[]');
+      const tenant = getAuthItem('tenant');
       const selectedTenant = tenants.find((t: any) => t.key === tenant);
-      localStorage.setItem('current_tenant', JSON.stringify(selectedTenant));
-      localStorage.setItem('tenants', JSON.stringify(tenants));
+      setAuthItem('current_tenant', JSON.stringify(selectedTenant));
+      window.dispatchEvent(
+        new StorageEvent('local-storage', { key: 'current_tenant' }),
+      );
     }
-    window.location.reload();
+
+    // Re-run the auth check IN PLACE instead of a full page reload (which
+    // re-downloaded every asset — the embed-widget startup delay). Mirrors the
+    // agent-ai default handler in providers/index.tsx: the browser's `storage`
+    // event only fires in OTHER windows, and a token refresh often leaves
+    // `username` unchanged, so the AuthProvider's username-keyed check would
+    // not otherwise re-run. The data layer reads tokens per-request, so new
+    // requests pick up the new tokens with no reload.
+    window.dispatchEvent(new Event(AUTH_TOKENS_UPDATED_EVENT));
   };
 
   const handlers = {

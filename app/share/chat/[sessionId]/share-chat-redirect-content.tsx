@@ -11,6 +11,7 @@ import { chatActions, useTenantContext } from '@iblai/iblai-js/web-utils';
 import { useAppDispatch } from '@/lib/hooks';
 import { useLocalStorage } from '@/hooks/use-local-storage';
 import { LOCAL_STORAGE_KEYS } from '@/lib/constants';
+import { sessionCacheKey } from '@/lib/utils';
 import { useSharedChatMessages } from '@/hooks/use-shared-chat-messages';
 import { hideInitialLoader } from '@/lib/initial-loader';
 
@@ -56,7 +57,8 @@ export default function ShareChatRedirectContent() {
       dispatch(chatActions.setShowingSharedChat(true));
       saveCachedSessionId({
         ...cachedSessionId,
-        [mentorUniqueId as string]: sessionId,
+        [sessionCacheKey(platformKey as string, mentorUniqueId as string)]:
+          sessionId,
       });
       setTenantKey(platformKey as string);
       router.push(`/platform/${platformKey}/${mentorUniqueId}`);

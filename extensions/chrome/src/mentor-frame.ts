@@ -2,6 +2,7 @@
 // from the original panel.js).
 import { extractPageContent } from './page-scripts';
 import { isAuthed, sessionData, signIn } from './auth';
+import { injectable } from './settings';
 
 export interface PageContent {
   title: string;
@@ -207,16 +208,19 @@ export function removeWidgetSpinner(host: Element): void {
 // chrome.scripting and post the mentor's own MENTOR:CONTEXT_UPDATE message
 // straight into its (open) shadow-DOM iframe.
 
-const UNSCRIPTABLE =
-  /^(chrome|edge|about|chrome-extension|view-source|devtools):/;
-
 export async function readActiveTab(): Promise<PageContent | null> {
-  const [tab] = await chrome.tabs.query({
-    active: true,
-    lastFocusedWindow: true,
-  });
-  // Can't script the browser's own pages, the web store, or extension pages.
-  if (!tab?.id || !tab.url || UNSCRIPTABLE.test(tab.url)) return null;
+  // The tab is resolved by WINDOW, not by `lastFocusedWindow`. The browse
+  // bridge already learned this the hard way: undocked DevTools is a window of
+  // its own, so while debugging, "last focused" is the DevTools window and this
+  // read silently returned nothing. The panel is in the browser window by
+  // construction.
+  const { id: windowId } = await chrome.windows.getCurrent();
+  const [tab] = await chrome.tabs.query({ active: true, windowId });
+  // `injectable` is the single source of truth for what can be read: browser
+  // pages, extension pages and the Web Store alike. It used to be a separate
+  // regex here that knew nothing about the Web Store, so a run started from
+  // the gallery tried anyway and failed inside `executeScript`.
+  if (!tab?.id || !injectable(tab.url)) return null;
   try {
     // Every frame the extension can reach: an embedded chat or editor is its
     // own document, invisible from the page's. Frame 0 is the page; Chrome

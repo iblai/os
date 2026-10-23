@@ -150,6 +150,8 @@ export const TAURI_COMMANDS = {
   INSTALL_FOUNDRY: 'install_foundry',
   DOWNLOAD_FOUNDRY_MODEL: 'download_foundry_model_cmd',
   GET_RECOMMENDED_FOUNDRY_MODELS: 'get_recommended_foundry_models',
+  // Opens the native save dialog and writes the bytes there; resolves false on cancel.
+  SAVE_CHAT_FILE: 'save_chat_file',
 } as const;
 
 /**

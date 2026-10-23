@@ -77,7 +77,6 @@ const executeWithTrialCheckMock = vi.fn((fn?: () => void) => {
 const redirectToAuthSpaMock = vi.fn();
 const redirectToAuthSpaJoinTenantMock = vi.fn();
 const eventBusEmitMock = vi.fn();
-const exportMessagesToXlsxMock = vi.fn();
 
 // Pageables / search params
 let mockPathname = '/platform/tenant-a/mentor-1';
@@ -348,10 +347,45 @@ vi.mock('@/components/projects/delete-project-modal', () => ({
     ) : null,
 }));
 
-// xlsx export helper — assert it's called with the row's messages.
-vi.mock('../export-messages', () => ({
-  exportMessagesToXlsx: (...args: unknown[]) =>
-    exportMessagesToXlsxMock(...args),
+// The SDK export dialog is covered in the SDK; here we check what it is opened with.
+vi.mock('@iblai/iblai-js/web-containers/next', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  ChatDownloadDialog: (props: {
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+    mentorName: string;
+    sessionId?: string;
+    username?: string | null;
+    tenantKey?: string;
+    saveFile?: unknown;
+  }) =>
+    props.open ? (
+      <div
+        role="dialog"
+        aria-label="Export Chat"
+        data-session={props.sessionId}
+        data-mentor={props.mentorName}
+        data-username={props.username ?? ''}
+        data-tenant={props.tenantKey}
+        data-native-save={String(props.saveFile === mockSaveFile)}
+      >
+        <button onClick={() => props.onOpenChange(false)}>Close Export</button>
+      </div>
+    ) : null,
+}));
+
+const { mockSaveFile, mockMentorSettings } = vi.hoisted(() => ({
+  mockSaveFile: vi.fn(),
+  mockMentorSettings: {
+    current: { mentorName: 'Open Agent' } as
+      | { mentorName?: string }
+      | undefined,
+  },
+}));
+vi.mock('@/lib/save-file', () => ({ saveFile: mockSaveFile }));
+
+vi.mock('@/hooks/use-mentors/use-mentor-settings', () => ({
+  useMentorSettings: () => ({ data: mockMentorSettings.current }),
 }));
 
 // SDK data-layer hooks — return canned data; allow individual tests to
@@ -736,7 +770,6 @@ function resetState() {
     return undefined;
   });
   eventBusEmitMock.mockReset();
-  exportMessagesToXlsxMock.mockReset();
   toggleSidebarMock.mockReset();
   setOpenMobileMock.mockReset();
   closeFreeTrialModalMock.mockReset();
@@ -1079,6 +1112,19 @@ describe('AppSidebar — sidebar rail toggle', () => {
     });
     fireEvent.click(toggle);
     expect(toggleSidebarMock).toHaveBeenCalled();
+  });
+});
+
+describe('AppSidebar — product tour hooks', () => {
+  it('marks the expanded Agents trigger and the footer for the tour', () => {
+    renderSidebar();
+    const [agents] = document.querySelectorAll('[data-tour="agents"]');
+    expect(agents).toHaveTextContent('Agents');
+    expect(agents.tagName).toBe('BUTTON');
+    expect(screen.getByTestId('sidebar-footer')).toHaveAttribute(
+      'data-tour',
+      'account',
+    );
   });
 });
 
@@ -1516,7 +1562,7 @@ describe('AppSidebar — Chats section', () => {
     );
     // The cached session id — the loader effect's dependency — is written.
     expect(saveCachedSessionIdMock).toHaveBeenCalledWith({
-      'mentor-1': 'sess-recent-2',
+      'tenant-a:mentor-1': 'sess-recent-2',
     });
   });
 
@@ -1532,7 +1578,7 @@ describe('AppSidebar — Chats section', () => {
     // chat-page params like `?embed=true` intact once we arrive.
     expect(pushMock).toHaveBeenCalledWith('/platform/tenant-a/mentor-1');
     expect(saveCachedSessionIdMock).toHaveBeenCalledWith({
-      'mentor-1': 'sess-recent-2',
+      'tenant-a:mentor-1': 'sess-recent-2',
     });
   });
 
@@ -1543,7 +1589,7 @@ describe('AppSidebar — Chats section', () => {
     fireEvent.click(screen.getByText('Recent message one').closest('button')!);
     expect(saveCachedSessionIdMock).toHaveBeenCalledWith({
       'other-mentor': 'keep-me',
-      'mentor-1': 'sess-recent-1',
+      'tenant-a:mentor-1': 'sess-recent-1',
     });
   });
 
@@ -1554,7 +1600,7 @@ describe('AppSidebar — Chats section', () => {
     // On the chat page → no navigation, but the session is still selected.
     expect(pushMock).not.toHaveBeenCalled();
     expect(saveCachedSessionIdMock).toHaveBeenCalledWith({
-      'mentor-1': 'sess-pinned-1',
+      'tenant-a:mentor-1': 'sess-pinned-1',
     });
   });
 
@@ -1672,18 +1718,47 @@ describe('AppSidebar — Chats section', () => {
     });
   });
 
-  it('clicking Export delegates to exportMessagesToXlsx with the row messages', async () => {
+  it('clicking Export opens the export dialog on the whole chat of that row', async () => {
     const user = userEvent.setup();
     renderSidebar();
     fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
+    expect(
+      screen.queryByRole('dialog', { name: 'Export Chat' }),
+    ).not.toBeInTheDocument();
     const menus = screen.getAllByRole('button', { name: 'Chat actions' });
     await user.click(menus[1]);
     await user.click(await screen.findByRole('menuitem', { name: /^Export$/ }));
-    expect(exportMessagesToXlsxMock).toHaveBeenCalled();
-    const calledWith = exportMessagesToXlsxMock.mock.calls[0]?.[0] as
-      | unknown[]
-      | undefined;
-    expect(Array.isArray(calledWith)).toBe(true);
+
+    const dialog = await screen.findByRole('dialog', { name: 'Export Chat' });
+    expect(dialog).toHaveAttribute('data-session', 'sess-recent-1');
+    // Named after the agent open in the app, not the row's summary.
+    expect(dialog).toHaveAttribute('data-mentor', 'Open Agent');
+    expect(dialog).toHaveAttribute('data-username', 'admin-user');
+    expect(dialog).toHaveAttribute('data-native-save', 'true');
+
+    await user.click(screen.getByRole('button', { name: 'Close Export' }));
+    expect(
+      screen.queryByRole('dialog', { name: 'Export Chat' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('names the export without an agent while the agent is still loading', async () => {
+    mockMentorSettings.current = undefined;
+    try {
+      const user = userEvent.setup();
+      renderSidebar();
+      fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
+      const menus = screen.getAllByRole('button', { name: 'Chat actions' });
+      await user.click(menus[1]);
+      await user.click(
+        await screen.findByRole('menuitem', { name: /^Export$/ }),
+      );
+      expect(
+        await screen.findByRole('dialog', { name: 'Export Chat' }),
+      ).toHaveAttribute('data-mentor', '');
+    } finally {
+      mockMentorSettings.current = { mentorName: 'Open Agent' };
+    }
   });
 
   it('clicking Delete triggers the delete mutation', async () => {
@@ -2359,6 +2434,18 @@ describe('AppSidebar — Rail-collapsed mode', () => {
     expect(
       screen.getAllByRole('button', { name: 'Projects' }).length,
     ).toBeGreaterThan(0);
+  });
+
+  it('marks the rail Agents icon and the rail footer for the tour', () => {
+    renderSidebar();
+    expect(document.querySelector('[data-tour="agents"]')).toHaveAttribute(
+      'aria-label',
+      'Agents',
+    );
+    expect(screen.getByTestId('sidebar-footer')).toHaveAttribute(
+      'data-tour',
+      'account',
+    );
   });
 
   function findRailLink(label: string) {
@@ -3362,7 +3449,7 @@ describe('AppSidebar — Rail-collapsed chats flyout click', () => {
     // On the chat page the flyout row selects the session without navigating.
     expect(pushMock).not.toHaveBeenCalled();
     expect(saveCachedSessionIdMock).toHaveBeenCalledWith(
-      expect.objectContaining({ 'mentor-1': 'sess-flyp' }),
+      expect.objectContaining({ 'tenant-a:mentor-1': 'sess-flyp' }),
     );
   });
 
@@ -3390,7 +3477,7 @@ describe('AppSidebar — Rail-collapsed chats flyout click', () => {
     // On the chat page the flyout row selects the session without navigating.
     expect(pushMock).not.toHaveBeenCalled();
     expect(saveCachedSessionIdMock).toHaveBeenCalledWith(
-      expect.objectContaining({ 'mentor-1': 'sess-flyr' }),
+      expect.objectContaining({ 'tenant-a:mentor-1': 'sess-flyr' }),
     );
   });
 });
@@ -3647,5 +3734,90 @@ describe('AppSidebar — New Chat evicts the old Code process', () => {
     );
     // …but nothing is evicted.
     expect(invokeTauriMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('AppSidebar — allow-mentor-selection embed', () => {
+  it('collapses the embed Agents section to a single Agents button that opens Explore', () => {
+    mockEmbedMode = true;
+    mockSearchParams = new URLSearchParams(
+      'embed=true&allow-mentor-selection=true',
+    );
+    renderSidebar();
+
+    const agents = screen.getByTestId('sidebar-explore-agents');
+    expect(agents).toHaveTextContent('Agents');
+    expect(
+      screen.queryByRole('button', { name: 'New Agent' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'My Agents' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Explore' }),
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(agents);
+    expect(navigateToExploreMock).toHaveBeenCalledTimes(1);
+    expect(openCreateMentorModalMock).not.toHaveBeenCalled();
+    expect(openSettingsModalMock).not.toHaveBeenCalled();
+  });
+
+  it('renders the Agents icon in the collapsed rail and opens Explore', () => {
+    mockEmbedMode = true;
+    mockSearchParams = new URLSearchParams(
+      'embed=true&allow-mentor-selection=true',
+    );
+    mockSidebarState = {
+      state: 'collapsed',
+      open: false,
+      openMobile: false,
+      isMobile: false,
+    };
+    renderSidebar();
+
+    const agents = screen.getByTestId('sidebar-explore-agents');
+    expect(agents).toHaveAttribute('aria-label', 'Agents');
+    fireEvent.click(agents);
+    expect(navigateToExploreMock).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(['', 'allow-mentor-selection=false', 'allow-mentor-selection=1'])(
+    'keeps the minimal embed sidebar when the flag is %s',
+    (query) => {
+      mockEmbedMode = true;
+      mockSearchParams = new URLSearchParams(`embed=true&${query}`);
+      renderSidebar();
+      expect(
+        screen.queryByTestId('sidebar-explore-agents'),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', { name: 'Agents' }),
+      ).not.toBeInTheDocument();
+    },
+  );
+
+  it('hides the Agents button from anonymous embed viewers even with the flag', () => {
+    mockEmbedMode = true;
+    mockIsLoggedIn = false;
+    mockSearchParams = new URLSearchParams(
+      'embed=true&allow-mentor-selection=true',
+    );
+    renderSidebar();
+    expect(
+      screen.queryByTestId('sidebar-explore-agents'),
+    ).not.toBeInTheDocument();
+  });
+
+  it('ignores the flag outside embed mode', () => {
+    mockSearchParams = new URLSearchParams('allow-mentor-selection=true');
+    renderSidebar();
+    expect(
+      screen.queryByTestId('sidebar-explore-agents'),
+    ).not.toBeInTheDocument();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Agents' })[0]);
+    expect(
+      screen.getByRole('button', { name: 'New Agent' }),
+    ).toBeInTheDocument();
   });
 });

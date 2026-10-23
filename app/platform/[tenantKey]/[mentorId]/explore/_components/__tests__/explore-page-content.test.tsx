@@ -37,6 +37,11 @@ vi.mock('@/hooks/user-navigate', () => ({
   }),
 }));
 
+let mockAllowMentorSelection = false;
+vi.mock('@/hooks/use-allow-mentor-selection', () => ({
+  useAllowMentorSelection: () => mockAllowMentorSelection,
+}));
+
 let mockHasPermission = true;
 vi.mock('@/hoc/withPermissions', () => ({
   WithPermissions: ({
@@ -209,6 +214,7 @@ describe('ExplorePageContent', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     capturedContextValue = null;
+    mockAllowMentorSelection = false;
 
     // Default mock implementations
     mockUseUsername.mockReturnValue('test-user');
@@ -777,7 +783,7 @@ describe('ExplorePageContent', () => {
       renderComponent();
 
       const heading = screen.getByRole('heading', { level: 1 });
-      expect(heading).toHaveTextContent('Explore agents');
+      expect(heading).toHaveTextContent('Explore Agents');
       expect(heading).toHaveTextContent(/Discover and create agents/i);
     });
 
@@ -799,6 +805,18 @@ describe('ExplorePageContent', () => {
       expect(
         screen.queryByRole('button', { name: 'Create new agent' }),
       ).not.toBeInTheDocument();
+    });
+
+    it('hides Create Agent when allow-mentor-selection is active', () => {
+      mockAllowMentorSelection = true;
+      renderComponent();
+
+      expect(
+        screen.queryByRole('button', { name: 'Create new agent' }),
+      ).not.toBeInTheDocument();
+      expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(
+        'Explore Agents',
+      );
     });
 
     it('sends signed-out users to sign in instead of opening the create modal', async () => {

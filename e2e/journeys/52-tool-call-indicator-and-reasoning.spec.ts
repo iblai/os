@@ -49,7 +49,7 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
   // ────────────────────────────────────────────────────────────────
   // Test 1: Tool Call Indicator - Web Search
   // ────────────────────────────────────────────────────────────────
-  test('Tool Call Indicator Appears With Bounce Dots During Streaming and Settles After', async ({
+  test('Tool Call Indicator Appears During Streaming and Settles Without Bounce Dots After', async ({
     page,
     createMentorPage,
     editMentorPage,
@@ -61,7 +61,7 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
     tracker52.add((await getPlatformContext(page)).mentorId);
 
     // Enable Web Search via Tools tab
-    // Enable verbose reasoning gates the tool-call indicator — enable it first.
+    // Enable Verbose Reasoning gates the tool-call indicator — enable it first.
     await editMentorPage.open('Settings');
     await editMentorPage.settings.setVerboseReasoning(true);
     await editMentorPage.navigateToTab('Tools');
@@ -103,24 +103,10 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
     }
     await expect(toolCallTrigger).toBeVisible({ timeout: 5_000 });
 
-    // While streaming, the trigger shows bounce dots. The dots are a transient
-    // streaming-only animation; a fast reply can settle before they are
-    // observable, so only assert their presence while the stream is still
-    // active. The post-stream "dots cleared" assertion below is the
-    // deterministic check.
+    // In-stream bounce dots are not asserted here: they track the `tool` phase
+    // only, which ends before a live web search's chip is observable. Journey 73
+    // pins the tool-row liveness deterministically over a mocked socket.
     const bounceDots = toolCallTrigger.locator('span.animate-bounce');
-    let streamStillActive = true;
-    try {
-      await chatPage.stopStreamingButton.waitFor({
-        state: 'visible',
-        timeout: 1_000,
-      });
-    } catch {
-      streamStillActive = false;
-    }
-    if (streamStillActive) {
-      await expect(bounceDots).toHaveCount(3, { timeout: 5_000 });
-    }
 
     // Indicator starts collapsed
     await expect(toolCallTrigger).toHaveAttribute('aria-expanded', 'false');
@@ -155,7 +141,7 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
     );
     tracker52.add((await getPlatformContext(page)).mentorId);
 
-    // Enable verbose reasoning gates the tool-call indicator — enable it first.
+    // Enable Verbose Reasoning gates the tool-call indicator — enable it first.
     await editMentorPage.open('Settings');
     await editMentorPage.settings.setVerboseReasoning(true);
     await editMentorPage.navigateToTab('Tools');
@@ -231,7 +217,7 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
     );
     tracker52.add((await getPlatformContext(page)).mentorId);
 
-    // Enable verbose reasoning gates the tool-call indicator — enable it first.
+    // Enable Verbose Reasoning gates the tool-call indicator — enable it first.
     await editMentorPage.open('Settings');
     await editMentorPage.settings.setVerboseReasoning(true);
     await editMentorPage.navigateToTab('Tools');
@@ -294,16 +280,11 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
     await createMentorPage.openAndCreate(`E2E No-Tools Mentor ${Date.now()}`);
     tracker52.add((await getPlatformContext(page)).mentorId);
 
-    // No Web Search button should be visible
-    try {
-      await chatPage.webSearchButton.waitFor({
-        state: 'visible',
-        timeout: 5_000,
-      });
-      expect(true).toBe(false); // Should not reach here
-    } catch {
-      // Expected: button is not visible
-    }
+    // No Web Search tool should be offered anywhere in the composer — not as
+    // an active chip, nor as a row in the "+" menu's Tools page (issue #2586:
+    // a disabled tool no longer has a permanently-visible button at all, so
+    // `isToolAvailable` opens/closes that menu itself to check).
+    expect(await chatPage.isToolAvailable('Web Search')).toBe(false);
 
     // Confirm Web Search is off in the Tools tab
     await editMentorPage.open('Tools');
@@ -313,16 +294,8 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
     expect(await editMentorPage.tools.isToolEnabled('Web Search')).toBe(false);
     await editMentorPage.close();
 
-    // Web Search button is still absent
-    try {
-      await chatPage.webSearchButton.waitFor({
-        state: 'visible',
-        timeout: 5_000,
-      });
-      expect(true).toBe(false);
-    } catch {
-      // Expected
-    }
+    // Web Search is still absent everywhere in the composer.
+    expect(await chatPage.isToolAvailable('Web Search')).toBe(false);
   });
 
   // ────────────────────────────────────────────────────────────────
@@ -339,15 +312,16 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
     );
     tracker52.add((await getPlatformContext(page)).mentorId);
 
-    // Enable verbose reasoning gates the tool-call indicator — enable it first.
+    // Enable Verbose Reasoning gates the tool-call indicator — enable it first.
     await editMentorPage.open('Settings');
     await editMentorPage.settings.setVerboseReasoning(true);
     await editMentorPage.navigateToTab('Tools');
     await editMentorPage.tools.enableTool('Web Search');
     await editMentorPage.close();
 
-    // Verify button is visible but do NOT click it
-    await expect(chatPage.webSearchButton).toBeVisible({ timeout: 10_000 });
+    // Verify the tool is offered (enabled-but-inactive lives in the "+" menu's
+    // Tools page now, issue #2586) but do NOT activate it.
+    expect(await chatPage.isToolAvailable('Web Search')).toBe(true);
 
     await chatPage.sendMessage('What is the current date today?');
     await chatPage.waitForUserMessage(
@@ -384,7 +358,7 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
     );
     tracker52.add((await getPlatformContext(page)).mentorId);
 
-    // Enable verbose reasoning gates the reasoning section — enable it first.
+    // Enable Verbose Reasoning gates the reasoning section — enable it first.
     await editMentorPage.open('Settings');
     await editMentorPage.settings.setVerboseReasoning(true);
     await editMentorPage.close();
@@ -481,7 +455,7 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
     );
     tracker52.add((await getPlatformContext(page)).mentorId);
 
-    // Enable verbose reasoning so this test verifies the model produces no
+    // Enable Verbose Reasoning so this test verifies the model produces no
     // reasoning tokens, rather than the section being hidden by the toggle.
     await editMentorPage.open('Settings');
     await editMentorPage.settings.setVerboseReasoning(true);
@@ -527,10 +501,15 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
     );
     tracker52.add((await getPlatformContext(page)).mentorId);
 
-    // Enable verbose reasoning gates both the reasoning section and the tool-call
+    // Enable Verbose Reasoning gates both the reasoning section and the tool-call
     // indicator — enable it first.
     await editMentorPage.open('Settings');
     await editMentorPage.settings.setVerboseReasoning(true);
+
+    // The ibl.ai models emit no reasoning tokens on a web-search turn, so no
+    // "Thought" row renders; gpt-5 reasons before the tool call.
+    await editMentorPage.navigateToTab('LLM');
+    await editMentorPage.llm.selectProviderAndModel('OpenAI', 'gpt-5');
 
     // Enable Web Search
     await editMentorPage.navigateToTab('Tools');
@@ -611,7 +590,7 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
   });
 
   // ────────────────────────────────────────────────────────────────
-  // Test 4.1: Enable verbose reasoning OFF hides the tool-call indicator
+  // Test 4.1: Enable Verbose Reasoning OFF hides the tool-call indicator
   // ────────────────────────────────────────────────────────────────
   test('Tool Call Indicator Is Hidden When Verbose Reasoning Is Off', async ({
     page,

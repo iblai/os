@@ -123,10 +123,14 @@ export class ProjectPage {
       // Loading text never appeared — agents already loaded
     }
 
-    // 6. Click the first agent card (button containing an h4 agent name)
+    // 6. Click the first NORMAL agent card (button containing an h4 agent
+    // name). Excludes any leftover "Test Workflow" mentor — a workflow-backed
+    // agent that replies empty, which silently broke sends in tests that
+    // relied on `.first()` picking a real agent (e.g. proj-06's chat send).
     const agentCard = modal
       .locator('button')
       .filter({ has: this.page.locator('h4') })
+      .filter({ hasNot: this.page.locator('h4', { hasText: /workflow/i }) })
       .first();
     await expect(agentCard).toBeVisible({ timeout: 30_000 });
     await agentCard.click();

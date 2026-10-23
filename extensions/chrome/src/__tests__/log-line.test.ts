@@ -11,6 +11,13 @@ describe('logLine', () => {
     expect(
       logLine({ tool: 'click', target: '[1] button "Pay"', ok: true }),
     ).toBe('Click [1] button "Pay"');
+    expect(
+      logLine({
+        tool: 'double_click',
+        target: '[2] row "Report.pdf"',
+        ok: true,
+      }),
+    ).toBe('Double-click [2] row "Report.pdf"');
     expect(logLine({ tool: 'read_page', target: '', ok: true })).toBe(
       'Read page',
     );
@@ -61,6 +68,13 @@ describe('logLine', () => {
         detail: 'Element 3 is not in the current snapshot.',
       }),
     ).toBe('Click [3] button — Element 3 is not in the current snapshot.');
+  });
+
+  // A refused element number has no detail of its own; it must not read as a success.
+  it('says a failure without a reason did not work', () => {
+    expect(logLine({ tool: 'click', target: '', ok: false })).toBe(
+      'Click — Didn’t work.',
+    );
   });
 
   it('omits a missing host or detail rather than printing undefined', () => {

@@ -7,27 +7,32 @@ import {
   type StepResult,
   type ToolSet,
 } from 'ai';
-import { instructions } from './prompt';
+import { PAGE_MARK, PICTURE_NOTE, instructions } from './prompt';
+import type { Picture } from './tools';
 
 export const MAX_STEPS = 40;
 export const TOKEN_BUDGET = 200_000;
-/** How many of the latest tool results keep their page state in the request. */
-export const KEEP_SNAPSHOTS = 2;
+/** Only the latest tool result keeps its page state: one numbering per request. */
+export const KEEP_SNAPSHOTS = 1;
 /**
- * First match wins. `iblai/iblai-pro` heads it because the DM seeds it into the
- * global model registry and the shim short-circuits its availability check
- * (`openai_compat/views.py` — `if name == "iblai": return True`), so it is
- * listed and resolvable on every platform with no credential row of its own; it
- * is also the DM's own `DEFAULT_MENTOR_LLM_MODEL`. Which means the entries below
- * it are unreachable in practice — they are the answer only if a platform ever
- * stops listing it.
+ * First match wins. Models that read a picture and call tools head the list.
+ * `iblai/iblai-pro` closes it: the DM seeds it into the global model registry
+ * and the shim short-circuits its availability check (`openai_compat/views.py`
+ * — `if name == "iblai": return True`), so it is listed on every platform, but
+ * it is a router that never learns tools are in play and gets no picture.
  */
 export const MODEL_PREFERENCE = [
-  'iblai/iblai-pro',
-  'anthropic/claude-opus-5',
   'anthropic/claude-sonnet-5',
+  'anthropic/claude-opus-5',
   'openai/gpt-5',
+  'iblai/iblai-pro',
 ];
+/** Providers whose listed models read images; `/v1/models` carries no such flag. */
+export const VISION_PROVIDERS = ['anthropic', 'openai', 'google'];
+
+export function wantsPicture(model: string): boolean {
+  return VISION_PROVIDERS.includes(model.split('/')[0] ?? '');
+}
 
 export interface Credentials {
   /** Platform key (or org slug); the DM resolves either. */
@@ -164,9 +169,12 @@ export function usedTokens(steps: Array<StepResult<ToolSet>>): number {
   );
 }
 
+const OMITTED = '(earlier page state omitted)';
+
 /**
- * Older page states drop out of what is sent: the model only needs the latest
- * ones, and the DM caps a request body at Django's default 2.5 MB.
+ * Older page states drop out of what is sent — the tool results before the
+ * last `keep`, and the page a user turn carried once an action followed it —
+ * so a request holds one numbering, and stays under the DM's 2.5 MB body cap.
  */
 export function pruneOldSnapshots(
   messages: ModelMessage[],
@@ -178,7 +186,21 @@ export function pruneOldSnapshots(
   const stale = new Set(
     toolIndexes.slice(0, Math.max(0, toolIndexes.length - keep)),
   );
+  const lastTool = toolIndexes[toolIndexes.length - 1] ?? -1;
   return messages.map((message, index) => {
+    if (
+      message.role === 'user' &&
+      index < lastTool &&
+      typeof message.content === 'string'
+    ) {
+      const cut = message.content.indexOf(PAGE_MARK);
+      return cut < 0
+        ? message
+        : {
+            ...message,
+            content: message.content.slice(0, cut + PAGE_MARK.length) + OMITTED,
+          };
+    }
     if (message.role !== 'tool' || !stale.has(index)) return message;
     return {
       ...message,
@@ -186,10 +208,7 @@ export function pruneOldSnapshots(
         part.type === 'tool-result' && part.output.type === 'text'
           ? {
               ...part,
-              output: {
-                type: 'text' as const,
-                value: '(earlier page state omitted)',
-              },
+              output: { type: 'text' as const, value: OMITTED },
             }
           : part,
       ),
@@ -199,8 +218,12 @@ export function pruneOldSnapshots(
 
 export type AgentEvent =
   | { type: 'text'; text: string }
+  /** Words said before an action in the same step: not the reply. */
+  | { type: 'narration'; text: string }
   | { type: 'tool-call'; toolName: string; input: unknown }
   | { type: 'tool-result'; toolName: string }
+  /** A call the SDK could not run or a tool that threw; the run carries on. */
+  | { type: 'tool-error'; toolName: string }
   | { type: 'error'; message: string; statusCode?: number }
   | { type: 'finish'; reason: string }
   | { type: 'abort' };
@@ -215,9 +238,14 @@ export interface RunOptions {
   tokenBudget?: number;
   /** The user's preferred language, named in the system prompt when known. */
   language?: string;
+  /** The latest picture of the tab, sent with every model call. */
+  picture?: () => Picture | null;
+  /** The tools act on a point of the picture too (click_at, type_at). */
+  positions?: boolean;
 }
 
 export interface RunResult {
+  /** The reply: the words of the step that took no action. */
   text: string;
   /** The conversation so far, including this run's assistant and tool messages. */
   messages: ModelMessage[];
@@ -247,7 +275,7 @@ export async function runAgent(options: RunOptions): Promise<RunResult> {
 
   const result = streamText({
     model: options.model,
-    instructions: instructions(options.language),
+    instructions: instructions(options.language, options.positions),
     messages: options.messages,
     tools: options.tools,
     abortSignal: options.signal,
@@ -264,18 +292,54 @@ export async function runAgent(options: RunOptions): Promise<RunResult> {
         return true;
       },
     ],
-    prepareStep: ({ messages }) => ({ messages: pruneOldSnapshots(messages) }),
+    // The picture rides a trailing user message, never a tool result: the
+    // OpenAI wire flattens tool results to text. Per call only — it is not
+    // part of the transcript the next step or the next run gets.
+    prepareStep: ({ messages }) => {
+      const pruned = pruneOldSnapshots(messages);
+      const picture = options.picture?.();
+      if (!picture) return { messages: pruned };
+      const shown: ModelMessage = {
+        role: 'user',
+        content:
+          'dataUrl' in picture
+            ? [
+                {
+                  type: 'image',
+                  image: picture.dataUrl,
+                  mediaType: 'image/jpeg',
+                },
+                { type: 'text', text: PICTURE_NOTE },
+              ]
+            : [{ type: 'text', text: picture.note }],
+      };
+      return { messages: [...pruned, shown] };
+    },
   });
 
   let text = '';
   let steps = 0;
+  // A step's words are narration when an action follows them and the reply
+  // when the step ends without one, so they are held until that is known.
+  // ponytail: nothing crosses the port while they are held; a text-only
+  // stretch past ~30 s could idle the MV3 worker — add an `ack` heartbeat if
+  // `errorWorkerGone` ever shows up.
+  let said = '';
+  let acted = false;
+  const flush = () => {
+    if (said)
+      options.onEvent({ type: acted ? 'narration' : 'text', text: said });
+    if (!acted) text += said;
+    said = '';
+  };
   for await (const part of result.stream) {
     switch (part.type) {
       case 'text-delta':
-        text += part.text;
-        options.onEvent({ type: 'text', text: part.text });
+        said += part.text;
         break;
       case 'tool-call':
+        acted = true;
+        flush();
         options.onEvent({
           type: 'tool-call',
           toolName: part.toolName,
@@ -286,18 +350,22 @@ export async function runAgent(options: RunOptions): Promise<RunResult> {
         options.onEvent({ type: 'tool-result', toolName: part.toolName });
         break;
       case 'tool-error':
-        options.onEvent(describeError(part.error));
+        options.onEvent({ type: 'tool-error', toolName: part.toolName });
         break;
       case 'error':
+        flush();
         options.onEvent(describeError(part.error));
         break;
       case 'finish-step':
+        flush();
+        acted = false;
         steps += 1;
         break;
       case 'finish':
         options.onEvent({ type: 'finish', reason: part.finishReason });
         break;
       case 'abort':
+        flush();
         options.onEvent({ type: 'abort' });
         break;
       default:

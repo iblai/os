@@ -5,6 +5,9 @@
   "actionClick": {
     "message": "Cliquer sur"
   },
+  "actionDoubleClick": {
+    "message": "Double-cliquer sur"
+  },
   "actionNavigate": {
     "message": "Ouvrir"
   },
@@ -89,9 +92,21 @@
     "message": "La connexion a échoué. Réessayez."
   },
   "stepLimit": {
-    "message": "Arrêté après le nombre maximal d’étapes."
+    "message": "Je me suis arrêté ici : c’est le nombre maximal d’étapes que je fais d’un coup. Envoyez « continuer » et je reprendrai là où j’en étais, tant que ce panneau reste ouvert."
   },
   "tokenLimit": {
-    "message": "Arrêté : l’exécution a épuisé son budget de jetons."
+    "message": "Je me suis arrêté ici : c’est tout ce que je peux lire d’un coup. Envoyez « continuer » et je reprendrai là où j’en étais, tant que ce panneau reste ouvert."
+  },
+  "noScriptablePage": {
+    "message": "Je ne peux pas lire cette page : le navigateur ne l’autorise pas. Ouvrez la page sur laquelle vous voulez que je travaille, puis réessayez."
+  },
+  "actionFailed": {
+    "message": "Ça n’a pas marché."
+  },
+  "errorRealClicksBusy": {
+    "message": "Les clics réels ne peuvent pas démarrer tant que les outils de développement sont ouverts sur cet onglet. Fermez-les, puis réessayez."
+  },
+  "errorRealClicksOff": {
+    "message": "Les clics réels ont été arrêtés depuis la barre de l’onglet ou par les outils de développement, l’exécution s’est donc terminée. Réessayez."
   }
 }

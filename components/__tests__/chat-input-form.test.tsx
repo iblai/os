@@ -569,6 +569,14 @@ describe('ChatInputForm', () => {
       expect(screen.getByTestId('submit-button')).toBeInTheDocument();
     });
 
+    it('marks the prompt input, and only the prompt input, for the product tour', () => {
+      renderWithRedux(<ChatInputForm {...defaultProps} />);
+      expect(
+        screen.getByTestId('auto-resize-textarea').closest('[data-tour]'),
+      ).toHaveAttribute('data-tour', 'prompt-input');
+      expect(document.querySelectorAll('[data-tour]')).toHaveLength(1);
+    });
+
     it('should render upload menu', () => {
       renderWithRedux(<ChatInputForm {...defaultProps} />);
       expect(screen.getByTestId('upload-menu')).toBeInTheDocument();

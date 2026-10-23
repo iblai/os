@@ -244,6 +244,39 @@ async function expectNameStackedOverSlug(
   expect(clipped).toBe(false);
 }
 
+/**
+ * Asserts the #2586 "/" picker contract (canvas board SlA): a compact
+ * (~300px), left-aligned popover ABOVE the composer — its bottom edge at or
+ * above the composer form's top — with no header row and no `/slug` line;
+ * every child of the listbox is an option. Real geometry, not class names.
+ */
+async function expectCompactPickerAboveComposer(
+  picker: Locator,
+  composer: Locator,
+): Promise<void> {
+  const form = composer.locator('xpath=ancestor::form[1]');
+  const [pickerBox, formBox] = await Promise.all([
+    picker.boundingBox(),
+    form.boundingBox(),
+  ]);
+  expect(pickerBox).not.toBeNull();
+  expect(formBox).not.toBeNull();
+  // Above the composer, never covering the input.
+  expect(pickerBox!.y + pickerBox!.height).toBeLessThanOrEqual(formBox!.y + 1);
+  // Compact and left-aligned (not full composer width).
+  expect(pickerBox!.width).toBeLessThanOrEqual(301);
+  expect(pickerBox!.x).toBeLessThan(formBox!.x + 16);
+  // No "Skills" header and no slug line — options only, each its name.
+  await expect(picker.locator(':scope > :not([role="option"])')).toHaveCount(0);
+  await expect(picker.getByText(/^skills$/i)).toHaveCount(0);
+  await expect(
+    picker.getByTestId('slash-skill-picker-option-slug'),
+  ).toHaveCount(0);
+}
+
+const LONG_SKILL_NAME =
+  'canvas-course-builder-with-a-very-long-name-that-wraps';
+
 const SLASH_SKILLS: EffectiveSkillFixture[] = [
   {
     unique_id: 'e2e-skill-web-research',
@@ -881,16 +914,132 @@ test.describe('Journey 67: Agent Skills — chat composer slash skill picker', (
     await expect(
       chatPage.slashSkillPicker.getByText('Research a topic on the open web.'),
     ).toHaveCount(0);
-    // Name stacked OVER the slug (column, not a row) so long names never
-    // get clipped to "canvas-course-b…": the name box sits fully above the
-    // slug box and is never wider than its container.
-    await expectNameStackedOverSlug(
-      chatPage.getSlashSkillOption('Web Research'),
-      'slash-skill-picker-option-name',
-      'slash-skill-picker-option-slug',
+    // #2586 (board SlA): compact popover above the composer, no header,
+    // rows show ONLY the skill name.
+    await expectCompactPickerAboveComposer(chatPage.slashSkillPicker, composer);
+    await expect(chatPage.getSlashSkillOption('Web Research')).toHaveText(
       'Web Research',
-      '/web-research',
     );
+    await expect(
+      chatPage
+        .getSlashSkillOption('Web Research')
+        .getByTestId('slash-skill-picker-option-name'),
+    ).toHaveText('Web Research');
+    await expect(
+      chatPage.slashSkillPicker.getByText('/web-research'),
+    ).toHaveCount(0);
+  });
+
+  // ── slash-02b: A long skill name wraps inside the compact picker ─────────
+
+  test('a long skill name wraps within the compact picker instead of clipping', async ({
+    page,
+    chatPage,
+  }) => {
+    await chatPage.mockEffectiveSkills([
+      ...SLASH_SKILLS,
+      {
+        unique_id: 'e2e-skill-long-name',
+        name: LONG_SKILL_NAME,
+        slug: 'canvas-course-builder',
+        enabled: true,
+      },
+    ]);
+    await navigateToMentorApp(page);
+
+    const composer = chatPage.getComposerTextarea();
+    await expect(composer).toBeVisible({ timeout: 15_000 });
+    await composer.fill('/canvas');
+    await expect(chatPage.slashSkillPicker).toBeVisible({ timeout: 10_000 });
+    await expectCompactPickerAboveComposer(chatPage.slashSkillPicker, composer);
+
+    const name = chatPage
+      .getSlashSkillOption(LONG_SKILL_NAME)
+      .getByTestId('slash-skill-picker-option-name');
+    await expect(name).toHaveText(LONG_SKILL_NAME);
+    const [nameBox, pickerBox] = await Promise.all([
+      name.boundingBox(),
+      chatPage.slashSkillPicker.boundingBox(),
+    ]);
+    // Wrapped onto 2+ lines (18px line height) and inside the picker.
+    expect(nameBox!.height).toBeGreaterThan(30);
+    expect(nameBox!.x + nameBox!.width).toBeLessThanOrEqual(
+      pickerBox!.x + pickerBox!.width,
+    );
+    // Never clipped or ellipsized.
+    const clipped = await name.evaluate(
+      (el) =>
+        el.scrollWidth > el.clientWidth + 1 ||
+        getComputedStyle(el).textOverflow === 'ellipsis',
+    );
+    expect(clipped).toBe(false);
+  });
+
+  // ── slash-02c: Mobile — picker sits above the pinned composer ────────────
+
+  test('mobile: the "/" picker opens above the pinned composer without covering the input', async ({
+    page,
+    chatPage,
+  }) => {
+    await chatPage.mockEffectiveSkills(SLASH_SKILLS);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await navigateToMentorApp(page);
+
+    const composer = chatPage.getComposerTextarea();
+    await expect(composer).toBeVisible({ timeout: 15_000 });
+    await composer.fill('/');
+    await expect(chatPage.slashSkillPicker).toBeVisible({ timeout: 10_000 });
+    await expectCompactPickerAboveComposer(chatPage.slashSkillPicker, composer);
+    // Fits the phone viewport (no horizontal overflow).
+    const box = await chatPage.slashSkillPicker.boundingBox();
+    expect(box!.x).toBeGreaterThanOrEqual(0);
+    expect(box!.x + box!.width).toBeLessThanOrEqual(390);
+  });
+
+  // ── slash-02d: Conversation — picker above the bottom-pinned composer ────
+  //
+  // Once a conversation exists the composer sits in the chat's
+  // `overflow-y-auto` wrapper (kept for scrollbar-gutter alignment), which
+  // used to clip the popover down to its last row. The redesign portals the
+  // picker (fixed) so it renders whole above the composer. The chat socket
+  // is mocked, so nothing reaches the agent.
+
+  test('conversation: the "/" picker opens fully visible above the bottom-pinned composer', async ({
+    page,
+    chatPage,
+  }) => {
+    await chatPage.mockEffectiveSkills(SLASH_SKILLS);
+    const ws = await chatPage.mockChatWebSocket();
+    await navigateToMentorApp(page);
+
+    await chatPage.sendMessage('Hello from the slash picker e2e');
+    const clientFrame = await ws.waitForClientMessage();
+    const sid =
+      typeof clientFrame.session_id === 'string' ? clientFrame.session_id : '';
+    ws.send({ generation_id: `e2e-gen-${Date.now()}`, session_id: sid });
+    ws.send({ eos: true, session_id: sid });
+    await expect(chatPage.userMessages.first()).toBeVisible({
+      timeout: 15_000,
+    });
+
+    const composer = chatPage.getComposerTextarea();
+    await expect(composer).toBeEnabled({ timeout: 15_000 });
+    await composer.fill('/');
+    await expect(chatPage.slashSkillPicker).toBeVisible({ timeout: 10_000 });
+    await expectCompactPickerAboveComposer(chatPage.slashSkillPicker, composer);
+
+    // Not clipped: the first option (the picker's top row) is the topmost
+    // element at its own centre point.
+    const first = chatPage.slashSkillPicker.getByRole('option').first();
+    const box = await first.boundingBox();
+    const hit = await page.evaluate(
+      ({ x, y }) => {
+        const el = document.elementFromPoint(x, y);
+        return !!el?.closest('[data-testid="slash-skill-picker"]');
+      },
+      { x: box!.x + box!.width / 2, y: box!.y + box!.height / 2 },
+    );
+    expect(hit).toBe(true);
   });
 
   // ── slash-03: Filtering narrows by name and by slug ──────────────────────
@@ -909,9 +1058,13 @@ test.describe('Journey 67: Agent Skills — chat composer slash skill picker', (
     await expect(chatPage.getSlashSkillOption('Web Research')).toBeVisible();
     await expect(chatPage.getSlashSkillOption('Code Review')).toHaveCount(0);
 
-    // Matches by slug, not just name.
+    // Matches by slug, not just name — even though rows no longer show the
+    // slug ("code-review" is not a substring of the name "Code Review").
     await composer.fill('/code-review');
     await expect(chatPage.getSlashSkillOption('Code Review')).toBeVisible();
+    await expect(chatPage.getSlashSkillOption('Code Review')).toHaveText(
+      'Code Review',
+    );
     await expect(chatPage.getSlashSkillOption('Web Research')).toHaveCount(0);
 
     // No match — picker closes entirely.
@@ -1176,11 +1329,18 @@ test.describe('Journey 67: Agent Skills — chat composer slash skill picker', (
 
   // ── slash-16: Skills dropdown button, synced with the `/` picker ─────────
   //
-  // A discoverable alternative to typing `/`: a Skills button next to Canvas
-  // opens a dropdown of the mentor's enabled skills. Selecting one arms its
-  // `/slug` token (highlighted in the composer); the button shows the armed
-  // skill's name. Both surfaces derive from the composer text, so arming via
-  // the dropdown or via `/` always agree.
+  // A discoverable alternative to typing `/`: a Skills row inside the
+  // composer's "+" menu opens a submenu of the mentor's enabled skills.
+  // Selecting one arms its `/slug` token, inserted INLINE in the composer
+  // text and highlighted there — the approved #2586 design has NO separate
+  // skill chip anywhere (unlike tools, `ComposerToolChips` never renders a
+  // top-level chip for a skill, and its "+N" active list only ever surfaces
+  // skill rows alongside 4+ already-active TOOL chips, so it plays no part
+  // in a skills-only flow like this one). Skills are single-select: arming
+  // one replaces whatever was armed before. The composer text is the single
+  // source of truth the `/` picker, the Skills submenu and the highlight all
+  // derive from, so arming/removing via either surface always agrees with
+  // the other.
 
   test('Skills dropdown arms/removes tokens and stays in sync with the "/" picker', async ({
     page,
@@ -1191,10 +1351,15 @@ test.describe('Journey 67: Agent Skills — chat composer slash skill picker', (
 
     const composer = chatPage.getComposerTextarea();
     await expect(composer).toBeVisible({ timeout: 15_000 });
+
+    // The Skills row lives inside the composer's "+" menu (issue #2586) —
+    // it only exists in the DOM while that menu is open.
+    await chatPage.openPlusMenu();
     await expect(chatPage.skillsMenuTrigger).toBeVisible({ timeout: 15_000 });
     await expect(chatPage.skillsMenuTrigger).toContainText('Skills');
+    await chatPage.closePlusMenu();
 
-    // Arm via the dropdown → token appears highlighted, button shows name.
+    // Arm via the dropdown → token appears inline in the composer, highlighted.
     await chatPage.openSkillsMenu();
     const webItem = chatPage.getSkillsMenuItem('web-research');
     await expect(webItem).toBeVisible();
@@ -1213,28 +1378,59 @@ test.describe('Journey 67: Agent Skills — chat composer slash skill picker', (
     );
     // Disabled skills never reach the menu.
     await expect(chatPage.getSkillsMenuItem('disabled-skill')).toHaveCount(0);
-    await webItem.click();
+    await webItem.click(); // selecting a skill closes the whole "+" menu
 
     await expect(composer).toHaveValue('/web-research ');
     await expect(chatPage.skillTokenHighlights).toHaveCount(1);
-    await expect(chatPage.skillsMenuTrigger).toContainText('Web Research');
 
-    // Toggle the armed skill off from the dropdown → token removed.
+    // Sync, forward direction: reopening the menu shows the armed skill
+    // checked, and the trigger's count badge reflects it too — both derive
+    // from the same composer text the token lives in.
     await chatPage.openSkillsMenu();
+    await expect(chatPage.getSkillsMenuItem('web-research')).toHaveAttribute(
+      'aria-checked',
+      'true',
+    );
+    await expect(
+      chatPage.skillsMenuTrigger.getByTestId('composer-count-badge'),
+    ).toHaveText('1');
+
+    // Remove it by choosing it again in the menu (a checkbox row — the SDK's
+    // supported disarm affordance, alongside deleting the token text) →
+    // token AND highlight gone, and the menu's own row un-checks.
     await chatPage.getSkillsMenuItem('web-research').click();
     await expect(composer).toHaveValue('');
-    await expect(chatPage.skillsMenuTrigger).toContainText('Skills');
+    await expect(chatPage.skillTokenHighlights).toHaveCount(0);
+    await chatPage.openSkillsMenu();
+    await expect(chatPage.getSkillsMenuItem('web-research')).toHaveAttribute(
+      'aria-checked',
+      'false',
+    );
+    await expect(
+      chatPage.skillsMenuTrigger.getByTestId('composer-count-badge'),
+    ).toHaveCount(0);
+    await chatPage.closePlusMenu();
 
-    // Sync the other way: arming via the `/` picker updates the button.
+    // Sync the other way: arming via the `/` picker updates the composer
+    // text the same way, and the Skills menu picks it up as checked.
     await composer.fill('/code');
     await chatPage.getSlashSkillOption('Code Review').click();
     await expect(composer).toHaveValue('/code-review ');
-    await expect(chatPage.skillsMenuTrigger).toContainText('Code Review');
+    await expect(chatPage.skillTokenHighlights).toHaveCount(1);
+
+    await chatPage.openSkillsMenu();
+    await expect(chatPage.getSkillsMenuItem('code-review')).toHaveAttribute(
+      'aria-checked',
+      'true',
+    );
+    await expect(chatPage.getSkillsMenuItem('web-research')).toHaveAttribute(
+      'aria-checked',
+      'false',
+    );
 
     // Single selection: arming another skill from the dropdown REPLACES the
     // currently-armed token (its highlight goes with it), inserting at the
     // caret with context-aware spacing.
-    await chatPage.openSkillsMenu();
     // Rows show the slash-invocation form next to the name.
     await expect(chatPage.getSkillsMenuItem('web-research')).toContainText(
       '/web-research',
@@ -1242,15 +1438,31 @@ test.describe('Journey 67: Agent Skills — chat composer slash skill picker', (
     await chatPage.getSkillsMenuItem('web-research').click();
     await expect(composer).toHaveValue('/web-research ');
     await expect(chatPage.skillTokenHighlights).toHaveCount(1);
-    await expect(chatPage.skillsMenuTrigger).toContainText('Web Research');
 
-    // The active pill carries the same ✕ as other tool pills — clicking it
-    // disarms without opening the menu. (Locator is scoped to the trigger
-    // it lives in, so it can never resolve ambiguously.)
-    await chatPage.skillsMenuClear.click();
-    await expect(composer).toHaveValue('');
+    await chatPage.openSkillsMenu();
+    await expect(chatPage.getSkillsMenuItem('web-research')).toHaveAttribute(
+      'aria-checked',
+      'true',
+    );
+    await expect(chatPage.getSkillsMenuItem('code-review')).toHaveAttribute(
+      'aria-checked',
+      'false',
+    );
+    await chatPage.closePlusMenu();
+
+    // Removal, the other supported way: deleting the token text directly in
+    // the composer disarms it just the same, in both the highlight and the
+    // (still menu-derived) armed state.
+    await composer.fill('');
     await expect(chatPage.skillTokenHighlights).toHaveCount(0);
-    await expect(chatPage.skillsMenuTrigger).toContainText('Skills');
+    await chatPage.openSkillsMenu();
+    await expect(chatPage.getSkillsMenuItem('web-research')).toHaveAttribute(
+      'aria-checked',
+      'false',
+    );
+    await expect(
+      chatPage.skillsMenuTrigger.getByTestId('composer-count-badge'),
+    ).toHaveCount(0);
   });
 
   // ── slash-15: NON-ADMIN uses the picker and gets an AI reply ─────────────

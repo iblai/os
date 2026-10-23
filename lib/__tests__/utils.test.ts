@@ -31,10 +31,7 @@ import {
   getProviderName,
   sendMessageToParentWebsite,
   isLoggedIn,
-  htmlToMarkdown,
   isHtml,
-  parsePrompt,
-  markdownToHtml,
   getUserOS,
   isMobileOS,
   saveUserObjectToLocalStorage,
@@ -45,6 +42,7 @@ import {
   formatRelativeTime,
   getMentorIdFromUrl,
   getTenantKeyFromUrl,
+  sessionCacheKey,
   isStripeActivated,
   getCurrentArtifactTitle,
   getFirstMessageWithContent,
@@ -53,6 +51,11 @@ import {
   isSafariBrowser,
   onAccountDeleted,
 } from '@/lib/utils';
+import {
+  htmlToMarkdown,
+  parsePrompt,
+  markdownToHtml,
+} from '@/lib/markdown-engine';
 import { LOCAL_STORAGE_KEYS, QUERY_PARAMS } from '@/lib/constants';
 import { config } from '@/lib/config';
 
@@ -102,6 +105,8 @@ vi.mock('@/hooks/use-tauri-offline', () => ({
 }));
 
 vi.mock('@iblai/iblai-js/web-utils', () => ({
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ...(globalThis as any).__iblAuthStorageMock,
   clearCurrentTenantCookie: vi.fn(),
 }));
 
@@ -1700,6 +1705,20 @@ describe('getTenantKeyFromUrl function', () => {
       configurable: true,
     });
     expect(getTenantKeyFromUrl()).toBe('tenant-123-abc');
+  });
+});
+
+describe('sessionCacheKey function', () => {
+  it('joins tenant key and mentor id with a colon', () => {
+    expect(sessionCacheKey('acme', 'mentor-1')).toBe('acme:mentor-1');
+  });
+
+  it('produces distinct keys for the same mentor under different tenants', () => {
+    const key1 = sessionCacheKey('tenant-a', 'mentor-1');
+    const key2 = sessionCacheKey('tenant-b', 'mentor-1');
+    expect(key1).not.toBe(key2);
+    expect(key1).toBe('tenant-a:mentor-1');
+    expect(key2).toBe('tenant-b:mentor-1');
   });
 });
 

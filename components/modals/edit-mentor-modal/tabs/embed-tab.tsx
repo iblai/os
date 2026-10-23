@@ -228,6 +228,10 @@ export function EmbedTab() {
   }, [shareableTokenData]);
   const {
     allowAnonymous,
+    allowMentorSelection,
+    setAllowMentorSelection,
+    allowFullscreen,
+    setAllowFullscreen,
     form,
     createTokenHandler,
     createTokenError,
@@ -1406,6 +1410,66 @@ export function EmbedTab() {
                     </div>
                   )}
                 </form.Field>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-[#646464]">
+                      {t('allowMentorSelectionLabel')}
+                    </span>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger
+                          aria-label={t('moreInfoAllowMentorSelection')}
+                        >
+                          <Info className="h-4 w-4 text-gray-400" />
+                        </TooltipTrigger>
+                        <TooltipContent className="ibl-tooltip-content">
+                          <p>{t('allowMentorSelectionTooltip')}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
+                  <Switch
+                    data-testid="embed-allow-mentor-selection-switch"
+                    checked={allowMentorSelection}
+                    onCheckedChange={setAllowMentorSelection}
+                    disabled={form.state.isSubmitting}
+                    aria-label={
+                      allowMentorSelection
+                        ? t('allowMentorSelectionEnabled')
+                        : t('allowMentorSelectionDisabled')
+                    }
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-[#646464]">
+                      {t('allowFullscreenLabel')}
+                    </span>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger
+                          aria-label={t('moreInfoAllowFullscreen')}
+                        >
+                          <Info className="h-4 w-4 text-gray-400" />
+                        </TooltipTrigger>
+                        <TooltipContent className="ibl-tooltip-content">
+                          <p>{t('allowFullscreenTooltip')}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
+                  <Switch
+                    data-testid="embed-allow-fullscreen-switch"
+                    checked={allowFullscreen}
+                    onCheckedChange={setAllowFullscreen}
+                    disabled={form.state.isSubmitting}
+                    aria-label={
+                      allowFullscreen
+                        ? t('allowFullscreenEnabled')
+                        : t('allowFullscreenDisabled')
+                    }
+                  />
+                </div>
                 <hr className="my-4 border-t border-gray-200" />
                 <form.Field name="generateShareableLink">
                   {(field) => (
