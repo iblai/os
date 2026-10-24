@@ -17,6 +17,8 @@ export const MAX_ITEMS = 200;
 export const STEP_CHARS = 1500;
 export const READ_PAGE_CHARS = 6000;
 export const MAX_WAIT_MS = 3000;
+/** Further tries of a page read that failed, each once the page settles. */
+export const READ_RETRIES = 2;
 /** Names of things the user should be asked about before they are clicked. */
 export const CONFIRM_NAME =
   /\b(pay|purchase|buy|checkout|send|submit|delete|remove|confirm|order|place|sign out|log out)\b/i;
@@ -40,6 +42,8 @@ export interface BrowserToolsContext {
   withPicture?: boolean;
   /** Trusted mouse and keyboard input; absent means scripted events. */
   real?: RealInput;
+  /** Aborted once the run is over: a read waiting to try again gives up. */
+  signal?: AbortSignal;
 }
 
 /** The latest capture, with its pixels per CSS px, or why there is none this step. */
@@ -217,6 +221,20 @@ export function createBrowserTools(ctx: BrowserToolsContext): BrowserTools {
     return run;
   };
 
+  // A read that failed — the page was still loading, a frame was swapped — is
+  // tried again once the page settles. Never an action: one may have landed.
+  const again = async <T>(read: () => Promise<T>): Promise<T> => {
+    for (let retries = READ_RETRIES; ; retries--) {
+      try {
+        return await read();
+      } catch (err) {
+        if (!retries) throw err;
+        await settle(ctx.tabId);
+        if (ctx.signal?.aborted) throw err;
+      }
+    }
+  };
+
   let latest: Picture | null = null;
 
   // The viewport, with every listed number drawn on its element here in the
@@ -252,12 +270,14 @@ export function createBrowserTools(ctx: BrowserToolsContext): BrowserTools {
   };
 
   const snapshot = async (textChars = STEP_CHARS): Promise<Snapshot> => {
-    const merged = mergeFrames(
-      await injectAll(ctx.tabId, snapshotPage, [
-        MAX_ITEMS,
-        textChars,
-        SECRET_FIELDS,
-      ]),
+    const merged = await again(async () =>
+      mergeFrames(
+        await injectAll(ctx.tabId, snapshotPage, [
+          MAX_ITEMS,
+          textChars,
+          SECRET_FIELDS,
+        ]),
+      ),
     );
     last = merged.snapshot;
     targets = merged.targets;
@@ -391,11 +411,13 @@ export function createBrowserTools(ctx: BrowserToolsContext): BrowserTools {
                 at.frameId,
               );
             if (!ctx.real) return scripted();
-            const found = await inject(
-              ctx.tabId,
-              actOnPage,
-              [at.n, 'locate', '', false],
-              at.frameId,
+            const found = await again(() =>
+              inject(
+                ctx.tabId,
+                actOnPage,
+                [at.n, 'locate', '', false],
+                at.frameId,
+              ),
             );
             if (!found.ok) return found;
             if (found.top && !found.covered) {
@@ -454,11 +476,13 @@ export function createBrowserTools(ctx: BrowserToolsContext): BrowserTools {
                 at.frameId,
               );
             if (!ctx.real) return scripted();
-            const ready = await inject(
-              ctx.tabId,
-              actOnPage,
-              [at.n, 'prepare-type', '', false, SECRET_FIELDS],
-              at.frameId,
+            const ready = await again(() =>
+              inject(
+                ctx.tabId,
+                actOnPage,
+                [at.n, 'prepare-type', '', false, SECRET_FIELDS],
+                at.frameId,
+              ),
             );
             if (!ready.ok) return ready;
             if (!ready.top) return scripted();
@@ -660,12 +684,9 @@ export function createBrowserTools(ctx: BrowserToolsContext): BrowserTools {
     // What is at the point, named as the user would name it.
     const atPoint = async (point: { x: number; y: number }) =>
       (
-        await inject(ctx.tabId, snapshotPage, [
-          MAX_ITEMS,
-          0,
-          SECRET_FIELDS,
-          point,
-        ])
+        await again(() =>
+          inject(ctx.tabId, snapshotPage, [MAX_ITEMS, 0, SECRET_FIELDS, point]),
+        )
       )?.items[0];
     const describeAt = (
       hit: SnapshotItem | undefined,
@@ -758,13 +779,15 @@ export function createBrowserTools(ctx: BrowserToolsContext): BrowserTools {
           step: async () => {
             await real.click(point.x, point.y);
             const answers = (
-              await injectAll(ctx.tabId, actOnPage, [
-                0,
-                'prepare-type',
-                '',
-                false,
-                SECRET_FIELDS,
-              ])
+              await again(() =>
+                injectAll(ctx.tabId, actOnPage, [
+                  0,
+                  'prepare-type',
+                  '',
+                  false,
+                  SECRET_FIELDS,
+                ]),
+              )
             ).map((frame) => frame.result as ActResult | undefined);
             const refused = answers.find((a) =>
               /^Refused:/.test(a?.error ?? ''),
