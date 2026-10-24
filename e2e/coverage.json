@@ -2,8 +2,8 @@
   "version": 2,
   "lastUpdated": "2026-10-23",
   "summary": {
-    "totalCheckpoints": 984,
-    "coveredCheckpoints": 939,
+    "totalCheckpoints": 999,
+    "coveredCheckpoints": 954,
     "deprecatedCheckpoints": 17,
     "notReproducibleCheckpoints": 17,
     "pendingCheckpoints": 11,
@@ -2266,6 +2266,11 @@
           "id": "mob-08",
           "description": "Admin on mobile sees Admin/User labels (not Instructor/Learner) on the profile dropdown's learner-mode row, and the label flips correctly when the switch is toggled (#2592)",
           "status": "covered"
+        },
+        {
+          "id": "mob-09",
+          "description": "On an iPhone 14 viewport the chat page's html and body have overscroll-behavior none, so swiping up cannot scroll the app shell and leave a blank gap (#121)",
+          "status": "covered"
         }
       ]
     },
@@ -4255,7 +4260,7 @@
       "checkpoints": [
         {
           "id": "ags-01",
-          "description": "Admin sees the Skills tab on a freshly-created (Base Agent) mentor, with the updated tab description (\"Reusable playbooks this Base Agent can discover and follow.\") and skills-info-box copy describing the / picker (feat/2215); Skills sits right after Prompts in the Configurations category (ordering moved here from journey 44) — full RBAC grant set forced via SkillsTab.grantAllSkillAssignmentPerms so the both-sub-tabs assert is rollout-independent",
+          "description": "Admin sees the Skills tab on a freshly-created (Base Agent) mentor, with its \"Skills\" heading and the \"type /\" hint (copy wording intentionally not pinned \u2014 differs between OS host and SDK wrapper); Skills sits right after Prompts in the Configurations category (ordering moved here from journey 44) \u2014 full RBAC grant set forced via SkillsTab.grantAllSkillAssignmentPerms so the both-sub-tabs assert is rollout-independent",
           "status": "covered"
         },
         {
@@ -4286,6 +4291,16 @@
         {
           "id": "ags-07",
           "description": "View-only RBAC (view_skill_assignments granted, create/write/delete denied via the permission-check mock SkillsTab.mockSkillAssignmentGrants): the Agent Skills sub-tab renders with its empty state while the Available Skills sub-tab and New Skill button are absent from the DOM",
+          "status": "covered"
+        },
+        {
+          "id": "ags-08",
+          "description": "Fresh agent with full RBAC grants: Agent Skills sub-tab shows the empty state (no rows), the Available Skills sub-tab offers New Skill, and switching back keeps the empty state",
+          "status": "covered"
+        },
+        {
+          "id": "ags-09",
+          "description": "Persistence: a skill attached to the agent and then disabled is still listed, still disabled, after closing and reopening the Edit Agent modal (server-backed state); detach + delete on cleanup",
           "status": "covered"
         },
         {
@@ -5462,7 +5477,9 @@
         "hooks/use-is-lti-launch.ts",
         "lib/embed-context.ts",
         "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/embed-nav-bar.tsx",
-        "app/platform/[tenantKey]/[mentorId]/_components/accessibility-fab/index.tsx"
+        "app/platform/[tenantKey]/[mentorId]/_components/accessibility-fab/index.tsx",
+        "hooks/use-show-user-profile.ts",
+        "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/user-profile.tsx"
       ],
       "checkpoints": [
         {
@@ -5503,6 +5520,26 @@
         {
           "id": "emb-lti-04",
           "description": "Regression (issue #2586): in a 300px LTI frame the composer placeholder stays on one line and ellipsizes (white-space nowrap, ::placeholder text-overflow ellipsis, content under two lines, not clipped), while typed text still wraps",
+          "status": "covered"
+        },
+        {
+          "id": "emb-prof-01",
+          "description": "The embed header shows the user's profile avatar (\"More options\") only when the host sets `show-user-profile=true`; without it there is no avatar",
+          "status": "covered"
+        },
+        {
+          "id": "emb-prof-02",
+          "description": "The embed profile menu offers Profile, the tenant switcher and Help, and leaves out Log Out and the Admin/User mode switch (the host owns auth)",
+          "status": "covered"
+        },
+        {
+          "id": "emb-prof-03",
+          "description": "Profile in the embed profile menu opens the User Profile dialog inside the frame on the Basic tab, and Cancel closes it without saving",
+          "status": "covered"
+        },
+        {
+          "id": "emb-prof-04",
+          "description": "Picking another tenant in the embed profile menu posts `{ tenantSwitch: true, tenant }` to the host page and leaves the frame on the chat instead of redirecting it to the auth app",
           "status": "covered"
         }
       ]

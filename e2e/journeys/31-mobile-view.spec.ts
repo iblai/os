@@ -192,3 +192,24 @@ test.describe('Journey 31: Profile Dropdown Learner Mode Label (mobile, admin)',
     }
   });
 });
+
+// #121: Playwright can't reproduce the iOS swipe that left a blank gap below
+// the chat card, so assert the fix (overscroll-behavior: none) is applied.
+test.describe('Journey 31: No Overscroll On Chat (mobile, iPhone 14)', () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  test.beforeEach(async ({ nonadminPage }) => {
+    await navigateToMentorApp(nonadminPage);
+  });
+
+  // mob-09
+  test('non-admin on iPhone 14 opens a chat and html/body have overscroll-behavior none (#121)', async ({
+    nonadminPage,
+  }) => {
+    const styles = await nonadminPage.evaluate(() => [
+      getComputedStyle(document.documentElement).overscrollBehaviorY,
+      getComputedStyle(document.body).overscrollBehaviorY,
+    ]);
+    expect(styles).toEqual(['none', 'none']);
+  });
+});

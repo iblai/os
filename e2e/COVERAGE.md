@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-10-23 | 984 checkpoints (939 covered, 11 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 102 journeys (101 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-10-23 | 999 checkpoints (954 covered, 11 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 102 journeys (101 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -617,7 +617,7 @@ The "Remember past conversations" (`enable_memory_component`) master toggle move
 
 ---
 
-## Journey 31: Mobile View (8 checkpoints) — `journeys/31-mobile-view.spec.ts`
+## Journey 31: Mobile View (9 checkpoints) — `journeys/31-mobile-view.spec.ts`
 
 **Source files:** `app/platform/[tenantKey]/[mentorId]/page.tsx`, `app/platform/[tenantKey]/[mentorId]/explore/page.tsx`, `components/modals/edit-mentor-modal/tabs/datasets-tab/agent-datasets-tab.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/user-profile.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/learner-mode-switch.tsx`
 
@@ -629,6 +629,7 @@ The "Remember past conversations" (`enable_memory_component`) master toggle move
 - [x] Search and mentor cards work correctly on mobile
 - [x] Dataset upload and untrain/delete flow works on mobile
 - [x] Admin on mobile sees Admin/User labels (not Instructor/Learner) on the profile dropdown's learner-mode row, and the label flips correctly when the switch is toggled (#2592)
+- [x] Issue #121: on an iPhone 14 viewport the chat page's html and body have `overscroll-behavior: none` (computed), so swiping up cannot scroll the app shell and leave a blank gap
 
 ---
 
@@ -1388,7 +1389,7 @@ Because the toggle mutates the mentor's attached tools — the same fields Journ
 
 ---
 
-## Journey 67: Agent Skills (26 checkpoints) — `journeys/67-agent-skills.spec.ts`
+## Journey 67: Agent Skills (28 checkpoints) — `journeys/67-agent-skills.spec.ts`
 
 **Source files:** `hooks/use-mentor-segments.ts`, `components/modals/edit-mentor-modal/tabs/skills-tab.tsx`, `components/chat-input-form.tsx`, `components/auto-resize-text-area.tsx`
 
@@ -1441,13 +1442,15 @@ surfaces:
    `ChatPage.mockEffectiveSkills` for full determinism — the composer fetches
    eagerly on mount, so the mock must be registered before navigation.
 
-- [x] ags-01: Admin sees the Skills tab on a freshly-created (Base Agent) mentor, with the updated tab description ("Reusable playbooks this Base Agent can discover and follow.") and skills-info-box copy describing the `/` picker; Skills sits right after Prompts in the Configurations category — full RBAC grant set forced via `SkillsTab.grantAllSkillAssignmentPerms` so the both-sub-tabs assert is rollout-independent
+- [x] ags-01: Admin sees the Skills tab on a freshly-created (Base Agent) mentor, with its "Skills" heading and the "type /" hint (wording not pinned — differs between OS host and SDK wrapper); Skills sits right after Prompts in the Configurations category — full RBAC grant set forced via `SkillsTab.grantAllSkillAssignmentPerms` so the both-sub-tabs assert is rollout-independent
 - [x] ags-02: Skills tab is hidden when the mentor resolves to a non-base-agent type (`mentor_slug` is not a base-agent alias and `template_mentor` does not resolve to one either)
 - [x] ags-03: Skills tab stays visible when the mentor type cannot be determined (`template_mentor` is a numeric PK the frontend cannot read a slug from) — the gate fails OPEN rather than hiding the tab
 - [x] ags-04: Admin creates a platform skill, attaches it from the Available Skills sub-tab (`addSkillToAgent` — assignment created ENABLED), and its enable Switch round-trips off/on on the Agent Skills sub-tab (`aria-checked`); detach + delete on cleanup — dedicated mentor per test
 - [x] ags-05: Admin creates a new platform skill, locates it on the server-paged Available Skills sub-tab (paging until found — catalog ordering not guaranteed), edits its description, and deletes it (row disappears) — via the SDK's `createSkill`/`editSkill`/`deleteSkill` helpers, serial (platform-wide catalog)
 - [x] ags-06: NON-ADMIN — the Skills tab is absent from the Edit Mentor modal (the segment is ADMIN-only via userTypes in `MENTOR_SEGMENTS`)
 - [x] ags-07: View-only RBAC (`view_skill_assignments` granted, create/write/delete denied via the same permission-check mock) — the Agent Skills sub-tab renders with its empty state, while the Available Skills sub-tab and the New Skill button are absent from the DOM
+- [x] ags-08: Fresh agent with full RBAC grants — Agent Skills sub-tab shows the empty state, Available Skills sub-tab offers New Skill, switching back keeps the empty state
+- [x] ags-09: Persistence — a skill attached then disabled is still listed and still disabled after closing and reopening the Edit Agent modal
 - [x] slash-01: Mentor with no effective skills — chat composer stays a plain textbox (no combobox role) and typing "/" opens nothing
 - [x] slash-02: Mentor with skills — composer gets `role=combobox` wiring and "/" opens the picker listing only enabled skills by NAME ONLY (no `/slug` line, no "Skills" header) in a compact (~300px) left-aligned popover ABOVE the composer (picker bottom <= composer top; geometry-asserted), no descriptions (assignment rows carry none; the platform-wide agent-skills catalog is never fetched from chat)
 - [x] slash-02b: A long skill name wraps onto multiple lines within the compact picker width — never clipped or ellipsized
@@ -1962,11 +1965,11 @@ Covers issue #2586's composer rebuild: the classic UploadMenu + always-visible I
 
 ---
 
-## Journey 80: Embed Header + LTI Redesign (8 checkpoints) — `journeys/80-embed-and-lti-redesign.spec.ts`
+## Journey 80: Embed Header + LTI Redesign (12 checkpoints) — `journeys/80-embed-and-lti-redesign.spec.ts`
 
-**Source files:** `components/chat/sdk-chat.tsx`, `hooks/use-embed-mode.ts`, `hooks/use-is-lti-launch.ts`, `lib/embed-context.ts`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/embed-nav-bar.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/accessibility-fab/index.tsx`
+**Source files:** `components/chat/sdk-chat.tsx`, `hooks/use-embed-mode.ts`, `hooks/use-is-lti-launch.ts`, `lib/embed-context.ts`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/embed-nav-bar.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/accessibility-fab/index.tsx`, `hooks/use-show-user-profile.ts`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/user-profile.tsx`
 
-Covers issue #2586's embed surface redesign: a new OS header (`EmbedNavBar` — avatar/name, a dedicated "New chat" icon button, a menu/help trigger and Close) and up to four suggested prompts stacked as full-width rows that, unlike the main chat's guided prompts (journey 79's cr-08), stay visible while the user types. An LTI launch (`?embed=true&lti=true`) additionally drops the Close button and makes Escape a no-op, and that `lti` flag persists across in-app navigation via the embed-context localStorage cache. Uses the same genuinely-cross-origin embed harness as journey 78 rather than a same-origin `?embed=true` navigation, since that is the shape a real customer site presents.
+Covers issue #2586's embed surface redesign: a new OS header (`EmbedNavBar` — avatar/name, a dedicated "New chat" icon button, a menu/help trigger and Close) and up to four suggested prompts stacked as full-width rows that, unlike the main chat's guided prompts (journey 79's cr-08), stay visible while the user types. An LTI launch (`?embed=true&lti=true`) additionally drops the Close button and makes Escape a no-op, and that `lti` flag persists across in-app navigation via the embed-context localStorage cache. Uses the same genuinely-cross-origin embed harness as journey 78 rather than a same-origin `?embed=true` navigation, since that is the shape a real customer site presents. The emb-prof checkpoints cover the opt-in profile avatar menu a host gets with `show-user-profile=true` (the Chrome extension sets it): no Log Out or mode switch, and a tenant switch handed to the host page.
 
 - [x] emb-hdr-01: The embed header shows the agent's avatar and name as plain text (not a button), a dedicated New chat button, the ? menu trigger and Close, on a genuinely cross-origin embed harness
 - [x] emb-hdr-02: The embed composer's "+" menu never offers Prompts or Memory, even for an authenticated (admin) embed session where they would otherwise render
@@ -1976,6 +1979,10 @@ Covers issue #2586's embed surface redesign: a new OS header (`EmbedNavBar` — 
 - [x] emb-lti-03 (regression, issue #2586): In a 320px LTI frame the composer stays inside the frame: the Canvas pill (on, with its ×) gives way, the toolbar never overflows, and every action button including Send is fully visible
 - [x] emb-hdr-04 (regression, issue #2586): The embed's suggested prompts are at most four full-width rows stacked above the composer, each matching the composer's left/right edges, with no horizontal overflow at 320px and still shown while typing
 - [x] emb-lti-04 (regression, issue #2586): In a 300px LTI frame the composer placeholder stays on one line and ellipsizes instead of wrapping into a clipped second line; typed text still wraps
+- [x] emb-prof-01: The embed header shows the user's profile avatar ("More options") only when the host sets `show-user-profile=true`; without it there is no avatar
+- [x] emb-prof-02: The embed profile menu offers Profile, the tenant switcher and Help, and leaves out Log Out and the Admin/User mode switch (the host owns auth)
+- [x] emb-prof-03: Profile in the embed profile menu opens the User Profile dialog inside the frame on the Basic tab, and Cancel closes it without saving
+- [x] emb-prof-04: Picking another tenant in the embed profile menu posts `{ tenantSwitch: true, tenant }` to the host page and leaves the frame on the chat instead of redirecting it to the auth app
 
 ---
 
