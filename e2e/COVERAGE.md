@@ -1965,7 +1965,7 @@ Covers issue #2586's composer rebuild: the classic UploadMenu + always-visible I
 
 ---
 
-## Journey 80: Embed Header + LTI Redesign (12 checkpoints) — `journeys/80-embed-and-lti-redesign.spec.ts`
+## Journey 80: Embed Header + LTI Redesign (14 checkpoints) — `journeys/80-embed-and-lti-redesign.spec.ts`
 
 **Source files:** `components/chat/sdk-chat.tsx`, `hooks/use-embed-mode.ts`, `hooks/use-is-lti-launch.ts`, `lib/embed-context.ts`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/embed-nav-bar.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/accessibility-fab/index.tsx`, `hooks/use-show-user-profile.ts`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/user-profile.tsx`
 
@@ -1983,6 +1983,8 @@ Covers issue #2586's embed surface redesign: a new OS header (`EmbedNavBar` — 
 - [x] emb-prof-02: The embed profile menu offers Profile, the tenant switcher and Help, and leaves out Log Out and the Admin/User mode switch (the host owns auth)
 - [x] emb-prof-03: Profile in the embed profile menu opens the User Profile dialog inside the frame on the Basic tab, and Cancel closes it without saving
 - [x] emb-prof-04: Picking another tenant in the embed profile menu posts `{ tenantSwitch: true, tenant }` to the host page and leaves the frame on the chat instead of redirecting it to the auth app
+- [x] emb-prof-05 (issue #2758): With `show-user-profile=true` the header order is New chat, ? menu, full screen, profile avatar, Close — profile directly before Close
+- [x] emb-prof-06 (issue #2758): With Close hidden the profile avatar is the right-most header control
 
 ---
 
@@ -2188,12 +2190,15 @@ Regression: the camera dialog opened from the "+" menu item left `<body style="p
 
 ---
 
-## Journey 88: Create Agent Category Wheel Scroll (1 checkpoint) — `journeys/88-create-agent-category-wheel-scroll.spec.ts`
+## Journey 88: Create Agent Category Wheel Scroll (4 checkpoints) — `journeys/88-create-agent-category-wheel-scroll.spec.ts`
 
-**Source files:** `components/modals/create-mentor-form.tsx`
+**Source files:** `components/modals/create-mentor-form.tsx`, `components/modals/edit-mentor-modal-dialog.tsx`
 
-Regression: the Category popover is portaled outside the Create Agent dialog, whose scroll lock swallowed wheel events. Page object: `page-objects/create-mentor.page.ts` (`categoryList`).
+Regression: the Category popover is portaled outside the Create Agent dialog, whose scroll lock swallowed wheel events. Page object: `page-objects/create-mentor.page.ts` (`categoryList`). Also covers the front-end-only Save button on the Create Agent prompt popups (issue #2758; `goToPromptsTab`, `openPromptPopupAndType`, `promptContent`).
 
+- [x] promptsave-01 (issue #2758): The System Prompt popup's Save closes it, the form shows the typed text and no non-GET request is sent
+- [x] promptsave-02 (issue #2758): Save in the Proactive and Guided popups closes them and keeps each text
+- [x] promptsave-03 (issue #2758): Escape in the System Prompt popup still closes it and keeps the text
 - [x] catscroll-01: Admin opens Create Agent, opens the Category picker and wheels the list: scrollTop increases and a lower category can be selected
 
 ---

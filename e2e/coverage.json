@@ -5541,6 +5541,16 @@
           "id": "emb-prof-04",
           "description": "Picking another tenant in the embed profile menu posts `{ tenantSwitch: true, tenant }` to the host page and leaves the frame on the chat instead of redirecting it to the auth app",
           "status": "covered"
+        },
+        {
+          "id": "emb-prof-05",
+          "description": "Issue #2758: with show-user-profile=true the embed header order is New chat, ? menu, full screen, profile avatar, Close, with the profile directly before Close",
+          "status": "covered"
+        },
+        {
+          "id": "emb-prof-06",
+          "description": "Issue #2758: with Close hidden the profile avatar is the right-most embed header control",
+          "status": "covered"
         }
       ]
     },
@@ -5976,8 +5986,26 @@
       "id": "create-agent-category-wheel-scroll",
       "name": "Create Agent Category Wheel Scroll",
       "spec": "88-create-agent-category-wheel-scroll.spec.ts",
-      "sourceFiles": ["components/modals/create-mentor-form.tsx"],
+      "sourceFiles": [
+        "components/modals/create-mentor-form.tsx",
+        "components/modals/edit-mentor-modal-dialog.tsx"
+      ],
       "checkpoints": [
+        {
+          "id": "promptsave-01",
+          "description": "Issue #2758: in Create Agent the System Prompt popup has a Save button; clicking it closes the popup, the form shows the typed text, and no non-GET request is sent (front-end only)",
+          "status": "covered"
+        },
+        {
+          "id": "promptsave-02",
+          "description": "Issue #2758: Save in the Proactive and Guided prompt popups closes them and the form keeps each typed text",
+          "status": "covered"
+        },
+        {
+          "id": "promptsave-03",
+          "description": "Issue #2758: pressing Escape in the System Prompt popup still closes it and keeps the typed text",
+          "status": "covered"
+        },
         {
           "id": "catscroll-01",
           "description": "Admin opens Create Agent, opens the Category picker and wheels the list: scrollTop increases and a lower category can be selected (regression: dialog scroll lock swallowed wheel events on the portaled popover)",
