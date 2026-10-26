@@ -91,11 +91,8 @@
   "signInFailed": {
     "message": "Sign-in failed. Try again."
   },
-  "stepLimit": {
-    "message": "I stopped here: that’s as many steps as I take in one go. Send “continue” and I’ll pick up where I left off, as long as this panel stays open."
-  },
-  "tokenLimit": {
-    "message": "I stopped here: that’s as much as I can read in one go. Send “continue” and I’ll pick up where I left off, as long as this panel stays open."
+  "timeLimit": {
+    "message": "I stopped here: that’s as long as I work in one go. Send “continue” and I’ll pick up where I left off, as long as this panel stays open."
   },
   "noScriptablePage": {
     "message": "I can’t read this page — the browser doesn’t allow it. Open the page you’d like me to work on and try again."

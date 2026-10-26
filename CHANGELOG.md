@@ -1,5 +1,44 @@
 # Changelog
 
+## [0.182.0](https://github.com/iblai/os/compare/v0.181.2...v0.182.0) (2026-10-26)
+
+### Features
+
+* **ext:** drop the step and token caps for a 200-minute limit, retry failures, ship 1.1.10 ([7da79ee](https://github.com/iblai/os/commit/7da79ee33261edd212882b988148a6d7a60f1efb))
+
+## [0.181.2](https://github.com/iblai/os/compare/v0.181.1...v0.181.2) (2026-10-26)
+
+### Bug Fixes
+
+* **embed:** don't register the service worker inside an iframe ([da4e55f](https://github.com/iblai/os/commit/da4e55fdbd4ddedffbbdd8f7784b11a1dff18e81))
+
+## [0.181.1](https://github.com/iblai/os/compare/v0.181.0...v0.181.1) (2026-10-26)
+
+### CI
+
+* request a prod-images release after each image build ([453cde8](https://github.com/iblai/os/commit/453cde813761bd61f46450718ad157a5aba1abbc))
+
+## [0.181.0](https://github.com/iblai/os/compare/v0.180.0...v0.181.0) (2026-10-24)
+
+### Features
+
+* **mentor:** skills tab becomes a thin wrapper over SDK AgentSkillsTab ([6bd334f](https://github.com/iblai/os/commit/6bd334febd7ad30bfa2cd4e4ad3c8ba5bd681739))
+
+### Bug Fixes
+
+* **layout:** stop html/body overscroll so iOS swipes can't shift the app ([2b1266a](https://github.com/iblai/os/commit/2b1266a3809c7df5419561ee0624d573a9ad061b))
+
+### Styles
+
+* prettier-format CHANGELOG bullets ([0ff9d84](https://github.com/iblai/os/commit/0ff9d84d54d95fea61d02b604f95cd6392ee8cc2))
+
+### Tests
+
+* **e2e:** assert no overscroll on chat at iPhone 14 viewport (mob-09, [#121](https://github.com/iblai/os/issues/121)) ([284139d](https://github.com/iblai/os/commit/284139dd5316dd07feeb88c37682b4d59a33c932))
+* **e2e:** cover the embed profile view (show-user-profile) ([669f8fb](https://github.com/iblai/os/commit/669f8fb268c8f43dd6268830594547f2ab0725ba))
+* **e2e:** pin Skills tab behaviour before the SDK swap ([ec3fdde](https://github.com/iblai/os/commit/ec3fdde0ce3a6ee2d8cf71ea5947468d626a5bb3))
+* pin the html/body overscroll rule ([#121](https://github.com/iblai/os/issues/121)) ([988cfe3](https://github.com/iblai/os/commit/988cfe36e1420b3c024f4a4ef2b095639d3e09a3))
+
 ## [0.180.0](https://github.com/iblai/os/compare/v0.179.1...v0.180.0) (2026-10-23)
 
 ### Features
