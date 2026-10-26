@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.182.0](https://github.com/iblai/os/compare/v0.181.2...v0.182.0) (2026-10-26)
+
+### Features
+
+* **ext:** drop the step and token caps for a 200-minute limit, retry failures, ship 1.1.10 ([7da79ee](https://github.com/iblai/os/commit/7da79ee33261edd212882b988148a6d7a60f1efb))
+
 ## [0.181.2](https://github.com/iblai/os/compare/v0.181.1...v0.181.2) (2026-10-26)
 
 ### Bug Fixes
