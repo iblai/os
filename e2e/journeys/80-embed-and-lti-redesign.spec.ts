@@ -2,6 +2,7 @@ import { test, expect } from '../fixtures/mentor-test';
 import { navigateToMentorApp } from '../utils/auth';
 import { waitForPageReady } from '../utils/resilient';
 import { EMBED_HARNESS_URL } from '../fixtures/test-data';
+import { navigateAndObserveTenantMetadata } from '../utils/tenant-metadata-observed';
 
 /**
  * Journey 80: Embed Header + LTI Redesign (issue #2586)
@@ -448,6 +449,7 @@ test.describe('Journey 80: Embed Header + LTI Redesign', () => {
   test('embed profile menu offers Profile, the tenant switcher and Help, but no Log Out or mode switch', async ({
     page,
   }) => {
+    const metadata = await navigateAndObserveTenantMetadata(page);
     const iframe = await gotoEmbedHarness(page, page.url(), {
       'show-user-profile': 'true',
     });
@@ -459,7 +461,14 @@ test.describe('Journey 80: Embed Header + LTI Redesign', () => {
     await expect(
       menu.getByRole('combobox', { name: 'Select a tenant' }),
     ).toBeVisible();
-    await expect(menu.getByRole('menuitem', { name: /Help/ })).toBeVisible();
+    // The SDK hides Help when the tenant sets `show_help: false`, and the
+    // shared CI tenant can carry that from other journeys.
+    const help = menu.getByRole('menuitem', { name: /Help/ });
+    if (metadata.show_help === false) {
+      await expect(help).toHaveCount(0);
+    } else {
+      await expect(help).toBeVisible();
+    }
     await expect(menu.getByRole('menuitem', { name: 'Log Out' })).toHaveCount(
       0,
     );
