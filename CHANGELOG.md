@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.181.2](https://github.com/iblai/os/compare/v0.181.1...v0.181.2) (2026-10-26)
+
+### Bug Fixes
+
+* **embed:** don't register the service worker inside an iframe ([da4e55f](https://github.com/iblai/os/commit/da4e55fdbd4ddedffbbdd8f7784b11a1dff18e81))
+
 ## [0.181.1](https://github.com/iblai/os/compare/v0.181.0...v0.181.1) (2026-10-26)
 
 ### CI
