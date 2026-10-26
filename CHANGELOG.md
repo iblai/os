@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.181.1](https://github.com/iblai/os/compare/v0.181.0...v0.181.1) (2026-10-26)
+
+### CI
+
+* request a prod-images release after each image build ([453cde8](https://github.com/iblai/os/commit/453cde813761bd61f46450718ad157a5aba1abbc))
+
 ## [0.181.0](https://github.com/iblai/os/compare/v0.180.0...v0.181.0) (2026-10-24)
 
 ### Features
