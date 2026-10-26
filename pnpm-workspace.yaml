@@ -50,7 +50,8 @@ overrides:
   # interceptors), plus the moderate/low DoS, cookie-caching and response
   # handling issues in the same line. Same reach, same major:
   # @wdio/local-runner > @wdio/runner > webdriver > undici (e2e-tauri only).
-  undici: '>=8.10.2'
+  # Floor lifted 8.10.2 -> 8.12.2 for GHSA-xjj6-f33q-929c (high), same reach.
+  undici: '>=8.12.2'
   # GHSA-8j4g-w8fx-2239 — ReDoS in the CORS middleware via a crafted
   # Access-Control-Request-Headers, patched in 4.12.34. Not surfaced by Dependabot;
   # found by `pnpm audit`. Reached through
