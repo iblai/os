@@ -86,11 +86,15 @@ for what it can see but the list does not hold. **Approvals** in the Cowork pane
 you first: _Automatic_ (the default) acts without asking, _Ask Me_ raises an
 approve/deny card before a submit, a payment, a send or a delete. Neither mode
 lets it type into a password or payment field — that is refused outright, in the
-page, and such a field's contents are never read back either. A run stops after
-40 steps or its token budget — it says which, and that a follow-up message
-("continue") picks up where it left off, since the conversation lasts as long as
-the panel stays open — and **Stop** aborts it at any time. Closing the panel
-drops the port that keeps the worker alive, which ends the run.
+page, and such a field's contents are never read back either. A run takes as
+many steps as it needs and stops after 200 minutes — it says so, and that a
+follow-up message ("continue") picks up where it left off, since the
+conversation lasts as long as the panel stays open — and **Stop** aborts it at
+any time. Closing the panel drops the port that keeps the worker alive, which
+ends the run. What fails on the way is tried again: a page read twice, once the
+page settles (never an action, which may have landed); a model call that breaks
+off twice, through the AI SDK's own retry; and a call to a tool that does not
+exist, or with input that is not JSON, goes back to the model once to fix.
 
 **The picture.** With a model that reads images, every page read also captures
 the visible part of the tab (`chrome.tabs.captureVisibleTab`), draws each listed
