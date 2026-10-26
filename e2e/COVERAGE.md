@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-10-23 | 984 checkpoints (939 covered, 11 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 102 journeys (101 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-10-24 | 1002 checkpoints (957 covered, 11 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 102 journeys (101 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -367,7 +367,7 @@ The **download-chat** checkpoints (sh-07 … sh-10, issue #2464) cover the "Down
 
 ## Journey 20: Dataset Management (30 checkpoints) — `journeys/20-dataset-management.spec.ts`
 
-**Source files:** `components/modals/edit-mentor-modal/tabs/datasets-tab/agent-datasets-tab.tsx`, `components/workflows/node-config-panel.tsx`, `hooks/user-navigate.ts`, `lib/constants.ts`, `lib/config.ts`, `lib/utils.ts`. The Datasets tab and its Add Resources / Train-or-Delete / Retrain Schedule modals now come from the `@iblai/iblai-js` SDK (`@iblai/web-containers`, linked locally via yalc); `agent-datasets-tab.tsx` is the OS host wrapper around the SDK's `AgentDatasetsTab`, also reused by `node-config-panel.tsx`'s File Search node in picker mode (see Journey 34).
+**Source files:** `components/modals/edit-mentor-modal/tabs/datasets-tab/agent-datasets-tab.tsx`, `app/platform/[tenantKey]/workflows/[mentorId]/[id]/page.tsx`, `hooks/user-navigate.ts`, `lib/constants.ts`, `lib/config.ts`, `lib/utils.ts`. The Datasets tab and its Add Resources / Train-or-Delete / Retrain Schedule modals now come from the `@iblai/iblai-js` SDK (`@iblai/web-containers`, linked locally via yalc); `agent-datasets-tab.tsx` is the OS host wrapper around the SDK's `AgentDatasetsTab`. The workflow builder's File Search node renders the same SDK `AgentDatasetsTab` in picker mode inside the SDK `WorkflowEditor`; the OS workflow page only hands it the disabled resource types and max upload size (see Journey 34).
 
 - [x] Datasets tab header and description display correctly (TC01)
 - [x] Search input is visible and filters the dataset list (TC02–TC03)
@@ -662,9 +662,9 @@ The "Remember past conversations" (`enable_memory_component`) master toggle move
 
 ---
 
-## Journey 34: Workflows (16 checkpoints) — `journeys/34-workflows.spec.ts`
+## Journey 34: Workflows (34 checkpoints) — `journeys/34-workflows.spec.ts`
 
-**Source files:** `app/platform/[tenantKey]/workflows/[mentorId]/page.tsx`, `app/platform/[tenantKey]/workflows/[mentorId]/[id]/page.tsx`, `components/workflows/workflow-canvas.tsx`, `components/workflows/node-config-panel.tsx`, `components/workflows/workflow-preview-chat.tsx`
+**Source files:** `app/platform/[tenantKey]/workflows/[mentorId]/page.tsx`, `app/platform/[tenantKey]/workflows/[mentorId]/[id]/page.tsx`. The workflow builder itself — `WorkflowsList`, `WorkflowEditor`, `WorkflowCanvas`, `NodeConfigPanel`, `WorkflowPreviewChat` and the definition helpers — lives in the SDK at `packages/web-containers/src/components/workflows/` and is imported from `@iblai/iblai-js/web-containers/next`; the two OS pages are thin route wrappers that pass the route ids, user identity, socket URL, RBAC / free-trial gate and dataset upload config, and turn its callbacks into navigation (back, the list after a delete, the edit-agent modal for an Agent step).
 
 - [x] Workflows page displays heading, description, and Create Workflow button
 - [x] Search input is visible on the workflows list page
@@ -676,12 +676,30 @@ The "Remember past conversations" (`enable_memory_component`) master toggle move
 - [x] New workflow shows Draft status badge
 - [x] Workflow name can be renamed inline via the pencil button
 - [x] Workflow can be saved without errors
-- [x] Default nodes (Start and Mentor) are visible with an edge connecting them
+- [x] Default nodes (Start and Agent) are visible with an edge connecting them
 - [x] More options menu shows Activate and Delete items
 - [x] Preview mode can be entered and exited; Close preview, New Chat, and Publish are visible
 - [x] Canvas and chat panel are visible in preview mode
 - [x] Workflow can be published; active workflow can be deactivated back to Draft
-- [x] File Search node's dataset picker dialog (the SDK Datasets tab in picker mode, `syncToUrl=false`): opening/searching/paging never touch the `datasetsPage`/`datasetsSearch` URL params; picking a row closes the dialog and shows the dataset name with a Change button; reopening highlights the previously selected row (self-seeded mentor)
+- [x] File Search node's dataset picker dialog (the SDK Datasets tab in picker mode, page/search kept in its own state): opening/searching/paging never touch the `datasetsPage`/`datasetsSearch` URL params; picking a row closes the dialog and shows the dataset name with a Change button; reopening highlights the previously selected row (self-seeded mentor)
+- [x] Hovering a step and clicking its trash button removes it from the canvas and the saved workflow
+- [x] Step panel header Delete button removes the step and closes the panel
+- [x] The Agent step's trash button removes it and its connection
+- [x] Selecting a connection and clicking Delete Connection removes it
+- [x] Pressing Delete with a connection selected removes only that connection
+- [x] Start step: Number and Boolean state variables are listed and saved with typed defaults
+- [x] Start step: Remove {name} asks to confirm in the Delete Variable dialog (Cancel keeps it, Delete removes it); an invalid or taken name keeps Save disabled
+- [x] Set State: To Variable lists Start variables (never Variable 1); New creates and selects a variable
+- [x] Set State saves data.assignments and passes backend validation
+- [x] Transform saves data.expressions and passes backend validation
+- [x] While: an invalid Max Iterations (0) shows the whole-number error; a valid Condition and Max Iterations are saved and pass backend validation
+- [x] While Loop and Done handles save edges with sourceHandle continue and done
+- [x] If / Else saves data.conditions[0].expression
+- [x] If / Else condition-0 and else handles save edges
+- [x] Legacy field names (including a two-way If / Else) open marked Unsaved with no auto-save; Save stores the new names and condition-0/else edges and clears Unsaved
+- [x] If / Else: rewiring the If output to a second step leaves a single connection from that output
+- [x] Start variable in use by a Set State step: Remove opens Variable In Use listing the step; Cancel keeps the variable
+- [x] Adding a Note: the backend warns it is not connected, but the validation banner never shows that warning (other warnings stay)
 
 ---
 
@@ -1824,7 +1842,7 @@ sequence from the reporter's real trace.
 
 ## Journey 74: Dataset Cloud Pickers (3 checkpoints) — `journeys/74-dataset-cloud-pickers.spec.ts`
 
-**Source files:** `components/workflows/node-config-panel.tsx`, `components/modals/edit-mentor-modal/tabs/datasets-tab/agent-datasets-tab.tsx` — the cloud-picker hooks and Add Resources modal now live in the `@iblai/iblai-js` SDK (`@iblai/web-containers`, linked locally via yalc), not in OS source.
+**Source files:** `app/platform/[tenantKey]/workflows/[mentorId]/[id]/page.tsx`, `components/modals/edit-mentor-modal/tabs/datasets-tab/agent-datasets-tab.tsx` — the cloud-picker hooks and Add Resources modal now live in the `@iblai/iblai-js` SDK (`@iblai/web-containers`, linked locally via yalc), not in OS source; the workflow builder's File Search picker (SDK `WorkflowEditor`) reaches the same modal with the upload config the workflow page passes.
 
 Verifies the Google Drive, Microsoft OneDrive, and Dropbox buttons in the Add Resources modal. Each test creates a fresh mentor (matching journey 36 / 75 pattern), opens the Datasets tab → Add Resources modal, and asserts the behaviour the **tenant's own configuration** selects.
 

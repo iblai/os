@@ -43,9 +43,8 @@ import { LLMTab } from './llm-tab';
 import { MemoryTab } from './tabs/memory-tab';
 import { DisclaimersTab } from './disclaimers-tab';
 // Datasets renders the SDK `AgentDatasetsTab` via an OS host wrapper (provider
-// + injected pagination/add-resource) instead of the local `DatasetsTab`. The
-// local component stays on disk — it's still used by the workflows
-// node-config-panel — so this import is deliberately the wrapper, not `./tabs`.
+// + injected pagination/add-resource) instead of the local `DatasetsTab`, so
+// this import is deliberately the wrapper, not `./tabs`.
 import { AgentDatasetsTabWrapper } from './tabs/datasets-tab/agent-datasets-tab';
 import {
   useMentorSegments,

@@ -1,4 +1,4 @@
-import { Page, expect } from '@playwright/test';
+import { Page, Locator, Request, expect, test } from '@playwright/test';
 import { logger } from '@iblai/iblai-js/playwright';
 import { safeWaitForURL } from './navigation';
 
@@ -296,4 +296,348 @@ export async function getWorkflowStatus(page: Page): Promise<string> {
   if (await draftBadge.isVisible().catch(() => false)) return 'Draft';
 
   return 'Unknown';
+}
+
+export const WORKFLOW_PANEL = '[data-testid="workflow-node-panel"]';
+
+type NodeData = Record<string, any>;
+
+export interface SavedNode {
+  id: string;
+  type: string;
+  data: NodeData;
+}
+
+export interface SavedEdge {
+  id: string;
+  source: string;
+  target: string;
+  sourceHandle?: string;
+}
+
+export interface SavedDefinition {
+  nodes: SavedNode[];
+  edges: SavedEdge[];
+}
+
+export interface AutosaveResult {
+  definition: SavedDefinition;
+  /** Raw body of the validate call that follows the auto-save. */
+  validation: string;
+}
+
+export function generateWorkflowName(): string {
+  const rand = Math.random().toString(36).slice(2, 7);
+  return `E2E Workflow ${Date.now()}-${test.info().parallelIndex}-${rand}`;
+}
+
+export function nodeOfType(
+  definition: SavedDefinition,
+  type: string,
+): SavedNode | undefined {
+  return definition.nodes.find((node) => node.type === type);
+}
+
+/**
+ * Run `body`, then delete the open workflow. After a failure the delete is
+ * best-effort, so a cleanup error never hides the real one.
+ */
+export async function deleteWorkflowAfter(
+  page: Page,
+  body: () => Promise<void>,
+): Promise<void> {
+  let passed = false;
+  try {
+    await body();
+    passed = true;
+  } finally {
+    const cleanup = (async () => {
+      // The open panel's header buttons would sit over "More workflow options".
+      const closeButton = nodePanel(page).getByRole('button', {
+        name: 'Close',
+        exact: true,
+      });
+      if ((await closeButton.count()) > 0) await closeButton.click();
+      await deleteCurrentWorkflow(page);
+    })();
+    if (passed) await cleanup;
+    else await cleanup.catch(() => {});
+  }
+}
+
+export async function withFreshWorkflow(
+  page: Page,
+  body: () => Promise<void>,
+): Promise<void> {
+  await navigateToWorkflowsPage(page);
+  await createWorkflow(page, generateWorkflowName());
+  await waitForWorkflowEditorReady(page);
+  await deleteWorkflowAfter(page, body);
+}
+
+const WORKFLOW_PATCH_URL = /\/workflows\/[^/?]+\/?(\?.*)?$/;
+const WORKFLOW_VALIDATE_URL = /\/workflows\/[^/]+\/validate\/?$/;
+
+function savedDefinitionOf(body: unknown): SavedDefinition | null {
+  const definition = (body as { definition?: SavedDefinition } | null)
+    ?.definition;
+  return definition && Array.isArray(definition.nodes) ? definition : null;
+}
+
+/**
+ * Run `action`, then return the first auto-save PATCH body that satisfies
+ * `matches` together with the validate response that follows it. The editor
+ * debounces edits by 1s, so intermediate saves are skipped by the predicate.
+ */
+export async function captureAutosave(
+  page: Page,
+  action: () => Promise<void>,
+  matches: (definition: SavedDefinition) => boolean = () => true,
+): Promise<AutosaveResult> {
+  const timeout = 60_000;
+  // Armed before `action` runs. The editor validates only after its PATCH
+  // returns, and an earlier save's validate call can still be in flight, so
+  // the validate request is taken only once the matched PATCH has answered.
+  let saved: Request | null = null;
+  let savedAnswered = false;
+  const patchRequest = page.waitForRequest(
+    (request) => {
+      if (saved || request.method() !== 'PATCH') return false;
+      if (!WORKFLOW_PATCH_URL.test(new URL(request.url()).pathname))
+        return false;
+      try {
+        const definition = savedDefinitionOf(request.postDataJSON());
+        if (!definition || !matches(definition)) return false;
+      } catch {
+        return false;
+      }
+      saved = request;
+      return true;
+    },
+    { timeout },
+  );
+  const patchResponse = page.waitForResponse(
+    (response) => {
+      if (!saved || response.request() !== saved) return false;
+      savedAnswered = true;
+      return true;
+    },
+    { timeout },
+  );
+  const validateRequest = page.waitForRequest(
+    (request) =>
+      savedAnswered &&
+      request.method() === 'POST' &&
+      WORKFLOW_VALIDATE_URL.test(new URL(request.url()).pathname),
+    { timeout },
+  );
+  for (const waiter of [patchRequest, patchResponse, validateRequest]) {
+    waiter.catch(() => {});
+  }
+
+  await action();
+  const request = await patchRequest;
+  await patchResponse;
+  const validation = await (await validateRequest).response();
+  expect(validation, 'validate call after the auto-save').not.toBeNull();
+
+  return {
+    definition: savedDefinitionOf(request.postDataJSON()) as SavedDefinition,
+    validation: await validation!.text(),
+  };
+}
+
+/**
+ * Run `action` (a Save click) and return the definition of the PATCH it sends.
+ * Unlike an auto-save, a manual save is not followed by a validate call.
+ */
+export async function captureManualSave(
+  page: Page,
+  action: () => Promise<void>,
+): Promise<SavedDefinition> {
+  const patchRequest = page.waitForRequest(
+    (request) =>
+      request.method() === 'PATCH' &&
+      WORKFLOW_PATCH_URL.test(new URL(request.url()).pathname),
+    { timeout: 30_000 },
+  );
+  patchRequest.catch(() => {});
+  await action();
+  const request = await patchRequest;
+  const definition = savedDefinitionOf(request.postDataJSON());
+  expect(definition, 'definition in the Save request').not.toBeNull();
+  return definition as SavedDefinition;
+}
+
+export function recordWorkflowPatches(page: Page): string[] {
+  const urls: string[] = [];
+  page.on('request', (request) => {
+    if (
+      request.method() === 'PATCH' &&
+      WORKFLOW_PATCH_URL.test(new URL(request.url()).pathname)
+    ) {
+      urls.push(request.url());
+    }
+  });
+  return urls;
+}
+
+export function canvasNode(page: Page, nodeId: string): Locator {
+  return page.locator(`[data-testid="workflow-node-${nodeId}"]`);
+}
+
+export function canvasEdge(page: Page, edgeId: string): Locator {
+  return page.locator(`[data-testid="workflow-edge-${edgeId}"]`);
+}
+
+export function nodePanel(page: Page): Locator {
+  return page.locator(WORKFLOW_PANEL);
+}
+
+/**
+ * Click a sidebar item (e.g. "Set State") and return the id of the node it
+ * adds to the canvas.
+ */
+export async function addNodeFromSidebar(
+  page: Page,
+  label: string,
+  nodeType: string,
+): Promise<string> {
+  const item = page.getByRole('button', { name: label, exact: true });
+  await expect(item).toBeVisible({ timeout: 15_000 });
+  await item.click();
+
+  const node = page.locator(`[data-node-type="${nodeType}"]`).last();
+  await expect(node).toBeVisible({ timeout: 10_000 });
+  const testId = await node.getAttribute('data-testid');
+  return testId!.replace('workflow-node-', '');
+}
+
+export async function openNodePanel(
+  page: Page,
+  nodeId: string,
+): Promise<Locator> {
+  await canvasNode(page, nodeId).click();
+  const panel = nodePanel(page);
+  await expect(panel).toBeVisible({ timeout: 10_000 });
+  return panel;
+}
+
+export async function closeNodePanel(page: Page): Promise<void> {
+  const panel = nodePanel(page);
+  await panel.getByRole('button', { name: 'Close', exact: true }).click();
+  await expect(panel).toBeHidden({ timeout: 5_000 });
+}
+
+/** Add a state variable through the Start step's "Add State Variable" dialog. */
+export async function addStartVariable(
+  page: Page,
+  variable: {
+    name: string;
+    type: 'String' | 'Number' | 'Boolean' | 'Object' | 'List';
+    defaultValue?: string;
+  },
+): Promise<void> {
+  await nodePanel(page)
+    .getByRole('button', { name: 'Add', exact: true })
+    .click();
+  const dialog = page.getByRole('dialog', { name: 'Add State Variable' });
+  await expect(dialog).toBeVisible({ timeout: 10_000 });
+
+  await dialog
+    .getByRole('button', { name: variable.type, exact: true })
+    .click();
+  await dialog.locator('#var-name').fill(variable.name);
+  if (variable.defaultValue !== undefined) {
+    const defaultField = dialog.locator('#var-default');
+    if (variable.type === 'Boolean') {
+      if (variable.defaultValue === 'true') await defaultField.click();
+    } else {
+      await defaultField.fill(variable.defaultValue);
+    }
+  }
+  await dialog.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(dialog).toBeHidden({ timeout: 10_000 });
+}
+
+/** Create a variable from a Set State row: "New" -> "New Variable" dialog. */
+export async function createVariableFromSetState(
+  page: Page,
+  name: string,
+): Promise<void> {
+  await nodePanel(page)
+    .getByRole('button', { name: 'New', exact: true })
+    .click();
+  const dialog = page.getByRole('dialog', { name: 'New Variable' });
+  await expect(dialog).toBeVisible({ timeout: 10_000 });
+  await dialog.locator('#new-variable-name').fill(name);
+  await dialog.getByRole('button', { name: 'Add', exact: true }).click();
+  await expect(dialog).toBeHidden({ timeout: 10_000 });
+}
+
+/**
+ * Select a connection by pressing on its hit path. The press lands a third of
+ * the way along the path: the midpoint is where the Delete Connection button
+ * appears on hover, and it would swallow the press.
+ */
+export async function selectConnection(
+  page: Page,
+  edgeId: string,
+): Promise<void> {
+  const hitPath = canvasEdge(page, edgeId);
+  await expect(hitPath).toBeAttached({ timeout: 10_000 });
+  const point = await hitPath.evaluate((element) => {
+    const path = element as unknown as SVGGeometryElement;
+    const onPath = path.getPointAtLength(path.getTotalLength() * 0.35);
+    const matrix = path.getScreenCTM()!;
+    return {
+      x: matrix.a * onPath.x + matrix.c * onPath.y + matrix.e,
+      y: matrix.b * onPath.x + matrix.d * onPath.y + matrix.f,
+    };
+  });
+  await page.mouse.move(point.x, point.y);
+  await page.mouse.down();
+  await page.mouse.up();
+  await expect(
+    page.locator(`[data-testid="workflow-edge-delete-${edgeId}"]`),
+  ).toBeVisible({ timeout: 5_000 });
+}
+
+/**
+ * Zoom the canvas out to its 50% minimum. A new step goes inside the canvas
+ * only when a free spot fits there: beside the default steps a 280px If / Else
+ * or While card can still land past the clipped right edge, or with its lower
+ * handle under the zoom toolbar. At 50% every step sits clear of both.
+ */
+async function zoomCanvasOut(page: Page): Promise<void> {
+  const canvas = page.locator('[data-testid="workflow-canvas"]');
+  const zoomOut = page.getByRole('button', { name: 'Zoom Out', exact: true });
+  for (let click = 0; click < 5; click++) await zoomOut.click();
+  await expect(canvas.getByText(/^\d+%$/)).toHaveText('50%');
+}
+
+/**
+ * Drag from a step's output handle onto another step. The handle is
+ * transparent until its step is hovered, but it takes the pointer all the same.
+ */
+export async function connectHandle(
+  page: Page,
+  fromNodeId: string,
+  handle: string,
+  toNodeId: string,
+): Promise<void> {
+  await zoomCanvasOut(page);
+  await page
+    .locator(`[data-testid="workflow-handle-${fromNodeId}-${handle}"]`)
+    .hover();
+  await page.mouse.down();
+  const target = canvasNode(page, toNodeId);
+  // The drop target comes from the step's mouseenter state, so the second
+  // move gives React time to commit it before the button is released.
+  await target.hover();
+  await target.hover();
+  await page.mouse.up();
+  await expect(
+    canvasEdge(page, `e-${fromNodeId}-${handle}-${toNodeId}`),
+  ).toBeAttached({ timeout: 5_000 });
 }
