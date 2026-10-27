@@ -2422,7 +2422,7 @@
         },
         {
           "id": "wf-08",
-          "description": "New workflow shows Draft status badge",
+          "description": "New workflow shows Active status badge",
           "status": "covered"
         },
         {

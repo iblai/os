@@ -513,6 +513,29 @@ export async function addNodeFromSidebar(
   return testId!.replace('workflow-node-', '');
 }
 
+/**
+ * Add a step and wait until it is auto-saved. The editor only saves a graph
+ * that differs from its last save, so a step added and removed within one
+ * debounce window never sends a request.
+ */
+export async function addSavedNodeFromSidebar(
+  page: Page,
+  label: string,
+  nodeType: string,
+): Promise<string> {
+  const before = await page.locator(`[data-node-type="${nodeType}"]`).count();
+  let nodeId = '';
+  await captureAutosave(
+    page,
+    async () => {
+      nodeId = await addNodeFromSidebar(page, label, nodeType);
+    },
+    (definition) =>
+      definition.nodes.filter((node) => node.type === nodeType).length > before,
+  );
+  return nodeId;
+}
+
 export async function openNodePanel(
   page: Page,
   nodeId: string,

@@ -674,7 +674,7 @@ The "Remember past conversations" (`enable_memory_component`) master toggle move
 - [x] An existing workflow can be opened from the list
 - [x] A workflow can be deleted and no longer appears in the list
 - [x] Workflow editor displays Save, Publish, and Preview buttons in the toolbar
-- [x] New workflow shows Draft status badge
+- [x] New workflow shows Active status badge
 - [x] Workflow name can be renamed inline via the pencil button
 - [x] Workflow can be saved without errors
 - [x] Default nodes (Start and Agent) are visible with an edge connecting them

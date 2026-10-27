@@ -20,6 +20,7 @@ import {
   captureAutosave,
   captureManualSave,
   addNodeFromSidebar,
+  addSavedNodeFromSidebar,
   openNodePanel,
   closeNodePanel,
   addStartVariable,
@@ -401,7 +402,11 @@ test.describe('Journey 34: Workflows', () => {
     page,
   }) => {
     await withFreshWorkflow(page, async () => {
-      const nodeId = await addNodeFromSidebar(page, 'Transform', 'transform');
+      const nodeId = await addSavedNodeFromSidebar(
+        page,
+        'Transform',
+        'transform',
+      );
       const node = canvasNode(page, nodeId);
 
       await node.hover();
@@ -420,7 +425,11 @@ test.describe('Journey 34: Workflows', () => {
     page,
   }) => {
     await withFreshWorkflow(page, async () => {
-      const nodeId = await addNodeFromSidebar(page, 'Set State', 'set-state');
+      const nodeId = await addSavedNodeFromSidebar(
+        page,
+        'Set State',
+        'set-state',
+      );
       const panel = await openNodePanel(page, nodeId);
 
       const { definition } = await captureAutosave(
