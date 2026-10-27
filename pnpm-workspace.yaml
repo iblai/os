@@ -50,7 +50,12 @@ overrides:
   # interceptors), plus the moderate/low DoS, cookie-caching and response
   # handling issues in the same line. Same reach, same major:
   # @wdio/local-runner > @wdio/runner > webdriver > undici (e2e-tauri only).
-  undici: '>=8.10.2'
+  # Floor lifted 8.10.2 -> 8.12.2 for GHSA-xjj6-f33q-929c (high, DoS via an
+  # unhandled error on excessive content-encodings), plus the moderate
+  # GHSA-4qv8-2p9j-2685 and GHSA-f72v-6w45-q472 patched in the same release.
+  # Same major and still dev-only: webdriverio's cheerio and release-it
+  # resolve this same copy.
+  undici: '>=8.12.2'
   # GHSA-8j4g-w8fx-2239 — ReDoS in the CORS middleware via a crafted
   # Access-Control-Request-Headers, patched in 4.12.34. Not surfaced by Dependabot;
   # found by `pnpm audit`. Reached through
@@ -210,10 +215,23 @@ overrides:
   # subnet), reached through @iblai/iblai-js > @iblai/mcp >
   # @modelcontextprotocol/sdk > express. Patch release inside express's ^2.0.7.
   proxy-addr: '>=2.0.8 <3'
+  # GHSA-27r3-jxmh-p828 (high, DoS via trailing bytes after a compressed
+  # request body), affecting >=2.0.0 <2.4.0. Same reach as proxy-addr:
+  # @iblai/mcp > @modelcontextprotocol/sdk > express@5, which asks for ^2.2.1.
+  # 2.4.0 was five days old when this landed, inside .npmrc's min-release-age=7
+  # (pnpm 10.11 does not enforce it); it is the only patched release and ships
+  # with npm provenance from the expressjs release workflow.
+  body-parser: '>=2.4.0 <3'
   # GHSA-6qxp-vccf-f47h (OAuth credentials sent to an MCP-server-chosen
   # authorization server). The published @iblai/mcp and @iblai/web-utils pin
   # 1.27.1; 1.31 is a minor bump within the same 1.x API.
   '@modelcontextprotocol/sdk': '>=1.31.0 <2'
+  # GHSA-mrhx-c7xc-m3w5 (high, memory exhaustion from unbounded issue
+  # collection in $ZodArray), patched in 4.6.6. @iblai/mcp pins zod 4.3.6 and
+  # runs as a Node MCP server, so its tool-call validation is the exposed path;
+  # the MCP SDK and zod-to-json-schema under it take their zod peer from here.
+  # The 3.x copies have no patched release; see auditConfig.ignoreGhsas.
+  '@iblai/mcp>zod': '>=4.6.6 <5'
   # GHSA-c8x8-7fp4-3x9w (XSS in paste handling), reached through the SDK
   # canvas's @tiptap/pm.
   prosemirror-view: '>=1.42.3 <2'
@@ -270,3 +288,14 @@ auditConfig:
     # through tooling (mocha > chokidar; fast-glob > micromatch, also via the
     # SDK's rollup-plugin-copy runtime dep), on the repo's own glob patterns.
     - GHSA-vfj7-8cjw-p6xm
+    # zod GHSA-mrhx-c7xc-m3w5 — patched only in 4.6.6, a major away from the
+    # 3.x the app (3.25.76), the SDK's data-layer / web-containers / web-utils
+    # (3.24.2, 3.25.76) and the AI SDK run. The 4.x copy under @iblai/mcp is
+    # lifted by the '@iblai/mcp>zod' override instead. Reach of the remaining
+    # copies, outside dev tooling (eslint-plugin-react-hooks, the shadcn CLI):
+    # the browser and the Chrome extension, on the user's own data
+    # (local-storage user and tenant records, form fields, URLs) and on
+    # responses from MCP servers and models the user connects through
+    # web-utils' MCP client and the AI SDK; worst case is the user's own tab
+    # running out of memory. Drop this once the SDK and app move to zod 4.
+    - GHSA-mrhx-c7xc-m3w5
