@@ -24,7 +24,6 @@ export const AGENT_LABELS: Record<CodeAgent, string> = {
   claude: 'Claude Code',
 };
 
-
 /** The two agents the desktop installs (never `opencode`, which is built in). */
 export const isAgent = (v: unknown): v is 'codex' | 'claude' =>
   v === 'codex' || v === 'claude';
