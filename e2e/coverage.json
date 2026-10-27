@@ -1,9 +1,9 @@
 {
   "version": 2,
-  "lastUpdated": "2026-10-26",
+  "lastUpdated": "2026-10-27",
   "summary": {
-    "totalCheckpoints": 1002,
-    "coveredCheckpoints": 955,
+    "totalCheckpoints": 1020,
+    "coveredCheckpoints": 973,
     "deprecatedCheckpoints": 17,
     "notReproducibleCheckpoints": 17,
     "pendingCheckpoints": 13,
@@ -1291,7 +1291,7 @@
       "spec": "20-dataset-management.spec.ts",
       "sourceFiles": [
         "components/modals/edit-mentor-modal/tabs/datasets-tab/agent-datasets-tab.tsx",
-        "components/workflows/node-config-panel.tsx",
+        "app/platform/[tenantKey]/workflows/[mentorId]/[id]/page.tsx",
         "hooks/user-navigate.ts",
         "lib/constants.ts",
         "lib/config.ts",
@@ -2388,10 +2388,7 @@
       "spec": "34-workflows.spec.ts",
       "sourceFiles": [
         "app/platform/[tenantKey]/workflows/[mentorId]/page.tsx",
-        "app/platform/[tenantKey]/workflows/[mentorId]/[id]/page.tsx",
-        "components/workflows/workflow-canvas.tsx",
-        "components/workflows/node-config-panel.tsx",
-        "components/workflows/workflow-preview-chat.tsx"
+        "app/platform/[tenantKey]/workflows/[mentorId]/[id]/page.tsx"
       ],
       "checkpoints": [
         {
@@ -2431,7 +2428,7 @@
         },
         {
           "id": "wf-08",
-          "description": "New workflow shows Draft status badge",
+          "description": "New workflow shows Active status badge",
           "status": "covered"
         },
         {
@@ -2446,7 +2443,7 @@
         },
         {
           "id": "wf-11",
-          "description": "Default nodes (Start and Mentor) are visible with an edge connecting them",
+          "description": "Default nodes (Start and Agent) are visible with an edge connecting them",
           "status": "covered"
         },
         {
@@ -2471,7 +2468,97 @@
         },
         {
           "id": "wf-16",
-          "description": "File Search node's dataset picker dialog: opening/searching/paging never touch datasetsPage/datasetsSearch URL params (syncToUrl=false, unlike the edit-mentor modal's Datasets tab); picking a row closes the dialog and shows the dataset name with a Change button; reopening highlights the previously selected row (self-seeded mentor)",
+          "description": "File Search node's dataset picker dialog: opening/searching/paging never touch datasetsPage/datasetsSearch URL params (the picker keeps page/search in its own state, unlike the edit-mentor modal's Datasets tab); picking a row closes the dialog and shows the dataset name with a Change button; reopening highlights the previously selected row (self-seeded mentor)",
+          "status": "covered"
+        },
+        {
+          "id": "wf-17",
+          "description": "Hovering a step and clicking its trash button (Delete Transform) removes it from the canvas and the saved definition",
+          "status": "covered"
+        },
+        {
+          "id": "wf-18",
+          "description": "Opening a step panel and clicking its header Delete button (Delete Set State) removes the step and closes the panel",
+          "status": "covered"
+        },
+        {
+          "id": "wf-19",
+          "description": "The Agent step's trash button removes it along with its connection from the saved definition",
+          "status": "covered"
+        },
+        {
+          "id": "wf-20",
+          "description": "Clicking a connection's hit path then the Delete Connection button removes the connection (e-start-mentor-1) from the canvas and the saved definition",
+          "status": "covered"
+        },
+        {
+          "id": "wf-21",
+          "description": "Pressing Delete with a connection selected removes only that connection and keeps both steps",
+          "status": "covered"
+        },
+        {
+          "id": "wf-22",
+          "description": "Start step: Number and Boolean state variables are listed in the panel and saved with typed defaults (5 as a number, true as a boolean)",
+          "status": "covered"
+        },
+        {
+          "id": "wf-23",
+          "description": "Start step: a state variable is removed with Remove {name} after confirming in the Delete Variable dialog (Cancel keeps it); an invalid or already-used name keeps Save disabled and shows its hint",
+          "status": "covered"
+        },
+        {
+          "id": "wf-24",
+          "description": "Set State: the To Variable dropdown lists Start variables and never Variable 1; New opens the New Variable dialog and the new name is selected",
+          "status": "covered"
+        },
+        {
+          "id": "wf-25",
+          "description": "Set State: an expression is saved as data.assignments [{variable, expression}] with no setStateAssignments, and validation has no empty-assignments or attribute-access message",
+          "status": "covered"
+        },
+        {
+          "id": "wf-26",
+          "description": "Transform: Key and Value are saved as data.expressions [{target, expression}] with no transformExpressions/transformMode, and validation has no empty-expressions message",
+          "status": "covered"
+        },
+        {
+          "id": "wf-27",
+          "description": "While: an invalid Max Iterations (0) shows \"Enter a whole number of 1 or more.\"; a valid Condition and Max Iterations are saved as data.condition and data.maxIterations (a number), and validation has no missing-condition message",
+          "status": "covered"
+        },
+        {
+          "id": "wf-28",
+          "description": "While: the Loop and Done handles connect to other steps and save edges with sourceHandle continue and done",
+          "status": "covered"
+        },
+        {
+          "id": "wf-29",
+          "description": "If / Else: the condition is saved in data.conditions[0].expression and validation has no attribute-access message",
+          "status": "covered"
+        },
+        {
+          "id": "wf-30",
+          "description": "If / Else: the condition-0 and Else handles connect to other steps and save edges with those sourceHandle values",
+          "status": "covered"
+        },
+        {
+          "id": "wf-31",
+          "description": "A workflow saved with the old field names (setStateAssignments, transformExpressions, whileExpression, a two-way If / Else with true/false edges) opens marked Unsaved and sends no auto-save; clicking Save stores assignments, expressions, condition, conditions[0].expression and condition-0/else edges and clears Unsaved",
+          "status": "covered"
+        },
+        {
+          "id": "wf-32",
+          "description": "If / Else: wiring the If output to one step and then to another leaves a single connection from that output, on the canvas and in the saved edges",
+          "status": "covered"
+        },
+        {
+          "id": "wf-33",
+          "description": "Start step: removing a variable that a Set State step assigns opens the Variable In Use dialog listing the step; Cancel closes it and the variable stays listed",
+          "status": "covered"
+        },
+        {
+          "id": "wf-34",
+          "description": "Adding a Note: the backend's validate response warns that the Note is not connected, but the validation banner shows only the other warnings (Workflow should have an 'end' node) and never the Note's",
           "status": "covered"
         }
       ]
@@ -4859,7 +4946,7 @@
       "name": "Dataset Cloud Pickers",
       "spec": "74-dataset-cloud-pickers.spec.ts",
       "sourceFiles": [
-        "components/workflows/node-config-panel.tsx",
+        "app/platform/[tenantKey]/workflows/[mentorId]/[id]/page.tsx",
         "components/modals/edit-mentor-modal/tabs/datasets-tab/agent-datasets-tab.tsx"
       ],
       "checkpoints": [
