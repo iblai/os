@@ -520,7 +520,7 @@ describe('EditMentorModal', () => {
             `desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`,
           ),
         ).toBeInTheDocument();
-        // Skills is admin-only and lives in the Configuration category (the
+        // Skills is admin-only and lives in the Setup category (the
         // default active category), so it renders alongside Settings.
         expect(
           document.getElementById(
@@ -636,7 +636,7 @@ describe('EditMentorModal', () => {
       mockMentorSettings = { ...dms(), permissions: { field: {} } };
       renderM();
       // Skills has an empty permissionFieldsCheck and lives in the default
-      // Configuration category, so it renders under permissive RBAC.
+      // Setup category, so it renders under permissive RBAC.
       await waitFor(() =>
         expect(
           document.getElementById(
@@ -754,6 +754,9 @@ describe('EditMentorModal', () => {
         platform_key: 'main',
         mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
       };
+      // Open on Policies, Access's own category, so the assertion fails if
+      // the visibility filter lets Access through.
+      mockGetEditMentorTab = MODALS.EDIT_MENTOR.tabs.privacy;
       renderM();
       await waitFor(() => {
         expect(
@@ -763,7 +766,7 @@ describe('EditMentorModal', () => {
         ).not.toBeInTheDocument();
         expect(
           document.getElementById(
-            `desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`,
+            `desktop-tab-${MODALS.EDIT_MENTOR.tabs.privacy}`,
           ),
         ).toBeInTheDocument();
       });
@@ -851,21 +854,27 @@ describe('EditMentorModal', () => {
   });
 
   describe('Full 13 tabs', () => {
-    // The sidebar now groups segments under three category tabs, and only
+    // The sidebar now groups segments under four category tabs, and only
     // the segments belonging to the active category render. We exercise each
     // category by opening the modal with that category's first segment as
     // the active tab — the modal derives activeCategory from navCategory and
     // mounts the category's segments. Re-mount with cleanup() between
     // groups so each fresh render reflects the new mockGetEditMentorTab.
     const groups: Array<{ tabs: string[] }> = [
-      // Configuration (Access moved here from Integrations in feat/2286)
+      // Setup
       {
         tabs: [
           MODALS.EDIT_MENTOR.tabs.settings,
-          MODALS.EDIT_MENTOR.tabs.access,
           MODALS.EDIT_MENTOR.tabs.llm,
-          MODALS.EDIT_MENTOR.tabs.spend_caps,
           MODALS.EDIT_MENTOR.tabs.prompts,
+          MODALS.EDIT_MENTOR.tabs.datasets,
+        ],
+      },
+      // Policies
+      {
+        tabs: [
+          MODALS.EDIT_MENTOR.tabs.access,
+          MODALS.EDIT_MENTOR.tabs.spend_caps,
           MODALS.EDIT_MENTOR.tabs.safety,
           MODALS.EDIT_MENTOR.tabs.disclaimer,
         ],
@@ -874,13 +883,12 @@ describe('EditMentorModal', () => {
       {
         tabs: [
           MODALS.EDIT_MENTOR.tabs.mcp,
-          MODALS.EDIT_MENTOR.tabs.datasets,
           MODALS.EDIT_MENTOR.tabs.api,
           MODALS.EDIT_MENTOR.tabs.embed,
           MODALS.EDIT_MENTOR.tabs.tools,
         ],
       },
-      // Runtime (formerly Analytics)
+      // Activity
       {
         tabs: [MODALS.EDIT_MENTOR.tabs.memory, MODALS.EDIT_MENTOR.tabs.history],
       },

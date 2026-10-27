@@ -46,7 +46,7 @@ export type { SupportTicketStatus };
  * (`@iblai/iblai-js/web-containers/next`), wrapped in `AgentSettingsProvider`
  * by `components/modals/edit-mentor-modal/tabs/human-support-tab.tsx`. The tab
  * is admin-only (`userTypes: [UserType.ADMIN]`) and lives under the
- * **Runtime** sidebar category (`hooks/use-mentor-segments.ts`), alongside
+ * **Activity** sidebar category (`hooks/use-mentor-segments.ts`), alongside
  * Tasks / Memory / History / Audit. The host sidebar renders the segment's
  * label as **"Support"** (not "Human Support") — `SUPPORT_LABELS.tabName`
  * mirrors this; the SDK still calls its own internal export "Support" too, so
@@ -62,7 +62,7 @@ export type { SupportTicketStatus };
  *
  * CATEGORY: the modal sidebar only mounts the active category's segment
  * triggers (see `EditMentorPage.navigateToTab`). Support lives under
- * **Runtime**, so `switchToTab()` activates that category first via the
+ * **Activity**, so `switchToTab()` activates that category first via the
  * `bindTabNav` callback injected by `EditMentorPage` — mirrors `TasksTab`,
  * which has the identical problem (its SDK helper `switchToTasksTab`
  * predates the category strip and is category-blind).
@@ -86,11 +86,11 @@ export class HumanSupportTab {
 
   /**
    * Category-aware tab navigation injected by `EditMentorPage` (see
-   * `bindTabNav` there). The Support segment lives in the modal's Runtime
+   * `bindTabNav` there). The Support segment lives in the modal's Activity
    * category, and the sidebar only mounts the ACTIVE category's segment
    * triggers — so the SDK's `switchToSupportTab` (which predates the
    * category strip and expects the trigger to already be in the DOM) can't
-   * find it while the modal sits on its default Configurations view.
+   * find it while the modal sits on its default Setup view.
    */
   private navigateToTab?: (tabName: string) => Promise<void>;
 
@@ -120,7 +120,7 @@ export class HumanSupportTab {
   /**
    * Click the Support tab inside the Edit Mentor modal.
    *
-   * Activates the Runtime category first when the tab nav is bound (the
+   * Activates the Activity category first when the tab nav is bound (the
    * default via `EditMentorPage`'s constructor), then delegates to the SDK
    * helper — its click on the now-active trigger is a no-op, but its
    * wait-for-panel-ready assertion is still the readiness signal callers

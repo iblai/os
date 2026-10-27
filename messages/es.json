@@ -467,7 +467,8 @@
     "coworkApprovalsLabel": "Aprobaciones",
     "coworkApprovalsManual": "Preguntarme",
     "coworkApprovalsAuto": "Automático",
-    "coworkApprovalsAutoHint": "Cowork hace clic, escribe y envía formularios sin preguntar. Úsalo solo en sitios de confianza."
+    "coworkApprovalsAutoHint": "Cowork hace clic, escribe y envía formularios sin preguntar. Úsalo solo en sitios de confianza.",
+    "coworkApprovalsManualHint": "Cowork te pregunta antes de hacer clic, escribir o enviar formularios."
   },
   "chatInputFormMemoryMenu": {
     "yourMemory": "Tu memoria",
@@ -786,9 +787,10 @@
     "memory": "Memoria",
     "evals": "Evaluaciones",
     "lti": "LTI",
-    "configurations": "Configuraciones",
+    "setup": "Ajustes",
+    "policies": "Políticas",
     "integrations": "Integraciones",
-    "runtime": "Ejecución",
+    "activity": "Actividad",
     "changeLanguage": "Cambiar idioma"
   },
   "headerProfileButton": {
@@ -1396,6 +1398,20 @@
     "reset": "Restablecer",
     "viewLogs": "Ver registros ({count})"
   },
+  "hooksModelDownload": {
+    "setupTitle": "Configurando el gestor de modelos",
+    "setupDescription": "Esto solo ocurre la primera vez y puede tardar unos minutos. Tu descarga empezará justo después.",
+    "enableFailed": "No se pudieron activar los modelos locales: {error}",
+    "desktopRequired": "Se necesita la app de escritorio para descargar modelos locales",
+    "downloaded": "¡Modelo descargado correctamente!",
+    "downloadFailed": "Error en la descarga: {error}",
+    "downloadCancelled": "Descarga cancelada",
+    "modelNotFound": "Modelo no encontrado",
+    "downloadedAndLoaded": "Modelo descargado y cargado: {model}",
+    "modelDownloadFailed": "No se pudo descargar el modelo: {error}",
+    "modelLoaded": "Modelo cargado: {model}",
+    "modelLoadFailed": "No se pudo cargar el modelo: {error}"
+  },
   "navBarEmbedNavBar": {
     "closeSidebar": "Cerrar barra lateral",
     "openSidebar": "Abrir barra lateral",
@@ -1430,7 +1446,8 @@
     "selectedAgent": "Agente seleccionado",
     "user": "Usuario",
     "admin": "Administrador",
-    "signUpForFree": "Registrarse gratis"
+    "signUpForFree": "Registrarse gratis",
+    "onDevice": "En el dispositivo"
   },
   "projectsCreateProjectModal": {
     "title": "Nuevo proyecto",
@@ -2200,7 +2217,10 @@
     "tooltip": "Una herramienta de programación con agentes para tu carpeta de proyecto",
     "description": "Una herramienta de programación con agentes que edita archivos, ejecuta comandos y confirma cambios en la carpeta que elijas.",
     "checkingLocalModel": "Comprobando si tu modelo local puede ejecutar Código…",
-    "tryToolCapableModel": " Prueba un modelo compatible con herramientas como qwen3, llama3.2 o phi4-mini.",
+    "pickLocalModel": "Primero elige un modelo en el dispositivo: abre la lista de modelos y selecciona uno marcado como «En el dispositivo».",
+    "localModelCantEdit": "{model} no puede modificar archivos ni ejecutar comandos, así que Code no puede usarlo.",
+    "localModelUnknown": "No pudimos confirmar que {model} pueda modificar archivos o ejecutar comandos, así que es posible que Code no funcione con él.",
+    "tryToolCapableModel": " Prueba un modelo que sí pueda, como Qwen 3, Llama 3.2 o Phi-4 Mini.",
     "firstRunSlow": "La primera ejecución puede tardar unos minutos mientras se carga el modelo.",
     "modelUnavailable": "no está disponible para Código: los turnos fallarán. Elige otro modelo arriba a la izquierda.",
     "workspace": "Espacio de trabajo",
@@ -2211,7 +2231,10 @@
     "permissionModeLabel": "Aprobaciones",
     "permissionModeManual": "Preguntarme",
     "permissionModeAuto": "Automático",
-    "permissionModeAutoHint": "Code edita archivos y ejecuta comandos sin preguntar. Úsalo solo en carpetas de confianza.",
+    "permissionModeAutoHint": "Code modifica archivos y ejecuta comandos sin preguntar. Úsalo solo en carpetas de confianza.",
+    "permissionModeManualHint": "Code te pregunta antes de modificar archivos o ejecutar comandos.",
+    "permissionModeSaveFailed": "No se pudo guardar el ajuste de aprobaciones. Code sigue usando el anterior.",
+    "approvalsAria": "Aprobaciones: {mode}",
     "agentLabel": "Agente",
     "agentNotInstalled": "No instalado",
     "agentInstall": "Instalar",
@@ -2231,10 +2254,6 @@
     "openFolderFailed": "No se pudo abrir la carpeta",
     "pickFolderFailed": "No se pudo elegir una carpeta",
     "newWorkspaceFailed": "No se pudo crear un nuevo espacio de trabajo",
-    "permissionDialogTitle": "¿Cómo debe pedir permiso Code?",
-    "permissionDialogDescription": "Code puede editar archivos y ejecutar comandos en tu espacio de trabajo. Elige si debe consultarte antes; podrás cambiarlo más tarde en el panel de Code.",
-    "permissionDialogManualAction": "Preguntarme cada vez",
-    "permissionDialogAutoAction": "Aprobar automáticamente",
     "connectTitle": "Tu computadora",
     "connectHint": "En la app de escritorio, abre Code y activa el acceso desde el teléfono; luego ingresa aquí su dirección y contraseña.",
     "connectedTo": "Conectado a",
@@ -2258,10 +2277,11 @@
     "cameraDenied": "Se denegó el acceso a la cámara: ingresa la dirección manualmente.",
     "notAPairingCode": "Ese código QR no es un código de emparejamiento de Code.",
     "closeScanner": "Cerrar escáner",
+    "turnOffCode": "Desactivar Código",
     "scanHint": "Apunta la cámara al código QR de emparejamiento que se muestra en tu computadora."
   },
   "chatCodePermissionCard": {
-    "title": "Código necesita tu permiso",
+    "title": "Code necesita tu permiso",
     "unnamedAction": "Una acción sin nombre",
     "kind": {
       "read": "leer",
@@ -2275,7 +2295,10 @@
       "other": "acción"
     },
     "allow": "Permitir",
-    "deny": "Denegar"
+    "deny": "Denegar",
+    "switchToAutomatic": "Cambiar a Automático",
+    "switchToAutomaticHint": "Code modifica archivos y ejecuta comandos sin preguntar, en todos los chats. Úsalo solo en carpetas de confianza.",
+    "switchToAutomaticFailed": "No se pudo guardar el ajuste de aprobaciones. Code sigue usando el anterior."
   },
   "appUpdatePrompt": {
     "title": "Actualización disponible",

@@ -213,48 +213,61 @@ vi.mock('@/hooks/use-responsive', () => ({
   })),
 }));
 
-vi.mock('@/components/chat-input-form/inside-buttons', () => ({
-  InsideButtons: ({
-    activeOptions,
-    onOptionClick,
-    onOpenPromptGallery,
-    skills,
-    activeSkillSlugs,
-    onToggleSkill,
-    onClearSkills,
-  }: any) => (
-    <div data-testid="inside-buttons">
-      <button onClick={() => onOptionClick('canvas')}>Canvas</button>
-      <button data-testid="open-prompt-gallery" onClick={onOpenPromptGallery}>
-        Prompt Gallery
-      </button>
-      <span data-testid="active-options">{activeOptions?.join(',') || ''}</span>
-      {/* Skills-dropdown wiring surface: one toggle button per passed skill,
+vi.mock('@/components/chat-input-form/inside-buttons', async () => {
+  const { createPortal } =
+    await vi.importActual<typeof import('react-dom')>('react-dom');
+  return {
+    InsideButtons: ({
+      activeOptions,
+      onOptionClick,
+      onOpenPromptGallery,
+      skills,
+      activeSkillSlugs,
+      onToggleSkill,
+      onClearSkills,
+      codeApprovalsSlot,
+    }: any) => (
+      <div data-testid="inside-buttons">
+        {/* Stands in for Code's approvals button, which portals into the slot. */}
+        {codeApprovalsSlot &&
+          createPortal(
+            <span data-testid="code-approvals-marker" />,
+            codeApprovalsSlot,
+          )}
+        <button onClick={() => onOptionClick('canvas')}>Canvas</button>
+        <button data-testid="open-prompt-gallery" onClick={onOpenPromptGallery}>
+          Prompt Gallery
+        </button>
+        <span data-testid="active-options">
+          {activeOptions?.join(',') || ''}
+        </span>
+        {/* Skills-dropdown wiring surface: one toggle button per passed skill,
           exposing the armed state the real dropdown would render. */}
-      {skills?.map((skill: any) => (
-        <button
-          key={skill.slug}
-          type="button"
-          data-testid={`toggle-skill-${skill.slug}`}
-          data-armed={activeSkillSlugs?.has(skill.slug) ? 'true' : 'false'}
-          onClick={() => onToggleSkill?.(skill)}
-        >
-          {/* slug, not name — picker tests query options by visible name */}
-          {skill.slug}
-        </button>
-      ))}
-      {skills && skills.length > 0 && (
-        <button
-          type="button"
-          data-testid="clear-skills"
-          onClick={() => onClearSkills?.()}
-        >
-          clear
-        </button>
-      )}
-    </div>
-  ),
-}));
+        {skills?.map((skill: any) => (
+          <button
+            key={skill.slug}
+            type="button"
+            data-testid={`toggle-skill-${skill.slug}`}
+            data-armed={activeSkillSlugs?.has(skill.slug) ? 'true' : 'false'}
+            onClick={() => onToggleSkill?.(skill)}
+          >
+            {/* slug, not name — picker tests query options by visible name */}
+            {skill.slug}
+          </button>
+        ))}
+        {skills && skills.length > 0 && (
+          <button
+            type="button"
+            data-testid="clear-skills"
+            onClick={() => onClearSkills?.()}
+          >
+            clear
+          </button>
+        )}
+      </div>
+    ),
+  };
+});
 
 vi.mock('@/components/chat-input-form/voice-call-button', () => ({
   VoiceCallButton: ({ onClick }: any) => (
@@ -600,6 +613,18 @@ describe('ChatInputForm', () => {
     it('should render voice chat button', () => {
       renderWithRedux(<ChatInputForm {...defaultProps} />);
       expect(screen.getByTestId('voice-chat-button')).toBeInTheDocument();
+    });
+
+    it('puts the Code approvals button first in the composer’s right-hand action group, not under the box', async () => {
+      renderWithRedux(<ChatInputForm {...defaultProps} />);
+
+      const slot = (await screen.findByTestId('code-approvals-marker'))
+        .parentElement;
+      const mic = screen.getByTestId('voice-chat-button');
+      expect(slot?.parentElement).toBe(mic.parentElement);
+      expect(
+        slot!.compareDocumentPosition(mic) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
     });
 
     it('should render voice call button', () => {
