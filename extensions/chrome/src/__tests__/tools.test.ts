@@ -4,6 +4,7 @@ import type { ActResult, FrameSnapshot } from '../page-scripts';
 import { settle, sleep } from '../settle';
 import {
   MAX_WAIT_MS,
+  READ_RETRIES,
   asElement,
   createBrowserTools,
   describeItem,
@@ -68,6 +69,33 @@ const actCalls = () =>
   chromeStub.stub.scripting.executeScript.mock.calls.filter(
     (call) => (call[0] as { func: { name: string } }).func.name === 'actOnPage',
   );
+
+const snapshotCalls = () =>
+  chromeStub.stub.scripting.executeScript.mock.calls.filter(
+    (call) =>
+      (call[0] as { func: { name: string } }).func.name === 'snapshotPage',
+  );
+
+/** The next `times` injections of `name` (of `action`, for actOnPage) throw. */
+const failing = (name: string, times: number, action?: string) => {
+  const original =
+    chromeStub.stub.scripting.executeScript.getMockImplementation()!;
+  chromeStub.stub.scripting.executeScript.mockImplementation(
+    async (injection) => {
+      const { func, args = [] } = injection as {
+        func: { name: string };
+        args?: unknown[];
+      };
+      if (
+        func.name === name &&
+        (action === undefined || args[1] === action) &&
+        times-- > 0
+      )
+        throw new Error('Frame with ID 0 was removed.');
+      return original(injection);
+    },
+  );
+};
 
 beforeEach(() => {
   Object.defineProperty(HTMLFormElement.prototype, 'requestSubmit', {
@@ -467,6 +495,48 @@ describe('createBrowserTools', () => {
         detail: 'Cannot access contents of the page',
       }),
     );
+    // The click may have landed before its answer was lost: never again.
+    expect(actCalls()).toHaveLength(1);
+  });
+
+  it('reads the page again when the read after an action fails, acting once', async () => {
+    failing('snapshotPage', 1);
+    expect(await run('click', { element: 5 })).toMatch(
+      /^Clicked \[5\] link "Forgot password\?"\./,
+    );
+    expect(actCalls()).toHaveLength(1);
+    expect(snapshotCalls()).toHaveLength(2);
+    expect(settle).toHaveBeenLastCalledWith(7);
+    expect(ctx.log).toHaveBeenCalledTimes(1);
+    expect(ctx.log).toHaveBeenLastCalledWith(
+      expect.objectContaining({ tool: 'click', ok: true }),
+    );
+  });
+
+  it('gives up on the read after two more tries, still acting once', async () => {
+    failing('snapshotPage', Infinity);
+    expect(await run('click', { element: 5 })).toBe(
+      'Error: Frame with ID 0 was removed.',
+    );
+    expect(actCalls()).toHaveLength(1);
+    expect(snapshotCalls()).toHaveLength(1 + READ_RETRIES);
+    expect(ctx.log).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        ok: false,
+        detail: 'Frame with ID 0 was removed.',
+      }),
+    );
+  });
+
+  it('tries no read again once the run is over', async () => {
+    const ended = new AbortController();
+    current = createBrowserTools({ ...ctx, signal: ended.signal });
+    ended.abort();
+    failing('snapshotPage', Infinity);
+    expect(await run('read_page', {})).toBe(
+      'Error: Frame with ID 0 was removed.',
+    );
+    expect(snapshotCalls()).toHaveLength(1);
   });
 
   it('runs concurrent tool calls one at a time', async () => {
@@ -643,9 +713,12 @@ describe('createBrowserTools', () => {
         },
       ]),
     ).toThrow('The page returned no snapshot.');
-    chromeStub.stub.scripting.executeScript.mockResolvedValueOnce([]);
+    chromeStub.stub.scripting.executeScript.mockResolvedValue([]);
     expect(await run('read_page', {})).toBe(
       'Error: The page returned no snapshot.',
+    );
+    expect(chromeStub.stub.scripting.executeScript).toHaveBeenCalledTimes(
+      1 + READ_RETRIES,
     );
   });
 });
@@ -802,6 +875,26 @@ describe('real input', () => {
     expect(input.click).toHaveBeenCalledWith(60, 40, 1);
     expect(actions()).toEqual(['locate']);
     expect(settle).toHaveBeenLastCalledWith(7, { frameId: 0 });
+  });
+
+  it('looks the element up again when the lookup fails, then clicks once', async () => {
+    const input = real();
+    await rebuild({ real: input });
+    const link = document.querySelector('a')!;
+    Object.defineProperty(link, 'getBoundingClientRect', {
+      configurable: true,
+      value: () => ({ left: 10, top: 20, width: 100, height: 40 }),
+    });
+    Object.defineProperty(document, 'elementFromPoint', {
+      configurable: true,
+      value: () => link,
+    });
+    failing('actOnPage', 1, 'locate');
+    expect(await run('click', { element: 5 })).toMatch(
+      /^Clicked \[5\] link "Forgot password\?"\./,
+    );
+    expect(actions()).toEqual(['locate', 'locate']);
+    expect(input.click).toHaveBeenCalledTimes(1);
   });
 
   it('double-clicks for real with two counted presses', async () => {
@@ -1130,6 +1223,22 @@ describe('acting on a point of the picture', () => {
       undefined,
     );
     expect(JSON.stringify(ctx.log.mock.lastCall)).not.toContain('jane');
+  });
+
+  it('looks for the focused field again after a click at a point, never clicking twice', async () => {
+    const input = real();
+    const email = document.querySelector<HTMLInputElement>('#email')!;
+    input.click.mockImplementation(async () => {
+      email.focus();
+    });
+    await rebuild({ withPicture: true, real: input });
+    hitsAt({ '30,30': email });
+    failing('actOnPage', 1, 'prepare-type');
+    expect(await run('type_at', { x: 30, y: 30, text: 'jane@x.io' })).toMatch(
+      /^Typed into textbox "Email" at \(30, 30\)\.\n/,
+    );
+    expect(input.click).toHaveBeenCalledTimes(1);
+    expect(input.insertText).toHaveBeenCalledTimes(1);
   });
 
   it('refuses a secret field that took the focus, before any text is sent', async () => {

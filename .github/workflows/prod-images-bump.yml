@@ -1,0 +1,76 @@
+name: Request prod-images bump
+
+# Once a release's image is built, ask iblai-prod-images to cut a release that pins it.
+# Its Request bump workflow makes every decision from this repo's own release data (a
+# published release, on main, newer than the pin, no "[skip prod-images]" in the notes) and
+# runs Cut release, the same workflow a person would run. It waits for that cut, so its
+# result is the bump's result, and this job turns red when the bump fails.
+on:
+  workflow_run:
+    workflows: ['Docker Build']
+    types: [completed]
+
+permissions: {}
+
+jobs:
+  request:
+    # workflow_dispatch: the release watchdog can re-run Docker Build on a tag.
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.path == '.github/workflows/trigger-docker-build.yml' &&
+      github.event.workflow_run.head_repository.full_name == github.repository &&
+      (github.event.workflow_run.event == 'push' || github.event.workflow_run.event == 'workflow_dispatch') &&
+      startsWith(github.event.workflow_run.head_branch, 'v')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # Holds the GitHub App key, restricted to main. workflow_run always runs main's copy of
+    # this file, so only merged code can use the key.
+    environment: prod-images-bump
+    steps:
+      - name: Token for iblai-prod-images
+        id: app
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ vars.PROD_IMAGES_BUMP_CLIENT_ID }}
+          private-key: ${{ secrets.PROD_IMAGES_BUMP_KEY }}
+          owner: iblai
+          repositories: iblai-prod-images
+          permission-actions: write
+
+      - name: Request the bump and wait for it
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          SERVICE: os
+          TAG: ${{ github.event.workflow_run.head_branch }}
+          SOURCE_RUN: ${{ github.event.workflow_run.html_url }}
+        run: |
+          id=$(gh api -X POST repos/iblai/iblai-prod-images/actions/workflows/request-bump.yml/dispatches \
+            -H 'X-GitHub-Api-Version: 2026-03-10' -f ref=main -f "inputs[service]=$SERVICE" \
+            -f "inputs[source_tag]=$TAG" -f "inputs[source_run]=$SOURCE_RUN" --jq '.workflow_run_id // empty')
+          if [ -z "$id" ]; then echo "::error::the dispatch returned no run id"; exit 1; fi
+          url="https://github.com/iblai/iblai-prod-images/actions/runs/$id"
+          echo "Request bump for $TAG: $url" | tee -a "$GITHUB_STEP_SUMMARY"
+          # Poll with actions:read only. Every error is retried (rate limits, read lag) except
+          # 401, a token that no longer works; the last error is shown if the wait runs out.
+          state="" err=""
+          deadline=$((SECONDS + 25 * 60))
+          while [ "$SECONDS" -lt "$deadline" ]; do
+            sleep 20
+            if ! state=$(timeout 60 gh api "repos/iblai/iblai-prod-images/actions/runs/$id" \
+                --jq '.status + " " + (.conclusion // "")' 2>"$RUNNER_TEMP/poll.err"); then
+              err=$(cat "$RUNNER_TEMP/poll.err")
+              case "$err" in *"HTTP 401"*) echo "::error::$err"; exit 1 ;; esac
+              continue
+            fi
+            case "$state" in completed\ *) break ;; esac
+          done
+          case "$state" in
+            completed\ *) conclusion=${state#completed } ;;
+            *) echo "::error::Request bump for $TAG not finished after 25 min${err:+ (last error: $err)} — see $url"
+               exit 1 ;;
+          esac
+          echo "Request bump finished: $conclusion" | tee -a "$GITHUB_STEP_SUMMARY"
+          if [ "$conclusion" != success ]; then
+            echo "::error::Request bump for $TAG ended '$conclusion' — see $url"
+            exit 1
+          fi

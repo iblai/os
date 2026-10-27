@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.182.0](https://github.com/iblai/os/compare/v0.181.2...v0.182.0) (2026-10-26)
+
+### Features
+
+* **ext:** drop the step and token caps for a 200-minute limit, retry failures, ship 1.1.10 ([7da79ee](https://github.com/iblai/os/commit/7da79ee33261edd212882b988148a6d7a60f1efb))
+
+## [0.181.2](https://github.com/iblai/os/compare/v0.181.1...v0.181.2) (2026-10-26)
+
+### Bug Fixes
+
+* **embed:** don't register the service worker inside an iframe ([da4e55f](https://github.com/iblai/os/commit/da4e55fdbd4ddedffbbdd8f7784b11a1dff18e81))
+
+## [0.181.1](https://github.com/iblai/os/compare/v0.181.0...v0.181.1) (2026-10-26)
+
+### CI
+
+* request a prod-images release after each image build ([453cde8](https://github.com/iblai/os/commit/453cde813761bd61f46450718ad157a5aba1abbc))
+
 ## [0.181.0](https://github.com/iblai/os/compare/v0.180.0...v0.181.0) (2026-10-24)
 
 ### Features
