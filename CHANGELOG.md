@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.182.2](https://github.com/iblai/os/compare/v0.182.1...v0.182.2) (2026-10-27)
+
+### Bug Fixes
+
+* **os:** adding fix for the playwright tests for workflows ([391e1e8](https://github.com/iblai/os/commit/391e1e8bc31afff3867c8bac8885278d6f4b699c))
+* **os:** adding fixes for workflows ([c3f9687](https://github.com/iblai/os/commit/c3f9687af4700520b4e5436a004f0b369d40cd63))
+* **os:** adding security audit fixes ([bfa596e](https://github.com/iblai/os/commit/bfa596e532fff48e66d695747f42a87206093d09))
+* **os:** bump version for sdk ([a012ef1](https://github.com/iblai/os/commit/a012ef1a7663e17421fff7c87e222da6dcf44302))
+
 ## [0.182.1](https://github.com/iblai/os/compare/v0.182.0...v0.182.1) (2026-10-27)
 
 ### Bug Fixes
