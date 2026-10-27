@@ -539,10 +539,9 @@ describe('Journey 3: Code Mode (opencode)', () => {
       ).toBe(fresh);
     });
 
-    it.skip('code-23: the Code popover asks for an approval mode on first use and stores the answer against the signed-in user', () => {
+    it.skip('code-23: Code starts in Automatic, shown first in the composer’s right-hand action group, and an Ask Me picked there holds in every chat until switched back', () => {
       /* pending — needs an authenticated UI session (like code-14) to render
-         the popover and reach the user-metadata endpoint; covered meanwhile by
-         the coding-mode-button Vitest cases */
+         the composer; covered meanwhile by the coding-mode-button Vitest cases */
     });
 
     it.skip('code-24: the popover offers New Workspace and a platform-named Open Folder button', () => {
@@ -808,6 +807,83 @@ describe('Journey 3: Code Mode (opencode)', () => {
          (opencode_acp.rs), an_unknown_model_is_refused_before_it_is_saved and
          the_model_choice_lists_the_agents_offer_with_default_and_selection
          (code_agent_models.rs) */
+    });
+
+    it.skip('code-47: Switch to Automatic on a permission card answers it, saves Automatic, clears the other waiting cards and asks nothing more in that turn', () => {
+      /* pending — needs an authenticated UI session and a tool-calling turn
+         (like code-08/code-10); covered meanwhile by the SDK's
+         code-permission-card "Switch to Automatic" cases, the SdkChat Vitest
+         "switches to Automatic from a permission card the way the approvals
+         button does", the use-approval-mode-choice Vitest cases and the Rust
+         queue/switch tests */
+    });
+
+    it.skip('code-54: an approval mode saved to the profile carries over to a computer with none saved, never over one it has saved, and a pick in the Code controls is saved to the profile', () => {
+      /* pending — needs an authenticated UI session with a profile that holds
+         a mode (like code-23); an Ask Me chosen on another computer stays
+         Ask Me. Covered meanwhile by the coding-mode-button Vitest "carried
+         over from the profile" cases, the desktop Rust
+         a_machine_with_no_mode_saved_takes_the_platform_choice,
+         a_saved_mode_is_never_replaced_by_the_platform_choice and
+         a_seed_over_an_unreadable_settings_file_is_refused (opencode_acp.rs),
+         and the phone Rust a_phone_with_no_mode_saved_takes_the_platform_choice,
+         a_mode_saved_on_the_phone_is_never_replaced_by_the_platform_choice and
+         the_platform_choice_is_never_saved_over_an_unreadable_config
+         (remote_code_client.rs) */
+    });
+
+    it.skip('code-49: the Code popover stays inside the window and scrolls below a pinned Code switch', () => {
+      /* pending — needs an authenticated UI session (like code-24); covered
+         meanwhile by the coding-mode-button Vitest "keeps the Code switch in
+         view and scrolls only what is below it" */
+    });
+
+    it.skip('code-50: in the mentor chat the approvals button sits first in the composer’s right-hand group, before the microphone, only while Code is on, and each composer of the canvas split shows its own until Code is switched off in either', () => {
+      /* pending — needs an authenticated UI session (like code-23); covered
+         meanwhile by the SdkChat Vitest "Code approvals" cases, the
+         coding-mode-button Vitest offer cases and the SDK's chat-input-form
+         "host action controls (slots.composerActionControls)" cases */
+    });
+
+    it.skip('code-51: at phone width the Code pill shows its name only when it is the one tool on or its popover is open, and its × whenever Code is on', () => {
+      /* pending — needs an authenticated UI session at phone width (like
+         code-50); covered meanwhile by the coding-mode-button Vitest
+         "CodingModeButton in the SDK composer’s tool row" cases and the SDK
+         composer-tool-row tests */
+    });
+
+    it.skip('code-52: tapping the Code pill while Code is off turns it on the way the switch does and opens the popover, and the × on the pill turns it off', () => {
+      /* pending — needs an authenticated UI session (like code-50); covered
+         meanwhile by the coding-mode-button Vitest "tapping the pill" cases
+         ("turns Code on while it is off, the way the switch does, and opens
+         the popover", "only opens the popover while bubblewrap is missing /
+         the on-device model cannot call tools, as the switch refuses too",
+         "only opens the popover before it knows where it runs", "only opens
+         and closes the popover while Code is on, which stays on with its x",
+         "puts the popover away without turning Code back on after it was
+         switched off there…") and its "its x" cases ("is gone while Code is
+         off and the popover closed…", "turns Code off from a closed popover,
+         which stays closed", "turns Code off from an open popover and closes
+         it", "works from the keyboard…"), plus "forces the same folder choice
+         the first time a tap on the pill turns Code on", "closes the popover
+         from the inline X without re-triggering it, leaving Code off while it
+         is off", and on the phone "only opens the popover on a tap while no
+         desktop is paired…" and "enables, from the pill and from the switch,
+         without the desktop folder-choice flow…" */
+    });
+
+    it.skip("code-53: a paired phone's Code runs inside the Mac's sandbox and can change files only in its workspace folders", () => {
+      /* pending — needs a paired phone driving the Mac's Code, which
+         tauri-driver cannot run; covered meanwhile by the Rust
+         remote_code.rs tests "the_phone_serve_runs_inside_the_code_sandbox",
+         "the_phone_serve_can_change_files_only_in_its_workspaces",
+         "the_phone_serve_is_confined_to_the_workspaces_root" and
+         "phone_code_starts_its_serve_only_through_the_sandboxed_command", the
+         opencode_acp.rs tests
+         "the_app_never_writes_through_a_link_in_a_config_home" and
+         "a_link_in_the_workspaces_root_is_never_used_as_a_workspace", and
+         the opt-in live "the_sandboxed_phone_serve_answers_and_is_confined"
+         (cargo test sandboxed_phone_serve -- --ignored --nocapture) */
     });
   });
 });

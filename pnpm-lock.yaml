@@ -41,8 +41,8 @@ overrides:
   '@puppeteer/browsers': '>=3.0.2'
   proxy-addr: '>=2.0.8 <3'
   body-parser: '>=2.4.0 <3'
-  '@modelcontextprotocol/sdk': '>=1.31.0 <2'
   '@iblai/mcp>zod': '>=4.6.6 <5'
+  '@modelcontextprotocol/sdk': '>=1.31.0 <2'
   prosemirror-view: '>=1.42.3 <2'
   source-map-js: '>=1.2.2 <2'
 

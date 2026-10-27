@@ -9,6 +9,13 @@ import {
   resetCodePermissionsForTests,
   useCodePermissionSessions,
 } from '../code-permission-card';
+import {
+  resetApprovalModeForTests,
+  setApprovalMode,
+  useApprovalMode,
+} from '@/components/chat-input-form/code-approvals-button';
+import { playAttentionChime } from '@/lib/attention-chime';
+import { toast } from 'sonner';
 
 /**
  * The inline Allow/Deny prompts Code shows before every tool call — reads included,
@@ -19,10 +26,11 @@ import {
  * one request — Rust forgets the id as soon as the first one lands.
  */
 
-const { listeners, unlisten, invoke } = vi.hoisted(() => ({
+const { listeners, unlisten, invoke, saveMetadata } = vi.hoisted(() => ({
   listeners: new Map<string, (evt: { payload: unknown }) => void>(),
   unlisten: vi.fn(),
   invoke: vi.fn(),
+  saveMetadata: vi.fn(),
 }));
 
 vi.mock('@tauri-apps/api/event', () => ({
@@ -36,6 +44,23 @@ vi.mock('@tauri-apps/api/event', () => ({
 
 vi.mock('@tauri-apps/api/core', () => ({
   invoke: (...args: unknown[]) => invoke(...args),
+}));
+
+const { appInBackground } = vi.hoisted(() => ({
+  appInBackground: { current: true },
+}));
+vi.mock('@/lib/attention-chime', () => ({
+  playAttentionChime: vi.fn(),
+  isAppInBackground: () => appInBackground.current,
+}));
+
+vi.mock('sonner', () => ({ toast: { error: vi.fn() } }));
+
+vi.mock('@iblai/iblai-js/data-layer', () => ({
+  useGetUserPlatformMetadataQuery: () => ({
+    data: { metadata: { code_mode: { permission_mode: 'manual' } } },
+  }),
+  useUpdateUserPlatformMetadataMutation: () => [saveMetadata],
 }));
 
 const GENERATION = 'opencode-1';
@@ -63,13 +88,18 @@ describe('CodePermissionCards', () => {
     // The store is module-level (one listener pair for the whole app), so it would
     // otherwise carry requests across tests.
     resetCodePermissionsForTests();
+    resetApprovalModeForTests();
+    appInBackground.current = true;
     vi.clearAllMocks();
     invoke.mockResolvedValue(undefined);
+    saveMetadata.mockReturnValue({ unwrap: async () => ({}) });
+    localStorage.setItem('tenant', 'acme');
     (window as unknown as Record<string, unknown>).__TAURI__ = {};
   });
 
   afterEach(() => {
     delete (window as unknown as Record<string, unknown>).__TAURI__;
+    localStorage.removeItem('tenant');
   });
 
   it('renders nothing until the backend asks for permission', () => {
@@ -128,6 +158,117 @@ describe('CodePermissionCards', () => {
   // `useSyncExternalStore`'s third argument. The store is module-level, so on a
   // server render it would otherwise hand one request's prompts to whoever is
   // rendering next; the server snapshot is empty on purpose.
+  it('switches to Automatic from the card: answers it, saves Automatic and shows it everywhere', async () => {
+    setApprovalMode('manual');
+    render(<CodePermissionCards generationId={GENERATION} />);
+    await emit('opencode:permission_request', REQUEST);
+
+    await userEvent.click(
+      screen.getByTestId('code-permission-switch-to-automatic'),
+    );
+
+    await waitFor(() =>
+      expect(invoke).toHaveBeenCalledWith('opencode_permission_respond', {
+        requestId: 'perm-1',
+        optionId: 'allow-once',
+      }),
+    );
+    expect(invoke).toHaveBeenCalledWith('set_opencode_permission_mode', {
+      mode: 'auto',
+    });
+    // Saved to the profile like a pick in the composer, so a computer with no
+    // mode saved starts on it too.
+    expect(saveMetadata).toHaveBeenCalledWith({
+      tenantKey: 'acme',
+      metadata: { code_mode: { permission_mode: 'auto' } },
+    });
+    const setModeCall = invoke.mock.calls.findIndex(
+      ([cmd]) => cmd === 'set_opencode_permission_mode',
+    );
+    expect(invoke.mock.invocationCallOrder[setModeCall]).toBeLessThan(
+      saveMetadata.mock.invocationCallOrder[0],
+    );
+    expect(screen.queryByText('Run a shell command')).not.toBeInTheDocument();
+    expect(renderHook(() => useApprovalMode()).result.current).toBe('auto');
+  });
+
+  it('goes back to Ask Me and says so when the switch cannot be saved, still allowing this one', async () => {
+    // Shown as Automatic but never saved, Code would keep asking in Rust while
+    // every control said it would not.
+    const err = vi.spyOn(console, 'error').mockImplementation(() => {});
+    setApprovalMode('manual');
+    invoke.mockImplementation(async (cmd: string) => {
+      if (cmd === 'set_opencode_permission_mode') throw new Error('disk full');
+    });
+    render(<CodePermissionCards generationId={GENERATION} />);
+    await emit('opencode:permission_request', REQUEST);
+
+    await userEvent.click(
+      screen.getByTestId('code-permission-switch-to-automatic'),
+    );
+
+    await waitFor(() =>
+      expect(invoke).toHaveBeenCalledWith('opencode_permission_respond', {
+        requestId: 'perm-1',
+        optionId: 'allow-once',
+      }),
+    );
+    expect(renderHook(() => useApprovalMode()).result.current).toBe('manual');
+    expect(toast.error).toHaveBeenCalledWith(
+      'The approval setting could not be saved. Code still uses the previous setting.',
+    );
+    expect(saveMetadata).not.toHaveBeenCalled();
+    expect(screen.queryByText('Run a shell command')).not.toBeInTheDocument();
+    err.mockRestore();
+  });
+
+  it('offers Switch to Automatic only on Code prompts that can be allowed', async () => {
+    render(<CodePermissionCards generationId={GENERATION} />);
+    // A Browse run follows Cowork's own Approvals; this one has nothing to allow.
+    act(() =>
+      addPermissionRequest({
+        ...REQUEST,
+        request_id: 'browse-1',
+        respond: vi.fn(),
+      }),
+    );
+    await emit('opencode:permission_request', {
+      ...REQUEST,
+      request_id: 'perm-2',
+      allow_option_id: null,
+    });
+
+    expect(screen.getAllByText('Run a shell command')).toHaveLength(2);
+    expect(
+      screen.queryByTestId('code-permission-switch-to-automatic'),
+    ).not.toBeInTheDocument();
+  });
+
+  it('stays quiet while the user is in the app — the card is the signal', async () => {
+    appInBackground.current = false;
+    render(<CodePermissionCards generationId={GENERATION} />);
+    await emit('opencode:permission_request', REQUEST);
+
+    expect(screen.getByText('Run a shell command')).toBeInTheDocument();
+    expect(playAttentionChime).not.toHaveBeenCalled();
+  });
+
+  it('chimes once for each new prompt while the app is in the background, never for a repeat', async () => {
+    render(<CodePermissionCards generationId={GENERATION} />);
+    await emit('opencode:permission_request', REQUEST);
+    await emit('opencode:permission_request', REQUEST);
+    expect(playAttentionChime).toHaveBeenCalledTimes(1);
+
+    act(() =>
+      addPermissionRequest({
+        ...REQUEST,
+        request_id: 'browse-1',
+        respond: vi.fn(),
+      }),
+    );
+    expect(playAttentionChime).toHaveBeenCalledTimes(2);
+  });
+
   it('renders nothing on the server, whatever the store holds', () => {
     addPermissionRequest(REQUEST);
 

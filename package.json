@@ -1,6 +1,6 @@
 {
   "name": "ibl-web-nextjs-mentor-spa",
-  "version": "0.182.0",
+  "version": "0.182.1",
   "private": false,
   "packageManager": "pnpm@10.11.1",
   "engines": {
@@ -163,10 +163,10 @@
   "devDependencies": {
     "@ai-sdk/openai-compatible": "3.0.5",
     "@axe-core/playwright": "4.10.2",
-    "@next/bundle-analyzer": "15.5.4",
     "@commitlint/cli": "20.5.0",
     "@commitlint/config-conventional": "20.5.0",
     "@eslint/eslintrc": "3.3.5",
+    "@next/bundle-analyzer": "15.5.4",
     "@playwright/test": "1.56.0",
     "@release-it/conventional-changelog": "10.0.6",
     "@tailwindcss/postcss": "4.1.4",

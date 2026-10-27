@@ -132,14 +132,21 @@ export function resolveIsBaseAgentMentor(
 }
 
 /**
- * Visual grouping shared by the platform NavBar dropdown (3 columns / mobile
- * accordion) and the EditMentorModal sidebar (3 category tabs). Optional on
+ * Visual grouping shared by the platform NavBar dropdown (4 columns / mobile
+ * accordion) and the EditMentorModal sidebar (4 category tabs). Optional on
  * a segment so ad-hoc/hidden tabs can omit it and fall through to a default.
+ *
+ * Setup holds tabs that change what the agent says or does in a chat;
+ * Policies holds the rules around it (who may use it, spend, personal data,
+ * moderation, terms) that never change its replies. Integrations is what the
+ * agent can use beyond chatting and where else people reach it; Activity is
+ * what has happened with it.
  */
 export type MentorSegmentNavCategory =
-  | 'configurations'
+  | 'setup'
+  | 'policies'
   | 'integrations'
-  | 'runtime';
+  | 'activity';
 
 /**
  * Category order + display titles. Drives the left-to-right column order
@@ -152,13 +159,10 @@ export const MENTOR_SEGMENT_NAV_CATEGORIES: ReadonlyArray<{
   /** i18n key in the `header` messages namespace. */
   titleKey: string;
 }> = [
-  {
-    key: 'configurations',
-    title: 'Configurations',
-    titleKey: 'configurations',
-  },
+  { key: 'setup', title: 'Setup', titleKey: 'setup' },
+  { key: 'policies', title: 'Policies', titleKey: 'policies' },
   { key: 'integrations', title: 'Integrations', titleKey: 'integrations' },
-  { key: 'runtime', title: 'Runtime', titleKey: 'runtime' },
+  { key: 'activity', title: 'Activity', titleKey: 'activity' },
 ];
 
 export type MentorSegment = {
@@ -212,34 +216,7 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
     ],
-    navCategory: 'configurations',
-  },
-  {
-    value: MODALS.EDIT_MENTOR.tabs.sandbox,
-    label: 'Sandbox',
-    labelKey: 'sandbox',
-    icon: Container,
-    userTypes: [UserType.ADMIN],
-    permissionFieldsCheck: [],
-    mentorVisibility: [
-      MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
-      MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
-    ],
-    // Always visible. The "Dedicated sandbox" (`enable_claw`) master toggle
-    // now lives inline on the Sandbox tab itself; the tab is where admins turn
-    // the capability on and connect it to an instance.
-    navCategory: 'integrations',
-  },
-  {
-    value: MODALS.EDIT_MENTOR.tabs.access,
-    label: 'Access',
-    labelKey: 'access',
-    icon: UserCog,
-    userTypes: [UserType.ADMIN],
-    rbacResource: (mentorDbId) => `/mentors/${mentorDbId}/#read_shared_mentor`,
-    permissionFieldsCheck: [],
-    mentorVisibility: [MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS],
-    navCategory: 'configurations',
+    navCategory: 'setup',
   },
   {
     value: MODALS.EDIT_MENTOR.tabs.llm,
@@ -253,45 +230,7 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
     ],
-    navCategory: 'configurations',
-  },
-  {
-    value: MODALS.EDIT_MENTOR.tabs.spend_caps,
-    label: 'Billing',
-    labelKey: 'billing',
-    icon: CircleDollarSign,
-    // Admin-only: the tab configures tenant/agent/per-user LLM spend limits
-    // and shows dollar figures. The backend gates each scope with RBAC
-    // (`Ibl.Mentor/SpendCaps/*`) but exposes no frontend-discoverable
-    // resource path yet, so the userTypes filter alone gates visibility
-    // (mirroring Tasks / Support / LTI). The SDK tab renders a friendly
-    // denied state per scope when the backend answers 403.
-    userTypes: [UserType.ADMIN],
-    permissionFieldsCheck: [],
-    mentorVisibility: [
-      MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
-      MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
-    ],
-    navCategory: 'configurations',
-  },
-  {
-    value: MODALS.EDIT_MENTOR.tabs.voice,
-    label: 'Voice',
-    labelKey: 'voice',
-    icon: Volume2,
-    userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
-    // Backend doesn't yet expose voice_provider/openai_voice/google_voice in
-    // mentorSettings.permissions.field, nor whitelist /mentors/{id}/#voice_settings.
-    // Re-add `rbacResource` + `permissionFieldsCheck` once those land.
-    permissionFieldsCheck: [],
-    mentorVisibility: [
-      MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
-      MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
-    ],
-    // Always visible. The "Enable voice calls" (`show_voice_call`) master
-    // toggle now lives inline at the top of the Voice tab; turning it off grays
-    // out the voice/call configuration below instead of hiding the whole tab.
-    navCategory: 'configurations',
+    navCategory: 'setup',
   },
   {
     value: MODALS.EDIT_MENTOR.tabs.prompts,
@@ -310,7 +249,7 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
     ],
-    navCategory: 'configurations',
+    navCategory: 'setup',
   },
   {
     value: MODALS.EDIT_MENTOR.tabs.skills,
@@ -338,79 +277,26 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
     // a sandbox is wired, and the SDK's <AgentSkills/> renders a "connect a
     // sandbox" grayed state until then.
     enabledThroughConfig: (flags) => flags.isBaseAgent,
-    navCategory: 'configurations',
+    navCategory: 'setup',
   },
   {
-    value: MODALS.EDIT_MENTOR.tabs.privacy,
-    label: 'Privacy',
-    labelKey: 'privacy',
-    icon: ShieldCheck,
+    value: MODALS.EDIT_MENTOR.tabs.datasets,
+    label: 'Datasets',
+    labelKey: 'datasets',
+    icon: Grid,
     userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
+    rbacResource: (mentorDbId) => `/mentors/${mentorDbId}/documents/#list`,
     permissionFieldsCheck: [],
     mentorVisibility: [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
     ],
-    // Always visible. The "PII filtering" (`enable_privacy_router`) master
-    // toggle now lives inline at the top of the Privacy tab; turning it off
-    // grays out the PII rules below instead of hiding the whole tab.
-    navCategory: 'configurations',
+    // Setup, not Integrations: the documents are the knowledge the agent
+    // answers from. Drive, Dropbox, GitHub and the crawler are only places to
+    // upload from — the tab connects the agent to nothing outside the app.
+    navCategory: 'setup',
   },
   {
-    value: MODALS.EDIT_MENTOR.tabs.safety,
-    label: 'Safety',
-    labelKey: 'safety',
-    icon: Shield,
-    userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
-    rbacResource: (mentorDbId) =>
-      `/mentors/${mentorDbId}/#view_moderation_logs`,
-    permissionFieldsCheck: [
-      'moderation_system_prompt',
-      'safety_system_prompt',
-      'moderation_response',
-      'safety_response',
-    ],
-    mentorVisibility: [
-      MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
-      MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
-    ],
-    navCategory: 'configurations',
-  },
-  {
-    value: MODALS.EDIT_MENTOR.tabs.tasks,
-    label: 'Tasks',
-    labelKey: 'tasks',
-    icon: CalendarClock,
-    // Platform-admin-only until the backend exposes an RBAC resource for
-    // periodic agents. No `rbacResource` set — the userTypes filter alone
-    // gates visibility (mirroring Sandbox / Access).
-    userTypes: [UserType.ADMIN],
-    permissionFieldsCheck: [],
-    mentorVisibility: [
-      MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
-      MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
-    ],
-    navCategory: 'runtime',
-  },
-  {
-    value: MODALS.EDIT_MENTOR.tabs.disclaimer,
-    label: 'Disclaimers',
-    labelKey: 'disclaimers',
-    icon: FileWarning,
-    userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
-    rbacResource: (mentorDbId) =>
-      `/mentors/${mentorDbId}/#view_disclaimers&/mentors/${mentorDbId}/#view_disclaimers_menu`,
-    permissionFieldsCheck: ['disclaimer'],
-    mentorVisibility: [
-      MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
-      MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
-    ],
-    navCategory: 'configurations',
-  },
-  {
-    // Deliberately the second-to-last Configurations segment (only Screen
-    // comes after it) — keep this entry right after Disclaimers when
-    // reordering the array.
     value: MODALS.EDIT_MENTOR.tabs.grader,
     label: 'Grader',
     labelKey: 'grader',
@@ -432,10 +318,28 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
     // of the Grader tab (it attaches/detaches the Grading tool on the agent);
     // turning it off grays out the rubric configuration below instead of
     // hiding the tab, and the rubric is preserved across disable/re-enable.
-    navCategory: 'configurations',
+    navCategory: 'setup',
   },
   {
-    // Deliberately the last Configurations segment — after Grader.
+    value: MODALS.EDIT_MENTOR.tabs.voice,
+    label: 'Voice',
+    labelKey: 'voice',
+    icon: Volume2,
+    userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
+    // Backend doesn't yet expose voice_provider/openai_voice/google_voice in
+    // mentorSettings.permissions.field, nor whitelist /mentors/{id}/#voice_settings.
+    // Re-add `rbacResource` + `permissionFieldsCheck` once those land.
+    permissionFieldsCheck: [],
+    mentorVisibility: [
+      MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
+      MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
+    ],
+    // Always visible. The "Enable voice calls" (`show_voice_call`) master
+    // toggle now lives inline at the top of the Voice tab; turning it off grays
+    // out the voice/call configuration below instead of hiding the whole tab.
+    navCategory: 'setup',
+  },
+  {
     value: MODALS.EDIT_MENTOR.tabs.screenshare,
     label: 'Screen',
     labelKey: 'screenShare',
@@ -449,7 +353,88 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
     // Always visible. The "Enable screen sharing" (`enable_video`) master
     // toggle now lives inline at the top of the Screen tab; turning it
     // off grays out the screen-sharing prompts below instead of hiding the tab.
-    navCategory: 'configurations',
+    navCategory: 'setup',
+  },
+  {
+    value: MODALS.EDIT_MENTOR.tabs.access,
+    label: 'Access',
+    labelKey: 'access',
+    icon: UserCog,
+    userTypes: [UserType.ADMIN],
+    rbacResource: (mentorDbId) => `/mentors/${mentorDbId}/#read_shared_mentor`,
+    permissionFieldsCheck: [],
+    mentorVisibility: [MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS],
+    navCategory: 'policies',
+  },
+  {
+    value: MODALS.EDIT_MENTOR.tabs.spend_caps,
+    label: 'Billing',
+    labelKey: 'billing',
+    icon: CircleDollarSign,
+    // Admin-only: the tab configures tenant/agent/per-user LLM spend limits
+    // and shows dollar figures. The backend gates each scope with RBAC
+    // (`Ibl.Mentor/SpendCaps/*`) but exposes no frontend-discoverable
+    // resource path yet, so the userTypes filter alone gates visibility
+    // (mirroring Tasks / Support / LTI). The SDK tab renders a friendly
+    // denied state per scope when the backend answers 403.
+    userTypes: [UserType.ADMIN],
+    permissionFieldsCheck: [],
+    mentorVisibility: [
+      MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
+      MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
+    ],
+    navCategory: 'policies',
+  },
+  {
+    value: MODALS.EDIT_MENTOR.tabs.privacy,
+    label: 'Privacy',
+    labelKey: 'privacy',
+    icon: ShieldCheck,
+    userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
+    permissionFieldsCheck: [],
+    mentorVisibility: [
+      MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
+      MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
+    ],
+    // Always visible. The "PII filtering" (`enable_privacy_router`) master
+    // toggle now lives inline at the top of the Privacy tab; turning it off
+    // grays out the PII rules below instead of hiding the whole tab.
+    navCategory: 'policies',
+  },
+  {
+    value: MODALS.EDIT_MENTOR.tabs.safety,
+    label: 'Safety',
+    labelKey: 'safety',
+    icon: Shield,
+    userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
+    rbacResource: (mentorDbId) =>
+      `/mentors/${mentorDbId}/#view_moderation_logs`,
+    permissionFieldsCheck: [
+      'moderation_system_prompt',
+      'safety_system_prompt',
+      'moderation_response',
+      'safety_response',
+    ],
+    mentorVisibility: [
+      MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
+      MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
+    ],
+    navCategory: 'policies',
+  },
+  {
+    value: MODALS.EDIT_MENTOR.tabs.disclaimer,
+    label: 'Disclaimers',
+    labelKey: 'disclaimers',
+    icon: FileWarning,
+    userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
+    rbacResource: (mentorDbId) =>
+      `/mentors/${mentorDbId}/#view_disclaimers&/mentors/${mentorDbId}/#view_disclaimers_menu`,
+    permissionFieldsCheck: ['disclaimer'],
+    mentorVisibility: [
+      MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
+      MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
+    ],
+    navCategory: 'policies',
   },
   {
     value: MODALS.EDIT_MENTOR.tabs.tools,
@@ -481,108 +466,29 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
     navCategory: 'integrations',
   },
   {
-    value: MODALS.EDIT_MENTOR.tabs.memory,
-    label: 'Memory',
-    labelKey: 'memory',
-    icon: Archive,
-    userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
-    rbacResource: (mentorDbId) => `/mentors/${mentorDbId}/memory/#list`,
-    permissionFieldsCheck: [],
-    mentorVisibility: [
-      MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
-      MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
-    ],
-    // Always visible. The "Remember past conversations"
-    // (`enable_memory_component`) master toggle now lives inline at the top of
-    // the Memory tab; turning it off grays out the memory management below
-    // instead of hiding the whole tab.
-    navCategory: 'runtime',
-  },
-  {
-    value: MODALS.EDIT_MENTOR.tabs.history,
-    label: 'History',
-    labelKey: 'history',
-    icon: Clock,
-    userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
-    rbacResource: (mentorDbId) => `/mentors/${mentorDbId}/#view_chat_history`,
-    permissionFieldsCheck: [],
-    mentorVisibility: [
-      MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
-      MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
-    ],
-    navCategory: 'runtime',
-  },
-  {
-    value: MODALS.EDIT_MENTOR.tabs.human_support,
-    label: 'Support',
-    labelKey: 'support',
-    icon: Headset,
-    // Admin-only ticket inbox (view / reply / close support requests).
-    // No `rbacResource` yet — the backend doesn't expose one for support
-    // tickets, so the userTypes filter alone gates visibility (mirroring
-    // Tasks / Sandbox / Access).
+    value: MODALS.EDIT_MENTOR.tabs.sandbox,
+    label: 'Sandbox',
+    labelKey: 'sandbox',
+    icon: Container,
     userTypes: [UserType.ADMIN],
     permissionFieldsCheck: [],
     mentorVisibility: [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
     ],
-    navCategory: 'runtime',
-  },
-  {
-    value: MODALS.EDIT_MENTOR.tabs.audit_log,
-    label: 'Audit',
-    labelKey: 'audit',
-    icon: ScrollText,
-    userTypes: [UserType.ADMIN],
-    rbacResource: (mentorDbId) => `/mentors/${mentorDbId}/#view_audit_logs`,
-    permissionFieldsCheck: [],
-    mentorVisibility: [MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS],
-    navCategory: 'runtime',
-  },
-  {
-    value: MODALS.EDIT_MENTOR.tabs.datasets,
-    label: 'Datasets',
-    labelKey: 'datasets',
-    icon: Grid,
-    userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
-    rbacResource: (mentorDbId) => `/mentors/${mentorDbId}/documents/#list`,
-    permissionFieldsCheck: [],
-    mentorVisibility: [
-      MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
-      MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
-    ],
+    // Always visible. The "Dedicated sandbox" (`enable_claw`) master toggle
+    // now lives inline on the Sandbox tab itself; the tab is where admins turn
+    // the capability on and connect it to an instance.
     navCategory: 'integrations',
   },
   {
-    value: MODALS.EDIT_MENTOR.tabs.evaluation,
-    label: 'Evals',
-    labelKey: 'evals',
-    icon: FlaskConical,
-    // Strictly admin-only, in BOTH the nav-bar dropdown and the Edit Agent
-    // modal — the userTypes filter alone gates visibility (mirrors
-    // Tasks/Sandbox). Deliberately NO `rbacResource`: `isUserTypeAllowed`
-    // treats an RBAC grant as an alternative to the userTypes check, so any
-    // resource listed here would let non-admins holding that grant see the
-    // tab (an earlier copy-paste of the Datasets resource did exactly that).
-    // Do not add one back without a dedicated evals RBAC action.
-    userTypes: [UserType.ADMIN],
-    permissionFieldsCheck: [],
-    mentorVisibility: [MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS],
-    // Without a navCategory the new categorized layout (modal sidebar +
-    // nav-bar dropdown) silently drops this segment — both consumers skip
-    // any segment lacking a category. Agent evaluation reports on run
-    // performance, so it belongs in Runtime alongside History/Audit.
-    navCategory: 'runtime',
-  },
-  {
-    value: MODALS.EDIT_MENTOR.tabs.api,
-    label: 'API',
-    labelKey: 'api',
-    icon: Key,
+    value: MODALS.EDIT_MENTOR.tabs.embed,
+    label: 'Embed',
+    labelKey: 'embed',
+    icon: MonitorSmartphone,
     userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
-    rbacResource: () => '/apitokens/#list',
-    permissionFieldsCheck: [],
+    rbacResource: (mentorDbId) => `/mentors/${mentorDbId}/#can_use_embed`,
+    permissionFieldsCheck: ['custom_css', 'allow_anonymous'],
     mentorVisibility: [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
@@ -612,18 +518,115 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
     navCategory: 'integrations',
   },
   {
-    value: MODALS.EDIT_MENTOR.tabs.embed,
-    label: 'Embed',
-    labelKey: 'embed',
-    icon: MonitorSmartphone,
+    value: MODALS.EDIT_MENTOR.tabs.api,
+    label: 'API',
+    labelKey: 'api',
+    icon: Key,
     userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
-    rbacResource: (mentorDbId) => `/mentors/${mentorDbId}/#can_use_embed`,
-    permissionFieldsCheck: ['custom_css', 'allow_anonymous'],
+    rbacResource: () => '/apitokens/#list',
+    permissionFieldsCheck: [],
     mentorVisibility: [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
     ],
     navCategory: 'integrations',
+  },
+  {
+    value: MODALS.EDIT_MENTOR.tabs.history,
+    label: 'History',
+    labelKey: 'history',
+    icon: Clock,
+    userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
+    rbacResource: (mentorDbId) => `/mentors/${mentorDbId}/#view_chat_history`,
+    permissionFieldsCheck: [],
+    mentorVisibility: [
+      MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
+      MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
+    ],
+    navCategory: 'activity',
+  },
+  {
+    value: MODALS.EDIT_MENTOR.tabs.memory,
+    label: 'Memory',
+    labelKey: 'memory',
+    icon: Archive,
+    userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
+    rbacResource: (mentorDbId) => `/mentors/${mentorDbId}/memory/#list`,
+    permissionFieldsCheck: [],
+    mentorVisibility: [
+      MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
+      MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
+    ],
+    // Always visible. The "Remember past conversations"
+    // (`enable_memory_component`) master toggle now lives inline at the top of
+    // the Memory tab; turning it off grays out the memory management below
+    // instead of hiding the whole tab.
+    navCategory: 'activity',
+  },
+  {
+    value: MODALS.EDIT_MENTOR.tabs.human_support,
+    label: 'Support',
+    labelKey: 'support',
+    icon: Headset,
+    // Admin-only ticket inbox (view / reply / close support requests).
+    // No `rbacResource` yet — the backend doesn't expose one for support
+    // tickets, so the userTypes filter alone gates visibility (mirroring
+    // Tasks / Sandbox / Access).
+    userTypes: [UserType.ADMIN],
+    permissionFieldsCheck: [],
+    mentorVisibility: [
+      MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
+      MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
+    ],
+    navCategory: 'activity',
+  },
+  {
+    value: MODALS.EDIT_MENTOR.tabs.tasks,
+    label: 'Tasks',
+    labelKey: 'tasks',
+    icon: CalendarClock,
+    // Platform-admin-only until the backend exposes an RBAC resource for
+    // periodic agents. No `rbacResource` set — the userTypes filter alone
+    // gates visibility (mirroring Sandbox / Access).
+    userTypes: [UserType.ADMIN],
+    permissionFieldsCheck: [],
+    mentorVisibility: [
+      MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
+      MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
+    ],
+    navCategory: 'activity',
+  },
+  {
+    value: MODALS.EDIT_MENTOR.tabs.evaluation,
+    label: 'Evals',
+    labelKey: 'evals',
+    icon: FlaskConical,
+    // Strictly admin-only, in BOTH the nav-bar dropdown and the Edit Agent
+    // modal — the userTypes filter alone gates visibility (mirrors
+    // Tasks/Sandbox). Deliberately NO `rbacResource`: `isUserTypeAllowed`
+    // treats an RBAC grant as an alternative to the userTypes check, so any
+    // resource listed here would let non-admins holding that grant see the
+    // tab (an earlier copy-paste of the Datasets resource did exactly that).
+    // Do not add one back without a dedicated evals RBAC action.
+    userTypes: [UserType.ADMIN],
+    permissionFieldsCheck: [],
+    mentorVisibility: [MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS],
+    // Without a navCategory the new categorized layout (modal sidebar +
+    // nav-bar dropdown) silently drops this segment — both consumers skip
+    // any segment lacking a category. Agent evaluation reports on run
+    // performance, so it belongs in Activity alongside History/Audit.
+    navCategory: 'activity',
+  },
+  {
+    value: MODALS.EDIT_MENTOR.tabs.audit_log,
+    label: 'Audit',
+    labelKey: 'audit',
+    icon: ScrollText,
+    userTypes: [UserType.ADMIN],
+    rbacResource: (mentorDbId) => `/mentors/${mentorDbId}/#view_audit_logs`,
+    permissionFieldsCheck: [],
+    mentorVisibility: [MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS],
+    navCategory: 'activity',
   },
   {
     // Analytics "hub" tab. Unlike other tabs it doesn't render dashboards
@@ -643,7 +646,7 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
     ],
-    navCategory: 'runtime',
+    navCategory: 'activity',
   },
 ];
 

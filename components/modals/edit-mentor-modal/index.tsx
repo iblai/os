@@ -197,7 +197,7 @@ export function EditMentorModal({ isOpen, onClose }: Props) {
   const activeSegment = filteredSegments.find((s) => s.value === activeTab);
 
   // Only categories that actually have items get a column / pill. If
-  // RBAC removes every Integrations or Analytics segment for a user,
+  // RBAC removes every Integrations or Activity segment for a user,
   // the whole category disappears from the strip — no greyed-out pills.
   const visibleCategories = useMemo(
     () =>
@@ -208,7 +208,7 @@ export function EditMentorModal({ isOpen, onClose }: Props) {
   );
 
   const fallbackCategory =
-    visibleCategories[0]?.key ?? ('configurations' as MentorSegmentNavCategory);
+    visibleCategories[0]?.key ?? ('setup' as MentorSegmentNavCategory);
 
   // Track the active category for the sidebar tab strip. Defaults to the
   // category of the active segment so deep-linking to a tab opens the
@@ -229,7 +229,7 @@ export function EditMentorModal({ isOpen, onClose }: Props) {
   }, [activeSegment?.navCategory]);
 
   // Self-correct when the current category becomes empty (e.g. an
-  // admin's Analytics tabs disappear after a permissions refresh). We
+  // admin's Activity tabs disappear after a permissions refresh). We
   // snap to the first visible category so the sidebar never gets stuck
   // pointing at an empty bucket.
   useEffect(() => {
@@ -261,6 +261,11 @@ export function EditMentorModal({ isOpen, onClose }: Props) {
   // Drop the category strip entirely when only one bucket has items —
   // no point in showing a single pill above the segment list.
   const showCategoryStrip = visibleCategories.length > 1;
+  // Each column takes its title's width, then an equal share of what is left.
+  // Equal quarters of the 320px sidebar (~71px) are narrower than the longest
+  // titles need (~80px for fr "Configuration" / es "Integraciones" with
+  // padding), while all four titles together fit in every locale.
+  const stripColumns = `repeat(${visibleCategories.length}, auto)`;
 
   return (
     /*
@@ -286,9 +291,9 @@ export function EditMentorModal({ isOpen, onClose }: Props) {
     >
       {isOpen && (
         <DialogContent
-          className={`mx-auto w-[85vw] max-w-7xl gap-0 overflow-hidden p-0 md:w-full`}
+          className={`mx-auto w-[85vw] max-w-[90rem] gap-0 overflow-hidden p-0 md:w-full`}
           style={{
-            height: '75vh',
+            height: '85vh',
             display: 'flex',
             flexDirection: 'column',
           }}
@@ -327,7 +332,7 @@ export function EditMentorModal({ isOpen, onClose }: Props) {
                     </DialogTitle>
                   </DialogHeader>
                 </div>
-                {/* Desktop Sidebar - 3-category tab strip + filtered segment list */}
+                {/* Desktop Sidebar - category tab strip + filtered segment list */}
                 <div className="hidden w-80 min-w-0 flex-shrink-0 flex-col border-r border-gray-200 bg-gray-50 lg:flex dark:border-gray-800 dark:bg-gray-900">
                   <DialogHeader className="flex h-[73px] flex-shrink-0 justify-start border-b border-gray-200 p-4 dark:border-gray-800">
                     <DialogTitle className="text-lg font-semibold text-gray-900">
@@ -339,8 +344,7 @@ export function EditMentorModal({ isOpen, onClose }: Props) {
                     doesn't drive content, only filters the segment list
                     below. Hidden entirely when only one category has
                     items (no point showing a strip with a single pill).
-                    Column count is dynamic so 2 visible buckets get a
-                    2-col grid instead of 3 with an empty slot. */}
+                    Column count follows the visible bucket count. */}
                     {showCategoryStrip && (
                       // Plain button group rather than Radix Tabs — the
                       // category strip only filters the segment list below;
@@ -349,23 +353,15 @@ export function EditMentorModal({ isOpen, onClose }: Props) {
                       // (axe-core flags it under aria-valid-attr-value), so
                       // we use `<button role="tab" aria-selected>` directly.
                       //
-                      // Sizing: the 320px sidebar leaves only ~96px per
-                      // grid cell with a 3-category strip. "Configurations"
-                      // (14 chars) at default `text-xs px-2` renders ~107px
-                      // and pushes its sibling cells right (reads as
-                      // "wrong padding on right" on the active Configurations
-                      // pill). Shrinking to `text-[11px] px-1.5` brings it
-                      // to ~89px so all three labels render in full and the
-                      // grid honors its `1fr` share. `whitespace-nowrap` +
-                      // `min-w-0` keeps it on one line even if the parent
-                      // shrinks unexpectedly.
+                      // Sizing: see `stripColumns`. `text-[11px] px-1` keeps
+                      // the four titles inside the 320px sidebar;
+                      // `whitespace-nowrap` + `min-w-0` keeps each on one line
+                      // even if the parent shrinks unexpectedly.
                       <div
                         role="tablist"
                         aria-label={t('agentSettingsCategories')}
                         className="mb-2 box-border grid h-auto w-full gap-1 rounded-lg bg-gray-100 p-1 dark:bg-gray-800"
-                        style={{
-                          gridTemplateColumns: `repeat(${visibleCategories.length}, minmax(0, 1fr))`,
-                        }}
+                        style={{ gridTemplateColumns: stripColumns }}
                       >
                         {visibleCategories.map((category) => {
                           const isActive = activeCategory === category.key;
@@ -433,16 +429,12 @@ export function EditMentorModal({ isOpen, onClose }: Props) {
                 {/* Mobile and Tablet — category tab strip + segment select */}
                 <div className="border-b border-gray-200 lg:hidden">
                   {showCategoryStrip && (
-                    // See desktop block above for the sizing rationale —
-                    // mobile has more horizontal room so the labels render
-                    // even more comfortably at `text-[11px] px-1.5`.
+                    // See `stripColumns` for the sizing rationale.
                     <div
                       role="tablist"
                       aria-label={t('agentSettingsCategories')}
                       className="mx-3 mt-2 box-border grid h-auto w-[calc(100%-1.5rem)] gap-1 rounded-lg bg-gray-100 p-1"
-                      style={{
-                        gridTemplateColumns: `repeat(${visibleCategories.length}, minmax(0, 1fr))`,
-                      }}
+                      style={{ gridTemplateColumns: stripColumns }}
                     >
                       {visibleCategories.map((category) => {
                         const isActive = activeCategory === category.key;

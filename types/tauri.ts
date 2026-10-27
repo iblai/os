@@ -128,6 +128,7 @@ export const TAURI_EVENTS = {
 export const TAURI_COMMANDS = {
   INSTALL_OLLAMA: 'install_ollama',
   STOP_OLLAMA: 'stop_ollama',
+  WARM_UP_LOCAL_CHAT: 'warm_up_local_chat',
   CHECK_OLLAMA_STATUS: 'check_ollama_status',
   // Path to the user-editable mcp-config.json (MCP servers are managed in-file).
   GET_MCP_CONFIG_PATH: 'get_mcp_config_path',

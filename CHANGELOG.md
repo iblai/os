@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.182.1](https://github.com/iblai/os/compare/v0.182.0...v0.182.1) (2026-10-27)
+
+### Bug Fixes
+
+* **os:** adding claude review fixes ([8bbeb56](https://github.com/iblai/os/commit/8bbeb56bd01f914318c2dbc381fb06768d632a1e))
+* **os:** adding fix for the claude review ([54877ba](https://github.com/iblai/os/commit/54877bacc018ab748438e8766f8d0dd8364577c9))
+* **os:** adding fix for the code pill ([cb30f6d](https://github.com/iblai/os/commit/cb30f6d79278548969deb87369c41a6c09c85e0a))
+* **os:** adding fix for the security audit issues ([723bce1](https://github.com/iblai/os/commit/723bce1d45087babc332555d68e23dce7959c810))
+* **os:** adding fix for the unit test coverage ([0b9a20f](https://github.com/iblai/os/commit/0b9a20fa5f6decf176c23421be1e4345f42c197b))
+* **os:** adding fixes for mac app and sdk bump ([8653aee](https://github.com/iblai/os/commit/8653aee622e1ede7eabc178c2763832759965929))
+* **os:** adding fixes for the auto mode and agent categories to 4 ([efc6704](https://github.com/iblai/os/commit/efc6704ff0ef69bbb223e32bda703953aced65c5))
+* **os:** fixes for security audit ([39b36d0](https://github.com/iblai/os/commit/39b36d0ef28f4c70cbc20ce116f280051b8f4f68))
+* **os:** fixes for the audit ([0990110](https://github.com/iblai/os/commit/0990110bc2539d870650763bcb0c14891a013f0f))
+* **os:** security audit fixes ([260ed62](https://github.com/iblai/os/commit/260ed62e6ab96679b1659571f0055e31a4d649c1))
+* **os:** take the 2.45.1 host half, drop the parity test, correct the ledgers ([46b59c7](https://github.com/iblai/os/commit/46b59c7bc89d9c0bdbe5807354da3eb15ff784b3))
+
+### Chores
+
+* **tauri:** release app-v0.95.30 ([c1273df](https://github.com/iblai/os/commit/c1273dfa92bab4f7c611aae80e07955eb3537ead))
+
 ## [0.182.0](https://github.com/iblai/os/compare/v0.181.2...v0.182.0) (2026-10-26)
 
 ### Features

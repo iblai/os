@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-10-24 | 1017 checkpoints (972 covered, 11 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 102 journeys (101 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-10-27 | 1020 checkpoints (973 covered, 13 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 102 journeys (101 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -104,9 +104,9 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 6: Mentor Management — Admin (23 checkpoints) — `journeys/06-mentor-management-admin.spec.ts`
+## Journey 6: Mentor Management — Admin (24 checkpoints) — `journeys/06-mentor-management-admin.spec.ts`
 
-**Source files:** `components/modals/create-mentor-modal.tsx`, `components/modals/edit-mentor-modal/index.tsx`, `components/modals/edit-mentor-modal/tabs/settings-tab.tsx`, `components/modals/edit-mentor-modal/llm-tab.tsx`, `components/modals/edit-mentor-modal/tabs/tools-tab.tsx`, `components/modals/edit-mentor-modal/tabs/prompts-tab.tsx`, `components/modals/settings-modal.tsx`, `hooks/use-mentors.ts`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`, `lib/utils.ts`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`
+**Source files:** `components/modals/create-mentor-modal.tsx`, `components/modals/edit-mentor-modal/index.tsx`, `hooks/use-mentor-segments.ts`, `components/modals/edit-mentor-modal/tabs/settings-tab.tsx`, `components/modals/edit-mentor-modal/llm-tab.tsx`, `components/modals/edit-mentor-modal/tabs/tools-tab.tsx`, `components/modals/edit-mentor-modal/tabs/prompts-tab.tsx`, `components/modals/settings-modal.tsx`, `hooks/use-mentors.ts`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`, `lib/utils.ts`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`
 
 _Note: the LLM tab is served by the SDK's `AgentLLMTab`; `components/modals/edit-mentor-modal/llm-tab.tsx` is the thin wrapper over it, and resolves the model label the nav-bar badge shows (see also Journey 28)._
 
@@ -133,6 +133,7 @@ _Note: the LLM tab is served by the SDK's `AgentLLMTab`; `components/modals/edit
 - [x] Issue #2502: LLM Selection model picker rows render the backend's `chat_models[].display_name` (falling back to `llm_name`), verified against the same live catalogue response
 - [x] Issue #2502: no network requests are made for the 15 deleted static `/llm-*-provider.*` images while opening the LLM tab and its model picker
 - [x] Issue #2638: LLM model availability is decided per model from route-mocked `mentor-llms` (`availability` wins over `has_credentials`; legacy shape falls back to provider flags) — provider card `data-disabled` only when every model is unavailable (synthetic never-active provider, since the SDK never greys the active card); unavailable rows are disabled with `data-availability-status` and the backend message as a `title` tooltip only (no inline text) and sort after available ones; `byok_main_fallback` model is selectable
+- [x] Edit Agent at desktop width shows exactly four category tabs in its "Agent settings categories" tablist — Setup, Policies, Integrations, Activity, in that order — all on one row, each visible with its title shown in full (`scrollWidth <= clientWidth`; equal quarters of the 320px sidebar cut "Integrations" off, so each pill takes its title's width)
 
 ---
 
@@ -852,8 +853,8 @@ The Sandbox tab used to wrap the SDK's `SandboxConfig` component in an app-level
 - [x] Admin opens the Sandbox tab and the three sandbox-kind switches (Computing Runtime / Virtual Machine Shell / Claw) are visible
 - [x] Computational-runtime and virtual-machine switches are interactable for admins while claw is off
 - [x] Selecting a sandbox kind auto-saves instantly; the three kinds are mutually exclusive and at least one is always active, so selecting one kind turns off whichever kind was previously active (no "disable" operation), and selection never affects Sandbox tab visibility — the tab is unconditionally mounted
-- [x] Selecting claw turns off whichever kind (computational-runtime or virtual-machine) was previously active in the same PATCH (mutual exclusivity); Sandbox leads the Integrations category (feat/2040 moved it off Configurations)
-- [x] Sandbox leads the Integrations category unconditionally (feat/2040 groups the sidebar into Configurations / Integrations / Runtime)
+- [x] Selecting claw turns off whichever kind (computational-runtime or virtual-machine) was previously active in the same PATCH (mutual exclusivity); Integrations opens on Tools and Sandbox follows MCP
+- [x] Sandbox follows Tools and MCP in the Integrations category unconditionally (the sidebar is grouped into Setup / Policies / Integrations / Activity)
 - [x] Switching to computational-runtime while claw is active deactivates claw and hides its instance section, leaving computational-runtime as the sole active kind — never an all-off state — while all three switches remain interactable and the Sandbox tab stays visible
 - [x] Admin navigates to Sandbox tab: the sandbox-kind card always renders; the claw connected/not-connected instance sections render only while claw is enabled
 - [x] Admin selects claw then switches away from it (to the mentor's original kind) in one session, and the claw connected/not-connected instance sections mount and unmount accordingly both times
@@ -1381,7 +1382,7 @@ against real DOM. That predicate is covered at the unit level instead, in
 
 **Source files:** `components/modals/edit-mentor-modal/tabs/grader-tab.tsx`, `components/modals/edit-mentor-modal/tabs/index.ts`, `components/modals/edit-mentor-modal/index.tsx`, `hooks/use-mentor-segments.ts`, `lib/constants.ts`
 
-New top-level "Configurations" segment (`grader`) rendered by the SDK's `AgentGraderTab` (`@iblai/iblai-js/web-containers/next`), wrapped locally in `grader-tab.tsx`. Its in-tab "Grading" master toggle (shared `CapabilityGate` component, same pattern as Voice/Screen/Memory/Privacy/LTI) attaches/detaches the tenant's "Grading" TOOL on the mentor (`tool_slugs` / `can_use_tools` via `editMentor`) rather than flipping a plain settings field, and is OPTIMISTIC (flips instantly, rolls back on mutation failure). Once on, the gated content splits into THREE sub-tabs: "Grading setup" (mode selects + instructions, Save-button-driven), "Rubric" (criteria table with modal-based add/edit/delete behind each row's three-dots menu, plus a running points total), and "Results" (grade-results table with email/username/status/override-status/date-range filters and a per-row Override affordance that PATCHes a grade override back to the LMS). A single misconfigured-warning banner surfaces whichever of "no config yet" / "rubric is empty" applies. Turning the capability off never deletes the saved config or rubric — both survive a disable/re-enable cycle — and the last remaining criterion cannot be deleted (its row menu's Delete item is `aria-disabled` with an explanatory hint) since the backend requires the rubric to keep at least one row.
+New top-level "Setup" segment (`grader`) rendered by the SDK's `AgentGraderTab` (`@iblai/iblai-js/web-containers/next`), wrapped locally in `grader-tab.tsx`. Its in-tab "Grading" master toggle (shared `CapabilityGate` component, same pattern as Voice/Screen/Memory/Privacy/LTI) attaches/detaches the tenant's "Grading" TOOL on the mentor (`tool_slugs` / `can_use_tools` via `editMentor`) rather than flipping a plain settings field, and is OPTIMISTIC (flips instantly, rolls back on mutation failure). Once on, the gated content splits into THREE sub-tabs: "Grading setup" (mode selects + instructions, Save-button-driven), "Rubric" (criteria table with modal-based add/edit/delete behind each row's three-dots menu, plus a running points total), and "Results" (grade-results table with email/username/status/override-status/date-range filters and a per-row Override affordance that PATCHes a grade override back to the LMS). A single misconfigured-warning banner surfaces whichever of "no config yet" / "rubric is empty" applies. Turning the capability off never deletes the saved config or rubric — both survive a disable/re-enable cycle — and the last remaining criterion cannot be deleted (its row menu's Delete item is `aria-disabled` with an explanatory hint) since the backend requires the rubric to keep at least one row.
 
 The tab's RBAC is real: the backend exposes grader permissions as flat actions on the mentor resource (`/mentors/{id}/#read_grader_config`, `#write_grader_config`, `#create_grader_config`, `#view_grader_criteria`, `#create_grader_criteria`, `#write_grader_criteria`, `#delete_grader_criteria`, `#view_grade_results`, `#override_grade_results`) — the same `/mentors/{id}/` RBAC entry every other mentor-scoped check already fetches, checked with a graceful fallback (enforcement only kicks in once the RBAC permission tree actually contains an entry for that mentor). Denied `read_grader_config` (or every view action denied at once) renders the tab's own denied empty state and drops that sub-tab's trigger; denied write/create/delete/override actions omit the matching affordance rather than erroring. The host additionally gates the whole segment on `read_grader_config` with the standard `[FREE_TRIAL, ADMIN]` userTypes set. The e2e admin's permissions on this suite's real tenant are NOT uniform: `read_grader_config`/`view_grader_criteria` are granted (grd-03), but `view_grade_results` is not (grd-04 skips gracefully) — confirmed live. The remaining denied paths have no fixture in this environment to seed — see grd-14/grd-15.
 
@@ -1389,7 +1390,7 @@ All interactions go through the `GraderTab` page object, which delegates to the 
 
 Because the toggle mutates the mentor's attached tools — the same fields Journey 6's "Admin can toggle tools on/off" (mgmt-04) exercises — this journey mirrors Journey 47's Voice tab isolation: the whole file runs serially in one worker and every test gets its own freshly-created, disposable mentor (tracked and deleted via `MentorTracker` in `afterAll`). Checkpoints that require the capability ON attempt the toggle via `GraderTab.tryEnableGrading` and skip gracefully (not a failure) when the tenant's tool catalogue has no "Grading" tool to attach — an environment gap, not an app bug.
 
-- [x] grd-01: Grader tab is visible in the Edit Mentor modal sidebar (Configurations category, always mounted for an admin with standard mentor-owner permissions)
+- [x] grd-01: Grader tab is visible in the Edit Mentor modal sidebar (Setup category, always mounted for an admin with standard mentor-owner permissions)
 - [x] grd-02: Grader tab renders heading, description, and tab body without getting stuck on the loading spinner
 - [x] grd-03: Gated content exposes the Grading Setup and Rubric sub-tabs — both consistently visible for the e2e admin — and switching between them renders the matching section (`grader-setup-section` / `grader-criteria-section`); the Results pill is checked separately in grd-04 since it's RBAC-gated (`view_grade_results`) and not granted to the e2e admin on the real tenant
 - [x] grd-04: The Results sub-tab renders its own grade-results table and shows the zero-filters empty state ("No grades yet…") on a mentor with no graded submissions yet; independent of a saved config or rubric. Gracefully skips when the Results pill isn't granted — confirmed live that the e2e admin lacks `view_grade_results` on the real tenant
@@ -1407,7 +1408,7 @@ Because the toggle mutates the mentor's attached tools — the same fields Journ
 
 ---
 
-## Journey 67: Agent Skills (28 checkpoints) — `journeys/67-agent-skills.spec.ts`
+## Journey 67: Agent Skills (29 checkpoints, 1 pending) — `journeys/67-agent-skills.spec.ts`
 
 **Source files:** `hooks/use-mentor-segments.ts`, `components/modals/edit-mentor-modal/tabs/skills-tab.tsx`, `components/chat-input-form.tsx`, `components/auto-resize-text-area.tsx`
 
@@ -1460,7 +1461,7 @@ surfaces:
    `ChatPage.mockEffectiveSkills` for full determinism — the composer fetches
    eagerly on mount, so the mock must be registered before navigation.
 
-- [x] ags-01: Admin sees the Skills tab on a freshly-created (Base Agent) mentor, with its "Skills" heading and the "type /" hint (wording not pinned — differs between OS host and SDK wrapper); Skills sits right after Prompts in the Configurations category — full RBAC grant set forced via `SkillsTab.grantAllSkillAssignmentPerms` so the both-sub-tabs assert is rollout-independent
+- [x] ags-01: Admin sees the Skills tab on a freshly-created (Base Agent) mentor, with its "Skills" heading and the "type /" hint (wording not pinned — differs between OS host and SDK wrapper); Skills sits right after Prompts in the Setup category — full RBAC grant set forced via `SkillsTab.grantAllSkillAssignmentPerms` so the both-sub-tabs assert is rollout-independent
 - [x] ags-02: Skills tab is hidden when the mentor resolves to a non-base-agent type (`mentor_slug` is not a base-agent alias and `template_mentor` does not resolve to one either)
 - [x] ags-03: Skills tab stays visible when the mentor type cannot be determined (`template_mentor` is a numeric PK the frontend cannot read a slug from) — the gate fails OPEN rather than hiding the tab
 - [x] ags-04: Admin creates a platform skill, attaches it from the Available Skills sub-tab (`addSkillToAgent` — assignment created ENABLED), and its enable Switch round-trips off/on on the Agent Skills sub-tab (`aria-checked`); detach + delete on cleanup — dedicated mentor per test
@@ -1486,6 +1487,7 @@ surfaces:
 - [x] slash-12: Multiple skill invocations in one message are each highlighted; unknown or disabled slugs never highlight
 - [x] slash-13: Typing "/" while the assignments fetch (the composer's only skill source) is still in flight shows the "Loading skills…" popover (`slash-skill-loading`, `role=status`), which yields to the picker once the list resolves
 - [x] slash-16: Skills row inside the composer's "+" menu lists enabled skills as name stacked over `/slug` (column layout — full name, never truncated; geometry-asserted); selecting inserts the token AT THE CARET with context-aware spacing — no separate skill chip exists in the #2586 redesign, so the armed state shows only as the composer token, a checked row in the Skills menu, and a count badge on the menu trigger; removing (re-selecting the skill, or deleting its token text) clears all three; arming another replaces (single selection); `/`-picker arming marks the same skill checked in the Skills menu — one composer-text source of truth
+- [ ] slash-17: On a phone-width composer (360px) the Skills button collapses into the ••• menu like the other tool pills; its ••• entry expands the skills list in place (scrolling, inside the viewport), and picking a skill arms its `/slug` token _(pending: no route renders a Skills button that could collapse — the mentor route renders the SDK composer, where Skills sits inside the "+" menu at every width, and the workflow preview renders the OS composer in its compact form, which has no tool row and so no Skills; `test.fixme` until a route renders the OS composer's tool row. Covered meanwhile by the `inside-buttons` Vitest case "moves into the ••• menu when the row is too narrow, and expands its list there")_
 - [x] slash-15: NON-ADMIN — with the assignments endpoint readable (mocked granted state; a 403 degrades to an inactive picker) the "/" picker offers skills; selecting completes the token and the sent invocation message receives a live AI reply — skips when the environment denies the non-admin CHAT permission entirely (composer disabled with a "you don't have permission to chat" placeholder): the picker rides on top of chat access
 - [x] slash-14: A "/" token typed after existing text (caret-adjacent, preceded by whitespace) opens the picker; selecting completes the invocation at that index keeping the sentence. A "/" glued inside a word (and/or, URLs) never triggers
 
@@ -1574,7 +1576,7 @@ Covers the "Billing" (LLM spend limits) top-level tab in the Edit Mentor
 tabs (Sandbox/Voice/Screen Share/Privacy/Memory/LTI), Billing has no master
 on/off toggle — it is gated purely by `userTypes: [ADMIN]` in
 `hooks/use-mentor-segments.ts` and is always mounted for admins. It lives in
-the **Configurations** sidebar category, immediately after **LLM**.
+the **Policies** sidebar category, immediately after **Access**.
 `AgentSpendCapsTab` has exactly two sub-tabs — **"This Agent"** and
 **"Per User"** — and the per-user flow is a proper **"Add User Limit" modal**
 with an email-based user picker (replacing the old inline
@@ -1595,7 +1597,7 @@ gates over `test.fixme` for app/backend-level blockers.
 (`MentorTracker`, deleted in `afterAll`); no test here touches tenant-wide
 state (the Workspace cap moved to the tenant block below).
 
-- [x] sc-01: Admin sees the "Billing" tab in the Configurations category, positioned immediately after "LLM", and it opens on the "This Agent" sub-tab with "Per User" also present
+- [x] sc-01: Admin sees the "Billing" tab in the Policies category, positioned immediately after "Access", and it opens on the "This Agent" sub-tab with "Per User" also present
 - [x] sc-02: Admin creates an agent spend limit (limit, interval, alert-only enforcement, thresholds, enabled) via `setAgentSpendLimit` and the values persist after closing and reopening the Billing tab
 - [x] sc-03: An invalid/zero spend limit shows the "Enter an amount greater than 0" validation error and disables Save
 - [x] sc-04: Admin removes the agent spend limit via the confirm dialog and the "no limit configured" hint reappears
@@ -1959,7 +1961,7 @@ Covers issue #2586's test infrastructure: `e2e/utils/embed-harness-server.mjs`, 
 
 ---
 
-## Journey 79: Composer Redesign (15 checkpoints) — `journeys/79-composer-redesign.spec.ts`
+## Journey 79: Composer Redesign (16 checkpoints, 1 pending) — `journeys/79-composer-redesign.spec.ts`
 
 **Source files:** `components/chat/sdk-chat.tsx`
 
@@ -1980,6 +1982,7 @@ Covers issue #2586's composer rebuild: the classic UploadMenu + always-visible I
 - [x] cr-14 (mobile, issue #2586): The composer's "+" menu opens as a bottom sheet with Upload/Camera tiles and Tools/Skills/Prompts/Memory rows; drilling into Tools toggles an available tool to an active chip, and the sheet closes via Escape and via a backdrop click
 - [x] cr-15 (issue #2586): The Memory row in the "+" menu never shows a trailing chevron (unlike Tools and Skills, both of which open a sub-page/submenu) on desktop or mobile, and clicking it opens the Memory panel ("Your Memory")
 - [x] cr-16 (issue #2586): The composer in CONVERSATION state (after a mocked reply) still shows an active tool chip, the Canvas "Turn off Canvas" × pill, and the "/" skill picker positioned above the composer; a 320-390px viewport in that state has no horizontal overflow with Send visible
+- [ ] cr-17: Below 520px the composer's tool pills keep one line: Canvas off shows only its icon (its name kept as the accessible name), Canvas on alone shows its name and its "Turn off Canvas" ×; from 520px up the name shows on or off _(pending: `test.fixme`, never run — needs an authenticated session (PLAYWRIGHT_USERNAME / PLAYWRIGHT_PASSWORD), which no env it has run in had; the pinned SDK (web-containers 1.48.0) has the tool row it tests, and the SDK measures the row rather than the window, so its 390px step still needs checking on the first run; the two-pills-on case needs the desktop app's Code or Cowork pill. Covered meanwhile by the SDK's `composer-tool-row` and `chat-input-form` "tool pills on phone widths" Vitest cases and the OS `coding-mode-button` "in the SDK composer's tool row" cases)_
 
 ---
 
