@@ -1,13 +1,22 @@
 import { describe, it, expect } from 'vitest';
 import rbacReducer, {
   updateRbacPermissions,
+  markMentorPermissionsLoaded,
+  resetMentorPermissionsLoaded,
   selectRbacPermissions,
+  selectMentorPermissionsLoaded,
 } from '../rbac-slice';
 
 describe('rbac/rbac-slice', () => {
   const initialState = {
     rbacPermissions: {},
+    mentorPermissionsLoaded: false,
   };
+
+  const stateWith = (rbac: Record<string, unknown>) =>
+    ({ rbac }) as unknown as Parameters<
+      typeof selectMentorPermissionsLoaded
+    >[0];
 
   describe('reducer', () => {
     it('should return the initial state', () => {
@@ -163,6 +172,44 @@ describe('rbac/rbac-slice', () => {
 
       expect(action.type).toBe('rbac/updateRbacPermissions');
       expect(action.payload).toEqual(permissions);
+    });
+  });
+
+  // An empty permissions object means both "denied" and "not asked yet". The
+  // SDK's composer and conversation starters default to ALLOWED when a
+  // mentor's key is absent — so anonymous and public routes keep working —
+  // and therefore cannot tell those apart on their own. This flag is what
+  // stops someone without `#chat` sending a message the server then 403s.
+  describe('mentor permissions loading state', () => {
+    it('starts out not loaded, so absence is not read as a verdict', () => {
+      expect(selectMentorPermissionsLoaded(stateWith(initialState))).toBe(
+        false,
+      );
+    });
+
+    it('marks the answer as arrived, granted or denied alike', () => {
+      const state = rbacReducer(initialState, markMentorPermissionsLoaded());
+      expect(selectMentorPermissionsLoaded(stateWith(state))).toBe(true);
+    });
+
+    it('resets when a different mentor comes into view', () => {
+      const loaded = rbacReducer(initialState, markMentorPermissionsLoaded());
+      const reset = rbacReducer(loaded, resetMentorPermissionsLoaded());
+      expect(selectMentorPermissionsLoaded(stateWith(reset))).toBe(false);
+    });
+
+    it('is independent of the permissions payload itself', () => {
+      const withPerms = rbacReducer(
+        initialState,
+        updateRbacPermissions({ mentors: {}, mentor: {} }),
+      );
+      expect(selectMentorPermissionsLoaded(stateWith(withPerms))).toBe(false);
+    });
+
+    it('reads a state without the field as loaded, for older consumers', () => {
+      expect(
+        selectMentorPermissionsLoaded(stateWith({ rbacPermissions: {} })),
+      ).toBe(true);
     });
   });
 });
