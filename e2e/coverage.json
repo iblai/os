@@ -1,15 +1,15 @@
 {
   "version": 2,
-  "lastUpdated": "2026-10-27",
+  "lastUpdated": "2026-10-28",
   "summary": {
-    "totalCheckpoints": 1020,
-    "coveredCheckpoints": 973,
+    "totalCheckpoints": 1031,
+    "coveredCheckpoints": 984,
     "deprecatedCheckpoints": 17,
     "notReproducibleCheckpoints": 17,
     "pendingCheckpoints": 13,
     "percent": 100,
-    "totalJourneys": 102,
-    "activeJourneys": 101
+    "totalJourneys": 103,
+    "activeJourneys": 102
   },
   "journeys": [
     {
@@ -6438,6 +6438,47 @@
         {
           "id": "avs-04",
           "description": "Switching away from Administrators hides the note and saves without a prompt, and Users to Anyone also saves without a prompt",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "allowed-file-types",
+      "name": "Allowed File Types",
+      "spec": "96-allowed-file-types.spec.ts",
+      "sourceFiles": [
+        "components/modals/edit-mentor-modal/settings-tab.tsx",
+        "messages/en.json"
+      ],
+      "checkpoints": [
+        {
+          "id": "aft-01",
+          "description": "Admin opens Settings > Capabilities on a fresh agent: the last group is File Uploads (after Context Limits) with the \"File Types Users Can Attach\" row, its info tooltip and the Allowed File Types button, no count text",
+          "status": "covered"
+        },
+        {
+          "id": "aft-02",
+          "description": "The Allowed File Types dialog lists the 12 common types and a footer count; typing .JSON adds json under \"Added by You\"; a duplicate shows \"json is already in the list.\", js-on shows \"Use letters and numbers only, like json.\"; Clear All unticks everything",
+          "status": "covered"
+        },
+        {
+          "id": "aft-03",
+          "description": "Done then Save sends one JSON PUT with allowed_file_upload_extensions [pdf, docx, png, json]; saving an unrelated setting does not resend it; reload and reopen shows the saved list",
+          "status": "covered"
+        },
+        {
+          "id": "aft-04",
+          "description": "In chat the composer's file input accept is .pdf,.docx,.png,.json; report.exe and the extension-less README are refused with \"<name> can't be added. This agent only accepts pdf, docx, png and json files.\" and not attached; report.pdf attaches (S3 leg mocked)",
+          "status": "covered"
+        },
+        {
+          "id": "aft-05",
+          "description": "Clear All + Save sends an empty list (everything allowed) and a csv then attaches with no refusal",
+          "status": "covered"
+        },
+        {
+          "id": "aft-06",
+          "description": "Upload-URL 400 {\"error\":\"This file type is not allowed for this mentor.\"} (mocked): the chip shows Retry and the toast says \"<name> can't be used with this agent\"",
           "status": "covered"
         }
       ]

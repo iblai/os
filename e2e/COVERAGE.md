@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-10-27 | 1020 checkpoints (973 covered, 13 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 102 journeys (101 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-10-28 | 1031 checkpoints (984 covered, 13 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 103 journeys (102 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -2331,3 +2331,18 @@ Issue #2731. Settings → Discovery → "Who Can View?": an admin-only note show
 - [x] avs-02: Cancel on the confirmation closes it, sends no visibility save, keeps Administrators in the form, and the server still holds Users
 - [x] avs-03: "Limit to Administrators" saves mentor_visibility=viewable_by_tenant_admins with the success toast; reopening shows Administrators with the note already visible
 - [x] avs-04: Switching away from Administrators hides the note and saves without a prompt, and Users to Anyone also saves without a prompt
+
+---
+
+## Journey 96: Allowed File Types (6 checkpoints) — `journeys/96-allowed-file-types.spec.ts`
+
+**Source files:** `components/modals/edit-mentor-modal/settings-tab.tsx`, `messages/en.json`
+
+Issue #2528. Settings → Capabilities ends with a File Uploads group whose Allowed File Types dialog sets the agent's `allowed_file_upload_extensions`; chat then limits the composer's file input and refuses other files with a toast. One throwaway agent (auto-deleted) is shared by the serial checkpoints. Only the S3 upload leg (and the 400 in aft-06) is mocked. The server's `file_error` WebSocket frame is not covered.
+
+- [x] aft-01: Admin opens Settings > Capabilities on a fresh agent: the last group is File Uploads (after Context Limits) with the "File Types Users Can Attach" row, its info tooltip and the Allowed File Types button, no count text
+- [x] aft-02: The Allowed File Types dialog lists the 12 common types and a footer count; typing .JSON adds json under "Added by You"; a duplicate shows "json is already in the list.", js-on shows "Use letters and numbers only, like json."; Clear All unticks everything
+- [x] aft-03: Done then Save sends one JSON PUT with allowed_file_upload_extensions [pdf, docx, png, json]; saving an unrelated setting does not resend it; reload and reopen shows the saved list
+- [x] aft-04: In chat the composer's file input accept is .pdf,.docx,.png,.json; report.exe and the extension-less README are refused with "<name> can't be added. This agent only accepts pdf, docx, png and json files." and not attached; report.pdf attaches (S3 leg mocked)
+- [x] aft-05: Clear All + Save sends an empty list (everything allowed) and a csv then attaches with no refusal
+- [x] aft-06: Upload-URL 400 {"error":"This file type is not allowed for this mentor."} (mocked): the chip shows Retry and the toast says "<name> can't be used with this agent"
