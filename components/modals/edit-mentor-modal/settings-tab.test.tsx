@@ -305,6 +305,27 @@ describe('SettingsTab', () => {
         advanced: 'advancedHeading',
         perSurface: 'perSurfaceHeading',
         globalSettings: 'globalSettingsHeading',
+        contextLimits: 'contextLimitsHeading',
+      });
+      // Context limits arrived with the SDK and are host-supplied like the
+      // rest: one value each, shared by in-app chat and the embed widget.
+      expect(labels.fields.chatHistoryMessages).toEqual({
+        label: 'chatHistoryMessagesLabel',
+        tooltip: 'chatHistoryMessagesTooltip',
+        placeholder: 'chatHistoryMessagesPlaceholder',
+        minValueError: 'chatHistoryMessagesMinValueError',
+      });
+      expect(labels.fields.chatHistoryTokens).toEqual({
+        label: 'chatHistoryTokensLabel',
+        tooltip: 'chatHistoryTokensTooltip',
+        placeholder: 'chatHistoryTokensPlaceholder',
+        minValueError: 'chatHistoryTokensMinValueError',
+      });
+      expect(labels.fields.documentChunks).toEqual({
+        label: 'documentChunksLabel',
+        tooltip: 'documentChunksTooltip',
+        placeholder: 'documentChunksPlaceholder',
+        minValueError: 'documentChunksMinValueError',
       });
       // #2476: the Capabilities sub-tab renders a two-column surface matrix,
       // so the wrapper must supply the column headings and the embed-column
