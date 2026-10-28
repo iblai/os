@@ -358,6 +358,13 @@ describe('SettingsTab', () => {
         'chatHistoryTokensLabel',
       );
       expect(labels.fields.documentChunks.label).toBe('documentChunksLabel');
+      expect(labels.allowedFileTypes).toMatchObject({
+        heading: 'heading',
+        title: 'title',
+        openButton: 'openButton',
+        removeAriaLabel: 'removeAriaLabel',
+        done: 'done',
+      });
       expect(labels.toasts.voiceCallError).toBe('voiceCallSettingsError');
     });
   });
@@ -418,6 +425,28 @@ describe('SettingsTab', () => {
             messages.tabsSettingsTab[key],
             `${locale}.${key}`,
           ).toBeTruthy();
+        }
+      }
+    });
+  });
+
+  describe('Allowed File Types catalogs', () => {
+    it('has every label in every locale, with the SDK placeholders kept', async () => {
+      const en = (await import('../../../messages/en.json')).default
+        .tabsSettingsTab.allowedFileTypes as Record<string, string>;
+
+      for (const locale of ['en', 'es', 'fr', 'zh']) {
+        const messages = (await import(`../../../messages/${locale}.json`))
+          .default as {
+          tabsSettingsTab: { allowedFileTypes: Record<string, string> };
+        };
+        const copy = messages.tabsSettingsTab.allowedFileTypes;
+        for (const key of Object.keys(en)) {
+          expect(copy[key], `${locale}.${key}`).toBeTruthy();
+        }
+        expect(copy.countMany, locale).toContain('{count}');
+        for (const key of ['removeAriaLabel', 'duplicateError']) {
+          expect(copy[key], `${locale}.${key}`).toContain('{ext}');
         }
       }
     });
