@@ -82,7 +82,11 @@ import { TenantLock } from '@/components/tenant-lock';
 import { WebContainersLocaleProvider } from '@/components/web-containers-locale-provider';
 import { MentorTimeTrackingProvider } from '@/hooks/use-mentor-time-tracking';
 import { useSelector } from 'react-redux';
-import { updateRbacPermissions } from '@/features/rbac/rbac-slice';
+import {
+  updateRbacPermissions,
+  markMentorPermissionsLoaded,
+  resetMentorPermissionsLoaded,
+} from '@/features/rbac/rbac-slice';
 import { useAppDispatch } from '@/lib/hooks';
 import { toast } from 'sonner';
 //import { useLazyGetTenantMetadataQuery } from '@iblai/iblai-js/data-layer';
@@ -269,6 +273,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   const isAdmin = useIsAdmin();
   const { tenantKey: tenantKeyParams, mentorId } =
     useParams<TenantKeyMentorIdParams>();
+
   const [getMentorPublicSettings] = useLazyGetMentorPublicSettingsQuery();
 
   // Check if we're in Tauri offline mode early - needed to skip API calls
@@ -364,6 +369,13 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   const { saveUserTenants } = useUserTenants();
   const isPreviewMode = useIsPreviewMode();
   const dispatch = useAppDispatch();
+  // A new mentor means the permissions in the store belong to the previous
+  // one. Clearing the flag puts the composer back into "waiting" until this
+  // mentor's own answer lands, rather than letting it act on a verdict that
+  // was about a different agent.
+  useEffect(() => {
+    dispatch(resetMentorPermissionsLoaded());
+  }, [mentorId, dispatch]);
   const [useMentorProvider, setUseMentorProvider] = useState(true);
 
   function saveUserTokens(tokenResponse: TokenResponse) {
@@ -395,6 +407,11 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     rbacPermissions: Record<string, unknown> | undefined,
   ) {
     dispatch(updateRbacPermissions(rbacPermissions ?? {}));
+    // Marked even when `rbacPermissions` is undefined: the request settled,
+    // and "it failed" is an answer. Without this a failed load would hold the
+    // composer disabled forever rather than falling back to the permissive
+    // default the absence of a mentor key already means.
+    dispatch(markMentorPermissionsLoaded());
   }
 
   async function handleMentorNotFound() {

@@ -200,6 +200,10 @@ vi.mock('@/features/rbac/rbac-slice', () => ({
     type: 'rbac/update',
     payload,
   }),
+  // The composer cannot tell "denied" from "not asked yet" without these:
+  // the permissions object is empty in both cases.
+  markMentorPermissionsLoaded: () => ({ type: 'rbac/markMentorLoaded' }),
+  resetMentorPermissionsLoaded: () => ({ type: 'rbac/resetMentorLoaded' }),
 }));
 
 // ── data-layer ──────────────────────────────────────────────────────────────
