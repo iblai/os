@@ -30,7 +30,8 @@ import {
   isStripeActivated,
   onAccountDeleted,
 } from '@/lib/utils';
-import { useTenantMetadata, Tenant } from '@iblai/iblai-js/web-utils';
+import { Tenant } from '@iblai/iblai-js/web-utils';
+import { useTenantObjectMetadata } from '@/hooks/use-tenant-object-metadata';
 import { UserApp } from '@iblai/iblai-api';
 import {
   selectRbacPermissions,
@@ -154,9 +155,8 @@ export function UserProfile({ embed = false }: { embed?: boolean } = {}) {
   const [currentPlan, setCurrentPlan] = useState<string>('');
   const [userActiveApp, setUserActiveApp] = useState<UserApp | null>(null);
 
-  const { metadata, metadataLoaded } = useTenantMetadata({
-    org: tenantKey,
-  });
+  const metadata = useTenantObjectMetadata(tenantKey);
+  const metadataLoaded = true;
 
   const rbacPermissions = useAppSelector(selectRbacPermissions);
 

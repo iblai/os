@@ -9,7 +9,7 @@ import { useGetAiSearchMentorsQuery } from '@iblai/iblai-js/data-layer';
 import { useParams } from 'next/navigation';
 import { TenantKeyMentorIdParams } from '@/lib/types';
 import { format } from 'date-fns';
-import { useTenantMetadata } from '@iblai/iblai-js/web-utils';
+import { useTenantObjectMetadata } from '@/hooks/use-tenant-object-metadata';
 import { useTranslations } from 'next-intl';
 
 const QUERY_LIMIT = 6;
@@ -18,7 +18,7 @@ export function ExploreMentors() {
   const t = useTranslations('welcomeChatExploreMentors');
   const { tenantKey } = useParams<TenantKeyMentorIdParams>();
   const { navigateToExplore, navigateToMentor } = useNavigate();
-  const { metadata } = useTenantMetadata({ org: tenantKey });
+  const metadata = useTenantObjectMetadata(tenantKey);
   const { data: allMentors } = useGetAiSearchMentorsQuery(
     {
       platform_key: tenantKey ?? '',

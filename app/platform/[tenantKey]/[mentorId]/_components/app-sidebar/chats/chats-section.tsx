@@ -5,7 +5,8 @@ import * as React from 'react';
 import { ChevronDown, ChevronRight, MessageSquare, Pin } from 'lucide-react';
 
 import { useAppSelector } from '@/lib/hooks';
-import { selectSessionId, useTenantMetadata } from '@iblai/iblai-js/web-utils';
+import { selectSessionId } from '@iblai/iblai-js/web-utils';
+import { useTenantObjectMetadata } from '@/hooks/use-tenant-object-metadata';
 import { getUserName } from '@/features/utils';
 import { useUserIsStudent } from '@/hooks/use-user';
 import { cn } from '@/lib/utils';
@@ -59,7 +60,7 @@ export function SidebarChatsSection({
   const appSessionId = useAppSelector(selectSessionId);
   const resolvedUserId = username ?? getUserName();
   const userIsStudent = useUserIsStudent();
-  const { metadata } = useTenantMetadata({ org: tenantKey });
+  const metadata = useTenantObjectMetadata(tenantKey);
   const canExport =
     !userIsStudent || metadata?.enable_chat_history_export !== false;
 

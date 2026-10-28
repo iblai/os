@@ -9,11 +9,8 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { ProjectPageParams } from '@/lib/types';
 import ErrorBoundary from '@/components/error-boundary';
 import { DocumentSidebar } from '@iblai/iblai-js/web-containers';
-import {
-  chatActions,
-  selectSessionId,
-  useTenantMetadata,
-} from '@iblai/iblai-js/web-utils';
+import { chatActions, selectSessionId } from '@iblai/iblai-js/web-utils';
+import { useTenantObjectMetadata } from '@/hooks/use-tenant-object-metadata';
 import '../../../[mentorId]/page.css';
 import { SdkChat } from '@/components/chat/sdk-chat';
 import { useIsPreviewMode } from '@/hooks/use-is-preview-mode';
@@ -45,9 +42,7 @@ export default function Page() {
 
   const searchParams = useSearchParams();
 
-  const { metadata } = useTenantMetadata({
-    org: tenantKey,
-  });
+  const metadata = useTenantObjectMetadata(tenantKey);
 
   React.useEffect(() => {
     dispatch(chatActions.setShouldStartNewChat(true));

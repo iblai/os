@@ -238,6 +238,11 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
 
 let mockMetadata: Record<string, unknown> = {};
 
+// Tenant metadata now rides the tenants list via this local hook (no network).
+vi.mock('@/hooks/use-tenant-object-metadata', () => ({
+  useTenantObjectMetadata: () => mockMetadata,
+}));
+
 let capturedIframeMessageHandler: {
   handlers?: unknown;
   defaultHandler?: (data: Record<string, unknown>) => void;
@@ -292,15 +297,6 @@ vi.mock('@iblai/iblai-js/web-utils', () => ({
   refreshTenantSwitchLock: vi.fn(),
   isTenantSwitchInProgress: vi.fn(() => false),
   AUTH_TOKENS_UPDATED_EVENT: 'ibl:auth-tokens-updated',
-  useTenantMetadata: () => ({
-    metadata: mockMetadata,
-    platformName: null,
-    isLoading: false,
-    isError: false,
-    metadataLoaded: true,
-    getAllMetadatas: vi.fn(() => []),
-    getSupportEmail: vi.fn(() => null),
-  }),
   AuthProvider: (props: Record<string, unknown>) => {
     capturedAuthProviderProps = props;
     for (const cb of authProviderCallbacksToInvoke) {

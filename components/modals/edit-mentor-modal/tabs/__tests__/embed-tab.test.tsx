@@ -27,7 +27,7 @@ const mockUpdateShareableLink = vi.fn();
 const mockGetMentorSettingsQuery = vi.fn();
 const mockEditMentor = vi.fn();
 const mockEditMentorLoading = vi.fn();
-const mockUseTenantMetadata = vi.fn();
+const mockUseTenantObjectMetadata = vi.fn();
 const mockToast = vi.fn();
 const mockSupportEmail = vi.fn();
 
@@ -104,8 +104,10 @@ vi.mock('@/lib/hooks', () => ({
   useAppDispatch: () => vi.fn(),
 }));
 
-vi.mock('@iblai/iblai-js/web-utils', () => ({
-  useTenantMetadata: (args: unknown) => mockUseTenantMetadata(args),
+// Tenant metadata now rides the tenants list via this local hook (raw object).
+vi.mock('@/hooks/use-tenant-object-metadata', () => ({
+  useTenantObjectMetadata: (tenantKey?: string) =>
+    mockUseTenantObjectMetadata(tenantKey),
 }));
 
 vi.mock('@iblai/iblai-js/web-containers', () => ({
@@ -544,7 +546,7 @@ describe('EmbedTab', () => {
     });
     mockEditMentor.mockReturnValue({ unwrap: vi.fn().mockResolvedValue({}) });
     mockEditMentorLoading.mockReturnValue(false);
-    mockUseTenantMetadata.mockReturnValue({ metadata: undefined });
+    mockUseTenantObjectMetadata.mockReturnValue(undefined);
     mockSupportEmail.mockReturnValue('support@ibl.ai');
     mockSyncEmbedSettings.mockResolvedValue({ success: true });
   });
@@ -994,8 +996,8 @@ describe('EmbedTab', () => {
   });
 
   it('uses tenant metadata support email when available', () => {
-    mockUseTenantMetadata.mockReturnValue({
-      metadata: { support_email: 'tenant@ibl.ai' },
+    mockUseTenantObjectMetadata.mockReturnValue({
+      support_email: 'tenant@ibl.ai',
     });
     renderEmbedTab();
     fireEvent.click(
@@ -1473,7 +1475,7 @@ describe('EmbedTab context-aware / open-by-default hydration (#2592)', () => {
     mockGetMentorId.mockReturnValue(null);
     mockUseGetShareableLinkQuery.mockReturnValue({ data: undefined });
     mockEditMentorLoading.mockReturnValue(false);
-    mockUseTenantMetadata.mockReturnValue({ metadata: undefined });
+    mockUseTenantObjectMetadata.mockReturnValue(undefined);
     mockSupportEmail.mockReturnValue('support@ibl.ai');
   }, 30_000);
 

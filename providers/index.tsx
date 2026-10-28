@@ -86,7 +86,7 @@ import { updateRbacPermissions } from '@/features/rbac/rbac-slice';
 import { useAppDispatch } from '@/lib/hooks';
 import { toast } from 'sonner';
 //import { useLazyGetTenantMetadataQuery } from '@iblai/iblai-js/data-layer';
-import { useTenantMetadata } from '@iblai/iblai-js/web-utils';
+import { useTenantObjectMetadata } from '@/hooks/use-tenant-object-metadata';
 import { sanitizeCss } from '@iblai/iblai-js/web-containers';
 import {
   isTauriOfflineMode,
@@ -300,11 +300,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     }
   }
 
-  // Skip tenant metadata API call in Tauri offline mode
-  const { metadata } = useTenantMetadata({
-    org: tenantKeyParams,
-    skip: isTauriOfflineEarly,
-  });
+  const metadata = useTenantObjectMetadata(tenantKeyParams);
   const tenantAdvancedCSS = isJSON(metadata?.mentor_advanced_css)
     ? sanitizeCss(JSON.parse(metadata?.mentor_advanced_css) as string)
     : '';
