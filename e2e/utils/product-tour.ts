@@ -3,6 +3,9 @@ import { expect, type Page, type Response } from '@playwright/test';
 /** Mirrors `productTourMetadataKey()` in components/product-tour/use-tour-completion.ts. */
 export const PRODUCT_TOUR_METADATA_KEY = 'os-product-tour';
 
+/** Mirrors LOCAL_STORAGE_KEYS.USER_METADATA — the app reads the tour record here. */
+const USER_METADATA_STORAGE_KEY = 'user_metadata';
+
 const USER_METADATA_PATH = '/api/ibl/users/manage/metadata/';
 
 export const isUserMetadataResponse = (
@@ -12,125 +15,66 @@ export const isUserMetadataResponse = (
   response.url().includes(USER_METADATA_PATH) &&
   response.request().method() === method;
 
-export type CapturedUserMetadata = {
-  url: string;
-  authorization: string;
-  body: Record<string, any>;
-};
-
 /**
- * Remembers the app's own user-metadata GET (URL, auth header, payload). It
- * carries everything a direct call to the same endpoint needs, so no extra
- * host or token configuration is required. Attach before the first navigation.
+ * Seed a tour record into the `user_metadata` localStorage key the app reads
+ * from (via `useStoredUserMetadata` → `use-tour-completion`). The auth app
+ * forwards this key at login in production; in e2e the login is stubbed, so we
+ * write it directly. Merges into any existing `public_metadata` so other keys
+ * survive.
  */
-export function trackUserMetadata(page: Page) {
-  const state: { latest: CapturedUserMetadata | null } = { latest: null };
-
-  const capture = async (
-    response: Response,
-  ): Promise<CapturedUserMetadata | null> => {
-    if (!isUserMetadataResponse(response, 'GET') || !response.ok()) return null;
-    const headers = await response.request().allHeaders();
-    state.latest = {
-      url: response.url(),
-      authorization: headers['authorization'] ?? '',
-      body: await response.json().catch(() => ({})),
-    };
-    return state.latest;
-  };
-
-  page.on('response', (response) => {
-    void capture(response).catch(() => undefined);
-  });
-
-  return {
-    async current(timeout = 60_000): Promise<CapturedUserMetadata> {
-      if (state.latest) return state.latest;
-      const response = await page.waitForResponse(
-        (candidate) =>
-          isUserMetadataResponse(candidate, 'GET') && candidate.ok(),
-        { timeout },
-      );
-      const captured = await capture(response);
-      if (!captured)
-        throw new Error('The user metadata response was not usable');
-      return captured;
-    },
-  };
-}
-
-export function readTourRecord(
-  metadata: CapturedUserMetadata,
-): Record<string, any> | null {
-  return metadata.body?.public_metadata?.[PRODUCT_TOUR_METADATA_KEY] ?? null;
-}
-
-async function writeTourRecord(
-  page: Page,
-  metadata: CapturedUserMetadata,
-  record: Record<string, any>,
-): Promise<void> {
-  const username =
-    metadata.body?.username ??
-    new URL(metadata.url).searchParams.get('username');
-  expect(username, 'username missing from the user metadata').toBeTruthy();
-
-  // The endpoint replaces public_metadata wholesale, so keep the other keys.
-  const response = await page.request.post(metadata.url, {
-    headers: {
-      authorization: metadata.authorization,
-      'content-type': 'application/json',
-    },
-    data: {
-      username,
-      public_metadata: {
-        ...(metadata.body?.public_metadata ?? {}),
-        [PRODUCT_TOUR_METADATA_KEY]: record,
-      },
-    },
-  });
-  expect(
-    response.ok(),
-    `writing the tour record failed: ${response.status()}`,
-  ).toBeTruthy();
-}
-
-/** Marks the tour as seen on the user's metadata. No-op when a record exists. */
-export async function markProductTourSeen(
-  page: Page,
-  tracker: ReturnType<typeof trackUserMetadata>,
-): Promise<void> {
-  const metadata = await tracker.current();
-  if (readTourRecord(metadata)) return;
-
-  await writeTourRecord(page, metadata, {
+async function seedTourRecord(page: Page, source: string): Promise<void> {
+  const record = {
     status: 'skipped',
     version: 1,
     completed_at: new Date().toISOString(),
     // Ignored by the app; tells a seeded record from a real one.
-    source: 'e2e-auth-setup',
-  });
+    source,
+  };
+  await page.evaluate(
+    ({ storageKey, tourKey, value }) => {
+      let meta: Record<string, any> = {};
+      try {
+        const raw = localStorage.getItem(storageKey);
+        meta = raw ? JSON.parse(raw) : {};
+      } catch {
+        meta = {};
+      }
+      if (!meta || typeof meta !== 'object') meta = {};
+      meta.public_metadata = {
+        ...(meta.public_metadata ?? {}),
+        [tourKey]: value,
+      };
+      localStorage.setItem(storageKey, JSON.stringify(meta));
+    },
+    {
+      storageKey: USER_METADATA_STORAGE_KEY,
+      tourKey: PRODUCT_TOUR_METADATA_KEY,
+      value: record,
+    },
+  );
 }
 
 /**
- * Overwrites the tour record with a seen one, whatever is stored. For specs
- * that replayed the tour and must leave later journeys unblocked.
+ * Marks the tour seen so its overlay never blocks other journeys. The app reads
+ * the record from the `user_metadata` localStorage key, so seed it there before
+ * storage state is saved.
  */
-export async function restoreProductTourSeen(
-  page: Page,
-  tracker: ReturnType<typeof trackUserMetadata>,
-): Promise<void> {
-  await writeTourRecord(page, await tracker.current(), {
-    status: 'skipped',
-    version: 1,
-    completed_at: new Date().toISOString(),
-    source: 'e2e-restore',
-  });
+export async function markProductTourSeen(page: Page): Promise<void> {
+  await seedTourRecord(page, 'e2e-auth-setup');
+}
+
+/**
+ * Re-seeds a seen record after a spec replayed the tour, so later journeys stay
+ * unblocked.
+ */
+export async function restoreProductTourSeen(page: Page): Promise<void> {
+  await seedTourRecord(page, 'e2e-restore');
 }
 
 /**
  * Runs `action` (clicking Done or the X) and returns the tour record the app
- * sent to the user-metadata endpoint, once that request has succeeded.
+ * sent to the user-metadata endpoint, once that request has succeeded. The
+ * write still goes through the update mutation, so the POST is unchanged.
  */
 export async function saveTourOutcome(
   page: Page,
