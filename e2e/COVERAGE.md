@@ -688,9 +688,9 @@ The "Remember past conversations" (`enable_memory_component`) master toggle move
 
 ---
 
-## Journey 37: Voice Call and Screen Share in Canvas (9 checkpoints) — `journeys/37-voice-call-and-screen-share-in-canvas.spec.ts`
+## Journey 37: Voice Call and Screen Share in Canvas (10 checkpoints; 1 not-reproducible) — `journeys/37-voice-call-and-screen-share-in-canvas.spec.ts`
 
-**Source files:** `components/chat-input-form/screen-sharing-button.tsx`, `components/chat-input-form/voice-call-button.tsx`, `components/chat/index.tsx`
+**Source files:** `components/chat-input-form/screen-sharing-button.tsx`, `components/chat-input-form/voice-call-button.tsx`, `components/chat/index.tsx`, `extensions/chrome/panel.html`, `extensions/chrome/panel.js`, `extensions/chrome/vendor/agent-ai.umd.js`
 
 - [x] Non-admin screen share button has `type="button"` and does not submit the chat form
 - [x] Non-admin clicking screen share activates screen sharing, not form submit
@@ -701,6 +701,7 @@ The "Remember past conversations" (`enable_memory_component`) master toggle move
 - [x] Admin creates mentor, enables tools, opens canvas; voice call opens dialog
 - [x] Admin creates mentor, enables tools, opens canvas; screen share activates
 - [x] Admin creates mentor, enables tools, opens canvas; screen share does not submit form
+- [ ] _(not-reproducible — requires an unpacked MV3 extension in Chrome's native side-panel UI)_ EXT-431: side-panel voice calls and screen sharing open a top-level, SSO-authenticated mentor popup so Chrome can show microphone/display-capture prompts; configuration and popup URL wiring are regression-covered in `extensions/chrome/__tests__/media-popup.test.ts`
 
 ---
 

@@ -1,11 +1,11 @@
 {
   "version": 2,
-  "lastUpdated": "2026-09-14",
+  "lastUpdated": "2026-10-28",
   "summary": {
-    "totalCheckpoints": 741,
+    "totalCheckpoints": 742,
     "coveredCheckpoints": 698,
     "deprecatedCheckpoints": 17,
-    "notReproducibleCheckpoints": 15,
+    "notReproducibleCheckpoints": 16,
     "pendingCheckpoints": 11,
     "percent": 100,
     "totalJourneys": 77,
@@ -2449,7 +2449,10 @@
       "sourceFiles": [
         "components/chat-input-form/screen-sharing-button.tsx",
         "components/chat-input-form/voice-call-button.tsx",
-        "components/chat/index.tsx"
+        "components/chat/index.tsx",
+        "extensions/chrome/panel.html",
+        "extensions/chrome/panel.js",
+        "extensions/chrome/vendor/agent-ai.umd.js"
       ],
       "checkpoints": [
         {
@@ -2496,6 +2499,11 @@
           "id": "vsc-09",
           "description": "Admin creates mentor, enables tools, opens canvas, screen share does not submit form",
           "status": "covered"
+        },
+        {
+          "id": "ext-431",
+          "description": "Chrome extension side-panel voice calls and screen sharing open a top-level, SSO-authenticated mentor popup so Chrome can surface microphone/display-capture prompts. Requires an unpacked MV3 extension in Chrome's native side-panel UI; configuration and URL wiring are regression-covered in extensions/chrome/__tests__/media-popup.test.ts",
+          "status": "not-reproducible"
         }
       ]
     },

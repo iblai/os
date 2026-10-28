@@ -5,6 +5,11 @@ A Manifest V3 Chrome extension that opens an ibl.ai agent in the browser
 [`@iblai/agent-ai`](../../../ibl-frontend/packages/agent-ai) `<agent-ai>` web
 component, vendored locally and mounted directly in `panel.html`.
 
+Voice calls and screen sharing open in a top-level mentor popup. Chrome cannot
+reliably surface media permission prompts from the storage-partitioned mentor
+iframe inside an extension side panel, so `enablechatactionpopup` must remain
+enabled on the `<agent-ai>` element.
+
 ## Load it (unpacked)
 
 1. Open `chrome://extensions` → enable **Developer mode**.

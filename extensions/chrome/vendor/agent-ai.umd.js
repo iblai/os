@@ -89,6 +89,7 @@
     async onPostMessage(t) {
       var e, n, o;
       console.log('################# message event ', t.data);
+      const messageEvent = t;
       let d = t.data;
       if ('string' == typeof d)
         try {
@@ -109,6 +110,11 @@
             ? void 0
             : e.querySelector('iframe');
         if (t && t.src) {
+          if (
+            messageEvent.source !== t.contentWindow ||
+            messageEvent.origin !== new URL(this.mentorUrl).origin
+          )
+            return;
           let e = '';
           'MENTOR:CHAT_ACTION_VOICECALL' === (null == d ? void 0 : d.type)
             ? (e = 'voice-call')
@@ -121,13 +127,22 @@
               'tenants' !== e && (t[e] = this.userObject[e]);
             n = JSON.stringify(t);
           }
-          const o = `${t.src}&ibl-data=${n}&chat-action=${e}&session-id=${null == d ? void 0 : d.sessionId}`;
+          const o = new URL(this.popupUrl || t.src);
+          o.searchParams.set('ibl-data', this.popupAuthData || n || '');
+          o.searchParams.set('chat-action', e);
+          o.searchParams.set(
+            'session-id',
+            (null == d ? void 0 : d.sessionId) || '',
+          );
           if (this.isInIframe())
             'MENTOR:CHAT_ACTION_SCREENSHARE' ===
               (null == d ? void 0 : d.type) &&
               (this.sentOpenNewWindowForScreenShare = !0),
               window.parent.postMessage(
-                { type: 'ACTION:OPEN_NEW_WINDOW', payload: { url: o } },
+                {
+                  type: 'ACTION:OPEN_NEW_WINDOW',
+                  payload: { url: o.toString() },
+                },
                 '*',
               );
           else {
@@ -138,17 +153,51 @@
               e = 667,
               n = (window.screen.width - t) / 2,
               s = (window.screen.height - e) / 2,
-              i = `MentorAI_${Date.now()}`,
-              r = window.open(
-                o,
+              i = `MentorAI_${Date.now()}`;
+            if (
+              'chrome-extension:' === window.location.protocol &&
+              globalThis.chrome?.windows?.create
+            )
+              globalThis.chrome.windows
+                .create({
+                  url: o.toString(),
+                  type: 'popup',
+                  width: t,
+                  height: e,
+                  left: Math.round(n),
+                  top: Math.round(s),
+                  focused: !0,
+                  setSelfAsOpener: !0,
+                })
+                .catch((t) =>
+                  console.error('[mentor-ai] failed to open media popup:', t),
+                );
+            else {
+              const r = window.open(
+                o.toString(),
                 i,
                 `width=${t},height=${e},left=${n},top=${s},toolbar=no,location=no,directories=no,status=no,menubar=no,resizable=yes,scrollbars=yes`,
               );
-            r &&
-              (localStorage.setItem(a, i), r.focus(), (this.popupWindow = r));
+              r &&
+                (localStorage.setItem(a, i), r.focus(), (this.popupWindow = r));
+            }
           }
         }
       }
+      if (
+        messageEvent.source &&
+        [
+          'MENTOR:ROOM_STATUS',
+          'MENTOR:SCREENSHARING_STARTED',
+          'MENTOR:SCREENSHARING_STOPPED',
+          'MENTOR:SCREENSHARING_SPEAKING',
+          'MENTOR:SCREENSHARING_MUTED',
+          'MENTOR:SCREENSHARING_MENTOR_SPEAKING',
+          'MENTOR:SCREENSHARING_MENTOR_MUTED',
+        ].includes(null == d ? void 0 : d.type) &&
+        messageEvent.origin === new URL(this.mentorUrl).origin
+      )
+        this.popupWindow = messageEvent.source;
       if (
         ((null == d ? void 0 : d.closeEmbed) &&
           window.parent.postMessage(JSON.stringify(d), '*'),
@@ -415,6 +464,18 @@
     }
     set mentorUrl(t) {
       this.setAttribute('mentorurl', t);
+    }
+    get popupUrl() {
+      return this.getAttribute('popupurl');
+    }
+    set popupUrl(t) {
+      this.setAttribute('popupurl', t);
+    }
+    get popupAuthData() {
+      return this.getAttribute('popupauthdata');
+    }
+    set popupAuthData(t) {
+      this.setAttribute('popupauthdata', t);
     }
     get authUrl() {
       return this.getAttribute('authurl') || 'https://auth.iblai.app';

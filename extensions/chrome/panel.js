@@ -129,8 +129,16 @@ function installAuthIntoIframe() {
   // was silently ignored, so the login fell through to defaultRedirectPath '/'
   // and dropped the embed params.
   const original = new URL(src);
+  // The iframe's src attribute is about to become /sso-login-complete. Keep
+  // the actual chat URL separately so agent-ai can open voice/screen-share as
+  // a top-level mentor page, where Chrome can surface media permission UI.
+  agent.setAttribute('popupurl', original.href);
   const redirectPath = original.pathname + original.search;
   const session = iblSessionData();
+  // The popup is a top-level mentor document, so it does not share the
+  // iframe's partitioned storage. Give agent-ai the same bounded session
+  // payload used by the SSO installer; the mentor app consumes and removes it.
+  agent.setAttribute('popupauthdata', JSON.stringify(session));
   iframe.src =
     `${mentorUrl}/sso-login-complete` +
     `?data=${encodeURIComponent(JSON.stringify(session))}` +
