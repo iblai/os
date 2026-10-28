@@ -62,6 +62,18 @@ export class SettingsTab {
   readonly capabilityMatrixRowVoiceRecord: Locator;
   readonly capabilityMatrixRowVoiceCall: Locator;
 
+  /** Capabilities sub-tab: "File Uploads" group, last group (iblai-platform#2528). */
+  readonly contextLimitsGroup: Locator;
+  readonly fileUploadsGroup: Locator;
+  readonly allowedFileTypesBox: Locator;
+  readonly allowedFileTypesInfoButton: Locator;
+  readonly allowedFileTypesButton: Locator;
+  readonly allowedFileTypesDialog: Locator;
+  readonly allowedFileTypesInput: Locator;
+  readonly allowedFileTypesError: Locator;
+  readonly allowedFileTypesDraftCount: Locator;
+  readonly allowedFileTypesCustom: Locator;
+
   /**
    * Basic sub-tab. The Category combobox (iblai-platform#2289 regression
    * coverage). Trigger's aria-label is a fixed SDK translation
@@ -212,6 +224,30 @@ export class SettingsTab {
     );
     this.capabilityMatrixRowVoiceCall = dialog.getByTestId(
       'capability-matrix-row-voice-call',
+    );
+    this.contextLimitsGroup = dialog.getByTestId('settings-context-limits');
+    this.fileUploadsGroup = dialog.getByTestId('settings-file-uploads');
+    this.allowedFileTypesBox = dialog.getByTestId('allowed-file-types-box');
+    this.allowedFileTypesInfoButton = this.allowedFileTypesBox.getByRole(
+      'button',
+      { name: 'More about file types users can attach' },
+    );
+    this.allowedFileTypesButton = dialog.getByTestId(
+      'allowed-file-types-button',
+    );
+    // The dialog is portaled out of the Edit Agent dialog, so resolve from page.
+    this.allowedFileTypesDialog = page.getByTestId('allowed-file-types-dialog');
+    this.allowedFileTypesInput = this.allowedFileTypesDialog.getByTestId(
+      'allowed-file-types-input',
+    );
+    this.allowedFileTypesError = this.allowedFileTypesDialog.getByTestId(
+      'allowed-file-types-error',
+    );
+    this.allowedFileTypesDraftCount = this.allowedFileTypesDialog.getByTestId(
+      'allowed-file-types-draft-count',
+    );
+    this.allowedFileTypesCustom = this.allowedFileTypesDialog.getByTestId(
+      'allowed-file-types-custom',
     );
     this.categoryTrigger = dialog.getByRole('combobox', {
       name: 'Select a category',
@@ -835,6 +871,65 @@ export class SettingsTab {
    */
   categoryOptionCheck(name: string): Locator {
     return this.categoryOption(name).locator('svg').last();
+  }
+
+  /** A common-extension toggle inside the File Types dialog (aria-pressed). */
+  allowedFileTypeToggle(ext: string): Locator {
+    return this.allowedFileTypesDialog.getByTestId(`allowed-file-type-${ext}`);
+  }
+
+  async openAllowedFileTypes(): Promise<void> {
+    await this.selectSubTab('Capabilities');
+    await this.allowedFileTypesButton.scrollIntoViewIfNeeded();
+    await this.allowedFileTypesButton.click();
+    await expect(this.allowedFileTypesDialog).toBeVisible({ timeout: 10_000 });
+  }
+
+  /** Types into the dialog's input and clicks Add. */
+  async addAllowedFileType(text: string): Promise<void> {
+    await this.allowedFileTypesInput.fill(text);
+    await this.allowedFileTypesDialog
+      .getByRole('button', { name: 'Add', exact: true })
+      .click();
+  }
+
+  async clearAllAllowedFileTypes(): Promise<void> {
+    await this.allowedFileTypesDialog
+      .getByRole('button', { name: 'Clear All' })
+      .click();
+  }
+
+  async doneAllowedFileTypes(): Promise<void> {
+    await this.allowedFileTypesDialog
+      .getByRole('button', { name: 'Done', exact: true })
+      .click();
+    await expect(this.allowedFileTypesDialog).toBeHidden({ timeout: 10_000 });
+  }
+
+  /**
+   * Clicks the tab's Save and returns the JSON PUT that carried
+   * `allowed_file_upload_extensions` (parsed list), once the success toast shows.
+   */
+  async saveAllowedFileTypes(): Promise<{ extensions: string[]; ok: boolean }> {
+    await expect(this.saveButton).toBeEnabled({ timeout: 10_000 });
+    const [request] = await Promise.all([
+      this.page.waitForRequest(
+        (req) =>
+          req.method() === 'PUT' &&
+          (req.postData() ?? '').includes('allowed_file_upload_extensions'),
+        { timeout: 30_000 },
+      ),
+      this.saveButton.click(),
+    ]);
+    const response = await request.response();
+    await expect(
+      this.page.getByText(/Agent updated successfully/i).first(),
+    ).toBeVisible({ timeout: 30_000 });
+    const body = JSON.parse(request.postData() ?? '{}');
+    return {
+      extensions: body.allowed_file_upload_extensions,
+      ok: !!response && response.ok(),
+    };
   }
 
   /**
