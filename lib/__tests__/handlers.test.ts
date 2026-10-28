@@ -61,7 +61,6 @@ vi.mock('@/features/navigation/slice', () => ({
 }));
 
 vi.mock('@iblai/iblai-js/web-utils', () => ({
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ...(globalThis as any).__iblAuthStorageMock,
   chatActions: {
     setIframeContext: mockSetIframeContext,

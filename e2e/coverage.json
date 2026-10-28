@@ -1,12 +1,12 @@
 {
   "version": 2,
-  "lastUpdated": "2026-10-23",
+  "lastUpdated": "2026-10-27",
   "summary": {
-    "totalCheckpoints": 999,
-    "coveredCheckpoints": 954,
+    "totalCheckpoints": 1020,
+    "coveredCheckpoints": 973,
     "deprecatedCheckpoints": 17,
     "notReproducibleCheckpoints": 17,
-    "pendingCheckpoints": 11,
+    "pendingCheckpoints": 13,
     "percent": 100,
     "totalJourneys": 102,
     "activeJourneys": 101
@@ -341,6 +341,7 @@
       "spec": "06-mentor-management-admin.spec.ts",
       "sourceFiles": [
         "components/modals/edit-mentor-modal/index.tsx",
+        "hooks/use-mentor-segments.ts",
         "app/create-mentor/page.tsx",
         "components/modals/settings-modal.tsx",
         "hooks/use-mentors.ts",
@@ -463,6 +464,11 @@
         {
           "id": "mgmt-23",
           "description": "Issue #2638: LLM model availability is decided per model from route-mocked mentor-llms (availability wins over has_credentials, legacy shape falls back to provider flags) — provider card data-disabled only when every model is unavailable; unavailable model rows are disabled with data-availability-status, the backend message as a title tooltip only (no inline text) and sort after available ones; byok_main_fallback model is selectable",
+          "status": "covered"
+        },
+        {
+          "id": "mgmt-24",
+          "description": "Admin opens the Edit Agent modal at desktop width and its \"Agent settings categories\" tablist shows exactly four tabs in order — Setup, Policies, Integrations, Activity — all on one row, each visible with its title shown in full (scrollWidth <= clientWidth; equal quarters of the 320px sidebar cut \"Integrations\" off, so each pill takes its title's width)",
           "status": "covered"
         }
       ]
@@ -1285,7 +1291,7 @@
       "spec": "20-dataset-management.spec.ts",
       "sourceFiles": [
         "components/modals/edit-mentor-modal/tabs/datasets-tab/agent-datasets-tab.tsx",
-        "components/workflows/node-config-panel.tsx",
+        "app/platform/[tenantKey]/workflows/[mentorId]/[id]/page.tsx",
         "hooks/user-navigate.ts",
         "lib/constants.ts",
         "lib/config.ts",
@@ -2382,10 +2388,7 @@
       "spec": "34-workflows.spec.ts",
       "sourceFiles": [
         "app/platform/[tenantKey]/workflows/[mentorId]/page.tsx",
-        "app/platform/[tenantKey]/workflows/[mentorId]/[id]/page.tsx",
-        "components/workflows/workflow-canvas.tsx",
-        "components/workflows/node-config-panel.tsx",
-        "components/workflows/workflow-preview-chat.tsx"
+        "app/platform/[tenantKey]/workflows/[mentorId]/[id]/page.tsx"
       ],
       "checkpoints": [
         {
@@ -2425,7 +2428,7 @@
         },
         {
           "id": "wf-08",
-          "description": "New workflow shows Draft status badge",
+          "description": "New workflow shows Active status badge",
           "status": "covered"
         },
         {
@@ -2440,7 +2443,7 @@
         },
         {
           "id": "wf-11",
-          "description": "Default nodes (Start and Mentor) are visible with an edge connecting them",
+          "description": "Default nodes (Start and Agent) are visible with an edge connecting them",
           "status": "covered"
         },
         {
@@ -2465,7 +2468,97 @@
         },
         {
           "id": "wf-16",
-          "description": "File Search node's dataset picker dialog: opening/searching/paging never touch datasetsPage/datasetsSearch URL params (syncToUrl=false, unlike the edit-mentor modal's Datasets tab); picking a row closes the dialog and shows the dataset name with a Change button; reopening highlights the previously selected row (self-seeded mentor)",
+          "description": "File Search node's dataset picker dialog: opening/searching/paging never touch datasetsPage/datasetsSearch URL params (the picker keeps page/search in its own state, unlike the edit-mentor modal's Datasets tab); picking a row closes the dialog and shows the dataset name with a Change button; reopening highlights the previously selected row (self-seeded mentor)",
+          "status": "covered"
+        },
+        {
+          "id": "wf-17",
+          "description": "Hovering a step and clicking its trash button (Delete Transform) removes it from the canvas and the saved definition",
+          "status": "covered"
+        },
+        {
+          "id": "wf-18",
+          "description": "Opening a step panel and clicking its header Delete button (Delete Set State) removes the step and closes the panel",
+          "status": "covered"
+        },
+        {
+          "id": "wf-19",
+          "description": "The Agent step's trash button removes it along with its connection from the saved definition",
+          "status": "covered"
+        },
+        {
+          "id": "wf-20",
+          "description": "Clicking a connection's hit path then the Delete Connection button removes the connection (e-start-mentor-1) from the canvas and the saved definition",
+          "status": "covered"
+        },
+        {
+          "id": "wf-21",
+          "description": "Pressing Delete with a connection selected removes only that connection and keeps both steps",
+          "status": "covered"
+        },
+        {
+          "id": "wf-22",
+          "description": "Start step: Number and Boolean state variables are listed in the panel and saved with typed defaults (5 as a number, true as a boolean)",
+          "status": "covered"
+        },
+        {
+          "id": "wf-23",
+          "description": "Start step: a state variable is removed with Remove {name} after confirming in the Delete Variable dialog (Cancel keeps it); an invalid or already-used name keeps Save disabled and shows its hint",
+          "status": "covered"
+        },
+        {
+          "id": "wf-24",
+          "description": "Set State: the To Variable dropdown lists Start variables and never Variable 1; New opens the New Variable dialog and the new name is selected",
+          "status": "covered"
+        },
+        {
+          "id": "wf-25",
+          "description": "Set State: an expression is saved as data.assignments [{variable, expression}] with no setStateAssignments, and validation has no empty-assignments or attribute-access message",
+          "status": "covered"
+        },
+        {
+          "id": "wf-26",
+          "description": "Transform: Key and Value are saved as data.expressions [{target, expression}] with no transformExpressions/transformMode, and validation has no empty-expressions message",
+          "status": "covered"
+        },
+        {
+          "id": "wf-27",
+          "description": "While: an invalid Max Iterations (0) shows \"Enter a whole number of 1 or more.\"; a valid Condition and Max Iterations are saved as data.condition and data.maxIterations (a number), and validation has no missing-condition message",
+          "status": "covered"
+        },
+        {
+          "id": "wf-28",
+          "description": "While: the Loop and Done handles connect to other steps and save edges with sourceHandle continue and done",
+          "status": "covered"
+        },
+        {
+          "id": "wf-29",
+          "description": "If / Else: the condition is saved in data.conditions[0].expression and validation has no attribute-access message",
+          "status": "covered"
+        },
+        {
+          "id": "wf-30",
+          "description": "If / Else: the condition-0 and Else handles connect to other steps and save edges with those sourceHandle values",
+          "status": "covered"
+        },
+        {
+          "id": "wf-31",
+          "description": "A workflow saved with the old field names (setStateAssignments, transformExpressions, whileExpression, a two-way If / Else with true/false edges) opens marked Unsaved and sends no auto-save; clicking Save stores assignments, expressions, condition, conditions[0].expression and condition-0/else edges and clears Unsaved",
+          "status": "covered"
+        },
+        {
+          "id": "wf-32",
+          "description": "If / Else: wiring the If output to one step and then to another leaves a single connection from that output, on the canvas and in the saved edges",
+          "status": "covered"
+        },
+        {
+          "id": "wf-33",
+          "description": "Start step: removing a variable that a Set State step assigns opens the Variable In Use dialog listing the step; Cancel closes it and the variable stays listed",
+          "status": "covered"
+        },
+        {
+          "id": "wf-34",
+          "description": "Adding a Note: the backend's validate response warns that the Note is not connected, but the validation banner shows only the other warnings (Workflow should have an 'end' node) and never the Note's",
           "status": "covered"
         }
       ]
@@ -2963,12 +3056,12 @@
         },
         {
           "id": "claw-04",
-          "description": "Selecting claw turns off whichever kind (computational-runtime or virtual-machine) was previously active in the same PATCH (mutual exclusivity); no kind switch ever gets a persistent disabled state — each is only briefly disabled while its own save is in flight; Sandbox leads the Integrations category (feat/2040 moved it off Configurations)",
+          "description": "Selecting claw turns off whichever kind (computational-runtime or virtual-machine) was previously active in the same PATCH (mutual exclusivity); no kind switch ever gets a persistent disabled state — each is only briefly disabled while its own save is in flight; Integrations opens on Tools and Sandbox follows MCP",
           "status": "covered"
         },
         {
           "id": "claw-06",
-          "description": "Sandbox leads the Integrations category unconditionally (feat/2040 groups the sidebar into Configurations / Integrations / Runtime and moved Sandbox off Configurations)",
+          "description": "Sandbox follows Tools and MCP in the Integrations category unconditionally (the sidebar is grouped into Setup / Policies / Integrations / Activity)",
           "status": "covered"
         },
         {
@@ -4172,7 +4265,7 @@
       "checkpoints": [
         {
           "id": "grd-01",
-          "description": "Grader tab is visible in the Edit Mentor modal sidebar (Configurations category, always mounted for an admin with standard mentor-owner permissions)",
+          "description": "Grader tab is visible in the Edit Mentor modal sidebar (Setup category, always mounted for an admin with standard mentor-owner permissions)",
           "status": "covered"
         },
         {
@@ -4260,7 +4353,7 @@
       "checkpoints": [
         {
           "id": "ags-01",
-          "description": "Admin sees the Skills tab on a freshly-created (Base Agent) mentor, with its \"Skills\" heading and the \"type /\" hint (copy wording intentionally not pinned \u2014 differs between OS host and SDK wrapper); Skills sits right after Prompts in the Configurations category (ordering moved here from journey 44) \u2014 full RBAC grant set forced via SkillsTab.grantAllSkillAssignmentPerms so the both-sub-tabs assert is rollout-independent",
+          "description": "Admin sees the Skills tab on a freshly-created (Base Agent) mentor, with its \"Skills\" heading and the \"type /\" hint (copy wording intentionally not pinned — differs between OS host and SDK wrapper); Skills sits right after Prompts in the Setup category (ordering moved here from journey 44) — full RBAC grant set forced via SkillsTab.grantAllSkillAssignmentPerms so the both-sub-tabs assert is rollout-independent",
           "status": "covered"
         },
         {
@@ -4397,6 +4490,12 @@
           "id": "slash-16",
           "description": "Skills row inside the composer's \"+\" menu lists the mentor's enabled skills as name + /slug (no descriptions); selecting inserts the /slug token AT THE CARET with context-aware spacing (highlighted in the composer) — there is no separate skill chip in the #2586 redesign, so the armed state shows only as the composer token, a checked row in the Skills menu, and its count badge on the menu trigger; removing (re-selecting the armed skill, or deleting its token text) clears all three; arming another skill replaces the current one (single selection); arming via the \"/\" picker marks the same skill checked in the Skills menu — both surfaces derive from the composer text so they stay in sync",
           "status": "covered"
+        },
+        {
+          "id": "slash-17",
+          "description": "On a phone-width composer (360px) the Skills button collapses into the ••• menu like the other tool pills; its ••• entry expands the skills list in place (scrolling, inside the viewport), and picking a skill arms its /slug token",
+          "status": "pending",
+          "note": "No route renders a Skills button that could collapse: the mentor route renders the SDK composer (SdkChat), where Skills sits inside the '+' menu at every width, and the workflow preview renders the OS composer (components/chat-input-form.tsx) in compactMode, which has no tool row (inside-buttons.tsx) and so no Skills. test.fixme until a route renders the OS composer's tool row; covered meanwhile by the inside-buttons Vitest case 'moves into the ••• menu when the row is too narrow, and expands its list there'"
         }
       ]
     },
@@ -4481,7 +4580,7 @@
       "checkpoints": [
         {
           "id": "sc-01",
-          "description": "Admin sees the \"Billing\" tab in the Configurations category, positioned immediately after \"LLM\", and it opens on the \"This Agent\" sub-tab with \"Per User\" also present (AgentSpendCapsTab now has exactly these two sub-tabs — the old \"Workspace\" sub-tab moved to the tenant Billing tab, covered by journey 69)",
+          "description": "Admin sees the \"Billing\" tab in the Policies category, positioned immediately after \"Access\", and it opens on the \"This Agent\" sub-tab with \"Per User\" also present (AgentSpendCapsTab now has exactly these two sub-tabs — the old \"Workspace\" sub-tab moved to the tenant Billing tab, covered by journey 69)",
           "status": "covered"
         },
         {
@@ -4847,7 +4946,7 @@
       "name": "Dataset Cloud Pickers",
       "spec": "74-dataset-cloud-pickers.spec.ts",
       "sourceFiles": [
-        "components/workflows/node-config-panel.tsx",
+        "app/platform/[tenantKey]/workflows/[mentorId]/[id]/page.tsx",
         "components/modals/edit-mentor-modal/tabs/datasets-tab/agent-datasets-tab.tsx"
       ],
       "checkpoints": [
@@ -5464,6 +5563,12 @@
           "id": "cr-16",
           "description": "The composer in CONVERSATION state (after a mocked reply) still shows an active tool chip, the Canvas \"Turn off Canvas\" x pill, and the \"/\" skill picker positioned above the composer; a 320-390px viewport in that state has no horizontal overflow with Send visible",
           "status": "covered"
+        },
+        {
+          "id": "cr-17",
+          "description": "Below 520px the composer's tool pills keep one line: Canvas off shows only its icon (its name kept as the accessible name), Canvas on alone shows its name and its \"Turn off Canvas\" x; from 520px up the name shows on or off",
+          "status": "pending",
+          "note": "Written as test.fixme and never run: needs an authenticated session (PLAYWRIGHT_USERNAME / PLAYWRIGHT_PASSWORD), which no env it has run in had. The pinned SDK (web-containers 1.48.0) has the tool row it tests; the SDK measures the row rather than the window, so its 390px step still needs checking on the first run. The two-pills-on case needs the desktop app's Code or Cowork pill; covered meanwhile by the SDK's composer-tool-row and chat-input-form 'tool pills on phone widths' Vitest cases and the OS coding-mode-button 'in the SDK composer's tool row' cases"
         }
       ]
     },

@@ -56,8 +56,7 @@ const DSN_VAR: &str = "IBL_SENTRY_DSN_DESKTOP";
 /// `sentry.client.config.ts` / `components/sentry-init.tsx`. A DSN is a public
 /// ingest key, not a secret: this one already ships in the web bundle under
 /// `NEXT_PUBLIC_IBL_SENTRY_DSN`.
-const DEFAULT_DSN: &str =
-    "https://f953ef66c4e0d5bda480069132dc9aee@sentry.ibl.network/33";
+const DEFAULT_DSN: &str = "https://f953ef66c4e0d5bda480069132dc9aee@sentry.ibl.network/33";
 
 /// Start reporting. Returns the guard, which **must be bound to a named
 /// local** for the lifetime of the process: `let _sentry = …`. A bare
@@ -103,10 +102,7 @@ pub fn init() -> Option<ClientInitGuard> {
 /// choices are assertable without opening a client.
 fn options() -> ClientOptions {
     let mut options = ClientOptions::default();
-    options.release = Some(Cow::Owned(format!(
-        "ibl-ai-os@{}",
-        env!("IBL_APP_VERSION")
-    )));
+    options.release = Some(Cow::Owned(format!("ibl-ai-os@{}", env!("IBL_APP_VERSION"))));
     options.environment = Some(Cow::Borrowed(if cfg!(debug_assertions) {
         "dev"
     } else {
@@ -597,7 +593,7 @@ mod tests {
         std::env::set_var("IBL_SENTRY_DEBUG", "1");
         for bad in [
             "not-a-url",
-            "https://sentry.ibl.network/33",   // no public key
+            "https://sentry.ibl.network/33",    // no public key
             "\"https://abc@sentry.example/1\"", // shell quotes kept
             "https://abc@/1",
         ] {
@@ -784,7 +780,10 @@ mod tests {
     #[test]
     fn report_once_captures_only_the_first_of_its_kind() {
         let context = "[test] a repeated failure in a hot loop";
-        assert!(first_time(context), "the first call is the one that reports");
+        assert!(
+            first_time(context),
+            "the first call is the one that reports"
+        );
         for _ in 0..500 {
             assert!(!first_time(context), "every later call is print-only");
         }
