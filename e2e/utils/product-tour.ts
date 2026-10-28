@@ -3,13 +3,17 @@ import { expect, type Page, type Response } from '@playwright/test';
 /** Mirrors `productTourMetadataKey()` in components/product-tour/use-tour-completion.ts. */
 export const PRODUCT_TOUR_METADATA_KEY = 'os-product-tour';
 
-const USER_METADATA_PATH = '/api/ibl/users/manage/metadata/';
+// Newer SDK releases moved the endpoint to the core proxy; accept both.
+const USER_METADATA_PATHS = [
+  '/api/ibl/users/manage/metadata/',
+  '/api/core/users/metadata/proxy/',
+];
 
 export const isUserMetadataResponse = (
   response: Response,
   method: 'GET' | 'POST',
 ): boolean =>
-  response.url().includes(USER_METADATA_PATH) &&
+  USER_METADATA_PATHS.some((path) => response.url().includes(path)) &&
   response.request().method() === method;
 
 export type CapturedUserMetadata = {
