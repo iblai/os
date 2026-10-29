@@ -95,6 +95,7 @@ export function SettingsTab() {
       advanced: t('advancedHeading'),
       perSurface: t('perSurfaceHeading'),
       globalSettings: t('globalSettingsHeading'),
+      contextLimits: t('contextLimitsHeading'),
     },
     surfaces: {
       inAppChat: t('inAppChatSurfaceLabel'),
@@ -198,6 +199,24 @@ export function SettingsTab() {
       smartDocRetrieval: {
         label: t('smartDocRetrievalLabel'),
         tooltip: t('smartDocRetrievalTooltip'),
+      },
+      chatHistoryMessages: {
+        label: t('chatHistoryMessagesLabel'),
+        tooltip: t('chatHistoryMessagesTooltip'),
+        placeholder: t('chatHistoryMessagesPlaceholder'),
+        minValueError: t('contextLimitMinValueError'),
+      },
+      chatHistoryTokens: {
+        label: t('chatHistoryTokensLabel'),
+        tooltip: t('chatHistoryTokensTooltip'),
+        placeholder: t('chatHistoryTokensPlaceholder'),
+        minValueError: t('contextLimitMinValueError'),
+      },
+      documentChunks: {
+        label: t('documentChunksLabel'),
+        tooltip: t('documentChunksTooltip'),
+        placeholder: t('documentChunksPlaceholder'),
+        minValueError: t('contextLimitMinValueError'),
       },
       image: {
         label: t('imageLabel'),

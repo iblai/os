@@ -3,6 +3,9 @@ import { logger } from '@iblai/iblai-js/playwright';
 
 export const MCP_SERVER_LIST_PATH = /\/mcp-servers\/$/;
 const MCP_CONNECTIONS_PATH = /\/users\/([^/]+)\/mcp-server-connections\/$/;
+/** The user's own sign-ins to outside services (not the start or callback paths below it). */
+const CONNECTED_SERVICES_PATH =
+  /\/connected-services\/orgs\/[^/]+\/users\/[^/]+\/$/;
 
 export const E2E_OAUTH_SERVICE = {
   provider: 'e2e-oauth-provider',
@@ -127,4 +130,71 @@ export async function mockMcpServerConnections(
       });
     },
   );
+}
+
+/**
+ * Serves `servicesFor()` as the user's connected services (an array), so the
+ * composer knows the sign-in lists and can count a server as waiting for one.
+ */
+export async function mockConnectedServices(
+  page: Page,
+  servicesFor: () => unknown[],
+): Promise<void> {
+  await page.route(
+    (url) => CONNECTED_SERVICES_PATH.test(url.pathname),
+    (route) =>
+      route.request().method() === 'GET'
+        ? route.fulfill({ json: servicesFor() })
+        : route.fallback(),
+  );
+}
+
+/**
+ * A per-user sign-in store for one mocked OAuth server: no connection until
+ * the app creates one (POST mcp-server-connections/, answered 201), after
+ * which the connections list and the user's connected services both carry
+ * it. `created()` says whether the app got that far.
+ */
+export async function mockMcpSignIn(
+  page: Page,
+  args: {
+    server: ReturnType<typeof userScopedOAuthServer>;
+    connectionId: number;
+    connectedServiceId: number;
+  },
+): Promise<{ created: () => boolean }> {
+  let created = false;
+  await page.route(
+    (url) => MCP_CONNECTIONS_PATH.test(url.pathname),
+    (route) => {
+      const method = route.request().method();
+      if (method !== 'GET' && method !== 'POST') return route.fallback();
+      const [, user] = MCP_CONNECTIONS_PATH.exec(
+        new URL(route.request().url()).pathname,
+      )!;
+      const connection = userConnection({
+        id: args.connectionId,
+        serverId: args.server.id,
+        username: decodeURIComponent(user),
+        connectedServiceId: args.connectedServiceId,
+      });
+      if (method === 'POST') {
+        created = true;
+        return route.fulfill({ status: 201, json: connection });
+      }
+      return route.fulfill({ json: page1(created ? [connection] : []) });
+    },
+  );
+  await mockConnectedServices(page, () =>
+    created
+      ? [
+          {
+            id: args.connectedServiceId,
+            provider: args.server.oauth_service_data.oauth_provider,
+            service: args.server.oauth_service_data.name,
+          },
+        ]
+      : [],
+  );
+  return { created: () => created };
 }

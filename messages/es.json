@@ -1846,7 +1846,18 @@
     "inAppChatNote": "Conversaciones alojadas dentro de la aplicacion: el chat que tus usuarios abren aqui.",
     "embedWidgetNote": "El widget que incrustas en tu propio sitio con el fragmento de la pestana Insertar.",
     "showLastConversationLabel": "Reabrir la última conversación",
-    "showLastConversationTooltip": "Cuando alguien abre este agente, le muestra su última conversación para que pueda seguir donde la dejó. Este ajuste tiene un solo valor, así que se aplica al chat de la app y al widget integrado."
+    "showLastConversationTooltip": "Cuando alguien abre este agente, le muestra su última conversación para que pueda seguir donde la dejó. Este ajuste tiene un solo valor, así que se aplica al chat de la app y al widget integrado.",
+    "contextLimitsHeading": "Límites de contexto",
+    "chatHistoryMessagesLabel": "Mensajes del historial de chat",
+    "chatHistoryMessagesTooltip": "Máximo de mensajes anteriores enviados al modelo. Este ajuste tiene un solo valor, así que se aplica al chat de la app y al widget integrado.",
+    "chatHistoryMessagesPlaceholder": "20",
+    "chatHistoryTokensLabel": "Tokens del historial de chat",
+    "chatHistoryTokensTooltip": "Máximo de tokens del historial de chat enviados al modelo. Este ajuste tiene un solo valor, así que se aplica al chat de la app y al widget integrado.",
+    "chatHistoryTokensPlaceholder": "15000",
+    "documentChunksLabel": "Fragmentos de documentos",
+    "documentChunksTooltip": "Número de fragmentos de la base de conocimiento recuperados por consulta. Este ajuste tiene un solo valor, así que se aplica al chat de la app y al widget integrado.",
+    "documentChunksPlaceholder": "4",
+    "contextLimitMinValueError": "Introduce 1 o más."
   },
   "tabsSkillsTab": {
     "heading": "Habilidades",

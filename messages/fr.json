@@ -1846,7 +1846,18 @@
     "inAppChatNote": "Les conversations hebergees dans l'application : le chat que vos utilisateurs ouvrent ici.",
     "embedWidgetNote": "Le widget que vous integrez a votre propre site avec l'extrait de l'onglet Integration.",
     "showLastConversationLabel": "Rouvrir la dernière conversation",
-    "showLastConversationTooltip": "Quand quelqu’un ouvre cet agent, sa dernière conversation s’affiche pour qu’il reprenne là où il s’était arrêté. Ce réglage n’a qu’une valeur : il s’applique au chat de l’application et au widget intégré."
+    "showLastConversationTooltip": "Quand quelqu’un ouvre cet agent, sa dernière conversation s’affiche pour qu’il reprenne là où il s’était arrêté. Ce réglage n’a qu’une valeur : il s’applique au chat de l’application et au widget intégré.",
+    "contextLimitsHeading": "Limites de contexte",
+    "chatHistoryMessagesLabel": "Messages de l’historique de chat",
+    "chatHistoryMessagesTooltip": "Nombre maximal de messages passés envoyés au modèle. Ce réglage n’a qu’une valeur : il s’applique au chat de l’application et au widget intégré.",
+    "chatHistoryMessagesPlaceholder": "20",
+    "chatHistoryTokensLabel": "Jetons de l’historique de chat",
+    "chatHistoryTokensTooltip": "Nombre maximal de jetons de l’historique de chat envoyés au modèle. Ce réglage n’a qu’une valeur : il s’applique au chat de l’application et au widget intégré.",
+    "chatHistoryTokensPlaceholder": "15000",
+    "documentChunksLabel": "Fragments de documents",
+    "documentChunksTooltip": "Nombre de fragments de la base de connaissances récupérés par requête. Ce réglage n’a qu’une valeur : il s’applique au chat de l’application et au widget intégré.",
+    "documentChunksPlaceholder": "4",
+    "contextLimitMinValueError": "Saisissez 1 ou plus."
   },
   "tabsSkillsTab": {
     "heading": "Compétences",

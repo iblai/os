@@ -348,6 +348,17 @@ describe('SettingsTab', () => {
         'anyoneOption',
         'enableVerboseReasoningLabel',
         'enableVerboseReasoningTooltip',
+        'contextLimitsHeading',
+        'chatHistoryMessagesLabel',
+        'chatHistoryMessagesTooltip',
+        'chatHistoryMessagesPlaceholder',
+        'chatHistoryTokensLabel',
+        'chatHistoryTokensTooltip',
+        'chatHistoryTokensPlaceholder',
+        'documentChunksLabel',
+        'documentChunksTooltip',
+        'documentChunksPlaceholder',
+        'contextLimitMinValueError',
       ];
 
       for (const [locale, messages] of Object.entries(catalogs)) {

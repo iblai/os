@@ -27,8 +27,9 @@ interface ApiContext {
  * `ComposerPlusMenu` → `McpServersMenu`, `chat-input-form/composer-plus-menu.tsx`).
  * On desktop the panel is a popover beside the menu (`composer-mcp-popover`);
  * on phones it is a page of the "+" bottom sheet. The panel lists only the
- * servers the agent uses, each with the person's on/off for this chat and,
- * for a per-user OAuth server they have not signed in to, Connect; servers
+ * servers the agent uses, each with one switch as its only control: the
+ * person's on/off for this chat or, on a sign-in (OAuth) server they have not
+ * signed in to, an off switch that starts the sign-in when turned on; servers
  * are added and attached in the agent settings MCP tab, so the fixtures here
  * create and attach them through the API. The row is offered only while the
  * agent uses at least one server (`useMcpActiveCount`), and, like Memory,
@@ -45,16 +46,24 @@ export class ChatMcpMenuPage {
     /** The "+" trigger keeps its historical accessible name. */
     plusMenu: 'Attach file',
     close: 'Close',
-    connect: 'Connect',
     sessionDescription:
       'Switches here apply to this chat only, from your next message.',
     nothingOn: 'Nothing is on for this agent yet.',
     failedToLoad: 'Failed to load connectors',
     retry: 'Retry',
+    /** A sign-in server's switch is named "{name} off: turn on to sign in". */
+    turnOnToSignIn: 'off: turn on to sign in',
+    /** "{name} on for this chat". */
+    onForThisChat: 'on for this chat',
+    /** "{name} is required by your organization". */
+    required: 'is required by your organization',
+    /** "{name} connected successfully", once a sign-in lands. */
+    connected: 'connected successfully',
     /** The explainer's title: "Sign in to {name}". */
     signInTo: 'Sign in to',
     /** Part of the explainer's per-user wording. */
     ownAccount: 'with your own account',
+    popupHint: 'If no window opens, allow pop-ups for this site and try again.',
     explainerContinue: 'Continue',
     /** "{name} isn't set up for sign-in yet. Ask your administrator." */
     notSetUp: "isn't set up for sign-in yet. Ask your administrator.",
@@ -139,8 +148,9 @@ export class ChatMcpMenuPage {
   }
 
   /**
-   * The on/off for this chat: shown on every server the agent uses (locked when the
-   * server is required by the organization).
+   * The server's one switch: its on/off for this chat (locked on when the
+   * organization requires it), or, on a sign-in server the person has not
+   * signed in to, off until turning it on starts the sign-in.
    */
   serverToggle(serverId: number): Locator {
     return this.menu.getByTestId(`mcp-server-session-toggle-${serverId}`);
@@ -151,12 +161,7 @@ export class ChatMcpMenuPage {
     return this.menu.getByTestId(`mcp-server-required-${serverId}`);
   }
 
-  /** Only on a per-user OAuth server the person has not signed in to. */
-  connectButton(serverId: number): Locator {
-    return this.menu.getByTestId(`mcp-server-connect-${serverId}`);
-  }
-
-  /** The "Sign in to {name}" explainer the first Connect opens. */
+  /** The "Sign in to {name}" explainer the first sign-in opens. */
   explainerDialog(serverName: string): Locator {
     return this.page.getByRole('alertdialog', {
       name: `${ChatMcpMenuPage.LABELS.signInTo} ${serverName}`,
@@ -200,6 +205,9 @@ export class ChatMcpMenuPage {
         ),
       )
       .toBe(true);
+    // The row mounts once the agent's settings and the list have answered;
+    // End pressed before that lands on Memory.
+    await expect(this.row).toBeVisible({ timeout: 10_000 });
     await this.page.keyboard.press('End');
     await expect(this.row).toBeFocused();
     await this.page.keyboard.press('Enter');
@@ -254,6 +262,16 @@ export class ChatMcpMenuPage {
     expect(box!.y + box!.height).toBeLessThanOrEqual(viewport!.height + 1);
   }
 
+  /** The desktop popover's width: 28rem, so the one-line description fits. */
+  async expectPanelWidth(px: number): Promise<void> {
+    await this.panel.evaluate((el) =>
+      Promise.all(el.getAnimations().map((animation) => animation.finished)),
+    );
+    const box = await this.panel.boundingBox();
+    expect(box, 'the MCP panel has a layout box').not.toBeNull();
+    expect(Math.round(box!.width)).toBe(px);
+  }
+
   /** Switches the server on or off for this chat and waits for the session preference save. */
   async setServerEnabled(serverId: number, enabled: boolean): Promise<void> {
     const toggle = this.serverToggle(serverId);
@@ -279,15 +297,25 @@ export class ChatMcpMenuPage {
     await expect(toggle).toHaveAttribute('aria-checked', String(enabled));
   }
 
-  /** Presses Connect and, when the explainer shows, Continue; the sign-in then starts. */
-  async connect(serverId: number, serverName: string): Promise<void> {
-    await this.connectButton(serverId).click();
+  /**
+   * Turns a sign-in server's off switch on and presses Continue in the explainer
+   * (call `forgetConnectExplainer` first); the sign-in then starts.
+   */
+  async turnOnToSignIn(serverId: number, serverName: string): Promise<void> {
+    const toggle = this.serverToggle(serverId);
+    await expect(toggle).toHaveAttribute('aria-checked', 'false');
+    await toggle.click();
     const explainer = this.explainerDialog(serverName);
     await expect(explainer).toBeVisible({ timeout: 10_000 });
-    await explainer.getByTestId('mcp-connect-explainer-continue').click();
+    await explainer
+      .getByRole('button', {
+        name: ChatMcpMenuPage.LABELS.explainerContinue,
+        exact: true,
+      })
+      .click();
   }
 
-  /** The explainer is said once per user; this makes the next Connect show it again. */
+  /** The explainer is said once per user; this makes the next sign-in show it again. */
   async forgetConnectExplainer(): Promise<void> {
     await this.page.evaluate(() => {
       Object.keys(localStorage)
@@ -324,9 +352,31 @@ export class ChatMcpMenuPage {
         const attached = (
           Array.isArray(json.mcp_servers) ? json.mcp_servers : []
         ).filter((entry) => !given.has(idOf(entry)));
+        // The mocked attachments stand for ones this person may read. The
+        // real answer flags the field unreadable for a non-admin, and the
+        // composer then offers no MCP row at all.
+        const permissions = json.permissions as
+          | { field?: Record<string, { read?: boolean }> }
+          | undefined;
+        const readable = permissions && {
+          permissions: {
+            ...permissions,
+            field: {
+              ...(permissions.field ?? {}),
+              mcp_servers: {
+                ...(permissions.field?.mcp_servers ?? {}),
+                read: true,
+              },
+            },
+          },
+        };
         await route.fulfill({
           response,
-          json: { ...json, mcp_servers: [...attached, ...servers] },
+          json: {
+            ...json,
+            mcp_servers: [...attached, ...servers],
+            ...readable,
+          },
         });
       },
     );
@@ -385,24 +435,7 @@ export class ChatMcpMenuPage {
    */
   async attachServers(ids: number[]): Promise<void> {
     const { settingsUrl, headers } = await this.api();
-    const current = await this.page.request.get(settingsUrl, {
-      headers,
-      timeout: 30_000,
-    });
-    expect(
-      current.ok(),
-      `reading the agent settings returned HTTP ${current.status()}`,
-    ).toBe(true);
-    const settings = (await current.json()) as {
-      mcp_servers?: Array<number | { id?: number }>;
-      mentor_tools?: Array<{ slug?: string }>;
-    };
-    const attached = (settings.mcp_servers ?? [])
-      .map((entry) => (typeof entry === 'number' ? entry : entry?.id))
-      .filter((id): id is number => typeof id === 'number');
-    const slugs = (settings.mentor_tools ?? [])
-      .map((tool) => tool?.slug)
-      .filter((slug): slug is string => typeof slug === 'string');
+    const { ids: attached, toolSlugs: slugs } = await this.agentAttachments();
     const response = await this.page.request.put(settingsUrl, {
       headers,
       data: {
@@ -416,6 +449,31 @@ export class ChatMcpMenuPage {
       response.ok(),
       `attaching the MCP servers to the agent returned HTTP ${response.status()}`,
     ).toBe(true);
+  }
+
+  /** The agent's connectors (ids) and tools (slugs) as the API has them now. */
+  async agentAttachments(): Promise<{ ids: number[]; toolSlugs: string[] }> {
+    const { settingsUrl, headers } = await this.api();
+    const response = await this.page.request.get(settingsUrl, {
+      headers,
+      timeout: 30_000,
+    });
+    expect(
+      response.ok(),
+      `reading the agent settings returned HTTP ${response.status()}`,
+    ).toBe(true);
+    const settings = (await response.json()) as {
+      mcp_servers?: Array<number | { id?: number }>;
+      mentor_tools?: Array<{ slug?: string }>;
+    };
+    return {
+      ids: (settings.mcp_servers ?? [])
+        .map((entry) => (typeof entry === 'number' ? entry : entry?.id))
+        .filter((id): id is number => typeof id === 'number'),
+      toolSlugs: (settings.mentor_tools ?? [])
+        .map((tool) => tool?.slug)
+        .filter((slug): slug is string => typeof slug === 'string'),
+    };
   }
 
   /** The app's own tenant, user, agent and token: the API the way it calls it. */
