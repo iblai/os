@@ -2,14 +2,14 @@
   "version": 2,
   "lastUpdated": "2026-10-28",
   "summary": {
-    "totalCheckpoints": 1031,
-    "coveredCheckpoints": 984,
+    "totalCheckpoints": 1035,
+    "coveredCheckpoints": 988,
     "deprecatedCheckpoints": 17,
     "notReproducibleCheckpoints": 17,
     "pendingCheckpoints": 13,
     "percent": 100,
-    "totalJourneys": 103,
-    "activeJourneys": 102
+    "totalJourneys": 104,
+    "activeJourneys": 103
   },
   "journeys": [
     {
@@ -6468,17 +6468,22 @@
         },
         {
           "id": "aft-04",
-          "description": "In chat the composer's file input accept is .pdf,.docx,.png,.json; report.exe and the extension-less README are refused with \"<name> can't be added. This agent only accepts pdf, docx, png and json files.\" and not attached; report.pdf attaches (S3 leg mocked)",
+          "description": "In chat the composer's file input accept is .pdf,.docx,.png,.json; report.exe and the extension-less README are refused with the toasts \".exe files aren't accepted by this agent.\" and \"README has no file type, so this agent can't accept it.\" and not attached; report.pdf attaches (S3 leg mocked)",
           "status": "covered"
         },
         {
           "id": "aft-05",
-          "description": "Clear All + Save sends an empty list (everything allowed) and a csv then attaches with no refusal",
+          "description": "Clear All + Save sends an empty list (everything allowed) and a csv then attaches with no refusal toast",
           "status": "covered"
         },
         {
           "id": "aft-06",
           "description": "Upload-URL 400 {\"error\":\"This file type is not allowed for this mentor.\"} (mocked): the chip shows Retry and the toast says \"<name> can't be used with this agent\"",
+          "status": "covered"
+        },
+        {
+          "id": "aft-07",
+          "description": "Refusing report.exe toasts with a \"See allowed types\" link; clicking it dismisses the toast and opens \"File Types This Agent Accepts\" listing pdf, docx, png, json with the count of 4; searching .png filters to png, \"exe\" shows \".exe isn't one of them.\", Got It closes it; report.exe + notes.zip in one pick give one \"2 files can't be added: report.exe and notes.zip.\" toast",
           "status": "covered"
         }
       ]

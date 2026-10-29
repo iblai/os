@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-10-28 | 1034 checkpoints (987 covered, 13 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 104 journeys (103 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-10-28 | 1035 checkpoints (988 covered, 13 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 104 journeys (103 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -2334,7 +2334,7 @@ Issue #2731. Settings → Discovery → "Who Can View?": an admin-only note show
 
 ---
 
-## Journey 96: Allowed File Types (6 checkpoints) — `journeys/96-allowed-file-types.spec.ts`
+## Journey 96: Allowed File Types (7 checkpoints) — `journeys/96-allowed-file-types.spec.ts`
 
 **Source files:** `components/modals/edit-mentor-modal/settings-tab.tsx`, `messages/en.json`
 
@@ -2343,9 +2343,10 @@ Issue #2528. Settings → Capabilities ends with a File Uploads group whose Allo
 - [x] aft-01: Admin opens Settings > Capabilities on a fresh agent: the last group is File Uploads (after Context Limits) with the "File Types Users Can Attach" row, its info tooltip and the Allowed File Types button, no count text
 - [x] aft-02: The Allowed File Types dialog lists the 12 common types and a footer count; typing .JSON adds json under "Added by You"; a duplicate shows "json is already in the list.", js-on shows "Use letters and numbers only, like json."; Clear All unticks everything
 - [x] aft-03: Done then Save sends one JSON PUT with allowed_file_upload_extensions [pdf, docx, png, json]; saving an unrelated setting does not resend it; reload and reopen shows the saved list
-- [x] aft-04: In chat the composer's file input accept is .pdf,.docx,.png,.json; report.exe and the extension-less README are refused with "<name> can't be added. This agent only accepts pdf, docx, png and json files." and not attached; report.pdf attaches (S3 leg mocked)
-- [x] aft-05: Clear All + Save sends an empty list (everything allowed) and a csv then attaches with no refusal
+- [x] aft-04: In chat the composer's file input accept is .pdf,.docx,.png,.json; report.exe and the extension-less README are refused with the toasts ".exe files aren't accepted by this agent." and "README has no file type, so this agent can't accept it." and not attached; report.pdf attaches (S3 leg mocked)
+- [x] aft-05: Clear All + Save sends an empty list (everything allowed) and a csv then attaches with no refusal toast
 - [x] aft-06: Upload-URL 400 {"error":"This file type is not allowed for this mentor."} (mocked): the chip shows Retry and the toast says "<name> can't be used with this agent"
+- [x] aft-07: Refusing report.exe toasts with a "See allowed types" link; clicking it dismisses the toast and opens "File Types This Agent Accepts" listing pdf, docx, png, json with the count of 4; searching .png filters to png, "exe" shows ".exe isn't one of them.", Got It closes it; report.exe + notes.zip in one pick give one "2 files can't be added: report.exe and notes.zip." toast
 
 ---
 
