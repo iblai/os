@@ -13,6 +13,7 @@ export const LOCAL_STORAGE_KEYS = {
   DM_TOKEN_KEY: 'dm_token',
   AXD_TOKEN_KEY: 'axd_token',
   USER_DATA: 'userData',
+  USER_METADATA: 'user_metadata',
   DEFAULT_TENANT: 'tenant',
   USER_TENANTS: 'tenants',
   SESSION_ID: 'session_id',

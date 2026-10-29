@@ -2010,7 +2010,20 @@
     "inAppChatNote": "Conversations hosted inside the app — the chat your users open here.",
     "embedWidgetNote": "The widget you embed on your own site using the snippet from the Embed tab.",
     "showLastConversationLabel": "Reopen Last Conversation",
-    "showLastConversationTooltip": "When someone opens this agent, show their last conversation so they can pick up where they left off. This setting has one value, so it applies to both in-app chat and the embed widget."
+    "showLastConversationTooltip": "When someone opens this agent, show their last conversation so they can pick up where they left off. This setting has one value, so it applies to both in-app chat and the embed widget.",
+    "contextLimitsHeading": "Context Limits",
+    "chatHistoryMessagesLabel": "Chat History Messages",
+    "chatHistoryMessagesTooltip": "Max past messages sent to the model. This setting has one value, so it applies to both in-app chat and the embed widget.",
+    "chatHistoryMessagesPlaceholder": "20",
+    "chatHistoryMessagesMinValueError": "Enter 1 or more.",
+    "chatHistoryTokensLabel": "Chat History Tokens",
+    "chatHistoryTokensTooltip": "Max tokens of chat history sent to the model. This setting has one value, so it applies to both in-app chat and the embed widget.",
+    "chatHistoryTokensPlaceholder": "15000",
+    "chatHistoryTokensMinValueError": "Enter 1 or more.",
+    "documentChunksLabel": "Document Chunks",
+    "documentChunksTooltip": "Number of knowledge-base chunks retrieved per query. This setting has one value, so it applies to both in-app chat and the embed widget.",
+    "documentChunksPlaceholder": "4",
+    "documentChunksMinValueError": "Enter 1 or more."
   },
   "tabsMcpTab": {
     "infoBox": "Connect your agent to your own systems through MCP servers, so it can reach your data and services right inside a conversation."
