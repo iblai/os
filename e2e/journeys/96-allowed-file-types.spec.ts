@@ -6,8 +6,11 @@
  * plus an "add your own" input. Done writes the form field; the tab's Save
  * stores it with a JSON PUT (`allowed_file_upload_extensions`) to the agent.
  * In chat the composer's file input `accept` follows the list, a refused file
- * toasts "<name> can't be added. This agent only accepts …", and an empty list
- * means every type is allowed.
+ * shows an error toast (".exe files aren't accepted by this agent.", or
+ * "<name> has no file type, so this agent can't accept it.", or "N files can't
+ * be added: …") whose "See allowed types" link opens a searchable dialog of the
+ * agent's list, and an empty list means every type is allowed. Refused files
+ * never reach the per-message file limit.
  *
  * One throwaway agent (auto-tracked and deleted by `createWithName`) is shared
  * by the serial checkpoints. Settings and chat are driven for real; only the
@@ -51,8 +54,10 @@ function writeFile(dir: string, name: string, content = 'e2e'): string {
   return file;
 }
 
-const REFUSAL = (name: string) =>
-  `${name} can't be added. This agent only accepts pdf, docx, png and json files.`;
+const TYPE_REFUSAL = (type: string) =>
+  `.${type} files aren't accepted by this agent.`;
+const NO_TYPE_REFUSAL = (name: string) =>
+  `${name} has no file type, so this agent can't accept it.`;
 
 test.describe.serial('Journey 96: Allowed file types', () => {
   test.setTimeout(180_000);
@@ -235,15 +240,17 @@ test.describe.serial('Journey 96: Allowed file types', () => {
     await expect(input).toHaveAttribute('accept', '.pdf,.docx,.png,.json');
 
     await chatPage.attachFile(exe);
-    await expect(page.getByText(REFUSAL('report.exe')).first()).toBeVisible({
+    await expect(page.getByText(TYPE_REFUSAL('exe')).first()).toBeVisible({
       timeout: 10_000,
     });
     await expect(chatPage.attachmentChip).toHaveCount(0);
 
     await chatPage.attachFile(readme);
-    await expect(page.getByText(REFUSAL('README')).first()).toBeVisible({
-      timeout: 10_000,
-    });
+    await expect(page.getByText(NO_TYPE_REFUSAL('README')).first()).toBeVisible(
+      {
+        timeout: 10_000,
+      },
+    );
     await expect(chatPage.attachmentChip).toHaveCount(0);
 
     await chatPage.attachFile(pdf);
@@ -251,6 +258,66 @@ test.describe.serial('Journey 96: Allowed file types', () => {
       timeout: 15_000,
     });
     await expect(chatPage.getRetryFileButton()).toHaveCount(0);
+  });
+
+  test("aft-07: a refused file links to a dialog of the agent's accepted types (count, search, no-match, Got It), and several refused files share one toast", async ({
+    page,
+    chatPage,
+  }, testInfo) => {
+    test.skip(!mentorUrl, 'aft-01 setup did not run');
+    const dir = testInfo.outputPath('files');
+    const exe = writeFile(dir, 'report.exe');
+    const zip = writeFile(dir, 'notes.zip');
+
+    await chatPage.mockFileUpload('success', 0);
+    await page.goto(mentorUrl, { waitUntil: 'domcontentloaded' });
+    await expect(chatPage.getComposerTextarea()).toBeVisible({
+      timeout: 30_000,
+    });
+
+    await chatPage.attachFile(exe);
+    const toast = page.locator('[data-sonner-toast]').filter({
+      hasText: TYPE_REFUSAL('exe'),
+    });
+    await expect(toast).toBeVisible({ timeout: 10_000 });
+    await toast.getByRole('button', { name: 'See allowed types' }).click();
+    await expect(toast).toBeHidden({ timeout: 10_000 });
+
+    const dialog = page.getByTestId('agent-allowed-file-types-dialog');
+    await expect(dialog).toBeVisible({ timeout: 10_000 });
+    await expect(
+      dialog.getByText('File Types This Agent Accepts'),
+    ).toBeVisible();
+    await expect(
+      dialog.getByText('You can attach any of these 4 file types.'),
+    ).toBeVisible();
+    for (const ext of ['pdf', 'docx', 'png', 'json']) {
+      await expect(dialog.getByText(ext, { exact: true })).toBeVisible();
+    }
+
+    const search = page.getByTestId('agent-allowed-file-types-search');
+    const noMatch = page.getByTestId('agent-allowed-file-types-no-match');
+    await search.fill('.png');
+    await expect(dialog.getByText('png', { exact: true })).toBeVisible();
+    await expect(dialog.getByText('pdf', { exact: true })).toBeHidden();
+    await expect(dialog.getByText('json', { exact: true })).toBeHidden();
+    await expect(noMatch).toBeHidden();
+
+    await search.fill('exe');
+    await expect(noMatch).toHaveText(".exe isn't one of them.");
+
+    await dialog.getByRole('button', { name: 'Got It' }).click();
+    await expect(dialog).toBeHidden({ timeout: 10_000 });
+    await expect(toast).toBeHidden();
+
+    // Two refused files in one pick produce a single combined toast.
+    await chatPage.getFileUploadInput().setInputFiles([exe, zip]);
+    await expect(
+      page
+        .getByText("2 files can't be added: report.exe and notes.zip.")
+        .first(),
+    ).toBeVisible({ timeout: 10_000 });
+    await expect(chatPage.attachmentChip).toHaveCount(0);
   });
 
   test('aft-05: Clear All then Save means everything is allowed, and a csv attaches', async ({
@@ -287,8 +354,13 @@ test.describe.serial('Journey 96: Allowed file types', () => {
     await expect(chatPage.attachmentChip.first()).toBeVisible({
       timeout: 15_000,
     });
-    await expect(page.getByText(/can't be added/i)).toHaveCount(0);
+    await expect(page.getByText(/aren't accepted by this agent/i)).toHaveCount(
+      0,
+    );
+    await expect(page.getByText(/has no file type/i)).toHaveCount(0);
+    await expect(page.getByText(/files can't be added/i)).toHaveCount(0);
   });
+
   test("aft-06: a server refusal of the upload URL (400) names the file and says it can't be used with this agent", async ({
     page,
     chatPage,
