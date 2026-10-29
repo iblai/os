@@ -305,6 +305,7 @@ describe('SettingsTab', () => {
         advanced: 'advancedHeading',
         perSurface: 'perSurfaceHeading',
         globalSettings: 'globalSettingsHeading',
+        contextLimits: 'contextLimitsHeading',
       });
       // #2476: the Capabilities sub-tab renders a two-column surface matrix,
       // so the wrapper must supply the column headings and the embed-column
@@ -347,6 +348,18 @@ describe('SettingsTab', () => {
       expect(labels.fields.smartDocRetrieval.label).toBe(
         'smartDocRetrievalLabel',
       );
+      for (const field of [
+        'chatHistoryMessages',
+        'chatHistoryTokens',
+        'documentChunks',
+      ] as const) {
+        expect(labels.fields[field]).toEqual({
+          label: `${field}Label`,
+          tooltip: `${field}Tooltip`,
+          placeholder: `${field}Placeholder`,
+          minValueError: `${field}MinValueError`,
+        });
+      }
       expect(labels.toasts.voiceCallError).toBe('voiceCallSettingsError');
     });
   });
