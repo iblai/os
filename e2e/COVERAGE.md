@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-10-28 | 1031 checkpoints (984 covered, 13 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 103 journeys (102 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-10-28 | 1034 checkpoints (987 covered, 13 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 104 journeys (103 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -2346,3 +2346,15 @@ Issue #2528. Settings → Capabilities ends with a File Uploads group whose Allo
 - [x] aft-04: In chat the composer's file input accept is .pdf,.docx,.png,.json; report.exe and the extension-less README are refused with "<name> can't be added. This agent only accepts pdf, docx, png and json files." and not attached; report.pdf attaches (S3 leg mocked)
 - [x] aft-05: Clear All + Save sends an empty list (everything allowed) and a csv then attaches with no refusal
 - [x] aft-06: Upload-URL 400 {"error":"This file type is not allowed for this mentor."} (mocked): the chip shows Retry and the toast says "<name> can't be used with this agent"
+
+---
+
+## Journey 97: Shareable-link chat frame token (3 checkpoints) — `journeys/97-shareable-link-chat-frame-token.spec.ts`
+
+**Source files:** `app/platform/[tenantKey]/[mentorId]/mentor-page-content.tsx`, `components/chat/index.tsx`
+
+Issue iblai-platform#2743. A `?token=<share token>` link now rides in the chat frame's `shareable_link_token` while `token` stays the user's own credential (empty for anonymous) and `token_type` is no longer sent. One throwaway public agent with a real shareable link (auto-deleted) is shared by the serial checkpoints; only the chat WebSocket is mocked.
+
+- [x] slf-01: Signed-in user on the share-link URL: frame shareable_link_token equals the URL token, token is the user's axd token, token_type is not "link"
+- [x] slf-02: Anonymous visitor on the share-link URL: shareable_link_token set, token empty, no token_type "link", mocked reply renders
+- [x] slf-03: Signed-in user without ?token: no shareable_link_token key, token is the axd token, mocked reply renders

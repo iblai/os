@@ -6482,6 +6482,32 @@
           "status": "covered"
         }
       ]
+    },
+    {
+      "id": "shareable-link-chat-frame-token",
+      "name": "Shareable-link chat frame token",
+      "spec": "97-shareable-link-chat-frame-token.spec.ts",
+      "sourceFiles": [
+        "app/platform/[tenantKey]/[mentorId]/mentor-page-content.tsx",
+        "components/chat/index.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "slf-01",
+          "description": "Signed-in user opens /platform/<tenant>/<agent>?token=<share token>: the chat frame carries shareable_link_token equal to the URL token, token stays the user's own axd token, and token_type is not \"link\" (chat WebSocket mocked)",
+          "status": "covered"
+        },
+        {
+          "id": "slf-02",
+          "description": "Anonymous visitor on the share-link URL: the frame carries shareable_link_token, token is empty, no token_type \"link\", and the mocked reply renders",
+          "status": "covered"
+        },
+        {
+          "id": "slf-03",
+          "description": "Signed-in user chats with no ?token: the frame has no shareable_link_token key, token is the axd token, and the mocked reply renders",
+          "status": "covered"
+        }
+      ]
     }
   ]
 }
