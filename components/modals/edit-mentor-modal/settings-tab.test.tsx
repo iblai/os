@@ -305,6 +305,7 @@ describe('SettingsTab', () => {
         advanced: 'advancedHeading',
         perSurface: 'perSurfaceHeading',
         globalSettings: 'globalSettingsHeading',
+        contextLimits: 'contextLimitsHeading',
       });
       // #2476: the Capabilities sub-tab renders a two-column surface matrix,
       // so the wrapper must supply the column headings and the embed-column
