@@ -2,14 +2,14 @@
   "version": 2,
   "lastUpdated": "2026-10-30",
   "summary": {
-    "totalCheckpoints": 978,
-    "coveredCheckpoints": 909,
+    "totalCheckpoints": 1040,
+    "coveredCheckpoints": 969,
     "deprecatedCheckpoints": 17,
     "notReproducibleCheckpoints": 17,
-    "pendingCheckpoints": 35,
+    "pendingCheckpoints": 37,
     "percent": 100,
-    "totalJourneys": 100,
-    "activeJourneys": 99
+    "totalJourneys": 103,
+    "activeJourneys": 102
   },
   "journeys": [
     {
@@ -341,6 +341,7 @@
       "spec": "06-mentor-management-admin.spec.ts",
       "sourceFiles": [
         "components/modals/edit-mentor-modal/index.tsx",
+        "hooks/use-mentor-segments.ts",
         "app/create-mentor/page.tsx",
         "components/modals/settings-modal.tsx",
         "hooks/use-mentors.ts",
@@ -463,6 +464,11 @@
         {
           "id": "mgmt-23",
           "description": "Issue #2638: LLM model availability is decided per model from route-mocked mentor-llms (availability wins over has_credentials, legacy shape falls back to provider flags) — provider card data-disabled only when every model is unavailable; unavailable model rows are disabled with data-availability-status, the backend message as a title tooltip only (no inline text) and sort after available ones; byok_main_fallback model is selectable",
+          "status": "covered"
+        },
+        {
+          "id": "mgmt-24",
+          "description": "Admin opens the Edit Agent modal at desktop width and its \"Agent settings categories\" tablist shows exactly four tabs in order — Setup, Policies, Integrations, Activity — all on one row, each visible with its title shown in full (scrollWidth <= clientWidth; equal quarters of the 320px sidebar cut \"Integrations\" off, so each pill takes its title's width)",
           "status": "covered"
         }
       ]
@@ -1285,7 +1291,7 @@
       "spec": "20-dataset-management.spec.ts",
       "sourceFiles": [
         "components/modals/edit-mentor-modal/tabs/datasets-tab/agent-datasets-tab.tsx",
-        "components/workflows/node-config-panel.tsx",
+        "app/platform/[tenantKey]/workflows/[mentorId]/[id]/page.tsx",
         "hooks/user-navigate.ts",
         "lib/constants.ts",
         "lib/config.ts",
@@ -2287,6 +2293,11 @@
           "id": "mob-08",
           "description": "Admin on mobile sees Admin/User labels (not Instructor/Learner) on the profile dropdown's learner-mode row, and the label flips correctly when the switch is toggled (#2592)",
           "status": "covered"
+        },
+        {
+          "id": "mob-09",
+          "description": "On an iPhone 14 viewport the chat page's html and body have overscroll-behavior none, so swiping up cannot scroll the app shell and leave a blank gap (#121)",
+          "status": "covered"
         }
       ]
     },
@@ -2398,10 +2409,7 @@
       "spec": "34-workflows.spec.ts",
       "sourceFiles": [
         "app/platform/[tenantKey]/workflows/[mentorId]/page.tsx",
-        "app/platform/[tenantKey]/workflows/[mentorId]/[id]/page.tsx",
-        "components/workflows/workflow-canvas.tsx",
-        "components/workflows/node-config-panel.tsx",
-        "components/workflows/workflow-preview-chat.tsx"
+        "app/platform/[tenantKey]/workflows/[mentorId]/[id]/page.tsx"
       ],
       "checkpoints": [
         {
@@ -2441,7 +2449,7 @@
         },
         {
           "id": "wf-08",
-          "description": "New workflow shows Draft status badge",
+          "description": "New workflow shows Active status badge",
           "status": "covered"
         },
         {
@@ -2456,7 +2464,7 @@
         },
         {
           "id": "wf-11",
-          "description": "Default nodes (Start and Mentor) are visible with an edge connecting them",
+          "description": "Default nodes (Start and Agent) are visible with an edge connecting them",
           "status": "covered"
         },
         {
@@ -2481,7 +2489,97 @@
         },
         {
           "id": "wf-16",
-          "description": "File Search node's dataset picker dialog: opening/searching/paging never touch datasetsPage/datasetsSearch URL params (syncToUrl=false, unlike the edit-mentor modal's Datasets tab); picking a row closes the dialog and shows the dataset name with a Change button; reopening highlights the previously selected row (self-seeded mentor)",
+          "description": "File Search node's dataset picker dialog: opening/searching/paging never touch datasetsPage/datasetsSearch URL params (the picker keeps page/search in its own state, unlike the edit-mentor modal's Datasets tab); picking a row closes the dialog and shows the dataset name with a Change button; reopening highlights the previously selected row (self-seeded mentor)",
+          "status": "covered"
+        },
+        {
+          "id": "wf-17",
+          "description": "Hovering a step and clicking its trash button (Delete Transform) removes it from the canvas and the saved definition",
+          "status": "covered"
+        },
+        {
+          "id": "wf-18",
+          "description": "Opening a step panel and clicking its header Delete button (Delete Set State) removes the step and closes the panel",
+          "status": "covered"
+        },
+        {
+          "id": "wf-19",
+          "description": "The Agent step's trash button removes it along with its connection from the saved definition",
+          "status": "covered"
+        },
+        {
+          "id": "wf-20",
+          "description": "Clicking a connection's hit path then the Delete Connection button removes the connection (e-start-mentor-1) from the canvas and the saved definition",
+          "status": "covered"
+        },
+        {
+          "id": "wf-21",
+          "description": "Pressing Delete with a connection selected removes only that connection and keeps both steps",
+          "status": "covered"
+        },
+        {
+          "id": "wf-22",
+          "description": "Start step: Number and Boolean state variables are listed in the panel and saved with typed defaults (5 as a number, true as a boolean)",
+          "status": "covered"
+        },
+        {
+          "id": "wf-23",
+          "description": "Start step: a state variable is removed with Remove {name} after confirming in the Delete Variable dialog (Cancel keeps it); an invalid or already-used name keeps Save disabled and shows its hint",
+          "status": "covered"
+        },
+        {
+          "id": "wf-24",
+          "description": "Set State: the To Variable dropdown lists Start variables and never Variable 1; New opens the New Variable dialog and the new name is selected",
+          "status": "covered"
+        },
+        {
+          "id": "wf-25",
+          "description": "Set State: an expression is saved as data.assignments [{variable, expression}] with no setStateAssignments, and validation has no empty-assignments or attribute-access message",
+          "status": "covered"
+        },
+        {
+          "id": "wf-26",
+          "description": "Transform: Key and Value are saved as data.expressions [{target, expression}] with no transformExpressions/transformMode, and validation has no empty-expressions message",
+          "status": "covered"
+        },
+        {
+          "id": "wf-27",
+          "description": "While: an invalid Max Iterations (0) shows \"Enter a whole number of 1 or more.\"; a valid Condition and Max Iterations are saved as data.condition and data.maxIterations (a number), and validation has no missing-condition message",
+          "status": "covered"
+        },
+        {
+          "id": "wf-28",
+          "description": "While: the Loop and Done handles connect to other steps and save edges with sourceHandle continue and done",
+          "status": "covered"
+        },
+        {
+          "id": "wf-29",
+          "description": "If / Else: the condition is saved in data.conditions[0].expression and validation has no attribute-access message",
+          "status": "covered"
+        },
+        {
+          "id": "wf-30",
+          "description": "If / Else: the condition-0 and Else handles connect to other steps and save edges with those sourceHandle values",
+          "status": "covered"
+        },
+        {
+          "id": "wf-31",
+          "description": "A workflow saved with the old field names (setStateAssignments, transformExpressions, whileExpression, a two-way If / Else with true/false edges) opens marked Unsaved and sends no auto-save; clicking Save stores assignments, expressions, condition, conditions[0].expression and condition-0/else edges and clears Unsaved",
+          "status": "covered"
+        },
+        {
+          "id": "wf-32",
+          "description": "If / Else: wiring the If output to one step and then to another leaves a single connection from that output, on the canvas and in the saved edges",
+          "status": "covered"
+        },
+        {
+          "id": "wf-33",
+          "description": "Start step: removing a variable that a Set State step assigns opens the Variable In Use dialog listing the step; Cancel closes it and the variable stays listed",
+          "status": "covered"
+        },
+        {
+          "id": "wf-34",
+          "description": "Adding a Note: the backend's validate response warns that the Note is not connected, but the validation banner shows only the other warnings (Workflow should have an 'end' node) and never the Note's",
           "status": "covered"
         }
       ]
@@ -2979,12 +3077,12 @@
         },
         {
           "id": "claw-04",
-          "description": "Selecting claw turns off whichever kind (computational-runtime or virtual-machine) was previously active in the same PATCH (mutual exclusivity); no kind switch ever gets a persistent disabled state — each is only briefly disabled while its own save is in flight; Sandbox leads the Integrations category (feat/2040 moved it off Configurations)",
+          "description": "Selecting claw turns off whichever kind (computational-runtime or virtual-machine) was previously active in the same PATCH (mutual exclusivity); no kind switch ever gets a persistent disabled state — each is only briefly disabled while its own save is in flight; Integrations opens on Tools and Sandbox follows MCP",
           "status": "covered"
         },
         {
           "id": "claw-06",
-          "description": "Sandbox leads the Integrations category unconditionally (feat/2040 groups the sidebar into Configurations / Integrations / Runtime and moved Sandbox off Configurations)",
+          "description": "Sandbox follows Tools and MCP in the Integrations category unconditionally (the sidebar is grouped into Setup / Policies / Integrations / Activity)",
           "status": "covered"
         },
         {
@@ -4188,7 +4286,7 @@
       "checkpoints": [
         {
           "id": "grd-01",
-          "description": "Grader tab is visible in the Edit Mentor modal sidebar (Configurations category, always mounted for an admin with standard mentor-owner permissions)",
+          "description": "Grader tab is visible in the Edit Mentor modal sidebar (Setup category, always mounted for an admin with standard mentor-owner permissions)",
           "status": "covered"
         },
         {
@@ -4276,7 +4374,7 @@
       "checkpoints": [
         {
           "id": "ags-01",
-          "description": "Admin sees the Skills tab on a freshly-created (Base Agent) mentor, with the updated tab description (\"Reusable playbooks this Base Agent can discover and follow.\") and skills-info-box copy describing the / picker (feat/2215); Skills sits right after Prompts in the Configurations category (ordering moved here from journey 44) — full RBAC grant set forced via SkillsTab.grantAllSkillAssignmentPerms so the both-sub-tabs assert is rollout-independent",
+          "description": "Admin sees the Skills tab on a freshly-created (Base Agent) mentor, with its \"Skills\" heading and the \"type /\" hint (copy wording intentionally not pinned — differs between OS host and SDK wrapper); Skills sits right after Prompts in the Setup category (ordering moved here from journey 44) — full RBAC grant set forced via SkillsTab.grantAllSkillAssignmentPerms so the both-sub-tabs assert is rollout-independent",
           "status": "covered"
         },
         {
@@ -4307,6 +4405,16 @@
         {
           "id": "ags-07",
           "description": "View-only RBAC (view_skill_assignments granted, create/write/delete denied via the permission-check mock SkillsTab.mockSkillAssignmentGrants): the Agent Skills sub-tab renders with its empty state while the Available Skills sub-tab and New Skill button are absent from the DOM",
+          "status": "covered"
+        },
+        {
+          "id": "ags-08",
+          "description": "Fresh agent with full RBAC grants: Agent Skills sub-tab shows the empty state (no rows), the Available Skills sub-tab offers New Skill, and switching back keeps the empty state",
+          "status": "covered"
+        },
+        {
+          "id": "ags-09",
+          "description": "Persistence: a skill attached to the agent and then disabled is still listed, still disabled, after closing and reopening the Edit Agent modal (server-backed state); detach + delete on cleanup",
           "status": "covered"
         },
         {
@@ -4403,6 +4511,12 @@
           "id": "slash-16",
           "description": "Skills row inside the composer's \"+\" menu lists the mentor's enabled skills as name + /slug (no descriptions); selecting inserts the /slug token AT THE CARET with context-aware spacing (highlighted in the composer) — there is no separate skill chip in the #2586 redesign, so the armed state shows only as the composer token, a checked row in the Skills menu, and its count badge on the menu trigger; removing (re-selecting the armed skill, or deleting its token text) clears all three; arming another skill replaces the current one (single selection); arming via the \"/\" picker marks the same skill checked in the Skills menu — both surfaces derive from the composer text so they stay in sync",
           "status": "covered"
+        },
+        {
+          "id": "slash-17",
+          "description": "On a phone-width composer (360px) the Skills button collapses into the ••• menu like the other tool pills; its ••• entry expands the skills list in place (scrolling, inside the viewport), and picking a skill arms its /slug token",
+          "status": "pending",
+          "note": "No route renders a Skills button that could collapse: the mentor route renders the SDK composer (SdkChat), where Skills sits inside the '+' menu at every width, and the workflow preview renders the OS composer (components/chat-input-form.tsx) in compactMode, which has no tool row (inside-buttons.tsx) and so no Skills. test.fixme until a route renders the OS composer's tool row; covered meanwhile by the inside-buttons Vitest case 'moves into the ••• menu when the row is too narrow, and expands its list there'"
         }
       ]
     },
@@ -4487,7 +4601,7 @@
       "checkpoints": [
         {
           "id": "sc-01",
-          "description": "Admin sees the \"Billing\" tab in the Configurations category, positioned immediately after \"LLM\", and it opens on the \"This Agent\" sub-tab with \"Per User\" also present (AgentSpendCapsTab now has exactly these two sub-tabs — the old \"Workspace\" sub-tab moved to the tenant Billing tab, covered by journey 69)",
+          "description": "Admin sees the \"Billing\" tab in the Policies category, positioned immediately after \"Access\", and it opens on the \"This Agent\" sub-tab with \"Per User\" also present (AgentSpendCapsTab now has exactly these two sub-tabs — the old \"Workspace\" sub-tab moved to the tenant Billing tab, covered by journey 69)",
           "status": "covered"
         },
         {
@@ -4853,7 +4967,7 @@
       "name": "Dataset Cloud Pickers",
       "spec": "74-dataset-cloud-pickers.spec.ts",
       "sourceFiles": [
-        "components/workflows/node-config-panel.tsx",
+        "app/platform/[tenantKey]/workflows/[mentorId]/[id]/page.tsx",
         "components/modals/edit-mentor-modal/tabs/datasets-tab/agent-datasets-tab.tsx"
       ],
       "checkpoints": [
@@ -5068,6 +5182,16 @@
         {
           "id": "sem-07",
           "description": "With the setting ON, the \"Explore Agents\" section sits below the first screen in two columns, and the \"Explore Agents\" hint scrolls it into view",
+          "status": "covered"
+        },
+        {
+          "id": "sem-08",
+          "description": "The \"Explore Agents\" button scrolls to the section and back to the top, and its chevron flips up/down on clicks and on manual scrolling",
+          "status": "covered"
+        },
+        {
+          "id": "sem-09",
+          "description": "At phone width the \"Explore Agents\" button is not shown",
           "status": "covered"
         }
       ]
@@ -5460,6 +5584,12 @@
           "id": "cr-16",
           "description": "The composer in CONVERSATION state (after a mocked reply) still shows an active tool chip, the Canvas \"Turn off Canvas\" x pill, and the \"/\" skill picker positioned above the composer; a 320-390px viewport in that state has no horizontal overflow with Send visible",
           "status": "covered"
+        },
+        {
+          "id": "cr-17",
+          "description": "Below 520px the composer's tool pills keep one line: Canvas off shows only its icon (its name kept as the accessible name), Canvas on alone shows its name and its \"Turn off Canvas\" x; from 520px up the name shows on or off",
+          "status": "pending",
+          "note": "Written as test.fixme and never run: needs an authenticated session (PLAYWRIGHT_USERNAME / PLAYWRIGHT_PASSWORD), which no env it has run in had. The pinned SDK (web-containers 1.48.0) has the tool row it tests; the SDK measures the row rather than the window, so its 390px step still needs checking on the first run. The two-pills-on case needs the desktop app's Code or Cowork pill; covered meanwhile by the SDK's composer-tool-row and chat-input-form 'tool pills on phone widths' Vitest cases and the OS coding-mode-button 'in the SDK composer's tool row' cases"
         }
       ]
     },
@@ -5473,7 +5603,9 @@
         "hooks/use-is-lti-launch.ts",
         "lib/embed-context.ts",
         "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/embed-nav-bar.tsx",
-        "app/platform/[tenantKey]/[mentorId]/_components/accessibility-fab/index.tsx"
+        "app/platform/[tenantKey]/[mentorId]/_components/accessibility-fab/index.tsx",
+        "hooks/use-show-user-profile.ts",
+        "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/user-profile.tsx"
       ],
       "checkpoints": [
         {
@@ -5514,6 +5646,26 @@
         {
           "id": "emb-lti-04",
           "description": "Regression (issue #2586): in a 300px LTI frame the composer placeholder stays on one line and ellipsizes (white-space nowrap, ::placeholder text-overflow ellipsis, content under two lines, not clipped), while typed text still wraps",
+          "status": "covered"
+        },
+        {
+          "id": "emb-prof-01",
+          "description": "The embed header shows the user's profile avatar (\"More options\") only when the host sets `show-user-profile=true`; without it there is no avatar",
+          "status": "covered"
+        },
+        {
+          "id": "emb-prof-02",
+          "description": "The embed profile menu offers Profile, the tenant switcher and Help, and leaves out Log Out and the Admin/User mode switch (the host owns auth)",
+          "status": "covered"
+        },
+        {
+          "id": "emb-prof-03",
+          "description": "Profile in the embed profile menu opens the User Profile dialog inside the frame on the Basic tab, and Cancel closes it without saving",
+          "status": "covered"
+        },
+        {
+          "id": "emb-prof-04",
+          "description": "Picking another tenant in the embed profile menu posts `{ tenantSwitch: true, tenant }` to the host page and leaves the frame on the chat instead of redirecting it to the auth app",
           "status": "covered"
         }
       ]
@@ -5732,7 +5884,7 @@
       "checkpoints": [
         {
           "id": "icm-01",
-          "description": "An admin turns on \"Allow in-chat model change\" on the LLM tab; it saves enable_in_chat_llm_change=true and it reads back on after reopening",
+          "description": "An admin turns on \"Allow In-Chat Model Change\" at the top of the LLM tab; the immediate save sends enable_in_chat_llm_change=true and it reads back on after reopening",
           "status": "covered"
         },
         {
@@ -5752,7 +5904,7 @@
         },
         {
           "id": "icm-05",
-          "description": "With the setting off (the LLM tab saves enable_in_chat_llm_change=false), the + menu has no Model row",
+          "description": "With the setting off (the LLM tab switch saves enable_in_chat_llm_change=false), the + menu has no Model row",
           "status": "covered"
         },
         {
@@ -5834,6 +5986,16 @@
         {
           "id": "sess-04",
           "description": "In embed mode (`?embed=true`) a dead session id self-heals with no manual New chat, fetching the dead id exactly 4 times, all before the mint",
+          "status": "covered"
+        },
+        {
+          "id": "sess-05",
+          "description": "A 403 {error: \"You do not have permission to chat with this agent.\"} on the create-session POST toasts exactly that sentence; no raw JSON, status, [object Object] or \"Failed to start new chat\" (iblai-platform#2712; the logout redirect is held pending so the toast stays)",
+          "status": "covered"
+        },
+        {
+          "id": "sess-06",
+          "description": "A start-chat failure with no readable message (400 {}) toasts the fallback \"We couldn't start a new chat. Please try again.\" (iblai-platform#2712)",
           "status": "covered"
         }
       ]
@@ -6063,6 +6225,104 @@
       ]
     },
     {
+      "id": "users-models",
+      "name": "User Models",
+      "spec": "92-users-models.spec.ts",
+      "sourceFiles": ["components/modals/edit-mentor-modal/llm-tab.tsx"],
+      "checkpoints": [
+        {
+          "id": "um-01",
+          "description": "Admin sees the User Models button on the LLM tab; it opens the dialog with provider cards showing \"All allowed\" under a saved llms/ (llm-access routes mocked, no POST)",
+          "status": "covered"
+        },
+        {
+          "id": "um-02",
+          "description": "Ticking models auto-saves the full replaced list on every tick (captured POST bodies); unticking the last model asks to confirm (Cancel sends nothing, Save anyway posts [])",
+          "status": "covered"
+        },
+        {
+          "id": "um-03",
+          "description": "\"Allow all\" saves llms/<provider>/ and the card shows \"All allowed\"",
+          "status": "covered"
+        },
+        {
+          "id": "um-04",
+          "description": "A partial selection shows \"N of M allowed\" on the card and the saved list shows again on reopen",
+          "status": "covered"
+        },
+        {
+          "id": "um-05",
+          "description": "Rapid ticks are saved one at a time (first POST delayed) and the last state wins",
+          "status": "covered"
+        },
+        {
+          "id": "um-06",
+          "description": "A 400 reverts the tick and shows the rejected-entry notice with \"Remove it\"",
+          "status": "covered"
+        },
+        {
+          "id": "um-07",
+          "description": "A 403 on save reverts the tick and toasts the admins-only message",
+          "status": "covered"
+        },
+        {
+          "id": "um-08",
+          "description": "A 500 on save reverts the tick and toasts the could-not-save message",
+          "status": "covered"
+        },
+        {
+          "id": "um-09",
+          "description": "A 403 loading the saved list shows the forbidden notice instead of cards",
+          "status": "covered"
+        },
+        {
+          "id": "um-10",
+          "description": "A 404 loading the saved list shows the unavailable notice instead of cards",
+          "status": "covered"
+        },
+        {
+          "id": "um-11",
+          "description": "A 500 loading the saved list shows the load-error notice instead of cards",
+          "status": "covered"
+        },
+        {
+          "id": "um-12",
+          "description": "Escape closes the dialog; the LLM tab outside it has no counts or checkboxes",
+          "status": "covered"
+        },
+        {
+          "id": "um-13",
+          "description": "A non-admin opening the agent LLM tab sees no User Models button",
+          "status": "covered"
+        },
+        {
+          "id": "um-14",
+          "description": "The in-chat model change switch is at the top of the LLM tab and is no longer under Settings > Capabilities",
+          "status": "covered"
+        },
+        {
+          "id": "um-15",
+          "description": "Switch off: no Models Users Can Pick box or User Models button; flipping on saves enable_in_chat_llm_change=true (mocked PUT) and shows the box with \"All models allowed for users\" and the button; flipping off saves false and hides it",
+          "status": "covered"
+        },
+        {
+          "id": "um-16",
+          "description": "The box counts the models allowed for users (\"0 models allowed for users\")",
+          "status": "covered"
+        },
+        {
+          "id": "um-17",
+          "description": "Real (unmocked): the admin allows two models through the User Models dialog (saved to the tenant list), and a non-admin opening chat with that agent sees exactly those models in the in-chat model picker, not another model of the same provider nor the previously allowed one",
+          "status": "covered"
+        },
+        {
+          "id": "um-18",
+          "description": "Real (unmocked): after the admin unticks a model in User Models, the non-admin no longer sees it in the in-chat model picker while the other allowed model stays",
+          "status": "covered"
+        }
+      ]
+    },
+    {
       "id": "cowork-extension-panel",
       "name": "Cowork in the Extension Panel",
       "spec": "93-cowork-extension-panel.spec.ts",
@@ -6078,12 +6338,99 @@
       "checkpoints": [
         {
           "id": "cw-01",
-          "description": "Answered by a (faked) side panel over postMessage, the app shows the Cowork pill pressed, and its popover holds the switch on, the disclosure note mentioning the picture of the tab, and Approvals = Automatic",
+          "description": "Declared the panel by enable-cowork=true on its iframe URL (the vendored component's enablecowork attribute, what the extension's panel sets), the app shows the Cowork pill pressed, and its popover holds the switch on, the disclosure note mentioning the picture of the tab, and Approvals = Automatic; it sends no MENTOR:BROWSE_HELLO",
           "status": "covered"
         },
         {
           "id": "cw-02",
-          "description": "A goal sent in the panel becomes a MENTOR:BROWSE_RUN frame carrying auto: true; scripted worker frames (ack, three log lines — an action, the agent's narration, a failed call — the reply text, done with the cap note) render as one assistant turn whose \"Used 1 tool\" row expands to each line's text, whose body ends with the reply then the note, and after which Send is back",
+          "description": "A goal sent in the panel becomes a MENTOR:BROWSE_RUN frame carrying auto: true; scripted worker frames (ack, three log lines — an action, the agent's narration, a failed call — the reply text, done with the time-limit note) render as one assistant turn whose \"Used 1 tool\" row expands to each line's text, whose body ends with the reply then the note, and after which Send is back",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "chat-download-excel-and-export",
+      "name": "Chat Download as Excel + Sidebar Export",
+      "spec": "94-chat-download-excel-and-export.spec.ts",
+      "sourceFiles": [
+        "components/chat/ai-message-download.tsx",
+        "components/chat/sdk-chat.tsx",
+        "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/chats/chats-section.tsx",
+        "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/chats/use-recent-chats.ts",
+        "messages/en.json",
+        "e2e/page-objects/chat.page.ts",
+        "e2e/utils/xlsx.ts"
+      ],
+      "checkpoints": [
+        {
+          "id": "dl-01",
+          "description": "Download dialog (SDK ChatDownloadDialog) opens on Entire chat + File type \"Text (.txt)\" with its description; the File type dropdown lists Text and Excel each with a description, choosing Excel swaps the shown description, and reopening the dialog resets scope to Entire chat and file type to Text (iblai-platform#2713)",
+          "status": "covered"
+        },
+        {
+          "id": "dl-02",
+          "description": "Download as Text saves chat-<agent>-<date>.txt holding every turn; This message only saves message-<agent>-<date>.txt without the earlier turns",
+          "status": "covered"
+        },
+        {
+          "id": "dl-03",
+          "description": "Download as Excel saves chat-<agent>-<date>.xlsx whose first sheet has the header Time / From / Message and one row per message (From = \"You\" / agent name, Message = the text); This message only saves message-<agent>-<date>.xlsx with header + one row",
+          "status": "covered"
+        },
+        {
+          "id": "dl-04",
+          "description": "While the session history request is held, the dialog footer shows \"Getting the whole chat…\" with a spinner and Download is disabled; after release the status clears and Download enables",
+          "status": "covered"
+        },
+        {
+          "id": "dl-05",
+          "description": "When the session history request fails (500), the footer shows the \"You can still download this message\" error, Entire chat is disabled, This message only is selected and still downloads message-<agent>-<date>.txt",
+          "status": "covered"
+        },
+        {
+          "id": "ex-01",
+          "description": "Sidebar row menu > Export opens \"Export Chat\" (same dialog) with only the File type dropdown (no scope radios), the \"Getting the whole chat…\" status and a disabled Export button until the history arrives",
+          "status": "covered"
+        },
+        {
+          "id": "ex-02",
+          "description": "Sidebar Export as Excel of a 3-turn chat saves chat-<agent>-<date>.xlsx (not messages.xlsx) containing EVERY message (6 rows) with From = \"You\" / agent name — regression for the first-message-only export",
+          "status": "covered"
+        },
+        {
+          "id": "ex-03",
+          "description": "Sidebar Export as Text saves chat-<agent>-<date>.txt containing every turn",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "admin-visibility-confirmation",
+      "name": "Admin Visibility Confirmation",
+      "spec": "95-admin-visibility-confirmation.spec.ts",
+      "sourceFiles": [
+        "components/modals/edit-mentor-modal/settings-tab.tsx",
+        "messages/en.json"
+      ],
+      "checkpoints": [
+        {
+          "id": "avs-01",
+          "description": "Picking Administrators on a Users agent shows the admin-only note, and Save opens the \"Limit this agent to administrators?\" confirmation instead of saving",
+          "status": "covered"
+        },
+        {
+          "id": "avs-02",
+          "description": "Cancel on the confirmation closes it, sends no visibility save, keeps Administrators in the form, and the server still holds Users",
+          "status": "covered"
+        },
+        {
+          "id": "avs-03",
+          "description": "\"Limit to Administrators\" saves mentor_visibility=viewable_by_tenant_admins with the success toast; reopening shows Administrators with the note already visible",
+          "status": "covered"
+        },
+        {
+          "id": "avs-04",
+          "description": "Switching away from Administrators hides the note and saves without a prompt, and Users to Anyone also saves without a prompt",
           "status": "covered"
         }
       ]

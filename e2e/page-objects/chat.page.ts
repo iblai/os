@@ -184,6 +184,12 @@ export class ChatPage {
   readonly downloadScopeMessageRadio: Locator;
   /** The dialog's single primary action button ("Download"). There is no Cancel — dismiss via Escape or the dialog's built-in close. */
   readonly downloadConfirmButton: Locator;
+  /** The shared SDK dialog (`data-testid="chat-download-dialog"`) — "Download Chat" from a reply, "Export Chat" from the sidebar row menu. */
+  readonly exportDialogRoot: Locator;
+  /** The "File type" dropdown (Text / Excel) inside the shared dialog. */
+  readonly downloadFormatSelect: Locator;
+  /** Footer status slot — "Getting the whole chat…", "Getting your file ready…" or an error; absent when idle. */
+  readonly downloadStatus: Locator;
   /**
    * One rendered file-attachment chip (SDK `file-attachments-list.tsx`,
    * `data-testid="attachment-chip"`). Use `.first()`/`.nth()` to disambiguate
@@ -318,6 +324,13 @@ export class ChatPage {
       name: 'Download this chat',
     });
     this.downloadDialog = page.getByRole('dialog', { name: 'Download Chat' });
+    this.exportDialogRoot = page.getByTestId('chat-download-dialog');
+    this.downloadFormatSelect = this.exportDialogRoot.getByRole('combobox', {
+      name: 'File type',
+    });
+    this.downloadStatus = this.exportDialogRoot.getByTestId(
+      'chat-download-status',
+    );
     this.downloadScopeChatRadio = this.downloadDialog.getByRole('radio', {
       name: 'Entire chat',
     });
@@ -1356,6 +1369,28 @@ export class ChatPage {
     await expect(button).toBeVisible({ timeout: 15_000 });
     await button.click();
     await expect(this.downloadDialog).toBeVisible({ timeout: 10_000 });
+  }
+
+  /** Picks "Text (.txt)" or "Excel (.xlsx)" in the dialog's File type dropdown. */
+  async selectDownloadFormat(format: 'Text' | 'Excel'): Promise<void> {
+    await this.downloadFormatSelect.click();
+    await this.page
+      .getByRole('option', { name: new RegExp(`^${format}`) })
+      .click();
+    await expect(this.downloadFormatSelect).toContainText(format);
+  }
+
+  /** Reads a triggered `Download`'s full content as a Buffer (binary files such as .xlsx). */
+  async readDownloadBuffer(download: Download): Promise<Buffer> {
+    const stream = await download.createReadStream();
+    if (!stream) return Buffer.alloc(0);
+    const chunks: Buffer[] = [];
+    await new Promise<void>((resolve, reject) => {
+      stream.on('data', (chunk: Buffer) => chunks.push(chunk));
+      stream.on('end', () => resolve());
+      stream.on('error', reject);
+    });
+    return Buffer.concat(chunks);
   }
 
   /**

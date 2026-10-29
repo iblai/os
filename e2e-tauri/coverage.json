@@ -1,10 +1,10 @@
 {
   "version": 1,
-  "lastUpdated": "2026-10-15",
+  "lastUpdated": "2026-10-20",
   "summary": {
-    "totalCheckpoints": 58,
+    "totalCheckpoints": 69,
     "coveredCheckpoints": 22,
-    "pendingCheckpoints": 35,
+    "pendingCheckpoints": 46,
     "deprecatedCheckpoints": 1,
     "notReproducibleCheckpoints": 0,
     "percent": 100,
@@ -62,7 +62,7 @@
       "checkpoints": [
         {
           "id": "odm-01",
-          "description": "The LLM picker merges on-device (local) models with the provider's cloud models in one availability-ranked list",
+          "description": "The LLM picker lists on-device models first, then the provider's cloud models, in one list",
           "status": "pending"
         },
         {
@@ -87,13 +87,36 @@
         },
         {
           "id": "odm-06",
-          "description": "The nav-bar on-device badge reflects the selected local model",
+          "description": "The nav-bar on-device badge reflects the selected local model, cased as written",
           "status": "pending"
         },
         {
           "id": "odm-07",
           "description": "Busy default ports at launch degrade to allocated ones: the MCP bridge and the offline server each bind a free port (preferring 8000/3457) and every consumer follows — local chat still streams, the offline cache still serves",
           "status": "pending"
+        },
+        {
+          "id": "odm-08",
+          "description": "Downloading an on-device model with Local Models off turns Local Models on first, which sets up the Model Manager (with a one-time notice when it was never installed), then starts the pull",
+          "status": "pending"
+        },
+        {
+          "id": "odm-09",
+          "description": "On a freshly launched app with Local Models already on, the first local chat reaches the MCP bridge — warmed up at launch, or started by the chat itself — with no 'turn Local Models off and on' error",
+          "status": "pending",
+          "note": "Live test, never run yet: tauri-driver has no macOS support and no CI job runs this suite. It skips itself on a host without ollama-mcp-bridge (turning Local Models on once installs it), where the 'turn Local Models off and on' error is the intended answer. Covered meanwhile by the model_manager.rs Rust tests a_chat_after_a_relaunch_starts_the_bridge_instead_of_failing (started by the chat), the_launch_warm_up_starts_local_chat_when_ollama_is_installed, the_launch_warm_up_starts_nothing_without_ollama, local_chat_brings_ollama_up_before_the_bridge and overlapping_starts_run_one_at_a_time (warmed up at launch), and the Vitest hooks/__tests__/use-model-download-warm-up.test.ts (the launch call while Local Models is on)"
+        },
+        {
+          "id": "odm-10",
+          "description": "With Local Models on, quitting Ollama while the app stays open does not break local chat: the next message starts Ollama again and is answered, with no 'turn Local Models off and on' step",
+          "status": "pending",
+          "note": "Needs a journey that stops Ollama under the running binary; covered meanwhile by the post_local_chat_with 503 Rust tests in model_manager.rs"
+        },
+        {
+          "id": "odm-11",
+          "description": "A local reply that keeps streaming for longer than 5 minutes is not cut off: only 5 minutes of silence ends it",
+          "status": "pending",
+          "note": "Needs a model slow enough to stream past 5 minutes; covered meanwhile by the streaming_chat_client Rust test in main.rs"
         }
       ]
     },
@@ -106,6 +129,8 @@
         "src-tauri/src/opencode_installer.rs",
         "src-tauri/src/opencode_proxy.rs",
         "components/chat-input-form/coding-mode-button.tsx",
+        "components/chat-input-form/code-approvals-button.tsx",
+        "components/chat-input-form/use-approval-mode-choice.ts",
         "components/chat/code-permission-card.tsx",
         "hooks/use-opencode-skill-sync.ts",
         "hooks/use-opencode-learner.ts",
@@ -115,7 +140,8 @@
         "src-tauri/src/code_agent_models.rs",
         "components/chat-input-form/code-agents.ts",
         "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/agent-model-selector.tsx",
-        "components/chat/sdk-chat.tsx"
+        "components/chat/sdk-chat.tsx",
+        "src-tauri/src/remote_code.rs"
       ],
       "checkpoints": [
         {
@@ -230,7 +256,7 @@
         },
         {
           "id": "code-23",
-          "description": "The Code popover asks for an approval mode on first use and stores the answer against the signed-in user (so it follows them to another machine)",
+          "description": "Approvals is one mode for every chat, saved on this machine: the Code popover and the composer both show the mode in force and a switch applies to running sessions",
           "status": "pending"
         },
         {
@@ -353,6 +379,47 @@
         {
           "id": "code-48",
           "description": "The app keeps answering while a Code turn streams a chatty command: a build's output never reaches the chat as events, only a tool call's visible changes do",
+          "status": "pending"
+        },
+        {
+          "id": "code-47",
+          "description": "An Ask Me permission card's Switch to Automatic answers it, saves Automatic (the composer's approvals icon and the Code popover show it), clears every other waiting card, and no later request in that turn raises a card — on the desktop and on a paired phone; each new card plays a short chime",
+          "status": "pending",
+          "note": "Needs an authenticated UI session and a tool-calling turn, like code-08/code-10; covered meanwhile by the SDK's code-permission-card 'Switch to Automatic' cases, the SdkChat Vitest 'switches to Automatic from a permission card the way the approvals button does', the use-approval-mode-choice Vitest cases and the Rust queue/switch tests"
+        },
+        {
+          "id": "code-49",
+          "description": "The Code popover stays inside the window: Radix opens it on the side with more room and caps it to that room, and only its body scrolls, so the Code switch at its top stays in view (on a short window, or with Phone Access on)",
+          "status": "pending",
+          "note": "Needs an authenticated UI session, like code-24; covered meanwhile by the coding-mode-button Vitest 'keeps the Code switch in view and scrolls only what is below it'"
+        },
+        {
+          "id": "code-50",
+          "description": "In the mentor chat the approvals button sits first in the composer's right-hand group, before the microphone, voice call and send, only while Code is on; with Code off that group gains nothing, and in the canvas split each composer shows its own and switching Code off in either takes it out of both",
+          "status": "pending",
+          "note": "Needs an authenticated UI session, like code-23; covered meanwhile by the SdkChat Vitest 'Code approvals' cases, the coding-mode-button Vitest offer cases and the SDK's chat-input-form 'host action controls (slots.composerActionControls)' cases"
+        },
+        {
+          "id": "code-51",
+          "description": "In the mentor chat at phone width (below 520px) the Code pill shows only its icon while off, keeps its name while it is the only tool on, folds to its icon and × when Canvas is also on, and shows its name and × while its popover is open",
+          "status": "pending",
+          "note": "Needs an authenticated UI session at phone width, like code-50; covered meanwhile by the coding-mode-button Vitest 'CodingModeButton in the SDK composer’s tool row' cases and the SDK composer-tool-row tests"
+        },
+        {
+          "id": "code-52",
+          "description": "Tapping the Code pill while Code is off turns Code on, the way the popover's switch does (the first folder choice, the on-device model check, the bubblewrap check and a phone's pairing all apply; where the switch refuses, the tap only opens the popover), and opens the popover; while Code is on a tap only opens or closes it; the × on the pill shows whenever Code is on and turns it off without opening the popover, and with Code off and the popover open it only closes the popover — on the desktop and the iPhone app",
+          "status": "pending",
+          "note": "Needs an authenticated UI session, like code-50; covered meanwhile by the coding-mode-button Vitest 'tapping the pill' cases (and its 'its x' cases), 'forces the same folder choice the first time a tap on the pill turns Code on', 'only opens the popover on a tap while no desktop is paired, and turns Code on from the next tap once one is' and 'enables, from the pill and from the switch, without the desktop folder-choice flow (no picker on a phone)'"
+        },
+        {
+          "id": "code-53",
+          "description": "A paired phone's Code runs inside the Mac's sandbox: it can change files only in its workspace folders",
+          "status": "pending",
+          "note": "Needs a paired phone driving the Mac's Code, which tauri-driver cannot run; covered meanwhile by the Rust `the_phone_serve_runs_inside_the_code_sandbox`, `the_phone_serve_can_change_files_only_in_its_workspaces`, `the_phone_serve_is_confined_to_the_workspaces_root` and `phone_code_starts_its_serve_only_through_the_sandboxed_command` (remote_code.rs), `the_app_never_writes_through_a_link_in_a_config_home` and `a_link_in_the_workspaces_root_is_never_used_as_a_workspace` (opencode_acp.rs), and the opt-in live `the_sandboxed_phone_serve_answers_and_is_confined` (`cargo test sandboxed_phone_serve -- --ignored --nocapture`), which starts the real pinned opencode the way phone Code does and proves a write in the workspace lands while the home and a secret are refused"
+        },
+        {
+          "id": "code-54",
+          "description": "An approval mode saved to the user's profile carries over to a computer that has none saved (an Ask Me chosen on another computer stays Ask Me), never overrides a mode this computer has saved, and a pick in the Code controls is saved to the profile too",
           "status": "pending"
         }
       ]

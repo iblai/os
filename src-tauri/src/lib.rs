@@ -23,6 +23,8 @@ mod code_agent_installer;
 #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
 mod code_agent_models;
 #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+mod save_file;
+#[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
 #[allow(dead_code)]
 mod foundry_manager;
 mod mcp_bridge_installer;
@@ -893,6 +895,15 @@ async fn stop_ollama(app: AppHandle) -> Result<(), String> {
     Ok(())
 }
 
+/// Starts local chat in the background at launch while Local Models is on —
+/// a switch only the webview knows, so it asks. Mobile chats against its
+/// embedded server directly, with no bridge to start.
+#[command]
+async fn warm_up_local_chat() {
+    #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+    model_manager::warm_up_local_chat().await;
+}
+
 /// Emit an app-wide event to the frontend WITHOUT racing the main thread's
 /// webview-manager mutex.
 ///
@@ -937,6 +948,10 @@ where
 /// Check Ollama installation and model status
 #[command]
 async fn check_ollama_status(app: AppHandle) -> Result<OllamaStatus, String> {
+    // Mobile: a status check is the first thing to reach the embedded server
+    // after the app resumes, so it is where a dead one gets restarted.
+    #[cfg(any(target_os = "ios", target_os = "android"))]
+    let _ = crate::local_llm::ensure_answering().await;
     // Determine availability FIRST (/api/version), then — only once available —
     // wait a short grace period BEFORE reaching /api/tags (it lags /api/version
     // right after start, so reading too early reports "stopped"/"no models").
@@ -1041,6 +1056,12 @@ async fn download_ollama_model(app: AppHandle, model: String) -> Result<(), Stri
         },
     );
 
+    // Mobile: the embedded server. One that stopped answering (iOS reclaims a
+    // suspended app's sockets) is restarted in place, with no 30 s wait on
+    // the dead port first.
+    #[cfg(any(target_os = "ios", target_os = "android"))]
+    crate::local_llm::ensure_answering().await?;
+
     // Check if Ollama is running
     if !is_ollama_running().await {
         emit_on_main(
@@ -1059,26 +1080,14 @@ async fn download_ollama_model(app: AppHandle, model: String) -> Result<(), Stri
         // Wait for it to actually become ready (it can take several seconds; a
         // fixed short delay raced the server and made downloads fail).
         if !wait_for_ollama_ready(30).await {
-            // Mobile: there is no "manually" — the server is embedded. Say
-            // what the probe actually saw so a failure is diagnosable from
-            // the error toast alone (device stdout is not readable in dev).
+            // The model service runs inside the app on a phone, so there is
+            // nothing there for the user to start by hand.
             #[cfg(any(target_os = "ios", target_os = "android"))]
-            {
-                let url = crate::local_llm::server_url();
-                let probe = match url.as_deref() {
-                    Some(u) => match reqwest::get(format!("{u}/api/version")).await {
-                        Ok(r) => format!("HTTP {}", r.status()),
-                        Err(e) => format!("{e}"),
-                    },
-                    None => "embedded server never started".to_string(),
-                };
-                return Err(format!(
-                    "Embedded model server is not responding (url: {}, probe: {probe})",
-                    url.as_deref().unwrap_or("none")
-                ));
-            }
+            let message =
+                "The built-in model service could not be reached. Close the app and open it again.";
             #[cfg(not(any(target_os = "ios", target_os = "android")))]
-            return Err("Could not start Ollama server. Please start Ollama manually.".to_string());
+            let message = "Could not start Ollama server. Please start Ollama manually.";
+            return Err(message.to_string());
         }
 
         emit_on_main(
@@ -1477,11 +1486,11 @@ async fn ollama_chat(
     tool_support: Option<bool>,
 ) -> Result<String, String> {
     let model = model.unwrap_or_else(|| "phi3:mini".to_string());
-    let base = model_manager::chat_base_url(tool_support.unwrap_or(false))?;
-    let ollama_url = format!("{base}/api/chat");
+    #[cfg(any(target_os = "ios", target_os = "android"))]
+    crate::local_llm::ensure_answering().await?;
 
     println!(
-        "[MentorAI] Proxying Ollama chat ({} messages) from {base}",
+        "[MentorAI] Proxying Ollama chat ({} messages)",
         messages.len()
     );
 
@@ -1496,13 +1505,8 @@ async fn ollama_chat(
         "stream": false
     });
 
-    let response = client
-        .post(ollama_url)
-        .header("Content-Type", "application/json")
-        .json(&body)
-        .send()
-        .await
-        .map_err(|e| format!("Failed to connect to Ollama: {}. Is Ollama running?", e))?;
+    let response =
+        model_manager::post_local_chat(&client, &body, tool_support.unwrap_or(false)).await?;
 
     if !response.status().is_success() {
         let status = response.status();
@@ -1530,11 +1534,11 @@ async fn ollama_chat_stream(
     tool_support: Option<bool>,
 ) -> Result<(), String> {
     let model = model.unwrap_or_else(|| "phi3:mini".to_string());
-    let base = model_manager::chat_base_url(tool_support.unwrap_or(false))?;
-    let ollama_url = format!("{base}/api/chat");
+    #[cfg(any(target_os = "ios", target_os = "android"))]
+    crate::local_llm::ensure_answering().await?;
 
     println!(
-        "[MentorAI] Streaming Ollama chat ({} messages) from {base}",
+        "[MentorAI] Streaming Ollama chat ({} messages)",
         messages.len()
     );
 
@@ -1553,13 +1557,8 @@ async fn ollama_chat_stream(
         "stream": true
     });
 
-    let response = client
-        .post(ollama_url)
-        .header("Content-Type", "application/json")
-        .json(&body)
-        .send()
-        .await
-        .map_err(|e| format!("Failed to connect to Ollama: {}. Is Ollama running?", e))?;
+    let response =
+        model_manager::post_local_chat(&client, &body, tool_support.unwrap_or(false)).await?;
 
     if !response.status().is_success() {
         let status = response.status();
@@ -3154,6 +3153,7 @@ pub fn run() {
     let builder = builder.invoke_handler(tauri::generate_handler![
         install_ollama,
         stop_ollama,
+        warm_up_local_chat,
         check_ollama_status,
         get_mcp_config_path,
         cua_driver_installer::install_cua_driver,
@@ -3197,6 +3197,7 @@ pub fn run() {
         opencode_acp::new_opencode_workspace,
         opencode_acp::get_opencode_permission_mode,
         opencode_acp::set_opencode_permission_mode,
+        opencode_acp::seed_opencode_permission_mode,
         opencode_acp::set_opencode_skills,
         opencode_acp::begin_opencode_skills_sync,
         opencode_installer::install_opencode,
@@ -3209,6 +3210,7 @@ pub fn run() {
         code_agent_installer::install_code_agent,
         code_agent_models::list_code_agent_models,
         code_agent_models::set_code_agent_model,
+        save_file::save_chat_file,
         app_update::check_app_update,
         app_update::install_app_update,
         remote_code::remote_code_status,
@@ -3222,6 +3224,7 @@ pub fn run() {
     let builder = builder.invoke_handler(tauri::generate_handler![
         install_ollama,
         stop_ollama,
+        warm_up_local_chat,
         check_ollama_status,
         check_disk_space_for_model,
         get_system_memory,
@@ -3247,6 +3250,7 @@ pub fn run() {
         remote_code_client::opencode_permission_respond,
         remote_code_client::get_opencode_permission_mode,
         remote_code_client::set_opencode_permission_mode,
+        remote_code_client::seed_opencode_permission_mode,
         remote_code_client::get_opencode_workspace,
         remote_code_client::set_opencode_workspace,
         remote_code_client::new_opencode_workspace,
@@ -3266,6 +3270,7 @@ pub fn run() {
             #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
             if let tauri::RunEvent::Exit = _event {
                 remote_code::shutdown_sync();
+                mcp_bridge_manager::shutdown();
             }
             // Phone back in the foreground: the OS reclaims a suspended
             // app's sockets, so a Code turn streaming from the desktop

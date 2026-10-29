@@ -130,8 +130,27 @@ describe('the browse port', () => {
     ]);
   });
 
-  it('says which cap ended the run, and nothing when none did', async () => {
-    const finish = (stoppedBy: 'steps' | 'tokens' | null) =>
+  it('hands the tools a signal that ends with the run', async () => {
+    let finishRun!: () => void;
+    runAgent.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          finishRun = () =>
+            resolve({ text: 'ok', messages: [], steps: 1, stoppedBy: null });
+        }),
+    );
+    const port = openPort();
+    port.emit({ type: 'run', tabId: 7, goal: 'go', creds });
+    const ctx = await ctxOf();
+    await vi.waitFor(() => expect(runAgent).toHaveBeenCalled());
+    expect(ctx.signal?.aborted).toBe(false);
+    finishRun();
+    await vi.waitFor(() => expect(frames(port, 'done')).toHaveLength(1));
+    await vi.waitFor(() => expect(ctx.signal?.aborted).toBe(true));
+  });
+
+  it('says when the time limit ended the run, and nothing otherwise', async () => {
+    const finish = (stoppedBy: 'time' | null) =>
       runAgent.mockResolvedValue({
         text: 'ok',
         messages: [],
@@ -140,12 +159,8 @@ describe('the browse port', () => {
       });
     for (const [stoppedBy, note] of [
       [
-        'steps',
-        'I stopped here: that’s as many steps as I take in one go. Send “continue” and I’ll pick up where I left off, as long as this panel stays open.',
-      ],
-      [
-        'tokens',
-        'I stopped here: that’s as much as I can read in one go. Send “continue” and I’ll pick up where I left off, as long as this panel stays open.',
+        'time',
+        'I stopped here: that’s as long as I work in one go. Send “continue” and I’ll pick up where I left off, as long as this panel stays open.',
       ],
       [null, undefined],
     ] as const) {
@@ -299,12 +314,15 @@ describe('the browse port', () => {
     expect((await ctxOf()).withPicture).toBe(true);
     await vi.waitFor(() => expect(runAgent).toHaveBeenCalled());
     expect(runAgent.mock.calls[0][0].picture).toEqual(expect.any(Function));
+    expect(runAgent.mock.calls[0][0].positions).toBe(true);
 
     listModels.mockResolvedValue(['iblai/iblai-pro']);
     await chromeStub.stub.storage.local.set({ browse: { model: '' } });
     const second = openPort();
     second.emit({ type: 'run', tabId: 8, goal: 'go', creds });
     expect((await ctxOf(1)).withPicture).toBe(false);
+    await vi.waitFor(() => expect(runAgent).toHaveBeenCalledTimes(2));
+    expect(runAgent.mock.calls[1][0].positions).toBe(false);
   });
 
   it('sends the action log as text, already localized', async () => {

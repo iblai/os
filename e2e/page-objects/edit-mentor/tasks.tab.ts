@@ -52,11 +52,11 @@ export class TasksTab {
 
   /**
    * Category-aware tab navigation injected by `EditMentorPage` (see
-   * `bindTabNav` there). The Tasks segment lives in the modal's Runtime
+   * `bindTabNav` there). The Tasks segment lives in the modal's Activity
    * category, and the sidebar only mounts the ACTIVE category's segment
    * triggers — so the SDK's `switchToTasksTab` (which predates the category
    * strip and expects the trigger to already be in the DOM) can't find it
-   * while the modal sits on its default Configurations view.
+   * while the modal sits on its default Setup view.
    */
   private navigateToTab?: (tabName: string) => Promise<void>;
 
@@ -81,7 +81,7 @@ export class TasksTab {
   /**
    * Click the Tasks tab inside the Edit Mentor modal.
    *
-   * Activates the Runtime category first when the tab nav is bound (the
+   * Activates the Activity category first when the tab nav is bound (the
    * default via `EditMentorPage`'s constructor), then delegates to the SDK
    * helper — its click on the now-active trigger is a no-op, but its
    * wait-for-toolbar-ready assertion is still the readiness signal callers

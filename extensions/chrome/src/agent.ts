@@ -1,17 +1,21 @@
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
 import {
   APICallError,
+  RetryError,
   streamText,
+  tool,
+  wrapLanguageModel,
   type LanguageModel,
+  type LanguageModelMiddleware,
   type ModelMessage,
-  type StepResult,
+  type ToolCallRepairFunction,
   type ToolSet,
 } from 'ai';
 import { PAGE_MARK, PICTURE_NOTE, instructions } from './prompt';
 import type { Picture } from './tools';
 
-export const MAX_STEPS = 40;
-export const TOKEN_BUDGET = 200_000;
+/** How long one run may take; it then stops, saying so. Stop ends it any time. */
+export const TIME_LIMIT_MS = 200 * 60_000;
 /** Only the latest tool result keeps its page state: one numbering per request. */
 export const KEEP_SNAPSHOTS = 1;
 /**
@@ -60,6 +64,41 @@ export function transformBody(
   return { ...body, user: username, parallel_tool_calls: false };
 }
 
+const retryable = (cause: unknown) =>
+  new APICallError({
+    message: cause instanceof Error ? cause.message : String(cause),
+    url: '',
+    requestBodyValues: undefined,
+    isRetryable: true,
+    cause,
+  });
+
+/**
+ * The DM answers 200 before the model does, so a provider failure arrives as
+ * an error frame inside the stream — past the point where the SDK retries — and
+ * a dropped connection as a TypeError. Each call is read through before the
+ * step sees it and such a failure is thrown as retryable, so the SDK's own
+ * retry sends the call again and nothing of the failed attempt reaches the run.
+ */
+export const retryFailedCalls: LanguageModelMiddleware = {
+  wrapStream: async ({ doStream, params }) => {
+    try {
+      const result = await doStream();
+      const [check, keep] = result.stream.tee();
+      const reader = check.getReader();
+      for (;;) {
+        const next = await reader.read();
+        if (next.done) return { ...result, stream: keep };
+        if (next.value.type === 'error') throw retryable(next.value.error);
+      }
+    } catch (err) {
+      if (err instanceof TypeError && !params.abortSignal?.aborted)
+        throw retryable(err);
+      throw err;
+    }
+  },
+};
+
 export function buildModel(cfg: ModelConfig): LanguageModel {
   const provider = createOpenAICompatible({
     name: 'ibl-dm',
@@ -71,7 +110,10 @@ export function buildModel(cfg: ModelConfig): LanguageModel {
     queryParams: { learner_id: cfg.username },
     transformRequestBody: (body) => transformBody(body, cfg.username),
   });
-  return provider(cfg.model);
+  return wrapLanguageModel({
+    model: provider(cfg.model),
+    middleware: retryFailedCalls,
+  });
 }
 
 /**
@@ -161,14 +203,6 @@ export function pickModel(ids: string[]): string {
   );
 }
 
-export function usedTokens(steps: Array<StepResult<ToolSet>>): number {
-  return steps.reduce(
-    (sum, step) =>
-      sum + (step.usage?.inputTokens ?? 0) + (step.usage?.outputTokens ?? 0),
-    0,
-  );
-}
-
 const OMITTED = '(earlier page state omitted)';
 
 /**
@@ -234,12 +268,13 @@ export interface RunOptions {
   tools: ToolSet;
   signal: AbortSignal;
   onEvent: (event: AgentEvent) => void;
-  maxSteps?: number;
-  tokenBudget?: number;
+  timeLimitMs?: number;
   /** The user's preferred language, named in the system prompt when known. */
   language?: string;
   /** The latest picture of the tab, sent with every model call. */
   picture?: () => Picture | null;
+  /** The tools act on a point of the picture too (click_at, type_at). */
+  positions?: boolean;
 }
 
 export interface RunResult {
@@ -248,11 +283,13 @@ export interface RunResult {
   /** The conversation so far, including this run's assistant and tool messages. */
   messages: ModelMessage[];
   steps: number;
-  stoppedBy: 'steps' | 'tokens' | null;
+  stoppedBy: 'time' | null;
 }
 
 /** Only the message and status reach the UI; the error also carries the request body. */
 export function describeError(error: unknown): AgentEvent {
+  // A call the SDK retried and gave up on says why the last attempt failed.
+  if (RetryError.isInstance(error)) return describeError(error.lastError);
   if (APICallError.isInstance(error)) {
     return {
       type: 'error',
@@ -266,30 +303,83 @@ export function describeError(error: unknown): AgentEvent {
   };
 }
 
+/**
+ * A call the SDK cannot run — a tool it doesn't have, input that isn't JSON —
+ * goes back to the model once with its error, offered the same tools without
+ * their `execute`; the call it makes instead runs in the step. None, and the
+ * call fails as before.
+ */
+const repairWith =
+  (
+    model: LanguageModel,
+    signal: AbortSignal,
+  ): ToolCallRepairFunction<ToolSet> =>
+  async ({ toolCall, tools, instructions, messages, error }) => {
+    const { toolCallId, toolName } = toolCall;
+    let input: unknown = toolCall.input;
+    try {
+      input = JSON.parse(toolCall.input);
+    } catch {
+      // Not JSON is what the error says; the model sees it as it was sent.
+    }
+    const answer = streamText({
+      model,
+      instructions,
+      messages: [
+        ...messages,
+        {
+          role: 'assistant',
+          content: [{ type: 'tool-call', toolCallId, toolName, input }],
+        },
+        {
+          role: 'tool',
+          content: [
+            {
+              type: 'tool-result',
+              toolCallId,
+              toolName,
+              output: { type: 'error-text', value: error.message },
+            },
+          ],
+        },
+      ],
+      tools: Object.fromEntries(
+        Object.entries(tools).map(([name, { description, inputSchema }]) => [
+          name,
+          tool({ description, inputSchema }),
+        ]),
+      ),
+      toolChoice: 'required',
+      abortSignal: signal,
+    });
+    const call = (await answer.toolCalls).find((made) => !made.invalid);
+    return call
+      ? {
+          type: 'tool-call',
+          toolCallId,
+          toolName: call.toolName,
+          input: JSON.stringify(call.input),
+        }
+      : null;
+  };
+
 export async function runAgent(options: RunOptions): Promise<RunResult> {
-  const maxSteps = options.maxSteps ?? MAX_STEPS;
-  const budget = options.tokenBudget ?? TOKEN_BUDGET;
   let stoppedBy: RunResult['stoppedBy'] = null;
+  const deadline = AbortSignal.timeout(options.timeLimitMs ?? TIME_LIMIT_MS);
+  const signal = AbortSignal.any([options.signal, deadline]);
 
   const result = streamText({
     model: options.model,
-    instructions: instructions(options.language),
+    instructions: instructions(options.language, options.positions),
     messages: options.messages,
     tools: options.tools,
-    abortSignal: options.signal,
-    timeout: { totalMs: 600_000 },
-    stopWhen: [
-      ({ steps }) => {
-        if (steps.length < maxSteps) return false;
-        stoppedBy = 'steps';
-        return true;
-      },
-      ({ steps }) => {
-        if (usedTokens(steps) < budget) return false;
-        stoppedBy = 'tokens';
-        return true;
-      },
-    ],
+    abortSignal: signal,
+    // No step cap: the SDK's default stops after one step.
+    // ponytail: every call re-sends the earlier steps, so a run of a few
+    // thousand steps fills the model's context and ends on its error — drop
+    // the oldest steps if that shows.
+    stopWhen: () => false,
+    experimental_repairToolCall: repairWith(options.model, signal),
     // The picture rides a trailing user message, never a tool result: the
     // OpenAI wire flattens tool results to text. Per call only — it is not
     // part of the transcript the next step or the next run gets.
@@ -364,6 +454,7 @@ export async function runAgent(options: RunOptions): Promise<RunResult> {
         break;
       case 'abort':
         flush();
+        if (deadline.aborted) stoppedBy = 'time';
         options.onEvent({ type: 'abort' });
         break;
       default:

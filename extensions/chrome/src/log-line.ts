@@ -3,6 +3,7 @@ import type { LogEntry } from './tools';
 
 const ACTION_LABEL: Record<string, string> = {
   click: 'actionClick',
+  double_click: 'actionDoubleClick',
   type: 'actionType',
   select: 'actionSelect',
   scroll: 'actionScroll',

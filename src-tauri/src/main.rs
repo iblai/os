@@ -12,6 +12,8 @@ mod foundry_manager;
 mod code_agent_installer;
 #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
 mod code_agent_models;
+#[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+mod save_file;
 #[allow(dead_code)]
 mod local_llm;
 mod mcp_bridge_installer;
@@ -442,6 +444,13 @@ async fn stop_ollama(app: AppHandle) -> Result<(), String> {
     tokio::time::sleep(tokio::time::Duration::from_millis(800)).await;
     let _ = check_ollama_status(app).await;
     Ok(())
+}
+
+/// Starts local chat in the background at launch while Local Models is on —
+/// a switch only the webview knows, so it asks.
+#[command]
+async fn warm_up_local_chat() {
+    model_manager::warm_up_local_chat().await;
 }
 
 /// Check Ollama installation and model status
@@ -1085,10 +1094,6 @@ async fn ollama_chat(
         }
     }
 
-    let base = model_manager::chat_base_url(tool_support.unwrap_or(false))?;
-    let ollama_url = format!("{base}/api/chat");
-    println!("[ibl.ai] Using Ollama for chat — streaming from {base}");
-
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(120))
         .build()
@@ -1100,13 +1105,8 @@ async fn ollama_chat(
         "stream": false
     });
 
-    let response = client
-        .post(ollama_url)
-        .header("Content-Type", "application/json")
-        .json(&body)
-        .send()
-        .await
-        .map_err(|e| format!("Failed to connect to Ollama: {}. Is Ollama running?", e))?;
+    let response =
+        model_manager::post_local_chat(&client, &body, tool_support.unwrap_or(false)).await?;
 
     if !response.status().is_success() {
         let status = response.status();
@@ -1121,6 +1121,52 @@ async fn ollama_chat(
 
     println!("[ibl.ai] Ollama chat response received");
     Ok(response_body)
+}
+
+/// Inactivity bound, not a total one (as on mobile): a streamed reply is alive
+/// as long as words keep arriving. A 5-minute total cut long replies
+/// mid-sentence — likeliest right after a break, when Ollama first reloads the
+/// model, or when tool rounds add up.
+fn streaming_chat_client(idle: std::time::Duration) -> Result<reqwest::Client, String> {
+    reqwest::Client::builder()
+        .read_timeout(idle)
+        .build()
+        .map_err(|e| format!("Failed to create HTTP client: {}", e))
+}
+
+/// Splits a streamed NDJSON body into whole lines. A read can end in the middle
+/// of a JSON line, or of a multi-byte character, and parsing that piece on its
+/// own silently dropped the words in it, so the tail waits for the rest.
+#[derive(Default)]
+struct NdjsonLines {
+    pending: Vec<u8>,
+}
+
+impl NdjsonLines {
+    /// The non-blank lines this chunk completes.
+    fn push(&mut self, chunk: &[u8]) -> Vec<String> {
+        self.pending.extend_from_slice(chunk);
+        match self.pending.iter().rposition(|&b| b == b'\n') {
+            Some(last) => {
+                let complete: Vec<u8> = self.pending.drain(..=last).collect();
+                Self::split(&complete)
+            }
+            None => Vec::new(),
+        }
+    }
+
+    /// A last line the stream ended without terminating.
+    fn finish(&mut self) -> Vec<String> {
+        Self::split(&std::mem::take(&mut self.pending))
+    }
+
+    fn split(bytes: &[u8]) -> Vec<String> {
+        String::from_utf8_lossy(bytes)
+            .lines()
+            .filter(|line| !line.trim().is_empty())
+            .map(str::to_owned)
+            .collect()
+    }
 }
 
 /// Stream a chat request to Ollama (returns chunks via events)
@@ -1160,14 +1206,7 @@ async fn ollama_chat_stream(
         }
     }
 
-    let base = model_manager::chat_base_url(tool_support.unwrap_or(false))?;
-    let ollama_url = format!("{base}/api/chat");
-    println!("[ibl.ai] Using Ollama for streaming chat — streaming from {base}");
-
-    let client = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(300))
-        .build()
-        .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
+    let client = streaming_chat_client(std::time::Duration::from_secs(300))?;
 
     let body = serde_json::json!({
         "model": model,
@@ -1175,13 +1214,8 @@ async fn ollama_chat_stream(
         "stream": true
     });
 
-    let response = client
-        .post(ollama_url)
-        .header("Content-Type", "application/json")
-        .json(&body)
-        .send()
-        .await
-        .map_err(|e| format!("Failed to connect to Ollama: {}. Is Ollama running?", e))?;
+    let response =
+        model_manager::post_local_chat(&client, &body, tool_support.unwrap_or(false)).await?;
 
     if !response.status().is_success() {
         let status = response.status();
@@ -1194,71 +1228,16 @@ async fn ollama_chat_stream(
     // must NOT stop on the first `done` — only a `done` with no tool calls is
     // the final answer. Intermediate tool rounds just log "running tool...".
     let mut stream = response.bytes_stream();
+    let mut lines = NdjsonLines::default();
     let mut full_content = String::new();
     let mut round_has_tool_calls = false;
 
     use futures_util::StreamExt;
 
-    while let Some(chunk_result) = stream.next().await {
-        match chunk_result {
-            Ok(chunk) => {
-                let chunk_str = String::from_utf8_lossy(&chunk);
-                // Ollama returns newline-delimited JSON
-                for line in chunk_str.lines() {
-                    if line.trim().is_empty() {
-                        continue;
-                    }
-                    if let Ok(json) = serde_json::from_str::<serde_json::Value>(line) {
-                        if let Some(content) = json
-                            .get("message")
-                            .and_then(|m| m.get("content"))
-                            .and_then(|c| c.as_str())
-                        {
-                            full_content.push_str(content);
-                            // Emit token event
-                            emit_on_main(
-                                &app,
-                                "ollama:token",
-                                serde_json::json!({
-                                    "generation_id": generation_id,
-                                    "token": content,
-                                    "full_content": full_content
-                                }),
-                            );
-                        }
-                        // The model requested MCP tools this round (bridge only).
-                        if json
-                            .get("message")
-                            .and_then(|m| m.get("tool_calls"))
-                            .and_then(|t| t.as_array())
-                            .map(|a| !a.is_empty())
-                            .unwrap_or(false)
-                        {
-                            round_has_tool_calls = true;
-                        }
-                        if json.get("done").and_then(|d| d.as_bool()).unwrap_or(false) {
-                            if round_has_tool_calls {
-                                // Tool round boundary: the bridge runs the tools
-                                // and streams another round — keep reading.
-                                println!("[ibl.ai] running tool...");
-                                round_has_tool_calls = false;
-                                continue;
-                            }
-                            // No tool calls -> final answer.
-                            emit_on_main(
-                                &app,
-                                "ollama:done",
-                                serde_json::json!({
-                                    "generation_id": generation_id,
-                                    "full_content": full_content
-                                }),
-                            );
-                            return Ok(());
-                        }
-                    }
-                }
-            }
-            Err(e) => {
+    loop {
+        let (batch, ended) = match stream.next().await {
+            Some(Ok(chunk)) => (lines.push(&chunk), false),
+            Some(Err(e)) => {
                 emit_on_main(
                     &app,
                     "ollama:error",
@@ -1269,6 +1248,61 @@ async fn ollama_chat_stream(
                 );
                 return Err(format!("Stream error: {}", e));
             }
+            None => (lines.finish(), true),
+        };
+        // Ollama returns newline-delimited JSON
+        for line in batch {
+            if let Ok(json) = serde_json::from_str::<serde_json::Value>(&line) {
+                if let Some(content) = json
+                    .get("message")
+                    .and_then(|m| m.get("content"))
+                    .and_then(|c| c.as_str())
+                {
+                    full_content.push_str(content);
+                    // Emit token event
+                    emit_on_main(
+                        &app,
+                        "ollama:token",
+                        serde_json::json!({
+                            "generation_id": generation_id,
+                            "token": content,
+                            "full_content": full_content
+                        }),
+                    );
+                }
+                // The model requested MCP tools this round (bridge only).
+                if json
+                    .get("message")
+                    .and_then(|m| m.get("tool_calls"))
+                    .and_then(|t| t.as_array())
+                    .map(|a| !a.is_empty())
+                    .unwrap_or(false)
+                {
+                    round_has_tool_calls = true;
+                }
+                if json.get("done").and_then(|d| d.as_bool()).unwrap_or(false) {
+                    if round_has_tool_calls {
+                        // Tool round boundary: the bridge runs the tools
+                        // and streams another round — keep reading.
+                        println!("[ibl.ai] running tool...");
+                        round_has_tool_calls = false;
+                        continue;
+                    }
+                    // No tool calls -> final answer.
+                    emit_on_main(
+                        &app,
+                        "ollama:done",
+                        serde_json::json!({
+                            "generation_id": generation_id,
+                            "full_content": full_content
+                        }),
+                    );
+                    return Ok(());
+                }
+            }
+        }
+        if ended {
+            break;
         }
     }
 
@@ -2871,6 +2905,7 @@ fn main() {
             app_update::install_app_update,
             install_ollama,
             stop_ollama,
+            warm_up_local_chat,
             check_ollama_status,
             get_mcp_config_path,
             cua_driver_installer::install_cua_driver,
@@ -2924,6 +2959,7 @@ fn main() {
             opencode_acp::new_opencode_workspace,
             opencode_acp::get_opencode_permission_mode,
             opencode_acp::set_opencode_permission_mode,
+            opencode_acp::seed_opencode_permission_mode,
             opencode_acp::set_opencode_skills,
             opencode_acp::begin_opencode_skills_sync,
             opencode_installer::install_opencode,
@@ -2936,6 +2972,7 @@ fn main() {
             code_agent_installer::install_code_agent,
             code_agent_models::list_code_agent_models,
             code_agent_models::set_code_agent_model,
+            save_file::save_chat_file,
             remote_code::remote_code_status,
             remote_code::remote_code_enable,
             remote_code::remote_code_disable,
@@ -2949,8 +2986,98 @@ fn main() {
             // orphan with a dead password poisons auth for every later one.
             if let tauri::RunEvent::Exit = event {
                 remote_code::shutdown_sync();
+                mcp_bridge_manager::shutdown();
             }
         });
+}
+
+#[cfg(test)]
+mod ndjson_lines_tests {
+    use super::{streaming_chat_client, NdjsonLines};
+
+    /// A reply that keeps streaming for longer than the limit must not be cut:
+    /// only silence for that long ends it.
+    #[tokio::test]
+    async fn a_reply_streaming_past_the_limit_is_not_cut_off() {
+        use futures_util::StreamExt;
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        let listener = tokio::net::TcpListener::bind(("127.0.0.1", 0))
+            .await
+            .unwrap();
+        let port = listener.local_addr().unwrap().port();
+        tokio::spawn(async move {
+            let (mut conn, _) = listener.accept().await.unwrap();
+            let mut request = [0u8; 4096];
+            let _ = conn.read(&mut request).await;
+            let _ = conn
+                .write_all(b"HTTP/1.1 200 OK\r\ntransfer-encoding: chunked\r\n\r\n")
+                .await;
+            for _ in 0..8 {
+                tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                let _ = conn.write_all(b"1\r\nx\r\n").await;
+            }
+            let _ = conn.write_all(b"0\r\n\r\n").await;
+        });
+
+        let limit = std::time::Duration::from_millis(400);
+        let client = streaming_chat_client(limit).unwrap();
+        let response = client
+            .get(format!("http://127.0.0.1:{port}/"))
+            .send()
+            .await
+            .unwrap();
+        let mut stream = response.bytes_stream();
+        let mut received = 0;
+        while let Some(chunk) = stream.next().await {
+            received += chunk
+                .expect("cut off while words were still arriving")
+                .len();
+        }
+
+        assert_eq!(
+            received, 8,
+            "every word of an 800 ms reply under a 400 ms limit"
+        );
+    }
+
+    #[test]
+    fn a_line_split_across_reads_arrives_once_and_whole() {
+        let mut lines = NdjsonLines::default();
+        assert!(lines.push(br#"{"message":{"content":"Hel"#).is_empty());
+        assert_eq!(
+            lines.push(b"lo\"}}\n"),
+            vec![r#"{"message":{"content":"Hello"}}"#]
+        );
+    }
+
+    #[test]
+    fn a_character_split_across_reads_is_not_garbled() {
+        let mut lines = NdjsonLines::default();
+        let line = "{\"content\":\"café\"}\n".as_bytes();
+        let cut = line.iter().position(|&b| b == 0xC3).unwrap() + 1;
+        assert!(lines.push(&line[..cut]).is_empty());
+        assert_eq!(lines.push(&line[cut..]), vec!["{\"content\":\"café\"}"]);
+    }
+
+    #[test]
+    fn several_lines_in_one_read_all_arrive_in_order() {
+        let mut lines = NdjsonLines::default();
+        assert_eq!(
+            lines.push(b"{\"a\":1}\n\n{\"b\":2}\n{\"c\""),
+            vec!["{\"a\":1}", "{\"b\":2}"]
+        );
+        assert_eq!(lines.push(b":3}\n"), vec!["{\"c\":3}"]);
+    }
+
+    /// What the old per-read parsing also handled: a final line the stream
+    /// ended without a newline still counts.
+    #[test]
+    fn an_unterminated_last_line_is_kept_at_the_end() {
+        let mut lines = NdjsonLines::default();
+        assert!(lines.push(b"{\"done\":true}").is_empty());
+        assert_eq!(lines.finish(), vec!["{\"done\":true}"]);
+        assert!(lines.finish().is_empty());
+    }
 }
 
 #[cfg(test)]

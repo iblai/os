@@ -56,7 +56,7 @@ test.describe.serial('Journey 84: In-chat model picker', () => {
 
   let mentorUrl = '';
 
-  test('icm-01: admin turns on "Allow in-chat model change" on the LLM tab and it saves enable_in_chat_llm_change=true', async ({
+  test('icm-01: admin turns on "Allow In-Chat Model Change" at the top of the LLM tab and the immediate save sends enable_in_chat_llm_change=true', async ({
     page,
     editMentorPage,
     createMentorPage,
@@ -77,6 +77,7 @@ test.describe.serial('Journey 84: In-chat model picker', () => {
     await editMentorPage.llm.selectProviderAndModel('ibl.ai', AGENT_MODEL);
 
     const body = await editMentorPage.llm.setInChatModelChange(true);
+    expect(body, 'the toggle starts off on a new agent').not.toBeNull();
     expect(body).toMatch(
       /name="enable_in_chat_llm_change"\r?\n\r?\ntrue|"enable_in_chat_llm_change"\s*:\s*true/,
     );

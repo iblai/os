@@ -5,6 +5,9 @@
   "actionClick": {
     "message": "Cliquer sur"
   },
+  "actionDoubleClick": {
+    "message": "Double-cliquer sur"
+  },
   "actionNavigate": {
     "message": "Ouvrir"
   },
@@ -88,11 +91,8 @@
   "signInFailed": {
     "message": "La connexion a échoué. Réessayez."
   },
-  "stepLimit": {
-    "message": "Je me suis arrêté ici : c’est le nombre maximal d’étapes que je fais d’un coup. Envoyez « continuer » et je reprendrai là où j’en étais, tant que ce panneau reste ouvert."
-  },
-  "tokenLimit": {
-    "message": "Je me suis arrêté ici : c’est tout ce que je peux lire d’un coup. Envoyez « continuer » et je reprendrai là où j’en étais, tant que ce panneau reste ouvert."
+  "timeLimit": {
+    "message": "Je me suis arrêté ici : c’est le temps maximal pendant lequel je travaille d’un coup. Envoyez « continuer » et je reprendrai là où j’en étais, tant que ce panneau reste ouvert."
   },
   "noScriptablePage": {
     "message": "Je ne peux pas lire cette page : le navigateur ne l’autorise pas. Ouvrez la page sur laquelle vous voulez que je travaille, puis réessayez."

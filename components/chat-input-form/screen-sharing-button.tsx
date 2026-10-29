@@ -52,7 +52,7 @@ export function ScreenSharingButton({
             size="icon"
             type="button"
             className={cn(
-              'h-9 w-9 text-gray-400',
+              'h-9 w-9 text-gray-400 max-[520px]:w-8',
               isScreenSharingModalOpen && 'ibl-button-primary',
             )}
             disabled={disabled || isPreviewMode}

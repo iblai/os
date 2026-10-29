@@ -70,27 +70,46 @@ for, and there is no consent dialog to dismiss: Chrome asked at install time,
 and the panel states what Cowork does to the tab under its own switch. Switch it
 off and that is remembered; the pill's panel is also where you switch it back on.
 
-What the agent can do: click, type (never into password or payment fields — it
+What the agent can do: click (or double-click, to open what one click only
+selects: a file in a list), type (never into password or payment fields — it
 asks you to type those), select, scroll, open a URL, go back, read the page
 again, wait. Controls inside iframes (Gmail's Chat, an embedded editor) and open
 shadow roots are numbered like the page's own, and an action lands in the frame
 its element lives in; anything a script made focusable (a custom dropdown's
-choices) is listed too. **Approvals** in the Cowork panel decides whether it checks with
+choices) is listed too. The list holds at most 200 elements per frame, what is
+on screen first, and says how many more are off screen, so a compose window or
+a dialog opened over a long page is never what the cap leaves out. The page
+text it reads is what is on screen too: a viewer or dialog over the page marks
+what it covers out of reach, and that part is left out. With a model
+that reads images it can also click or type at a point of the picture (below),
+for what it can see but the list does not hold. **Approvals** in the Cowork panel decides whether it checks with
 you first: _Automatic_ (the default) acts without asking, _Ask Me_ raises an
 approve/deny card before a submit, a payment, a send or a delete. Neither mode
 lets it type into a password or payment field — that is refused outright, in the
-page, and such a field's contents are never read back either. A run stops after
-40 steps or its token budget — it says which, and that a follow-up message
-("continue") picks up where it left off, since the conversation lasts as long as
-the panel stays open — and **Stop** aborts it at any time. Closing the panel
-drops the port that keeps the worker alive, which ends the run.
+page, and such a field's contents are never read back either. A run takes as
+many steps as it needs and stops after 200 minutes — it says so, and that a
+follow-up message ("continue") picks up where it left off, since the
+conversation lasts as long as the panel stays open — and **Stop** aborts it at
+any time. Closing the panel drops the port that keeps the worker alive, which
+ends the run. What fails on the way is tried again: a page read twice, once the
+page settles (never an action, which may have landed); a model call that breaks
+off twice, through the AI SDK's own retry; and a call to a tool that does not
+exist, or with input that is not JSON, goes back to the model once to fix.
 
 **The picture.** With a model that reads images, every page read also captures
-the visible part of the tab (`chrome.tabs.captureVisibleTab`), with each listed
-element's number drawn on it, and sends that one picture with the next model
-call — the latest only, never kept in the conversation. No picture is taken
-while the tab is not in front or while a password or payment field is on the
-page.
+the visible part of the tab (`chrome.tabs.captureVisibleTab`), draws each listed
+element's number onto that image in the worker — nothing is added to the page,
+so nothing flashes — scales it to the viewport's own size (at most 1568 px on
+its longer edge, past which the model's API would resize it itself) and sends
+that one picture with the next model call, the latest only, never kept in the
+conversation. A point on it is a point of the tab: `click_at` and `type_at`
+take x and y on the picture, look at what is there (the same confirmations
+apply, by that element's name, and the same refusal to type into a password or
+payment field, by the field that takes the focus) and click (twice, if asked)
+or type through the DevTools protocol — which reaches a cross-origin iframe too. An element
+that is not on screen, inside a cross-origin iframe or scrolled out of view,
+stays in the list but gets no number on the picture. No picture is taken while
+the tab is not in front or while a password or payment field is on the page.
 
 **Real clicks.** The worker attaches Chrome's debugger to the tab for every run
 and clicks and types through the DevTools protocol, so the page sees the events
@@ -98,8 +117,13 @@ a real mouse and keyboard send — menus that open on the press, editors that
 ignore scripted input, anything that needs a user gesture. Chrome shows its "is
 debugging this browser" bar on the tab for exactly that long: the worker
 detaches when the run ends. Closing the bar or opening DevTools on the tab ends
-the run with a message; so does a tab DevTools already holds. Elements inside
-iframes keep the scripted click.
+the run with a message; so does a tab DevTools already holds. Before a real
+click the element is scrolled into view without animation and the point is
+checked in its own frame and in every frame above it: when something lies over
+it (a sticky header, a banner, a backdrop on the page around an iframe), the
+click goes to the element directly and the tool result says so. Elements inside
+same-origin iframes get real clicks and typing too, placed through the frame
+chain; cross-origin iframes keep the scripted click.
 
 Every action is reported as it happens, the agent's own running commentary
 alongside; typed text is never shown.
@@ -131,8 +155,9 @@ src/settings.ts            the host constants and the cached model
 src/mentor-origin.ts       build-time: the mentor URL default and the manifest's CSP hole
 src/auth.ts                chrome.identity sign-in against the auth SPA
 src/mentor-frame.ts        installs the session into the mentor iframe; context feed
-src/page-scripts.ts        the functions injected into the tab (snapshot, act, settle, badges)
+src/page-scripts.ts        the functions injected into the tab (snapshot, act, settle)
 src/tools.ts               the agent's tools: gating, confirmations, execution, the picture
+src/badges.ts              the element numbers drawn onto the capture, in the worker
 src/real-input.ts          real clicks and typing through chrome.debugger
 src/secret-fields.ts       the autocomplete tokens never typed into nor read back
 src/agent.ts               the model loop (Vercel AI SDK, OpenAI-compatible endpoint)
@@ -148,21 +173,20 @@ pnpm typecheck
 
 ## How Cowork is driven here
 
-The pill lives in the mentor app's own composer
-(`components/chat-input-form/inside-buttons.tsx`) and reads **Cowork** on every
-host — what changes in the panel is the driver, not the name. On the desktop app
-it is the Tauri Cua Driver; here it is this extension's service worker, and none
-of the Cua Driver's install or OS-permission calls are made.
-`hooks/use-in-extension-panel.ts` detects the panel with a handshake it answers,
-so the pill appears there and not in an ordinary tab.
+The pill lives in the SDK's composer (`SdkChat`, `components/chat/sdk-chat.tsx`
+in the app) and reads **Cowork** on every host — what changes in the panel is the
+driver, not the name. On the desktop app it is the Tauri Cua Driver; here it is
+this extension's service worker, and none of the Cua Driver's install or
+OS-permission calls are made. `<agent-ai enablecowork>` puts `enable-cowork=true`
+on the iframe URL, which is how `hooks/use-in-extension-panel.ts` knows it is in
+the panel before anything renders; an older extension, which sets no flag, is
+still detected over the `MENTOR:BROWSE_HELLO`/`MENTOR:BROWSE_READY` handshake.
 
-Being on means `ibl_cowork_enabled` is set, which is what already routes the
-turn through the DM's OpenAI-compatible endpoint — so the panel writes the pref
-rather than only its own state: the SDK (`shouldUseRemoteAiChat`, the Cowork tool
-list) and the submit in `components/chat/index.tsx` all read it back through
-`isCoworkEnabled()`. Only an unset pref defaults on, which is how an explicit off
-survives, and the panel's iframe has its own partitioned storage, so none of this
-reaches the same app in an ordinary tab. Submitting a goal goes to
+In the panel Cowork starts on, and its switch lives in session storage
+(`ibl_cowork_panel`, the SDK's): the iframe shares the site's localStorage with
+the user's ordinary tabs, so nothing the panel does reaches the same app in a
+plain tab — and a plain tab never routes a turn to the remote AI without a
+driver (`shouldUseRemoteAiChat`). Submitting a goal goes to
 `hooks/use-browse-run.ts` instead of the normal send:
 
     composer → postMessage → browse-bridge.ts → chrome.runtime port
@@ -186,4 +210,4 @@ workflow header). CI has no `.env.local`, so what it publishes always points at
 
 Copy a fresh `dist/index.umd.js` from the SDK's `packages/agent-ai` build over
 `public/vendor/agent-ai.umd.js` (the directory is prettier-ignored so it stays
-as published). Also copy it byte-for-byte to `e2e/fixtures/agent-ai.umd.js` (journey 89 serves that copy; `scripts/agent-ai-vendor-copy.test.ts` fails when they differ). Vendored: `@iblai/agent-ai` 2.13.1.
+as published). Also copy it byte-for-byte to `e2e/fixtures/agent-ai.umd.js` (journey 89 serves that copy; `scripts/agent-ai-vendor-copy.test.ts` fails when they differ). Vendored: `@iblai/agent-ai` 2.13.2.

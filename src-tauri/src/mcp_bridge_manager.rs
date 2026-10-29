@@ -2,7 +2,10 @@
 //!
 //! The bridge runs *alongside* Ollama: it is started right after the Ollama
 //! server starts and stopped when the Ollama server stops (see
-//! `model_manager::start_ollama_server` / `stop_ollama_server`).
+//! `model_manager::start_ollama_server` / `stop_ollama_server`), and it dies
+//! with the app ([`shutdown`]). On launch it is brought back in the background
+//! by `model_manager::warm_up_local_chat`, or by the first local chat
+//! (`model_manager::post_local_chat`); only one copy ever runs.
 //!
 //! MCP servers are managed by editing `mcp-config.json` in the app data
 //! directory — there is no UI. A companion `mcp-config.example.json` documents
@@ -35,6 +38,41 @@ static ACTIVE_PORT: Mutex<Option<u16>> = Mutex::new(None);
 /// The port the running bridge listens on, or `None` when we haven't started one.
 pub fn bridge_port() -> Option<u16> {
     *ACTIVE_PORT.lock().unwrap_or_else(|e| e.into_inner())
+}
+
+/// The recorded port without waiting; `Err` while a start holds the lock, which
+/// it does for seconds (see `BRIDGE_READY_TIMEOUT`).
+#[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+fn peek_port() -> Result<Option<u16>, ()> {
+    match ACTIVE_PORT.try_lock() {
+        Ok(port) => Ok(*port),
+        Err(std::sync::TryLockError::Poisoned(e)) => Ok(*e.into_inner()),
+        Err(std::sync::TryLockError::WouldBlock) => Err(()),
+    }
+}
+
+/// [`bridge_port`] for the chat send path, which must never wait: a start in
+/// progress reads as `None`, so the sender joins that start on a blocking
+/// thread instead of stalling an async worker.
+#[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+pub fn bridge_port_now() -> Option<u16> {
+    peek_port().ok().flatten()
+}
+
+/// A start in progress counts: it may spawn the bridge any moment now.
+#[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+fn started_by_us() -> bool {
+    peek_port().map_or(true, |port| port.is_some())
+}
+
+/// App exit: stop the bridge so it doesn't sit in memory while the app is
+/// closed — a leftover would only be reaped by the next launch anyway. A no-op
+/// when this run never started one, and it never waits on a start in progress.
+#[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+pub fn shutdown() {
+    if started_by_us() {
+        kill_bridge_processes();
+    }
 }
 
 /// Pretend a bridge is (or isn't) running, for tests that exercise the callers
@@ -134,43 +172,32 @@ fn home_dir() -> Option<PathBuf> {
     std::env::var(var).ok().map(PathBuf::from)
 }
 
-/// Resolve a runnable path to the `ollama-mcp-bridge` executable, probing PATH
-/// first and then the locations `uv tool install` / pip use. Returns `None`
-/// when the bridge isn't installed.
+#[cfg(target_os = "windows")]
+const BRIDGE_EXE: &str = "ollama-mcp-bridge.exe";
+#[cfg(any(target_os = "macos", target_os = "linux"))]
+const BRIDGE_EXE: &str = "ollama-mcp-bridge";
+
+/// Path to the `ollama-mcp-bridge` executable — PATH first, then where
+/// `uv tool install` / pip put it — or `None` when it isn't installed.
 #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
 fn resolve_bridge_bin() -> Option<String> {
-    let on_path = create_command("ollama-mcp-bridge")
-        .arg("--help")
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .status()
-        .map(|s| s.success())
-        .unwrap_or(false);
-    if on_path {
-        return Some("ollama-mcp-bridge".to_string());
-    }
+    let path = std::env::var_os("PATH").unwrap_or_default();
+    find_bridge_bin(&path, home_dir().as_deref()).map(|p| p.to_string_lossy().into_owned())
+}
 
-    let mut candidates: Vec<PathBuf> = Vec::new();
-    if let Some(home) = home_dir() {
-        #[cfg(target_os = "windows")]
-        {
-            candidates.push(
-                home.join(".local")
-                    .join("bin")
-                    .join("ollama-mcp-bridge.exe"),
-            );
-        }
+/// Looks for the file rather than running it: running `--help` to find it
+/// booted a whole Python interpreter on every bridge start.
+#[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+fn find_bridge_bin(path: &std::ffi::OsStr, home: Option<&std::path::Path>) -> Option<PathBuf> {
+    let mut candidates: Vec<PathBuf> = std::env::split_paths(path)
+        .map(|dir| dir.join(BRIDGE_EXE))
+        .collect();
+    if let Some(home) = home {
+        candidates.push(home.join(".local").join("bin").join(BRIDGE_EXE));
         #[cfg(not(target_os = "windows"))]
-        {
-            candidates.push(home.join(".local/bin/ollama-mcp-bridge"));
-            candidates.push(home.join(".cargo/bin/ollama-mcp-bridge"));
-        }
+        candidates.push(home.join(".cargo").join("bin").join(BRIDGE_EXE));
     }
-
-    candidates
-        .into_iter()
-        .find(|p| p.exists())
-        .map(|p| p.to_string_lossy().into_owned())
+    candidates.into_iter().find(|p| p.is_file())
 }
 
 /// Ensure the live config exists (scaffolding an empty one) and refresh the
@@ -457,6 +484,65 @@ mod tests {
             "someone else's listener is not a bridge of ours"
         );
         assert!(is_listening(taken), "the squatter really is answering");
+        set_bridge_port_for_test(None);
+    }
+
+    /// The exit hook kills only what this run started — or may be starting
+    /// right now — and leaves the machine alone otherwise.
+    #[test]
+    fn exit_stops_the_bridge_only_when_this_run_started_one() {
+        let _guard = bridge_state_lock();
+        set_bridge_port_for_test(None);
+        assert!(!started_by_us(), "nothing started: nothing to stop");
+
+        set_bridge_port_for_test(Some(8123));
+        assert!(started_by_us());
+
+        set_bridge_port_for_test(None);
+        let starting = ACTIVE_PORT.lock().unwrap();
+        assert!(started_by_us(), "a start in progress may spawn any moment");
+        drop(starting);
+    }
+
+    #[test]
+    fn the_bridge_is_found_on_path_or_in_the_uv_install_dir_without_running_it() {
+        let root = std::env::temp_dir().join(format!("bridge-bin-{}", std::process::id()));
+        let on_path = root.join("path-dir");
+        let home = root.join("home");
+        let uv_bin = home.join(".local").join("bin");
+        std::fs::create_dir_all(&on_path).unwrap();
+        std::fs::create_dir_all(&uv_bin).unwrap();
+        let path = std::env::join_paths([&on_path]).unwrap();
+
+        assert_eq!(find_bridge_bin(&path, Some(&home)), None, "not installed");
+
+        std::fs::write(uv_bin.join(BRIDGE_EXE), "").unwrap();
+        assert_eq!(
+            find_bridge_bin(&path, Some(&home)),
+            Some(uv_bin.join(BRIDGE_EXE))
+        );
+
+        std::fs::write(on_path.join(BRIDGE_EXE), "").unwrap();
+        assert_eq!(
+            find_bridge_bin(&path, Some(&home)),
+            Some(on_path.join(BRIDGE_EXE)),
+            "PATH wins, like the shell"
+        );
+
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    /// A start in progress holds the lock for seconds; the send path must read
+    /// that as "no bridge yet" and join the start, not block on it.
+    #[test]
+    fn the_send_path_never_waits_on_a_start_in_progress() {
+        let _guard = bridge_state_lock();
+        set_bridge_port_for_test(Some(8123));
+        assert_eq!(bridge_port_now(), Some(8123));
+
+        let starting = ACTIVE_PORT.lock().unwrap();
+        assert_eq!(bridge_port_now(), None);
+        drop(starting);
         set_bridge_port_for_test(None);
     }
 

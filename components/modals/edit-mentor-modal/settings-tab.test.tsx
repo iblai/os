@@ -177,6 +177,17 @@ describe('SettingsTab', () => {
       );
     });
 
+    it('keeps the constant label for a visibility option without a translation', () => {
+      const extra = { label: 'Department', value: 'viewable_by_department' };
+      (MENTOR_VISIBILITY as { label: string; value: string }[]).push(extra);
+      try {
+        render(<SettingsTab />);
+        expect(providerValue().visibilityOptions).toContainEqual(extra);
+      } finally {
+        MENTOR_VISIBILITY.pop();
+      }
+    });
+
     it('forwards the config-derived enableRBAC flag', () => {
       mockEnableRBAC.mockReturnValue(true);
       render(<SettingsTab />);
@@ -267,6 +278,15 @@ describe('SettingsTab', () => {
         students: 'usersOption',
         anyone: 'anyoneOption',
       });
+      expect(labels.fields.whoCanView.adminOnlyNote).toBe(
+        'whoCanViewAdminOnlyNote',
+      );
+      expect(labels.adminVisibilityConfirm).toEqual({
+        title: 'title',
+        description: 'description',
+        cancel: 'cancel',
+        confirm: 'confirm',
+      });
       expect(labels.fields.showReasoning).toEqual({
         label: 'enableVerboseReasoningLabel',
         tooltip: 'enableVerboseReasoningTooltip',
@@ -316,6 +336,7 @@ describe('SettingsTab', () => {
       expect(labels.fields.enhancedDocRetrieval.label).toBe(
         'enhancedDocRetrievalLabel',
       );
+      expect(labels.fields).not.toHaveProperty('inChatModelChange');
       expect(labels.fields.showLastConversation).toEqual({
         label: 'showLastConversationLabel',
         tooltip: 'showLastConversationTooltip',

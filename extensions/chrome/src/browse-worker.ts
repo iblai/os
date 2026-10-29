@@ -52,13 +52,9 @@ function describeRunError(event: AgentEvent & { type: 'error' }): string {
   return translate('errorGeneric', event.message);
 }
 
-/** Why a run ended early, when it did — otherwise the cap is invisible. */
-const stopNote = (stoppedBy: 'steps' | 'tokens' | null) =>
-  stoppedBy === 'steps'
-    ? translate('stepLimit')
-    : stoppedBy === 'tokens'
-      ? translate('tokenLimit')
-      : undefined;
+/** Why a run ended early, when it did — otherwise the limit is invisible. */
+const stopNote = (stoppedBy: 'time' | null) =>
+  stoppedBy === 'time' ? translate('timeLimit') : undefined;
 
 /**
  * One browse session per connected port. The port is what keeps this worker
@@ -149,13 +145,15 @@ export function handleBrowsePort(port: chrome.runtime.Port): void {
         lostRealInput = true;
         controller?.abort();
       });
+      const withPicture = wantsPicture(model);
       const { tools, snapshot, picture } = createBrowserTools({
         tabId,
         confirm,
         log: (entry) =>
           send({ type: 'log', text: logLine(entry), ok: entry.ok }),
-        withPicture: wantsPicture(model),
+        withPicture,
         real: realInput(tabId),
+        signal: controller.signal,
       });
       // The run's first sign of life. Reading the page and then waiting for
       // the model's first token is the longest stretch of a run with nothing to
@@ -185,6 +183,7 @@ export function handleBrowsePort(port: chrome.runtime.Port): void {
         signal: controller.signal,
         language: await userLanguage(),
         picture,
+        positions: withPicture,
         // Narration and a refused call are rows in the action list, like
         // every action; only a failed model call ends the turn.
         onEvent: (event) => {
@@ -215,6 +214,8 @@ export function handleBrowsePort(port: chrome.runtime.Port): void {
       send({ type: 'error', message: message(err) });
     } finally {
       stopWatching?.();
+      // Ends what the run left going, like a page read waiting to try again.
+      controller.abort();
       await detach(tabId);
       controller = null;
     }

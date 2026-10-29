@@ -419,4 +419,129 @@ test.describe('Journey 80: Embed Header + LTI Redesign', () => {
 
     await page.setViewportSize({ width: 1280, height: 800 });
   });
+
+  // emb-prof-01..04: a host that sets `show-user-profile=true` (the Chrome
+  // extension does, via `<agent-ai showuserprofile>`) gets the user's avatar
+  // menu in the embed header. Embeds are host-owned, so the menu leaves out
+  // Log Out and the Admin/User mode switch, and a tenant switch is handed to
+  // the host instead of redirecting the frame.
+  test('embed header shows the profile avatar only when the host asks for it', async ({
+    page,
+  }) => {
+    const mentorUrl = page.url();
+    let iframe = await gotoEmbedHarness(page, mentorUrl);
+    await expect(iframe.getByTestId('embed-agent-identity')).toBeVisible({
+      timeout: 20_000,
+    });
+    await expect(
+      iframe.getByRole('button', { name: 'More options' }),
+    ).toHaveCount(0);
+
+    iframe = await gotoEmbedHarness(page, mentorUrl, {
+      'show-user-profile': 'true',
+    });
+    await expect(
+      iframe.getByRole('button', { name: 'More options' }),
+    ).toBeVisible({ timeout: 20_000 });
+  });
+
+  test('embed profile menu offers Profile, the tenant switcher and Help, but no Log Out or mode switch', async ({
+    page,
+  }) => {
+    const iframe = await gotoEmbedHarness(page, page.url(), {
+      'show-user-profile': 'true',
+    });
+    await iframe.getByRole('button', { name: 'More options' }).click();
+
+    const menu = iframe.getByRole('menu');
+    await expect(menu).toBeVisible({ timeout: 10_000 });
+    await expect(menu.getByRole('menuitem', { name: 'Profile' })).toBeVisible();
+    await expect(
+      menu.getByRole('combobox', { name: 'Select a tenant' }),
+    ).toBeVisible();
+    await expect(menu.getByRole('menuitem', { name: /Help/ })).toBeVisible();
+    await expect(menu.getByRole('menuitem', { name: 'Log Out' })).toHaveCount(
+      0,
+    );
+    await expect(
+      menu.getByRole('menuitem', { name: /^(Admin|User)$/ }),
+    ).toHaveCount(0);
+  });
+
+  test('embed Profile opens the profile dialog inside the frame and Cancel closes it', async ({
+    page,
+  }) => {
+    const iframe = await gotoEmbedHarness(page, page.url(), {
+      'show-user-profile': 'true',
+    });
+    await iframe.getByRole('button', { name: 'More options' }).click();
+    await iframe.getByRole('menuitem', { name: 'Profile' }).click();
+
+    const dialog = iframe.getByRole('dialog');
+    await expect(dialog).toBeVisible({ timeout: 15_000 });
+    await expect(
+      dialog.getByRole('heading', { name: 'User Profile' }),
+    ).toBeAttached();
+    await expect(dialog.getByRole('tab', { name: 'Basic' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+    await expect(
+      dialog.getByRole('button', { name: 'Save Changes' }),
+    ).toBeVisible();
+
+    await dialog.getByRole('button', { name: 'Cancel' }).click();
+    await expect(dialog).toBeHidden({ timeout: 10_000 });
+  });
+
+  test('embed tenant switch is handed to the host page instead of redirecting the frame', async ({
+    page,
+  }) => {
+    const iframe = await gotoEmbedHarness(page, page.url(), {
+      'show-user-profile': 'true',
+    });
+    await page.evaluate(() => {
+      const w = window as unknown as { __hostMessages: unknown[] };
+      w.__hostMessages = [];
+      window.addEventListener('message', (event) =>
+        w.__hostMessages.push(event.data),
+      );
+    });
+    await expect(iframe.locator('#chat-input-textarea')).toBeVisible({
+      timeout: 20_000,
+    });
+    const appFrame = await (
+      await page.locator('#embed-harness-iframe').elementHandle()
+    )?.contentFrame();
+    const frameUrlBefore = appFrame?.url();
+
+    await iframe.getByRole('button', { name: 'More options' }).click();
+    await iframe
+      .getByRole('menu')
+      .getByRole('combobox', { name: 'Select a tenant' })
+      .click();
+    const otherTenant = iframe
+      .getByRole('option')
+      .and(iframe.locator(':not([aria-selected="true"])'))
+      .first();
+    test.skip(
+      (await otherTenant.count()) === 0,
+      'the e2e user belongs to only one tenant',
+    );
+    await otherTenant.click();
+
+    await expect
+      .poll(() =>
+        page.evaluate(() =>
+          (
+            window as unknown as { __hostMessages: unknown[] }
+          ).__hostMessages.find(
+            (m) => (m as { tenantSwitch?: boolean })?.tenantSwitch === true,
+          ),
+        ),
+      )
+      .toMatchObject({ tenantSwitch: true, tenant: expect.any(String) });
+    await expect(iframe.locator('#chat-input-textarea')).toBeVisible();
+    expect(appFrame?.url()).toBe(frameUrlBefore);
+  });
 });

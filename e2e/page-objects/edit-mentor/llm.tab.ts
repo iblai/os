@@ -1,4 +1,5 @@
 import { Page, Locator, expect } from '@playwright/test';
+import { UsersModelsDialog } from './users-models.dialog';
 
 /** One provider grid card as rendered by `tabs/llm-tab.tsx`. */
 export interface LlmProviderCardInfo {
@@ -14,6 +15,15 @@ export class LlmTab {
   readonly page: Page;
   readonly dialog: Locator;
 
+  /** Tenant-wide Users Models editor (admin-only button on this tab). */
+  readonly usersModels: UsersModelsDialog;
+
+  /** "Allow In-Chat Model Change" switch at the top of the tab (#2633). */
+  readonly inChatModelChangeToggle: Locator;
+  /** "Models Users Can Pick" box; only for a tenant admin with the switch on. */
+  readonly usersModelsSummary: Locator;
+  readonly usersModelsSummaryCount: Locator;
+
   readonly providerTabpanel: Locator;
   readonly searchProvidersInput: Locator;
   /** Every provider grid card (`data-testid="llm-provider-card"`), in DOM order. */
@@ -28,12 +38,18 @@ export class LlmTab {
    * logo `<img>`, which excludes the dialog's own Close (X icon) button.
    */
   readonly modelRows: Locator;
-  /** "Allow in-chat model change" (#2633); saves on its own, with no Save button. */
-  readonly inChatModelChangeToggle: Locator;
 
   constructor(page: Page, dialog: Locator) {
     this.page = page;
     this.dialog = dialog;
+    this.usersModels = new UsersModelsDialog(page, dialog);
+    this.inChatModelChangeToggle = dialog.getByTestId(
+      'llm-in-chat-model-change-toggle',
+    );
+    this.usersModelsSummary = dialog.getByTestId('users-models-summary');
+    this.usersModelsSummaryCount = dialog.getByTestId(
+      'users-models-summary-count',
+    );
     this.providerTabpanel = dialog
       .getByRole('tabpanel', { name: /llm/i, exact: true })
       .first();
@@ -46,43 +62,6 @@ export class LlmTab {
     this.modelRows = this.llmSelectionDialog
       .getByRole('button')
       .filter({ has: page.locator('img') });
-    this.inChatModelChangeToggle = dialog.getByTestId(
-      'llm-in-chat-model-change-toggle',
-    );
-  }
-
-  /**
-   * Flips "Allow in-chat model change" from `!target` to `target` and returns
-   * the save request's body. Waiting for the starting state first keeps a
-   * click from landing before the agent's settings load and the switch shows
-   * its saved value.
-   */
-  async setInChatModelChange(target: boolean): Promise<string> {
-    await expect(this.inChatModelChangeToggle).toBeEnabled({
-      timeout: 10_000,
-    });
-    await expect(this.inChatModelChangeToggle).toHaveAttribute(
-      'aria-checked',
-      String(!target),
-      { timeout: 10_000 },
-    );
-    const [request] = await Promise.all([
-      this.page.waitForRequest(
-        (req) =>
-          ['PUT', 'PATCH'].includes(req.method()) &&
-          (req.postData() ?? '').includes('enable_in_chat_llm_change'),
-        { timeout: 30_000 },
-      ),
-      this.inChatModelChangeToggle.click(),
-    ]);
-    const response = await request.response();
-    expect(response?.ok(), 'the setting saved').toBe(true);
-    await expect(this.inChatModelChangeToggle).toHaveAttribute(
-      'aria-checked',
-      String(target),
-      { timeout: 10_000 },
-    );
-    return request.postData() ?? '';
   }
 
   /**
@@ -255,5 +234,38 @@ export class LlmTab {
     await expect(this.llmSelectionDialog).not.toBeVisible({ timeout: 10_000 });
     // Small buffer for RTK Query cache invalidation.
     await this.page.waitForTimeout(500);
+  }
+
+  /**
+   * Flips "Allow In-Chat Model Change" (saves immediately) and returns the
+   * settings request body, or `null` when already in that state.
+   */
+  async setInChatModelChange(target: boolean): Promise<string | null> {
+    await expect(this.inChatModelChangeToggle).toBeVisible({
+      timeout: 30_000,
+    });
+    await expect(this.inChatModelChangeToggle).toBeEnabled({ timeout: 30_000 });
+    const isChecked =
+      (await this.inChatModelChangeToggle.getAttribute('aria-checked')) ===
+      'true';
+    if (isChecked === target) return null;
+    const [request] = await Promise.all([
+      this.page.waitForRequest(
+        (req) =>
+          ['PUT', 'PATCH'].includes(req.method()) &&
+          (req.postData() ?? '').includes('enable_in_chat_llm_change'),
+        { timeout: 30_000 },
+      ),
+      this.inChatModelChangeToggle.click(),
+    ]);
+    const response = await request.response();
+    expect(response?.ok(), 'the setting saved').toBe(true);
+    await expect(this.inChatModelChangeToggle).toHaveAttribute(
+      'aria-checked',
+      String(target),
+      { timeout: 15_000 },
+    );
+    await this.page.waitForTimeout(500);
+    return request.postData() ?? '';
   }
 }

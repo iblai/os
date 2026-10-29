@@ -5,6 +5,9 @@
   "actionClick": {
     "message": "点击"
   },
+  "actionDoubleClick": {
+    "message": "双击"
+  },
   "actionNavigate": {
     "message": "打开"
   },
@@ -88,11 +91,8 @@
   "signInFailed": {
     "message": "登录失败，请重试。"
   },
-  "stepLimit": {
-    "message": "我在这里停下了：这是我一次能执行的最多步骤。发送“继续”，只要此面板保持打开，我就会从停下的地方接着做。"
-  },
-  "tokenLimit": {
-    "message": "我在这里停下了：这是我一次能读取的上限。发送“继续”，只要此面板保持打开，我就会从停下的地方接着做。"
+  "timeLimit": {
+    "message": "我在这里停下了：这是我一次能连续工作的最长时间。发送“继续”，只要此面板保持打开，我就会从停下的地方接着做。"
   },
   "noScriptablePage": {
     "message": "我无法读取此页面——浏览器不允许。请打开你希望我处理的页面后重试。"

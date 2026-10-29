@@ -1,6 +1,6 @@
 {
   "name": "ibl-web-nextjs-mentor-spa",
-  "version": "0.175.0",
+  "version": "0.182.2",
   "private": false,
   "packageManager": "pnpm@10.11.1",
   "engines": {
@@ -77,7 +77,7 @@
     "@radix-ui/react-toggle-group": "1.1.3",
     "@radix-ui/react-tooltip": "1.2.0",
     "@reduxjs/toolkit": "2.7.0",
-    "@sentry/nextjs": "10.62.0",
+    "@sentry/nextjs": "10.75.2",
     "@tanstack/react-form": "1.6.3",
     "@tauri-apps/api": "2.11.0",
     "@tauri-apps/plugin-barcode-scanner": "2.4.6",
@@ -117,7 +117,7 @@
     "load-script": "2.0.0",
     "lucide-react": "0.488.0",
     "mitt": "3.0.1",
-    "next": "15.5.25",
+    "next": "15.5.28",
     "next-intl": "4.13.0",
     "next-themes": "0.4.6",
     "next-transpile-modules": "10.0.1",
@@ -158,7 +158,6 @@
     "unist-util-visit": "5.1.0",
     "use-debounce": "10.0.4",
     "vaul": "1.1.2",
-    "write-excel-file": "4.0.7",
     "zod": "3.25.76"
   },
   "devDependencies": {
@@ -215,7 +214,7 @@
     "tsx": "4.23.1",
     "turbo": "2.9.14",
     "typescript": "5.9.3",
-    "vite": "8.1.3",
+    "vite": "8.1.6",
     "vite-tsconfig-paths": "5.1.4",
     "vitest": "3.2.6",
     "vitest-axe": "0.1.0",

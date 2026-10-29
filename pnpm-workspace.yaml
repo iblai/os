@@ -7,7 +7,9 @@ onlyBuiltDependencies:
   - sharp
   - unrs-resolver
 overrides:
-  vite: '>=7.3.2'
+  # Floor raised to 8.1.6 for GHSA-587h-7wmj-h5pm (launch-editor existence
+  # check bypass on Windows, >=8.0.0 <=8.1.5). Dev server only.
+  vite: '>=8.1.6 <8.2'
   # GHSA-c475-qrg2-pj4r — quadratic-time CPU DoS in Client.list()'s Unix
   # directory-listing parser (RE_LINE backtracking), affecting <=6.2.0; 6.2.1 is
   # the only patched release. Surfaced by `pnpm audit` (high), which blocks the
@@ -21,7 +23,10 @@ overrides:
   # Dev-only reach: @release-it/conventional-changelog > conventional-changelog
   # > conventional-changelog-writer > handlebars. Upper bound keeps the 4.x line.
   handlebars: '>=4.7.10 <5'
-  follow-redirects: '>=1.16.0'
+  # Floor raised to 1.16.1 for GHSA-q3jh-wrc6-jgq8 and GHSA-8r9p-f939-6h3c
+  # (credential headers kept on cross-origin redirects, >=1.16.0 <1.16.1).
+  # Reached through axios.
+  follow-redirects: '>=1.16.1'
   defu: '>=6.1.5'
   lodash-es: '>=4.18.0'
   lodash: '>=4.18.0'
@@ -45,7 +50,8 @@ overrides:
   # interceptors), plus the moderate/low DoS, cookie-caching and response
   # handling issues in the same line. Same reach, same major:
   # @wdio/local-runner > @wdio/runner > webdriver > undici (e2e-tauri only).
-  undici: '>=8.10.2'
+  # Floor lifted 8.10.2 -> 8.12.2 for GHSA-xjj6-f33q-929c (high), same reach.
+  undici: '>=8.12.2'
   # GHSA-8j4g-w8fx-2239 — ReDoS in the CORS middleware via a crafted
   # Access-Control-Request-Headers, patched in 4.12.34. Not surfaced by Dependabot;
   # found by `pnpm audit`. Reached through
@@ -62,10 +68,10 @@ overrides:
   # (fetch adapter ignores maxRedirects: 0). Direct dependency, pinned to match.
   axios: '>=1.20.0'
   prismjs: '>=1.30.0'
-  # Floor raised 3.4.12 -> 3.4.13 for GHSA-55q2-fjhq-7xh7: IN_PLACE hook removal
-  # leaves a detached subtree executable (XSS). Reached through
-  # @iblai/iblai-js > @iblai/web-containers.
-  dompurify: '>=3.4.13'
+  # Floor raised 3.4.13 -> 3.4.17 for GHSA-cg2g-xh64-v4q7 (SAFE_FOR_TEMPLATES
+  # bypass) and GHSA-mrv2-3pqr-j5jr (IN_PLACE hook removal, incomplete fix for
+  # GHSA-55q2-fjhq-7xh7). Reached through @iblai/iblai-js > @iblai/web-containers.
+  dompurify: '>=3.4.17'
   # GHSA-j95f-988m-3j2f - quadratic ReDoS parsing block and inline Markdown
   # attributes, affecting >=3.7.0 <3.30.5. Scoped to the web-containers subtree
   # deliberately: this app depends on @tiptap/core 2.x directly and a bare
@@ -166,7 +172,9 @@ overrides:
   # Reached through @iblai/iblai-js > @iblai/web-containers > @tiptap/pm >
   # prosemirror-markdown, which asks for ^14. Upper bound is deliberate: a bare
   # '>=14.3.1' resolves to 15.x, a major that consumer does not declare.
-  markdown-it: '>=14.3.1 <15'
+  # Floor raised 14.3.1 -> 14.3.3 for GHSA-gfr2-rv44-r23c, affecting
+  # >=14.1.0 <14.3.3; the upper bound stays.
+  markdown-it: '>=14.3.3 <15'
   # GHSA-cp6q-959q-f8rh + GHSA-j95f-988m-3j2f (XSS via crafted editor
   # content), patched in 3.30.4/3.30.5. Scoped to the 3.x resolution
   # (@iblai/web-containers): the app itself pins the 2.x API for the canvas
@@ -203,6 +211,13 @@ overrides:
   # subnet), reached through @iblai/iblai-js > @iblai/mcp >
   # @modelcontextprotocol/sdk > express. Patch release inside express's ^2.0.7.
   proxy-addr: '>=2.0.8 <3'
+  # GHSA-27r3-jxmh-p828, affecting >=2.0.0 <2.4.0; reached through the MCP
+  # SDK's express 5. Patch release inside express's ^2.
+  body-parser: '>=2.4.0 <3'
+  # GHSA-mrhx-c7xc-m3w5 (memory exhaustion on oversized constrained
+  # collections), patched in 4.6.6. Scoped to @iblai/mcp, which already uses
+  # zod 4; the zod 3 copies have no patched release (see auditConfig).
+  '@iblai/mcp>zod': '>=4.6.6 <5'
   # GHSA-6qxp-vccf-f47h (OAuth credentials sent to an MCP-server-chosen
   # authorization server). The published @iblai/mcp and @iblai/web-utils pin
   # 1.27.1; 1.31 is a minor bump within the same 1.x API.
@@ -263,3 +278,10 @@ auditConfig:
     # through tooling (mocha > chokidar; fast-glob > micromatch, also via the
     # SDK's rollup-plugin-copy runtime dep), on the repo's own glob patterns.
     - GHSA-vfj7-8cjw-p6xm
+    # zod memory exhaustion on oversized constrained collections
+    # (GHSA-mrhx-c7xc-m3w5) — patched only in zod 4 (>=4.6.6), with no zod 3
+    # release. @iblai/mcp's zod 4 copy is raised by the override above; the
+    # app's own zod 3 and @iblai/data-layer's exactly pinned zod 3.24.2 stay
+    # until both move to zod 4. Their schemas check the app's own forms and
+    # the platform's responses, not attacker-sized input.
+    - GHSA-mrhx-c7xc-m3w5

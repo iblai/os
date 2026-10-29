@@ -5,6 +5,9 @@
   "actionClick": {
     "message": "Clic en"
   },
+  "actionDoubleClick": {
+    "message": "Doble clic en"
+  },
   "actionNavigate": {
     "message": "Abrir"
   },
@@ -88,11 +91,8 @@
   "signInFailed": {
     "message": "No se pudo iniciar sesión. Inténtalo de nuevo."
   },
-  "stepLimit": {
-    "message": "Me detuve aquí: es el máximo de pasos que doy de una vez. Envía «continuar» y seguiré donde lo dejé, mientras este panel siga abierto."
-  },
-  "tokenLimit": {
-    "message": "Me detuve aquí: es todo lo que puedo leer de una vez. Envía «continuar» y seguiré donde lo dejé, mientras este panel siga abierto."
+  "timeLimit": {
+    "message": "Me detuve aquí: es el máximo de tiempo que trabajo de una vez. Envía «continuar» y seguiré donde lo dejé, mientras este panel siga abierto."
   },
   "noScriptablePage": {
     "message": "No puedo leer esta página: el navegador no lo permite. Abre la página con la que quieres que trabaje e inténtalo de nuevo."

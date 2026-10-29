@@ -77,7 +77,6 @@ const executeWithTrialCheckMock = vi.fn((fn?: () => void) => {
 const redirectToAuthSpaMock = vi.fn();
 const redirectToAuthSpaJoinTenantMock = vi.fn();
 const eventBusEmitMock = vi.fn();
-const exportMessagesToXlsxMock = vi.fn();
 
 // Pageables / search params
 let mockPathname = '/platform/tenant-a/mentor-1';
@@ -348,10 +347,45 @@ vi.mock('@/components/projects/delete-project-modal', () => ({
     ) : null,
 }));
 
-// xlsx export helper — assert it's called with the row's messages.
-vi.mock('../export-messages', () => ({
-  exportMessagesToXlsx: (...args: unknown[]) =>
-    exportMessagesToXlsxMock(...args),
+// The SDK export dialog is covered in the SDK; here we check what it is opened with.
+vi.mock('@iblai/iblai-js/web-containers/next', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  ChatDownloadDialog: (props: {
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+    mentorName: string;
+    sessionId?: string;
+    username?: string | null;
+    tenantKey?: string;
+    saveFile?: unknown;
+  }) =>
+    props.open ? (
+      <div
+        role="dialog"
+        aria-label="Export Chat"
+        data-session={props.sessionId}
+        data-mentor={props.mentorName}
+        data-username={props.username ?? ''}
+        data-tenant={props.tenantKey}
+        data-native-save={String(props.saveFile === mockSaveFile)}
+      >
+        <button onClick={() => props.onOpenChange(false)}>Close Export</button>
+      </div>
+    ) : null,
+}));
+
+const { mockSaveFile, mockMentorSettings } = vi.hoisted(() => ({
+  mockSaveFile: vi.fn(),
+  mockMentorSettings: {
+    current: { mentorName: 'Open Agent' } as
+      | { mentorName?: string }
+      | undefined,
+  },
+}));
+vi.mock('@/lib/save-file', () => ({ saveFile: mockSaveFile }));
+
+vi.mock('@/hooks/use-mentors/use-mentor-settings', () => ({
+  useMentorSettings: () => ({ data: mockMentorSettings.current }),
 }));
 
 // SDK data-layer hooks — return canned data; allow individual tests to
@@ -736,7 +770,6 @@ function resetState() {
     return undefined;
   });
   eventBusEmitMock.mockReset();
-  exportMessagesToXlsxMock.mockReset();
   toggleSidebarMock.mockReset();
   setOpenMobileMock.mockReset();
   closeFreeTrialModalMock.mockReset();
@@ -1685,18 +1718,47 @@ describe('AppSidebar — Chats section', () => {
     });
   });
 
-  it('clicking Export delegates to exportMessagesToXlsx with the row messages', async () => {
+  it('clicking Export opens the export dialog on the whole chat of that row', async () => {
     const user = userEvent.setup();
     renderSidebar();
     fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
+    expect(
+      screen.queryByRole('dialog', { name: 'Export Chat' }),
+    ).not.toBeInTheDocument();
     const menus = screen.getAllByRole('button', { name: 'Chat actions' });
     await user.click(menus[1]);
     await user.click(await screen.findByRole('menuitem', { name: /^Export$/ }));
-    expect(exportMessagesToXlsxMock).toHaveBeenCalled();
-    const calledWith = exportMessagesToXlsxMock.mock.calls[0]?.[0] as
-      | unknown[]
-      | undefined;
-    expect(Array.isArray(calledWith)).toBe(true);
+
+    const dialog = await screen.findByRole('dialog', { name: 'Export Chat' });
+    expect(dialog).toHaveAttribute('data-session', 'sess-recent-1');
+    // Named after the agent open in the app, not the row's summary.
+    expect(dialog).toHaveAttribute('data-mentor', 'Open Agent');
+    expect(dialog).toHaveAttribute('data-username', 'admin-user');
+    expect(dialog).toHaveAttribute('data-native-save', 'true');
+
+    await user.click(screen.getByRole('button', { name: 'Close Export' }));
+    expect(
+      screen.queryByRole('dialog', { name: 'Export Chat' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('names the export without an agent while the agent is still loading', async () => {
+    mockMentorSettings.current = undefined;
+    try {
+      const user = userEvent.setup();
+      renderSidebar();
+      fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
+      const menus = screen.getAllByRole('button', { name: 'Chat actions' });
+      await user.click(menus[1]);
+      await user.click(
+        await screen.findByRole('menuitem', { name: /^Export$/ }),
+      );
+      expect(
+        await screen.findByRole('dialog', { name: 'Export Chat' }),
+      ).toHaveAttribute('data-mentor', '');
+    } finally {
+      mockMentorSettings.current = { mentorName: 'Open Agent' };
+    }
   });
 
   it('clicking Delete triggers the delete mutation', async () => {

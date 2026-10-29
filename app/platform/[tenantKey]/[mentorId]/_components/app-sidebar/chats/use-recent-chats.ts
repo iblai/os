@@ -27,7 +27,6 @@ import { sessionCacheKey } from '@/lib/utils';
 import { getUserName } from '@/features/utils';
 import { ProjectPageParams } from '@/lib/types';
 import eventBus, { RemoteEvents } from '@/lib/eventBus';
-import { exportMessagesToXlsx } from '../export-messages';
 
 import { ChatRow } from './chat-row-label';
 
@@ -394,11 +393,11 @@ export function useRecentChats({
     }
   };
 
-  const handleExport = (row: ChatRow) => {
-    // Delegate to the shared sibling helper — it uses `write-excel-file`
-    // (already a project dep) and is covered by `export-messages.test.ts`.
-    exportMessagesToXlsx(row.messages ?? []);
-  };
+  // The row only carries a summary of the chat (its opening message), so the
+  // export dialog reads the whole session itself.
+  const [exportingRow, setExportingRow] = React.useState<ChatRow | null>(null);
+  const handleExport = (row: ChatRow) => setExportingRow(row);
+  const closeExport = () => setExportingRow(null);
 
   return {
     pinned,
@@ -413,5 +412,7 @@ export function useRecentChats({
     handleUnpin,
     handleDelete,
     handleExport,
+    exportingRow,
+    closeExport,
   };
 }

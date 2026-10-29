@@ -1,8 +1,10 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { FrameSnapshot } from '../page-scripts';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { drawBadges } from '../badges';
+import type { ActResult, FrameSnapshot } from '../page-scripts';
 import { settle, sleep } from '../settle';
 import {
   MAX_WAIT_MS,
+  READ_RETRIES,
   asElement,
   createBrowserTools,
   describeItem,
@@ -18,6 +20,12 @@ import { installChromeStub, type ChromeStub } from './chrome.stub';
 vi.mock('../settle', () => ({
   settle: vi.fn(async () => undefined),
   sleep: vi.fn(async () => undefined),
+}));
+vi.mock('../badges', () => ({
+  drawBadges: vi.fn(async (dataUrl: string) => ({
+    dataUrl: `${dataUrl}#badged`,
+    scale: 1,
+  })),
 }));
 
 const FIXTURE = `
@@ -62,6 +70,33 @@ const actCalls = () =>
     (call) => (call[0] as { func: { name: string } }).func.name === 'actOnPage',
   );
 
+const snapshotCalls = () =>
+  chromeStub.stub.scripting.executeScript.mock.calls.filter(
+    (call) =>
+      (call[0] as { func: { name: string } }).func.name === 'snapshotPage',
+  );
+
+/** The next `times` injections of `name` (of `action`, for actOnPage) throw. */
+const failing = (name: string, times: number, action?: string) => {
+  const original =
+    chromeStub.stub.scripting.executeScript.getMockImplementation()!;
+  chromeStub.stub.scripting.executeScript.mockImplementation(
+    async (injection) => {
+      const { func, args = [] } = injection as {
+        func: { name: string };
+        args?: unknown[];
+      };
+      if (
+        func.name === name &&
+        (action === undefined || args[1] === action) &&
+        times-- > 0
+      )
+        throw new Error('Frame with ID 0 was removed.');
+      return original(injection);
+    },
+  );
+};
+
 beforeEach(() => {
   Object.defineProperty(HTMLFormElement.prototype, 'requestSubmit', {
     configurable: true,
@@ -76,6 +111,7 @@ beforeEach(() => {
 beforeEach(async () => {
   vi.mocked(settle).mockClear();
   vi.mocked(sleep).mockClear();
+  vi.mocked(drawBadges).mockClear();
   document.body.innerHTML = FIXTURE;
   document.title = 'Billing – Acme';
   // jsdom cannot navigate or submit; keep those from logging "not implemented".
@@ -189,6 +225,31 @@ describe('createBrowserTools', () => {
       target: '[5] link "Forgot password?"',
       ok: true,
     });
+  });
+
+  // A file in a list opens on a double click: the page's own way without
+  // real input, named as one in the result, the log and the confirmation.
+  it('double-clicks when asked, says so, and logs it as one', async () => {
+    const onDouble = vi.fn();
+    document.querySelector('a')!.addEventListener('dblclick', onDouble);
+    const result = await run('click', { element: 5, double: true });
+    expect(
+      result.startsWith('Double-clicked [5] link "Forgot password?".\n\n'),
+    ).toBe(true);
+    expect(actCalls()[0][0]).toMatchObject({
+      args: [5, 'dblclick', '', false],
+    });
+    expect(onDouble).toHaveBeenCalledTimes(1);
+    expect(ctx.log).toHaveBeenLastCalledWith({
+      tool: 'double_click',
+      target: '[5] link "Forgot password?"',
+      ok: true,
+    });
+    await run('click', { element: 4, double: true });
+    expect(ctx.confirm).toHaveBeenLastCalledWith(
+      'Double-click [4] button "Continue" on "Billing – Acme"',
+      undefined,
+    );
   });
 
   it('asks before a submit button and before a risky name, passing the abort signal', async () => {
@@ -434,6 +495,48 @@ describe('createBrowserTools', () => {
         detail: 'Cannot access contents of the page',
       }),
     );
+    // The click may have landed before its answer was lost: never again.
+    expect(actCalls()).toHaveLength(1);
+  });
+
+  it('reads the page again when the read after an action fails, acting once', async () => {
+    failing('snapshotPage', 1);
+    expect(await run('click', { element: 5 })).toMatch(
+      /^Clicked \[5\] link "Forgot password\?"\./,
+    );
+    expect(actCalls()).toHaveLength(1);
+    expect(snapshotCalls()).toHaveLength(2);
+    expect(settle).toHaveBeenLastCalledWith(7);
+    expect(ctx.log).toHaveBeenCalledTimes(1);
+    expect(ctx.log).toHaveBeenLastCalledWith(
+      expect.objectContaining({ tool: 'click', ok: true }),
+    );
+  });
+
+  it('gives up on the read after two more tries, still acting once', async () => {
+    failing('snapshotPage', Infinity);
+    expect(await run('click', { element: 5 })).toBe(
+      'Error: Frame with ID 0 was removed.',
+    );
+    expect(actCalls()).toHaveLength(1);
+    expect(snapshotCalls()).toHaveLength(1 + READ_RETRIES);
+    expect(ctx.log).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        ok: false,
+        detail: 'Frame with ID 0 was removed.',
+      }),
+    );
+  });
+
+  it('tries no read again once the run is over', async () => {
+    const ended = new AbortController();
+    current = createBrowserTools({ ...ctx, signal: ended.signal });
+    ended.abort();
+    failing('snapshotPage', Infinity);
+    expect(await run('read_page', {})).toBe(
+      'Error: Frame with ID 0 was removed.',
+    );
+    expect(snapshotCalls()).toHaveLength(1);
   });
 
   it('runs concurrent tool calls one at a time', async () => {
@@ -489,6 +592,7 @@ describe('createBrowserTools', () => {
         },
       ],
       excerpt: 'hi from chat',
+      viewport: { width: 400, height: 300 },
     };
     chromeStub.stub.scripting.executeScript.mockImplementation(
       async (injection) => {
@@ -525,6 +629,7 @@ describe('createBrowserTools', () => {
       title: 'X',
       items: [],
       excerpt: '',
+      viewport: { width: 400, height: 300 },
       ...overrides,
     });
     const button = (n: number, name: string) => ({
@@ -558,19 +663,62 @@ describe('createBrowserTools', () => {
     );
   });
 
+  it('says how many elements the cap left out, across frames', () => {
+    const page: FrameSnapshot = {
+      url: 'https://x/',
+      title: 'X',
+      items: [
+        {
+          n: 1,
+          role: 'button',
+          name: 'A',
+          state: '',
+          submit: false,
+          secret: false,
+        },
+      ],
+      excerpt: '',
+      viewport: { width: 400, height: 300 },
+      dropped: 3,
+    };
+    const { snapshot } = mergeFrames([
+      { frameId: 0, result: page },
+      {
+        frameId: 2,
+        result: {
+          ...page,
+          items: [{ ...page.items[0], name: 'B' }],
+          dropped: 2,
+        },
+      },
+    ]);
+    expect(snapshot.text).toBe(
+      'https://x/  "X"\n[1] button "A"\n[2] button "B"\n(+5 more elements off screen: scroll to list them)\n--- text ---\n',
+    );
+  });
+
   it('fails loudly when the page returns no snapshot', async () => {
     expect(() => mergeFrames([])).toThrow('The page returned no snapshot.');
     expect(() =>
       mergeFrames([
         {
           frameId: 4,
-          result: { url: 'https://x/', title: 'X', items: [], excerpt: '' },
+          result: {
+            url: 'https://x/',
+            title: 'X',
+            items: [],
+            excerpt: '',
+            viewport: { width: 400, height: 300 },
+          },
         },
       ]),
     ).toThrow('The page returned no snapshot.');
-    chromeStub.stub.scripting.executeScript.mockResolvedValueOnce([]);
+    chromeStub.stub.scripting.executeScript.mockResolvedValue([]);
     expect(await run('read_page', {})).toBe(
       'Error: The page returned no snapshot.',
+    );
+    expect(chromeStub.stub.scripting.executeScript).toHaveBeenCalledTimes(
+      1 + READ_RETRIES,
     );
   });
 });
@@ -587,35 +735,62 @@ describe('the picture of the tab', () => {
     await current.snapshot();
   };
 
-  it('captures the tab after each page read, with every number drawn on its element', async () => {
+  it('captures the tab after each page read and draws every number on it in the worker, never on the page', async () => {
     document.querySelector('#pw')!.remove();
     await rebuild({ withPicture: true });
     expect(current.picture()).toEqual({
-      dataUrl: 'data:image/jpeg;base64,xyz',
+      dataUrl: 'data:image/jpeg;base64,xyz#badged',
+      scale: 1,
     });
     expect(chromeStub.stub.tabs.captureVisibleTab).toHaveBeenCalledWith(1, {
-      format: 'jpeg',
-      quality: 60,
+      format: 'png',
     });
-    expect(funcs()).toEqual(['snapshotPage', 'markPage', 'unmarkPage']);
-    const marks = chromeStub.stub.scripting.executeScript.mock
-      .calls[1][0] as unknown as {
-      target: { frameIds: number[] };
-      args: [Array<[number, number]>];
-    };
-    expect(marks.target.frameIds).toEqual([0]);
-    expect(marks.args[0][0]).toEqual([1, 1]);
-    expect(marks.args[0]).toHaveLength(7);
+    expect(funcs()).toEqual(['snapshotPage']);
+    const [shot, marks, width] = vi.mocked(drawBadges).mock.calls[0];
+    expect(shot).toBe('data:image/jpeg;base64,xyz');
+    expect(marks).toHaveLength(7);
+    expect(marks[0]).toEqual({ n: 1, x: 0, y: 0 });
+    expect(width).toBe(1024);
 
     chromeStub.stub.scripting.executeScript.mockClear();
     await run('click', { element: 5 });
-    expect(funcs()).toEqual([
-      'actOnPage',
-      'snapshotPage',
-      'markPage',
-      'unmarkPage',
-    ]);
+    expect(funcs()).toEqual(['actOnPage', 'snapshotPage']);
     expect(chromeStub.stub.tabs.captureVisibleTab).toHaveBeenCalledTimes(2);
+  });
+
+  // Its place in the tab is unknown from the page, so no number is drawn for it.
+  it('keeps an element inside a cross-origin frame in the list but off the picture', async () => {
+    document.querySelector('#pw')!.remove();
+    const original =
+      chromeStub.stub.scripting.executeScript.getMockImplementation()!;
+    chromeStub.stub.scripting.executeScript.mockImplementation(
+      async (injection) => {
+        const { func } = injection as { func: { name: string } };
+        if (func.name !== 'snapshotPage') return original(injection);
+        const chat: FrameSnapshot = {
+          url: 'https://chat.acme.com/frame',
+          title: 'Chat',
+          excerpt: '',
+          viewport: { width: 400, height: 300 },
+          items: [
+            {
+              n: 1,
+              role: 'button',
+              name: 'Send',
+              state: '',
+              submit: false,
+              secret: false,
+            },
+          ],
+        };
+        return [...(await original(injection)), { frameId: 5, result: chat }];
+      },
+    );
+    await rebuild({ withPicture: true });
+    const page = await current.snapshot();
+    expect(page.text).toContain('[8] button "Send"');
+    const marks = vi.mocked(drawBadges).mock.lastCall![1];
+    expect(marks.map((mark) => mark.n)).toEqual([1, 2, 3, 4, 5, 6, 7]);
   });
 
   it('keeps a page with a password or payment field out of the picture', async () => {
@@ -627,14 +802,14 @@ describe('the picture of the tab', () => {
     expect(funcs()).toEqual(['snapshotPage']);
   });
 
-  it('takes the numbers down even when the capture fails, and says why', async () => {
+  it('says why when the capture fails', async () => {
     document.querySelector('#pw')!.remove();
     chromeStub.stub.tabs.captureVisibleTab.mockRejectedValueOnce(
       new Error('throttled'),
     );
     await rebuild({ withPicture: true });
     expect(current.picture()).toEqual({ note: '(no picture: throttled)' });
-    expect(funcs()).toEqual(['snapshotPage', 'markPage', 'unmarkPage']);
+    expect(drawBadges).not.toHaveBeenCalled();
   });
 
   it('takes no picture of a tab that is not in front', async () => {
@@ -659,7 +834,7 @@ describe('the picture of the tab', () => {
     await run('click', { element: 5 });
     expect(current.picture()).toBeNull();
     expect(chromeStub.stub.tabs.captureVisibleTab).not.toHaveBeenCalled();
-    expect(funcs()).not.toContain('markPage');
+    expect(drawBadges).not.toHaveBeenCalled();
   });
 });
 
@@ -677,23 +852,67 @@ describe('real input', () => {
   };
   const actions = () =>
     actCalls().map((call) => (call[0] as { args: unknown[] }).args[1]);
+  // jsdom's own elementFromPoint answers null, which reads as off-screen; the
+  // tests below put a hit there, and this takes it away again.
+  afterEach(() => {
+    delete (document as { elementFromPoint?: unknown }).elementFromPoint;
+  });
 
   it("clicks for real at the element's centre, never with a scripted click", async () => {
     const input = real();
     await rebuild({ real: input });
-    Object.defineProperty(
-      document.querySelector('a'),
-      'getBoundingClientRect',
-      {
-        configurable: true,
-        value: () => ({ left: 10, top: 20, width: 100, height: 40 }),
-      },
-    );
+    const link = document.querySelector('a')!;
+    Object.defineProperty(link, 'getBoundingClientRect', {
+      configurable: true,
+      value: () => ({ left: 10, top: 20, width: 100, height: 40 }),
+    });
+    Object.defineProperty(document, 'elementFromPoint', {
+      configurable: true,
+      value: () => link,
+    });
     const result = await run('click', { element: 5 });
     expect(result).toMatch(/^Clicked \[5\] link "Forgot password\?"\./);
-    expect(input.click).toHaveBeenCalledWith(60, 40);
+    expect(input.click).toHaveBeenCalledWith(60, 40, 1);
     expect(actions()).toEqual(['locate']);
     expect(settle).toHaveBeenLastCalledWith(7, { frameId: 0 });
+  });
+
+  it('looks the element up again when the lookup fails, then clicks once', async () => {
+    const input = real();
+    await rebuild({ real: input });
+    const link = document.querySelector('a')!;
+    Object.defineProperty(link, 'getBoundingClientRect', {
+      configurable: true,
+      value: () => ({ left: 10, top: 20, width: 100, height: 40 }),
+    });
+    Object.defineProperty(document, 'elementFromPoint', {
+      configurable: true,
+      value: () => link,
+    });
+    failing('actOnPage', 1, 'locate');
+    expect(await run('click', { element: 5 })).toMatch(
+      /^Clicked \[5\] link "Forgot password\?"\./,
+    );
+    expect(actions()).toEqual(['locate', 'locate']);
+    expect(input.click).toHaveBeenCalledTimes(1);
+  });
+
+  it('double-clicks for real with two counted presses', async () => {
+    const input = real();
+    await rebuild({ real: input });
+    const link = document.querySelector('a')!;
+    Object.defineProperty(link, 'getBoundingClientRect', {
+      configurable: true,
+      value: () => ({ left: 10, top: 20, width: 100, height: 40 }),
+    });
+    Object.defineProperty(document, 'elementFromPoint', {
+      configurable: true,
+      value: () => link,
+    });
+    const result = await run('click', { element: 5, double: true });
+    expect(result).toMatch(/^Double-clicked \[5\] link "Forgot password\?"\./);
+    expect(input.click).toHaveBeenCalledWith(60, 40, 2);
+    expect(actions()).toEqual(['locate']);
   });
 
   it('types for real: the field is prepared in the page, the text and Enter go through the protocol', async () => {
@@ -724,46 +943,331 @@ describe('real input', () => {
     expect(input.pressEnter).not.toHaveBeenCalled();
   });
 
-  // Real input knows only the page's own coordinates.
-  it('keeps the scripted click for an element inside a subframe', async () => {
+  // Whatever is over the element would take the real click instead.
+  it("clicks the page's own way when something covers the element, and says so", async () => {
     const input = real();
+    await rebuild({ real: input });
+    Object.defineProperty(document, 'elementFromPoint', {
+      configurable: true,
+      value: () => document.querySelector('h1'),
+    });
+    const result = await run('click', { element: 5 });
+    expect(result).toMatch(
+      /^Clicked \[5\] link "Forgot password\?"\. \(something covers it, clicked directly\)\n/,
+    );
+    expect(input.click).not.toHaveBeenCalled();
+    expect(actions()).toEqual(['locate', 'click']);
+  });
+
+  // Frame 5 is not the jsdom document: it answers each action as told.
+  const withFrame = (answers: Record<string, ActResult>) => {
     const original =
       chromeStub.stub.scripting.executeScript.getMockImplementation()!;
     const chat: FrameSnapshot = {
       url: 'https://chat.acme.com/frame',
       title: 'Chat',
+      excerpt: '',
+      viewport: { width: 400, height: 300 },
       items: [
         {
           n: 1,
-          role: 'button',
-          name: 'Send',
-          state: '',
+          role: 'textbox',
+          name: 'Message',
+          state: 'empty',
           submit: false,
           secret: false,
         },
       ],
-      excerpt: '',
     };
     chromeStub.stub.scripting.executeScript.mockImplementation(
       async (injection) => {
-        const { func, target } = injection as {
+        const { func, target, args } = injection as unknown as {
           func: { name: string };
           target: { frameIds?: number[] };
+          args: [number, string];
         };
         if (func.name === 'snapshotPage')
           return [...(await original(injection)), { frameId: 5, result: chat }];
         if (target.frameIds?.[0] === 5)
-          return [{ frameId: 5, result: { ok: true } }];
+          return [{ frameId: 5, result: answers[args[1]] ?? { ok: true } }];
         return original(injection);
       },
     );
+  };
+
+  it('clicks and types for real inside a same-origin frame, at its place in the tab', async () => {
+    const input = real();
+    withFrame({
+      locate: { ok: true, x: 160, y: 90, top: true },
+      'prepare-type': { ok: true, top: true },
+    });
     await rebuild({ real: input });
-    const result = await run('click', { element: 9 });
-    expect(result).toMatch(/^Clicked \[9\] button "Send"\./);
+    expect(await run('click', { element: 9 })).toMatch(
+      /^Clicked \[9\] textbox "Message"\./,
+    );
+    expect(input.click).toHaveBeenCalledWith(160, 90, 1);
+    expect(await run('type', { element: 9, text: 'hi' })).toMatch(
+      /^Typed into \[9\]/,
+    );
+    expect(input.insertText).toHaveBeenCalledWith('hi');
+    expect(actions()).toEqual(['locate', 'prepare-type']);
+  });
+
+  // Past a cross-origin parent the page cannot say where it is in the tab.
+  it("keeps the page's own click and typing inside a cross-origin frame", async () => {
+    const input = real();
+    withFrame({
+      locate: { ok: true, x: 60, y: 40, top: false },
+      'prepare-type': { ok: true, top: false },
+    });
+    await rebuild({ real: input });
+    expect(await run('click', { element: 9 })).toMatch(
+      /^Clicked \[9\] textbox "Message"\.\n/,
+    );
+    expect(await run('type', { element: 9, text: 'hi' })).toMatch(
+      /^Typed into \[9\]/,
+    );
     expect(input.click).not.toHaveBeenCalled();
-    expect(actCalls()[0][0]).toMatchObject({
+    expect(input.insertText).not.toHaveBeenCalled();
+    expect(actions()).toEqual(['locate', 'click', 'prepare-type', 'type']);
+    expect(actCalls()[1][0]).toMatchObject({
       target: { tabId: 7, frameIds: [5] },
       args: [1, 'click', '', false],
     });
+  });
+});
+
+describe('acting on a point of the picture', () => {
+  const real = () => ({
+    click: vi.fn(async () => undefined),
+    insertText: vi.fn(async () => undefined),
+    pressEnter: vi.fn(async () => undefined),
+  });
+  const hitsAt = (at: Record<string, Element | null>) =>
+    Object.defineProperty(document, 'elementFromPoint', {
+      configurable: true,
+      value: (x: number, y: number) => at[`${x},${y}`] ?? null,
+    });
+  const rebuild = async (patch: Partial<BrowserToolsContext>) => {
+    Object.assign(ctx, patch);
+    current = createBrowserTools(ctx);
+    await current.snapshot();
+    chromeStub.stub.scripting.executeScript.mockClear();
+  };
+  const injected = () =>
+    chromeStub.stub.scripting.executeScript.mock.calls.map((call) => {
+      const { func, args } = call[0] as {
+        func: { name: string };
+        args: unknown[];
+      };
+      return [func.name, ...args];
+    });
+  // A picture needs a page without a secret field.
+  beforeEach(() => document.querySelector('#pw')!.remove());
+  afterEach(() => {
+    delete (document as { elementFromPoint?: unknown }).elementFromPoint;
+  });
+
+  it('offers click_at and type_at only with a picture and real input', async () => {
+    await rebuild({ withPicture: true, real: real() });
+    expect(Object.keys(current.tools)).toEqual(
+      expect.arrayContaining(['click_at', 'type_at']),
+    );
+    await rebuild({ withPicture: false });
+    expect(Object.keys(current.tools)).not.toContain('click_at');
+    await rebuild({ withPicture: true, real: undefined });
+    expect(Object.keys(current.tools)).not.toContain('type_at');
+  });
+
+  it('clicks a point for real, naming what is there, and logs the position', async () => {
+    const input = real();
+    await rebuild({ withPicture: true, real: input });
+    hitsAt({ '60,40': document.querySelector('a') });
+    const result = await run('click_at', { x: 60, y: 40 });
+    expect(result).toMatch(
+      /^Clicked link "Forgot password\?" at \(60, 40\)\.\n\n/,
+    );
+    expect(input.click).toHaveBeenCalledWith(60, 40, 1);
+    expect(injected()[0]).toEqual([
+      'snapshotPage',
+      200,
+      0,
+      SECRET_FIELDS,
+      { x: 60, y: 40 },
+    ]);
+    expect(injected().map(([name]) => name)).toEqual([
+      'snapshotPage',
+      'snapshotPage',
+    ]);
+    expect(settle).toHaveBeenLastCalledWith(7, { frameId: 0 });
+    expect(ctx.confirm).not.toHaveBeenCalled();
+    expect(ctx.log).toHaveBeenLastCalledWith({
+      tool: 'click',
+      target: 'link "Forgot password?" at (60, 40)',
+      ok: true,
+    });
+  });
+
+  it('double-clicks a point when asked, and logs it as one', async () => {
+    const input = real();
+    await rebuild({ withPicture: true, real: input });
+    hitsAt({ '60,40': document.querySelector('a') });
+    const result = await run('click_at', { x: 60, y: 40, double: true });
+    expect(result).toMatch(
+      /^Double-clicked link "Forgot password\?" at \(60, 40\)\.\n\n/,
+    );
+    expect(input.click).toHaveBeenCalledWith(60, 40, 2);
+    expect(ctx.log).toHaveBeenLastCalledWith({
+      tool: 'double_click',
+      target: 'link "Forgot password?" at (60, 40)',
+      ok: true,
+    });
+  });
+
+  // The model's x and y are the picture's pixels; the click takes CSS px.
+  it('maps the point through the picture scale and refuses one off the picture', async () => {
+    const input = real();
+    vi.mocked(drawBadges).mockResolvedValueOnce({
+      dataUrl: 'small',
+      scale: 0.5,
+    });
+    await rebuild({ withPicture: true, real: input });
+    hitsAt({ '60,40': document.querySelector('a') });
+    expect(await run('click_at', { x: 30, y: 20 })).toMatch(
+      /^Clicked link "Forgot password\?" at \(30, 20\)\./,
+    );
+    expect(input.click).toHaveBeenCalledWith(60, 40, 1);
+    expect(await run('click_at', { x: 5000, y: 10 })).toBe(
+      'Error: That point is outside the picture.',
+    );
+    expect(await run('click_at', { x: -1, y: 10 })).toBe(
+      'Error: x and y must be pixel positions on the picture.',
+    );
+    expect(await run('type_at', { x: 'a', y: 10, text: 'x' })).toBe(
+      'Error: x and y must be pixel positions on the picture.',
+    );
+    expect(input.click).toHaveBeenCalledTimes(1);
+    expect(ctx.log).toHaveBeenLastCalledWith({
+      tool: 'type',
+      target: '',
+      ok: false,
+      detail: 'x and y must be pixel positions on the picture.',
+    });
+  });
+
+  it('reports when there is no picture to point at', async () => {
+    chromeStub.stub.tabs.captureVisibleTab.mockRejectedValue(
+      new Error('throttled'),
+    );
+    await rebuild({ withPicture: true, real: real() });
+    expect(await run('click_at', { x: 1, y: 1 })).toBe(
+      'Error: No picture this step; use an element number.',
+    );
+  });
+
+  it('asks before a risky name at the point, and declines without clicking', async () => {
+    const input = real();
+    await rebuild({ withPicture: true, real: input });
+    hitsAt({ '10,10': document.querySelector('button[type=button]') });
+    ctx.confirm.mockResolvedValueOnce(false);
+    expect(await run('click_at', { x: 10, y: 10 })).toBe(
+      'Error: User declined. Ask how to proceed.',
+    );
+    expect(ctx.confirm).toHaveBeenCalledWith(
+      'Click button "Pay now" at (10, 10) on "Billing – Acme"',
+      undefined,
+    );
+    expect(input.click).not.toHaveBeenCalled();
+    expect(ctx.log).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        tool: 'click',
+        target: 'button "Pay now" at (10, 10)',
+        code: 'declined',
+      }),
+    );
+  });
+
+  it('types at a point: the click focuses the field, its frame prepares it, the text goes through the protocol', async () => {
+    const input = real();
+    const email = document.querySelector<HTMLInputElement>('#email')!;
+    input.click.mockImplementation(async () => {
+      email.focus();
+    });
+    await rebuild({ withPicture: true, real: input });
+    hitsAt({ '30,30': email });
+    const result = await run('type_at', {
+      x: 30,
+      y: 30,
+      text: 'jane@x.io',
+      submit: true,
+    });
+    expect(result).toMatch(
+      /^Typed into textbox "Email" at \(30, 30\) and submitted\.\n/,
+    );
+    expect(input.click).toHaveBeenCalledWith(30, 30);
+    expect(injected()[1]).toEqual([
+      'actOnPage',
+      0,
+      'prepare-type',
+      '',
+      false,
+      SECRET_FIELDS,
+    ]);
+    expect(
+      chromeStub.stub.scripting.executeScript.mock.calls[1][0],
+    ).toMatchObject({ target: { tabId: 7, allFrames: true } });
+    expect(input.insertText).toHaveBeenCalledWith('jane@x.io');
+    expect(input.pressEnter).toHaveBeenCalledTimes(1);
+    expect(ctx.confirm).toHaveBeenCalledWith(
+      'Type into textbox "Email" at (30, 30) and submit on "Billing – Acme"',
+      undefined,
+    );
+    expect(JSON.stringify(ctx.log.mock.lastCall)).not.toContain('jane');
+  });
+
+  it('looks for the focused field again after a click at a point, never clicking twice', async () => {
+    const input = real();
+    const email = document.querySelector<HTMLInputElement>('#email')!;
+    input.click.mockImplementation(async () => {
+      email.focus();
+    });
+    await rebuild({ withPicture: true, real: input });
+    hitsAt({ '30,30': email });
+    failing('actOnPage', 1, 'prepare-type');
+    expect(await run('type_at', { x: 30, y: 30, text: 'jane@x.io' })).toMatch(
+      /^Typed into textbox "Email" at \(30, 30\)\.\n/,
+    );
+    expect(input.click).toHaveBeenCalledTimes(1);
+    expect(input.insertText).toHaveBeenCalledTimes(1);
+  });
+
+  it('refuses a secret field that took the focus, before any text is sent', async () => {
+    const input = real();
+    await rebuild({ withPicture: true, real: input });
+    const pw = document.createElement('input');
+    pw.type = 'password';
+    document.querySelector('#f')!.append(pw);
+    input.click.mockImplementation(async () => {
+      pw.focus();
+    });
+    hitsAt({ '30,30': pw });
+    expect(await run('type_at', { x: 30, y: 30, text: 'hunter2' })).toMatch(
+      /^Error: this field takes a password/,
+    );
+    expect(input.insertText).not.toHaveBeenCalled();
+    expect(ctx.log).toHaveBeenLastCalledWith(
+      expect.objectContaining({ tool: 'type', code: 'refused' }),
+    );
+  });
+
+  it('says when nothing at the point takes text', async () => {
+    const input = real();
+    await rebuild({ withPicture: true, real: input });
+    hitsAt({ '3,3': document.querySelector('h1') });
+    expect(await run('type_at', { x: 3, y: 3, text: 'x' })).toBe(
+      'Error: Nothing at that point takes text; click a field first or use an element number.',
+    );
+    expect(input.click).toHaveBeenCalledWith(3, 3);
+    expect(input.insertText).not.toHaveBeenCalled();
   });
 });
