@@ -51,7 +51,7 @@ export async function navigateAndObserveTenantMetadata(
 ): Promise<ObservedTenantMetadata> {
   await navigateToMentorApp(page, url);
 
-  let handle: JSHandle<ObservedTenantMetadata>;
+  let handle: JSHandle<ObservedTenantMetadata> | undefined;
   try {
     handle = await page.waitForFunction(
       ({ currentKey, listKey }) => {
@@ -90,6 +90,10 @@ export async function navigateAndObserveTenantMetadata(
       { currentKey: CURRENT_TENANT_KEY, listKey: USER_TENANTS_KEY },
       { timeout: 30_000 },
     );
+    // Read inside the try: a navigation between the predicate resolving and
+    // this read destroys the execution context, and that raw error should be
+    // wrapped in the explanatory failure below, not surfaced bare.
+    return (await handle.jsonValue()) as ObservedTenantMetadata;
   } catch (error) {
     throw new Error(
       'Could not read the resolved tenant from storage ' +
@@ -99,7 +103,7 @@ export async function navigateAndObserveTenantMetadata(
         'FAIL, not skip — it is not gated by DM_URL or any per-environment ' +
         `setup. Underlying error: ${error}`,
     );
+  } finally {
+    await handle?.dispose();
   }
-
-  return (await handle.jsonValue()) as ObservedTenantMetadata;
 }

@@ -77,15 +77,33 @@ export class AccessibilityFabPage {
       async (route) => {
         if (route.request().method() !== 'GET') return route.continue();
         const response = await route.fetch();
-        const body = await response.json();
+        // A non-JSON body (proxy 5xx HTML, an empty 401) must not leave the
+        // route un-answered — that would stall the app's bootstrap request and
+        // surface as an opaque 30s "button not visible". Fall back to passing
+        // the real response through untouched; the flag just isn't forced.
+        let body: unknown;
+        try {
+          body = await response.json();
+        } catch {
+          return route.fulfill({ response });
+        }
         // Both endpoints return a bare array today; tolerate a paginated
         // `{ results: [...] }` envelope too so a backend change can't silently
         // stop forcing the flag.
-        let patched = body;
+        let patched: unknown = body;
         if (Array.isArray(body)) {
           patched = body.map(withMenu);
-        } else if (body && Array.isArray(body.results)) {
-          patched = { ...body, results: body.results.map(withMenu) };
+        } else if (
+          body &&
+          Array.isArray((body as { results?: unknown[] }).results)
+        ) {
+          const envelope = body as { results: unknown[] };
+          patched = {
+            ...envelope,
+            results: envelope.results.map((t) =>
+              withMenu(t as { metadata?: Record<string, unknown> }),
+            ),
+          };
         }
         await route.fulfill({ response, json: patched });
       },
