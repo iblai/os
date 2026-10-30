@@ -369,9 +369,19 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   // one. Clearing the flag puts the composer back into "waiting" until this
   // mentor's own answer lands, rather than letting it act on a verdict that
   // was about a different agent.
+  //
+  // But the SDK's MentorProvider only fetches mentor RBAC for a signed-in user
+  // (it guards the load on `isLoggedIn`). An anonymous viewer's answer therefore
+  // never arrives, so for them we mark it loaded right away — otherwise the
+  // composer's `awaitingMentorPermissions` gate stays stuck and an
+  // anonymous-allowed mentor renders a permanently disabled "no permission to
+  // chat" input. Anonymous chat is governed by the mentor's public-access
+  // rules, not by a mentor-scoped RBAC grant they can never hold.
   useEffect(() => {
-    dispatch(resetMentorPermissionsLoaded());
-  }, [mentorId, dispatch]);
+    dispatch(
+      username ? resetMentorPermissionsLoaded() : markMentorPermissionsLoaded(),
+    );
+  }, [mentorId, username, dispatch]);
   const [useMentorProvider, setUseMentorProvider] = useState(true);
 
   function saveUserTokens(tokenResponse: TokenResponse) {

@@ -1047,6 +1047,35 @@ describe('Providers', () => {
       });
     });
 
+    // The SDK's MentorProvider only fetches mentor RBAC for a signed-in user,
+    // so an anonymous viewer's `onLoadMentorsPermissions` never fires. If the
+    // flag were merely reset and left to that callback, the composer's
+    // `awaitingMentorPermissions` gate would stay stuck and an
+    // anonymous-allowed mentor would render a permanently disabled input.
+    it('on an anonymous load, marks mentor permissions loaded (no RBAC answer is coming)', () => {
+      mockUsername = null;
+      renderProviders();
+      expect(mockDispatch).toHaveBeenCalledWith({
+        type: 'rbac/markMentorLoaded',
+      });
+      expect(mockDispatch).not.toHaveBeenCalledWith({
+        type: 'rbac/resetMentorLoaded',
+      });
+    });
+
+    it('on a signed-in load, resets the flag to wait for the real RBAC answer', () => {
+      mockUsername = 'testuser';
+      renderProviders();
+      expect(mockDispatch).toHaveBeenCalledWith({
+        type: 'rbac/resetMentorLoaded',
+      });
+      // The mark only comes later, from onLoadMentorsPermissions — not from
+      // the reset effect itself.
+      expect(mockDispatch).not.toHaveBeenCalledWith({
+        type: 'rbac/markMentorLoaded',
+      });
+    });
+
     it('handleMentorNotFound navigates to error page', async () => {
       renderProviders();
       const fn = capturedMentorProviderProps.handleMentorNotFound as Function;
