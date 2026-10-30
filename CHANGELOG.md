@@ -1,5 +1,45 @@
 # Changelog
 
+## [0.183.0](https://github.com/iblai/os/compare/v0.182.2...v0.183.0) (2026-10-30)
+
+### Features
+
+* **create-agent:** add a Save button to the prompt popup ([8e2d566](https://github.com/iblai/os/commit/8e2d5669104e49f56b189a54d3b7f5ab6799b42d))
+* **embed:** move the user profile next to the Close button ([3123f59](https://github.com/iblai/os/commit/3123f5907ebc41a1dbe1290df9d82187caddb847))
+* **settings:** pass the Allowed File Types labels to the agent settings tab ([2bd736c](https://github.com/iblai/os/commit/2bd736ccabef6b849b044f66a959a44cab599d36))
+* **settings:** pass the Context Limits labels to the agent settings tab ([8115815](https://github.com/iblai/os/commit/8115815707e6b9819ba90c7496febbfc4fa2687c))
+
+### Bug Fixes
+
+* **e2e:** wait on the proxied user-metadata path in journey 83 ([3387046](https://github.com/iblai/os/commit/33870460801176068997198827465f9766b073bd))
+* **e2e:** wait on the proxied user-metadata path in the product tour helper ([79d9b41](https://github.com/iblai/os/commit/79d9b41c0c9fb39b22370f4d709918fe8339ac2c))
+
+### Chores
+
+* **deps:** bump @iblai/iblai-js to 2.52.0 ([9577be0](https://github.com/iblai/os/commit/9577be0b405865551fa0173639166da8d1fdc350))
+* **deps:** bump @iblai/iblai-js to 2.53.0 ([3277859](https://github.com/iblai/os/commit/327785939d489d73a0e6e1771fd73af2375b5fa0))
+* **deps:** bump @iblai/iblai-js to 2.56.0 ([f4393dc](https://github.com/iblai/os/commit/f4393dca6d316a1ea4fe34676fd68b6300a9878c)), closes [iblai/iblai-web-frontend#2189](https://github.com/iblai/iblai-web-frontend/issues/2189)
+* **deps:** bump @iblai/iblai-js to 2.59.0 ([e1354bb](https://github.com/iblai/os/commit/e1354bb95a0da12d68d98c57ce3c2a7990d1feb1)), closes [iblai/iblai-web-frontend#2195](https://github.com/iblai/iblai-web-frontend/issues/2195)
+
+### Documentation
+
+* **e2e:** add aft-07 to the coverage records ([cceecad](https://github.com/iblai/os/commit/cceecad757f3c758835085364f104292937510fd))
+* **e2e:** record [#2528](https://github.com/iblai/os/issues/2528) checkpoints in coverage ([dee255b](https://github.com/iblai/os/commit/dee255b7d4be38e66cec033564c5c49cd882d24c))
+* **e2e:** record [#2758](https://github.com/iblai/os/issues/2758) checkpoints in coverage ([6c099c5](https://github.com/iblai/os/commit/6c099c536f61d2138e74e8e7fcd78719dd3f6a96))
+
+### Tests
+
+* **create-agent:** cover the prompt popup Save button ([0c897f7](https://github.com/iblai/os/commit/0c897f701e5aba70c330a0ed72ec1dc96d2da23c))
+* **e2e:** add embed profile placement checks to journey 80 ([c0c3d6a](https://github.com/iblai/os/commit/c0c3d6acb26576f7ce4d5c3ece5a33380d7a12f1))
+* **e2e:** add prompt popup Save checks to journey 88 ([d4a197c](https://github.com/iblai/os/commit/d4a197cbafcbe12d2b52c71cfe08559c10352d25))
+* **e2e:** add the allowed file types journey ([41c7837](https://github.com/iblai/os/commit/41c78379b585fd044642b9dd59dbaf514e7a5db5))
+* **e2e:** cover the refused-file toast and allowed-types dialog ([cf04b94](https://github.com/iblai/os/commit/cf04b947b3f215be7b450b24e01f9d759af18c11))
+* **e2e:** cover the share-link websocket frame in journey 97 ([5465e34](https://github.com/iblai/os/commit/5465e34f966412f9d79f0c92b6432d0002bbbe3e))
+* **e2e:** fail Read Aloud only past 30s and annotate a slow first audio ([42c905b](https://github.com/iblai/os/commit/42c905b68fcb49960f1ac6aa3aefeae2e60d4cd6))
+* **e2e:** follow the tenant show_help flag in the embed profile menu check ([e2090a5](https://github.com/iblai/os/commit/e2090a5c25fd9ae779c66a8e74cad0d70c9cec70))
+* **embed:** cover the nav bar profile position ([7088ea4](https://github.com/iblai/os/commit/7088ea41c1e75e241815cc4a7b8a02e671c856e2))
+* **nav-bar:** add TransportEnum to the @iblai/iblai-api mocks ([ebc54ce](https://github.com/iblai/os/commit/ebc54ce4e5fd122137943bfcfca22801e1e8d0c2))
+
 ## [0.182.2](https://github.com/iblai/os/compare/v0.182.1...v0.182.2) (2026-10-27)
 
 ### Bug Fixes

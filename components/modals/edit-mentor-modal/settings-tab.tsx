@@ -48,6 +48,7 @@ export function SettingsTab() {
   const tCopy = useTranslations('settingsTabCopyMentorModal');
   const tDelete = useTranslations('settingsTabDeleteMentorModal');
   const tAdminVisibility = useTranslations('settingsTabAdminVisibilityConfirm');
+  const tFileTypes = useTranslations('tabsSettingsTab.allowedFileTypes');
 
   const { tenantKey, mentorId } = useParams<TenantKeyMentorIdParams>();
   const { getMentorId, closeEditMentorModal, navigateToMentor } = useNavigate();
@@ -206,19 +207,19 @@ export function SettingsTab() {
         label: t('chatHistoryMessagesLabel'),
         tooltip: t('chatHistoryMessagesTooltip'),
         placeholder: t('chatHistoryMessagesPlaceholder'),
-        minValueError: t('chatHistoryMessagesMinValueError'),
+        minValueError: t('contextLimitMinValueError'),
       },
       chatHistoryTokens: {
         label: t('chatHistoryTokensLabel'),
         tooltip: t('chatHistoryTokensTooltip'),
         placeholder: t('chatHistoryTokensPlaceholder'),
-        minValueError: t('chatHistoryTokensMinValueError'),
+        minValueError: t('contextLimitMinValueError'),
       },
       documentChunks: {
         label: t('documentChunksLabel'),
         tooltip: t('documentChunksTooltip'),
         placeholder: t('documentChunksPlaceholder'),
-        minValueError: t('documentChunksMinValueError'),
+        minValueError: t('contextLimitMinValueError'),
       },
       image: {
         label: t('imageLabel'),
@@ -237,6 +238,29 @@ export function SettingsTab() {
       saveSuccess: t('agentUpdatedSuccess'),
       saveError: t('agentUpdateError'),
       voiceCallError: t('voiceCallSettingsError'),
+    },
+    allowedFileTypes: {
+      heading: tFileTypes('heading'),
+      title: tFileTypes('title'),
+      tooltip: tFileTypes('tooltip'),
+      tooltipAriaLabel: tFileTypes('tooltipAriaLabel'),
+      openButton: tFileTypes('openButton'),
+      // `{count}` and `{ext}` are filled in by the SDK, so pass them through.
+      countAll: tFileTypes('countAll'),
+      countOne: tFileTypes('countOne'),
+      countMany: tFileTypes('countMany', { count: '{count}' }),
+      dialogTitle: tFileTypes('dialogTitle'),
+      dialogDescription: tFileTypes('dialogDescription'),
+      commonHeading: tFileTypes('commonHeading'),
+      customHeading: tFileTypes('customHeading'),
+      inputPlaceholder: tFileTypes('inputPlaceholder'),
+      inputAriaLabel: tFileTypes('inputAriaLabel'),
+      add: tFileTypes('add'),
+      removeAriaLabel: tFileTypes('removeAriaLabel', { ext: '{ext}' }),
+      duplicateError: tFileTypes('duplicateError', { ext: '{ext}' }),
+      invalidError: tFileTypes('invalidError'),
+      clearAll: tFileTypes('clearAll'),
+      done: tFileTypes('done'),
     },
     deleteModal: {
       title: tDelete('title'),
