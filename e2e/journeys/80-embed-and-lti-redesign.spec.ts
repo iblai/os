@@ -2,6 +2,7 @@ import { test, expect } from '../fixtures/mentor-test';
 import { navigateToMentorApp } from '../utils/auth';
 import { waitForPageReady } from '../utils/resilient';
 import { EMBED_HARNESS_URL } from '../fixtures/test-data';
+import { navigateAndObserveTenantMetadata } from '../utils/tenant-metadata-observed';
 
 /**
  * Journey 80: Embed Header + LTI Redesign (issue #2586)
@@ -448,6 +449,7 @@ test.describe('Journey 80: Embed Header + LTI Redesign', () => {
   test('embed profile menu offers Profile, the tenant switcher and Help, but no Log Out or mode switch', async ({
     page,
   }) => {
+    const metadata = await navigateAndObserveTenantMetadata(page);
     const iframe = await gotoEmbedHarness(page, page.url(), {
       'show-user-profile': 'true',
     });
@@ -459,7 +461,14 @@ test.describe('Journey 80: Embed Header + LTI Redesign', () => {
     await expect(
       menu.getByRole('combobox', { name: 'Select a tenant' }),
     ).toBeVisible();
-    await expect(menu.getByRole('menuitem', { name: /Help/ })).toBeVisible();
+    // The SDK hides Help when the tenant sets `show_help: false`, and the
+    // shared CI tenant can carry that from other journeys.
+    const help = menu.getByRole('menuitem', { name: /Help/ });
+    if (metadata.show_help === false) {
+      await expect(help).toHaveCount(0);
+    } else {
+      await expect(help).toBeVisible();
+    }
     await expect(menu.getByRole('menuitem', { name: 'Log Out' })).toHaveCount(
       0,
     );
@@ -543,5 +552,97 @@ test.describe('Journey 80: Embed Header + LTI Redesign', () => {
       .toMatchObject({ tenantSwitch: true, tenant: expect.any(String) });
     await expect(iframe.locator('#chat-input-textarea')).toBeVisible();
     expect(appFrame?.url()).toBe(frameUrlBefore);
+  });
+});
+
+/**
+ * Issue #2758: with `show-user-profile=true` the profile avatar moved from
+ * the first right-hand control to just before Close (X). Order: New chat,
+ * "?" menu, full screen, profile, Close. With Close hidden it is right-most.
+ */
+test.describe('Journey 80: embed header profile placement', () => {
+  test.beforeEach(async ({ page }) => {
+    await navigateToMentorApp(page);
+  });
+
+  async function openEmbed(
+    page: import('@playwright/test').Page,
+    params: Record<string, string>,
+  ) {
+    const url = new URL(page.url());
+    url.searchParams.set('embed', 'true');
+    for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
+    await page.goto(
+      `${EMBED_HARNESS_URL}/?src=${encodeURIComponent(url.toString())}`,
+      { waitUntil: 'domcontentloaded', timeout: 30_000 },
+    );
+    const iframe = page.frameLocator('#embed-harness-iframe');
+    await expect(iframe.locator('#chat-input-textarea')).toBeVisible({
+      timeout: 20_000,
+    });
+    return iframe;
+  }
+
+  async function centers(
+    controls: import('@playwright/test').Locator[],
+  ): Promise<number[]> {
+    const xs: number[] = [];
+    for (const c of controls) {
+      await expect(c).toBeVisible({ timeout: 15_000 });
+      const box = await c.boundingBox();
+      expect(box).not.toBeNull();
+      xs.push(box!.x + box!.width / 2);
+    }
+    return xs;
+  }
+
+  // emb-prof-05
+  test('embed header puts the profile avatar after New chat, ? menu and full screen and directly before Close', async ({
+    page,
+  }) => {
+    const iframe = await openEmbed(page, {
+      'show-user-profile': 'true',
+      'allow-fullscreen': 'true',
+      'show-close-button': 'true',
+    });
+    const newChat = iframe.getByRole('button', {
+      name: 'New chat',
+      exact: true,
+    });
+    const help = iframe.getByRole('button', { name: 'Open menu options' });
+    const fullscreen = iframe.getByTestId('embed-fullscreen-toggle');
+    const profile = iframe.getByRole('button', { name: 'More options' });
+    const close = iframe.getByRole('button', {
+      name: 'Close chat',
+      exact: true,
+    });
+
+    const xs = await centers([newChat, help, fullscreen, profile, close]);
+    expect(xs).toEqual([...xs].sort((a, b) => a - b));
+    expect(new Set(xs).size).toBe(5);
+  });
+
+  // emb-prof-06
+  test('embed header shows the profile avatar right-most when Close is hidden', async ({
+    page,
+  }) => {
+    const iframe = await openEmbed(page, {
+      'show-user-profile': 'true',
+      'allow-fullscreen': 'true',
+      mode: 'anonymous',
+    });
+    const newChat = iframe.getByRole('button', {
+      name: 'New chat',
+      exact: true,
+    });
+    const help = iframe.getByRole('button', { name: 'Open menu options' });
+    const fullscreen = iframe.getByTestId('embed-fullscreen-toggle');
+    const profile = iframe.getByRole('button', { name: 'More options' });
+
+    await expect(
+      iframe.getByRole('button', { name: 'Close chat', exact: true }),
+    ).toHaveCount(0);
+    const xs = await centers([newChat, help, fullscreen, profile]);
+    expect(xs).toEqual([...xs].sort((a, b) => a - b));
   });
 });

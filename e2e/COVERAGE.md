@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-10-27 | 1020 checkpoints (973 covered, 13 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 102 journeys (101 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-10-28 | 1035 checkpoints (988 covered, 13 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 104 journeys (103 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -1985,7 +1985,7 @@ Covers issue #2586's composer rebuild: the classic UploadMenu + always-visible I
 
 ---
 
-## Journey 80: Embed Header + LTI Redesign (12 checkpoints) — `journeys/80-embed-and-lti-redesign.spec.ts`
+## Journey 80: Embed Header + LTI Redesign (14 checkpoints) — `journeys/80-embed-and-lti-redesign.spec.ts`
 
 **Source files:** `components/chat/sdk-chat.tsx`, `hooks/use-embed-mode.ts`, `hooks/use-is-lti-launch.ts`, `lib/embed-context.ts`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/embed-nav-bar.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/accessibility-fab/index.tsx`, `hooks/use-show-user-profile.ts`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/user-profile.tsx`
 
@@ -2003,6 +2003,8 @@ Covers issue #2586's embed surface redesign: a new OS header (`EmbedNavBar` — 
 - [x] emb-prof-02: The embed profile menu offers Profile, the tenant switcher and Help, and leaves out Log Out and the Admin/User mode switch (the host owns auth)
 - [x] emb-prof-03: Profile in the embed profile menu opens the User Profile dialog inside the frame on the Basic tab, and Cancel closes it without saving
 - [x] emb-prof-04: Picking another tenant in the embed profile menu posts `{ tenantSwitch: true, tenant }` to the host page and leaves the frame on the chat instead of redirecting it to the auth app
+- [x] emb-prof-05 (issue #2758): With `show-user-profile=true` the header order is New chat, ? menu, full screen, profile avatar, Close — profile directly before Close
+- [x] emb-prof-06 (issue #2758): With Close hidden the profile avatar is the right-most header control
 
 ---
 
@@ -2208,12 +2210,15 @@ Regression: the camera dialog opened from the "+" menu item left `<body style="p
 
 ---
 
-## Journey 88: Create Agent Category Wheel Scroll (1 checkpoint) — `journeys/88-create-agent-category-wheel-scroll.spec.ts`
+## Journey 88: Create Agent Category Wheel Scroll (4 checkpoints) — `journeys/88-create-agent-category-wheel-scroll.spec.ts`
 
-**Source files:** `components/modals/create-mentor-form.tsx`
+**Source files:** `components/modals/create-mentor-form.tsx`, `components/modals/edit-mentor-modal-dialog.tsx`
 
-Regression: the Category popover is portaled outside the Create Agent dialog, whose scroll lock swallowed wheel events. Page object: `page-objects/create-mentor.page.ts` (`categoryList`).
+Regression: the Category popover is portaled outside the Create Agent dialog, whose scroll lock swallowed wheel events. Page object: `page-objects/create-mentor.page.ts` (`categoryList`). Also covers the front-end-only Save button on the Create Agent prompt popups (issue #2758; `goToPromptsTab`, `openPromptPopupAndType`, `promptContent`).
 
+- [x] promptsave-01 (issue #2758): The System Prompt popup's Save closes it, the form shows the typed text and no non-GET request is sent
+- [x] promptsave-02 (issue #2758): Save in the Proactive and Guided popups closes them and keeps each text
+- [x] promptsave-03 (issue #2758): Escape in the System Prompt popup still closes it and keeps the text
 - [x] catscroll-01: Admin opens Create Agent, opens the Category picker and wheels the list: scrollTop increases and a lower category can be selected
 
 ---
@@ -2325,3 +2330,31 @@ Issue #2731. Settings → Discovery → "Who Can View?": an admin-only note show
 - [x] avs-02: Cancel on the confirmation closes it, sends no visibility save, keeps Administrators in the form, and the server still holds Users
 - [x] avs-03: "Limit to Administrators" saves mentor_visibility=viewable_by_tenant_admins with the success toast; reopening shows Administrators with the note already visible
 - [x] avs-04: Switching away from Administrators hides the note and saves without a prompt, and Users to Anyone also saves without a prompt
+
+---
+
+## Journey 96: Allowed File Types (7 checkpoints) — `journeys/96-allowed-file-types.spec.ts`
+
+**Source files:** `components/modals/edit-mentor-modal/settings-tab.tsx`, `messages/en.json`
+
+Issue #2528. Settings → Capabilities ends with a File Uploads group whose Allowed File Types dialog sets the agent's `allowed_file_upload_extensions`; chat then limits the composer's file input and refuses other files with a toast. One throwaway agent (auto-deleted) is shared by the serial checkpoints. Only the S3 upload leg (and the 400 in aft-06) is mocked. The server's `file_error` WebSocket frame is not covered.
+
+- [x] aft-01: Admin opens Settings > Capabilities on a fresh agent: the last group is File Uploads (after Context Limits) with the "File Types Users Can Attach" row, its info tooltip and the Allowed File Types button, no count text
+- [x] aft-02: The Allowed File Types dialog lists the 12 common types and a footer count; typing .JSON adds json under "Added by You"; a duplicate shows "json is already in the list.", js-on shows "Use letters and numbers only, like json."; Clear All unticks everything
+- [x] aft-03: Done then Save sends one JSON PUT with allowed_file_upload_extensions [pdf, docx, png, json]; saving an unrelated setting does not resend it; reload and reopen shows the saved list
+- [x] aft-04: In chat the composer's file input accept is .pdf,.docx,.png,.json; report.exe and the extension-less README are refused with the toasts ".exe files aren't accepted by this agent." and "README has no file type, so this agent can't accept it." and not attached; report.pdf attaches (S3 leg mocked)
+- [x] aft-05: Clear All + Save sends an empty list (everything allowed) and a csv then attaches with no refusal toast
+- [x] aft-06: Upload-URL 400 {"error":"This file type is not allowed for this mentor."} (mocked): the chip shows Retry and the toast says "<name> can't be used with this agent"
+- [x] aft-07: Refusing report.exe toasts with a "See allowed types" link; clicking it dismisses the toast and opens "File Types This Agent Accepts" listing pdf, docx, png, json with the count of 4; searching .png filters to png, "exe" shows ".exe isn't one of them.", Got It closes it; report.exe + notes.zip in one pick give one "2 files can't be added: report.exe and notes.zip." toast
+
+---
+
+## Journey 97: Shareable-link chat frame token (3 checkpoints) — `journeys/97-shareable-link-chat-frame-token.spec.ts`
+
+**Source files:** `app/platform/[tenantKey]/[mentorId]/mentor-page-content.tsx`, `components/chat/index.tsx`
+
+Issue iblai-platform#2743. A `?token=<share token>` link now rides in the chat frame's `shareable_link_token` while `token` stays the user's own credential (empty for anonymous) and `token_type` is no longer sent. One throwaway public agent with a real shareable link (auto-deleted) is shared by the serial checkpoints; only the chat WebSocket is mocked.
+
+- [x] slf-01: Signed-in user on the share-link URL: frame shareable_link_token equals the URL token, token is the user's axd token, token_type is not "link"
+- [x] slf-02: Anonymous visitor on the share-link URL: shareable_link_token set, token empty, no token_type "link", mocked reply renders
+- [x] slf-03: Signed-in user without ?token: no shareable_link_token key, token is the axd token, mocked reply renders

@@ -6,13 +6,17 @@ export const PRODUCT_TOUR_METADATA_KEY = 'os-product-tour';
 /** Mirrors LOCAL_STORAGE_KEYS.USER_METADATA — the app reads the tour record here. */
 const USER_METADATA_STORAGE_KEY = 'user_metadata';
 
-const USER_METADATA_PATH = '/api/ibl/users/manage/metadata/';
+// Newer SDK releases moved the endpoint to the core proxy; accept both.
+const USER_METADATA_PATHS = [
+  '/api/ibl/users/manage/metadata/',
+  '/api/core/users/metadata/proxy/',
+];
 
 export const isUserMetadataResponse = (
   response: Response,
   method: 'GET' | 'POST',
 ): boolean =>
-  response.url().includes(USER_METADATA_PATH) &&
+  USER_METADATA_PATHS.some((path) => response.url().includes(path)) &&
   response.request().method() === method;
 
 /**
