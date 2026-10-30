@@ -1,15 +1,15 @@
 {
   "version": 2,
-  "lastUpdated": "2026-10-27",
+  "lastUpdated": "2026-10-28",
   "summary": {
-    "totalCheckpoints": 1020,
-    "coveredCheckpoints": 973,
+    "totalCheckpoints": 1035,
+    "coveredCheckpoints": 988,
     "deprecatedCheckpoints": 17,
     "notReproducibleCheckpoints": 17,
     "pendingCheckpoints": 13,
     "percent": 100,
-    "totalJourneys": 102,
-    "activeJourneys": 101
+    "totalJourneys": 104,
+    "activeJourneys": 103
   },
   "journeys": [
     {
@@ -5646,6 +5646,16 @@
           "id": "emb-prof-04",
           "description": "Picking another tenant in the embed profile menu posts `{ tenantSwitch: true, tenant }` to the host page and leaves the frame on the chat instead of redirecting it to the auth app",
           "status": "covered"
+        },
+        {
+          "id": "emb-prof-05",
+          "description": "Issue #2758: with show-user-profile=true the embed header order is New chat, ? menu, full screen, profile avatar, Close, with the profile directly before Close",
+          "status": "covered"
+        },
+        {
+          "id": "emb-prof-06",
+          "description": "Issue #2758: with Close hidden the profile avatar is the right-most embed header control",
+          "status": "covered"
         }
       ]
     },
@@ -6081,8 +6091,26 @@
       "id": "create-agent-category-wheel-scroll",
       "name": "Create Agent Category Wheel Scroll",
       "spec": "88-create-agent-category-wheel-scroll.spec.ts",
-      "sourceFiles": ["components/modals/create-mentor-form.tsx"],
+      "sourceFiles": [
+        "components/modals/create-mentor-form.tsx",
+        "components/modals/edit-mentor-modal-dialog.tsx"
+      ],
       "checkpoints": [
+        {
+          "id": "promptsave-01",
+          "description": "Issue #2758: in Create Agent the System Prompt popup has a Save button; clicking it closes the popup, the form shows the typed text, and no non-GET request is sent (front-end only)",
+          "status": "covered"
+        },
+        {
+          "id": "promptsave-02",
+          "description": "Issue #2758: Save in the Proactive and Guided prompt popups closes them and the form keeps each typed text",
+          "status": "covered"
+        },
+        {
+          "id": "promptsave-03",
+          "description": "Issue #2758: pressing Escape in the System Prompt popup still closes it and keeps the typed text",
+          "status": "covered"
+        },
         {
           "id": "catscroll-01",
           "description": "Admin opens Create Agent, opens the Category picker and wheels the list: scrollTop increases and a lower category can be selected (regression: dialog scroll lock swallowed wheel events on the portaled popover)",
@@ -6410,6 +6438,78 @@
         {
           "id": "avs-04",
           "description": "Switching away from Administrators hides the note and saves without a prompt, and Users to Anyone also saves without a prompt",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "allowed-file-types",
+      "name": "Allowed File Types",
+      "spec": "96-allowed-file-types.spec.ts",
+      "sourceFiles": [
+        "components/modals/edit-mentor-modal/settings-tab.tsx",
+        "messages/en.json"
+      ],
+      "checkpoints": [
+        {
+          "id": "aft-01",
+          "description": "Admin opens Settings > Capabilities on a fresh agent: the last group is File Uploads (after Context Limits) with the \"File Types Users Can Attach\" row, its info tooltip and the Allowed File Types button, no count text",
+          "status": "covered"
+        },
+        {
+          "id": "aft-02",
+          "description": "The Allowed File Types dialog lists the 12 common types and a footer count; typing .JSON adds json under \"Added by You\"; a duplicate shows \"json is already in the list.\", js-on shows \"Use letters and numbers only, like json.\"; Clear All unticks everything",
+          "status": "covered"
+        },
+        {
+          "id": "aft-03",
+          "description": "Done then Save sends one JSON PUT with allowed_file_upload_extensions [pdf, docx, png, json]; saving an unrelated setting does not resend it; reload and reopen shows the saved list",
+          "status": "covered"
+        },
+        {
+          "id": "aft-04",
+          "description": "In chat the composer's file input accept is .pdf,.docx,.png,.json; report.exe and the extension-less README are refused with the toasts \".exe files aren't accepted by this agent.\" and \"README has no file type, so this agent can't accept it.\" and not attached; report.pdf attaches (S3 leg mocked)",
+          "status": "covered"
+        },
+        {
+          "id": "aft-05",
+          "description": "Clear All + Save sends an empty list (everything allowed) and a csv then attaches with no refusal toast",
+          "status": "covered"
+        },
+        {
+          "id": "aft-06",
+          "description": "Upload-URL 400 {\"error\":\"This file type is not allowed for this mentor.\"} (mocked): the chip shows Retry and the toast says \"<name> can't be used with this agent\"",
+          "status": "covered"
+        },
+        {
+          "id": "aft-07",
+          "description": "Refusing report.exe toasts with a \"See allowed types\" link; clicking it dismisses the toast and opens \"File Types This Agent Accepts\" listing pdf, docx, png, json with the count of 4; searching .png filters to png, \"exe\" shows \".exe isn't one of them.\", Got It closes it; report.exe + notes.zip in one pick give one \"2 files can't be added: report.exe and notes.zip.\" toast",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "shareable-link-chat-frame-token",
+      "name": "Shareable-link chat frame token",
+      "spec": "97-shareable-link-chat-frame-token.spec.ts",
+      "sourceFiles": [
+        "app/platform/[tenantKey]/[mentorId]/mentor-page-content.tsx",
+        "components/chat/index.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "slf-01",
+          "description": "Signed-in user opens /platform/<tenant>/<agent>?token=<share token>: the chat frame carries shareable_link_token equal to the URL token, token stays the user's own axd token, and token_type is not \"link\" (chat WebSocket mocked)",
+          "status": "covered"
+        },
+        {
+          "id": "slf-02",
+          "description": "Anonymous visitor on the share-link URL: the frame carries shareable_link_token, token is empty, no token_type \"link\", and the mocked reply renders",
+          "status": "covered"
+        },
+        {
+          "id": "slf-03",
+          "description": "Signed-in user chats with no ?token: the frame has no shareable_link_token key, token is the axd token, and the mocked reply renders",
           "status": "covered"
         }
       ]

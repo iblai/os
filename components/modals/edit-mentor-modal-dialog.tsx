@@ -1,10 +1,13 @@
+import { useTranslations } from 'next-intl';
 import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 import { RichTextEditor } from '@iblai/iblai-js/web-containers';
 
 export type Prompt = {
@@ -27,6 +30,8 @@ export function EditMentorModalDialog({
   editPrompt,
   value,
 }: Props) {
+  const t = useTranslations('common');
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="w-full">
@@ -43,6 +48,17 @@ export function EditMentorModalDialog({
             onChange={(e) => editPrompt(e, prompt.type)}
           />
         </div>
+
+        <DialogFooter>
+          {/* editPrompt already keeps every keystroke, so Save only closes. */}
+          <Button
+            type="button"
+            className="bg-gradient-to-r from-[#2563EB] to-[#93C5FD] text-white hover:opacity-90"
+            onClick={onClose}
+          >
+            {t('save')}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
