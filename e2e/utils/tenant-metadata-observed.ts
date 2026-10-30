@@ -15,6 +15,69 @@ const USER_TENANTS_KEY = 'tenants';
 
 export type ObservedTenantMetadata = Record<string, unknown>;
 
+/** Both endpoints that can serve the platforms list — see the module doc above. */
+const USER_PLATFORMS_PATH_RE =
+  /\/api\/(?:core\/users\/platforms|ibl\/users\/manage\/platform)\/?$/;
+
+/**
+ * Forces the given metadata keys onto every tenant in the platforms list
+ * response, on whichever of the two endpoints serves it. Call BEFORE the
+ * navigation that triggers the fetch.
+ *
+ * Use this instead of reading-then-branching-on observed metadata (e.g. via
+ * `navigateAndObserveTenantMetadata`) whenever the assertion target is a
+ * genuinely cross-origin surface — an embed iframe hosted on a different
+ * origin than the top-level page. That iframe resolves its OWN copy of
+ * `tenants`/`current_tenant` into its OWN (cross-origin-partitioned) storage
+ * by fetching the platforms list itself; the top-level page's storage is a
+ * different partition and is not a reliable proxy for what the iframe will
+ * render (see journey 80's embed-profile-menu Help checkpoint, which flaked
+ * for exactly this reason — issue #2586 follow-up). `page.route` intercepts
+ * requests from every frame of the page, so registering this on the
+ * top-level `page` before navigating into an embed harness also covers the
+ * request the embed iframe makes.
+ */
+export async function forceTenantMetadata(
+  page: Page,
+  overrides: Record<string, unknown>,
+): Promise<void> {
+  const withOverrides = (tenant: { metadata?: Record<string, unknown> }) => ({
+    ...tenant,
+    metadata: { ...(tenant.metadata ?? {}), ...overrides },
+  });
+  await page.route(
+    (url) => USER_PLATFORMS_PATH_RE.test(url.pathname),
+    async (route) => {
+      if (route.request().method() !== 'GET') return route.continue();
+      const response = await route.fetch();
+      let body: unknown;
+      try {
+        body = await response.json();
+      } catch {
+        // Non-JSON body (proxy error page, empty 401): pass the real
+        // response through rather than stall the request unanswered.
+        return route.fulfill({ response });
+      }
+      let patched: unknown = body;
+      if (Array.isArray(body)) {
+        patched = body.map(withOverrides);
+      } else if (
+        body &&
+        Array.isArray((body as { results?: unknown[] }).results)
+      ) {
+        const envelope = body as { results: unknown[] };
+        patched = {
+          ...envelope,
+          results: envelope.results.map((t) =>
+            withOverrides(t as { metadata?: Record<string, unknown> }),
+          ),
+        };
+      }
+      await route.fulfill({ response, json: patched });
+    },
+  );
+}
+
 /**
  * Navigates into the mentor app via `navigateToMentorApp`, then reads the
  * active tenant's `metadata` from the SAME place the app itself reads it: the
