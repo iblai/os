@@ -1,85 +1,105 @@
-import type { Page } from '@playwright/test';
+import type { JSHandle, Page } from '@playwright/test';
 import { navigateToMentorApp } from './auth';
 
 /**
- * Matches the org-metadata GET path the app itself fires on EVERY
- * authenticated load. `providers/index.tsx`'s top-level `Providers`
- * component calls the SDK's `useTenantMetadata({ org: tenantKeyParams })`
- * (`@iblai/web-utils`), which resolves to `@iblai/data-layer`'s
- * `useGetTenantMetadataQuery` — `CoreService.coreOrgsMetadataRetrieve`,
- * `GET /api/core/orgs/{org}/metadata/`.
- *
- * Matched on `pathname` WITHOUT a leading anchor and verified against a live
- * trace: the SDK's DM base URL already includes a service prefix (observed
- * as `.../dm/api/core/orgs/<org>/metadata/`), so the path does NOT start at
- * `/api/core/...` — it can be preceded by an arbitrary service segment. Only
- * the trailing `.../orgs/<org>/metadata/` shape (and NOT a sub-resource
- * under it) is guaranteed, so only the `$` end-anchor is kept.
+ * Storage keys the app persists the resolved tenant under (mirrors
+ * `LOCAL_STORAGE_KEYS`, `lib/constants.ts`). Tenant metadata no longer arrives
+ * from a dedicated `GET /api/core/orgs/<org>/metadata/` call — it rides the
+ * platforms list (`/api/ibl/users/manage/platform/`), which the tenant
+ * provider persists whole to `tenants`, while `current_tenant` holds only the
+ * active tenant's identity (`{ key, is_admin, org }`, no metadata). The app
+ * joins them by key (`useTenantObjectMetadata`); this helper does the same.
  */
-const TENANT_METADATA_PATH_RE = /\/api\/core\/orgs\/[^/]+\/metadata\/?$/;
+const CURRENT_TENANT_KEY = 'current_tenant';
+const USER_TENANTS_KEY = 'tenants';
 
 export type ObservedTenantMetadata = Record<string, unknown>;
 
 /**
- * Navigates into the mentor app via `navigateToMentorApp` while OBSERVING
- * the org-metadata GET the app itself issues during its own bootstrap —
- * the SAME traffic every authenticated load already makes. This needs no
- * DM API call, no DM_URL, no dm_token, and no per-environment setup: it is
- * strictly read-only and works on any tenant, on any environment, as-is.
+ * Navigates into the mentor app via `navigateToMentorApp`, then reads the
+ * active tenant's `metadata` from the SAME place the app itself reads it: the
+ * persisted `tenants` list, matched to `current_tenant` by key
+ * (`useTenantObjectMetadata`). This needs no DM API call, no DM_URL, no
+ * dm_token, and no per-environment setup — it is strictly read-only and works
+ * on any tenant, on any environment, as-is.
  *
- * ── Why the listener must be armed BEFORE navigating ───────────────────
- * `Providers`' `useTenantMetadata({ org: tenantKeyParams })` call
- * (`providers/index.tsx`) can fire within the first render after
- * `page.goto`'s `domcontentloaded` — well before `navigateToMentorApp`
- * itself resolves (it goes on to wait for auth redirects, the mentor
- * dropdown, and a stable mentor URL).
- * `page.waitForResponse(...)` only observes responses that occur AFTER it
- * is called; it cannot replay a response that already landed. So the
- * listener is armed synchronously here, before any `await`, strictly
- * before `navigateToMentorApp`'s own `page.goto` — there is no window in
- * which the request could fire and complete before we are listening for
- * it.
+ * ── Why storage, not a network response ──────────────────────────────────
+ * The app used to fetch org-metadata on every authenticated load; it no
+ * longer does. Metadata now travels inside each tenant object in the
+ * platforms list, and the tenant provider persists that list to `tenants`
+ * and the active identity to `current_tenant`. Reading them is the current
+ * analogue of "observe the app's own tenant-metadata traffic".
  *
- * ── Never skips ─────────────────────────────────────────────────────────
- * If the response is never observed, or comes back non-OK, this THROWS. A
- * missing/failed org-metadata load is a real failure — the app itself
- * depends on this same response to resolve the tenant — never a "this
- * environment isn't configured for the test" signal.
+ * ── Session-first, seed fallback ─────────────────────────────────────────
+ * `current_tenant` and `tenants` are per-tab auth keys
+ * (`lib/auth-storage.ts`): under per-tab auth the tab's `sessionStorage` is
+ * the source of truth and `localStorage` holds the most-recent-login seed;
+ * with the flag off it is plain `localStorage`. The in-page read below checks
+ * `sessionStorage` first, then `localStorage`, matching `getAuthItem`.
+ *
+ * ── Never skips ──────────────────────────────────────────────────────────
+ * If the tenant never resolves (no `current_tenant` whose key is present in
+ * the `tenants` list within the timeout), this THROWS. A tenant that fails to
+ * resolve is a real failure — the app depends on the same resolution — never a
+ * "this environment isn't configured for the test" signal. A tenant that
+ * resolves without metadata is valid and yields `{}` (the app treats absent
+ * flags as their defaults).
  */
 export async function navigateAndObserveTenantMetadata(
   page: Page,
   url?: string,
 ): Promise<ObservedTenantMetadata> {
-  const metadataResponse = page.waitForResponse(
-    (res) =>
-      res.request().method() === 'GET' &&
-      TENANT_METADATA_PATH_RE.test(new URL(res.url()).pathname),
-    { timeout: 30_000 },
-  );
-
   await navigateToMentorApp(page, url);
 
-  let response: Awaited<typeof metadataResponse>;
+  let handle: JSHandle<ObservedTenantMetadata>;
   try {
-    response = await metadataResponse;
+    handle = await page.waitForFunction(
+      ({ currentKey, listKey }) => {
+        const read = (key: string) =>
+          window.sessionStorage.getItem(key) ??
+          window.localStorage.getItem(key);
+        const parse = (raw: string | null): unknown => {
+          if (!raw) return null;
+          try {
+            return JSON.parse(raw);
+          } catch {
+            return null;
+          }
+        };
+
+        const current = parse(read(currentKey)) as { key?: string } | null;
+        const tenants = parse(read(listKey));
+        if (!current?.key || !Array.isArray(tenants)) {
+          return null;
+        }
+
+        const tenant = tenants.find(
+          (candidate: unknown) =>
+            !!candidate &&
+            typeof candidate === 'object' &&
+            (candidate as { key?: string }).key === current.key,
+        ) as { metadata?: Record<string, unknown> } | undefined;
+        if (!tenant) {
+          return null;
+        }
+
+        return tenant.metadata && typeof tenant.metadata === 'object'
+          ? tenant.metadata
+          : {};
+      },
+      { currentKey: CURRENT_TENANT_KEY, listKey: USER_TENANTS_KEY },
+      { timeout: 30_000 },
+    );
   } catch (error) {
     throw new Error(
-      'Could not observe the tenant org-metadata GET ' +
-        '(`/api/core/orgs/<org>/metadata/`) that the app itself fires on ' +
-        "load via `providers/index.tsx`'s `useTenantMetadata`. This must " +
+      'Could not read the resolved tenant from storage ' +
+        `(\`${CURRENT_TENANT_KEY}\` joined to \`${USER_TENANTS_KEY}\`) after ` +
+        'navigating into the app. Tenant metadata now rides the platforms ' +
+        'list and is persisted by the tenant provider on load; this must ' +
         'FAIL, not skip — it is not gated by DM_URL or any per-environment ' +
         `setup. Underlying error: ${error}`,
     );
   }
 
-  if (!response.ok()) {
-    throw new Error(
-      `Org-metadata GET failed: ${response.status()} ${response.statusText()} — ${response.url()}`,
-    );
-  }
-
-  const json = (await response.json()) as {
-    metadata?: ObservedTenantMetadata;
-  };
-  return json.metadata ?? {};
+  return (await handle.jsonValue()) as ObservedTenantMetadata;
 }

@@ -56,7 +56,7 @@
  * suite, because it never asserts against a fixed expectation, only against
  * "does the UI match what the API says right now."
  *
- * ── Zero-configuration: observe the app's OWN traffic, not the DM API ────
+ * ── Zero-configuration: read the app's OWN tenant metadata, not the DM API ──
  *
  * This journey used to call the DM API directly (`GET
  * /api/core/orgs/<org>/metadata/` with a `dm_token`, via
@@ -66,23 +66,19 @@
  * environment except CI: a green run that tested nothing, and worse than
  * failing, because nothing ever pointed at the missing configuration.
  *
- * The app itself already fetches this exact endpoint on every load —
- * `providers/index.tsx`'s top-level `Providers` component calls the SDK's
- * `useTenantMetadata({ org: tenantKeyParams })` (`@iblai/web-utils` →
- * `@iblai/data-layer`'s `useGetTenantMetadataQuery` →
- * `CoreService.coreOrgsMetadataRetrieve`, `GET
- * /api/core/orgs/<org>/metadata/`), which wraps the whole app tree, so it
- * fires on every authenticated render. This journey now OBSERVES that
- * response instead of issuing its own
- * authenticated request — see
+ * The app itself already carries this metadata on every load — tenant
+ * metadata rides the platforms list (`/api/ibl/users/manage/platform/`) the
+ * tenant provider fetches on bootstrap, which it persists to the `tenants`
+ * storage key; the app joins the active tenant's metadata by key
+ * (`hooks/use-tenant-object-metadata.ts`). This journey now READS that
+ * persisted metadata instead of issuing its own authenticated request — see
  * `e2e/utils/tenant-metadata-observed.ts`'s
- * `navigateAndObserveTenantMetadata`, which arms a `page.waitForResponse`
- * listener BEFORE `navigateToMentorApp` starts navigating (so it cannot
- * miss an early/cached response — see that file for the full race
- * analysis). This needs no `DM_URL`, no API credentials, and no
- * per-environment setup — it uses traffic the app already makes on any
- * environment, unconditionally. If the response genuinely cannot be
- * observed, the journey FAILS loudly; it never skips.
+ * `navigateAndObserveTenantMetadata`, which navigates in and then reads the
+ * `tenants` list joined to `current_tenant` from storage (session-first,
+ * localStorage seed fallback — see that file). This needs no `DM_URL`, no
+ * API credentials, and no per-environment setup — it uses data the app
+ * already holds on any environment, unconditionally. If the tenant genuinely
+ * cannot be resolved, the journey FAILS loudly; it never skips.
  *
  * ── What moved to unit tests instead ───────────────────────────────────
  *

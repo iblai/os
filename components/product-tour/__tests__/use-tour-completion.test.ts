@@ -145,7 +145,9 @@ describe('useTourCompletion', () => {
   });
 
   it('shows a reworked tour again: an older version does not count', () => {
-    state.stored = metadata({ [KEY]: record('finished', PRODUCT_TOUR_VERSION - 1) });
+    state.stored = metadata({
+      [KEY]: record('finished', PRODUCT_TOUR_VERSION - 1),
+    });
     expect(
       renderHook(() => useTourCompletion('alice')).result.current.completed,
     ).toBe(false);

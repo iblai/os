@@ -2,7 +2,15 @@ import type { CDPSession, Locator, Page } from '@playwright/test';
 import { expect } from '@playwright/test';
 
 const POSITION_STORAGE_KEY = 'accessibility-fab-position:v2';
-const TENANT_METADATA_PATH_RE = /\/api\/core\/orgs\/[^/]+\/metadata\/?$/;
+
+/**
+ * The platforms list the app fetches on bootstrap — tenant metadata now rides
+ * each tenant object here (`/api/ibl/users/manage/platform/`,
+ * `features/tenants/constants.ts`) instead of a per-org `/metadata/` call.
+ * Matched on `pathname` without a leading anchor: the LMS service base URL can
+ * prepend a service segment, so only the trailing shape is guaranteed.
+ */
+const USER_PLATFORMS_PATH_RE = /\/api\/ibl\/users\/manage\/platform\/?$/;
 
 export interface StoredFabPosition {
   side: 'left' | 'right';
@@ -46,21 +54,32 @@ export class AccessibilityFabPage {
     this.fileDropOverlay = page.getByText('Drop your files here');
   }
 
-  /** Forces `accessibility_menu: true` on the tenant-metadata GET. Call BEFORE navigating. */
+  /**
+   * Forces `accessibility_menu: true` on every tenant in the platforms list
+   * the app reads its metadata from. Call BEFORE navigating: the tenant
+   * provider fetches this list on bootstrap and the app joins the active
+   * tenant's metadata by key (`useTenantObjectMetadata`), so injecting the
+   * flag here makes the button deterministic on any tenant.
+   */
   async enableAccessibilityMenu(): Promise<void> {
     await this.page.route(
-      (url) => TENANT_METADATA_PATH_RE.test(url.pathname),
+      (url) => USER_PLATFORMS_PATH_RE.test(url.pathname),
       async (route) => {
         if (route.request().method() !== 'GET') return route.continue();
         const response = await route.fetch();
-        const json = await response.json();
-        await route.fulfill({
-          response,
-          json: {
-            ...json,
-            metadata: { ...(json.metadata ?? {}), accessibility_menu: true },
-          },
-        });
+        const tenants = (await response.json()) as Array<{
+          metadata?: Record<string, unknown>;
+        }>;
+        const withMenu = Array.isArray(tenants)
+          ? tenants.map((tenant) => ({
+              ...tenant,
+              metadata: {
+                ...(tenant.metadata ?? {}),
+                accessibility_menu: true,
+              },
+            }))
+          : tenants;
+        await route.fulfill({ response, json: withMenu });
       },
     );
   }
