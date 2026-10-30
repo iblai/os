@@ -5,12 +5,18 @@ const POSITION_STORAGE_KEY = 'accessibility-fab-position:v2';
 
 /**
  * The platforms list the app fetches on bootstrap — tenant metadata now rides
- * each tenant object here (`/api/ibl/users/manage/platform/`,
- * `features/tenants/constants.ts`) instead of a per-org `/metadata/` call.
- * Matched on `pathname` without a leading anchor: the LMS service base URL can
- * prepend a service segment, so only the trailing shape is guaranteed.
+ * each tenant object here instead of a per-org `/metadata/` call. Two
+ * endpoints serve it: the SDK `TenantProvider` reads
+ * `/api/core/users/platforms/` (`CoreService.coreUsersPlatformsList`), which
+ * is what populates the persisted tenants list the app reads metadata from;
+ * mentorai's own slice reads `/api/ibl/users/manage/platform/`
+ * (`features/tenants/constants.ts`). Both return a bare tenant array, so the
+ * injection below handles whichever fires. Matched on `pathname` without a
+ * leading anchor: the service base URL can prepend a segment, so only the
+ * trailing shape is guaranteed.
  */
-const USER_PLATFORMS_PATH_RE = /\/api\/ibl\/users\/manage\/platform\/?$/;
+const USER_PLATFORMS_PATH_RE =
+  /\/api\/(?:core\/users\/platforms|ibl\/users\/manage\/platform)\/?$/;
 
 export interface StoredFabPosition {
   side: 'left' | 'right';
@@ -62,24 +68,26 @@ export class AccessibilityFabPage {
    * flag here makes the button deterministic on any tenant.
    */
   async enableAccessibilityMenu(): Promise<void> {
+    const withMenu = (tenant: { metadata?: Record<string, unknown> }) => ({
+      ...tenant,
+      metadata: { ...(tenant.metadata ?? {}), accessibility_menu: true },
+    });
     await this.page.route(
       (url) => USER_PLATFORMS_PATH_RE.test(url.pathname),
       async (route) => {
         if (route.request().method() !== 'GET') return route.continue();
         const response = await route.fetch();
-        const tenants = (await response.json()) as Array<{
-          metadata?: Record<string, unknown>;
-        }>;
-        const withMenu = Array.isArray(tenants)
-          ? tenants.map((tenant) => ({
-              ...tenant,
-              metadata: {
-                ...(tenant.metadata ?? {}),
-                accessibility_menu: true,
-              },
-            }))
-          : tenants;
-        await route.fulfill({ response, json: withMenu });
+        const body = await response.json();
+        // Both endpoints return a bare array today; tolerate a paginated
+        // `{ results: [...] }` envelope too so a backend change can't silently
+        // stop forcing the flag.
+        let patched = body;
+        if (Array.isArray(body)) {
+          patched = body.map(withMenu);
+        } else if (body && Array.isArray(body.results)) {
+          patched = { ...body, results: body.results.map(withMenu) };
+        }
+        await route.fulfill({ response, json: patched });
       },
     );
   }
