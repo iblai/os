@@ -38,7 +38,7 @@ When adding a new page or modifying an existing user flow:
 - [x] Newly created user can navigate to the Explore page via sidebar
 - [x] Newly created user can log out via the profile dropdown
 - [x] Sidebar can be toggled open and closed
-- [x] Help button opens the docs/help link in a new tab when the tenant's own metadata (observed from the app's own org-metadata GET, no `DM_URL` required) shows `show_help !== false`; the menu item is correctly absent when a tenant explicitly sets `show_help: false` (#uat-9)
+- [x] Help button opens the docs/help link in a new tab when the tenant's own metadata (read from the app's own localStorage tenant metadata, no `DM_URL` required) shows `show_help !== false`; the menu item is correctly absent when a tenant explicitly sets `show_help: false` (#uat-9)
 - [x] Suggested prompts authored with Markdown render via the Markdown component (issue #1179, fixme until a seeded mentor fixture is available)
 - [x] NAV-08: Clicking "New Chat" once fires exactly ONE create-session POST (issue #1002 regression guard — activated and verified against the SDK Chat, issue #2586)
 - [x] NAV-09: A freshly created mentor's session lifecycle stays at exactly ONE session through its first message and through navigating away (Explore) and back (issue #2586) — covers the mount-time auto-create path, complementing NAV-08's "New Chat" button coverage
@@ -1743,11 +1743,9 @@ workers, and other PRs' CI jobs, hit the same live tenant concurrently), and
 `show_help: false` PERMANENTLY on the live tenant, and the next run's
 `beforeAll` captured that `false` as "original" and restored it forever —
 silently breaking an unrelated team's PR (os-222). No in-suite cleanup can
-fix a cross-job race; only not writing does. Every checkpoint now OBSERVES
-the org-metadata GET the app itself already fires on every authenticated
-load (`providers/index.tsx`'s `Providers` calls the SDK's
-`useTenantMetadata({ org: tenantKeyParams })`, which resolves to `GET
-/api/core/orgs/<org>/metadata/`) via
+fix a cross-job race; only not writing does. Every checkpoint now READS
+the tenant metadata the app itself uses (SDK `useTenantMetadata` resolves it
+from localStorage `tenants` / `current_tenant`, no API call) via
 `navigateAndObserveTenantMetadata` (`e2e/utils/tenant-metadata-observed.ts`),
 computes the SAME expected value the app/SDK would compute from that exact
 reading, and asserts the live UI matches it — there is no shared mutable
@@ -1766,10 +1764,10 @@ same pattern as journeys 15/16).
 API directly (`getTenantMetadata`, `e2e/utils/tenant-metadata.ts`) gated on
 the `DM_URL` env var, which is exported only in CI and never in
 `e2e/.env.local` — so every checkpoint silently SKIPPED on any local or
-non-CI environment, a green run that tested nothing. It now observes traffic
-the app makes unconditionally on any environment, so it needs no `DM_URL`,
+non-CI environment, a green run that tested nothing. It now reads the localStorage copy
+the app populates at login on any environment, so it needs no `DM_URL`,
 no DM API credentials, and no per-environment setup — and it never skips: if
-the org-metadata response cannot be observed, the checkpoint FAILS loudly
+no tenant metadata is found in localStorage, the checkpoint FAILS loudly
 instead.
 
 - [x] shc-01: READ-ONLY — sidebar footer Support link's href in the EXPANDED layout matches `documentation_url || default` computed from a live GET of tenant metadata, or the link is absent when `show_help` is false
@@ -2107,7 +2105,7 @@ Regression guard for [iblai-platform#2536](https://github.com/iblai/iblai-platfo
 
 **Source files:** `app/platform/[tenantKey]/[mentorId]/_components/accessibility-fab/index.tsx` (wraps the SDK `AccessibilityFab` from `@iblai/iblai-js/web-containers/next`)
 
-Issue #2611. The floating accessibility button can be dragged (mouse + touch), nudged with the arrow keys, sent to a corner from the menu and reset; it snaps to the nearest edge and persists in `localStorage` (`accessibility-fab-position:v2` => `{side, bottom}`). The tenant-metadata GET is route-mocked to force `accessibility_menu: true`; `reducedMotion: 'reduce'` makes snaps instant except in fab-05. Touch drags use CDP `Input.dispatchTouchEvent` (Chromium only; mobile tests skip elsewhere). Page object: `page-objects/accessibility-fab.page.ts`.
+Issue #2611. The floating accessibility button can be dragged (mouse + touch), nudged with the arrow keys, sent to a corner from the menu and reset; it snaps to the nearest edge and persists in `localStorage` (`accessibility-fab-position:v2` => `{side, bottom}`). The tenant metadata in localStorage (`tenants` / `current_tenant`) is patched via `addInitScript` to force `accessibility_menu: true`; `reducedMotion: 'reduce'` makes snaps instant except in fab-05. Touch drags use CDP `Input.dispatchTouchEvent` (Chromium only; mobile tests skip elsewhere). Page object: `page-objects/accessibility-fab.page.ts`.
 
 - [x] fab-01: User clicks the accessibility button to open the menu; a drag past 5px does not open it; a click right after a drag still opens it
 - [x] fab-02: Mouse drag left of centre snaps the button to the left edge and right of centre to the right edge, keeping its vertical position; the spot persists across reload (localStorage accessibility-fab-position:v2)

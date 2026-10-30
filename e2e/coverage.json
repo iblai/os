@@ -82,7 +82,7 @@
         },
         {
           "id": "nav-06",
-          "description": "Help button opens the docs/help link in a new tab when the tenant's own metadata (observed from the app's own org-metadata GET, no DM_URL required) shows show_help !== false; the menu item is correctly absent when a tenant explicitly sets show_help: false (#uat-9)",
+          "description": "Help button opens the docs/help link in a new tab when the tenant's own metadata (read from the app's own localStorage tenant metadata, no DM_URL required) shows show_help !== false; the menu item is correctly absent when a tenant explicitly sets show_help: false (#uat-9)",
           "status": "covered"
         },
         {

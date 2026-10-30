@@ -2,7 +2,6 @@ import type { CDPSession, Locator, Page } from '@playwright/test';
 import { expect } from '@playwright/test';
 
 const POSITION_STORAGE_KEY = 'accessibility-fab-position:v2';
-const TENANT_METADATA_PATH_RE = /\/api\/core\/orgs\/[^/]+\/metadata\/?$/;
 
 export interface StoredFabPosition {
   side: 'left' | 'right';
@@ -46,23 +45,54 @@ export class AccessibilityFabPage {
     this.fileDropOverlay = page.getByText('Drop your files here');
   }
 
-  /** Forces `accessibility_menu: true` on the tenant-metadata GET. Call BEFORE navigating. */
+  /**
+   * Forces `accessibility_menu: true` in the tenant metadata the SDK reads
+   * from localStorage (`tenants` entry for the URL's tenant, and
+   * `current_tenant`). Runs on every load, before app code. Call BEFORE navigating.
+   */
   async enableAccessibilityMenu(): Promise<void> {
-    await this.page.route(
-      (url) => TENANT_METADATA_PATH_RE.test(url.pathname),
-      async (route) => {
-        if (route.request().method() !== 'GET') return route.continue();
-        const response = await route.fetch();
-        const json = await response.json();
-        await route.fulfill({
-          response,
-          json: {
-            ...json,
-            metadata: { ...(json.metadata ?? {}), accessibility_menu: true },
-          },
-        });
-      },
-    );
+    await this.page.addInitScript(() => {
+      const parse = (raw: string | null): unknown => {
+        try {
+          return raw ? JSON.parse(raw) : null;
+        } catch {
+          return null;
+        }
+      };
+      const patch = (t: unknown): boolean => {
+        if (!t || typeof t !== 'object') return false;
+        const tenant = t as { metadata?: Record<string, unknown> };
+        tenant.metadata = {
+          ...(tenant.metadata ?? {}),
+          accessibility_menu: true,
+        };
+        return true;
+      };
+      try {
+        const org = /\/platform\/([^/]+)/.exec(window.location.pathname)?.[1];
+        const tenants = parse(window.localStorage.getItem('tenants'));
+        if (Array.isArray(tenants)) {
+          let changed = false;
+          for (const t of tenants) {
+            if (t && (!org || t.key === org)) changed = patch(t) || changed;
+          }
+          if (changed)
+            window.localStorage.setItem('tenants', JSON.stringify(tenants));
+        }
+        const current = parse(
+          window.localStorage.getItem('current_tenant'),
+        ) as {
+          key?: string;
+        } | null;
+        if (current && (!org || current.key === org) && patch(current))
+          window.localStorage.setItem(
+            'current_tenant',
+            JSON.stringify(current),
+          );
+      } catch {
+        // storage unavailable (e.g. about:blank) — nothing to patch
+      }
+    });
   }
 
   async expectVisible(): Promise<void> {
