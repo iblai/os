@@ -76,8 +76,13 @@ export class HistoryTab {
     this.openCanvasButtons = dialog.getByTestId('canvas-open-button');
     this.canvasDialog = page.getByTestId('canvas-dialog');
     this.emptyState = dialog.getByText(/no conversations/i);
-    this.nextButton = dialog.getByRole('button', { name: /next/i });
-    this.exportButton = dialog.getByRole('button', { name: /export/i });
+    // Anchored: conversation rows are role="button" too and are named by
+    // their text, so a loose /next/ or /export/ would also match a row whose
+    // title or reply mentions the word.
+    this.nextButton = dialog.getByRole('button', { name: 'Go to next page' });
+    this.exportButton = dialog.getByRole('button', {
+      name: /^export(ing\.\.\.)?$/i,
+    });
     this.sentimentFilter = dialog
       .getByRole('combobox', { name: /sentiment/i })
       .first();
