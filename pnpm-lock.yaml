@@ -1046,8 +1046,8 @@ packages:
     resolution: {integrity: sha512-43/qtrDUokr7LJqoF2c3+RInu/t4zfrpYdoSDfYyhg52rwLV6TnOvdG4fXm7IkSB3wErkcmJS9iEhjVtOSEjjA==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
 
-  '@fastify/deepmerge@3.2.2':
-    resolution: {integrity: sha512-155eqA/WMQdN6gUD4RrhS2K0Pcz2Ou9pQ86L0sipOpP9ONbTA6oYw/hW4VdBjR4egcDHqmWUK9x80oUX7S1mDQ==}
+  '@fastify/deepmerge@3.2.1':
+    resolution: {integrity: sha512-N5Oqvltoa2r9z1tbx4xjky0oRR60v+T47Ic4J1ukoVQcptLOrIdRnCSdTGmOmajZuHVKlTnfcmrjyqsGEW1ztA==}
 
   '@floating-ui/core@1.7.5':
     resolution: {integrity: sha512-1Ih4WTWyw0+lKyFMcBHGbb5U5FtuHJuujoyyr5zTaWS5EYMeT6Jb2AuDeftsCsEuchO+mM2ij5+q9crhydzLhQ==}
@@ -1116,8 +1116,8 @@ packages:
     resolution: {integrity: sha512-bV0Tgo9K4hfPCek+aMAn81RppFKv2ySDQeMoSZuvTASywNTnVJCArCZE2FWqpvIatKu7VMRLWlR1EazvVhDyhQ==}
     engines: {node: '>=18.18'}
 
-  '@iblai/agent-ai@2.13.3':
-    resolution: {integrity: sha512-o4QJxztdREkCI+r/tN1ZK5sY/v6IZVXjqXAsxAc0D1lF1vFIIFiafcuW7NmpHu4yCj3NqelHBM2vILMYM1Iz6A==}
+  '@iblai/agent-ai@2.10.0':
+    resolution: {integrity: sha512-Hu0YwzF3tQP/+E1D7W7FfoJFaorVd33OE2YWhi9wccx9WT3DhgItyvFY5QSviGInBgyGdopZKBDDIkQz6fHrUA==}
     engines: {node: 25.3.0}
     peerDependencies:
       react: 19.1.0
@@ -11133,7 +11133,7 @@ snapshots:
       '@eslint/core': 0.17.0
       levn: 0.4.1
 
-  '@fastify/deepmerge@3.2.2': {}
+  '@fastify/deepmerge@3.2.1': {}
 
   '@floating-ui/core@1.7.5':
     dependencies:
@@ -11200,7 +11200,7 @@ snapshots:
 
   '@humanwhocodes/retry@0.4.3': {}
 
-  '@iblai/agent-ai@2.13.3(react-dom@19.1.0(react@19.1.0))(react@19.1.0)':
+  '@iblai/agent-ai@2.10.0(react-dom@19.1.0(react@19.1.0))(react@19.1.0)':
     dependencies:
       react: 19.1.0
       react-dom: 19.1.0(react@19.1.0)
@@ -19864,7 +19864,7 @@ snapshots:
 
   react-joyride@3.2.0(@types/react@19.1.17)(react-dom@19.1.0(react@19.1.0))(react@19.1.0):
     dependencies:
-      '@fastify/deepmerge': 3.2.2
+      '@fastify/deepmerge': 3.2.1
       '@floating-ui/react-dom': 2.1.8(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       '@gilbarbara/deep-equal': 0.4.1
       '@gilbarbara/hooks': 0.11.0(react@19.1.0)
