@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-10-30 | 1040 checkpoints (969 covered, 37 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 103 journeys (102 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-10-31 | 1055 checkpoints (984 covered, 37 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 105 journeys (104 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -504,7 +504,7 @@ The "Remember past conversations" (`enable_memory_component`) master toggle move
 
 **Source files:** `components/modals/edit-mentor-modal/tabs/mcp-tab/index.tsx` (the OS wrapper around the SDK `McpTab`)
 
-Issue iblai/iblai-platform#2725. The agent settings MCP tab lists connectors as compact cards, under Featured / Directory sub-tabs when the organization features any (one "Connectors" list otherwise). Each card is a group named after its connector, with one switch (on/off for this agent) and two icon buttons: Configure (gear), which opens the "Configure MCP Connector" form, and Delete (bin), which asks in "Remove Connector" first. Add Connector opens the same form as "Add MCP Connector"; a connector added there is turned on for the agent at once. Turning a connector on adds the agent's `mcp` tool, and taking the last one off removes it. Every test that changes anything runs on its own fresh agent, with a connector created by API and scoped to that agent (`ChatMcpMenuPage.createServer`); the `mcp` fixture deletes every connector a test created, including those added through the form. Each portal dialog is resolved by its own role and name and every field looked up inside it. The list is narrowed to the connector's unique name through the tab's search box, so its card is on the first page however many connectors the organization has. Not covered here, since they need a sign-in service or featured connectors on the environment: Connect / Disconnect in the form's Connection row, the restricted form on a featured or directory connector, App Credentials, and the "{name} was turned off for this agent" notice. All checkpoints are live but pending: they have not run yet against @iblai/iblai-js 2.58.0.
+Issue iblai/iblai-platform#2725. The agent settings MCP tab lists connectors as compact cards, under Featured / Directory sub-tabs when the organization features any (one "Connectors" list otherwise). Each card is a group named after its connector, with one switch (on/off for this agent) and two icon buttons: Configure (gear), which opens the "Configure MCP Connector" form, and Delete (bin), which asks in "Remove Connector" first. Add Connector opens the same form as "Add MCP Connector"; a connector added there is turned on for the agent at once. Turning a connector on adds the agent's `mcp` tool, and taking the last one off removes it. Every test that changes anything runs on its own fresh agent, with a connector created by API and scoped to that agent (`ChatMcpMenuPage.createServer`); the `mcp` fixture deletes every connector a test created, including those added through the form. Each portal dialog is resolved by its own role and name and every field looked up inside it. The list is narrowed to the connector's unique name through the tab's search box, so its card is on the first page however many connectors the organization has. Not covered here, since they need a sign-in service or featured connectors on the environment: Connect / Disconnect in the form's Connection row, the restricted form on a featured or directory connector, App Credentials, and the "{name} was turned off for this agent" notice. All checkpoints are live but pending: they have not run yet against @iblai/iblai-js 2.59.0.
 
 - [ ] mcp-01: Admin opens the Edit Agent modal's MCP tab (Integrations) and finds its "MCP" heading, the sentence "Outside services your agent can use in chats. Turn each one on or off for this agent.", Add Connector, and the connector list: the Featured / Directory sub-tabs (tablist "Connectors", mcp-tab-featured / mcp-tab-custom) when the organization features any connector, otherwise the single "Connectors" list _(pending: not yet run)_
 - [ ] mcp-02: Admin, on a fresh agent with one connector created by API for it, narrows the Directory list to its name (the "Search by name..." box) and finds its card (mcp-connector-{id}, a group named after the connector) with its switch off (mcp-connector-toggle-{id}, named "{name} disabled") and the Configure (gear, mcp-connector-configure-{id}) and Delete (bin, mcp-connector-delete-{id}) icon buttons _(pending: not yet run)_
@@ -1991,7 +1991,7 @@ Covers issue #2586's composer rebuild: the classic UploadMenu + always-visible I
 
 ---
 
-## Journey 80: Embed Header + LTI Redesign (12 checkpoints) — `journeys/80-embed-and-lti-redesign.spec.ts`
+## Journey 80: Embed Header + LTI Redesign (14 checkpoints) — `journeys/80-embed-and-lti-redesign.spec.ts`
 
 **Source files:** `components/chat/sdk-chat.tsx`, `hooks/use-embed-mode.ts`, `hooks/use-is-lti-launch.ts`, `lib/embed-context.ts`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/embed-nav-bar.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/accessibility-fab/index.tsx`, `hooks/use-show-user-profile.ts`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/user-profile.tsx`
 
@@ -2009,6 +2009,8 @@ Covers issue #2586's embed surface redesign: a new OS header (`EmbedNavBar` — 
 - [x] emb-prof-02: The embed profile menu offers Profile, the tenant switcher and Help, and leaves out Log Out and the Admin/User mode switch (the host owns auth)
 - [x] emb-prof-03: Profile in the embed profile menu opens the User Profile dialog inside the frame on the Basic tab, and Cancel closes it without saving
 - [x] emb-prof-04: Picking another tenant in the embed profile menu posts `{ tenantSwitch: true, tenant }` to the host page and leaves the frame on the chat instead of redirecting it to the auth app
+- [x] emb-prof-05 (issue #2758): With `show-user-profile=true` the header order is New chat, ? menu, full screen, profile avatar, Close — profile directly before Close
+- [x] emb-prof-06 (issue #2758): With Close hidden the profile avatar is the right-most header control
 
 ---
 
@@ -2214,12 +2216,15 @@ Regression: the camera dialog opened from the "+" menu item left `<body style="p
 
 ---
 
-## Journey 88: Create Agent Category Wheel Scroll (1 checkpoint) — `journeys/88-create-agent-category-wheel-scroll.spec.ts`
+## Journey 88: Create Agent Category Wheel Scroll (4 checkpoints) — `journeys/88-create-agent-category-wheel-scroll.spec.ts`
 
-**Source files:** `components/modals/create-mentor-form.tsx`
+**Source files:** `components/modals/create-mentor-form.tsx`, `components/modals/edit-mentor-modal-dialog.tsx`
 
-Regression: the Category popover is portaled outside the Create Agent dialog, whose scroll lock swallowed wheel events. Page object: `page-objects/create-mentor.page.ts` (`categoryList`).
+Regression: the Category popover is portaled outside the Create Agent dialog, whose scroll lock swallowed wheel events. Page object: `page-objects/create-mentor.page.ts` (`categoryList`). Also covers the front-end-only Save button on the Create Agent prompt popups (issue #2758; `goToPromptsTab`, `openPromptPopupAndType`, `promptContent`).
 
+- [x] promptsave-01 (issue #2758): The System Prompt popup's Save closes it, the form shows the typed text and no non-GET request is sent
+- [x] promptsave-02 (issue #2758): Save in the Proactive and Guided popups closes them and keeps each text
+- [x] promptsave-03 (issue #2758): Escape in the System Prompt popup still closes it and keeps the text
 - [x] catscroll-01: Admin opens Create Agent, opens the Category picker and wheels the list: scrollTop increases and a lower category can be selected
 
 ---
@@ -2334,11 +2339,39 @@ Issue #2731. Settings → Discovery → "Who Can View?": an admin-only note show
 
 ---
 
-## Journey 96: Chat MCP Servers (17 checkpoints, 17 pending) — `journeys/96-chat-mcp-servers.spec.ts`
+## Journey 96: Allowed File Types (7 checkpoints) — `journeys/96-allowed-file-types.spec.ts`
+
+**Source files:** `components/modals/edit-mentor-modal/settings-tab.tsx`, `messages/en.json`
+
+Issue #2528. Settings → Capabilities ends with a File Uploads group whose Allowed File Types dialog sets the agent's `allowed_file_upload_extensions`; chat then limits the composer's file input and refuses other files with a toast. One throwaway agent (auto-deleted) is shared by the serial checkpoints. Only the S3 upload leg (and the 400 in aft-06) is mocked. The server's `file_error` WebSocket frame is not covered.
+
+- [x] aft-01: Admin opens Settings > Capabilities on a fresh agent: the last group is File Uploads (after Context Limits) with the "File Types Users Can Attach" row, its info tooltip and the Allowed File Types button, no count text
+- [x] aft-02: The Allowed File Types dialog lists the 12 common types and a footer count; typing .JSON adds json under "Added by You"; a duplicate shows "json is already in the list.", js-on shows "Use letters and numbers only, like json."; Clear All unticks everything
+- [x] aft-03: Done then Save sends one JSON PUT with allowed_file_upload_extensions [pdf, docx, png, json]; saving an unrelated setting does not resend it; reload and reopen shows the saved list
+- [x] aft-04: In chat the composer's file input accept is .pdf,.docx,.png,.json; report.exe and the extension-less README are refused with the toasts ".exe files aren't accepted by this agent." and "README has no file type, so this agent can't accept it." and not attached; report.pdf attaches (S3 leg mocked)
+- [x] aft-05: Clear All + Save sends an empty list (everything allowed) and a csv then attaches with no refusal toast
+- [x] aft-06: Upload-URL 400 {"error":"This file type is not allowed for this mentor."} (mocked): the chip shows Retry and the toast says "<name> can't be used with this agent"
+- [x] aft-07: Refusing report.exe toasts with a "See allowed types" link; clicking it dismisses the toast and opens "File Types This Agent Accepts" listing pdf, docx, png, json with the count of 4; searching .png filters to png, "exe" shows ".exe isn't one of them.", Got It closes it; report.exe + notes.zip in one pick give one "2 files can't be added: report.exe and notes.zip." toast
+
+---
+
+## Journey 97: Shareable-link chat frame token (3 checkpoints) — `journeys/97-shareable-link-chat-frame-token.spec.ts`
+
+**Source files:** `app/platform/[tenantKey]/[mentorId]/mentor-page-content.tsx`, `components/chat/index.tsx`
+
+Issue iblai-platform#2743. A `?token=<share token>` link now rides in the chat frame's `shareable_link_token` while `token` stays the user's own credential (empty for anonymous) and `token_type` is no longer sent. One throwaway public agent with a real shareable link (auto-deleted) is shared by the serial checkpoints; only the chat WebSocket is mocked.
+
+- [x] slf-01: Signed-in user on the share-link URL: frame shareable_link_token equals the URL token, token is the user's axd token, token_type is not "link"
+- [x] slf-02: Anonymous visitor on the share-link URL: shareable_link_token set, token empty, no token_type "link", mocked reply renders
+- [x] slf-03: Signed-in user without ?token: no shareable_link_token key, token is the axd token, mocked reply renders
+
+---
+
+## Journey 98: Chat MCP Servers (17 checkpoints, 17 pending) — `journeys/98-chat-mcp-servers.spec.ts`
 
 **Source files:** `components/chat/sdk-chat.tsx`, `components/chat-input-form/use-overflow-fit.ts`, `app/google-oauth-callback/page.tsx`
 
-Issue iblai/iblai-platform#2625. The composer's "+" menu (journey 79) gains an MCP row after Memory (SDK `ComposerPlusMenu`, test id `chat-mcp-button`; no chevron, like Memory; a count badge of the servers on for this chat, like Skills, whose "{count} on" label joins the row's name; a server still waiting for this person's own sign-in is not counted). The row is offered only while the agent uses at least one server the organization has on (SDK `useMcpActiveCount`, from the agent settings' readable `mcp_servers`); an agent with none, or attachments the person may not read, has no MCP row, so the panel's "Nothing is on for this agent yet." empty state is not reachable from the chat. On desktop the row opens the SDK's `McpServersMenu` in a 28rem panel beside the menu (`composer-mcp-popover`, accessible name "MCP"), on phones as a page of the bottom sheet. The panel lists only the servers the agent uses, sorted by name (not asserted), each with one switch: the person's on/off for this chat (the user's session preference, iblai/iblai-platform#2725; a server the organization requires shows a locked one). The switch is the row's only control: a per-user OAuth server they have not signed in to shows its switch off (named "{name} off: turn on to sign in"), and turning it on opens the sign-in window, the first time after a "Sign in to {name}" explainer (once per user); the switch shows on and locked only while that sign-in is in flight, the panel will not close meanwhile, and a window closed without signing in gives the switch back. Shared (agent or organization) sign-ins are made in agent settings, so such a server shows the plain switch. Adding, editing, attaching and disconnecting servers live in the agent settings MCP tab (journey 25), and the row needs no grant beyond chatting. Every admin checkpoint runs on its own fresh agent, creates a server by API scoped to that agent and attaches it through the agent settings API the way the MCP tab's switch does (`ChatMcpMenuPage.createServer` / `attachServers`, the spec's `freshAgentWithServer`), reloads so the composer reads the new settings, and the spec's `mcp` fixture deletes every created server by API in teardown (`utils/mcp-servers.ts`), which also runs after a timeout. The non-admin checkpoints mock the server list, the agent's `mcp_servers` (`mockAgentUsesServers`, ids or whole rows, flagged readable since the real answer hides the field from a non-admin), the connections and the user's connected services (`mockMcpServerConnections`, `mockConnectedServices`, and `mockMcpSignIn` for a sign-in that completes), since a non-admin can neither create nor attach a server and a real provider sign-in cannot be completed in e2e. The switches' hover text (title) is not asserted. All checkpoints are live but pending: they have not run yet against @iblai/iblai-js 2.58.0.
+Issue iblai/iblai-platform#2625. The composer's "+" menu (journey 79) gains an MCP row after Memory (SDK `ComposerPlusMenu`, test id `chat-mcp-button`; no chevron, like Memory; a count badge of the servers on for this chat, like Skills, whose "{count} on" label joins the row's name; a server still waiting for this person's own sign-in is not counted). The row is offered only while the agent uses at least one server the organization has on (SDK `useMcpActiveCount`, from the agent settings' readable `mcp_servers`); an agent with none, or attachments the person may not read, has no MCP row, so the panel's "Nothing is on for this agent yet." empty state is not reachable from the chat. On desktop the row opens the SDK's `McpServersMenu` in a 28rem panel beside the menu (`composer-mcp-popover`, accessible name "MCP"), on phones as a page of the bottom sheet. The panel lists only the servers the agent uses, sorted by name (not asserted), each with one switch: the person's on/off for this chat (the user's session preference, iblai/iblai-platform#2725; a server the organization requires shows a locked one). The switch is the row's only control: a per-user OAuth server they have not signed in to shows its switch off (named "{name} off: turn on to sign in"), and turning it on opens the sign-in window, the first time after a "Sign in to {name}" explainer (once per user); the switch shows on and locked only while that sign-in is in flight, the panel will not close meanwhile, and a window closed without signing in gives the switch back. Shared (agent or organization) sign-ins are made in agent settings, so such a server shows the plain switch. Adding, editing, attaching and disconnecting servers live in the agent settings MCP tab (journey 25), and the row needs no grant beyond chatting. Every admin checkpoint runs on its own fresh agent, creates a server by API scoped to that agent and attaches it through the agent settings API the way the MCP tab's switch does (`ChatMcpMenuPage.createServer` / `attachServers`, the spec's `freshAgentWithServer`), reloads so the composer reads the new settings, and the spec's `mcp` fixture deletes every created server by API in teardown (`utils/mcp-servers.ts`), which also runs after a timeout. The non-admin checkpoints mock the server list, the agent's `mcp_servers` (`mockAgentUsesServers`, ids or whole rows, flagged readable since the real answer hides the field from a non-admin), the connections and the user's connected services (`mockMcpServerConnections`, `mockConnectedServices`, and `mockMcpSignIn` for a sign-in that completes), since a non-admin can neither create nor attach a server and a real provider sign-in cannot be completed in e2e. The switches' hover text (title) is not asserted. All checkpoints are live but pending: they have not run yet against @iblai/iblai-js 2.59.0.
 
 - [ ] chat-mcp-01: Admin, on a fresh agent with one server created and attached by API, opens the composer's "+" menu and sees the MCP row (data-testid chat-mcp-button, accessible name exactly "MCP 1 on" with its badge, last after Memory, no trailing chevron like Memory); choosing it opens the MCP panel beside the menu (heading "MCP", the sentence "Switches here apply to this chat only, from your next message.", a Close icon button), and Close closes the panel and hands focus back to "+" _(pending: not yet run)_
 - [ ] chat-mcp-02: Admin, on a fresh agent that uses no server, reloads behind the agent-settings and server-list answers, opens the "+" menu and finds no MCP row among its items (`expectRowAbsent`: the row is offered only while the agent has a connector on); after a server is created and attached by API and the app reloads, the row is there, last, named "MCP 1 on" _(pending: not yet run)_

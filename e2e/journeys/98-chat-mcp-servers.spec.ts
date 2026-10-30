@@ -21,7 +21,7 @@ import {
 import type { CreateMentorPage } from '../page-objects/create-mentor.page';
 
 /**
- * Journey 96 — Chat MCP Servers (iblai/iblai-platform#2625).
+ * Journey 98 — Chat MCP Servers (iblai/iblai-platform#2625).
  *
  * The composer's "+" menu (journey 79) gains an MCP row after Memory (SDK
  * `ComposerPlusMenu`), with a count of the servers on for this chat. The row
@@ -117,7 +117,7 @@ const freshAgentWithServer = async (
   return { serverId, name };
 };
 
-test.describe('Journey 96: Chat MCP Servers', () => {
+test.describe('Journey 98: Chat MCP Servers', () => {
   test.describe('admin', () => {
     test.beforeEach(async ({ page }) => {
       await navigateToMentorApp(page);

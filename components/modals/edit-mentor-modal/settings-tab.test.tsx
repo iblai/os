@@ -348,6 +348,23 @@ describe('SettingsTab', () => {
       expect(labels.fields.smartDocRetrieval.label).toBe(
         'smartDocRetrievalLabel',
       );
+      expect(labels.fields.chatHistoryMessages).toEqual({
+        label: 'chatHistoryMessagesLabel',
+        tooltip: 'chatHistoryMessagesTooltip',
+        placeholder: 'chatHistoryMessagesPlaceholder',
+        minValueError: 'contextLimitMinValueError',
+      });
+      expect(labels.fields.chatHistoryTokens.label).toBe(
+        'chatHistoryTokensLabel',
+      );
+      expect(labels.fields.documentChunks.label).toBe('documentChunksLabel');
+      expect(labels.allowedFileTypes).toMatchObject({
+        heading: 'heading',
+        title: 'title',
+        openButton: 'openButton',
+        removeAriaLabel: 'removeAriaLabel',
+        done: 'done',
+      });
       expect(labels.toasts.voiceCallError).toBe('voiceCallSettingsError');
     });
   });
@@ -370,17 +387,6 @@ describe('SettingsTab', () => {
         'anyoneOption',
         'enableVerboseReasoningLabel',
         'enableVerboseReasoningTooltip',
-        'contextLimitsHeading',
-        'chatHistoryMessagesLabel',
-        'chatHistoryMessagesTooltip',
-        'chatHistoryMessagesPlaceholder',
-        'chatHistoryTokensLabel',
-        'chatHistoryTokensTooltip',
-        'chatHistoryTokensPlaceholder',
-        'documentChunksLabel',
-        'documentChunksTooltip',
-        'documentChunksPlaceholder',
-        'contextLimitMinValueError',
       ];
 
       for (const [locale, messages] of Object.entries(catalogs)) {
@@ -394,6 +400,55 @@ describe('SettingsTab', () => {
       expect(catalogs.en.tabsSettingsTab.enableVerboseReasoningLabel).toBe(
         'Enable Verbose Reasoning',
       );
+    });
+
+    it('translates the Context Limits copy in every locale', async () => {
+      const keys = [
+        'contextLimitsHeading',
+        'contextLimitMinValueError',
+        ...[
+          'chatHistoryMessages',
+          'chatHistoryTokens',
+          'documentChunks',
+        ].flatMap((field) => [
+          `${field}Label`,
+          `${field}Tooltip`,
+          `${field}Placeholder`,
+        ]),
+      ];
+
+      for (const locale of ['en', 'es', 'fr', 'zh']) {
+        const messages = (await import(`../../../messages/${locale}.json`))
+          .default as { tabsSettingsTab: Record<string, string> };
+        for (const key of keys) {
+          expect(
+            messages.tabsSettingsTab[key],
+            `${locale}.${key}`,
+          ).toBeTruthy();
+        }
+      }
+    });
+  });
+
+  describe('Allowed File Types catalogs', () => {
+    it('has every label in every locale, with the SDK placeholders kept', async () => {
+      const en = (await import('../../../messages/en.json')).default
+        .tabsSettingsTab.allowedFileTypes as Record<string, string>;
+
+      for (const locale of ['en', 'es', 'fr', 'zh']) {
+        const messages = (await import(`../../../messages/${locale}.json`))
+          .default as {
+          tabsSettingsTab: { allowedFileTypes: Record<string, string> };
+        };
+        const copy = messages.tabsSettingsTab.allowedFileTypes;
+        for (const key of Object.keys(en)) {
+          expect(copy[key], `${locale}.${key}`).toBeTruthy();
+        }
+        expect(copy.countMany, locale).toContain('{count}');
+        for (const key of ['removeAriaLabel', 'duplicateError']) {
+          expect(copy[key], `${locale}.${key}`).toContain('{ext}');
+        }
+      }
     });
   });
 

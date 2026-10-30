@@ -113,6 +113,11 @@ vi.mock('@iblai/iblai-js/web-utils', () => ({
 // (pulled in via the prompt modals) is read at module scope, so omitting it
 // fails the file at import time.
 vi.mock('@iblai/iblai-api', () => ({
+  TransportEnum: {
+    SSE: 'sse',
+    WEBSOCKET: 'websocket',
+    STREAMABLE_HTTP: 'streamable_http',
+  },
   MentorVisibilityEnum: {
     VIEWABLE_BY_ANYONE: 'VIEWABLE_BY_ANYONE',
   },
@@ -122,13 +127,6 @@ vi.mock('@iblai/iblai-api', () => ({
     VIEWABLE_BY_ANYONE: 'viewable_by_anyone',
   },
   UserApp: {},
-  // The SDK's MCP tab reads the transport enum at import time (SDK 2.58.0),
-  // and this mock replaces the whole package.
-  TransportEnum: {
-    SSE: 'sse',
-    WEBSOCKET: 'websocket',
-    STREAMABLE_HTTP: 'streamable_http',
-  },
 }));
 
 // Mentor is NOT anonymous - allow_anonymous is false

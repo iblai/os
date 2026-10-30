@@ -368,6 +368,47 @@ describe('EmbedNavBar', () => {
       renderEmbedNavBar();
       expect(screen.getByTestId('embed-user-profile')).toBeInTheDocument();
     });
+
+    function actionButtons() {
+      return Array.from(
+        screen.getByLabelText('New chat').parentElement!.children,
+      );
+    }
+
+    it('sits after New chat, Help and Full screen, right before Close', () => {
+      mockShowUserProfile = true;
+      mockAllowFullscreen = true;
+      renderEmbedNavBar();
+      expect(actionButtons()).toEqual([
+        screen.getByLabelText('New chat'),
+        screen.getByLabelText('Open menu options'),
+        screen.getByTestId('embed-fullscreen-toggle'),
+        screen.getByTestId('embed-user-profile'),
+        screen.getByLabelText('Close chat'),
+      ]);
+    });
+
+    it('is the right-most item when Close is hidden', () => {
+      mockShowUserProfile = true;
+      mockShowCloseButton = false;
+      renderEmbedNavBar();
+      expect(actionButtons()).toEqual([
+        screen.getByLabelText('New chat'),
+        screen.getByLabelText('Open menu options'),
+        screen.getByTestId('embed-user-profile'),
+      ]);
+    });
+
+    it('leaves the other buttons unchanged when off', () => {
+      mockAllowFullscreen = true;
+      renderEmbedNavBar();
+      expect(actionButtons()).toEqual([
+        screen.getByLabelText('New chat'),
+        screen.getByLabelText('Open menu options'),
+        screen.getByTestId('embed-fullscreen-toggle'),
+        screen.getByLabelText('Close chat'),
+      ]);
+    });
   });
 
   // --------------------------------------------------------------------------

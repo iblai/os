@@ -14,7 +14,9 @@ import { waitForPageReady } from '../utils/resilient';
 // never write to it (wss-06 aborts its save); wss-07..09 save on a throw-away
 // agent and check the chat's new-chat heading.
 
-const USER_METADATA = /\/api\/ibl\/users\/manage\/metadata\//;
+// Newer SDK releases read the profile through the core proxy; accept both.
+const USER_METADATA =
+  /\/api\/(ibl\/users\/manage\/metadata|core\/users\/metadata\/proxy)\//;
 const GREETING = '^Good (morning|afternoon|evening)';
 
 /**
