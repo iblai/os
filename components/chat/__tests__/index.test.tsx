@@ -139,10 +139,15 @@ const { streamingToolCalls } = vi.hoisted(() => ({
 // Default carries the support email and a chat_area_size within bounds (850,
 // distinct from the DEFAULT 800) to exercise the width clamp.
 const { mockUseTenantObjectMetadata } = vi.hoisted(() => ({
-  mockUseTenantObjectMetadata: vi.fn(() => ({
-    support_email: 'support@test.com',
-    chat_area_size: 850,
-  })),
+  // Typed to the hook's real return (`TenantObjectMetadata`, a free-form
+  // `Record<string, any>`) so per-test `mockReturnValue` calls can pass any
+  // subset of metadata fields, not just the shape of this default.
+  mockUseTenantObjectMetadata: vi.fn(
+    (): Record<string, any> => ({
+      support_email: 'support@test.com',
+      chat_area_size: 850,
+    }),
+  ),
 }));
 
 vi.mock('@/hooks/use-tenant-object-metadata', () => ({
