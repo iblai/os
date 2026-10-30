@@ -105,11 +105,6 @@ vi.mock('@iblai/iblai-api', () => ({
     VIEWABLE_BY_TENANT_STUDENTS: 'viewable_by_tenant_students',
     VIEWABLE_BY_ANYONE: 'viewable_by_anyone',
   },
-  TransportEnum: {
-    SSE: 'sse',
-    WEBSOCKET: 'websocket',
-    STREAMABLE_HTTP: 'streamable_http',
-  },
   UserApp: {},
 }));
 

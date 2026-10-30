@@ -110,27 +110,6 @@ export function SettingsTab() {
       embedWidget: t('embedWidgetNote'),
     },
     fields: {
-      // Context limits: one value each, shared by in-app chat and the embed
-      // widget. Wording mirrors the SDK's own locales so the field reads the
-      // same here as everywhere else it appears.
-      chatHistoryMessages: {
-        label: t('chatHistoryMessagesLabel'),
-        tooltip: t('chatHistoryMessagesTooltip'),
-        placeholder: t('chatHistoryMessagesPlaceholder'),
-        minValueError: t('chatHistoryMessagesMinValueError'),
-      },
-      chatHistoryTokens: {
-        label: t('chatHistoryTokensLabel'),
-        tooltip: t('chatHistoryTokensTooltip'),
-        placeholder: t('chatHistoryTokensPlaceholder'),
-        minValueError: t('chatHistoryTokensMinValueError'),
-      },
-      documentChunks: {
-        label: t('documentChunksLabel'),
-        tooltip: t('documentChunksTooltip'),
-        placeholder: t('documentChunksPlaceholder'),
-        minValueError: t('documentChunksMinValueError'),
-      },
       name: {
         label: t('nameLabel'),
         placeholder: t('agentNamePlaceholder'),
