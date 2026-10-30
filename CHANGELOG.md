@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.183.1](https://github.com/iblai/os/compare/v0.183.0...v0.183.1) (2026-10-30)
+
+### CI
+
+* **pr-gate:** say what the e2e run found in the merge box, linked to it ([702be85](https://github.com/iblai/os/commit/702be85f527a6af70020358622d38d7bb450e6ed))
+
 ## [0.183.0](https://github.com/iblai/os/compare/v0.182.2...v0.183.0) (2026-10-30)
 
 ### Features
