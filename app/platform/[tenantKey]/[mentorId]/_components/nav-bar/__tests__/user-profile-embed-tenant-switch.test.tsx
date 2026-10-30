@@ -90,6 +90,11 @@ vi.mock('@iblai/iblai-js/web-utils', () => ({
 }));
 
 vi.mock('@iblai/iblai-api', () => ({
+  TransportEnum: {
+    SSE: 'sse',
+    WEBSOCKET: 'websocket',
+    STREAMABLE_HTTP: 'streamable_http',
+  },
   MentorVisibilityEnum: { VIEWABLE_BY_ANYONE: 'VIEWABLE_BY_ANYONE' },
   PromptVisibilityEnum: {
     VIEWABLE_BY_TENANT_ADMINS: 'viewable_by_tenant_admins',
