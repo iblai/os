@@ -43,6 +43,19 @@ function greetingFor(fullName: string): RegExp {
 
 /** Serves the signed-in user's profile with `name` as their full name. */
 async function withFullName(page: Page, name: string): Promise<void> {
+  // SDK >= 2.59 reads the profile from localStorage `user_metadata`.
+  await page.addInitScript((fullName) => {
+    try {
+      const raw = window.localStorage.getItem('user_metadata');
+      const parsed = raw ? JSON.parse(raw) : {};
+      window.localStorage.setItem(
+        'user_metadata',
+        JSON.stringify({ ...parsed, name: fullName }),
+      );
+    } catch {
+      // storage unavailable — route mock below is the fallback
+    }
+  }, name);
   await page.route(USER_METADATA, async (route) => {
     if (route.request().method() !== 'GET') return route.continue();
     const response = await route.fetch();
