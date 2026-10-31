@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-10-28 | 1035 checkpoints (988 covered, 13 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 104 journeys (103 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-10-31 | 1055 checkpoints (1005 covered, 16 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 105 journeys (104 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -38,7 +38,7 @@ When adding a new page or modifying an existing user flow:
 - [x] Newly created user can navigate to the Explore page via sidebar
 - [x] Newly created user can log out via the profile dropdown
 - [x] Sidebar can be toggled open and closed
-- [x] Help button opens the docs/help link in a new tab when the tenant's own metadata (observed from the app's own org-metadata GET, no `DM_URL` required) shows `show_help !== false`; the menu item is correctly absent when a tenant explicitly sets `show_help: false` (#uat-9)
+- [x] Help button opens the docs/help link in a new tab when the tenant's own metadata (read from the app's own localStorage tenant metadata, no `DM_URL` required) shows `show_help !== false`; the menu item is correctly absent when a tenant explicitly sets `show_help: false` (#uat-9)
 - [x] Suggested prompts authored with Markdown render via the Markdown component (issue #1179, fixme until a seeded mentor fixture is available)
 - [x] NAV-08: Clicking "New Chat" once fires exactly ONE create-session POST (issue #1002 regression guard — activated and verified against the SDK Chat, issue #2586)
 - [x] NAV-09: A freshly created mentor's session lifecycle stays at exactly ONE session through its first message and through navigating away (Explore) and back (issue #2586) — covers the mount-time auto-create path, complementing NAV-08's "New Chat" button coverage
@@ -500,14 +500,19 @@ The "Remember past conversations" (`enable_memory_component`) master toggle move
 
 ---
 
-## Journey 25: MCP (Model Context Protocol) Tab (4 checkpoints) — `journeys/25-mentor-mcp-tab.spec.ts`
+## Journey 25: Mentor MCP Tab (7 checkpoints, 1 pending) — `journeys/25-mentor-mcp-tab.spec.ts`
 
-**Source files:** `components/modals/edit-mentor-modal/tabs/mcp-tab/index.tsx`, `components/modals/edit-mentor-modal/tabs/mcp-tab/connector-management-content.tsx`, `components/modals/edit-mentor-modal/tabs/mcp-tab/connector-dialogs.tsx`
+**Source files:** `components/modals/edit-mentor-modal/tabs/mcp-tab/index.tsx` (the OS wrapper around the SDK `McpTab`)
 
-- [x] MCP tab is visible in the Edit Mentor modal
-- [x] MCP tab shows connector list or empty state
-- [x] A new MCP connector can be added and appears in the list
-- [x] An MCP connector can be deleted
+Issue iblai/iblai-platform#2725. The agent settings MCP tab lists connectors as compact cards, under Featured / Directory sub-tabs when the organization features any (one "Connectors" list otherwise). Each card is a group named after its connector, with one switch (on/off for this agent) and two icon buttons: Configure (gear), which opens the "Configure MCP Connector" form, and Delete (bin), which asks in "Remove Connector" first. Add Connector opens the same form as "Add MCP Connector"; a connector added there is turned on for the agent at once. Turning a connector on adds the agent's `mcp` tool, and taking the last one off removes it. Every test that changes anything runs on its own fresh agent, with a connector created by API and scoped to that agent (`ChatMcpMenuPage.createServer`); the `mcp` fixture deletes every connector a test created, including those added through the form. Each portal dialog is resolved by its own role and name and every field looked up inside it. The list is narrowed to the connector's unique name through the tab's search box, so its card is on the first page however many connectors the organization has. Not covered here, since they need a sign-in service or featured connectors on the environment: Connect / Disconnect in the form's Connection row, the restricted form on a featured or directory connector, App Credentials, and the "{name} was turned off for this agent" notice. Run on stg1 on 2026-10-31 (PR os#616); the checkpoints marked pending were fixed after that run and await the rerun.
+
+- [x] mcp-01: Admin opens the Edit Agent modal's MCP tab (Integrations) and finds its "MCP" heading, the sentence "Outside services your agent can use in chats. Turn each one on or off for this agent.", Add Connector, and the connector list: the Featured / Directory sub-tabs (tablist "Connectors", mcp-tab-featured / mcp-tab-custom) when the organization features any connector, otherwise the single "Connectors" list
+- [x] mcp-02: Admin, on a fresh agent with one connector created by API for it, narrows the Directory list to its name (the "Search by name..." box) and finds its card (mcp-connector-{id}, a group named after the connector) with its switch off (mcp-connector-toggle-{id}, named "{name} disabled") and the Configure (gear, mcp-connector-configure-{id}) and Delete (bin, mcp-connector-delete-{id}) icon buttons
+- [x] mcp-03: Admin, on a fresh agent, adds a connector through "Add MCP Connector" (Connector Name, Connector Server, Connect): the toast "{name} connector added successfully" shows, the form closes, and the card shows the connector already on for the agent ("{name} enabled"), with the agent's settings listing it in mcp\*servers beside the mcp tool
+- [x] mcp-04: Admin, on a fresh agent whose one connector is off, turns the card switch on (PUT settings carrying the id and the mcp tool, toast "{name} is on for this agent", switch named "{name} enabled") and off again (toast "{name} is off for this agent", "{name} disabled"); the agent's settings then hold the connector and the mcp tool after the first, and neither after the second, since it was the last one
+- [ ] mcp-05: Admin, on a fresh agent, presses a connector's gear: "Configure MCP Connector" opens with its name and server filled in and Allow Users to Turn Off on ("People can switch it off in their own chats."); switching it off shows "It stays on in every chat. No one can switch it off.", Update sends user\*can*disable false (PUT mcp-servers/{id}/) and shows "{name} connector updated successfully", and the reopened form shows it off *(pending: fixed after the stg1 run, awaiting the rerun)\_
+- [x] mcp-06: Admin opens "Add MCP Connector": Allow Users to Turn Off is on by default; choosing OAuth as the Authentication Method shows Authentication Scope set to User with "Each person signs in with their own account from the chat." and the options Organization, Agent and User to pick from; Escape closes the form with nothing saved
+- [x] mcp-07: Admin, on a fresh agent whose one connector is on, presses the card's bin: "Remove Connector" names the connector, Delete removes it (DELETE mcp-servers/{id}/, toast "{name} connector removed successfully"), the card is gone and the agent's settings no longer list it
 
 ---
 
@@ -1743,11 +1748,9 @@ workers, and other PRs' CI jobs, hit the same live tenant concurrently), and
 `show_help: false` PERMANENTLY on the live tenant, and the next run's
 `beforeAll` captured that `false` as "original" and restored it forever —
 silently breaking an unrelated team's PR (os-222). No in-suite cleanup can
-fix a cross-job race; only not writing does. Every checkpoint now OBSERVES
-the org-metadata GET the app itself already fires on every authenticated
-load (`providers/index.tsx`'s `Providers` calls the SDK's
-`useTenantMetadata({ org: tenantKeyParams })`, which resolves to `GET
-/api/core/orgs/<org>/metadata/`) via
+fix a cross-job race; only not writing does. Every checkpoint now READS
+the tenant metadata the app itself uses (SDK `useTenantMetadata` resolves it
+from localStorage `tenants` / `current_tenant`, no API call) via
 `navigateAndObserveTenantMetadata` (`e2e/utils/tenant-metadata-observed.ts`),
 computes the SAME expected value the app/SDK would compute from that exact
 reading, and asserts the live UI matches it — there is no shared mutable
@@ -1766,10 +1769,10 @@ same pattern as journeys 15/16).
 API directly (`getTenantMetadata`, `e2e/utils/tenant-metadata.ts`) gated on
 the `DM_URL` env var, which is exported only in CI and never in
 `e2e/.env.local` — so every checkpoint silently SKIPPED on any local or
-non-CI environment, a green run that tested nothing. It now observes traffic
-the app makes unconditionally on any environment, so it needs no `DM_URL`,
+non-CI environment, a green run that tested nothing. It now reads the localStorage copy
+the app populates at login on any environment, so it needs no `DM_URL`,
 no DM API credentials, and no per-environment setup — and it never skips: if
-the org-metadata response cannot be observed, the checkpoint FAILS loudly
+no tenant metadata is found in localStorage, the checkpoint FAILS loudly
 instead.
 
 - [x] shc-01: READ-ONLY — sidebar footer Support link's href in the EXPANDED layout matches `documentation_url || default` computed from a live GET of tenant metadata, or the link is absent when `show_help` is false
@@ -2107,7 +2110,7 @@ Regression guard for [iblai-platform#2536](https://github.com/iblai/iblai-platfo
 
 **Source files:** `app/platform/[tenantKey]/[mentorId]/_components/accessibility-fab/index.tsx` (wraps the SDK `AccessibilityFab` from `@iblai/iblai-js/web-containers/next`)
 
-Issue #2611. The floating accessibility button can be dragged (mouse + touch), nudged with the arrow keys, sent to a corner from the menu and reset; it snaps to the nearest edge and persists in `localStorage` (`accessibility-fab-position:v2` => `{side, bottom}`). The tenant-metadata GET is route-mocked to force `accessibility_menu: true`; `reducedMotion: 'reduce'` makes snaps instant except in fab-05. Touch drags use CDP `Input.dispatchTouchEvent` (Chromium only; mobile tests skip elsewhere). Page object: `page-objects/accessibility-fab.page.ts`.
+Issue #2611. The floating accessibility button can be dragged (mouse + touch), nudged with the arrow keys, sent to a corner from the menu and reset; it snaps to the nearest edge and persists in `localStorage` (`accessibility-fab-position:v2` => `{side, bottom}`). The tenant metadata in localStorage (`tenants` / `current_tenant`) is patched via `addInitScript` to force `accessibility_menu: true`; `reducedMotion: 'reduce'` makes snaps instant except in fab-05. Touch drags use CDP `Input.dispatchTouchEvent` (Chromium only; mobile tests skip elsewhere). Page object: `page-objects/accessibility-fab.page.ts`.
 
 - [x] fab-01: User clicks the accessibility button to open the menu; a drag past 5px does not open it; a click right after a drag still opens it
 - [x] fab-02: Mouse drag left of centre snaps the button to the left edge and right of centre to the right edge, keeping its vertical position; the spot persists across reload (localStorage accessibility-fab-position:v2)
@@ -2359,3 +2362,29 @@ Issue iblai-platform#2743. A `?token=<share token>` link now rides in the chat f
 - [x] slf-01: Signed-in user on the share-link URL: frame shareable_link_token equals the URL token, token is the user's axd token, token_type is not "link"
 - [x] slf-02: Anonymous visitor on the share-link URL: shareable_link_token set, token empty, no token_type "link", mocked reply renders
 - [x] slf-03: Signed-in user without ?token: no shareable_link_token key, token is the axd token, mocked reply renders
+
+---
+
+## Journey 98: Chat MCP Servers (17 checkpoints, 2 pending) — `journeys/98-chat-mcp-servers.spec.ts`
+
+**Source files:** `components/chat/sdk-chat.tsx`, `components/chat-input-form/use-overflow-fit.ts`, `app/google-oauth-callback/page.tsx`
+
+Issue iblai/iblai-platform#2625. The composer's "+" menu (journey 79) gains an MCP row after Memory (SDK `ComposerPlusMenu`, test id `chat-mcp-button`; no chevron, like Memory; a count badge of the servers on for this chat, like Skills, whose "{count} on" label joins the row's name; a server still waiting for this person's own sign-in is not counted). The row is offered only while the agent uses at least one server the organization has on (SDK `useMcpActiveCount`, from the agent settings' readable `mcp_servers`); an agent with none, or attachments the person may not read, has no MCP row, so the panel's "Nothing is on for this agent yet." empty state is not reachable from the chat. On desktop the row opens the SDK's `McpServersMenu` in a 28rem panel beside the menu (`composer-mcp-popover`, accessible name "MCP"), on phones as a page of the bottom sheet. The panel lists only the servers the agent uses, sorted by name (not asserted), each with one switch: the person's on/off for this chat (the user's session preference, iblai/iblai-platform#2725; a server the organization requires shows a locked one). The switch is the row's only control: a per-user OAuth server they have not signed in to shows its switch off (named "{name} off: turn on to sign in"), and turning it on opens the sign-in window, the first time after a "Sign in to {name}" explainer (once per user); the switch shows on and locked only while that sign-in is in flight, the panel will not close meanwhile, and a window closed without signing in gives the switch back. Shared (agent or organization) sign-ins are made in agent settings, so such a server shows the plain switch. Adding, editing, attaching and disconnecting servers live in the agent settings MCP tab (journey 25), and the row needs no grant beyond chatting. Every admin checkpoint runs on its own fresh agent, creates a server by API scoped to that agent and attaches it through the agent settings API the way the MCP tab's switch does (`ChatMcpMenuPage.createServer` / `attachServers`, the spec's `freshAgentWithServer`), reloads so the composer reads the new settings, and the spec's `mcp` fixture deletes every created server by API in teardown (`utils/mcp-servers.ts`), which also runs after a timeout. The non-admin checkpoints mock the server list, the agent's `mcp_servers` (`mockAgentUsesServers`, ids or whole rows, flagged readable since the real answer hides the field from a non-admin), the connections and the user's connected services (`mockMcpServerConnections`, `mockConnectedServices`, and `mockMcpSignIn` for a sign-in that completes), since a non-admin can neither create nor attach a server and a real provider sign-in cannot be completed in e2e. The switches' hover text (title) is not asserted. Run on stg1 on 2026-10-31 (PR os#616); the checkpoints marked pending were fixed after that run and await the rerun.
+
+- [x] chat-mcp-01: Admin, on a fresh agent with one server created and attached by API, opens the composer's "+" menu and sees the MCP row (data-testid chat-mcp-button, accessible name exactly "MCP 1 on" with its badge, last after Memory, no trailing chevron like Memory); choosing it opens the MCP panel beside the menu (heading "MCP", the sentence "Switches here apply to this chat only, from your next message.", a Close icon button), and Close closes the panel and hands focus back to "+"
+- [x] chat-mcp-02: Admin, on a fresh agent that uses no server, reloads behind the agent-settings and server-list answers, opens the "+" menu and finds no MCP row among its items (`expectRowAbsent`: the row is offered only while the agent has a connector on); after a server is created and attached by API and the app reloads, the row is there, last, named "MCP 1 on"
+- [x] chat-mcp-03: Admin, on a fresh agent with two servers created by API and only one attached through the agent settings API (mcp\*servers plus the mcp tool, as the MCP tab's switch sends): after a reload the panel lists exactly the attached server (mcp-server-row-{id}, its name, its switch for this chat on) and the unattached one is absent
+- [ ] chat-mcp-04: The "+" menu's MCP row carries a count badge (composer-count-badge) of the servers on for this chat: "1" with one attached server on, gone (the row itself stays) once the admin switches it off for this chat from the panel, "1" again once it is switched back on _(pending: fixed after the stg1 run, awaiting the rerun)_
+- [x] chat-mcp-05: Admin switches an attached server off and back on for this chat from the panel; each switch saves the user's session preference (PUT mcp-servers/{id}/session-preference/ naming the open conversation) and its state survives a page reload and reopening the panel; switched off again, a new chat (New Chat) counts the server as on: its "+" row shows the badge "1" and the panel lists it
+- [x] chat-mcp-06: A server created with user\*can_disable false and attached to a fresh agent shows a lock (mcp-server-required-{id}) beside a disabled switch that stays checked, named "{name} is required by your organization"
+- [x] chat-mcp-07: Non-admin, with no grant beyond chatting and the agent's use of one server mocked (server list and settings GET patched, with the attachments flagged readable, since a non-admin can neither create nor attach one), sees the MCP row in the "+" menu and opens the panel: the sentence, Close and that server's row, then Close
+- [x] chat-mcp-08: Admin, on a fresh agent with one attached server: on desktop the MCP panel beside the "+" menu fits inside the viewport and is 448px (28rem) wide; on a phone viewport the "+" menu is a bottom sheet whose MCP row opens the same panel as a page of the sheet, with the heading and the sentence, which fits inside the viewport at 375x667 and 320x568, and whose Close returns to the sheet
+- [x] chat-mcp-09: Keyboard only, on a fresh agent with one attached server: Enter on the composer's "+" opens its menu, End then Enter on the MCP row (the last one) closes the menu and moves focus onto the MCP panel, Tab reaches its Close button, and Escape closes the panel and puts focus back on "+"
+- [x] chat-mcp-10: Non-admin, with the server list mocked to one per-user (auth\*scope "user") OAuth server the agent uses (settings GET patched) and no connection or connected service: the "+" row is named exactly "MCP" with no badge (a server waiting for a sign-in is not counted); its switch shows off and enabled, named "{name} off: turn on to sign in"; turning it on the first time opens the "Sign in to {name}" explainer saying their own account will be used and "If no window opens, allow pop-ups for this site and try again.", and Continue opens a popup at the sign-in URL the connected-services start endpoint returned (mocked) while the switch shows on and locked; Escape and Close leave the panel open while that window is up; closing the window without signing in gives the switch back, off and enabled, within 30s; turning it on again opens the sign-in at once, with no explainer
+- [x] chat-mcp-11: Non-admin, with the server list and connections mocked to one per-user OAuth server they have signed in to (connected services mocked empty): the "+" row's badge reads "1", and the server's switch is on for this chat and enabled, named "{name} on for this chat", with no sign-in prompt
+- [x] chat-mcp-12: Non-admin, with the connected-services start endpoint mocked to answer 400 (no sign-in app for the organization): turning the server's switch on and pressing the explainer's Continue shows the notice "{name} isn't set up for sign-in yet. Ask your administrator." and the switch is back off and enabled
+- [x] chat-mcp-13: On a fresh agent with one attached server (served as a settings row too, since the MCP row needs the attachment to resolve without the list): when the MCP-server list request fails the panel shows the alert "Failed to load connectors" with a Retry button; once the API recovers, Retry loads the list with that server's row and the alert goes away
+- [x] chat-mcp-14: Non-admin opens the OAuth callback page with the connected-services callback mocked to answer 404 "Invalid state" (a used or unknown sign-in): the tab shows the alert "This sign-in link has expired or was already used. Close this tab and try again." and "You can close this tab.", not the raw "Invalid state" (that the tab no longer closes itself is unit-tested in app/google-oauth-callback/**tests**/page.test.tsx)
+- [x] chat-mcp-15: Non-admin, with a per-user OAuth server mocked with no sign-in yet, turns its switch on: the sign-in window (the provider page answers with a redirect to the app's /google-oauth-callback/ page, whose callback request is mocked as a finished sign-in) posts back to the chat, the app stores the connection (POST mcp-server-connections/, mocked 201, after which the connections list and connected services carry it), the window closes itself, the toast "{name} connected successfully" shows, the switch is on for this chat, enabled and named "{name} on for this chat", and the "+" row's badge reads "1"
+- [x] chat-mcp-16: Non-admin, with the server list mocked to an OAuth server whose auth\*scope is "mentor" (a shared agent account) and no connection: its switch shows the plain per-chat state, on and enabled, named "{name} on for this chat", and no sign-in explainer is offered (shared sign-ins are made in agent settings)
+- [ ] chat-mcp-17: Student (non-admin), with the server list, connections and connected services mocked to one signed-in per-user OAuth server the agent uses, and that mocked server's session-preference PUT answered as the backend would: switches it off for this chat (the save names the open conversation), closes the panel and sends a message, which goes out in that same conversation (its request carries the session id), shows as the user's message and gets the agent's reply (or its User Agreement); the "+" row then has no badge, and switching the server back on for this chat brings the badge "1" back _(pending: fixed after the stg1 run, awaiting the rerun)_

@@ -14,7 +14,7 @@ import { AccessibilityFabPage } from '../page-objects/accessibility-fab.page';
  * the nearest edge and the spot persists in localStorage
  * (`accessibility-fab-position:v2` => `{side, bottom}`).
  *
- * The tenant-metadata GET is route-mocked to force `accessibility_menu: true`
+ * The tenant metadata in localStorage is patched via an init script to force `accessibility_menu: true`
  * so the button is deterministic on any tenant. `reducedMotion: 'reduce'` makes
  * the edge snap instant for position assertions; one checkpoint (fab-05) runs
  * with normal motion to prove the overshoot easing is applied after release and

@@ -1,15 +1,15 @@
 {
   "version": 2,
-  "lastUpdated": "2026-10-28",
+  "lastUpdated": "2026-10-31",
   "summary": {
-    "totalCheckpoints": 1035,
-    "coveredCheckpoints": 988,
+    "totalCheckpoints": 1055,
+    "coveredCheckpoints": 1005,
     "deprecatedCheckpoints": 17,
     "notReproducibleCheckpoints": 17,
-    "pendingCheckpoints": 13,
+    "pendingCheckpoints": 16,
     "percent": 100,
-    "totalJourneys": 104,
-    "activeJourneys": 103
+    "totalJourneys": 105,
+    "activeJourneys": 104
   },
   "journeys": [
     {
@@ -82,7 +82,7 @@
         },
         {
           "id": "nav-06",
-          "description": "Help button opens the docs/help link in a new tab when the tenant's own metadata (observed from the app's own org-metadata GET, no DM_URL required) shows show_help !== false; the menu item is correctly absent when a tenant explicitly sets show_help: false (#uat-9)",
+          "description": "Help button opens the docs/help link in a new tab when the tenant's own metadata (read from the app's own localStorage tenant metadata, no DM_URL required) shows show_help !== false; the menu item is correctly absent when a tenant explicitly sets show_help: false (#uat-9)",
           "status": "covered"
         },
         {
@@ -477,7 +477,9 @@
       "id": "mentor-settings-tab-unique-id",
       "name": "Mentor Settings Tab — Unique ID",
       "spec": "07-mentor-settings-tab-unique-id.spec.ts",
-      "sourceFiles": ["components/modals/edit-mentor-modal/settings-tab.tsx"],
+      "sourceFiles": [
+        "components/modals/edit-mentor-modal/settings-tab.tsx"
+      ],
       "checkpoints": [
         {
           "id": "uid-01",
@@ -762,7 +764,9 @@
       "id": "canvas-embed",
       "name": "Canvas — Embed",
       "spec": "11-canvas-embed.spec.ts",
-      "sourceFiles": ["components/modals/edit-mentor-modal/tabs/embed-tab.tsx"],
+      "sourceFiles": [
+        "components/modals/edit-mentor-modal/tabs/embed-tab.tsx"
+      ],
       "checkpoints": [
         {
           "id": "ce-01",
@@ -1062,7 +1066,9 @@
       "id": "my-mentors-modal",
       "name": "My Mentors Modal",
       "spec": "16-my-mentors-modal.spec.ts",
-      "sourceFiles": ["components/modals/my-mentors-modal.tsx"],
+      "sourceFiles": [
+        "components/modals/my-mentors-modal.tsx"
+      ],
       "status": "deprecated",
       "deprecatedIn": "#1431",
       "deprecatedReason": "Feature removed; agent discovery consolidated to the Explore sidebar. Spec file is a stub.",
@@ -1765,28 +1771,43 @@
       "name": "Mentor MCP Tab",
       "spec": "25-mentor-mcp-tab.spec.ts",
       "sourceFiles": [
-        "components/modals/edit-mentor-modal/tabs/mcp-tab/index.tsx",
-        "components/modals/edit-mentor-modal/tabs/mcp-tab/connector-management-content.tsx"
+        "components/modals/edit-mentor-modal/tabs/mcp-tab/index.tsx"
       ],
       "checkpoints": [
         {
           "id": "mcp-01",
-          "description": "MCP tab is visible in Edit Mentor modal",
+          "description": "Admin opens the Edit Agent modal's MCP tab (Integrations) and finds its \"MCP\" heading, the sentence \"Outside services your agent can use in chats. Turn each one on or off for this agent.\", Add Connector, and the connector list: the Featured / Directory sub-tabs (tablist \"Connectors\", mcp-tab-featured / mcp-tab-custom) when the organization features any connector, otherwise the single \"Connectors\" list",
           "status": "covered"
         },
         {
           "id": "mcp-02",
-          "description": "MCP tab shows connector list or empty state",
+          "description": "Admin, on a fresh agent with one connector created by API for it, narrows the Directory list to its name (the \"Search by name...\" box) and finds its card (mcp-connector-{id}, a group named after the connector) with its switch off (mcp-connector-toggle-{id}, named \"{name} disabled\") and the Configure (gear, mcp-connector-configure-{id}) and Delete (bin, mcp-connector-delete-{id}) icon buttons",
           "status": "covered"
         },
         {
           "id": "mcp-03",
-          "description": "New MCP connector can be added and appears in the list",
+          "description": "Admin, on a fresh agent, adds a connector through \"Add MCP Connector\" (Connector Name, Connector Server, Connect): the toast \"{name} connector added successfully\" shows, the form closes, and the card shows the connector already on for the agent (\"{name} enabled\"), with the agent's settings listing it in mcp_servers beside the mcp tool",
           "status": "covered"
         },
         {
           "id": "mcp-04",
-          "description": "MCP connector can be deleted",
+          "description": "Admin, on a fresh agent whose one connector is off, turns the card switch on (PUT settings carrying the id and the mcp tool, toast \"{name} is on for this agent\", switch named \"{name} enabled\") and off again (toast \"{name} is off for this agent\", \"{name} disabled\"); the agent's settings then hold the connector and the mcp tool after the first, and neither after the second, since it was the last one",
+          "status": "covered"
+        },
+        {
+          "id": "mcp-05",
+          "description": "Admin, on a fresh agent, presses a connector's gear: \"Configure MCP Connector\" opens with its name and server filled in and Allow Users to Turn Off on (\"People can switch it off in their own chats.\"); switching it off shows \"It stays on in every chat. No one can switch it off.\", Update sends user_can_disable false (PUT mcp-servers/{id}/) and shows \"{name} connector updated successfully\", and the reopened form shows it off",
+          "status": "pending",
+          "note": "Fixed after the stg1 run of 2026-10-31 (PR os#616); flip to covered once the rerun is green."
+        },
+        {
+          "id": "mcp-06",
+          "description": "Admin opens \"Add MCP Connector\": Allow Users to Turn Off is on by default; choosing OAuth as the Authentication Method shows Authentication Scope set to User with \"Each person signs in with their own account from the chat.\" and the options Organization, Agent and User to pick from; Escape closes the form with nothing saved",
+          "status": "covered"
+        },
+        {
+          "id": "mcp-07",
+          "description": "Admin, on a fresh agent whose one connector is on, presses the card's bin: \"Remove Connector\" names the connector, Delete removes it (DELETE mcp-servers/{id}/, toast \"{name} connector removed successfully\"), the card is gone and the agent's settings no longer list it",
           "status": "covered"
         }
       ]
@@ -1896,7 +1917,9 @@
       "id": "user-invitations-and-default-mentor",
       "name": "User Invitations & Default Mentor",
       "spec": "27-user-invitations-and-default-mentor.spec.ts",
-      "sourceFiles": ["components/modals/settings-modal.tsx"],
+      "sourceFiles": [
+        "components/modals/settings-modal.tsx"
+      ],
       "checkpoints": [
         {
           "id": "inv-01",
@@ -2179,7 +2202,9 @@
       "id": "advanced-css-js-customization",
       "name": "Advanced CSS / JS Customization",
       "spec": "30-advanced-css-js-customization.spec.ts",
-      "sourceFiles": ["components/modals/advanced-settings-modal.tsx"],
+      "sourceFiles": [
+        "components/modals/advanced-settings-modal.tsx"
+      ],
       "checkpoints": [
         {
           "id": "css-01",
@@ -2373,7 +2398,9 @@
       "id": "ui-render-console-errors",
       "name": "UI Render Console Errors",
       "spec": "33-ui-render-console-errors.spec.ts",
-      "sourceFiles": ["app/platform/[tenantKey]/[mentorId]/page.tsx"],
+      "sourceFiles": [
+        "app/platform/[tenantKey]/[mentorId]/page.tsx"
+      ],
       "checkpoints": [
         {
           "id": "ui-err-01",
@@ -2624,7 +2651,9 @@
       "id": "copy-mentor",
       "name": "Copy Mentor",
       "spec": "36-copy-mentor.spec.ts",
-      "sourceFiles": ["components/modals/edit-mentor-modal/settings-tab.tsx"],
+      "sourceFiles": [
+        "components/modals/edit-mentor-modal/settings-tab.tsx"
+      ],
       "checkpoints": [
         {
           "id": "cpm-01",
@@ -2744,7 +2773,9 @@
       "id": "tenant-memory-system-toggle",
       "name": "Tenant Memory System Toggle",
       "spec": "38-tenant-memory-system-toggle.spec.ts",
-      "sourceFiles": ["components/modals/settings-modal.tsx"],
+      "sourceFiles": [
+        "components/modals/settings-modal.tsx"
+      ],
       "checkpoints": [
         {
           "id": "tms-01",
@@ -2975,7 +3006,9 @@
       "id": "persistent-chat-input-label",
       "name": "Persistent Chat Input Label (WCAG 3.3.2)",
       "spec": "43-persistent-chat-input-label.spec.ts",
-      "sourceFiles": ["components/chat-input-form.tsx"],
+      "sourceFiles": [
+        "components/chat-input-form.tsx"
+      ],
       "checkpoints": [
         {
           "id": "pcil-01",
@@ -4192,7 +4225,9 @@
       "id": "shareable-link-rbac-bypass",
       "name": "Shareable Link RBAC Bypass",
       "spec": "64-shareable-link-rbac-bypass.spec.ts",
-      "sourceFiles": ["components/chat-input-form.tsx"],
+      "sourceFiles": [
+        "components/chat-input-form.tsx"
+      ],
       "checkpoints": [
         {
           "id": "shl-01",
@@ -4887,7 +4922,9 @@
       "id": "chat-url-prompt-injection",
       "name": "Chat URL ?prompt= Auto-Injection",
       "spec": "chat-url-prompt-injection.spec.ts",
-      "sourceFiles": ["components/chat/index.tsx"],
+      "sourceFiles": [
+        "components/chat/index.tsx"
+      ],
       "checkpoints": [
         {
           "id": "upi-01",
@@ -5179,7 +5216,9 @@
       "id": "mentor-tools-tab",
       "name": "Mentor Tools Tab",
       "spec": "77-mentor-tools-tab.spec.ts",
-      "sourceFiles": ["components/modals/edit-mentor-modal/tabs/tools-tab.tsx"],
+      "sourceFiles": [
+        "components/modals/edit-mentor-modal/tabs/tools-tab.tsx"
+      ],
       "checkpoints": [
         {
           "id": "tools-01",
@@ -5222,7 +5261,9 @@
       "id": "mentor-api-tab",
       "name": "Mentor API Tab",
       "spec": "78-mentor-api-tab.spec.ts",
-      "sourceFiles": ["components/modals/edit-mentor-modal/tabs/api-tab.tsx"],
+      "sourceFiles": [
+        "components/modals/edit-mentor-modal/tabs/api-tab.tsx"
+      ],
       "checkpoints": [
         {
           "id": "api-01",
@@ -5487,7 +5528,9 @@
       "id": "composer-redesign",
       "name": "Composer Redesign",
       "spec": "79-composer-redesign.spec.ts",
-      "sourceFiles": ["components/chat/sdk-chat.tsx"],
+      "sourceFiles": [
+        "components/chat/sdk-chat.tsx"
+      ],
       "checkpoints": [
         {
           "id": "cr-01",
@@ -6068,7 +6111,9 @@
       "id": "camera-dialog-pointer-events",
       "name": "Camera Dialog Leaves Page Clickable",
       "spec": "87-camera-dialog-pointer-events.spec.ts",
-      "sourceFiles": ["components/chat/sdk-chat.tsx"],
+      "sourceFiles": [
+        "components/chat/sdk-chat.tsx"
+      ],
       "checkpoints": [
         {
           "id": "camera-01",
@@ -6235,7 +6280,9 @@
       "id": "users-models",
       "name": "User Models",
       "spec": "92-users-models.spec.ts",
-      "sourceFiles": ["components/modals/edit-mentor-modal/llm-tab.tsx"],
+      "sourceFiles": [
+        "components/modals/edit-mentor-modal/llm-tab.tsx"
+      ],
       "checkpoints": [
         {
           "id": "um-01",
@@ -6511,6 +6558,105 @@
           "id": "slf-03",
           "description": "Signed-in user chats with no ?token: the frame has no shareable_link_token key, token is the axd token, and the mocked reply renders",
           "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "chat-mcp-servers",
+      "name": "Chat MCP Servers",
+      "spec": "98-chat-mcp-servers.spec.ts",
+      "sourceFiles": [
+        "components/chat/sdk-chat.tsx",
+        "components/chat-input-form/use-overflow-fit.ts",
+        "app/google-oauth-callback/page.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "chat-mcp-01",
+          "description": "Admin, on a fresh agent with one server created and attached by API, opens the composer's \"+\" menu and sees the MCP row (data-testid chat-mcp-button, accessible name exactly \"MCP 1 on\" with its badge, last after Memory, no trailing chevron like Memory); choosing it opens the MCP panel beside the menu (heading \"MCP\", the sentence \"Switches here apply to this chat only, from your next message.\", a Close icon button), and Close closes the panel and hands focus back to \"+\"",
+          "status": "covered"
+        },
+        {
+          "id": "chat-mcp-02",
+          "description": "Admin, on a fresh agent that uses no server, reloads behind the agent-settings and server-list answers, opens the \"+\" menu and finds no MCP row among its items (`expectRowAbsent`: the row is offered only while the agent has a connector on); after a server is created and attached by API and the app reloads, the row is there, last, named \"MCP 1 on\"",
+          "status": "covered"
+        },
+        {
+          "id": "chat-mcp-03",
+          "description": "Admin, on a fresh agent with two servers created by API and only one attached through the agent settings API (mcp_servers plus the mcp tool, as the MCP tab's switch sends): after a reload the panel lists exactly the attached server (mcp-server-row-{id}, its name, its switch for this chat on) and the unattached one is absent",
+          "status": "covered"
+        },
+        {
+          "id": "chat-mcp-04",
+          "description": "The \"+\" menu's MCP row carries a count badge (composer-count-badge) of the servers on for this chat: \"1\" with one attached server on, gone (the row itself stays) once the admin switches it off for this chat from the panel, \"1\" again once it is switched back on",
+          "status": "pending",
+          "note": "Fixed after the stg1 run of 2026-10-31 (PR os#616); flip to covered once the rerun is green."
+        },
+        {
+          "id": "chat-mcp-05",
+          "description": "Admin switches an attached server off and back on for this chat from the panel; each switch saves the user's session preference (PUT mcp-servers/{id}/session-preference/ naming the open conversation) and its state survives a page reload and reopening the panel; switched off again, a new chat (New Chat) counts the server as on: its \"+\" row shows the badge \"1\" and the panel lists it",
+          "status": "covered"
+        },
+        {
+          "id": "chat-mcp-06",
+          "description": "A server created with user_can_disable false and attached to a fresh agent shows a lock (mcp-server-required-{id}) beside a disabled switch that stays checked, named \"{name} is required by your organization\"",
+          "status": "covered"
+        },
+        {
+          "id": "chat-mcp-07",
+          "description": "Non-admin, with no grant beyond chatting and the agent's use of one server mocked (server list and settings GET patched, with the attachments flagged readable, since a non-admin can neither create nor attach one), sees the MCP row in the \"+\" menu and opens the panel: the sentence, Close and that server's row, then Close",
+          "status": "covered"
+        },
+        {
+          "id": "chat-mcp-08",
+          "description": "Admin, on a fresh agent with one attached server: on desktop the MCP panel beside the \"+\" menu fits inside the viewport and is 448px (28rem) wide; on a phone viewport the \"+\" menu is a bottom sheet whose MCP row opens the same panel as a page of the sheet, with the heading and the sentence, which fits inside the viewport at 375x667 and 320x568, and whose Close returns to the sheet",
+          "status": "covered"
+        },
+        {
+          "id": "chat-mcp-09",
+          "description": "Keyboard only, on a fresh agent with one attached server: Enter on the composer's \"+\" opens its menu, End then Enter on the MCP row (the last one) closes the menu and moves focus onto the MCP panel, Tab reaches its Close button, and Escape closes the panel and puts focus back on \"+\"",
+          "status": "covered"
+        },
+        {
+          "id": "chat-mcp-10",
+          "description": "Non-admin, with the server list mocked to one per-user (auth_scope \"user\") OAuth server the agent uses (settings GET patched) and no connection or connected service: the \"+\" row is named exactly \"MCP\" with no badge (a server waiting for a sign-in is not counted); its switch shows off and enabled, named \"{name} off: turn on to sign in\"; turning it on the first time opens the \"Sign in to {name}\" explainer saying their own account will be used and \"If no window opens, allow pop-ups for this site and try again.\", and Continue opens a popup at the sign-in URL the connected-services start endpoint returned (mocked) while the switch shows on and locked; Escape and Close leave the panel open while that window is up; closing the window without signing in gives the switch back, off and enabled, within 30s; turning it on again opens the sign-in at once, with no explainer",
+          "status": "covered"
+        },
+        {
+          "id": "chat-mcp-11",
+          "description": "Non-admin, with the server list and connections mocked to one per-user OAuth server they have signed in to (connected services mocked empty): the \"+\" row's badge reads \"1\", and the server's switch is on for this chat and enabled, named \"{name} on for this chat\", with no sign-in prompt",
+          "status": "covered"
+        },
+        {
+          "id": "chat-mcp-12",
+          "description": "Non-admin, with the connected-services start endpoint mocked to answer 400 (no sign-in app for the organization): turning the server's switch on and pressing the explainer's Continue shows the notice \"{name} isn't set up for sign-in yet. Ask your administrator.\" and the switch is back off and enabled",
+          "status": "covered"
+        },
+        {
+          "id": "chat-mcp-13",
+          "description": "On a fresh agent with one attached server (served as a settings row too, since the MCP row needs the attachment to resolve without the list): when the MCP-server list request fails the panel shows the alert \"Failed to load connectors\" with a Retry button; once the API recovers, Retry loads the list with that server's row and the alert goes away",
+          "status": "covered"
+        },
+        {
+          "id": "chat-mcp-14",
+          "description": "Non-admin opens the OAuth callback page with the connected-services callback mocked to answer 404 \"Invalid state\" (a used or unknown sign-in): the tab shows the alert \"This sign-in link has expired or was already used. Close this tab and try again.\" and \"You can close this tab.\", not the raw \"Invalid state\" (that the tab no longer closes itself is unit-tested in app/google-oauth-callback/__tests__/page.test.tsx)",
+          "status": "covered"
+        },
+        {
+          "id": "chat-mcp-15",
+          "description": "Non-admin, with a per-user OAuth server mocked with no sign-in yet, turns its switch on: the sign-in window (the provider page answers with a redirect to the app's /google-oauth-callback/ page, whose callback request is mocked as a finished sign-in) posts back to the chat, the app stores the connection (POST mcp-server-connections/, mocked 201, after which the connections list and connected services carry it), the window closes itself, the toast \"{name} connected successfully\" shows, the switch is on for this chat, enabled and named \"{name} on for this chat\", and the \"+\" row's badge reads \"1\"",
+          "status": "covered"
+        },
+        {
+          "id": "chat-mcp-16",
+          "description": "Non-admin, with the server list mocked to an OAuth server whose auth_scope is \"mentor\" (a shared agent account) and no connection: its switch shows the plain per-chat state, on and enabled, named \"{name} on for this chat\", and no sign-in explainer is offered (shared sign-ins are made in agent settings)",
+          "status": "covered"
+        },
+        {
+          "id": "chat-mcp-17",
+          "description": "Student (non-admin), with the server list, connections and connected services mocked to one signed-in per-user OAuth server the agent uses, and that mocked server's session-preference PUT answered as the backend would: switches it off for this chat (the save names the open conversation), closes the panel and sends a message, which goes out in that same conversation (its request carries the session id), shows as the user's message and gets the agent's reply (or its User Agreement); the \"+\" row then has no badge, and switching the server back on for this chat brings the badge \"1\" back",
+          "status": "pending",
+          "note": "Fixed after the stg1 run of 2026-10-31 (PR os#616); flip to covered once the rerun is green."
         }
       ]
     }
