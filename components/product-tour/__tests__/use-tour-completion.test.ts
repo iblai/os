@@ -2,18 +2,18 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 
 const state = vi.hoisted(() => ({
-  query: { data: undefined as unknown, isLoading: false, isError: false },
-  queryArgs: [] as unknown[],
+  stored: undefined as unknown,
+  setStored: vi.fn(),
   update: vi.fn(),
   appName: 'os',
 }));
 
 vi.mock('@iblai/iblai-js/data-layer', () => ({
-  useGetUserMetadataQuery: (...args: unknown[]) => {
-    state.queryArgs = args;
-    return state.query;
-  },
   useUpdateUserMetadataMutation: () => [state.update],
+}));
+
+vi.mock('@/hooks/use-stored-user-metadata', () => ({
+  useStoredUserMetadata: () => [state.stored, state.setStored],
 }));
 
 vi.mock('@/lib/config', () => ({
@@ -91,8 +91,8 @@ describe('readTourRecord', () => {
 
 describe('useTourCompletion', () => {
   beforeEach(() => {
-    state.query = { data: undefined, isLoading: false, isError: false };
-    state.queryArgs = [];
+    state.stored = undefined;
+    state.setStored.mockReset();
     state.update
       .mockReset()
       .mockReturnValue({ unwrap: () => Promise.resolve({}) });
@@ -102,61 +102,26 @@ describe('useTourCompletion', () => {
     vi.restoreAllMocks();
   });
 
-  it('reads the metadata of the given user', () => {
-    renderHook(() => useTourCompletion('alice'));
-    expect(state.queryArgs).toEqual([
-      { params: { username: 'alice' } },
-      { skip: false },
-    ]);
-  });
-
-  it('skips the read without a username and has nothing to wait for', () => {
-    state.query = { data: undefined, isLoading: true, isError: true };
+  it('reads synchronously from storage: never loading or erroring', () => {
     const { result } = renderHook(() => useTourCompletion(null));
-    expect(state.queryArgs).toEqual([
-      { params: { username: '' } },
-      { skip: true },
-    ]);
     expect(result.current.isLoading).toBe(false);
     expect(result.current.isError).toBe(false);
     expect(result.current.completed).toBe(false);
   });
 
-  it('is loading until the metadata arrives', () => {
-    state.query = { data: undefined, isLoading: true, isError: false };
-    const { result } = renderHook(() => useTourCompletion('alice'));
-    expect(result.current.isLoading).toBe(true);
-    expect(result.current.completed).toBe(false);
-  });
-
-  it('reports metadata that could not be read', () => {
-    state.query = { data: undefined, isLoading: false, isError: true };
-    const { result } = renderHook(() => useTourCompletion('alice'));
-    expect(result.current.isError).toBe(true);
-    expect(result.current.completed).toBe(false);
-  });
-
   it('is incomplete when the metadata has no record', () => {
-    state.query = {
-      data: metadata({ language: 'en' }),
-      isLoading: false,
-      isError: false,
-    };
+    state.stored = metadata({ language: 'en' });
     const { result } = renderHook(() => useTourCompletion('alice'));
     expect(result.current.completed).toBe(false);
     expect(result.current.outcome).toBeNull();
   });
 
   it('is incomplete when public_metadata is missing or null', () => {
-    state.query = { data: metadata(null), isLoading: false, isError: false };
+    state.stored = metadata(null);
     expect(
       renderHook(() => useTourCompletion('alice')).result.current.completed,
     ).toBe(false);
-    state.query = {
-      data: { username: 'alice' },
-      isLoading: false,
-      isError: false,
-    };
+    state.stored = { username: 'alice' };
     expect(
       renderHook(() => useTourCompletion('alice')).result.current.completed,
     ).toBe(false);
@@ -165,11 +130,7 @@ describe('useTourCompletion', () => {
   it.each(['finished', 'skipped'])(
     'is complete when the stored record says %s',
     (status) => {
-      state.query = {
-        data: metadata({ [KEY]: record(status) }),
-        isLoading: false,
-        isError: false,
-      };
+      state.stored = metadata({ [KEY]: record(status) });
       const { result } = renderHook(() => useTourCompletion('alice'));
       expect(result.current.completed).toBe(true);
       expect(result.current.outcome).toBe(status);
@@ -177,44 +138,30 @@ describe('useTourCompletion', () => {
   );
 
   it("ignores another app's tour record", () => {
-    state.query = {
-      data: metadata({ 'skills-product-tour': record('finished') }),
-      isLoading: false,
-      isError: false,
-    };
+    state.stored = metadata({ 'skills-product-tour': record('finished') });
     expect(
       renderHook(() => useTourCompletion('alice')).result.current.completed,
     ).toBe(false);
   });
 
   it('shows a reworked tour again: an older version does not count', () => {
-    state.query = {
-      data: metadata({ [KEY]: record('finished', PRODUCT_TOUR_VERSION - 1) }),
-      isLoading: false,
-      isError: false,
-    };
+    state.stored = metadata({
+      [KEY]: record('finished', PRODUCT_TOUR_VERSION - 1),
+    });
     expect(
       renderHook(() => useTourCompletion('alice')).result.current.completed,
     ).toBe(false);
   });
 
   it('ignores values this code did not write', () => {
-    state.query = {
-      data: metadata({ [KEY]: 'finished' }),
-      isLoading: false,
-      isError: false,
-    };
+    state.stored = metadata({ [KEY]: 'finished' });
     expect(
       renderHook(() => useTourCompletion('alice')).result.current.completed,
     ).toBe(false);
   });
 
   it('saves the outcome under the key and keeps the rest of public_metadata', async () => {
-    state.query = {
-      data: metadata({ language: 'en', social_links: [] }),
-      isLoading: false,
-      isError: false,
-    };
+    state.stored = metadata({ language: 'en', social_links: [] });
     const { result } = renderHook(() => useTourCompletion('alice'));
 
     await act(() => result.current.markCompleted('finished'));
@@ -239,7 +186,7 @@ describe('useTourCompletion', () => {
   });
 
   it('saves a skip the same way, even when public_metadata was null', async () => {
-    state.query = { data: metadata(null), isLoading: false, isError: false };
+    state.stored = metadata(null);
     const { result } = renderHook(() => useTourCompletion('alice'));
 
     await act(() => result.current.markCompleted('skipped'));
@@ -262,7 +209,7 @@ describe('useTourCompletion', () => {
     state.update.mockReturnValue({
       unwrap: () => Promise.reject(new Error('boom')),
     });
-    state.query = { data: metadata({}), isLoading: false, isError: false };
+    state.stored = metadata({});
     const { result } = renderHook(() => useTourCompletion('alice'));
 
     await act(() => result.current.markCompleted('finished'));

@@ -1743,14 +1743,13 @@ workers, and other PRs' CI jobs, hit the same live tenant concurrently), and
 `show_help: false` PERMANENTLY on the live tenant, and the next run's
 `beforeAll` captured that `false` as "original" and restored it forever —
 silently breaking an unrelated team's PR (os-222). No in-suite cleanup can
-fix a cross-job race; only not writing does. Every checkpoint now OBSERVES
-the org-metadata GET the app itself already fires on every authenticated
-load (`providers/index.tsx`'s `Providers` calls the SDK's
-`useTenantMetadata({ org: tenantKeyParams })`, which resolves to `GET
-/api/core/orgs/<org>/metadata/`) via
-`navigateAndObserveTenantMetadata` (`e2e/utils/tenant-metadata-observed.ts`),
-computes the SAME expected value the app/SDK would compute from that exact
-reading, and asserts the live UI matches it — there is no shared mutable
+fix a cross-job race; only not writing does. Every checkpoint now READS the
+SAME tenant metadata the app itself uses — the persisted tenants list
+(`/api/core/users/platforms/` embeds each tenant's metadata), joined to the
+active `current_tenant` by key — via `navigateAndObserveTenantMetadata`
+(`e2e/utils/tenant-metadata-observed.ts`), computes the SAME expected value
+the app/SDK would compute from that exact reading, and asserts the live UI
+matches it — there is no shared mutable
 state left to race, and no DM API call of the journey's own. The
 tenant-override PRECEDENCE logic previously proven by mutating the live
 tenant (`documentation_url` with/without a scheme, `show_help` gating in

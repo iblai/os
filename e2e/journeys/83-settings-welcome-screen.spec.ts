@@ -8,15 +8,16 @@ import {
 } from '../utils/auth';
 import type { EditMentorPage } from '../page-objects/edit-mentor/edit-mentor.page';
 import { waitForPageReady } from '../utils/resilient';
+import {
+  readStoredUserFullName,
+  forceStoredUserFullName,
+} from '../utils/user-metadata-observed';
 
 // The Welcome screen sub-tab (#2586) saves with the agent
 // (iblai/iblai-platform#2626). wss-01..06 run on the tenant's default agent and
 // never write to it (wss-06 aborts its save); wss-07..09 save on a throw-away
 // agent and check the chat's new-chat heading.
 
-// Newer SDK releases read the profile through the core proxy; accept both.
-const USER_METADATA =
-  /\/api\/(ibl\/users\/manage\/metadata|core\/users\/metadata\/proxy)\//;
 const GREETING = '^Good (morning|afternoon|evening)';
 
 /**
@@ -41,27 +42,6 @@ function greetingFor(fullName: string): RegExp {
   return new RegExp(`${GREETING}${name ? `, ${name}` : ''}$`);
 }
 
-/** Serves the signed-in user's profile with `name` as their full name. */
-async function withFullName(page: Page, name: string): Promise<void> {
-  await page.route(USER_METADATA, async (route) => {
-    if (route.request().method() !== 'GET') return route.continue();
-    const response = await route.fetch();
-    const body = (await response.json()) as Record<string, unknown>;
-    const publicMetadata = body.public_metadata as
-      | Record<string, unknown>
-      | undefined;
-    await route.fulfill({
-      response,
-      json: {
-        ...body,
-        name,
-        ...(publicMetadata
-          ? { public_metadata: { ...publicMetadata, name } }
-          : {}),
-      },
-    });
-  });
-}
 test.describe('Journey 83: Settings Welcome Screen Sub-Tab', () => {
   test.beforeEach(async ({ page, editMentorPage }) => {
     await navigateToMentorApp(page);
@@ -334,14 +314,10 @@ test.describe.serial('Journey 83: Personal greeting in the chat', () => {
     );
     await editMentorPage.close();
 
-    const profile = page.waitForResponse(
-      (res) => USER_METADATA.test(res.url()) && res.ok(),
-      { timeout: 30_000 },
-    );
     await navigateToMentorApp(page, mentorUrl);
-    const { name } = (await (await profile).json()) as { name?: string };
+    const name = await readStoredUserFullName(page);
     await expect(page.getByTestId('welcome-heading')).toHaveText(
-      greetingFor(name ?? ''),
+      greetingFor(name),
       { timeout: 30_000 },
     );
 
@@ -359,19 +335,17 @@ test.describe.serial('Journey 83: Personal greeting in the chat', () => {
     page,
   }) => {
     test.skip(!mentorUrl, 'wss-07 did not create the agent');
-    const profile = page.waitForResponse(
-      (res) => USER_METADATA.test(res.url()) && res.ok(),
-      { timeout: 30_000 },
-    );
     // The embed has no agent dropdown, which navigateToMentorApp waits for.
+    // This is a plain same-origin navigation (not the cross-origin embed
+    // harness), so the top-level page's own storage IS what the embed reads.
     await page.goto(
       `${mentorUrl}?embed=true&extra-body-classes=iframed-externally`,
       { waitUntil: 'domcontentloaded' },
     );
-    const { name } = (await (await profile).json()) as { name?: string };
+    const name = await readStoredUserFullName(page);
     await expect(
       page.getByTestId('embed-empty-state').getByTestId('welcome-heading'),
-    ).toHaveText(greetingFor(name ?? ''), { timeout: 30_000 });
+    ).toHaveText(greetingFor(name), { timeout: 30_000 });
   });
 
   for (const [fullName, shown] of [
@@ -383,14 +357,18 @@ test.describe.serial('Journey 83: Personal greeting in the chat', () => {
       page,
     }) => {
       test.skip(!mentorUrl, 'wss-07 did not create the agent');
-      await withFullName(page, fullName);
+      // Establish the mentor origin first (storageState's localStorage seed
+      // is only injected once a page actually loads it), then overwrite the
+      // name and reload so `WelcomeHeading` mounts fresh against it.
       await navigateToMentorApp(page, mentorUrl);
+      await forceStoredUserFullName(page, fullName);
+      await page.reload();
+      await waitForPageReady(page);
       const heading = page.getByTestId('welcome-heading');
       await expect(heading).toHaveText(greetingFor(fullName), {
         timeout: 30_000,
       });
       await expect(heading).not.toContainText('#');
-      await page.unroute(USER_METADATA);
     });
   }
 });
@@ -517,14 +495,10 @@ test.describe
     page.on('request', (req) => {
       if (GUIDED_PROMPTS.test(req.url())) guidedRequests.push(req.url());
     });
-    const profile = page.waitForResponse(
-      (res) => USER_METADATA.test(res.url()) && res.ok(),
-      { timeout: 30_000 },
-    );
     await navigateToMentorApp(page, mentorUrl);
-    const { name } = (await (await profile).json()) as { name?: string };
+    const name = await readStoredUserFullName(page);
     await expect(page.getByTestId('welcome-heading')).toHaveText(
-      greetingFor(name ?? ''),
+      greetingFor(name),
       { timeout: 30_000 },
     );
     await waitForPageReady(page);
@@ -536,14 +510,10 @@ test.describe
     nonadminPage,
   }) => {
     test.skip(!mentorUrl, 'wss-11 did not create the agent');
-    const profile = nonadminPage.waitForResponse(
-      (res) => USER_METADATA.test(res.url()) && res.ok(),
-      { timeout: 30_000 },
-    );
     await navigateToMentorApp(nonadminPage, mentorUrl);
-    const { name } = (await (await profile).json()) as { name?: string };
+    const name = await readStoredUserFullName(nonadminPage);
     await expect(nonadminPage.getByTestId('welcome-heading')).toHaveText(
-      greetingFor(name ?? ''),
+      greetingFor(name),
       { timeout: 30_000 },
     );
     await waitForPageReady(nonadminPage);
