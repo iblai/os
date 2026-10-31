@@ -47,8 +47,6 @@ import {
   selectStreamingToolCalls,
   selectCurrentStreamingMessage,
   useMentorTools,
-  useTenantContext,
-  useTenantMetadata as useTenantMetadataHook,
   CHAT_AREA_SIZE,
   FileReference,
   use401TokenRefresh,
@@ -66,6 +64,7 @@ import {
 } from '@/lib/utils';
 import { toast } from 'sonner';
 import { config } from '@/lib/config';
+import { useTenantObjectMetadata } from '@/hooks/use-tenant-object-metadata';
 import { AdvancedChatHeader } from '@/components/advanced-chat/advanced-chat-header';
 import { advancedTabs } from '@iblai/iblai-js/web-utils';
 import { GuidedSuggestedPrompts } from '../guided-suggested-prompts';
@@ -279,19 +278,16 @@ export function Chat({
   const axdToken = useAxdToken();
   const { userTenants } = useUserTenants();
   const { getMentorId } = useNavigate();
-  const { metadata } = useTenantContext();
   const isAccessingPublicRoute = useAccessingPublicRoute();
   const { mentorId: mentorIdParam, tenantKey } =
     useParams<TenantKeyMentorIdParams>();
 
-  // Skip tenant metadata API call in Tauri offline mode
-  // isTauriOfflineMode() already checks isOfflineServerOrigin() internally
-  const isTauriOffline = isTauriOfflineMode();
-  const { platformName: tenantPlatformName, metadata: tenantMetadata } =
-    useTenantMetadataHook({
-      org: tenantKey,
-      skip: isTauriOffline,
-    });
+  // Tenant metadata rides the tenants list the app already has; no fetch.
+  const metadata = useTenantObjectMetadata(tenantKey);
+  const tenantMetadata = metadata;
+  const tenantPlatformName = userTenants?.find(
+    (candidate) => candidate.key === tenantKey,
+  )?.platform_name;
 
   // Determine chat area max width based on metadata (in pixels)
   const chatAreaMaxWidth = (() => {

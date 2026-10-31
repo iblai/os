@@ -3,11 +3,8 @@
 import React from 'react';
 
 import { useMediaQuery } from 'react-responsive';
-import {
-  chatActions,
-  selectSessionId,
-  useTenantMetadata,
-} from '@iblai/iblai-js/web-utils';
+import { chatActions, selectSessionId } from '@iblai/iblai-js/web-utils';
+import { useTenantObjectMetadata } from '@/hooks/use-tenant-object-metadata';
 
 import ErrorBoundary from '@/components/error-boundary';
 import { DocumentSidebar } from '@iblai/iblai-js/web-containers';
@@ -65,11 +62,7 @@ export default function MentorPageContent() {
   const searchParams = useSearchParams();
   const { mentorId, tenantKey } = useParams<TenantKeyMentorIdParams>();
 
-  // Skip tenant metadata API call in offline mode
-  const { metadata } = useTenantMetadata({
-    org: tenantKey,
-    skip: isTauriOffline,
-  });
+  const metadata = useTenantObjectMetadata(tenantKey);
 
   // Skip mentor public settings API call in offline mode
   const { data: mentorPublicSettings } = useGetMentorPublicSettingsQuery(

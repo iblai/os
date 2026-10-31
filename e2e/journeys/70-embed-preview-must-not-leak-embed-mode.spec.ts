@@ -72,9 +72,9 @@ const EMBED_CONTEXT_KEY = 'ibl:embed-context';
  * tenant that explicitly sets `show_help: false` never renders it, even in
  * the correct, un-leaked full app. Hardcoding `true` here made this journey
  * depend on ambient tenant configuration it has no business assuming (see
- * #uat-9). `expectedShowHelp` is derived from the SAME tenant-metadata
- * response the app itself fetches on load (`navigateAndObserveTenantMetadata`
- * in `beforeEach`), so this asserts the CORRECT visibility for whatever the
+ * #uat-9). `expectedShowHelp` is derived from the SAME tenant metadata the
+ * app itself uses — the persisted tenants list read in `beforeEach` via
+ * `navigateAndObserveTenantMetadata` — so this asserts the CORRECT visibility for whatever the
  * tenant under test is actually configured to do — still catching a leak
  * for any tenant where the control is expected to be visible, without
  * requiring one specific config to be seeded.

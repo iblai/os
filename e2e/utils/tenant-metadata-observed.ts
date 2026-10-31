@@ -1,22 +1,112 @@
-import type { Page } from '@playwright/test';
+import type { JSHandle, Page } from '@playwright/test';
 import { navigateToMentorApp } from './auth';
+
+/**
+ * Storage keys the app persists the resolved tenant under (mirrors
+ * `LOCAL_STORAGE_KEYS`, `lib/constants.ts`). Tenant metadata no longer arrives
+ * from a dedicated `GET /api/core/orgs/<org>/metadata/` call — it rides the
+ * platforms list (`/api/ibl/users/manage/platform/`), which the tenant
+ * provider persists whole to `tenants`, while `current_tenant` holds only the
+ * active tenant's identity (`{ key, is_admin, org }`, no metadata). The app
+ * joins them by key (`useTenantObjectMetadata`); this helper does the same.
+ */
+const CURRENT_TENANT_KEY = 'current_tenant';
+const USER_TENANTS_KEY = 'tenants';
 
 export type ObservedTenantMetadata = Record<string, unknown>;
 
+/** Both endpoints that can serve the platforms list — see the module doc above. */
+const USER_PLATFORMS_PATH_RE =
+  /\/api\/(?:core\/users\/platforms|ibl\/users\/manage\/platform)\/?$/;
+
 /**
- * Navigates into the mentor app via `navigateToMentorApp` and returns the
- * metadata of the tenant in the URL (`/platform/<tenantKey>/…`), read from
- * the SAME localStorage copy the app reads.
+ * Forces the given metadata keys onto every tenant in the platforms list
+ * response, on whichever of the two endpoints serves it. Call BEFORE the
+ * navigation that triggers the fetch.
  *
- * The SDK's `useTenantMetadata({ org })` (`@iblai/web-utils`) no longer
- * calls `GET /api/core/orgs/<org>/metadata/`; it resolves `metadata` from
- * localStorage `tenants` (the entry whose `key === org`), falling back to
- * `current_tenant` when its `key === org`. Both are written at login, so no
- * DM API call, DM_URL or dm_token is needed — read-only, works on any
- * environment.
+ * Use this instead of reading-then-branching-on observed metadata (e.g. via
+ * `navigateAndObserveTenantMetadata`) whenever the assertion target is a
+ * genuinely cross-origin surface — an embed iframe hosted on a different
+ * origin than the top-level page. That iframe resolves its OWN copy of
+ * `tenants`/`current_tenant` into its OWN (cross-origin-partitioned) storage
+ * by fetching the platforms list itself; the top-level page's storage is a
+ * different partition and is not a reliable proxy for what the iframe will
+ * render (see journey 80's embed-profile-menu Help checkpoint, which flaked
+ * for exactly this reason — issue #2586 follow-up). `page.route` intercepts
+ * requests from every frame of the page, so registering this on the
+ * top-level `page` before navigating into an embed harness also covers the
+ * request the embed iframe makes.
+ */
+export async function forceTenantMetadata(
+  page: Page,
+  overrides: Record<string, unknown>,
+): Promise<void> {
+  const withOverrides = (tenant: { metadata?: Record<string, unknown> }) => ({
+    ...tenant,
+    metadata: { ...(tenant.metadata ?? {}), ...overrides },
+  });
+  await page.route(
+    (url) => USER_PLATFORMS_PATH_RE.test(url.pathname),
+    async (route) => {
+      if (route.request().method() !== 'GET') return route.continue();
+      const response = await route.fetch();
+      let body: unknown;
+      try {
+        body = await response.json();
+      } catch {
+        // Non-JSON body (proxy error page, empty 401): pass the real
+        // response through rather than stall the request unanswered.
+        return route.fulfill({ response });
+      }
+      let patched: unknown = body;
+      if (Array.isArray(body)) {
+        patched = body.map(withOverrides);
+      } else if (
+        body &&
+        Array.isArray((body as { results?: unknown[] }).results)
+      ) {
+        const envelope = body as { results: unknown[] };
+        patched = {
+          ...envelope,
+          results: envelope.results.map((t) =>
+            withOverrides(t as { metadata?: Record<string, unknown> }),
+          ),
+        };
+      }
+      await route.fulfill({ response, json: patched });
+    },
+  );
+}
+
+/**
+ * Navigates into the mentor app via `navigateToMentorApp`, then reads the
+ * active tenant's `metadata` from the SAME place the app itself reads it: the
+ * persisted `tenants` list, matched to `current_tenant` by key
+ * (`useTenantObjectMetadata`). This needs no DM API call, no DM_URL, no
+ * dm_token, and no per-environment setup — it is strictly read-only and works
+ * on any tenant, on any environment, as-is.
  *
- * Never skips: if neither entry carries `metadata`, this THROWS — the app
- * itself depends on it to resolve the tenant.
+ * ── Why storage, not a network response ──────────────────────────────────
+ * The app used to fetch org-metadata on every authenticated load; it no
+ * longer does. Metadata now travels inside each tenant object in the
+ * platforms list, and the tenant provider persists that list to `tenants`
+ * and the active identity to `current_tenant`. Reading them is the current
+ * analogue of "observe the app's own tenant-metadata traffic".
+ *
+ * ── Session-first, seed fallback ─────────────────────────────────────────
+ * `current_tenant` and `tenants` are per-tab auth keys
+ * (`lib/auth-storage.ts`): under per-tab auth the tab's `sessionStorage` is
+ * the source of truth and `localStorage` holds the most-recent-login seed;
+ * with the flag off it is plain `localStorage`. The in-page read below checks
+ * `sessionStorage` first, then `localStorage`, matching `getAuthItem`.
+ *
+ * ── Never skips ──────────────────────────────────────────────────────────
+ * If the tenant never resolves (no `current_tenant` whose key is present in
+ * the `tenants` list within the timeout), this THROWS. A tenant that fails to
+ * resolve is a real failure — the app depends on the same resolution — never a
+ * "this environment isn't configured for the test" signal. A tenant that
+ * resolves without metadata is valid and yields `{}` (the app treats absent
+ * flags as their defaults).
  */
 export async function navigateAndObserveTenantMetadata(
   page: Page,
@@ -24,39 +114,59 @@ export async function navigateAndObserveTenantMetadata(
 ): Promise<ObservedTenantMetadata> {
   await navigateToMentorApp(page, url);
 
-  const result = await page.evaluate(() => {
-    const parse = (raw: string | null): unknown => {
-      try {
-        return raw ? JSON.parse(raw) : null;
-      } catch {
-        return null;
-      }
-    };
-    const org = /\/platform\/([^/]+)/.exec(window.location.pathname)?.[1];
-    const tenants = parse(window.localStorage.getItem('tenants'));
-    const current = parse(window.localStorage.getItem('current_tenant')) as {
-      key?: string;
-      metadata?: Record<string, unknown>;
-    } | null;
-    const fromList = Array.isArray(tenants)
-      ? (tenants.find((t) => t && t.key === org) as
-          | { metadata?: Record<string, unknown> }
-          | undefined)
-      : undefined;
-    const fromCurrent =
-      current && (!org || current.key === org) ? current : undefined;
-    return {
-      org,
-      metadata: fromList?.metadata ?? fromCurrent?.metadata ?? null,
-    };
-  });
+  let handle: JSHandle<ObservedTenantMetadata> | undefined;
+  try {
+    handle = await page.waitForFunction(
+      ({ currentKey, listKey }) => {
+        const read = (key: string) =>
+          window.sessionStorage.getItem(key) ??
+          window.localStorage.getItem(key);
+        const parse = (raw: string | null): unknown => {
+          if (!raw) return null;
+          try {
+            return JSON.parse(raw);
+          } catch {
+            return null;
+          }
+        };
 
-  if (!result.metadata) {
-    throw new Error(
-      `No tenant metadata in localStorage 'tenants' / 'current_tenant' for ` +
-        `tenant "${result.org}". This must FAIL, not skip — the app reads ` +
-        'the same copy via `useTenantMetadata`.',
+        const current = parse(read(currentKey)) as { key?: string } | null;
+        const tenants = parse(read(listKey));
+        if (!current?.key || !Array.isArray(tenants)) {
+          return null;
+        }
+
+        const tenant = tenants.find(
+          (candidate: unknown) =>
+            !!candidate &&
+            typeof candidate === 'object' &&
+            (candidate as { key?: string }).key === current.key,
+        ) as { metadata?: Record<string, unknown> } | undefined;
+        if (!tenant) {
+          return null;
+        }
+
+        return tenant.metadata && typeof tenant.metadata === 'object'
+          ? tenant.metadata
+          : {};
+      },
+      { currentKey: CURRENT_TENANT_KEY, listKey: USER_TENANTS_KEY },
+      { timeout: 30_000 },
     );
+    // Read inside the try: a navigation between the predicate resolving and
+    // this read destroys the execution context, and that raw error should be
+    // wrapped in the explanatory failure below, not surfaced bare.
+    return (await handle.jsonValue()) as ObservedTenantMetadata;
+  } catch (error) {
+    throw new Error(
+      'Could not read the resolved tenant from storage ' +
+        `(\`${CURRENT_TENANT_KEY}\` joined to \`${USER_TENANTS_KEY}\`) after ` +
+        'navigating into the app. Tenant metadata now rides the platforms ' +
+        'list and is persisted by the tenant provider on load; this must ' +
+        'FAIL, not skip — it is not gated by DM_URL or any per-environment ' +
+        `setup. Underlying error: ${error}`,
+    );
+  } finally {
+    await handle?.dispose();
   }
-  return result.metadata;
 }

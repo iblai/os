@@ -322,7 +322,11 @@ test.describe('Journey 78: Mentor API Tab', () => {
     const { api } = editMentorPage;
 
     await api.openCreateDialog();
-    // An empty name can't be submitted: Submit starts disabled.
+    // A pristine form has an empty required name, so Submit is disabled from
+    // the start — there is nothing valid to submit and nothing can be created.
+    // (It used to start enabled because the form only computed `canSubmit`
+    // after the first onChange; it now computes it on mount.)
+    await expect(api.createDialog).toBeVisible();
     await expect(api.submitButton()).toBeDisabled();
 
     // Invalid: spaces and "!" fail the `^[a-zA-Z0-9_-]+$` regex.

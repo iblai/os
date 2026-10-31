@@ -27,12 +27,12 @@ vi.mock('@iblai/iblai-js/web-utils', () => ({
     return mockLatestTodos;
   },
   selectShowingSharedChat: () => mockShowingSharedChat,
-  useTenantMetadata: () => ({
-    ...tenantMetadataReturnValue,
-    platformName: 'Test Platform',
-    isLoading: false,
-    isError: false,
-  }),
+}));
+
+// Tenant metadata now rides the tenants list via this local hook, returning the
+// raw metadata object directly.
+vi.mock('@/hooks/use-tenant-object-metadata', () => ({
+  useTenantObjectMetadata: () => tenantMetadataReturnValue.metadata,
 }));
 
 // Chat-privacy signal driving the share-button gate. Defaults to a normal

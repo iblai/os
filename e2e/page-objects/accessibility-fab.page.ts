@@ -3,6 +3,21 @@ import { expect } from '@playwright/test';
 
 const POSITION_STORAGE_KEY = 'accessibility-fab-position:v2';
 
+/**
+ * The platforms list the app fetches on bootstrap — tenant metadata now rides
+ * each tenant object here instead of a per-org `/metadata/` call. Two
+ * endpoints serve it: the SDK `TenantProvider` reads
+ * `/api/core/users/platforms/` (`CoreService.coreUsersPlatformsList`), which
+ * is what populates the persisted tenants list the app reads metadata from;
+ * mentorai's own slice reads `/api/ibl/users/manage/platform/`
+ * (`features/tenants/constants.ts`). Both return a bare tenant array, so the
+ * injection below handles whichever fires. Matched on `pathname` without a
+ * leading anchor: the service base URL can prepend a segment, so only the
+ * trailing shape is guaranteed.
+ */
+const USER_PLATFORMS_PATH_RE =
+  /\/api\/(?:core\/users\/platforms|ibl\/users\/manage\/platform)\/?$/;
+
 export interface StoredFabPosition {
   side: 'left' | 'right';
   bottom: number;
@@ -46,72 +61,53 @@ export class AccessibilityFabPage {
   }
 
   /**
-   * Forces `accessibility_menu: true` in the tenant metadata the SDK reads
-   * from localStorage (`tenants` entry for the URL's tenant, and
-   * `current_tenant`). Runs on every load, before app code. Call BEFORE navigating.
-   *
-   * The app re-saves `tenants` from the platforms list after load, which would
-   * drop the seeded flag on a tenant that has it off, so that response is
-   * patched too.
+   * Forces `accessibility_menu: true` on every tenant in the platforms list
+   * the app reads its metadata from. Call BEFORE navigating: the tenant
+   * provider fetches this list on bootstrap and the app joins the active
+   * tenant's metadata by key (`useTenantObjectMetadata`), so injecting the
+   * flag here makes the button deterministic on any tenant.
    */
   async enableAccessibilityMenu(): Promise<void> {
-    await this.page.route('**/api/core/users/platforms/**', async (route) => {
-      const response = await route.fetch();
-      const tenants = await response.json().catch(() => null);
-      if (!Array.isArray(tenants)) return route.fulfill({ response });
-      const org = /\/platform\/([^/]+)/.exec(
-        new URL(this.page.url()).pathname,
-      )?.[1];
-      for (const t of tenants) {
-        if (t && (!org || t.key === org)) {
-          t.metadata = { ...(t.metadata ?? {}), accessibility_menu: true };
-        }
-      }
-      await route.fulfill({ response, json: tenants });
+    const withMenu = (tenant: { metadata?: Record<string, unknown> }) => ({
+      ...tenant,
+      metadata: { ...(tenant.metadata ?? {}), accessibility_menu: true },
     });
-
-    await this.page.addInitScript(() => {
-      const parse = (raw: string | null): unknown => {
+    await this.page.route(
+      (url) => USER_PLATFORMS_PATH_RE.test(url.pathname),
+      async (route) => {
+        if (route.request().method() !== 'GET') return route.continue();
+        const response = await route.fetch();
+        // A non-JSON body (proxy 5xx HTML, an empty 401) must not leave the
+        // route un-answered — that would stall the app's bootstrap request and
+        // surface as an opaque 30s "button not visible". Fall back to passing
+        // the real response through untouched; the flag just isn't forced.
+        let body: unknown;
         try {
-          return raw ? JSON.parse(raw) : null;
+          body = await response.json();
         } catch {
-          return null;
+          return route.fulfill({ response });
         }
-      };
-      const patch = (t: unknown): boolean => {
-        if (!t || typeof t !== 'object') return false;
-        const tenant = t as { metadata?: Record<string, unknown> };
-        tenant.metadata = {
-          ...(tenant.metadata ?? {}),
-          accessibility_menu: true,
-        };
-        return true;
-      };
-      try {
-        const org = /\/platform\/([^/]+)/.exec(window.location.pathname)?.[1];
-        const tenants = parse(window.localStorage.getItem('tenants'));
-        if (Array.isArray(tenants)) {
-          let changed = false;
-          for (const t of tenants) {
-            if (t && (!org || t.key === org)) changed = patch(t) || changed;
-          }
-          if (changed)
-            window.localStorage.setItem('tenants', JSON.stringify(tenants));
+        // Both endpoints return a bare array today; tolerate a paginated
+        // `{ results: [...] }` envelope too so a backend change can't silently
+        // stop forcing the flag.
+        let patched: unknown = body;
+        if (Array.isArray(body)) {
+          patched = body.map(withMenu);
+        } else if (
+          body &&
+          Array.isArray((body as { results?: unknown[] }).results)
+        ) {
+          const envelope = body as { results: unknown[] };
+          patched = {
+            ...envelope,
+            results: envelope.results.map((t) =>
+              withMenu(t as { metadata?: Record<string, unknown> }),
+            ),
+          };
         }
-        const current = parse(
-          window.localStorage.getItem('current_tenant'),
-        ) as {
-          key?: string;
-        } | null;
-        if (current && (!org || current.key === org) && patch(current))
-          window.localStorage.setItem(
-            'current_tenant',
-            JSON.stringify(current),
-          );
-      } catch {
-        // storage unavailable (e.g. about:blank) — nothing to patch
-      }
-    });
+        await route.fulfill({ response, json: patched });
+      },
+    );
   }
 
   async expectVisible(): Promise<void> {

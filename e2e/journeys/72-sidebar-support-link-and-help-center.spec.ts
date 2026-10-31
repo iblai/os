@@ -56,7 +56,7 @@
  * suite, because it never asserts against a fixed expectation, only against
  * "does the UI match what the API says right now."
  *
- * ── Zero-configuration: observe the app's OWN traffic, not the DM API ────
+ * ── Zero-configuration: read the app's OWN tenant metadata, not the DM API ──
  *
  * This journey used to call the DM API directly (`GET
  * /api/core/orgs/<org>/metadata/` with a `dm_token`, via
@@ -66,14 +66,19 @@
  * environment except CI: a green run that tested nothing, and worse than
  * failing, because nothing ever pointed at the missing configuration.
  *
- * The SDK's `useTenantMetadata({ org })` (`@iblai/web-utils`, used by
- * `providers/index.tsx`) resolves tenant metadata from localStorage
- * `tenants` / `current_tenant` (written at login) — it no longer fires
- * `GET /api/core/orgs/<org>/metadata/`. This journey reads that same copy
- * via `e2e/utils/tenant-metadata-observed.ts`'s
- * `navigateAndObserveTenantMetadata`. No `DM_URL`, API credentials or
- * per-environment setup is needed; if no metadata is found the journey
- * FAILS loudly; it never skips.
+ * The app itself already carries this metadata on every load — tenant
+ * metadata rides the platforms list (`/api/ibl/users/manage/platform/`) the
+ * tenant provider fetches on bootstrap, which it persists to the `tenants`
+ * storage key; the app joins the active tenant's metadata by key
+ * (`hooks/use-tenant-object-metadata.ts`). This journey now READS that
+ * persisted metadata instead of issuing its own authenticated request — see
+ * `e2e/utils/tenant-metadata-observed.ts`'s
+ * `navigateAndObserveTenantMetadata`, which navigates in and then reads the
+ * `tenants` list joined to `current_tenant` from storage (session-first,
+ * localStorage seed fallback — see that file). This needs no `DM_URL`, no
+ * API credentials, and no per-environment setup — it uses data the app
+ * already holds on any environment, unconditionally. If the tenant genuinely
+ * cannot be resolved, the journey FAILS loudly; it never skips.
  *
  * ── What moved to unit tests instead ───────────────────────────────────
  *

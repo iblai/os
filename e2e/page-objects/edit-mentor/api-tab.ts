@@ -124,7 +124,7 @@ export class ApiTab {
     });
   }
 
-  /** The EXPIRES cell (4th column: Name, Mode, Created, Expires) for a row, e.g. a PPP date string or "N/A". */
+  /** The EXPIRES cell (4th column) for a row, e.g. a PPP date string or "N/A". */
   expiresCellFor(name: string): Locator {
     return this.rowByName(name).locator('td').nth(3);
   }

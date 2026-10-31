@@ -20,15 +20,15 @@ vi.mock('next/navigation', () => ({
   useParams: () => mockUseParams(),
 }));
 
-const mockUseTenantMetadata = vi.fn(
-  (): { metadata?: { mentor_include_community_mentors: boolean } } => ({
-    metadata: {
-      mentor_include_community_mentors: true,
-    },
+// Tenant metadata now rides the tenants list via this local hook, returning the
+// raw metadata object directly.
+const mockUseTenantObjectMetadata = vi.fn(
+  (): Record<string, unknown> | undefined => ({
+    mentor_include_community_mentors: true,
   }),
 );
-vi.mock('@iblai/iblai-js/web-utils', () => ({
-  useTenantMetadata: () => mockUseTenantMetadata(),
+vi.mock('@/hooks/use-tenant-object-metadata', () => ({
+  useTenantObjectMetadata: () => mockUseTenantObjectMetadata(),
 }));
 
 // Mock data-layer hooks
@@ -69,10 +69,8 @@ describe('ExploreMentors', () => {
       tenantKey: 'test-tenant',
       mentorId: 'test-mentor',
     });
-    mockUseTenantMetadata.mockReturnValue({
-      metadata: {
-        mentor_include_community_mentors: true,
-      },
+    mockUseTenantObjectMetadata.mockReturnValue({
+      mentor_include_community_mentors: true,
     });
 
     mockUseGetAiSearchMentorsQuery.mockReturnValue({
@@ -331,10 +329,8 @@ describe('ExploreMentors', () => {
 
   describe('Tenant metadata handling', () => {
     it('includes main public mentors when mentor_include_community_mentors is true', () => {
-      mockUseTenantMetadata.mockReturnValue({
-        metadata: {
-          mentor_include_community_mentors: true,
-        },
+      mockUseTenantObjectMetadata.mockReturnValue({
+        mentor_include_community_mentors: true,
       });
 
       render(<ExploreMentors />);
@@ -348,10 +344,8 @@ describe('ExploreMentors', () => {
     });
 
     it('excludes main public mentors when mentor_include_community_mentors is false', () => {
-      mockUseTenantMetadata.mockReturnValue({
-        metadata: {
-          mentor_include_community_mentors: false,
-        },
+      mockUseTenantObjectMetadata.mockReturnValue({
+        mentor_include_community_mentors: false,
       });
 
       render(<ExploreMentors />);
@@ -365,9 +359,7 @@ describe('ExploreMentors', () => {
     });
 
     it('includes main public mentors when metadata is undefined', () => {
-      mockUseTenantMetadata.mockReturnValue({
-        metadata: undefined,
-      });
+      mockUseTenantObjectMetadata.mockReturnValue(undefined);
 
       render(<ExploreMentors />);
 
