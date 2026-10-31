@@ -322,14 +322,12 @@ test.describe('Journey 78: Mentor API Tab', () => {
     const { api } = editMentorPage;
 
     await api.openCreateDialog();
-    // TanStack Form only computes canSubmit after its first onChange
-    // validation, so Submit starts enabled on a pristine form. Submitting the
-    // empty form must still create nothing: the dialog stays open, no toast.
-    await api.submitButton().click();
+    // A pristine form has an empty required name, so Submit is disabled from
+    // the start — there is nothing valid to submit and nothing can be created.
+    // (It used to start enabled because the form only computed `canSubmit`
+    // after the first onChange; it now computes it on mount.)
     await expect(api.createDialog).toBeVisible();
-    await expect(
-      api.successToast(ApiTab.LABELS.createModal.successToast),
-    ).toHaveCount(0);
+    await expect(api.submitButton()).toBeDisabled();
 
     // Invalid: spaces and "!" fail the `^[a-zA-Z0-9_-]+$` regex.
     await api.nameInput().fill('invalid name!');

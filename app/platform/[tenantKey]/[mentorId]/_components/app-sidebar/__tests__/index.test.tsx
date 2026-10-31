@@ -538,6 +538,12 @@ vi.mock('@iblai/iblai-js/web-utils', () => ({
     /^https?:\/\//.test(url) ? url : `https://${url}`,
 }));
 
+// The sidebar now reads tenant metadata from the tenants list
+// (useTenantObjectMetadata) via useHelpCenter and the chats section.
+vi.mock('@/hooks/use-tenant-object-metadata', () => ({
+  useTenantObjectMetadata: () => mockTenantMetadata,
+}));
+
 vi.mock('@iblai/iblai-js/web-containers', () => ({
   Admin: ({ initialTab }: { initialTab?: string }) => (
     <div data-testid="sdk-admin-tab" data-initial-tab={initialTab}>
@@ -586,6 +592,7 @@ vi.mock('@/hooks/use-user', () => ({
   useUsername: () => mockUsername,
   useIsAdmin: () => mockIsAdmin,
   useCurrentTenant: () => ({ currentTenant: mockCurrentTenant }),
+  useUserTenants: () => ({ userTenants: [] }),
   useUserIsStudent: () => mockUserIsStudent,
 }));
 

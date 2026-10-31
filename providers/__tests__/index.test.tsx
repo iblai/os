@@ -200,6 +200,10 @@ vi.mock('@/features/rbac/rbac-slice', () => ({
     type: 'rbac/update',
     payload,
   }),
+  // The composer cannot tell "denied" from "not asked yet" without these:
+  // the permissions object is empty in both cases.
+  markMentorPermissionsLoaded: () => ({ type: 'rbac/markMentorLoaded' }),
+  resetMentorPermissionsLoaded: () => ({ type: 'rbac/resetMentorLoaded' }),
 }));
 
 // ── data-layer ──────────────────────────────────────────────────────────────
@@ -237,6 +241,11 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
 // ── tenant metadata ─────────────────────────────────────────────────────────
 
 let mockMetadata: Record<string, unknown> = {};
+
+// Tenant metadata now rides the tenants list via this local hook (no network).
+vi.mock('@/hooks/use-tenant-object-metadata', () => ({
+  useTenantObjectMetadata: () => mockMetadata,
+}));
 
 let capturedIframeMessageHandler: {
   handlers?: unknown;
@@ -292,15 +301,6 @@ vi.mock('@iblai/iblai-js/web-utils', () => ({
   refreshTenantSwitchLock: vi.fn(),
   isTenantSwitchInProgress: vi.fn(() => false),
   AUTH_TOKENS_UPDATED_EVENT: 'ibl:auth-tokens-updated',
-  useTenantMetadata: () => ({
-    metadata: mockMetadata,
-    platformName: null,
-    isLoading: false,
-    isError: false,
-    metadataLoaded: true,
-    getAllMetadatas: vi.fn(() => []),
-    getSupportEmail: vi.fn(() => null),
-  }),
   AuthProvider: (props: Record<string, unknown>) => {
     capturedAuthProviderProps = props;
     for (const cb of authProviderCallbacksToInvoke) {
@@ -1044,6 +1044,35 @@ describe('Providers', () => {
       expect(mockDispatch).toHaveBeenCalledWith({
         type: 'rbac/update',
         payload: {},
+      });
+    });
+
+    // The SDK's MentorProvider only fetches mentor RBAC for a signed-in user,
+    // so an anonymous viewer's `onLoadMentorsPermissions` never fires. If the
+    // flag were merely reset and left to that callback, the composer's
+    // `awaitingMentorPermissions` gate would stay stuck and an
+    // anonymous-allowed mentor would render a permanently disabled input.
+    it('on an anonymous load, marks mentor permissions loaded (no RBAC answer is coming)', () => {
+      mockUsername = null;
+      renderProviders();
+      expect(mockDispatch).toHaveBeenCalledWith({
+        type: 'rbac/markMentorLoaded',
+      });
+      expect(mockDispatch).not.toHaveBeenCalledWith({
+        type: 'rbac/resetMentorLoaded',
+      });
+    });
+
+    it('on a signed-in load, resets the flag to wait for the real RBAC answer', () => {
+      mockUsername = 'testuser';
+      renderProviders();
+      expect(mockDispatch).toHaveBeenCalledWith({
+        type: 'rbac/resetMentorLoaded',
+      });
+      // The mark only comes later, from onLoadMentorsPermissions — not from
+      // the reset effect itself.
+      expect(mockDispatch).not.toHaveBeenCalledWith({
+        type: 'rbac/markMentorLoaded',
       });
     });
 
