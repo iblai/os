@@ -49,8 +49,27 @@ export class AccessibilityFabPage {
    * Forces `accessibility_menu: true` in the tenant metadata the SDK reads
    * from localStorage (`tenants` entry for the URL's tenant, and
    * `current_tenant`). Runs on every load, before app code. Call BEFORE navigating.
+   *
+   * The app re-saves `tenants` from the platforms list after load, which would
+   * drop the seeded flag on a tenant that has it off, so that response is
+   * patched too.
    */
   async enableAccessibilityMenu(): Promise<void> {
+    await this.page.route('**/api/core/users/platforms/**', async (route) => {
+      const response = await route.fetch();
+      const tenants = await response.json().catch(() => null);
+      if (!Array.isArray(tenants)) return route.fulfill({ response });
+      const org = /\/platform\/([^/]+)/.exec(
+        new URL(this.page.url()).pathname,
+      )?.[1];
+      for (const t of tenants) {
+        if (t && (!org || t.key === org)) {
+          t.metadata = { ...(t.metadata ?? {}), accessibility_menu: true };
+        }
+      }
+      await route.fulfill({ response, json: tenants });
+    });
+
     await this.page.addInitScript(() => {
       const parse = (raw: string | null): unknown => {
         try {
