@@ -726,7 +726,10 @@ test.describe('Journey 98: Chat MCP Servers', () => {
       nonadminPage,
     }) => {
       test.setTimeout(180_000);
-      const server = userScopedOAuthServer(990_006, 'E2E Mock Student Server');
+      const server = {
+        ...userScopedOAuthServer(990_006, 'E2E Mock Student Server'),
+        user_enabled: true,
+      };
       const mcp = new ChatMcpMenuPage(nonadminPage);
       await mockMcpServerList(nonadminPage, [server]);
       await mockMcpServerConnections(nonadminPage, (username) => [
@@ -740,7 +743,9 @@ test.describe('Journey 98: Chat MCP Servers', () => {
       await mockConnectedServices(nonadminPage, () => []);
       await mcp.mockAgentUsesServers([server.id]);
       // The server is mocked, so its per-chat setting is answered here the way
-      // the backend answers a real one, and the conversation it names is kept.
+      // the backend answers a real one (the switch reads the answer's
+      // effective_is_enabled, and the list's user_enabled once it refetches),
+      // and the conversation it names is kept.
       const saved: string[] = [];
       await nonadminPage.route(
         (url) =>
@@ -753,7 +758,14 @@ test.describe('Journey 98: Chat MCP Servers', () => {
             session_id?: string;
           };
           if (body.session_id) saved.push(body.session_id);
-          return route.fulfill({ json: { server: server.id, ...body } });
+          server.user_enabled = body.is_enabled;
+          return route.fulfill({
+            json: {
+              server: server.id,
+              ...body,
+              effective_is_enabled: body.is_enabled,
+            },
+          });
         },
       );
 

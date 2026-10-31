@@ -230,9 +230,16 @@ export class ChatMcpMenuPage {
     await expect(target).toBeFocused();
   }
 
-  /** Opens the panel unless it is already showing. */
+  /** Opens the panel unless it is already showing, from the "+" menu if that is already open. */
   async open(): Promise<void> {
     if (await this.heading.isVisible()) return;
+    // An open "+" menu hides its own trigger from the accessibility tree, so
+    // the button below would never be found; the row is right there instead.
+    if (await this.openPlusMenu().isVisible()) {
+      await this.row.click();
+      await expect(this.heading).toBeVisible({ timeout: 10_000 });
+      return;
+    }
     await expect(this.plusMenuButton).toBeVisible({ timeout: 30_000 });
     // Retried: a click can land while a previous popover is still tearing
     // down and get swallowed.
