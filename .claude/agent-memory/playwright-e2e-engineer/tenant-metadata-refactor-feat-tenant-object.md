@@ -59,6 +59,47 @@ either (a) force the value via `forceTenantMetadata` before navigating, or
 (b) read storage from the iframe's own frame context — never read the
 top-level page's storage and assume the iframe matches it.
 
+## Second real bug found + fixed: journey 83's personal-greeting name source
+
+`e2e/journeys/83-settings-welcome-screen.spec.ts` (wss-07, wss-08, wss-09,
+wss-13, wss-14) all waited on `page.waitForResponse` for a GET matching
+`/api/(ibl/users/manage/metadata|core/users/metadata/proxy)/` to read the
+current user's `name`, then asserted the welcome-chat greeting. The SDK's
+`WelcomeHeading` (`@iblai/iblai-js` `welcome-chat/welcome-heading.js`)
+computes the greeted name as
+`userMetadata?.name || userMetadata?.public_metadata?.name || ''`, where
+`userMetadata` comes from `useStoredUserMetadata()` (`@iblai/web-utils`) — a
+**plain `window.localStorage` read of the `user_metadata` key**, no network
+call, no `getAuthItem` even (confirmed in the compiled `useLocalStorage`
+source — it does NOT route through the per-tab-auth layer). So the GET
+never fires for the current user anymore and every one of those
+`waitForResponse` calls times out at 30s.
+
+**Fix shipped:** added `e2e/utils/user-metadata-observed.ts` —
+`readStoredUserFullName(page)` (session-first/localStorage read, mirrors
+`tenant-metadata-observed.ts`'s pattern, throws rather than skips) for
+wss-07/08/13/14, and `forceStoredUserFullName(page, name)` (same-origin
+localStorage+sessionStorage write, merge-safe) for wss-09, which used to
+intercept the dead GET to inject a synthetic name — now it writes
+`user_metadata.name` directly, then needs a `page.reload()` (not just the
+write) since `WelcomeHeading` only re-reads on mount, not live, so the
+reload is what makes the forced value visible. Verified: a throwaway
+diagnostic spec read the REAL admin's name (`"Sone Gillis Ekeh"`) via
+`readStoredUserFullName`, then forced `"John Doe"` and read it back
+correctly after reload — 5/5 passed live.
+
+**Why:** wss-08 is a same-origin `?embed=true` navigation via plain
+`page.goto` (NOT the cross-origin `gotoEmbedHarness`), so unlike journey 80
+there is no storage-partition risk here — reading the top page's storage is
+valid for all five checkpoints.
+
+**How to apply:** grep for `waitForResponse` + a metadata/profile GET
+pattern in any OTHER journey before trusting it — this refactor broke it
+silently (times out, doesn't error loudly) everywhere it appears, not just
+the checkpoints a bug report happens to name. I found 3 more occurrences
+beyond the 2 originally reported (wss-13, wss-14, and the second copy
+inside wss-07) just by grepping the same file.
+
 ## False positives — local `pnpm dev` vs a built container's `window.__ENV__`
 
 Running the full suite against a LOCAL `pnpm dev` server (not a built Docker
