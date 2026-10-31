@@ -34,43 +34,59 @@ type StoredUserMetadata = {
  * real failure (the app depends on the same key), never a "skip" signal.
  */
 export async function readStoredUserFullName(page: Page): Promise<string> {
-  let handle: JSHandle<string> | undefined;
-  try {
-    handle = await page.waitForFunction(
-      (storageKey) => {
-        const raw =
-          window.sessionStorage.getItem(storageKey) ??
-          window.localStorage.getItem(storageKey);
-        if (!raw) return null;
-        let parsed: unknown;
-        try {
-          parsed = JSON.parse(raw);
-        } catch {
-          return null;
-        }
-        if (!parsed || typeof parsed !== 'object') return null;
-        return '__present__';
-      },
-      USER_METADATA_STORAGE_KEY,
-      { timeout: 15_000 },
-    );
-    return await page.evaluate((storageKey) => {
-      const raw =
-        window.sessionStorage.getItem(storageKey) ??
-        window.localStorage.getItem(storageKey);
-      const meta = raw ? JSON.parse(raw) : null;
-      return meta?.name || meta?.public_metadata?.name || '';
-    }, USER_METADATA_STORAGE_KEY);
-  } catch (error) {
-    throw new Error(
-      `Could not read \`${USER_METADATA_STORAGE_KEY}\` from storage after ` +
-        "navigating into the app. The welcome greeting reads the user's " +
-        'name from this key (no GET fires for it anymore); this must FAIL, ' +
-        `not skip. Underlying error: ${error}`,
-    );
-  } finally {
-    await handle?.dispose();
+  const deadline = Date.now() + 15_000;
+  let lastError: unknown;
+  // The name is returned straight from the predicate — not read in a second
+  // `page.evaluate` — so there is no window between "key is present" and
+  // "read the value" for a navigation to destroy. The embed harness (wss-08)
+  // keeps redirecting while it loads, which can still destroy the context as
+  // the resolved value is serialized; retrying across that narrow race (each
+  // `waitForFunction` is itself navigation-resilient) rides it out.
+  while (Date.now() < deadline) {
+    let handle: JSHandle<{ name: string }> | undefined;
+    try {
+      handle = await page.waitForFunction(
+        (storageKey) => {
+          const raw =
+            window.sessionStorage.getItem(storageKey) ??
+            window.localStorage.getItem(storageKey);
+          if (!raw) return null;
+          let parsed: unknown;
+          try {
+            parsed = JSON.parse(raw);
+          } catch {
+            return null;
+          }
+          if (!parsed || typeof parsed !== 'object') return null;
+          const meta = parsed as {
+            name?: string;
+            public_metadata?: { name?: string };
+          };
+          // An object (even with an empty name) is truthy, so a user whose
+          // name is "" still resolves the poll instead of spinning to timeout.
+          return { name: meta.name || meta.public_metadata?.name || '' };
+        },
+        USER_METADATA_STORAGE_KEY,
+        { timeout: Math.max(1, deadline - Date.now()) },
+      );
+      const value = await handle.jsonValue();
+      return value.name;
+    } catch (error) {
+      lastError = error;
+      if (String(error).includes('Execution context was destroyed')) {
+        continue;
+      }
+      break;
+    } finally {
+      await handle?.dispose();
+    }
   }
+  throw new Error(
+    `Could not read \`${USER_METADATA_STORAGE_KEY}\` from storage after ` +
+      "navigating into the app. The welcome greeting reads the user's " +
+      'name from this key (no GET fires for it anymore); this must FAIL, ' +
+      `not skip. Underlying error: ${lastError}`,
+  );
 }
 
 /**
