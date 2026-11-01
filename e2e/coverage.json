@@ -477,9 +477,7 @@
       "id": "mentor-settings-tab-unique-id",
       "name": "Mentor Settings Tab — Unique ID",
       "spec": "07-mentor-settings-tab-unique-id.spec.ts",
-      "sourceFiles": [
-        "components/modals/edit-mentor-modal/settings-tab.tsx"
-      ],
+      "sourceFiles": ["components/modals/edit-mentor-modal/settings-tab.tsx"],
       "checkpoints": [
         {
           "id": "uid-01",
@@ -764,9 +762,7 @@
       "id": "canvas-embed",
       "name": "Canvas — Embed",
       "spec": "11-canvas-embed.spec.ts",
-      "sourceFiles": [
-        "components/modals/edit-mentor-modal/tabs/embed-tab.tsx"
-      ],
+      "sourceFiles": ["components/modals/edit-mentor-modal/tabs/embed-tab.tsx"],
       "checkpoints": [
         {
           "id": "ce-01",
@@ -1066,9 +1062,7 @@
       "id": "my-mentors-modal",
       "name": "My Mentors Modal",
       "spec": "16-my-mentors-modal.spec.ts",
-      "sourceFiles": [
-        "components/modals/my-mentors-modal.tsx"
-      ],
+      "sourceFiles": ["components/modals/my-mentors-modal.tsx"],
       "status": "deprecated",
       "deprecatedIn": "#1431",
       "deprecatedReason": "Feature removed; agent discovery consolidated to the Explore sidebar. Spec file is a stub.",
@@ -1917,9 +1911,7 @@
       "id": "user-invitations-and-default-mentor",
       "name": "User Invitations & Default Mentor",
       "spec": "27-user-invitations-and-default-mentor.spec.ts",
-      "sourceFiles": [
-        "components/modals/settings-modal.tsx"
-      ],
+      "sourceFiles": ["components/modals/settings-modal.tsx"],
       "checkpoints": [
         {
           "id": "inv-01",
@@ -2202,9 +2194,7 @@
       "id": "advanced-css-js-customization",
       "name": "Advanced CSS / JS Customization",
       "spec": "30-advanced-css-js-customization.spec.ts",
-      "sourceFiles": [
-        "components/modals/advanced-settings-modal.tsx"
-      ],
+      "sourceFiles": ["components/modals/advanced-settings-modal.tsx"],
       "checkpoints": [
         {
           "id": "css-01",
@@ -2398,9 +2388,7 @@
       "id": "ui-render-console-errors",
       "name": "UI Render Console Errors",
       "spec": "33-ui-render-console-errors.spec.ts",
-      "sourceFiles": [
-        "app/platform/[tenantKey]/[mentorId]/page.tsx"
-      ],
+      "sourceFiles": ["app/platform/[tenantKey]/[mentorId]/page.tsx"],
       "checkpoints": [
         {
           "id": "ui-err-01",
@@ -2651,9 +2639,7 @@
       "id": "copy-mentor",
       "name": "Copy Mentor",
       "spec": "36-copy-mentor.spec.ts",
-      "sourceFiles": [
-        "components/modals/edit-mentor-modal/settings-tab.tsx"
-      ],
+      "sourceFiles": ["components/modals/edit-mentor-modal/settings-tab.tsx"],
       "checkpoints": [
         {
           "id": "cpm-01",
@@ -2773,9 +2759,7 @@
       "id": "tenant-memory-system-toggle",
       "name": "Tenant Memory System Toggle",
       "spec": "38-tenant-memory-system-toggle.spec.ts",
-      "sourceFiles": [
-        "components/modals/settings-modal.tsx"
-      ],
+      "sourceFiles": ["components/modals/settings-modal.tsx"],
       "checkpoints": [
         {
           "id": "tms-01",
@@ -3006,9 +2990,7 @@
       "id": "persistent-chat-input-label",
       "name": "Persistent Chat Input Label (WCAG 3.3.2)",
       "spec": "43-persistent-chat-input-label.spec.ts",
-      "sourceFiles": [
-        "components/chat-input-form.tsx"
-      ],
+      "sourceFiles": ["components/chat-input-form.tsx"],
       "checkpoints": [
         {
           "id": "pcil-01",
@@ -4225,9 +4207,7 @@
       "id": "shareable-link-rbac-bypass",
       "name": "Shareable Link RBAC Bypass",
       "spec": "64-shareable-link-rbac-bypass.spec.ts",
-      "sourceFiles": [
-        "components/chat-input-form.tsx"
-      ],
+      "sourceFiles": ["components/chat-input-form.tsx"],
       "checkpoints": [
         {
           "id": "shl-01",
@@ -4922,9 +4902,7 @@
       "id": "chat-url-prompt-injection",
       "name": "Chat URL ?prompt= Auto-Injection",
       "spec": "chat-url-prompt-injection.spec.ts",
-      "sourceFiles": [
-        "components/chat/index.tsx"
-      ],
+      "sourceFiles": ["components/chat/index.tsx"],
       "checkpoints": [
         {
           "id": "upi-01",
@@ -5216,9 +5194,7 @@
       "id": "mentor-tools-tab",
       "name": "Mentor Tools Tab",
       "spec": "77-mentor-tools-tab.spec.ts",
-      "sourceFiles": [
-        "components/modals/edit-mentor-modal/tabs/tools-tab.tsx"
-      ],
+      "sourceFiles": ["components/modals/edit-mentor-modal/tabs/tools-tab.tsx"],
       "checkpoints": [
         {
           "id": "tools-01",
@@ -5261,9 +5237,7 @@
       "id": "mentor-api-tab",
       "name": "Mentor API Tab",
       "spec": "78-mentor-api-tab.spec.ts",
-      "sourceFiles": [
-        "components/modals/edit-mentor-modal/tabs/api-tab.tsx"
-      ],
+      "sourceFiles": ["components/modals/edit-mentor-modal/tabs/api-tab.tsx"],
       "checkpoints": [
         {
           "id": "api-01",
@@ -5528,9 +5502,7 @@
       "id": "composer-redesign",
       "name": "Composer Redesign",
       "spec": "79-composer-redesign.spec.ts",
-      "sourceFiles": [
-        "components/chat/sdk-chat.tsx"
-      ],
+      "sourceFiles": ["components/chat/sdk-chat.tsx"],
       "checkpoints": [
         {
           "id": "cr-01",
@@ -6111,9 +6083,7 @@
       "id": "camera-dialog-pointer-events",
       "name": "Camera Dialog Leaves Page Clickable",
       "spec": "87-camera-dialog-pointer-events.spec.ts",
-      "sourceFiles": [
-        "components/chat/sdk-chat.tsx"
-      ],
+      "sourceFiles": ["components/chat/sdk-chat.tsx"],
       "checkpoints": [
         {
           "id": "camera-01",
@@ -6280,9 +6250,7 @@
       "id": "users-models",
       "name": "User Models",
       "spec": "92-users-models.spec.ts",
-      "sourceFiles": [
-        "components/modals/edit-mentor-modal/llm-tab.tsx"
-      ],
+      "sourceFiles": ["components/modals/edit-mentor-modal/llm-tab.tsx"],
       "checkpoints": [
         {
           "id": "um-01",
