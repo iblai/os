@@ -83,7 +83,8 @@ export interface OverflowFit {
  * Widths of items currently hidden are remembered from the last time they
  * were inline, which keeps the fit stable — an item is only pulled back
  * inline when it is known (or, before its first measurement, estimated) to
- * fit.
+ * fit. A collapsible item holding an expanded trigger
+ * (`aria-expanded="true"`) keeps its last width until it closes.
  */
 export function useOverflowFit(
   items: OverflowFitItem[],
@@ -141,6 +142,16 @@ export function useOverflowFit(
   useLayoutEffect(() => {
     let changed = false;
     for (const [key, el] of elsRef.current) {
+      // A pill whose own popover is open (Memory, MCP) grows an active ✕.
+      // Re-fitting on that width could collapse it into ••• and unmount the
+      // popover mid-use, then keep it collapsed on the remembered wider width.
+      if (
+        !fixedKeys.includes(key) &&
+        widthsRef.current.has(key) &&
+        el.querySelector('[aria-expanded="true"]')
+      ) {
+        continue;
+      }
       const width = Math.ceil(el.getBoundingClientRect().width);
       const previous = widthsRef.current.get(key);
       if (fixedKeys.includes(key)) {

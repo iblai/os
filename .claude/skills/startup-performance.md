@@ -19,10 +19,10 @@ screen draw, let the value arrive.
 
 ## The three places that must stay unblocked
 
-| Location | What must not be awaited before it |
-| --- | --- |
-| `MentorProvider` | `redirectToMentor(...)` |
-| `TenantProvider` / `MentorProvider` | `setIsLoading(false)`, `onComplete?.()` |
+| Location                                                      | What must not be awaited before it                               |
+| ------------------------------------------------------------- | ---------------------------------------------------------------- |
+| `MentorProvider`                                              | `redirectToMentor(...)`                                          |
+| `TenantProvider` / `MentorProvider`                           | `setIsLoading(false)`, `onComplete?.()`                          |
 | `app/platform/[tenantKey]/[mentorId]/mentor-page-content.tsx` | `<SdkChat>` — it renders unconditionally today, keep it that way |
 
 These sit in `@iblai/iblai-js/web-utils`; the host wires callbacks to them.
