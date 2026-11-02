@@ -2020,7 +2020,7 @@
         },
         {
           "id": "ov-14",
-          "description": "Admin sidebar footer mirrors the SDK tenant-settings rail: a \"Memory\" entry sits next to Integrations/Advanced (admin-only, no dedicated RBAC permission) and clicking it opens the Account dialog titled \"Memory\" (\"Manage user global memories and agent memories.\") hosting the SDK MemoryAdminTab — Global / Agent sub-tabs (or the memsearch-disabled notice), Agent sub-tab renders the agents section, Escape closes it",
+          "description": "Admin sidebar footer mirrors the SDK tenant-settings rail: a \"Memory\" entry sits next to Integrations/Advanced (admin-only, no dedicated RBAC permission) and clicking it opens the full Account sheet (\"Organization settings\", tab rail included) on its Memory tab, hosting the SDK MemoryAdminTab — Global / Agent sub-tabs (or the memsearch-disabled notice), Agent sub-tab renders the agents section, Escape closes it",
           "status": "covered"
         }
       ]

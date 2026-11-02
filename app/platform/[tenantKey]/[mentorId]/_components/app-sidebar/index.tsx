@@ -65,7 +65,10 @@ import {
 } from '@/hooks/use-user';
 import { useUserType } from '@/hooks/use-user-type';
 import { useAppSelector } from '@/lib/hooks';
-import { selectRbacPermissions } from '@/features/rbac/rbac-slice';
+import {
+  selectRbacPermissions,
+  updateRbacPermissions,
+} from '@/features/rbac/rbac-slice';
 import { checkRbacPermission } from '@/hoc/withPermissions';
 import { useEmbedMode } from '@/hooks/use-embed-mode';
 import { useAllowMentorSelection } from '@/hooks/use-allow-mentor-selection';
@@ -1559,8 +1562,6 @@ export function AppSidebar() {
         </aside>
       </Sidebar>
 
-      {/* Each footer shortcut opens the full Account component, tab rail
-          included, on its own tab. */}
       <PlatformAccountSheet
         tab={accountDialogTab}
         onClose={() => setAccountDialogTab(null)}
@@ -1573,9 +1574,13 @@ export function AppSidebar() {
         platformBaseDomain={config.platformBaseDomain()}
         defaultSupportPhone={config.defaultSupportPhoneNumber()}
         enableSupportPhone={config.enableSupportPhone()}
-        isAdmin={isAdmin}
+        isAdmin={isLiveAdmin}
         enableRbac={config.enableRBAC()}
         rbacPermissions={rbacPermissions}
+        onLoadGroupPermissions={(permissions) =>
+          dispatch(updateRbacPermissions(permissions ?? {}))
+        }
+        showGradebookTab={config.enableGradebookTab()}
         onInviteClick={() => {
           // Don't close the Users popup. The SDK's InviteUserDialog
           // renders via its own Radix Portal, so it layers on top; when

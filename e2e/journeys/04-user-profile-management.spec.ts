@@ -998,7 +998,9 @@ test.describe('Journey 4: User Profile Management', () => {
     );
     await sidebarPage.managementButton.click();
 
-    const managementDialog = page.getByRole('dialog', { name: 'Management' });
+    const managementDialog = page.getByRole('dialog', {
+      name: 'Organization settings',
+    });
     await expect(managementDialog).toBeVisible({ timeout: 15_000 });
 
     // Users is the default Management sub-tab; find the non-admin user.

@@ -564,7 +564,7 @@ The "Remember past conversations" (`enable_memory_component`) master toggle move
 - [x] Admin: nav does not overflow on mobile (Pixel 5); with credit balance visible the LLM name span shrinks to ≤100 px _(navbar overflow fix: ov-11)_
 - [x] Admin: nav does not overflow on mobile when credit balance is hidden; LLM name span stays ≤150 px _(navbar overflow fix: ov-12)_
 - [x] Admin opens the navbar LLM selector modal (`navbarPage.openLlmProviderModal`, dialog name "LLM Providers") and the "LLM Configuration" heading/description are absent — proves the OS wrapper's `showConfigurationHeader={false}` prop reaches the SDK `AgentLLMTab` component _(ov-13)_
-- [x] Admin sidebar footer mirrors the SDK tenant-settings (`Account`) rail: a "Memory" entry sits next to Integrations/Advanced (admin-only — no dedicated RBAC permission, so a non-admin never gets it via RBAC alone; hidden when an admin flips to learner mode) and clicking it opens the Account dialog titled "Memory" ("Manage user global memories and agent memories.") hosting the SDK `MemoryAdminTab` — Global / Agent sub-tabs (or the memsearch-disabled notice); the Agent sub-tab renders the agents section and Escape closes the dialog _(ov-14)_
+- [x] Admin sidebar footer mirrors the SDK tenant-settings (`Account`) rail: a "Memory" entry sits next to Integrations/Advanced (admin-only — no dedicated RBAC permission, so a non-admin never gets it via RBAC alone; hidden when an admin flips to learner mode) and clicking it opens the full Account sheet ("Organization settings", tab rail included) on its Memory tab, hosting the SDK `MemoryAdminTab` — Global / Agent sub-tabs (or the memsearch-disabled notice); the Agent sub-tab renders the agents section and Escape closes the dialog _(ov-14)_
 
 ---
 

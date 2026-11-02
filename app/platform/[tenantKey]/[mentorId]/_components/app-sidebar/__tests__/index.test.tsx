@@ -360,6 +360,8 @@ vi.mock('@iblai/iblai-js/web-containers/next', async (importOriginal) => ({
     isAdmin?: boolean;
     enableRbac?: boolean;
     currentSpa: string;
+    showGradebookTab?: boolean;
+    onLoadGroupPermissions?: (permissions: Record<string, unknown>) => void;
   }) =>
     props.tab ? (
       <div
@@ -372,8 +374,16 @@ vi.mock('@iblai/iblai-js/web-containers/next', async (importOriginal) => ({
         data-admin={String(props.isAdmin)}
         data-rbac={String(props.enableRbac)}
         data-spa={props.currentSpa}
+        data-gradebook={String(props.showGradebookTab)}
       >
         <button onClick={props.onClose}>Close Account</button>
+        <button
+          onClick={() =>
+            props.onLoadGroupPermissions?.({ '/usergroups/1/': true })
+          }
+        >
+          Load Group Permissions
+        </button>
       </div>
     ) : null,
   ChatDownloadDialog: (props: {
@@ -621,6 +631,10 @@ vi.mock('@/lib/hooks', async () => {
 
 vi.mock('@/features/rbac/rbac-slice', () => ({
   selectRbacPermissions: () => ({}),
+  updateRbacPermissions: (payload: unknown) => ({
+    type: 'rbac/updateRbacPermissions',
+    payload,
+  }),
 }));
 
 vi.mock('@/hoc/withPermissions', () => ({
@@ -682,6 +696,7 @@ vi.mock('@/lib/config', () => ({
     enableSupportPhone: () => false,
     hideAnalytics: () => 'false',
     enableRBAC: () => mockEnableRBAC,
+    enableGradebookTab: () => true,
     stripeEnabled: () => 'true',
     mentorTrainingMaximumFileSize: () => '60',
   },
@@ -2563,6 +2578,42 @@ describe('AppSidebar — Account sheet shortcuts', () => {
     const sheet = await screen.findByTestId('account-sheet');
     expect(sheet).toHaveAttribute('data-admin', 'true');
     expect(sheet).toHaveAttribute('data-rbac', String(mockEnableRBAC));
+    expect(sheet).toHaveAttribute('data-gradebook', 'true');
+  });
+
+  it('drops the admin flag on the open sheet when the admin switches to learner mode', async () => {
+    const { rerender } = renderSidebar();
+    openFromFooter('Advanced');
+    expect(await screen.findByTestId('account-sheet')).toHaveAttribute(
+      'data-admin',
+      'true',
+    );
+    mockUserIsStudent = true;
+    rerender(
+      <Provider store={makeStore()}>
+        <TooltipProvider>
+          <SidebarProvider defaultOpen={mockSidebarState.open}>
+            <AppSidebar />
+          </SidebarProvider>
+        </TooltipProvider>
+      </Provider>,
+    );
+    expect(screen.getByTestId('account-sheet')).toHaveAttribute(
+      'data-admin',
+      'false',
+    );
+  });
+
+  it('stores the team permissions the sheet loads, like the profile-menu Account does', async () => {
+    renderSidebar();
+    openFromFooter('Management');
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Load Group Permissions' }),
+    );
+    expect(dispatchMock).toHaveBeenCalledWith({
+      type: 'rbac/updateRbacPermissions',
+      payload: { '/usergroups/1/': true },
+    });
   });
 
   it('admin sees Memory between Monetization/Integrations and Advanced, matching the SDK Account rail order', () => {
