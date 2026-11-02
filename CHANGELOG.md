@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.186.0](https://github.com/iblai/os/compare/v0.185.0...v0.186.0) (2026-11-02)
+
+### Features
+
+* unclutter the agent History conversation list ([68fc383](https://github.com/iblai/os/commit/68fc383824f5d048c4559176dc0bab2feaefff45))
+
 ## [0.185.0](https://github.com/iblai/os/compare/v0.184.1...v0.185.0) (2026-11-02)
 
 ### Features
