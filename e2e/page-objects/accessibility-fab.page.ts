@@ -2,7 +2,21 @@ import type { CDPSession, Locator, Page } from '@playwright/test';
 import { expect } from '@playwright/test';
 
 const POSITION_STORAGE_KEY = 'accessibility-fab-position:v2';
-const TENANT_METADATA_PATH_RE = /\/api\/core\/orgs\/[^/]+\/metadata\/?$/;
+
+/**
+ * The platforms list the app fetches on bootstrap — tenant metadata now rides
+ * each tenant object here instead of a per-org `/metadata/` call. Two
+ * endpoints serve it: the SDK `TenantProvider` reads
+ * `/api/core/users/platforms/` (`CoreService.coreUsersPlatformsList`), which
+ * is what populates the persisted tenants list the app reads metadata from;
+ * mentorai's own slice reads `/api/ibl/users/manage/platform/`
+ * (`features/tenants/constants.ts`). Both return a bare tenant array, so the
+ * injection below handles whichever fires. Matched on `pathname` without a
+ * leading anchor: the service base URL can prepend a segment, so only the
+ * trailing shape is guaranteed.
+ */
+const USER_PLATFORMS_PATH_RE =
+  /\/api\/(?:core\/users\/platforms|ibl\/users\/manage\/platform)\/?$/;
 
 export interface StoredFabPosition {
   side: 'left' | 'right';
@@ -46,21 +60,52 @@ export class AccessibilityFabPage {
     this.fileDropOverlay = page.getByText('Drop your files here');
   }
 
-  /** Forces `accessibility_menu: true` on the tenant-metadata GET. Call BEFORE navigating. */
+  /**
+   * Forces `accessibility_menu: true` on every tenant in the platforms list
+   * the app reads its metadata from. Call BEFORE navigating: the tenant
+   * provider fetches this list on bootstrap and the app joins the active
+   * tenant's metadata by key (`useTenantObjectMetadata`), so injecting the
+   * flag here makes the button deterministic on any tenant.
+   */
   async enableAccessibilityMenu(): Promise<void> {
+    const withMenu = (tenant: { metadata?: Record<string, unknown> }) => ({
+      ...tenant,
+      metadata: { ...(tenant.metadata ?? {}), accessibility_menu: true },
+    });
     await this.page.route(
-      (url) => TENANT_METADATA_PATH_RE.test(url.pathname),
+      (url) => USER_PLATFORMS_PATH_RE.test(url.pathname),
       async (route) => {
         if (route.request().method() !== 'GET') return route.continue();
         const response = await route.fetch();
-        const json = await response.json();
-        await route.fulfill({
-          response,
-          json: {
-            ...json,
-            metadata: { ...(json.metadata ?? {}), accessibility_menu: true },
-          },
-        });
+        // A non-JSON body (proxy 5xx HTML, an empty 401) must not leave the
+        // route un-answered — that would stall the app's bootstrap request and
+        // surface as an opaque 30s "button not visible". Fall back to passing
+        // the real response through untouched; the flag just isn't forced.
+        let body: unknown;
+        try {
+          body = await response.json();
+        } catch {
+          return route.fulfill({ response });
+        }
+        // Both endpoints return a bare array today; tolerate a paginated
+        // `{ results: [...] }` envelope too so a backend change can't silently
+        // stop forcing the flag.
+        let patched: unknown = body;
+        if (Array.isArray(body)) {
+          patched = body.map(withMenu);
+        } else if (
+          body &&
+          Array.isArray((body as { results?: unknown[] }).results)
+        ) {
+          const envelope = body as { results: unknown[] };
+          patched = {
+            ...envelope,
+            results: envelope.results.map((t) =>
+              withMenu(t as { metadata?: Record<string, unknown> }),
+            ),
+          };
+        }
+        await route.fulfill({ response, json: patched });
       },
     );
   }

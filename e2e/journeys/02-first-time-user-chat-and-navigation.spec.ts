@@ -72,9 +72,10 @@ test.describe('Journey 2: First-Time User Chat & Navigation', () => {
   // `show_help: false` never renders it, and that's the CORRECT behavior,
   // not a bug. Re-navigating here (redundant with the shared `beforeEach`,
   // but isolated to this one test so the rest of the file's tests keep
-  // their original, simpler setup) observes the SAME tenant-metadata
-  // response the app itself fetches on load — no DM_URL, no per-environment
-  // setup — and asserts whichever behavior that tenant's config dictates.
+  // their original, simpler setup) reads the SAME tenant metadata the app
+  // itself uses — the persisted tenants list, joined to `current_tenant` by
+  // key — no DM_URL, no per-environment setup — and asserts whichever
+  // behavior that tenant's config dictates.
   test('newly registered user goes to sidebar and clicks the help button to open docs link', async ({
     nonadminPage,
     nonadminSidebarPage,

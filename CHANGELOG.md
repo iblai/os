@@ -1,5 +1,97 @@
 # Changelog
 
+## [0.185.0](https://github.com/iblai/os/compare/v0.184.1...v0.185.0) (2026-11-02)
+
+### Features
+
+* **os:** adding mcp to prompt box ([7491fcf](https://github.com/iblai/os/commit/7491fcfb389730c8db577b1fa15baaa6a026b574))
+
+### Bug Fixes
+
+* **os:** adding fix for pnpm lock ([77f6ff4](https://github.com/iblai/os/commit/77f6ff43cca4f542b92deb9cb0333e02bcdb3d90))
+* **os:** adding fix for the e2e tests ([9b529ac](https://github.com/iblai/os/commit/9b529acd164f045f6b7293a48c9849debe6500a6))
+* **os:** adding fix for the unit tests ([ccd9b67](https://github.com/iblai/os/commit/ccd9b67f8859be0731ef79618473749741629989))
+* **os:** adding fix the playright test ([c208c91](https://github.com/iblai/os/commit/c208c91f26bfdacf593b17d3b43ff99441407043))
+* **os:** fixes for the mcps ([cd025ed](https://github.com/iblai/os/commit/cd025ed1f4f0666c58abc2f5e685542f7996eeec))
+* **os:** mcp fixes for the student and tenant ([4029a30](https://github.com/iblai/os/commit/4029a306b40892bae52d8bf2e948cc32f3b5eba3))
+* **web-containers:** adding fix for the mcp connectors ([86f967d](https://github.com/iblai/os/commit/86f967df58c91f05ff7c1b90f686c33684c7fc0d))
+
+### Chores
+
+* **deps:** bump @iblai/iblai-js to 2.59.3 ([f2f09b7](https://github.com/iblai/os/commit/f2f09b7ac29f418fb12f09b309c3cc9eff8ef4c1))
+
+### Documentation
+
+* **e2e:** describe the localStorage metadata in the coverage records ([22184d9](https://github.com/iblai/os/commit/22184d999c69544fd27250c23b0a01edb587457f))
+
+### Styles
+
+* **e2e:** apply prettier to coverage.json ([a0acc51](https://github.com/iblai/os/commit/a0acc5191f662b21d0bf204c19dc356bcc740eb2))
+* **skills:** apply prettier to startup-performance.md ([da8a958](https://github.com/iblai/os/commit/da8a95836626ea3badf7387b15f4742c5f6cbf00))
+
+### Tests
+
+* **e2e:** enable the accessibility menu through stored tenant metadata ([2e36035](https://github.com/iblai/os/commit/2e360355c594741392c5e7a33bab23513579740c))
+* **e2e:** journey 78 reads Expires from the 4th column and expects a disabled Submit ([5846063](https://github.com/iblai/os/commit/58460631e7570ab476d9967a8f0a2b77c28a1c16))
+* **e2e:** journey 86 keeps the accessibility flag through the tenant refresh ([ebbcd73](https://github.com/iblai/os/commit/ebbcd737ac0c2edb7b432299aa6a8a4bdfe083ba))
+* **e2e:** read tenant metadata from localStorage in the observer helper ([f20d706](https://github.com/iblai/os/commit/f20d706c522e0aa23364559c31e993ff03fc9190))
+* **e2e:** seed the stored user metadata name in journey 83 ([baa5323](https://github.com/iblai/os/commit/baa53234435f84619c362a64033630c6ad661b5c))
+* **e2e:** wait for the embed's chat history before journey 82 types ([d63557b](https://github.com/iblai/os/commit/d63557bec5aeaf41731eb5f863ce0d0760c82bd4))
+
+## [0.184.1](https://github.com/iblai/os/compare/v0.184.0...v0.184.1) (2026-11-02)
+
+### Documentation
+
+* **perf:** add a startup-performance skill so the load path stays unblocked ([92a14f1](https://github.com/iblai/os/commit/92a14f1d96302909b5f2bf6d657d5ade2618f14f))
+
+## [0.184.0](https://github.com/iblai/os/compare/v0.183.1...v0.184.0) (2026-10-31)
+
+### Features
+
+* **tenant-metadata:** read tenant metadata from the tenant object ([009a62e](https://github.com/iblai/os/commit/009a62ef968d3e83c854ec742ccd7c4cbfec6016))
+* **user-metadata:** read the current user's metadata from localStorage ([09d9192](https://github.com/iblai/os/commit/09d9192b92c7f94cac3eb4761a45a7c6dd28fdb7))
+
+### Bug Fixes
+
+* **e2e:** assert Create API Key Submit is disabled on a pristine form ([f8d55da](https://github.com/iblai/os/commit/f8d55da91bf336ab288277fa65561c2ef536692a))
+* **e2e:** force accessibility_menu on the SDK platforms endpoint too ([a903146](https://github.com/iblai/os/commit/a9031463033f72b50f028ce83bd9340a2ae84c87))
+* **e2e:** force tenant metadata for the cross-origin embed (journey 80) ([b781fe3](https://github.com/iblai/os/commit/b781fe3763a41fdd69c759a73cbca1c79caba323))
+* **e2e:** make readStoredUserFullName survive the embed's navigation ([3111961](https://github.com/iblai/os/commit/31119619585af8e6e607beb97e87a1af4ceb6f1b))
+* **e2e:** source the greeting name from user_metadata storage (journey 83) ([f80eb82](https://github.com/iblai/os/commit/f80eb828071666cb7c58e564798e509a46be96ae))
+* **merge:** drop duplicate object keys from the main merge ([bf92486](https://github.com/iblai/os/commit/bf924868958499a6417cb3fbff53dd80c941c300))
+* **rbac:** let anonymous viewers chat on anonymous-allowed mentors ([9f81ec0](https://github.com/iblai/os/commit/9f81ec0ab3839a2152e7b562798b35ac23ddf590))
+* **rbac:** track whether the mentor permissions answer has arrived ([2f880dc](https://github.com/iblai/os/commit/2f880dc9d946ed145f5784a169fc717348ce7e88)), closes [iblai/ibl-frontend#2186](https://github.com/iblai/ibl-frontend/issues/2186)
+* **tenant-metadata:** bump @iblai/iblai-js to 2.55.0 + repair tenant-metadata test mocks ([6dc06b9](https://github.com/iblai/os/commit/6dc06b9b2bcb61b84ebb9014385c28e76b8a0873))
+* **tenants:** sync saved org metadata into localStorage on update ([c521a84](https://github.com/iblai/os/commit/c521a846fd190a6a55e15c8c6556ba351a101f27))
+* **test:** type the useTenantObjectMetadata mock as its real return ([2516364](https://github.com/iblai/os/commit/2516364ea18f2662c0d1cdb9d093d9a970afeca9))
+
+### Refactors
+
+* **e2e:** harden tenant-metadata helpers from review ([ad81ae6](https://github.com/iblai/os/commit/ad81ae6a3324d6ec24a578f58a740c715a97fcf9))
+
+### Chores
+
+* **deps:** bump @iblai/iblai-js 2.55.0 -> 2.57.0 ([1a9303a](https://github.com/iblai/os/commit/1a9303afcd526829e907bf7be3e19c34a3e2fc77)), closes [iblai-web-frontend#2192](https://github.com/iblai/iblai-web-frontend/issues/2192)
+* **deps:** bump @iblai/iblai-js 2.57.0 -> 2.58.1 ([4886d52](https://github.com/iblai/os/commit/4886d5257f0f3605d1dbd25292f4c645a23c306d))
+* **deps:** bump @iblai/iblai-js to 2.59.0 ([880227b](https://github.com/iblai/os/commit/880227bfb9eaa54e496c63366ccdced407b5e610))
+* **deps:** bump @iblai/iblai-js to 2.59.2 ([35b688a](https://github.com/iblai/os/commit/35b688acb08d5c98c113ba1674f121643f03e801)), closes [iblai/ibl-frontend#2201](https://github.com/iblai/ibl-frontend/issues/2201)
+* **deps:** take @iblai/iblai-js 2.52.2, which makes the RBAC guard live ([1827837](https://github.com/iblai/os/commit/1827837b3b7f5fe572def49d3cf32a64c9232ee4))
+* **security:** bump follow-redirects override to >=1.16.2 ([f6d932b](https://github.com/iblai/os/commit/f6d932b3ee242c346be47332bc228a723aae9f6f))
+
+### Tests
+
+* cover useStoredUserMetadata ([c07289d](https://github.com/iblai/os/commit/c07289dd4ae9a97b13f42fc55cfde6136d515b88))
+* **e2e:** drive the product tour via the user_metadata localStorage key ([1e25f17](https://github.com/iblai/os/commit/1e25f170ae708a7ffb2eff65f83c90ec9a9c4a21))
+* **e2e:** point the API-keys EXPIRES cell at the 4th column ([a06ae1b](https://github.com/iblai/os/commit/a06ae1b73375e59f8e9cd6a01d3522a4bf77c657))
+* **e2e:** read tenant metadata from the persisted tenants list ([087adaa](https://github.com/iblai/os/commit/087adaa5df7f8eaa44f76f27654690832f2f96e3))
+* **nav-bar:** add TransportEnum to the @iblai/iblai-api mock ([66499c9](https://github.com/iblai/os/commit/66499c97391f3fdb99faa8fed38948ad4f2de877))
+
+## [0.183.1](https://github.com/iblai/os/compare/v0.183.0...v0.183.1) (2026-10-30)
+
+### CI
+
+* **pr-gate:** say what the e2e run found in the merge box, linked to it ([702be85](https://github.com/iblai/os/commit/702be85f527a6af70020358622d38d7bb450e6ed))
+
 ## [0.183.0](https://github.com/iblai/os/compare/v0.182.2...v0.183.0) (2026-10-30)
 
 ### Features

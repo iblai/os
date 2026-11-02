@@ -72,6 +72,13 @@ vi.mock('@iblai/iblai-js/web-utils', () => ({
   useTenantMetadata: () => mockUseTenantMetadata(),
 }));
 
+// The source now reads the tenant's metadata object from the tenants list via
+// useTenantObjectMetadata (not the SDK hook). Unwrap the fixture's `metadata` so
+// the existing mockReturnValue({ metadata: … }) calls below still drive it.
+vi.mock('@/hooks/use-tenant-object-metadata', () => ({
+  useTenantObjectMetadata: () => mockUseTenantMetadata().metadata ?? {},
+}));
+
 vi.mock('@/lib/config', () => ({
   config: {
     mainTenantKey: () => 'main',

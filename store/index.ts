@@ -29,6 +29,7 @@ import { analyticsReducer } from '@/features/analytics/slice';
 import { chatInputSliceReducer } from '@/features/chat-input/api-slice';
 import rbacReducer from '@/features/rbac/rbac-slice';
 import imagePreviewsReducer from '@/features/image-previews/image-previews-slice';
+import { tenantMetadataStorageSync } from '@/features/tenants/tenant-metadata-storage-sync';
 
 // Bridge: the data layer's `updateMemsearchConfig` mutation only invalidates
 // the MEMSEARCH_PLATFORM_CONFIG tag, but our app reads memsearch state via
@@ -97,6 +98,7 @@ export const store = configureStore({
       providerAssociationApiSlice.middleware,
       ...mentorMiddleware,
       memsearchStatusBridge.middleware,
+      tenantMetadataStorageSync.middleware,
     ),
 });
 

@@ -135,6 +135,25 @@ const { streamingToolCalls } = vi.hoisted(() => ({
   streamingToolCalls: { current: [] as unknown[] },
 }));
 
+// Tenant metadata now rides the tenants list via this local hook (no network).
+// Default carries the support email and a chat_area_size within bounds (850,
+// distinct from the DEFAULT 800) to exercise the width clamp.
+const { mockUseTenantObjectMetadata } = vi.hoisted(() => ({
+  // Typed to the hook's real return (`TenantObjectMetadata`, a free-form
+  // `Record<string, any>`) so per-test `mockReturnValue` calls can pass any
+  // subset of metadata fields, not just the shape of this default.
+  mockUseTenantObjectMetadata: vi.fn(
+    (): Record<string, any> => ({
+      support_email: 'support@test.com',
+      chat_area_size: 850,
+    }),
+  ),
+}));
+
+vi.mock('@/hooks/use-tenant-object-metadata', () => ({
+  useTenantObjectMetadata: mockUseTenantObjectMetadata,
+}));
+
 const mockCurrentStreamingMessage = {
   id: '',
   content: '',
@@ -184,15 +203,8 @@ vi.mock('@iblai/iblai-js/web-utils', async () => {
       googleDocumentIsEnabled: true,
       artifactsEnabled: false,
     })),
-    useTenantContext: vi.fn(() => ({
-      metadata: { support_email: 'support@test.com' },
-    })),
     useAuthContext: vi.fn(() => ({
       userIsAccessingPublicRoute: false,
-    })),
-    useTenantMetadata: vi.fn(() => ({
-      platformName: 'Test Platform',
-      metadata: { chat_area_size: 850 }, // Use 850 (within bounds 600-1200, different from DEFAULT 800) to cover lines 220-223
     })),
     useAdvancedChat: vi.fn(() => ({
       changeTab: vi.fn(),
@@ -780,6 +792,12 @@ describe('Chat', () => {
     vi.clearAllMocks();
     // Reset the chat actions popup mock
     mockSelectEnableChatActionsPopup.mockReturnValue(false);
+    // clearAllMocks keeps mockReturnValue overrides, so restore the default
+    // tenant metadata each test to avoid leaks between cases.
+    mockUseTenantObjectMetadata.mockReturnValue({
+      support_email: 'support@test.com',
+      chat_area_size: 850,
+    });
     // Reset window scroll
     Object.defineProperty(window, 'scrollY', { value: 0, writable: true });
     Object.defineProperty(window, 'pageYOffset', { value: 0, writable: true });
@@ -2498,11 +2516,7 @@ describe('Chat', () => {
 
   describe('chat area max width', () => {
     it('should use chat area size from tenant metadata', async () => {
-      const { useTenantMetadata } = await import('@iblai/iblai-js/web-utils');
-      (useTenantMetadata as any).mockReturnValue({
-        platformName: 'Test Platform',
-        metadata: { chat_area_size: 900 },
-      });
+      mockUseTenantObjectMetadata.mockReturnValue({ chat_area_size: 900 });
 
       const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
       (useAdvancedChat as any).mockReturnValue({
@@ -2532,10 +2546,8 @@ describe('Chat', () => {
     });
 
     it('should use default chat area size when metadata is invalid', async () => {
-      const { useTenantMetadata } = await import('@iblai/iblai-js/web-utils');
-      (useTenantMetadata as any).mockReturnValue({
-        platformName: 'Test Platform',
-        metadata: { chat_area_size: 'invalid' },
+      mockUseTenantObjectMetadata.mockReturnValue({
+        chat_area_size: 'invalid',
       });
 
       const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
@@ -2566,11 +2578,7 @@ describe('Chat', () => {
     });
 
     it('should use default when chat area size is below minimum', async () => {
-      const { useTenantMetadata } = await import('@iblai/iblai-js/web-utils');
-      (useTenantMetadata as any).mockReturnValue({
-        platformName: 'Test Platform',
-        metadata: { chat_area_size: 100 },
-      });
+      mockUseTenantObjectMetadata.mockReturnValue({ chat_area_size: 100 });
 
       const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
       (useAdvancedChat as any).mockReturnValue({
@@ -2599,11 +2607,7 @@ describe('Chat', () => {
     });
 
     it('should use default when chat area size is above maximum', async () => {
-      const { useTenantMetadata } = await import('@iblai/iblai-js/web-utils');
-      (useTenantMetadata as any).mockReturnValue({
-        platformName: 'Test Platform',
-        metadata: { chat_area_size: 5000 },
-      });
+      mockUseTenantObjectMetadata.mockReturnValue({ chat_area_size: 5000 });
 
       const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
       (useAdvancedChat as any).mockReturnValue({
@@ -7899,11 +7903,11 @@ describe('Chat', () => {
         },
       });
 
-      const { useAdvancedChat, chatActions, useTenantContext } = await import(
+      const { useAdvancedChat, chatActions } = await import(
         '@iblai/iblai-js/web-utils'
       );
-      (useTenantContext as any).mockReturnValue({
-        metadata: { support_email: 'test@example.com' },
+      mockUseTenantObjectMetadata.mockReturnValue({
+        support_email: 'test@example.com',
       });
       (useAdvancedChat as any).mockReturnValue({
         changeTab: vi.fn(),
@@ -12168,7 +12172,7 @@ describe('Chat', () => {
     });
 
     it('should show join tenant message with platform name when available', async () => {
-      const { useAdvancedChat, chatActions, useTenantMetadata } = await import(
+      const { useAdvancedChat, chatActions } = await import(
         '@iblai/iblai-js/web-utils'
       );
       const { useUserTenants } = await import('@/hooks/use-user');
@@ -12179,8 +12183,13 @@ describe('Chat', () => {
 
       (isLoggedIn as any).mockReturnValue(true);
 
+      // Platform name now rides each tenant entry; the join message reads it off
+      // the entry matching tenantKey. User is in 'other-tenant', not the
+      // 'test-tenant' they're visiting, so the join path fires.
       (useUserTenants as any).mockReturnValue({
-        userTenants: [{ key: 'other-tenant' }],
+        userTenants: [
+          { key: 'other-tenant', platform_name: 'My Custom Platform' },
+        ],
       });
 
       (useMentorSettings as any).mockReturnValue({
@@ -12188,12 +12197,6 @@ describe('Chat', () => {
           allowAnonymous: false,
           mentorVisibility: 'PRIVATE',
         },
-      });
-
-      // Set platform name
-      (useTenantMetadata as any).mockReturnValue({
-        platformName: 'My Custom Platform',
-        metadata: { chat_area_size: 800 },
       });
 
       (useAdvancedChat as any).mockReturnValue({
@@ -14971,15 +14974,10 @@ describe('Chat', () => {
 
   describe('chatAreaMaxWidth calculation', () => {
     it('should use tenant metadata chat_area_size when within valid bounds', async () => {
-      const { useTenantMetadata, useAdvancedChat } = await import(
-        '@iblai/iblai-js/web-utils'
-      );
+      const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
 
       // Set metadata to a value that is WITHIN valid bounds (600 <= 700 <= 1200)
-      (useTenantMetadata as any).mockReturnValue({
-        platformName: 'Test Platform',
-        metadata: { chat_area_size: 700 },
-      });
+      mockUseTenantObjectMetadata.mockReturnValue({ chat_area_size: 700 });
 
       (useAdvancedChat as any).mockReturnValue({
         changeTab: vi.fn(),
@@ -15016,15 +15014,10 @@ describe('Chat', () => {
     });
 
     it('should use sizeValue (MIN boundary) when exactly at MIN', async () => {
-      const { useTenantMetadata, useAdvancedChat } = await import(
-        '@iblai/iblai-js/web-utils'
-      );
+      const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
 
       // Test with value exactly at MIN boundary - should return sizeValue, not DEFAULT
-      (useTenantMetadata as any).mockReturnValue({
-        platformName: 'Test Platform',
-        metadata: { chat_area_size: 600 },
-      });
+      mockUseTenantObjectMetadata.mockReturnValue({ chat_area_size: 600 });
 
       (useAdvancedChat as any).mockReturnValue({
         changeTab: vi.fn(),
@@ -15052,15 +15045,10 @@ describe('Chat', () => {
     });
 
     it('should use sizeValue (MAX boundary) when exactly at MAX', async () => {
-      const { useTenantMetadata, useAdvancedChat } = await import(
-        '@iblai/iblai-js/web-utils'
-      );
+      const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
 
       // Test with value exactly at MAX boundary - should return sizeValue
-      (useTenantMetadata as any).mockReturnValue({
-        platformName: 'Test Platform',
-        metadata: { chat_area_size: 1200 },
-      });
+      mockUseTenantObjectMetadata.mockReturnValue({ chat_area_size: 1200 });
 
       (useAdvancedChat as any).mockReturnValue({
         changeTab: vi.fn(),
@@ -15088,15 +15076,10 @@ describe('Chat', () => {
     });
 
     it('should use sizeValue within valid mid-range', async () => {
-      const { useTenantMetadata, useAdvancedChat } = await import(
-        '@iblai/iblai-js/web-utils'
-      );
+      const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
 
       // Test with a value in the middle of valid range (e.g., 900)
-      (useTenantMetadata as any).mockReturnValue({
-        platformName: 'Test Platform',
-        metadata: { chat_area_size: 900 },
-      });
+      mockUseTenantObjectMetadata.mockReturnValue({ chat_area_size: 900 });
 
       (useAdvancedChat as any).mockReturnValue({
         changeTab: vi.fn(),
@@ -16421,7 +16404,7 @@ describe('Chat', () => {
 
   describe('Strategy 9: handleSubmit not logged in with null platformName', () => {
     it('should show join tenant message with tenantKey.toUpperCase() when platformName is null', async () => {
-      const { useAdvancedChat, chatActions, useTenantMetadata } = await import(
+      const { useAdvancedChat, chatActions } = await import(
         '@iblai/iblai-js/web-utils'
       );
       const { useUserTenants } = await import('@/hooks/use-user');
@@ -16432,6 +16415,8 @@ describe('Chat', () => {
 
       (isLoggedIn as any).mockReturnValue(true);
 
+      // User is in 'other-tenant' with no platform_name, so the join message
+      // for the visited 'test-tenant' falls back to tenantKey.toUpperCase().
       (useUserTenants as any).mockReturnValue({
         userTenants: [{ key: 'other-tenant' }],
       });
@@ -16441,12 +16426,6 @@ describe('Chat', () => {
           allowAnonymous: false,
           mentorVisibility: 'PRIVATE',
         },
-      });
-
-      // Set platformName to null to trigger the ?? tenantKey.toUpperCase() fallback
-      (useTenantMetadata as any).mockReturnValue({
-        platformName: null,
-        metadata: { chat_area_size: 800 },
       });
 
       (useAdvancedChat as any).mockReturnValue({
@@ -16808,8 +16787,7 @@ describe('Chat', () => {
 
   describe('Strategy 6: support_email null fallback', () => {
     it('should use config.supportEmail() when metadata.support_email is missing', async () => {
-      const { useTenantContext } = await import('@iblai/iblai-js/web-utils');
-      (useTenantContext as any).mockReturnValue({ metadata: {} });
+      mockUseTenantObjectMetadata.mockReturnValue({});
 
       const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
       (useAdvancedChat as any).mockReturnValue({
@@ -17211,7 +17189,7 @@ describe('Chat', () => {
 
   describe('requireUserToJoinTenantOnChat with null support_email', () => {
     it('should use config.supportEmail() when metadata.support_email is null in join tenant message', async () => {
-      const { useAdvancedChat, chatActions, useTenantContext } = await import(
+      const { useAdvancedChat, chatActions } = await import(
         '@iblai/iblai-js/web-utils'
       );
       const { useUserTenants } = await import('@/hooks/use-user');
@@ -17234,7 +17212,7 @@ describe('Chat', () => {
       });
 
       // Set metadata without support_email to cover || config.supportEmail() fallback on line 1213
-      (useTenantContext as any).mockReturnValue({ metadata: {} });
+      mockUseTenantObjectMetadata.mockReturnValue({});
 
       (useAdvancedChat as any).mockReturnValue({
         changeTab: vi.fn(),
@@ -19209,14 +19187,10 @@ describe('Chat', () => {
 
   describe('support_email fallback in errorHandler (Branch 15, 20)', () => {
     it('should use config.supportEmail() fallback when metadata has no support_email', async () => {
-      const { useAdvancedChat, useTenantContext } = await import(
-        '@iblai/iblai-js/web-utils'
-      );
+      const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
 
       // Set up metadata without support_email
-      (useTenantContext as any).mockReturnValue({
-        metadata: {}, // no support_email
-      });
+      mockUseTenantObjectMetadata.mockReturnValue({}); // no support_email
 
       (useAdvancedChat as any).mockReturnValue({
         changeTab: vi.fn(),

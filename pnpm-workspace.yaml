@@ -23,10 +23,11 @@ overrides:
   # Dev-only reach: @release-it/conventional-changelog > conventional-changelog
   # > conventional-changelog-writer > handlebars. Upper bound keeps the 4.x line.
   handlebars: '>=4.7.10 <5'
-  # Floor raised to 1.16.1 for GHSA-q3jh-wrc6-jgq8 and GHSA-8r9p-f939-6h3c
-  # (credential headers kept on cross-origin redirects, >=1.16.0 <1.16.1).
-  # Reached through axios.
-  follow-redirects: '>=1.16.1'
+  # Floor raised to 1.16.2 for GHSA-q3jh-wrc6-jgq8 and GHSA-8r9p-f939-6h3c
+  # (credential headers kept on cross-origin redirects, patched in 1.16.1) and
+  # GHSA-mrwp-f3q8-3g9p (cross-realm sensitive-headers leak on a same-host
+  # redirect, >=1.16.0 <=1.16.1, patched in 1.16.2). Reached through axios.
+  follow-redirects: '>=1.16.2'
   defu: '>=6.1.5'
   lodash-es: '>=4.18.0'
   lodash: '>=4.18.0'

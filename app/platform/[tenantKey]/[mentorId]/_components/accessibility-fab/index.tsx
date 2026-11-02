@@ -3,7 +3,7 @@
 import { useParams, usePathname } from 'next/navigation';
 
 import { AccessibilityFab as SdkAccessibilityFab } from '@iblai/iblai-js/web-containers/next';
-import { useTenantMetadata } from '@iblai/iblai-js/web-utils';
+import { useTenantObjectMetadata } from '@/hooks/use-tenant-object-metadata';
 import { TenantKeyMentorIdParams } from '@/lib/types';
 import { useEmbedMode } from '@/hooks/use-embed-mode';
 import { useAppSelector } from '@/lib/hooks';
@@ -13,7 +13,7 @@ import { cn } from '@/lib/utils';
 export function AccessibilityFab() {
   const pathname = usePathname();
   const { tenantKey } = useParams<TenantKeyMentorIdParams>();
-  const { metadata } = useTenantMetadata({ org: tenantKey });
+  const metadata = useTenantObjectMetadata(tenantKey);
   const isEmbedMode = useEmbedMode();
   const chats = useAppSelector(selectChats);
   const activeTab = useAppSelector(selectActiveTab);

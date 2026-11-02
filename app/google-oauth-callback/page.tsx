@@ -1,12 +1,13 @@
 'use client';
 
 import { useSearchParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Spinner } from '@/components/spinner';
 import { useLazyConnectedServicesCallbackQuery } from '@iblai/iblai-js/data-layer';
 import { toast } from 'sonner';
 import { useLocalStorage } from '@/hooks/use-local-storage';
 import { hideInitialLoader } from '@/lib/initial-loader';
+import { describeOAuthCallbackFailure } from '@/lib/oauth-callback-failure';
 
 // Type for OAuth completion data stored in localStorage
 interface OAuthCompletionData {
@@ -29,7 +30,10 @@ interface PendingOAuthServer {
 
 export default function OAuthCallbackPage() {
   const searchParams = useSearchParams();
-  const [callbackTriggered, setCallbackTriggered] = useState(false);
+  // A ref, not state: React runs this effect twice on mount in development, and
+  // the provider's code and state can be used only once.
+  const callbackSentRef = useRef(false);
+  const [failure, setFailure] = useState<string | null>(null);
 
   useEffect(() => {
     hideInitialLoader();
@@ -49,7 +53,8 @@ export default function OAuthCallbackPage() {
   );
 
   useEffect(() => {
-    if (callbackTriggered) return;
+    if (callbackSentRef.current) return;
+    callbackSentRef.current = true;
 
     const handleCallback = async () => {
       // Get all search params from the URL
@@ -61,8 +66,6 @@ export default function OAuthCallbackPage() {
       params.redirect_uri = `${window.location.origin}/google-oauth-callback/`;
 
       try {
-        setCallbackTriggered(true);
-
         // Call the connected services callback endpoint with all params
         const result = await connectedServicesCallback(params).unwrap();
 
@@ -115,30 +118,29 @@ export default function OAuthCallbackPage() {
         }, 1000);
       } catch (error: unknown) {
         console.error('Failed to complete OAuth callback:', error);
-        const err = error as {
-          data?: { detail?: string; error?: string };
-          message?: string;
-        };
-        const errorMessage =
-          err?.data?.detail ||
-          err?.data?.error ||
-          err?.message ||
-          'Failed to connect service';
-        toast.error(errorMessage);
-        setTimeout(() => {
-          window.close();
-        }, 3000);
+        // The tab stays open so the reason can be read.
+        setFailure(describeOAuthCallbackFailure(error));
       }
     };
 
     handleCallback();
   }, [
     searchParams,
-    callbackTriggered,
     connectedServicesCallback,
     setOAuthComplete,
     pendingOAuthServer,
   ]);
+
+  if (failure) {
+    return (
+      <div className="flex h-dvh w-screen items-center justify-center p-4">
+        <div role="alert" className="max-w-md space-y-2 text-center">
+          <p className="text-base font-medium text-gray-900">{failure}</p>
+          <p className="text-sm text-gray-500">You can close this tab.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-dvh w-screen items-center justify-center">
