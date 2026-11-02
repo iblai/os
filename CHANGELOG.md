@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.184.1](https://github.com/iblai/os/compare/v0.184.0...v0.184.1) (2026-11-02)
+
+### Documentation
+
+* **perf:** add a startup-performance skill so the load path stays unblocked ([92a14f1](https://github.com/iblai/os/commit/92a14f1d96302909b5f2bf6d657d5ade2618f14f))
+
 ## [0.184.0](https://github.com/iblai/os/compare/v0.183.1...v0.184.0) (2026-10-31)
 
 ### Features
