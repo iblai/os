@@ -171,15 +171,6 @@
     "advanced": "Advanced",
     "memory": "Memory",
     "support": "Support",
-    "accountTabOrganization": "Organization",
-    "accountTabBilling": "Billing",
-    "accountDescOrganization": "Manage your organization settings.",
-    "accountDescManagement": "Manage users and their permissions in the system.",
-    "accountDescIntegrations": "Manage your integrations with other services.",
-    "accountDescMonetization": "Configure paywalls, pricing, and revenue.",
-    "accountDescAdvanced": "Configure advanced organization settings.",
-    "accountDescMemory": "Manage user global memories and agent memories.",
-    "accountDescBilling": "Manage your billing and subscription.",
     "awaitingPermission": "Waiting for your permission"
   },
   "appSidebarPinnedMessages": {

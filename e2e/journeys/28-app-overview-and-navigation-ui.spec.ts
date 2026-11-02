@@ -141,11 +141,15 @@ test.describe('Journey 28: App Overview & Navigation UI — Admin', () => {
 
     await sidebarPage.memoryButton.click();
 
-    const memoryDialog = page.getByRole('dialog', { name: 'Memory' });
+    const memoryDialog = page.getByRole('dialog', {
+      name: 'Organization settings',
+    });
     await expect(memoryDialog).toBeVisible({ timeout: 15_000 });
     await expect(
-      memoryDialog.getByText('Manage user global memories and agent memories.'),
-    ).toBeVisible({ timeout: 5_000 });
+      memoryDialog
+        .getByRole('navigation', { name: 'Organization settings', exact: true })
+        .getByRole('button', { name: 'Memory', exact: true }),
+    ).toBeVisible({ timeout: 10_000 });
 
     // The SDK MemoryAdminTab renders its Global / Agent sub-tabs once the
     // tenant's memsearch status resolves; if memsearch is off for this

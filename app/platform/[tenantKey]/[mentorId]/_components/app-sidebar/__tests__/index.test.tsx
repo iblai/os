@@ -350,6 +350,42 @@ vi.mock('@/components/projects/delete-project-modal', () => ({
 // The SDK export dialog is covered in the SDK; here we check what it is opened with.
 vi.mock('@iblai/iblai-js/web-containers/next', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
+  // The full Account component is covered in the SDK; here we check which
+  // tab the footer shortcuts open it on, and with what.
+  PlatformAccountSheet: (props: {
+    tab: string | null;
+    onClose: () => void;
+    tenantKey: string;
+    username: string;
+    isAdmin?: boolean;
+    enableRbac?: boolean;
+    currentSpa: string;
+    showGradebookTab?: boolean;
+    onLoadGroupPermissions?: (permissions: Record<string, unknown>) => void;
+  }) =>
+    props.tab ? (
+      <div
+        role="dialog"
+        aria-label="Account"
+        data-testid="account-sheet"
+        data-tab={props.tab}
+        data-tenant={props.tenantKey}
+        data-username={props.username}
+        data-admin={String(props.isAdmin)}
+        data-rbac={String(props.enableRbac)}
+        data-spa={props.currentSpa}
+        data-gradebook={String(props.showGradebookTab)}
+      >
+        <button onClick={props.onClose}>Close Account</button>
+        <button
+          onClick={() =>
+            props.onLoadGroupPermissions?.({ '/usergroups/1/': true })
+          }
+        >
+          Load Group Permissions
+        </button>
+      </div>
+    ) : null,
   ChatDownloadDialog: (props: {
     open: boolean;
     onOpenChange: (open: boolean) => void;
@@ -544,37 +580,6 @@ vi.mock('@/hooks/use-tenant-object-metadata', () => ({
   useTenantObjectMetadata: () => mockTenantMetadata,
 }));
 
-vi.mock('@iblai/iblai-js/web-containers', () => ({
-  Admin: ({ initialTab }: { initialTab?: string }) => (
-    <div data-testid="sdk-admin-tab" data-initial-tab={initialTab}>
-      Admin SDK Tab
-    </div>
-  ),
-  IntegrationsTab: () => (
-    <div data-testid="sdk-integrations-tab">Integrations SDK Tab</div>
-  ),
-  BillingTab: () => <div data-testid="sdk-billing-tab">Billing SDK Tab</div>,
-  MonetizationTab: () => (
-    <div data-testid="sdk-monetization-tab">Monetization SDK Tab</div>
-  ),
-  MemoryAdminTab: ({
-    tenantKey,
-    username,
-  }: {
-    tenantKey: string;
-    username: string;
-  }) => (
-    <div
-      data-testid="sdk-memory-admin-tab"
-      data-tenant-key={tenantKey}
-      data-username={username}
-    >
-      Memory Admin SDK Tab
-    </div>
-  ),
-  AdvancedTab: () => <div data-testid="sdk-advanced-tab">Advanced SDK Tab</div>,
-}));
-
 vi.mock('@/hooks/user-navigate', () => ({
   useNavigate: () => ({
     openCreateMentorModal: openCreateMentorModalMock,
@@ -626,6 +631,10 @@ vi.mock('@/lib/hooks', async () => {
 
 vi.mock('@/features/rbac/rbac-slice', () => ({
   selectRbacPermissions: () => ({}),
+  updateRbacPermissions: (payload: unknown) => ({
+    type: 'rbac/updateRbacPermissions',
+    payload,
+  }),
 }));
 
 vi.mock('@/hoc/withPermissions', () => ({
@@ -683,8 +692,11 @@ vi.mock('@/lib/config', () => ({
     documentationUrl: () => 'https://docs.example.com',
     authUrl: () => 'https://auth.example.com',
     platformBaseDomain: () => 'example.com',
+    defaultSupportPhoneNumber: () => '',
+    enableSupportPhone: () => false,
     hideAnalytics: () => 'false',
     enableRBAC: () => mockEnableRBAC,
+    enableGradebookTab: () => true,
     stripeEnabled: () => 'true',
     mentorTrainingMaximumFileSize: () => '60',
   },
@@ -1966,7 +1978,10 @@ describe('AppSidebar — Footer actions', () => {
   it('clicking Advanced opens the account dialog on the advanced tab', async () => {
     renderSidebar();
     fireEvent.click(screen.getAllByRole('button', { name: 'Advanced' })[0]);
-    expect(await screen.findByTestId('sdk-advanced-tab')).toBeInTheDocument();
+    expect(await screen.findByTestId('account-sheet')).toHaveAttribute(
+      'data-tab',
+      'advanced',
+    );
   });
 
   it('hides Invites for non-admin users (gated by isLiveAdmin)', () => {
@@ -2530,24 +2545,75 @@ describe('AppSidebar — Rail-collapsed mode', () => {
 });
 
 // =============================================================================
-// AccountSheet — exercise each footer-driven tab (management, integrations,
-// monetization, billing). The Advanced tab is covered above; this block
-// covers the remaining branches in the switch.
+// Account sheet — each footer shortcut opens the full SDK Account component
+// (tab rail included) on its own tab.
 // =============================================================================
 
-describe('AppSidebar — AccountSheet tabs', () => {
-  it('clicking Management opens the Admin SDK tab', async () => {
+describe('AppSidebar — Account sheet shortcuts', () => {
+  const openFromFooter = (name: string) =>
+    fireEvent.click(
+      within(screen.getByTestId('sidebar-footer')).getByRole('button', {
+        name,
+      }),
+    );
+
+  it.each([
+    ['Management', 'management'],
+    ['Integrations', 'integrations'],
+    ['Memory', 'memory'],
+    ['Advanced', 'advanced'],
+  ])('clicking %s opens the Account sheet on the %s tab', async (name, tab) => {
     renderSidebar();
-    fireEvent.click(screen.getAllByRole('button', { name: 'Management' })[0]);
-    expect(await screen.findByTestId('sdk-admin-tab')).toBeInTheDocument();
+    openFromFooter(name);
+    const sheet = await screen.findByTestId('account-sheet');
+    expect(sheet).toHaveAttribute('data-tab', tab);
+    expect(sheet).toHaveAttribute('data-tenant', 'tenant-a');
+    expect(sheet).toHaveAttribute('data-username', 'admin-user');
+    expect(sheet).toHaveAttribute('data-spa', 'mentor');
   });
 
-  it('clicking Integrations opens the IntegrationsTab', async () => {
+  it('hands the sheet the admin flag and RBAC setting the footer gates on', async () => {
     renderSidebar();
-    fireEvent.click(screen.getAllByRole('button', { name: 'Integrations' })[0]);
-    expect(
-      await screen.findByTestId('sdk-integrations-tab'),
-    ).toBeInTheDocument();
+    openFromFooter('Management');
+    const sheet = await screen.findByTestId('account-sheet');
+    expect(sheet).toHaveAttribute('data-admin', 'true');
+    expect(sheet).toHaveAttribute('data-rbac', String(mockEnableRBAC));
+    expect(sheet).toHaveAttribute('data-gradebook', 'true');
+  });
+
+  it('drops the admin flag on the open sheet when the admin switches to learner mode', async () => {
+    const { rerender } = renderSidebar();
+    openFromFooter('Advanced');
+    expect(await screen.findByTestId('account-sheet')).toHaveAttribute(
+      'data-admin',
+      'true',
+    );
+    mockUserIsStudent = true;
+    rerender(
+      <Provider store={makeStore()}>
+        <TooltipProvider>
+          <SidebarProvider defaultOpen={mockSidebarState.open}>
+            <AppSidebar />
+          </SidebarProvider>
+        </TooltipProvider>
+      </Provider>,
+    );
+    expect(screen.getByTestId('account-sheet')).toHaveAttribute(
+      'data-admin',
+      'false',
+    );
+  });
+
+  it('stores the team permissions the sheet loads, like the profile-menu Account does', async () => {
+    renderSidebar();
+    openFromFooter('Management');
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Load Group Permissions' }),
+    );
+    expect(dispatchMock).toHaveBeenCalledWith({
+      type: 'rbac/updateRbacPermissions',
+      payload: { '/usergroups/1/': true },
+    });
   });
 
   it('admin sees Memory between Monetization/Integrations and Advanced, matching the SDK Account rail order', () => {
@@ -2579,25 +2645,7 @@ describe('AppSidebar — AccountSheet tabs', () => {
     ).toBeTruthy();
   });
 
-  it('clicking Memory opens the SDK MemoryAdminTab in the account dialog with the tenant and username', async () => {
-    renderSidebar();
-    fireEvent.click(
-      within(screen.getByTestId('sidebar-footer')).getByRole('button', {
-        name: 'Memory',
-      }),
-    );
-    const tab = await screen.findByTestId('sdk-memory-admin-tab');
-    expect(tab).toBeInTheDocument();
-    expect(tab).toHaveAttribute('data-tenant-key', 'tenant-a');
-    expect(tab).toHaveAttribute('data-username', 'admin-user');
-    // Dialog chrome carries the same title/description the SDK rail shows.
-    expect(screen.getByRole('dialog', { name: 'Memory' })).toBeInTheDocument();
-    expect(
-      screen.getByText('Manage user global memories and agent memories.'),
-    ).toBeInTheDocument();
-  });
-
-  it('clicking Monetization opens the MonetizationTab (when tenant has it enabled)', async () => {
+  it('clicking Monetization opens the Account sheet on the monetization tab (when tenant has it enabled)', async () => {
     mockCurrentTenant = {
       is_admin: true,
       is_advertising: false,
@@ -2605,10 +2653,11 @@ describe('AppSidebar — AccountSheet tabs', () => {
       monetization_enabled: true,
     };
     renderSidebar();
-    fireEvent.click(screen.getAllByRole('button', { name: 'Monetization' })[0]);
-    expect(
-      await screen.findByTestId('sdk-monetization-tab'),
-    ).toBeInTheDocument();
+    openFromFooter('Monetization');
+    expect(await screen.findByTestId('account-sheet')).toHaveAttribute(
+      'data-tab',
+      'monetization',
+    );
   });
 
   it('hides Monetization when tenant has not enabled it', () => {
@@ -2623,15 +2672,13 @@ describe('AppSidebar — AccountSheet tabs', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('the AccountSheet closes when its dialog onOpenChange fires false', async () => {
+  it('the Account sheet closes through its onClose', async () => {
     renderSidebar();
-    fireEvent.click(screen.getAllByRole('button', { name: 'Advanced' })[0]);
-    const tab = await screen.findByTestId('sdk-advanced-tab');
-    expect(tab).toBeInTheDocument();
-    // Esc closes Radix dialogs in jsdom.
-    fireEvent.keyDown(tab, { key: 'Escape' });
+    openFromFooter('Advanced');
+    expect(await screen.findByTestId('account-sheet')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Close Account' }));
     await waitFor(() => {
-      expect(screen.queryByTestId('sdk-advanced-tab')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('account-sheet')).not.toBeInTheDocument();
     });
   });
 });

@@ -52,13 +52,9 @@ import {
   type AnalyticsTab,
 } from '@iblai/iblai-js/web-utils';
 import {
-  Admin,
-  IntegrationsTab,
-  BillingTab,
-  MonetizationTab,
-  MemoryAdminTab,
-  AdvancedTab,
-} from '@iblai/iblai-js/web-containers';
+  PlatformAccountSheet,
+  type PlatformAccountTab,
+} from '@iblai/iblai-js/web-containers/next';
 
 import { useNavigate } from '@/hooks/user-navigate';
 import {
@@ -69,7 +65,10 @@ import {
 } from '@/hooks/use-user';
 import { useUserType } from '@/hooks/use-user-type';
 import { useAppSelector } from '@/lib/hooks';
-import { selectRbacPermissions } from '@/features/rbac/rbac-slice';
+import {
+  selectRbacPermissions,
+  updateRbacPermissions,
+} from '@/features/rbac/rbac-slice';
 import { checkRbacPermission } from '@/hoc/withPermissions';
 import { useEmbedMode } from '@/hooks/use-embed-mode';
 import { useAllowMentorSelection } from '@/hooks/use-allow-mentor-selection';
@@ -81,13 +80,6 @@ import { config } from '@/lib/config';
 import { ANONYMOUS_USERNAME, UserType } from '@/lib/constants';
 import { TenantKeyMentorIdParams, ProjectPageParams } from '@/lib/types';
 import { getUserEmail } from '@/features/utils';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import eventBus, { RemoteEvents } from '@/lib/eventBus';
 import Logo from '@/components/logo';
 import {
@@ -455,15 +447,6 @@ type SidebarOpenSection =
   | 'agents'
   | 'analytics';
 
-type AccountTab =
-  | 'organization'
-  | 'management'
-  | 'integrations'
-  | 'monetization'
-  | 'memory'
-  | 'advanced'
-  | 'billing';
-
 export function AppSidebar() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -506,7 +489,7 @@ export function AppSidebar() {
   const hideSidebar = hideSidebarRaw === '1' || hideSidebarRaw === 'true';
 
   const [accountDialogTab, setAccountDialogTab] =
-    React.useState<AccountTab | null>(null);
+    React.useState<PlatformAccountTab | null>(null);
 
   const {
     openCreateMentorModal,
@@ -1118,7 +1101,7 @@ export function AppSidebar() {
   ]);
 
   const openAccountTab = React.useCallback(
-    (tab: AccountTab) => {
+    (tab: PlatformAccountTab) => {
       const result = runAdminAction(() => {
         setAccountDialogTab(tab);
       });
@@ -1579,12 +1562,25 @@ export function AppSidebar() {
         </aside>
       </Sidebar>
 
-      <AccountSheet
+      <PlatformAccountSheet
         tab={accountDialogTab}
         onClose={() => setAccountDialogTab(null)}
         tenantKey={tenantKey}
         username={username ?? ''}
         email={userEmail}
+        mainPlatformKey={config.mainTenantKey()}
+        authUrl={config.authUrl()}
+        currentSpa={config.iblPlatform() || 'mentor'}
+        platformBaseDomain={config.platformBaseDomain()}
+        defaultSupportPhone={config.defaultSupportPhoneNumber()}
+        enableSupportPhone={config.enableSupportPhone()}
+        isAdmin={isLiveAdmin}
+        enableRbac={config.enableRBAC()}
+        rbacPermissions={rbacPermissions}
+        onLoadGroupPermissions={(permissions) =>
+          dispatch(updateRbacPermissions(permissions ?? {}))
+        }
+        showGradebookTab={config.enableGradebookTab()}
         onInviteClick={() => {
           // Don't close the Users popup. The SDK's InviteUserDialog
           // renders via its own Radix Portal, so it layers on top; when
@@ -1610,133 +1606,5 @@ export function AppSidebar() {
         />
       )}
     </SidebarNavCallbackContext.Provider>
-  );
-}
-
-/**
- * Renders one of the SDK's organization-level tab components in its
- * own dialog — `Admin` (Users), `IntegrationsTab` (API), `BillingTab`,
- * `MonetizationTab`, `MemoryAdminTab` (user global + agent memories),
- * `AdvancedTab` (Settings). Each footer action opens
- * this dialog with a different `tab`; the body switches the SDK
- * component, so there's no shared tab rail and nothing to hide.
- *
- * `organization` doesn't have a sidebar footer entry today, but it's
- * defined for completeness so adding "Organization" later is a one-line
- * change.
- */
-function AccountSheet({
-  tab,
-  onClose,
-  tenantKey,
-  username,
-  email,
-  onInviteClick,
-}: {
-  tab: AccountTab | null;
-  onClose: () => void;
-  tenantKey: string;
-  username: string;
-  email: string;
-  onInviteClick: () => void;
-}) {
-  const t = useTranslations('appSidebarIndex');
-  const open = tab !== null;
-
-  const accountTabTitles: Record<AccountTab, string> = {
-    organization: t('accountTabOrganization'),
-    management: t('management'),
-    integrations: t('integrations'),
-    monetization: t('monetization'),
-    memory: t('memory'),
-    advanced: t('advanced'),
-    billing: t('accountTabBilling'),
-  };
-
-  const accountTabDescriptions: Record<AccountTab, string> = {
-    organization: t('accountDescOrganization'),
-    management: t('accountDescManagement'),
-    integrations: t('accountDescIntegrations'),
-    monetization: t('accountDescMonetization'),
-    memory: t('accountDescMemory'),
-    advanced: t('accountDescAdvanced'),
-    billing: t('accountDescBilling'),
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      {/*
-        Dimensions: width matches the SDK's `InviteUserDialog`
-        (`sm:max-w-7xl w-[95vw]`). Height is PINNED to `h-[90vh]`
-        (was `max-h-[90vh]`) so the dialog stays the same size as
-        the user navigates between sub-tabs inside Management
-        (Users → Groups → Roles → Policies) and Integrations. With
-        `max-h`, an empty/short sub-tab made the dialog collapse to
-        fit, then expand back when content loaded — felt jumpy.
-        Pinning the outer height + keeping the inner scroll area
-        (`flex-1 overflow-y-auto`) means the chrome is stable and
-        all the variation happens inside the scroll region.
-      */}
-      <DialogContent className="mx-auto my-auto flex h-[90vh] w-[95vw] max-w-none flex-col justify-between gap-0 rounded-lg p-0 sm:max-w-7xl">
-        <DialogHeader className="flex-shrink-0 border-b border-gray-200 p-4 pt-[30px]">
-          <DialogTitle className="text-lg font-medium text-gray-900 dark:text-gray-100">
-            {tab ? accountTabTitles[tab] : ''}
-          </DialogTitle>
-          <DialogDescription className="text-sm leading-relaxed text-gray-600">
-            {tab ? accountTabDescriptions[tab] : ''}
-          </DialogDescription>
-        </DialogHeader>
-        <div className="min-h-0 flex-1 overflow-y-auto p-6">
-          {tab === 'management' && (
-            <Admin
-              tenant={tenantKey}
-              onInviteClick={onInviteClick}
-              // RBAC is off for this entry point — admin users see every
-              // sub-tab. Tenant-level access is already gated by the
-              // sidebar (only admins reach the footer actions).
-              hasUserTabPermission
-              hasGroupsTabPermission
-              hasRolesTabPermission
-              hasPoliciesTabPermission
-              hasTeamsTabPermission
-              hasAlertsTabPermission
-              hasInviteUserPermission
-              hasCreateTeamPermission
-              enableRbac={false}
-              rbacPermissions={{}}
-            />
-          )}
-          {tab === 'integrations' && (
-            <IntegrationsTab tenantKey={tenantKey} username={username} />
-          )}
-          {tab === 'billing' && (
-            <BillingTab
-              tenant={tenantKey}
-              username={username}
-              mainPlatformKey={config.mainTenantKey()}
-              currentUserEmail={email}
-            />
-          )}
-          {tab === 'monetization' && (
-            <MonetizationTab
-              platformKey={tenantKey}
-              authURL={config.authUrl()}
-            />
-          )}
-          {tab === 'memory' && (
-            <MemoryAdminTab tenantKey={tenantKey} username={username} />
-          )}
-          {tab === 'advanced' && (
-            <AdvancedTab
-              platformKey={tenantKey}
-              username={username}
-              currentSPA={config.iblPlatform() || 'mentor'}
-              authURL={config.authUrl()}
-              currentPlatformBaseDomain={config.platformBaseDomain()}
-            />
-          )}
-        </div>
-      </DialogContent>
-    </Dialog>
   );
 }
