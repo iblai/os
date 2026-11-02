@@ -52,6 +52,23 @@ After any change to user-facing behavior, evaluate whether `e2e/coverage.json` a
 
 See `.claude/skills/e2e-coverage.md` for the full decision process.
 
+## Startup performance — don't block first render
+
+The startup path was deliberately unblocked: nothing on the way to first render
+may `await` data that the UI reads reactively. Before adding an `await`, a
+provider, or a query that runs on load, check what the screen shows while it
+waits — if the answer is "a spinner" or "nothing", that is a regression.
+
+Three places must stay unblocked: `redirectToMentor(...)`, `setIsLoading(false)`
+/ `onComplete?.()` in the providers, and `<SdkChat>` rendering unconditionally
+in `mentor-page-content.tsx`.
+
+Deferring has traps that have already been hit: an empty permissions object
+means both "denied" and "not asked yet" (two consumers fail OPEN on it), and
+`await` was silently providing ordering that fire-and-forget gives up.
+
+See `.claude/skills/startup-performance.md` before touching the load path.
+
 ## UI terminology: "users" not "students", "agent" not "mentor"
 
 We moved from "student" to "user" and from "mentor" to "agent". This is a UI rule: everything a person reads (UI strings, all locales, toasts, errors, dialog titles) says "user(s)" and "agent(s)" — e.g. "User Models", "Edit Agent". It does NOT apply to API calls, endpoint paths, request/response fields, query params, or existing code identifiers (`mentor_id`, `useGetMentorsQuery`, `useUserIsStudent`, …) — never rename those to match the copy.
