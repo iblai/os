@@ -400,7 +400,7 @@ vi.mock('@/components/sentry-init', () => ({
   SentryInit: () => null,
 }));
 
-// Side-effect-only component (syncs language pref via useGetUserMetadataQuery);
+// Side-effect-only component (syncs language pref from the stored user metadata);
 // stub it out so the suite needn't wire up a real RTK store.
 vi.mock('@/components/language-preference-sync', () => ({
   LanguagePreferenceSync: () => null,
