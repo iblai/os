@@ -30,6 +30,7 @@ export const PER_TAB_AUTH_KEYS = [
   'dm_token_expires',
   'edx_jwt_token',
   'userData',
+  'user_metadata',
   'current_tenant',
   'tenant',
   'tenants',

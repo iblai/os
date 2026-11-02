@@ -1,12 +1,7 @@
 import { test, expect } from '../fixtures/mentor-test';
 import type { Locator, Page } from '@playwright/test';
 import { navigateToMentorApp, checkAdminStatus } from '../utils/auth';
-import {
-  isUserMetadataResponse,
-  restoreProductTourSeen,
-  saveTourOutcome,
-  trackUserMetadata,
-} from '../utils/product-tour';
+import { restoreProductTourSeen, saveTourOutcome } from '../utils/product-tour';
 
 /**
  * Journey 79: First-Visit Product Tour
@@ -66,16 +61,13 @@ async function goToLastStep(page: Page): Promise<void> {
 test.describe('Journey 79: First-Visit Product Tour', () => {
   test.setTimeout(200_000);
 
-  let userMetadata: ReturnType<typeof trackUserMetadata>;
-
   test.beforeEach(async ({ page }) => {
-    userMetadata = trackUserMetadata(page);
     await navigateToMentorApp(page);
   });
 
   test.afterEach(async ({ page }) => {
     try {
-      await restoreProductTourSeen(page, userMetadata);
+      await restoreProductTourSeen(page);
     } catch {
       // Best effort: a completed or skipped tour is already a seen record.
     }
@@ -176,13 +168,13 @@ test.describe('Journey 79: First-Visit Product Tour', () => {
     expect(Date.parse(saved?.completed_at)).not.toBeNaN();
     await expect(tip).toHaveCount(0);
 
-    const metadataLoaded = page.waitForResponse(
-      (response) => isUserMetadataResponse(response, 'GET') && response.ok(),
-      { timeout: 60_000 },
-    );
     await navigateToMentorApp(page, withQuery(page.url(), ''));
-    await metadataLoaded;
-    // Past the tour's start delay (1s) and its retry window.
+    // The finished outcome is read from the `user_metadata` localStorage key
+    // (set by the save above). Wait for the chat shell, then past the tour's
+    // start delay (1s) and its retry window.
+    await expect(
+      page.getByRole('textbox', { name: 'Ask anything', exact: true }),
+    ).toBeVisible({ timeout: 60_000 });
     await page.waitForTimeout(4_000);
     await expect(tooltipOf(page)).toHaveCount(0);
   });

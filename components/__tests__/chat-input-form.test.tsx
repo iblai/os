@@ -287,12 +287,13 @@ vi.mock('@iblai/iblai-js/web-utils', async () => {
     ...actual,
     selectShowingSharedChat: (state: any) =>
       state.chatSliceShared?.showingSharedChat ?? false,
-    useTenantMetadata: () => ({
-      metadata: {},
-      metadataLoaded: true,
-    }),
   };
 });
+
+// Tenant metadata now rides the tenants list via this local hook (raw object).
+vi.mock('@/hooks/use-tenant-object-metadata', () => ({
+  useTenantObjectMetadata: () => ({}),
+}));
 
 // The real useChatPrivacy fires chat-privacy selectors/API calls against redux
 // slices this test's minimal store doesn't provide; stub it (the nav-bar tests

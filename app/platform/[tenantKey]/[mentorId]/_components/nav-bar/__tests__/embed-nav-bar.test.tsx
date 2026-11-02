@@ -66,6 +66,8 @@ vi.mock('../user-profile', () => ({
 
 vi.mock('@/hooks/use-user', () => ({
   useUsername: () => mockUsername,
+  useUserTenants: () => ({ userTenants: [] }),
+  useCurrentTenant: () => ({ currentTenant: null }),
 }));
 
 vi.mock('@/lib/utils', () => ({
@@ -80,6 +82,12 @@ vi.mock('@/lib/config', () => ({
     documentationUrl: () => 'https://docs.example.com',
     iblTemplateMentor: () => 'ai-mentor',
   },
+}));
+
+// The nav bar now reads tenant metadata from the tenants list via useHelpCenter
+// (useTenantObjectMetadata); route it to the same fixture.
+vi.mock('@/hooks/use-tenant-object-metadata', () => ({
+  useTenantObjectMetadata: () => mockMetadata,
 }));
 
 vi.mock('@iblai/iblai-js/web-utils', () => ({

@@ -5,8 +5,8 @@ import { useParams } from 'next/navigation';
 import {
   SUBSCRIPTION_V2_TRIGGERS,
   SUBSCRIPTION_MESSAGES,
-  useTenantMetadata,
 } from '@iblai/iblai-js/web-utils';
+import { useTenantObjectMetadata } from '@/hooks/use-tenant-object-metadata';
 import { useCurrentTenant } from '@/hooks/use-user';
 import { getUserEmail } from '@/features/utils';
 import { config } from '@/lib/config';
@@ -20,7 +20,7 @@ import { TenantKeyMentorIdParams } from '@/lib/types';
 export function useTopBannerButtonHandler() {
   const { currentTenant } = useCurrentTenant();
   const { tenantKey } = useParams<TenantKeyMentorIdParams>();
-  const { metadata } = useTenantMetadata({ org: tenantKey || '' });
+  const metadata = useTenantObjectMetadata(tenantKey || '');
 
   return useCallback(
     (trigger?: string): (() => void) => {

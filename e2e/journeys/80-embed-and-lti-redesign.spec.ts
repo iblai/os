@@ -2,7 +2,7 @@ import { test, expect } from '../fixtures/mentor-test';
 import { navigateToMentorApp } from '../utils/auth';
 import { waitForPageReady } from '../utils/resilient';
 import { EMBED_HARNESS_URL } from '../fixtures/test-data';
-import { navigateAndObserveTenantMetadata } from '../utils/tenant-metadata-observed';
+import { forceTenantMetadata } from '../utils/tenant-metadata-observed';
 
 /**
  * Journey 80: Embed Header + LTI Redesign (issue #2586)
@@ -449,7 +449,16 @@ test.describe('Journey 80: Embed Header + LTI Redesign', () => {
   test('embed profile menu offers Profile, the tenant switcher and Help, but no Log Out or mode switch', async ({
     page,
   }) => {
-    const metadata = await navigateAndObserveTenantMetadata(page);
+    // The SDK hides Help when the tenant's `show_help` is `false`, and the
+    // shared CI tenant can carry that flag from another journey. The embed
+    // iframe is genuinely cross-origin (`gotoEmbedHarness`), so it resolves
+    // its OWN copy of the platforms list into its OWN storage partition —
+    // reading `show_help` from the top-level page first and branching on it
+    // does not reliably predict what the iframe renders (see
+    // `forceTenantMetadata`'s doc comment). Force the flag instead, on the
+    // top-level `page`: `page.route` covers every frame, including the
+    // embed iframe's own fetch.
+    await forceTenantMetadata(page, { show_help: true });
     const iframe = await gotoEmbedHarness(page, page.url(), {
       'show-user-profile': 'true',
     });
@@ -461,14 +470,7 @@ test.describe('Journey 80: Embed Header + LTI Redesign', () => {
     await expect(
       menu.getByRole('combobox', { name: 'Select a tenant' }),
     ).toBeVisible();
-    // The SDK hides Help when the tenant sets `show_help: false`, and the
-    // shared CI tenant can carry that from other journeys.
-    const help = menu.getByRole('menuitem', { name: /Help/ });
-    if (metadata.show_help === false) {
-      await expect(help).toHaveCount(0);
-    } else {
-      await expect(help).toBeVisible();
-    }
+    await expect(menu.getByRole('menuitem', { name: /Help/ })).toBeVisible();
     await expect(menu.getByRole('menuitem', { name: 'Log Out' })).toHaveCount(
       0,
     );

@@ -267,11 +267,9 @@ vi.mock('@/components/ui/use-toast', () => ({
   }),
 }));
 
-// Mock tenant metadata
-vi.mock('@iblai/iblai-js/web-utils', () => ({
-  useTenantMetadata: () => ({
-    metadata: { support_email: 'support@test.com' },
-  }),
+// Mock tenant metadata — now rides the tenants list via this local hook.
+vi.mock('@/hooks/use-tenant-object-metadata', () => ({
+  useTenantObjectMetadata: () => ({ support_email: 'support@test.com' }),
 }));
 
 // Mock config

@@ -41,10 +41,8 @@ import { InsideButtons } from './chat-input-form/inside-buttons';
 import { VoiceCallButton } from './chat-input-form/voice-call-button';
 import { useMentorSettings } from '@/hooks/use-mentors/use-mentor-settings';
 import { MentorVisibilityEnum } from '@iblai/iblai-api';
-import {
-  selectShowingSharedChat,
-  useTenantMetadata,
-} from '@iblai/iblai-js/web-utils';
+import { selectShowingSharedChat } from '@iblai/iblai-js/web-utils';
+import { useTenantObjectMetadata } from '@/hooks/use-tenant-object-metadata';
 import { useVisitingTenant } from '@/hooks/use-user';
 import { FileAttachmentsList } from './chat-input-form/file-attachments-list';
 import { toast } from 'sonner';
@@ -168,7 +166,7 @@ export function ChatInputForm({
   const chatPrivacyActive =
     chatPrivacyReady && chatPrivacyEffective?.mode === 'disabled';
   const rbacPermissions = useAppSelector(selectRbacPermissions);
-  const { metadata: tenantMetadata } = useTenantMetadata({ org: tenantKey });
+  const tenantMetadata = useTenantObjectMetadata(tenantKey);
   const persistentChatInputLabel =
     tenantMetadata?.persistent_chat_input_label === true;
 

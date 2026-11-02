@@ -46,6 +46,11 @@ vi.mock('@iblai/iblai-js/web-utils', () => ({
   useTenantMetadata: () => ({ metadata: {} }),
 }));
 
+// The source now reads the tenant's metadata from the tenants list.
+vi.mock('@/hooks/use-tenant-object-metadata', () => ({
+  useTenantObjectMetadata: () => ({}),
+}));
+
 const mockPublicUnwrap = vi.fn();
 const mockGetShareableTokenPublic = vi.fn(() => ({ unwrap: mockPublicUnwrap }));
 let mockPublicData: { token: string } | undefined;
