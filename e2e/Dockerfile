@@ -1,6 +1,6 @@
 # Playwright test image for CI/CD
 # Built from repo root: docker build -f e2e/Dockerfile .
-FROM mcr.microsoft.com/playwright:v1.56.0-jammy
+FROM mcr.microsoft.com/playwright:v1.64.1-jammy
 
 # Install AWS CLI for S3 log/report uploads
 RUN apt-get update && \
