@@ -1,15 +1,15 @@
 {
   "version": 2,
-  "lastUpdated": "2026-10-31",
+  "lastUpdated": "2026-11-02",
   "summary": {
-    "totalCheckpoints": 1055,
-    "coveredCheckpoints": 1005,
+    "totalCheckpoints": 1059,
+    "coveredCheckpoints": 1009,
     "deprecatedCheckpoints": 17,
     "notReproducibleCheckpoints": 17,
     "pendingCheckpoints": 16,
     "percent": 100,
-    "totalJourneys": 105,
-    "activeJourneys": 104
+    "totalJourneys": 106,
+    "activeJourneys": 105
   },
   "journeys": [
     {
@@ -6437,22 +6437,22 @@
       "checkpoints": [
         {
           "id": "avs-01",
-          "description": "Picking Administrators on a Users agent shows the admin-only note, and Save opens the \"Limit this agent to administrators?\" confirmation instead of saving",
+          "description": "Picking Admins Only on an All Members agent shows the \"only admins\" help line, and Save opens the \"Limit this agent to administrators?\" confirmation instead of saving",
           "status": "covered"
         },
         {
           "id": "avs-02",
-          "description": "Cancel on the confirmation closes it, sends no visibility save, keeps Administrators in the form, and the server still holds Users",
+          "description": "Cancel on the confirmation closes it, sends no visibility save, keeps Admins Only in the form, and the server still holds All Members",
           "status": "covered"
         },
         {
           "id": "avs-03",
-          "description": "\"Limit to Administrators\" saves mentor_visibility=viewable_by_tenant_admins with the success toast; reopening shows Administrators with the note already visible",
+          "description": "\"Limit to Administrators\" saves mentor_visibility=viewable_by_tenant_admins with the success toast; reopening shows Admins Only",
           "status": "covered"
         },
         {
           "id": "avs-04",
-          "description": "Switching away from Administrators hides the note and saves without a prompt, and Users to Anyone also saves without a prompt",
+          "description": "Switching away from Admins Only saves without a prompt, and All Members to the public catalog also saves without a prompt",
           "status": "covered"
         }
       ]
@@ -6625,6 +6625,37 @@
           "description": "Student (non-admin), with the server list, connections and connected services mocked to one signed-in per-user OAuth server the agent uses, and that mocked server's session-preference PUT answered as the backend would: switches it off for this chat (the save names the open conversation), closes the panel and sends a message, which goes out in that same conversation (its request carries the session id), shows as the user's message and gets the agent's reply (or its User Agreement); the \"+\" row then has no badge, and switching the server back on for this chat brings the badge \"1\" back",
           "status": "pending",
           "note": "Fixed after the stg1 run of 2026-10-31 (PR os#616); flip to covered once the rerun is green."
+        }
+      ]
+    },
+    {
+      "id": "discovery-audience-and-catalog",
+      "name": "Discovery Audience and Public Catalog",
+      "spec": "99-discovery-audience-and-catalog.spec.ts",
+      "sourceFiles": [
+        "components/modals/edit-mentor-modal/settings-tab.tsx",
+        "messages/en.json"
+      ],
+      "checkpoints": [
+        {
+          "id": "dac-01",
+          "description": "All six audience / List in Public Catalog / Allow Chat Without Signing In combinations save the mapped mentor_visibility and allow_anonymous, show the matching summary, and a reload restores the controls and summary",
+          "status": "covered"
+        },
+        {
+          "id": "dac-02",
+          "description": "Admins Only disables and clears List in Public Catalog; switching back to All Members lands with the catalog off",
+          "status": "covered"
+        },
+        {
+          "id": "dac-03",
+          "description": "Narrowing a publicly listed agent to Admins Only opens the \"Limit this agent to administrators?\" confirmation, and Cancel saves nothing",
+          "status": "covered"
+        },
+        {
+          "id": "dac-04",
+          "description": "The Discovery sub-tab never shows the tenant name or key",
+          "status": "covered"
         }
       ]
     }

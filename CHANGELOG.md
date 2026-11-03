@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.187.1](https://github.com/iblai/os/compare/v0.187.0...v0.187.1) (2026-11-03)
+
+### Chores
+
+* **deps:** bump @iblai/iblai-js to 2.62.2 ([639b367](https://github.com/iblai/os/commit/639b367bb4ac02f44682f2e15cd65d6ce23fcd47))
+
+## [0.187.0](https://github.com/iblai/os/compare/v0.186.0...v0.187.0) (2026-11-03)
+
+### Features
+
+* **edit-mentor:** pass the Discovery access labels to the settings tab ([b7b8ede](https://github.com/iblai/os/commit/b7b8ede5513224633cb1f781d1ff381d32a59460))
+
+### Chores
+
+* **deps:** bump @iblai/iblai-js to 2.62.1 ([dcacf62](https://github.com/iblai/os/commit/dcacf6254a01b7e921d22b064b80162c5965c0ce)), closes [iblai-web-frontend#2205](https://github.com/iblai/iblai-web-frontend/issues/2205)
+
+### Tests
+
+* **e2e:** add journey 99 for Discovery audience and catalog ([a27d313](https://github.com/iblai/os/commit/a27d3137808024db5872f2dba033cadcddcd5ae6))
+* **e2e:** drive the redesigned Discovery controls in existing journeys ([7cdb59f](https://github.com/iblai/os/commit/7cdb59f51892ead0e71d2c3162fe63ef1551986d))
+
 ## [0.186.0](https://github.com/iblai/os/compare/v0.185.0...v0.186.0) (2026-11-02)
 
 ### Features

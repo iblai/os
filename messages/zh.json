@@ -1934,7 +1934,25 @@
     "documentChunksLabel": "文档片段数",
     "documentChunksTooltip": "每次查询从知识库检索的片段数量。 此设置只有一个值，因此同时适用于应用内聊天和嵌入式小组件。",
     "documentChunksPlaceholder": "4",
-    "documentChunksMinValueError": "请输入 1 或更大的数字。"
+    "documentChunksMinValueError": "请输入 1 或更大的数字。",
+    "discoveryAccess": {
+      "audienceLabel": "谁可以使用此智能体？",
+      "audienceTooltipAriaLabel": "详细了解谁可以使用此智能体",
+      "allMembers": "所有成员",
+      "adminsOnly": "仅管理员",
+      "allMembersHelp": "每位成员都可以找到它并与其聊天。",
+      "adminsOnlyHelp": "只有管理员、创建者和获得访问权限的人可以找到它并与其聊天。",
+      "publicCatalogLabel": "在公共目录中列出",
+      "publicCatalogDescription": "非成员（在其他地方登录或未登录的人）也可以找到它。",
+      "publicCatalogTooltipAriaLabel": "详细了解公共目录",
+      "guestChatLabel": "允许无需登录即可聊天",
+      "guestChatDescription": "访客和其他组织的人可以以访客身份聊天。",
+      "guestChatTooltipAriaLabel": "详细了解无需登录即可聊天",
+      "summaryAdminsGuest": "不会出现在搜索中。任何拥有链接的人都无需登录即可聊天。",
+      "summaryMembersGuest": "成员可以找到它。任何拥有链接的人都无需登录即可聊天。",
+      "summaryPublicCatalog": "已在公共目录中列出。访客必须登录才能聊天。",
+      "summaryPublicCatalogGuest": "已在公共目录中列出。任何人都无需登录即可聊天。"
+    }
   },
   "tabsSkillsTab": {
     "heading": "技能"
