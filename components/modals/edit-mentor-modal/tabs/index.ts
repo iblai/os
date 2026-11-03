@@ -1,7 +1,6 @@
 export * from './prompts-tab';
 export * from './mcp-tab';
 export * from './tools-tab';
-export * from './safety-tab';
 export * from './spend-caps-tab';
 export * from './privacy-tab';
 export * from './tasks-tab';

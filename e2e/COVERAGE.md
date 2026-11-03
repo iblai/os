@@ -2195,3 +2195,24 @@ Regression guard for [iblai-platform#2680](https://github.com/iblai/iblai-platfo
 
 - [x] aa-01: The launcher's chat iframe sandbox includes `allow-downloads`, and "Download this chat" > Download inside the frame yields a `chat-*.txt` containing both conversation turns
 - [x] aa-02: Negative control: reloading the iframe under the pre-fix sandbox (no `allow-downloads`) yields no download within 5s, so aa-01 detects the bug
+
+---
+
+## Journey 79: Mentor Safety Tab (12 checkpoints) — `journeys/79-mentor-safety-tab.spec.ts`
+
+**Source files:** `components/modals/edit-mentor-modal/safety-tab.tsx`, `components/modals/edit-mentor-modal/tabs/safety-tab/flagged-prompts/index.tsx`
+
+Safety net written BEFORE the tab is migrated to the SDK's `AgentSafetyTab`; every assertion uses role / accessible-name / visible-text locators so the spec must pass unchanged after the swap. Each test gets its own disposable mentor (auto-tracked, cheap ibl.ai model). Real flagged prompts cannot be produced deterministically, so the moderation-logs endpoint is route-mocked with a stateful list (page size 5). The flagged-prompt detail pane has no Contact/Notify button today (`SendNotificationDialog` is unreachable), so there is no notify checkpoint.
+
+- [x] safety-01: Admin opens the Safety tab and sees the header, description, all four cards (Moderation Prompt, Safety Prompt, Moderation Response, Safety Response) each with Edit and Copy, and the View Flagged Prompts button
+- [x] safety-02: Admin toggles the Moderation Prompt switch (accessible name and Active/Inactive label flip) and the state persists across close + full reload + reopen
+- [x] safety-03: Admin toggles the Safety Prompt switch (accessible name and Active/Inactive label flip) and the state persists across close + full reload + reopen
+- [x] safety-04: Admin edits all four prompts/responses via their Edit dialogs (Save shows the Agent updated successfully toast); the new text shows in each card and persists after reload
+- [x] safety-05: The Edit dialog opens pre-filled with the saved content, rejects an empty prompt (Prompt is required, Save disabled), and cancelling leaves the saved content untouched
+- [x] safety-06: Each card's Copy button flips to Text copied to clipboard / Copied and then reverts
+- [x] safety-07: The Moderation/Safety info icons are labelled (More info about ... prompt) and show their tooltip on hover and keyboard focus
+- [x] safety-08: View Flagged Prompts opens the Flagged Prompts modal; with no logs (mocked) it shows 0 Total Flagged Prompts and the empty state
+- [x] safety-09: Flagged Prompts modal (mocked 12 logs): summary count, 5 rows per page, row selection shows the detail pane, and next/numbered/previous pagination fetches the right pages
+- [x] safety-10: Flagged Prompts modal: searching by user and filtering by type (Safety / Moderation) re-query the list with the right params and reset to page 1 (mocked)
+- [x] safety-11: Flagged Prompts modal: Delete asks for confirmation, Cancel deletes nothing, confirming DELETEs the selected log, shows the success toast and clears the selection (mocked)
+- [x] safety-12: Non-admin does not see the Safety tab in the Edit Mentor modal (Settings menu item itself is unreachable; falls back to a direct tab-absence check)
