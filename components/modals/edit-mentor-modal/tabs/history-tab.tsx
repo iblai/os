@@ -7,10 +7,10 @@ import {
   Calendar,
   Download,
   Star,
-  ChevronRight,
   Brain,
   Check,
   ChevronsUpDown,
+  MessagesSquare,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -41,7 +41,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
-import { cn, textTruncate } from '@/lib/utils';
+import { cn } from '@/lib/utils';
+import { formatSessionShortDate } from '@/lib/format-session-short-date';
 import Markdown from '@/components/markdown';
 import IblPagination from '@/components/ibl-pagination';
 import { useHistoryWithPagination } from '@/hooks/use-history';
@@ -58,8 +59,7 @@ import {
   conversationDocuments,
   ConversationSentiment,
   conversationTitle,
-  ConversationTopics,
-  formatSessionDate,
+  conversationTopics,
   resolveUserIdentity,
   RetrievedDocumentsButton,
   SessionCanvasCards,
@@ -324,7 +324,7 @@ export function HistoryTab() {
             )}
 
           {/* Filters */}
-          <div className="rounded-lg border p-4">
+          <div>
             <div className="flex flex-col gap-3 lg:flex-row">
               {/* Row 1: Search + Date (Mobile/Tablet) | All filters (Desktop) */}
               <div className="flex flex-1 flex-wrap gap-3">
@@ -578,7 +578,7 @@ export function HistoryTab() {
               {/* Left Column: Conversation List */}
               <div className="col-span-full space-y-4 md:col-span-1">
                 <div
-                  className="scrollbar-hide max-h-[500px] overflow-hidden overflow-y-auto rounded-md border"
+                  className="scrollbar-hide max-h-[500px] divide-y divide-gray-100 overflow-y-auto rounded-lg border border-gray-200"
                   tabIndex={0}
                   role="region"
                   aria-label={t('conversationListAriaLabel')}
@@ -596,8 +596,6 @@ export function HistoryTab() {
                     // turns carry, as the backend reports them.
                     const documents = conversationDocuments(messages);
                     const rollup = summarizeTranscriptTurns(messages);
-                    // The same date pattern as the profile History tab.
-                    const when = formatSessionDate(conversation.inserted_at);
                     // A turn can be an upload with no text, in which case the
                     // attachment name is the only meaningful title we have.
                     const firstAttachmentName = normalizeHistoryFiles(
@@ -605,66 +603,98 @@ export function HistoryTab() {
                     )[0]?.fileName;
                     // title → first_user_message → first human turn (as everywhere),
                     // then a file-only turn's attachment name, then the label.
-                    const title = textTruncate(
-                      conversationTitle(
-                        conversation,
-                        firstAttachmentName || t('conversationFallbackTitle'),
-                      ),
-                      50,
+                    const title = conversationTitle(
+                      conversation,
+                      firstAttachmentName || t('conversationFallbackTitle'),
                     );
                     const preview =
-                      textTruncate(chatTextPreview(firstMessage?.ai), 60) ||
+                      chatTextPreview(firstMessage?.ai) ||
                       t('noResponseAvailable');
+                    const topics = conversationTopics(conversation.topics);
+                    const isSelected =
+                      selectedConversation?.id === conversation.id;
 
                     return (
+                      // Mail-list layout, as on the profile History tab: who
+                      // (avatar) on the left; title and date, the first reply,
+                      // then owner · topics · chips · sentiment in one quiet
+                      // line. The full date lives in the preview.
                       <div
                         key={conversation.id}
+                        role="button"
+                        tabIndex={0}
+                        aria-current={isSelected ? 'true' : undefined}
                         data-testid="history-conversation-row"
                         data-session-id={conversation.id}
                         className={cn(
-                          'flex cursor-pointer items-center justify-between border-b p-4 last:border-b-0',
-                          selectedConversation?.id === conversation.id
-                            ? 'bg-gray-100'
+                          'relative flex cursor-pointer items-start gap-3 px-4 py-3.5 transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none focus-visible:ring-inset',
+                          isSelected
+                            ? 'bg-blue-50/70 before:absolute before:inset-y-0 before:left-0 before:w-0.5 before:bg-blue-600'
                             : 'hover:bg-gray-50',
                         )}
                         onClick={() => handleConversationClick(conversation)}
+                        onKeyDown={(event) => {
+                          if (
+                            event.target === event.currentTarget &&
+                            (event.key === 'Enter' || event.key === ' ')
+                          ) {
+                            event.preventDefault();
+                            handleConversationClick(conversation);
+                          }
+                        }}
                       >
-                        <div className="w-full">
-                          <div className="mb-2 flex items-center justify-between">
-                            <span className="text-sm text-gray-600">
-                              {when}
+                        <div
+                          className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-blue-100"
+                          aria-hidden="true"
+                        >
+                          <span className="text-sm font-medium text-blue-600">
+                            {owner.initial}
+                          </span>
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-baseline justify-between gap-3">
+                            <span
+                              className={cn(
+                                'min-w-0 truncate text-sm text-gray-900',
+                                isSelected ? 'font-semibold' : 'font-medium',
+                              )}
+                            >
+                              {title}
                             </span>
+                            <time
+                              dateTime={conversation.inserted_at}
+                              className="flex-shrink-0 text-xs text-gray-500"
+                            >
+                              {formatSessionShortDate(conversation.inserted_at)}
+                            </time>
+                          </div>
+                          <p className="mt-0.5 truncate text-sm text-gray-500">
+                            {preview}
+                          </p>
+                          {/* The topics take only the width left over
+                              (`flex-1` from zero), so the owner is cut only
+                              when it alone overflows. */}
+                          <div className="mt-1.5 flex min-w-0 items-center gap-1.5 text-xs text-gray-500">
                             <UserProfileLink
                               tenantKey={tenantKey}
                               username={owner.profileUsername}
                               display={owner.label}
                               currentSPA={currentSPA}
                               testId="history-conversation-owner"
-                              className="max-w-[100px] text-sm text-gray-900 sm:max-w-[200px]"
+                              className="min-w-0 font-medium text-gray-600"
                             />
-                          </div>
-                          <div className="font-medium text-gray-900">
-                            {title}
-                          </div>
-                          {/* Under the title, as on the profile History tab: the sentiment
-                              thumb (explained on hover) leading the topic chips. */}
-                          <ConversationTopics
-                            topics={conversation.topics}
-                            className="mt-1"
-                            leading={
-                              <ConversationSentiment
-                                sentiment={conversation.sentiment}
-                                labels={sentimentLabels}
-                                compact
-                              />
-                            }
-                          />
-                          <p className="line-clamp-1 text-sm text-gray-600">
-                            {preview}
-                          </p>
-                          {(rollup.documentsCount > 0 ||
-                            rollup.toolCallsCount > 0) && (
-                            <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                            {topics.length > 0 && (
+                              <>
+                                <span aria-hidden="true">·</span>
+                                <span
+                                  className="min-w-0 flex-1 truncate"
+                                  data-testid="conversation-topics"
+                                >
+                                  {topics.join(', ')}
+                                </span>
+                              </>
+                            )}
+                            <div className="ml-auto flex flex-shrink-0 items-center gap-1.5">
                               {rollup.documentsCount > 0 && (
                                 // The chat's documents dialog, as a chip: one
                                 // click shows what the conversation retrieved.
@@ -673,18 +703,23 @@ export function HistoryTab() {
                                   label={t('documentsChip', {
                                     count: rollup.documentsCount,
                                   })}
-                                  className="h-6 gap-1 rounded-md border-transparent bg-blue-50 px-2 text-xs font-normal text-blue-700 hover:bg-blue-100 [&_svg]:h-3 [&_svg]:w-3"
+                                  className="h-5 gap-1 rounded-md border-transparent bg-blue-50 px-1.5 text-xs font-normal text-blue-700 hover:bg-blue-100 [&_svg]:h-3 [&_svg]:w-3"
                                 />
                               )}
-                              <TranscriptRollupBadges
-                                documentsCount={0}
-                                toolCallsCount={rollup.toolCallsCount}
+                              {rollup.toolCallsCount > 0 && (
+                                <TranscriptRollupBadges
+                                  documentsCount={0}
+                                  toolCallsCount={rollup.toolCallsCount}
+                                />
+                              )}
+                              <ConversationSentiment
+                                sentiment={conversation.sentiment}
+                                labels={sentimentLabels}
+                                compact
+                                className="[&_svg]:h-3.5 [&_svg]:w-3.5"
                               />
                             </div>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2 text-sm text-gray-600">
-                          <ChevronRight className="h-4 w-4" />
+                          </div>
                         </div>
                       </div>
                     );
@@ -707,7 +742,7 @@ export function HistoryTab() {
 
               {/* Right Column: Conversation Preview - Hidden on mobile, visible on desktop */}
               <div
-                className="scrollbar-hide hidden max-h-[500px] flex-col overflow-y-auto rounded-lg border bg-white p-6 shadow-sm md:flex"
+                className="scrollbar-hide hidden max-h-[500px] flex-col overflow-y-auto rounded-lg border border-gray-200 bg-white p-6 md:flex"
                 tabIndex={0}
                 role="region"
                 aria-label={t('conversationPreviewAriaLabel')}
@@ -855,8 +890,14 @@ export function HistoryTab() {
                     </div>
                   </>
                 ) : (
-                  <div className="flex h-full items-center justify-center text-gray-500">
-                    {t('selectConversationPrompt')}
+                  <div className="flex h-full min-h-[240px] flex-col items-center justify-center text-center">
+                    <MessagesSquare
+                      className="mb-3 h-10 w-10 text-gray-300"
+                      aria-hidden="true"
+                    />
+                    <p className="text-sm text-gray-400">
+                      {t('selectConversationPrompt')}
+                    </p>
                   </div>
                 )}
               </div>
