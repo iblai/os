@@ -27,6 +27,7 @@ const deleteMessageMock = vi.fn(() => ({ unwrap: () => Promise.resolve({}) }));
 const exportMessagesToXlsxMock = vi.fn();
 const eventBusEmitMock = vi.fn();
 const recentInfiniteArgsMock = vi.fn();
+const pinnedQueryArgsMock = vi.fn();
 
 let mockActiveSessionId = 'sess-active';
 let mockRecentInfinite: any = {
@@ -113,9 +114,10 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
     };
   },
   useGetPinnedMessagesQuery: (
-    _args: unknown,
+    args: unknown,
     options?: { skip?: boolean; selectFromResult?: (state: any) => any },
   ) => {
+    pinnedQueryArgsMock(args);
     const state = {
       data: options?.skip ? undefined : mockPinnedPages,
       isError: false,
@@ -227,6 +229,19 @@ describe('ChatSearchDialog', () => {
     expect(lastArgs?.org).toBe('tenant-a');
   });
 
+  // #2608: the endpoint takes no session_id.
+  it('queries pinned messages by org + user + mentor (no session id)', () => {
+    renderDialog();
+    const lastArgs = pinnedQueryArgsMock.mock.calls.at(-1)?.[0];
+    expect(lastArgs).not.toHaveProperty('sessionId');
+    expect(lastArgs).toEqual(
+      expect.objectContaining({
+        org: 'tenant-a',
+        mentor: 'mentor-1',
+      }),
+    );
+  });
+
   it('updates the query arg with the debounced search term', () => {
     vi.useFakeTimers();
     try {
@@ -244,6 +259,9 @@ describe('ChatSearchDialog', () => {
         (c) => (c?.[0] as { search?: string })?.search === 'invoice',
       );
       expect(hasAfter).toBe(true);
+      expect(pinnedQueryArgsMock.mock.calls.at(-1)?.[0]).not.toHaveProperty(
+        'search',
+      );
     } finally {
       vi.useRealTimers();
     }

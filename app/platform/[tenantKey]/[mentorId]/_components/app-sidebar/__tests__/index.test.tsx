@@ -161,6 +161,7 @@ const fetchNextPageMock = vi.fn(() => Promise.resolve(undefined));
 // Records the args passed to the recent infinite query so tests can assert
 // the debounced `search` / `mentor` params reached the hook.
 const recentInfiniteArgsMock = vi.fn();
+const pinnedQueryArgsMock = vi.fn();
 let mockHasNextPage = false;
 let mockIsFetchingNextPage = false;
 // When set, overrides the single-page wrapping so tests can supply an
@@ -381,9 +382,10 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
     isLoading: false,
   }),
   useGetPinnedMessagesQuery: (
-    _args: unknown,
+    args: unknown,
     options?: { skip?: boolean; selectFromResult?: (state: any) => any },
   ) => {
+    pinnedQueryArgsMock(args);
     if (options?.skip) {
       const skipped = { data: undefined, isError: false, isLoading: false };
       return options.selectFromResult
@@ -745,6 +747,7 @@ function resetState() {
   refetchRecentMock.mockClear();
   fetchNextPageMock.mockClear();
   recentInfiniteArgsMock.mockClear();
+  pinnedQueryArgsMock.mockClear();
   mockHasNextPage = false;
   mockIsFetchingNextPage = false;
   mockRecentInfinitePages = undefined;
@@ -2869,6 +2872,23 @@ describe('AppSidebar — recent chats infinite query', () => {
     };
     expect(lastArgs?.mentor).toBe('mentor-1');
     expect(lastArgs?.org).toBe('tenant-a');
+  });
+
+  // #2608: the endpoint takes no session_id.
+  it('queries pinned messages by mentor, without the active session id', () => {
+    mockActiveSessionId = 'sess-active';
+    renderSidebar();
+    expect(pinnedQueryArgsMock).toHaveBeenCalled();
+    for (const [args] of pinnedQueryArgsMock.mock.calls) {
+      expect(args).not.toHaveProperty('sessionId');
+      expect(args).not.toHaveProperty('search');
+      expect(args).toEqual(
+        expect.objectContaining({
+          org: 'tenant-a',
+          mentor: 'mentor-1',
+        }),
+      );
+    }
   });
 
   it('flattens rows across multiple pages into the recent list', () => {
