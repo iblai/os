@@ -36,16 +36,10 @@ export type SystemPrompt =
   | 'study_mode_prompt'
   | 'prompt';
 
-export type SafetyPrompt =
-  | 'moderation_response'
-  | 'safety_response'
-  | 'moderation_system_prompt'
-  | 'safety_system_prompt';
-
 export interface SelectedPrompt {
   label: string;
   isSystem: boolean;
-  name: SystemPrompt | SafetyPrompt;
+  name: SystemPrompt;
   prompt: string;
   category?: string;
   id?: number;

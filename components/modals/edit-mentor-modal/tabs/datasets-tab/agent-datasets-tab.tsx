@@ -110,6 +110,7 @@ export function AgentDatasetsTabWrapper({
       enableRBAC={config.enableRBAC()}
       rbacPermissions={rbacPermissions}
       executeGatedAction={executeWithTrialCheck}
+      dmUrl={config.dmUrl()}
     >
       <AgentDatasetsTab
         {...(syncToUrl

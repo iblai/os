@@ -32,6 +32,7 @@ const {
     iblTemplateMentor: vi.fn(() => 'default-mentor'),
     disabedDatasets: vi.fn(() => 'zip|courses'),
     mentorTrainingMaximumFileSize: vi.fn(() => '25'),
+    dmUrl: vi.fn(() => 'https://os.ibl.ai/backend/dm'),
   },
 }));
 
@@ -113,6 +114,7 @@ vi.mock('@iblai/iblai-js/web-containers', () => ({
       <div data-testid="project-max-upload-size-mb">
         {String(props.maxUploadSizeMb)}
       </div>
+      <div data-testid="project-dm-url">{props.dmUrl}</div>
     </div>
   ),
 }));
@@ -1054,6 +1056,9 @@ describe('WelcomeChatNew', () => {
       expect(
         screen.getByTestId('project-max-upload-size-mb'),
       ).toHaveTextContent('25');
+      expect(screen.getByTestId('project-dm-url')).toHaveTextContent(
+        'https://os.ibl.ai/backend/dm',
+      );
     });
 
     it('should pass all props to WelcomeChat in embed mode', () => {

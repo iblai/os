@@ -53,6 +53,7 @@ vi.mock('@/lib/config', async (importOriginal) => ({
   config: {
     ...(await importOriginal<typeof import('@/lib/config')>()).config,
     enableRBAC: () => true,
+    dmUrl: () => 'https://os.ibl.ai/backend/dm',
     disabedDatasets: () => mockDisabedDatasets(),
     mentorTrainingMaximumFileSize: () => mockMaxFileSize(),
   },
@@ -134,6 +135,12 @@ describe('AgentDatasetsTabWrapper', () => {
       rbacPermissions: ['perm'],
       executeGatedAction: mockExecuteWithTrialCheck,
     });
+  });
+
+  it('feeds the provider the DM url so uploaded document links open from DM', () => {
+    render(<AgentDatasetsTabWrapper />);
+
+    expect(lastProviderProps().dmUrl).toBe('https://os.ibl.ai/backend/dm');
   });
 
   it('prefers the active modal mentor over the route mentor', () => {

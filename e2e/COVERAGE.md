@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-10-28 | 1035 checkpoints (988 covered, 13 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 104 journeys (103 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-11-03 | 1067 checkpoints (1017 covered, 16 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 106 journeys (105 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -1117,12 +1117,12 @@ Covers the "Enable Prompt Caching" toggle added to the Capabilities sub-tab of t
 
 ## Journey 53: Recent Chats Refresh (3 checkpoints; 1 pending) — `journeys/53-recent-chats-refresh.spec.ts`
 
-**Source files:** `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`, `components/chat/index.tsx`
+**Source files:** `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`, `components/chat/index.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/chats/use-recent-chats.ts`, `providers/app-provider.tsx`
 
 Regression guard for the `SidebarChatsSection` `useEffect` that calls `refetchRecent()` once streaming finishes on a brand-new chat (exactly 2 messages: user + first assistant reply). On `main` the effect was orphaned in an unrendered component; on `fix/1982` it lives inside the rendered `SidebarChatsSection`.
 
 - [x] rcr-01: New chat appears in the sidebar Recent list immediately after the first AI response finishes streaming — no page reload _(regression guard for issue #1982)_
-- [x] rcr-02: Clicking an existing Recent chat row loads the conversation in the chat panel _(regression guard for issue #1881: `handleSelectRow` must write `cachedSessionId[mentorId]` to localStorage so the message loader re-fires)_
+- [x] rcr-02: Clicking an existing Recent chat row loads the conversation in the chat panel _(regression guard for issue #1881: `handleSelectRow` must write `cachedSessionId[mentorId]` to localStorage so the message loader re-fires; also #2608: the pin-message GET is scoped to the active agent (`mentor`), sends no `session_id` or `search`, and the pinned list is not refetched on new chat / chat switch)_
 - [ ] rcr-03: Reopening a Recent chat restores that session's own options — a chat that had Canvas enabled shows the Canvas toggle active again after switching to a new chat with Canvas off and back; the chat no longer sends a session update turning canvas off on the chat being opened _(pending: needs an SDK build that includes the `useMentorTools` session restore)_
 
 ---
@@ -2231,6 +2231,27 @@ Regression guard for [iblai-platform#2680](https://github.com/iblai/iblai-platfo
 
 - [x] aa-01: The launcher's chat iframe sandbox includes `allow-downloads`, and "Download this chat" > Download inside the frame yields a `chat-*.txt` containing both conversation turns
 - [x] aa-02: Negative control: reloading the iframe under the pre-fix sandbox (no `allow-downloads`) yields no download within 5s, so aa-01 detects the bug
+
+---
+
+## Journey 79: Mentor Safety Tab (12 checkpoints) — `journeys/79-mentor-safety-tab.spec.ts`
+
+**Source files:** `components/modals/edit-mentor-modal/safety-tab.tsx`, `components/modals/edit-mentor-modal/tabs/safety-tab/flagged-prompts/index.tsx`
+
+Safety net written BEFORE the tab is migrated to the SDK's `AgentSafetyTab`; every assertion uses role / accessible-name / visible-text locators so the spec must pass unchanged after the swap. Each test gets its own disposable mentor (auto-tracked, cheap ibl.ai model). Real flagged prompts cannot be produced deterministically, so the moderation-logs endpoint is route-mocked with a stateful list (page size 5). The flagged-prompt detail pane has no Contact/Notify button today (`SendNotificationDialog` is unreachable), so there is no notify checkpoint.
+
+- [x] safety-01: Admin opens the Safety tab and sees the header, description, all four cards (Moderation Prompt, Safety Prompt, Moderation Response, Safety Response) each with Edit and Copy, and the View Flagged Prompts button
+- [x] safety-02: Admin toggles the Moderation Prompt switch (accessible name and Active/Inactive label flip) and the state persists across close + full reload + reopen
+- [x] safety-03: Admin toggles the Safety Prompt switch (accessible name and Active/Inactive label flip) and the state persists across close + full reload + reopen
+- [x] safety-04: Admin edits all four prompts/responses via their Edit dialogs (Save shows the Agent updated successfully toast); the new text shows in each card and persists after reload
+- [x] safety-05: The Edit dialog opens pre-filled with the saved content, rejects an empty prompt (Prompt is required, Save disabled), and cancelling leaves the saved content untouched
+- [x] safety-06: Each card's Copy button flips to Text copied to clipboard / Copied and then reverts
+- [x] safety-07: The Moderation/Safety info icons are labelled (More info about ... prompt) and show their tooltip on hover and keyboard focus
+- [x] safety-08: View Flagged Prompts opens the Flagged Prompts modal; with no logs (mocked) it shows 0 Total Flagged Prompts and the empty state
+- [x] safety-09: Flagged Prompts modal (mocked 12 logs): summary count, 5 rows per page, row selection shows the detail pane, and next/numbered/previous pagination fetches the right pages
+- [x] safety-10: Flagged Prompts modal: searching by user and filtering by type (Safety / Moderation) re-query the list with the right params and reset to page 1 (mocked)
+- [x] safety-11: Flagged Prompts modal: Delete asks for confirmation, Cancel deletes nothing, confirming DELETEs the selected log, shows the success toast and clears the selection (mocked)
+- [x] safety-12: Non-admin does not see the Safety tab in the Edit Mentor modal (Settings menu item itself is unreachable; falls back to a direct tab-absence check)
 
 ---
 

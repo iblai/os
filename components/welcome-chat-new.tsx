@@ -178,6 +178,7 @@ export function WelcomeChatNew({
         navigateToProject={navigateToProject}
         showExploreMentors
         disabledResourceTypes={disabledDatasetResourceTypes()}
+        dmUrl={config.dmUrl()}
         maxUploadSizeMb={maxDatasetFileSizeInMegaBytes()}
       />
     );

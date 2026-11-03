@@ -1,15 +1,15 @@
 {
   "version": 2,
-  "lastUpdated": "2026-10-31",
+  "lastUpdated": "2026-11-03",
   "summary": {
-    "totalCheckpoints": 1055,
-    "coveredCheckpoints": 1005,
+    "totalCheckpoints": 1067,
+    "coveredCheckpoints": 1017,
     "deprecatedCheckpoints": 17,
     "notReproducibleCheckpoints": 17,
     "pendingCheckpoints": 16,
     "percent": 100,
-    "totalJourneys": 105,
-    "activeJourneys": 104
+    "totalJourneys": 106,
+    "activeJourneys": 105
   },
   "journeys": [
     {
@@ -3655,7 +3655,9 @@
       "spec": "53-recent-chats-refresh.spec.ts",
       "sourceFiles": [
         "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx",
-        "components/chat/index.tsx"
+        "components/chat/index.tsx",
+        "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/chats/use-recent-chats.ts",
+        "providers/app-provider.tsx"
       ],
       "checkpoints": [
         {
@@ -3665,7 +3667,7 @@
         },
         {
           "id": "rcr-02",
-          "description": "Clicking an existing Recent chat row loads the conversation in the chat panel (regression guard for issue #1881: handleSelectRow must write cachedSessionId[mentorId] to localStorage so the message loader re-fires)",
+          "description": "Clicking an existing Recent chat row loads the conversation in the chat panel (regression guard for issue #1881: handleSelectRow must write cachedSessionId[mentorId] to localStorage so the message loader re-fires); also guards issue #2608: the pin-message GET is scoped to the active agent (mentor), sends no session_id or search, and the pinned list is not refetched on new chat / chat switch",
           "status": "covered"
         },
         {
@@ -6152,6 +6154,77 @@
         {
           "id": "aa-02",
           "description": "Negative control: with the iframe reloaded under the pre-fix sandbox (no allow-downloads) the same export yields no download event, proving aa-01 detects the silently blocked download",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "mentor-safety-tab",
+      "name": "Mentor Safety Tab",
+      "spec": "79-mentor-safety-tab.spec.ts",
+      "sourceFiles": [
+        "components/modals/edit-mentor-modal/safety-tab.tsx",
+        "components/modals/edit-mentor-modal/tabs/safety-tab/flagged-prompts/index.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "safety-01",
+          "description": "Admin opens the Safety tab and sees the header, description, all four cards (Moderation Prompt, Safety Prompt, Moderation Response, Safety Response) each with Edit and Copy, and the View Flagged Prompts button",
+          "status": "covered"
+        },
+        {
+          "id": "safety-02",
+          "description": "Admin toggles the Moderation Prompt switch (accessible name and Active/Inactive label flip) and the state persists across close + full reload + reopen",
+          "status": "covered"
+        },
+        {
+          "id": "safety-03",
+          "description": "Admin toggles the Safety Prompt switch (accessible name and Active/Inactive label flip) and the state persists across close + full reload + reopen",
+          "status": "covered"
+        },
+        {
+          "id": "safety-04",
+          "description": "Admin edits all four prompts/responses via their Edit dialogs (Save shows the Agent updated successfully toast); the new text shows in each card and persists after reload",
+          "status": "covered"
+        },
+        {
+          "id": "safety-05",
+          "description": "The Edit dialog opens pre-filled with the saved content, rejects an empty prompt (Prompt is required, Save disabled), and cancelling leaves the saved content untouched",
+          "status": "covered"
+        },
+        {
+          "id": "safety-06",
+          "description": "Each card's Copy button flips to Text copied to clipboard / Copied and then reverts",
+          "status": "covered"
+        },
+        {
+          "id": "safety-07",
+          "description": "The Moderation/Safety info icons are labelled (More info about ... prompt) and show their tooltip on hover and keyboard focus",
+          "status": "covered"
+        },
+        {
+          "id": "safety-08",
+          "description": "View Flagged Prompts opens the Flagged Prompts modal; with no logs (mocked) it shows 0 Total Flagged Prompts and the empty state",
+          "status": "covered"
+        },
+        {
+          "id": "safety-09",
+          "description": "Flagged Prompts modal (mocked 12 logs): summary count, 5 rows per page, row selection shows the detail pane, and next/numbered/previous pagination fetches the right pages",
+          "status": "covered"
+        },
+        {
+          "id": "safety-10",
+          "description": "Flagged Prompts modal: searching by user and filtering by type (Safety / Moderation) re-query the list with the right params and reset to page 1 (mocked)",
+          "status": "covered"
+        },
+        {
+          "id": "safety-11",
+          "description": "Flagged Prompts modal: Delete asks for confirmation, Cancel deletes nothing, confirming DELETEs the selected log, shows the success toast and clears the selection (mocked)",
+          "status": "covered"
+        },
+        {
+          "id": "safety-12",
+          "description": "Non-admin does not see the Safety tab in the Edit Mentor modal (Settings menu item itself is unreachable; falls back to a direct tab-absence check)",
           "status": "covered"
         }
       ]
