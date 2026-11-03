@@ -1934,7 +1934,25 @@
     "documentChunksLabel": "Fragments de documents",
     "documentChunksTooltip": "Nombre de fragments de la base de connaissances récupérés par requête. Ce paramètre a une seule valeur ; il s'applique donc à la fois au chat dans l'application et au widget intégré.",
     "documentChunksPlaceholder": "4",
-    "documentChunksMinValueError": "Saisissez 1 ou plus."
+    "documentChunksMinValueError": "Saisissez 1 ou plus.",
+    "discoveryAccess": {
+      "audienceLabel": "Qui peut utiliser cet agent ?",
+      "audienceTooltipAriaLabel": "En savoir plus sur qui peut utiliser cet agent",
+      "allMembers": "Tous les membres",
+      "adminsOnly": "Administrateurs uniquement",
+      "allMembersHelp": "Tous les membres peuvent le trouver et discuter avec lui.",
+      "adminsOnlyHelp": "Seuls les administrateurs, le créateur et les personnes ayant reçu l'accès peuvent le trouver et discuter avec lui.",
+      "publicCatalogLabel": "Afficher dans le catalogue public",
+      "publicCatalogDescription": "Les personnes qui ne sont pas membres, connectées ailleurs ou déconnectées, peuvent le trouver.",
+      "publicCatalogTooltipAriaLabel": "En savoir plus sur le catalogue public",
+      "guestChatLabel": "Autoriser la discussion sans connexion",
+      "guestChatDescription": "Les visiteurs et les personnes d'autres organisations peuvent discuter en tant qu'invités.",
+      "guestChatTooltipAriaLabel": "En savoir plus sur la discussion sans connexion",
+      "summaryAdminsGuest": "Masqué dans la recherche. Toute personne disposant du lien peut discuter sans se connecter.",
+      "summaryMembersGuest": "Les membres peuvent le trouver. Toute personne disposant du lien peut discuter sans se connecter.",
+      "summaryPublicCatalog": "Affiché dans le catalogue public. Les visiteurs doivent se connecter pour discuter.",
+      "summaryPublicCatalogGuest": "Affiché dans le catalogue public. Tout le monde peut discuter sans se connecter."
+    }
   },
   "tabsSkillsTab": {
     "heading": "Compétences"
