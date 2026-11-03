@@ -367,6 +367,15 @@ describe('SettingsTab', () => {
       });
       expect(labels.toasts.voiceCallError).toBe('voiceCallSettingsError');
     });
+
+    it('passes every Discovery label from its next-intl key', async () => {
+      render(<SettingsTab />);
+      const en = (await import('../../../messages/en.json')).default
+        .tabsSettingsTab.discoveryAccess;
+      expect(tabProps().labels.discoveryAccess).toEqual(
+        Object.fromEntries(Object.keys(en).map((key) => [key, key])),
+      );
+    });
   });
 
   // The SDK builds the copy's default name as `${prefix} ${sourceName}` — it
@@ -447,6 +456,31 @@ describe('SettingsTab', () => {
         expect(copy.countMany, locale).toContain('{count}');
         for (const key of ['removeAriaLabel', 'duplicateError']) {
           expect(copy[key], `${locale}.${key}`).toContain('{ext}');
+        }
+      }
+    });
+  });
+
+  describe('Discovery catalogs', () => {
+    it('has every label in every locale and never names the tenant', async () => {
+      const en = (await import('../../../messages/en.json')).default
+        .tabsSettingsTab.discoveryAccess as Record<string, string>;
+      expect(en.audienceLabel).toBe('Who Can Use This Agent?');
+      expect(en.publicCatalogLabel).toBe('List in Public Catalog');
+      expect(en.guestChatLabel).toBe('Allow Chat Without Signing In');
+
+      for (const locale of ['en', 'es', 'fr', 'zh']) {
+        const messages = (await import(`../../../messages/${locale}.json`))
+          .default as {
+          tabsSettingsTab: { discoveryAccess: Record<string, string> };
+        };
+        const copy = messages.tabsSettingsTab.discoveryAccess;
+        expect(Object.keys(copy).sort(), locale).toEqual(
+          Object.keys(en).sort(),
+        );
+        for (const key of Object.keys(en)) {
+          expect(copy[key], `${locale}.${key}`).toBeTruthy();
+          expect(copy[key], `${locale}.${key}`).not.toMatch(/\{|tenant/i);
         }
       }
     });

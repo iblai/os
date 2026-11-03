@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-10-28 | 1035 checkpoints (988 covered, 13 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 104 journeys (103 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-11-02 | 1039 checkpoints (992 covered, 13 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 105 journeys (104 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -2324,12 +2324,12 @@ The app half of the Chrome extension's Cowork mode, without loading the extensio
 
 **Source files:** `components/modals/edit-mentor-modal/settings-tab.tsx`, `messages/en.json`
 
-Issue #2731. Settings → Discovery → "Who Can View?": an admin-only note shows while Administrators is picked, and saving a change from Users/Anyone to Administrators asks "Limit this agent to administrators?" first. One throwaway agent (auto-deleted) is walked through the states by the serial checkpoints. The existing specs that pick Administrators then save (journeys 13 and 64) confirm the prompt through `saveConfirmingAdminVisibility()`.
+Issue #2731. Settings → Discovery → "Who Can Use This Agent?": the help line says only admins can use it while Admins Only is picked, and saving a change from All Members to Admins Only asks "Limit this agent to administrators?" first. One throwaway agent (auto-deleted) is walked through the states by the serial checkpoints. The existing specs that pick Admins Only then save (journeys 13 and 64) confirm the prompt through `saveConfirmingAdminVisibility()`.
 
-- [x] avs-01: Picking Administrators on a Users agent shows the admin-only note, and Save opens the "Limit this agent to administrators?" confirmation instead of saving
-- [x] avs-02: Cancel on the confirmation closes it, sends no visibility save, keeps Administrators in the form, and the server still holds Users
-- [x] avs-03: "Limit to Administrators" saves mentor_visibility=viewable_by_tenant_admins with the success toast; reopening shows Administrators with the note already visible
-- [x] avs-04: Switching away from Administrators hides the note and saves without a prompt, and Users to Anyone also saves without a prompt
+- [x] avs-01: Picking Admins Only on an All Members agent shows the "only admins" help line, and Save opens the "Limit this agent to administrators?" confirmation instead of saving
+- [x] avs-02: Cancel on the confirmation closes it, sends no visibility save, keeps Admins Only in the form, and the server still holds All Members
+- [x] avs-03: "Limit to Administrators" saves mentor_visibility=viewable_by_tenant_admins with the success toast; reopening shows Admins Only
+- [x] avs-04: Switching away from Admins Only saves without a prompt, and All Members to the public catalog also saves without a prompt
 
 ---
 
@@ -2358,3 +2358,18 @@ Issue iblai-platform#2743. A `?token=<share token>` link now rides in the chat f
 - [x] slf-01: Signed-in user on the share-link URL: frame shareable_link_token equals the URL token, token is the user's axd token, token_type is not "link"
 - [x] slf-02: Anonymous visitor on the share-link URL: shareable_link_token set, token empty, no token_type "link", mocked reply renders
 - [x] slf-03: Signed-in user without ?token: no shareable_link_token key, token is the axd token, mocked reply renders
+
+---
+
+## Journey 99: Discovery Audience and Public Catalog (4 checkpoints) — `journeys/99-discovery-audience-and-catalog.spec.ts`
+
+**Source files:** `components/modals/edit-mentor-modal/settings-tab.tsx`, `messages/en.json`
+
+Issue #2788. Settings → Discovery: "Who Can Use This Agent?" (All Members / Admins Only), "List in Public Catalog" and "Allow Chat Without Signing In" map onto `mentor_visibility` and `allow_anonymous`. One throwaway agent (auto-deleted) is shared by the serial checkpoints.
+
+- [x] dac-01: All six audience / List in Public Catalog / Allow Chat Without Signing In combinations save the mapped mentor_visibility and allow_anonymous, show the matching summary, and a reload restores the controls and summary
+- [x] dac-02: Admins Only disables and clears List in Public Catalog; switching back to All Members lands with the catalog off
+- [x] dac-03: Narrowing a publicly listed agent to Admins Only opens the "Limit this agent to administrators?" confirmation, and Cancel saves nothing
+- [x] dac-04: The Discovery sub-tab never shows the tenant name or key
+
+---

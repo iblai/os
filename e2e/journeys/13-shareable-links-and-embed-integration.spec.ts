@@ -1104,7 +1104,7 @@ test.describe('Journey 13: Shareable Links & Embed Integration', () => {
       await waitForPageReady(page);
       await editMentorPage.settings.selectSubTab('Discovery');
       await expect(editMentorPage.settings.visibilityCombobox).toContainText(
-        /Administrators/i,
+        /Admins Only/i,
         { timeout: 15_000 },
       );
       await editMentorPage.close();

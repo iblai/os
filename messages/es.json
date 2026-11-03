@@ -1934,7 +1934,25 @@
     "documentChunksLabel": "Fragmentos de documentos",
     "documentChunksTooltip": "Número de fragmentos de la base de conocimientos recuperados por consulta. Esta configuración tiene un solo valor, por lo que se aplica tanto al chat en la aplicación como al widget insertado.",
     "documentChunksPlaceholder": "4",
-    "documentChunksMinValueError": "Introduce 1 o más."
+    "documentChunksMinValueError": "Introduce 1 o más.",
+    "discoveryAccess": {
+      "audienceLabel": "¿Quién puede usar este agente?",
+      "audienceTooltipAriaLabel": "Más información sobre quién puede usar este agente",
+      "allMembers": "Todos los miembros",
+      "adminsOnly": "Solo administradores",
+      "allMembersHelp": "Todos los miembros pueden encontrarlo y chatear con él.",
+      "adminsOnlyHelp": "Solo los administradores, el creador y las personas con acceso pueden encontrarlo y chatear con él.",
+      "publicCatalogLabel": "Mostrar en el catálogo público",
+      "publicCatalogDescription": "Las personas que no son miembros, con sesión iniciada en otro lugar o sin sesión, pueden encontrarlo.",
+      "publicCatalogTooltipAriaLabel": "Más información sobre el catálogo público",
+      "guestChatLabel": "Permitir chatear sin iniciar sesión",
+      "guestChatDescription": "Los visitantes y las personas de otras organizaciones pueden chatear como invitados.",
+      "guestChatTooltipAriaLabel": "Más información sobre chatear sin iniciar sesión",
+      "summaryAdminsGuest": "Oculto en la búsqueda. Cualquiera con el enlace puede chatear sin iniciar sesión.",
+      "summaryMembersGuest": "Los miembros pueden encontrarlo. Cualquiera con el enlace puede chatear sin iniciar sesión.",
+      "summaryPublicCatalog": "Aparece en el catálogo público. Los visitantes deben iniciar sesión para chatear.",
+      "summaryPublicCatalogGuest": "Aparece en el catálogo público. Cualquiera puede chatear sin iniciar sesión."
+    }
   },
   "tabsSkillsTab": {
     "heading": "Habilidades"

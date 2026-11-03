@@ -1934,7 +1934,25 @@
     "documentChunksLabel": "Document Chunks",
     "documentChunksTooltip": "Number of knowledge-base chunks retrieved per query. This setting has one value, so it applies to both in-app chat and the embed widget.",
     "documentChunksPlaceholder": "4",
-    "documentChunksMinValueError": "Enter 1 or more."
+    "documentChunksMinValueError": "Enter 1 or more.",
+    "discoveryAccess": {
+      "audienceLabel": "Who Can Use This Agent?",
+      "audienceTooltipAriaLabel": "More about who can use this agent",
+      "allMembers": "All Members",
+      "adminsOnly": "Admins Only",
+      "allMembersHelp": "Every member can find and chat with it.",
+      "adminsOnlyHelp": "Only admins, the creator, and people given access can find and chat with it.",
+      "publicCatalogLabel": "List in Public Catalog",
+      "publicCatalogDescription": "People who aren't members, signed in elsewhere or signed out, can find it.",
+      "publicCatalogTooltipAriaLabel": "More about the public catalog",
+      "guestChatLabel": "Allow Chat Without Signing In",
+      "guestChatDescription": "Visitors and people from other organizations can chat as guests.",
+      "guestChatTooltipAriaLabel": "More about chat without signing in",
+      "summaryAdminsGuest": "Hidden from search. Anyone with the link can chat without signing in.",
+      "summaryMembersGuest": "Members can find it. Anyone with the link can chat without signing in.",
+      "summaryPublicCatalog": "Listed in the public catalog. Visitors must sign in to chat.",
+      "summaryPublicCatalogGuest": "Listed in the public catalog. Anyone can chat without signing in."
+    }
   },
   "tabsSkillsTab": {
     "heading": "Skills"
