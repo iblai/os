@@ -13,6 +13,7 @@ export const LOCAL_STORAGE_KEYS = {
   DM_TOKEN_KEY: 'dm_token',
   AXD_TOKEN_KEY: 'axd_token',
   USER_DATA: 'userData',
+  USER_METADATA: 'user_metadata',
   DEFAULT_TENANT: 'tenant',
   USER_TENANTS: 'tenants',
   SESSION_ID: 'session_id',
@@ -34,6 +35,8 @@ export const QUERY_PARAMS = {
   LTI: 'lti',
   ALLOW_MENTOR_SELECTION: 'allow-mentor-selection',
   ALLOW_FULLSCREEN: 'allow-fullscreen',
+  /** Set by the Chrome extension's panel on its iframe URL: Cowork has a tab to drive here. */
+  ENABLE_COWORK: 'enable-cowork',
 };
 
 // URL patterns

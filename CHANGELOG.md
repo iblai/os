@@ -1,50 +1,562 @@
 # Changelog
 
+## [0.186.0](https://github.com/iblai/os/compare/v0.185.0...v0.186.0) (2026-11-02)
+
+### Features
+
+* unclutter the agent History conversation list ([68fc383](https://github.com/iblai/os/commit/68fc383824f5d048c4559176dc0bab2feaefff45))
+
+## [0.185.0](https://github.com/iblai/os/compare/v0.184.1...v0.185.0) (2026-11-02)
+
+### Features
+
+* **os:** adding mcp to prompt box ([7491fcf](https://github.com/iblai/os/commit/7491fcfb389730c8db577b1fa15baaa6a026b574))
+
+### Bug Fixes
+
+* **os:** adding fix for pnpm lock ([77f6ff4](https://github.com/iblai/os/commit/77f6ff43cca4f542b92deb9cb0333e02bcdb3d90))
+* **os:** adding fix for the e2e tests ([9b529ac](https://github.com/iblai/os/commit/9b529acd164f045f6b7293a48c9849debe6500a6))
+* **os:** adding fix for the unit tests ([ccd9b67](https://github.com/iblai/os/commit/ccd9b67f8859be0731ef79618473749741629989))
+* **os:** adding fix the playright test ([c208c91](https://github.com/iblai/os/commit/c208c91f26bfdacf593b17d3b43ff99441407043))
+* **os:** fixes for the mcps ([cd025ed](https://github.com/iblai/os/commit/cd025ed1f4f0666c58abc2f5e685542f7996eeec))
+* **os:** mcp fixes for the student and tenant ([4029a30](https://github.com/iblai/os/commit/4029a306b40892bae52d8bf2e948cc32f3b5eba3))
+* **web-containers:** adding fix for the mcp connectors ([86f967d](https://github.com/iblai/os/commit/86f967df58c91f05ff7c1b90f686c33684c7fc0d))
+
+### Chores
+
+* **deps:** bump @iblai/iblai-js to 2.59.3 ([f2f09b7](https://github.com/iblai/os/commit/f2f09b7ac29f418fb12f09b309c3cc9eff8ef4c1))
+
+### Documentation
+
+* **e2e:** describe the localStorage metadata in the coverage records ([22184d9](https://github.com/iblai/os/commit/22184d999c69544fd27250c23b0a01edb587457f))
+
+### Styles
+
+* **e2e:** apply prettier to coverage.json ([a0acc51](https://github.com/iblai/os/commit/a0acc5191f662b21d0bf204c19dc356bcc740eb2))
+* **skills:** apply prettier to startup-performance.md ([da8a958](https://github.com/iblai/os/commit/da8a95836626ea3badf7387b15f4742c5f6cbf00))
+
+### Tests
+
+* **e2e:** enable the accessibility menu through stored tenant metadata ([2e36035](https://github.com/iblai/os/commit/2e360355c594741392c5e7a33bab23513579740c))
+* **e2e:** journey 78 reads Expires from the 4th column and expects a disabled Submit ([5846063](https://github.com/iblai/os/commit/58460631e7570ab476d9967a8f0a2b77c28a1c16))
+* **e2e:** journey 86 keeps the accessibility flag through the tenant refresh ([ebbcd73](https://github.com/iblai/os/commit/ebbcd737ac0c2edb7b432299aa6a8a4bdfe083ba))
+* **e2e:** read tenant metadata from localStorage in the observer helper ([f20d706](https://github.com/iblai/os/commit/f20d706c522e0aa23364559c31e993ff03fc9190))
+* **e2e:** seed the stored user metadata name in journey 83 ([baa5323](https://github.com/iblai/os/commit/baa53234435f84619c362a64033630c6ad661b5c))
+* **e2e:** wait for the embed's chat history before journey 82 types ([d63557b](https://github.com/iblai/os/commit/d63557bec5aeaf41731eb5f863ce0d0760c82bd4))
+
+## [0.184.1](https://github.com/iblai/os/compare/v0.184.0...v0.184.1) (2026-11-02)
+
+### Documentation
+
+* **perf:** add a startup-performance skill so the load path stays unblocked ([92a14f1](https://github.com/iblai/os/commit/92a14f1d96302909b5f2bf6d657d5ade2618f14f))
+
+## [0.184.0](https://github.com/iblai/os/compare/v0.183.1...v0.184.0) (2026-10-31)
+
+### Features
+
+* **tenant-metadata:** read tenant metadata from the tenant object ([009a62e](https://github.com/iblai/os/commit/009a62ef968d3e83c854ec742ccd7c4cbfec6016))
+* **user-metadata:** read the current user's metadata from localStorage ([09d9192](https://github.com/iblai/os/commit/09d9192b92c7f94cac3eb4761a45a7c6dd28fdb7))
+
+### Bug Fixes
+
+* **e2e:** assert Create API Key Submit is disabled on a pristine form ([f8d55da](https://github.com/iblai/os/commit/f8d55da91bf336ab288277fa65561c2ef536692a))
+* **e2e:** force accessibility_menu on the SDK platforms endpoint too ([a903146](https://github.com/iblai/os/commit/a9031463033f72b50f028ce83bd9340a2ae84c87))
+* **e2e:** force tenant metadata for the cross-origin embed (journey 80) ([b781fe3](https://github.com/iblai/os/commit/b781fe3763a41fdd69c759a73cbca1c79caba323))
+* **e2e:** make readStoredUserFullName survive the embed's navigation ([3111961](https://github.com/iblai/os/commit/31119619585af8e6e607beb97e87a1af4ceb6f1b))
+* **e2e:** source the greeting name from user_metadata storage (journey 83) ([f80eb82](https://github.com/iblai/os/commit/f80eb828071666cb7c58e564798e509a46be96ae))
+* **merge:** drop duplicate object keys from the main merge ([bf92486](https://github.com/iblai/os/commit/bf924868958499a6417cb3fbff53dd80c941c300))
+* **rbac:** let anonymous viewers chat on anonymous-allowed mentors ([9f81ec0](https://github.com/iblai/os/commit/9f81ec0ab3839a2152e7b562798b35ac23ddf590))
+* **rbac:** track whether the mentor permissions answer has arrived ([2f880dc](https://github.com/iblai/os/commit/2f880dc9d946ed145f5784a169fc717348ce7e88)), closes [iblai/ibl-frontend#2186](https://github.com/iblai/ibl-frontend/issues/2186)
+* **tenant-metadata:** bump @iblai/iblai-js to 2.55.0 + repair tenant-metadata test mocks ([6dc06b9](https://github.com/iblai/os/commit/6dc06b9b2bcb61b84ebb9014385c28e76b8a0873))
+* **tenants:** sync saved org metadata into localStorage on update ([c521a84](https://github.com/iblai/os/commit/c521a846fd190a6a55e15c8c6556ba351a101f27))
+* **test:** type the useTenantObjectMetadata mock as its real return ([2516364](https://github.com/iblai/os/commit/2516364ea18f2662c0d1cdb9d093d9a970afeca9))
+
+### Refactors
+
+* **e2e:** harden tenant-metadata helpers from review ([ad81ae6](https://github.com/iblai/os/commit/ad81ae6a3324d6ec24a578f58a740c715a97fcf9))
+
+### Chores
+
+* **deps:** bump @iblai/iblai-js 2.55.0 -> 2.57.0 ([1a9303a](https://github.com/iblai/os/commit/1a9303afcd526829e907bf7be3e19c34a3e2fc77)), closes [iblai-web-frontend#2192](https://github.com/iblai/iblai-web-frontend/issues/2192)
+* **deps:** bump @iblai/iblai-js 2.57.0 -> 2.58.1 ([4886d52](https://github.com/iblai/os/commit/4886d5257f0f3605d1dbd25292f4c645a23c306d))
+* **deps:** bump @iblai/iblai-js to 2.59.0 ([880227b](https://github.com/iblai/os/commit/880227bfb9eaa54e496c63366ccdced407b5e610))
+* **deps:** bump @iblai/iblai-js to 2.59.2 ([35b688a](https://github.com/iblai/os/commit/35b688acb08d5c98c113ba1674f121643f03e801)), closes [iblai/ibl-frontend#2201](https://github.com/iblai/ibl-frontend/issues/2201)
+* **deps:** take @iblai/iblai-js 2.52.2, which makes the RBAC guard live ([1827837](https://github.com/iblai/os/commit/1827837b3b7f5fe572def49d3cf32a64c9232ee4))
+* **security:** bump follow-redirects override to >=1.16.2 ([f6d932b](https://github.com/iblai/os/commit/f6d932b3ee242c346be47332bc228a723aae9f6f))
+
+### Tests
+
+* cover useStoredUserMetadata ([c07289d](https://github.com/iblai/os/commit/c07289dd4ae9a97b13f42fc55cfde6136d515b88))
+* **e2e:** drive the product tour via the user_metadata localStorage key ([1e25f17](https://github.com/iblai/os/commit/1e25f170ae708a7ffb2eff65f83c90ec9a9c4a21))
+* **e2e:** point the API-keys EXPIRES cell at the 4th column ([a06ae1b](https://github.com/iblai/os/commit/a06ae1b73375e59f8e9cd6a01d3522a4bf77c657))
+* **e2e:** read tenant metadata from the persisted tenants list ([087adaa](https://github.com/iblai/os/commit/087adaa5df7f8eaa44f76f27654690832f2f96e3))
+* **nav-bar:** add TransportEnum to the @iblai/iblai-api mock ([66499c9](https://github.com/iblai/os/commit/66499c97391f3fdb99faa8fed38948ad4f2de877))
+
+## [0.183.1](https://github.com/iblai/os/compare/v0.183.0...v0.183.1) (2026-10-30)
+
+### CI
+
+* **pr-gate:** say what the e2e run found in the merge box, linked to it ([702be85](https://github.com/iblai/os/commit/702be85f527a6af70020358622d38d7bb450e6ed))
+
+## [0.183.0](https://github.com/iblai/os/compare/v0.182.2...v0.183.0) (2026-10-30)
+
+### Features
+
+* **create-agent:** add a Save button to the prompt popup ([8e2d566](https://github.com/iblai/os/commit/8e2d5669104e49f56b189a54d3b7f5ab6799b42d))
+* **embed:** move the user profile next to the Close button ([3123f59](https://github.com/iblai/os/commit/3123f5907ebc41a1dbe1290df9d82187caddb847))
+* **settings:** pass the Allowed File Types labels to the agent settings tab ([2bd736c](https://github.com/iblai/os/commit/2bd736ccabef6b849b044f66a959a44cab599d36))
+* **settings:** pass the Context Limits labels to the agent settings tab ([8115815](https://github.com/iblai/os/commit/8115815707e6b9819ba90c7496febbfc4fa2687c))
+
+### Bug Fixes
+
+* **e2e:** wait on the proxied user-metadata path in journey 83 ([3387046](https://github.com/iblai/os/commit/33870460801176068997198827465f9766b073bd))
+* **e2e:** wait on the proxied user-metadata path in the product tour helper ([79d9b41](https://github.com/iblai/os/commit/79d9b41c0c9fb39b22370f4d709918fe8339ac2c))
+
+### Chores
+
+* **deps:** bump @iblai/iblai-js to 2.52.0 ([9577be0](https://github.com/iblai/os/commit/9577be0b405865551fa0173639166da8d1fdc350))
+* **deps:** bump @iblai/iblai-js to 2.53.0 ([3277859](https://github.com/iblai/os/commit/327785939d489d73a0e6e1771fd73af2375b5fa0))
+* **deps:** bump @iblai/iblai-js to 2.56.0 ([f4393dc](https://github.com/iblai/os/commit/f4393dca6d316a1ea4fe34676fd68b6300a9878c)), closes [iblai/iblai-web-frontend#2189](https://github.com/iblai/iblai-web-frontend/issues/2189)
+* **deps:** bump @iblai/iblai-js to 2.59.0 ([e1354bb](https://github.com/iblai/os/commit/e1354bb95a0da12d68d98c57ce3c2a7990d1feb1)), closes [iblai/iblai-web-frontend#2195](https://github.com/iblai/iblai-web-frontend/issues/2195)
+
+### Documentation
+
+* **e2e:** add aft-07 to the coverage records ([cceecad](https://github.com/iblai/os/commit/cceecad757f3c758835085364f104292937510fd))
+* **e2e:** record [#2528](https://github.com/iblai/os/issues/2528) checkpoints in coverage ([dee255b](https://github.com/iblai/os/commit/dee255b7d4be38e66cec033564c5c49cd882d24c))
+* **e2e:** record [#2758](https://github.com/iblai/os/issues/2758) checkpoints in coverage ([6c099c5](https://github.com/iblai/os/commit/6c099c536f61d2138e74e8e7fcd78719dd3f6a96))
+
+### Tests
+
+* **create-agent:** cover the prompt popup Save button ([0c897f7](https://github.com/iblai/os/commit/0c897f701e5aba70c330a0ed72ec1dc96d2da23c))
+* **e2e:** add embed profile placement checks to journey 80 ([c0c3d6a](https://github.com/iblai/os/commit/c0c3d6acb26576f7ce4d5c3ece5a33380d7a12f1))
+* **e2e:** add prompt popup Save checks to journey 88 ([d4a197c](https://github.com/iblai/os/commit/d4a197cbafcbe12d2b52c71cfe08559c10352d25))
+* **e2e:** add the allowed file types journey ([41c7837](https://github.com/iblai/os/commit/41c78379b585fd044642b9dd59dbaf514e7a5db5))
+* **e2e:** cover the refused-file toast and allowed-types dialog ([cf04b94](https://github.com/iblai/os/commit/cf04b947b3f215be7b450b24e01f9d759af18c11))
+* **e2e:** cover the share-link websocket frame in journey 97 ([5465e34](https://github.com/iblai/os/commit/5465e34f966412f9d79f0c92b6432d0002bbbe3e))
+* **e2e:** fail Read Aloud only past 30s and annotate a slow first audio ([42c905b](https://github.com/iblai/os/commit/42c905b68fcb49960f1ac6aa3aefeae2e60d4cd6))
+* **e2e:** follow the tenant show_help flag in the embed profile menu check ([e2090a5](https://github.com/iblai/os/commit/e2090a5c25fd9ae779c66a8e74cad0d70c9cec70))
+* **embed:** cover the nav bar profile position ([7088ea4](https://github.com/iblai/os/commit/7088ea41c1e75e241815cc4a7b8a02e671c856e2))
+* **nav-bar:** add TransportEnum to the @iblai/iblai-api mocks ([ebc54ce](https://github.com/iblai/os/commit/ebc54ce4e5fd122137943bfcfca22801e1e8d0c2))
+
+## [0.182.2](https://github.com/iblai/os/compare/v0.182.1...v0.182.2) (2026-10-27)
+
+### Bug Fixes
+
+* **os:** adding fix for the playwright tests for workflows ([391e1e8](https://github.com/iblai/os/commit/391e1e8bc31afff3867c8bac8885278d6f4b699c))
+* **os:** adding fixes for workflows ([c3f9687](https://github.com/iblai/os/commit/c3f9687af4700520b4e5436a004f0b369d40cd63))
+* **os:** adding security audit fixes ([bfa596e](https://github.com/iblai/os/commit/bfa596e532fff48e66d695747f42a87206093d09))
+* **os:** bump version for sdk ([a012ef1](https://github.com/iblai/os/commit/a012ef1a7663e17421fff7c87e222da6dcf44302))
+
+## [0.182.1](https://github.com/iblai/os/compare/v0.182.0...v0.182.1) (2026-10-27)
+
+### Bug Fixes
+
+* **os:** adding claude review fixes ([8bbeb56](https://github.com/iblai/os/commit/8bbeb56bd01f914318c2dbc381fb06768d632a1e))
+* **os:** adding fix for the claude review ([54877ba](https://github.com/iblai/os/commit/54877bacc018ab748438e8766f8d0dd8364577c9))
+* **os:** adding fix for the code pill ([cb30f6d](https://github.com/iblai/os/commit/cb30f6d79278548969deb87369c41a6c09c85e0a))
+* **os:** adding fix for the security audit issues ([723bce1](https://github.com/iblai/os/commit/723bce1d45087babc332555d68e23dce7959c810))
+* **os:** adding fix for the unit test coverage ([0b9a20f](https://github.com/iblai/os/commit/0b9a20fa5f6decf176c23421be1e4345f42c197b))
+* **os:** adding fixes for mac app and sdk bump ([8653aee](https://github.com/iblai/os/commit/8653aee622e1ede7eabc178c2763832759965929))
+* **os:** adding fixes for the auto mode and agent categories to 4 ([efc6704](https://github.com/iblai/os/commit/efc6704ff0ef69bbb223e32bda703953aced65c5))
+* **os:** fixes for security audit ([39b36d0](https://github.com/iblai/os/commit/39b36d0ef28f4c70cbc20ce116f280051b8f4f68))
+* **os:** fixes for the audit ([0990110](https://github.com/iblai/os/commit/0990110bc2539d870650763bcb0c14891a013f0f))
+* **os:** security audit fixes ([260ed62](https://github.com/iblai/os/commit/260ed62e6ab96679b1659571f0055e31a4d649c1))
+* **os:** take the 2.45.1 host half, drop the parity test, correct the ledgers ([46b59c7](https://github.com/iblai/os/commit/46b59c7bc89d9c0bdbe5807354da3eb15ff784b3))
+
+### Chores
+
+* **tauri:** release app-v0.95.30 ([c1273df](https://github.com/iblai/os/commit/c1273dfa92bab4f7c611aae80e07955eb3537ead))
+
+## [0.182.0](https://github.com/iblai/os/compare/v0.181.2...v0.182.0) (2026-10-26)
+
+### Features
+
+* **ext:** drop the step and token caps for a 200-minute limit, retry failures, ship 1.1.10 ([7da79ee](https://github.com/iblai/os/commit/7da79ee33261edd212882b988148a6d7a60f1efb))
+
+## [0.181.2](https://github.com/iblai/os/compare/v0.181.1...v0.181.2) (2026-10-26)
+
+### Bug Fixes
+
+* **embed:** don't register the service worker inside an iframe ([da4e55f](https://github.com/iblai/os/commit/da4e55fdbd4ddedffbbdd8f7784b11a1dff18e81))
+
+## [0.181.1](https://github.com/iblai/os/compare/v0.181.0...v0.181.1) (2026-10-26)
+
+### CI
+
+* request a prod-images release after each image build ([453cde8](https://github.com/iblai/os/commit/453cde813761bd61f46450718ad157a5aba1abbc))
+
+## [0.181.0](https://github.com/iblai/os/compare/v0.180.0...v0.181.0) (2026-10-24)
+
+### Features
+
+* **mentor:** skills tab becomes a thin wrapper over SDK AgentSkillsTab ([6bd334f](https://github.com/iblai/os/commit/6bd334febd7ad30bfa2cd4e4ad3c8ba5bd681739))
+
+### Bug Fixes
+
+* **layout:** stop html/body overscroll so iOS swipes can't shift the app ([2b1266a](https://github.com/iblai/os/commit/2b1266a3809c7df5419561ee0624d573a9ad061b))
+
+### Styles
+
+* prettier-format CHANGELOG bullets ([0ff9d84](https://github.com/iblai/os/commit/0ff9d84d54d95fea61d02b604f95cd6392ee8cc2))
+
+### Tests
+
+* **e2e:** assert no overscroll on chat at iPhone 14 viewport (mob-09, [#121](https://github.com/iblai/os/issues/121)) ([284139d](https://github.com/iblai/os/commit/284139dd5316dd07feeb88c37682b4d59a33c932))
+* **e2e:** cover the embed profile view (show-user-profile) ([669f8fb](https://github.com/iblai/os/commit/669f8fb268c8f43dd6268830594547f2ab0725ba))
+* **e2e:** pin Skills tab behaviour before the SDK swap ([ec3fdde](https://github.com/iblai/os/commit/ec3fdde0ce3a6ee2d8cf71ea5947468d626a5bb3))
+* pin the html/body overscroll rule ([#121](https://github.com/iblai/os/issues/121)) ([988cfe3](https://github.com/iblai/os/commit/988cfe36e1420b3c024f4a4ef2b095639d3e09a3))
+
+## [0.180.0](https://github.com/iblai/os/compare/v0.179.1...v0.180.0) (2026-10-23)
+
+### Features
+
+* read the panel's enable-cowork flag, bump iblai-js to 2.49.1 and agent-ai to 2.13.2 ([7e1ec55](https://github.com/iblai/os/commit/7e1ec557f9c777eb2f99a817a9db4f6feacd2052))
+
+### Chores
+
+* **deps:** audit fixes: next 15.5.28, @sentry/nextjs 10.75.2, vite 8.3.5, three override floors ([2ae6565](https://github.com/iblai/os/commit/2ae6565ab0ed4c01c5207ec6288cc665746da2ed))
+* **ext:** bump Chrome extension to 1.1.9 ([5147597](https://github.com/iblai/os/commit/51475975b05b8006f474472b1c43709311088596))
+
+## [0.179.1](https://github.com/iblai/os/compare/v0.179.0...v0.179.1) (2026-10-23)
+
+### Chores
+
+* iblai-js bump to 2.50.0 ([53d0685](https://github.com/iblai/os/commit/53d06859ef699892d32c36744ec9dc18a4552f81))
+
+## [0.179.0](https://github.com/iblai/os/compare/v0.178.0...v0.179.0) (2026-10-23)
+
+### Features
+
+* **settings:** pass the admin-visibility note and confirmation labels to the SDK tab ([f64ceac](https://github.com/iblai/os/commit/f64ceacd1c3823d6b8760d9cbd3ca47b18ecb5a8))
+
+### Documentation
+
+* **e2e:** add journey 76 sem-08 and sem-09 coverage checkpoints ([680dd33](https://github.com/iblai/os/commit/680dd334bc26c2e695eae02c4b5e724c3906216d))
+* **e2e:** add journey 95 coverage checkpoints ([ff76306](https://github.com/iblai/os/commit/ff76306325060ea4bbbcc951d5b4f186c867a4db))
+* **e2e:** add sess-05 and sess-06 coverage checkpoints ([3914723](https://github.com/iblai/os/commit/3914723251510dfdf2f8880cff728ad4da233419))
+
+### Tests
+
+* **e2e:** confirm the admin-visibility dialog in journeys 13 and 64 ([76f3bcf](https://github.com/iblai/os/commit/76f3bcfe43c08868bc81b36eb761f5b7f4ed2fd8))
+* **e2e:** cover the Explore Agents scroll-down and back-up toggle ([cf53a39](https://github.com/iblai/os/commit/cf53a39f7e8a96fee981936a35764ec2b397dbef))
+* **e2e:** journey 95 covers the admin-visibility note and confirmation ([60de8c5](https://github.com/iblai/os/commit/60de8c5f302ec8dc7159df46cb1338f4035fe0fc))
+* **e2e:** start-chat failures toast the backend's message, not the raw error ([df5a996](https://github.com/iblai/os/commit/df5a996ca9923dc6577a38cddffdca670b729cbb))
+
+### Build
+
+* **deps:** bump @iblai/iblai-js to 2.49.2 ([b7430ba](https://github.com/iblai/os/commit/b7430ba7800505b1e5d93e54eeeaeb82c30b93e2)), closes [iblai/iblai-web-frontend#2176](https://github.com/iblai/iblai-web-frontend/issues/2176)
+
+## [0.178.0](https://github.com/iblai/os/compare/v0.177.0...v0.178.0) (2026-10-23)
+
+### Features
+
+* **desktop:** save downloads through the desktop app when available ([1f06407](https://github.com/iblai/os/commit/1f06407791d89fa59a2e857fdd18867ea952df9f))
+* **tauri:** save chat files through the native save dialog ([26cd939](https://github.com/iblai/os/commit/26cd9392c4cd092ed7e0d6174909afd9a6b279fd))
+
+### Bug Fixes
+
+* **sidebar:** export the whole chat in Text or Excel ([c596e1a](https://github.com/iblai/os/commit/c596e1a8d6109cbbbe46e17e8e02f0a0c02be9e2))
+
+### Chores
+
+* **tauri:** release app-v0.95.29 ([2beec72](https://github.com/iblai/os/commit/2beec72e225f660cfc0f270e336ab3f1ffe8bfc4))
+
+### Documentation
+
+* **e2e:** update coverage for journey 94 ([a7929cb](https://github.com/iblai/os/commit/a7929cbcbf2e5269b323fe12fc1e0f1366ffdc3e))
+
+### Tests
+
+* **e2e:** cover chat download formats and whole-chat sidebar export ([16e13f0](https://github.com/iblai/os/commit/16e13f016e10e207d9a80b11aceb20a915129456))
+* **e2e:** wait for the agent's fresh chat before reopening in journey 94 ([25d5960](https://github.com/iblai/os/commit/25d596019156d39302abc8d0e177ce0d4054f29a))
+
+### Build
+
+* **deps:** bump next, @sentry/nextjs and the dompurify floor for new advisories ([71f22e6](https://github.com/iblai/os/commit/71f22e65402c82ec0587b8ccc2583c2b7301fe23))
+* **deps:** clear the high pnpm audit advisories ([9ae825a](https://github.com/iblai/os/commit/9ae825ad149ee08eba9b4e201b52a414311959df))
+* **deps:** drop write-excel-file, the SDK ships it ([03fed06](https://github.com/iblai/os/commit/03fed063af2c7cf9b7521ba065e47d4a692aafa3))
+
+## [0.177.0](https://github.com/iblai/os/compare/v0.176.1...v0.177.0) (2026-10-22)
+
+### Features
+
+* **ext:** act by position on the picture, list on-screen elements first, picture at CSS size ([22ed461](https://github.com/iblai/os/commit/22ed461a8a6ab63907faf709a79bd64d2ae3b789))
+* **ext:** double clicks to open what one click only selects, selected state in the list ([c2bf565](https://github.com/iblai/os/commit/c2bf565ff60b74d57d4095aa563371aba4d4af83))
+
+### Bug Fixes
+
+* **ext:** badges on the picture, real clicks after an instant scroll, real clicks in same-origin iframes ([e985a04](https://github.com/iblai/os/commit/e985a04270221bf186cd34970c9e103960262490))
+* **ext:** cover check up the frame chain, offset after the retry, badges only on screen ([8911b6c](https://github.com/iblai/os/commit/8911b6c35309d7d9bdc428aa909af7319102928d))
+* **ext:** page text keeps display: contents blocks and leaves a block's hidden content out ([c96816b](https://github.com/iblai/os/commit/c96816bd248d47ab55953fb27d6c7bd5d2be776b))
+* **ext:** read the page text that is on screen, not what a modal covers ([36ce104](https://github.com/iblai/os/commit/36ce104cffaaf567049798bf3a556689beaa8db0))
+* **tests:** type the dispatch spy and cast the injection via unknown so typecheck passes ([f600290](https://github.com/iblai/os/commit/f6002909ce8eb92b6ee3dd899e25515e682d77e6))
+
+### Chores
+
+* **ext:** bump Chrome extension to 1.1.8 ([b50a43b](https://github.com/iblai/os/commit/b50a43bc7a8ea093903808026ecfd49f103f0262))
+
+## [0.176.1](https://github.com/iblai/os/compare/v0.176.0...v0.176.1) (2026-10-22)
+
+### Chores
+
+* bump @iblai/iblai-js to 2.48.0 ([32601a3](https://github.com/iblai/os/commit/32601a39bc452aad604d022f6cd54e78010aa63c))
+
+## [0.176.0](https://github.com/iblai/os/compare/v0.175.0...v0.176.0) (2026-10-22)
+
+### Features
+
+* **llm:** move in-chat model change to the LLM tab, add User Models ([0c88319](https://github.com/iblai/os/commit/0c8831963ad24df6aa0553f6f3dfba40aada1a74)), closes [iblai/iblai-platform#2675](https://github.com/iblai/iblai-platform/issues/2675)
+
+### Bug Fixes
+
+* **settings:** title-case the Reopen Last Conversation label ([ee985d7](https://github.com/iblai/os/commit/ee985d79fcf774098bec800a7e1ff821f8be5c1b))
+
+### Documentation
+
+* add UI terminology and casing rules to AGENTS.md ([87ee1c7](https://github.com/iblai/os/commit/87ee1c77c4948338531658a18f6c25aa8bc8a86a))
+
+### Tests
+
+* **e2e:** add journey 92 for User Models ([e2d3639](https://github.com/iblai/os/commit/e2d36395b3178e11f0c3e719cd37b025e2a4a0cf)), closes [iblai/iblai-platform#2675](https://github.com/iblai/iblai-platform/issues/2675)
+* **e2e:** drive the in-chat model change switch from the LLM tab ([75a7c37](https://github.com/iblai/os/commit/75a7c3762858750bd84bf9c0ec2163a76101bf01)), closes [iblai/iblai-platform#2675](https://github.com/iblai/iblai-platform/issues/2675)
+* **e2e:** journey 92 reads the mocked switch, not the landing agent's ([c502c89](https://github.com/iblai/os/commit/c502c8976c0c9c3538788e496195c266db306c2b))
+* **e2e:** let um-13 treat the open Edit Agent dialog as page-ready ([af93a09](https://github.com/iblai/os/commit/af93a098df9cdc8c6111a24ec00c9f1f82426366))
+* **e2e:** scope journey 17's create-notification dialog to its test id ([0cc1f99](https://github.com/iblai/os/commit/0cc1f99a63da3ebf75d0b40b2770ccb9e9bfa7bc))
+* **handlers:** type the dispatch-spy helper so typecheck passes ([2ad5b75](https://github.com/iblai/os/commit/2ad5b751eb8b5eab16e85c771cdc8ac2ad8674f1))
+
+## [0.175.0](https://github.com/iblai/os/compare/v0.174.3...v0.175.0) (2026-10-21)
+
+### Features
+
+* **ext:** real clicks, a picture of the tab, focusable widgets, narration rows and a cap note ([47c19df](https://github.com/iblai/os/commit/47c19df806131e1df1466ce79b96bff691ea8660))
+
+### Chores
+
+* **ext:** bump Chrome extension to 1.1.7 ([5aefcf5](https://github.com/iblai/os/commit/5aefcf58e400e2ad83fc8237b0d456b0af6ed96f))
+
+## [0.174.3](https://github.com/iblai/os/compare/v0.174.2...v0.174.3) (2026-10-21)
+
+### Chores
+
+* iblai-js bump 2.47.0 ([6b0e6f9](https://github.com/iblai/os/commit/6b0e6f9cd8dd542e19da4abb0558edfcc2cf50fe))
+
+## [0.174.2](https://github.com/iblai/os/compare/v0.174.1...v0.174.2) (2026-10-21)
+
+### Bug Fixes
+
+* follow the in-chat model toggle to the LLM tab after the iblai-js 2.45.1 bump ([f457bfe](https://github.com/iblai/os/commit/f457bfe627eb340a177db429bff66e4ff40167c2))
+* **llm-tab:** no false success toast when the paywall blocks the in-chat toggle ([b9c4f58](https://github.com/iblai/os/commit/b9c4f588a77e054323953cabf31ae8c4b20a3563))
+
+### Chores
+
+* iblai-js bump to 2.45.1 ([60132a9](https://github.com/iblai/os/commit/60132a980c0309676939476759ba8eacd5a6774b))
+* iblai-js bump to 2.46.0 ([f70d2c7](https://github.com/iblai/os/commit/f70d2c7ac3fa809eb55680eb9041b502dc81325f))
+
+### Tests
+
+* expect the delayed blob URL revoke from web-containers 1.49 ([12c2fa6](https://github.com/iblai/os/commit/12c2fa6735674d2f1eed3dcab94b29872516c657))
+
+## [0.174.1](https://github.com/iblai/os/compare/v0.174.0...v0.174.1) (2026-10-20)
+
+### Bug Fixes
+
+* **embed:** re-hydrate in place on MENTOR:AUTH_UPDATE instead of reloading ([810ce65](https://github.com/iblai/os/commit/810ce654a9d30a218aca5921131b8ff72fefb9b6))
+
+## [0.174.0](https://github.com/iblai/os/compare/v0.173.0...v0.174.0) (2026-10-20)
+
+### Features
+
+* now logging than 7s TTS response latency + playwright testing patch ([02bcb3d](https://github.com/iblai/os/commit/02bcb3d6e4e443c90d1394b4d43ba3987ee8da1d))
+* playwright tts coverage + explore page capitalization ([02292ca](https://github.com/iblai/os/commit/02292ca53071022f39ec3448db50951c5c3ca073))
+* playwright tts test coverage update ([51dab1f](https://github.com/iblai/os/commit/51dab1f4573cda9b7141affe16de65e69368356e))
+
+## [0.173.0](https://github.com/iblai/os/compare/v0.172.0...v0.173.0) (2026-10-19)
+
+### Features
+
+* **edit-mentor:** label the Reopen last conversation setting ([abec7b4](https://github.com/iblai/os/commit/abec7b4304ee1307d9ba12c44469fe1e8b56ec52))
+
+### Chores
+
+* **deps:** bump @iblai/iblai-js to 2.42.0 ([b4ac9b3](https://github.com/iblai/os/commit/b4ac9b377d4457227a1fabc8520e0d7db206d039))
+
+### Tests
+
+* **e2e:** cover reopening the last conversation (journey 90) ([1c371b5](https://github.com/iblai/os/commit/1c371b55c2ce161dee3621ee290908b811e33f36))
+* **e2e:** read J6 model rows past the touch-only unavailable reason ([40fa358](https://github.com/iblai/os/commit/40fa3587a41775bd1ec41f038609f5e16440c9e4)), closes [#2146](https://github.com/iblai/os/issues/2146)
+
+## [0.172.0](https://github.com/iblai/os/compare/v0.171.5...v0.172.0) (2026-10-19)
+
+### Features
+
+* **auth:** wire mentorai to per-tab authStorage (flag off) + bump iblai-js 2.7.3 ([fe7c60b](https://github.com/iblai/os/commit/fe7c60b4da8a366645113bb2725271ec1960ec5a))
+
+### Bug Fixes
+
+* **auth:** fill only empty stores on Tauri offline restore (no clobber) ([4629ac5](https://github.com/iblai/os/commit/4629ac529c8ebc7cb62d5407f9812b0e2d8976a6))
+* **auth:** per-tab Tauri offline restore writes each store independently ([ac05304](https://github.com/iblai/os/commit/ac053048e8f6aae038111ea7f583419ef19d51b2))
+* **auth:** route per-tab authStorage through an RSC-safe app-local module ([77b20cd](https://github.com/iblai/os/commit/77b20cd730e37cfdadafc3ffeb79d78c384a9af1))
+* **per-tab-auth:** guard storage reads when getItem isn't a function ([e67ba4f](https://github.com/iblai/os/commit/e67ba4f0923f743dca2cc7ad5ba3c4f51399c3de))
+* **per-tab-auth:** route main's new localStorage auth reads through the per-tab store ([be846cc](https://github.com/iblai/os/commit/be846cc5be8fb84039123b0456ae2b4fc7cd2681)), closes [#467](https://github.com/iblai/os/issues/467)
+
+### Chores
+
+* **auth:** expose NEXT_PUBLIC_IBL_PER_TAB_AUTH in runtime env.js ([a70931c](https://github.com/iblai/os/commit/a70931cc91093312fd0f50e86cb723569b0b6476))
+* **deps:** bump @iblai/iblai-js to 2.13.1 ([0a5f399](https://github.com/iblai/os/commit/0a5f3991f2f61a0b5ea33d2939a27e4f0ef12860))
+* **tauri:** release app-v0.95.28 ([18cea5b](https://github.com/iblai/os/commit/18cea5be30a0b6cb928872e51b80f61126bcdccb))
+
+### Tests
+
+* **auth:** fix web-utils mocks for per-tab authStorage imports ([79beade](https://github.com/iblai/os/commit/79beade8e7e2d42d59b43404cf060ce73282c0a4))
+
+## [0.171.5](https://github.com/iblai/os/compare/v0.171.4...v0.171.5) (2026-10-16)
+
+### Bug Fixes
+
+* **code:** drop output-only ACP updates, emit on main, bump opencode to 1.19.0 ([ea2f045](https://github.com/iblai/os/commit/ea2f0450a705c54e68402a30f7f30b030af2e9e9))
+* **code:** flush thoughts before reply and error, one bounded flush exit, test the wiring ([e629383](https://github.com/iblai/os/commit/e629383f74e122fe6b9b6648c8ddce640bf55146))
+* **code:** forward admitted tool updates without the output the chat never reads ([5f56e36](https://github.com/iblai/os/commit/5f56e369d77c0785f064b1f5fac828bb11d47e04))
+* **code:** one toast per failed Code turn, renumber code-48, round-3 review fixes ([79b5d7c](https://github.com/iblai/os/commit/79b5d7c9c92a46fb18c32a1fa838d89a0affb916))
+
+### Chores
+
+* **tauri:** release app-v0.95.27 ([c857256](https://github.com/iblai/os/commit/c8572567219a37cc070c64837619f2f36f9fe96a))
+
+### Tests
+
+* retry the two port re-binds that race the parallel cargo suite ([2136de9](https://github.com/iblai/os/commit/2136de9f9d71b144c4a7e789e61da61e6ae54ad0))
+
+## [0.171.4](https://github.com/iblai/os/compare/v0.171.3...v0.171.4) (2026-10-16)
+
+### Bug Fixes
+
+* **ext:** vendor agent-ai with allow-downloads in the iframe sandbox ([04a6cfb](https://github.com/iblai/os/commit/04a6cfb2366be02842a41fefa8fc3434f02d37fa)), closes [iblai-web-frontend#2144](https://github.com/iblai/iblai-web-frontend/issues/2144)
+
+### Chores
+
+* **ext:** bump Chrome extension to 1.1.6 ([f861814](https://github.com/iblai/os/commit/f86181455251742423aac34c01015926ea6c7f63)), closes [#577](https://github.com/iblai/os/issues/577)
+
+### Tests
+
+* **e2e:** expect a finished turn's in_progress todo to render as to do ([ba87528](https://github.com/iblai/os/commit/ba8752871fd5ab93a7e093932ba6496ff16159e0))
+* **e2e:** journey 86 covers chat download through the agent-ai launcher ([438f51a](https://github.com/iblai/os/commit/438f51abeffd84d53e222d8a080779cc2bc1d665))
+* **e2e:** reopen the Edit Agent dialog when it closes during journey 45 setup ([5b04e4f](https://github.com/iblai/os/commit/5b04e4f16f970a3a86b68e589cc1c8b2aabd96a6))
+* **e2e:** run journey 86 in CI with an e2e copy of the launcher ([9b521da](https://github.com/iblai/os/commit/9b521da13e7babe40d3b0ef109994cb96a3aa6d9))
+* **e2e:** serve the agent-ai launcher from the embed harness ([b22642e](https://github.com/iblai/os/commit/b22642ee758276f1bf0b497d8442398f5b369048))
+* **e2e:** wait for the settings saves in journey 13's Show Catalogue tests ([dff3eae](https://github.com/iblai/os/commit/dff3eaee1b0925c42631ed0c68211921adab44a3))
+
+## [0.171.3](https://github.com/iblai/os/compare/v0.171.2...v0.171.3) (2026-10-15)
+
+### Bug Fixes
+
+* adopt iblai-js 2.40.6 + transpile react-gravatar (prod avatar crash) ([0e14c76](https://github.com/iblai/os/commit/0e14c768bcf99cb8c22788250ee30a072cc57f34))
+
+## [0.171.2](https://github.com/iblai/os/compare/v0.171.1...v0.171.2) (2026-10-15)
+
+### Performance
+
+* adopt @iblai/iblai-js 2.40.1 (tree-shakeable web-containers) ([bbed213](https://github.com/iblai/os/commit/bbed2139670c21ee6237c8c1f26773832045fda3))
+* trim first-load JS off error/404 and non-chat routes ([44f4d71](https://github.com/iblai/os/commit/44f4d717e90aa38a57dabbf88cd9903340a7adcf))
+
+### Tests
+
+* retire the web-utils iOS local-LLM gate guard (shipped in the SDK) ([71a39c3](https://github.com/iblai/os/commit/71a39c3c847628856e0386f36fbf7da0a5a1659a))
+
+## [0.171.1](https://github.com/iblai/os/compare/v0.171.0-patch.2...v0.171.1) (2026-10-15)
+
+### Chores
+
+* iblai js bump 2.40.4 > patch version update ([eeae31e](https://github.com/iblai/os/commit/eeae31e82c6b9bbc038c33531893859a672f40fc))
+
+## [0.171.0](https://github.com/iblai/os/compare/v0.170.0...v0.171.0) (2026-10-15)
+
+### Features
+
+- **code-mode:** describe every Code-turn step, card, line and error in plain words ([20541fe](https://github.com/iblai/os/commit/20541fe7ee4b276fc92db7d1f5e2867a8c2bec98))
+
+### Bug Fixes
+
+- **code-mode:** keep task-list items plain, test the permission payload, fix the ledger notes ([616116a](https://github.com/iblai/os/commit/616116ab09cdec38c2f43b96e1a2483b68d88c37))
+- **e2e:** read an unfinished task of a finished turn as To do ([c3dbc91](https://github.com/iblai/os/commit/c3dbc91202a952f0b2194ff3b6e5861fb6e58502))
+
+### Chores
+
+- **code-mode:** move the plain-words Code-turn UI to the SDK and pin @iblai/iblai-js 2.38.0 ([a441380](https://github.com/iblai/os/commit/a4413800b5b7221d5dac62a131c3268be218723c))
+- **tauri:** release app-v0.95.26 ([1e6fd4b](https://github.com/iblai/os/commit/1e6fd4b5bdfa573ff487a899790288da13806e04))
+
+## [0.170.0](https://github.com/iblai/os/compare/v0.169.3...v0.170.0) (2026-10-15)
+
+### Features
+
+- **ui:** let PopoverContent portal into a given container ([90f76a8](https://github.com/iblai/os/commit/90f76a834ec9ebd08fe7dd980050077db88a4a4c))
+
+### Bug Fixes
+
+- **create-agent:** portal the category list into the dialog so the wheel scrolls it ([4d1e221](https://github.com/iblai/os/commit/4d1e221436a14a42e36230b97b3f5e168fdbe699))
+
+### Chores
+
+- **deps:** bump @iblai/iblai-js to 2.39.1 for the camera dialog fix ([45fc836](https://github.com/iblai/os/commit/45fc836e23d0d301b3b61f8bf9b553438fda2b07))
+
+### Documentation
+
+- **e2e:** add journeys 87 and 88 to coverage ([00a8aa0](https://github.com/iblai/os/commit/00a8aa0f18458fa21e6e9b15c28b1c50c911339c))
+
+### Styles
+
+- prettier-format CHANGELOG bullets ([1084e1d](https://github.com/iblai/os/commit/1084e1d3420c41dc7b3121097f6f65de2139cb6f))
+
+### Tests
+
+- **create-agent:** cover wheel scrolling the category list inside the dialog ([49ec699](https://github.com/iblai/os/commit/49ec699fe94969ae8237b12be54cf4528b884aed))
+- **e2e:** journey 87 — closing the camera dialog keeps the page clickable ([4733088](https://github.com/iblai/os/commit/4733088d227b1aaf19539c50aefdebd7be39814d))
+- **e2e:** journey 88 — Create Agent category list scrolls with the wheel ([e939893](https://github.com/iblai/os/commit/e9398938833b901be991eb2a7b7c8cfc273f4c37))
+
 ## [0.169.3](https://github.com/iblai/os/compare/v0.169.2...v0.169.3) (2026-10-14)
 
 ### Bug Fixes
 
-* **embed:** re-check auth via a token-update event instead of reloading ([3d3c46c](https://github.com/iblai/os/commit/3d3c46cc3d516626ce4579669c807ae313749484)), closes [os#580](https://github.com/iblai/os/issues/580)
+- **embed:** re-check auth via a token-update event instead of reloading ([3d3c46c](https://github.com/iblai/os/commit/3d3c46cc3d516626ce4579669c807ae313749484)), closes [os#580](https://github.com/iblai/os/issues/580)
 
 ## [0.169.2](https://github.com/iblai/os/compare/v0.169.1...v0.169.2) (2026-10-13)
 
 ### Bug Fixes
 
-* **embed:** re-hydrate in place on authExpired tokens instead of reloading ([53c5c5a](https://github.com/iblai/os/commit/53c5c5a11d6ffa1c77e506536b2de27ed75d7175))
+- **embed:** re-hydrate in place on authExpired tokens instead of reloading ([53c5c5a](https://github.com/iblai/os/commit/53c5c5a11d6ffa1c77e506536b2de27ed75d7175))
 
 ## [0.169.1](https://github.com/iblai/os/compare/v0.169.0...v0.169.1) (2026-10-13)
 
 ### Bug Fixes
 
-* **auth:** single-flight 401 recovery so a burst recovers once ([a0a7ecd](https://github.com/iblai/os/commit/a0a7ecd5ccb5957503c0f55fe3a61c9c47bf4d1f)), closes [iblai-web-frontend#2140](https://github.com/iblai/iblai-web-frontend/issues/2140)
-* **embed:** recover 401s without a full page reload ([81287f4](https://github.com/iblai/os/commit/81287f47cc785a2c664b9e7635bf3c5dbf8698ec))
+- **auth:** single-flight 401 recovery so a burst recovers once ([a0a7ecd](https://github.com/iblai/os/commit/a0a7ecd5ccb5957503c0f55fe3a61c9c47bf4d1f)), closes [iblai-web-frontend#2140](https://github.com/iblai/iblai-web-frontend/issues/2140)
+- **embed:** recover 401s without a full page reload ([81287f4](https://github.com/iblai/os/commit/81287f47cc785a2c664b9e7635bf3c5dbf8698ec))
 
 ## [0.169.0](https://github.com/iblai/os/compare/v0.168.1...v0.169.0) (2026-10-13)
 
 ### Features
 
-* **mentor:** use the SDK draggable accessibility button ([7701ac3](https://github.com/iblai/os/commit/7701ac367c647a53bb6040e5b52952e0bf8a9c50)), closes [iblai/iblai-platform#2611](https://github.com/iblai/iblai-platform/issues/2611)
+- **mentor:** use the SDK draggable accessibility button ([7701ac3](https://github.com/iblai/os/commit/7701ac367c647a53bb6040e5b52952e0bf8a9c50)), closes [iblai/iblai-platform#2611](https://github.com/iblai/iblai-platform/issues/2611)
 
 ### Bug Fixes
 
-* **deps:** override handlebars to 4.7.10 for the audit gate ([7f4bf53](https://github.com/iblai/os/commit/7f4bf53a50c3205f4112740e9ab035211ebf0ca5))
-* **deps:** override vulnerable transitive packages for the audit gate ([07deefc](https://github.com/iblai/os/commit/07deefc0b69af790c969052df3daf2014af71a11))
-* **mentor:** key the sidebar's pinned list cache by org and user only ([93968bf](https://github.com/iblai/os/commit/93968bff65b57ff02d7da79d064e7e077a631275)), closes [iblai/iblai-platform#2611](https://github.com/iblai/iblai-platform/issues/2611)
+- **deps:** override handlebars to 4.7.10 for the audit gate ([7f4bf53](https://github.com/iblai/os/commit/7f4bf53a50c3205f4112740e9ab035211ebf0ca5))
+- **deps:** override vulnerable transitive packages for the audit gate ([07deefc](https://github.com/iblai/os/commit/07deefc0b69af790c969052df3daf2014af71a11))
+- **mentor:** key the sidebar's pinned list cache by org and user only ([93968bf](https://github.com/iblai/os/commit/93968bff65b57ff02d7da79d064e7e077a631275)), closes [iblai/iblai-platform#2611](https://github.com/iblai/iblai-platform/issues/2611)
 
 ### Chores
 
-* **deps:** bump @iblai/iblai-js to 2.31.0 ([40f2fa5](https://github.com/iblai/os/commit/40f2fa5c827914c0b4bda6e089c8946ade4b74d9)), closes [#2611](https://github.com/iblai/os/issues/2611)
+- **deps:** bump @iblai/iblai-js to 2.31.0 ([40f2fa5](https://github.com/iblai/os/commit/40f2fa5c827914c0b4bda6e089c8946ade4b74d9)), closes [#2611](https://github.com/iblai/os/issues/2611)
 
 ### Tests
 
-* **e2e:** add journey 83 for the draggable accessibility button ([c7009a8](https://github.com/iblai/os/commit/c7009a8ac33b26a04839733abe62ca7eb02f68aa)), closes [iblai/iblai-platform#2611](https://github.com/iblai/iblai-platform/issues/2611)
-* **tts:** expect the trailing slash on the chat-message TTS endpoint ([a303818](https://github.com/iblai/os/commit/a303818e7f5d42def908f6599198012487cc48ad))
+- **e2e:** add journey 83 for the draggable accessibility button ([c7009a8](https://github.com/iblai/os/commit/c7009a8ac33b26a04839733abe62ca7eb02f68aa)), closes [iblai/iblai-platform#2611](https://github.com/iblai/iblai-platform/issues/2611)
+- **tts:** expect the trailing slash on the chat-message TTS endpoint ([a303818](https://github.com/iblai/os/commit/a303818e7f5d42def908f6599198012487cc48ad))
 
 ## [0.168.1](https://github.com/iblai/os/compare/v0.168.0...v0.168.1) (2026-10-13)
 
 ### Chores
 
-* **ext:** bump Chrome extension to 1.1.5 ([1ba663c](https://github.com/iblai/os/commit/1ba663c16b10b37709fd42d01935647cb882fd0d)), closes [#574](https://github.com/iblai/os/issues/574)
+- **ext:** bump Chrome extension to 1.1.5 ([1ba663c](https://github.com/iblai/os/commit/1ba663c16b10b37709fd42d01935647cb882fd0d)), closes [#574](https://github.com/iblai/os/issues/574)
 
 ## [0.168.0](https://github.com/iblai/os/compare/v0.167.1...v0.168.0) (2026-10-13)
 

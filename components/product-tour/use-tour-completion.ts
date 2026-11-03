@@ -1,12 +1,10 @@
 'use client';
 
 import { useCallback, useMemo, useState } from 'react';
-import {
-  useGetUserMetadataQuery,
-  useUpdateUserMetadataMutation,
-} from '@iblai/iblai-js/data-layer';
+import { useUpdateUserMetadataMutation } from '@iblai/iblai-js/data-layer';
 
 import { config } from '@/lib/config';
+import { useStoredUserMetadata } from '@/hooks/use-stored-user-metadata';
 
 /** Bump to show a reworked tour again to everyone who saw an older version. */
 export const PRODUCT_TOUR_VERSION = 1;
@@ -41,18 +39,15 @@ export function readTourRecord(value: unknown): ProductTourRecord | null {
  * across devices.
  */
 export function useTourCompletion(username: string | null | undefined) {
-  const { data, isLoading, isError } = useGetUserMetadataQuery(
-    { params: { username: username ?? '' } },
-    { skip: !username },
-  );
+  const [stored, setStored] = useStoredUserMetadata();
   const [updateUserMetadata] = useUpdateUserMetadataMutation();
   type UpdatePayload = Parameters<typeof updateUserMetadata>[0];
   const [localOutcome, setLocalOutcome] = useState<TourOutcome | null>(null);
 
   const key = productTourMetadataKey();
   const publicMetadata = useMemo(
-    () => (data?.public_metadata ?? {}) as Record<string, unknown>,
-    [data],
+    () => (stored?.public_metadata ?? {}) as Record<string, unknown>,
+    [stored],
   );
   const record = useMemo(
     () => readTourRecord(publicMetadata[key]),
@@ -72,13 +67,16 @@ export function useTourCompletion(username: string | null | undefined) {
         version: PRODUCT_TOUR_VERSION,
         completed_at: new Date().toISOString(),
       };
+      // The endpoint replaces public_metadata wholesale; dropping the spread
+      // would wipe the user's language, bio, social links, etc.
+      const nextPublicMetadata = { ...publicMetadata, [key]: next };
       try {
-        // The endpoint replaces public_metadata wholesale; dropping the
-        // spread would wipe the user's language, bio, social links, etc.
         await updateUserMetadata({
           username,
-          public_metadata: { ...publicMetadata, [key]: next },
+          public_metadata: nextPublicMetadata,
         } as unknown as UpdatePayload).unwrap();
+        // Keep the stored metadata fresh so the tour stays dismissed on reload.
+        setStored({ ...(stored ?? {}), public_metadata: nextPublicMetadata });
       } catch (error) {
         console.error(
           '[product-tour] Could not save the tour outcome to the user metadata',
@@ -86,14 +84,15 @@ export function useTourCompletion(username: string | null | undefined) {
         );
       }
     },
-    [username, publicMetadata, key, updateUserMetadata],
+    [username, publicMetadata, key, updateUserMetadata, stored, setStored],
   );
 
   return {
     completed: outcome !== null,
     outcome,
-    isLoading: !!username && isLoading,
-    isError: !!username && isError,
+    // Metadata is read synchronously from localStorage — no network load/error.
+    isLoading: false,
+    isError: false,
     markCompleted,
   };
 }

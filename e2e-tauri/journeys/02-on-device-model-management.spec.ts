@@ -1,5 +1,8 @@
 /// <reference types="@wdio/globals/types" />
 import { spawnSync } from 'node:child_process';
+import { statSync } from 'node:fs';
+import { homedir } from 'node:os';
+import { delimiter, join } from 'node:path';
 import { loginIfNeeded } from '../support/login';
 
 /**
@@ -63,6 +66,24 @@ async function waitForOllama(timeoutMs = 30_000): Promise<void> {
     await new Promise((res) => setTimeout(res, 500));
   }
   throw new Error('Ollama did not become reachable on :11434 within timeout');
+}
+
+/** Same lookup as `find_bridge_bin` in `mcp_bridge_manager.rs`. */
+function bridgeInstalled(): boolean {
+  const exe =
+    process.platform === 'win32'
+      ? 'ollama-mcp-bridge.exe'
+      : 'ollama-mcp-bridge';
+  const dirs = (process.env.PATH ?? '').split(delimiter).filter(Boolean);
+  dirs.push(join(homedir(), '.local', 'bin'));
+  if (process.platform !== 'win32') dirs.push(join(homedir(), '.cargo', 'bin'));
+  return dirs.some((dir) => {
+    try {
+      return statSync(join(dir, exe)).isFile();
+    } catch {
+      return false;
+    }
+  });
 }
 
 /** Remove the test model host-side so the next pull is real, not a fake-complete. */
@@ -201,6 +222,33 @@ describe('Journey 2: On-device Model Management', () => {
     removeTestModel();
   });
 
+  // Must run before odm-03: its cancel restarts Ollama through
+  // start_ollama_server, which also starts the bridge and would hide the
+  // fresh-launch state (no bridge recorded) this checkpoint needs.
+  it('odm-09: on a fresh launch the first local chat reaches the MCP bridge (warmed up at launch or started by the chat) instead of failing', async function () {
+    // Without the bridge the "turn Local Models off and on" error is the
+    // intended answer, not this bug.
+    if (!bridgeInstalled()) this.skip();
+    await waitForOllama();
+    let error = '';
+    try {
+      await invokeCmd('ollama_chat', {
+        messages: [{ role: 'user', content: 'hi' }],
+        model: TEST_MODEL,
+        toolSupport: true,
+      });
+    } catch (err) {
+      error = String(err);
+    }
+    // The test model can't call tools and may not be pulled yet, so Ollama can
+    // refuse the request — an error relayed from it still proves the chat
+    // reached a running bridge.
+    if (error) {
+      expect(error).not.toContain('turn Local Models off and on');
+      expect(error).toContain('Ollama returned error');
+    }
+  });
+
   it('odm-02: a not-installed on-device model starts a real pull with live progress', async () => {
     await waitForOllama();
     removeTestModel(); // force a genuine pull, not an instant fake-complete
@@ -264,13 +312,24 @@ describe('Journey 2: On-device Model Management', () => {
     });
 
     it(
-      'odm-01: the LLM picker merges on-device models with the provider cloud models in one list',
+      'odm-01: the LLM picker lists on-device models first, then the provider cloud models, in one list',
     );
     it(
       'odm-04: starting a second on-device download while one is in flight shows the "already downloading" guard',
     );
-    it('odm-06: the nav-bar on-device badge reflects the selected local model');
+    it(
+      'odm-06: the nav-bar on-device badge reflects the selected local model, cased as written',
+    );
   });
+
+  // Pending: needs a machine where the Model Manager (Ollama) is NOT installed,
+  // while every other checkpoint here requires it running. The picker runs the
+  // SDK's own useModelDownload, so this is covered meanwhile by the SDK Vitest
+  // suite "useModelDownload startDownload with Local Models off"
+  // (@iblai/web-containers src/hooks/__tests__/use-model-download.test.ts).
+  it(
+    'odm-08: downloading an on-device model with Local Models off turns Local Models on first, which sets up the Model Manager (with a one-time notice when it was never installed), then starts the pull',
+  );
 
   // Pending: needs a harness that occupies 8000/3457 BEFORE launching the
   // binary. Covered meanwhile by the Rust port tests
@@ -278,5 +337,18 @@ describe('Journey 2: On-device Model Management', () => {
   // `mcp_bridge_manager.rs`, `offline_server.rs` and `model_manager.rs`.
   it(
     'odm-07: busy default ports at launch degrade to allocated ones — the MCP bridge and offline server bind free ports and every consumer follows',
+  );
+
+  // Pending: stopping Ollama under the running binary would starve every
+  // other checkpoint here, which needs it up. Covered meanwhile by the
+  // `post_local_chat_with` 503 Rust tests in `model_manager.rs`.
+  it(
+    'odm-10: quitting Ollama while the app stays open does not break local chat — the next message starts it again and is answered',
+  );
+
+  // Pending: needs a model slow enough to stream past 5 minutes. Covered
+  // meanwhile by the `streaming_chat_client` Rust test in `main.rs`.
+  it(
+    'odm-11: a local reply streaming for longer than 5 minutes is not cut off — only 5 minutes of silence ends it',
   );
 });

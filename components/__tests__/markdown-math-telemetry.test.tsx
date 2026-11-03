@@ -2,7 +2,7 @@ import { render } from '@testing-library/react';
 import * as Sentry from '@sentry/nextjs';
 
 import Markdown from '../markdown';
-import { markdownToHtml } from '@/lib/utils';
+import { markdownToHtml } from '@/lib/markdown-engine';
 import { resetMathErrorReports } from '@/lib/markdown-math-error-reporter';
 
 vi.mock('@sentry/nextjs', () => ({

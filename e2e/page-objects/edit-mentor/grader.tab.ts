@@ -249,7 +249,7 @@ export class GraderTab {
 
   /**
    * Switch to the Grader tab directly via the SDK helper. NOTE: this does
-   * NOT switch the host app's own "Configurations" category strip first —
+   * NOT switch the host app's own "Setup" category strip first —
    * that's a genuinely host-side concern the SDK has no way to know about.
    * Journeys should navigate via `editMentorPage.open('Grader')` /
    * `editMentorPage.navigateToTab('Grader')`, which handles the category

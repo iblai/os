@@ -37,6 +37,18 @@ describe('prompt', () => {
     expect(instructions('qqq-ZZ')).toContain('qqq-ZZ');
   });
 
+  // Offered only with the picture: a model without one must not be told about
+  // tools it does not have.
+  it('adds the position tools only when asked, before the language line', () => {
+    expect(instructions()).not.toContain('click_at');
+    expect(instructions('fr-FR')).not.toContain('click_at');
+    const withPositions = instructions(undefined, true);
+    expect(withPositions.startsWith(INSTRUCTIONS)).toBe(true);
+    expect(withPositions).toContain('click_at and type_at');
+    const both = instructions('fr-FR', true);
+    expect(both.indexOf('click_at')).toBeLessThan(both.indexOf('French'));
+  });
+
   it('puts the goal before the page', () => {
     const turn = userTurn('open billing', 'https://x  "X"\n[1] link "Billing"');
     expect(turn.startsWith('open billing\n\nCurrent page:\n')).toBe(true);

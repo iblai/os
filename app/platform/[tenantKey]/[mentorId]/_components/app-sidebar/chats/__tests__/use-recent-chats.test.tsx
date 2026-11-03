@@ -26,7 +26,6 @@ const addPinnedMessageMock = vi.fn(() => ({
 }));
 const unpinMessageMock = vi.fn(() => ({ unwrap: () => Promise.resolve({}) }));
 const deleteMessageMock = vi.fn(() => ({ unwrap: () => Promise.resolve({}) }));
-const exportMessagesToXlsxMock = vi.fn();
 const eventBusEmitMock = vi.fn();
 const pinnedQueryArgsMock = vi.fn();
 const updateQueryDataMock = vi.fn(
@@ -90,11 +89,6 @@ vi.mock('@/lib/eventBus', () => ({
     newChat: 'newChat',
     stopChatGenerating: 'stopChatGenerating',
   },
-}));
-
-vi.mock('../../export-messages', () => ({
-  exportMessagesToXlsx: (...args: unknown[]) =>
-    exportMessagesToXlsxMock(...args),
 }));
 
 vi.mock('@iblai/iblai-js/data-layer', () => ({
@@ -357,15 +351,20 @@ describe('useRecentChats', () => {
     expect(refetchPinnedMock).toHaveBeenCalled();
   });
 
-  it('handleExport delegates the row messages to the xlsx helper', () => {
-    const messages = [{ role: 'user' }];
+  it('handleExport opens the export on that row, not on its summary messages', () => {
+    const row = { session_id: 's', messages: [{ role: 'user' }] };
     const { result } = renderHook(() => useRecentChats(baseArgs));
+    expect(result.current.exportingRow).toBeNull();
 
     act(() => {
-      result.current.handleExport({ session_id: 's', messages });
+      result.current.handleExport(row);
     });
+    expect(result.current.exportingRow).toBe(row);
 
-    expect(exportMessagesToXlsxMock).toHaveBeenCalledWith(messages);
+    act(() => {
+      result.current.closeExport();
+    });
+    expect(result.current.exportingRow).toBeNull();
   });
 
   it('handleSelectRow navigates and repoints chat state for a new session', () => {

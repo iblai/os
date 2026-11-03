@@ -4,14 +4,11 @@ import { render, cleanup } from '@testing-library/react';
 import { LanguagePreferenceSync } from '../language-preference-sync';
 
 // --- controllable mock state -------------------------------------------------
-let mockUsername: string | null = 'test-user';
-let mockEdxJwtToken: string | undefined = 'edx-token';
 let mockActiveLocale = 'en';
 let mockUserMetadata: unknown = undefined;
 
-vi.mock('@/hooks/use-user', () => ({
-  useUsername: () => mockUsername,
-  useEdxJwtToken: () => ({ edxJwtToken: mockEdxJwtToken }),
+vi.mock('@/hooks/use-stored-user-metadata', () => ({
+  useStoredUserMetadata: () => [mockUserMetadata, vi.fn()],
 }));
 
 // Override next-intl's useLocale (globally mocked to 'en' in setup) with a
@@ -29,12 +26,6 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ refresh: mockRefresh }),
 }));
 
-const mockUseGetUserMetadataQuery = vi.fn();
-vi.mock('@iblai/iblai-js/data-layer', () => ({
-  useGetUserMetadataQuery: (...args: unknown[]) =>
-    mockUseGetUserMetadataQuery(...args),
-}));
-
 const mockSyncLanguageCookies = vi.fn();
 vi.mock('@/lib/locale-cookie', () => ({
   syncLanguageCookies: (...args: unknown[]) => mockSyncLanguageCookies(...args),
@@ -43,49 +34,15 @@ vi.mock('@/lib/locale-cookie', () => ({
 describe('LanguagePreferenceSync', () => {
   beforeEach(() => {
     cleanup();
-    mockUsername = 'test-user';
-    mockEdxJwtToken = 'edx-token';
     mockActiveLocale = 'en';
     mockUserMetadata = undefined;
     mockRefresh.mockReset();
     mockSyncLanguageCookies.mockReset();
-    mockUseGetUserMetadataQuery.mockReset();
-    mockUseGetUserMetadataQuery.mockImplementation(() => ({
-      data: mockUserMetadata,
-    }));
   });
 
   it('renders nothing', () => {
     const { container } = render(<LanguagePreferenceSync />);
     expect(container.firstChild).toBeNull();
-  });
-
-  it('skips the metadata query when there is no username', () => {
-    mockUsername = null;
-    render(<LanguagePreferenceSync />);
-
-    expect(mockUseGetUserMetadataQuery).toHaveBeenCalledWith(
-      { params: { username: '' } },
-      { skip: true },
-    );
-  });
-
-  it('passes the username and enables the query when present', () => {
-    render(<LanguagePreferenceSync />);
-    expect(mockUseGetUserMetadataQuery).toHaveBeenCalledWith(
-      { params: { username: 'test-user' } },
-      { skip: false },
-    );
-  });
-
-  it('skips the metadata query when the edX token is missing', () => {
-    mockEdxJwtToken = undefined;
-    render(<LanguagePreferenceSync />);
-
-    expect(mockUseGetUserMetadataQuery).toHaveBeenCalledWith(
-      { params: { username: 'test-user' } },
-      { skip: true },
-    );
   });
 
   it('does nothing when no stored language exists', () => {

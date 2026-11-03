@@ -31,10 +31,7 @@ import {
   getProviderName,
   sendMessageToParentWebsite,
   isLoggedIn,
-  htmlToMarkdown,
   isHtml,
-  parsePrompt,
-  markdownToHtml,
   getUserOS,
   isMobileOS,
   saveUserObjectToLocalStorage,
@@ -54,6 +51,11 @@ import {
   isSafariBrowser,
   onAccountDeleted,
 } from '@/lib/utils';
+import {
+  htmlToMarkdown,
+  parsePrompt,
+  markdownToHtml,
+} from '@/lib/markdown-engine';
 import { LOCAL_STORAGE_KEYS, QUERY_PARAMS } from '@/lib/constants';
 import { config } from '@/lib/config';
 
@@ -103,6 +105,8 @@ vi.mock('@/hooks/use-tauri-offline', () => ({
 }));
 
 vi.mock('@iblai/iblai-js/web-utils', () => ({
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ...(globalThis as any).__iblAuthStorageMock,
   clearCurrentTenantCookie: vi.fn(),
 }));
 

@@ -302,6 +302,32 @@ describe('CreateMentorForm', () => {
         screen.queryByRole('button', { name: /remove uploaded image/i }),
       ).not.toBeInTheDocument();
     });
+
+    // The Dialog's scroll lock cancels every wheel event outside its content,
+    // so the list must be portaled into the Dialog, not document.body.
+    it('lets the mouse wheel scroll the category list inside the dialog', async () => {
+      const user = userEvent.setup();
+      renderDialogVariant();
+
+      await user.click(
+        screen.getByRole('combobox', { name: /select category/i }),
+      );
+      await screen.findByText('General');
+      const list = document.querySelector<HTMLElement>('[cmdk-list]')!;
+      expect(list.closest('[role="dialog"]')).not.toBeNull();
+      list.style.overflowY = 'auto';
+      Object.defineProperty(list, 'scrollHeight', { value: 1000 });
+      Object.defineProperty(list, 'clientHeight', { value: 300 });
+
+      const wheel = new WheelEvent('wheel', {
+        deltaY: 100,
+        bubbles: true,
+        cancelable: true,
+      });
+      list.dispatchEvent(wheel);
+
+      expect(wheel.defaultPrevented).toBe(false);
+    });
   });
 
   describe('prompts tab + submission', () => {
@@ -357,6 +383,33 @@ describe('CreateMentorForm', () => {
       // prompt editor in turn). It runs in ~1s in isolation but can exceed the
       // default 5s under the heavily-parallel full-suite run, so give it headroom.
     }, 15000);
+  });
+
+  describe('prompt editor Save button', () => {
+    it.each([0, 1, 2])(
+      'closes editor %i on Save and shows the typed text in the form',
+      async (index) => {
+        const user = userEvent.setup();
+        render(<CreateMentorForm variant="inline" />);
+        await fillRequiredAndGoToPrompts(user);
+
+        await user.click(
+          screen.getAllByRole('button', { name: /edit/i })[index],
+        );
+        const dialog = await screen.findByRole('dialog');
+        const editor = within(dialog).getByTestId('rich-text-editor');
+        await user.clear(editor);
+        await user.type(editor, 'Typed prompt');
+        await user.click(within(dialog).getByRole('button', { name: 'Save' }));
+
+        await waitFor(() =>
+          expect(screen.queryByRole('dialog')).not.toBeInTheDocument(),
+        );
+        expect(screen.getByText('Typed prompt')).toBeInTheDocument();
+        expect(createMutation).not.toHaveBeenCalled();
+      },
+      15000,
+    );
   });
 
   describe('free trial dialog', () => {

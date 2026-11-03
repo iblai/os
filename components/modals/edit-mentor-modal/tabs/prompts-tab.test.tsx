@@ -167,6 +167,8 @@ vi.mock('@/hoc/withPermissions', () => ({
 
 vi.mock('@/lib/utils', () => ({
   cn: (...args: unknown[]) => args.filter(Boolean).join(' '),
+}));
+vi.mock('@/lib/markdown-engine', () => ({
   parsePrompt: (text: string) => text,
 }));
 

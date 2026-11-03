@@ -735,6 +735,8 @@ test.describe('Journey 63: Mentor Evaluation Tab — Non-Admin', () => {
       timeout: 15_000,
     });
 
+    // Evals lives in Activity; check there, not in the Setup list.
+    await nonadminEditMentorPage.activateCategoryOf('Evals');
     expect(await nonadminEditMentorPage.evaluation.isTabVisible()).toBe(false);
 
     await nonadminEditMentorPage.close();

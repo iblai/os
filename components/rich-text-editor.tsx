@@ -18,7 +18,8 @@ import {
 
 import { Toggle } from '@/components/ui/toggle';
 import { Separator } from '@/components/ui/separator';
-import { htmlToMarkdown, isHtml, markdownToHtml } from '@/lib/utils';
+import { isHtml } from '@/lib/utils';
+import { htmlToMarkdown, markdownToHtml } from '@/lib/markdown-engine';
 
 interface RichTextEditorProps {
   value: string;

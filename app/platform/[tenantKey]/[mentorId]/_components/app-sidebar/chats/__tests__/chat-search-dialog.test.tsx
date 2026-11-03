@@ -24,7 +24,6 @@ const addPinnedMessageMock = vi.fn(() => ({
 }));
 const unpinMessageMock = vi.fn(() => ({ unwrap: () => Promise.resolve({}) }));
 const deleteMessageMock = vi.fn(() => ({ unwrap: () => Promise.resolve({}) }));
-const exportMessagesToXlsxMock = vi.fn();
 const eventBusEmitMock = vi.fn();
 const recentInfiniteArgsMock = vi.fn();
 
@@ -80,11 +79,6 @@ vi.mock('@/lib/eventBus', () => ({
     newChat: 'newChat',
     stopChatGenerating: 'stopChatGenerating',
   },
-}));
-
-vi.mock('../../export-messages', () => ({
-  exportMessagesToXlsx: (...args: unknown[]) =>
-    exportMessagesToXlsxMock(...args),
 }));
 
 vi.mock('@iblai/iblai-js/data-layer', () => ({

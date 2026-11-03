@@ -37,7 +37,7 @@ import { useNavigate } from '@/hooks/user-navigate';
 import { CopyButton } from '@/components/modals/edit-mentor-modal/tabs/prompts-tab/copy-button';
 import { useShowFreeTrialDialog } from '@/hooks/user-user-actions';
 import WithFormPermissions, { WithPermissions } from '@/hoc/withPermissions';
-import { parsePrompt } from '@/lib/utils';
+import { parsePrompt } from '@/lib/markdown-engine';
 import Markdown from '@/components/markdown';
 
 export function SafetyTab() {

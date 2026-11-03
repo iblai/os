@@ -46,6 +46,7 @@ import Script from 'next/script';
 import { useTenantKey } from '@/hooks/use-tenants';
 import { TenantKeyMentorIdParams } from '@/lib/types';
 import { handleTenantSwitch } from '@/lib/utils';
+import { getAuthItem, getPerTabAuthSnapshot } from '@/lib/auth-storage';
 import {
   useTenantSwitchSync,
   refreshTenantSwitchLock,
@@ -81,11 +82,15 @@ import { TenantLock } from '@/components/tenant-lock';
 import { WebContainersLocaleProvider } from '@/components/web-containers-locale-provider';
 import { MentorTimeTrackingProvider } from '@/hooks/use-mentor-time-tracking';
 import { useSelector } from 'react-redux';
-import { updateRbacPermissions } from '@/features/rbac/rbac-slice';
+import {
+  updateRbacPermissions,
+  markMentorPermissionsLoaded,
+  resetMentorPermissionsLoaded,
+} from '@/features/rbac/rbac-slice';
 import { useAppDispatch } from '@/lib/hooks';
 import { toast } from 'sonner';
 //import { useLazyGetTenantMetadataQuery } from '@iblai/iblai-js/data-layer';
-import { useTenantMetadata } from '@iblai/iblai-js/web-utils';
+import { useTenantObjectMetadata } from '@/hooks/use-tenant-object-metadata';
 import { sanitizeCss } from '@iblai/iblai-js/web-containers';
 import {
   isTauriOfflineMode,
@@ -125,7 +130,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     refreshTenantSwitchLock();
     sendMessageToParentWebsite({
       loaded: true,
-      auth: { ...localStorage },
+      auth: getPerTabAuthSnapshot(),
     });
   }, []);
 
@@ -159,9 +164,9 @@ export default function Providers({ children }: { children: React.ReactNode }) {
       // again. Acting on an identical payload therefore loops forever: save,
       // reload, receive the same data, save. Only act on a real change.
       const unchanged =
-        localStorage.getItem('axd_token') === payload.axd_token &&
-        localStorage.getItem('dm_token') === payload.dm_token &&
-        localStorage.getItem('tenant') === payload.tenant;
+        getAuthItem('axd_token') === payload.axd_token &&
+        getAuthItem('dm_token') === payload.dm_token &&
+        getAuthItem('tenant') === payload.tenant;
       if (unchanged) {
         return;
       }
@@ -268,6 +273,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   const isAdmin = useIsAdmin();
   const { tenantKey: tenantKeyParams, mentorId } =
     useParams<TenantKeyMentorIdParams>();
+
   const [getMentorPublicSettings] = useLazyGetMentorPublicSettingsQuery();
 
   // Check if we're in Tauri offline mode early - needed to skip API calls
@@ -299,11 +305,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     }
   }
 
-  // Skip tenant metadata API call in Tauri offline mode
-  const { metadata } = useTenantMetadata({
-    org: tenantKeyParams,
-    skip: isTauriOfflineEarly,
-  });
+  const metadata = useTenantObjectMetadata(tenantKeyParams);
   const tenantAdvancedCSS = isJSON(metadata?.mentor_advanced_css)
     ? sanitizeCss(JSON.parse(metadata?.mentor_advanced_css) as string)
     : '';
@@ -363,6 +365,23 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   const { saveUserTenants } = useUserTenants();
   const isPreviewMode = useIsPreviewMode();
   const dispatch = useAppDispatch();
+  // A new mentor means the permissions in the store belong to the previous
+  // one. Clearing the flag puts the composer back into "waiting" until this
+  // mentor's own answer lands, rather than letting it act on a verdict that
+  // was about a different agent.
+  //
+  // But the SDK's MentorProvider only fetches mentor RBAC for a signed-in user
+  // (it guards the load on `isLoggedIn`). An anonymous viewer's answer therefore
+  // never arrives, so for them we mark it loaded right away — otherwise the
+  // composer's `awaitingMentorPermissions` gate stays stuck and an
+  // anonymous-allowed mentor renders a permanently disabled "no permission to
+  // chat" input. Anonymous chat is governed by the mentor's public-access
+  // rules, not by a mentor-scoped RBAC grant they can never hold.
+  useEffect(() => {
+    dispatch(
+      username ? resetMentorPermissionsLoaded() : markMentorPermissionsLoaded(),
+    );
+  }, [mentorId, username, dispatch]);
   const [useMentorProvider, setUseMentorProvider] = useState(true);
 
   function saveUserTokens(tokenResponse: TokenResponse) {
@@ -394,6 +413,11 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     rbacPermissions: Record<string, unknown> | undefined,
   ) {
     dispatch(updateRbacPermissions(rbacPermissions ?? {}));
+    // Marked even when `rbacPermissions` is undefined: the request settled,
+    // and "it failed" is an answer. Without this a failed load would hold the
+    // composer disabled forever rather than falling back to the permissive
+    // default the absence of a mentor key already means.
+    dispatch(markMentorPermissionsLoaded());
   }
 
   async function handleMentorNotFound() {
@@ -772,7 +796,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
               onAuthSuccess={() =>
                 sendMessageToParentWebsite({
                   loaded: true,
-                  auth: { ...localStorage },
+                  auth: getPerTabAuthSnapshot(),
                 })
               }
               fallback={

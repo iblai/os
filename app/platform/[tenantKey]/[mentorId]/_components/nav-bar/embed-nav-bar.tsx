@@ -254,9 +254,6 @@ export function EmbedNavBar({
         </div>
 
         <div className="ml-auto flex shrink-0 items-center gap-0.5">
-          {/* Only when the host asks for it (the Chrome side panel does). */}
-          {showUserProfile && <UserProfile embed />}
-
           <Button
             variant="ghost"
             size="icon"
@@ -365,6 +362,9 @@ export function EmbedNavBar({
               {isFullscreen ? <Minimize2 /> : <Maximize2 />}
             </Button>
           )}
+
+          {/* Only when the host asks for it (the Chrome side panel does). */}
+          {showUserProfile && <UserProfile embed />}
 
           {isIframed && showCloseButton && (
             <Button

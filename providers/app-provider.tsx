@@ -14,8 +14,6 @@ import { useParams } from 'next/navigation';
 import { useEffect } from 'react';
 import { MessageBridgeProvider } from './message-bridge-provider';
 import { AgentSettingsLauncher } from './agent-settings-launcher';
-// Side effect: gives the SDK's canvas this app's markdown engine.
-import '@/lib/canvas-markdown-engine';
 
 export default function AppProvider({
   children,
@@ -30,6 +28,15 @@ export default function AppProvider({
 
   useEffect(() => {
     sendMessageToParentWebsite({ ready: true });
+  }, []);
+
+  // Hand the SDK's canvas this app's markdown engine — but lazily, after mount.
+  // The engine pulls the heavy remark/rehype/KaTeX pipeline; loading it as a
+  // module side effect put that on every page's initial bundle. The canvas
+  // itself is lazy-loaded, so registering it a tick later is in time, and the
+  // SDK falls back to its own converters until it lands.
+  useEffect(() => {
+    import('@/lib/canvas-markdown-engine');
   }, []);
 
   // NOTE: the shared iframe handlers from `useIframeHandlers` are registered

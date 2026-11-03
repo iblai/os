@@ -37,7 +37,7 @@ import {
  * below pins the flow to the plain chat: call the support tool, reply in
  * plain text, no canvas/document/artifact.
  *
- * CATEGORY: Support lives under the modal's **Runtime** sidebar category
+ * CATEGORY: Support lives under the modal's **Activity** sidebar category
  * (alongside Tasks / Memory / History / Audit), so `editMentorPage.open('Support')`
  * activates that category before the segment mounts.
  *

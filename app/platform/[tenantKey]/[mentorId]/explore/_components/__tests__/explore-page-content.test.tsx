@@ -72,6 +72,13 @@ vi.mock('@iblai/iblai-js/web-utils', () => ({
   useTenantMetadata: () => mockUseTenantMetadata(),
 }));
 
+// The source now reads the tenant's metadata object from the tenants list via
+// useTenantObjectMetadata (not the SDK hook). Unwrap the fixture's `metadata` so
+// the existing mockReturnValue({ metadata: … }) calls below still drive it.
+vi.mock('@/hooks/use-tenant-object-metadata', () => ({
+  useTenantObjectMetadata: () => mockUseTenantMetadata().metadata ?? {},
+}));
+
 vi.mock('@/lib/config', () => ({
   config: {
     mainTenantKey: () => 'main',
@@ -783,7 +790,7 @@ describe('ExplorePageContent', () => {
       renderComponent();
 
       const heading = screen.getByRole('heading', { level: 1 });
-      expect(heading).toHaveTextContent('Explore agents');
+      expect(heading).toHaveTextContent('Explore Agents');
       expect(heading).toHaveTextContent(/Discover and create agents/i);
     });
 
@@ -815,7 +822,7 @@ describe('ExplorePageContent', () => {
         screen.queryByRole('button', { name: 'Create new agent' }),
       ).not.toBeInTheDocument();
       expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(
-        'Explore agents',
+        'Explore Agents',
       );
     });
 

@@ -170,14 +170,174 @@ pub fn chat_base_url(tool_support: bool) -> Result<String, String> {
         match crate::mcp_bridge_manager::bridge_port() {
             Some(port) => Ok(format!("http://localhost:{port}")),
             None => {
-                let msg = "Local chat needs the MCP bridge, which isn't running — \
-                           toggle local models off and on to start it"
-                    .to_string();
-                println!("[McpBridge] {msg}");
-                Err(msg)
+                println!("[McpBridge] Local chat refused: no bridge of ours is running");
+                Err(
+                    "Local models couldn't start on this computer — turn Local Models \
+                     off and on to set them up again"
+                        .to_string(),
+                )
             }
         }
     }
+}
+
+/// Sends a local chat through the bridge. The bridge's port lives only in this
+/// process, so after a relaunch none is recorded until [`warm_up_local_chat`]
+/// (called at launch while Local Models is on) or this send starts one.
+///
+/// Sending only reads that port — nothing is probed before a message. What
+/// stopped since is noticed from the answer, and brought back once before the
+/// same chat is resent: a bridge that died refuses the connection, and a
+/// bridge whose Ollama was quit answers 503.
+pub async fn post_local_chat(
+    client: &Client,
+    body: &Value,
+    tool_support: bool,
+) -> Result<reqwest::Response, String> {
+    #[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
+    {
+        let base = chat_base_url(tool_support)?;
+        return send_chat(client, &base, body)
+            .await
+            .map_err(unreachable_chat);
+    }
+    #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+    {
+        post_local_chat_with(
+            client,
+            body,
+            tool_support,
+            start_local_chat_runtime,
+            is_ollama_running,
+        )
+        .await
+    }
+}
+
+#[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+async fn post_local_chat_with<F, Fut, R, RFut>(
+    client: &Client,
+    body: &Value,
+    tool_support: bool,
+    start: F,
+    ollama_running: R,
+) -> Result<reqwest::Response, String>
+where
+    F: Fn() -> Fut,
+    Fut: std::future::Future<Output = ()>,
+    R: Fn() -> RFut,
+    RFut: std::future::Future<Output = bool>,
+{
+    if tool_support && crate::mcp_bridge_manager::bridge_port_now().is_none() {
+        start().await;
+    }
+    let base = chat_base_url(tool_support)?;
+    let response = match send_chat(client, &base, body).await {
+        Err(e) if e.is_connect() => {
+            println!("[McpBridge] Nothing answered on {base} — restarting the bridge");
+            start().await;
+            let base = chat_base_url(tool_support)?;
+            return send_chat(client, &base, body)
+                .await
+                .map_err(unreachable_chat);
+        }
+        sent => sent.map_err(unreachable_chat)?,
+    };
+    // A 503 with Ollama up is the bridge's own answer and goes back as it was.
+    if response.status() == reqwest::StatusCode::SERVICE_UNAVAILABLE && !ollama_running().await {
+        println!("[McpBridge] The bridge can't reach Ollama — starting it");
+        start().await;
+        let base = chat_base_url(tool_support)?;
+        return send_chat(client, &base, body)
+            .await
+            .map_err(unreachable_chat);
+    }
+    Ok(response)
+}
+
+async fn send_chat(
+    client: &Client,
+    base: &str,
+    body: &Value,
+) -> reqwest::Result<reqwest::Response> {
+    println!("[ibl.ai] Sending local chat to {base}");
+    client
+        .post(format!("{base}/api/chat"))
+        .json(body)
+        .send()
+        .await
+}
+
+fn unreachable_chat(e: reqwest::Error) -> String {
+    format!("Failed to connect to Ollama: {e}. Is Ollama running?")
+}
+
+/// Brings Ollama and the bridge up ahead of the first chat, so it doesn't wait
+/// out the bridge's cold start. The webview calls this at launch while Local
+/// Models is on; that switch lives in its storage, not here.
+#[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+pub async fn warm_up_local_chat() {
+    warm_up_local_chat_with(check_ollama_installed, start_local_chat_runtime).await
+}
+
+#[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+async fn warm_up_local_chat_with<F, Fut>(ollama_installed: impl Fn() -> bool, start: F)
+where
+    F: Fn() -> Fut,
+    Fut: std::future::Future<Output = ()>,
+{
+    if ollama_installed() {
+        start().await;
+    }
+}
+
+/// One start at a time. The launch warm-up, a chat that beats it and a restart
+/// after a failed send can overlap; a later caller waits for the start in
+/// flight, then finds Ollama and the bridge up and starts nothing.
+#[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+static LOCAL_CHAT_START: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+
+/// Starts only what isn't running. The bridge only forwards to Ollama, so
+/// Ollama comes up first — a bridge in front of nothing would just move the
+/// failure to the first request.
+#[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+async fn start_local_chat_runtime() {
+    start_local_chat_runtime_with(
+        is_ollama_running,
+        || async {
+            match tokio::task::spawn_blocking(start_ollama_server).await {
+                Ok(Ok(())) => {
+                    wait_for_ollama_ready(20).await;
+                }
+                Ok(Err(e)) => println!("[McpBridge] Couldn't start Ollama for local chat: {e}"),
+                Err(e) => println!("[McpBridge] Ollama start task failed: {e}"),
+            }
+        },
+        || async {
+            let _ = tokio::task::spawn_blocking(crate::mcp_bridge_manager::start_bridge).await;
+        },
+    )
+    .await
+}
+
+#[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+async fn start_local_chat_runtime_with<R, RFut, O, OFut, B, BFut>(
+    ollama_running: R,
+    start_ollama: O,
+    start_bridge: B,
+) where
+    R: Fn() -> RFut,
+    RFut: std::future::Future<Output = bool>,
+    O: Fn() -> OFut,
+    OFut: std::future::Future<Output = ()>,
+    B: Fn() -> BFut,
+    BFut: std::future::Future<Output = ()>,
+{
+    let _one_start = LOCAL_CHAT_START.lock().await;
+    if !ollama_running().await {
+        start_ollama().await;
+    }
+    start_bridge().await;
 }
 
 /// Get the current timestamp in RFC3339 format
@@ -223,19 +383,31 @@ pub fn check_ollama_installed() -> bool {
     }
 }
 
-/// Check if Ollama server is running by pinging the API
+/// How long Ollama gets to answer a health check. Generous for a healthy one,
+/// which answers in milliseconds even while loading a model.
+const OLLAMA_CHECK_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(5);
+
+/// Check if Ollama server is running by pinging the API. Bounded: one that
+/// accepts the connection but never answers (stuck after the computer wakes,
+/// say) reads as not running, instead of hanging the caller — and every chat
+/// queued behind a start — for good.
 pub async fn is_ollama_running() -> bool {
-    let Ok(resp) = reqwest::get(format!("{}/api/version", api_base_url())).await else {
+    let status = ollama_answers(&api_base_url(), OLLAMA_CHECK_TIMEOUT).await;
+    println!("[Ollama] running: {}", status);
+    status
+}
+
+async fn ollama_answers(base: &str, timeout: std::time::Duration) -> bool {
+    let Ok(client) = Client::builder().timeout(timeout).build() else {
+        return false;
+    };
+    let Ok(resp) = client.get(format!("{base}/api/version")).send().await else {
         return false;
     };
     let Ok(json) = resp.json::<Value>().await else {
         return false;
     };
-
-    let status = json.get("version").is_some_and(Value::is_string);
-
-    println!("[Ollama] running: {}", status);
-    status
+    json.get("version").is_some_and(Value::is_string)
 }
 
 /// Poll until Ollama is actually answering its API, up to `timeout_secs`.
@@ -921,7 +1093,377 @@ mod tests {
         let _guard = bridge_state_lock();
         set_bridge_port_for_test(None);
         let err = chat_base_url(true).expect_err("a missing bridge must not yield a URL");
-        assert!(err.contains("MCP bridge"), "{err}");
+        assert!(err.contains("turn Local Models off and on"), "{err}");
+        assert!(
+            !err.contains("MCP"),
+            "the toast is read by people who never coded: {err}"
+        );
+    }
+
+    use serde_json::json;
+    use std::sync::atomic::AtomicUsize;
+
+    /// A stand-in bridge. Each request gets the next status in `statuses`
+    /// (the last one repeats) and an empty JSON body.
+    async fn fake_bridge_answering(statuses: &'static [u16]) -> u16 {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        let listener = tokio::net::TcpListener::bind(("127.0.0.1", 0))
+            .await
+            .unwrap();
+        let port = listener.local_addr().unwrap().port();
+        tokio::spawn(async move {
+            let mut served = 0;
+            while let Ok((mut conn, _)) = listener.accept().await {
+                let status = statuses[served.min(statuses.len() - 1)];
+                served += 1;
+                let mut request = [0u8; 4096];
+                let _ = conn.read(&mut request).await;
+                let reply = format!(
+                    "HTTP/1.1 {status} Fake\r\ncontent-length: 2\r\nconnection: close\r\n\r\n{{}}"
+                );
+                let _ = conn.write_all(reply.as_bytes()).await;
+            }
+        });
+        port
+    }
+
+    async fn fake_bridge() -> u16 {
+        fake_bridge_answering(&[200]).await
+    }
+
+    fn closed_port() -> u16 {
+        std::net::TcpListener::bind(("127.0.0.1", 0))
+            .unwrap()
+            .local_addr()
+            .unwrap()
+            .port()
+    }
+
+    fn client() -> Client {
+        Client::builder().no_proxy().build().unwrap()
+    }
+
+    fn chat_body() -> Value {
+        json!({ "model": "m", "messages": [], "stream": false })
+    }
+
+    async fn never_started() {
+        panic!("nothing here may start Ollama or the bridge")
+    }
+
+    async fn ollama_never_checked() -> bool {
+        panic!("only a 503 from the bridge may lead to an Ollama check")
+    }
+
+    /// The reported bug: after a relaunch no bridge port is recorded. A chat
+    /// that beats the launch warm-up must start the bridge itself instead of
+    /// failing until Local Models is toggled.
+    #[tokio::test]
+    async fn a_chat_after_a_relaunch_starts_the_bridge_instead_of_failing() {
+        let _guard = bridge_state_lock();
+        set_bridge_port_for_test(None);
+        let port = fake_bridge().await;
+        let starts = AtomicUsize::new(0);
+
+        let sent = post_local_chat_with(
+            &client(),
+            &chat_body(),
+            true,
+            || async {
+                starts.fetch_add(1, Ordering::SeqCst);
+                set_bridge_port_for_test(Some(port));
+            },
+            ollama_never_checked,
+        )
+        .await;
+
+        assert!(sent.unwrap().status().is_success());
+        assert_eq!(starts.load(Ordering::SeqCst), 1);
+        set_bridge_port_for_test(None);
+    }
+
+    /// The common case costs nothing extra: a recorded bridge is sent to
+    /// straight away, with no start and no health check first.
+    #[tokio::test]
+    async fn a_running_bridge_is_sent_to_without_starting_or_checking_anything() {
+        let _guard = bridge_state_lock();
+        let port = fake_bridge().await;
+        set_bridge_port_for_test(Some(port));
+
+        let sent = post_local_chat_with(
+            &client(),
+            &chat_body(),
+            true,
+            never_started,
+            ollama_never_checked,
+        )
+        .await;
+
+        assert!(sent.unwrap().status().is_success());
+        set_bridge_port_for_test(None);
+    }
+
+    /// A bridge that died after we recorded it shows up as a refused
+    /// connection: it is restarted once and the same chat resent.
+    #[tokio::test]
+    async fn a_bridge_that_died_is_restarted_once_and_the_chat_resent() {
+        let _guard = bridge_state_lock();
+        let port = fake_bridge().await;
+        set_bridge_port_for_test(Some(closed_port()));
+        let starts = AtomicUsize::new(0);
+
+        let sent = post_local_chat_with(
+            &client(),
+            &chat_body(),
+            true,
+            || async {
+                starts.fetch_add(1, Ordering::SeqCst);
+                set_bridge_port_for_test(Some(port));
+            },
+            ollama_never_checked,
+        )
+        .await;
+
+        assert!(sent.unwrap().status().is_success());
+        assert_eq!(starts.load(Ordering::SeqCst), 1);
+        set_bridge_port_for_test(None);
+    }
+
+    /// Ollama quit from its menu bar (or restarting for an update) while the
+    /// bridge stays up: the bridge answers 503, so Ollama is started and the
+    /// same chat resent once.
+    #[tokio::test]
+    async fn a_chat_after_ollama_was_quit_starts_it_and_resends_once() {
+        let _guard = bridge_state_lock();
+        let port = fake_bridge_answering(&[503, 200]).await;
+        set_bridge_port_for_test(Some(port));
+        let starts = AtomicUsize::new(0);
+
+        let sent = post_local_chat_with(
+            &client(),
+            &chat_body(),
+            true,
+            || async {
+                starts.fetch_add(1, Ordering::SeqCst);
+            },
+            || async { false },
+        )
+        .await;
+
+        assert!(sent.unwrap().status().is_success());
+        assert_eq!(starts.load(Ordering::SeqCst), 1);
+        set_bridge_port_for_test(None);
+    }
+
+    /// A 503 while Ollama is up is the bridge's own error: no start, no
+    /// resend, and the caller shows it exactly as before.
+    #[tokio::test]
+    async fn a_503_with_ollama_running_is_returned_unchanged() {
+        let _guard = bridge_state_lock();
+        let port = fake_bridge_answering(&[503, 200]).await;
+        set_bridge_port_for_test(Some(port));
+
+        let sent = post_local_chat_with(&client(), &chat_body(), true, never_started, || async {
+            true
+        })
+        .await;
+
+        assert_eq!(
+            sent.unwrap().status(),
+            reqwest::StatusCode::SERVICE_UNAVAILABLE
+        );
+        set_bridge_port_for_test(None);
+    }
+
+    /// Ollama that can't be started (uninstalled, say) gets one resend, then
+    /// the same 503 the user saw before — never a loop.
+    #[tokio::test]
+    async fn an_ollama_that_cannot_start_gets_one_resend_then_the_same_error() {
+        let _guard = bridge_state_lock();
+        let port = fake_bridge_answering(&[503]).await;
+        set_bridge_port_for_test(Some(port));
+        let starts = AtomicUsize::new(0);
+
+        let sent = post_local_chat_with(
+            &client(),
+            &chat_body(),
+            true,
+            || async {
+                starts.fetch_add(1, Ordering::SeqCst);
+            },
+            || async { false },
+        )
+        .await;
+
+        assert_eq!(
+            sent.unwrap().status(),
+            reqwest::StatusCode::SERVICE_UNAVAILABLE
+        );
+        assert_eq!(starts.load(Ordering::SeqCst), 1);
+        set_bridge_port_for_test(None);
+    }
+
+    #[tokio::test]
+    async fn a_model_without_tool_support_never_starts_the_bridge() {
+        let _guard = bridge_state_lock();
+        set_bridge_port_for_test(None);
+
+        let err = post_local_chat_with(
+            &client(),
+            &chat_body(),
+            false,
+            never_started,
+            ollama_never_checked,
+        )
+        .await
+        .expect_err("non-tool models are refused");
+
+        assert!(err.contains("tool_support=false"), "{err}");
+    }
+
+    /// Not installed, or never came up in time: the chat still fails, with the
+    /// toggle as the way out (turning Local Models on reinstalls the bridge).
+    #[tokio::test]
+    async fn a_bridge_that_cannot_start_still_fails_with_the_way_out() {
+        let _guard = bridge_state_lock();
+        set_bridge_port_for_test(None);
+
+        let err = post_local_chat_with(
+            &client(),
+            &chat_body(),
+            true,
+            || async {},
+            ollama_never_checked,
+        )
+        .await
+        .expect_err("no bridge came up");
+
+        assert!(err.contains("turn Local Models off and on"), "{err}");
+    }
+
+    /// Accepts connections and never answers, like an Ollama stuck after the
+    /// computer wakes.
+    async fn silent_server() -> u16 {
+        let listener = tokio::net::TcpListener::bind(("127.0.0.1", 0))
+            .await
+            .unwrap();
+        let port = listener.local_addr().unwrap().port();
+        tokio::spawn(async move {
+            let mut held = Vec::new();
+            while let Ok((conn, _)) = listener.accept().await {
+                held.push(conn);
+            }
+        });
+        port
+    }
+
+    #[tokio::test]
+    async fn an_ollama_that_never_answers_reads_as_not_running_in_bounded_time() {
+        let port = silent_server().await;
+        let checked = std::time::Instant::now();
+
+        let up = ollama_answers(
+            &format!("http://127.0.0.1:{port}"),
+            std::time::Duration::from_millis(300),
+        )
+        .await;
+
+        assert!(!up);
+        assert!(
+            checked.elapsed() < std::time::Duration::from_secs(3),
+            "the check must give up, not hang"
+        );
+    }
+
+    #[tokio::test]
+    async fn an_answering_ollama_still_reads_as_running() {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        let listener = tokio::net::TcpListener::bind(("127.0.0.1", 0))
+            .await
+            .unwrap();
+        let port = listener.local_addr().unwrap().port();
+        tokio::spawn(async move {
+            let body = r#"{"version":"0.12.0"}"#;
+            while let Ok((mut conn, _)) = listener.accept().await {
+                let mut request = [0u8; 4096];
+                let _ = conn.read(&mut request).await;
+                let reply = format!(
+                    "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\nconnection: close\r\n\r\n{body}",
+                    body.len()
+                );
+                let _ = conn.write_all(reply.as_bytes()).await;
+            }
+        });
+
+        assert!(ollama_answers(&format!("http://127.0.0.1:{port}"), OLLAMA_CHECK_TIMEOUT).await);
+    }
+
+    /// The launch half of odm-09: with Ollama installed, the warm-up brings
+    /// local chat up before anyone sends a message.
+    #[tokio::test]
+    async fn the_launch_warm_up_starts_local_chat_when_ollama_is_installed() {
+        let starts = AtomicUsize::new(0);
+        warm_up_local_chat_with(
+            || true,
+            || async {
+                starts.fetch_add(1, Ordering::SeqCst);
+            },
+        )
+        .await;
+        assert_eq!(starts.load(Ordering::SeqCst), 1);
+    }
+
+    /// Without Ollama there is nothing to warm up, and starting the bridge
+    /// would only fail in front of nothing.
+    #[tokio::test]
+    async fn the_launch_warm_up_starts_nothing_without_ollama() {
+        warm_up_local_chat_with(|| false, never_started).await;
+    }
+
+    #[tokio::test]
+    async fn local_chat_brings_ollama_up_before_the_bridge() {
+        let order = std::sync::Mutex::new(Vec::new());
+        start_local_chat_runtime_with(
+            || async { false },
+            || async { order.lock().unwrap().push("ollama") },
+            || async { order.lock().unwrap().push("bridge") },
+        )
+        .await;
+        assert_eq!(*order.lock().unwrap(), ["ollama", "bridge"]);
+    }
+
+    #[tokio::test]
+    async fn a_running_ollama_is_not_started_again_but_the_bridge_is() {
+        let bridge_starts = AtomicUsize::new(0);
+        start_local_chat_runtime_with(
+            || async { true },
+            never_started,
+            || async {
+                bridge_starts.fetch_add(1, Ordering::SeqCst);
+            },
+        )
+        .await;
+        assert_eq!(bridge_starts.load(Ordering::SeqCst), 1);
+    }
+
+    /// The launch warm-up and a chat that beats it overlap; the later one
+    /// must wait for the start in flight instead of racing it.
+    #[tokio::test]
+    async fn overlapping_starts_run_one_at_a_time() {
+        let running = AtomicUsize::new(0);
+        let overlapped = AtomicBool::new(false);
+        let start = || async {
+            if running.fetch_add(1, Ordering::SeqCst) > 0 {
+                overlapped.store(true, Ordering::SeqCst);
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+            running.fetch_sub(1, Ordering::SeqCst);
+        };
+        tokio::join!(
+            start_local_chat_runtime_with(|| async { true }, never_started, start),
+            start_local_chat_runtime_with(|| async { true }, never_started, start),
+        );
+        assert!(!overlapped.load(Ordering::SeqCst));
     }
 
     /// The pre-existing rule: a model without tool support can't use the

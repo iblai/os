@@ -210,7 +210,7 @@ const config = defineConfig({
     // genuinely different origin to iframe the app from.
     {
       command: `node ${path.join(root, 'utils/embed-harness-server.mjs')}`,
-      url: 'http://127.0.0.1:4599/',
+      url: `${process.env.EMBED_HARNESS_URL || 'http://127.0.0.1:4599'}/`,
       reuseExistingServer: true,
       timeout: 30_000,
     },

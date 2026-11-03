@@ -13,7 +13,7 @@
  * so a future consumer that renders the HTML directly cannot inherit a hole.
  */
 import { describe, it, expect } from 'vitest';
-import { markdownToHtml } from '../utils';
+import { markdownToHtml } from '../markdown-engine';
 
 const DANGEROUS =
   /<script|<iframe|<object|<embed|<form|\son\w+\s*=|(?:java|vb)script:|href="data:text\/html/i;

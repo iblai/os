@@ -485,8 +485,23 @@ describe('useModelDownload — full coverage', () => {
   // ----- startDownload -----------------------------------------------------
 
   describe('startDownload', () => {
+    const managerRunning = {
+      installed: true,
+      running: true,
+      model_installed: false,
+    };
+
+    beforeEach(() => {
+      localStorage.setItem('ibl_local_llm_enabled', 'true');
+    });
+
+    afterEach(() => {
+      localStorage.removeItem('ibl_local_llm_enabled');
+    });
+
     it('completes a successful download and refreshes status', async () => {
       setInvoke({
+        [C.CHECK_OLLAMA_STATUS]: managerRunning,
         [C.CHECK_DISK_SPACE]: true,
         [C.DOWNLOAD_MODEL]: undefined,
       });
@@ -526,6 +541,7 @@ describe('useModelDownload — full coverage', () => {
 
     it('reports a failed download via state and a toast', async () => {
       setInvoke({
+        [C.CHECK_OLLAMA_STATUS]: managerRunning,
         [C.CHECK_DISK_SPACE]: true,
         [C.DOWNLOAD_MODEL]: () => Promise.reject(new Error('pull failed')),
       });
@@ -544,6 +560,7 @@ describe('useModelDownload — full coverage', () => {
     it('suppresses the error toast when a cancellation already landed', async () => {
       let rejectDownload: (e: unknown) => void = () => {};
       setInvoke({
+        [C.CHECK_OLLAMA_STATUS]: managerRunning,
         [C.CHECK_DISK_SPACE]: true,
         [C.DOWNLOAD_MODEL]: () =>
           new Promise((_, rej) => {

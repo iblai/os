@@ -1,90 +1,76 @@
 'use client';
 
-import type React from 'react';
-import Image from 'next/image';
-import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-// @ts-expect-error - error-utils module does not exist yet
-import { getErrorData, type ErrorData } from '@/lib/error-utils';
+import { cn } from '@/lib/utils';
 
-interface ErrorPageProps {
-  errorCode: string;
+export interface ErrorPageProps {
+  errorCode?: string;
   customTitle?: string;
   customDescription?: string;
-  customIcon?: React.ReactNode;
-  showHomeButton?: boolean;
-  homeButtonText?: string;
-  homeButtonHref?: string;
+  supportEmail?: string | null;
+  showReset?: boolean;
+  reset?: () => void;
+  className?: string;
 }
 
+/**
+ * Lightweight, self-contained error/404 page.
+ *
+ * Deliberately avoids the SDK's `ErrorPage` (from `@iblai/iblai-js/web-containers`)
+ * because that import pulls the entire ~13 MB web-containers barrel — charts,
+ * PDF, editor and all — onto a page whose only job is to say "something broke".
+ * It is also the page shown when a chunk fails to load, so it must not itself
+ * depend on a heavy chunk that may be the very thing that failed.
+ */
 export function ErrorPage({
   errorCode,
   customTitle,
   customDescription,
-  customIcon,
-  showHomeButton = true,
-  homeButtonText = 'Back to Home',
-  homeButtonHref = '/',
+  supportEmail,
+  showReset = false,
+  reset,
+  className,
 }: ErrorPageProps) {
-  // Get default error data based on error code
-  const defaultErrorData: ErrorData = getErrorData(errorCode);
-
-  // Use custom values if provided, otherwise use defaults
-  const title = customTitle || defaultErrorData.title;
-  const description = customDescription || defaultErrorData.description;
-  const icon = customIcon || defaultErrorData.icon;
-
-  console.error(
-    `Error page shown to user: title --> ${title}, description --> ${description}`,
-  );
-
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center p-4">
-      <div className="flex w-full max-w-4xl flex-col items-center justify-center gap-8 md:flex-row md:gap-16">
-        {/* Left side - Icon */}
-        <div className="flex h-80 w-80 items-center justify-center rounded-full bg-gray-100">
-          {icon}
-        </div>
-
-        {/* Right side - Error content */}
-        <div className="flex flex-col items-center">
-          <h1 className="text-blue-5000 text-center text-9xl font-bold">
-            {errorCode}
-          </h1>
-          <h2 className="mt-8 text-center text-4xl font-medium text-gray-500">
-            {title}
-          </h2>
-          <p
-            className="mt-8 max-w-md text-center text-gray-600"
-            dangerouslySetInnerHTML={{ __html: description }}
-          />
-
-          {showHomeButton && (
-            <Link href={homeButtonHref} className="mt-8">
-              <Button className="bg-blue-500 hover:bg-blue-600">
-                {homeButtonText}
-              </Button>
-            </Link>
-          )}
-        </div>
-      </div>
-
-      {/* Footer with logo */}
-      <div className="mt-16 flex items-center justify-center">
-        <div className="flex items-end justify-center text-sm text-gray-500">
-          <span className="flex h-6 items-end text-xs">
-            Powered by
-            <Image
-              src="/iblai-logo.png"
-              alt="ibl.ai"
-              width={43}
-              height={19}
-              className="mx-2 mb-1 h-4 w-auto"
-            />
-            in New York
-          </span>
-        </div>
-      </div>
+    <div
+      className={cn(
+        'flex min-h-dvh flex-col items-center justify-center gap-4 px-6 text-center',
+        className,
+      )}
+    >
+      {errorCode ? (
+        <p className="text-muted-foreground text-sm font-semibold tracking-widest">
+          {errorCode}
+        </p>
+      ) : null}
+      {customTitle ? (
+        <h1 className="text-foreground text-2xl font-semibold">
+          {customTitle}
+        </h1>
+      ) : null}
+      {customDescription ? (
+        <p className="text-muted-foreground max-w-md text-sm">
+          {customDescription}
+        </p>
+      ) : null}
+      {showReset && reset ? (
+        <button
+          type="button"
+          onClick={reset}
+          className="bg-primary text-primary-foreground mt-2 rounded-md px-4 py-2 text-sm font-medium transition hover:opacity-90"
+        >
+          Try again
+        </button>
+      ) : null}
+      {supportEmail ? (
+        <a
+          href={`mailto:${supportEmail}`}
+          className="text-muted-foreground hover:text-foreground text-xs underline underline-offset-4"
+        >
+          Contact support
+        </a>
+      ) : null}
     </div>
   );
 }
+
+export default ErrorPage;

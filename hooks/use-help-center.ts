@@ -1,9 +1,10 @@
-import { addProtocolToUrl, useTenantMetadata } from '@iblai/iblai-js/web-utils';
+import { addProtocolToUrl } from '@iblai/iblai-js/web-utils';
 
 import { config } from '@/lib/config';
+import { useTenantObjectMetadata } from '@/hooks/use-tenant-object-metadata';
 
 export function useHelpCenter(tenantKey?: string) {
-  const { metadata } = useTenantMetadata({ org: tenantKey ?? '' });
+  const metadata = useTenantObjectMetadata(tenantKey);
 
   return {
     helpCenterUrl: addProtocolToUrl(

@@ -8,10 +8,13 @@ vi.mock('@/lib/utils', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/utils')>();
   return {
     ...actual,
-    markdownToHtml: vi.fn((text) => `<p>${text}</p>`),
     isHtml: vi.fn((text) => text.startsWith('<')),
   };
 });
+
+vi.mock('@/lib/markdown-engine', () => ({
+  markdownToHtml: vi.fn((text) => `<p>${text}</p>`),
+}));
 
 // Mock Markdown component
 vi.mock('@/components/markdown', () => ({

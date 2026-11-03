@@ -139,7 +139,7 @@ vi.mock('@/hoc/withPermissions', () => ({
     children({ hasPermission: mockWithPermissionsHasPermission() }),
 }));
 
-vi.mock('@/lib/utils', () => ({
+vi.mock('@/lib/markdown-engine', () => ({
   parsePrompt: (text: string) => text,
 }));
 

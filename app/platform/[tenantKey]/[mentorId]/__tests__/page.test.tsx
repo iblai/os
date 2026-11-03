@@ -59,6 +59,7 @@ vi.mock('next/navigation', () => ({
 vi.mock('@/hooks/use-user', () => ({
   useUsername: () => 'testuser',
   useUserTenants: () => ({ userTenants: [] }),
+  useCurrentTenant: () => ({ currentTenant: null }),
 }));
 
 vi.mock('@/lib/utils', () => ({

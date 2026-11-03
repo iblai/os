@@ -16,7 +16,7 @@ import { useNavigate } from '@/hooks/user-navigate';
 import { config } from '@/lib/config';
 import { useAppSelector } from '@/lib/hooks';
 import { TenantKeyMentorIdParams } from '@/lib/types';
-import { parsePrompt } from '@/lib/utils';
+import { parsePrompt } from '@/lib/markdown-engine';
 
 /**
  * OS/MentorAI wiring for the SDK's `AgentDisclaimersTab`.

@@ -2,10 +2,7 @@
 
 import React from 'react';
 import { z } from 'zod';
-import {
-  useLazyGetTenantMetadataQuery,
-  useLazyGetUserTenantsQuery,
-} from '@/features/tenants/api-slice';
+import { useLazyGetUserTenantsQuery } from '@/features/tenants/api-slice';
 import { tenantSchema } from '@/lib/types';
 import { appendEmbedContext } from '@/lib/embed-context';
 
@@ -32,7 +29,6 @@ export function useTenantProvider({
 }: UseTenantProviderProps): UseTenantProviderReturn {
   const [isLoading, setIsLoading] = React.useState(true);
   const [fetchUserTenants] = useLazyGetUserTenantsQuery();
-  const [fetchTenantMetadata] = useLazyGetTenantMetadataQuery();
 
   const determineWhichTenantToUse = React.useCallback(async () => {
     setIsLoading(true);
@@ -59,17 +55,22 @@ export function useTenantProvider({
 
       saveUserTenants(tenants || []);
 
-      // get the user's tenant metadata
-      const { data: tenantMetadata } = await fetchTenantMetadata({
-        tenantKey,
-      });
+      // The tenant's metadata rides the platforms list fetched above — no
+      // separate /metadata/ call. `spa_domains` sits directly under it.
+      const tenantMetadata = (
+        tenant as {
+          metadata?: {
+            spa_domains?: Record<string, { active?: boolean; domain?: string }>;
+          };
+        }
+      ).metadata;
 
       // check if the tenant is active
-      if (tenantMetadata?.metadata?.spa_domains?.mentor?.active) {
+      if (tenantMetadata?.spa_domains?.mentor?.active) {
         // Cross-origin redirect: sessionStorage doesn't follow to another
         // domain, so carry the embed params explicitly to keep the embed view.
         window.location.href = appendEmbedContext(
-          tenantMetadata?.metadata?.spa_domains?.mentor?.domain,
+          tenantMetadata?.spa_domains?.mentor?.domain ?? '',
         );
         onAuthSuccess?.();
         return;
@@ -94,7 +95,6 @@ export function useTenantProvider({
     }
   }, [
     fetchUserTenants,
-    fetchTenantMetadata,
     tenantKey,
     redirectToAuthSpa,
     onAuthSuccess,

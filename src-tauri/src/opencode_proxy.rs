@@ -76,7 +76,11 @@ already has sign-in, chat, agents, a profile page and an admin area. What \
 would you like to build or change?\", not \"scaffolded from the template\". \
 Say what they get and what you need from them, and show technical detail \
 only when they ask for it (an error you are told to report verbatim is \
-the exception).
+the exception). The short description you attach to a command or a side \
+task, and every item of your task list, are shown to the user: write them \
+in the same everyday words — what each does for their app (\"Install what \
+the app needs\", \"Start the preview\") — never the command itself or a \
+developer word.
 - When the user's intent is action, implement it — run the tools and make \
 the change rather than posting a proposal or a plan. Resolve blockers \
 yourself when you can, and carry the task through to done in the same turn.
@@ -496,7 +500,7 @@ fn unix_now() -> u64 {
 /// than the renewal margin left. Pure over the settings map so the freshness
 /// rule is testable. Entries without `expires_at` (an older build's format)
 /// read as absent — one harmless re-mint.
-fn stored_platform_key(
+pub(crate) fn stored_platform_key(
     settings: &serde_json::Map<String, serde_json::Value>,
     base: &str,
     tenant: &str,
@@ -519,7 +523,7 @@ fn stored_platform_key(
 
 /// Record a freshly minted key in its slot, leaving every other settings owner
 /// (and every other slot) untouched.
-fn record_platform_key(
+pub(crate) fn record_platform_key(
     settings: &mut serde_json::Map<String, serde_json::Value>,
     base: &str,
     tenant: &str,
@@ -659,9 +663,10 @@ pub async fn platform_api_key(tenant: &str, token: &str) -> Option<(String, u64)
     match mint_platform_key(&base, token, &name).await {
         Ok(Some(key)) => {
             let expires_at = now.saturating_add(PLATFORM_KEY_LIFETIME.as_secs());
-            let mut settings = crate::opencode_acp::read_settings();
-            record_platform_key(&mut settings, &base, tenant, &key, expires_at);
-            if let Err(e) = crate::opencode_acp::write_settings(&settings) {
+            let saved = crate::opencode_acp::update_settings(|settings| {
+                record_platform_key(settings, &base, tenant, &key, expires_at);
+            });
+            if let Err(e) = saved {
                 // The key still works for this run; only its persistence failed.
                 crate::telemetry::report("[opencode-proxy] could not persist IBLAI_API_KEY", e);
             }
@@ -1981,6 +1986,8 @@ mod tests {
                 && text.contains("The user is not technical")
                 && text.contains("has never coded")
                 && text.contains("never how it was made")
+                && text.contains("description you attach")
+                && text.contains("every item of your task list")
                 && !text.contains("it scaffolds")
                 && !text.contains("hand-roll the scaffold"),
             "the result-or-obstacle-only rule must survive edits: {text}"
