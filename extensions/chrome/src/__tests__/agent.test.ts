@@ -1,5 +1,6 @@
 import {
   APICallError,
+  RetryError,
   jsonSchema,
   tool,
   type ModelMessage,
@@ -16,10 +17,10 @@ import {
   pruneOldSnapshots,
   runAgent,
   transformBody,
-  usedTokens,
+  wantsPicture,
   type AgentEvent,
 } from '../agent';
-import { INSTRUCTIONS } from '../prompt';
+import { INSTRUCTIONS, PAGE_MARK, PICTURE_NOTE } from '../prompt';
 
 const USAGE = {
   inputTokens: { total: 10, noCache: 10, cacheRead: 0, cacheWrite: 0 },
@@ -32,16 +33,27 @@ const finish = (unified: 'stop' | 'tool-calls') => ({
   usage: USAGE,
 });
 
-const toolStep = (input: unknown = { element: 5 }) => ({
+const toolStep = (
+  input: unknown = { element: 5 },
+  toolName = 'click',
+  said = '',
+) => ({
   stream: simulateReadableStream({
     chunks: [
       { type: 'stream-start', warnings: [] },
+      ...(said
+        ? [
+            { type: 'text-start', id: 't0' },
+            { type: 'text-delta', id: 't0', delta: said },
+            { type: 'text-end', id: 't0' },
+          ]
+        : []),
       // The provider spec streams tool input as JSON text.
       {
         type: 'tool-call',
         toolCallId: 'c1',
-        toolName: 'click',
-        input: JSON.stringify(input),
+        toolName,
+        input: typeof input === 'string' ? input : JSON.stringify(input),
       },
       finish('tool-calls'),
     ],
@@ -66,6 +78,40 @@ function mockModel(
   const queue = [...steps];
   return new MockLanguageModelV4({
     doStream: async () => (queue.shift() ?? textStep('')) as never,
+  });
+}
+
+/** Like mockModel, then a call that streams nothing until it is aborted. */
+function stallingModel(
+  ...steps: Array<ReturnType<typeof toolStep> | ReturnType<typeof textStep>>
+) {
+  const queue = [...steps];
+  return new MockLanguageModelV4({
+    doStream: async ({ abortSignal }) =>
+      (queue.shift() ?? {
+        stream: new ReadableStream({
+          start(controller) {
+            controller.enqueue({ type: 'stream-start', warnings: [] });
+            abortSignal?.addEventListener('abort', () =>
+              controller.error(abortSignal.reason),
+            );
+          },
+        }),
+      }) as never,
+  });
+}
+
+/** Like mockModel, recording what each call was asked. */
+function recordingModel(
+  prompts: unknown[][],
+  ...steps: Array<ReturnType<typeof toolStep> | ReturnType<typeof textStep>>
+) {
+  const queue = [...steps];
+  return new MockLanguageModelV4({
+    doStream: async ({ prompt }) => {
+      prompts.push(prompt as unknown[]);
+      return (queue.shift() ?? textStep('')) as never;
+    },
   });
 }
 
@@ -117,34 +163,34 @@ describe('request shaping', () => {
   });
 
   it('picks the preferred model, else the first, else nothing', () => {
-    // iblai-pro heads the list: the DM seeds it globally and the shim reports it
-    // available for every platform, so it is the answer wherever it is listed.
+    // Models that read a picture and call tools come first; iblai-pro, the
+    // router every platform lists, is the answer only when nothing else is.
     expect(
       pickModel(['openai/gpt-5', 'anthropic/claude-opus-5', 'iblai/iblai-pro']),
-    ).toBe('iblai/iblai-pro');
+    ).toBe('anthropic/claude-opus-5');
     expect(
       pickModel([
         'openai/gpt-5',
         'anthropic/claude-sonnet-5',
         'anthropic/claude-opus-5',
       ]),
-    ).toBe('anthropic/claude-opus-5');
-    expect(pickModel(['openai/gpt-5', 'anthropic/claude-sonnet-5'])).toBe(
-      'anthropic/claude-sonnet-5',
-    );
+    ).toBe('anthropic/claude-sonnet-5');
+    expect(pickModel(['iblai/iblai-pro', 'openai/gpt-5'])).toBe('openai/gpt-5');
+    expect(pickModel(['bedrock/x', 'iblai/iblai-pro'])).toBe('iblai/iblai-pro');
     expect(pickModel(['bedrock/anthropic.claude-opus-5'])).toBe(
       'bedrock/anthropic.claude-opus-5',
     );
     expect(pickModel([])).toBe('');
   });
 
-  it('sums step usage and treats missing counts as zero', () => {
-    const steps = [
-      { usage: { inputTokens: 10, outputTokens: 5 } },
-      { usage: { inputTokens: undefined, outputTokens: 3 } },
-      {},
-    ] as never;
-    expect(usedTokens(steps)).toBe(18);
+  // `/v1/models` says nothing about vision, so the provider decides.
+  it('sends a picture only to providers whose models read one', () => {
+    expect(wantsPicture('anthropic/claude-sonnet-5')).toBe(true);
+    expect(wantsPicture('openai/gpt-5')).toBe(true);
+    expect(wantsPicture('google/gemini-3')).toBe(true);
+    expect(wantsPicture('iblai/iblai-pro')).toBe(false);
+    expect(wantsPicture('bedrock/anthropic.claude-opus-5')).toBe(false);
+    expect(wantsPicture('')).toBe(false);
   });
 });
 
@@ -184,6 +230,29 @@ describe('pruneOldSnapshots', () => {
     const messages = [user('go'), toolMessage('1')];
     expect(pruneOldSnapshots(messages)).toEqual(messages);
   });
+
+  // One numbering per request: the page a user turn carried is stale as soon
+  // as an action has produced a newer one, and only the latest result keeps its.
+  it("blanks a user turn's page once an action followed it, and keeps one tool result", () => {
+    const messages = [
+      user(`go${PAGE_MARK}[1] button "Pay"`),
+      toolMessage('1'),
+      toolMessage('2'),
+      user(`continue${PAGE_MARK}[1] button "Pay again"`),
+    ];
+    const pruned = pruneOldSnapshots(messages);
+    expect(pruned[0]).toEqual(
+      user(`go${PAGE_MARK}(earlier page state omitted)`),
+    );
+    const output = (index: number) =>
+      (pruned[index] as { content: Array<{ output: { value: unknown } }> })
+        .content[0].output.value;
+    expect(output(1)).toBe('(earlier page state omitted)');
+    expect(output(2)).toBe('page 2');
+    // The newest turn's page is the current one until an action follows it.
+    expect(pruned[3]).toBe(messages[3]);
+    expect(messages[0]).toEqual(user(`go${PAGE_MARK}[1] button "Pay"`));
+  });
 });
 
 describe('describeError', () => {
@@ -204,6 +273,27 @@ describe('describeError', () => {
       message: 'boom',
     });
     expect(describeError('text')).toEqual({ type: 'error', message: 'text' });
+  });
+
+  it('describes a call the SDK gave up retrying by its last failure', () => {
+    const retried = new RetryError({
+      message: 'Failed after 2 attempts.',
+      reason: 'errorNotRetryable',
+      errors: [
+        new Error('overloaded'),
+        new APICallError({
+          message: 'Insufficient credits.',
+          url: 'u',
+          requestBodyValues: {},
+          statusCode: 402,
+        }),
+      ],
+    });
+    expect(describeError(retried)).toEqual({
+      type: 'error',
+      message: 'Insufficient credits.',
+      statusCode: 402,
+    });
   });
 });
 
@@ -389,34 +479,58 @@ describe('runAgent', () => {
     ]);
   });
 
-  it('stops at the step cap', async () => {
+  it('has no step cap: a run goes on until the model answers', async () => {
     const execute = clickExecute();
-    const { onEvent } = collect();
     const result = await runAgent({
-      model: mockModel(toolStep(), toolStep(), toolStep()),
+      model: mockModel(
+        ...Array.from({ length: 45 }, () => toolStep()),
+        textStep('Done.'),
+      ),
       messages: [user('loop')],
       tools: clickTools(execute),
       signal: new AbortController().signal,
-      onEvent,
-      maxSteps: 2,
+      onEvent: () => undefined,
     });
-    expect(execute).toHaveBeenCalledTimes(2);
-    expect(result.steps).toBe(2);
-    expect(result.stoppedBy).toBe('steps');
+    expect(execute).toHaveBeenCalledTimes(45);
+    expect(result.steps).toBe(46);
+    expect(result.text).toBe('Done.');
+    expect(result.stoppedBy).toBeNull();
   });
 
-  it('stops when the token budget is spent', async () => {
-    const { onEvent } = collect();
+  it('ends at the time limit, saying so, and keeps the steps it finished', async () => {
+    const { events, onEvent } = collect();
     const result = await runAgent({
-      model: mockModel(toolStep(), toolStep()),
+      model: stallingModel(toolStep()),
       messages: [user('loop')],
       tools: clickTools(),
       signal: new AbortController().signal,
       onEvent,
-      tokenBudget: 12,
+      timeLimitMs: 50,
     });
+    expect(result.stoppedBy).toBe('time');
+    expect(events[events.length - 1]).toEqual({ type: 'abort' });
+    expect(events.filter((event) => event.type === 'error')).toEqual([]);
     expect(result.steps).toBe(1);
-    expect(result.stoppedBy).toBe('tokens');
+    expect(result.messages.slice(1).map((message) => message.role)).toEqual([
+      'assistant',
+      'tool',
+    ]);
+  });
+
+  it('says nothing about time when the user stopped the run', async () => {
+    const controller = new AbortController();
+    const { events, onEvent } = collect();
+    const running = runAgent({
+      model: stallingModel(),
+      messages: [user('x')],
+      tools: clickTools(),
+      signal: controller.signal,
+      onEvent,
+    });
+    setTimeout(() => controller.abort(), 20);
+    const result = await running;
+    expect(events).toContainEqual({ type: 'abort' });
+    expect(result.stoppedBy).toBeNull();
   });
 
   it('does nothing on an already aborted signal', async () => {
@@ -435,9 +549,11 @@ describe('runAgent', () => {
     expect(events.some((event) => event.type === 'text')).toBe(false);
   });
 
-  it('reports a tool that throws as an error event', async () => {
+  // The SDK carries on after a tool fails — the failure goes back to the model
+  // as that call's result — so the run must not be torn down over it.
+  it('keeps going after a tool that throws, reporting it as a failed call', async () => {
     const { events, onEvent } = collect();
-    await runAgent({
+    const result = await runAgent({
       model: mockModel(toolStep(), textStep()),
       messages: [user('x')],
       tools: clickTools(
@@ -448,7 +564,190 @@ describe('runAgent', () => {
       signal: new AbortController().signal,
       onEvent,
     });
-    expect(events).toContainEqual({ type: 'error', message: 'tab closed' });
+    expect(events).toContainEqual({ type: 'tool-error', toolName: 'click' });
+    expect(events.filter((event) => event.type === 'error')).toEqual([]);
+    expect(result.text).toBe('Done.');
+  });
+
+  it('keeps going after a call it does not know and cannot fix', async () => {
+    const execute = clickExecute();
+    const { events, onEvent } = collect();
+    const result = await runAgent({
+      // The second answer is the fix it is asked for: words, no call.
+      model: mockModel(
+        toolStep({ element: 5 }, 'tap'),
+        textStep('No tool for that.'),
+        textStep(),
+      ),
+      messages: [user('x')],
+      tools: clickTools(execute),
+      signal: new AbortController().signal,
+      onEvent,
+    });
+    expect(events).toContainEqual({ type: 'tool-error', toolName: 'tap' });
+    expect(events.filter((event) => event.type === 'error')).toEqual([]);
+    expect(execute).not.toHaveBeenCalled();
+    expect(result.text).toBe('Done.');
+  });
+
+  it('fixes a call to a tool it does not have within the same step', async () => {
+    const execute = clickExecute();
+    const { events, onEvent } = collect();
+    const result = await runAgent({
+      model: mockModel(
+        toolStep({ element: 5 }, 'tap'),
+        toolStep({ element: 5 }),
+        textStep('Done.'),
+      ),
+      messages: [user('x')],
+      tools: clickTools(execute),
+      signal: new AbortController().signal,
+      onEvent,
+    });
+    expect(execute).toHaveBeenCalledTimes(1);
+    expect(execute.mock.calls[0][0]).toEqual({ element: 5 });
+    expect(events.map((event) => event.type)).toEqual([
+      'tool-call',
+      'tool-result',
+      'text',
+      'finish',
+    ]);
+    expect(events[0]).toMatchObject({ toolName: 'click' });
+    expect(result.steps).toBe(2);
+    expect(result.text).toBe('Done.');
+  });
+
+  it('fixes a call whose input is not JSON', async () => {
+    const execute = clickExecute();
+    const result = await runAgent({
+      model: mockModel(
+        toolStep('{"element": 5'),
+        toolStep({ element: 5 }),
+        textStep('Done.'),
+      ),
+      messages: [user('x')],
+      tools: clickTools(execute),
+      signal: new AbortController().signal,
+      onEvent: () => undefined,
+    });
+    expect(execute).toHaveBeenCalledTimes(1);
+    expect(execute.mock.calls[0][0]).toEqual({ element: 5 });
+    expect(result.text).toBe('Done.');
+  });
+
+  it('shows the fix the failed call and its error, asking for a tool and running none', async () => {
+    const asked: Array<{
+      prompt: Array<{ role: string; content: unknown }>;
+      toolChoice?: unknown;
+      tools?: Array<{ name: string }>;
+    }> = [];
+    const queue = [
+      toolStep({ element: 5 }, 'tap'),
+      toolStep({ element: 5 }),
+      textStep(),
+    ];
+    const execute = clickExecute();
+    await runAgent({
+      model: new MockLanguageModelV4({
+        doStream: async (call) => {
+          asked.push(call as never);
+          return queue.shift() as never;
+        },
+      }),
+      messages: [user('x')],
+      tools: clickTools(execute),
+      signal: new AbortController().signal,
+      onEvent: () => undefined,
+    });
+    const fix = asked[1];
+    expect(fix.toolChoice).toEqual({ type: 'required' });
+    expect(fix.tools?.map((offered) => offered.name)).toEqual(['click']);
+    const [call, answer] = fix.prompt.slice(-2);
+    expect(call).toMatchObject({
+      role: 'assistant',
+      content: [{ type: 'tool-call', toolName: 'tap', input: { element: 5 } }],
+    });
+    expect(answer.role).toBe('tool');
+    expect(JSON.stringify(answer.content)).toContain(
+      "Model tried to call unavailable tool 'tap'",
+    );
+    // Only the step ran the click; the fix itself ran nothing.
+    expect(execute).toHaveBeenCalledTimes(1);
+  });
+
+  it('files words said before an action as narration, and only the last step as the reply', async () => {
+    const { events, onEvent } = collect();
+    const result = await runAgent({
+      model: mockModel(
+        toolStep({ element: 5 }, 'click', 'Opening billing.'),
+        textStep('Done.'),
+      ),
+      messages: [user('open billing')],
+      tools: clickTools(),
+      signal: new AbortController().signal,
+      onEvent,
+    });
+    expect(events.map((event) => event.type)).toEqual([
+      'narration',
+      'tool-call',
+      'tool-result',
+      'text',
+      'finish',
+    ]);
+    expect(events[0]).toEqual({ type: 'narration', text: 'Opening billing.' });
+    expect(events[3]).toEqual({ type: 'text', text: 'Done.' });
+    expect(result.text).toBe('Done.');
+  });
+
+  it('sends the latest picture on a trailing user message, and never keeps it', async () => {
+    const prompts: unknown[][] = [];
+    const result = await runAgent({
+      model: recordingModel(prompts, toolStep(), textStep()),
+      messages: [user('open billing')],
+      tools: clickTools(),
+      signal: new AbortController().signal,
+      onEvent: () => undefined,
+      picture: () => ({ dataUrl: 'data:image/jpeg;base64,/9j/AAA=', scale: 1 }),
+    });
+    expect(prompts).toHaveLength(2);
+    for (const prompt of prompts) {
+      const last = prompt[prompt.length - 1] as { role: string };
+      expect(last.role).toBe('user');
+      expect(JSON.stringify(last)).toContain('image/jpeg');
+      expect(JSON.stringify(last)).toContain(PICTURE_NOTE);
+    }
+    expect(JSON.stringify(result.messages)).not.toContain('image/jpeg');
+    expect(result.messages.filter((m) => m.role === 'user')).toHaveLength(1);
+  });
+
+  it('sends the reason when there is no picture, and nothing extra when none is expected', async () => {
+    const withNote: unknown[][] = [];
+    await runAgent({
+      model: recordingModel(withNote, textStep()),
+      messages: [user('x')],
+      tools: clickTools(),
+      signal: new AbortController().signal,
+      onEvent: () => undefined,
+      picture: () => ({ note: '(no picture: the tab is not in front)' }),
+    });
+    const last = withNote[0][withNote[0].length - 1] as { role: string };
+    expect(last.role).toBe('user');
+    expect(JSON.stringify(last)).toContain(
+      '(no picture: the tab is not in front)',
+    );
+    expect(JSON.stringify(last)).not.toContain('image/jpeg');
+
+    const without: unknown[][] = [];
+    await runAgent({
+      model: recordingModel(without, textStep()),
+      messages: [user('x')],
+      tools: clickTools(),
+      signal: new AbortController().signal,
+      onEvent: () => undefined,
+    });
+    expect(
+      without[0].filter((m) => (m as { role: string }).role === 'user'),
+    ).toHaveLength(1);
   });
 });
 
@@ -463,6 +762,88 @@ describe('buildModel against the DM shim', () => {
 
   const respond = (body: string, status = 200, type = 'text/event-stream') =>
     new Response(body, { status, headers: { 'content-type': type } });
+
+  const errorFrame = `data: ${JSON.stringify({ error: { message: 'provider boom', type: 'server_error', status_code: 502 } })}`;
+  const answer = () =>
+    respond(
+      sse([chunk({ content: 'Done.' }), chunk({}, 'stop'), 'data: [DONE]']),
+    );
+
+  const run = (onEvent: (event: AgentEvent) => void = () => undefined) =>
+    runAgent({
+      model: buildModel({
+        ...creds,
+        base: 'https://asgi.example',
+        model: 'openai/gpt-5',
+      }),
+      messages: [user('hello')],
+      tools: {},
+      signal: new AbortController().signal,
+      onEvent,
+    });
+
+  /** Runs `start` with the SDK's retry waits (2 s, then 4 s) on fake time. */
+  async function withoutWaiting<T>(start: () => Promise<T>): Promise<T> {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      const running = start();
+      let settled = false;
+      running.then(
+        () => (settled = true),
+        () => (settled = true),
+      );
+      while (!settled) await vi.advanceTimersByTimeAsync(1_000);
+      return await running;
+    } finally {
+      vi.useRealTimers();
+    }
+  }
+
+  it('sends a call again when the DM streams an error after its 200', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        respond(
+          sse([chunk({ role: 'assistant' }), errorFrame, 'data: [DONE]']),
+        ),
+      )
+      .mockResolvedValueOnce(answer());
+    vi.stubGlobal('fetch', fetchMock);
+    const events: AgentEvent[] = [];
+    const result = await withoutWaiting(() =>
+      run((event) => events.push(event)),
+    );
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(result.text).toBe('Done.');
+    expect(events.filter((event) => event.type === 'error')).toEqual([]);
+  });
+
+  it('sends a call again when the connection fails, before or during the answer', async () => {
+    const dropped = new Response(
+      new ReadableStream({
+        start(controller) {
+          controller.enqueue(
+            new TextEncoder().encode(sse([chunk({ role: 'assistant' })])),
+          );
+          controller.error(new TypeError('network error'));
+        },
+      }),
+      { status: 200, headers: { 'content-type': 'text/event-stream' } },
+    );
+    const fetchMock = vi
+      .fn()
+      .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+      .mockResolvedValueOnce(dropped)
+      .mockResolvedValueOnce(answer());
+    vi.stubGlobal('fetch', fetchMock);
+    const events: AgentEvent[] = [];
+    const result = await withoutWaiting(() =>
+      run((event) => events.push(event)),
+    );
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(result.text).toBe('Done.');
+    expect(events.filter((event) => event.type === 'error')).toEqual([]);
+  });
 
   it('sends the member request the shim expects and streams the answer', async () => {
     const fetchMock = vi.fn(async () =>
@@ -515,6 +896,27 @@ describe('buildModel against the DM shim', () => {
     expect(events.filter((event) => event.type === 'error')).toEqual([]);
   });
 
+  it('tells the model about the position tools only when they are offered', async () => {
+    const prompts: unknown[][] = [];
+    const call = (positions?: boolean) =>
+      runAgent({
+        model: recordingModel(prompts, textStep()),
+        messages: [user('x')],
+        tools: {},
+        signal: new AbortController().signal,
+        onEvent: () => undefined,
+        positions,
+      });
+    await call(true);
+    await call();
+    const systems = prompts.map(
+      (prompt) => prompt[0] as { role: string; content: string },
+    );
+    expect(systems.map((system) => system.role)).toEqual(['system', 'system']);
+    expect(systems[0].content).toContain('click_at and type_at');
+    expect(systems[1].content).not.toContain('click_at');
+  });
+
   // The user's language reaches the model as part of the system message and
   // nowhere else — no body field, no header.
   it('names the user language in the system message when it has one', async () => {
@@ -546,70 +948,41 @@ describe('buildModel against the DM shim', () => {
     expect(body.messages[0].content).toContain('fr-FR');
   });
 
-  it('surfaces the pre-stream 402 with its status', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async () =>
-        respond(
-          JSON.stringify({
-            error: {
-              message: 'Insufficient credits.',
-              type: 'insufficient_quota',
-              code: 'payment_required',
-            },
-          }),
-          402,
-          'application/json',
-        ),
+  it('surfaces the pre-stream 402 with its status, without trying again', async () => {
+    const fetchMock = vi.fn(async () =>
+      respond(
+        JSON.stringify({
+          error: {
+            message: 'Insufficient credits.',
+            type: 'insufficient_quota',
+            code: 'payment_required',
+          },
+        }),
+        402,
+        'application/json',
       ),
     );
+    vi.stubGlobal('fetch', fetchMock);
     const events: AgentEvent[] = [];
-    await runAgent({
-      model: buildModel({
-        ...creds,
-        base: 'https://asgi.example',
-        model: 'openai/gpt-5',
-      }),
-      messages: [user('hello')],
-      tools: {},
-      signal: new AbortController().signal,
-      onEvent: (event) => events.push(event),
-    }).catch(() => null);
+    await run((event) => events.push(event)).catch(() => null);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(events).toContainEqual(
       expect.objectContaining({ type: 'error', statusCode: 402 }),
     );
   });
 
-  it('surfaces a mid-stream error frame', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async () =>
-        respond(
-          sse([
-            chunk({ role: 'assistant' }),
-            `data: ${JSON.stringify({ error: { message: 'provider boom', type: 'server_error', status_code: 502 } })}`,
-            'data: [DONE]',
-          ]),
-        ),
-      ),
+  it('surfaces a mid-stream error frame once two more tries fail too', async () => {
+    const fetchMock = vi.fn(async () =>
+      respond(sse([chunk({ role: 'assistant' }), errorFrame, 'data: [DONE]'])),
     );
+    vi.stubGlobal('fetch', fetchMock);
     const events: AgentEvent[] = [];
-    await runAgent({
-      model: buildModel({
-        ...creds,
-        base: 'https://asgi.example',
-        model: 'openai/gpt-5',
-      }),
-      messages: [user('hello')],
-      tools: {},
-      signal: new AbortController().signal,
-      onEvent: (event) => events.push(event),
-    }).catch(() => null);
-    expect(
-      events.some(
-        (event) =>
-          event.type === 'error' && /provider boom/.test(event.message),
-      ),
-    ).toBe(true);
+    await withoutWaiting(() =>
+      run((event) => events.push(event)).catch(() => null),
+    );
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(events.filter((event) => event.type === 'error')).toEqual([
+      { type: 'error', message: 'provider boom' },
+    ]);
   });
 });

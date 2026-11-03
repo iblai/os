@@ -97,6 +97,8 @@ export function useBrowseRun() {
             chatActions.addToolCall({
               id: `${generation.current}-${tools.current++}`,
               name: 'browse',
+              // The row's label: the indicator reads `input.text`, never `log`.
+              input: { text: frame.text },
               log: frame.text,
               result: frame.ok ? 'ok' : 'failed',
             }),

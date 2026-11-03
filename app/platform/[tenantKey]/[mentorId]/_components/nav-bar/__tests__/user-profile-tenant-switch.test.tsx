@@ -109,12 +109,16 @@ vi.mock('@/hooks/subscription/subscription-flow-v2', () => ({
   MentorSubscriptionFlowV2: vi.fn().mockImplementation(() => ({})),
 }));
 
-// Mock tenant metadata and subscription hooks
-vi.mock('@iblai/iblai-js/web-utils', () => ({
-  useTenantMetadata: () => ({
-    metadata: { help_center_url: 'https://help.example.com', show_help: true },
-    metadataLoaded: true,
+// Tenant metadata now rides the tenants list via this local hook (raw object).
+vi.mock('@/hooks/use-tenant-object-metadata', () => ({
+  useTenantObjectMetadata: () => ({
+    help_center_url: 'https://help.example.com',
+    show_help: true,
   }),
+}));
+
+// Mock subscription hooks
+vi.mock('@iblai/iblai-js/web-utils', () => ({
   Tenant: {},
   useSubscriptionHandlerV2: () => ({
     getBillingURL: mockGetBillingURL,
@@ -136,6 +140,11 @@ vi.mock('@iblai/iblai-js/web-utils', () => ({
 // be listed here — `PromptVisibilityEnum` (pulled in via the prompt modals) is
 // read at module scope, so omitting it fails the file at import time.
 vi.mock('@iblai/iblai-api', () => ({
+  TransportEnum: {
+    SSE: 'sse',
+    WEBSOCKET: 'websocket',
+    STREAMABLE_HTTP: 'streamable_http',
+  },
   MentorVisibilityEnum: {
     VIEWABLE_BY_ANYONE: 'VIEWABLE_BY_ANYONE',
   },

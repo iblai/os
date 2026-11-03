@@ -73,7 +73,20 @@ async function gotoEmbedHarness(
   page: Page,
   mentorUrl: string,
   extraParams: Record<string, string> = {},
+  { loggedOut = false }: { loggedOut?: boolean } = {},
 ): Promise<FrameLocator> {
+  // The composer mounts before the session's history arrives, and the
+  // history replaces the whole chat when it lands — a message sent in that
+  // window is wiped. Callers type right away, so wait for it here. A
+  // logged-out visitor has no history to fetch.
+  const historyLoaded = loggedOut
+    ? undefined
+    : page
+        .waitForResponse(
+          (r) => /\/sessions\/[^/?]+\/\?.*page=1/.test(r.url()),
+          { timeout: EMBED_READY_TIMEOUT },
+        )
+        .catch(() => undefined);
   await page.goto(
     `${EMBED_HARNESS_URL}/?src=${encodeURIComponent(embedUrl(mentorUrl, extraParams))}`,
     { waitUntil: 'domcontentloaded', timeout: 30_000 },
@@ -82,6 +95,7 @@ async function gotoEmbedHarness(
   await expect(iframe.locator('#chat-input-textarea')).toBeVisible({
     timeout: EMBED_READY_TIMEOUT,
   });
+  await historyLoaded;
   return iframe;
 }
 
@@ -915,7 +929,12 @@ test.describe('Journey 82: Logged-out embed visitor', () => {
     const chatPage = new ChatPage(page);
     const ws = await chatPage.mockChatWebSocket();
     const mentorUrl = `${MENTOR_NEXTJS_HOST}/platform/${platformKey}/${mentorId}`;
-    const iframe = await gotoEmbedHarness(page, mentorUrl);
+    const iframe = await gotoEmbedHarness(
+      page,
+      mentorUrl,
+      {},
+      { loggedOut: true },
+    );
     const chatInput = iframe.locator('#chat-input-textarea');
     await expect(chatInput).toBeVisible({ timeout: 30_000 });
 

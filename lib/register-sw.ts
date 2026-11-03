@@ -28,6 +28,16 @@ export function isServiceWorkerSupported(): boolean {
 }
 
 /**
+ * True when this document is running inside an iframe (an external embed).
+ * Kept local so this module stays dependency-free. Mirrors `isInIframe` in
+ * lib/utils.ts; the comparison is safe cross-origin (property access on
+ * `window.top` would throw, but `!==` does not).
+ */
+function isEmbeddedInIframe(): boolean {
+  return typeof window !== 'undefined' && window.self !== window.top;
+}
+
+/**
  * Get current service worker status
  */
 export function getServiceWorkerStatus(): ServiceWorkerStatus {
@@ -287,6 +297,18 @@ export function setupNetworkListeners(): () => void {
  * Call this once when app loads
  */
 export async function initServiceWorker(): Promise<ServiceWorkerStatus> {
+  // Embedded (iframe) mode: the service worker's offline/PWA caching has no
+  // value inside a host page, and registering it double-loads the embed on
+  // every fresh mount — sw.js claims the page on install (skipWaiting +
+  // clients.claim), which fires `controllerchange`, and the listener below
+  // then reloads. Skip registration (and the reload) entirely when framed.
+  if (isEmbeddedInIframe()) {
+    console.log(
+      '[SW Registration] Skipping SW registration - running in an iframe embed',
+    );
+    return getServiceWorkerStatus();
+  }
+
   // Setup network listeners (cleanup is handled elsewhere)
   setupNetworkListeners();
 

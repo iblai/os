@@ -41,10 +41,8 @@ import { InsideButtons } from './chat-input-form/inside-buttons';
 import { VoiceCallButton } from './chat-input-form/voice-call-button';
 import { useMentorSettings } from '@/hooks/use-mentors/use-mentor-settings';
 import { MentorVisibilityEnum } from '@iblai/iblai-api';
-import {
-  selectShowingSharedChat,
-  useTenantMetadata,
-} from '@iblai/iblai-js/web-utils';
+import { selectShowingSharedChat } from '@iblai/iblai-js/web-utils';
+import { useTenantObjectMetadata } from '@/hooks/use-tenant-object-metadata';
 import { useVisitingTenant } from '@/hooks/use-user';
 import { FileAttachmentsList } from './chat-input-form/file-attachments-list';
 import { toast } from 'sonner';
@@ -168,7 +166,7 @@ export function ChatInputForm({
   const chatPrivacyActive =
     chatPrivacyReady && chatPrivacyEffective?.mode === 'disabled';
   const rbacPermissions = useAppSelector(selectRbacPermissions);
-  const { metadata: tenantMetadata } = useTenantMetadata({ org: tenantKey });
+  const tenantMetadata = useTenantObjectMetadata(tenantKey);
   const persistentChatInputLabel =
     tenantMetadata?.persistent_chat_input_label === true;
 
@@ -222,6 +220,8 @@ export function ChatInputForm({
     string | null
   >(null);
   const [isCameraDialogOpen, setIsCameraDialogOpen] = useState(false);
+  const [codeApprovalsSlot, setCodeApprovalsSlot] =
+    useState<HTMLDivElement | null>(null);
   const fileUploadInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const isMobileOS = useIsMobileOS();
@@ -919,7 +919,10 @@ export function ChatInputForm({
             </div>
           )}
 
-          <div data-tour={TOUR_TARGET.promptInput} className="grid">
+          {/* `grid-cols-1` (minmax(0, 1fr)): an auto column sizes itself to the
+              button row's content, so a pill growing (the Code ✕) pushed the
+              send button out of the box instead of letting the tools shrink. */}
+          <div data-tour={TOUR_TARGET.promptInput} className="grid grid-cols-1">
             <label
               id="chat-input-label"
               htmlFor="chat-input-textarea"
@@ -1003,7 +1006,7 @@ export function ChatInputForm({
                 }}
               />
             </div>
-            <div className="flex items-center gap-2 px-2">
+            <div className="flex items-center gap-2 px-2 max-[520px]:gap-1.5 max-[380px]:gap-1 max-[380px]:px-1">
               {visibleToLoggedInUsersOnly && !compactMode && (
                 <UploadMenu
                   onFileInputTrigger={() =>
@@ -1041,11 +1044,21 @@ export function ChatInputForm({
                   isFetchingMoreSkills={isFetchingMoreSkills}
                   onLoadMoreSkills={loadMoreSkills}
                   skillSync={skillSync}
+                  codeApprovalsSlot={codeApprovalsSlot}
                 />
               )}
 
               {/* `shrink-0`: the tool row (flex-1) gives way, never these. */}
               <div className="ml-auto flex shrink-0">
+                {/* First in the group, so its hover label widens over the
+                    tool row's free space, never over a neighbour button. */}
+                {visibleToLoggedInUsersOnly && !compactMode && (
+                  <div
+                    ref={setCodeApprovalsSlot}
+                    className="flex items-center"
+                  />
+                )}
+
                 {visibleToLoggedInUsersOnly && !compactMode && (
                   <ScreenSharingButton
                     onClick={onScreenSharingClick}

@@ -84,6 +84,7 @@ import {
 } from '@/features/analytics/slice';
 import { useMentorSettings } from '@/hooks/use-mentors/use-mentor-settings';
 import {
+  localModelDisplayName,
   useLlmDisplayName,
   useLlmProviderCatalogue,
 } from '@iblai/iblai-js/web-containers';
@@ -142,7 +143,7 @@ export const ANALYTICS_NAV_ITEM: MentorSegment = {
     MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
     MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
   ],
-  navCategory: 'runtime',
+  navCategory: 'activity',
 };
 
 export function NavBar() {
@@ -277,7 +278,8 @@ export function NavBar() {
     ? resolveLlmProvider(selectedLocal.model.provider).logo
     : '';
   const localModelName =
-    selectedLocal.model?.name ?? selectedLocal.modelId ?? '';
+    selectedLocal.model?.name ??
+    (selectedLocal.modelId ? localModelDisplayName(selectedLocal.modelId) : '');
   // Admins (non-students) can switch the mentor's LLM; for them the on-device
   // badge doubles as the entry point to the model picker (mirrors the cloud
   // selector's gate). Others get a plain, non-interactive indicator.
@@ -297,12 +299,12 @@ export function NavBar() {
           <HardDrive className="h-4 w-4 text-[#646464]" />
         )}
       </div>
-      <span className="hidden max-w-[150px] overflow-hidden text-ellipsis whitespace-nowrap lowercase sm:block">
+      <span className="hidden max-w-[150px] overflow-hidden text-ellipsis whitespace-nowrap sm:block">
         {localModelName}
       </span>
       <span className="hidden flex-shrink-0 items-center gap-1 rounded-full bg-[#F5F8FF] px-2 py-0.5 text-[11px] font-medium text-[#38A1E5] md:inline-flex">
         <HardDrive className="h-3 w-3" aria-hidden="true" />
-        On-device
+        {t('onDevice')}
       </span>
       {canChooseLlm && <ChevronDown className="h-4 w-4 text-gray-500" />}
     </>
@@ -414,12 +416,12 @@ export function NavBar() {
   });
 
   // Map MentorSegment → SDK CategorizedItem. The SDK's
-  // `CategorizedDropdownMenu` owns the 3-column / mobile-accordion layout
+  // `CategorizedDropdownMenu` owns the column / mobile-accordion layout
   // and the in-section state — we just hand it items + per-category
   // metadata. New Chat is a `topAction` and Modify (fork) is a
   // `footerAction`, both rendered outside the category columns.
   const categorizedDropdownItems = React.useMemo<CategorizedItem[]>(() => {
-    // `analytics` is now a canonical segment in `MENTOR_SEGMENTS` (Runtime
+    // `analytics` is now a canonical segment in `MENTOR_SEGMENTS` (Activity
     // category), so `filteredSegments` already includes it — no need to append
     // the legacy ad-hoc `ANALYTICS_NAV_ITEM`. Clicking it is still routed to
     // the full-page analytics view in `handleSegmentClick` below.

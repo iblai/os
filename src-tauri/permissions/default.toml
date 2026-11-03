@@ -12,6 +12,7 @@ permissions = [
     "allow-get-locked-tenant",
     "allow-install-ollama",
     "allow-stop-ollama",
+    "allow-warm-up-local-chat",
     "allow-check-ollama-status",
     "allow-check-disk-space-for-model",
     "allow-download-phi3-model",
@@ -46,6 +47,7 @@ permissions = [
     "allow-install-code-agent",
     "allow-list-code-agent-models",
     "allow-set-code-agent-model",
+    "allow-save-chat-file",
     "allow-remote-code-status",
     "allow-remote-code-enable",
     "allow-remote-code-disable",
@@ -111,6 +113,12 @@ identifier = "allow-stop-ollama"
 description = "Enables stopping the Ollama model manager server"
 [permission.commands]
 allow = ["stop_ollama"]
+
+[[permission]]
+identifier = "allow-warm-up-local-chat"
+description = "Enables starting local chat in the background at launch"
+[permission.commands]
+allow = ["warm_up_local_chat"]
 
 [[permission]]
 identifier = "allow-check-ollama-status"
@@ -305,6 +313,12 @@ description = "Enables choosing the model a subscription code agent runs on this
 allow = ["set_code_agent_model"]
 
 [[permission]]
+identifier = "allow-save-chat-file"
+description = "Enables saving a chat download through the native save dialog (the macOS webview ignores browser downloads)"
+[permission.commands]
+allow = ["save_chat_file"]
+
+[[permission]]
 identifier = "allow-check-code-local-model"
 description = "Enables checking whether the selected on-device model can drive Code (tool-calling support, runtime reachability)"
 [permission.commands]
@@ -333,6 +347,12 @@ identifier = "allow-set-opencode-permission-mode"
 description = "Enables choosing whether Coding Mode asks before each operation or approves automatically"
 [permission.commands]
 allow = ["set_opencode_permission_mode"]
+
+[[permission]]
+identifier = "allow-seed-opencode-permission-mode"
+description = "Enables saving the approval mode chosen on the platform, only on a machine with none saved yet"
+[permission.commands]
+allow = ["seed_opencode_permission_mode"]
 
 [[permission]]
 identifier = "allow-remote-code-status"

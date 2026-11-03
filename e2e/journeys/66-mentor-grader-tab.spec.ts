@@ -11,7 +11,7 @@ import { GraderTab } from '../page-objects/edit-mentor/grader.tab';
 /**
  * Journey 66 — Mentor Grader Tab.
  *
- * The Grader tab is a new top-level "Configurations" segment
+ * The Grader tab is a new top-level "Setup" segment
  * (`hooks/use-mentor-segments.ts`, segment value `grader`) rendered by the
  * SDK's `AgentGraderTab` (`@iblai/iblai-js/web-containers/next`), wrapped
  * locally in `components/modals/edit-mentor-modal/tabs/grader-tab.tsx`. It
@@ -111,7 +111,7 @@ test.describe('Journey 66: Mentor Grader Tab', () => {
     await waitForPageReady(page);
   });
 
-  // GRD-01: Grader tab is visible in the modal sidebar (Configurations
+  // GRD-01: Grader tab is visible in the modal sidebar (Setup
   // category, always mounted for an admin with standard mentor-owner
   // permissions — the segment is additionally gated on
   // read_grader_config, see the RBAC note above).

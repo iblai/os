@@ -1087,13 +1087,7 @@ test.describe('Journey 13: Shareable Links & Embed Integration', () => {
       await editMentorPage.open('Settings');
       await waitForPageReady(page);
       await editMentorPage.settings.setVisibility('Administrators');
-      await expect(editMentorPage.settings.saveButton).toBeEnabled({
-        timeout: 5_000,
-      });
-      await editMentorPage.settings.saveButton.click();
-      await expect(
-        page.getByText(/agent updated successfully/i).first(),
-      ).toBeVisible({ timeout: 30_000 });
+      await editMentorPage.settings.saveConfirmingAdminVisibility();
       await editMentorPage.close();
 
       // Save the (unrelated) Embed tab form. A non-anonymous mentor requires

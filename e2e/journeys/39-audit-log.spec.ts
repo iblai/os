@@ -103,7 +103,7 @@ test.describe('Journey 39: Audit log (tenant admin)', () => {
 
     // The modal shows only a spinner until settings + RBAC hydrate; no
     // segment tab exists before that. The deep-link pre-selects Audit, and
-    // its Runtime category auto-activates once the segment list mounts —
+    // its Activity category auto-activates once the segment list mounts —
     // wait for hydration before asserting the active state.
     await editMentorPage.waitForHydrated();
     await expect(
@@ -187,6 +187,10 @@ test.describe('Journey 39: Audit log (non-admin)', () => {
       return;
     }
 
+    // Only the active category's tabs are mounted, so on the default Setup
+    // view this check would pass even if Audit leaked to non-admins — look in
+    // Activity, where Audit lives.
+    await nonadminEditMentorPage.activateCategoryOf('Audit');
     const auditTab = nonadminEditMentorPage.dialog.getByRole('tab', {
       name: 'Audit',
       exact: true,

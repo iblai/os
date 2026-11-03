@@ -917,4 +917,73 @@ test.describe('Journey 79: Composer Redesign', () => {
 
     await page.setViewportSize({ width: 1280, height: 800 });
   });
+
+  // cr-17: below 520px the composer's tool pills keep the row on one line:
+  // a pill that is off shows only its icon, the one pill that is on shows its
+  // name and ×, and two or more on show only their icons. On the web Canvas is
+  // the only such pill (Code and Cowork are desktop-app pills), so this covers
+  // off and on alone; from 520px up the name always shows.
+  //
+  // The SDK measures the tool row itself, not the viewport, and the row is
+  // always narrower than the window: the wide step uses 1280px for that, and
+  // a row under 300px (`CRAMPED_ROW_WIDTH`) hides the name even when on, so
+  // the 390px step assumes the row stays 300px or wider there.
+  //
+  // FIXME: pending, never run. It needs an authenticated session
+  // (PLAYWRIGHT_USERNAME / PLAYWRIGHT_PASSWORD), which no env this has run in
+  // had; the pinned SDK (web-containers 1.48.0) has the tool row it tests.
+  test.fixme(
+    'Canvas pill on a phone-width composer: icon only while off, its name and × once on; wider screens keep the name',
+    async ({ page, chatPage }) => {
+      const turnOff = page.getByRole('button', {
+        name: 'Turn off Canvas',
+        exact: true,
+      });
+      const canvasName = page
+        .getByTestId('composer-canvas-pill')
+        .getByText('Canvas', { exact: true });
+      // Not \b: the pill's `@max-[300px]:sr-only` would match it.
+      const srOnly = /(^|\s)sr-only(\s|$)/;
+
+      await page.setViewportSize({ width: 390, height: 844 });
+      await expect(chatPage.canvasToggle).toBeVisible({ timeout: 30_000 });
+      await expect
+        .poll(() => chatPage.getCachedSessionId(mentorId), { timeout: 30_000 })
+        .toBeTruthy();
+      if (await chatPage.isCanvasToolActive()) {
+        await turnOff.click();
+        await expect(chatPage.canvasToggle).toHaveAttribute(
+          'aria-pressed',
+          'false',
+          { timeout: 10_000 },
+        );
+      }
+
+      // Off: icon only, its name still the button's accessible name.
+      await expect(canvasName).toHaveClass(srOnly);
+      await expect(chatPage.canvasToggle).toBeVisible();
+
+      // On alone: its name and its ×.
+      await chatPage.canvasToggle.click();
+      await expect(chatPage.canvasToggle).toHaveAttribute(
+        'aria-pressed',
+        'true',
+        { timeout: 10_000 },
+      );
+      await expect(canvasName).not.toHaveClass(srOnly);
+      await expect(canvasName).toBeVisible();
+      await expect(turnOff).toBeVisible();
+
+      // A row 520px and up: the name shows, on or off.
+      await page.setViewportSize({ width: 1280, height: 800 });
+      await expect(canvasName).not.toHaveClass(srOnly);
+      await turnOff.click();
+      await expect(chatPage.canvasToggle).toHaveAttribute(
+        'aria-pressed',
+        'false',
+        { timeout: 10_000 },
+      );
+      await expect(canvasName).not.toHaveClass(srOnly);
+    },
+  );
 });

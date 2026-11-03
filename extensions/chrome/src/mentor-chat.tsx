@@ -49,6 +49,7 @@ export function MentorChat() {
       authrelyonhost=""
       showuserprofile=""
       allowmentorselection=""
+      enablecowork=""
     />
   );
 }

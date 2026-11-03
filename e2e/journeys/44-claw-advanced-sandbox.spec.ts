@@ -67,7 +67,7 @@ import type { Locator } from '@playwright/test';
 /**
  * Returns a SEGMENT-tab locator by exact label, scoped to the currently
  * visible (active-category) sidebar list. The Edit Agent modal groups its
- * tabs under a Configurations / Integrations / Runtime category strip and
+ * tabs under a Setup / Policies / Integrations / Activity category strip and
  * only mounts the ACTIVE category's segment tabs, so the target tab's
  * category must be active first (`navigateToTab` handles that). Filtering on
  * `[aria-controls^="panel-"]:visible` also excludes the category pills (which
@@ -119,7 +119,7 @@ test.describe('Journey 44: CLAW Advanced Sandbox', () => {
 
     // Open the Edit Agent modal once here so each test starts with it mounted
     // (mirrors journey 47's beforeEach). Landing on Settings — always present
-    // and in the default Configurations category — is a neutral anchor; each
+    // and in the default Setup category — is a neutral anchor; each
     // test then navigateToTab()s to whatever it needs. open() blocks until the
     // modal finishes hydrating (it can spin ~30s+ on a just-created mentor).
     await editMentorPage.open('Settings');
@@ -226,13 +226,15 @@ test.describe('Journey 44: CLAW Advanced Sandbox', () => {
       // save is in flight).
       await expect(sandbox.computationalRuntimeSwitch).toBeEnabled();
 
-      // Verify ordering while we're here: Sandbox leads the Integrations
-      // category (feat/2040 moved it off Configurations, so it is no longer
-      // adjacent to Settings — Settings lives in Configurations).
+      // Verify ordering while we're here: Integrations opens on Tools, and
+      // Sandbox follows MCP.
       const integrationTabs = await visibleSegmentTabLabels(
         editMentorPage.dialog,
       );
-      expect(integrationTabs.findIndex((t) => /sandbox/i.test(t))).toBe(0);
+      expect(integrationTabs.findIndex((t) => /tools/i.test(t))).toBe(0);
+      expect(integrationTabs.findIndex((t) => /sandbox/i.test(t))).toBe(
+        integrationTabs.findIndex((t) => /mcp/i.test(t)) + 1,
+      );
     } finally {
       // Switch away from claw (no "disable" operation exists) — cheap
       // hygiene even though this mentor is deleted in afterAll regardless.
@@ -243,13 +245,12 @@ test.describe('Journey 44: CLAW Advanced Sandbox', () => {
 
   // ── TC06: Sandbox sits in its fixed category position unconditionally ────
   //
-  // feat/2040 groups the sidebar into Configurations / Integrations / Runtime
-  // categories. Sandbox now LEADS the Integrations category (no longer
-  // adjacent to Settings — Settings lives in Configurations). Only the
-  // active category's segment tabs are mounted, so the Sandbox tab must be
-  // navigated to first.
+  // The sidebar is grouped into Setup / Policies / Integrations / Activity
+  // categories. Integrations opens on Tools, and Sandbox follows MCP. Only
+  // the active category's segment tabs are mounted, so the Sandbox tab must
+  // be navigated to first.
 
-  test('Sandbox leads the Integrations category unconditionally', async ({
+  test('Sandbox follows Tools and MCP in the Integrations category unconditionally', async ({
     page,
     editMentorPage,
   }) => {
@@ -263,7 +264,10 @@ test.describe('Journey 44: CLAW Advanced Sandbox', () => {
     const integrationTabs = await visibleSegmentTabLabels(
       editMentorPage.dialog,
     );
-    expect(integrationTabs.findIndex((t) => /sandbox/i.test(t))).toBe(0);
+    expect(integrationTabs.findIndex((t) => /tools/i.test(t))).toBe(0);
+    expect(integrationTabs.findIndex((t) => /sandbox/i.test(t))).toBe(
+      integrationTabs.findIndex((t) => /mcp/i.test(t)) + 1,
+    );
 
     await editMentorPage.close();
   });
@@ -970,6 +974,10 @@ test.describe('Journey 44: CLAW Advanced Sandbox — Non-Admin', () => {
     const dialog = nonadminEditMentorPage.dialog;
     await expect(dialog).toBeVisible({ timeout: 15_000 });
 
+    // Only the active category's tabs are mounted, so on the default Setup
+    // view this check would pass even if Sandbox leaked to non-admins — look
+    // in Integrations, where Sandbox lives.
+    await nonadminEditMentorPage.activateCategoryOf('Sandbox');
     await expect(
       dialog.getByRole('tablist').getByRole('tab', {
         name: 'Sandbox',

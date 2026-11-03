@@ -106,6 +106,7 @@ function agentAiPageHtml() {
         if (params.get(k)) el.setAttribute(k, params.get(k));
       });
       if (params.get('authrelyonhost')) el.setAttribute('authrelyonhost', '');
+      if (params.get('enablecowork')) el.setAttribute('enablecowork', '');
       document.body.appendChild(el);
     </script>
   </body>

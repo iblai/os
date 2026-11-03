@@ -87,11 +87,12 @@ vi.mock('@/hooks/subscription/subscription-flow-v2', () => ({
   MentorSubscriptionFlowV2: vi.fn().mockImplementation(() => ({})),
 }));
 
+// Tenant metadata now rides the tenants list via this local hook (raw object).
+vi.mock('@/hooks/use-tenant-object-metadata', () => ({
+  useTenantObjectMetadata: () => ({}),
+}));
+
 vi.mock('@iblai/iblai-js/web-utils', () => ({
-  useTenantMetadata: () => ({
-    metadata: {},
-    metadataLoaded: true,
-  }),
   Tenant: {},
   useSubscriptionHandlerV2: () => ({
     getBillingURL: vi.fn().mockResolvedValue(''),
@@ -113,6 +114,11 @@ vi.mock('@iblai/iblai-js/web-utils', () => ({
 // (pulled in via the prompt modals) is read at module scope, so omitting it
 // fails the file at import time.
 vi.mock('@iblai/iblai-api', () => ({
+  TransportEnum: {
+    SSE: 'sse',
+    WEBSOCKET: 'websocket',
+    STREAMABLE_HTTP: 'streamable_http',
+  },
   MentorVisibilityEnum: {
     VIEWABLE_BY_ANYONE: 'VIEWABLE_BY_ANYONE',
   },

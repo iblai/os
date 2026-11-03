@@ -89,7 +89,7 @@ import type { Locator, Page } from '@playwright/test';
 
 // ─── Helpers (Skills tab gating) ──────────────────────────────────────────
 
-/** Text labels of the currently-visible Configurations-category segment tabs. */
+/** Text labels of the currently-visible Setup-category segment tabs. */
 async function visibleSegmentTabLabels(dialog: Locator): Promise<string[]> {
   return dialog
     .locator('[role="tab"][aria-controls^="panel-"]:visible')
@@ -130,7 +130,9 @@ async function locateAvailableSkillRow(
     .getByTestId('available-skill-row')
     .filter({ hasText: skillName });
   const nav = section.getByRole('navigation');
-  const nextButton = nav.getByRole('link', { name: 'Go to next page' });
+  // The pagination anchors carry no href, so they expose no `link` role —
+  // match by aria-label / text instead of role.
+  const nextButton = nav.getByLabel('Go to next page');
 
   for (let pageNumber = 1; ; pageNumber++) {
     if (
@@ -149,7 +151,7 @@ async function locateAvailableSkillRow(
     if (!nextEnabled) break;
     await nextButton.click();
     await expect(
-      nav.getByRole('link', { name: String(pageNumber + 1), exact: true }),
+      nav.locator('a', { hasText: new RegExp(`^${pageNumber + 1}$`) }),
     ).toHaveAttribute('aria-current', 'page', { timeout: 10_000 });
     await expect(
       section
@@ -324,7 +326,7 @@ test.describe('Journey 67: Agent Skills — Edit Mentor Skills tab gating', () =
 
   // ── ags-01: Base Agent mentor — tab visible with the updated copy ────────
 
-  test('admin sees the Skills tab on a freshly-created (Base Agent) mentor, with the updated description and info box copy', async ({
+  test('admin sees the Skills tab on a freshly-created (Base Agent) mentor, with its heading and the "type /" hint', async ({
     page,
     createMentorPage,
     editMentorPage,
@@ -347,28 +349,25 @@ test.describe('Journey 67: Agent Skills — Edit Mentor Skills tab gating', () =
     // (or from the dialog-scoped SkillsTab locators built on it).
     const dialog = editMentorPage.dialog;
 
-    // Element-first readiness: the host copy rendering IS the wait.
-    await expect(editMentorPage.skills.description).toBeVisible({
-      timeout: 10_000,
-    });
-    await expect(editMentorPage.skills.infoBox).toContainText(
-      /Agent Skills are reusable playbooks/i,
-    );
-    await expect(editMentorPage.skills.infoBox).toContainText(
-      /type \/ to see this agent's skills/i,
-    );
+    // Element-first readiness: the tab heading rendering IS the wait. Only
+    // behaviour-shaped copy is pinned (heading + the "type /" hint) — the
+    // exact wording differs between the OS host and the SDK tab wrapper.
+    await expect(
+      dialog.getByRole('heading', { name: 'Skills', exact: true }),
+    ).toBeVisible({ timeout: 10_000 });
+    await expect(dialog.getByText(/type \//i).first()).toBeVisible();
     // The SDK skills section (Agent Skills / Available Skills sub-tabs)
     // mounted below the host copy.
     await verifySkillsTabVisible(page);
 
     // Ordering (moved here from journey 44 — the sandbox journey carries no
     // skills assertions): Skills sits right after Prompts in the
-    // Configurations category. The description assert above proves the
+    // Setup category. The description assert above proves the
     // segment list rendered, so this non-retrying label read can't run
     // against an empty list.
-    const configTabs = await visibleSegmentTabLabels(dialog);
-    const promptsIdx = configTabs.findIndex((t) => /prompts/i.test(t));
-    const skillsIdx = configTabs.findIndex((t) => /skills/i.test(t));
+    const setupTabs = await visibleSegmentTabLabels(dialog);
+    const promptsIdx = setupTabs.findIndex((t) => /prompts/i.test(t));
+    const skillsIdx = setupTabs.findIndex((t) => /skills/i.test(t));
     expect(promptsIdx).toBeGreaterThanOrEqual(0);
     expect(skillsIdx).toBe(promptsIdx + 1);
 
@@ -402,7 +401,7 @@ test.describe('Journey 67: Agent Skills — Edit Mentor Skills tab gating', () =
     await editMentorPage.open('Settings');
 
     // Capture the dialog once, then resolve everything from it. Prove the
-    // Configurations segment list actually rendered (Prompts is
+    // Setup segment list actually rendered (Prompts is
     // unconditionally present) BEFORE asserting absence — otherwise a
     // "no Skills tab" check could pass vacuously against a list that
     // simply hadn't mounted yet.
@@ -443,10 +442,8 @@ test.describe('Journey 67: Agent Skills — Edit Mentor Skills tab gating', () =
     await editMentorPage.open('Settings');
     await editMentorPage.navigateToTab('Skills');
 
-    // The host copy rendering is the readiness signal.
-    await expect(editMentorPage.skills.description).toBeVisible({
-      timeout: 10_000,
-    });
+    // The SDK section mounting is the readiness signal.
+    await verifySkillsTabVisible(page);
 
     await editMentorPage.close();
   });
@@ -687,6 +684,108 @@ test.describe('Journey 67: Agent Skills — skills section management', () => {
       await expect(row).toBeHidden({ timeout: 10_000 });
     } finally {
       // Best-effort final cleanup — if the flow broke before the delete.
+      if (created) {
+        try {
+          await locateAvailableSkillRow(page, skillName);
+          await deleteSkill(page, skillName);
+        } catch {
+          // Best-effort
+        }
+      }
+      await editMentorPage.close();
+    }
+  });
+  // ── ags-08: Fresh agent — empty state, and the full-admin affordances ────
+
+  test('fresh agent shows the empty Agent Skills state, and the admin can reach the catalog sub-tab with New Skill', async ({
+    page,
+    editMentorPage,
+  }) => {
+    try {
+      const section = page.getByTestId('agent-skills-content');
+      // Default sub-tab is Agent Skills; a new mentor has no assignments.
+      await expect(
+        page.getByText(/No skills enabled for this agent yet/i),
+      ).toBeVisible({ timeout: 10_000 });
+      await expect(section.getByTestId('agent-skill-row')).toHaveCount(0);
+
+      // Full grants: the Available Skills sub-tab exists and offers New Skill.
+      await switchToAvailableSkillsSubTab(page);
+      await expect(
+        editMentorPage.dialog.getByRole('button', { name: /New Skill/i }),
+      ).toBeVisible({ timeout: 10_000 });
+
+      // Back to Agent Skills: still the empty state (nothing was attached).
+      await switchToAgentSkillsSubTab(page);
+      await expect(
+        page.getByText(/No skills enabled for this agent yet/i),
+      ).toBeVisible({ timeout: 10_000 });
+    } finally {
+      await editMentorPage.close();
+    }
+  });
+
+  // ── ags-09: Attach + disable persists across closing/reopening the modal ──
+
+  test('an attached, disabled skill is still listed and still disabled after closing and reopening the modal', async ({
+    page,
+    editMentorPage,
+  }) => {
+    const ts = Date.now();
+    const skillName = `e2e-persist-skill-${ts}`;
+    const section = page.getByTestId('agent-skills-content');
+    const agentRow = section
+      .getByTestId('agent-skill-row')
+      .filter({ hasText: skillName });
+
+    let created = false;
+    let attached = false;
+
+    try {
+      await createSkill(page, {
+        name: skillName,
+        slug: `e2e_persist_skill_${ts}`,
+        description: `E2E persistence fixture created at ${ts}`,
+        version: '1.0.0',
+        instruction: `Instruction for ${skillName}`,
+      });
+      created = true;
+
+      await locateAvailableSkillRow(page, skillName);
+      await addSkillToAgent(page, skillName);
+      attached = true;
+
+      await switchToAgentSkillsSubTab(page);
+      await verifySkillVisible(page, skillName);
+      await disableSkill(page, skillName);
+      await expect(agentRow.getByRole('switch')).toHaveAttribute(
+        'aria-checked',
+        'false',
+        { timeout: 10_000 },
+      );
+
+      // Close and reopen: state must come from the server, not local state.
+      await editMentorPage.close();
+      await editMentorPage.open('Settings');
+      await editMentorPage.navigateToTab('Skills');
+      await verifySkillsTabVisible(page);
+      await switchToAgentSkillsSubTab(page);
+
+      await expect(agentRow).toBeVisible({ timeout: 15_000 });
+      await expect(agentRow.getByRole('switch')).toHaveAttribute(
+        'aria-checked',
+        'false',
+        { timeout: 10_000 },
+      );
+    } finally {
+      if (attached) {
+        try {
+          await switchToAgentSkillsSubTab(page);
+          await removeSkillFromAgent(page, skillName);
+        } catch {
+          // Best-effort
+        }
+      }
       if (created) {
         try {
           await locateAvailableSkillRow(page, skillName);
@@ -1365,6 +1464,47 @@ test.describe('Journey 67: Agent Skills — chat composer slash skill picker', (
       chatPage.skillsMenuTrigger.getByTestId('composer-count-badge'),
     ).toHaveCount(0);
   });
+
+  // ── slash-17: Skills collapses into ••• on a phone-width composer ───────
+  //
+  // Like every tool pill, Skills moves into the ••• menu when the composer
+  // row has no room for it; there its entry expands the same list in place
+  // (a side submenu has no room on a phone), inside the viewport.
+  //
+  // FIXME: no route renders a Skills button that could collapse. The mentor
+  // route renders the SDK's composer (`SdkChat`), where Skills sits inside the
+  // "+" menu at every width, and the workflow preview renders the OS composer
+  // in `compactMode`, which drops the tool row (`inside-buttons.tsx`) and its
+  // Skills. Re-enable once a route renders that tool row.
+
+  test.fixme(
+    'Skills moves into the ••• menu on a phone-width composer and still arms a skill',
+    async ({ page, chatPage }) => {
+      await page.setViewportSize({ width: 360, height: 740 });
+      await chatPage.mockEffectiveSkills(SLASH_SKILLS);
+      await navigateToMentorApp(page);
+
+      const composer = chatPage.getComposerTextarea();
+      await expect(composer).toBeVisible({ timeout: 15_000 });
+      await expect(chatPage.skillsMenuTrigger).toHaveCount(0);
+
+      await page.getByRole('button', { name: 'More options' }).click();
+      const skillsEntry = page.getByTestId('skills-menu-overflow');
+      await skillsEntry.click();
+      await expect(skillsEntry).toHaveAttribute('aria-expanded', 'true');
+      const webItem = page
+        .getByTestId('skills-menu-overflow-list')
+        .getByTestId('skills-menu-item-web-research');
+      await expect(webItem).toBeVisible();
+      const box = await webItem.boundingBox();
+      expect(box!.x).toBeGreaterThanOrEqual(0);
+      expect(box!.x + box!.width).toBeLessThanOrEqual(360);
+      await webItem.click();
+
+      await expect(composer).toHaveValue('/web-research ');
+      await expect(chatPage.skillTokenHighlights).toHaveCount(1);
+    },
+  );
 
   // ── slash-15: NON-ADMIN uses the picker and gets an AI reply ─────────────
   //

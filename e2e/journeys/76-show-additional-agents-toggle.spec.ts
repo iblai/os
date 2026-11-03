@@ -278,6 +278,71 @@ test.describe.serial('Journey 76: Show Additional Agents Toggle', () => {
     expect(third!.y).toBeGreaterThan(first!.y);
   });
 
+  test('sem-08: the "Explore Agents" button scrolls down and back up, and its chevron follows both clicks and manual scrolling', async ({
+    page,
+  }) => {
+    test.skip(!mentorUrl, 'sem-01 setup did not run (skipped or failed)');
+    // Relies on sem-04 having left the toggle ON on this shared mentor.
+    await navigateToMentorApp(page, mentorUrl);
+    await waitForPageReady(page);
+
+    const section = page.locator('#explore-agents');
+    await expect(section).toBeAttached({ timeout: 30_000 });
+    const button = page.getByRole('button', { name: /^explore agents$/i });
+    const chevronUp = button.locator('svg.lucide-chevron-up');
+    const chevronDown = button.locator('svg.lucide-chevron-down');
+    const scroller = page
+      .getByTestId('chat-empty-state')
+      .locator('xpath=ancestor::*[contains(@class,"overflow-y-auto")][1]');
+    const scrollTop = () => scroller.evaluate((el) => el.scrollTop);
+
+    await expect(button).toBeInViewport();
+    await expect(chevronDown).toBeVisible();
+    await expect(chevronUp).toHaveCount(0);
+    expect(await scrollTop()).toBe(0);
+
+    await button.click();
+    await expect.poll(scrollTop, { timeout: 10_000 }).toBeGreaterThan(0);
+    await expect(section).toBeInViewport({ timeout: 10_000 });
+    await expect(chevronUp).toBeVisible();
+    await expect(chevronDown).toHaveCount(0);
+    await expect(button).toHaveText(/explore agents/i);
+
+    await button.click();
+    await expect.poll(scrollTop, { timeout: 10_000 }).toBe(0);
+    await expect(chevronDown).toBeVisible();
+    await expect(chevronUp).toHaveCount(0);
+
+    // Manual scroll flips the chevron without clicking the button.
+    // hover() on the tall empty state would scroll it into view first, so
+    // park the pointer at the viewport centre instead.
+    const viewport = page.viewportSize()!;
+    await page.mouse.move(viewport.width / 2, viewport.height / 2);
+    await page.mouse.wheel(0, 100000);
+    await expect(section).toBeInViewport({ timeout: 10_000 });
+    await expect(chevronUp).toBeVisible({ timeout: 10_000 });
+
+    await page.mouse.wheel(0, -100000);
+    await expect.poll(scrollTop, { timeout: 10_000 }).toBe(0);
+    await expect(chevronDown).toBeVisible({ timeout: 10_000 });
+  });
+
+  test('sem-09: at phone width the "Explore Agents" button is not shown', async ({
+    page,
+  }) => {
+    test.skip(!mentorUrl, 'sem-01 setup did not run (skipped or failed)');
+    await page.setViewportSize({ width: 390, height: 844 });
+    await navigateToMentorApp(page, mentorUrl);
+    await waitForPageReady(page);
+
+    await expect(page.locator('#explore-agents')).toBeAttached({
+      timeout: 30_000,
+    });
+    await expect(
+      page.getByRole('button', { name: /^explore agents$/i }),
+    ).toHaveCount(0);
+  });
+
   test('sem-05: with the toggle ON, a non-admin, non-owner viewer of the same agent also sees the Explore Agents section (RBAC redaction regression)', async ({
     nonadminPage,
   }) => {

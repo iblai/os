@@ -57,3 +57,66 @@ test.describe('Journey 88: Create Agent category wheel scroll', () => {
     await expect(createMentorPage.categoryCombobox).toContainText(name);
   });
 });
+
+/**
+ * Create Agent prompt popup Save (issue #2758): the System / Proactive /
+ * Guided prompt popup got a front-end-only Save button. Text is kept per
+ * keystroke, so Save only closes the popup; nothing is sent to the backend and
+ * no agent is created (the form is abandoned at the end of each test).
+ */
+
+test.describe('Journey 88: Create Agent prompt popup Save', () => {
+  test.beforeEach(async ({ page, createMentorPage }) => {
+    await navigateToMentorApp(page);
+    await waitForPageReady(page);
+    await createMentorPage.open();
+    await createMentorPage.goToPromptsTab(`E2E Prompt Save ${Date.now()}`);
+  });
+
+  test('admin edits the System Prompt in Create Agent, clicks Save and the popup closes with the text in the form and no request sent', async ({
+    page,
+    createMentorPage,
+  }) => {
+    const text = `System text ${Date.now()}`;
+    const popup = await createMentorPage.openPromptPopupAndType('system', text);
+    const save = popup.getByRole('button', { name: 'Save', exact: true });
+    await expect(save).toBeVisible();
+
+    const requests: string[] = [];
+    const onRequest = (r: import('@playwright/test').Request) => {
+      if (r.method() !== 'GET') requests.push(`${r.method()} ${r.url()}`);
+    };
+    page.on('request', onRequest);
+    await save.click();
+    await expect(popup).toBeHidden({ timeout: 10_000 });
+    await page.waitForTimeout(500);
+    page.off('request', onRequest);
+
+    expect(requests).toEqual([]);
+    await expect(createMentorPage.promptContent('system')).toHaveText(text);
+    await expect(createMentorPage.dialog).toBeVisible();
+  });
+
+  for (const kind of ['proactive', 'guided'] as const) {
+    test(`admin edits the ${kind} prompt in Create Agent and Save closes the popup keeping the text`, async ({
+      createMentorPage,
+    }) => {
+      const text = `${kind} text ${Date.now()}`;
+      const popup = await createMentorPage.openPromptPopupAndType(kind, text);
+      await popup.getByRole('button', { name: 'Save', exact: true }).click();
+      await expect(popup).toBeHidden({ timeout: 10_000 });
+      await expect(createMentorPage.promptContent(kind)).toHaveText(text);
+    });
+  }
+
+  test('admin presses Escape in the System Prompt popup and the typed text is still kept', async ({
+    page,
+    createMentorPage,
+  }) => {
+    const text = `Escape text ${Date.now()}`;
+    const popup = await createMentorPage.openPromptPopupAndType('system', text);
+    await page.keyboard.press('Escape');
+    await expect(popup).toBeHidden({ timeout: 10_000 });
+    await expect(createMentorPage.promptContent('system')).toHaveText(text);
+  });
+});

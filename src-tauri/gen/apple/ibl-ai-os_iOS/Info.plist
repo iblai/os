@@ -19,13 +19,13 @@
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
-			<key>CFBundleURLName</key>
-			<string>iblai-mentor</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>iblai-mentor</string>
 				<string>ai.ibl.mentorai</string>
 			</array>
+			<key>CFBundleURLName</key>
+			<string>iblai-mentor</string>
 		</dict>
 	</array>
 	<key>CFBundleVersion</key>

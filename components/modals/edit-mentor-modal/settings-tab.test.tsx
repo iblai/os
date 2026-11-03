@@ -177,6 +177,17 @@ describe('SettingsTab', () => {
       );
     });
 
+    it('keeps the constant label for a visibility option without a translation', () => {
+      const extra = { label: 'Department', value: 'viewable_by_department' };
+      (MENTOR_VISIBILITY as { label: string; value: string }[]).push(extra);
+      try {
+        render(<SettingsTab />);
+        expect(providerValue().visibilityOptions).toContainEqual(extra);
+      } finally {
+        MENTOR_VISIBILITY.pop();
+      }
+    });
+
     it('forwards the config-derived enableRBAC flag', () => {
       mockEnableRBAC.mockReturnValue(true);
       render(<SettingsTab />);
@@ -267,6 +278,15 @@ describe('SettingsTab', () => {
         students: 'usersOption',
         anyone: 'anyoneOption',
       });
+      expect(labels.fields.whoCanView.adminOnlyNote).toBe(
+        'whoCanViewAdminOnlyNote',
+      );
+      expect(labels.adminVisibilityConfirm).toEqual({
+        title: 'title',
+        description: 'description',
+        cancel: 'cancel',
+        confirm: 'confirm',
+      });
       expect(labels.fields.showReasoning).toEqual({
         label: 'enableVerboseReasoningLabel',
         tooltip: 'enableVerboseReasoningTooltip',
@@ -285,6 +305,7 @@ describe('SettingsTab', () => {
         advanced: 'advancedHeading',
         perSurface: 'perSurfaceHeading',
         globalSettings: 'globalSettingsHeading',
+        contextLimits: 'contextLimitsHeading',
       });
       // #2476: the Capabilities sub-tab renders a two-column surface matrix,
       // so the wrapper must supply the column headings and the embed-column
@@ -316,9 +337,10 @@ describe('SettingsTab', () => {
       expect(labels.fields.enhancedDocRetrieval.label).toBe(
         'enhancedDocRetrievalLabel',
       );
-      expect(labels.fields.inChatModelChange).toEqual({
-        label: 'inChatModelChangeLabel',
-        tooltip: 'inChatModelChangeTooltip',
+      expect(labels.fields).not.toHaveProperty('inChatModelChange');
+      expect(labels.fields.showLastConversation).toEqual({
+        label: 'showLastConversationLabel',
+        tooltip: 'showLastConversationTooltip',
       });
       expect(labels.fields.promptCaching.label).toBe(
         'enablePromptCachingLabel',
@@ -326,6 +348,23 @@ describe('SettingsTab', () => {
       expect(labels.fields.smartDocRetrieval.label).toBe(
         'smartDocRetrievalLabel',
       );
+      expect(labels.fields.chatHistoryMessages).toEqual({
+        label: 'chatHistoryMessagesLabel',
+        tooltip: 'chatHistoryMessagesTooltip',
+        placeholder: 'chatHistoryMessagesPlaceholder',
+        minValueError: 'contextLimitMinValueError',
+      });
+      expect(labels.fields.chatHistoryTokens.label).toBe(
+        'chatHistoryTokensLabel',
+      );
+      expect(labels.fields.documentChunks.label).toBe('documentChunksLabel');
+      expect(labels.allowedFileTypes).toMatchObject({
+        heading: 'heading',
+        title: 'title',
+        openButton: 'openButton',
+        removeAriaLabel: 'removeAriaLabel',
+        done: 'done',
+      });
       expect(labels.toasts.voiceCallError).toBe('voiceCallSettingsError');
     });
   });
@@ -361,6 +400,55 @@ describe('SettingsTab', () => {
       expect(catalogs.en.tabsSettingsTab.enableVerboseReasoningLabel).toBe(
         'Enable Verbose Reasoning',
       );
+    });
+
+    it('translates the Context Limits copy in every locale', async () => {
+      const keys = [
+        'contextLimitsHeading',
+        'contextLimitMinValueError',
+        ...[
+          'chatHistoryMessages',
+          'chatHistoryTokens',
+          'documentChunks',
+        ].flatMap((field) => [
+          `${field}Label`,
+          `${field}Tooltip`,
+          `${field}Placeholder`,
+        ]),
+      ];
+
+      for (const locale of ['en', 'es', 'fr', 'zh']) {
+        const messages = (await import(`../../../messages/${locale}.json`))
+          .default as { tabsSettingsTab: Record<string, string> };
+        for (const key of keys) {
+          expect(
+            messages.tabsSettingsTab[key],
+            `${locale}.${key}`,
+          ).toBeTruthy();
+        }
+      }
+    });
+  });
+
+  describe('Allowed File Types catalogs', () => {
+    it('has every label in every locale, with the SDK placeholders kept', async () => {
+      const en = (await import('../../../messages/en.json')).default
+        .tabsSettingsTab.allowedFileTypes as Record<string, string>;
+
+      for (const locale of ['en', 'es', 'fr', 'zh']) {
+        const messages = (await import(`../../../messages/${locale}.json`))
+          .default as {
+          tabsSettingsTab: { allowedFileTypes: Record<string, string> };
+        };
+        const copy = messages.tabsSettingsTab.allowedFileTypes;
+        for (const key of Object.keys(en)) {
+          expect(copy[key], `${locale}.${key}`).toBeTruthy();
+        }
+        expect(copy.countMany, locale).toContain('{count}');
+        for (const key of ['removeAriaLabel', 'duplicateError']) {
+          expect(copy[key], `${locale}.${key}`).toContain('{ext}');
+        }
+      }
     });
   });
 

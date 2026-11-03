@@ -5,6 +5,7 @@ import { useUsername } from '@/hooks/use-user';
 import { getUserEmail } from '@/features/utils';
 import { config, getEnv } from '@/lib/config';
 import { isTauriApp } from '@/types/tauri';
+import { getAuthItem } from '@/lib/auth-storage';
 
 /**
  * Keep the Rust model proxy told who is signed in. The proxy appends
@@ -50,8 +51,8 @@ export function useOpencodeLearner() {
           username &&
           localStorage.getItem('ibl_coding_mode_enabled') === 'true'
         ) {
-          const tenant = localStorage.getItem('tenant');
-          const token = localStorage.getItem('dm_token');
+          const tenant = getAuthItem('tenant');
+          const token = getAuthItem('dm_token');
           if (tenant && token) {
             await invoke('ensure_opencode_platform_key', { tenant, token });
           }

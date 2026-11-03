@@ -85,17 +85,33 @@ jobs:
     if: github.event_name == 'workflow_run'
     runs-on: ubuntu-latest
     steps:
+      # iblai/pr-e2e-action keeps the sentence its PR comment leads with ("Not your code: …",
+      # "12 tests failed …") as this artifact, so the merge box says what happened, linked to the
+      # comment. Absent for runs that never reached e2e and for older action versions.
+      - name: Fetch the e2e headline
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: pr-e2e-headline
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/e2e-headline
+
       - name: Update validation status from E2E result
         uses: actions/github-script@v7
         with:
           script: |
+            const fs = require('fs');
             const run = context.payload.workflow_run;
             const sha = run.head_sha;
             const { owner, repo } = context.repo;
 
-            const setStatus = (state, description) =>
+            // The merge box shows about 60 characters of the description; the API takes 140.
+            const setStatus = (state, description, target_url) =>
               github.rest.repos.createCommitStatus({
-                owner, repo, sha, state, context: 'PR Validation', description,
+                owner, repo, sha, state, context: 'PR Validation',
+                description: description.length > 140 ? description.slice(0, 139) + '…' : description,
+                ...(target_url ? { target_url } : {}),
               });
 
             // Release branches are auto-passed by the pull_request job above; don't undo that.
@@ -143,17 +159,33 @@ jobs:
               return;
             }
 
-            // Gate ran but E2E did not => an earlier job (build) failed. Report that honestly
+            // Gate ran but E2E did not => an earlier job (build) failed. Name it and link it,
             // rather than blaming a missing label.
             if (!e2e || e2e.conclusion === 'skipped') {
-              await setStatus('failure', 'PR E2E Tests did not run — an earlier job failed');
+              const failed = jobList.jobs.find(j => j.conclusion === 'failure' && j.name !== 'gate');
+              await setStatus('failure',
+                failed ? `Not tested: the ${failed.name} job failed` : 'PR E2E Tests did not run — an earlier job failed',
+                failed ? failed.html_url : run.html_url);
               core.info('E2E skipped despite gate passing — upstream job failure');
               return;
             }
 
+            // The state comes from the E2E job; the artifact only words it. Read it as data:
+            // its links must point at this repo's PR comments or the public report.
+            let head = {};
+            try {
+              head = JSON.parse(fs.readFileSync(`${process.env.RUNNER_TEMP}/e2e-headline/pr-e2e-headline.json`, 'utf8'));
+            } catch (e) {
+              core.info('no pr-e2e-headline artifact — using the generic description');
+            }
+            const ours = new RegExp(`^https://github\\.com/${owner}/${repo}/(pull|issues)/\\d+#issuecomment-\\d+$`);
+            const link = [head.comment_url, head.report_url].find(u => typeof u === 'string'
+              && (ours.test(u) || /^https:\/\/tests\.iblai\.app\/[\w\-./]+$/.test(u))) || e2e.html_url;
+            const said = typeof head.headline === 'string' ? head.headline.replace(/\s+/g, ' ').trim() : '';
             const passed = e2e.conclusion === 'success';
             await setStatus(
               passed ? 'success' : 'failure',
-              passed ? 'PR E2E Tests passed' : `PR E2E Tests ${e2e.conclusion}`,
+              said || (passed ? 'PR E2E Tests passed' : `PR E2E Tests ${e2e.conclusion}`),
+              link,
             );
             core.info(`E2E job ${e2e.conclusion} — PR Validation ${passed ? 'success' : 'failure'}`);

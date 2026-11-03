@@ -118,13 +118,7 @@ async function provisionMentor(
   await waitForPageReady(page);
   await editMentorPage.settings.setVisibility(opts.whoCanView);
   await editMentorPage.settings.setChatAccess(opts.whoCanChat);
-  await expect(editMentorPage.settings.saveButton).toBeEnabled({
-    timeout: 5_000,
-  });
-  await editMentorPage.settings.saveButton.click();
-  await expect(
-    page.getByText(/agent updated successfully/i).first(),
-  ).toBeVisible({ timeout: 30_000 });
+  await editMentorPage.settings.saveConfirmingAdminVisibility();
 
   // Shareable-link minting is unaffected by #2476 — still lives on Embed.
   await editMentorPage.navigateToTab('Embed');

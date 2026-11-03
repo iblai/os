@@ -66,6 +66,8 @@ vi.mock('../user-profile', () => ({
 
 vi.mock('@/hooks/use-user', () => ({
   useUsername: () => mockUsername,
+  useUserTenants: () => ({ userTenants: [] }),
+  useCurrentTenant: () => ({ currentTenant: null }),
 }));
 
 vi.mock('@/lib/utils', () => ({
@@ -80,6 +82,12 @@ vi.mock('@/lib/config', () => ({
     documentationUrl: () => 'https://docs.example.com',
     iblTemplateMentor: () => 'ai-mentor',
   },
+}));
+
+// The nav bar now reads tenant metadata from the tenants list via useHelpCenter
+// (useTenantObjectMetadata); route it to the same fixture.
+vi.mock('@/hooks/use-tenant-object-metadata', () => ({
+  useTenantObjectMetadata: () => mockMetadata,
 }));
 
 vi.mock('@iblai/iblai-js/web-utils', () => ({
@@ -367,6 +375,47 @@ describe('EmbedNavBar', () => {
       mockShowUserProfile = true;
       renderEmbedNavBar();
       expect(screen.getByTestId('embed-user-profile')).toBeInTheDocument();
+    });
+
+    function actionButtons() {
+      return Array.from(
+        screen.getByLabelText('New chat').parentElement!.children,
+      );
+    }
+
+    it('sits after New chat, Help and Full screen, right before Close', () => {
+      mockShowUserProfile = true;
+      mockAllowFullscreen = true;
+      renderEmbedNavBar();
+      expect(actionButtons()).toEqual([
+        screen.getByLabelText('New chat'),
+        screen.getByLabelText('Open menu options'),
+        screen.getByTestId('embed-fullscreen-toggle'),
+        screen.getByTestId('embed-user-profile'),
+        screen.getByLabelText('Close chat'),
+      ]);
+    });
+
+    it('is the right-most item when Close is hidden', () => {
+      mockShowUserProfile = true;
+      mockShowCloseButton = false;
+      renderEmbedNavBar();
+      expect(actionButtons()).toEqual([
+        screen.getByLabelText('New chat'),
+        screen.getByLabelText('Open menu options'),
+        screen.getByTestId('embed-user-profile'),
+      ]);
+    });
+
+    it('leaves the other buttons unchanged when off', () => {
+      mockAllowFullscreen = true;
+      renderEmbedNavBar();
+      expect(actionButtons()).toEqual([
+        screen.getByLabelText('New chat'),
+        screen.getByLabelText('Open menu options'),
+        screen.getByTestId('embed-fullscreen-toggle'),
+        screen.getByLabelText('Close chat'),
+      ]);
     });
   });
 

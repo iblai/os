@@ -544,6 +544,12 @@ export class SidebarPage {
     );
   }
 
+  /** Opens the row's "Chat actions" menu and clicks Export, which opens the shared "Export Chat" dialog. */
+  async clickExportBySession(sessionId: string): Promise<void> {
+    const menu = await this.openChatActionsMenuBySession(sessionId);
+    await menu.getByRole('menuitem', { name: /^Export$/ }).click();
+  }
+
   private async openMenuForRow(
     container: import('@playwright/test').Locator,
     selectButton: import('@playwright/test').Locator,

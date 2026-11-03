@@ -165,6 +165,99 @@ async function pollHealedSessionId(
   return cache[key];
 }
 
+const START_CHAT_FALLBACK = "We couldn't start a new chat. Please try again.";
+
+/**
+ * Fails every `POST .../sessions/` with `status`/`body` and records the error toast. A non-402 start-chat failure makes
+ * the SDK toast and then call `redirectToAuthSpa(undefined, undefined, true)`
+ * (logout); holding that navigation keeps the page and the toast alive, so
+ * the shared e2e account is never logged out.
+ */
+async function mockStartChatFailure(
+  page: Page,
+  status: number,
+  body: Record<string, unknown>,
+): Promise<void> {
+  await page.route(
+    (url) => /\/sessions\/$/.test(url.pathname),
+    async (route) => {
+      if (route.request().method() !== 'POST') return route.fallback();
+      await route.fulfill({
+        status,
+        contentType: 'application/json',
+        body: JSON.stringify(body),
+      });
+    },
+  );
+  // The logout that follows the toast resets app state and can remove the
+  // toast within milliseconds, so record toast text the moment it is added.
+  await page.evaluate(() => {
+    const seen: string[] = [];
+    (window as unknown as { __toastTexts: string[] }).__toastTexts = seen;
+    const record = (mutations: MutationRecord[]) => {
+      for (const mutation of mutations) {
+        mutation.addedNodes.forEach((node) => {
+          const text = node.textContent ?? '';
+          if (/Sorry about that!/i.test(text) && !seen.includes(text)) {
+            seen.push(text);
+          }
+        });
+        const text = mutation.target.textContent ?? '';
+        if (/Sorry about that!/i.test(text) && !seen.includes(text)) {
+          seen.push(text);
+        }
+      }
+    };
+    new MutationObserver(record).observe(document.body, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+    });
+  });
+  const appOrigin = new URL(page.url()).origin;
+  await page.route('**/*', (route) => {
+    const request = route.request();
+    const target = new URL(request.url());
+    const logsOut =
+      request.isNavigationRequest() &&
+      request.frame() === page.mainFrame() &&
+      (target.origin !== appOrigin ||
+        target.pathname.endsWith('/auth-redirect'));
+    // Left pending on purpose: aborting commits Chrome's error page, which
+    // would replace the document and destroy the toast.
+    if (!logsOut) return route.fallback();
+  });
+}
+
+/** Asserts the error toast shows `expected` verbatim and no raw error leakage. */
+async function expectCleanStartChatToast(
+  page: Page,
+  expected: string,
+): Promise<void> {
+  let text = '';
+  await expect
+    .poll(
+      async () => {
+        const texts = await page.evaluate(
+          () =>
+            (window as unknown as { __toastTexts?: string[] }).__toastTexts ??
+            [],
+        );
+        text = (texts.find((t) => /Sorry about that!/i.test(t)) ?? '')
+          .replace(/\s+/g, ' ')
+          .trim();
+        return text;
+      },
+      { timeout: 20_000, message: 'expected the start-chat error toast' },
+    )
+    .not.toBe('');
+  expect(text).toContain(expected);
+  expect(text).not.toContain('{');
+  expect(text).not.toContain('status');
+  expect(text).not.toContain('[object Object]');
+  expect(text).not.toContain('Failed to start new chat');
+}
+
 test.describe('Journey 85: Stale Session Id Self-Heal', () => {
   test('sess-01: a stale localStorage session id is retried 1 + 3 times, then self-heals, and chat remains usable', async ({
     page,
@@ -418,5 +511,38 @@ test.describe('Journey 85: Stale Session Id Self-Heal', () => {
     for (const t of sessionGetRequests) {
       expect(t).toBeLessThanOrEqual(firstCreateAt);
     }
+  });
+
+  test("sess-05: a 403 on starting a new chat toasts the backend's own sentence, not the raw error object (iblai-platform#2712)", async ({
+    page,
+    chatPage,
+  }) => {
+    await navigateToMentorApp(page);
+    await waitForPageReady(page);
+    await expect(chatPage.getComposerTextarea()).toBeEditable({
+      timeout: 30_000,
+    });
+    const message = 'You do not have permission to chat with this agent.';
+    await mockStartChatFailure(page, 403, { error: message });
+
+    await chatPage.startNewChat();
+
+    await expectCleanStartChatToast(page, message);
+  });
+
+  test('sess-06: a failed start-chat with no readable message toasts the plain fallback sentence (iblai-platform#2712)', async ({
+    page,
+    chatPage,
+  }) => {
+    await navigateToMentorApp(page);
+    await waitForPageReady(page);
+    await expect(chatPage.getComposerTextarea()).toBeEditable({
+      timeout: 30_000,
+    });
+    await mockStartChatFailure(page, 400, {});
+
+    await chatPage.startNewChat();
+
+    await expectCleanStartChatToast(page, START_CHAT_FALLBACK);
   });
 });

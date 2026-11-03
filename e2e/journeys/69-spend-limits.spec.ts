@@ -49,8 +49,8 @@ import {
  *      (`components/modals/edit-mentor-modal/tabs/spend-caps-tab.tsx`,
  *      admin-only — `userTypes: [UserType.ADMIN]` in
  *      `hooks/use-mentor-segments.ts`, always mounted, no `CapabilityGate`
- *      master toggle). Lives in the **Configurations** sidebar category,
- *      immediately after **LLM**. Exactly two sub-tabs — "This Agent" and
+ *      master toggle). Lives in the **Policies** sidebar category,
+ *      immediately after **Access**. Exactly two sub-tabs — "This Agent" and
  *      "Per User" — the per-user flow is an "Add User Limit" MODAL with an
  *      email-based user picker.
  *
@@ -310,17 +310,17 @@ test.describe('Journey 69: Spend Limits — Agent settings (Billing tab)', () =>
 
   // ── sc-01: tab position + default sub-tab ─────────────────────────────────
 
-  test('admin sees the Billing tab in the Configurations category immediately after LLM, and it opens on "This Agent" with "Per User" also available', async ({
+  test('admin sees the Billing tab in the Policies category immediately after Access, and it opens on "This Agent" with "Per User" also available', async ({
     page,
     editMentorPage,
   }) => {
     const labels = (await visibleSegmentTabLabels(editMentorPage.dialog)).map(
       (l) => l.trim(),
     );
-    const llmIndex = labels.indexOf('LLM');
+    const accessIndex = labels.indexOf('Access');
     const billingIndex = labels.indexOf('Billing');
-    expect(llmIndex).toBeGreaterThanOrEqual(0);
-    expect(billingIndex).toBe(llmIndex + 1);
+    expect(accessIndex).toBeGreaterThanOrEqual(0);
+    expect(billingIndex).toBe(accessIndex + 1);
 
     expect(await isSpendLimitsTabVisible(page)).toBe(true);
 
@@ -609,12 +609,13 @@ test.describe('Journey 69: Spend Limits — Agent settings (Billing tab)', () =>
     }
 
     // If (in some env) the non-admin can open the dialog, assert the
-    // Billing tab trigger is absent from the Configurations category.
+    // Billing tab trigger is absent from the Policies category. The modal
+    // opens on Setup, so switch to Policies first when its pill is shown.
     await modifyItem.click();
     await expect(nonadminEditMentorPage.dialog).toBeVisible({
       timeout: 15_000,
     });
-    await nonadminEditMentorPage.waitForHydrated();
+    await nonadminEditMentorPage.activateCategoryOf('Billing');
     await expect(
       nonadminEditMentorPage.dialog
         .getByRole('tab', { name: 'Billing', exact: true })

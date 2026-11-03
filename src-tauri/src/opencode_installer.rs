@@ -17,7 +17,7 @@ use crate::opencode_acp::{iblai_data_dir, opencode_bin, opencode_program};
 
 /// Pinned opencode version → GitHub release tag `v<VERSION>`. Bump ONLY after
 /// testing ACP + config against it. Override at runtime with `IBL_OPENCODE_VERSION`.
-const OPENCODE_VERSION: &str = "1.18.13";
+const OPENCODE_VERSION: &str = "1.19.0";
 
 /// The opencode version this run wants: the runtime override, or the pin.
 fn pinned_version() -> String {
@@ -518,15 +518,23 @@ pub async fn ensure_vibe_skills(app: AppHandle) -> Result<serde_json::Value, Str
 /// Write the ibl.ai opencode config into `config_home` if missing. Public so the ACP
 /// spawn path can materialise a session's own copy — the config ships embedded in the app
 /// (CONFIG_TEMPLATE), not as a loose file on the user's disk.
+///
+/// Through the link-safe config-home calls: the sandboxed agent can write this
+/// folder, so a link it left at `opencode/` or `opencode.json` must be
+/// replaced, never written through.
 pub fn ensure_opencode_config_at(config_home: &Path) -> Result<(), String> {
-    let path = config_home.join("opencode").join("opencode.json");
-    if path.exists() {
+    use crate::opencode_acp::{make_real_dirs, read_config_file, write_config_file};
+    make_real_dirs(config_home, Path::new("opencode"))
+        .map_err(|e| format!("config dir failed: {e}"))?;
+    let rel = Path::new("opencode").join("opencode.json");
+    if read_config_file(config_home, &rel)
+        .map_err(|e| format!("config read failed: {e}"))?
+        .is_some()
+    {
         return Ok(());
     }
-    if let Some(parent) = path.parent() {
-        std::fs::create_dir_all(parent).map_err(|e| format!("config dir failed: {e}"))?;
-    }
-    std::fs::write(&path, CONFIG_TEMPLATE).map_err(|e| format!("config write failed: {e}"))
+    write_config_file(config_home, &rel, CONFIG_TEMPLATE.as_bytes())
+        .map_err(|e| format!("config write failed: {e}"))
 }
 
 /// The canonical copy, kept only so `check_opencode_status` can answer "is Code set up at
@@ -1030,7 +1038,7 @@ mod tests {
 
         /// A proven-working OpenAI-compatible SSE completion (one "ok" chunk, a
         /// stop chunk, then [DONE]) — what @ai-sdk/openai-compatible inside
-        /// opencode v1.18.13 accepts. Close-delimited body (no content-length),
+        /// opencode v1.19.0 accepts. Close-delimited body (no content-length),
         /// so the stub shuts the socket after writing.
         const STUB_SSE: &str = "HTTP/1.1 200 OK\r\ncontent-type: text/event-stream\r\nconnection: close\r\n\r\n\
 data: {\"id\":\"c1\",\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"ok\"},\"finish_reason\":null}]}\n\n\
@@ -1140,7 +1148,7 @@ data: [DONE]\n\n";
 
         /// One real `opencode run` turn under a fully scratch HOME/XDG world.
         ///
-        /// `env_clear` plus upstream's own hermetic-harness recipe (v1.18.13),
+        /// `env_clear` plus upstream's own hermetic-harness recipe (v1.19.0),
         /// so the child can never read or write the developer's real
         /// config/state and never phones home (no update check, no models.dev
         /// fetch, no auth file). PATH passes through — opencode needs its

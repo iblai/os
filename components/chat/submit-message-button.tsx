@@ -45,7 +45,7 @@ export function SubmitMessageButton({
             size="icon"
             onMouseDown={(e) => e.preventDefault()}
             className={cn(
-              'h-9 w-9 rounded-lg bg-gradient-to-r from-[#2563EB] to-[#93C5FD] hover:opacity-90',
+              'h-9 w-9 rounded-lg bg-gradient-to-r from-[#2563EB] to-[#93C5FD] hover:opacity-90 max-[380px]:h-8 max-[380px]:w-8',
               CSS_CLASS_NAMES.CHAT.SUBMIT_MESSAGE_BUTTON,
               (isUploading || isConnecting) && 'cursor-not-allowed opacity-50',
             )}

@@ -21,7 +21,7 @@ use serde_json::{json, Value};
 use tauri::command;
 
 use crate::code_agent_installer::{agent_cli, display_name};
-use crate::opencode_acp::{iblai_data_dir, read_settings, write_settings, Backend};
+use crate::opencode_acp::{iblai_data_dir, read_settings, update_settings, Backend};
 
 /// `settings.json` key: `{ "codex": "<model id>", "claude": "<model id>" }`.
 /// An absent agent runs its own default.
@@ -38,22 +38,22 @@ pub(crate) fn saved(backend: Backend) -> Option<String> {
         .map(str::to_string)
 }
 
-fn save(backend: Backend, model: Option<&str>) -> Result<(), String> {
-    let mut settings = read_settings();
-    let mut map = settings
-        .get(SETTINGS_KEY)
-        .and_then(|v| v.as_object().cloned())
-        .unwrap_or_default();
-    match model {
-        Some(m) => {
-            map.insert(backend.id().to_string(), json!(m));
+pub(crate) fn save(backend: Backend, model: Option<&str>) -> Result<(), String> {
+    update_settings(|settings| {
+        let mut map = settings
+            .get(SETTINGS_KEY)
+            .and_then(|v| v.as_object().cloned())
+            .unwrap_or_default();
+        match model {
+            Some(m) => {
+                map.insert(backend.id().to_string(), json!(m));
+            }
+            None => {
+                map.remove(backend.id());
+            }
         }
-        None => {
-            map.remove(backend.id());
-        }
-    }
-    settings.insert(SETTINGS_KEY.to_string(), Value::Object(map));
-    write_settings(&settings)
+        settings.insert(SETTINGS_KEY.to_string(), Value::Object(map));
+    })
 }
 
 /// `<data>/acp/<agent>/config-options.json`: the agent's last reported

@@ -3,13 +3,20 @@ import { renderHook, waitFor } from '@testing-library/react';
 
 // Mock tenants api-slice
 const mockFetchUserTenants = vi.fn();
-const mockFetchTenantMetadata = vi.fn();
 vi.mock('@/features/tenants/api-slice', () => ({
   useLazyGetUserTenantsQuery: () => [mockFetchUserTenants],
-  useLazyGetTenantMetadataQuery: () => [mockFetchTenantMetadata],
 }));
 
 import { useTenantProvider } from '../use-tenant-redirect';
+
+// The tenant's metadata (spa_domains) now rides each tenant object in the
+// platforms list, so a redirect scenario is built by attaching it to tenant-1.
+function tenantsWithMetadata(metadata: unknown) {
+  return [
+    { key: 'tenant-1', is_admin: true, org: 'org-1', metadata },
+    { key: 'tenant-2', is_admin: false, org: 'org-2' },
+  ];
+}
 
 describe('useTenantProvider', () => {
   const mockOnAuthSuccess = vi.fn();
@@ -40,9 +47,6 @@ describe('useTenantProvider', () => {
       writable: true,
     });
     mockFetchUserTenants.mockResolvedValue({ data: mockTenants });
-    mockFetchTenantMetadata.mockResolvedValue({
-      data: { metadata: null },
-    });
   });
 
   describe('initial state', () => {
@@ -59,16 +63,6 @@ describe('useTenantProvider', () => {
 
       await waitFor(() => {
         expect(mockFetchUserTenants).toHaveBeenCalled();
-      });
-    });
-
-    it('should call fetchTenantMetadata after getting user tenants', async () => {
-      renderHook(() => useTenantProvider(defaultProps));
-
-      await waitFor(() => {
-        expect(mockFetchTenantMetadata).toHaveBeenCalledWith({
-          tenantKey: 'tenant-1',
-        });
       });
     });
 
@@ -103,17 +97,15 @@ describe('useTenantProvider', () => {
 
   describe('spa_domains redirect', () => {
     it('should redirect to spa_domains when active', async () => {
-      mockFetchTenantMetadata.mockResolvedValue({
-        data: {
-          metadata: {
-            spa_domains: {
-              mentor: {
-                active: true,
-                domain: 'https://mentor.example.com',
-              },
+      mockFetchUserTenants.mockResolvedValue({
+        data: tenantsWithMetadata({
+          spa_domains: {
+            mentor: {
+              active: true,
+              domain: 'https://mentor.example.com',
             },
           },
-        },
+        }),
       });
 
       renderHook(() => useTenantProvider(defaultProps));
@@ -124,17 +116,15 @@ describe('useTenantProvider', () => {
     });
 
     it('should call onAuthSuccess after spa_domains redirect', async () => {
-      mockFetchTenantMetadata.mockResolvedValue({
-        data: {
-          metadata: {
-            spa_domains: {
-              mentor: {
-                active: true,
-                domain: 'https://mentor.example.com',
-              },
+      mockFetchUserTenants.mockResolvedValue({
+        data: tenantsWithMetadata({
+          spa_domains: {
+            mentor: {
+              active: true,
+              domain: 'https://mentor.example.com',
             },
           },
-        },
+        }),
       });
 
       renderHook(() => useTenantProvider(defaultProps));
@@ -145,17 +135,15 @@ describe('useTenantProvider', () => {
     });
 
     it('should not save current tenant when redirecting via spa_domains', async () => {
-      mockFetchTenantMetadata.mockResolvedValue({
-        data: {
-          metadata: {
-            spa_domains: {
-              mentor: {
-                active: true,
-                domain: 'https://mentor.example.com',
-              },
+      mockFetchUserTenants.mockResolvedValue({
+        data: tenantsWithMetadata({
+          spa_domains: {
+            mentor: {
+              active: true,
+              domain: 'https://mentor.example.com',
             },
           },
-        },
+        }),
       });
 
       renderHook(() => useTenantProvider(defaultProps));
@@ -225,25 +213,6 @@ describe('useTenantProvider', () => {
       await waitFor(() => {
         expect(mockRedirectToAuthSpa).toHaveBeenCalled();
       });
-
-      consoleSpy.mockRestore();
-    });
-
-    it('should not call fetchTenantMetadata when tenant not found', async () => {
-      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-
-      renderHook(() =>
-        useTenantProvider({
-          ...defaultProps,
-          tenantKey: 'non-existent-tenant',
-        }),
-      );
-
-      await waitFor(() => {
-        expect(mockRedirectToAuthSpa).toHaveBeenCalled();
-      });
-
-      expect(mockFetchTenantMetadata).not.toHaveBeenCalled();
 
       consoleSpy.mockRestore();
     });
@@ -325,17 +294,15 @@ describe('useTenantProvider', () => {
 
   describe('optional callbacks', () => {
     it('should work without onAuthSuccess', async () => {
-      mockFetchTenantMetadata.mockResolvedValue({
-        data: {
-          metadata: {
-            spa_domains: {
-              mentor: {
-                active: true,
-                domain: 'https://mentor.example.com',
-              },
+      mockFetchUserTenants.mockResolvedValue({
+        data: tenantsWithMetadata({
+          spa_domains: {
+            mentor: {
+              active: true,
+              domain: 'https://mentor.example.com',
             },
           },
-        },
+        }),
       });
 
       const { result } = renderHook(() =>
@@ -375,17 +342,15 @@ describe('useTenantProvider', () => {
 
   describe('metadata edge cases', () => {
     it('should save current tenant when spa_domains is not active', async () => {
-      mockFetchTenantMetadata.mockResolvedValue({
-        data: {
-          metadata: {
-            spa_domains: {
-              mentor: {
-                active: false,
-                domain: 'https://mentor.example.com',
-              },
+      mockFetchUserTenants.mockResolvedValue({
+        data: tenantsWithMetadata({
+          spa_domains: {
+            mentor: {
+              active: false,
+              domain: 'https://mentor.example.com',
             },
           },
-        },
+        }),
       });
 
       renderHook(() => useTenantProvider(defaultProps));
@@ -400,12 +365,10 @@ describe('useTenantProvider', () => {
     });
 
     it('should save current tenant when mentor domain config is missing', async () => {
-      mockFetchTenantMetadata.mockResolvedValue({
-        data: {
-          metadata: {
-            spa_domains: {},
-          },
-        },
+      mockFetchUserTenants.mockResolvedValue({
+        data: tenantsWithMetadata({
+          spa_domains: {},
+        }),
       });
 
       renderHook(() => useTenantProvider(defaultProps));
@@ -420,8 +383,8 @@ describe('useTenantProvider', () => {
     });
 
     it('should save current tenant when metadata is undefined', async () => {
-      mockFetchTenantMetadata.mockResolvedValue({
-        data: undefined,
+      mockFetchUserTenants.mockResolvedValue({
+        data: tenantsWithMetadata(undefined),
       });
 
       renderHook(() => useTenantProvider(defaultProps));

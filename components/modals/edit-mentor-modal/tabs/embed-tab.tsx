@@ -68,7 +68,7 @@ import type { ChatMode } from '@iblai/iblai-js/web-utils';
 import { toast as sonnerToast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { useEditMentorMutation } from '@iblai/iblai-js/data-layer';
-import { useTenantMetadata } from '@iblai/iblai-js/web-utils';
+import { useTenantObjectMetadata } from '@/hooks/use-tenant-object-metadata';
 import { config } from '@/lib/config';
 import { useTranslations } from 'next-intl';
 
@@ -261,7 +261,7 @@ export function EmbedTab() {
 
   const [editMentor, { isLoading: isSavingAdvanced }] = useEditMentorMutation();
 
-  const { metadata } = useTenantMetadata({ org: tenantKey });
+  const metadata = useTenantObjectMetadata(tenantKey);
   const supportEmail = metadata?.support_email || config.supportEmail();
 
   // TODO: Uncomment when enable_custom_javascript is supported by API

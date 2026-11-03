@@ -12,6 +12,17 @@ import { observeDmBase } from '../utils/dm-api';
 import { registerMentor } from '../utils/resource-tracker';
 import { E2E_LLM_DISPLAY_NAME, E2E_LLM_NAME } from '../fixtures/test-data';
 
+export type PromptKind = 'system' | 'proactive' | 'guided';
+
+const PROMPT_KINDS: Record<
+  PromptKind,
+  { index: number; title: string; label: string }
+> = {
+  system: { index: 0, title: 'System Prompt', label: 'System prompt' },
+  proactive: { index: 1, title: 'Proactive Prompt', label: 'Proactive prompt' },
+  guided: { index: 2, title: 'Guided Prompt', label: 'Guided prompt' },
+};
+
 export class CreateMentorPage {
   readonly page: Page;
   readonly dialog: Locator;
@@ -27,6 +38,7 @@ export class CreateMentorPage {
   readonly closeButton: Locator;
   readonly settingsTab: Locator;
   readonly promptsTab: Locator;
+  readonly systemPromptContent: Locator;
 
   constructor(page: Page) {
     this.page = page;
@@ -53,6 +65,9 @@ export class CreateMentorPage {
     this.closeButton = this.dialog.getByRole('button', { name: 'Close' });
     this.settingsTab = this.dialog.getByRole('tab', { name: 'Settings' });
     this.promptsTab = this.dialog.getByRole('tab', { name: 'Prompts' });
+    this.systemPromptContent = this.dialog.getByRole('textbox', {
+      name: 'System prompt content',
+    });
   }
 
   /**
@@ -151,6 +166,50 @@ export class CreateMentorPage {
 
     // Wait for Next button to become enabled
     await expect(this.nextButton).toBeEnabled({ timeout: 10_000 });
+  }
+
+  /** Fill the required fields and advance to the Prompts tab (no agent is created). */
+  async goToPromptsTab(name: string): Promise<void> {
+    await this.fillRequiredFields(name);
+    await this.nextButton.click();
+    await expect(this.systemPromptContent).toBeVisible({ timeout: 10_000 });
+  }
+
+  /** The read-only preview of a prompt on the Prompts tab. */
+  promptContent(kind: PromptKind): Locator {
+    return this.dialog.getByRole('textbox', {
+      name: `${PROMPT_KINDS[kind].label} content`,
+    });
+  }
+
+  /** The popup opened by a prompt's Edit button. */
+  promptPopup(kind: PromptKind): Locator {
+    return this.page.getByRole('dialog', {
+      name: PROMPT_KINDS[kind].title,
+      exact: true,
+    });
+  }
+
+  /** Opens the popup, replaces its text with `text` and returns it. */
+  async openPromptPopupAndType(
+    kind: PromptKind,
+    text: string,
+  ): Promise<Locator> {
+    await this.dialog
+      .getByRole('button', { name: 'Edit', exact: true })
+      .nth(PROMPT_KINDS[kind].index)
+      .click();
+    const popup = this.promptPopup(kind);
+    await expect(popup).toBeVisible({ timeout: 10_000 });
+    const editor = popup.locator('[contenteditable="true"]').last();
+    await expect(editor).toBeVisible();
+    await editor.click();
+    await this.page.keyboard.press(
+      process.platform === 'darwin' ? 'Meta+A' : 'Control+A',
+    );
+    await this.page.keyboard.press('Delete');
+    await this.page.keyboard.type(text);
+    return popup;
   }
 
   /**

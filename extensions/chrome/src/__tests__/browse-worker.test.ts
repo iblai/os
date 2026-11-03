@@ -31,6 +31,7 @@ vi.mock('../tools', async (importOriginal) => ({
         items: [],
         text: '[1] button "Pay"',
       }),
+      picture: () => null,
     };
   }),
 }));
@@ -74,7 +75,7 @@ beforeEach(async () => {
   listModels.mockReset();
   listModels.mockResolvedValue(['openai/gpt-5']);
   await chromeStub.stub.storage.local.set({
-    browse: { model: 'openai/gpt-5', preference: 'iblai/iblai-pro' },
+    browse: { model: 'openai/gpt-5', preference: 'anthropic/claude-sonnet-5' },
   });
 });
 
@@ -129,8 +130,27 @@ describe('the browse port', () => {
     ]);
   });
 
-  it('says which cap ended the run, and nothing when none did', async () => {
-    const finish = (stoppedBy: 'steps' | 'tokens' | null) =>
+  it('hands the tools a signal that ends with the run', async () => {
+    let finishRun!: () => void;
+    runAgent.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          finishRun = () =>
+            resolve({ text: 'ok', messages: [], steps: 1, stoppedBy: null });
+        }),
+    );
+    const port = openPort();
+    port.emit({ type: 'run', tabId: 7, goal: 'go', creds });
+    const ctx = await ctxOf();
+    await vi.waitFor(() => expect(runAgent).toHaveBeenCalled());
+    expect(ctx.signal?.aborted).toBe(false);
+    finishRun();
+    await vi.waitFor(() => expect(frames(port, 'done')).toHaveLength(1));
+    await vi.waitFor(() => expect(ctx.signal?.aborted).toBe(true));
+  });
+
+  it('says when the time limit ended the run, and nothing otherwise', async () => {
+    const finish = (stoppedBy: 'time' | null) =>
       runAgent.mockResolvedValue({
         text: 'ok',
         messages: [],
@@ -138,8 +158,10 @@ describe('the browse port', () => {
         stoppedBy,
       });
     for (const [stoppedBy, note] of [
-      ['steps', 'Stopped after the maximum number of steps.'],
-      ['tokens', 'Stopped: the run used up its token budget.'],
+      [
+        'time',
+        'I stopped here: that’s as long as I work in one go. Send “continue” and I’ll pick up where I left off, as long as this panel stays open.',
+      ],
       [null, undefined],
     ] as const) {
       finish(stoppedBy);
@@ -264,6 +286,45 @@ describe('the browse port', () => {
     await expect(answer).resolves.toBe(false);
   });
 
+  // Narration and a call the SDK refused are rows in the action list, where
+  // the user can see them; they never end the turn.
+  it('files narration and a refused call as rows, and keeps the run going', async () => {
+    runAgent.mockImplementation(
+      async (options: { onEvent: (event: AgentEvent) => void }) => {
+        options.onEvent({ type: 'narration', text: 'Opening the menu.' });
+        options.onEvent({ type: 'tool-error', toolName: 'click' });
+        return { text: 'Done.', messages: [], steps: 2, stoppedBy: null };
+      },
+    );
+    const port = openPort();
+    port.emit({ type: 'run', tabId: 7, goal: 'go', creds });
+    await vi.waitFor(() => expect(frames(port, 'done')).toHaveLength(1));
+    expect(frames(port, 'log')).toEqual([
+      { type: 'log', text: 'Read page app.acme.com', ok: true },
+      { type: 'log', text: 'Opening the menu.', ok: true },
+      { type: 'log', text: 'Click — Didn’t work.', ok: false },
+    ]);
+    expect(frames(port, 'error')).toEqual([]);
+  });
+
+  it('captures pictures only for a model that reads them', async () => {
+    pending();
+    const port = openPort();
+    port.emit({ type: 'run', tabId: 7, goal: 'go', creds });
+    expect((await ctxOf()).withPicture).toBe(true);
+    await vi.waitFor(() => expect(runAgent).toHaveBeenCalled());
+    expect(runAgent.mock.calls[0][0].picture).toEqual(expect.any(Function));
+    expect(runAgent.mock.calls[0][0].positions).toBe(true);
+
+    listModels.mockResolvedValue(['iblai/iblai-pro']);
+    await chromeStub.stub.storage.local.set({ browse: { model: '' } });
+    const second = openPort();
+    second.emit({ type: 'run', tabId: 8, goal: 'go', creds });
+    expect((await ctxOf(1)).withPicture).toBe(false);
+    await vi.waitFor(() => expect(runAgent).toHaveBeenCalledTimes(2));
+    expect(runAgent.mock.calls[1][0].positions).toBe(false);
+  });
+
   it('sends the action log as text, already localized', async () => {
     pending();
     const port = openPort();
@@ -314,8 +375,8 @@ describe('the browse port', () => {
     expect(listModels).toHaveBeenCalled();
     const stored = await chromeStub.stub.storage.local.get('browse');
     expect(stored.browse).toEqual({
-      model: 'iblai/iblai-pro',
-      preference: 'iblai/iblai-pro',
+      model: 'openai/gpt-5',
+      preference: 'anthropic/claude-sonnet-5',
     });
   });
 
@@ -441,5 +502,78 @@ describe('worker wiring', () => {
     (globalThis as { chrome: { sidePanel?: unknown } }).chrome.sidePanel =
       undefined;
     expect(() => enablePanelOnActionClick()).not.toThrow();
+  });
+});
+
+describe('real clicks', () => {
+  const done = () =>
+    runAgent.mockResolvedValue({
+      text: 'ok',
+      messages: [],
+      steps: 1,
+      stoppedBy: null,
+    });
+
+  it('attaches the debugger for the run and detaches when it ends', async () => {
+    done();
+    const port = openPort();
+    port.emit({ type: 'run', tabId: 7, goal: 'go', creds });
+    await vi.waitFor(() => expect(frames(port, 'done')).toHaveLength(1));
+    expect(chromeStub.stub.debugger.attach).toHaveBeenCalledWith(
+      { tabId: 7 },
+      '1.3',
+    );
+    expect(
+      chromeStub.stub.debugger.attach.mock.invocationCallOrder[0],
+    ).toBeLessThan(runAgent.mock.invocationCallOrder[0]);
+    expect(chromeStub.stub.debugger.detach).toHaveBeenCalledWith({ tabId: 7 });
+    expect((await ctxOf()).real).toBeDefined();
+    // Our own detach must not read as the user's.
+    expect(chromeStub.detached.size).toBe(0);
+  });
+
+  it('refuses to start when another debugger holds the tab', async () => {
+    done();
+    chromeStub.stub.debugger.attach.mockRejectedValueOnce(
+      new Error('Another debugger is already attached to the tab'),
+    );
+    const port = openPort();
+    port.emit({ type: 'run', tabId: 7, goal: 'go', creds });
+    await vi.waitFor(() => expect(frames(port, 'error')).toHaveLength(1));
+    expect(frames(port, 'error')[0]).toEqual({
+      type: 'error',
+      message:
+        'Real clicks can’t start while the developer tools are open on this tab. Close them and try again.',
+    });
+    expect(runAgent).not.toHaveBeenCalled();
+    expect(frames(port, 'done')).toEqual([]);
+  });
+
+  // Chrome's bar closed, or DevTools opened: the run ends saying so, never
+  // quietly on scripted clicks.
+  it('ends the run when the debugger goes away mid-run', async () => {
+    const signal = pending();
+    const port = openPort();
+    port.emit({ type: 'run', tabId: 7, goal: 'go', creds });
+    await vi.waitFor(() => expect(signal()).not.toBeNull());
+    for (const listener of [...chromeStub.detached]) listener({ tabId: 7 });
+    expect(signal()!.aborted).toBe(true);
+    await vi.waitFor(() => expect(frames(port, 'error')).toHaveLength(1));
+    expect(frames(port, 'error')[0]).toEqual({
+      type: 'error',
+      message:
+        'Real clicks were stopped from the bar on the tab or by the developer tools, so the run ended. Try again.',
+    });
+    expect(frames(port, 'done')).toEqual([]);
+    expect(chromeStub.stub.debugger.detach).toHaveBeenCalledTimes(1);
+  });
+
+  it('ignores another tab losing its debugger', async () => {
+    const signal = pending();
+    const port = openPort();
+    port.emit({ type: 'run', tabId: 7, goal: 'go', creds });
+    await vi.waitFor(() => expect(signal()).not.toBeNull());
+    for (const listener of [...chromeStub.detached]) listener({ tabId: 9 });
+    expect(signal()!.aborted).toBe(false);
   });
 });

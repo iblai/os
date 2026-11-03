@@ -385,6 +385,33 @@ describe('CreateMentorForm', () => {
     }, 15000);
   });
 
+  describe('prompt editor Save button', () => {
+    it.each([0, 1, 2])(
+      'closes editor %i on Save and shows the typed text in the form',
+      async (index) => {
+        const user = userEvent.setup();
+        render(<CreateMentorForm variant="inline" />);
+        await fillRequiredAndGoToPrompts(user);
+
+        await user.click(
+          screen.getAllByRole('button', { name: /edit/i })[index],
+        );
+        const dialog = await screen.findByRole('dialog');
+        const editor = within(dialog).getByTestId('rich-text-editor');
+        await user.clear(editor);
+        await user.type(editor, 'Typed prompt');
+        await user.click(within(dialog).getByRole('button', { name: 'Save' }));
+
+        await waitFor(() =>
+          expect(screen.queryByRole('dialog')).not.toBeInTheDocument(),
+        );
+        expect(screen.getByText('Typed prompt')).toBeInTheDocument();
+        expect(createMutation).not.toHaveBeenCalled();
+      },
+      15000,
+    );
+  });
+
   describe('free trial dialog', () => {
     it('renders the FreeTrialDialog when the trial gate is open', () => {
       freeTrial.isModalOpen = true;
