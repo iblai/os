@@ -1,6 +1,6 @@
 {
   "name": "ibl-web-nextjs-mentor-spa",
-  "version": "0.184.0",
+  "version": "0.187.1",
   "private": false,
   "packageManager": "pnpm@10.11.1",
   "engines": {
@@ -167,7 +167,7 @@
     "@commitlint/config-conventional": "20.5.0",
     "@eslint/eslintrc": "3.3.5",
     "@next/bundle-analyzer": "15.5.4",
-    "@playwright/test": "1.56.0",
+    "@playwright/test": "1.64.1",
     "@release-it/conventional-changelog": "10.0.6",
     "@tailwindcss/postcss": "4.1.4",
     "@testing-library/dom": "10.4.0",

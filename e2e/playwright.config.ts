@@ -43,6 +43,12 @@ const config = defineConfig({
     screenshot: process.env.CI ? 'only-on-failure' : 'off',
     actionTimeout: 30_000,
     navigationTimeout: 30_000,
+    // Keep the Chromium sandbox on, which Playwright otherwise leaves off by
+    // default. Disabled only in CI, where the Microsoft Playwright image runs
+    // as root and the sandbox helper cannot initialize; that run loads only our
+    // own app on localhost, so it stays low risk. See e2e/mcp.config.ts for the
+    // agent-driven browser, which is sandboxed everywhere.
+    launchOptions: { chromiumSandbox: !process.env.CI },
   },
   projects: [
     // ── Admin auth setup: runs once per browser, saves storage state ──────────

@@ -1,5 +1,4 @@
 import { Page, Locator, expect } from '@playwright/test';
-import { isVisibleWithin } from '../../utils/resilient';
 
 export class SettingsTab {
   readonly page: Page;
@@ -9,7 +8,10 @@ export class SettingsTab {
   readonly copyButton: Locator;
   readonly visibilityCombobox: Locator;
   readonly saveButton: Locator;
-  readonly adminOnlyVisibilityNote: Locator;
+  readonly audienceHelp: Locator;
+  readonly publicCatalogSwitch: Locator;
+  readonly guestChatSwitch: Locator;
+  readonly discoverySummary: Locator;
   readonly adminVisibilityConfirm: Locator;
   readonly adminVisibilityConfirmButton: Locator;
   readonly adminVisibilityCancelButton: Locator;
@@ -21,7 +23,6 @@ export class SettingsTab {
   readonly advancedJsEditor: Locator;
   readonly allowCopiesToggle: Locator;
   readonly copyMentorButton: Locator;
-  readonly chatAccessCombobox: Locator;
   readonly verboseReasoningToggle: Locator;
   /** Capabilities sub-tab: "Reopen last conversation" (#2629), `show_last_conversation`. */
   readonly showLastConversationToggle: Locator;
@@ -116,13 +117,14 @@ export class SettingsTab {
       .or(dialog.getByLabel(/unique id/i));
     this.copyButton = dialog.getByRole('button', { name: /copy/i }).first();
     this.visibilityCombobox = dialog.getByRole('combobox', {
-      name: 'Select Who Can View',
+      name: 'Who Can Use This Agent?',
       exact: true,
     });
+    this.publicCatalogSwitch = dialog.getByTestId('discovery-public-catalog');
+    this.guestChatSwitch = dialog.getByTestId('discovery-guest-chat');
+    this.discoverySummary = dialog.getByTestId('discovery-summary');
     this.saveButton = dialog.getByRole('button', { name: /save/i }).first();
-    this.adminOnlyVisibilityNote = page.getByTestId(
-      'admin-only-visibility-note',
-    );
+    this.audienceHelp = page.getByTestId('discovery-audience-help');
     this.adminVisibilityConfirm = page.getByRole('alertdialog');
     this.adminVisibilityConfirmButton = this.adminVisibilityConfirm.getByRole(
       'button',
@@ -158,9 +160,6 @@ export class SettingsTab {
     this.copyMentorButton = dialog.getByRole('button', {
       name: 'Copy',
       exact: true,
-    });
-    this.chatAccessCombobox = dialog.getByRole('combobox', {
-      name: 'Select who can chat',
     });
     // Capabilities sub-tab. The "Enable Verbose Reasoning" toggle (show_reasoning);
     // aria-label is "Enable Verbose Reasoning enabled" / "Enable Verbose Reasoning disabled"
@@ -418,25 +417,49 @@ export class SettingsTab {
     await this.copyButton.click();
   }
 
+  /**
+   * Picks the "Who Can Use This Agent?" option. Legacy labels map onto the
+   * Discovery redesign: Administrators -> Admins Only; Users /
+   * Authenticated Users -> All Members with the public catalog off; Anyone ->
+   * All Members with the public catalog on.
+   */
   async setVisibility(label: string): Promise<void> {
+    const key = label.trim().toLowerCase();
+    if (/^admin/.test(key)) return this.setAudience('Admins Only');
+    if (key === 'anyone') {
+      await this.setAudience('All Members');
+      return this.setPublicCatalog(true);
+    }
+    await this.setAudience('All Members');
+    return this.setPublicCatalog(false);
+  }
+
+  async setAudience(option: 'All Members' | 'Admins Only'): Promise<void> {
     await this.selectSubTab('Discovery');
     await expect(this.visibilityCombobox).toBeVisible({ timeout: 5_000 });
+    const current = (await this.visibilityCombobox.textContent()) ?? '';
+    if (current.includes(option)) return;
     await this.visibilityCombobox.click();
-    // Use the Radix UI option (div[role="option"]) rather than native <option>
-    const opt = this.page.locator('div[role="option"]').filter({
-      hasText: new RegExp(`^${label}$`, 'i'),
-    });
-    const radixVisible = await isVisibleWithin(opt.first(), 3_000);
-    if (radixVisible) {
-      await opt.first().click();
-    } else {
-      // Fallback: try any role="option" with matching text
-      const fallback = this.page.getByRole('option', {
-        name: new RegExp(label, 'i'),
-      });
-      await expect(fallback.first()).toBeVisible({ timeout: 5_000 });
-      await fallback.first().click();
-    }
+    const opt = this.page.getByRole('option', { name: option, exact: true });
+    await expect(opt).toBeVisible({ timeout: 5_000 });
+    await opt.click();
+    await expect(this.visibilityCombobox).toContainText(option);
+  }
+
+  private async setSwitch(sw: Locator, on: boolean): Promise<void> {
+    await this.selectSubTab('Discovery');
+    await expect(sw).toBeVisible({ timeout: 5_000 });
+    if (((await sw.getAttribute('aria-checked')) === 'true') === on) return;
+    await sw.click();
+    await expect(sw).toHaveAttribute('aria-checked', String(on));
+  }
+
+  async setPublicCatalog(on: boolean): Promise<void> {
+    await this.setSwitch(this.publicCatalogSwitch, on);
+  }
+
+  async setGuestChat(on: boolean): Promise<void> {
+    await this.setSwitch(this.guestChatSwitch, on);
   }
 
   async confirmAdminVisibility(): Promise<void> {
@@ -473,23 +496,29 @@ export class SettingsTab {
     await this.setVisibility('Anyone');
   }
 
-  async setChatAccess(label: string): Promise<void> {
+  /** Reads the Discovery state: audience text, catalog and guest switches. */
+  async readDiscovery(): Promise<{
+    audience: string;
+    catalog: boolean;
+    guest: boolean;
+    summary: string;
+  }> {
     await this.selectSubTab('Discovery');
-    await expect(this.chatAccessCombobox).toBeVisible({ timeout: 5_000 });
-    await this.chatAccessCombobox.click();
-    const opt = this.page.locator('div[role="option"]').filter({
-      hasText: new RegExp(`^${label}$`, 'i'),
-    });
-    const radixVisible = await isVisibleWithin(opt.first(), 3_000);
-    if (radixVisible) {
-      await opt.first().click();
-    } else {
-      const fallback = this.page.getByRole('option', {
-        name: new RegExp(label, 'i'),
-      });
-      await expect(fallback.first()).toBeVisible({ timeout: 5_000 });
-      await fallback.first().click();
-    }
+    await expect(this.visibilityCombobox).toBeVisible({ timeout: 10_000 });
+    return {
+      audience: ((await this.visibilityCombobox.textContent()) ?? '').trim(),
+      catalog:
+        (await this.publicCatalogSwitch.getAttribute('aria-checked')) ===
+        'true',
+      guest:
+        (await this.guestChatSwitch.getAttribute('aria-checked')) === 'true',
+      summary: ((await this.discoverySummary.textContent()) ?? '').trim(),
+    };
+  }
+
+  /** "Anyone" -> guest chat on; any other legacy label -> guest chat off. */
+  async setChatAccess(label: string): Promise<void> {
+    await this.setGuestChat(/^anyone$/i.test(label.trim()));
   }
 
   async setChatAccessAnyone(): Promise<void> {
