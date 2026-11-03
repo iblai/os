@@ -154,6 +154,56 @@ test.describe('Journey 3: New User UI & Profile Dropdown', () => {
       );
     }
   });
+
+  // ui-06: picking an organization moved out of the app and into the auth
+  // app, which is the only place that can mint another organization's tokens.
+  // What is left in the menu is the organization the user is in (a label, no
+  // picker) plus an "Organizations" entry that makes the trip. The entry only
+  // appears when there is somewhere to go, so a user with a single
+  // organization skips rather than fails.
+  test('profile dropdown offers no in-place organization picker, and Organizations opens the auth app chooser', async ({
+    nonadminPage,
+    nonadminNavbarPage,
+  }) => {
+    await nonadminNavbarPage.openProfileDropdown();
+
+    // The old chevron/select is gone: the menu shows the current organization
+    // as text only.
+    await expect(
+      nonadminNavbarPage.profileDropdownMenu.getByRole('combobox'),
+    ).toHaveCount(0);
+
+    let hasEntry = false;
+    try {
+      await nonadminNavbarPage.organizationsItem.waitFor({
+        state: 'visible',
+        timeout: 5_000,
+      });
+      hasEntry = true;
+    } catch {
+      hasEntry = false;
+    }
+
+    if (!hasEntry) {
+      logger.info(
+        'ui-06: no Organizations entry — this account belongs to a single organization; skipping the trip',
+      );
+      return;
+    }
+
+    await nonadminNavbarPage.organizationsItem.click();
+
+    await nonadminPage.waitForURL(/\/me\?.*action=switch-tenant/, {
+      timeout: 20_000,
+    });
+    const url = new URL(nonadminPage.url());
+    expect(url.searchParams.get('action')).toBe('switch-tenant');
+    // Without a return address the chooser cannot hand the user back.
+    expect(url.searchParams.get('redirect-to')).toBeTruthy();
+    await expect(
+      nonadminPage.getByText(/select the organization you want to sign in to/i),
+    ).toBeVisible({ timeout: 20_000 });
+  });
 });
 
 // ── Journey 3 (fresh signup): Profile Dropdown for a genuinely new user ────

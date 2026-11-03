@@ -1,4 +1,4 @@
-import { ChevronDown, LogOut, User } from 'lucide-react';
+import { ArrowLeftRight, ChevronDown, LogOut, User } from 'lucide-react';
 
 import {
   DropdownMenu,
@@ -10,8 +10,8 @@ import { handleLogout } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { handleTenantSwitch } from '@/lib/utils';
 import { TenantSwitcher } from '@iblai/iblai-js/web-containers';
+import { openTenantSwitcher } from '@iblai/iblai-js/web-utils/auth';
 import { useParams } from 'next/navigation';
 import { TenantKeyMentorIdParams } from '@/lib/types';
 import { useUserTenants } from '@/hooks/use-user';
@@ -94,11 +94,21 @@ export function ProfileButton({
             <TenantSwitcher
               currentTenantKey={tenantKey}
               tenants={userTenants}
-              onTenantChange={handleTenantSwitch}
               setHideTenantSwitcher={setHideTenantSwitcher}
               rbacPermissions={rbacPermissions}
               enableRbac={config.enableRBAC()}
             />
+            <DropdownMenuItem
+              onClick={() =>
+                openTenantSwitcher({
+                  authUrl: config.authUrl(),
+                  tenant: tenantKey,
+                })
+              }
+            >
+              <ArrowLeftRight className="mr-2 h-4 w-4" />
+              {t('organizations')}
+            </DropdownMenuItem>
           </>
         )}
         <DropdownMenuItem onClick={() => handleLogout()}>

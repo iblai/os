@@ -108,6 +108,7 @@
       "spec": "03-new-user-ui-and-profile-dropdown.spec.ts",
       "sourceFiles": [
         "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx",
+        "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/user-profile.tsx",
         "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx",
         "components/modals/settings-modal.tsx"
       ],
@@ -135,6 +136,11 @@
         {
           "id": "ui-05",
           "description": "Non-admin in the main OR an advertising tenant sees the full admin sidebar (New Agent, Workflows, Analytics, Invites, Management, Integrations, Monetization, Memory, Advanced) and clicking any trial-gated entry opens the upgrade/pricing dialog instead of performing the real action; gracefully skips when paywall is off",
+          "status": "covered"
+        },
+        {
+          "id": "ui-06",
+          "description": "Profile dropdown shows the current organization as a label with no in-place picker, and its Organizations entry opens the auth app chooser (/me?action=switch-tenant with a return address); skips when the account belongs to a single organization",
           "status": "covered"
         }
       ]
