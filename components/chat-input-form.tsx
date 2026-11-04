@@ -290,11 +290,16 @@ export function ChatInputForm({
   const notificationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
+  // The timer is armed after an awaited upload, so unmounting mid-upload would
+  // otherwise schedule a fresh one that the cleanup below can never see.
+  const isMountedRef = useRef(true);
 
   useEffect(
     () => () => {
+      isMountedRef.current = false;
       if (notificationTimerRef.current) {
         clearTimeout(notificationTimerRef.current);
+        notificationTimerRef.current = null;
       }
     },
     [],
@@ -765,6 +770,8 @@ export function ChatInputForm({
 
     // Upload files (validation happens inside the hook)
     await uploadFiles(files);
+
+    if (!isMountedRef.current) return;
 
     // Hide notification after upload completes. Held in a ref so a second
     // upload replaces the pending timer rather than racing it, and so unmount

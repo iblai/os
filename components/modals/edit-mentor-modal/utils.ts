@@ -255,7 +255,7 @@ export const getEmbedCode = async (
             window.onload = function() {
               let isEmbeddedMentorReady = false;
               let embedTenant = "${tenant}";
-              const iblData = new URL(window.location.href).searchParams.get("ibl-data");
+              let iblData = new URL(window.location.href).searchParams.get("ibl-data");
               if (iblData) {
                 const url = new URL(window.location);
                 url.searchParams.delete("ibl-data");
@@ -264,9 +264,11 @@ export const getEmbedCode = async (
                   const userData = JSON.parse(iblData).userData;
                   document.cookie = \`userData=\${userData}; domain=\${document.domain}; path=/;\`;
                 } catch (error) {
-                  // Unreadable ibl-data used to throw here and take the whole
-                  // widget down with it, before the launcher was ever drawn.
-                  console.error('Error parsing ibl-data:', error);
+                  // Unusable session: drop it so every \`if (iblData)\` below
+                  // falls through to the sign-in path instead of replaying auth
+                  // the embed cannot read.
+                  iblData = null;
+                  console.error('Error reading ibl-data:', error);
                 }
               }
               
@@ -688,13 +690,8 @@ export const getEmbedCode = async (
                     }
                     
                     if (message?.tenantSwitch) {
-                      // The embed is on the wrong organization and cannot fix that
-                      // itself: authExpired would only re-send this organization's
-                      // auth, so it would ask again forever. This host is pinned to
-                      // one organization, so honour the request only for that one,
-                      // and only answer with a session that belongs to it — handing
-                      // back another organization's cached session is the bug this
-                      // check exists to prevent.
+                      // Answer only for this embed's own organization, and only
+                      // with a session that belongs to it.
                       if (message.tenant === embedTenant) {
                         if (getIblDataTenant() === embedTenant) {
                           sendAuthDataToIframe();
