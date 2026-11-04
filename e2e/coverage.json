@@ -1,13 +1,13 @@
 {
   "version": 2,
-  "lastUpdated": "2026-11-02",
+  "lastUpdated": "2026-11-04",
   "summary": {
-    "totalCheckpoints": 1059,
-    "coveredCheckpoints": 1009,
+    "totalCheckpoints": 1060,
+    "coveredCheckpoints": 1010,
     "deprecatedCheckpoints": 17,
     "notReproducibleCheckpoints": 17,
     "pendingCheckpoints": 16,
-    "percent": 100,
+    "percent": 95.28,
     "totalJourneys": 106,
     "activeJourneys": 105
   },
@@ -2380,6 +2380,11 @@
         {
           "id": "mt-15",
           "description": "Direct-URL redirect invariant: a user with no access to the visited tenant is denied (routed to /error/403) rather than silently redirected to the default or visited tenant",
+          "status": "covered"
+        },
+        {
+          "id": "mt-16",
+          "description": "Auto-join invariant: visiting a mentor URL for a joinable tenant the user does not belong to joins them to THAT tenant and lands on the named mentor, not their default tenant (one-shot: skips once the account is a member)",
           "status": "covered"
         }
       ]
