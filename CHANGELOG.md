@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.187.2](https://github.com/iblai/os/compare/v0.187.1...v0.187.2) (2026-11-04)
+
+### Bug Fixes
+
+* **e2e:** install pnpm with npm, not corepack, in the e2e image ([b897e35](https://github.com/iblai/os/commit/b897e359556d6117c7e74e1f2d3c9abc7e6f4233))
+
+### Chores
+
+* **deps:** bump @iblai/iblai-js to 2.62.4 ([a2ffeb5](https://github.com/iblai/os/commit/a2ffeb5c83634a378d975bd64f230ea3e28c965e)), closes [iblai/os#614](https://github.com/iblai/os/issues/614) [iblai/ibl-frontend#2187](https://github.com/iblai/ibl-frontend/issues/2187)
+* **deps:** bump @iblai/iblai-js to 2.62.5 ([37e1459](https://github.com/iblai/os/commit/37e14594137db07f675bce6a2da3690269088d10)), closes [iblai/iblai-web-frontend#2213](https://github.com/iblai/iblai-web-frontend/issues/2213)
+* **e2e:** enable Chromium sandbox and update Playwright to 1.64.1 ([7bda319](https://github.com/iblai/os/commit/7bda319893fef2c2dda865ae7067d823e6d2abfb))
+* **users:** drop the unused user metadata query ([d07054a](https://github.com/iblai/os/commit/d07054a7f7c5729812fb75ca4113620b3f7a065c))
+
 ## [0.187.1](https://github.com/iblai/os/compare/v0.187.0...v0.187.1) (2026-11-03)
 
 ### Chores
