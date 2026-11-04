@@ -442,3 +442,179 @@ describe('getEmbedCode snippet variants', () => {
     );
   });
 });
+
+// An embed whose tab is seeded from a sibling on another organization lands on
+// the wrong one and cannot recover alone: `authExpired` only re-sends the same
+// organization's auth, so the embed would ask forever. It posts `tenantSwitch`
+// instead, which `agent-ai` answers — and so, now, does the generated snippet.
+describe('getEmbedCode tenant switch', () => {
+  const anonymous = { ...settings, allow_anonymous: true };
+  const hostListeners: EventListener[] = [];
+  let realLocation: Location;
+  const origin = window.location.origin;
+
+  const session = (tenant: string) =>
+    encodeURIComponent(
+      JSON.stringify({ tenant, userData: JSON.stringify({ user_id: 7 }) }),
+    );
+
+  // Same origin as the test document: the snippet strips `ibl-data` with
+  // history.replaceState, which jsdom refuses across origins.
+  function setUrl(search: string) {
+    const href = `${origin}/page${search}`;
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      writable: true,
+      value: {
+        href,
+        origin,
+        pathname: '/page',
+        search,
+        toString: () => href,
+      },
+    });
+  }
+
+  beforeEach(() => {
+    realLocation = window.location;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({ ok: true }) as Response),
+    );
+    vi.useFakeTimers();
+    setUrl('');
+  });
+
+  afterEach(() => {
+    vi.clearAllTimers();
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      writable: true,
+      value: realLocation,
+    });
+    hostListeners
+      .splice(0)
+      .forEach((listener) => window.removeEventListener('message', listener));
+    document.body.innerHTML = '';
+  });
+
+  function runSnippet(code: string) {
+    const script = code.split('<script>')[1].split('</script>')[0];
+    new Function(script)();
+    const add = vi.spyOn(window, 'addEventListener');
+    (window.onload as () => void)();
+    add.mock.calls
+      .filter(([type]) => type === 'message')
+      .forEach(([, listener]) => hostListeners.push(listener as EventListener));
+    add.mockRestore();
+  }
+
+  function postToHost(data: unknown) {
+    window.dispatchEvent(new MessageEvent('message', { data }));
+  }
+
+  /** Opens the widget and watches what the host posts into the iframe. */
+  function openWidget() {
+    (document.querySelector('.ibl-chat-bubble') as HTMLButtonElement).click();
+    const iframe = document.querySelector(
+      '#ibl-chat-widget-container iframe',
+    ) as HTMLIFrameElement;
+    return vi.spyOn(iframe.contentWindow!, 'postMessage');
+  }
+
+  it('re-sends the cached session when the embed asks for the pinned organization', async () => {
+    setUrl(`?ibl-data=${session('acme')}`);
+    runSnippet(await getEmbedCode('acme', settings, 'redirect-token'));
+    const posted = openWidget();
+
+    postToHost({ tenantSwitch: true, tenant: 'acme' });
+
+    expect(posted).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'MENTOR:AUTH_UPDATE' }),
+      '*',
+    );
+  });
+
+  it('accepts the JSON-string form the embed chain also carries', async () => {
+    setUrl(`?ibl-data=${session('acme')}`);
+    runSnippet(await getEmbedCode('acme', settings, 'redirect-token'));
+    const posted = openWidget();
+
+    postToHost(JSON.stringify({ tenantSwitch: true, tenant: 'acme' }));
+
+    expect(posted).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'MENTOR:AUTH_UPDATE' }),
+      '*',
+    );
+  });
+
+  it('refuses a request for an organization this embed is not pinned to', async () => {
+    setUrl(`?ibl-data=${session('acme')}`);
+    runSnippet(await getEmbedCode('acme', settings, 'redirect-token'));
+    const posted = openWidget();
+    const before = window.location.href;
+
+    postToHost({ tenantSwitch: true, tenant: 'other-org' });
+
+    expect(posted).not.toHaveBeenCalled();
+    expect(window.location.href).toBe(before);
+  });
+
+  it('ignores a request that names no organization', async () => {
+    setUrl(`?ibl-data=${session('acme')}`);
+    runSnippet(await getEmbedCode('acme', settings, 'redirect-token'));
+    const posted = openWidget();
+
+    postToHost({ tenantSwitch: true });
+
+    expect(posted).not.toHaveBeenCalled();
+  });
+
+  it('sends the user to sign in when the cached session is another organization’s', async () => {
+    setUrl(`?ibl-data=${session('other-org')}`);
+    runSnippet(await getEmbedCode('acme', settings, 'redirect-token'));
+    const posted = openWidget();
+
+    postToHost({ tenantSwitch: true, tenant: 'acme' });
+
+    expect(posted).not.toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'MENTOR:AUTH_UPDATE' }),
+      '*',
+    );
+    expect(window.location.href).toContain('https://auth.example.com/login');
+    expect(window.location.href).toContain('tenant=acme');
+    expect(window.location.href).not.toContain('logout=true');
+  });
+
+  it('sends the user to sign in when there is no cached session at all', async () => {
+    runSnippet(await getEmbedCode('acme', settings, 'redirect-token'));
+    openWidget();
+
+    postToHost({ tenantSwitch: true, tenant: 'acme' });
+
+    expect(window.location.href).toContain('tenant=acme');
+  });
+
+  it('survives an unreadable ibl-data rather than throwing at the embed', async () => {
+    setUrl('?ibl-data=not-json');
+    runSnippet(await getEmbedCode('acme', settings, 'redirect-token'));
+    openWidget();
+
+    expect(() =>
+      postToHost({ tenantSwitch: true, tenant: 'acme' }),
+    ).not.toThrow();
+  });
+
+  it('leaves an anonymous embed where it is, having no session to switch', async () => {
+    runSnippet(await getEmbedCode('acme', anonymous, 'redirect-token'));
+    const posted = openWidget();
+    const before = window.location.href;
+
+    postToHost({ tenantSwitch: true, tenant: 'acme' });
+
+    expect(posted).not.toHaveBeenCalled();
+    expect(window.location.href).toBe(before);
+  });
+});

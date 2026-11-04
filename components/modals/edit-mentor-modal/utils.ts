@@ -260,8 +260,14 @@ export const getEmbedCode = async (
                 const url = new URL(window.location);
                 url.searchParams.delete("ibl-data");
                 window.history.replaceState({}, document.title, url);
-                const userData = JSON.parse(iblData).userData;
-                document.cookie = \`userData=\${userData}; domain=\${document.domain}; path=/;\`;
+                try {
+                  const userData = JSON.parse(iblData).userData;
+                  document.cookie = \`userData=\${userData}; domain=\${document.domain}; path=/;\`;
+                } catch (error) {
+                  // Unreadable ibl-data used to throw here and take the whole
+                  // widget down with it, before the launcher was ever drawn.
+                  console.error('Error parsing ibl-data:', error);
+                }
               }
               
                 ${
@@ -321,6 +327,18 @@ export const getEmbedCode = async (
                     const iframe = document.querySelector('#ibl-chat-widget-container iframe');
                     if (iframe && iframe.contentWindow) {
                         iframe.contentWindow.postMessage({ type: 'MENTOR:AUTH_UPDATE', authData: iblData }, '*');
+                    }
+                }
+
+                function getIblDataTenant() {
+                    if (!iblData) {
+                        return null;
+                    }
+                    try {
+                        return JSON.parse(iblData).tenant ?? null;
+                    } catch (error) {
+                        console.error('Error parsing ibl-data:', error);
+                        return null;
                     }
                 }
 
@@ -669,6 +687,24 @@ export const getEmbedCode = async (
                         : ''
                     }
                     
+                    if (message?.tenantSwitch) {
+                      // The embed is on the wrong organization and cannot fix that
+                      // itself: authExpired would only re-send this organization's
+                      // auth, so it would ask again forever. This host is pinned to
+                      // one organization, so honour the request only for that one,
+                      // and only answer with a session that belongs to it — handing
+                      // back another organization's cached session is the bug this
+                      // check exists to prevent.
+                      if (message.tenant === embedTenant) {
+                        if (getIblDataTenant() === embedTenant) {
+                          sendAuthDataToIframe();
+                        } else {
+                          ${!settings.allow_anonymous ? 'redirectToAuthSPA();' : ''}
+                        }
+                      }
+                      return;
+                    }
+
                     if (message?.authExpired) {
                       if(iblData){
                         sendAuthDataToIframe();
