@@ -287,6 +287,19 @@ export function ChatInputForm({
   >([]);
   const [hasMoreSkills, setHasMoreSkills] = useState(false);
 
+  const notificationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+
+  useEffect(
+    () => () => {
+      if (notificationTimerRef.current) {
+        clearTimeout(notificationTimerRef.current);
+      }
+    },
+    [],
+  );
+
   // Switching mentors restarts the pagination from the first page.
   useEffect(() => {
     setSkillsPage(0);
@@ -753,8 +766,15 @@ export function ChatInputForm({
     // Upload files (validation happens inside the hook)
     await uploadFiles(files);
 
-    // Hide notification after upload completes
-    setTimeout(() => {
+    // Hide notification after upload completes. Held in a ref so a second
+    // upload replaces the pending timer rather than racing it, and so unmount
+    // cancels it — it used to fire after teardown and set state on a gone
+    // component.
+    if (notificationTimerRef.current) {
+      clearTimeout(notificationTimerRef.current);
+    }
+    notificationTimerRef.current = setTimeout(() => {
+      notificationTimerRef.current = null;
       setFileAddedNotification(null);
     }, 3000);
   };
