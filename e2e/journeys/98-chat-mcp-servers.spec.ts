@@ -276,10 +276,9 @@ test.describe('Journey 98: Chat MCP Servers', () => {
       await mcp.setServerEnabled(serverId, false);
       await mcp.close();
       await mcp.chat.startNewChat();
+      await mcp.expectRowBadge('1');
       await mcp.open();
       await expect(mcp.serverRow(serverId)).toBeVisible({ timeout: 15_000 });
-      await mcp.close();
-      await mcp.expectRowBadge('1');
     });
 
     test('chat-mcp-06: a server the organization requires shows a locked switch that stays on', async ({
@@ -415,7 +414,7 @@ test.describe('Journey 98: Chat MCP Servers', () => {
     await mcp.mockAgentUsesServers([server.id]);
     await navigateToMentorApp(nonadminPage);
 
-    await mcp.openFromPlusMenu();
+    await mcp.open();
     await expect(mcp.description).toBeVisible();
     await expect(mcp.closeButton).toBeVisible();
     await expect(mcp.serverRow(server.id)).toContainText(server.name, {
@@ -486,7 +485,6 @@ test.describe('Journey 98: Chat MCP Servers', () => {
 
       // Waiting for a sign-in, the server is not counted: the row has no badge.
       await mcp.expectRowBadge(null);
-      await expect(mcp.row).toHaveAccessibleName(LABELS.row);
       await mcp.open();
 
       const toggle = mcp.serverToggle(server.id);

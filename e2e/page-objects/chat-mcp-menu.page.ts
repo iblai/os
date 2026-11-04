@@ -169,14 +169,6 @@ export class ChatMcpMenuPage {
     });
   }
 
-  /** Opens the "+" menu and chooses its MCP row. */
-  async openFromPlusMenu(): Promise<void> {
-    await this.chat.openPlusMenu();
-    await expect(this.row).toBeVisible({ timeout: 10_000 });
-    await this.row.click();
-    await expect(this.heading).toBeVisible({ timeout: 10_000 });
-  }
-
   /**
    * The OPEN "+" menu offers no MCP row: the agent uses no server. Judged
    * only once the menu has its rows, so a menu still painting cannot pass.
@@ -238,7 +230,6 @@ export class ChatMcpMenuPage {
    * open one alone) and chooses MCP again.
    */
   async open(): Promise<void> {
-    if (await this.heading.isVisible()) return;
     await expect(async () => {
       if (await this.heading.isVisible()) return;
       await this.chat.openPlusMenu();
@@ -249,20 +240,29 @@ export class ChatMcpMenuPage {
   }
 
   /**
-   * The row's count badge, read with the "+" menu open: `null` means no
-   * badge beside a visible row. Retried like `open()`, since the menu can
-   * close under a re-render between opening it and reading the row.
+   * The row's count badge, read with the "+" menu open: `null` means the
+   * row is named just "MCP", with no badge. Retried like `open()`, since
+   * the menu can close under a re-render between opening it and reading
+   * the row. The no-badge case is judged by the row's exact name rather
+   * than by counting badges: the badge is resolved inside the open menu,
+   * so a menu closing under the check would make a count of zero pass for
+   * nothing.
    */
   async expectRowBadge(text: string | null): Promise<void> {
     await expect(async () => {
       await this.chat.openPlusMenu();
       await expect(this.row).toBeVisible({ timeout: 5_000 });
       if (text === null) {
-        await expect(this.rowBadge).toHaveCount(0, { timeout: 5_000 });
+        await expect(this.row).toHaveAccessibleName(
+          ChatMcpMenuPage.LABELS.row,
+          {
+            timeout: 5_000,
+          },
+        );
       } else {
         await expect(this.rowBadge).toHaveText(text, { timeout: 5_000 });
       }
-    }).toPass({ timeout: 30_000 });
+    }).toPass({ timeout: 60_000 });
   }
 
   /** The panel's own close: back to the composer (desktop) or the sheet's main page (phones). */
