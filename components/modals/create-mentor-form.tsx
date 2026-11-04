@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl';
 
 import { Info, Edit, X, ChevronsUpDown, Check } from 'lucide-react';
 import { useGetMentorCategoriesQuery } from '@iblai/iblai-js/data-layer';
+import { useCreateAgentFieldPermissions } from '@iblai/iblai-js/web-containers';
 
 import {
   DialogDescription,
@@ -101,6 +102,12 @@ export function CreateMentorForm({
       },
     );
 
+  const {
+    permissions,
+    visibility,
+    isLoading: isLoadingFieldPermissions,
+  } = useCreateAgentFieldPermissions({ org: tenantKey ?? '' });
+
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const categoryFieldRef = React.useRef<HTMLDivElement>(null);
   const [categoryPortalContainer, setCategoryPortalContainer] =
@@ -119,7 +126,7 @@ export function CreateMentorForm({
     proactivePrompt,
     isLoadingCreateMentor,
     editPrompt,
-  } = useCreateMentor(initialValues, onCreated);
+  } = useCreateMentor(initialValues, onCreated, permissions);
   const {
     FreeTrialDialog,
     closeModal: closeFreeTrialModal,
@@ -127,9 +134,25 @@ export function CreateMentorForm({
     executeWithTrialCheck,
   } = useShowFreeTrialDialog();
 
-  const isDisabled = isLoadingMentorCategories || isLoadingCreateMentor;
-  const disablePromptsTab =
-    name === '' || description === '' || category === null;
+  const isDisabled =
+    isLoadingMentorCategories ||
+    isLoadingCreateMentor ||
+    isLoadingFieldPermissions;
+  // The gated fields, the Prompts tab and the Next/Save choice wait for the
+  // permissions answer, so nothing shows up only to change once it lands.
+  const fieldsReady = !isLoadingFieldPermissions;
+  // A field the user may not write is not shown, so it cannot be required.
+  const isSettingsComplete =
+    name !== '' &&
+    (!visibility.description || description !== '') &&
+    (!visibility.category || category !== null);
+  const disablePromptsTab = !fieldsReady || !isSettingsComplete;
+  const showPromptsTab = fieldsReady && visibility.anyPrompt;
+  const submitForm = (formEvent: React.FormEvent) => {
+    formEvent.preventDefault();
+    formEvent.stopPropagation();
+    executeWithTrialCheck(form.handleSubmit);
+  };
 
   return (
     <>
@@ -162,17 +185,19 @@ export function CreateMentorForm({
             >
               {t('settingsTab')}
             </TabsTrigger>
-            <TabsTrigger
-              value="prompts"
-              disabled={disablePromptsTab}
-              className="rounded-md bg-gray-100 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-200 data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#2563EB] data-[state=active]:to-[#93C5FD] data-[state=active]:text-white"
-            >
-              {t('promptsTab')}
-            </TabsTrigger>
+            {showPromptsTab && (
+              <TabsTrigger
+                value="prompts"
+                disabled={disablePromptsTab}
+                className="rounded-md bg-gray-100 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-200 data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#2563EB] data-[state=active]:to-[#93C5FD] data-[state=active]:text-white"
+              >
+                {t('promptsTab')}
+              </TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value="settings">
-            <div className="space-y-6">
+            <div className="mt-6 space-y-6">
               <div className="flex flex-col gap-6 md:flex-row">
                 <div className="order-2 space-y-6 md:order-1 md:flex-1">
                   <form.Field name="name">
@@ -204,166 +229,137 @@ export function CreateMentorForm({
                     }}
                   </form.Field>
 
-                  <form.Field name="description">
-                    {(field) => {
-                      const hasNoValue = field.state.value === '';
-                      const isDirty = field.state.meta.isDirty;
-                      const hasNoValueAndIsDirty = hasNoValue && isDirty;
+                  {fieldsReady && visibility.description && (
+                    <form.Field name="description">
+                      {(field) => {
+                        const hasNoValue = field.state.value === '';
+                        const isDirty = field.state.meta.isDirty;
+                        const hasNoValueAndIsDirty = hasNoValue && isDirty;
 
-                      return (
-                        <div className="space-y-2">
+                        return (
+                          <div className="space-y-2">
+                            <label className="flex items-center text-sm font-medium text-gray-700">
+                              {t('descriptionLabel')}
+                              <span className="ml-1 text-red-500">*</span>
+                            </label>
+                            <Textarea
+                              placeholder={t('descriptionPlaceholder')}
+                              value={field.state.value}
+                              onChange={(e) =>
+                                field.handleChange(e.target.value)
+                              }
+                              required
+                              disabled={isDisabled}
+                            />
+                            {hasNoValueAndIsDirty && (
+                              <p className="text-xs text-red-500">
+                                {t('descriptionRequired')}
+                              </p>
+                            )}
+                          </div>
+                        );
+                      }}
+                    </form.Field>
+                  )}
+
+                  {fieldsReady && visibility.category && (
+                    <form.Field name="category">
+                      {(field) => (
+                        <div ref={categoryFieldRef} className="space-y-2">
                           <label className="flex items-center text-sm font-medium text-gray-700">
-                            {t('descriptionLabel')}
+                            {t('categoryLabel')}
                             <span className="ml-1 text-red-500">*</span>
                           </label>
-                          <Textarea
-                            placeholder={t('descriptionPlaceholder')}
-                            value={field.state.value}
-                            onChange={(e) => field.handleChange(e.target.value)}
-                            required
-                            disabled={isDisabled}
-                          />
-                          {hasNoValueAndIsDirty && (
-                            <p className="text-xs text-red-500">
-                              {t('descriptionRequired')}
-                            </p>
-                          )}
-                        </div>
-                      );
-                    }}
-                  </form.Field>
-
-                  <form.Field name="category">
-                    {(field) => (
-                      <div ref={categoryFieldRef} className="space-y-2">
-                        <label className="flex items-center text-sm font-medium text-gray-700">
-                          {t('categoryLabel')}
-                          <span className="ml-1 text-red-500">*</span>
-                        </label>
-                        {/* Portaled into the Dialog: on document.body the list
-                            sits outside the Dialog's scroll lock, which cancels
-                            every wheel event there. */}
-                        <Popover
-                          onOpenChange={(isOpen) => {
-                            if (isOpen) {
-                              setCategoryPortalContainer(
-                                categoryFieldRef.current?.closest<HTMLElement>(
-                                  '[role="dialog"]',
-                                ) ?? null,
-                              );
-                            }
-                          }}
-                        >
-                          <PopoverTrigger asChild>
-                            <Button
-                              variant="outline"
-                              role="combobox"
-                              aria-label={t('selectCategoryAriaLabel')}
-                              className="w-full justify-between"
-                            >
-                              {field.state.value
-                                ? mentorCategories?.find(
-                                    (mentorCategory) =>
-                                      mentorCategory.id === field.state.value,
-                                  )?.name
-                                : t('selectCategoryPlaceholder')}
-                              <ChevronsUpDown className="opacity-50" />
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent
-                            aria-label={t('categoriesDropdownAriaLabel')}
-                            role="listbox"
-                            aria-labelledby="Categories dropdown container"
-                            className="flex w-full max-w-[490px] flex-col overflow-hidden p-0 sm:w-[400px] lg:w-[490px]"
-                            style={{
-                              maxHeight:
-                                'var(--radix-popover-content-available-height)',
+                          {/* Portaled into the Dialog: on document.body the list
+                          sits outside the Dialog's scroll lock, which cancels
+                          every wheel event there. */}
+                          <Popover
+                            onOpenChange={(isOpen) => {
+                              if (isOpen) {
+                                setCategoryPortalContainer(
+                                  categoryFieldRef.current?.closest<HTMLElement>(
+                                    '[role="dialog"]',
+                                  ) ?? null,
+                                );
+                              }
                             }}
-                            container={categoryPortalContainer}
-                            collisionBoundary={categoryPortalContainer}
                           >
-                            <Command className="flex min-h-0 flex-1 flex-col">
-                              <CommandInput
-                                placeholder={t('searchCategoryPlaceholder')}
-                                className="h-9"
-                              />
-                              <CommandList className="min-h-0">
-                                <CommandEmpty>
-                                  {t('noCategoryFound')}
-                                </CommandEmpty>
-                                <CommandGroup>
-                                  {mentorCategories?.map((mentorCategory) => (
-                                    <CommandItem
-                                      key={mentorCategory.id}
-                                      value={mentorCategory.id.toString()}
-                                      onSelect={(currentValue) => {
-                                        field.handleChange(
-                                          Number(currentValue),
-                                        );
-                                      }}
-                                    >
-                                      {mentorCategory.name}
-                                      <Check
-                                        className={cn(
-                                          'ml-auto',
-                                          field.state.value ===
-                                            mentorCategory.id
-                                            ? 'opacity-100'
-                                            : 'opacity-0',
-                                        )}
-                                      />
-                                    </CommandItem>
-                                  ))}
-                                </CommandGroup>
-                              </CommandList>
-                            </Command>
-                          </PopoverContent>
-                        </Popover>
-                      </div>
-                    )}
-                  </form.Field>
-
-                  <form.Field name="mentorVisibility">
-                    {(field) => (
-                      <div className="space-y-2">
-                        <label className="flex items-center text-sm font-medium text-gray-700">
-                          {t('agentVisibilityLabel')}
-                          <span className="ml-1 text-red-500">*</span>
-                        </label>
-                        <Select
-                          value={field.state.value}
-                          onValueChange={(value) => field.handleChange(value)}
-                          required
-                          disabled={isDisabled}
-                        >
-                          <SelectTrigger
-                            aria-label={t('selectAgentVisibilityAriaLabel')}
-                          >
-                            <SelectValue
-                              placeholder={t('selectVisibilityPlaceholder')}
-                            />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {MENTOR_VISIBILITY.map((visibility) => (
-                              <SelectItem
-                                key={visibility.value}
-                                value={visibility.value}
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                role="combobox"
+                                aria-label={t('selectCategoryAriaLabel')}
+                                className="w-full justify-between"
                               >
-                                {visibility.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )}
-                  </form.Field>
+                                {field.state.value
+                                  ? mentorCategories?.find(
+                                      (mentorCategory) =>
+                                        mentorCategory.id === field.state.value,
+                                    )?.name
+                                  : t('selectCategoryPlaceholder')}
+                                <ChevronsUpDown className="opacity-50" />
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent
+                              aria-label={t('categoriesDropdownAriaLabel')}
+                              role="listbox"
+                              aria-labelledby="Categories dropdown container"
+                              className="flex w-full max-w-[490px] flex-col overflow-hidden p-0 sm:w-[400px] lg:w-[490px]"
+                              style={{
+                                maxHeight:
+                                  'var(--radix-popover-content-available-height)',
+                              }}
+                              container={categoryPortalContainer}
+                              collisionBoundary={categoryPortalContainer}
+                            >
+                              <Command className="flex min-h-0 flex-1 flex-col">
+                                <CommandInput
+                                  placeholder={t('searchCategoryPlaceholder')}
+                                  className="h-9"
+                                />
+                                <CommandList className="min-h-0">
+                                  <CommandEmpty>
+                                    {t('noCategoryFound')}
+                                  </CommandEmpty>
+                                  <CommandGroup>
+                                    {mentorCategories?.map((mentorCategory) => (
+                                      <CommandItem
+                                        key={mentorCategory.id}
+                                        value={mentorCategory.id.toString()}
+                                        onSelect={(currentValue) => {
+                                          field.handleChange(
+                                            Number(currentValue),
+                                          );
+                                        }}
+                                      >
+                                        {mentorCategory.name}
+                                        <Check
+                                          className={cn(
+                                            'ml-auto',
+                                            field.state.value ===
+                                              mentorCategory.id
+                                              ? 'opacity-100'
+                                              : 'opacity-0',
+                                          )}
+                                        />
+                                      </CommandItem>
+                                    ))}
+                                  </CommandGroup>
+                                </CommandList>
+                              </Command>
+                            </PopoverContent>
+                          </Popover>
+                        </div>
+                      )}
+                    </form.Field>
+                  )}
 
-                  {config.showBaseMentor() && (
-                    <form.Field name="base">
+                  {fieldsReady && visibility.mentorVisibility && (
+                    <form.Field name="mentorVisibility">
                       {(field) => (
                         <div className="space-y-2">
                           <label className="flex items-center text-sm font-medium text-gray-700">
-                            {t('baseLabel')}
+                            {t('agentVisibilityLabel')}
                             <span className="ml-1 text-red-500">*</span>
                           </label>
                           <Select
@@ -373,19 +369,19 @@ export function CreateMentorForm({
                             disabled={isDisabled}
                           >
                             <SelectTrigger
-                              aria-label={t('selectBaseModelAriaLabel')}
+                              aria-label={t('selectAgentVisibilityAriaLabel')}
                             >
                               <SelectValue
-                                placeholder={t('selectBasePlaceholder')}
+                                placeholder={t('selectVisibilityPlaceholder')}
                               />
                             </SelectTrigger>
                             <SelectContent>
-                              {MODEL_AGENTS.map((agent) => (
+                              {MENTOR_VISIBILITY.map((option) => (
                                 <SelectItem
-                                  key={agent.value}
-                                  value={agent.value}
+                                  key={option.value}
+                                  value={option.value}
                                 >
-                                  {agent.label}
+                                  {option.label}
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -394,296 +390,355 @@ export function CreateMentorForm({
                       )}
                     </form.Field>
                   )}
-                </div>
-                <form.Field name="file">
-                  {(field) => (
-                    <>
-                      <div className="order-1 mb-4 space-y-2 md:order-2 md:mb-0 md:w-[200px]">
-                        <label className="text-sm font-medium text-gray-700">
-                          {t('imageLabel')}
-                        </label>
-                        <div
-                          className="flex h-[200px] cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-200"
-                          onClick={() => {
-                            if (isDisabled) return;
-                            fileInputRef.current?.click();
-                          }}
-                          role="button"
-                          tabIndex={0}
-                          aria-label={t('uploadImageAriaLabel')}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' || e.key === ' ') {
-                              e.preventDefault();
-                              if (!isDisabled) {
-                                fileInputRef.current?.click();
+
+                  {config.showBaseMentor() &&
+                    fieldsReady &&
+                    visibility.base && (
+                      <form.Field name="base">
+                        {(field) => (
+                          <div className="space-y-2">
+                            <label className="flex items-center text-sm font-medium text-gray-700">
+                              {t('baseLabel')}
+                              <span className="ml-1 text-red-500">*</span>
+                            </label>
+                            <Select
+                              value={field.state.value}
+                              onValueChange={(value) =>
+                                field.handleChange(value)
                               }
-                            }
-                          }}
-                        >
-                          {file ? (
-                            <div className="relative h-full w-full">
-                              <Image
-                                src={URL.createObjectURL(file)}
-                                alt={t('agentImageAlt')}
-                                className="h-full w-full object-cover"
-                                width={200}
-                                height={200}
-                              />
+                              required
+                              disabled={isDisabled}
+                            >
+                              <SelectTrigger
+                                aria-label={t('selectBaseModelAriaLabel')}
+                              >
+                                <SelectValue
+                                  placeholder={t('selectBasePlaceholder')}
+                                />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {MODEL_AGENTS.map((agent) => (
+                                  <SelectItem
+                                    key={agent.value}
+                                    value={agent.value}
+                                  >
+                                    {agent.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        )}
+                      </form.Field>
+                    )}
+                </div>
+                {fieldsReady && visibility.file && (
+                  <form.Field name="file">
+                    {(field) => (
+                      <>
+                        <div className="order-1 mb-4 space-y-2 md:order-2 md:mb-0 md:w-[200px]">
+                          <label className="text-sm font-medium text-gray-700">
+                            {t('imageLabel')}
+                          </label>
+                          <div
+                            className="flex h-[200px] cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-200"
+                            onClick={() => {
+                              if (isDisabled) return;
+                              fileInputRef.current?.click();
+                            }}
+                            role="button"
+                            tabIndex={0}
+                            aria-label={t('uploadImageAriaLabel')}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                if (!isDisabled) {
+                                  fileInputRef.current?.click();
+                                }
+                              }
+                            }}
+                          >
+                            {file ? (
+                              <div className="relative h-full w-full">
+                                <Image
+                                  src={URL.createObjectURL(file)}
+                                  alt={t('agentImageAlt')}
+                                  className="h-full w-full object-cover"
+                                  width={200}
+                                  height={200}
+                                />
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  className="absolute top-2 right-2 cursor-pointer rounded-full"
+                                  onClick={(event) => {
+                                    if (isDisabled) return;
+                                    event.stopPropagation();
+                                    field.handleChange(null);
+                                    if (fileInputRef.current) {
+                                      fileInputRef.current.value = '';
+                                    }
+                                  }}
+                                  aria-label={t('removeImageAriaLabel')}
+                                >
+                                  <X className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            ) : (
+                              <span className="text-sm text-gray-700">
+                                {t('uploadButton')}
+                              </span>
+                            )}
+                          </div>
+                          <input
+                            ref={fileInputRef}
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(event) => {
+                              const file = event.target.files?.[0];
+                              if (file) {
+                                field.handleChange(file);
+                              }
+                            }}
+                            aria-label={t('selectImageFileAriaLabel')}
+                          />
+                        </div>
+                      </>
+                    )}
+                  </form.Field>
+                )}
+              </div>
+
+              {fieldsReady && (
+                <div className="flex justify-end">
+                  {visibility.anyPrompt ? (
+                    <Button
+                      type="button"
+                      disabled={disablePromptsTab}
+                      className="w-full gap-2 bg-gradient-to-r from-[#2563EB] to-[#93C5FD] text-white hover:opacity-90 sm:w-auto"
+                      onClick={() => setActiveTab('prompts')}
+                    >
+                      {t('nextButton')}
+                    </Button>
+                  ) : (
+                    <Button
+                      type="button"
+                      disabled={disablePromptsTab || isDisabled}
+                      className="w-full gap-2 bg-gradient-to-r from-[#2563EB] to-[#93C5FD] text-white hover:opacity-90 sm:w-auto"
+                      onClick={() => executeWithTrialCheck(form.handleSubmit)}
+                    >
+                      {isLoadingCreateMentor ? t('saving') : t('saveButton')}
+                    </Button>
+                  )}
+                </div>
+              )}
+            </div>
+          </TabsContent>
+
+          {showPromptsTab && (
+            <TabsContent value="prompts">
+              <form className="mt-6 space-y-6" onSubmit={submitForm}>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {visibility.systemPrompt && (
+                    <form.Field name="systemPrompt">
+                      {(field) => (
+                        <div className="space-y-4">
+                          <div className="flex items-center gap-2">
+                            <h3 className="text-sm font-medium text-gray-700">
+                              {t('systemPromptsHeading')}
+                            </h3>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <button
+                                    type="button"
+                                    aria-label={t('systemPromptsInfoAriaLabel')}
+                                    className="flex items-center justify-center"
+                                  >
+                                    <Info className="h-4 w-4 text-gray-400" />
+                                  </button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>{t('systemPromptsTooltip')}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </div>
+                          <div className="flex h-[200px] flex-col rounded-lg bg-gray-50 p-4">
+                            <div
+                              className="flex-1 overflow-auto"
+                              tabIndex={0}
+                              role="textbox"
+                              aria-readonly="true"
+                              aria-label={t('systemPromptContentAriaLabel')}
+                            >
+                              <p className="text-sm text-gray-600">
+                                {field.state.value}
+                              </p>
+                            </div>
+                            <div className="mt-4 flex justify-end gap-2">
                               <Button
                                 type="button"
                                 variant="outline"
                                 size="sm"
-                                className="absolute top-2 right-2 cursor-pointer rounded-full"
-                                onClick={(event) => {
-                                  if (isDisabled) return;
-                                  event.stopPropagation();
-                                  field.handleChange(null);
-                                  if (fileInputRef.current) {
-                                    fileInputRef.current.value = '';
-                                  }
+                                className="h-7 border-gray-200 px-4 text-xs font-normal text-gray-600"
+                                onClick={() => {
+                                  field.handleChange(field.state.value);
+                                  setPrompt({
+                                    label: t('systemPromptLabel'),
+                                    type: 'systemPrompt',
+                                  });
                                 }}
-                                aria-label={t('removeImageAriaLabel')}
                               >
-                                <X className="h-3 w-3" />
+                                <Edit className="mr-1.5 h-3 w-3" />
+                                {t('editButton')}
                               </Button>
                             </div>
-                          ) : (
-                            <span className="text-sm text-gray-700">
-                              {t('uploadButton')}
-                            </span>
-                          )}
+                          </div>
                         </div>
-                        <input
-                          ref={fileInputRef}
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={(event) => {
-                            const file = event.target.files?.[0];
-                            if (file) {
-                              field.handleChange(file);
-                            }
-                          }}
-                          aria-label={t('selectImageFileAriaLabel')}
-                        />
-                      </div>
-                    </>
+                      )}
+                    </form.Field>
                   )}
-                </form.Field>
-              </div>
 
-              <div className="flex justify-end">
-                <Button
-                  type="button"
-                  disabled={disablePromptsTab}
-                  className="w-full gap-2 bg-gradient-to-r from-[#2563EB] to-[#93C5FD] text-white hover:opacity-90 sm:w-auto"
-                  onClick={() => setActiveTab('prompts')}
-                >
-                  {t('nextButton')}
-                </Button>
-              </div>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="prompts">
-            <form
-              className="mt-6 space-y-6"
-              onSubmit={(formEvent) => {
-                formEvent.preventDefault();
-                formEvent.stopPropagation();
-                executeWithTrialCheck(form.handleSubmit);
-              }}
-            >
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                <form.Field name="systemPrompt">
-                  {(field) => (
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-2">
-                        <h3 className="text-sm font-medium text-gray-700">
-                          {t('systemPromptsHeading')}
-                        </h3>
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <button
+                  {visibility.proactivePrompt && (
+                    <form.Field name="proactivePrompt">
+                      {(field) => (
+                        <div className="space-y-4">
+                          <div className="flex items-center gap-2">
+                            <h3 className="text-sm font-medium text-gray-700">
+                              {t('proactivePromptsHeading')}
+                            </h3>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <button
+                                    type="button"
+                                    aria-label={t(
+                                      'proactivePromptsInfoAriaLabel',
+                                    )}
+                                    className="flex items-center justify-center"
+                                  >
+                                    <Info className="h-4 w-4 text-gray-400" />
+                                  </button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>{t('proactivePromptsTooltip')}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </div>
+                          <div className="flex h-[200px] flex-col rounded-lg bg-gray-50 p-4">
+                            <div
+                              className="flex-1 overflow-auto"
+                              tabIndex={0}
+                              role="textbox"
+                              aria-readonly="true"
+                              aria-label={t('proactivePromptContentAriaLabel')}
+                            >
+                              <p className="text-sm text-gray-600">
+                                {field.state.value}
+                              </p>
+                            </div>
+                            <div className="mt-4 flex justify-end gap-2">
+                              <Button
                                 type="button"
-                                aria-label={t('systemPromptsInfoAriaLabel')}
-                                className="flex items-center justify-center"
+                                variant="outline"
+                                size="sm"
+                                className="h-7 border-gray-200 px-4 text-xs font-normal text-gray-600"
+                                onClick={() => {
+                                  field.handleChange(field.state.value);
+                                  setPrompt({
+                                    label: t('proactivePromptLabel'),
+                                    type: 'proactivePrompt',
+                                  });
+                                }}
                               >
-                                <Info className="h-4 w-4 text-gray-400" />
-                              </button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>{t('systemPromptsTooltip')}</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      </div>
-                      <div className="flex h-[200px] flex-col rounded-lg bg-gray-50 p-4">
-                        <div
-                          className="flex-1 overflow-auto"
-                          tabIndex={0}
-                          role="textbox"
-                          aria-readonly="true"
-                          aria-label={t('systemPromptContentAriaLabel')}
-                        >
-                          <p className="text-sm text-gray-600">
-                            {field.state.value}
-                          </p>
+                                <Edit className="mr-1.5 h-3 w-3" />
+                                {t('editButton')}
+                              </Button>
+                            </div>
+                          </div>
                         </div>
-                        <div className="mt-4 flex justify-end gap-2">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className="h-7 border-gray-200 px-4 text-xs font-normal text-gray-600"
-                            onClick={() => {
-                              field.handleChange(field.state.value);
-                              setPrompt({
-                                label: t('systemPromptLabel'),
-                                type: 'systemPrompt',
-                              });
-                            }}
-                          >
-                            <Edit className="mr-1.5 h-3 w-3" />
-                            {t('editButton')}
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
+                      )}
+                    </form.Field>
                   )}
-                </form.Field>
 
-                <form.Field name="proactivePrompt">
-                  {(field) => (
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-2">
-                        <h3 className="text-sm font-medium text-gray-700">
-                          {t('proactivePromptsHeading')}
-                        </h3>
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <button
+                  {visibility.guidedPrompt && (
+                    <form.Field name="guidedPrompt">
+                      {(field) => (
+                        <div className="space-y-4">
+                          <div className="flex items-center gap-2">
+                            <h3 className="text-sm font-medium text-gray-700">
+                              {t('guidedPromptsHeading')}
+                            </h3>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <button
+                                    type="button"
+                                    aria-label={t('guidedPromptsInfoAriaLabel')}
+                                    className="flex items-center justify-center"
+                                  >
+                                    <Info className="h-4 w-4 text-gray-400" />
+                                  </button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>{t('guidedPromptsTooltip')}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </div>
+                          <div className="flex h-[200px] flex-col rounded-lg bg-gray-50 p-4">
+                            <div
+                              className="flex-1 overflow-auto"
+                              tabIndex={0}
+                              role="textbox"
+                              aria-readonly="true"
+                              aria-label={t('guidedPromptContentAriaLabel')}
+                            >
+                              <p className="text-sm text-gray-600">
+                                {field.state.value}
+                              </p>
+                            </div>
+                            <div className="mt-4 flex justify-end gap-2">
+                              <Button
                                 type="button"
-                                aria-label={t('proactivePromptsInfoAriaLabel')}
-                                className="flex items-center justify-center"
+                                variant="outline"
+                                size="sm"
+                                className="h-7 border-gray-200 px-4 text-xs font-normal text-gray-600"
+                                onClick={() => {
+                                  field.handleChange(field.state.value);
+                                  setPrompt({
+                                    label: t('guidedPromptLabel'),
+                                    type: 'guidedPrompt',
+                                  });
+                                }}
                               >
-                                <Info className="h-4 w-4 text-gray-400" />
-                              </button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>{t('proactivePromptsTooltip')}</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      </div>
-                      <div className="flex h-[200px] flex-col rounded-lg bg-gray-50 p-4">
-                        <div
-                          className="flex-1 overflow-auto"
-                          tabIndex={0}
-                          role="textbox"
-                          aria-readonly="true"
-                          aria-label={t('proactivePromptContentAriaLabel')}
-                        >
-                          <p className="text-sm text-gray-600">
-                            {field.state.value}
-                          </p>
+                                <Edit className="mr-1.5 h-3 w-3" />
+                                {t('editButton')}
+                              </Button>
+                            </div>
+                          </div>
                         </div>
-                        <div className="mt-4 flex justify-end gap-2">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className="h-7 border-gray-200 px-4 text-xs font-normal text-gray-600"
-                            onClick={() => {
-                              field.handleChange(field.state.value);
-                              setPrompt({
-                                label: t('proactivePromptLabel'),
-                                type: 'proactivePrompt',
-                              });
-                            }}
-                          >
-                            <Edit className="mr-1.5 h-3 w-3" />
-                            {t('editButton')}
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
+                      )}
+                    </form.Field>
                   )}
-                </form.Field>
+                </div>
 
-                <form.Field name="guidedPrompt">
-                  {(field) => (
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-2">
-                        <h3 className="text-sm font-medium text-gray-700">
-                          {t('guidedPromptsHeading')}
-                        </h3>
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <button
-                                type="button"
-                                aria-label={t('guidedPromptsInfoAriaLabel')}
-                                className="flex items-center justify-center"
-                              >
-                                <Info className="h-4 w-4 text-gray-400" />
-                              </button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>{t('guidedPromptsTooltip')}</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      </div>
-                      <div className="flex h-[200px] flex-col rounded-lg bg-gray-50 p-4">
-                        <div
-                          className="flex-1 overflow-auto"
-                          tabIndex={0}
-                          role="textbox"
-                          aria-readonly="true"
-                          aria-label={t('guidedPromptContentAriaLabel')}
-                        >
-                          <p className="text-sm text-gray-600">
-                            {field.state.value}
-                          </p>
-                        </div>
-                        <div className="mt-4 flex justify-end gap-2">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className="h-7 border-gray-200 px-4 text-xs font-normal text-gray-600"
-                            onClick={() => {
-                              field.handleChange(field.state.value);
-                              setPrompt({
-                                label: t('guidedPromptLabel'),
-                                type: 'guidedPrompt',
-                              });
-                            }}
-                          >
-                            <Edit className="mr-1.5 h-3 w-3" />
-                            {t('editButton')}
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </form.Field>
-              </div>
-
-              <div className="flex justify-end">
-                <Button
-                  type="submit"
-                  className="bg-gradient-to-r from-[#2563EB] to-[#93C5FD] text-white hover:opacity-90"
-                  disabled={isDisabled}
-                >
-                  {isLoadingCreateMentor ? t('saving') : t('saveButton')}
-                </Button>
-              </div>
-            </form>
-          </TabsContent>
+                <div className="flex justify-end">
+                  <Button
+                    type="submit"
+                    className="bg-gradient-to-r from-[#2563EB] to-[#93C5FD] text-white hover:opacity-90"
+                    disabled={isDisabled}
+                  >
+                    {isLoadingCreateMentor ? t('saving') : t('saveButton')}
+                  </Button>
+                </div>
+              </form>
+            </TabsContent>
+          )}
         </Tabs>
       </div>
       {prompt && (

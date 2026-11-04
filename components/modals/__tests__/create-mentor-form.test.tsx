@@ -1,6 +1,7 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
+  act,
   render,
   screen,
   cleanup,
@@ -9,6 +10,11 @@ import {
   within,
 } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+
+import {
+  canWriteAgentField,
+  getCreateAgentFieldVisibility,
+} from '@iblai/iblai-js/web-utils';
 
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { CreateMentorForm, CreateMentorInline } from '../create-mentor-form';
@@ -32,6 +38,21 @@ const { navigateToMentor, createMutation, unwrap, freeTrial } = vi.hoisted(
     },
   }),
 );
+
+type FieldPermissions = Record<string, { write: boolean }> | undefined | null;
+
+const { fieldPermissions, categoriesQuery, useCreateAgentFieldPermissions } =
+  vi.hoisted(() => ({
+    fieldPermissions: {
+      permissions: undefined as
+        | Record<string, { write: boolean }>
+        | undefined
+        | null,
+      isLoading: false,
+    },
+    categoriesQuery: { isLoading: false },
+    useCreateAgentFieldPermissions: vi.fn(),
+  }));
 
 vi.mock('@/hooks/use-tenants', () => ({
   useTenantKey: () => ({ tenant: 'test-tenant' }),
@@ -75,6 +96,7 @@ vi.mock('next/image', () => ({
 
 // Avoid pulling the heavy rich-text editor (and its transitive deps).
 vi.mock('@iblai/iblai-js/web-containers', () => ({
+  useCreateAgentFieldPermissions,
   RichTextEditor: ({
     value,
     onChange,
@@ -103,7 +125,7 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
       { id: 1, name: 'General' },
       { id: 2, name: 'Technical' },
     ],
-    isLoading: false,
+    isLoading: categoriesQuery.isLoading,
   }),
   useCreateMentorMutation: () => [
     (...args: unknown[]) => {
@@ -112,6 +134,16 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
     },
     { isLoading: false },
   ],
+}));
+
+// The SDK hook is stubbed only to keep the Redux store out of the test; the
+// visibility and the payload come from the SDK's own helpers.
+useCreateAgentFieldPermissions.mockImplementation(() => ({
+  permissions: fieldPermissions.permissions,
+  isLoading: fieldPermissions.isLoading,
+  visibility: getCreateAgentFieldVisibility(fieldPermissions.permissions),
+  canWrite: (field: string) =>
+    canWriteAgentField(fieldPermissions.permissions, field),
 }));
 
 // ============================================================================
@@ -157,6 +189,9 @@ describe('CreateMentorForm', () => {
     unwrap.mockResolvedValue({ unique_id: 'new-mentor-id' });
     freeTrial.isModalOpen = false;
     freeTrial.FreeTrialDialog = null;
+    fieldPermissions.permissions = undefined;
+    fieldPermissions.isLoading = false;
+    categoriesQuery.isLoading = false;
   });
 
   afterEach(() => {
@@ -426,6 +461,304 @@ describe('CreateMentorForm', () => {
     });
   });
 
+  describe('field permissions', () => {
+    function setPermissions(permissions: FieldPermissions) {
+      fieldPermissions.permissions = permissions;
+    }
+
+    async function fillVisibleRequired(
+      user: ReturnType<typeof userEvent.setup>,
+    ) {
+      await user.type(screen.getByPlaceholderText('Agent Name'), 'My Agent');
+      if (screen.queryByPlaceholderText('Agent Description')) {
+        await user.type(
+          screen.getByPlaceholderText('Agent Description'),
+          'A helpful agent',
+        );
+      }
+      if (screen.queryByRole('combobox', { name: /select category/i })) {
+        await user.click(
+          screen.getByRole('combobox', { name: /select category/i }),
+        );
+        await user.click(await screen.findByText('General'));
+      }
+    }
+
+    it('asks for the permissions of the current organization', () => {
+      render(<CreateMentorForm variant="inline" />);
+
+      expect(useCreateAgentFieldPermissions).toHaveBeenCalledWith({
+        org: 'test-tenant',
+      });
+    });
+
+    it('hides a field the user may not write and leaves it out of the payload', async () => {
+      setPermissions({ mentor_visibility: { write: false } });
+      const user = userEvent.setup();
+      render(<CreateMentorForm variant="inline" />);
+
+      expect(
+        screen.queryByRole('combobox', { name: /select agent visibility/i }),
+      ).not.toBeInTheDocument();
+
+      await fillRequiredAndGoToPrompts(user);
+      await user.click(screen.getByRole('button', { name: /save/i }));
+
+      await waitFor(() => expect(createMutation).toHaveBeenCalledTimes(1));
+      const { formData } = createMutation.mock.calls[0][0] as {
+        formData: Record<string, unknown>;
+      };
+      expect(formData).not.toHaveProperty('mentor_visibility');
+      expect(formData).toMatchObject({
+        new_mentor_name: 'My Agent',
+        display_name: 'My Agent',
+        description: 'A helpful agent',
+        categories: [1],
+      });
+    });
+
+    it('does not require a hidden description to move on', async () => {
+      setPermissions({ description: { write: false } });
+      const user = userEvent.setup();
+      render(<CreateMentorForm variant="inline" />);
+
+      expect(
+        screen.queryByPlaceholderText('Agent Description'),
+      ).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled();
+
+      await fillVisibleRequired(user);
+
+      expect(screen.getByRole('button', { name: 'Next' })).toBeEnabled();
+      expect(screen.getByRole('tab', { name: 'Prompts' })).toBeEnabled();
+    });
+
+    it('does not require a hidden category to move on', async () => {
+      setPermissions({ categories: { write: false } });
+      const user = userEvent.setup();
+      render(<CreateMentorForm variant="inline" />);
+
+      expect(
+        screen.queryByRole('combobox', { name: /select category/i }),
+      ).not.toBeInTheDocument();
+
+      await fillVisibleRequired(user);
+
+      expect(screen.getByRole('button', { name: 'Next' })).toBeEnabled();
+    });
+
+    it('hides the image and base fields the user may not write', () => {
+      setPermissions({
+        uploaded_profile_image: { write: false },
+        template_name: { write: false },
+      });
+      render(<CreateMentorForm variant="inline" />);
+
+      expect(
+        screen.queryByRole('button', { name: /upload agent image/i }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('combobox', { name: /select base model/i }),
+      ).not.toBeInTheDocument();
+      expect(screen.getByPlaceholderText('Agent Name')).toBeInTheDocument();
+    });
+
+    it('saves from the Settings tab when no prompt may be written', async () => {
+      setPermissions({
+        system_prompt: { write: false },
+        proactive_prompt: { write: false },
+        guided_prompt_instructions: { write: false },
+      });
+      const user = userEvent.setup();
+      const onCreated = vi.fn();
+      render(<CreateMentorForm variant="inline" onCreated={onCreated} />);
+
+      expect(
+        screen.queryByRole('tab', { name: 'Prompts' }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', { name: 'Next' }),
+      ).not.toBeInTheDocument();
+      const save = screen.getByRole('button', { name: 'Save' });
+      expect(save).toBeDisabled();
+
+      await fillVisibleRequired(user);
+      expect(save).toBeEnabled();
+      await user.click(save);
+
+      await waitFor(() => expect(createMutation).toHaveBeenCalledTimes(1));
+      const { formData } = createMutation.mock.calls[0][0] as {
+        formData: Record<string, unknown>;
+      };
+      expect(formData).not.toHaveProperty('system_prompt');
+      expect(formData).not.toHaveProperty('proactive_prompt');
+      expect(formData).not.toHaveProperty('guided_prompt_instructions');
+      expect(formData).toMatchObject({
+        new_mentor_name: 'My Agent',
+        description: 'A helpful agent',
+        moderation_system_prompt: expect.any(String),
+      });
+      await waitFor(() => {
+        expect(navigateToMentor).toHaveBeenCalledWith(
+          'new-mentor-id',
+          undefined,
+          undefined,
+        );
+        expect(onCreated).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    it('does not create the agent on Enter in the name field when saving from Settings', async () => {
+      setPermissions({
+        system_prompt: { write: false },
+        proactive_prompt: { write: false },
+        guided_prompt_instructions: { write: false },
+      });
+      const user = userEvent.setup();
+      render(<CreateMentorForm variant="inline" />);
+
+      await fillVisibleRequired(user);
+      await user.type(screen.getByPlaceholderText('Agent Name'), '{Enter}');
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      });
+
+      expect(createMutation).not.toHaveBeenCalled();
+      expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled();
+    });
+
+    it('shows a prompt card only for each prompt the user may write', async () => {
+      setPermissions({ proactive_prompt: { write: false } });
+      const user = userEvent.setup();
+      render(<CreateMentorForm variant="inline" />);
+
+      await fillRequiredAndGoToPrompts(user);
+
+      expect(screen.getByText('System Prompts')).toBeInTheDocument();
+      expect(screen.queryByText('Proactive Prompts')).not.toBeInTheDocument();
+      expect(screen.getByText('Guided Prompts')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Save' })).toBeInTheDocument();
+    });
+
+    it('shows every field and the Prompts tab while the permissions are unknown', () => {
+      setPermissions(undefined);
+      render(<CreateMentorForm variant="inline" />);
+
+      expect(screen.getByPlaceholderText('Agent Name')).toBeInTheDocument();
+      expect(
+        screen.getByPlaceholderText('Agent Description'),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole('combobox', { name: /select category/i }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole('combobox', { name: /select agent visibility/i }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole('combobox', { name: /select base model/i }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: /upload agent image/i }),
+      ).toBeInTheDocument();
+      expect(screen.getByRole('tab', { name: 'Prompts' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Next' })).toBeInTheDocument();
+    });
+
+    it('keeps the name field, disabled, and holds the gated fields back while the permissions load', () => {
+      fieldPermissions.isLoading = true;
+      const prefilled = {
+        name: 'Prefilled Agent',
+        description: 'Prefilled description',
+        category: 1,
+      };
+      const { rerender } = render(
+        <CreateMentorForm variant="inline" initialValues={prefilled} />,
+      );
+
+      const name = screen.getByPlaceholderText('Agent Name');
+      expect(name).toBeDisabled();
+      expect(name).toHaveValue('Prefilled Agent');
+      expect(
+        screen.queryByPlaceholderText('Agent Description'),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('combobox', { name: /select category/i }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('tab', { name: 'Prompts' }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', { name: 'Next' }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', { name: 'Save' }),
+      ).not.toBeInTheDocument();
+
+      fieldPermissions.isLoading = false;
+      rerender(<CreateMentorForm variant="inline" initialValues={prefilled} />);
+
+      expect(screen.getByPlaceholderText('Agent Name')).toBeEnabled();
+      expect(screen.getByPlaceholderText('Agent Description')).toHaveValue(
+        'Prefilled description',
+      );
+      expect(screen.getByRole('tab', { name: 'Prompts' })).toBeEnabled();
+      expect(screen.getByRole('button', { name: 'Next' })).toBeEnabled();
+    });
+
+    it('decides between Next and Save only once the permissions arrive', () => {
+      fieldPermissions.isLoading = true;
+      const prefilled = {
+        name: 'Prefilled Agent',
+        description: 'Prefilled description',
+        category: 1,
+      };
+      const { rerender } = render(
+        <CreateMentorForm variant="inline" initialValues={prefilled} />,
+      );
+
+      expect(
+        screen.queryByRole('button', { name: 'Next' }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', { name: 'Save' }),
+      ).not.toBeInTheDocument();
+
+      setPermissions({
+        system_prompt: { write: false },
+        proactive_prompt: { write: false },
+        guided_prompt_instructions: { write: false },
+      });
+      fieldPermissions.isLoading = false;
+      rerender(<CreateMentorForm variant="inline" initialValues={prefilled} />);
+
+      expect(
+        screen.queryByRole('button', { name: 'Next' }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('tab', { name: 'Prompts' }),
+      ).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled();
+    });
+
+    it('lets the user move on to Prompts while the categories load when the settings are filled in', () => {
+      categoriesQuery.isLoading = true;
+      render(
+        <CreateMentorForm
+          variant="inline"
+          initialValues={{
+            name: 'Prefilled Agent',
+            description: 'Prefilled description',
+            category: 1,
+          }}
+        />,
+      );
+
+      expect(screen.getByPlaceholderText('Agent Name')).toBeDisabled();
+      expect(screen.getByRole('button', { name: 'Next' })).toBeEnabled();
+      expect(screen.getByRole('tab', { name: 'Prompts' })).toBeEnabled();
+    });
+  });
+
   describe('CreateMentorInline convenience wrapper', () => {
     it('renders the inline variant', () => {
       render(<CreateMentorInline />);
@@ -441,6 +774,9 @@ describe('CreateMentorModal', () => {
     unwrap.mockResolvedValue({ unique_id: 'new-mentor-id' });
     freeTrial.isModalOpen = false;
     freeTrial.FreeTrialDialog = null;
+    fieldPermissions.permissions = undefined;
+    fieldPermissions.isLoading = false;
+    categoriesQuery.isLoading = false;
   });
 
   afterEach(() => {

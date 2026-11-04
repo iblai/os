@@ -4,7 +4,11 @@ import { useUsername } from '@/hooks/use-user';
 import { toast } from 'sonner';
 import { useTenantKey } from '@/hooks/use-tenants';
 import { useNavigate } from '@/hooks/user-navigate';
-import { useCreateMentorMutation } from '@iblai/iblai-js/data-layer';
+import {
+  useCreateMentorMutation,
+  type AgentSettingsFieldPermissions,
+} from '@iblai/iblai-js/data-layer';
+import { buildCreateAgentPayload } from '@iblai/iblai-js/web-utils';
 import {
   DEFAULT_PROMPTS,
   MENTOR_VISIBILITY,
@@ -42,6 +46,7 @@ const defaultCreateMentor: CreateMentorFormValues = {
 export function useCreateMentor(
   initialValues?: Partial<CreateMentorFormValues>,
   onCreated?: () => void,
+  permissions?: AgentSettingsFieldPermissions | null,
 ) {
   const username = useUsername();
   const { tenant: tenantKey = '' } = useTenantKey();
@@ -56,26 +61,14 @@ export function useCreateMentor(
   const form = useForm({
     defaultValues: { ...defaultCreateMentor, ...initialValues },
     onSubmit: async ({ value }) => {
+      const formData = buildCreateAgentPayload(value, permissions);
       try {
         const mentor = await createMentorWithSettings({
           org: tenantKey ?? '',
-          formData: {
-            // @ts-ignore
-            uploaded_profile_image: value.file ?? undefined,
-            new_mentor_name: value.name,
-            display_name: value.name,
-            template_name: value.base,
-            metadata: {
-              category: value.category,
-            },
-            guided_prompt_instructions: value.guidedPrompt,
-            proactive_prompt: value.proactivePrompt,
-            moderation_system_prompt: value.moderationPrompt,
-            system_prompt: value.systemPrompt,
-            description: value.description,
-            mentor_visibility: value.mentorVisibility,
-            ...(value.category && { categories: [value.category] }),
-          },
+          // @ts-expect-error - uploaded_profile_image is a File upload, which the
+          // generated form-data type declares as a string, and template_name is left
+          // out when the user may not set it, which that type requires.
+          formData,
           // @ts-ignore
           userId: username ?? '',
         }).unwrap();

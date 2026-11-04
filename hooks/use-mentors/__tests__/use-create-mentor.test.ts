@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
+import { buildCreateAgentPayload } from '@iblai/iblai-js/web-utils';
 import { useCreateMentor } from '../use-create-mentor';
 import { toast } from 'sonner';
 
@@ -112,6 +113,8 @@ const { mockCreateMentorWithSettings, mockUnwrap } = vi.hoisted(() => ({
   mockCreateMentorWithSettings: vi.fn(),
   mockUnwrap: vi.fn(),
 }));
+
+type FieldPermissions = Record<string, { write: boolean }> | undefined | null;
 
 vi.mock('@iblai/iblai-js/data-layer', () => ({
   useCreateMentorMutation: () => [
@@ -368,6 +371,123 @@ describe('useCreateMentor', () => {
 
       expect(toast.error).toHaveBeenCalledWith('Custom error message');
       consoleSpy.mockRestore();
+    });
+
+    it('builds the payload with the shared helper and the given permissions', async () => {
+      const permissions: FieldPermissions = {
+        mentor_visibility: { write: false },
+      };
+      const { result } = renderHook(() =>
+        useCreateMentor(undefined, undefined, permissions),
+      );
+
+      await act(async () => {
+        result.current.form.setFieldValue('name', 'Test Mentor');
+      });
+      await act(async () => {
+        await result.current.form.handleSubmit();
+      });
+
+      const { formData } = mockCreateMentorWithSettings.mock.calls[0][0] as {
+        formData: Record<string, unknown>;
+      };
+      expect(formData).toEqual(
+        buildCreateAgentPayload(
+          { ...mockFormState, name: 'Test Mentor' },
+          permissions,
+        ),
+      );
+      expect(formData).not.toHaveProperty('mentor_visibility');
+    });
+
+    it('leaves out the fields the user may not write', async () => {
+      const { result } = renderHook(() =>
+        useCreateMentor(undefined, undefined, {
+          mentor_visibility: { write: false },
+          description: { write: false },
+          system_prompt: { write: false },
+        }),
+      );
+
+      await act(async () => {
+        result.current.form.setFieldValue('name', 'Test Mentor');
+        result.current.form.setFieldValue('description', 'Hidden');
+        result.current.form.setFieldValue('category', 3);
+      });
+      await act(async () => {
+        await result.current.form.handleSubmit();
+      });
+
+      const { formData } = mockCreateMentorWithSettings.mock.calls[0][0] as {
+        formData: Record<string, unknown>;
+      };
+      expect(formData).not.toHaveProperty('mentor_visibility');
+      expect(formData).not.toHaveProperty('description');
+      expect(formData).not.toHaveProperty('system_prompt');
+      expect(formData).toMatchObject({
+        new_mentor_name: 'Test Mentor',
+        display_name: 'Test Mentor',
+        template_name: 'default-agent',
+        categories: [3],
+        metadata: { category: 3 },
+        proactive_prompt: 'Proactive prompt',
+        guided_prompt_instructions: 'Guided prompt',
+        moderation_system_prompt: 'Moderation prompt',
+      });
+    });
+
+    it('sends every field when the permissions are unknown', async () => {
+      const { result } = renderHook(() => useCreateMentor());
+
+      await act(async () => {
+        result.current.form.setFieldValue('name', 'Test Mentor');
+        result.current.form.setFieldValue('description', 'Test Description');
+        result.current.form.setFieldValue('category', 3);
+      });
+      await act(async () => {
+        await result.current.form.handleSubmit();
+      });
+
+      const { formData } = mockCreateMentorWithSettings.mock.calls[0][0] as {
+        formData: Record<string, unknown>;
+      };
+      expect(Object.keys(formData).sort()).toEqual(
+        [
+          'categories',
+          'description',
+          'display_name',
+          'guided_prompt_instructions',
+          'mentor_visibility',
+          'metadata',
+          'moderation_system_prompt',
+          'new_mentor_name',
+          'proactive_prompt',
+          'system_prompt',
+          'template_name',
+        ].sort(),
+      );
+      expect(formData).toMatchObject({
+        categories: [3],
+        metadata: { category: 3 },
+        mentor_visibility: 'public',
+      });
+    });
+
+    it('sends categories only when a category is picked', async () => {
+      const { result } = renderHook(() => useCreateMentor());
+
+      await act(async () => {
+        result.current.form.setFieldValue('name', 'Test Mentor');
+      });
+      await act(async () => {
+        await result.current.form.handleSubmit();
+      });
+
+      const { formData } = mockCreateMentorWithSettings.mock.calls[0][0] as {
+        formData: Record<string, unknown>;
+      };
+      expect(formData).not.toHaveProperty('categories');
+      expect(formData).toMatchObject({ metadata: { category: null } });
     });
 
     it('shows default error message when no specific error', async () => {
