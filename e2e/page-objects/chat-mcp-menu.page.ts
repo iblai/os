@@ -230,22 +230,38 @@ export class ChatMcpMenuPage {
     await expect(target).toBeFocused();
   }
 
-  /** Opens the panel unless it is already showing, from the "+" menu if that is already open. */
+  /**
+   * Opens the panel unless it is already showing. Retried as a whole: while
+   * a chat settles (a new chat, a popover tearing down) the composer
+   * re-renders, which closes the "+" menu under a click or detaches its
+   * rows, so each try reopens the menu (`ChatPage.openPlusMenu` leaves an
+   * open one alone) and chooses MCP again.
+   */
   async open(): Promise<void> {
     if (await this.heading.isVisible()) return;
-    // An open "+" menu hides its own trigger from the accessibility tree, so
-    // the button below would never be found; the row is right there instead.
-    if (await this.openPlusMenu().isVisible()) {
-      await this.row.click();
-      await expect(this.heading).toBeVisible({ timeout: 10_000 });
-      return;
-    }
-    await expect(this.plusMenuButton).toBeVisible({ timeout: 30_000 });
-    // Retried: a click can land while a previous popover is still tearing
-    // down and get swallowed.
     await expect(async () => {
       if (await this.heading.isVisible()) return;
-      await this.openFromPlusMenu();
+      await this.chat.openPlusMenu();
+      await expect(this.row).toBeVisible({ timeout: 5_000 });
+      await this.row.click({ timeout: 5_000 });
+      await expect(this.heading).toBeVisible({ timeout: 5_000 });
+    }).toPass({ timeout: 60_000 });
+  }
+
+  /**
+   * The row's count badge, read with the "+" menu open: `null` means no
+   * badge beside a visible row. Retried like `open()`, since the menu can
+   * close under a re-render between opening it and reading the row.
+   */
+  async expectRowBadge(text: string | null): Promise<void> {
+    await expect(async () => {
+      await this.chat.openPlusMenu();
+      await expect(this.row).toBeVisible({ timeout: 5_000 });
+      if (text === null) {
+        await expect(this.rowBadge).toHaveCount(0, { timeout: 5_000 });
+      } else {
+        await expect(this.rowBadge).toHaveText(text, { timeout: 5_000 });
+      }
     }).toPass({ timeout: 30_000 });
   }
 
