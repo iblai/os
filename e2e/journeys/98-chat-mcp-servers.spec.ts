@@ -145,7 +145,7 @@ test.describe('Journey 98: Chat MCP Servers', () => {
 
       await mcp.row.click();
       await expect(mcp.heading).toBeVisible({ timeout: 10_000 });
-      await expect(mcp.openPlusMenu()).toBeHidden();
+      await expect(mcp.openPlusMenuAny()).toBeHidden();
       await expect(mcp.description).toBeVisible();
       await expect(mcp.closeButton).toHaveAccessibleName(LABELS.close);
 

@@ -29,6 +29,9 @@
       "@/*": ["./*"]
     }
   },
+  // Imported by __tests__/playwright-security-config.test.ts from outside the
+  // excluded e2e/ tree; under composite, every imported file must be listed
+  // (TS6307). Keep them importing nothing else from e2e/.
   "files": ["e2e/playwright.config.ts", "e2e/mcp.config.ts"],
   "include": [
     "**/*.ts",

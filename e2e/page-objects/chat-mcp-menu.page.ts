@@ -97,7 +97,7 @@ export class ChatMcpMenuPage {
     this.chat = new ChatPage(page);
     observeDmBase(page);
     this.plusMenuButton = this.chat.plusMenuButton;
-    this.row = this.openPlusMenu()
+    this.row = this.openPlusMenuAny()
       .getByTestId('chat-mcp-button')
       .filter({ hasText: new RegExp(`^${LABELS.row}`) });
     this.rowBadge = this.row.getByTestId('composer-count-badge');
@@ -139,7 +139,7 @@ export class ChatMcpMenuPage {
   }
 
   /** Whichever "+" surface is open — the two are exclusive by viewport. */
-  openPlusMenu(): Locator {
+  openPlusMenuAny(): Locator {
     return this.plusMenuContent().or(this.plusMenuSheet());
   }
 
@@ -181,6 +181,9 @@ export class ChatMcpMenuPage {
       }),
     ).toHaveCount(0);
     await expect(this.row).toHaveCount(0);
+    // The counts are read inside the open menu, so they prove nothing if it
+    // closed meanwhile; it is still open.
+    await expect(this.menuItems.first()).toBeVisible();
   }
 
   /** "+" via Enter, End to the MCP row (always the last one), Enter. */

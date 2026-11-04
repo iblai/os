@@ -6583,7 +6583,7 @@
           "id": "chat-mcp-04",
           "description": "The \"+\" menu's MCP row carries a count badge (composer-count-badge) of the servers on for this chat: \"1\" with one attached server on, gone (the row itself stays) once the admin switches it off for this chat from the panel, \"1\" again once it is switched back on",
           "status": "pending",
-          "note": "Fixed after the stg1 run of 2026-10-31 (PR os#616); flip to covered once the rerun is green."
+          "note": "Root cause fixed in PR os#626: the \"+\" trigger is aria-hidden while the menu is open, so the helpers now leave an open menu alone; flip to covered once the stg rerun is green."
         },
         {
           "id": "chat-mcp-05",
@@ -6649,7 +6649,7 @@
           "id": "chat-mcp-17",
           "description": "Student (non-admin), with the server list, connections and connected services mocked to one signed-in per-user OAuth server the agent uses, and that mocked server's session-preference PUT answered as the backend would: switches it off for this chat (the save names the open conversation), closes the panel and sends a message, which goes out in that same conversation (its request carries the session id), shows as the user's message and gets the agent's reply (or its User Agreement); the \"+\" row then has no badge, and switching the server back on for this chat brings the badge \"1\" back",
           "status": "pending",
-          "note": "Fixed after the stg1 run of 2026-10-31 (PR os#616); flip to covered once the rerun is green."
+          "note": "Root cause fixed in PR os#626: the \"+\" trigger is aria-hidden while the menu is open, so the helpers now leave an open menu alone; flip to covered once the stg rerun is green."
         }
       ]
     },
