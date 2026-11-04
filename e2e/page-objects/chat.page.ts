@@ -1588,13 +1588,18 @@ export class ChatPage {
    * Opens the composer's "+" menu (desktop dropdown or phone sheet) and
    * waits until it is genuinely showing — retried like `openSkillsMenu()`,
    * since a click landing while a previous Radix instance is still tearing
-   * down can be swallowed or double-toggle.
+   * down can be swallowed or double-toggle. A menu that is already open is
+   * left alone, and left alone BEFORE the trigger is looked for: the open
+   * dropdown hides everything outside itself from the accessibility tree,
+   * its own trigger included, so a role query for "+" cannot succeed until
+   * the menu has closed.
    */
   async openPlusMenu(): Promise<void> {
+    if (await this.openPlusMenuAny().isVisible()) return;
     await expect(this.plusMenuButton).toBeVisible({ timeout: 15_000 });
     await expect(async () => {
       if (!(await this.openPlusMenuAny().isVisible())) {
-        await this.plusMenuButton.click();
+        await this.plusMenuButton.click({ timeout: 5_000 });
       }
       await expect(this.openPlusMenuAny()).toBeVisible({ timeout: 1_000 });
     }).toPass({ timeout: 15_000 });
