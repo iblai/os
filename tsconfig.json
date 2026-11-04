@@ -29,6 +29,7 @@
       "@/*": ["./*"]
     }
   },
+  "files": ["e2e/playwright.config.ts", "e2e/mcp.config.ts"],
   "include": [
     "**/*.ts",
     "**/*.tsx",
