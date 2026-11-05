@@ -255,13 +255,22 @@ export const getEmbedCode = async (
             window.onload = function() {
               let isEmbeddedMentorReady = false;
               let embedTenant = "${tenant}";
-              const iblData = new URL(window.location.href).searchParams.get("ibl-data");
+              let organizationSwitchAttemptKey = 'ibl-org-switch-' + embedTenant;
+              let iblData = new URL(window.location.href).searchParams.get("ibl-data");
               if (iblData) {
                 const url = new URL(window.location);
                 url.searchParams.delete("ibl-data");
                 window.history.replaceState({}, document.title, url);
-                const userData = JSON.parse(iblData).userData;
-                document.cookie = \`userData=\${userData}; domain=\${document.domain}; path=/;\`;
+                try {
+                  const userData = JSON.parse(iblData).userData;
+                  document.cookie = \`userData=\${userData}; domain=\${document.domain}; path=/;\`;
+                } catch (error) {
+                  // Unusable session: drop it so every \`if (iblData)\` below
+                  // falls through to the sign-in path instead of replaying auth
+                  // the embed cannot read.
+                  iblData = null;
+                  console.error('Error reading ibl-data:', error);
+                }
               }
               
                 ${
@@ -324,6 +333,18 @@ export const getEmbedCode = async (
                     }
                 }
 
+                function getIblDataTenant() {
+                    if (!iblData) {
+                        return null;
+                    }
+                    try {
+                        return JSON.parse(iblData).tenant ?? null;
+                    } catch (error) {
+                        console.error('Error parsing ibl-data:', error);
+                        return null;
+                    }
+                }
+
                 function isTokenExpired(token_expires) {
                   const expirationDate = new Date(token_expires);
                   const now = new Date();
@@ -333,6 +354,36 @@ export const getEmbedCode = async (
                 function redirectToAuthSPA(forceLogout) {
                     const redirectPath = window.location.pathname + window.location.search;
                     window.location.href = \`${config.authUrl()}/login?redirect-path=\${redirectPath}${!settings.allow_anonymous ? '&redirect-token=' + redirectToken : ''}&tenant=${tenant}${settings.sso_provider ? '&custom_sso_backend_path=' + settings.sso_provider : ''}\${forceLogout ? '&logout=true' : ''}\`;
+                }
+
+                function switchOrganizationViaAuthSPA() {
+                    // One attempt per organization. The embed re-asks every few
+                    // seconds, so without this a switch that cannot succeed
+                    // would navigate this page over and over.
+                    try {
+                        if (sessionStorage.getItem(organizationSwitchAttemptKey)) {
+                            console.warn('[ibl] Already tried switching to ' + embedTenant + ', not retrying.');
+                            return;
+                        }
+                        sessionStorage.setItem(organizationSwitchAttemptKey, '1');
+                    } catch (error) {
+                        // Private browsing can refuse sessionStorage; switching
+                        // once is better than never switching.
+                    }
+                    const redirectPath = window.location.pathname + window.location.search;
+                    // /join covers every case: a member gets a new session, a
+                    // non-member is linked first where the organization allows
+                    // it, and an invalid session falls back to sign-in and
+                    // returns here.
+                    window.location.href = \`${config.authUrl()}/join?tenant=${tenant}&redirect-to=\${encodeURIComponent(window.location.origin)}&redirect-path=\${encodeURIComponent(redirectPath)}\`;
+                }
+
+                function clearOrganizationSwitchAttempt() {
+                    try {
+                        sessionStorage.removeItem(organizationSwitchAttemptKey);
+                    } catch (error) {
+                        // Nothing to clear if storage is unavailable.
+                    }
                 }
 
                 let isWidgetInjected = false;
@@ -626,6 +677,9 @@ export const getEmbedCode = async (
                     : ''
                 }
                 initChatWidget();
+                if (getIblDataTenant() === embedTenant) {
+                    clearOrganizationSwitchAttempt();
+                }
                 window.addEventListener('message', function(event) {
                     let message = event.data;
                     if (typeof message === 'string') {
@@ -669,6 +723,19 @@ export const getEmbedCode = async (
                         : ''
                     }
                     
+                    if (message?.tenantSwitch) {
+                      // Answer only for this embed's own organization, and only
+                      // with a session that belongs to it.
+                      if (message.tenant === embedTenant) {
+                        if (getIblDataTenant() === embedTenant) {
+                          clearOrganizationSwitchAttempt();
+                          sendAuthDataToIframe();
+                        } else {
+                          ${!settings.allow_anonymous ? 'switchOrganizationViaAuthSPA();' : ''}
+                        }
+                      }
+                    }
+
                     if (message?.authExpired) {
                       if(iblData){
                         sendAuthDataToIframe();
