@@ -158,10 +158,11 @@ test.describe('Journey 3: New User UI & Profile Dropdown', () => {
   // ui-06: picking an organization moved out of the app and into the auth
   // app, which is the only place that can mint another organization's tokens.
   // What is left in the menu is the organization the user is in (a label, no
-  // picker) plus an "Organizations" entry that makes the trip. The entry only
-  // appears when there is somewhere to go, so a user with a single
-  // organization skips rather than fails.
-  test('profile dropdown offers no in-place organization picker, and Organizations opens the auth app chooser', async ({
+  // picker) plus an "Organizations" entry that opens the chooser in its own
+  // tab — this one stays put, so closing that tab means no switch. The entry
+  // only appears when there is somewhere to go, so a single-organization
+  // account skips rather than fails.
+  test('profile dropdown offers no in-place picker, and Organizations opens the chooser in its own tab', async ({
     nonadminPage,
     nonadminNavbarPage,
   }) => {
@@ -191,18 +192,28 @@ test.describe('Journey 3: New User UI & Profile Dropdown', () => {
       return;
     }
 
-    await nonadminNavbarPage.organizationsItem.click();
+    const appUrlBefore = nonadminPage.url();
+    const [chooser] = await Promise.all([
+      nonadminPage.context().waitForEvent('page', { timeout: 20_000 }),
+      nonadminNavbarPage.organizationsItem.click(),
+    ]);
 
-    await nonadminPage.waitForURL(/\/me\?.*action=switch-tenant/, {
-      timeout: 20_000,
-    });
-    const url = new URL(nonadminPage.url());
+    await chooser.waitForLoadState('domcontentloaded');
+    const url = new URL(chooser.url());
+    expect(url.pathname).toBe('/me');
     expect(url.searchParams.get('action')).toBe('switch-tenant');
-    // Without a return address the chooser cannot hand the user back.
+    // Without a return address the chooser cannot hand the user back, and the
+    // popup flag is what tells it to drive this tab rather than its own.
     expect(url.searchParams.get('redirect-to')).toBeTruthy();
-    await expect(
-      nonadminPage.getByText(/select the organization you want to sign in to/i),
-    ).toBeVisible({ timeout: 20_000 });
+    expect(url.searchParams.get('popup')).toBe('1');
+
+    // The app the user was in is untouched while they decide.
+    expect(nonadminPage.url()).toBe(appUrlBefore);
+
+    // Closing the tab without picking is simply not switching.
+    await chooser.close();
+    await nonadminPage.waitForTimeout(1_000);
+    expect(nonadminPage.url()).toBe(appUrlBefore);
   });
 });
 

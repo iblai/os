@@ -90,26 +90,33 @@ export function ProfileButton({
           </div>
         )}
         {!hideTenantSwitcher && !lockedTenant && (
-          <>
-            <TenantSwitcher
-              currentTenantKey={tenantKey}
-              tenants={userTenants}
-              setHideTenantSwitcher={setHideTenantSwitcher}
-              rbacPermissions={rbacPermissions}
-              enableRbac={config.enableRBAC()}
-            />
-            <DropdownMenuItem
-              onClick={() =>
-                openTenantSwitcher({
-                  authUrl: config.authUrl(),
-                  tenant: tenantKey,
-                })
-              }
-            >
-              <ArrowLeftRight className="mr-2 h-4 w-4" />
-              {t('organizations')}
-            </DropdownMenuItem>
-          </>
+          <TenantSwitcher
+            currentTenantKey={tenantKey}
+            tenants={userTenants}
+            setHideTenantSwitcher={setHideTenantSwitcher}
+            rbacPermissions={rbacPermissions}
+            enableRbac={config.enableRBAC()}
+          />
+        )}
+        {/* Independent of the row above: the switcher hides itself when there
+            is no other organization to NAME, which says nothing about whether
+            the user can go and look. A build pinned to a tenant still has
+            nowhere to go. */}
+        {!lockedTenant && (
+          <DropdownMenuItem
+            onClick={() =>
+              openTenantSwitcher({
+                authUrl: config.authUrl(),
+                tenant: tenantKey,
+                // Its own tab: this one stays put, and a tab closed without a
+                // pick means no switch at all.
+                popup: true,
+              })
+            }
+          >
+            <ArrowLeftRight className="mr-2 h-4 w-4" />
+            {t('organizations')}
+          </DropdownMenuItem>
         )}
         <DropdownMenuItem onClick={() => handleLogout()}>
           <LogOut className="mr-2 h-4 w-4" />

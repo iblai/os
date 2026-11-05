@@ -54,7 +54,7 @@ When adding a new page or modifying an existing user flow:
 - [x] Fresh signup (unauthenticated context, real `/account/create` registration) lands on the main tenant and the profile dropdown shows exactly 3 items: Profile, Help, Log out
 - [x] Sidebar admin-only buttons (e.g. New Project) show upgrade/auth dialog for non-admins when visible
 - [x] Non-admin in the main OR an advertising tenant sees full admin sidebar (New Agent, Workflows, Analytics, Invites, Management, Integrations, Monetization, Memory, Advanced) and clicking any trial-gated entry opens the upgrade/pricing dialog; gracefully skips when paywall is off
-- [x] Profile dropdown shows the current organization as a label with no in-place picker, and its "Organizations" entry opens the auth app chooser (`/me?action=switch-tenant` with a return address); skips when the account belongs to a single organization
+- [x] Profile dropdown shows the current organization as a label with no in-place picker, and its "Organizations" entry opens the auth app chooser in its own tab (`/me?action=switch-tenant&popup=1` with a return address), leaving this tab untouched; closing that tab means no switch. Skips when the account belongs to a single organization
 
 ---
 
