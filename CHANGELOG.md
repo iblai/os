@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.189.1](https://github.com/iblai/os/compare/v0.189.0...v0.189.1) (2026-11-05)
+
+### Chores
+
+* **deps:** take @iblai/iblai-js 2.65.2 ([89e7dc4](https://github.com/iblai/os/commit/89e7dc4dec999d14377dfcb2e297ab9e7c7b2f6e))
+
 ## [0.189.0](https://github.com/iblai/os/compare/v0.188.2...v0.189.0) (2026-11-05)
 
 ### Features
