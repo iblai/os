@@ -576,9 +576,36 @@ describe('getEmbedCode tenant switch', () => {
     expect(posted).not.toHaveBeenCalled();
   });
 
-  // `/join` rather than `/login`: it links a user the organization admits and
-  // sends a member straight on, so membership stops being a precondition.
-  it('joins the pinned organization when the cached session is another one’s', async () => {
+  // The embed cannot reach the chooser itself: navigating a storage-partitioned
+  // iframe would tear it out of this page. It hands over the address instead,
+  // and the host opens a real tab, which comes back with the new session.
+  it('opens the organization chooser in a tab when the embed hands over its address', async () => {
+    const open = vi.fn();
+    Object.defineProperty(window, 'open', {
+      value: open,
+      writable: true,
+      configurable: true,
+    });
+    setUrl(`?ibl-data=${session('acme')}`);
+    runSnippet(await getEmbedCode('acme', settings, 'redirect-token'));
+    const posted = openWidget();
+    const before = window.location.href;
+
+    postToHost({
+      tenantSwitch: true,
+      chooserUrl: 'https://login.example.com/me?action=switch-tenant&popup=1',
+    });
+
+    expect(open).toHaveBeenCalledWith(
+      'https://login.example.com/me?action=switch-tenant&popup=1',
+      'ibl-organizations',
+    );
+    // The page the embed lives on is left exactly as it was.
+    expect(window.location.href).toBe(before);
+    expect(posted).not.toHaveBeenCalled();
+  });
+
+  it('sends the user to sign in when the cached session is another organization’s', async () => {
     setUrl(`?ibl-data=${session('other-org')}`);
     runSnippet(await getEmbedCode('acme', settings, 'redirect-token'));
     const posted = openWidget();

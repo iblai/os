@@ -127,6 +127,81 @@ describe('watchTenantSwitch', () => {
     stop();
   });
 
+  // A message with no tenant but an address means "let me choose". The panel's
+  // iframe cannot go there — navigating it would tear the mentor out of the
+  // panel — so the chooser opens in a tab and the pick resumes the normal
+  // switch.
+  it('opens the chooser in a tab and switches to whatever the user picks there', async () => {
+    const { host, iframe } = makeHost(
+      'https://os.ibl.ai/platform/acme/bot?embed=true&mode=anonymous',
+    );
+    const stop = watchTenantSwitch(host);
+
+    window.dispatchEvent(
+      new MessageEvent('message', {
+        data: {
+          tenantSwitch: true,
+          chooserUrl: 'https://login.iblai.app/me?action=switch-tenant&popup=1',
+        },
+      }),
+    );
+
+    await vi.waitFor(() =>
+      expect(chromeStub.stub.tabs.create).toHaveBeenCalled(),
+    );
+    const [{ url }] = chromeStub.stub.tabs.create.mock.calls[0] as unknown as [
+      { url: string },
+    ];
+    expect(url).toContain('action=switch-tenant');
+
+    // The chooser answers by sending its tab to /login/complete?tenant=…
+    for (const listener of [...chromeStub.updated])
+      listener(
+        99,
+        {},
+        { id: 99, url: 'https://login.iblai.app/login/complete?tenant=beta' },
+      );
+
+    // That tab is closed rather than left to open the full web app, and the
+    // panel mints its own session for the chosen organization.
+    await vi.waitFor(() =>
+      expect(chromeStub.stub.tabs.remove).toHaveBeenCalledWith(99),
+    );
+    await vi.waitFor(() =>
+      expect(chromeStub.stub.identity.launchWebAuthFlow).toHaveBeenCalled(),
+    );
+    const [{ url: authUrl }] = chromeStub.stub.identity.launchWebAuthFlow.mock
+      .calls[0] as unknown as [{ url: string }];
+    expect(authUrl).toContain('tenant=beta');
+    await vi.waitFor(() => expect(iframe.src).toContain('/sso-login-complete'));
+    stop();
+  });
+
+  // Closing the tab without choosing is not a switch: nothing was minted and
+  // the panel keeps the session it had.
+  it('does nothing when the chooser tab is closed without a pick', async () => {
+    const { host } = makeHost('https://os.ibl.ai/platform/acme/bot?embed=true');
+    const stop = watchTenantSwitch(host);
+
+    window.dispatchEvent(
+      new MessageEvent('message', {
+        data: {
+          tenantSwitch: true,
+          chooserUrl: 'https://login.iblai.app/me?action=switch-tenant&popup=1',
+        },
+      }),
+    );
+    await vi.waitFor(() =>
+      expect(chromeStub.stub.tabs.create).toHaveBeenCalled(),
+    );
+
+    for (const listener of [...chromeStub.removed]) listener(99);
+
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(chromeStub.stub.identity.launchWebAuthFlow).not.toHaveBeenCalled();
+    stop();
+  });
+
   it('captures the return path BEFORE auth, so a mid-flight navigation cannot degrade it to bare /', async () => {
     const { host, iframe } = makeHost(
       'https://os.ibl.ai/platform/acme/bot?embed=true&mode=anonymous',

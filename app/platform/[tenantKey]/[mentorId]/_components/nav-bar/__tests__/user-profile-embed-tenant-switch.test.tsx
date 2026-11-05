@@ -1,10 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { UserProfile } from '../user-profile';
-
-const { mockHandleTenantSwitch } = vi.hoisted(() => ({
-  mockHandleTenantSwitch: vi.fn(),
-}));
 
 vi.mock('next/navigation', () => ({
   useParams: () => ({ tenantKey: 'existing-tenant', mentorId: 'mentor-1' }),
@@ -72,7 +68,6 @@ vi.mock('@/features/utils', () => ({
 
 vi.mock('@/lib/utils', () => ({
   handleLogout: vi.fn(),
-  handleTenantSwitch: mockHandleTenantSwitch,
   isStripeActivated: vi.fn().mockReturnValue(false),
 }));
 
@@ -146,50 +141,39 @@ vi.mock('./learner-mode-switch', () => ({
   LearnerModeSwitch: () => <div data-testid="learner-mode-switch">Switch</div>,
 }));
 
-// A mock that surfaces the tenant-switch callback so a test can trigger it the
-// way the real dropdown does when the user picks a different tenant.
 vi.mock('@iblai/iblai-js/web-containers/next', () => ({
   UserProfileDropdown: (props: any) => (
-    <button
-      data-testid="switch-tenant"
-      onClick={() => props.onTenantChange('new-tenant')}
-    >
-      switch
-    </button>
+    <>
+      <span data-testid="organizations-link">
+        {String(props.showOrganizationsLink)}
+      </span>
+      <span data-testid="tenant-switcher">
+        {String(props.showTenantSwitcher)}
+      </span>
+    </>
   ),
 }));
 
-describe('UserProfile tenant switch', () => {
+// Picking an organization is the auth app's job now — this app only decides
+// whether to offer the trip.
+describe('UserProfile organization chooser', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('in an embed, posts the tenant switch to the parent instead of redirecting', () => {
-    const postMessage = vi.fn();
-    vi.spyOn(window, 'parent', 'get').mockReturnValue({
-      postMessage,
-    } as unknown as Window);
+  it('offers the chooser to a user who belongs to another organization', () => {
+    render(<UserProfile />);
 
-    render(<UserProfile embed />);
-    fireEvent.click(screen.getByTestId('switch-tenant'));
-
-    expect(postMessage).toHaveBeenCalledWith(
-      { tenantSwitch: true, tenant: 'new-tenant' },
-      '*',
-    );
-    expect(mockHandleTenantSwitch).not.toHaveBeenCalled();
+    expect(screen.getByTestId('organizations-link')).toHaveTextContent('true');
   });
 
-  it('outside an embed, runs the normal web tenant switch', () => {
-    const postMessage = vi.fn();
-    vi.spyOn(window, 'parent', 'get').mockReturnValue({
-      postMessage,
-    } as unknown as Window);
+  // An embed cannot make the trip itself — navigating its iframe would tear it
+  // out of the host page — so the SDK hands the chooser's address to the host.
+  // The entry is still offered.
+  it('offers it in an embed too, where the host makes the trip', () => {
+    render(<UserProfile embed />);
 
-    render(<UserProfile />);
-    fireEvent.click(screen.getByTestId('switch-tenant'));
-
-    expect(mockHandleTenantSwitch).toHaveBeenCalledWith('new-tenant');
-    expect(postMessage).not.toHaveBeenCalled();
+    expect(screen.getByTestId('organizations-link')).toHaveTextContent('true');
+    expect(screen.getByTestId('tenant-switcher')).toHaveTextContent('true');
   });
 });
