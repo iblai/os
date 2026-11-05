@@ -146,14 +146,80 @@ export function refreshHostAuthCache(host: Element): void {
 // target tenant + edX JWT — then re-install the session via /sso-login-complete,
 // landing on the app root (embed params preserved) so the app opens the newly
 // selected tenant.
+/**
+ * Watch a chooser tab until the user picks an organization, and report which.
+ *
+ * The chooser hands its answer to `/login/complete?tenant=<key>`, so that
+ * navigation IS the pick. We take the key from the URL and close the tab there
+ * rather than letting it run on — completing it would land the full web app in
+ * a browser tab, while the session that matters is the panel's, which we mint
+ * ourselves through `signIn`.
+ *
+ * Resolves null when the user closes the tab instead of choosing: no pick, no
+ * switch, nothing to undo.
+ */
+function awaitChosenOrganization(tabId: number): Promise<string | null> {
+  return new Promise((resolve) => {
+    const done = (tenant: string | null) => {
+      chrome.tabs.onUpdated.removeListener(onUpdated);
+      chrome.tabs.onRemoved.removeListener(onRemoved);
+      resolve(tenant);
+    };
+    const onUpdated = (id: number, _info: unknown, tab: chrome.tabs.Tab) => {
+      if (id !== tabId || !tab.url) return;
+      let url: URL;
+      try {
+        url = new URL(tab.url);
+      } catch {
+        return;
+      }
+      if (!url.pathname.endsWith('/login/complete')) return;
+      const tenant = url.searchParams.get('tenant');
+      if (!tenant) return;
+      chrome.tabs.remove(tabId).catch(() => {});
+      done(tenant);
+    };
+    const onRemoved = (id: number) => {
+      if (id === tabId) done(null);
+    };
+    chrome.tabs.onUpdated.addListener(onUpdated);
+    chrome.tabs.onRemoved.addListener(onRemoved);
+  });
+}
+
 export function watchTenantSwitch(host: Element): () => void {
   let switching = false;
   const onMessage = async (event: MessageEvent) => {
     const data = event.data as {
       tenantSwitch?: boolean;
       tenant?: string;
+      chooserUrl?: string;
     } | null;
-    if (!data?.tenantSwitch || !data.tenant || switching) return;
+    if (!data?.tenantSwitch || switching) return;
+
+    // No tenant, but an address: the user asked to CHOOSE one. The panel's
+    // iframe cannot go there itself — navigating it would tear the mentor out
+    // of the panel — so the chooser opens in a real tab and we resume the
+    // normal switch below with whatever they pick.
+    if (!data.tenant && data.chooserUrl) {
+      switching = true;
+      try {
+        const tab = await chrome.tabs.create({ url: data.chooserUrl });
+        const tenant = tab.id ? await awaitChosenOrganization(tab.id) : null;
+        if (!tenant) return;
+        const redirectPath = embedRedirectPath(host);
+        await signIn(tenant);
+        refreshHostAuthCache(host);
+        installSession(host, redirectPath);
+      } catch (err) {
+        console.warn('[ibl.ai panel] organization chooser failed:', err);
+      } finally {
+        switching = false;
+      }
+      return;
+    }
+
+    if (!data.tenant) return;
     switching = true;
     try {
       // Capture the return path from the CURRENT chat URL *before* the auth

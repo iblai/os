@@ -261,6 +261,12 @@ export function UserProfile({ embed = false }: { embed?: boolean } = {}) {
     }
   };
 
+  // A Tauri build pinned to a tenant has nothing to switch to.
+  const hasOtherTenants =
+    (userIsAdmin ||
+      userTenants.some((t) => t.key !== 'main' && t.key !== tenantKey)) &&
+    !lockedTenant;
+
   const handleProfileClick = () => {
     // Trigger subscription data fetch when profile is opened
     handleGetSubscriptionRelatedData();
@@ -304,13 +310,14 @@ export function UserProfile({ embed = false }: { embed?: boolean } = {}) {
       // Configuration
       showProfileTab={true}
       showAccountTab={false}
-      showTenantSwitcher={
-        (userIsAdmin ||
-          userTenants.some((t) => t.key !== 'main' && t.key !== tenantKey)) &&
-        !lockedTenant
-      }
+      showTenantSwitcher={hasOtherTenants}
       showHelpLink={true}
       showLogoutButton={!embed}
+      // Always offered, deliberately: the chooser fetches its own list, and
+      // the tenants this app knows about are going away. In an embed the trip
+      // is handed to the host rather than navigating the iframe, so it is
+      // offered there too; only a build pinned to a tenant has nowhere to go.
+      showOrganizationsLink={!lockedTenant}
       showLearnerModeSwitch={!embed && userIsAdmin && tenantKey !== 'main'}
       // Customization
       helpCenterUrl={config.helpCenterUrl()}

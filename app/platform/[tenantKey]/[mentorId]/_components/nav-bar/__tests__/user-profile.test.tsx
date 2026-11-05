@@ -205,7 +205,6 @@ vi.mock('@iblai/iblai-js/web-containers/next', () => ({
     capturedCallbacks = {
       onProfileClick: props.onProfileClick,
       onLogout: props.onLogout,
-      onTenantChange: props.onTenantChange,
       onHelpClick: props.onHelpClick,
       onTenantUpdate: props.onTenantUpdate,
       onLoadGroupPermissions: props.onLoadGroupPermissions,
@@ -226,6 +225,9 @@ vi.mock('@iblai/iblai-js/web-containers/next', () => ({
         <span data-testid="billing-url">{props.billingURL || ''}</span>
         <span data-testid="top-up-url">{props.topUpURL || ''}</span>
         <span data-testid="current-plan">{props.currentPlan || ''}</span>
+        <span data-testid="show-organizations-link">
+          {String(props.showOrganizationsLink)}
+        </span>
         <span data-testid="show-tenant-switcher">
           {String(props.showTenantSwitcher)}
         </span>
@@ -254,12 +256,6 @@ vi.mock('@iblai/iblai-js/web-containers/next', () => ({
         </button>
         <button data-testid="logout-btn" onClick={() => props.onLogout?.()}>
           Logout
-        </button>
-        <button
-          data-testid="tenant-change-btn"
-          onClick={() => props.onTenantChange?.('new-tenant')}
-        >
-          Change Tenant
         </button>
         <button
           data-testid="help-btn"
@@ -382,6 +378,19 @@ describe('UserProfile', () => {
       );
       expect(screen.getByTestId('show-learner-mode-switch')).toHaveTextContent(
         'false',
+      );
+    });
+
+    // An embed is a scoped, host-owned surface: navigating the iframe to the
+    // auth app would tear it out of the page.
+    // An embed cannot navigate to the auth app itself without tearing itself
+    // out of the host page, so the SDK hands the host the chooser's address —
+    // the entry is still offered.
+    it('still offers the organization chooser when embed', () => {
+      render(<UserProfile embed />);
+
+      expect(screen.getByTestId('show-organizations-link')).toHaveTextContent(
+        'true',
       );
     });
   });

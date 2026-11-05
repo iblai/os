@@ -154,6 +154,67 @@ test.describe('Journey 3: New User UI & Profile Dropdown', () => {
       );
     }
   });
+
+  // ui-06: picking an organization moved out of the app and into the auth
+  // app, which is the only place that can mint another organization's tokens.
+  // What is left in the menu is the organization the user is in (a label, no
+  // picker) plus an "Organizations" entry that opens the chooser in its own
+  // tab — this one stays put, so closing that tab means no switch. The entry
+  // only appears when there is somewhere to go, so a single-organization
+  // account skips rather than fails.
+  test('profile dropdown offers no in-place picker, and Organizations opens the chooser in its own tab', async ({
+    nonadminPage,
+    nonadminNavbarPage,
+  }) => {
+    await nonadminNavbarPage.openProfileDropdown();
+
+    // The old chevron/select is gone: the menu shows the current organization
+    // as text only.
+    await expect(
+      nonadminNavbarPage.profileDropdownMenu.getByRole('combobox'),
+    ).toHaveCount(0);
+
+    let hasEntry = false;
+    try {
+      await nonadminNavbarPage.organizationsItem.waitFor({
+        state: 'visible',
+        timeout: 5_000,
+      });
+      hasEntry = true;
+    } catch {
+      hasEntry = false;
+    }
+
+    if (!hasEntry) {
+      logger.info(
+        'ui-06: no Organizations entry — this account belongs to a single organization; skipping the trip',
+      );
+      return;
+    }
+
+    const appUrlBefore = nonadminPage.url();
+    const [chooser] = await Promise.all([
+      nonadminPage.context().waitForEvent('page', { timeout: 20_000 }),
+      nonadminNavbarPage.organizationsItem.click(),
+    ]);
+
+    await chooser.waitForLoadState('domcontentloaded');
+    const url = new URL(chooser.url());
+    expect(url.pathname).toBe('/me');
+    expect(url.searchParams.get('action')).toBe('switch-tenant');
+    // Without a return address the chooser cannot hand the user back, and the
+    // popup flag is what tells it to drive this tab rather than its own.
+    expect(url.searchParams.get('redirect-to')).toBeTruthy();
+    expect(url.searchParams.get('popup')).toBe('1');
+
+    // The app the user was in is untouched while they decide.
+    expect(nonadminPage.url()).toBe(appUrlBefore);
+
+    // Closing the tab without picking is simply not switching.
+    await chooser.close();
+    await nonadminPage.waitForTimeout(1_000);
+    expect(nonadminPage.url()).toBe(appUrlBefore);
+  });
 });
 
 // ── Journey 3 (fresh signup): Profile Dropdown for a genuinely new user ────
@@ -167,7 +228,7 @@ test.describe('Journey 3: New User UI & Profile Dropdown', () => {
 // This sibling describe signs up a brand-new account via the auth service
 // (mirroring Journey 1's signup test and Journey 59 Flow 0) and asserts the
 // default post-signup profile dropdown on the "main" tenant: exactly
-// Profile / Help / Log Out. It intentionally does NOT use the shared
+// Profile / Organizations / Help / Log Out. It intentionally does NOT use the shared
 // `beforeEach`/nonadmin fixtures above — it needs a clean, unauthenticated
 // context so the signup flow can provision + authenticate its own account.
 test.describe('Journey 3: New User UI & Profile Dropdown (fresh signup)', () => {
@@ -177,7 +238,7 @@ test.describe('Journey 3: New User UI & Profile Dropdown (fresh signup)', () => 
   // SSO -> main tenant); give it plenty of room like Journeys 1 and 59.
   test.setTimeout(120_000);
 
-  test('newly registered user goes to navbar and opens profile dropdown to see exactly 3 items', async ({
+  test('newly registered user goes to navbar and opens profile dropdown to see exactly 4 items', async ({
     page,
   }) => {
     test.skip(
@@ -191,10 +252,15 @@ test.describe('Journey 3: New User UI & Profile Dropdown (fresh signup)', () => 
     const navbarPage = new NavbarPage(page);
     await navbarPage.openProfileDropdown();
 
-    await expect(page.getByRole('menuitem')).toHaveCount(3, {
+    // Organizations is always offered — the chooser fetches its own list, so
+    // the app does not need to know whether there is another organization.
+    await expect(page.getByRole('menuitem')).toHaveCount(4, {
       timeout: 10_000,
     });
     await expect(page.getByRole('menuitem', { name: 'Profile' })).toBeVisible();
+    await expect(
+      page.getByRole('menuitem', { name: 'Organizations' }),
+    ).toBeVisible();
     await expect(page.getByRole('menuitem', { name: 'Help' })).toBeVisible();
     await expect(
       page.getByRole('menuitem', { name: 'Log Out', exact: true }),
