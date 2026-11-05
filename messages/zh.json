@@ -800,6 +800,7 @@
     "profile": "个人资料",
     "user": "用户",
     "admin": "管理员",
+    "organizations": "组织",
     "logout": "退出登录"
   },
   "jobScoutPage": {

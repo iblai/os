@@ -800,6 +800,7 @@
     "profile": "Profile",
     "user": "User",
     "admin": "Admin",
+    "organizations": "Organizations",
     "logout": "Logout"
   },
   "jobScoutPage": {

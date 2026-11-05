@@ -108,6 +108,7 @@
       "spec": "03-new-user-ui-and-profile-dropdown.spec.ts",
       "sourceFiles": [
         "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx",
+        "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/user-profile.tsx",
         "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx",
         "components/modals/settings-modal.tsx"
       ],
@@ -124,7 +125,7 @@
         },
         {
           "id": "ui-03",
-          "description": "Fresh signup (unauthenticated context, real /account/create registration) lands on the main tenant and the profile dropdown shows exactly 3 items: Profile, Help, Log Out",
+          "description": "Fresh signup (unauthenticated context, real /account/create registration) lands on the main tenant and the profile dropdown shows exactly 4 items: Profile, Organizations, Help, Log Out",
           "status": "covered"
         },
         {
@@ -135,6 +136,11 @@
         {
           "id": "ui-05",
           "description": "Non-admin in the main OR an advertising tenant sees the full admin sidebar (New Agent, Workflows, Analytics, Invites, Management, Integrations, Monetization, Memory, Advanced) and clicking any trial-gated entry opens the upgrade/pricing dialog instead of performing the real action; gracefully skips when paywall is off",
+          "status": "covered"
+        },
+        {
+          "id": "ui-06",
+          "description": "Profile dropdown shows the current organization as a label with no in-place picker, and its Organizations entry opens the auth app chooser in its own tab (/me?action=switch-tenant&popup=1 with a return address), leaving this tab untouched; closing that tab means no switch. Skips when the account belongs to a single organization",
           "status": "covered"
         }
       ]
@@ -5674,7 +5680,7 @@
         },
         {
           "id": "emb-prof-02",
-          "description": "The embed profile menu offers Profile, the tenant switcher and Help, and leaves out Log Out and the Admin/User mode switch (the host owns auth)",
+          "description": "The embed profile menu offers Profile, the current organization as a label, Organizations and Help, and leaves out the in-place picker, Log Out and the Admin/User mode switch (the host owns auth)",
           "status": "covered"
         },
         {
@@ -5684,7 +5690,7 @@
         },
         {
           "id": "emb-prof-04",
-          "description": "Picking another tenant in the embed profile menu posts `{ tenantSwitch: true, tenant }` to the host page and leaves the frame on the chat instead of redirecting it to the auth app",
+          "description": "The embed hands the organization chooser to the host — `{ tenantSwitch: true, chooserUrl }`, with no tenant since nobody has picked one — instead of redirecting the frame, which stays on the chat",
           "status": "covered"
         },
         {
