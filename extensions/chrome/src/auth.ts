@@ -46,6 +46,11 @@ export function storeSessionFromRedirect(responseUrl: string): void {
     throw new Error(`no "data" param in auth redirect: ${responseUrl}`);
   }
   const session = JSON.parse(data) as Record<string, unknown>;
+  // Drop the previous session first. A payload carries only the keys it has,
+  // so writing over the old one can leave another session's leftovers behind —
+  // and an orphaned `axd_token_expires` would make the session we just minted
+  // read as already expired, locking the panel out for good.
+  for (const key of SESSION_KEYS) localStorage.removeItem(key);
   Object.entries(session).forEach(([key, value]) =>
     localStorage.setItem(key, String(value)),
   );
