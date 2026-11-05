@@ -8,6 +8,7 @@ import {
   removeWidgetSpinner,
   startContextFeed,
   watchAndInstallSession,
+  watchAuthExpired,
   watchTenantSwitch,
 } from '../mentor-frame';
 import {
@@ -294,6 +295,119 @@ describe('watchTenantSwitch', () => {
     expect(chromeStub.stub.identity.launchWebAuthFlow).not.toHaveBeenCalled();
     expect(iframe.src).toBe(before);
     stop();
+  });
+});
+
+// The embed posts `authExpired` instead of navigating itself to the auth SPA:
+// inside the panel's partitioned iframe that navigation would tear the mentor
+// out of the panel. The host has to answer, and when the host session is dead
+// too the only answer left is a fresh interactive sign-in.
+describe('watchAuthExpired', () => {
+  const EXPIRED = '2026-11-03T18:13:55.050Z';
+
+  it('re-authenticates and re-installs when the host session has expired too', async () => {
+    const { host, iframe } = makeHost(
+      'https://os.ibl.ai/platform/acme/bot?embed=true&mode=anonymous',
+    );
+    localStorage.setItem('axd_token_expires', EXPIRED);
+    const stop = watchAuthExpired(host);
+
+    window.dispatchEvent(
+      new MessageEvent('message', { data: { authExpired: true } }),
+    );
+
+    await vi.waitFor(() =>
+      expect(chromeStub.stub.identity.launchWebAuthFlow).toHaveBeenCalled(),
+    );
+    await vi.waitFor(() => expect(iframe.src).toContain('/sso-login-complete'));
+    // The embed params survive the round-trip, so the app reopens the chat it
+    // was in rather than a bare root.
+    expect(new URL(iframe.src).searchParams.get('redirect-path')).toBe(
+      '/?embed=true&mode=anonymous',
+    );
+    stop();
+  });
+
+  // agent-ai re-mints from the stored edX JWT whenever the host session is
+  // still good. Popping an auth window over a refresh that was about to
+  // succeed is worse than waiting for it.
+  it('stands aside while the host session is still valid', async () => {
+    const { host } = makeHost();
+    const stop = watchAuthExpired(host);
+
+    window.dispatchEvent(
+      new MessageEvent('message', { data: { authExpired: true } }),
+    );
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(chromeStub.stub.identity.launchWebAuthFlow).not.toHaveBeenCalled();
+    stop();
+  });
+
+  it('signs in once for a burst of authExpired messages', async () => {
+    const { host } = makeHost();
+    localStorage.setItem('axd_token_expires', EXPIRED);
+    const stop = watchAuthExpired(host);
+
+    for (let i = 0; i < 3; i++) {
+      window.dispatchEvent(
+        new MessageEvent('message', { data: { authExpired: true } }),
+      );
+    }
+
+    await vi.waitFor(() =>
+      expect(chromeStub.stub.identity.launchWebAuthFlow).toHaveBeenCalled(),
+    );
+    expect(chromeStub.stub.identity.launchWebAuthFlow).toHaveBeenCalledTimes(1);
+    stop();
+  });
+
+  // A failed sign-in must not wedge the guard: the person can close the auth
+  // window by accident, and the next message has to be able to try again.
+  it('recovers from a failed sign-in and will retry', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const { host } = makeHost();
+    localStorage.setItem('axd_token_expires', EXPIRED);
+    chromeStub.stub.identity.launchWebAuthFlow.mockResolvedValueOnce(
+      undefined as never,
+    );
+    const stop = watchAuthExpired(host);
+
+    window.dispatchEvent(
+      new MessageEvent('message', { data: { authExpired: true } }),
+    );
+    await vi.waitFor(() => expect(warn).toHaveBeenCalled());
+    expect(warn.mock.calls[0]?.[0]).toContain('session recovery failed');
+
+    window.dispatchEvent(
+      new MessageEvent('message', { data: { authExpired: true } }),
+    );
+    await vi.waitFor(() =>
+      expect(chromeStub.stub.identity.launchWebAuthFlow).toHaveBeenCalledTimes(
+        2,
+      ),
+    );
+    stop();
+    warn.mockRestore();
+  });
+
+  it('ignores unrelated messages, and stops listening once detached', async () => {
+    const { host } = makeHost();
+    localStorage.setItem('axd_token_expires', EXPIRED);
+    const stop = watchAuthExpired(host);
+
+    window.dispatchEvent(
+      new MessageEvent('message', { data: { somethingElse: true } }),
+    );
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(chromeStub.stub.identity.launchWebAuthFlow).not.toHaveBeenCalled();
+
+    stop();
+    window.dispatchEvent(
+      new MessageEvent('message', { data: { authExpired: true } }),
+    );
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(chromeStub.stub.identity.launchWebAuthFlow).not.toHaveBeenCalled();
   });
 });
 

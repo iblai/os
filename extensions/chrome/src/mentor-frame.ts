@@ -1,7 +1,7 @@
 // Glue between the side panel and the mentor iframe inside <agent-ai> (ported
 // from the original panel.js).
 import { extractPageContent } from './page-scripts';
-import { isAuthed, sessionData, signIn } from './auth';
+import { isAuthed, isSessionExpired, sessionData, signIn } from './auth';
 import { injectable } from './settings';
 
 export interface PageContent {
@@ -241,6 +241,47 @@ export function watchTenantSwitch(host: Element): () => void {
       console.warn('[ibl.ai panel] tenant switch failed:', err);
     } finally {
       switching = false;
+    }
+  };
+  window.addEventListener('message', onMessage);
+  return () => window.removeEventListener('message', onMessage);
+}
+
+// ---- Expired session ---------------------------------------------------------
+/**
+ * Re-authenticate the panel when the mentor app reports its session is dead.
+ *
+ * The app posts `{ authExpired: true }` instead of navigating itself to the
+ * auth SPA, because inside the panel's storage-partitioned iframe that
+ * navigation would tear the mentor out of the panel. On a normal page the host
+ * answers from its own session; here the host IS this panel, and when our own
+ * tokens have expired too there is nothing left to answer with — the only way
+ * to mint more is the interactive flow, which only an extension page can run.
+ *
+ * We deliberately stand aside while the host session is still in date:
+ * `<agent-ai>` re-mints from the stored edX JWT in that case, and popping an
+ * auth window over a refresh that was about to succeed is worse than waiting.
+ */
+export function watchAuthExpired(host: Element): () => void {
+  let recovering = false;
+  const onMessage = async (event: MessageEvent) => {
+    const data = event.data as { authExpired?: boolean } | null;
+    if (!data?.authExpired || recovering) return;
+    if (!isSessionExpired()) return; // agent-ai can still handle this one
+
+    recovering = true;
+    try {
+      // Snapshot the chat URL before the round-trip: signIn() takes seconds and
+      // the app may navigate the iframe meanwhile, after which embedRedirectPath
+      // would strip the embed params down to a bare "/".
+      const redirectPath = embedRedirectPath(host);
+      await signIn();
+      refreshHostAuthCache(host);
+      installSession(host, redirectPath);
+    } catch (err) {
+      console.warn('[ibl.ai panel] session recovery failed:', err);
+    } finally {
+      recovering = false;
     }
   };
   window.addEventListener('message', onMessage);

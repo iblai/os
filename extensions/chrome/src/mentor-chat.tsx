@@ -4,6 +4,7 @@ import {
   removeWidgetSpinner,
   startContextFeed,
   watchAndInstallSession,
+  watchAuthExpired,
   watchTenantSwitch,
 } from './mentor-frame';
 import { MENTOR_URL } from './settings';
@@ -25,11 +26,13 @@ export function MentorChat() {
     removeWidgetSpinner(host);
     const stopInstall = watchAndInstallSession(host);
     const stopTenantSwitch = watchTenantSwitch(host);
+    const stopAuthExpired = watchAuthExpired(host);
     const stopFeed = startContextFeed(host);
     const stopBridge = startBrowseBridge(host);
     return () => {
       stopInstall();
       stopTenantSwitch();
+      stopAuthExpired();
       stopFeed();
       stopBridge();
     };
