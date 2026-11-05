@@ -145,7 +145,7 @@ test.describe('Journey 98: Chat MCP Servers', () => {
 
       await mcp.row.click();
       await expect(mcp.heading).toBeVisible({ timeout: 10_000 });
-      await expect(mcp.openPlusMenu()).toBeHidden();
+      await expect(mcp.openPlusMenuAny()).toBeHidden();
       await expect(mcp.description).toBeVisible();
       await expect(mcp.closeButton).toHaveAccessibleName(LABELS.close);
 
@@ -224,22 +224,18 @@ test.describe('Journey 98: Chat MCP Servers', () => {
         createMentorPage,
       });
 
-      await mcp.chat.openPlusMenu();
-      await expect(mcp.rowBadge).toHaveText('1', { timeout: 15_000 });
+      await mcp.expectRowBadge('1');
 
       await mcp.open();
       await mcp.setServerEnabled(serverId, false);
       await mcp.close();
-      await mcp.chat.openPlusMenu();
       // The server is still attached, so the row stays; only its count goes.
-      await expect(mcp.row).toBeVisible({ timeout: 15_000 });
-      await expect(mcp.rowBadge).toHaveCount(0, { timeout: 15_000 });
+      await mcp.expectRowBadge(null);
 
       await mcp.open();
       await mcp.setServerEnabled(serverId, true);
       await mcp.close();
-      await mcp.chat.openPlusMenu();
-      await expect(mcp.rowBadge).toHaveText('1', { timeout: 15_000 });
+      await mcp.expectRowBadge('1');
     });
 
     test('chat-mcp-05: admin switches a server off and back on for this chat and each state survives a reload', async ({
@@ -280,9 +276,8 @@ test.describe('Journey 98: Chat MCP Servers', () => {
       await mcp.setServerEnabled(serverId, false);
       await mcp.close();
       await mcp.chat.startNewChat();
-      await mcp.chat.openPlusMenu();
-      await expect(mcp.rowBadge).toHaveText('1', { timeout: 30_000 });
-      await mcp.row.click();
+      await mcp.expectRowBadge('1');
+      await mcp.open();
       await expect(mcp.serverRow(serverId)).toBeVisible({ timeout: 15_000 });
     });
 
@@ -419,7 +414,7 @@ test.describe('Journey 98: Chat MCP Servers', () => {
     await mcp.mockAgentUsesServers([server.id]);
     await navigateToMentorApp(nonadminPage);
 
-    await mcp.openFromPlusMenu();
+    await mcp.open();
     await expect(mcp.description).toBeVisible();
     await expect(mcp.closeButton).toBeVisible();
     await expect(mcp.serverRow(server.id)).toContainText(server.name, {
@@ -489,14 +484,8 @@ test.describe('Journey 98: Chat MCP Servers', () => {
       await mcp.forgetConnectExplainer();
 
       // Waiting for a sign-in, the server is not counted: the row has no badge.
-      await mcp.chat.openPlusMenu();
-      await expect(mcp.row).toBeVisible({ timeout: 10_000 });
-      await expect(mcp.row).toHaveAccessibleName(LABELS.row, {
-        timeout: 15_000,
-      });
-      await expect(mcp.rowBadge).toHaveCount(0);
-      await mcp.row.click();
-      await expect(mcp.heading).toBeVisible({ timeout: 10_000 });
+      await mcp.expectRowBadge(null);
+      await mcp.open();
 
       const toggle = mcp.serverToggle(server.id);
       await expect(mcp.serverRow(server.id)).toContainText(server.name, {
@@ -568,10 +557,8 @@ test.describe('Journey 98: Chat MCP Servers', () => {
       await mcp.mockAgentUsesServers([server.id]);
 
       await navigateToMentorApp(nonadminPage);
-      await mcp.chat.openPlusMenu();
-      await expect(mcp.rowBadge).toHaveText('1', { timeout: 15_000 });
-      await mcp.row.click();
-      await expect(mcp.heading).toBeVisible({ timeout: 10_000 });
+      await mcp.expectRowBadge('1');
+      await mcp.open();
 
       const toggle = mcp.serverToggle(server.id);
       await expect(mcp.serverRow(server.id)).toContainText(server.name, {
@@ -690,8 +677,7 @@ test.describe('Journey 98: Chat MCP Servers', () => {
       );
 
       await mcp.close();
-      await mcp.chat.openPlusMenu();
-      await expect(mcp.rowBadge).toHaveText('1', { timeout: 15_000 });
+      await mcp.expectRowBadge('1');
     });
 
     test("chat-mcp-16: a server that signs in through a shared agent account shows the plain switch for this chat, on, and asks for no sign-in of the user's own", async ({
@@ -790,15 +776,11 @@ test.describe('Journey 98: Chat MCP Servers', () => {
       await mcp.chat.waitForUserMessage(text);
       await mcp.chat.waitForAIResponseOrUserAgreement();
 
-      await mcp.chat.openPlusMenu();
-      await expect(mcp.row).toBeVisible({ timeout: 15_000 });
-      await expect(mcp.rowBadge).toHaveCount(0, { timeout: 15_000 });
-      await mcp.row.click();
-      await expect(mcp.heading).toBeVisible({ timeout: 10_000 });
+      await mcp.expectRowBadge(null);
+      await mcp.open();
       await mcp.setServerEnabled(server.id, true);
       await mcp.close();
-      await mcp.chat.openPlusMenu();
-      await expect(mcp.rowBadge).toHaveText('1', { timeout: 15_000 });
+      await mcp.expectRowBadge('1');
     });
   });
 });

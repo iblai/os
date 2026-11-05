@@ -97,7 +97,7 @@ export class ChatMcpMenuPage {
     this.chat = new ChatPage(page);
     observeDmBase(page);
     this.plusMenuButton = this.chat.plusMenuButton;
-    this.row = this.openPlusMenu()
+    this.row = this.openPlusMenuAny()
       .getByTestId('chat-mcp-button')
       .filter({ hasText: new RegExp(`^${LABELS.row}`) });
     this.rowBadge = this.row.getByTestId('composer-count-badge');
@@ -139,7 +139,7 @@ export class ChatMcpMenuPage {
   }
 
   /** Whichever "+" surface is open — the two are exclusive by viewport. */
-  openPlusMenu(): Locator {
+  openPlusMenuAny(): Locator {
     return this.plusMenuContent().or(this.plusMenuSheet());
   }
 
@@ -169,14 +169,6 @@ export class ChatMcpMenuPage {
     });
   }
 
-  /** Opens the "+" menu and chooses its MCP row. */
-  async openFromPlusMenu(): Promise<void> {
-    await this.chat.openPlusMenu();
-    await expect(this.row).toBeVisible({ timeout: 10_000 });
-    await this.row.click();
-    await expect(this.heading).toBeVisible({ timeout: 10_000 });
-  }
-
   /**
    * The OPEN "+" menu offers no MCP row: the agent uses no server. Judged
    * only once the menu has its rows, so a menu still painting cannot pass.
@@ -189,6 +181,9 @@ export class ChatMcpMenuPage {
       }),
     ).toHaveCount(0);
     await expect(this.row).toHaveCount(0);
+    // The counts are read inside the open menu, so they prove nothing if it
+    // closed meanwhile; it is still open.
+    await expect(this.menuItems.first()).toBeVisible();
   }
 
   /** "+" via Enter, End to the MCP row (always the last one), Enter. */
@@ -230,23 +225,47 @@ export class ChatMcpMenuPage {
     await expect(target).toBeFocused();
   }
 
-  /** Opens the panel unless it is already showing, from the "+" menu if that is already open. */
+  /**
+   * Opens the panel unless it is already showing. Retried as a whole: while
+   * a chat settles (a new chat, a popover tearing down) the composer
+   * re-renders, which closes the "+" menu under a click or detaches its
+   * rows, so each try reopens the menu (`ChatPage.openPlusMenu` leaves an
+   * open one alone) and chooses MCP again.
+   */
   async open(): Promise<void> {
-    if (await this.heading.isVisible()) return;
-    // An open "+" menu hides its own trigger from the accessibility tree, so
-    // the button below would never be found; the row is right there instead.
-    if (await this.openPlusMenu().isVisible()) {
-      await this.row.click();
-      await expect(this.heading).toBeVisible({ timeout: 10_000 });
-      return;
-    }
-    await expect(this.plusMenuButton).toBeVisible({ timeout: 30_000 });
-    // Retried: a click can land while a previous popover is still tearing
-    // down and get swallowed.
     await expect(async () => {
       if (await this.heading.isVisible()) return;
-      await this.openFromPlusMenu();
-    }).toPass({ timeout: 30_000 });
+      await this.chat.openPlusMenu();
+      await expect(this.row).toBeVisible({ timeout: 5_000 });
+      await this.row.click({ timeout: 5_000 });
+      await expect(this.heading).toBeVisible({ timeout: 5_000 });
+    }).toPass({ timeout: 60_000 });
+  }
+
+  /**
+   * The row's count badge, read with the "+" menu open: `null` means the
+   * row is named just "MCP", with no badge. Retried like `open()`, since
+   * the menu can close under a re-render between opening it and reading
+   * the row. The no-badge case is judged by the row's exact name rather
+   * than by counting badges: the badge is resolved inside the open menu,
+   * so a menu closing under the check would make a count of zero pass for
+   * nothing.
+   */
+  async expectRowBadge(text: string | null): Promise<void> {
+    await expect(async () => {
+      await this.chat.openPlusMenu();
+      await expect(this.row).toBeVisible({ timeout: 5_000 });
+      if (text === null) {
+        await expect(this.row).toHaveAccessibleName(
+          ChatMcpMenuPage.LABELS.row,
+          {
+            timeout: 5_000,
+          },
+        );
+      } else {
+        await expect(this.rowBadge).toHaveText(text, { timeout: 5_000 });
+      }
+    }).toPass({ timeout: 60_000 });
   }
 
   /** The panel's own close: back to the composer (desktop) or the sheet's main page (phones). */
