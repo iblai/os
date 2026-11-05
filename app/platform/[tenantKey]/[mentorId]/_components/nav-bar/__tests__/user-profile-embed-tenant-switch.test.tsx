@@ -167,12 +167,13 @@ describe('UserProfile organization chooser', () => {
     expect(screen.getByTestId('organizations-link')).toHaveTextContent('true');
   });
 
-  // An embed is a scoped, host-owned surface: navigating its iframe to the
-  // auth app would tear the embed out of the page.
-  it('withholds it in an embed, while still naming the current organization', () => {
+  // An embed cannot make the trip itself — navigating its iframe would tear it
+  // out of the host page — so the SDK hands the chooser's address to the host.
+  // The entry is still offered.
+  it('offers it in an embed too, where the host makes the trip', () => {
     render(<UserProfile embed />);
 
-    expect(screen.getByTestId('organizations-link')).toHaveTextContent('false');
+    expect(screen.getByTestId('organizations-link')).toHaveTextContent('true');
     expect(screen.getByTestId('tenant-switcher')).toHaveTextContent('true');
   });
 });

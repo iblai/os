@@ -314,10 +314,10 @@ export function UserProfile({ embed = false }: { embed?: boolean } = {}) {
       showHelpLink={true}
       showLogoutButton={!embed}
       // Always offered, deliberately: the chooser fetches its own list, and
-      // the tenants this app knows about are going away. An embed is a scoped,
-      // host-owned surface whose iframe the trip would tear out of the host
-      // page, and a build pinned to a tenant has nowhere to go.
-      showOrganizationsLink={!embed && !lockedTenant}
+      // the tenants this app knows about are going away. In an embed the trip
+      // is handed to the host rather than navigating the iframe, so it is
+      // offered there too; only a build pinned to a tenant has nowhere to go.
+      showOrganizationsLink={!lockedTenant}
       showLearnerModeSwitch={!embed && userIsAdmin && tenantKey !== 'main'}
       // Customization
       helpCenterUrl={config.helpCenterUrl()}

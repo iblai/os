@@ -383,11 +383,14 @@ describe('UserProfile', () => {
 
     // An embed is a scoped, host-owned surface: navigating the iframe to the
     // auth app would tear it out of the page.
-    it('hides the organization chooser when embed', () => {
+    // An embed cannot navigate to the auth app itself without tearing itself
+    // out of the host page, so the SDK hands the host the chooser's address —
+    // the entry is still offered.
+    it('still offers the organization chooser when embed', () => {
       render(<UserProfile embed />);
 
       expect(screen.getByTestId('show-organizations-link')).toHaveTextContent(
-        'false',
+        'true',
       );
     });
   });

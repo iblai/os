@@ -467,13 +467,13 @@ test.describe('Journey 80: Embed Header + LTI Redesign', () => {
     const menu = iframe.getByRole('menu');
     await expect(menu).toBeVisible({ timeout: 10_000 });
     await expect(menu.getByRole('menuitem', { name: 'Profile' })).toBeVisible();
-    // The organization is named, but there is nothing to pick from: switching
-    // moved to the auth app, and an embed is never sent there (navigating a
-    // storage-partitioned iframe would tear it out of the host page).
+    // The in-place picker is gone — switching moved to the auth app — but the
+    // trip is still offered: in an embed it is handed to the host rather than
+    // navigating the iframe.
     await expect(menu.getByRole('combobox')).toHaveCount(0);
     await expect(
       menu.getByRole('menuitem', { name: /organizations/i }),
-    ).toHaveCount(0);
+    ).toBeVisible();
     await expect(menu.getByRole('menuitem', { name: /Help/ })).toBeVisible();
     await expect(menu.getByRole('menuitem', { name: 'Log Out' })).toHaveCount(
       0,
@@ -509,7 +509,7 @@ test.describe('Journey 80: Embed Header + LTI Redesign', () => {
     await expect(dialog).toBeHidden({ timeout: 10_000 });
   });
 
-  test('embed offers no way to switch organizations, so the frame is never redirected', async ({
+  test('embed hands the organization chooser to the host instead of redirecting the frame', async ({
     page,
   }) => {
     const iframe = await gotoEmbedHarness(page, page.url(), {
@@ -531,16 +531,23 @@ test.describe('Journey 80: Embed Header + LTI Redesign', () => {
     const frameUrlBefore = appFrame?.url();
 
     await iframe.getByRole('button', { name: 'More options' }).click();
-    const menu = iframe.getByRole('menu');
-    await expect(menu).toBeVisible({ timeout: 10_000 });
+    await iframe.getByRole('menuitem', { name: /organizations/i }).click();
 
-    // Nothing in the menu starts a switch: no in-place picker, and no trip to
-    // the auth app. The host keeps whatever tenant it installed.
-    await expect(menu.getByRole('combobox')).toHaveCount(0);
-    await expect(
-      menu.getByRole('menuitem', { name: /organizations/i }),
-    ).toHaveCount(0);
+    // The host is handed the chooser's address — no tenant, because nobody has
+    // picked one yet — and opens a real tab itself.
+    await expect
+      .poll(() =>
+        page.evaluate(() =>
+          (
+            window as unknown as { __hostMessages: unknown[] }
+          ).__hostMessages.find(
+            (m) => (m as { tenantSwitch?: boolean })?.tenantSwitch === true,
+          ),
+        ),
+      )
+      .toMatchObject({ tenantSwitch: true, chooserUrl: expect.any(String) });
 
+    // The frame itself never moves.
     await expect(iframe.locator('#chat-input-textarea')).toBeVisible();
     expect(appFrame?.url()).toBe(frameUrlBefore);
   });

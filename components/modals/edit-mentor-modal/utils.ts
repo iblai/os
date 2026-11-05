@@ -690,6 +690,14 @@ export const getEmbedCode = async (
                     }
                     
                     if (message?.tenantSwitch) {
+                      // The user asked to pick an organization. The embed cannot
+                      // go there itself without tearing itself out of this page,
+                      // so open the chooser in a real tab; it returns here with
+                      // the session it minted.
+                      if (message.chooserUrl) {
+                        window.open(message.chooserUrl, 'ibl-organizations');
+                        return;
+                      }
                       // Answer only for this embed's own organization, and only
                       // with a session that belongs to it.
                       if (message.tenant === embedTenant) {

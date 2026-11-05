@@ -2056,9 +2056,9 @@ Covers issue #2586's embed surface redesign: a new OS header (`EmbedNavBar` — 
 - [x] emb-hdr-04 (regression, issue #2586): The embed's suggested prompts are at most four full-width rows stacked above the composer, each matching the composer's left/right edges, with no horizontal overflow at 320px and still shown while typing
 - [x] emb-lti-04 (regression, issue #2586): In a 300px LTI frame the composer placeholder stays on one line and ellipsizes instead of wrapping into a clipped second line; typed text still wraps
 - [x] emb-prof-01: The embed header shows the user's profile avatar ("More options") only when the host sets `show-user-profile=true`; without it there is no avatar
-- [x] emb-prof-02: The embed profile menu offers Profile, the current organization as a label and Help, and leaves out the organization picker, the Organizations trip, Log Out and the Admin/User mode switch (the host owns auth)
+- [x] emb-prof-02: The embed profile menu offers Profile, the current organization as a label, Organizations and Help, and leaves out the in-place picker, Log Out and the Admin/User mode switch (the host owns auth)
 - [x] emb-prof-03: Profile in the embed profile menu opens the User Profile dialog inside the frame on the Basic tab, and Cancel closes it without saving
-- [x] emb-prof-04: The embed offers no way to switch organizations — no in-place picker and no trip to the auth app — so the frame is never redirected away from the chat and the host keeps the tenant it installed
+- [x] emb-prof-04: The embed hands the organization chooser to the host — `{ tenantSwitch: true, chooserUrl }`, with no tenant since nobody has picked one — instead of redirecting the frame, which stays on the chat
 - [x] emb-prof-05 (issue #2758): With `show-user-profile=true` the header order is New chat, ? menu, full screen, profile avatar, Close — profile directly before Close
 - [x] emb-prof-06 (issue #2758): With Close hidden the profile avatar is the right-most header control
 
