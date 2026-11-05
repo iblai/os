@@ -17,6 +17,7 @@ const {
   mockGetUserActiveAppLegacy,
   mockBannerButtonTriggerCallback,
   mockHandleLogout,
+  mockHandleTenantSwitch,
   mockIsStripeActivated,
   mockFetchTenantMetadata,
   mockOnAccountDeleted,
@@ -34,6 +35,7 @@ const {
   mockGetUserActiveAppLegacy: vi.fn(),
   mockBannerButtonTriggerCallback: vi.fn(),
   mockHandleLogout: vi.fn(),
+  mockHandleTenantSwitch: vi.fn(),
   mockIsStripeActivated: vi.fn(),
   mockFetchTenantMetadata: vi.fn(),
   mockOnAccountDeleted: vi.fn(),
@@ -113,6 +115,7 @@ vi.mock('@/features/utils', () => ({
 // Mock lib/utils
 vi.mock('@/lib/utils', () => ({
   handleLogout: mockHandleLogout,
+  handleTenantSwitch: mockHandleTenantSwitch,
   isStripeActivated: mockIsStripeActivated,
   onAccountDeleted: mockOnAccountDeleted,
 }));
@@ -202,6 +205,7 @@ vi.mock('@iblai/iblai-js/web-containers/next', () => ({
     capturedCallbacks = {
       onProfileClick: props.onProfileClick,
       onLogout: props.onLogout,
+      onTenantChange: props.onTenantChange,
       onHelpClick: props.onHelpClick,
       onTenantUpdate: props.onTenantUpdate,
       onLoadGroupPermissions: props.onLoadGroupPermissions,
@@ -234,9 +238,6 @@ vi.mock('@iblai/iblai-js/web-containers/next', () => ({
         <span data-testid="show-logout-button">
           {String(props.showLogoutButton)}
         </span>
-        <span data-testid="show-organizations-link">
-          {String(props.showOrganizationsLink)}
-        </span>
         <span data-testid="billing-enabled">
           {String(props.billingEnabled)}
         </span>
@@ -256,6 +257,12 @@ vi.mock('@iblai/iblai-js/web-containers/next', () => ({
         </button>
         <button data-testid="logout-btn" onClick={() => props.onLogout?.()}>
           Logout
+        </button>
+        <button
+          data-testid="tenant-change-btn"
+          onClick={() => props.onTenantChange?.('new-tenant')}
+        >
+          Change Tenant
         </button>
         <button
           data-testid="help-btn"
@@ -362,28 +369,21 @@ describe('UserProfile', () => {
   });
 
   describe('embed mode', () => {
-    it('shows logout and the Organizations link by default (non-embed)', () => {
+    it('shows logout by default (non-embed)', () => {
       render(<UserProfile />);
 
       expect(screen.getByTestId('show-logout-button')).toHaveTextContent(
         'true',
       );
-      expect(screen.getByTestId('show-organizations-link')).toHaveTextContent(
-        'true',
-      );
     });
 
-    it('hides logout, the learner-mode switch and the Organizations link when embed', () => {
+    it('hides logout and the learner-mode switch when embed', () => {
       render(<UserProfile embed />);
 
       expect(screen.getByTestId('show-logout-button')).toHaveTextContent(
         'false',
       );
       expect(screen.getByTestId('show-learner-mode-switch')).toHaveTextContent(
-        'false',
-      );
-      // The auth app's chooser cannot hand its pick back into a host-owned frame.
-      expect(screen.getByTestId('show-organizations-link')).toHaveTextContent(
         'false',
       );
     });
@@ -478,6 +478,20 @@ describe('UserProfile', () => {
       await user.click(logoutBtn);
 
       expect(mockHandleLogout).toHaveBeenCalled();
+    });
+
+    it('should handle tenant change', async () => {
+      const { default: userEvent } = await import(
+        '@testing-library/user-event'
+      );
+      const user = userEvent.setup();
+
+      render(<UserProfile />);
+
+      const tenantChangeBtn = screen.getByTestId('tenant-change-btn');
+      await user.click(tenantChangeBtn);
+
+      expect(mockHandleTenantSwitch).toHaveBeenCalledWith('new-tenant');
     });
 
     it('should handle help click', async () => {
