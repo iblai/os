@@ -355,6 +355,37 @@ export const getEmbedCode = async (
                     window.location.href = \`${config.authUrl()}/login?redirect-path=\${redirectPath}${!settings.allow_anonymous ? '&redirect-token=' + redirectToken : ''}&tenant=${tenant}${settings.sso_provider ? '&custom_sso_backend_path=' + settings.sso_provider : ''}\${forceLogout ? '&logout=true' : ''}\`;
                 }
 
+                function switchOrganizationViaAuthSPA() {
+                    // One attempt per organization. The embed re-asks every few
+                    // seconds, so without this a switch that cannot succeed
+                    // would navigate this page over and over.
+                    const attemptKey = 'ibl-org-switch-' + embedTenant;
+                    try {
+                        if (sessionStorage.getItem(attemptKey)) {
+                            console.warn('[ibl] Already tried switching to ' + embedTenant + ', not retrying.');
+                            return;
+                        }
+                        sessionStorage.setItem(attemptKey, '1');
+                    } catch (error) {
+                        // Private browsing can refuse sessionStorage; switching
+                        // once is better than never switching.
+                    }
+                    const redirectPath = window.location.pathname + window.location.search;
+                    // /join covers every case: a member gets a new session, a
+                    // non-member is linked first where the organization allows
+                    // it, and an invalid session falls back to sign-in and
+                    // returns here.
+                    window.location.href = \`${config.authUrl()}/join?tenant=${tenant}&redirect-to=\${encodeURIComponent(window.location.origin)}&redirect-path=\${encodeURIComponent(redirectPath)}\`;
+                }
+
+                function clearOrganizationSwitchAttempt() {
+                    try {
+                        sessionStorage.removeItem('ibl-org-switch-' + embedTenant);
+                    } catch (error) {
+                        // Nothing to clear if storage is unavailable.
+                    }
+                }
+
                 let isWidgetInjected = false;
 
                 function createWidget() {
@@ -694,9 +725,10 @@ export const getEmbedCode = async (
                       // with a session that belongs to it.
                       if (message.tenant === embedTenant) {
                         if (getIblDataTenant() === embedTenant) {
+                          clearOrganizationSwitchAttempt();
                           sendAuthDataToIframe();
                         } else {
-                          ${!settings.allow_anonymous ? 'redirectToAuthSPA();' : ''}
+                          ${!settings.allow_anonymous ? 'switchOrganizationViaAuthSPA();' : ''}
                         }
                       }
                       return;

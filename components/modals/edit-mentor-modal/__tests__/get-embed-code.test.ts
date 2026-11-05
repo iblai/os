@@ -482,6 +482,7 @@ describe('getEmbedCode tenant switch', () => {
       vi.fn(async () => ({ ok: true }) as Response),
     );
     vi.useFakeTimers();
+    sessionStorage.clear();
     setUrl('');
   });
 
@@ -572,7 +573,9 @@ describe('getEmbedCode tenant switch', () => {
     expect(posted).not.toHaveBeenCalled();
   });
 
-  it('sends the user to sign in when the cached session is another organization’s', async () => {
+  // `/join` rather than `/login`: it links a user the organization admits and
+  // sends a member straight on, so membership stops being a precondition.
+  it('joins the pinned organization when the cached session is another one’s', async () => {
     setUrl(`?ibl-data=${session('other-org')}`);
     runSnippet(await getEmbedCode('acme', settings, 'redirect-token'));
     const posted = openWidget();
@@ -583,18 +586,61 @@ describe('getEmbedCode tenant switch', () => {
       expect.objectContaining({ type: 'MENTOR:AUTH_UPDATE' }),
       '*',
     );
-    expect(window.location.href).toContain('https://auth.example.com/login');
+    expect(window.location.href).toContain('https://auth.example.com/join');
     expect(window.location.href).toContain('tenant=acme');
     expect(window.location.href).not.toContain('logout=true');
   });
 
-  it('sends the user to sign in when there is no cached session at all', async () => {
+  it('carries the host page back through redirect-to and redirect-path', async () => {
+    setUrl('?a=1');
     runSnippet(await getEmbedCode('acme', settings, 'redirect-token'));
     openWidget();
 
     postToHost({ tenantSwitch: true, tenant: 'acme' });
 
-    expect(window.location.href).toContain('tenant=acme');
+    expect(window.location.href).toContain(
+      `redirect-to=${encodeURIComponent(origin)}`,
+    );
+    expect(window.location.href).toContain(
+      `redirect-path=${encodeURIComponent('/page?a=1')}`,
+    );
+  });
+
+  it('joins when there is no cached session at all', async () => {
+    runSnippet(await getEmbedCode('acme', settings, 'redirect-token'));
+    openWidget();
+
+    postToHost({ tenantSwitch: true, tenant: 'acme' });
+
+    expect(window.location.href).toContain('/join?tenant=acme');
+  });
+
+  // The embed re-asks every few seconds, so a switch that cannot succeed would
+  // otherwise navigate the customer's page on a loop.
+  it('navigates once per organization, however often the embed asks', async () => {
+    runSnippet(await getEmbedCode('acme', settings, 'redirect-token'));
+    openWidget();
+
+    postToHost({ tenantSwitch: true, tenant: 'acme' });
+    const firstTarget = window.location.href;
+    expect(firstTarget).toContain('/join?tenant=acme');
+
+    setUrl('');
+    postToHost({ tenantSwitch: true, tenant: 'acme' });
+    postToHost({ tenantSwitch: true, tenant: 'acme' });
+
+    expect(window.location.href).not.toContain('/join');
+  });
+
+  it('frees the guard once the pinned organization’s session is in hand', async () => {
+    setUrl(`?ibl-data=${session('acme')}`);
+    sessionStorage.setItem('ibl-org-switch-acme', '1');
+    runSnippet(await getEmbedCode('acme', settings, 'redirect-token'));
+    openWidget();
+
+    postToHost({ tenantSwitch: true, tenant: 'acme' });
+
+    expect(sessionStorage.getItem('ibl-org-switch-acme')).toBeNull();
   });
 
   it('survives an unreadable ibl-data rather than throwing at the embed', async () => {
