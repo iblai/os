@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.188.1](https://github.com/iblai/os/compare/v0.188.0...v0.188.1) (2026-11-05)
+
+### Bug Fixes
+
+* **chat:** cancel the file-upload notification timer on unmount ([e308398](https://github.com/iblai/os/commit/e30839886b9775e5d7306e17534534c563e3d40e))
+* **embed:** answer the embed's tenant-switch request in generated code ([a269fcb](https://github.com/iblai/os/commit/a269fcb9947f0d0b21f7a22943aed1c853109824))
+* **embed:** drop an unreadable ibl-data, and close the timer-arming gap ([d022a92](https://github.com/iblai/os/commit/d022a921e49ca05396551944f346be978861222f))
+* **tsconfig:** let the e2e configs the security test imports be typechecked ([bcf3136](https://github.com/iblai/os/commit/bcf31369bfe9e3a9620762e7d731f61a1617d17c))
+
 ## [0.188.0](https://github.com/iblai/os/compare/v0.187.2...v0.188.0) (2026-11-05)
 
 ### Features
