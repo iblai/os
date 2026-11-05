@@ -294,19 +294,16 @@ export function ChatInputForm({
   // otherwise schedule a fresh one that the cleanup below can never see.
   const isMountedRef = useRef(true);
 
-  useEffect(() => {
-    // Set on mount, not just cleared on unmount: StrictMode's dev remount
-    // reuses the same refs, so a cleanup-only effect would latch this false
-    // and leave the notice up forever.
-    isMountedRef.current = true;
-    return () => {
+  useEffect(
+    () => () => {
       isMountedRef.current = false;
       if (notificationTimerRef.current) {
         clearTimeout(notificationTimerRef.current);
         notificationTimerRef.current = null;
       }
-    };
-  }, []);
+    },
+    [],
+  );
 
   // Switching mentors restarts the pagination from the first page.
   useEffect(() => {
