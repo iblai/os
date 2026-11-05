@@ -482,6 +482,7 @@ describe('getEmbedCode tenant switch', () => {
       vi.fn(async () => ({ ok: true }) as Response),
     );
     vi.useFakeTimers();
+    sessionStorage.clear();
     setUrl('');
   });
 
@@ -514,6 +515,9 @@ describe('getEmbedCode tenant switch', () => {
   function postToHost(data: unknown) {
     window.dispatchEvent(new MessageEvent('message', { data }));
   }
+
+  const widget = () =>
+    document.getElementById('ibl-chat-widget-container') as HTMLDivElement;
 
   /** Opens the widget and watches what the host posts into the iframe. */
   function openWidget() {
@@ -572,7 +576,9 @@ describe('getEmbedCode tenant switch', () => {
     expect(posted).not.toHaveBeenCalled();
   });
 
-  it('sends the user to sign in when the cached session is another organization’s', async () => {
+  // `/join` rather than `/login`: it links a user the organization admits and
+  // sends a member straight on, so membership stops being a precondition.
+  it('joins the pinned organization when the cached session is another one’s', async () => {
     setUrl(`?ibl-data=${session('other-org')}`);
     runSnippet(await getEmbedCode('acme', settings, 'redirect-token'));
     const posted = openWidget();
@@ -583,28 +589,107 @@ describe('getEmbedCode tenant switch', () => {
       expect.objectContaining({ type: 'MENTOR:AUTH_UPDATE' }),
       '*',
     );
-    expect(window.location.href).toContain('https://auth.example.com/login');
+    expect(window.location.href).toContain('https://auth.example.com/join');
     expect(window.location.href).toContain('tenant=acme');
     expect(window.location.href).not.toContain('logout=true');
   });
 
-  it('sends the user to sign in when there is no cached session at all', async () => {
+  it('carries the host page back through redirect-to and redirect-path', async () => {
+    setUrl('?a=1');
     runSnippet(await getEmbedCode('acme', settings, 'redirect-token'));
     openWidget();
 
     postToHost({ tenantSwitch: true, tenant: 'acme' });
 
-    expect(window.location.href).toContain('tenant=acme');
+    expect(window.location.href).toContain(
+      `redirect-to=${encodeURIComponent(origin)}`,
+    );
+    expect(window.location.href).toContain(
+      `redirect-path=${encodeURIComponent('/page?a=1')}`,
+    );
   });
 
-  it('survives an unreadable ibl-data rather than throwing at the embed', async () => {
-    setUrl('?ibl-data=not-json');
+  it('joins when there is no cached session at all', async () => {
     runSnippet(await getEmbedCode('acme', settings, 'redirect-token'));
     openWidget();
 
-    expect(() =>
-      postToHost({ tenantSwitch: true, tenant: 'acme' }),
-    ).not.toThrow();
+    postToHost({ tenantSwitch: true, tenant: 'acme' });
+
+    expect(window.location.href).toContain('/join?tenant=acme');
+  });
+
+  // The embed re-asks every few seconds, so a switch that cannot succeed would
+  // otherwise navigate the customer's page on a loop.
+  it('navigates once per organization, however often the embed asks', async () => {
+    runSnippet(await getEmbedCode('acme', settings, 'redirect-token'));
+    openWidget();
+
+    postToHost({ tenantSwitch: true, tenant: 'acme' });
+    const firstTarget = window.location.href;
+    expect(firstTarget).toContain('/join?tenant=acme');
+
+    setUrl('');
+    postToHost({ tenantSwitch: true, tenant: 'acme' });
+    postToHost({ tenantSwitch: true, tenant: 'acme' });
+
+    expect(window.location.href).not.toContain('/join');
+  });
+
+  it('frees the guard once the pinned organization’s session is in hand', async () => {
+    setUrl(`?ibl-data=${session('acme')}`);
+    sessionStorage.setItem('ibl-org-switch-acme', '1');
+    runSnippet(await getEmbedCode('acme', settings, 'redirect-token'));
+    openWidget();
+
+    postToHost({ tenantSwitch: true, tenant: 'acme' });
+
+    expect(sessionStorage.getItem('ibl-org-switch-acme')).toBeNull();
+  });
+
+  // Unreadable `ibl-data` is no session at all, not a session to replay.
+  it('treats unreadable ibl-data as no session and joins', async () => {
+    setUrl('?ibl-data=not-json');
+    runSnippet(await getEmbedCode('acme', settings, 'redirect-token'));
+    const posted = openWidget();
+
+    postToHost({ tenantSwitch: true, tenant: 'acme' });
+
+    expect(posted).not.toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'MENTOR:AUTH_UPDATE' }),
+      '*',
+    );
+    expect(window.location.href).toContain('/join?tenant=acme');
+  });
+
+  // A message carrying both must still reach the handlers further down, which
+  // an early return out of the tenant-switch branch used to skip.
+  it('does not swallow other instructions on the same message', async () => {
+    setUrl(`?ibl-data=${session('acme')}`);
+    runSnippet(
+      await getEmbedCode(
+        'acme',
+        { ...settings, allow_fullscreen: true },
+        'redirect-token',
+      ),
+    );
+    openWidget();
+    const normal = widget().style.cssText;
+
+    postToHost({ tenantSwitch: true, tenant: 'acme', embedFullscreen: true });
+
+    expect(widget().style.width).toBe('100vw');
+    expect(widget().style.cssText).not.toBe(normal);
+  });
+
+  // A switch resolved by any other route must free the guard, or one failed
+  // attempt blocks every later switch in the tab.
+  it('frees the guard at load when the pinned session is already held', async () => {
+    sessionStorage.setItem('ibl-org-switch-acme', '1');
+    setUrl(`?ibl-data=${session('acme')}`);
+
+    runSnippet(await getEmbedCode('acme', settings, 'redirect-token'));
+
+    expect(sessionStorage.getItem('ibl-org-switch-acme')).toBeNull();
   });
 
   it('leaves an anonymous embed where it is, having no session to switch', async () => {

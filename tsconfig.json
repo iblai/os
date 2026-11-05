@@ -40,10 +40,6 @@
     "next-env.d.ts",
     ".next/types/**/*.ts"
   ],
-  // `exclude` wins over `include`, so the two e2e configs that
-  // __tests__/playwright-security-config.test.ts imports are listed as `files`,
-  // which `exclude` does not filter. The e2e specs themselves stay out.
-  "files": ["e2e/mcp.config.ts", "e2e/playwright.config.ts"],
   "exclude": [
     "**/node_modules",
     ".next",
