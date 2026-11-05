@@ -17,7 +17,6 @@ const {
   mockGetUserActiveAppLegacy,
   mockBannerButtonTriggerCallback,
   mockHandleLogout,
-  mockHandleTenantSwitch,
   mockIsStripeActivated,
   mockFetchTenantMetadata,
   mockOnAccountDeleted,
@@ -35,7 +34,6 @@ const {
   mockGetUserActiveAppLegacy: vi.fn(),
   mockBannerButtonTriggerCallback: vi.fn(),
   mockHandleLogout: vi.fn(),
-  mockHandleTenantSwitch: vi.fn(),
   mockIsStripeActivated: vi.fn(),
   mockFetchTenantMetadata: vi.fn(),
   mockOnAccountDeleted: vi.fn(),
@@ -115,7 +113,6 @@ vi.mock('@/features/utils', () => ({
 // Mock lib/utils
 vi.mock('@/lib/utils', () => ({
   handleLogout: mockHandleLogout,
-  handleTenantSwitch: mockHandleTenantSwitch,
   isStripeActivated: mockIsStripeActivated,
   onAccountDeleted: mockOnAccountDeleted,
 }));
@@ -236,6 +233,9 @@ vi.mock('@iblai/iblai-js/web-containers/next', () => ({
         </span>
         <span data-testid="show-logout-button">
           {String(props.showLogoutButton)}
+        </span>
+        <span data-testid="show-organizations-link">
+          {String(props.showOrganizationsLink)}
         </span>
         <span data-testid="billing-enabled">
           {String(props.billingEnabled)}
@@ -362,21 +362,28 @@ describe('UserProfile', () => {
   });
 
   describe('embed mode', () => {
-    it('shows logout by default (non-embed)', () => {
+    it('shows logout and the Organizations link by default (non-embed)', () => {
       render(<UserProfile />);
 
       expect(screen.getByTestId('show-logout-button')).toHaveTextContent(
         'true',
       );
+      expect(screen.getByTestId('show-organizations-link')).toHaveTextContent(
+        'true',
+      );
     });
 
-    it('hides logout and the learner-mode switch when embed', () => {
+    it('hides logout, the learner-mode switch and the Organizations link when embed', () => {
       render(<UserProfile embed />);
 
       expect(screen.getByTestId('show-logout-button')).toHaveTextContent(
         'false',
       );
       expect(screen.getByTestId('show-learner-mode-switch')).toHaveTextContent(
+        'false',
+      );
+      // The auth app's chooser cannot hand its pick back into a host-owned frame.
+      expect(screen.getByTestId('show-organizations-link')).toHaveTextContent(
         'false',
       );
     });
