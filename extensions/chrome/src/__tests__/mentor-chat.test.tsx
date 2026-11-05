@@ -58,6 +58,9 @@ describe('MentorChat', () => {
     expect(element.getAttribute('theme')).toBe('light');
     expect(element.getAttribute('component')).toBe('chat');
     expect(element.hasAttribute('authrelyonhost')).toBe(true);
+    // watchTenantSwitch opens the chooser through chrome.tabs and mints the
+    // chosen organization's session, so agent-ai must not open one too.
+    expect(element.hasAttribute('hostownschooser')).toBe(true);
     expect(element.hasAttribute('allowmentorselection')).toBe(true);
     expect(removeWidgetSpinner).toHaveBeenCalledWith(element);
     expect(watchAndInstallSession).toHaveBeenCalledWith(element);

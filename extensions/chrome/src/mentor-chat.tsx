@@ -50,6 +50,7 @@ export function MentorChat() {
       theme="light"
       component="chat"
       authrelyonhost=""
+      hostownschooser=""
       showuserprofile=""
       allowmentorselection=""
       enablecowork=""
