@@ -51,7 +51,7 @@ When adding a new page or modifying an existing user flow:
 
 - [x] Mentor dropdown shows "New chat" item; non-admin sees at most 2 items
 - [x] "My Mentors" button is NOT present in the header (removed in feat-1431); mentor dropdown still shows New Chat item
-- [x] Fresh signup (unauthenticated context, real `/account/create` registration) lands on the main tenant and the profile dropdown shows exactly 3 items: Profile, Help, Log out
+- [x] Fresh signup (unauthenticated context, real `/account/create` registration) lands on the main tenant and the profile dropdown shows exactly 4 items: Profile, Organizations, Help, Log out
 - [x] Sidebar admin-only buttons (e.g. New Project) show upgrade/auth dialog for non-admins when visible
 - [x] Non-admin in the main OR an advertising tenant sees full admin sidebar (New Agent, Workflows, Analytics, Invites, Management, Integrations, Monetization, Memory, Advanced) and clicking any trial-gated entry opens the upgrade/pricing dialog; gracefully skips when paywall is off
 - [x] Profile dropdown shows the current organization as a label with no in-place picker, and its "Organizations" entry opens the auth app chooser in its own tab (`/me?action=switch-tenant&popup=1` with a return address), leaving this tab untouched; closing that tab means no switch. Skips when the account belongs to a single organization
@@ -2056,9 +2056,9 @@ Covers issue #2586's embed surface redesign: a new OS header (`EmbedNavBar` — 
 - [x] emb-hdr-04 (regression, issue #2586): The embed's suggested prompts are at most four full-width rows stacked above the composer, each matching the composer's left/right edges, with no horizontal overflow at 320px and still shown while typing
 - [x] emb-lti-04 (regression, issue #2586): In a 300px LTI frame the composer placeholder stays on one line and ellipsizes instead of wrapping into a clipped second line; typed text still wraps
 - [x] emb-prof-01: The embed header shows the user's profile avatar ("More options") only when the host sets `show-user-profile=true`; without it there is no avatar
-- [x] emb-prof-02: The embed profile menu offers Profile, the tenant switcher and Help, and leaves out Log Out and the Admin/User mode switch (the host owns auth)
+- [x] emb-prof-02: The embed profile menu offers Profile, the current organization as a label and Help, and leaves out the organization picker, the Organizations trip, Log Out and the Admin/User mode switch (the host owns auth)
 - [x] emb-prof-03: Profile in the embed profile menu opens the User Profile dialog inside the frame on the Basic tab, and Cancel closes it without saving
-- [x] emb-prof-04: Picking another tenant in the embed profile menu posts `{ tenantSwitch: true, tenant }` to the host page and leaves the frame on the chat instead of redirecting it to the auth app
+- [x] emb-prof-04: The embed offers no way to switch organizations — no in-place picker and no trip to the auth app — so the frame is never redirected away from the chat and the host keeps the tenant it installed
 - [x] emb-prof-05 (issue #2758): With `show-user-profile=true` the header order is New chat, ? menu, full screen, profile avatar, Close — profile directly before Close
 - [x] emb-prof-06 (issue #2758): With Close hidden the profile avatar is the right-most header control
 

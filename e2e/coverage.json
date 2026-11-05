@@ -125,7 +125,7 @@
         },
         {
           "id": "ui-03",
-          "description": "Fresh signup (unauthenticated context, real /account/create registration) lands on the main tenant and the profile dropdown shows exactly 3 items: Profile, Help, Log Out",
+          "description": "Fresh signup (unauthenticated context, real /account/create registration) lands on the main tenant and the profile dropdown shows exactly 4 items: Profile, Organizations, Help, Log Out",
           "status": "covered"
         },
         {
@@ -5680,7 +5680,7 @@
         },
         {
           "id": "emb-prof-02",
-          "description": "The embed profile menu offers Profile, the tenant switcher and Help, and leaves out Log Out and the Admin/User mode switch (the host owns auth)",
+          "description": "The embed profile menu offers Profile, the current organization as a label and Help, and leaves out the organization picker, the Organizations trip, Log Out and the Admin/User mode switch (the host owns auth)",
           "status": "covered"
         },
         {
@@ -5690,7 +5690,7 @@
         },
         {
           "id": "emb-prof-04",
-          "description": "Picking another tenant in the embed profile menu posts `{ tenantSwitch: true, tenant }` to the host page and leaves the frame on the chat instead of redirecting it to the auth app",
+          "description": "The embed offers no way to switch organizations — no in-place picker and no trip to the auth app — so the frame is never redirected away from the chat and the host keeps the tenant it installed",
           "status": "covered"
         },
         {

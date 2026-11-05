@@ -446,7 +446,7 @@ test.describe('Journey 80: Embed Header + LTI Redesign', () => {
     ).toBeVisible({ timeout: 20_000 });
   });
 
-  test('embed profile menu offers Profile, the tenant switcher and Help, but no Log Out or mode switch', async ({
+  test('embed profile menu offers Profile, the current organization and Help, but no picker, Log Out or mode switch', async ({
     page,
   }) => {
     // The SDK hides Help when the tenant's `show_help` is `false`, and the
@@ -467,9 +467,13 @@ test.describe('Journey 80: Embed Header + LTI Redesign', () => {
     const menu = iframe.getByRole('menu');
     await expect(menu).toBeVisible({ timeout: 10_000 });
     await expect(menu.getByRole('menuitem', { name: 'Profile' })).toBeVisible();
+    // The organization is named, but there is nothing to pick from: switching
+    // moved to the auth app, and an embed is never sent there (navigating a
+    // storage-partitioned iframe would tear it out of the host page).
+    await expect(menu.getByRole('combobox')).toHaveCount(0);
     await expect(
-      menu.getByRole('combobox', { name: 'Select a tenant' }),
-    ).toBeVisible();
+      menu.getByRole('menuitem', { name: /organizations/i }),
+    ).toHaveCount(0);
     await expect(menu.getByRole('menuitem', { name: /Help/ })).toBeVisible();
     await expect(menu.getByRole('menuitem', { name: 'Log Out' })).toHaveCount(
       0,
@@ -505,7 +509,7 @@ test.describe('Journey 80: Embed Header + LTI Redesign', () => {
     await expect(dialog).toBeHidden({ timeout: 10_000 });
   });
 
-  test('embed tenant switch is handed to the host page instead of redirecting the frame', async ({
+  test('embed offers no way to switch organizations, so the frame is never redirected', async ({
     page,
   }) => {
     const iframe = await gotoEmbedHarness(page, page.url(), {
@@ -527,31 +531,16 @@ test.describe('Journey 80: Embed Header + LTI Redesign', () => {
     const frameUrlBefore = appFrame?.url();
 
     await iframe.getByRole('button', { name: 'More options' }).click();
-    await iframe
-      .getByRole('menu')
-      .getByRole('combobox', { name: 'Select a tenant' })
-      .click();
-    const otherTenant = iframe
-      .getByRole('option')
-      .and(iframe.locator(':not([aria-selected="true"])'))
-      .first();
-    test.skip(
-      (await otherTenant.count()) === 0,
-      'the e2e user belongs to only one tenant',
-    );
-    await otherTenant.click();
+    const menu = iframe.getByRole('menu');
+    await expect(menu).toBeVisible({ timeout: 10_000 });
 
-    await expect
-      .poll(() =>
-        page.evaluate(() =>
-          (
-            window as unknown as { __hostMessages: unknown[] }
-          ).__hostMessages.find(
-            (m) => (m as { tenantSwitch?: boolean })?.tenantSwitch === true,
-          ),
-        ),
-      )
-      .toMatchObject({ tenantSwitch: true, tenant: expect.any(String) });
+    // Nothing in the menu starts a switch: no in-place picker, and no trip to
+    // the auth app. The host keeps whatever tenant it installed.
+    await expect(menu.getByRole('combobox')).toHaveCount(0);
+    await expect(
+      menu.getByRole('menuitem', { name: /organizations/i }),
+    ).toHaveCount(0);
+
     await expect(iframe.locator('#chat-input-textarea')).toBeVisible();
     expect(appFrame?.url()).toBe(frameUrlBefore);
   });

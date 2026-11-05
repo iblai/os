@@ -228,7 +228,7 @@ test.describe('Journey 3: New User UI & Profile Dropdown', () => {
 // This sibling describe signs up a brand-new account via the auth service
 // (mirroring Journey 1's signup test and Journey 59 Flow 0) and asserts the
 // default post-signup profile dropdown on the "main" tenant: exactly
-// Profile / Help / Log Out. It intentionally does NOT use the shared
+// Profile / Organizations / Help / Log Out. It intentionally does NOT use the shared
 // `beforeEach`/nonadmin fixtures above — it needs a clean, unauthenticated
 // context so the signup flow can provision + authenticate its own account.
 test.describe('Journey 3: New User UI & Profile Dropdown (fresh signup)', () => {
@@ -238,7 +238,7 @@ test.describe('Journey 3: New User UI & Profile Dropdown (fresh signup)', () => 
   // SSO -> main tenant); give it plenty of room like Journeys 1 and 59.
   test.setTimeout(120_000);
 
-  test('newly registered user goes to navbar and opens profile dropdown to see exactly 3 items', async ({
+  test('newly registered user goes to navbar and opens profile dropdown to see exactly 4 items', async ({
     page,
   }) => {
     test.skip(
@@ -252,10 +252,15 @@ test.describe('Journey 3: New User UI & Profile Dropdown (fresh signup)', () => 
     const navbarPage = new NavbarPage(page);
     await navbarPage.openProfileDropdown();
 
-    await expect(page.getByRole('menuitem')).toHaveCount(3, {
+    // Organizations is always offered — the chooser fetches its own list, so
+    // the app does not need to know whether there is another organization.
+    await expect(page.getByRole('menuitem')).toHaveCount(4, {
       timeout: 10_000,
     });
     await expect(page.getByRole('menuitem', { name: 'Profile' })).toBeVisible();
+    await expect(
+      page.getByRole('menuitem', { name: 'Organizations' }),
+    ).toBeVisible();
     await expect(page.getByRole('menuitem', { name: 'Help' })).toBeVisible();
     await expect(
       page.getByRole('menuitem', { name: 'Log Out', exact: true }),
