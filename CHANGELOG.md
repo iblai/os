@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.189.2](https://github.com/iblai/os/compare/v0.189.1...v0.189.2) (2026-11-05)
+
+### Bug Fixes
+
+* **extension:** close five holes in the expired-session recovery ([8e45efe](https://github.com/iblai/os/commit/8e45efed1d04451daeb3cda8c74c34a0ad040243))
+* **extension:** re-authenticate the panel when its session has expired ([46b747a](https://github.com/iblai/os/commit/46b747a1e45549706a46f1f2b5c9e056d42df92a))
+* **extension:** ship the organization chooser, and let agent-ai know we own it ([fd906b3](https://github.com/iblai/os/commit/fd906b382b1185871ecf3deb82235fc947f8573a))
+
+### Chores
+
+* **ext:** vendor agent-ai 2.13.3 so the panel gets the chooser and expiry fixes ([1772176](https://github.com/iblai/os/commit/177217636b500c06ede63d5a673d27098d7371e8)), closes [iblai-web-frontend#2223](https://github.com/iblai/iblai-web-frontend/issues/2223) [#2223](https://github.com/iblai/os/issues/2223)
+
 ## [0.189.1](https://github.com/iblai/os/compare/v0.189.0...v0.189.1) (2026-11-05)
 
 ### Chores
