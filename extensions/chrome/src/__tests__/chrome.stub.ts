@@ -47,6 +47,7 @@ export function installChromeStub() {
   const store: Record<string, unknown> = {};
   const activated = new Set<Listener>();
   const updated = new Set<Listener>();
+  const removed = new Set<Listener>();
   const connected = new Set<Listener>();
   const detached = new Set<Listener>();
   const stub = {
@@ -90,6 +91,14 @@ export function installChromeStub() {
       onUpdated: {
         addListener: vi.fn((listener: Listener) => updated.add(listener)),
         removeListener: vi.fn((listener: Listener) => updated.delete(listener)),
+      },
+      // The organization chooser opens in a tab of its own and is watched
+      // until the user picks (or closes it).
+      create: vi.fn(async ({ url }: { url: string }) => ({ id: 99, url })),
+      remove: vi.fn(async (_id: number) => undefined),
+      onRemoved: {
+        addListener: vi.fn((listener: Listener) => removed.add(listener)),
+        removeListener: vi.fn((listener: Listener) => removed.delete(listener)),
       },
     },
     scripting: {
@@ -152,7 +161,7 @@ export function installChromeStub() {
     windows: { getCurrent: vi.fn(async () => ({ id: 1 })) },
   };
   (globalThis as { chrome?: unknown }).chrome = stub;
-  return { stub, store, activated, updated, connected, detached };
+  return { stub, store, activated, updated, removed, connected, detached };
 }
 
 /**
