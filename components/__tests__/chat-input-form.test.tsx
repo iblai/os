@@ -1356,6 +1356,56 @@ describe('ChatInputForm', () => {
       expect(screen.queryByText(/Uploading 1 file/i)).not.toBeInTheDocument();
       vi.useRealTimers();
     });
+
+    // The hide timer is armed only after the awaited upload resolves, so a form
+    // unmounted mid-upload used to arm one nothing could cancel; it then fired
+    // past teardown and set state on a gone component, which vitest reports as
+    // an unhandled error and fails the whole run.
+    it('arms no hide timer when unmounted mid-upload', async () => {
+      vi.useFakeTimers();
+      const { useChatFileUpload } = await import(
+        '@/hooks/use-chat-file-upload'
+      );
+      let finishUpload!: () => void;
+      (useChatFileUpload as any).mockReturnValue({
+        uploadFiles: vi.fn(
+          () =>
+            new Promise<void>((resolve) => {
+              finishUpload = resolve;
+            }),
+        ),
+        retryUpload: vi.fn(),
+      });
+
+      const { container, unmount } = renderWithRedux(
+        <ChatInputForm {...defaultProps} />,
+      );
+      const fileInput = container.querySelector(
+        'input[type="file"]',
+      ) as HTMLInputElement;
+      const file = new File(['x'], 'test.pdf', { type: 'application/pdf' });
+      Object.defineProperty(fileInput, 'files', {
+        value: [file],
+        writable: false,
+      });
+
+      fireEvent.change(fileInput);
+      expect(screen.getByText(/Uploading 1 file/i)).toBeInTheDocument();
+
+      // Leave while the upload is still in flight, then let it land.
+      unmount();
+      const pending = vi.getTimerCount();
+      await act(async () => {
+        finishUpload();
+        await Promise.resolve();
+      });
+
+      expect(vi.getTimerCount()).toBe(pending);
+
+      // Nothing left to fire, so running the clock cannot touch state.
+      expect(() => vi.advanceTimersByTime(3000)).not.toThrow();
+      vi.useRealTimers();
+    });
   });
 
   describe('voice transcript insertion', () => {
