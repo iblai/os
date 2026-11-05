@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.188.0](https://github.com/iblai/os/compare/v0.187.2...v0.188.0) (2026-11-05)
+
+### Features
+
+* **e2e:** cover the User Limits billing tab and bump @iblai/iblai-js to 2.62.3 ([135e620](https://github.com/iblai/os/commit/135e6203d4c9c3cd6a3708e6e5e0398ca7f6aadd)), closes [iblai-web-frontend#2209](https://github.com/iblai/iblai-web-frontend/issues/2209) [iblai/iblai-platform#2598](https://github.com/iblai/iblai-platform/issues/2598)
+
+### Tests
+
+* **e2e:** judge the MCP row's no-badge state by name and retry every panel open ([ebf655c](https://github.com/iblai/os/commit/ebf655c0c8c1274d31713e463e158e4f9fdea266))
+* **e2e:** keep the MCP panel helpers retrying through composer re-renders ([738c06c](https://github.com/iblai/os/commit/738c06c0127553f1ab3105bb51d052b227ed0920))
+* **e2e:** leave an open "+" menu alone before looking for its trigger ([a3e9623](https://github.com/iblai/os/commit/a3e9623d42f4a00705cf4315def41f02081ccfd2))
+* **e2e:** tighten the MCP menu helpers and scope the typecheck file list ([94d30bb](https://github.com/iblai/os/commit/94d30bb64ca80f97ce933caf2510de12f4a4563c))
+
+### Build
+
+* list the e2e Playwright configs in the typecheck project ([984da5b](https://github.com/iblai/os/commit/984da5be12eec52e46ccc3a7c1bb1108c9ec82cf))
+
 ## [0.187.2](https://github.com/iblai/os/compare/v0.187.1...v0.187.2) (2026-11-04)
 
 ### Bug Fixes
