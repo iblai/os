@@ -255,6 +255,7 @@ export const getEmbedCode = async (
             window.onload = function() {
               let isEmbeddedMentorReady = false;
               let embedTenant = "${tenant}";
+              let organizationSwitchAttemptKey = 'ibl-org-switch-' + embedTenant;
               let iblData = new URL(window.location.href).searchParams.get("ibl-data");
               if (iblData) {
                 const url = new URL(window.location);
@@ -353,6 +354,36 @@ export const getEmbedCode = async (
                 function redirectToAuthSPA(forceLogout) {
                     const redirectPath = window.location.pathname + window.location.search;
                     window.location.href = \`${config.authUrl()}/login?redirect-path=\${redirectPath}${!settings.allow_anonymous ? '&redirect-token=' + redirectToken : ''}&tenant=${tenant}${settings.sso_provider ? '&custom_sso_backend_path=' + settings.sso_provider : ''}\${forceLogout ? '&logout=true' : ''}\`;
+                }
+
+                function switchOrganizationViaAuthSPA() {
+                    // One attempt per organization. The embed re-asks every few
+                    // seconds, so without this a switch that cannot succeed
+                    // would navigate this page over and over.
+                    try {
+                        if (sessionStorage.getItem(organizationSwitchAttemptKey)) {
+                            console.warn('[ibl] Already tried switching to ' + embedTenant + ', not retrying.');
+                            return;
+                        }
+                        sessionStorage.setItem(organizationSwitchAttemptKey, '1');
+                    } catch (error) {
+                        // Private browsing can refuse sessionStorage; switching
+                        // once is better than never switching.
+                    }
+                    const redirectPath = window.location.pathname + window.location.search;
+                    // /join covers every case: a member gets a new session, a
+                    // non-member is linked first where the organization allows
+                    // it, and an invalid session falls back to sign-in and
+                    // returns here.
+                    window.location.href = \`${config.authUrl()}/join?tenant=${tenant}&redirect-to=\${encodeURIComponent(window.location.origin)}&redirect-path=\${encodeURIComponent(redirectPath)}\`;
+                }
+
+                function clearOrganizationSwitchAttempt() {
+                    try {
+                        sessionStorage.removeItem(organizationSwitchAttemptKey);
+                    } catch (error) {
+                        // Nothing to clear if storage is unavailable.
+                    }
                 }
 
                 let isWidgetInjected = false;
@@ -646,6 +677,9 @@ export const getEmbedCode = async (
                     : ''
                 }
                 initChatWidget();
+                if (getIblDataTenant() === embedTenant) {
+                    clearOrganizationSwitchAttempt();
+                }
                 window.addEventListener('message', function(event) {
                     let message = event.data;
                     if (typeof message === 'string') {
@@ -702,12 +736,12 @@ export const getEmbedCode = async (
                       // with a session that belongs to it.
                       if (message.tenant === embedTenant) {
                         if (getIblDataTenant() === embedTenant) {
+                          clearOrganizationSwitchAttempt();
                           sendAuthDataToIframe();
                         } else {
-                          ${!settings.allow_anonymous ? 'redirectToAuthSPA();' : ''}
+                          ${!settings.allow_anonymous ? 'switchOrganizationViaAuthSPA();' : ''}
                         }
                       }
-                      return;
                     }
 
                     if (message?.authExpired) {
