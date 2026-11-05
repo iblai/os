@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-10-28 | 1035 checkpoints (988 covered, 13 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 104 journeys (103 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-11-04 | 1064 checkpoints (1014 covered, 16 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 106 journeys (105 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -1549,17 +1549,20 @@ tool calls actually mounts `AgentTodoList`.
 - [x] atl-10: The task list survives a page reload, recovered from chat history
 - [x] atl-11: First fixture-backed validation of the LangChain-shape and OpenAI-shape `write_todos` history parsing, plus a malformed entry dropped without throwing
 
-## Journey 69: LLM Spend Limits (Billing) — Agent & Tenant Settings (16 checkpoints) — `journeys/69-spend-limits.spec.ts`
+## Journey 69: LLM Spend Limits (Billing) — Agent & Tenant Settings (21 checkpoints) — `journeys/69-spend-limits.spec.ts`
 
 **Source files:** `components/modals/edit-mentor-modal/tabs/spend-caps-tab.tsx`, `components/modals/edit-mentor-modal/index.tsx`, `hooks/use-mentor-segments.ts`, `lib/constants.ts`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/user-profile.tsx`
 
-Covers BOTH surfaces the SDK's spend-limits UI touches, as two
+Covers BOTH surfaces the SDK's spend-limits UI touches, as three
 clearly-separated `test.describe` blocks in one file: **Agent settings**
 (the Edit Mentor "Billing" tab) and **Tenant settings** (the tenant Billing
-tab's "Spend Limits" + "Agent Limits" tabs). The whole file runs `serial` —
-the simplest safe arrangement given the tenant block's tenant-wide mutation
-(see its isolation note below); the agent block's tests are independent of
-each other and of the tenant block either way.
+tab's "Spend Limits" + "Agent Limits" tabs, and its "User Limits" tab as a
+block of its own). The file is configured `mode: 'default'`, which under the
+suite's `fullyParallel` means each `describe` block's tests run in
+declaration order in one worker (a failure skips nothing), while the three
+blocks may run in parallel with each other — safe because no block reads
+state another block writes (see the isolation notes below), and every test
+creates and removes its own state.
 
 **REWRITE (feat/2286):** the prior version of the agent block targeted a
 three-sub-tab UI (This agent / Per user / Workspace) via hand-rolled
@@ -1670,13 +1673,65 @@ longer relies on that timing: it searches broadly and samples up to 5
 already-indexed candidates rather than waiting on its own freshly-created
 mentor (see the checkpoint description below for why).
 
-- [x] twl-01: The tenant settings Billing tab exposes a "Billing sections" tablist with Plan & Credits (default), Spend Limits, and Agent Limits, and each tab switches to its section
+- [x] twl-01: The tenant settings Billing tab exposes a "Billing sections" tablist with Plan & Credits (default), Spend Limits, Agent Limits, and User Limits, and each tab switches to its section (User Limits renders both of its cards)
 - [x] twl-02: Admin configures the workspace-wide (tenant) spend limit with alert-only enforcement via `setWorkspaceSpendLimit`, the presence-level usage stats render, the values persist after reopening the tab, and the limit is removed again in the test's own `finally`-block cleanup so no other journey sharing this tenant inherits it
 - [x] tal-02: Admin edits the agent spend limit — created via the Edit Agent dialog's Billing tab (no search-index dependency) — through the Agent Limits row's manage popup stacked on the tenant settings dialog (`setAgentSpendLimitFromTenantBilling`), and the row reflects the updated limit
 - [x] tal-03: Admin flips the agent's Status toggle directly in the Agent Limits table row (saves immediately) off and back on
 - [x] tal-04: Admin adds a per-user spend limit through the Agent Limits manage popup's nested "Per User" sub-tab / user-cap modal (`addUserSpendLimitFromTenantBilling`); reopening the popup confirms the user's row persisted server-side
 - [x] tal-05: Admin deletes the agent spend limit through the manage popup's confirm dialog (local `deleteAgentCapAndAwaitResponse` helper, network-response-gated — see the isolation note above); the tenant-wide unfiltered list only holds configured caps, so the row disappears entirely
 - [x] tal-01: Admin filters Agent Limits to an ALREADY-INDEXED mentor (broad query "E2E Mentor" against the search-index-backed autocomplete, sampling up to 5 results for the first capless one) — the ONE checkpoint that depends on that index, which lags mentor creation by DAYS on this backend (a known product limitation, not a test bug, reported upstream separately — a freshly-created mentor is never searchable in time, so this borrows a mentor from a past run instead of retrying its own) — sees the "Set Spend Limit" empty state, creates that mentor's spend limit (alert-only) from the popup, the row lists it, and the cap is removed again in an unconditional `finally` block so the borrowed (shared-tenant) mentor is left exactly as found; if every sampled candidate already has a cap, verifies the filter → row-visible path on the first one instead (annotated, never a failure)
+
+### Tenant settings (User Limits)
+
+Covers the 4th tab of that same "Billing sections" tablist — **User
+Limits** — two cards in this order:
+
+- **User Limits** — every USER-scoped spend cap in the workspace (one
+  user's spend across ALL agents, backend `spend-caps/users/`),
+  `UserLimitsSection` inside `BillingTab`: the Agent Limits layout with an
+  email-only user autocomplete filter (also the only entry point for a user
+  who has none yet — the filtered empty state's "Set Spend Limit" button
+  opens the SAME `user-cap-modal` the per-agent flow uses, straight on the
+  form with the filtered user pre-picked), a direct Status switch per row,
+  and edit/delete icons beside it.
+- **Default for New Users** — the spend limit each member gets when they
+  JOIN (backend `spend-caps/users/default/`, a config TEMPLATE, not a cap:
+  GET never 404s, `enabled: false` is "off", PUT is a full replace, applies
+  to future joins only — never to existing members), `NewUserDefaultSection`
+  inside `BillingTab`: a `CapabilityGate` switch whose fields are inert
+  while off, the same fields as a cap, Save — no usage strip, no Delete.
+
+Every interaction goes through the SDK's `*TenantUserSpendLimit` /
+`*NewUserSpendLimitDefault` helpers in `@iblai/iblai-js/playwright`.
+
+**Isolation:** no mentor at all — user-tier caps are keyed by USERNAME, not
+by agent, so every checkpoint acts on the acting admin's own account
+(`getCurrentAdminIdentity`, the same identity source the agent block's
+per-user checkpoints use: always a real member of the tenant, which the
+user-tier PUT requires). Both cards hold TENANT-WIDE state — a user cap
+applies to that user across every agent, and the new-user default attaches
+a cap to EVERY future signup in this tenant — so every mutation is
+`enforcement: 'alert_only'` (never `'block'`) and every test removes what it
+created in an unconditional `finally` (the local `removeTenantUserCapIfPresent`
+→ `deleteTenantUserSpendLimit`, or the default switched back OFF), the same
+contract as `twl-02`. The three row checkpoints also start by calling
+`removeTenantUserCapIfPresent` so a cap left over by a crashed earlier run can
+never hide the "Set Spend Limit" empty state they create from. Like
+`twl-02`'s singleton workspace cap, this identity-keyed state is shared
+across browser projects running the same admin in parallel — per-browser
+admin credentials (`PLAYWRIGHT_USERNAME_<BROWSER>`) keep the rows apart.
+
+No non-admin checkpoint here: neither this block nor journey 21 has an
+established non-admin pattern for the tenant Billing surface (journey 21-C's
+non-admin test covers the Stripe pricing modal on mentor creation, not the
+Billing tab), and `sc-09` already pins the admin-only gate at the Edit Mentor
+level.
+
+- [x] tul-01: The tenant Billing "User Limits" tab (4th tab of the "Billing sections" tablist, active once switched to) shows both cards: the user caps table (email-only user autocomplete filter, User | Limit | Spent | Remaining | Status columns) and the "Default for New Users" card with its visible future-joins note ("Only people who join after this is turned on get it. To limit someone already here, set their limit above."), its switch and its Save button
+- [x] tul-02: Admin creates a tenant-level (all-agents) user spend limit for the acting admin's own account via the filter → "Set Spend Limit" empty state → user-cap modal opened straight on the form with the filtered user pre-picked (`addTenantUserSpendLimit`, ALWAYS alert-only), the row lists it with the formatted limit ("$7.00 / Month") and its Status on, the row persists after switching tabs away (Plan & Credits) and back, and the cap is removed again in an unconditional `finally` block so the shared tenant is left capless; a cap left over by a crashed earlier run is removed up front so the empty state is always reachable
+- [x] tul-03: Admin edits an existing tenant-level user limit (created in the test's own setup) through the row's edit icon → the same user-cap modal in edit mode (`editTenantUserSpendLimit`) and the row reflects the new limit ("$12.00 / Week"); removed again in `finally`
+- [x] tul-04: Admin flips a tenant-level user limit's Status switch directly in the User Limits row (saves immediately, "Spend limit saved" toast) off and back on (`setUserLimitsRowEnabled`, idempotent); created in the test's own setup and removed again in `finally`
+- [x] tul-05: Admin turns on the "Default for New Users" template with an alert-only amount (`setNewUserSpendLimitDefault` — enabled first, since the `CapabilityGate` keeps the fields inert while off; gated on the "Default for new users saved" toast), the switch, amount and enforcement persist after switching tabs away and back (`expectNewUserSpendLimitDefault` — the amount rehydrates as `String(Number(max_cost_usd))`), and the default is switched back OFF in an unconditional `finally` block because a tenant default left on would attach a cap to every future test signup in this tenant
 
 ---
 
@@ -2325,12 +2380,12 @@ The app half of the Chrome extension's Cowork mode, without loading the extensio
 
 **Source files:** `components/modals/edit-mentor-modal/settings-tab.tsx`, `messages/en.json`
 
-Issue #2731. Settings → Discovery → "Who Can View?": an admin-only note shows while Administrators is picked, and saving a change from Users/Anyone to Administrators asks "Limit this agent to administrators?" first. One throwaway agent (auto-deleted) is walked through the states by the serial checkpoints. The existing specs that pick Administrators then save (journeys 13 and 64) confirm the prompt through `saveConfirmingAdminVisibility()`.
+Issue #2731. Settings → Discovery → "Who Can Use This Agent?": the help line says only admins can use it while Admins Only is picked, and saving a change from All Members to Admins Only asks "Limit this agent to administrators?" first. One throwaway agent (auto-deleted) is walked through the states by the serial checkpoints. The existing specs that pick Admins Only then save (journeys 13 and 64) confirm the prompt through `saveConfirmingAdminVisibility()`.
 
-- [x] avs-01: Picking Administrators on a Users agent shows the admin-only note, and Save opens the "Limit this agent to administrators?" confirmation instead of saving
-- [x] avs-02: Cancel on the confirmation closes it, sends no visibility save, keeps Administrators in the form, and the server still holds Users
-- [x] avs-03: "Limit to Administrators" saves mentor_visibility=viewable_by_tenant_admins with the success toast; reopening shows Administrators with the note already visible
-- [x] avs-04: Switching away from Administrators hides the note and saves without a prompt, and Users to Anyone also saves without a prompt
+- [x] avs-01: Picking Admins Only on an All Members agent shows the "only admins" help line, and Save opens the "Limit this agent to administrators?" confirmation instead of saving
+- [x] avs-02: Cancel on the confirmation closes it, sends no visibility save, keeps Admins Only in the form, and the server still holds All Members
+- [x] avs-03: "Limit to Administrators" saves mentor_visibility=viewable_by_tenant_admins with the success toast; reopening shows Admins Only
+- [x] avs-04: Switching away from Admins Only saves without a prompt, and All Members to the public catalog also saves without a prompt
 
 ---
 
@@ -2359,3 +2414,18 @@ Issue iblai-platform#2743. A `?token=<share token>` link now rides in the chat f
 - [x] slf-01: Signed-in user on the share-link URL: frame shareable_link_token equals the URL token, token is the user's axd token, token_type is not "link"
 - [x] slf-02: Anonymous visitor on the share-link URL: shareable_link_token set, token empty, no token_type "link", mocked reply renders
 - [x] slf-03: Signed-in user without ?token: no shareable_link_token key, token is the axd token, mocked reply renders
+
+---
+
+## Journey 99: Discovery Audience and Public Catalog (4 checkpoints) — `journeys/99-discovery-audience-and-catalog.spec.ts`
+
+**Source files:** `components/modals/edit-mentor-modal/settings-tab.tsx`, `messages/en.json`
+
+Issue #2788. Settings → Discovery: "Who Can Use This Agent?" (All Members / Admins Only), "List in Public Catalog" and "Allow Chat Without Signing In" map onto `mentor_visibility` and `allow_anonymous`. One throwaway agent (auto-deleted) is shared by the serial checkpoints.
+
+- [x] dac-01: All six audience / List in Public Catalog / Allow Chat Without Signing In combinations save the mapped mentor_visibility and allow_anonymous, show the matching summary, and a reload restores the controls and summary
+- [x] dac-02: Admins Only disables and clears List in Public Catalog; switching back to All Members lands with the catalog off
+- [x] dac-03: Narrowing a publicly listed agent to Admins Only opens the "Limit this agent to administrators?" confirmation, and Cancel saves nothing
+- [x] dac-04: The Discovery sub-tab never shows the tenant name or key
+
+---

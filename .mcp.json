@@ -2,7 +2,12 @@
   "mcpServers": {
     "playwright-test": {
       "command": "npx",
-      "args": ["playwright", "run-test-mcp-server"]
+      "args": [
+        "playwright",
+        "run-test-mcp-server",
+        "--config",
+        "e2e/mcp.config.ts"
+      ]
     }
   }
 }

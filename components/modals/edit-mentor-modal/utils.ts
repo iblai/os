@@ -255,13 +255,21 @@ export const getEmbedCode = async (
             window.onload = function() {
               let isEmbeddedMentorReady = false;
               let embedTenant = "${tenant}";
-              const iblData = new URL(window.location.href).searchParams.get("ibl-data");
+              let iblData = new URL(window.location.href).searchParams.get("ibl-data");
               if (iblData) {
                 const url = new URL(window.location);
                 url.searchParams.delete("ibl-data");
                 window.history.replaceState({}, document.title, url);
-                const userData = JSON.parse(iblData).userData;
-                document.cookie = \`userData=\${userData}; domain=\${document.domain}; path=/;\`;
+                try {
+                  const userData = JSON.parse(iblData).userData;
+                  document.cookie = \`userData=\${userData}; domain=\${document.domain}; path=/;\`;
+                } catch (error) {
+                  // Unusable session: drop it so every \`if (iblData)\` below
+                  // falls through to the sign-in path instead of replaying auth
+                  // the embed cannot read.
+                  iblData = null;
+                  console.error('Error reading ibl-data:', error);
+                }
               }
               
                 ${
@@ -321,6 +329,18 @@ export const getEmbedCode = async (
                     const iframe = document.querySelector('#ibl-chat-widget-container iframe');
                     if (iframe && iframe.contentWindow) {
                         iframe.contentWindow.postMessage({ type: 'MENTOR:AUTH_UPDATE', authData: iblData }, '*');
+                    }
+                }
+
+                function getIblDataTenant() {
+                    if (!iblData) {
+                        return null;
+                    }
+                    try {
+                        return JSON.parse(iblData).tenant ?? null;
+                    } catch (error) {
+                        console.error('Error parsing ibl-data:', error);
+                        return null;
                     }
                 }
 
@@ -669,6 +689,19 @@ export const getEmbedCode = async (
                         : ''
                     }
                     
+                    if (message?.tenantSwitch) {
+                      // Answer only for this embed's own organization, and only
+                      // with a session that belongs to it.
+                      if (message.tenant === embedTenant) {
+                        if (getIblDataTenant() === embedTenant) {
+                          sendAuthDataToIframe();
+                        } else {
+                          ${!settings.allow_anonymous ? 'redirectToAuthSPA();' : ''}
+                        }
+                      }
+                      return;
+                    }
+
                     if (message?.authExpired) {
                       if(iblData){
                         sendAuthDataToIframe();

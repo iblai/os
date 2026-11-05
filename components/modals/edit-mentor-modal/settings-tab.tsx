@@ -49,6 +49,7 @@ export function SettingsTab() {
   const tDelete = useTranslations('settingsTabDeleteMentorModal');
   const tAdminVisibility = useTranslations('settingsTabAdminVisibilityConfirm');
   const tFileTypes = useTranslations('tabsSettingsTab.allowedFileTypes');
+  const tDiscovery = useTranslations('tabsSettingsTab.discoveryAccess');
 
   const { tenantKey, mentorId } = useParams<TenantKeyMentorIdParams>();
   const { getMentorId, closeEditMentorModal, navigateToMentor } = useNavigate();
@@ -261,6 +262,26 @@ export function SettingsTab() {
       invalidError: tFileTypes('invalidError'),
       clearAll: tFileTypes('clearAll'),
       done: tFileTypes('done'),
+    },
+    discoveryAccess: {
+      audienceLabel: tDiscovery('audienceLabel'),
+      audienceTooltipAriaLabel: tDiscovery('audienceTooltipAriaLabel'),
+      allMembers: tDiscovery('allMembers'),
+      adminsOnly: tDiscovery('adminsOnly'),
+      allMembersHelp: tDiscovery('allMembersHelp'),
+      adminsOnlyHelp: tDiscovery('adminsOnlyHelp'),
+      publicCatalogLabel: tDiscovery('publicCatalogLabel'),
+      publicCatalogDescription: tDiscovery('publicCatalogDescription'),
+      publicCatalogTooltipAriaLabel: tDiscovery(
+        'publicCatalogTooltipAriaLabel',
+      ),
+      guestChatLabel: tDiscovery('guestChatLabel'),
+      guestChatDescription: tDiscovery('guestChatDescription'),
+      guestChatTooltipAriaLabel: tDiscovery('guestChatTooltipAriaLabel'),
+      summaryAdminsGuest: tDiscovery('summaryAdminsGuest'),
+      summaryMembersGuest: tDiscovery('summaryMembersGuest'),
+      summaryPublicCatalog: tDiscovery('summaryPublicCatalog'),
+      summaryPublicCatalogGuest: tDiscovery('summaryPublicCatalogGuest'),
     },
     deleteModal: {
       title: tDelete('title'),

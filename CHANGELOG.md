@@ -1,5 +1,115 @@
 # Changelog
 
+## [0.188.1](https://github.com/iblai/os/compare/v0.188.0...v0.188.1) (2026-11-05)
+
+### Bug Fixes
+
+* **chat:** cancel the file-upload notification timer on unmount ([e308398](https://github.com/iblai/os/commit/e30839886b9775e5d7306e17534534c563e3d40e))
+* **embed:** answer the embed's tenant-switch request in generated code ([a269fcb](https://github.com/iblai/os/commit/a269fcb9947f0d0b21f7a22943aed1c853109824))
+* **embed:** drop an unreadable ibl-data, and close the timer-arming gap ([d022a92](https://github.com/iblai/os/commit/d022a921e49ca05396551944f346be978861222f))
+* **tsconfig:** let the e2e configs the security test imports be typechecked ([bcf3136](https://github.com/iblai/os/commit/bcf31369bfe9e3a9620762e7d731f61a1617d17c))
+
+## [0.188.0](https://github.com/iblai/os/compare/v0.187.2...v0.188.0) (2026-11-05)
+
+### Features
+
+* **e2e:** cover the User Limits billing tab and bump @iblai/iblai-js to 2.62.3 ([135e620](https://github.com/iblai/os/commit/135e6203d4c9c3cd6a3708e6e5e0398ca7f6aadd)), closes [iblai-web-frontend#2209](https://github.com/iblai/iblai-web-frontend/issues/2209) [iblai/iblai-platform#2598](https://github.com/iblai/iblai-platform/issues/2598)
+
+### Tests
+
+* **e2e:** judge the MCP row's no-badge state by name and retry every panel open ([ebf655c](https://github.com/iblai/os/commit/ebf655c0c8c1274d31713e463e158e4f9fdea266))
+* **e2e:** keep the MCP panel helpers retrying through composer re-renders ([738c06c](https://github.com/iblai/os/commit/738c06c0127553f1ab3105bb51d052b227ed0920))
+* **e2e:** leave an open "+" menu alone before looking for its trigger ([a3e9623](https://github.com/iblai/os/commit/a3e9623d42f4a00705cf4315def41f02081ccfd2))
+* **e2e:** tighten the MCP menu helpers and scope the typecheck file list ([94d30bb](https://github.com/iblai/os/commit/94d30bb64ca80f97ce933caf2510de12f4a4563c))
+
+### Build
+
+* list the e2e Playwright configs in the typecheck project ([984da5b](https://github.com/iblai/os/commit/984da5be12eec52e46ccc3a7c1bb1108c9ec82cf))
+
+## [0.187.2](https://github.com/iblai/os/compare/v0.187.1...v0.187.2) (2026-11-04)
+
+### Bug Fixes
+
+* **e2e:** install pnpm with npm, not corepack, in the e2e image ([b897e35](https://github.com/iblai/os/commit/b897e359556d6117c7e74e1f2d3c9abc7e6f4233))
+
+### Chores
+
+* **deps:** bump @iblai/iblai-js to 2.62.4 ([a2ffeb5](https://github.com/iblai/os/commit/a2ffeb5c83634a378d975bd64f230ea3e28c965e)), closes [iblai/os#614](https://github.com/iblai/os/issues/614) [iblai/ibl-frontend#2187](https://github.com/iblai/ibl-frontend/issues/2187)
+* **deps:** bump @iblai/iblai-js to 2.62.5 ([37e1459](https://github.com/iblai/os/commit/37e14594137db07f675bce6a2da3690269088d10)), closes [iblai/iblai-web-frontend#2213](https://github.com/iblai/iblai-web-frontend/issues/2213)
+* **e2e:** enable Chromium sandbox and update Playwright to 1.64.1 ([7bda319](https://github.com/iblai/os/commit/7bda319893fef2c2dda865ae7067d823e6d2abfb))
+* **users:** drop the unused user metadata query ([d07054a](https://github.com/iblai/os/commit/d07054a7f7c5729812fb75ca4113620b3f7a065c))
+
+## [0.187.1](https://github.com/iblai/os/compare/v0.187.0...v0.187.1) (2026-11-03)
+
+### Chores
+
+* **deps:** bump @iblai/iblai-js to 2.62.2 ([639b367](https://github.com/iblai/os/commit/639b367bb4ac02f44682f2e15cd65d6ce23fcd47))
+
+## [0.187.0](https://github.com/iblai/os/compare/v0.186.0...v0.187.0) (2026-11-03)
+
+### Features
+
+* **edit-mentor:** pass the Discovery access labels to the settings tab ([b7b8ede](https://github.com/iblai/os/commit/b7b8ede5513224633cb1f781d1ff381d32a59460))
+
+### Chores
+
+* **deps:** bump @iblai/iblai-js to 2.62.1 ([dcacf62](https://github.com/iblai/os/commit/dcacf6254a01b7e921d22b064b80162c5965c0ce)), closes [iblai-web-frontend#2205](https://github.com/iblai/iblai-web-frontend/issues/2205)
+
+### Tests
+
+* **e2e:** add journey 99 for Discovery audience and catalog ([a27d313](https://github.com/iblai/os/commit/a27d3137808024db5872f2dba033cadcddcd5ae6))
+* **e2e:** drive the redesigned Discovery controls in existing journeys ([7cdb59f](https://github.com/iblai/os/commit/7cdb59f51892ead0e71d2c3162fe63ef1551986d))
+
+## [0.186.0](https://github.com/iblai/os/compare/v0.185.0...v0.186.0) (2026-11-02)
+
+### Features
+
+* unclutter the agent History conversation list ([68fc383](https://github.com/iblai/os/commit/68fc383824f5d048c4559176dc0bab2feaefff45))
+
+## [0.185.0](https://github.com/iblai/os/compare/v0.184.1...v0.185.0) (2026-11-02)
+
+### Features
+
+* **os:** adding mcp to prompt box ([7491fcf](https://github.com/iblai/os/commit/7491fcfb389730c8db577b1fa15baaa6a026b574))
+
+### Bug Fixes
+
+* **os:** adding fix for pnpm lock ([77f6ff4](https://github.com/iblai/os/commit/77f6ff43cca4f542b92deb9cb0333e02bcdb3d90))
+* **os:** adding fix for the e2e tests ([9b529ac](https://github.com/iblai/os/commit/9b529acd164f045f6b7293a48c9849debe6500a6))
+* **os:** adding fix for the unit tests ([ccd9b67](https://github.com/iblai/os/commit/ccd9b67f8859be0731ef79618473749741629989))
+* **os:** adding fix the playright test ([c208c91](https://github.com/iblai/os/commit/c208c91f26bfdacf593b17d3b43ff99441407043))
+* **os:** fixes for the mcps ([cd025ed](https://github.com/iblai/os/commit/cd025ed1f4f0666c58abc2f5e685542f7996eeec))
+* **os:** mcp fixes for the student and tenant ([4029a30](https://github.com/iblai/os/commit/4029a306b40892bae52d8bf2e948cc32f3b5eba3))
+* **web-containers:** adding fix for the mcp connectors ([86f967d](https://github.com/iblai/os/commit/86f967df58c91f05ff7c1b90f686c33684c7fc0d))
+
+### Chores
+
+* **deps:** bump @iblai/iblai-js to 2.59.3 ([f2f09b7](https://github.com/iblai/os/commit/f2f09b7ac29f418fb12f09b309c3cc9eff8ef4c1))
+
+### Documentation
+
+* **e2e:** describe the localStorage metadata in the coverage records ([22184d9](https://github.com/iblai/os/commit/22184d999c69544fd27250c23b0a01edb587457f))
+
+### Styles
+
+* **e2e:** apply prettier to coverage.json ([a0acc51](https://github.com/iblai/os/commit/a0acc5191f662b21d0bf204c19dc356bcc740eb2))
+* **skills:** apply prettier to startup-performance.md ([da8a958](https://github.com/iblai/os/commit/da8a95836626ea3badf7387b15f4742c5f6cbf00))
+
+### Tests
+
+* **e2e:** enable the accessibility menu through stored tenant metadata ([2e36035](https://github.com/iblai/os/commit/2e360355c594741392c5e7a33bab23513579740c))
+* **e2e:** journey 78 reads Expires from the 4th column and expects a disabled Submit ([5846063](https://github.com/iblai/os/commit/58460631e7570ab476d9967a8f0a2b77c28a1c16))
+* **e2e:** journey 86 keeps the accessibility flag through the tenant refresh ([ebbcd73](https://github.com/iblai/os/commit/ebbcd737ac0c2edb7b432299aa6a8a4bdfe083ba))
+* **e2e:** read tenant metadata from localStorage in the observer helper ([f20d706](https://github.com/iblai/os/commit/f20d706c522e0aa23364559c31e993ff03fc9190))
+* **e2e:** seed the stored user metadata name in journey 83 ([baa5323](https://github.com/iblai/os/commit/baa53234435f84619c362a64033630c6ad661b5c))
+* **e2e:** wait for the embed's chat history before journey 82 types ([d63557b](https://github.com/iblai/os/commit/d63557bec5aeaf41731eb5f863ce0d0760c82bd4))
+
+## [0.184.1](https://github.com/iblai/os/compare/v0.184.0...v0.184.1) (2026-11-02)
+
+### Documentation
+
+* **perf:** add a startup-performance skill so the load path stays unblocked ([92a14f1](https://github.com/iblai/os/commit/92a14f1d96302909b5f2bf6d657d5ade2618f14f))
+
 ## [0.184.0](https://github.com/iblai/os/compare/v0.183.1...v0.184.0) (2026-10-31)
 
 ### Features
