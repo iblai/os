@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.188.2](https://github.com/iblai/os/compare/v0.188.1...v0.188.2) (2026-11-05)
+
+### Bug Fixes
+
+* **embed:** stop the switch branch swallowing other instructions ([c519c06](https://github.com/iblai/os/commit/c519c066e2676b774fa5a32d6ae50ade043ffffb))
+* **embed:** switch organizations through /join, and only try once ([566d6b2](https://github.com/iblai/os/commit/566d6b2a70caa0d577408908509512d59b7b5a61))
+* **tsconfig:** drop my duplicate "files" key after merging main ([ab0a6ba](https://github.com/iblai/os/commit/ab0a6bad34ea1c5d6d304cddb78051684b1e26eb))
+
 ## [0.188.1](https://github.com/iblai/os/compare/v0.188.0...v0.188.1) (2026-11-05)
 
 ### Bug Fixes
