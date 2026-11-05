@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-11-02 | 1039 checkpoints (992 covered, 13 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 105 journeys (104 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-11-04 | 1043 checkpoints (996 covered, 13 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 106 journeys (105 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -2371,5 +2371,18 @@ Issue #2788. Settings → Discovery: "Who Can Use This Agent?" (All Members / Ad
 - [x] dac-02: Admins Only disables and clears List in Public Catalog; switching back to All Members lands with the catalog off
 - [x] dac-03: Narrowing a publicly listed agent to Admins Only opens the "Limit this agent to administrators?" confirmation, and Cancel saves nothing
 - [x] dac-04: The Discovery sub-tab never shows the tenant name or key
+
+---
+
+## Journey 100: Sidebar Logo Refresh After Upload (4 checkpoints) — `journeys/100-org-logo-refresh.spec.ts`
+
+**Source files:** `components/logo.tsx`
+
+Issue #2809. After a successful light logo upload the SDK stores `tenant_logo_version:<tenant>` in localStorage and the sidebar logo appends `?v=<version>` to `/api/core/orgs/<tenant>/logo/`, so it refreshes without a reload. The upload POST and the logo image are mocked (no tenant is changed); next/image's `/_next/image?url=` wrapper is decoded before asserting.
+
+- [x] logo-01: With no stored logo version the sidebar logo requests the bare /api/core/orgs/<tenant>/logo/ URL with no ?v=
+- [x] logo-02: A successful light logo upload (POST mocked) adds ?v=<stored version> to the sidebar logo URL with no reload, a second already-open tab updates too, and the version survives a reload
+- [x] logo-03: A failed light logo upload leaves the sidebar logo on the bare URL and stores no version
+- [x] logo-04: A dark logo upload leaves the sidebar logo on the bare URL and stores no version
 
 ---

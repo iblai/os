@@ -1,15 +1,15 @@
 {
   "version": 2,
-  "lastUpdated": "2026-11-02",
+  "lastUpdated": "2026-11-04",
   "summary": {
-    "totalCheckpoints": 1059,
-    "coveredCheckpoints": 1009,
+    "totalCheckpoints": 1063,
+    "coveredCheckpoints": 1013,
     "deprecatedCheckpoints": 17,
     "notReproducibleCheckpoints": 17,
     "pendingCheckpoints": 16,
     "percent": 100,
-    "totalJourneys": 106,
-    "activeJourneys": 105
+    "totalJourneys": 107,
+    "activeJourneys": 106
   },
   "journeys": [
     {
@@ -6655,6 +6655,34 @@
         {
           "id": "dac-04",
           "description": "The Discovery sub-tab never shows the tenant name or key",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "org-logo-refresh",
+      "name": "Sidebar Logo Refresh After Upload",
+      "spec": "100-org-logo-refresh.spec.ts",
+      "sourceFiles": ["components/logo.tsx"],
+      "checkpoints": [
+        {
+          "id": "logo-01",
+          "description": "With no stored logo version the sidebar logo requests the bare /api/core/orgs/<tenant>/logo/ URL with no ?v=",
+          "status": "covered"
+        },
+        {
+          "id": "logo-02",
+          "description": "A successful light logo upload (POST mocked) adds ?v=<stored version> to the sidebar logo URL with no reload, a second already-open tab updates too, and the version survives a reload",
+          "status": "covered"
+        },
+        {
+          "id": "logo-03",
+          "description": "A failed light logo upload leaves the sidebar logo on the bare URL and stores no version",
+          "status": "covered"
+        },
+        {
+          "id": "logo-04",
+          "description": "A dark logo upload leaves the sidebar logo on the bare URL and stores no version",
           "status": "covered"
         }
       ]
