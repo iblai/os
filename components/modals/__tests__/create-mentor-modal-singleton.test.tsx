@@ -12,7 +12,10 @@ import { configureStore } from '@reduxjs/toolkit';
 
 import { modalReducer, type ModalInfo } from '@/features/navigation/slice';
 import rbacReducer from '@/features/rbac/rbac-slice';
-import { mentorApiSlice } from '@iblai/iblai-js/data-layer';
+import {
+  agentSettingsApiSlice,
+  mentorApiSlice,
+} from '@iblai/iblai-js/data-layer';
 import { MODALS } from '@/lib/constants';
 
 // ============================================================================
@@ -185,11 +188,13 @@ function createTestStore(preloadedStack: ModalInfo[] = []) {
       modals: modalReducer,
       rbac: rbacReducer,
       [mentorApiSlice.reducerPath]: mentorApiSlice.reducer,
+      // CreateMentorForm asks the field-permissions query on open.
+      [agentSettingsApiSlice.reducerPath]: agentSettingsApiSlice.reducer,
     },
     middleware: (getDefaultMiddleware) =>
       getDefaultMiddleware({
         serializableCheck: false,
-      }).concat(mentorApiSlice.middleware),
+      }).concat(mentorApiSlice.middleware, agentSettingsApiSlice.middleware),
     preloadedState: {
       modals: {
         modalStack: preloadedStack,
