@@ -49,10 +49,8 @@
       "spec": "02-first-time-user-chat-and-navigation.spec.ts",
       "sourceFiles": [
         "app/platform/[tenantKey]/[mentorId]/page.tsx",
-        "components/chat/index.tsx",
-        "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx",
-        "components/welcome-chat.tsx",
-        "components/advanced-chat/ui-tags/default-tag.tsx"
+        "components/chat/sdk-chat.tsx",
+        "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx"
       ],
       "checkpoints": [
         {
@@ -622,10 +620,7 @@
       "id": "voice-chat",
       "name": "Voice Chat",
       "spec": "09-voice-chat.spec.ts",
-      "sourceFiles": [
-        "components/live-kit-voice-chat.tsx",
-        "hooks/use-voice-chat.ts"
-      ],
+      "sourceFiles": ["hooks/use-voice-chat.ts"],
       "checkpoints": [
         {
           "id": "vc-01",
@@ -673,7 +668,7 @@
         "components/chat/chat-messages/canvas-message-preview.tsx",
         "components/chat/chat-messages/message-preview.tsx",
         "components/chat/chat-messages/types.ts",
-        "components/chat/index.tsx"
+        "components/chat/sdk-chat.tsx"
       ],
       "checkpoints": [
         {
@@ -1559,8 +1554,6 @@
       "spec": "22-disclaimers-and-user-agreement.spec.ts",
       "sourceFiles": [
         "components/modals/edit-mentor-modal/disclaimers-tab.tsx",
-        "components/modals/disclaimer-modal.tsx",
-        "hooks/use-user-agreement.ts",
         "constants/disclaimer.ts"
       ],
       "checkpoints": [
@@ -1816,7 +1809,7 @@
         "hooks/user-navigate.ts",
         "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx",
         "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx",
-        "components/welcome-chat-new.tsx",
+        "components/chat/sdk-chat.tsx",
         "components/modals/no-mentor-selected-modal.tsx"
       ],
       "checkpoints": [
@@ -2705,7 +2698,7 @@
       "sourceFiles": [
         "components/chat-input-form/screen-sharing-button.tsx",
         "components/chat-input-form/voice-call-button.tsx",
-        "components/chat/index.tsx"
+        "components/chat/sdk-chat.tsx"
       ],
       "checkpoints": [
         {
@@ -3603,7 +3596,7 @@
         "components/chat/reasoning-section.tsx",
         "components/chat/ai-message-bubble.tsx",
         "components/chat/chat-messages/index.tsx",
-        "components/chat/index.tsx",
+        "components/chat/sdk-chat.tsx",
         "hooks/use-mentors/use-mentor-settings.ts"
       ],
       "checkpoints": [
@@ -3655,7 +3648,7 @@
       "spec": "53-recent-chats-refresh.spec.ts",
       "sourceFiles": [
         "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx",
-        "components/chat/index.tsx"
+        "components/chat/sdk-chat.tsx"
       ],
       "checkpoints": [
         {
@@ -4561,7 +4554,7 @@
         },
         {
           "id": "atl-08",
-          "description": "The in-progress row's text carries the .todo-shimmer left-to-right sweep class while the turn streams, and loses it once the turn is over",
+          "description": "While the turn streams, the in-progress row reads \"In progress\" and its text carries the .todo-shimmer left-to-right sweep class; once the turn has ended (history), an unfinished row reads \"To do\" and stops shimmering",
           "status": "covered"
         },
         {
@@ -4744,7 +4737,7 @@
         "lib/canvas-markdown-engine.ts",
         "components/chat/chat-messages/canvas-message-preview.tsx",
         "components/chat/chat-messages/message-preview.tsx",
-        "components/chat/index.tsx",
+        "components/chat/sdk-chat.tsx",
         "components/modals/edit-mentor-modal/tabs/sandbox-tab.tsx"
       ],
       "checkpoints": [
@@ -4825,7 +4818,7 @@
         "components/chat/ai-message-frame.tsx",
         "components/chat/ai-message-bubble.tsx",
         "components/chat/chat-messages/index.tsx",
-        "components/chat/index.tsx",
+        "components/chat/sdk-chat.tsx",
         "components/chat/reasoning-section.tsx",
         "lib/constants.ts",
         "app/globals.css",
@@ -4927,7 +4920,7 @@
       "id": "chat-url-prompt-injection",
       "name": "Chat URL ?prompt= Auto-Injection",
       "spec": "chat-url-prompt-injection.spec.ts",
-      "sourceFiles": ["components/chat/index.tsx"],
+      "sourceFiles": ["components/chat/sdk-chat.tsx"],
       "checkpoints": [
         {
           "id": "upi-01",
@@ -5163,8 +5156,7 @@
       "spec": "76-show-additional-agents-toggle.spec.ts",
       "sourceFiles": [
         "components/modals/edit-mentor-modal/settings-tab.tsx",
-        "components/welcome-chat-new.tsx",
-        "components/welcome-chat/explore-mentors.tsx",
+        "components/chat/sdk-chat.tsx",
         "hooks/use-mentors/use-mentor-settings.ts"
       ],
       "checkpoints": [
@@ -5705,7 +5697,7 @@
       "spec": "81-project-page-redesign.spec.ts",
       "sourceFiles": [
         "app/platform/[tenantKey]/projects/[projectId]/[mentorId]/page.tsx",
-        "components/welcome-chat-new.tsx"
+        "components/chat/sdk-chat.tsx"
       ],
       "checkpoints": [
         {
@@ -6534,7 +6526,7 @@
       "spec": "97-shareable-link-chat-frame-token.spec.ts",
       "sourceFiles": [
         "app/platform/[tenantKey]/[mentorId]/mentor-page-content.tsx",
-        "components/chat/index.tsx"
+        "components/chat/sdk-chat.tsx"
       ],
       "checkpoints": [
         {
