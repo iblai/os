@@ -1357,6 +1357,47 @@ describe('ChatInputForm', () => {
       vi.useRealTimers();
     });
 
+    // StrictMode's dev remount reuses refs, so a mounted flag that is only
+    // cleared on unmount stays false for the rest of the session and the notice
+    // never goes away.
+    it('still clears the notice under StrictMode', async () => {
+      vi.useFakeTimers();
+      const { useChatFileUpload } = await import(
+        '@/hooks/use-chat-file-upload'
+      );
+      (useChatFileUpload as any).mockReturnValue({
+        uploadFiles: vi.fn().mockResolvedValue(undefined),
+        retryUpload: vi.fn(),
+      });
+
+      const { container } = renderWithRedux(
+        <React.StrictMode>
+          <ChatInputForm {...defaultProps} />
+        </React.StrictMode>,
+      );
+      const fileInput = container.querySelector(
+        'input[type="file"]',
+      ) as HTMLInputElement;
+      const file = new File(['x'], 'test.pdf', { type: 'application/pdf' });
+      Object.defineProperty(fileInput, 'files', {
+        value: [file],
+        writable: false,
+      });
+
+      fireEvent.change(fileInput);
+      expect(screen.getByText(/Uploading 1 file/i)).toBeInTheDocument();
+
+      await act(async () => {
+        await Promise.resolve();
+      });
+      await act(async () => {
+        vi.advanceTimersByTime(3000);
+      });
+
+      expect(screen.queryByText(/Uploading 1 file/i)).not.toBeInTheDocument();
+      vi.useRealTimers();
+    });
+
     // The hide timer is armed only after the awaited upload resolves, so a form
     // unmounted mid-upload used to arm one nothing could cancel; it then fired
     // past teardown and set state on a gone component, which vitest reports as
