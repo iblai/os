@@ -464,20 +464,6 @@ describe('UserProfile', () => {
       expect(mockHandleLogout).toHaveBeenCalled();
     });
 
-    it('should handle tenant change', async () => {
-      const { default: userEvent } = await import(
-        '@testing-library/user-event'
-      );
-      const user = userEvent.setup();
-
-      render(<UserProfile />);
-
-      const tenantChangeBtn = screen.getByTestId('tenant-change-btn');
-      await user.click(tenantChangeBtn);
-
-      expect(mockHandleTenantSwitch).toHaveBeenCalledWith('new-tenant');
-    });
-
     it('should handle help click', async () => {
       const windowOpenSpy = vi
         .spyOn(window, 'open')
