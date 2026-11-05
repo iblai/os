@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-11-04 | 1064 checkpoints (1014 covered, 16 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 106 journeys (105 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-11-04 | 1065 checkpoints (1015 covered, 16 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 106 journeys (105 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -634,7 +634,7 @@ The "Remember past conversations" (`enable_memory_component`) master toggle move
 
 ---
 
-## Journey 32: Multi-Tenancy, Advertising & Auth Customization (15 checkpoints; 1 deprecated) — `journeys/32-multi-tenancy-advertising-and-auth-customization.spec.ts`
+## Journey 32: Multi-Tenancy, Advertising & Auth Customization (16 checkpoints; 1 deprecated) — `journeys/32-multi-tenancy-advertising-and-auth-customization.spec.ts`
 
 **Source files:** `app/platform/[tenantKey]/[mentorId]/page.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`, `components/modals/create-mentor-modal.tsx`, `app/sso-login/page.tsx`
 
@@ -653,6 +653,7 @@ The "Remember past conversations" (`enable_memory_component`) master toggle move
 - [x] Direct-URL redirect invariant: visiting a second tenant's mentor URL while signed into a different tenant lands on that exact tenant+mentor _(env-gated: SECOND_TENANT_MENTOR_URL)_
 - [x] Direct-URL redirect invariant: visiting a mentor URL while already signed into that same tenant lands there directly with no auth/tenant-switch detour
 - [x] Direct-URL redirect invariant: a user with no access to the visited tenant is denied (routed to `/error/403`), not silently redirected to the default or visited tenant _(env-gated: set NO_ACCESS_TENANT_MENTOR_URL to a tenant with self-join disabled; see the discovery notes in the spec — there is no 409 "no access" page in the current codebase)_
+- [x] Auto-join invariant: visiting a mentor URL for a joinable tenant the user does not belong to joins them to **that** tenant and lands on the named mentor, not their default tenant _(env-gated: set JOIN_TENANT_MENTOR_URL to a tenant with self-join enabled that PLAYWRIGHT_USERNAME has not joined. **One-shot** — a passing run joins the account and no API can unjoin it, so the test then skips with an explanation rather than degrading into a duplicate of the second-tenant case)_
 
 ---
 

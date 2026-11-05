@@ -1,4 +1,7 @@
+import { request } from '@playwright/test';
 import { test, expect } from '../fixtures/mentor-test';
+import { dmBaseFromEnv } from '../utils/dm-api';
+import { readAuthFromStorageState } from '../utils/resource-tracker';
 import {
   navigateToMentorApp,
   checkAdminStatus,
@@ -14,6 +17,7 @@ import {
   ADVERTISING_TENANT_MENTOR_URL,
   SECOND_TENANT_MENTOR_URL,
   NO_ACCESS_TENANT_MENTOR_URL,
+  JOIN_TENANT_MENTOR_URL,
   AUTH_NEXTJS_HOST,
   ENABLE_ADVERTISING_LOGIN_TEST,
   PLAYWRIGHT_USERNAME,
@@ -350,6 +354,85 @@ test.describe('Journey 32: Multi-Tenancy — Direct Mentor URL Redirect Invarian
       // in the invariant: the *exact* mentor path, not just any platform URL.
       await authenticate(anonPage, SECOND_TENANT_MENTOR_URL);
 
+      expect(new URL(anonPage.url()).pathname).toBe(expectedPath);
+
+      const chatInput = anonPage.getByRole('textbox', {
+        name: 'Ask anything',
+        exact: true,
+      });
+      await expect(chatInput).toBeVisible({ timeout: 30_000 });
+    } finally {
+      await anonContext.close();
+    }
+  });
+
+  // Auto-join: a mentor link for a tenant the user does NOT belong to must log
+  // them in, join them to THAT tenant, and land them on the mentor the link
+  // named — not on their default tenant.
+  //
+  // The regression: the auth app treated a non-member `selected_tenant` as a
+  // join target only when the CURRENT request carried `?tenant=`. The OAuth
+  // round trip returns to a bare /login/complete, so that was never true for a
+  // real login — the target was dropped and the user was minted into their
+  // first tenant instead. Reported as baif -> kaplan.
+  //
+  // ONE-SHOT: passing this joins the account, and no API can unjoin it. A
+  // member never reaches the join path (isSelectedTenantMember short-circuits
+  // it), so a re-run would assert nothing about joining and quietly become a
+  // duplicate of the SECOND_TENANT case above. It therefore checks membership
+  // first and skips loudly, rather than passing for the wrong reason.
+  test('unauthenticated user visits a mentor URL for a joinable tenant and is joined and landed there', async ({
+    browser,
+  }) => {
+    test.skip(
+      !JOIN_TENANT_MENTOR_URL,
+      'Set JOIN_TENANT_MENTOR_URL (a tenant PLAYWRIGHT_USERNAME can self-join) to enable the auto-join invariant',
+    );
+
+    const expectedPath = new URL(JOIN_TENANT_MENTOR_URL).pathname;
+    const tenantKey = expectedPath.split('/')[2];
+
+    const auth = readAuthFromStorageState('playwright/.auth/user-chrome.json');
+    const dmBase = dmBaseFromEnv();
+    test.skip(
+      !auth?.dmToken || !auth?.username || !dmBase,
+      'Need the admin storageState and DM_URL to check membership before joining',
+    );
+
+    const api = await request.newContext();
+    let alreadyMember = false;
+    try {
+      const res = await api.get(
+        `${dmBase}/api/core/users/platforms/?username=${encodeURIComponent(auth!.username)}`,
+        { headers: { Authorization: `Token ${auth!.dmToken}` } },
+      );
+      expect(
+        res.ok(),
+        `could not read the account's platforms: ${res.status()}`,
+      ).toBeTruthy();
+      const platforms = (await res.json()) as Array<{ key?: string }>;
+      alreadyMember = platforms.some((p) => p.key === tenantKey);
+    } finally {
+      await api.dispose();
+    }
+
+    test.skip(
+      alreadyMember,
+      `${auth?.username} already belongs to '${tenantKey}', so the join path cannot run ` +
+        '(a member short-circuits it, and there is no API to unjoin). Point ' +
+        'JOIN_TENANT_MENTOR_URL at a tenant this account has not joined to exercise it again.',
+    );
+
+    const anonContext = await browser.newContext({ storageState: undefined });
+    const anonPage = await anonContext.newPage();
+    try {
+      // authenticate() navigates first, which bounces the anonymous visitor to
+      // the auth SPA, logs in, and waits through login/complete. For a
+      // non-member that detours via /join before sso-login-complete.
+      await authenticate(anonPage, JOIN_TENANT_MENTOR_URL);
+
+      // The exact path — landing on the default tenant (the regression) would
+      // still satisfy a looser `/platform/` check.
       expect(new URL(anonPage.url()).pathname).toBe(expectedPath);
 
       const chatInput = anonPage.getByRole('textbox', {
