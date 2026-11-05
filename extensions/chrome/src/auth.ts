@@ -19,8 +19,20 @@ const SESSION_KEYS = [
   'consented_to_data_collection',
 ];
 
+/**
+ * True when a stored session can still authenticate the panel.
+ *
+ * Presence is not enough. An expired `axd_token` is still a string in
+ * localStorage, and treating it as a session is what stranded the panel: we
+ * installed dead tokens into the mentor iframe, it 401'd, posted `authExpired`,
+ * and nothing here ever minted a replacement.
+ *
+ * A session with no recorded expiry counts as valid — those predate the field,
+ * and forcing a sign-in on them would be worse than the occasional stale one.
+ */
 export function isAuthed(): boolean {
-  return Boolean(localStorage.getItem('axd_token'));
+  if (!localStorage.getItem('axd_token')) return false;
+  return !isSessionExpired();
 }
 
 // Extract ibl's session payload (a JSON `data` param — the same shape the web
@@ -34,6 +46,11 @@ export function storeSessionFromRedirect(responseUrl: string): void {
     throw new Error(`no "data" param in auth redirect: ${responseUrl}`);
   }
   const session = JSON.parse(data) as Record<string, unknown>;
+  // Drop the previous session first. A payload carries only the keys it has,
+  // so writing over the old one can leave another session's leftovers behind —
+  // and an orphaned `axd_token_expires` would make the session we just minted
+  // read as already expired, locking the panel out for good.
+  for (const key of SESSION_KEYS) localStorage.removeItem(key);
   Object.entries(session).forEach(([key, value]) =>
     localStorage.setItem(key, String(value)),
   );
@@ -139,12 +156,41 @@ export function username(): string | null {
   }
 }
 
-/** True only when `dm_token_expires` parses as a date that has passed. */
-export function tokenExpired(now = Date.now()): boolean {
-  const raw = localStorage.getItem('dm_token_expires');
+/**
+ * True only when `key` holds a date that has already passed.
+ *
+ * An absent or unparseable stamp reads as NOT expired: sessions stored before
+ * we recorded one are common, and forcing those people to sign in again would
+ * be a worse bug than occasionally trusting a stale token.
+ */
+function stampPassed(key: string, now: number, skewMs = 0): boolean {
+  const raw = localStorage.getItem(key);
   if (!raw) return false;
   const expires = Date.parse(raw);
-  return Number.isFinite(expires) && expires <= now;
+  return Number.isFinite(expires) && expires <= now + skewMs;
+}
+
+/** True only when `dm_token_expires` parses as a date that has passed. */
+export function tokenExpired(now = Date.now()): boolean {
+  return stampPassed('dm_token_expires', now);
+}
+
+/**
+ * How soon before the stamped expiry a session stops being worth installing.
+ *
+ * `signIn` takes seconds, so a token with one second left dies during the
+ * round-trip and lands the iframe straight back in recovery.
+ */
+const EXPIRY_SKEW_MS = 30_000;
+
+/**
+ * True when the session `<agent-ai>` forwards has expired (or is about to).
+ *
+ * This is the token the mentor iframe actually authenticates with, so it — not
+ * `dm_token_expires` — decides whether the panel still has a usable session.
+ */
+export function isSessionExpired(now = Date.now()): boolean {
+  return stampPassed('axd_token_expires', now, EXPIRY_SKEW_MS);
 }
 
 /**
