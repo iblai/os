@@ -237,10 +237,10 @@ export class CreateMentorPage {
     });
   }
 
-  /** The popup opened by a prompt's Edit button. */
+  /** The popup opened by a prompt's Edit button (the SDK titles it "Edit <prompt>"). */
   promptPopup(kind: PromptKind): Locator {
     return this.page.getByRole('dialog', {
-      name: PROMPT_KINDS[kind].title,
+      name: `Edit ${PROMPT_KINDS[kind].title}`,
       exact: true,
     });
   }
