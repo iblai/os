@@ -36,12 +36,23 @@ import {
   openAgentLimitsManage,
   switchToSpendLimitsSubTab,
   closeAgentLimitsPopup,
+  switchToUserLimits,
+  userLimitsSection,
+  userLimitsRow,
+  newUserDefaultSection,
+  addTenantUserSpendLimit,
+  editTenantUserSpendLimit,
+  setUserLimitsRowEnabled,
+  deleteTenantUserSpendLimit,
+  expectUserLimitsRowContent,
+  setNewUserSpendLimitDefault,
+  expectNewUserSpendLimitDefault,
 } from '@iblai/iblai-js/playwright';
 
 /**
  * Journey 69 — LLM Spend Limits ("Billing").
  *
- * Covers BOTH surfaces the SDK's spend-limits UI touches, as two
+ * Covers BOTH surfaces the SDK's spend-limits UI touches, as three
  * clearly-separated `test.describe` blocks in this one file:
  *
  *   A. **Agent settings (Billing tab)** — the "Billing" top-level tab in the
@@ -59,7 +70,8 @@ import {
  *      journey 21-B already exercises for Plan & Credits —
  *      `billingPage.openBillingTab()` / `?profileTab=billing` — now with an
  *      internal "Billing sections" tablist: "Plan & Credits" (default,
- *      journey 21's coverage) / "Spend Limits" / "Agent Limits"):
+ *      journey 21's coverage) / "Spend Limits" / "Agent Limits" /
+ *      "User Limits"):
  *        - **Spend Limits** — the tenant-wide (workspace) LLM spend limit,
  *          `SpendLimitsSection` inside `BillingTab`. ONE cap for the whole
  *          tenant; mutating it affects every mentor and every user.
@@ -69,6 +81,24 @@ import {
  *          the SAME agent-scoped Billing editor block A covers
  *          (`AgentSpendCapsTab`) in a POPUP stacked on top of the tenant
  *          settings dialog.
+ *
+ *   C. **Tenant settings (User Limits)** — the 4th tab of that same
+ *      tablist, two cards in this order:
+ *        - **User Limits** — every USER-scoped spend cap in the workspace
+ *          (one user's spend across ALL agents, backend `spend-caps/users/`),
+ *          `UserLimitsSection`: the Agent Limits layout with an email-only
+ *          user autocomplete filter (also the only entry point for a user
+ *          who has none yet — the filtered empty state's "Set Spend Limit"
+ *          button opens the SAME `user-cap-modal` block A's per-agent flow
+ *          uses, straight on the form with the filtered user pre-picked), a
+ *          direct Status switch per row, and edit/delete icons beside it.
+ *        - **Default for New Users** — the spend limit each member gets
+ *          when they JOIN (backend `spend-caps/users/default/`, a config
+ *          TEMPLATE, not a cap: GET never 404s, `enabled:false` is "off",
+ *          PUT is a full replace, applies to future joins only — never to
+ *          existing members), `NewUserDefaultSection`: a `CapabilityGate`
+ *          switch whose fields are inert while off, the same fields as a
+ *          cap, Save — no usage strip, no Delete.
  *
  * REWRITE NOTE (feat/2286): the prior version of block A tested a
  * three-sub-tab UI (This agent / Per user / Workspace) with hand-rolled
@@ -146,6 +176,25 @@ import {
  *     be). `tal-01` — the sole filter-dependent checkpoint — is declared
  *     LAST in the block so every other test's runtime gives the search
  *     index maximum time to catch up before it runs.
+ *   - Block C: no mentor at all — user-tier caps are keyed by USERNAME, not
+ *     by agent, so every `tul-*` checkpoint acts on the acting admin's own
+ *     account (`getCurrentAdminIdentity`, the same identity source block
+ *     A's per-user checkpoints use: always a real member of the tenant,
+ *     which the user-tier PUT requires). Both cards hold TENANT-WIDE state
+ *     — a user cap applies to that user across every agent, and the new-user
+ *     default attaches a cap to EVERY future signup in this tenant — so
+ *     every mutation is `enforcement: 'alert_only'` (never `'block'`) and
+ *     every test removes what it created in an unconditional `finally`
+ *     (`removeTenantUserCapIfPresent` / the default switched back OFF), the
+ *     same contract as `twl-02`. The three row checkpoints also start by
+ *     calling `removeTenantUserCapIfPresent` so a cap left over by a
+ *     crashed earlier run can never hide the "Set Spend Limit" empty state
+ *     they create from. Like `twl-02`'s singleton workspace cap, this
+ *     identity-keyed state is shared across browser projects running the
+ *     same admin in parallel — per-browser admin credentials
+ *     (`PLAYWRIGHT_USERNAME_<BROWSER>`, see `fixtures/test-data.ts`) keep
+ *     the rows apart; a single shared admin contends the same way `twl-02`
+ *     already does.
  */
 
 test.describe.configure({ mode: 'default', timeout: 300_000 });
@@ -272,6 +321,36 @@ async function createAgentCapViaEditDialog(
   await waitForPageReady(page);
   await setAgentSpendLimit(page, values);
   await editMentorPage.close();
+}
+
+/**
+ * Removes the given user's TENANT-level spend cap (User Limits tab) if one
+ * exists — best-effort and unconditional, for block C's `finally` cleanups
+ * and as each row checkpoint's clean-slate pre-step. The table only
+ * renders once the caps list query settles (a spinner replaces it while
+ * loading/fetching), so a row-count snapshot taken after the table is
+ * visible is final; with no filter applied the list holds EVERY user cap
+ * in the tenant, so the row is found whether or not a filter is still set
+ * to this user. The tenant Billing tab must already be open.
+ */
+async function removeTenantUserCapIfPresent(
+  page: Page,
+  username: string,
+): Promise<void> {
+  await switchToUserLimits(page).catch(() => {});
+  let listSettled = false;
+  try {
+    await userLimitsSection(page)
+      .getByRole('table')
+      .waitFor({ state: 'visible', timeout: 15_000 });
+    listSettled = true;
+  } catch {
+    listSettled = false;
+  }
+  if (!listSettled) return;
+  if ((await userLimitsRow(page, username).count()) > 0) {
+    await deleteTenantUserSpendLimit(page, username).catch(() => {});
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -663,7 +742,7 @@ test.describe('Journey 69: Spend Limits — Tenant settings (Spend Limits + Agen
 
   // ── twl-01: tab structure + Plan & Credits round-trip ─────────────────────
 
-  test('the tenant Billing tab exposes a "Billing sections" tablist with Plan & Credits, Spend Limits, and Agent Limits', async ({
+  test('the tenant Billing tab exposes a "Billing sections" tablist with Plan & Credits, Spend Limits, Agent Limits, and User Limits', async ({
     page,
     billingPage,
   }) => {
@@ -694,6 +773,14 @@ test.describe('Journey 69: Spend Limits — Tenant settings (Spend Limits + Agen
 
     await switchToAgentLimits(page);
     await expect(agentLimitsSection(page)).toBeVisible({ timeout: 15_000 });
+
+    // The 4th tab renders BOTH its cards (block C below covers their
+    // content) — `switchToUserLimits` already gates on each one.
+    await switchToUserLimits(page);
+    await expect(userLimitsSection(page)).toBeVisible({ timeout: 15_000 });
+    await expect(newUserDefaultSection(page)).toBeVisible({
+      timeout: 15_000,
+    });
 
     await switchToPlanAndCredits(page);
     await expect(billingPage.billingPlanSection).toBeVisible({
@@ -1115,6 +1202,245 @@ test.describe('Journey 69: Spend Limits — Tenant settings (Spend Limits + Agen
         await closeAgentLimitsPopup(page).catch(() => {});
       }
       await clearAgentLimitsFilter(page).catch(() => {});
+    }
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Block C: Tenant settings (User Limits)
+// ═══════════════════════════════════════════════════════════════════════════
+
+test.describe('Journey 69: Spend Limits — Tenant settings (User Limits)', () => {
+  // No mentor here — user-tier caps are keyed by username, not by agent
+  // (see the block C isolation note at the top of this file).
+  test.beforeEach(async ({ page }) => {
+    await navigateToMentorApp(page);
+    const isAdmin = await checkAdminStatus(page);
+    if (!isAdmin) {
+      test.skip(true, 'Tenant Billing user limits require admin access');
+      return;
+    }
+  });
+
+  // ── tul-01: both cards render ─────────────────────────────────────────────
+
+  test('the User Limits tab shows the user caps table with its filter and the Default for New Users card with its future-joins note', async ({
+    page,
+    billingPage,
+  }) => {
+    if (!(await billingPage.isPaywallEnabled())) {
+      test.skip(true, 'show_paywall=false on this tenant');
+      return;
+    }
+    await billingPage.openBillingTab();
+    await switchToUserLimits(page);
+
+    await expect(
+      page
+        .getByRole('tablist', { name: SPEND_LIMITS_LABELS.tenantTablistAria })
+        .getByRole('tab', {
+          name: SPEND_LIMITS_LABELS.tenantTabs.userLimits,
+          exact: true,
+        }),
+    ).toHaveAttribute('data-state', 'active', { timeout: 10_000 });
+
+    const users = userLimitsSection(page);
+    await expect(users.getByTestId('user-limits-filter-input')).toBeVisible({
+      timeout: 10_000,
+    });
+    for (const column of ['User', 'Limit', 'Spent', 'Remaining', 'Status']) {
+      await expect(
+        users.getByRole('columnheader', { name: column, exact: true }),
+      ).toBeVisible({ timeout: 15_000 });
+    }
+
+    const defaults = newUserDefaultSection(page);
+    await expect(defaults.getByTestId('new-user-default-note')).toHaveText(
+      'Only people who join after this is turned on get it. To limit someone already here, set their limit above.',
+      { timeout: 15_000 },
+    );
+    await expect(
+      defaults.getByTestId('new-user-default-enabled-switch'),
+    ).toBeVisible({ timeout: 10_000 });
+    await expect(
+      defaults.getByTestId('new-user-default-save-button'),
+    ).toBeVisible({ timeout: 10_000 });
+  });
+
+  // ── tul-02: create from the filtered empty state + persist ────────────────
+
+  test('admin creates a user limit for their own account from the filtered "Set Spend Limit" empty state, the row lists it, and it persists after switching tabs away and back', async ({
+    page,
+    billingPage,
+  }) => {
+    if (!(await billingPage.isPaywallEnabled())) {
+      test.skip(true, 'show_paywall=false on this tenant');
+      return;
+    }
+    await billingPage.openBillingTab();
+
+    const { email, username } = await getCurrentAdminIdentity(page);
+    await removeTenantUserCapIfPresent(page, username);
+
+    try {
+      // ALWAYS alert-only — this cap follows the admin across EVERY agent in
+      // the tenant (see the block C isolation note at the top of this file).
+      await addTenantUserSpendLimit(page, {
+        email,
+        username,
+        limitUsd: '7',
+        interval: 'month',
+        enforcement: 'alert_only',
+        alertThresholds: '80, 95',
+        enabled: true,
+      });
+      await expectUserLimitsRowContent(page, username, {
+        limitText: '$7.00 / Month',
+        enabled: true,
+      });
+
+      // Round-trip: leave the tab and come back, re-reading the SERVER copy
+      // (the section remounts unfiltered — the tenant-wide list holds every
+      // user cap, so the row is listed either way).
+      await switchToPlanAndCredits(page);
+      await switchToUserLimits(page);
+      await expectUserLimitsRowContent(page, username, {
+        limitText: '$7.00 / Month',
+        enabled: true,
+      });
+    } finally {
+      await removeTenantUserCapIfPresent(page, username);
+    }
+  });
+
+  // ── tul-03: edit via the row's edit icon ──────────────────────────────────
+
+  test("admin edits an existing user limit through the row's edit icon and the row reflects the new limit", async ({
+    page,
+    billingPage,
+  }) => {
+    if (!(await billingPage.isPaywallEnabled())) {
+      test.skip(true, 'show_paywall=false on this tenant');
+      return;
+    }
+    await billingPage.openBillingTab();
+
+    const { email, username } = await getCurrentAdminIdentity(page);
+    await removeTenantUserCapIfPresent(page, username);
+
+    try {
+      await addTenantUserSpendLimit(page, {
+        email,
+        username,
+        limitUsd: '7',
+        interval: 'month',
+        enforcement: 'alert_only',
+        enabled: true,
+      });
+      await expectUserLimitsRowContent(page, username, {
+        limitText: '$7.00 / Month',
+      });
+
+      await editTenantUserSpendLimit(page, username, {
+        limitUsd: '12',
+        interval: 'week',
+        enforcement: 'alert_only',
+      });
+
+      await expectUserLimitsRowContent(page, username, {
+        limitText: '$12.00 / Week',
+      });
+    } finally {
+      await removeTenantUserCapIfPresent(page, username);
+    }
+  });
+
+  // ── tul-04: Status switch in the table row ────────────────────────────────
+
+  test("admin flips a user limit's Status switch off and back on directly in the User Limits row", async ({
+    page,
+    billingPage,
+  }) => {
+    if (!(await billingPage.isPaywallEnabled())) {
+      test.skip(true, 'show_paywall=false on this tenant');
+      return;
+    }
+    await billingPage.openBillingTab();
+
+    const { email, username } = await getCurrentAdminIdentity(page);
+    await removeTenantUserCapIfPresent(page, username);
+
+    try {
+      await addTenantUserSpendLimit(page, {
+        email,
+        username,
+        limitUsd: '7',
+        interval: 'month',
+        enforcement: 'alert_only',
+        enabled: true,
+      });
+      await expectUserLimitsRowContent(page, username, { enabled: true });
+
+      await setUserLimitsRowEnabled(page, username, false);
+      await expectUserLimitsRowContent(page, username, { enabled: false });
+
+      await setUserLimitsRowEnabled(page, username, true);
+      await expectUserLimitsRowContent(page, username, { enabled: true });
+    } finally {
+      await removeTenantUserCapIfPresent(page, username);
+    }
+  });
+
+  // ── tul-05: Default for New Users on + persist, then back OFF ─────────────
+
+  test('admin turns on the Default for New Users with an alert-only amount, the switch and amount persist after switching tabs away and back, and it is switched back off afterward', async ({
+    page,
+    billingPage,
+  }) => {
+    if (!(await billingPage.isPaywallEnabled())) {
+      test.skip(true, 'show_paywall=false on this tenant');
+      return;
+    }
+    await billingPage.openBillingTab();
+
+    try {
+      // ALWAYS alert-only: while on, this template attaches a cap to EVERY
+      // future signup in the tenant (see the block C isolation note at the
+      // top of this file). `enabled: true` goes first inside the helper —
+      // the fields are inert until the switch is on.
+      await setNewUserSpendLimitDefault(page, {
+        enabled: true,
+        limitUsd: '5',
+        interval: 'month',
+        enforcement: 'alert_only',
+        alertThresholds: '80, 95',
+      });
+      await expectNewUserSpendLimitDefault(page, {
+        enabled: true,
+        limitUsd: '5',
+      });
+
+      // Round-trip: leave the tab and come back, re-reading the SERVER copy.
+      // The form rehydrates the amount as `String(Number(max_cost_usd))` —
+      // "5" round-trips through the backend's "5.00" and back as "5".
+      await switchToPlanAndCredits(page);
+      await switchToUserLimits(page);
+      await expectNewUserSpendLimitDefault(page, {
+        enabled: true,
+        limitUsd: '5',
+      });
+      await expect(
+        newUserDefaultSection(page).getByTestId(
+          'new-user-default-enforcement-select',
+        ),
+      ).toContainText(SPEND_LIMITS_LABELS.enforcementOptions.alert_only);
+    } finally {
+      // The tenant default must NEVER be left on — it would attach a cap to
+      // every future test signup in this tenant. Off keeps the stored values
+      // (harmless while off) and hands nothing to new members.
+      await setNewUserSpendLimitDefault(page, { enabled: false }).catch(
+        () => {},
+      );
     }
   });
 });
