@@ -16,7 +16,6 @@
   },
   "permissions": [
     "allow-get-system-memory",
-    "allow-get-offline-context",
     "allow-log-fe",
     "allow-check-ollama-status",
     "allow-download-phi3-model",
@@ -52,7 +51,6 @@
     "allow-check-opencode-status",
     "allow-check-code-local-model",
     "allow-set-opencode-learner",
-    "allow-ensure-opencode-platform-key",
     "allow-check-code-agent-status",
     "allow-install-code-agent",
     "allow-list-code-agent-models",
