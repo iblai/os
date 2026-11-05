@@ -255,6 +255,7 @@ export const getEmbedCode = async (
             window.onload = function() {
               let isEmbeddedMentorReady = false;
               let embedTenant = "${tenant}";
+              let organizationSwitchAttemptKey = 'ibl-org-switch-' + embedTenant;
               let iblData = new URL(window.location.href).searchParams.get("ibl-data");
               if (iblData) {
                 const url = new URL(window.location);
@@ -359,13 +360,12 @@ export const getEmbedCode = async (
                     // One attempt per organization. The embed re-asks every few
                     // seconds, so without this a switch that cannot succeed
                     // would navigate this page over and over.
-                    const attemptKey = 'ibl-org-switch-' + embedTenant;
                     try {
-                        if (sessionStorage.getItem(attemptKey)) {
+                        if (sessionStorage.getItem(organizationSwitchAttemptKey)) {
                             console.warn('[ibl] Already tried switching to ' + embedTenant + ', not retrying.');
                             return;
                         }
-                        sessionStorage.setItem(attemptKey, '1');
+                        sessionStorage.setItem(organizationSwitchAttemptKey, '1');
                     } catch (error) {
                         // Private browsing can refuse sessionStorage; switching
                         // once is better than never switching.
@@ -380,7 +380,7 @@ export const getEmbedCode = async (
 
                 function clearOrganizationSwitchAttempt() {
                     try {
-                        sessionStorage.removeItem('ibl-org-switch-' + embedTenant);
+                        sessionStorage.removeItem(organizationSwitchAttemptKey);
                     } catch (error) {
                         // Nothing to clear if storage is unavailable.
                     }
@@ -677,6 +677,9 @@ export const getEmbedCode = async (
                     : ''
                 }
                 initChatWidget();
+                if (getIblDataTenant() === embedTenant) {
+                    clearOrganizationSwitchAttempt();
+                }
                 window.addEventListener('message', function(event) {
                     let message = event.data;
                     if (typeof message === 'string') {
@@ -731,7 +734,6 @@ export const getEmbedCode = async (
                           ${!settings.allow_anonymous ? 'switchOrganizationViaAuthSPA();' : ''}
                         }
                       }
-                      return;
                     }
 
                     if (message?.authExpired) {

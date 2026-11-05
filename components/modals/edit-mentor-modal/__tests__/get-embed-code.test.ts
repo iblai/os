@@ -516,6 +516,9 @@ describe('getEmbedCode tenant switch', () => {
     window.dispatchEvent(new MessageEvent('message', { data }));
   }
 
+  const widget = () =>
+    document.getElementById('ibl-chat-widget-container') as HTMLDivElement;
+
   /** Opens the widget and watches what the host posts into the iframe. */
   function openWidget() {
     (document.querySelector('.ibl-chat-bubble') as HTMLButtonElement).click();
@@ -643,14 +646,50 @@ describe('getEmbedCode tenant switch', () => {
     expect(sessionStorage.getItem('ibl-org-switch-acme')).toBeNull();
   });
 
-  it('survives an unreadable ibl-data rather than throwing at the embed', async () => {
+  // Unreadable `ibl-data` is no session at all, not a session to replay.
+  it('treats unreadable ibl-data as no session and joins', async () => {
     setUrl('?ibl-data=not-json');
     runSnippet(await getEmbedCode('acme', settings, 'redirect-token'));
-    openWidget();
+    const posted = openWidget();
 
-    expect(() =>
-      postToHost({ tenantSwitch: true, tenant: 'acme' }),
-    ).not.toThrow();
+    postToHost({ tenantSwitch: true, tenant: 'acme' });
+
+    expect(posted).not.toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'MENTOR:AUTH_UPDATE' }),
+      '*',
+    );
+    expect(window.location.href).toContain('/join?tenant=acme');
+  });
+
+  // A message carrying both must still reach the handlers further down, which
+  // an early return out of the tenant-switch branch used to skip.
+  it('does not swallow other instructions on the same message', async () => {
+    setUrl(`?ibl-data=${session('acme')}`);
+    runSnippet(
+      await getEmbedCode(
+        'acme',
+        { ...settings, allow_fullscreen: true },
+        'redirect-token',
+      ),
+    );
+    openWidget();
+    const normal = widget().style.cssText;
+
+    postToHost({ tenantSwitch: true, tenant: 'acme', embedFullscreen: true });
+
+    expect(widget().style.width).toBe('100vw');
+    expect(widget().style.cssText).not.toBe(normal);
+  });
+
+  // A switch resolved by any other route must free the guard, or one failed
+  // attempt blocks every later switch in the tab.
+  it('frees the guard at load when the pinned session is already held', async () => {
+    sessionStorage.setItem('ibl-org-switch-acme', '1');
+    setUrl(`?ibl-data=${session('acme')}`);
+
+    runSnippet(await getEmbedCode('acme', settings, 'redirect-token'));
+
+    expect(sessionStorage.getItem('ibl-org-switch-acme')).toBeNull();
   });
 
   it('leaves an anonymous embed where it is, having no session to switch', async () => {
