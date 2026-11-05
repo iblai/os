@@ -6396,7 +6396,12 @@
         },
         {
           "id": "cw-02",
-          "description": "A goal sent in the panel becomes a MENTOR:BROWSE_RUN frame carrying auto: true; scripted worker frames (ack, three log lines — an action, the agent's narration, a failed call — the reply text, done with the time-limit note) render as one assistant turn whose \"Used 1 tool\" row expands to each line's text, whose body ends with the reply then the note, and after which Send is back",
+          "description": "A goal sent in the panel becomes a MENTOR:BROWSE_RUN frame carrying auto: true; scripted worker frames (ack, three log rows — the page read, a typed field, a failed click — the reply text, done with the time-limit note) render as one assistant turn whose \"Used 3 tools\" row expands to the rows numbered and named after their actions, whose body ends with the reply then the note, and after which Send is back",
+          "status": "covered"
+        },
+        {
+          "id": "cw-03",
+          "description": "The mentor WebSocket closing mid-run (proxied to the real server and closed with the DM's idle code 4000) leaves the turn in flight — Stop stays and Send stays hidden — until the worker's done, after which Send is back",
           "status": "covered"
         }
       ]
