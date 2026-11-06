@@ -1,4 +1,4 @@
-import { Page, Locator, expect } from '@playwright/test';
+import { Page, Locator, Request, expect } from '@playwright/test';
 import { safeWaitForURL } from '../utils/navigation';
 import {
   waitForPageReady,
@@ -13,6 +13,12 @@ import { registerMentor } from '../utils/resource-tracker';
 import { E2E_LLM_DISPLAY_NAME, E2E_LLM_NAME } from '../fixtures/test-data';
 
 export type PromptKind = 'system' | 'proactive' | 'guided';
+
+export interface CreatedAgent {
+  name: string;
+  /** The `mentor-with-settings` POST that created the agent. */
+  request: Request;
+}
 
 const PROMPT_KINDS: Record<
   PromptKind,
@@ -32,6 +38,7 @@ export class CreateMentorPage {
   readonly categoryCombobox: Locator;
   readonly visibilityCombobox: Locator;
   readonly categoryList: Locator;
+  readonly categorySearchInput: Locator;
   readonly imageUploadButton: Locator;
   readonly nextButton: Locator;
   readonly saveButton: Locator;
@@ -54,6 +61,8 @@ export class CreateMentorPage {
       name: /category/i,
     });
     this.categoryList = page.locator('[cmdk-list]').last();
+    this.categorySearchInput =
+      this.dialog.getByPlaceholder('Search category...');
     this.visibilityCombobox = this.dialog.getByRole('combobox', {
       name: /visibility/i,
     });
@@ -68,6 +77,34 @@ export class CreateMentorPage {
     this.systemPromptContent = this.dialog.getByRole('textbox', {
       name: 'System prompt content',
     });
+  }
+
+  static isCreateRequest(request: Request): boolean {
+    return (
+      request.method() === 'POST' &&
+      /\/mentor-with-settings\/?(?:\?|$)/.test(request.url())
+    );
+  }
+
+  /** Multipart part names of a create request (`new_mentor_name`, `mentor_visibility`, ...). */
+  static createRequestFields(request: Request): string[] {
+    const body = request.postData();
+    if (body === null) {
+      throw new Error(`No readable body on create request ${request.url()}`);
+    }
+    return [
+      ...body.matchAll(/content-disposition:\s*form-data;\s*name="([^"]+)"/gi),
+    ].map((match) => match[1]);
+  }
+
+  /** Value of a single-line multipart part of a create request. */
+  static createRequestValue(
+    request: Request,
+    field: string,
+  ): string | undefined {
+    return new RegExp(`name="${field}"\\r?\\n\\r?\\n([^\\r\\n]*)`).exec(
+      request.postData() ?? '',
+    )?.[1];
   }
 
   /**
@@ -107,9 +144,12 @@ export class CreateMentorPage {
   }
 
   /**
-   * Fill the required fields on the Settings tab and advance to Prompts.
+   * Wait until the form accepts input. Inputs stay disabled while the
+   * categories and the field permissions load, and the field grid renders only
+   * once both settled, so a field that is absent after this returns is hidden
+   * for good.
    */
-  async fillRequiredFields(name: string, description?: string): Promise<void> {
+  async waitUntilEditable(): Promise<void> {
     // The modal starts with fields disabled while mentor categories load from
     // the API (isLoadingMentorCategories). Use a generous timeout to
     // accommodate slow environments / cold API caches.
@@ -136,12 +176,33 @@ export class CreateMentorPage {
       await this.open();
       await expect(this.nameInput).toBeEnabled({ timeout: 60_000 });
     }
+  }
+
+  /**
+   * Fill the required fields on the Settings tab. Fields the caller may not
+   * set are not rendered, so they are skipped. Leaves the Settings tab's
+   * submit control (Next, or Save when the form has no Prompts tab) enabled.
+   */
+  async fillRequiredFields(name: string, description?: string): Promise<void> {
+    await this.waitUntilEditable();
     await this.nameInput.fill(name);
 
-    await this.descriptionInput.fill(
-      description || `E2E test mentor created at ${Date.now()}`,
-    );
+    if ((await this.descriptionInput.count()) > 0) {
+      await this.descriptionInput.fill(
+        description || `E2E test mentor created at ${Date.now()}`,
+      );
+    }
 
+    if ((await this.categoryCombobox.count()) > 0) {
+      await this.pickFirstCategory();
+    }
+
+    await expect(this.nextButton.or(this.saveButton).first()).toBeEnabled({
+      timeout: 10_000,
+    });
+  }
+
+  private async pickFirstCategory(): Promise<void> {
     // Select first available category. The cmdk option list streams in from
     // the categories API and can be slow — or briefly empty — under parallel
     // load, so the first <div role="option"> may not exist yet. Wait
@@ -163,9 +224,6 @@ export class CreateMentorPage {
     // option mid-click; reliableClick waits for stability and retries the
     // whole click, so a detach just re-runs.
     await reliableClick(this.page, firstCategory, 10_000);
-
-    // Wait for Next button to become enabled
-    await expect(this.nextButton).toBeEnabled({ timeout: 10_000 });
   }
 
   /** Fill the required fields and advance to the Prompts tab (no agent is created). */
@@ -182,10 +240,10 @@ export class CreateMentorPage {
     });
   }
 
-  /** The popup opened by a prompt's Edit button. */
+  /** The popup opened by a prompt's Edit button (the SDK titles it "Edit <prompt>"). */
   promptPopup(kind: PromptKind): Locator {
     return this.page.getByRole('dialog', {
-      name: PROMPT_KINDS[kind].title,
+      name: `Edit ${PROMPT_KINDS[kind].title}`,
       exact: true,
     });
   }
@@ -222,24 +280,72 @@ export class CreateMentorPage {
     await this.fillRequiredFields(mentorName);
     await this.nextButton.click();
 
-    // On the Prompts tab, click Save
-    await expect(this.saveButton).toBeVisible({ timeout: 5_000 });
-    await expect(this.saveButton).toBeEnabled({ timeout: 5_000 });
-    await this.saveButton.click();
-
-    const previousUrl = this.page.url();
-
-    await safeWaitForURL(
-      this.page,
-      (url) => url.href.includes('/platform/') && previousUrl != url.href,
-      {
-        timeout: 60_000,
-      },
-    );
-    await waitForPageReady(this.page);
-    await registerMentor(this.page, mentorName);
+    await this.saveAndWaitForCreated(mentorName);
     await this.pinLlm();
     return mentorName;
+  }
+
+  /**
+   * Like `createWithName` through Settings, Next and Save, but returns the
+   * create request so a test can inspect what was sent. Does not pin the LLM:
+   * use `createWithName` for agents a test chats with.
+   */
+  async createAndCaptureRequest(name?: string): Promise<CreatedAgent> {
+    const mentorName = name || `E2E Mentor ${Date.now()}`;
+
+    await this.fillRequiredFields(mentorName);
+    await this.nextButton.click();
+
+    return this.createdAgent(mentorName);
+  }
+
+  /**
+   * Save straight from the Settings tab, for a form with no Prompts tab (none
+   * of its prompts is writable). Does not pin the LLM.
+   */
+  async createFromSettingsTab(name?: string): Promise<CreatedAgent> {
+    const mentorName = name || `E2E Mentor ${Date.now()}`;
+
+    await this.fillRequiredFields(mentorName);
+
+    return this.createdAgent(mentorName);
+  }
+
+  private async createdAgent(name: string): Promise<CreatedAgent> {
+    const request = await this.saveAndWaitForCreated(name);
+    if (!request) {
+      throw new Error('Saving the agent sent no mentor-with-settings request');
+    }
+    return { name, request };
+  }
+
+  private async saveAndWaitForCreated(
+    name: string,
+  ): Promise<Request | undefined> {
+    await expect(this.saveButton).toBeVisible({ timeout: 5_000 });
+    await expect(this.saveButton).toBeEnabled({ timeout: 5_000 });
+
+    let createRequest: Request | undefined;
+    const onRequest = (request: Request) => {
+      if (CreateMentorPage.isCreateRequest(request)) createRequest ??= request;
+    };
+    this.page.on('request', onRequest);
+    try {
+      const previousUrl = this.page.url();
+      await this.saveButton.click();
+      await safeWaitForURL(
+        this.page,
+        (url) => url.href.includes('/platform/') && previousUrl != url.href,
+        {
+          timeout: 60_000,
+        },
+      );
+      await waitForPageReady(this.page);
+    } finally {
+      this.page.off('request', onRequest);
+    }
+    await registerMentor(this.page, name);
+    return createRequest;
   }
 
   /**
