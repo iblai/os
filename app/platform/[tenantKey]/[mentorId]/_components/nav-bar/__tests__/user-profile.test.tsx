@@ -205,7 +205,6 @@ vi.mock('@iblai/iblai-js/web-containers/next', () => ({
     capturedCallbacks = {
       onProfileClick: props.onProfileClick,
       onLogout: props.onLogout,
-      onTenantChange: props.onTenantChange,
       onHelpClick: props.onHelpClick,
       onTenantUpdate: props.onTenantUpdate,
       onLoadGroupPermissions: props.onLoadGroupPermissions,
@@ -257,12 +256,6 @@ vi.mock('@iblai/iblai-js/web-containers/next', () => ({
         </button>
         <button data-testid="logout-btn" onClick={() => props.onLogout?.()}>
           Logout
-        </button>
-        <button
-          data-testid="tenant-change-btn"
-          onClick={() => props.onTenantChange?.('new-tenant')}
-        >
-          Change Tenant
         </button>
         <button
           data-testid="help-btn"
@@ -478,20 +471,6 @@ describe('UserProfile', () => {
       await user.click(logoutBtn);
 
       expect(mockHandleLogout).toHaveBeenCalled();
-    });
-
-    it('should handle tenant change', async () => {
-      const { default: userEvent } = await import(
-        '@testing-library/user-event'
-      );
-      const user = userEvent.setup();
-
-      render(<UserProfile />);
-
-      const tenantChangeBtn = screen.getByTestId('tenant-change-btn');
-      await user.click(tenantChangeBtn);
-
-      expect(mockHandleTenantSwitch).toHaveBeenCalledWith('new-tenant');
     });
 
     it('should handle help click', async () => {

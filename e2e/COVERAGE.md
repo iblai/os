@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-11-04 | 1068 checkpoints (1018 covered, 16 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 107 journeys (106 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-11-06 | 1072 checkpoints (1022 covered, 16 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 108 journeys (107 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -2268,7 +2268,7 @@ Regression: the camera dialog opened from the "+" menu item left `<body style="p
 
 ## Journey 88: Create Agent Category Wheel Scroll (4 checkpoints) — `journeys/88-create-agent-category-wheel-scroll.spec.ts`
 
-**Source files:** `components/modals/create-mentor-form.tsx`, `components/modals/edit-mentor-modal-dialog.tsx`
+**Source files:** `components/modals/create-mentor-modal.tsx`
 
 Regression: the Category popover is portaled outside the Create Agent dialog, whose scroll lock swallowed wheel events. Page object: `page-objects/create-mentor.page.ts` (`categoryList`). Also covers the front-end-only Save button on the Create Agent prompt popups (issue #2758; `goToPromptsTab`, `openPromptPopupAndType`, `promptContent`).
 
@@ -2418,6 +2418,32 @@ Issue iblai-platform#2743. A `?token=<share token>` link now rides in the chat f
 
 ---
 
+## Journey 98: Chat MCP Servers (17 checkpoints, 2 pending) — `journeys/98-chat-mcp-servers.spec.ts`
+
+**Source files:** `components/chat/sdk-chat.tsx`, `components/chat-input-form/use-overflow-fit.ts`, `app/google-oauth-callback/page.tsx`
+
+Issue iblai-platform#2625, with the per-chat switch from #2725. The composer's "+" menu gains an MCP row after Memory with a count of the servers on for this chat; the row exists only while the agent uses at least one server, so an agent with none has no row at all. On desktop the row opens the MCP panel beside the menu, on phones as a page of the "+" bottom sheet. The panel lists only the servers the agent uses and gives each one switch, its on/off for this chat (the user's session preference; a server the organization requires shows a locked one). A per-user OAuth server the person has not signed in to shows its switch off, and turning it on opens the sign-in window, the first time after explaining whose account the sign-in becomes. Every admin test runs on its own fresh agent, creates a server and attaches it through the API (`ChatMcpMenuPage.createServer` / `attachServers`), and the `mcp` fixture deletes every server it created. The non-admin tests mock the server list and the agent's attachments, since a non-admin can neither create nor attach a server and a real sign-in cannot be completed here. The phone layout is the SDK's `max-width: 767px` media query, exercised with `page.setViewportSize`. chat-mcp-04 and chat-mcp-17 stay pending until the stg1 rerun after PR os#616 is green.
+
+- [x] chat-mcp-01: Admin, on a fresh agent with one server created and attached by API, opens the composer's "+" menu and sees the MCP row (data-testid chat-mcp-button, accessible name exactly "MCP 1 on" with its badge, last after Memory, no trailing chevron like Memory); choosing it opens the MCP panel beside the menu (heading "MCP", the sentence "Switches here apply to this chat only, from your next message.", a Close icon button), and Close closes the panel and hands focus back to "+"
+- [x] chat-mcp-02: Admin, on a fresh agent that uses no server, reloads behind the agent-settings and server-list answers, opens the "+" menu and finds no MCP row among its items (`expectRowAbsent`: the row is offered only while the agent has a connector on); after a server is created and attached by API and the app reloads, the row is there, last, named "MCP 1 on"
+- [x] chat-mcp-03: Admin, on a fresh agent with two servers created by API and only one attached through the agent settings API (mcp_servers plus the mcp tool, as the MCP tab's switch sends): after a reload the panel lists exactly the attached server (mcp-server-row-{id}, its name, its switch for this chat on) and the unattached one is absent
+- [ ] chat-mcp-04: The "+" menu's MCP row carries a count badge (composer-count-badge) of the servers on for this chat: "1" with one attached server on, gone (the row itself stays) once the admin switches it off for this chat from the panel, "1" again once it is switched back on _(pending: fixed after the stg1 run of 2026-10-31 in PR os#616; flip to covered once the rerun is green)_
+- [x] chat-mcp-05: Admin switches an attached server off and back on for this chat from the panel; each switch saves the user's session preference (PUT mcp-servers/{id}/session-preference/ naming the open conversation) and its state survives a page reload and reopening the panel; switched off again, a new chat (New Chat) counts the server as on: its "+" row shows the badge "1" and the panel lists it
+- [x] chat-mcp-06: A server created with user_can_disable false and attached to a fresh agent shows a lock (mcp-server-required-{id}) beside a disabled switch that stays checked, named "{name} is required by your organization"
+- [x] chat-mcp-07: Non-admin, with no grant beyond chatting and the agent's use of one server mocked (server list and settings GET patched, with the attachments flagged readable, since a non-admin can neither create nor attach one), sees the MCP row in the "+" menu and opens the panel: the sentence, Close and that server's row, then Close
+- [x] chat-mcp-08: Admin, on a fresh agent with one attached server: on desktop the MCP panel beside the "+" menu fits inside the viewport and is 448px (28rem) wide; on a phone viewport the "+" menu is a bottom sheet whose MCP row opens the same panel as a page of the sheet, with the heading and the sentence, which fits inside the viewport at 375x667 and 320x568, and whose Close returns to the sheet
+- [x] chat-mcp-09: Keyboard only, on a fresh agent with one attached server: Enter on the composer's "+" opens its menu, End then Enter on the MCP row (the last one) closes the menu and moves focus onto the MCP panel, Tab reaches its Close button, and Escape closes the panel and puts focus back on "+"
+- [x] chat-mcp-10: Non-admin, with the server list mocked to one per-user (auth_scope "user") OAuth server the agent uses (settings GET patched) and no connection or connected service: the "+" row is named exactly "MCP" with no badge (a server waiting for a sign-in is not counted); its switch shows off and enabled, named "{name} off: turn on to sign in"; turning it on the first time opens the "Sign in to {name}" explainer saying their own account will be used and "If no window opens, allow pop-ups for this site and try again.", and Continue opens a popup at the sign-in URL the connected-services start endpoint returned (mocked) while the switch shows on and locked; Escape and Close leave the panel open while that window is up; closing the window without signing in gives the switch back, off and enabled, within 30s; turning it on again opens the sign-in at once, with no explainer
+- [x] chat-mcp-11: Non-admin, with the server list and connections mocked to one per-user OAuth server they have signed in to (connected services mocked empty): the "+" row's badge reads "1", and the server's switch is on for this chat and enabled, named "{name} on for this chat", with no sign-in prompt
+- [x] chat-mcp-12: Non-admin, with the connected-services start endpoint mocked to answer 400 (no sign-in app for the organization): turning the server's switch on and pressing the explainer's Continue shows the notice "{name} isn't set up for sign-in yet. Ask your administrator." and the switch is back off and enabled
+- [x] chat-mcp-13: On a fresh agent with one attached server (served as a settings row too, since the MCP row needs the attachment to resolve without the list): when the MCP-server list request fails the panel shows the alert "Failed to load connectors" with a Retry button; once the API recovers, Retry loads the list with that server's row and the alert goes away
+- [x] chat-mcp-14: Non-admin opens the OAuth callback page with the connected-services callback mocked to answer 404 "Invalid state" (a used or unknown sign-in): the tab shows the alert "This sign-in link has expired or was already used. Close this tab and try again." and "You can close this tab.", not the raw "Invalid state" (that the tab no longer closes itself is unit-tested in app/google-oauth-callback/**tests**/page.test.tsx)
+- [x] chat-mcp-15: Non-admin, with a per-user OAuth server mocked with no sign-in yet, turns its switch on: the sign-in window (the provider page answers with a redirect to the app's /google-oauth-callback/ page, whose callback request is mocked as a finished sign-in) posts back to the chat, the app stores the connection (POST mcp-server-connections/, mocked 201, after which the connections list and connected services carry it), the window closes itself, the toast "{name} connected successfully" shows, the switch is on for this chat, enabled and named "{name} on for this chat", and the "+" row's badge reads "1"
+- [x] chat-mcp-16: Non-admin, with the server list mocked to an OAuth server whose auth_scope is "mentor" (a shared agent account) and no connection: its switch shows the plain per-chat state, on and enabled, named "{name} on for this chat", and no sign-in explainer is offered (shared sign-ins are made in agent settings)
+- [ ] chat-mcp-17: Student (non-admin), with the server list, connections and connected services mocked to one signed-in per-user OAuth server the agent uses, and that mocked server's session-preference PUT answered as the backend would: switches it off for this chat (the save names the open conversation), closes the panel and sends a message, which goes out in that same conversation (its request carries the session id), shows as the user's message and gets the agent's reply (or its User Agreement); the "+" row then has no badge, and switching the server back on for this chat brings the badge "1" back _(pending: fixed after the stg1 run of 2026-10-31 in PR os#616; flip to covered once the rerun is green)_
+
+---
+
 ## Journey 99: Discovery Audience and Public Catalog (4 checkpoints) — `journeys/99-discovery-audience-and-catalog.spec.ts`
 
 **Source files:** `components/modals/edit-mentor-modal/settings-tab.tsx`, `messages/en.json`
@@ -2441,5 +2467,18 @@ Issue #2809. After a successful light logo upload the SDK stores `tenant_logo_ve
 - [x] logo-02: A successful light logo upload (POST mocked) adds ?v=<stored version> to the sidebar logo URL with no reload, a second already-open tab updates too, and the version survives a reload
 - [x] logo-03: A failed light logo upload leaves the sidebar logo on the bare URL and stores no version
 - [x] logo-04: A dark logo upload leaves the sidebar logo on the bare URL and stores no version
+
+---
+
+## Journey 101: Create Agent Field Permissions (4 checkpoints) — `journeys/101-create-agent-field-permissions.spec.ts`
+
+**Source files:** `components/modals/create-mentor-modal.tsx`
+
+Issue iblai-platform#2766. Opening Create Agent asks the DM backend which fields of the form the caller may write (`GET <DM base>/v1/agents/settings/field-permissions`, header `iblai-org` = tenant key, answer `{ "<field>": { "write": boolean } }`). A field answered `write: false` is not rendered and not sent, a hidden field no longer counts toward the Next / Save gating, and a form with no writable prompt drops the Prompts tab and saves from the Settings tab. While the answer is unknown (403, 404, network error) every field is writable. The agent name is always shown and sent. cafp-01 runs against the real backend; cafp-02..04 mock only the field-permissions answer (the real one grants an admin everything) with `page.route`, registered before the dialog opens and removed in a `finally`, and every mocked absence is checked only after the name input is enabled, i.e. once the permissions settled. cafp-02 and cafp-03 each create one throwaway agent (registered by the page object for the run-level residue teardown, tracked with `MentorTracker`); they are not pinned to the default LLM since nothing chats with them. The create request is read through `CreateMentorPage.createRequestFields` (multipart part names).
+
+- [x] cafp-01: Real backend: opening Create Agent issues the field-permissions GET at the DM root (not under /api/ai-mentor/) with `iblai-org` equal to the tenant key; the answer is 200 with a `{write: boolean}` entry per field; with the admin's default roles the Settings tab shows the name, description, category, visibility and image upload
+- [x] cafp-02: Answer mocked with `mentor_visibility` write:false: the Visibility combobox is absent while description, category, image upload and the Prompts tab stay; creating through Next and Save sends a `mentor-with-settings` POST with name, description, template and prompt parts but no `mentor_visibility` part, and the agent is created
+- [x] cafp-03: Answer mocked with `system_prompt`, `proactive_prompt` and `guided_prompt_instructions` write:false: the Prompts tab and Next are absent and the Settings tab shows Save; saving from it creates the agent and the POST has none of the three prompt parts but still carries `mentor_visibility`
+- [x] cafp-04: Answer mocked as 404 (older backend): the dialog fails open and shows every field, the Prompts tab and Next
 
 ---

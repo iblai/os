@@ -1,5 +1,5 @@
 /**
- * Journey 100 — Create Agent shows only the fields the caller may set
+ * Journey 101 — Create Agent shows only the fields the caller may set
  * (iblai/iblai-platform#2766)
  *
  * Opening Create Agent asks the DM backend which fields of the create form the
@@ -120,7 +120,7 @@ async function expectEveryField(
 
 test.describe.configure({ mode: 'default', timeout: 240_000 });
 
-test.describe('Journey 100: Create Agent field permissions', () => {
+test.describe('Journey 101: Create Agent field permissions', () => {
   const tracker = new MentorTracker();
 
   test.beforeEach(async ({ page }) => {

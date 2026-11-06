@@ -1,15 +1,15 @@
 {
   "version": 2,
-  "lastUpdated": "2026-11-04",
+  "lastUpdated": "2026-11-06",
   "summary": {
-    "totalCheckpoints": 1068,
-    "coveredCheckpoints": 1018,
+    "totalCheckpoints": 1072,
+    "coveredCheckpoints": 1022,
     "deprecatedCheckpoints": 17,
     "notReproducibleCheckpoints": 17,
     "pendingCheckpoints": 16,
     "percent": 100,
-    "totalJourneys": 107,
-    "activeJourneys": 106
+    "totalJourneys": 108,
+    "activeJourneys": 107
   },
   "journeys": [
     {
@@ -6137,10 +6137,7 @@
       "id": "create-agent-category-wheel-scroll",
       "name": "Create Agent Category Wheel Scroll",
       "spec": "88-create-agent-category-wheel-scroll.spec.ts",
-      "sourceFiles": [
-        "components/modals/create-mentor-form.tsx",
-        "components/modals/edit-mentor-modal-dialog.tsx"
-      ],
+      "sourceFiles": ["components/modals/create-mentor-modal.tsx"],
       "checkpoints": [
         {
           "id": "promptsave-01",
@@ -6719,6 +6716,34 @@
         {
           "id": "logo-04",
           "description": "A dark logo upload leaves the sidebar logo on the bare URL and stores no version",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "create-agent-field-permissions",
+      "name": "Create Agent Field Permissions",
+      "spec": "101-create-agent-field-permissions.spec.ts",
+      "sourceFiles": ["components/modals/create-mentor-modal.tsx"],
+      "checkpoints": [
+        {
+          "id": "cafp-01",
+          "description": "Issue #2766, real backend: opening Create Agent issues GET /v1/agents/settings/field-permissions (at the DM root, not under /api/ai-mentor/) carrying the iblai-org header equal to the tenant key; the answer is 200 with a {write: boolean} entry per field; with the admin's default roles the Settings tab shows the name, description, category, visibility and image upload",
+          "status": "covered"
+        },
+        {
+          "id": "cafp-02",
+          "description": "Issue #2766, answer mocked with mentor_visibility write:false: once the name input is enabled the Visibility combobox is absent while description, category, image upload and the Prompts tab stay; creating the agent through Next and Save sends a mentor-with-settings POST with name, description, template and prompt parts but no mentor_visibility part, and the agent is created",
+          "status": "covered"
+        },
+        {
+          "id": "cafp-03",
+          "description": "Issue #2766, answer mocked with system_prompt, proactive_prompt and guided_prompt_instructions write:false: the Prompts tab and the Next button are absent, the Settings tab shows Save, saving from it creates the agent and the POST body has none of the three prompt parts but still carries mentor_visibility",
+          "status": "covered"
+        },
+        {
+          "id": "cafp-04",
+          "description": "Issue #2766, answer mocked as 404 (older backend): the dialog fails open and shows every field, the Prompts tab and Next",
           "status": "covered"
         }
       ]
