@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.190.0](https://github.com/iblai/os/compare/v0.189.2...v0.190.0) (2026-11-06)
+
+### Features
+
+* **ext:** ship 1.1.11 with silent runs, batched form actions, longer retries and named rows ([e817524](https://github.com/iblai/os/commit/e817524b9703073a9ef894f7643d5276bf4896d8))
+
+### Chores
+
+* **deps:** bump @iblai/iblai-js to 2.65.3 for the panel turn and private-skill fixes ([a2281c6](https://github.com/iblai/os/commit/a2281c67a02ca339085f5121d2ac2c017ab31ec3))
+
 ## [0.189.2](https://github.com/iblai/os/compare/v0.189.1...v0.189.2) (2026-11-05)
 
 ### Bug Fixes
