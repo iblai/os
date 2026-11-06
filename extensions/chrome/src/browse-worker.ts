@@ -184,13 +184,11 @@ export function handleBrowsePort(port: chrome.runtime.Port): void {
         language: await userLanguage(),
         picture,
         positions: withPicture,
-        // Narration and a refused call are rows in the action list, like
-        // every action; only a failed model call ends the turn.
+        // A refused call is a row in the action list, like every action;
+        // only a failed model call ends the turn.
         onEvent: (event) => {
           if (event.type === 'error')
             send({ type: 'error', message: describeRunError(event) });
-          else if (event.type === 'narration')
-            send({ type: 'log', text: event.text, ok: true });
           else if (event.type === 'tool-error')
             send({
               type: 'log',

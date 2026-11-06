@@ -286,12 +286,11 @@ describe('the browse port', () => {
     await expect(answer).resolves.toBe(false);
   });
 
-  // Narration and a call the SDK refused are rows in the action list, where
-  // the user can see them; they never end the turn.
-  it('files narration and a refused call as rows, and keeps the run going', async () => {
+  // A call the SDK refused is a row in the action list, where the user can
+  // see it; it never ends the turn.
+  it('files a refused call as a row, and keeps the run going', async () => {
     runAgent.mockImplementation(
       async (options: { onEvent: (event: AgentEvent) => void }) => {
-        options.onEvent({ type: 'narration', text: 'Opening the menu.' });
         options.onEvent({ type: 'tool-error', toolName: 'click' });
         return { text: 'Done.', messages: [], steps: 2, stoppedBy: null };
       },
@@ -301,7 +300,6 @@ describe('the browse port', () => {
     await vi.waitFor(() => expect(frames(port, 'done')).toHaveLength(1));
     expect(frames(port, 'log')).toEqual([
       { type: 'log', text: 'Read page app.acme.com', ok: true },
-      { type: 'log', text: 'Opening the menu.', ok: true },
       { type: 'log', text: 'Click — Didn’t work.', ok: false },
     ]);
     expect(frames(port, 'error')).toEqual([]);

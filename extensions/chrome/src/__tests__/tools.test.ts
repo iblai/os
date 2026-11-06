@@ -4,6 +4,7 @@ import type { ActResult, FrameSnapshot } from '../page-scripts';
 import { settle, sleep } from '../settle';
 import {
   MAX_WAIT_MS,
+  QUICK_SETTLE,
   READ_RETRIES,
   asElement,
   createBrowserTools,
@@ -406,6 +407,17 @@ describe('createBrowserTools', () => {
     ]);
   });
 
+  // Typing and choosing cannot start a navigation, so the page is watched
+  // briefly; a submit can, so it gets the full wait like a click.
+  it('settles briefly after typing or choosing, fully after a submit', async () => {
+    await run('type', { element: 2, text: 'jane' });
+    expect(settle).toHaveBeenLastCalledWith(7, { frameId: 0, ...QUICK_SETTLE });
+    await run('select', { element: 6, value: 'Français' });
+    expect(settle).toHaveBeenLastCalledWith(7, { frameId: 0, ...QUICK_SETTLE });
+    await run('type', { element: 2, text: 'jane', submit: true });
+    expect(settle).toHaveBeenLastCalledWith(7, { frameId: 0 });
+  });
+
   it('acts on an element number sent as text', async () => {
     const result = await run('click', { element: '5' });
     expect(result).toMatch(/^Clicked \[5\] link "Forgot password\?"\./);
@@ -619,7 +631,10 @@ describe('createBrowserTools', () => {
       target: { tabId: 7, frameIds: [5] },
       args: [1, 'type', 'hi', false, SECRET_FIELDS],
     });
-    expect(settle).toHaveBeenLastCalledWith(7, { frameId: 5 });
+    expect(settle).toHaveBeenLastCalledWith(7, {
+      frameId: 5,
+      ...QUICK_SETTLE,
+    });
     expect(document.querySelector<HTMLInputElement>('#email')!.value).toBe('');
   });
 

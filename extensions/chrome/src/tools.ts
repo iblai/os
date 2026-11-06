@@ -11,7 +11,7 @@ import {
 import type { RealInput } from './real-input';
 import { SECRET_FIELDS } from './secret-fields';
 import { injectable } from './settings';
-import { settle, sleep } from './settle';
+import { settle, sleep, type SettleOptions } from './settle';
 
 export const MAX_ITEMS = 200;
 export const STEP_CHARS = 1500;
@@ -19,6 +19,8 @@ export const READ_PAGE_CHARS = 6000;
 export const MAX_WAIT_MS = 3000;
 /** Further tries of a page read that failed, each once the page settles. */
 export const READ_RETRIES = 2;
+/** After typing or choosing, which cannot start a navigation: a shorter look. */
+export const QUICK_SETTLE: SettleOptions = { graceMs: 100, quietMs: 250 };
 /** Names of things the user should be asked about before they are clicked. */
 export const CONFIRM_NAME =
   /\b(pay|purchase|buy|checkout|send|submit|delete|remove|confirm|order|place|sign out|log out)\b/i;
@@ -214,7 +216,7 @@ export function createBrowserTools(ctx: BrowserToolsContext): BrowserTools {
   let queue: Promise<unknown> = Promise.resolve();
 
   // The AI SDK runs a step's tool calls concurrently; one page can only take
-  // them one at a time (and the request also asks for parallel_tool_calls: false).
+  // them one at a time, in the order they were made.
   const serial = <T>(fn: () => Promise<T>): Promise<T> => {
     const run = queue.then(fn, fn);
     queue = run.catch(() => undefined);
@@ -340,6 +342,8 @@ export function createBrowserTools(ctx: BrowserToolsContext): BrowserTools {
     confirmText?: string | (() => Promise<string | undefined>);
     signal?: AbortSignal;
     textChars?: number;
+    /** How long to watch the page after the action; the default waits for a navigation. */
+    settle?: SettleOptions;
   }
 
   // Gate, act, settle, re-read, log — every acting tool goes through here.
@@ -368,7 +372,7 @@ export function createBrowserTools(ctx: BrowserToolsContext): BrowserTools {
             throw new Refusal('refused', message.replace(/^Refused:\s*/, ''));
           throw new Error(message);
         }
-        await settle(ctx.tabId, { frameId: at.frameId });
+        await settle(ctx.tabId, { frameId: at.frameId, ...p.settle });
         // A click or back may have left the allowed sites; never read what is there.
         assertAllowed(await currentUrl());
         const page = await snapshot(p.textChars);
@@ -494,6 +498,7 @@ export function createBrowserTools(ctx: BrowserToolsContext): BrowserTools {
             ? `Type into ${target} and submit on "${last?.title ?? ''}"`
             : undefined,
           signal: abortSignal,
+          settle: doSubmit ? undefined : QUICK_SETTLE,
         });
       },
     }),
@@ -522,6 +527,7 @@ export function createBrowserTools(ctx: BrowserToolsContext): BrowserTools {
               [at.n, 'select', String(value ?? ''), false],
               at.frameId,
             ),
+          settle: QUICK_SETTLE,
         });
       },
     }),
