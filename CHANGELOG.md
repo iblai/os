@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.190.2](https://github.com/iblai/os/compare/v0.190.1...v0.190.2) (2026-11-06)
+
+### Bug Fixes
+
+* **logo:** add the organization logo version to the logo URL ([2e777a9](https://github.com/iblai/os/commit/2e777a9b1586f3692ce398adffdced7c5a7b0c34))
+
+### Chores
+
+* **deps:** bump @iblai/iblai-js to 2.63.0 ([d3fae11](https://github.com/iblai/os/commit/d3fae11a0953463fe4a5ffad6bb2249337ef21a4))
+
+### Documentation
+
+* **e2e:** add journey 100 to the coverage docs ([0c36517](https://github.com/iblai/os/commit/0c36517860dea458e9d1878783c88d7413bd61b8))
+
+### Tests
+
+* **e2e:** cover the sidebar logo refresh after an upload ([8ac00d5](https://github.com/iblai/os/commit/8ac00d520be1be9e8787af5c04e149ca7b722bb8))
+* **logo:** cover the logo version ([1cfbc36](https://github.com/iblai/os/commit/1cfbc368e898b56653052f16d629db2c28e7aeb8))
+
 ## [0.190.1](https://github.com/iblai/os/compare/v0.190.0...v0.190.1) (2026-11-06)
 
 ### CI
