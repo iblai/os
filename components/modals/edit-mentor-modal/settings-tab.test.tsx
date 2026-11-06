@@ -539,13 +539,9 @@ describe('SettingsTab', () => {
   });
 
   describe('onSuccessfulCopy', () => {
-    it('navigates to the new mentor for a same-tenant copy', () => {
+    it('navigates to the new agent with its settings open', () => {
       render(<SettingsTab />);
-      tabProps().onSuccessfulCopy({
-        forkedMentorId: 'fork-1',
-        destinationTenantKey: 'acme',
-        isCrossTenantCopy: false,
-      });
+      tabProps().onSuccessfulCopy({ forkedMentorId: 'fork-1' });
       const expectedStack = JSON.stringify([
         {
           name: MODALS.EDIT_MENTOR.name,
@@ -556,22 +552,20 @@ describe('SettingsTab', () => {
         'fork-1',
         `modal=${expectedStack}`,
       );
+    });
+
+    // Only same-organization copies report back. A copy into any other one is
+    // made by the auth app, which lands the user on the result itself — so
+    // this app never switches organizations on a copy's behalf.
+    it('never switches organizations itself', () => {
+      render(<SettingsTab />);
+      tabProps().onSuccessfulCopy({ forkedMentorId: 'fork-1' });
       expect(mockHandleTenantSwitch).not.toHaveBeenCalled();
     });
 
-    it('switches tenants for a cross-tenant copy', () => {
+    it('hands the auth app URL to the settings tab for copies made elsewhere', () => {
       render(<SettingsTab />);
-      tabProps().onSuccessfulCopy({
-        forkedMentorId: 'fork-2',
-        destinationTenantKey: 'beta',
-        isCrossTenantCopy: true,
-      });
-      expect(mockHandleTenantSwitch).toHaveBeenCalledTimes(1);
-      const [dest, flag, url] = mockHandleTenantSwitch.mock.calls[0];
-      expect(dest).toBe('beta');
-      expect(flag).toBe(false);
-      expect(url).toContain('/platform/beta/fork-2?modal=');
-      expect(mockNavigateToMentor).not.toHaveBeenCalled();
+      expect(tabProps().authUrl).toBeTruthy();
     });
   });
 });

@@ -1,7 +1,7 @@
 import { test, expect } from '../fixtures/mentor-test';
 import { navigateToMentorApp, checkAdminStatus } from '../utils/auth';
 import { waitForPageReady } from '../utils/resilient';
-import { safeWaitForURL, logger } from '@iblai/iblai-js/playwright';
+import { logger } from '@iblai/iblai-js/playwright';
 import path from 'path';
 import { registerMentor } from '../utils/resource-tracker';
 
@@ -327,8 +327,15 @@ test.describe('Journey 36: Copy Mentor', () => {
     await editMentorPage.close();
   });
 
-  test('admin copies a mentor to a different tenant if user has multiple admin tenants', async ({
+  // cpm-10: copying into another organization is handed to the auth app,
+  // which is the only place that can mint that organization's tokens. This
+  // app's share of it is the hand-off, so that is what is asserted here —
+  // the copy and the switch that follow are covered by the auth app's own
+  // chooser journey, and driving them from here would mean a second real
+  // organization and a popup this suite cannot follow.
+  test('admin copying elsewhere is handed to the auth app with the request attached', async ({
     page,
+    context,
     createMentorPage,
     editMentorPage,
   }) => {
@@ -342,64 +349,32 @@ test.describe('Journey 36: Copy Mentor', () => {
     const { copyMentorDialog } = editMentorPage;
     await copyMentorDialog.waitForOpen();
 
-    const hasMultipleTenants = await copyMentorDialog.hasDestinationSelector();
+    const currentTenantKey = new URL(page.url()).pathname.split('/')[2];
+    await copyMentorDialog.chooseAnotherOrganization();
 
-    if (!hasMultipleTenants) {
-      logger.info(
-        'User is admin in only one tenant — skipping cross-tenant copy test',
-      );
-      await copyMentorDialog.closeViaEscape();
-      await editMentorPage.close();
-      test.skip();
-      return;
-    }
+    // The chooser opens in its own tab, leaving this one where it is — so a
+    // user who closes it has copied nothing.
+    const [chooser] = await Promise.all([
+      context.waitForEvent('page', { timeout: 60_000 }),
+      copyMentorDialog.continueButton.click(),
+    ]);
 
-    logger.info('Destination dropdown found — user has multiple admin tenants');
+    const chooserUrl = new URL(chooser.url());
+    expect(chooserUrl.pathname).toBe('/me');
+    expect(chooserUrl.searchParams.get('action')).toBe('copy-agent');
+    expect(chooserUrl.searchParams.get('tenant')).toBe(currentTenantKey);
 
-    const currentUrl = new URL(page.url());
-    const currentTenantKey = currentUrl.pathname.split('/')[2];
-    logger.info(`Current tenant: ${currentTenantKey}`);
-
-    const selectedTenantName =
-      await copyMentorDialog.selectDifferentTenant(currentTenantKey);
-
-    if (!selectedTenantName) {
-      logger.info(
-        'Could not find a different tenant option — skipping cross-tenant test',
-      );
-      await copyMentorDialog.closeViaEscape();
-      await editMentorPage.close();
-      test.skip();
-      return;
-    }
-
-    logger.info(`Selected destination tenant: ${selectedTenantName}`);
-
-    await copyMentorDialog.copyButton.click();
-
-    await safeWaitForURL(
-      page,
-      (url) =>
-        !url.pathname.startsWith(`/platform/${currentTenantKey}/`) ||
-        url.href.includes('/login'),
-      { timeout: 120_000 },
+    const request = JSON.parse(
+      chooserUrl.searchParams.get('extra-params') ?? '{}',
     );
+    expect(request.name).toBe(`Copy of ${mentorName}`);
+    expect(request.org).toBe(currentTenantKey);
+    expect(typeof request.mentorId).toBe('string');
+    expect(request.mentorId.length).toBeGreaterThan(0);
+    logger.info(`Copy handed to the auth app for agent ${request.mentorId}`);
 
-    // Bounded + non-fatal: the destination SPA keeps long-lived connections
-    // open (streaming/polling) so it may never idle. `safeWaitForURL` above
-    // already confirmed the cross-tenant redirect; cap networkidle so it
-    // can't hang, and let `waitForPageReady` settle the new page.
-    await page
-      .waitForLoadState('networkidle', { timeout: 15_000 })
-      .catch(() => {});
-    await waitForPageReady(page);
-
-    logger.info(`Tenant switch completed — landed at: ${page.url()}`);
-    await registerMentor(page, `Copy of ${mentorName}`).catch((err) =>
-      logger.warn(`Cross-tenant copy not registered: ${err}`),
-    );
-
-    expect(page.url()).not.toContain(`/platform/${currentTenantKey}/`);
-    logger.info('Cross-tenant copy verified — no longer on original tenant');
+    // Nothing was copied here, and this tab never moved.
+    expect(page.url()).toContain(`/platform/${currentTenantKey}/`);
+    await chooser.close();
   });
 });
