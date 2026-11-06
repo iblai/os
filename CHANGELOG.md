@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.190.1](https://github.com/iblai/os/compare/v0.190.0...v0.190.1) (2026-11-06)
+
+### CI
+
+* pin GitHub Actions to commit SHAs ([cd85749](https://github.com/iblai/os/commit/cd85749e3e49ded5964705b2f599689ffa963e16))
+
 ## [0.190.0](https://github.com/iblai/os/compare/v0.189.2...v0.190.0) (2026-11-06)
 
 ### Features
