@@ -369,18 +369,28 @@ test.describe.serial('Journey 90: Reopen last conversation', () => {
     nonadminPage,
   }) => {
     test.skip(!settingsUrl, 'rlc-01 setup did not run');
-    const publicSettings = nonadminPage.waitForRequest(
-      (req) =>
-        req.method() === 'GET' && req.url().includes('/public-settings/'),
+    // Wait for the RESPONSE, not the request. waitForRequest resolves the
+    // moment a request is issued, and the redirect-heavy startup path can
+    // cancel it before it reaches the network — after which `allHeaders()`,
+    // which asks the browser for headers that only exist once the request has
+    // really been sent, never settles. That left the checkpoint hanging until
+    // the 240s test timeout tore the context down, surfacing as the misleading
+    // "Target page, context or browser has been closed".
+    const publicSettings = nonadminPage.waitForResponse(
+      (res) =>
+        res.request().method() === 'GET' &&
+        res.url().includes('/public-settings/'),
       { timeout: 60_000 },
     );
     await navigateToMentorApp(nonadminPage, mentorUrl);
-    const request = await publicSettings;
-    const authorization = (await request.allHeaders())['authorization'];
+    const response = await publicSettings;
+    // Synchronous `headers()` on a request that provably completed, the way
+    // the MCP tab page object reads the same header.
+    const authorization = response.request().headers()['authorization'];
     expect(authorization, 'public settings are read signed-in').toBeTruthy();
     const headers = { authorization };
 
-    const read = await nonadminPage.request.get(request.url(), { headers });
+    const read = await nonadminPage.request.get(response.url(), { headers });
     expect(read.ok()).toBe(true);
 
     const write = await nonadminPage.request.put(settingsUrl, {
