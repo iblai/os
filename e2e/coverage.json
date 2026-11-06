@@ -1,9 +1,9 @@
 {
   "version": 2,
-  "lastUpdated": "2026-11-06",
+  "lastUpdated": "2026-11-07",
   "summary": {
-    "totalCheckpoints": 1072,
-    "coveredCheckpoints": 1022,
+    "totalCheckpoints": 1075,
+    "coveredCheckpoints": 1025,
     "deprecatedCheckpoints": 17,
     "notReproducibleCheckpoints": 17,
     "pendingCheckpoints": 16,
@@ -6157,6 +6157,11 @@
         {
           "id": "catscroll-01",
           "description": "Admin opens Create Agent, opens the Category picker and wheels the list: scrollTop increases and a lower category can be selected (regression: dialog scroll lock swallowed wheel events on the portaled popover)",
+          "status": "covered"
+        },
+        {
+          "id": "catscroll-02",
+          "description": "Admin types a category name in the Category picker: the list narrows to matching categories at the same height, clearing the search brings back every category, and picking one closes the list and fills the field",
           "status": "covered"
         }
       ]

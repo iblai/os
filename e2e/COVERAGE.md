@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-11-06 | 1072 checkpoints (1022 covered, 16 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 108 journeys (107 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-11-07 | 1075 checkpoints (1025 covered, 16 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 108 journeys (107 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -2266,7 +2266,7 @@ Regression: the camera dialog opened from the "+" menu item left `<body style="p
 
 ---
 
-## Journey 88: Create Agent Category Wheel Scroll (4 checkpoints) — `journeys/88-create-agent-category-wheel-scroll.spec.ts`
+## Journey 88: Create Agent Category Wheel Scroll (5 checkpoints) — `journeys/88-create-agent-category-wheel-scroll.spec.ts`
 
 **Source files:** `components/modals/create-mentor-modal.tsx`
 
@@ -2276,6 +2276,7 @@ Regression: the Category popover is portaled outside the Create Agent dialog, wh
 - [x] promptsave-02 (issue #2758): Save in the Proactive and Guided popups closes them and keeps each text
 - [x] promptsave-03 (issue #2758): Escape in the System Prompt popup still closes it and keeps the text
 - [x] catscroll-01: Admin opens Create Agent, opens the Category picker and wheels the list: scrollTop increases and a lower category can be selected
+- [x] catscroll-02: Admin types a category name in the Category picker: the list narrows to matching categories at the same height, clearing the search brings back every category, and picking one closes the list and fills the field
 
 ---
 
