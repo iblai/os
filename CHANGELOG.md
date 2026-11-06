@@ -1,5 +1,48 @@
 # Changelog
 
+## [0.189.2](https://github.com/iblai/os/compare/v0.189.1...v0.189.2) (2026-11-05)
+
+### Bug Fixes
+
+* **extension:** close five holes in the expired-session recovery ([8e45efe](https://github.com/iblai/os/commit/8e45efed1d04451daeb3cda8c74c34a0ad040243))
+* **extension:** re-authenticate the panel when its session has expired ([46b747a](https://github.com/iblai/os/commit/46b747a1e45549706a46f1f2b5c9e056d42df92a))
+* **extension:** ship the organization chooser, and let agent-ai know we own it ([fd906b3](https://github.com/iblai/os/commit/fd906b382b1185871ecf3deb82235fc947f8573a))
+
+### Chores
+
+* **ext:** vendor agent-ai 2.13.3 so the panel gets the chooser and expiry fixes ([1772176](https://github.com/iblai/os/commit/177217636b500c06ede63d5a673d27098d7371e8)), closes [iblai-web-frontend#2223](https://github.com/iblai/iblai-web-frontend/issues/2223) [#2223](https://github.com/iblai/os/issues/2223)
+
+## [0.189.1](https://github.com/iblai/os/compare/v0.189.0...v0.189.1) (2026-11-05)
+
+### Chores
+
+* **deps:** take @iblai/iblai-js 2.65.2 ([89e7dc4](https://github.com/iblai/os/commit/89e7dc4dec999d14377dfcb2e297ab9e7c7b2f6e))
+
+## [0.189.0](https://github.com/iblai/os/compare/v0.188.2...v0.189.0) (2026-11-05)
+
+### Features
+
+* **embed:** let an embedded app reach the organization chooser ([0d7b4e1](https://github.com/iblai/os/commit/0d7b4e15959174b909710e4a6b81c526d839d57c))
+* **extension:** let the side panel reach the organization chooser ([fdb46ab](https://github.com/iblai/os/commit/fdb46abd7dd019d7dcfdd4f5b8096f8443ee8cda))
+* **nav:** open the organization chooser in its own tab ([ae6bf4e](https://github.com/iblai/os/commit/ae6bf4e6e3046bee62f1060836824cf5c6b9ad8a))
+* **nav:** send organization switching to the auth app ([feef47b](https://github.com/iblai/os/commit/feef47b85c7b19b197a311ca7546627646afc284))
+
+### Bug Fixes
+
+* **build:** drop a duplicate "files" key that broke every test ([11c5e0d](https://github.com/iblai/os/commit/11c5e0de090816117bb597e00ed951be103b5bf8))
+* **deps:** drop three yalc paths that were never dependencies ([5aa3c3f](https://github.com/iblai/os/commit/5aa3c3f26930b54dbb7eac8858965b09001346b8))
+* **layout:** keep the app shell <main> from scrolling in the mobile apps ([36cd284](https://github.com/iblai/os/commit/36cd284610e2f4243afc9280e758ec3798f964a5))
+* **tauri:** stop the injected mobile CSS scrolling <main> and offset the status bar ([e2b7edb](https://github.com/iblai/os/commit/e2b7edbcec0ced51992a90ca1a51e19b12e31742))
+
+### Chores
+
+* **deps:** take @iblai/iblai-js 2.65.1, and return chat-input-form to main ([80d89d9](https://github.com/iblai/os/commit/80d89d9d37d11119c9fa2ae82f49eaced3903499))
+* **tauri:** release app-v0.95.31 ([89da94d](https://github.com/iblai/os/commit/89da94d4d91bf950034e200f4d60226a7af3ba55))
+
+### Tests
+
+* **nav:** fix the tests the organization change invalidated ([b942c24](https://github.com/iblai/os/commit/b942c24a01bcdeeb28fb6f82d70677c71112a9b7))
+
 ## [0.188.2](https://github.com/iblai/os/compare/v0.188.1...v0.188.2) (2026-11-05)
 
 ### Bug Fixes
