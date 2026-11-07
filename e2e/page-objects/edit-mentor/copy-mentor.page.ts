@@ -6,7 +6,8 @@ export class CopyMentorPage {
   readonly dialog: Locator;
   readonly nameInput: Locator;
   readonly trainingDataToggle: Locator;
-  readonly destinationCombobox: Locator;
+  readonly copyHereCheckbox: Locator;
+  readonly continueButton: Locator;
   readonly copyButton: Locator;
   readonly cancelButton: Locator;
 
@@ -17,8 +18,12 @@ export class CopyMentorPage {
       name: 'Agent Name',
     });
     this.trainingDataToggle = this.dialog.locator('button[role="switch"]');
-    this.destinationCombobox = this.dialog.getByRole('combobox', {
-      name: 'Select destination tenant',
+    // Shown only to an admin of the organization being copied from: ticked,
+    // the copy is made here; unticked, Continue hands it to the auth app.
+    this.copyHereCheckbox = this.dialog.getByRole('checkbox');
+    this.continueButton = this.dialog.getByRole('button', {
+      name: 'Continue',
+      exact: true,
     });
     this.copyButton = this.dialog.getByRole('button', {
       name: 'Copy',
@@ -73,39 +78,21 @@ export class CopyMentorPage {
   }
 
   /**
-   * Select a different tenant from the destination dropdown.
-   * Returns the selected tenant name, or null if no other tenant is available.
+   * Turn off "copy to this organization", which is what swaps Copy for
+   * Continue. Only an admin of the current organization is offered the
+   * choice; for anyone else Continue is already the only button.
    */
-  async selectDifferentTenant(
-    currentTenantKey: string,
-  ): Promise<string | null> {
-    await this.destinationCombobox.click();
-    await this.page.waitForTimeout(1_000);
-
-    const options = this.page.locator('[role="option"]');
-    const optionCount = await options.count();
-
-    for (let i = 0; i < optionCount; i++) {
-      const optionText = await options.nth(i).textContent();
-      if (optionText && !optionText.includes(currentTenantKey)) {
-        const tenantName = optionText.trim();
-        await options.nth(i).click();
-        return tenantName;
-      }
+  async chooseAnotherOrganization(): Promise<void> {
+    if (await this.copyHereCheckbox.isVisible().catch(() => false)) {
+      await this.copyHereCheckbox.uncheck();
     }
-    return null;
+    await expect(this.continueButton).toBeVisible({ timeout: 15_000 });
   }
 
-  /**
-   * Check if the destination tenant selector is available (user has multiple admin tenants).
-   * Waits up to the specified timeout.
-   */
-  async hasDestinationSelector(timeout = 120_000): Promise<boolean> {
+  /** Whether this user may copy into the organization they are already in. */
+  async canCopyHere(timeout = 120_000): Promise<boolean> {
     try {
-      await this.destinationCombobox.waitFor({
-        state: 'visible',
-        timeout,
-      });
+      await this.copyHereCheckbox.waitFor({ state: 'visible', timeout });
       return true;
     } catch {
       return false;

@@ -165,9 +165,20 @@ export class VmNetworkSection {
    * Waits for the section to finish loading the agent's settings and the
    * org's policy / secret lists (the skeleton renders until all three
    * resolve).
+   *
+   * Visible is not loaded. The radio group renders before the agent's
+   * settings arrive and shows nothing selected until they do, so a caller
+   * that asserted on the selection straight after this was racing a dialog
+   * that, on a freshly created agent, can take tens of seconds to hydrate —
+   * against `expect`'s 5s default. Every agent resolves to one of the four
+   * profiles once hydrated (the component falls back to `none`), so a
+   * selection existing is the signal that the draft is real.
    */
   async waitForLoaded(timeout = 30_000): Promise<void> {
     await expect(this.section).toBeVisible({ timeout });
+    await expect
+      .poll(() => this.getSelectedEgress(), { timeout })
+      .not.toBeNull();
   }
 
   /** Which profile is currently selected in the draft, from the radios' state. */
