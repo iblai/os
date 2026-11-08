@@ -1,5 +1,37 @@
 # Changelog
 
+## [0.191.0](https://github.com/iblai/os/compare/v0.190.3...v0.191.0) (2026-11-08)
+
+### Features
+
+* **os:** create agent to have rbac permissions for fields ([7ef7304](https://github.com/iblai/os/commit/7ef7304c67c9abc3926a3f76fd7158df7ad2f067))
+
+### Bug Fixes
+
+* **e2e:** read rlc-07's member token from storage, not the page request ([8e55dcd](https://github.com/iblai/os/commit/8e55dcd6262437c12e7536bb2588432130821a7d)), closes [os#630](https://github.com/iblai/os/issues/630)
+* **e2e:** stop rlc-07 hanging on allHeaders until the test times out ([12eeadc](https://github.com/iblai/os/commit/12eeadc6bef7169eaf8913cdba8758377fbaa515))
+* **os:** follow the SDK's Organizations item in the profile menu ([abf1297](https://github.com/iblai/os/commit/abf1297e829ae0c2f1621aec86ae5ae387347d80))
+
+### Reverts
+
+* **os:** keep the profile-menu specs and navbar as on main ([882a0b5](https://github.com/iblai/os/commit/882a0b5d67409656a60dd223e4ae88dd02808ccb)), closes [iblai-web-frontend#2211](https://github.com/iblai/iblai-web-frontend/issues/2211)
+
+### Refactors
+
+* **os:** use the SDK's Create Agent form ([6b84a41](https://github.com/iblai/os/commit/6b84a412eabae805d64fabd37959a032b6c826f5))
+
+### Chores
+
+* **deps:** bump @iblai/iblai-js to 2.66.1 ([7f2a5ba](https://github.com/iblai/os/commit/7f2a5ba41eac8d991c99e10ea290effca4b15004))
+* restore .npmrc ([c40ccb8](https://github.com/iblai/os/commit/c40ccb810946ff87dfa1bc8b8dfc5ca3872442d0))
+
+### Tests
+
+* **e2e:** cover the Create Agent category search in journey 88 ([7031cdb](https://github.com/iblai/os/commit/7031cdbbfed755023b5d175d42ba53d7d850b86b))
+* **e2e:** set the starting egress in journey 79 instead of relying on the default ([1c7574f](https://github.com/iblai/os/commit/1c7574fd2960d87d3b34a5f5c9ffb925587c4c80)), closes [iblai-dm-pro#2837](https://github.com/iblai/iblai-dm-pro/issues/2837)
+* **os:** mount the field-permissions slice in the Create Agent singleton test ([76e2c48](https://github.com/iblai/os/commit/76e2c48a45727d544e8b86f22ebcb00b7feee8d2))
+* **os:** renumber the create agent journey to 101 after the rebase ([c20e2a3](https://github.com/iblai/os/commit/c20e2a3ef065385803b997320a97f47ca63cff8a))
+
 ## [0.190.3](https://github.com/iblai/os/compare/v0.190.2...v0.190.3) (2026-11-07)
 
 ### Bug Fixes
