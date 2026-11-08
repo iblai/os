@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.190.3](https://github.com/iblai/os/compare/v0.190.2...v0.190.3) (2026-11-07)
+
+### Bug Fixes
+
+* **e2e:** stop rlc-07 hanging on allHeaders until the test times out ([de079ca](https://github.com/iblai/os/commit/de079ca558f9ed90a4e77c8b064033eb5a632cde))
+* **e2e:** wait for the VM network draft to hydrate, not just appear ([963a7fa](https://github.com/iblai/os/commit/963a7fa1de35707ca0f1683bd137bfaaa62ea0e8))
+
+### Chores
+
+* **deps:** bump @iblai/iblai-js to 2.66.0 and follow copy-agent across ([79429e0](https://github.com/iblai/os/commit/79429e08261ade0365ee600e459ff261b48d989e))
+
 ## [0.190.2](https://github.com/iblai/os/compare/v0.190.1...v0.190.2) (2026-11-06)
 
 ### Bug Fixes

@@ -2694,7 +2694,7 @@
         },
         {
           "id": "cpm-10",
-          "description": "Mentor can be copied to a different tenant",
+          "description": "Copying an agent elsewhere is handed to the auth app chooser with the agent, its organization, the new name and the training-data choice attached, and nothing is copied in this app",
           "status": "covered"
         },
         {

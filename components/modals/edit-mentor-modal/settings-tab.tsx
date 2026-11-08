@@ -23,7 +23,6 @@ import { selectRbacPermissions } from '@/features/rbac/rbac-slice';
 import { useAppDispatch, useAppSelector } from '@/lib/hooks';
 import { useGetUserTenantsQuery } from '@/features/tenants/api-slice';
 import { TenantKeyMentorIdParams } from '@/lib/types';
-import { handleTenantSwitch } from '@/lib/utils';
 import { urlRoutes } from '@/url-routes';
 
 /**
@@ -312,7 +311,7 @@ export function SettingsTab() {
       cancel: tCopy('cancelButton'),
       confirm: tCopy('copyButton'),
       confirming: tCopy('copyingButton'),
-      continueLabel: tCopy('continueLabel'),
+      continueLabel: tCopy('continueButton'),
       successToast: tCopy('successCopied'),
       errorToast: tCopy('errorCopyFailed'),
       missingContextToast: tCopy('errorMissingContext'),
@@ -338,18 +337,14 @@ export function SettingsTab() {
     }
   };
 
-  // Post-copy: mirror the monolith's CopyMentorModal navigation. Same-tenant
-  // copies push straight to the new mentor with the Edit-Mentor modal
-  // pre-opened; cross-tenant copies switch tenants first, carrying the same
-  // modal-stack param through the full-page redirect.
+  // Post-copy: push straight to the new agent with the Edit-Agent modal
+  // pre-opened. Only same-organization copies arrive here — a copy into any
+  // other organization is made by the auth app, which lands the user on the
+  // result itself rather than handing it back.
   const handleSuccessfulCopy = ({
     forkedMentorId,
-    destinationTenantKey,
-    isCrossTenantCopy,
   }: {
     forkedMentorId: string;
-    destinationTenantKey: string;
-    isCrossTenantCopy: boolean;
   }) => {
     const modalStack = [
       {
@@ -358,18 +353,7 @@ export function SettingsTab() {
       },
     ];
 
-    if (isCrossTenantCopy) {
-      const mentorPath = `/platform/${destinationTenantKey}/${forkedMentorId}?modal=${encodeURIComponent(
-        JSON.stringify(modalStack),
-      )}`;
-      void handleTenantSwitch(
-        destinationTenantKey,
-        false,
-        `${window.location.origin}${mentorPath}`,
-      );
-    } else {
-      navigateToMentor(forkedMentorId, `modal=${JSON.stringify(modalStack)}`);
-    }
+    navigateToMentor(forkedMentorId, `modal=${JSON.stringify(modalStack)}`);
   };
 
   return (
@@ -389,6 +373,9 @@ export function SettingsTab() {
       <AgentSettingsTab
         tenants={copyTenants}
         isLoadingTenants={isLoadingTenants}
+        // Copying into any other organization happens on the auth app, which
+        // is the only place that can mint that organization's tokens.
+        authUrl={config.authUrl()}
         onSuccessfulSave={handleSuccessfulSave}
         onSuccessfulDelete={handleSuccessfulDelete}
         onSuccessfulCopy={handleSuccessfulCopy}
