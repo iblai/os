@@ -379,16 +379,19 @@ test.describe.serial('Journey 90: Reopen last conversation', () => {
     const publicSettings = nonadminPage.waitForResponse(
       (res) =>
         res.request().method() === 'GET' &&
-        res.url().includes('/public-settings/'),
+        res.url().includes('/public-settings/') &&
+        res.ok(),
       { timeout: 60_000 },
     );
     await navigateToMentorApp(nonadminPage, mentorUrl);
     const response = await publicSettings;
-    // Synchronous `headers()` on a request that provably completed, the way
-    // the MCP tab page object reads the same header.
-    const authorization = response.request().headers()['authorization'];
-    expect(authorization, 'public settings are read signed-in').toBeTruthy();
-    const headers = { authorization };
+    // The app reads public settings without an Authorization header, so the
+    // member's token comes from storage rather than from the page's request.
+    const dmToken = await nonadminPage.evaluate(() =>
+      localStorage.getItem('dm_token'),
+    );
+    expect(dmToken, 'member must be signed in').toBeTruthy();
+    const headers = { Authorization: `Token ${dmToken}` };
 
     const read = await nonadminPage.request.get(response.url(), { headers });
     expect(read.ok()).toBe(true);

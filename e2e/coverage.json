@@ -1,15 +1,15 @@
 {
   "version": 2,
-  "lastUpdated": "2026-11-08",
+  "lastUpdated": "2026-11-09",
   "summary": {
-    "totalCheckpoints": 1080,
-    "coveredCheckpoints": 1030,
+    "totalCheckpoints": 1087,
+    "coveredCheckpoints": 1037,
     "deprecatedCheckpoints": 17,
     "notReproducibleCheckpoints": 17,
     "pendingCheckpoints": 16,
     "percent": 100,
-    "totalJourneys": 108,
-    "activeJourneys": 107
+    "totalJourneys": 109,
+    "activeJourneys": 108
   },
   "journeys": [
     {
@@ -5430,7 +5430,7 @@
         },
         {
           "id": "vmn-07",
-          "description": "With the Virtual Machine Shell kind selected on a dedicated agent, the Sandbox tab renders the Network Access section: the billing notice ($1 per 10 minutes by default, prorated per second) and a labelled \"Egress Profile\" radio group with the four labelled options (No Network / Package Registries / Public Internet / Custom Allowlist); a fresh agent defaults to No Network, so neither picker renders and Save is disabled",
+          "description": "With the Virtual Machine Shell kind selected on a dedicated agent, the Sandbox tab renders the Network Access section: the billing notice ($1 per 10 minutes by default, prorated per second) and a labelled \"Egress Profile\" radio group with the four labelled options (No Network / Package Registries / Public Internet / Custom Allowlist); an agent set to No Network through the API shows it selected, with neither picker and Save disabled",
           "status": "covered"
         },
         {
@@ -6210,10 +6210,7 @@
       "id": "create-agent-category-wheel-scroll",
       "name": "Create Agent Category Wheel Scroll",
       "spec": "88-create-agent-category-wheel-scroll.spec.ts",
-      "sourceFiles": [
-        "components/modals/create-mentor-form.tsx",
-        "components/modals/edit-mentor-modal-dialog.tsx"
-      ],
+      "sourceFiles": ["components/modals/create-mentor-modal.tsx"],
       "checkpoints": [
         {
           "id": "promptsave-01",
@@ -6233,6 +6230,11 @@
         {
           "id": "catscroll-01",
           "description": "Admin opens Create Agent, opens the Category picker and wheels the list: scrollTop increases and a lower category can be selected (regression: dialog scroll lock swallowed wheel events on the portaled popover)",
+          "status": "covered"
+        },
+        {
+          "id": "catscroll-02",
+          "description": "Admin types a category name in the Category picker: the list narrows to matching categories at the same height, clearing the search brings back every category, and picking one closes the list and fills the field",
           "status": "covered"
         }
       ]
@@ -6792,6 +6794,34 @@
         {
           "id": "logo-04",
           "description": "A dark logo upload leaves the sidebar logo on the bare URL and stores no version",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "create-agent-field-permissions",
+      "name": "Create Agent Field Permissions",
+      "spec": "101-create-agent-field-permissions.spec.ts",
+      "sourceFiles": ["components/modals/create-mentor-modal.tsx"],
+      "checkpoints": [
+        {
+          "id": "cafp-01",
+          "description": "Issue #2766, real backend: opening Create Agent issues GET /v1/agents/settings/field-permissions (at the DM root, not under /api/ai-mentor/) carrying the iblai-org header equal to the tenant key; the answer is 200 with a {write: boolean} entry per field; with the admin's default roles the Settings tab shows the name, description, category, visibility and image upload",
+          "status": "covered"
+        },
+        {
+          "id": "cafp-02",
+          "description": "Issue #2766, answer mocked with mentor_visibility write:false: once the name input is enabled the Visibility combobox is absent while description, category, image upload and the Prompts tab stay; creating the agent through Next and Save sends a mentor-with-settings POST with name, description, template and prompt parts but no mentor_visibility part, and the agent is created",
+          "status": "covered"
+        },
+        {
+          "id": "cafp-03",
+          "description": "Issue #2766, answer mocked with system_prompt, proactive_prompt and guided_prompt_instructions write:false: the Prompts tab and the Next button are absent, the Settings tab shows Save, saving from it creates the agent and the POST body has none of the three prompt parts but still carries mentor_visibility",
+          "status": "covered"
+        },
+        {
+          "id": "cafp-04",
+          "description": "Issue #2766, answer mocked as 404 (older backend): the dialog fails open and shows every field, the Prompts tab and Next",
           "status": "covered"
         }
       ]

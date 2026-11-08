@@ -56,6 +56,33 @@ test.describe('Journey 88: Create Agent category wheel scroll', () => {
     await last.click();
     await expect(createMentorPage.categoryCombobox).toContainText(name);
   });
+
+  test('admin searches the Create Agent category list by name, clears the search and picks a category, which closes the list', async ({
+    createMentorPage,
+  }) => {
+    const list = createMentorPage.categoryList;
+    const options = list.getByRole('option');
+    const search = createMentorPage.categorySearchInput;
+
+    const total = await options.count();
+    const height = await list.evaluate((el) => el.clientHeight);
+    const name = (await options.last().innerText()).trim();
+    const match = list.getByRole('option', { name, exact: true });
+
+    await search.fill(name);
+    await expect(match).toBeVisible();
+    await expect.poll(() => options.count()).toBeLessThan(total);
+    expect(await list.evaluate((el) => el.clientHeight)).toBe(height);
+
+    await search.fill('');
+    await expect(options).toHaveCount(total);
+    expect(await list.evaluate((el) => el.clientHeight)).toBe(height);
+
+    await search.fill(name);
+    await match.click();
+    await expect(search).toBeHidden();
+    await expect(createMentorPage.categoryCombobox).toContainText(name);
+  });
 });
 
 /**
