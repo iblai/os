@@ -8,6 +8,7 @@ import type {
 
 const DM_BASE = 'https://api.iblai.org/dm';
 const AXD_BASE = 'https://api.iblai.org/axd';
+const SDK_URL = 'https://assets.ibl.ai/web/mentorai.js?versionId=test-version';
 
 // The default launcher thumbnail is a DM (manager) endpoint. On the unified API
 // gateway axdUrl() resolves to an invalid `/axd` prefix (HTTP 404), so the embed
@@ -19,6 +20,8 @@ vi.mock('@/lib/config', () => ({
     axdUrl: () => AXD_BASE,
     mentorIframeUrl: () => 'https://mentor.example.com',
     authUrl: () => 'https://auth.example.com',
+    legacyLmsUrl: () => 'https://learn.example.com',
+    agentAiSdkUrl: () => SDK_URL,
   },
 }));
 
@@ -46,268 +49,197 @@ const settings: EmbedFormValues & { allow_anonymous: boolean } = {
   strip_page_content_html: false,
 };
 
-describe('getEmbedCode default bubble image (thumbnail uses dm, not axd)', () => {
-  beforeEach(() => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async () => ({ ok: true }) as Response),
+const build = (
+  overrides: Partial<typeof settings> = {},
+  redirectToken = 'redirect-token',
+  useCustomBubble?: boolean,
+  bubbleConfig?: CustomFloatingBubbleConfig,
+) =>
+  getEmbedCode(
+    'acme',
+    { ...settings, ...overrides },
+    redirectToken,
+    useCustomBubble,
+    bubbleConfig,
+  );
+
+/**
+ * The attributes the snippet sets on `<agent-ai>`, read back out of the
+ * generated `setAttribute` calls. Asserting on these rather than on the
+ * iframe URL is the point of the change: the URL is the component's business
+ * now, and this snippet's job is to describe the embed correctly.
+ */
+const attributesOf = (code: string): Record<string, string> => {
+  const found: Record<string, string> = {};
+  const pattern = /agent\.setAttribute\("([^"]+)", "([^"]*)"\)/g;
+  let match: RegExpExecArray | null;
+  while ((match = pattern.exec(code)) !== null) {
+    found[match[1]] = match[2];
+  }
+  return found;
+};
+
+beforeEach(() => {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async () => ({ ok: true }) as Response),
+  );
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
+});
+
+describe('getEmbedCode loads the agent-ai bundle', () => {
+  it('loads the pinned bundle the config names', async () => {
+    const code = await build();
+
+    expect(code).toContain(`<script src="${SDK_URL}"></script>`);
+  });
+
+  /**
+   * A pasted snippet keeps running whatever it was generated with, so the
+   * version has to be baked in — an unpinned URL would hand every existing
+   * embed a new widget with nobody re-copying anything.
+   */
+  it('pins a version rather than tracking latest', async () => {
+    expect(await build()).toContain('versionId=');
+  });
+
+  it('mounts the component rather than building an iframe itself', async () => {
+    const code = await build();
+
+    expect(code).toContain("document.createElement('agent-ai')");
+    expect(code).not.toContain("document.createElement('iframe')");
+  });
+
+  /**
+   * All of this moved into the component. Finding it here again would mean
+   * the snippet had started duplicating auth or context handling that an
+   * already-pasted embed can never be updated to fix.
+   */
+  it('hand-rolls no auth, context or tenant-switch logic', async () => {
+    const code = await build({ is_context_aware: true });
+
+    expect(code).not.toContain('MENTOR:AUTH_UPDATE');
+    expect(code).not.toContain('MENTOR:CONTEXT_UPDATE');
+    expect(code).not.toContain('getCleanBodyContent');
+    expect(code).not.toContain('redirectToAuthSPA');
+    expect(code).not.toContain('switchOrganizationViaAuthSPA');
+    expect(code).not.toContain('ibl-data');
+  });
+});
+
+describe('getEmbedCode agent attributes', () => {
+  it('names where the agent, auth and LMS live', async () => {
+    const attrs = attributesOf(await build());
+
+    expect(attrs.mentorurl).toBe('https://mentor.example.com');
+    expect(attrs.authurl).toBe('https://auth.example.com');
+    expect(attrs.lmsurl).toBe('https://learn.example.com');
+    expect(attrs.tenant).toBe('acme');
+    expect(attrs.mentor).toBe('my-mentor');
+  });
+
+  it('tells the agent it is framed by someone else', async () => {
+    expect(attributesOf(await build()).extraparams).toContain(
+      'extra-body-classes=iframed-externally',
     );
   });
 
-  afterEach(() => {
-    vi.unstubAllGlobals();
-    vi.restoreAllMocks();
+  it.each([
+    ['isadvanced', { mode: 'advanced' as const }],
+    ['isanonymous', { allow_anonymous: true }],
+    ['iscontextaware', { is_context_aware: true }],
+    ['allowmentorselection', { allow_mentor_selection: true }],
+    ['allowfullscreen', { allow_fullscreen: true }],
+  ])('sets %s when the setting is on', async (attr, overrides) => {
+    expect(attributesOf(await build(overrides as never))).toHaveProperty(attr);
   });
 
+  it.each([
+    ['isadvanced', {}],
+    ['isanonymous', {}],
+    ['iscontextaware', {}],
+    ['allowmentorselection', {}],
+    ['allowfullscreen', {}],
+  ])('leaves %s off when the setting is off', async (attr, overrides) => {
+    expect(attributesOf(await build(overrides))).not.toHaveProperty(attr);
+  });
+
+  /**
+   * A tenant wired to its own identity provider has to reach that provider's
+   * login; without this the visitor lands on the default one.
+   */
+  it('forwards a custom SSO backend', async () => {
+    expect(
+      attributesOf(await build({ sso_provider: 'azuread-oauth2' })).ssoprovider,
+    ).toBe('azuread-oauth2');
+  });
+
+  it('omits ssoprovider when the tenant uses the default login', async () => {
+    expect(attributesOf(await build())).not.toHaveProperty('ssoprovider');
+  });
+
+  it('carries a redirect token so a signed-in visitor comes back here', async () => {
+    expect(attributesOf(await build()).redirecttoken).toBe('redirect-token');
+  });
+
+  // An agent anyone may read never sends the visitor to sign in, so it has
+  // nowhere to come back from.
+  it('omits the redirect token when the agent allows anonymous access', async () => {
+    expect(
+      attributesOf(await build({ allow_anonymous: true })),
+    ).not.toHaveProperty('redirecttoken');
+  });
+});
+
+describe('getEmbedCode default launcher image', () => {
   it('fetches the thumbnail from the dm base, never /axd/', async () => {
-    const code = await getEmbedCode('acme', settings, 'redirect-token');
+    const code = await build();
 
-    const expectedThumbnailUrl = `${DM_BASE}/api/core/orgs/acme/thumbnail/`;
-
-    // fetch was called with the dm thumbnail URL...
-    expect(fetch).toHaveBeenCalledWith(expectedThumbnailUrl);
-
-    // ...and never with an /axd/ thumbnail URL.
-    const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
-    const fetchedUrls = fetchMock.mock.calls.map((c) => String(c[0]));
-    expect(fetchedUrls.some((u) => u.includes('/axd/'))).toBe(false);
-
-    // The generated embed snippet wires the bubble image to the dm URL.
-    expect(code).toContain(expectedThumbnailUrl);
-    expect(code).not.toContain(`${AXD_BASE}/api/core/orgs/`);
+    expect(code).toContain(DM_BASE);
+    expect(code).not.toContain(AXD_BASE);
   });
 
-  it('falls back to the main-tenant thumbnail via the dm base on a non-ok primary response', async () => {
+  it('falls back to the main-tenant thumbnail on a non-ok primary response', async () => {
+    // First call is this tenant's thumbnail, second is main's.
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce({ ok: false } as Response)
       .mockResolvedValueOnce({ ok: true } as Response);
     vi.stubGlobal('fetch', fetchMock);
 
-    const code = await getEmbedCode('acme', settings, 'redirect-token');
+    const code = await build();
 
-    expect(fetchMock).toHaveBeenNthCalledWith(
-      1,
-      `${DM_BASE}/api/core/orgs/acme/thumbnail/`,
-    );
-    expect(fetchMock).toHaveBeenNthCalledWith(
-      2,
-      `${DM_BASE}/api/core/orgs/main/thumbnail/`,
-    );
     expect(code).toContain(`${DM_BASE}/api/core/orgs/main/thumbnail/`);
+    expect(code).not.toContain(AXD_BASE);
   });
-});
 
-describe('getEmbedCode allow-mentor-selection param', () => {
-  const EMBED_URL =
-    'https://mentor.example.com/platform/acme/my-mentor?embed=true&extra-body-classes=iframed-externally';
-
-  beforeEach(() => {
+  it('falls back to the bundled logo when neither thumbnail answers', async () => {
     vi.stubGlobal(
       'fetch',
-      vi.fn(async () => ({ ok: true }) as Response),
-    );
-  });
-
-  afterEach(() => {
-    vi.unstubAllGlobals();
-  });
-
-  it('leaves the embed URL unchanged by default', async () => {
-    const code = await getEmbedCode('acme', settings, 'redirect-token');
-
-    expect(code).toContain(`iframe.src = '${EMBED_URL}';`);
-    expect(code).not.toContain('allow-mentor-selection');
-  });
-
-  it('produces the same code when allow_mentor_selection is false', async () => {
-    const baseline = await getEmbedCode('acme', settings, 'redirect-token');
-    const off = await getEmbedCode(
-      'acme',
-      { ...settings, allow_mentor_selection: false },
-      'redirect-token',
+      vi.fn(async () => ({ ok: false }) as Response),
     );
 
-    expect(off).toBe(baseline);
-  });
-
-  it('adds allow-mentor-selection=true to the embed URL when allow_mentor_selection is on', async () => {
-    const code = await getEmbedCode(
-      'acme',
-      { ...settings, allow_mentor_selection: true },
-      'redirect-token',
-    );
-
-    expect(code).toContain(
-      `iframe.src = '${EMBED_URL}&allow-mentor-selection=true';`,
-    );
-  });
-
-  it('keeps chat=advanced alongside allow-mentor-selection', async () => {
-    const code = await getEmbedCode(
-      'acme',
-      { ...settings, mode: 'advanced', allow_mentor_selection: true },
-      'redirect-token',
-    );
-
-    expect(code).toContain(
-      `iframe.src = '${EMBED_URL}&chat=advanced&allow-mentor-selection=true';`,
-    );
+    expect(await build()).toContain('/images/ibl-logo-animated.gif');
   });
 });
 
-describe('getEmbedCode allow-fullscreen', () => {
-  const EMBED_URL =
-    'https://mentor.example.com/platform/acme/my-mentor?embed=true&extra-body-classes=iframed-externally';
-  const anonymous = { ...settings, allow_anonymous: true };
-  const hostListeners: EventListener[] = [];
-
-  beforeEach(() => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async () => ({ ok: true }) as Response),
-    );
-    // The snippet focuses the iframe on a 100ms timer, which would otherwise
-    // fire after jsdom is torn down.
-    vi.useFakeTimers();
-  });
-
-  afterEach(() => {
-    vi.clearAllTimers();
-    vi.useRealTimers();
-    vi.unstubAllGlobals();
-    hostListeners
-      .splice(0)
-      .forEach((listener) => window.removeEventListener('message', listener));
-    document.body.innerHTML = '';
-  });
-
-  function runSnippet(code: string) {
-    const script = code.split('<script>')[1].split('</script>')[0];
-    new Function(script)();
-    const add = vi.spyOn(window, 'addEventListener');
-    (window.onload as () => void)();
-    add.mock.calls
-      .filter(([type]) => type === 'message')
-      .forEach(([, listener]) => hostListeners.push(listener as EventListener));
-    add.mockRestore();
-  }
-
-  function postToHost(data: unknown) {
-    window.dispatchEvent(new MessageEvent('message', { data }));
-  }
-
-  const widget = () =>
-    document.getElementById('ibl-chat-widget-container') as HTMLDivElement;
-  const bubble = () =>
-    document.querySelector('.ibl-chat-bubble') as HTMLButtonElement;
-
-  it('leaves the URL and the snippet unchanged when off', async () => {
-    const baseline = await getEmbedCode('acme', settings, 'redirect-token');
-    const off = await getEmbedCode(
-      'acme',
-      { ...settings, allow_fullscreen: false },
-      'redirect-token',
-    );
-
-    expect(off).toBe(baseline);
-    expect(off).not.toContain('allow-fullscreen');
-    expect(off).not.toContain('embedFullscreen');
-    expect(off).not.toContain('setWidgetFullscreen');
-  });
-
-  it('adds allow-fullscreen=true to the embed URL and the handler when on', async () => {
-    const code = await getEmbedCode(
-      'acme',
-      { ...settings, allow_mentor_selection: true, allow_fullscreen: true },
-      'redirect-token',
-    );
-
-    expect(code).toContain(
-      `iframe.src = '${EMBED_URL}&allow-mentor-selection=true&allow-fullscreen=true';`,
-    );
-    expect(code).toContain('message?.embedFullscreen');
-  });
-
-  it('switches the widget to full screen and back on embedFullscreen messages', async () => {
-    const code = await getEmbedCode(
-      'acme',
-      { ...anonymous, allow_fullscreen: true },
-      'redirect-token',
-    );
-    runSnippet(code);
-    bubble().click();
-    const normal = widget().style.cssText;
-    const iframe = widget().querySelector('iframe') as HTMLIFrameElement;
-
-    postToHost({ embedFullscreen: true });
-    expect(widget().style.position).toBe('fixed');
-    expect(widget().style.width).toBe('100vw');
-    expect(widget().style.height).toBe('100vh');
-    expect(widget().style.getPropertyPriority('width')).toBe('important');
-    expect(iframe.style.borderRadius).toBe('0');
-    expect(bubble().style.display).toBe('none');
-
-    postToHost(JSON.stringify({ embedFullscreen: true }));
-    postToHost({ embedFullscreen: false });
-    expect(widget().style.cssText).toBe(normal);
-    expect(iframe.style.borderRadius).toBe('13px');
-    expect(bubble().style.display).toBe('');
-
-    postToHost({ embedFullscreen: false });
-    expect(widget().style.cssText).toBe(normal);
-  });
-
-  it('reopens at normal size after being closed while full screen', async () => {
-    const code = await getEmbedCode(
-      'acme',
-      { ...anonymous, allow_fullscreen: true },
-      'redirect-token',
-    );
-    runSnippet(code);
-    bubble().click();
-    const normal = widget().style.cssText;
-
-    postToHost({ embedFullscreen: true });
-    postToHost({ closeEmbed: true });
-    expect(widget().style.display).toBe('none');
-    expect(bubble().style.display).toBe('');
-
-    bubble().click();
-    expect(widget().style.cssText).toBe(normal);
-  });
-
-  it('ignores embedFullscreen before the widget exists', async () => {
-    const code = await getEmbedCode(
-      'acme',
-      { ...anonymous, allow_fullscreen: true },
-      'redirect-token',
-    );
-    runSnippet(code);
-
-    expect(() => postToHost({ embedFullscreen: true })).not.toThrow();
-    expect(widget()).toBeNull();
-  });
-
-  it('ignores embedFullscreen messages when off', async () => {
-    const code = await getEmbedCode('acme', anonymous, 'redirect-token');
-    runSnippet(code);
-    bubble().click();
-    const normal = widget().style.cssText;
-
-    postToHost({ embedFullscreen: true });
-    expect(widget().style.cssText).toBe(normal);
-  });
-});
-
-describe('getEmbedCode snippet variants', () => {
+/**
+ * The launcher stays here by decision: the component renders none, because
+ * hosts that embed it inline — the Chrome extension side panel, a nested edX
+ * frame — do not want one.
+ */
+describe('getEmbedCode launcher', () => {
   const bubble: CustomFloatingBubbleConfig = {
-    image: '',
-    position: 'bottom-right',
+    image: 'https://cdn.example.com/logo.png',
+    position: 'bottom-left',
     size: 'medium',
-    backgroundColor: '#fff',
-    textColor: '#000',
-    subtitleTextColor: '#333',
+    backgroundColor: '#111111',
+    textColor: '#ffffff',
+    subtitleTextColor: '#cccccc',
     accentColor: '#2467eb',
     borderRadius: 12,
     shadow: true,
@@ -315,418 +247,71 @@ describe('getEmbedCode snippet variants', () => {
     subtitle: 'We reply fast',
     height: 60,
     padding: 10,
-    imageSize: 32,
+    imageSize: 28,
     fontSize: 14,
-    subtitleFontSize: 12,
-    strokeColor: '#ccc',
+    subtitleFontSize: 11,
+    strokeColor: '#222222',
     strokeWidth: 1,
-  } as CustomFloatingBubbleConfig;
+  };
 
-  afterEach(() => {
-    vi.unstubAllGlobals();
+  it('renders a launcher button that opens the panel', async () => {
+    const code = await build();
+
+    expect(code).toContain("bubble.className = 'ibl-chat-bubble'");
+    expect(code).toContain("bubble.addEventListener('click', toggle)");
   });
 
-  function stubThumbnail(ok: (url: string) => boolean) {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async (url: string) => ({ ok: ok(url) }) as Response),
-    );
-  }
+  it('labels the launcher and reports whether the panel is open', async () => {
+    const code = await build();
+
+    expect(code).toContain("'aria-label', 'Open chat assistant'");
+    expect(code).toContain("'aria-expanded', 'false'");
+  });
 
   it.each([
-    ['bottom-right', 'right: 30px'],
-    ['bottom-left', 'left: 30px'],
-    ['top-right', 'right: 30px'],
-    ['top-left', 'left: 30px'],
-  ] as const)(
-    'places a custom %s launcher and its widget',
-    async (position, side) => {
-      stubThumbnail(() => true);
-      const code = await getEmbedCode(
-        'acme',
-        { ...settings, mode: 'advanced' },
-        'redirect-token',
-        true,
-        { ...bubble, position },
-      );
-      expect(code).toContain(side);
-      expect(code).toContain('Ask us');
-      expect(code).toContain('We reply fast');
-      expect(code).toContain('box-shadow');
-      expect(code).toContain('border: 1px solid #ccc;');
-    },
-  );
-
-  it('pins a top-left launcher widget in the default window size', async () => {
-    stubThumbnail(() => true);
-    const code = await getEmbedCode('acme', settings, 'redirect-token', true, {
+    ['bottom-right', 'bottom: 20px; right: 30px;'],
+    ['bottom-left', 'bottom: 20px; left: 30px;'],
+    ['top-right', 'top: 20px; right: 30px;'],
+    ['top-left', 'top: 20px; left: 30px;'],
+  ])('places a custom launcher %s', async (position, expected) => {
+    const code = await build({}, 'redirect-token', true, {
       ...bubble,
-      position: 'top-left',
-      subtitle: '',
+      position: position as CustomFloatingBubbleConfig['position'],
     });
-    expect(code).toContain('top: 92px; left: 30px;');
-    expect(code).not.toContain('We reply fast');
+
+    expect(code).toContain(expected);
   });
 
-  it('renders a subtitle without a title', async () => {
-    stubThumbnail(() => true);
-    const code = await getEmbedCode('acme', settings, 'redirect-token', true, {
-      ...bubble,
-      title: '',
-    });
+  it('uses the configured image, title and subtitle', async () => {
+    const code = await build({}, 'redirect-token', true, bubble);
+
+    expect(code).toContain('https://cdn.example.com/logo.png');
+    expect(code).toContain('Ask us');
     expect(code).toContain('We reply fast');
-    expect(code).not.toContain('Ask us');
   });
 
-  it('renders a plain custom launcher without title, shadow or stroke', async () => {
-    stubThumbnail(() => true);
-    const code = await getEmbedCode('acme', settings, 'redirect-token', true, {
-      ...bubble,
-      title: '',
-      subtitle: '',
-      shadow: false,
-      strokeWidth: 0,
-      image: '',
-      imageSize: 0,
-    });
-    expect(code).not.toContain('box-shadow');
-    expect(code).toContain('border: none;');
-    expect(code).toContain('width: 32px');
+  it('uses the tenant thumbnail when no custom launcher is configured', async () => {
+    const code = await build();
+
+    expect(code).toContain(DM_BASE);
+    expect(code).not.toContain('https://cdn.example.com/logo.png');
   });
 
-  it('emits context-aware and auto-open code when those are on', async () => {
-    stubThumbnail(() => true);
-    const code = await getEmbedCode(
-      'acme',
-      {
-        ...settings,
-        allow_anonymous: true,
-        is_context_aware: true,
-        auto_open: true,
-        sso_provider: 'okta',
-      },
-      'redirect-token',
-    );
-    expect(code).toContain('MENTOR:CONTEXT_UPDATE');
-    expect(code).toContain('sendHostInfoToIframe();');
-    expect(code).toContain('if (!isWidgetInjected)');
-    expect(code).toContain('custom_sso_backend_path=okta');
-    expect(code).not.toContain('redirect-token=redirect-token');
-  });
-
-  it('falls back to the main thumbnail, then to the default image', async () => {
-    stubThumbnail((url) => url.includes('/orgs/main/'));
-    expect(await getEmbedCode('acme', settings, 't')).toContain(
-      `${DM_BASE}/api/core/orgs/main/thumbnail/`,
-    );
-
-    stubThumbnail(() => false);
-    expect(await getEmbedCode('acme', settings, 't')).toContain(
-      '/images/ibl-logo-animated.gif',
-    );
-    expect(await getEmbedCode('main', settings, 't')).toContain(
-      '/images/ibl-logo-animated.gif',
+  it('opens by itself when auto-open is on', async () => {
+    expect(await build({ auto_open: true })).toContain(
+      'setTimeout(function () { if (!injected) toggle(); }, 500);',
     );
   });
 
-  it('keeps the default image when the thumbnail request throws', async () => {
-    vi.spyOn(console, 'error').mockImplementation(() => {});
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async () => {
-        throw new Error('offline');
-      }),
-    );
-    expect(await getEmbedCode('acme', settings, 't')).toContain(
-      '/images/ibl-logo-animated.gif',
-    );
-  });
-});
-
-// An embed whose tab is seeded from a sibling on another organization lands on
-// the wrong one and cannot recover alone: `authExpired` only re-sends the same
-// organization's auth, so the embed would ask forever. It posts `tenantSwitch`
-// instead, which `agent-ai` answers — and so, now, does the generated snippet.
-describe('getEmbedCode tenant switch', () => {
-  const anonymous = { ...settings, allow_anonymous: true };
-  const hostListeners: EventListener[] = [];
-  let realLocation: Location;
-  const origin = window.location.origin;
-
-  const session = (tenant: string) =>
-    encodeURIComponent(
-      JSON.stringify({ tenant, userData: JSON.stringify({ user_id: 7 }) }),
-    );
-
-  // Same origin as the test document: the snippet strips `ibl-data` with
-  // history.replaceState, which jsdom refuses across origins.
-  function setUrl(search: string) {
-    const href = `${origin}/page${search}`;
-    Object.defineProperty(window, 'location', {
-      configurable: true,
-      writable: true,
-      value: {
-        href,
-        origin,
-        pathname: '/page',
-        search,
-        toString: () => href,
-      },
-    });
-  }
-
-  beforeEach(() => {
-    realLocation = window.location;
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async () => ({ ok: true }) as Response),
-    );
-    vi.useFakeTimers();
-    sessionStorage.clear();
-    setUrl('');
+  it('waits to be clicked when auto-open is off', async () => {
+    expect(await build()).not.toContain('if (!injected) toggle();');
   });
 
-  afterEach(() => {
-    vi.clearAllTimers();
-    vi.useRealTimers();
-    vi.unstubAllGlobals();
-    Object.defineProperty(window, 'location', {
-      configurable: true,
-      writable: true,
-      value: realLocation,
-    });
-    hostListeners
-      .splice(0)
-      .forEach((listener) => window.removeEventListener('message', listener));
-    document.body.innerHTML = '';
-  });
+  // The agent asks to be closed; the launcher is ours, so the hiding is too.
+  it('hides the panel when the agent asks to be closed', async () => {
+    const code = await build();
 
-  function runSnippet(code: string) {
-    const script = code.split('<script>')[1].split('</script>')[0];
-    new Function(script)();
-    const add = vi.spyOn(window, 'addEventListener');
-    (window.onload as () => void)();
-    add.mock.calls
-      .filter(([type]) => type === 'message')
-      .forEach(([, listener]) => hostListeners.push(listener as EventListener));
-    add.mockRestore();
-  }
-
-  function postToHost(data: unknown) {
-    window.dispatchEvent(new MessageEvent('message', { data }));
-  }
-
-  const widget = () =>
-    document.getElementById('ibl-chat-widget-container') as HTMLDivElement;
-
-  /** Opens the widget and watches what the host posts into the iframe. */
-  function openWidget() {
-    (document.querySelector('.ibl-chat-bubble') as HTMLButtonElement).click();
-    const iframe = document.querySelector(
-      '#ibl-chat-widget-container iframe',
-    ) as HTMLIFrameElement;
-    return vi.spyOn(iframe.contentWindow!, 'postMessage');
-  }
-
-  it('re-sends the cached session when the embed asks for the pinned organization', async () => {
-    setUrl(`?ibl-data=${session('acme')}`);
-    runSnippet(await getEmbedCode('acme', settings, 'redirect-token'));
-    const posted = openWidget();
-
-    postToHost({ tenantSwitch: true, tenant: 'acme' });
-
-    expect(posted).toHaveBeenCalledWith(
-      expect.objectContaining({ type: 'MENTOR:AUTH_UPDATE' }),
-      '*',
-    );
-  });
-
-  it('accepts the JSON-string form the embed chain also carries', async () => {
-    setUrl(`?ibl-data=${session('acme')}`);
-    runSnippet(await getEmbedCode('acme', settings, 'redirect-token'));
-    const posted = openWidget();
-
-    postToHost(JSON.stringify({ tenantSwitch: true, tenant: 'acme' }));
-
-    expect(posted).toHaveBeenCalledWith(
-      expect.objectContaining({ type: 'MENTOR:AUTH_UPDATE' }),
-      '*',
-    );
-  });
-
-  it('refuses a request for an organization this embed is not pinned to', async () => {
-    setUrl(`?ibl-data=${session('acme')}`);
-    runSnippet(await getEmbedCode('acme', settings, 'redirect-token'));
-    const posted = openWidget();
-    const before = window.location.href;
-
-    postToHost({ tenantSwitch: true, tenant: 'other-org' });
-
-    expect(posted).not.toHaveBeenCalled();
-    expect(window.location.href).toBe(before);
-  });
-
-  it('ignores a request that names no organization', async () => {
-    setUrl(`?ibl-data=${session('acme')}`);
-    runSnippet(await getEmbedCode('acme', settings, 'redirect-token'));
-    const posted = openWidget();
-
-    postToHost({ tenantSwitch: true });
-
-    expect(posted).not.toHaveBeenCalled();
-  });
-
-  // The embed cannot reach the chooser itself: navigating a storage-partitioned
-  // iframe would tear it out of this page. It hands over the address instead,
-  // and the host opens a real tab, which comes back with the new session.
-  it('opens the organization chooser in a tab when the embed hands over its address', async () => {
-    const open = vi.fn();
-    Object.defineProperty(window, 'open', {
-      value: open,
-      writable: true,
-      configurable: true,
-    });
-    setUrl(`?ibl-data=${session('acme')}`);
-    runSnippet(await getEmbedCode('acme', settings, 'redirect-token'));
-    const posted = openWidget();
-    const before = window.location.href;
-
-    postToHost({
-      tenantSwitch: true,
-      chooserUrl: 'https://login.example.com/me?action=switch-tenant&popup=1',
-    });
-
-    expect(open).toHaveBeenCalledWith(
-      'https://login.example.com/me?action=switch-tenant&popup=1',
-      'ibl-organizations',
-    );
-    // The page the embed lives on is left exactly as it was.
-    expect(window.location.href).toBe(before);
-    expect(posted).not.toHaveBeenCalled();
-  });
-
-  it('sends the user to sign in when the cached session is another organization’s', async () => {
-    setUrl(`?ibl-data=${session('other-org')}`);
-    runSnippet(await getEmbedCode('acme', settings, 'redirect-token'));
-    const posted = openWidget();
-
-    postToHost({ tenantSwitch: true, tenant: 'acme' });
-
-    expect(posted).not.toHaveBeenCalledWith(
-      expect.objectContaining({ type: 'MENTOR:AUTH_UPDATE' }),
-      '*',
-    );
-    expect(window.location.href).toContain('https://auth.example.com/join');
-    expect(window.location.href).toContain('tenant=acme');
-    expect(window.location.href).not.toContain('logout=true');
-  });
-
-  it('carries the host page back through redirect-to and redirect-path', async () => {
-    setUrl('?a=1');
-    runSnippet(await getEmbedCode('acme', settings, 'redirect-token'));
-    openWidget();
-
-    postToHost({ tenantSwitch: true, tenant: 'acme' });
-
-    expect(window.location.href).toContain(
-      `redirect-to=${encodeURIComponent(origin)}`,
-    );
-    expect(window.location.href).toContain(
-      `redirect-path=${encodeURIComponent('/page?a=1')}`,
-    );
-  });
-
-  it('joins when there is no cached session at all', async () => {
-    runSnippet(await getEmbedCode('acme', settings, 'redirect-token'));
-    openWidget();
-
-    postToHost({ tenantSwitch: true, tenant: 'acme' });
-
-    expect(window.location.href).toContain('/join?tenant=acme');
-  });
-
-  // The embed re-asks every few seconds, so a switch that cannot succeed would
-  // otherwise navigate the customer's page on a loop.
-  it('navigates once per organization, however often the embed asks', async () => {
-    runSnippet(await getEmbedCode('acme', settings, 'redirect-token'));
-    openWidget();
-
-    postToHost({ tenantSwitch: true, tenant: 'acme' });
-    const firstTarget = window.location.href;
-    expect(firstTarget).toContain('/join?tenant=acme');
-
-    setUrl('');
-    postToHost({ tenantSwitch: true, tenant: 'acme' });
-    postToHost({ tenantSwitch: true, tenant: 'acme' });
-
-    expect(window.location.href).not.toContain('/join');
-  });
-
-  it('frees the guard once the pinned organization’s session is in hand', async () => {
-    setUrl(`?ibl-data=${session('acme')}`);
-    sessionStorage.setItem('ibl-org-switch-acme', '1');
-    runSnippet(await getEmbedCode('acme', settings, 'redirect-token'));
-    openWidget();
-
-    postToHost({ tenantSwitch: true, tenant: 'acme' });
-
-    expect(sessionStorage.getItem('ibl-org-switch-acme')).toBeNull();
-  });
-
-  // Unreadable `ibl-data` is no session at all, not a session to replay.
-  it('treats unreadable ibl-data as no session and joins', async () => {
-    setUrl('?ibl-data=not-json');
-    runSnippet(await getEmbedCode('acme', settings, 'redirect-token'));
-    const posted = openWidget();
-
-    postToHost({ tenantSwitch: true, tenant: 'acme' });
-
-    expect(posted).not.toHaveBeenCalledWith(
-      expect.objectContaining({ type: 'MENTOR:AUTH_UPDATE' }),
-      '*',
-    );
-    expect(window.location.href).toContain('/join?tenant=acme');
-  });
-
-  // A message carrying both must still reach the handlers further down, which
-  // an early return out of the tenant-switch branch used to skip.
-  it('does not swallow other instructions on the same message', async () => {
-    setUrl(`?ibl-data=${session('acme')}`);
-    runSnippet(
-      await getEmbedCode(
-        'acme',
-        { ...settings, allow_fullscreen: true },
-        'redirect-token',
-      ),
-    );
-    openWidget();
-    const normal = widget().style.cssText;
-
-    postToHost({ tenantSwitch: true, tenant: 'acme', embedFullscreen: true });
-
-    expect(widget().style.width).toBe('100vw');
-    expect(widget().style.cssText).not.toBe(normal);
-  });
-
-  // A switch resolved by any other route must free the guard, or one failed
-  // attempt blocks every later switch in the tab.
-  it('frees the guard at load when the pinned session is already held', async () => {
-    sessionStorage.setItem('ibl-org-switch-acme', '1');
-    setUrl(`?ibl-data=${session('acme')}`);
-
-    runSnippet(await getEmbedCode('acme', settings, 'redirect-token'));
-
-    expect(sessionStorage.getItem('ibl-org-switch-acme')).toBeNull();
-  });
-
-  it('leaves an anonymous embed where it is, having no session to switch', async () => {
-    runSnippet(await getEmbedCode('acme', anonymous, 'redirect-token'));
-    const posted = openWidget();
-    const before = window.location.href;
-
-    postToHost({ tenantSwitch: true, tenant: 'acme' });
-
-    expect(posted).not.toHaveBeenCalled();
-    expect(window.location.href).toBe(before);
+    expect(code).toContain('message.closeEmbed');
+    expect(code).toContain('toggle();');
   });
 });
