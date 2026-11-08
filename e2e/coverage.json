@@ -1,15 +1,15 @@
 {
   "version": 2,
-  "lastUpdated": "2026-11-04",
+  "lastUpdated": "2026-11-08",
   "summary": {
-    "totalCheckpoints": 1068,
-    "coveredCheckpoints": 1018,
+    "totalCheckpoints": 1080,
+    "coveredCheckpoints": 1030,
     "deprecatedCheckpoints": 17,
     "notReproducibleCheckpoints": 17,
     "pendingCheckpoints": 16,
     "percent": 100,
-    "totalJourneys": 107,
-    "activeJourneys": 106
+    "totalJourneys": 108,
+    "activeJourneys": 107
   },
   "journeys": [
     {
@@ -3393,6 +3393,11 @@
           "id": "ta-08",
           "description": "Admin deletes a task and its row is removed from the list",
           "status": "covered"
+        },
+        {
+          "id": "ta-09",
+          "description": "Phone view (375x812, touch): the Edit Agent dialog fills the viewport, the header info button opens and closes the About This Tab sheet, a task shows as a card, tapping it opens the full-screen Task Logs screen and Back returns, the Select Date icon opens the calendar sheet and the backdrop closes it, delete works from the Task Logs screen, and the page never scrolls sideways",
+          "status": "covered"
         }
       ]
     },
@@ -4205,6 +4210,74 @@
         {
           "id": "eval-17",
           "description": "Non-admin does not see the Evals tab in the Edit Mentor modal (ADMIN-only segment in use-mentor-segments.ts)",
+          "status": "covered"
+        },
+        {
+          "id": "eval-18",
+          "description": "Phone view (375x812, touch): the Edit Agent dialog fills the viewport, the info sheet opens and closes, a run shows as a card, tapping it opens the action sheet (Status plus View results, New review, Check status, Export CSV, Delete) that the backdrop closes, the benchmark picker opens as a sheet listing the benchmark and closes, and the page never scrolls sideways",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "mentor-human-support-tab",
+      "name": "Mentor Human Support Tab",
+      "spec": "65-mentor-human-support-tab.spec.ts",
+      "sourceFiles": [
+        "components/modals/edit-mentor-modal/tabs/human-support-tab.tsx",
+        "components/modals/edit-mentor-modal/tabs/index.ts",
+        "components/modals/edit-mentor-modal/index.tsx",
+        "hooks/use-mentor-segments.ts"
+      ],
+      "checkpoints": [
+        {
+          "id": "support-01",
+          "description": "Admin opens the Support tab and the ticket surface renders (heading, description, and either the ticket list or the empty state)",
+          "status": "covered"
+        },
+        {
+          "id": "support-02",
+          "description": "Admin round-trips the status filter (Open, In Progress, Closed, All) and the surface keeps rendering a valid state after every change",
+          "status": "covered"
+        },
+        {
+          "id": "support-03",
+          "description": "The Support availability toggle is turned on and the setting persists across a reload (skips when the tenant tool catalog has no human-support tool)",
+          "status": "covered"
+        },
+        {
+          "id": "support-04",
+          "description": "Admin asks the agent in chat to open a ticket and it appears in the Support list as Open",
+          "status": "covered"
+        },
+        {
+          "id": "support-05",
+          "description": "Admin opens the ticket and its agent-authored description renders",
+          "status": "covered"
+        },
+        {
+          "id": "support-06",
+          "description": "Admin replies from the ticket detail and the reply appears in the conversation",
+          "status": "covered"
+        },
+        {
+          "id": "support-07",
+          "description": "Admin moves the ticket to In Progress and the list status updates",
+          "status": "covered"
+        },
+        {
+          "id": "support-08",
+          "description": "Admin closes the ticket, the closed notice replaces the composer and the list status reflects Closed",
+          "status": "covered"
+        },
+        {
+          "id": "support-09",
+          "description": "Phone view (375x812, touch) of a ticket: it shows as a card, tapping it opens the full-screen Support Ticket screen with the reply composer, Back returns to the list, the status filter sheet hides it under Closed and brings it back under All Statuses, and the page never scrolls sideways",
+          "status": "covered"
+        },
+        {
+          "id": "support-10",
+          "description": "Phone view (375x812, touch) of an agent with no tickets: the Edit Agent dialog fills the viewport, the info sheet opens and closes, the Available to Users row shows, the status filter sheet lists its options, closes on the backdrop and applies a picked option, and the page never scrolls sideways",
           "status": "covered"
         }
       ]

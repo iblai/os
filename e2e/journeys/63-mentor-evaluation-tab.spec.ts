@@ -7,6 +7,7 @@ import { waitForPageReady } from '../utils/resilient';
 import { MENTOR_NEXTJS_HOST } from '../fixtures/test-data';
 import { CreateMentorPage } from '../page-objects/create-mentor.page';
 import { EvaluationTab } from '../page-objects/edit-mentor/evaluation.tab';
+import { PHONE_CONTEXT } from '../page-objects/edit-mentor/activity-phone';
 import {
   closeWithEsc,
   expectNoAccessibilityViolationsOnDialogs,
@@ -586,6 +587,55 @@ test.describe('Journey 63: Mentor Evaluation Tab', () => {
 
     await evaluation.cancelLlmJudge();
     await editMentorPage.close();
+  });
+
+  // EVAL-18: Phone view (< 768px) — run cards instead of the table, the
+  // per-run action sheet and the benchmark picker sheet. Declared before
+  // EVAL-13 so the primary run still exists when it runs.
+  test.describe('phone view', () => {
+    test.use(PHONE_CONTEXT);
+
+    test('on a phone the Evals tab shows run cards, the run action sheet and the benchmark sheet', async ({
+      editMentorPage,
+    }) => {
+      test.skip(!primaryRunName, 'Primary run was not started in EVAL-08');
+      const { evaluation } = editMentorPage;
+      const { phone } = evaluation;
+
+      await phone.expectDialogFillsViewport();
+      await phone.openAndCloseInfoSheet(EvaluationTab.LABELS.header.title);
+
+      await expect(evaluation.phoneRunCard(primaryRunName)).toBeVisible({
+        timeout: 15_000,
+      });
+      await phone.expectNoHorizontalScroll();
+
+      const actions = await evaluation.openPhoneRunActions(primaryRunName);
+      await expect(actions.getByText(/^Status:/)).toBeVisible();
+      for (const label of [
+        EvaluationTab.LABELS.actions.viewResults,
+        EvaluationTab.LABELS.actions.evaluate,
+        EvaluationTab.LABELS.actions.checkStatus,
+        EvaluationTab.LABELS.actions.exportCsv,
+        EvaluationTab.LABELS.actions.delete,
+      ]) {
+        await expect(
+          actions.getByRole('button', { name: label }),
+        ).toBeVisible();
+      }
+      await phone.closeSheetByBackdrop(actions);
+
+      await evaluation.benchmarkCombobox().click();
+      const benchmarkSheet = evaluation.phoneBenchmarkSheet();
+      await expect(benchmarkSheet).toBeVisible({ timeout: 5_000 });
+      await expect(
+        benchmarkSheet.getByText(BENCHMARK_NAME, { exact: true }),
+      ).toBeVisible();
+      await phone.closeSheetByBackdrop(benchmarkSheet);
+      await phone.expectNoHorizontalScroll();
+
+      await editMentorPage.close();
+    });
   });
 
   // EVAL-13: Cancelling a delete confirmation leaves the row in place;

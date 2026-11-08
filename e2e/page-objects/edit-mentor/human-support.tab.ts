@@ -1,4 +1,4 @@
-import { Page, Locator } from '@playwright/test';
+import { expect, Page, Locator } from '@playwright/test';
 import {
   SUPPORT_LABELS,
   getSupportTabTrigger,
@@ -36,6 +36,7 @@ import {
   createSupportTicketViaChatAndVerify,
   type SupportTicketStatus,
 } from '@iblai/iblai-js/playwright';
+import { ActivityPhoneView } from './activity-phone';
 
 export type { SupportTicketStatus };
 
@@ -80,9 +81,16 @@ export type { SupportTicketStatus };
 export class HumanSupportTab {
   readonly page: Page;
   readonly dialog: Locator;
+  readonly phone: ActivityPhoneView;
 
   /** Default labels shipped with the SDK — use for text assertions. */
   static readonly LABELS = SUPPORT_LABELS;
+
+  /** Phone-only strings the SDK's `SUPPORT_LABELS` does not export. */
+  static readonly PHONE_LABELS = {
+    availableToUsers: 'Available to Users',
+    ticketTitle: 'Support Ticket',
+  } as const;
 
   /**
    * Category-aware tab navigation injected by `EditMentorPage` (see
@@ -101,6 +109,7 @@ export class HumanSupportTab {
   constructor(page: Page, dialog: Locator) {
     this.page = page;
     this.dialog = dialog;
+    this.phone = new ActivityPhoneView(page, dialog);
   }
 
   // ---------------------------------------------------------------------------
@@ -334,6 +343,45 @@ export class HumanSupportTab {
 
   expectNoRepliesYet(): Promise<void> {
     return expectNoRepliesYet(this.dialog);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Phone view (< 768px): ticket cards, ticket screen, filter sheets
+  // ---------------------------------------------------------------------------
+
+  /** The "Available to Users" row that holds the switch on a phone. */
+  phoneAvailableToUsersRow(): Locator {
+    return this.dialog.getByText(
+      HumanSupportTab.PHONE_LABELS.availableToUsers,
+      {
+        exact: true,
+      },
+    );
+  }
+
+  /** The status filter is a sheet trigger (`aria-haspopup="dialog"`). */
+  phoneStatusFilterTrigger(): Locator {
+    return this.dialog.getByRole('button', { name: 'Filter by status' });
+  }
+
+  phoneStatusFilterSheet(): Locator {
+    return this.phone.sheet('Filter by status');
+  }
+
+  /** Open the status sheet, pick `label` (e.g. "Closed"); the sheet closes. */
+  async pickPhoneStatusFilter(label: string): Promise<void> {
+    await this.phoneStatusFilterTrigger().click();
+    const sheet = this.phoneStatusFilterSheet();
+    await sheet.getByRole('button', { name: label, exact: true }).click();
+    await expect(sheet).toBeHidden({ timeout: 5_000 });
+  }
+
+  /** Tap a ticket card; the full-screen ticket screen opens. */
+  async openPhoneTicket(subject: string | RegExp): Promise<void> {
+    await this.ticketRow(subject).click();
+    await expect(
+      this.phone.screenTitle(HumanSupportTab.PHONE_LABELS.ticketTitle),
+    ).toBeVisible({ timeout: 10_000 });
   }
 
   // ---------------------------------------------------------------------------
