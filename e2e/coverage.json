@@ -4144,7 +4144,7 @@
         },
         {
           "id": "eval-05",
-          "description": "With a fresh (zero-run) benchmark selected, the runs table renders all five canonical headers (Evaluation, Status, Initiated by, Created, Actions) and the benchmark-specific empty state",
+          "description": "With a fresh (zero-run) benchmark selected, the tab shows only the benchmark-specific empty state, with no runs table or headers",
           "status": "covered"
         },
         {
@@ -4159,7 +4159,7 @@
         },
         {
           "id": "eval-08",
-          "description": "Admin starts a new evaluation and it appears in the runs table with a valid status badge",
+          "description": "Admin starts a new evaluation and it appears in the runs table, under all five column headers (Evaluation, Status, Initiated by, Created, Actions), with a valid status",
           "status": "covered"
         },
         {

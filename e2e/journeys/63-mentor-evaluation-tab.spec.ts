@@ -339,21 +339,19 @@ test.describe('Journey 63: Mentor Evaluation Tab', () => {
     await editMentorPage.close();
   });
 
-  // EVAL-05: With the fresh (zero-run) benchmark selected, the runs table
-  // renders its five canonical headers and the benchmark-specific empty
-  // state (`{dataset}` substituted).
-  test('with the fresh benchmark selected, the runs table shows its headers and the benchmark-specific empty state', async ({
+  // EVAL-05: With the fresh (zero-run) benchmark selected, the tab shows
+  // only the benchmark-specific empty state (`{dataset}` substituted) — the
+  // runs table and its headers appear once there is a run (EVAL-08).
+  test('with the fresh benchmark selected, the tab shows the benchmark-specific empty state instead of the runs table', async ({
     editMentorPage,
   }) => {
     test.skip(!benchmarkReady, 'Benchmark was not created in EVAL-03');
     const { evaluation } = editMentorPage;
 
-    for (const header of EvaluationTab.TABLE_HEADERS) {
-      await expect(evaluation.tableHeader(header)).toBeVisible({
-        timeout: 15_000,
-      });
-    }
     await evaluation.expectRunsTableEmpty(BENCHMARK_NAME);
+    await expect(
+      evaluation.tableHeader(EvaluationTab.TABLE_HEADERS[0]),
+    ).toBeHidden();
 
     await editMentorPage.close();
   });
@@ -401,7 +399,7 @@ test.describe('Journey 63: Mentor Evaluation Tab', () => {
   });
 
   // EVAL-08: Admin starts a real evaluation; the dialog closes and the run
-  // appears in the table with a valid status badge. This is the "primary"
+  // appears in the table, under its five column headers, with a valid status. This is the "primary"
   // run later checkpoints opportunistically re-check the status of.
   test('admin starts a new evaluation and it appears in the table with a valid status', async ({
     editMentorPage,
@@ -412,6 +410,9 @@ test.describe('Journey 63: Mentor Evaluation Tab', () => {
     primaryRunName = EvaluationTab.uniqueName('e2e-eval-run');
     await evaluation.startEvaluation({ name: primaryRunName });
     await evaluation.expectRunInTable(primaryRunName);
+    for (const header of EvaluationTab.TABLE_HEADERS) {
+      await expect(evaluation.tableHeader(header).first()).toBeVisible();
+    }
 
     const status = await evaluation.readRunStatus(primaryRunName);
     expect(['COMPLETED', 'FAILED', 'PENDING', 'IN_PROGRESS']).toContain(status);

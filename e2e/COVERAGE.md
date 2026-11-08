@@ -914,10 +914,10 @@ Wraps the packaged `AgentEvaluationTab` from `@iblai/iblai-js/web-containers/nex
 - [x] EVAL-02: Benchmark combobox and both toolbar actions (New Evaluation, Manage benchmarks) render; New Evaluation's disabled/enabled state correctly reflects whether a benchmark is auto-selected
 - [x] EVAL-03: Admin creates a new benchmark via Manage benchmarks and selects it back on the Evals tab toolbar
 - [x] EVAL-04: Admin adds a Q&A pair to a benchmark via Manage benchmarks → View items → Add Q&A (Manual sub-tab)
-- [x] EVAL-05: With a fresh (zero-run) benchmark selected, the runs table renders all five canonical headers (Evaluation, Status, Initiated by, Created, Actions) and the benchmark-specific empty state
+- [x] EVAL-05: With a fresh (zero-run) benchmark selected, the tab shows only the benchmark-specific empty state, with no runs table or headers
 - [x] EVAL-06: New Evaluation dialog shows the benchmark readback and name input, and Cancel dismisses it without creating a run
 - [x] EVAL-07: New Evaluation dialog can be dismissed via Escape without creating a run
-- [x] EVAL-08: Admin starts a new evaluation and it appears in the runs table with a valid status badge
+- [x] EVAL-08: Admin starts a new evaluation and it appears in the runs table, under all five column headers (Evaluation, Status, Initiated by, Created, Actions), with a valid status
 - [x] EVAL-09: A run's actions menu reflects its live status — Check status/Delete always enabled; View results/New review/Export CSV enabled once completed, otherwise disabled with the `notReadyHint` tooltip
 - [x] EVAL-10: Check status triggers a fresh fetch and surfaces an outcome toast (pending, completed, or failed)
 - [x] EVAL-11: Once a run has completed, admin can open View results and Export CSV _(opportunistic — skips gracefully while the run has not completed yet)_
