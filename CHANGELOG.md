@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.191.2](https://github.com/iblai/os/compare/v0.191.1...v0.191.2) (2026-11-09)
+
+### Refactors
+
+* **settings:** answer "may I copy here" from storage, not the edX LMS ([b10edbd](https://github.com/iblai/os/commit/b10edbd98ab56417982c49913c1ad226f0fa995b))
+
 ## [0.191.1](https://github.com/iblai/os/compare/v0.191.0...v0.191.1) (2026-11-09)
 
 ### Bug Fixes
