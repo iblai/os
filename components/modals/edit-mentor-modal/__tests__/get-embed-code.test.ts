@@ -49,8 +49,16 @@ const settings: EmbedFormValues & { allow_anonymous: boolean } = {
   strip_page_content_html: false,
 };
 
+// `allow_mentor_selection` / `allow_fullscreen` are not form fields — the hook
+// passes them in alongside the form values, exactly as `getEmbedCode` types
+// them — so they belong here rather than being cast away at each call site.
 const build = (
-  overrides: Partial<typeof settings> = {},
+  overrides: Partial<
+    typeof settings & {
+      allow_mentor_selection: boolean;
+      allow_fullscreen: boolean;
+    }
+  > = {},
   redirectToken = 'redirect-token',
   useCustomBubble?: boolean,
   bubbleConfig?: CustomFloatingBubbleConfig,
@@ -351,5 +359,22 @@ describe('getEmbedCode keeps the markers the e2e helpers match', () => {
     const code = await build();
 
     expect(code).toContain('DOMContentLoaded');
+  });
+
+  /**
+   * Journey 13's emb-19 reads the snippet as text to check the Allow Full
+   * Screen switch reached it. The component owns the behaviour now — it adds
+   * `allow-fullscreen=true` to the iframe URL it builds and resizes itself on
+   * `embedFullscreen` — so this attribute is the whole of the snippet's part
+   * in it, and its absence is how "off" is asserted.
+   */
+  it('turns Allow Full Screen into the attribute the component reads, and nothing when off', async () => {
+    expect(await build({ allow_fullscreen: true })).toContain(
+      'agent.setAttribute("allowfullscreen", "")',
+    );
+
+    const off = await build();
+    expect(off).not.toContain('allowfullscreen');
+    expect(off).not.toContain('allow-fullscreen');
   });
 });

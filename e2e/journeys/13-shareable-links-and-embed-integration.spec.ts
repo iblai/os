@@ -1111,11 +1111,15 @@ test.describe('Journey 13: Shareable Links & Embed Integration', () => {
   });
 
   // emb-19..emb-22: Allow Full Screen (issue #2665). The switch is URL-only
-  // (never saved); it adds `allow-fullscreen=true` to the generated iframe URL
-  // and, when on, a host-side `embedFullscreen` handler that the embed nav
-  // bar's maximize button drives via postMessage. The host is built from the
-  // REAL generated snippet, served from a fake origin so the chat really loads
-  // cross-origin inside an iframe (the only place the button renders).
+  // (never saved); it puts the `allowfullscreen` attribute on the snippet's
+  // `<agent-ai>` element, and the component does the rest — it adds
+  // `allow-fullscreen=true` to the iframe URL it builds (which is what makes
+  // the embed nav bar's maximize button render) and resizes itself when that
+  // button posts `embedFullscreen` up. The snippet used to carry both halves
+  // itself, as an `iframe.src` param and a `setWidgetFullscreen` handler;
+  // neither is in it any more. The host is built from the REAL generated
+  // snippet, served from a fake origin so the chat really loads cross-origin
+  // inside an iframe (the only place the button renders).
   test.describe('Embed Allow Full Screen (issue #2665)', () => {
     const fullscreenTracker = new MentorTracker();
     test.afterAll(async ({ browser }, testInfo) => {
@@ -1220,18 +1224,15 @@ test.describe('Journey 13: Shareable Links & Embed Integration', () => {
       ).toHaveAccessibleName(/full screen disabled/i);
 
       const offCode = await editMentorPage.embed.createEmbedAndReadCode();
+      expect(offCode).not.toContain('allowfullscreen');
       expect(offCode).not.toContain('allow-fullscreen');
-      expect(offCode).not.toContain('setWidgetFullscreen');
-      expect(offCode).not.toContain('embedFullscreen');
 
       await editMentorPage.embed.setAllowFullscreen(true);
       await expect(
         editMentorPage.embed.allowFullscreenToggle,
       ).toHaveAccessibleName(/full screen enabled/i);
       const onCode = await editMentorPage.embed.createEmbedAndReadCode();
-      expect(onCode).toMatch(/iframe\.src = '[^']*&allow-fullscreen=true'/);
-      expect(onCode).toContain('setWidgetFullscreen');
-      expect(onCode).toContain('embedFullscreen');
+      expect(onCode).toContain('agent.setAttribute("allowfullscreen", "")');
       await editMentorPage.close();
     });
 

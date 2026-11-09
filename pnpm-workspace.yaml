@@ -7,6 +7,8 @@ onlyBuiltDependencies:
   - sharp
   - unrs-resolver
 overrides:
+  tinypool: '>=2.1.2'
+  zip: '9.0.5'
   # Floor raised to 8.1.6 for GHSA-587h-7wmj-h5pm (launch-editor existence
   # check bypass on Windows, >=8.0.0 <=8.1.5). Dev server only.
   vite: '>=8.1.6 <8.2'
