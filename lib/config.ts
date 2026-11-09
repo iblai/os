@@ -91,7 +91,7 @@ const domain = () => getEnv('NEXT_PUBLIC_PLATFORM_BASE_DOMAIN', 'iblai.app');
 const agentAiSdkVersion = () =>
   getEnv(
     'NEXT_PUBLIC_AGENT_AI_SDK_VERSION',
-    'BtoRkc6JUEax7cDpVCks5W27yVhSJ6zO',
+    'CJhD8dFLf8mzV7uPkPMBM.miYdYRS1qx',
   );
 
 export const config = {
