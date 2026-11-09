@@ -1,3 +1,4 @@
+import type { BrowserContext, Page } from '@playwright/test';
 import { test, expect } from '../fixtures/mentor-test';
 import {
   navigateToMentorApp,
@@ -6,6 +7,9 @@ import {
 } from '../utils/auth';
 import { waitForPageReady } from '../utils/resilient';
 import { MentorTracker } from '../utils/mentor-cleanup';
+import { EditMentorPage } from '../page-objects/edit-mentor/edit-mentor.page';
+import { HumanSupportTab } from '../page-objects/edit-mentor/human-support.tab';
+import { PHONE_CONTEXT } from '../page-objects/edit-mentor/activity-phone';
 import {
   sendAgentChatMessage,
   waitForAgentChatResponse,
@@ -58,6 +62,41 @@ import {
  */
 
 test.describe.configure({ mode: 'serial' });
+
+/**
+ * A phone-sized (touch, 375x812) context signed in like `page`. The agent is
+ * created on the desktop page first because the sidebar that agent creation
+ * needs does not exist on a phone.
+ */
+async function newPhoneContext(page: Page): Promise<BrowserContext> {
+  return page
+    .context()
+    .browser()!
+    .newContext({
+      ...PHONE_CONTEXT,
+      storageState: await page.context().storageState(),
+    });
+}
+
+async function openSupportOnPhone(
+  phoneContext: BrowserContext,
+  page: Page,
+): Promise<EditMentorPage> {
+  const phonePage = await phoneContext.newPage();
+  const agentUrl = new URL(page.url());
+  await navigateToMentorApp(phonePage, agentUrl.origin + agentUrl.pathname);
+  const phoneEdit = new EditMentorPage(phonePage);
+  await phoneEdit.open('Support');
+  await waitForPageReady(phonePage);
+  return phoneEdit;
+}
+
+const SUPPORT_STATUS_LABEL = {
+  all: 'All Statuses',
+  open: 'Open',
+  inProgress: 'In Progress',
+  closed: 'Closed',
+} as const;
 
 test.describe('Journey 65: Mentor Human Support Tab', () => {
   const tracker = new MentorTracker();
@@ -261,6 +300,38 @@ test.describe('Journey 65: Mentor Human Support Tab', () => {
     await editMentorPage.humanSupport.reply(replyMessage);
     await editMentorPage.humanSupport.expectMessageInConversation(replyMessage);
 
+    // support-09: the same ticket on a phone. A second, phone-sized context
+    // (touch, 375x812) reuses this context's sign-in and opens the same
+    // agent: the ticket is a card, tapping it opens the ticket screen with
+    // the reply composer, Back returns, and the status sheet filters it out.
+    const phoneContext = await newPhoneContext(page);
+    try {
+      const phoneEdit = await openSupportOnPhone(phoneContext, page);
+      const phonePage = phoneEdit.page;
+      const { humanSupport: support } = phoneEdit;
+
+      await expect(support.ticketRow(subject)).toBeVisible({
+        timeout: 30_000,
+      });
+      await support.phone.expectNoHorizontalScroll();
+
+      await support.openPhoneTicket(subject);
+      await expect(support.replyComposer()).toBeVisible({ timeout: 10_000 });
+      await support.phone.expectNoHorizontalScroll();
+      await support.phone.goBack();
+      await expect(support.ticketRow(subject)).toBeVisible({ timeout: 5_000 });
+
+      // Filtering by Closed hides the open ticket; All Statuses brings it back.
+      await support.pickPhoneStatusFilter(SUPPORT_STATUS_LABEL.closed);
+      await expect(support.ticketRow(subject)).toBeHidden({ timeout: 15_000 });
+      await support.pickPhoneStatusFilter(SUPPORT_STATUS_LABEL.all);
+      await expect(support.ticketRow(subject)).toBeVisible({
+        timeout: 15_000,
+      });
+    } finally {
+      await phoneContext.close();
+    }
+
     // support-07: move the ticket to "In Progress"; the list badge updates.
     await editMentorPage.humanSupport.setStatus('inProgress');
     await editMentorPage.humanSupport.expectTicketStatusInList(
@@ -279,4 +350,62 @@ test.describe('Journey 65: Mentor Human Support Tab', () => {
 
     await editMentorPage.close();
   });
+
+  // support-10: phone view (< 768px) of a ticket-less agent — full-screen
+  // dialog, info sheet, Available to Users row, status filter sheet.
+  test.describe('phone view', () => {
+    test('on a phone the Support tab shows the info sheet, the availability row and the status filter sheet', async ({
+      page,
+    }) => {
+      const phoneContext = await newPhoneContext(page);
+      try {
+        await runNoTicketPhoneChecks(
+          await openSupportOnPhone(phoneContext, page),
+        );
+      } finally {
+        await phoneContext.close();
+      }
+    });
+  });
 });
+
+async function runNoTicketPhoneChecks(
+  phoneEdit: EditMentorPage,
+): Promise<void> {
+  const { humanSupport: support } = phoneEdit;
+  await support.phone.expectDialogFillsViewport();
+  await support.phone.openAndCloseInfoSheet(
+    HumanSupportTab.LABELS.header.title,
+  );
+  await expect(support.noTicketsMessage()).toBeVisible({
+    timeout: 15_000,
+  });
+  await support.phone.expectNoHorizontalScroll();
+
+  if (await support.hasToggle()) {
+    await expect(support.phoneAvailableToUsersRow()).toBeVisible();
+  }
+
+  // Opening the status sheet and tapping outside it closes it unchanged.
+  await support.phoneStatusFilterTrigger().click();
+  const sheet = support.phoneStatusFilterSheet();
+  await expect(sheet).toBeVisible({ timeout: 5_000 });
+  for (const label of [
+    SUPPORT_STATUS_LABEL.all,
+    SUPPORT_STATUS_LABEL.open,
+    SUPPORT_STATUS_LABEL.inProgress,
+    SUPPORT_STATUS_LABEL.closed,
+  ]) {
+    await expect(sheet.getByRole('button', { name: label })).toBeVisible();
+  }
+  await support.phone.closeSheetByBackdrop(sheet);
+
+  // Picking an option applies it, shows it on the trigger and closes the sheet.
+  await support.pickPhoneStatusFilter(SUPPORT_STATUS_LABEL.closed);
+  await expect(support.phoneStatusFilterTrigger()).toContainText(
+    SUPPORT_STATUS_LABEL.closed,
+  );
+  await expect(support.noTicketsMessage()).toBeVisible({
+    timeout: 15_000,
+  });
+}

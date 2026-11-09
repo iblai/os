@@ -1,6 +1,7 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-11-07 | 1075 checkpoints (1025 covered, 16 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 108 journeys (107 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-11-08 | 1080 checkpoints (1030 covered, 16 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 108 journeys (107 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-11-09 | 1087 checkpoints (1037 covered, 16 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 109 journeys (108 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -885,7 +886,7 @@ The Privacy tab is a thin wrapper around the SDK's `AgentPrivacyTab` (`@iblai/ib
 
 ---
 
-## Journey 49: Mentor Tasks Tab (8 checkpoints) — `journeys/49-mentor-tasks-tab.spec.ts`
+## Journey 49: Mentor Tasks Tab (9 checkpoints) — `journeys/49-mentor-tasks-tab.spec.ts`
 
 **Source files:** `components/modals/edit-mentor-modal/tabs/tasks-tab.tsx`, `components/modals/edit-mentor-modal/tabs/index.ts`, `components/modals/edit-mentor-modal/index.tsx`, `hooks/use-mentor-segments.ts`, `lib/constants.ts`
 
@@ -901,10 +902,11 @@ The spec drives the tab through the semantic Tasks helpers from `@iblai/iblai-js
 - [x] TA-06: Admin schedules a new daily periodic task and it appears in the task list
 - [x] TA-07: Searching the task list — a matching query keeps the task visible, and clearing the search leaves it visible
 - [x] TA-08: Admin deletes a task and its row is removed from the list
+- [x] TA-09: Phone view (375x812, touch): the Edit Agent dialog fills the viewport, the header info button opens and closes the About This Tab sheet, a task shows as a card, tapping it opens the full-screen Task Logs screen and Back returns, the Select Date icon opens the calendar sheet and the backdrop closes it, delete works from the Task Logs screen, and the page never scrolls sideways
 
 ---
 
-## Journey 63: Mentor Evaluation Tab (17 checkpoints) — `journeys/63-mentor-evaluation-tab.spec.ts`
+## Journey 63: Mentor Evaluation Tab (18 checkpoints) — `journeys/63-mentor-evaluation-tab.spec.ts`
 
 **Source files:** `components/modals/edit-mentor-modal/tabs/evaluation-tab/index.tsx`, `hooks/use-mentor-segments.ts`
 
@@ -914,10 +916,10 @@ Wraps the packaged `AgentEvaluationTab` from `@iblai/iblai-js/web-containers/nex
 - [x] EVAL-02: Benchmark combobox and both toolbar actions (New Evaluation, Manage benchmarks) render; New Evaluation's disabled/enabled state correctly reflects whether a benchmark is auto-selected
 - [x] EVAL-03: Admin creates a new benchmark via Manage benchmarks and selects it back on the Evals tab toolbar
 - [x] EVAL-04: Admin adds a Q&A pair to a benchmark via Manage benchmarks → View items → Add Q&A (Manual sub-tab)
-- [x] EVAL-05: With a fresh (zero-run) benchmark selected, the runs table renders all five canonical headers (Evaluation, Status, Initiated by, Created, Actions) and the benchmark-specific empty state
+- [x] EVAL-05: With a fresh (zero-run) benchmark selected, the tab shows only the benchmark-specific empty state, with no runs table or headers
 - [x] EVAL-06: New Evaluation dialog shows the benchmark readback and name input, and Cancel dismisses it without creating a run
 - [x] EVAL-07: New Evaluation dialog can be dismissed via Escape without creating a run
-- [x] EVAL-08: Admin starts a new evaluation and it appears in the runs table with a valid status badge
+- [x] EVAL-08: Admin starts a new evaluation and it appears in the runs table, under all five column headers (Evaluation, Status, Initiated by, Created, Actions), with a valid status
 - [x] EVAL-09: A run's actions menu reflects its live status — Check status/Delete always enabled; View results/New review/Export CSV enabled once completed, otherwise disabled with the `notReadyHint` tooltip
 - [x] EVAL-10: Check status triggers a fresh fetch and surfaces an outcome toast (pending, completed, or failed)
 - [x] EVAL-11: Once a run has completed, admin can open View results and Export CSV _(opportunistic — skips gracefully while the run has not completed yet)_
@@ -927,6 +929,26 @@ Wraps the packaged `AgentEvaluationTab` from `@iblai/iblai-js/web-containers/nex
 - [x] EVAL-15: Evals tab has no axe-core accessibility violations on visible dialogs
 - [x] EVAL-16: Admin can leave the Evals tab and return without errors (wrapper re-mounts cleanly)
 - [x] EVAL-17: Non-admin does not see the Evals tab in the Edit Mentor modal (ADMIN-only segment in `use-mentor-segments.ts`)
+- [x] EVAL-18: Phone view (375x812, touch): the Edit Agent dialog fills the viewport, the info sheet opens and closes, a run shows as a card, tapping it opens the action sheet (Status plus View results, New review, Check status, Export CSV, Delete) that the backdrop closes, the benchmark picker opens as a sheet listing the benchmark and closes, and the page never scrolls sideways
+
+---
+
+## Journey 65: Mentor Human Support Tab (10 checkpoints) — `journeys/65-mentor-human-support-tab.spec.ts`
+
+**Source files:** `components/modals/edit-mentor-modal/tabs/human-support-tab.tsx`, `components/modals/edit-mentor-modal/tabs/index.ts`, `components/modals/edit-mentor-modal/index.tsx`, `hooks/use-mentor-segments.ts`
+
+The Support tab (Activity category) wraps the SDK's `AgentHumanSupportTab`: an admin-only support-ticket inbox with a user and status filter, a ticket list, and a ticket detail with a status select and reply composer. Tickets are filed by the agent during chat through its support tool, so the lifecycle checkpoints chat with a dedicated agent per test (created fresh, deleted by the residue teardown). This file shares the number 65 with Journey 65: Analytics Navbar Parity above. Checkpoints support-03..support-09 sit in one chat-driven lifecycle test and skip when the tenant has no human-support tool.
+
+- [x] support-01: Admin opens the Support tab and the ticket surface renders (heading, description, and either the ticket list or the empty state)
+- [x] support-02: Admin round-trips the status filter (Open, In Progress, Closed, All) and the surface keeps rendering a valid state after every change
+- [x] support-03: The Support availability toggle is turned on and the setting persists across a reload (skips when the tenant tool catalog has no human-support tool)
+- [x] support-04: Admin asks the agent in chat to open a ticket and it appears in the Support list as Open
+- [x] support-05: Admin opens the ticket and its agent-authored description renders
+- [x] support-06: Admin replies from the ticket detail and the reply appears in the conversation
+- [x] support-07: Admin moves the ticket to In Progress and the list status updates
+- [x] support-08: Admin closes the ticket, the closed notice replaces the composer and the list status reflects Closed
+- [x] support-09: Phone view (375x812, touch) of a ticket: it shows as a card, tapping it opens the full-screen Support Ticket screen with the reply composer, Back returns to the list, the status filter sheet hides it under Closed and brings it back under All Statuses, and the page never scrolls sideways
+- [x] support-10: Phone view (375x812, touch) of an agent with no tickets: the Edit Agent dialog fills the viewport, the info sheet opens and closes, the Available to Users row shows, the status filter sheet lists its options, closes on the backdrop and applies a picked option, and the page never scrolls sideways
 
 ---
 
