@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.192.0](https://github.com/iblai/os/compare/v0.191.3...v0.192.0) (2026-11-09)
+
+### Features
+
+* **embed:** let a host open a specific chat session ([62f4b25](https://github.com/iblai/os/commit/62f4b25fc36e6347ef25a97d5cb0aafaa0c099b1))
+
 ## [0.191.3](https://github.com/iblai/os/compare/v0.191.2...v0.191.3) (2026-11-09)
 
 ### Bug Fixes
