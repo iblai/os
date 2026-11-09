@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.191.3](https://github.com/iblai/os/compare/v0.191.2...v0.191.3) (2026-11-09)
+
+### Bug Fixes
+
+* **edit-agent:** open Edit Agent full screen on phones with underlined sub-tabs ([46f9d53](https://github.com/iblai/os/commit/46f9d53e28eb36f39a5d0c418a1b52bc15429890))
+
+### Chores
+
+* **deps:** bump @iblai/iblai-js to 2.67.0 and expect the evals empty state without table headers ([c646b48](https://github.com/iblai/os/commit/c646b48dbb3a2a31bdc6297a669119e592e7d4e0))
+
+### Tests
+
+* **e2e:** cover the Activity tabs on phones ([1a9df18](https://github.com/iblai/os/commit/1a9df187ebf4b99b70d76e7d81e2de35c884d96d))
+* **e2e:** retry the sidebar expand as one step in the projects helper ([1e3e504](https://github.com/iblai/os/commit/1e3e50402a3dbe1b9d5d951e5806d9b68331218b))
+
 ## [0.191.2](https://github.com/iblai/os/compare/v0.191.1...v0.191.2) (2026-11-09)
 
 ### Refactors
