@@ -2579,7 +2579,7 @@
         },
         {
           "id": "wf-34",
-          "description": "Adding a Note: the backend's validate response warns that the Note is not connected, but the validation banner shows only the other warnings (Workflow should have an 'end' node) and never the Note's",
+          "description": "Adding a Note: the backend's validate response warns that the Note is not connected, but the validation banner shows only the other messages (the missing 'end' node, read from the same response) and never the Note's",
           "status": "covered"
         }
       ]
