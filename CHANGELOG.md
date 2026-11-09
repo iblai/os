@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.192.1](https://github.com/iblai/os/compare/v0.192.0...v0.192.1) (2026-11-09)
+
+### Chores
+
+* **deps:** take @iblai/iblai-js 2.67.3, which fixes an embed resuming a chat ([74c4b53](https://github.com/iblai/os/commit/74c4b535b6911fa6553acb5ae93655c9a7eaa950))
+
 ## [0.192.0](https://github.com/iblai/os/compare/v0.191.3...v0.192.0) (2026-11-09)
 
 ### Features
