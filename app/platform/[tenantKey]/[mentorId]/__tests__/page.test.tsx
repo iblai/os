@@ -66,7 +66,8 @@ vi.mock('@/lib/utils', () => ({
   isLoggedIn: () => true,
 }));
 
-vi.mock('@/lib/constants', () => ({
+vi.mock('@/lib/constants', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/constants')>()),
   ANONYMOUS_USERNAME: 'anonymous',
 }));
 
