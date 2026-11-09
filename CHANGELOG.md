@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.191.1](https://github.com/iblai/os/compare/v0.191.0...v0.191.1) (2026-11-09)
+
+### Bug Fixes
+
+* **auth:** stop sending credentials on the SSO providers lookup ([0527340](https://github.com/iblai/os/commit/05273404ceb2e246bea5e36d0488d3c19298bb27))
+
 ## [0.191.0](https://github.com/iblai/os/compare/v0.190.3...v0.191.0) (2026-11-08)
 
 ### Features
