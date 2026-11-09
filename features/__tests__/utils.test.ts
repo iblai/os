@@ -49,7 +49,13 @@ const localStorageMock = (() => {
 })();
 vi.stubGlobal('localStorage', localStorageMock);
 
-import { getServiceUrl, getUserName, getUserId, getUserEmail } from '../utils';
+import {
+  getServiceUrl,
+  getUserName,
+  getUserId,
+  getUserEmail,
+  getAuthHeaders,
+} from '../utils';
 import { SERVICES } from '../constants';
 
 describe('features/utils', () => {
@@ -138,6 +144,67 @@ describe('features/utils', () => {
     it('should return undefined when no user data', () => {
       const email = getUserEmail();
       expect(email).toBeUndefined();
+    });
+  });
+
+  /**
+   * What an endpoint is allowed to send. `prepareHeaders` spreads exactly
+   * this onto the outgoing request, so an empty object means no credentials
+   * leave the browser.
+   */
+  describe('getAuthHeaders', () => {
+    beforeEach(() => {
+      localStorageMock._setStore({
+        edx_token: 'edx-jwt-value',
+        dm_token: 'dm-token-value',
+        axd_token: 'axd-token-value',
+      });
+    });
+
+    // The LMS answers a stale or absent JWT with a 401 rather than ignoring
+    // it, and this endpoint is read to build a sign-in screen — so the caller
+    // may legitimately have no session at all.
+    it('sends nothing for getIntegratedSsoProviders', () => {
+      expect(getAuthHeaders(SERVICES.LMS, 'getIntegratedSsoProviders')).toEqual(
+        {},
+      );
+    });
+
+    it('still sends the edX JWT for other LMS endpoints', () => {
+      expect(getAuthHeaders(SERVICES.LMS, 'getUserTenants')).toEqual({
+        Authorization: 'JWT edx-jwt-value',
+      });
+    });
+
+    it('still sends the DM token for DM endpoints', () => {
+      expect(getAuthHeaders(SERVICES.DM, 'getSomething')).toEqual({
+        Authorization: 'Token dm-token-value',
+      });
+    });
+
+    it('still sends the AXD token for AXD endpoints', () => {
+      expect(getAuthHeaders(SERVICES.AXD, 'getTenantMetadata')).toEqual({
+        Authorization: 'Token axd-token-value',
+      });
+    });
+
+    // The exemption is by endpoint, not by service: another service must not
+    // inherit it just because the names happen to collide.
+    it('exempts only the named endpoint, whatever the service', () => {
+      expect(getAuthHeaders(SERVICES.DM, 'getIntegratedSsoProviders')).toEqual(
+        {},
+      );
+      expect(
+        getAuthHeaders(SERVICES.LMS, 'getIntegratedSsoProvidersExtra'),
+      ).toEqual({
+        Authorization: 'JWT edx-jwt-value',
+      });
+    });
+
+    it('authenticates when the endpoint name is unknown', () => {
+      expect(getAuthHeaders(SERVICES.LMS)).toEqual({
+        Authorization: 'JWT edx-jwt-value',
+      });
     });
   });
 });
