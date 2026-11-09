@@ -30,6 +30,7 @@ export class McpTab {
     connectors: 'Connectors',
     featured: 'Featured',
     directory: 'Directory',
+    loadingFeatured: 'Loading featured connectors...',
     search: 'Search by name...',
     noConnectors: 'No connectors configured',
     configure: 'Configure',
@@ -74,6 +75,7 @@ export class McpTab {
   readonly subTabs: Locator;
   readonly featuredTab: Locator;
   readonly directoryTab: Locator;
+  readonly loadingFeatured: Locator;
   /** The single list's heading, shown instead of the sub-tabs. */
   readonly connectorsHeading: Locator;
   readonly emptyState: Locator;
@@ -102,6 +104,9 @@ export class McpTab {
     });
     this.featuredTab = this.subTabs.getByTestId('mcp-tab-featured');
     this.directoryTab = this.subTabs.getByTestId('mcp-tab-custom');
+    this.loadingFeatured = dialog.getByText(LABELS.loadingFeatured, {
+      exact: true,
+    });
     this.connectorsHeading = dialog.getByRole('heading', {
       name: LABELS.connectors,
       exact: true,
@@ -159,12 +164,14 @@ export class McpTab {
   /**
    * Reaches the list that holds the organization's own connectors: through
    * the Directory sub-tab when something is featured, otherwise the single
-   * Connectors list. Which one shows is settled at the tab's first render
-   * and never swaps, so it is safe to read once the tab has painted.
+   * Connectors list. The sub-tabs also show while the featured list loads
+   * and go away when it comes back empty (stg2 features nothing), so the
+   * layout is read only once that list has answered.
    */
   async showDirectory(): Promise<void> {
     const { LABELS } = McpTab;
     await expect(this.addConnectorButton).toBeVisible({ timeout: 30_000 });
+    await expect(this.loadingFeatured).toBeHidden({ timeout: 30_000 });
     await expect(this.subTabs.or(this.connectorsHeading).first()).toBeVisible({
       timeout: 30_000,
     });
