@@ -12,6 +12,7 @@ import { EditMentorPage } from '../page-objects/edit-mentor/edit-mentor.page';
 import { ChatPage } from '../page-objects/chat.page';
 import { parsePlatformUrl } from '../utils/navigation';
 import {
+  HOST_WIDGET_SELECTOR,
   postRealSnippetUrl,
   rewriteSnippetOrigin,
 } from '../utils/embed-harness-client';
@@ -188,7 +189,7 @@ test.describe('Journey 82: Embed Mode Redesign — Conversation & Controls', () 
 
     // Open: the widget container + its iframe (the chat) become visible.
     await bubble.click();
-    const widget = page.locator('#ibl-chat-widget-container');
+    const widget = page.locator(HOST_WIDGET_SELECTOR);
     await expect(widget).toBeVisible({ timeout: 15_000 });
     await expect(bubble).toHaveAttribute('aria-expanded', 'true');
 
@@ -196,13 +197,11 @@ test.describe('Journey 82: Embed Mode Redesign — Conversation & Controls', () 
     // build-time origin baked into the snippet (see `rewriteSnippetOrigin`'s
     // doc comment — confirmed via a debug run to be `http://localhost:3000`,
     // an unrelated app, which `net::ERR_CONNECTION_REFUSED`s).
-    const iframeSrc = await page
-      .locator('#ibl-chat-widget-container iframe')
-      .getAttribute('src');
+    const iframeSrc = await widget.locator('iframe').getAttribute('src');
     expect(iframeSrc).not.toBeNull();
     expect(iframeSrc!.startsWith(MENTOR_NEXTJS_HOST)).toBe(true);
 
-    const panelFrame = page.frameLocator('#ibl-chat-widget-container iframe');
+    const panelFrame = widget.frameLocator('iframe');
     await expect(panelFrame.locator('#chat-input-textarea')).toBeVisible({
       timeout: 30_000,
     });

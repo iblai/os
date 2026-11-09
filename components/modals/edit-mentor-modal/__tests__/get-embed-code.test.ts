@@ -315,3 +315,41 @@ describe('getEmbedCode launcher', () => {
     expect(code).toContain('toggle();');
   });
 });
+
+/**
+ * The e2e suite reads the generated snippet as text, so two details of its
+ * SHAPE — not just its meaning — are load-bearing:
+ *
+ * - `e2e/utils/embed-harness-client.ts`'s `rewriteSnippetOrigin` finds the
+ *   baked app origin by matching the `mentorurl` setAttribute call, and
+ *   repoints it at the app under test. When the snippet moved from building
+ *   its own iframe to mounting `<agent-ai>`, the `iframe.src` line it used to
+ *   match disappeared and the rewrite silently became a no-op — every
+ *   real-snippet test then framed an unrelated app and showed an empty panel.
+ * - `e2e/page-objects/edit-mentor/embed.tab.ts` waits for `DOMContentLoaded`
+ *   to know the whole snippet has rendered into the dialog.
+ *
+ * Both are matched by regex against this text, so a reshape here must be made
+ * there in the same change. These pin the markers so that break is a failing
+ * unit test rather than a puzzling e2e trace.
+ */
+describe('getEmbedCode keeps the markers the e2e helpers match', () => {
+  it('carries the app origin as a `mentorurl` attribute the origin rewrite can find', async () => {
+    const code = await build();
+
+    expect(code).toContain(
+      'agent.setAttribute("mentorurl", "https://mentor.example.com")',
+    );
+    expect(
+      code.match(
+        /setAttribute\(\s*"mentorurl"\s*,\s*"(https?:\/\/[^/"]+)/,
+      )?.[1],
+    ).toBe('https://mentor.example.com');
+  });
+
+  it('ends with the DOMContentLoaded hand-off the readiness gate waits for', async () => {
+    const code = await build();
+
+    expect(code).toContain('DOMContentLoaded');
+  });
+});

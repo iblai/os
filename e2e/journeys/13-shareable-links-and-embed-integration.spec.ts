@@ -15,6 +15,7 @@ import {
 } from '../fixtures/test-data';
 import { waitForPageReady } from '../utils/resilient';
 import {
+  HOST_WIDGET_SELECTOR,
   postRealSnippetUrl,
   rewriteSnippetOrigin,
 } from '../utils/embed-harness-client';
@@ -642,7 +643,7 @@ test.describe('Journey 13: Shareable Links & Embed Integration', () => {
     }
 
     // Open the widget if it is not already visible (click the chat bubble)
-    const widgetContainer = page.locator('#ibl-chat-widget-container');
+    const widgetContainer = page.locator(HOST_WIDGET_SELECTOR);
     let widgetVisible = false;
     try {
       await widgetContainer.waitFor({ state: 'visible', timeout: 5_000 });
@@ -665,9 +666,7 @@ test.describe('Journey 13: Shareable Links & Embed Integration', () => {
     }
 
     // Locate the iframe inside the widget
-    const iframe = page
-      .frameLocator('#ibl-chat-widget-container iframe')
-      .first();
+    const iframe = widgetContainer.frameLocator('iframe').first();
 
     // Find a focusable element inside the iframe — the chat textarea or any input
     const escTarget = iframe.locator('textarea').first();
@@ -1178,12 +1177,15 @@ test.describe('Journey 13: Shareable Links & Embed Integration', () => {
      * check when framing the local app), iframe pointed at the local app.
      */
     async function openHost(page: Page, code: string): Promise<void> {
-      const localCode = code.replace(
-        /iframe\.src = '[^']*?(\/platform\/[^']*)'/,
-        `iframe.src = '${MENTOR_NEXTJS_HOST}$1'`,
+      // The shared helper, not a second copy of the rewrite: the snippet
+      // carries its origin as the agent-ai component's `mentorurl`
+      // attribute now, and one place to change beats two.
+      const { rewritten: localCode } = rewriteSnippetOrigin(
+        code,
+        MENTOR_NEXTJS_HOST,
       );
       expect(localCode).toContain(
-        `iframe.src = '${MENTOR_NEXTJS_HOST}/platform/`,
+        `setAttribute("mentorurl", "${MENTOR_NEXTJS_HOST}")`,
       );
       const html = `<!doctype html><html><head><title>Host</title></head><body><h1>Host page</h1>${localCode}</body></html>`;
       hostServer = http.createServer((_req, res) => {
@@ -1198,7 +1200,7 @@ test.describe('Journey 13: Shareable Links & Embed Integration', () => {
       await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: 'load' });
     }
 
-    const widgetOf = (page: Page) => page.locator('#ibl-chat-widget-container');
+    const widgetOf = (page: Page) => page.locator(HOST_WIDGET_SELECTOR);
     const bubbleOf = (page: Page) => page.locator('.ibl-chat-bubble');
 
     // emb-19: the toggle is present, off by default, and drives the URL param.
@@ -1249,7 +1251,7 @@ test.describe('Journey 13: Shareable Links & Embed Integration', () => {
       expect(normalBox).not.toBeNull();
       expect(normalBox!.width).toBeLessThan(1440);
 
-      const chat = page.frameLocator('#ibl-chat-widget-container iframe');
+      const chat = widgetOf(page).frameLocator('iframe');
       const toggle = chat.getByTestId('embed-fullscreen-toggle');
       await expect(toggle).toBeVisible({ timeout: 60_000 });
       await expect(toggle).toHaveAccessibleName('Full screen');
@@ -1304,7 +1306,7 @@ test.describe('Journey 13: Shareable Links & Embed Integration', () => {
 
       await bubbleOf(page).click();
       await expect(widgetOf(page)).toBeVisible({ timeout: 15_000 });
-      const chat = page.frameLocator('#ibl-chat-widget-container iframe');
+      const chat = widgetOf(page).frameLocator('iframe');
       await expect(
         chat.getByRole('button', { name: /close chat/i }),
       ).toBeVisible({ timeout: 60_000 });

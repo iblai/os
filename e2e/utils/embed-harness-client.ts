@@ -32,13 +32,12 @@ export async function postRealSnippetUrl(
 
 /**
  * Rewrites the app origin baked into a generated embed snippet
- * (`getEmbedCode()`'s `iframe.src = '<origin>/platform/...'` line) to
+ * (`getEmbedCode()`'s `agent.setAttribute("mentorurl", "<origin>")` line) to
  * `targetOrigin`.
  *
- * `getEmbedCode()` builds that URL from `config.mentorIframeUrl()`
- * (`components/modals/edit-mentor-modal/utils.ts`'s `getUrl`), a value
- * resolved at BUILD time, not from the request the Edit Agent dialog is
- * currently served from. In this environment that bakes in
+ * `getEmbedCode()` takes that origin from `config.mentorUrl()`
+ * (`components/modals/edit-mentor-modal/utils.ts`), a value resolved at BUILD
+ * time, not from the request the Edit Agent dialog is currently served from. In this environment that bakes in
  * `http://localhost:3000` — an unrelated app on this machine — while the
  * build actually under test is served at `MENTOR_NEXTJS_HOST`
  * (`http://localhost:3005`). A real customer deploy doesn't hit this
@@ -50,13 +49,16 @@ export async function postRealSnippetUrl(
  *
  * Only the snippet's own baked origin is replaced — not a blind
  * `localhost:3000` string replace — so this keeps working if the baked
- * port/host ever changes.
+ * port/host ever changes. `mentorurl` is the only attribute read: `authurl`
+ * and `lmsurl` name different services, which stay where they are.
  */
 export function rewriteSnippetOrigin(
   snippet: string,
   targetOrigin: string,
 ): { rewritten: string; originalOrigin: string | null } {
-  const match = snippet.match(/iframe\.src\s*=\s*'(https?:\/\/[^/']+)/);
+  const match = snippet.match(
+    /setAttribute\(\s*"mentorurl"\s*,\s*"(https?:\/\/[^/"]+)/,
+  );
   const originalOrigin = match?.[1] ?? null;
   if (!originalOrigin) {
     return { rewritten: snippet, originalOrigin: null };
@@ -68,6 +70,19 @@ export function rewriteSnippetOrigin(
 }
 
 /** The session keys the launcher page copies from the app origin into its own localStorage. */
+/**
+ * The launcher panel the generated snippet creates on the HOST page.
+ *
+ * Scoped to a direct child of `body` on purpose. The `agent-ai` component
+ * renders a div with this same id inside its own OPEN shadow root, and
+ * Playwright's CSS engine pierces open shadow roots, so the bare
+ * `#ibl-chat-widget-container` matches two elements and every use of it is a
+ * strict-mode violation. Ids are scoped per shadow root, so there is no
+ * clash in the page itself — `document.getElementById` only ever sees this
+ * one, which is the panel the snippet appends to `document.body` and toggles.
+ */
+export const HOST_WIDGET_SELECTOR = 'body > #ibl-chat-widget-container';
+
 export const HOST_SESSION_KEYS = [
   'axd_token',
   'dm_token',

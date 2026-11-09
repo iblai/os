@@ -286,7 +286,13 @@ export class EmbedTab {
     await this.submitButton.click();
     const block = this.embedCodeDialog.locator('pre');
     await expect(block).toBeVisible({ timeout: 30_000 });
-    await expect(block).toContainText('iframe.src', { timeout: 10_000 });
+    // Readiness gate: the dialog's `<pre>` is visible before the generated
+    // code has finished rendering into it, so wait for something from the
+    // END of the snippet. `DOMContentLoaded` is in its closing lines and is
+    // always emitted. (It used to wait for `iframe.src`, which the snippet
+    // stopped containing when the embed moved to the agent-ai component —
+    // the component owns the iframe now.)
+    await expect(block).toContainText('DOMContentLoaded', { timeout: 10_000 });
     const code = (await block.textContent()) ?? '';
     await this.dismissEmbedCodeDialog();
     return code;
