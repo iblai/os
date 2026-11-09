@@ -11,7 +11,7 @@ import {
 import { chatPrivacyApiSlice } from '@iblai/iblai-js/data-layer';
 
 import { useNavigate } from '@/hooks/user-navigate';
-import { useUsername } from '@/hooks/use-user';
+import { useUsername, useUserTenants } from '@/hooks/use-user';
 import { useShowFreeTrialDialog } from '@/hooks/user-user-actions';
 import { config } from '@/lib/config';
 import {
@@ -21,7 +21,6 @@ import {
 } from '@/lib/constants';
 import { selectRbacPermissions } from '@/features/rbac/rbac-slice';
 import { useAppDispatch, useAppSelector } from '@/lib/hooks';
-import { useGetUserTenantsQuery } from '@/features/tenants/api-slice';
 import { TenantKeyMentorIdParams } from '@/lib/types';
 import { urlRoutes } from '@/url-routes';
 
@@ -57,8 +56,15 @@ export function SettingsTab() {
   const dispatch = useAppDispatch();
   const rbacPermissions = useAppSelector(selectRbacPermissions);
   const { executeWithTrialCheck } = useShowFreeTrialDialog();
-  const { data: tenants, isLoading: isLoadingTenants } =
-    useGetUserTenantsQuery();
+  // Read from the cached list rather than asking the LMS. The SDK uses this
+  // for exactly one thing — whether the user administers the organization
+  // they are already in — and the destination list it used to populate moved
+  // to the auth app. A full organization fetch from the edX LMS on every
+  // Settings-tab open, to answer one boolean, is not worth the round trip.
+  // The cache is written at login and tenant switch, and every other admin
+  // check in the app (useIsAdmin, the subscription hooks, the free-trial
+  // gate) already reads it.
+  const { userTenants: tenants } = useUserTenants();
 
   const activeMentorId = getMentorId() ?? mentorId;
 
@@ -372,7 +378,6 @@ export function SettingsTab() {
     >
       <AgentSettingsTab
         tenants={copyTenants}
-        isLoadingTenants={isLoadingTenants}
         // Copying into any other organization happens on the auth app, which
         // is the only place that can mint that organization's tokens.
         authUrl={config.authUrl()}

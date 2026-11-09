@@ -19,7 +19,7 @@ const mockEnableRBAC = vi.fn();
 const mockExecuteWithTrialCheck = vi.fn();
 const mockDispatch = vi.fn();
 const mockRbacPermissions = { mentors: { '/x/': { read: true } } };
-const mockUseGetUserTenantsQuery = vi.fn();
+const mockUseUserTenants = vi.fn();
 const mockHandleTenantSwitch = vi.fn();
 const mockInvalidateTags = vi.fn((tags: string[]) => ({
   type: 'invalidate',
@@ -51,6 +51,7 @@ vi.mock('@/hooks/user-navigate', () => ({
 
 vi.mock('@/hooks/use-user', () => ({
   useUsername: () => mockUseUsername(),
+  useUserTenants: () => mockUseUserTenants(),
 }));
 
 vi.mock('@/hooks/user-user-actions', () => ({
@@ -76,10 +77,6 @@ vi.mock('@/lib/hooks', () => ({
     void selector;
     return mockRbacPermissions;
   },
-}));
-
-vi.mock('@/features/tenants/api-slice', () => ({
-  useGetUserTenantsQuery: () => mockUseGetUserTenantsQuery(),
 }));
 
 vi.mock('@/lib/utils', async (importOriginal) => {
@@ -139,12 +136,11 @@ describe('SettingsTab', () => {
     mockGetMentorId.mockReturnValue(null);
     mockUseUsername.mockReturnValue('jane');
     mockEnableRBAC.mockReturnValue(false);
-    mockUseGetUserTenantsQuery.mockReturnValue({
-      data: [
+    mockUseUserTenants.mockReturnValue({
+      userTenants: [
         { key: 'acme', name: 'Acme', is_admin: true },
         { key: 'beta', name: null, is_admin: false },
       ],
-      isLoading: false,
     });
   });
 
@@ -247,17 +243,19 @@ describe('SettingsTab', () => {
         { key: 'acme', name: 'Acme', is_admin: true },
         { key: 'beta', name: null, is_admin: false },
       ]);
-      expect(tabProps().isLoadingTenants).toBe(false);
     });
 
-    it('defaults to an empty tenant list while the query is loading', () => {
-      mockUseGetUserTenantsQuery.mockReturnValue({
-        data: undefined,
-        isLoading: true,
-      });
+    // Read from storage, so there is no in-flight state to report — and no
+    // request to the edX LMS on every open of this tab.
+    it('defaults to an empty tenant list when nothing is cached', () => {
+      mockUseUserTenants.mockReturnValue({ userTenants: [] });
       render(<SettingsTab />);
       expect(tabProps().tenants).toEqual([]);
-      expect(tabProps().isLoadingTenants).toBe(true);
+    });
+
+    it('reports no loading state, since the list is already in hand', () => {
+      render(<SettingsTab />);
+      expect(tabProps().isLoadingTenants).toBeUndefined();
     });
   });
 
