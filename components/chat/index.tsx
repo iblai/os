@@ -3,6 +3,7 @@
 import { useTranslations } from 'next-intl';
 import React, { useLayoutEffect } from 'react';
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import { recoverFromChatAuthFailure } from '@/lib/chat-auth-recovery';
 import dynamic from 'next/dynamic';
 
 import {
@@ -49,7 +50,6 @@ import {
   useMentorTools,
   CHAT_AREA_SIZE,
   FileReference,
-  use401TokenRefresh,
 } from '@iblai/iblai-js/web-utils';
 import {
   cn,
@@ -332,7 +332,7 @@ export function Chat({
   );
 
   const { handle402Error } = use402ErrorCheck();
-  const { handle401Error } = use401TokenRefresh({ tenantKey });
+  const handle401Error = useCallback(() => recoverFromChatAuthFailure(), []);
   const tokenEnabled = useAppSelector(selectTokenEnabled);
   const token = useAppSelector(selectToken);
   const showingSharedChat = useAppSelector(selectShowingSharedChat);
