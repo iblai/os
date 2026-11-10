@@ -32,6 +32,7 @@ import {
   useLazyGetMentorPublicSettingsQuery,
 } from '@iblai/iblai-js/data-layer';
 import { redirectToAuthSpa } from '@/lib/utils';
+import { tokenRefreshUrl } from '@/lib/token-refresh';
 import {
   beginAuthRecoveryRoundTrip,
   clearAuthRecovery,
@@ -238,16 +239,23 @@ export default function Providers({ children }: { children: React.ReactNode }) {
           handle402Error({ error: SUBSCRIPTION_CREDIT_LIMIT_ERROR_MESSAGE }),
       },
       undefined,
-      isInIframe()
-        ? () => {
-            // Embedded: recover by asking the host for fresh tokens and awaiting
-            // the reply, so the data layer replays the failed request instead of
-            // reloading the page. Standalone leaves this undefined, keeping the
-            // data layer's own edX-session mint.
-            sendMessageToParentWebsite({ authExpired: true });
-            return beginAuthRecoveryRoundTrip();
-          }
-        : undefined,
+      // Always ours: left undefined, the data layer mints tokens itself from
+      // the edX session (`consolidated-token/proxy/`), and this app makes no
+      // calls to the edX LMS.
+      () => {
+        // Embedded: ask the host and await the reply, so the data layer
+        // replays the failed request instead of the page reloading under it.
+        if (isInIframe()) {
+          sendMessageToParentWebsite({ authExpired: true });
+          return beginAuthRecoveryRoundTrip();
+        }
+        // Standalone: the auth app re-mints and returns us to this page with
+        // the session intact. Resolving false abandons the replay, which is
+        // right — we are leaving, and the request goes out again on the way
+        // back.
+        window.location.href = tokenRefreshUrl();
+        return Promise.resolve(false);
+      },
     );
     setReady(true);
   };
