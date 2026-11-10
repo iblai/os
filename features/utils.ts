@@ -43,6 +43,34 @@ export const getServiceUrl = (service: SERVICES) => {
   }
 };
 
+/**
+ * Endpoints that must go out WITHOUT credentials.
+ *
+ * `getIntegratedSsoProviders` asks the LMS which sign-in providers a tenant
+ * has, which is public by nature — it is read to build a sign-in screen, so
+ * the caller may well have no session yet. Sending `Authorization: JWT` means
+ * sending whatever happens to be in storage: absent, expired or belonging to
+ * someone else, any of which the LMS answers with a 401 rather than ignoring.
+ *
+ * Keyed by RTK Query's endpoint name, which `prepareHeaders` hands us.
+ */
+const UNAUTHENTICATED_ENDPOINTS = new Set(['getIntegratedSsoProviders']);
+
+/**
+ * The credentials an endpoint should go out with, if any.
+ *
+ * Split from `prepareHeaders` so the decision can be read and tested on its
+ * own — driving it through the real base query means constructing a Request,
+ * which is what the environment, not the rule, decides.
+ */
+export function getAuthHeaders(
+  service: SERVICES,
+  endpoint?: string,
+): Record<string, string> {
+  if (endpoint && UNAUTHENTICATED_ENDPOINTS.has(endpoint)) return {};
+  return getHeaders(service);
+}
+
 function getHeaders(service: SERVICES) {
   switch (service) {
     case SERVICES.LMS:
@@ -68,15 +96,15 @@ const baseQuery = (service: SERVICES) =>
   fetchBaseQuery({
     baseUrl: getServiceUrl(service),
 
-    prepareHeaders: (headers) => {
-      const authHeaders = getHeaders(service);
-
+    prepareHeaders: (headers, { endpoint }) => {
       // Remove this in favor of the isForm flag in the future
       headers.set('Content-Type', 'application/json');
 
-      Object.entries(authHeaders).forEach(([key, value]) => {
-        headers.set(key, value);
-      });
+      Object.entries(getAuthHeaders(service, endpoint)).forEach(
+        ([key, value]) => {
+          headers.set(key, value);
+        },
+      );
 
       return headers;
     },

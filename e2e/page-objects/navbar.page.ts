@@ -42,6 +42,8 @@ export class NavbarPage {
    * query.
    */
   readonly profileDropdownMenu: Locator;
+  /** Profile menu entry that opens the auth app's organization chooser. */
+  readonly organizationsItem: Locator;
   /**
    * The learner-mode switch rendered inside the profile dropdown (mobile
    * only, `xl:hidden`). Only present while the dropdown is open — call
@@ -79,6 +81,9 @@ export class NavbarPage {
     this.profileItem = page.getByRole('menuitem', { name: /profile/i });
     this.helpItem = page.getByRole('menuitem', { name: /help/i });
     this.logoutItem = page.getByRole('menuitem', { name: /log out/i });
+    this.organizationsItem = page.getByRole('menuitem', {
+      name: /organizations/i,
+    });
     this.vectorDocButton = page.getByRole('button', {
       name: /vector document/i,
     });

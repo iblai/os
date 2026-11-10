@@ -19,7 +19,7 @@ const mockEnableRBAC = vi.fn();
 const mockExecuteWithTrialCheck = vi.fn();
 const mockDispatch = vi.fn();
 const mockRbacPermissions = { mentors: { '/x/': { read: true } } };
-const mockUseGetUserTenantsQuery = vi.fn();
+const mockUseUserTenants = vi.fn();
 const mockHandleTenantSwitch = vi.fn();
 const mockInvalidateTags = vi.fn((tags: string[]) => ({
   type: 'invalidate',
@@ -51,6 +51,7 @@ vi.mock('@/hooks/user-navigate', () => ({
 
 vi.mock('@/hooks/use-user', () => ({
   useUsername: () => mockUseUsername(),
+  useUserTenants: () => mockUseUserTenants(),
 }));
 
 vi.mock('@/hooks/user-user-actions', () => ({
@@ -76,10 +77,6 @@ vi.mock('@/lib/hooks', () => ({
     void selector;
     return mockRbacPermissions;
   },
-}));
-
-vi.mock('@/features/tenants/api-slice', () => ({
-  useGetUserTenantsQuery: () => mockUseGetUserTenantsQuery(),
 }));
 
 vi.mock('@/lib/utils', async (importOriginal) => {
@@ -139,12 +136,11 @@ describe('SettingsTab', () => {
     mockGetMentorId.mockReturnValue(null);
     mockUseUsername.mockReturnValue('jane');
     mockEnableRBAC.mockReturnValue(false);
-    mockUseGetUserTenantsQuery.mockReturnValue({
-      data: [
+    mockUseUserTenants.mockReturnValue({
+      userTenants: [
         { key: 'acme', name: 'Acme', is_admin: true },
         { key: 'beta', name: null, is_admin: false },
       ],
-      isLoading: false,
     });
   });
 
@@ -247,17 +243,19 @@ describe('SettingsTab', () => {
         { key: 'acme', name: 'Acme', is_admin: true },
         { key: 'beta', name: null, is_admin: false },
       ]);
-      expect(tabProps().isLoadingTenants).toBe(false);
     });
 
-    it('defaults to an empty tenant list while the query is loading', () => {
-      mockUseGetUserTenantsQuery.mockReturnValue({
-        data: undefined,
-        isLoading: true,
-      });
+    // Read from storage, so there is no in-flight state to report — and no
+    // request to the edX LMS on every open of this tab.
+    it('defaults to an empty tenant list when nothing is cached', () => {
+      mockUseUserTenants.mockReturnValue({ userTenants: [] });
       render(<SettingsTab />);
       expect(tabProps().tenants).toEqual([]);
-      expect(tabProps().isLoadingTenants).toBe(true);
+    });
+
+    it('reports no loading state, since the list is already in hand', () => {
+      render(<SettingsTab />);
+      expect(tabProps().isLoadingTenants).toBeUndefined();
     });
   });
 
@@ -539,13 +537,9 @@ describe('SettingsTab', () => {
   });
 
   describe('onSuccessfulCopy', () => {
-    it('navigates to the new mentor for a same-tenant copy', () => {
+    it('navigates to the new agent with its settings open', () => {
       render(<SettingsTab />);
-      tabProps().onSuccessfulCopy({
-        forkedMentorId: 'fork-1',
-        destinationTenantKey: 'acme',
-        isCrossTenantCopy: false,
-      });
+      tabProps().onSuccessfulCopy({ forkedMentorId: 'fork-1' });
       const expectedStack = JSON.stringify([
         {
           name: MODALS.EDIT_MENTOR.name,
@@ -556,22 +550,20 @@ describe('SettingsTab', () => {
         'fork-1',
         `modal=${expectedStack}`,
       );
+    });
+
+    // Only same-organization copies report back. A copy into any other one is
+    // made by the auth app, which lands the user on the result itself — so
+    // this app never switches organizations on a copy's behalf.
+    it('never switches organizations itself', () => {
+      render(<SettingsTab />);
+      tabProps().onSuccessfulCopy({ forkedMentorId: 'fork-1' });
       expect(mockHandleTenantSwitch).not.toHaveBeenCalled();
     });
 
-    it('switches tenants for a cross-tenant copy', () => {
+    it('hands the auth app URL to the settings tab for copies made elsewhere', () => {
       render(<SettingsTab />);
-      tabProps().onSuccessfulCopy({
-        forkedMentorId: 'fork-2',
-        destinationTenantKey: 'beta',
-        isCrossTenantCopy: true,
-      });
-      expect(mockHandleTenantSwitch).toHaveBeenCalledTimes(1);
-      const [dest, flag, url] = mockHandleTenantSwitch.mock.calls[0];
-      expect(dest).toBe('beta');
-      expect(flag).toBe(false);
-      expect(url).toContain('/platform/beta/fork-2?modal=');
-      expect(mockNavigateToMentor).not.toHaveBeenCalled();
+      expect(tabProps().authUrl).toBeTruthy();
     });
   });
 });

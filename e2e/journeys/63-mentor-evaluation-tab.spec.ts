@@ -7,6 +7,7 @@ import { waitForPageReady } from '../utils/resilient';
 import { MENTOR_NEXTJS_HOST } from '../fixtures/test-data';
 import { CreateMentorPage } from '../page-objects/create-mentor.page';
 import { EvaluationTab } from '../page-objects/edit-mentor/evaluation.tab';
+import { PHONE_CONTEXT } from '../page-objects/edit-mentor/activity-phone';
 import {
   closeWithEsc,
   expectNoAccessibilityViolationsOnDialogs,
@@ -339,21 +340,19 @@ test.describe('Journey 63: Mentor Evaluation Tab', () => {
     await editMentorPage.close();
   });
 
-  // EVAL-05: With the fresh (zero-run) benchmark selected, the runs table
-  // renders its five canonical headers and the benchmark-specific empty
-  // state (`{dataset}` substituted).
-  test('with the fresh benchmark selected, the runs table shows its headers and the benchmark-specific empty state', async ({
+  // EVAL-05: With the fresh (zero-run) benchmark selected, the tab shows
+  // only the benchmark-specific empty state (`{dataset}` substituted) — the
+  // runs table and its headers appear once there is a run (EVAL-08).
+  test('with the fresh benchmark selected, the tab shows the benchmark-specific empty state instead of the runs table', async ({
     editMentorPage,
   }) => {
     test.skip(!benchmarkReady, 'Benchmark was not created in EVAL-03');
     const { evaluation } = editMentorPage;
 
-    for (const header of EvaluationTab.TABLE_HEADERS) {
-      await expect(evaluation.tableHeader(header)).toBeVisible({
-        timeout: 15_000,
-      });
-    }
     await evaluation.expectRunsTableEmpty(BENCHMARK_NAME);
+    await expect(
+      evaluation.tableHeader(EvaluationTab.TABLE_HEADERS[0]),
+    ).toBeHidden();
 
     await editMentorPage.close();
   });
@@ -401,7 +400,7 @@ test.describe('Journey 63: Mentor Evaluation Tab', () => {
   });
 
   // EVAL-08: Admin starts a real evaluation; the dialog closes and the run
-  // appears in the table with a valid status badge. This is the "primary"
+  // appears in the table, under its five column headers, with a valid status. This is the "primary"
   // run later checkpoints opportunistically re-check the status of.
   test('admin starts a new evaluation and it appears in the table with a valid status', async ({
     editMentorPage,
@@ -412,6 +411,9 @@ test.describe('Journey 63: Mentor Evaluation Tab', () => {
     primaryRunName = EvaluationTab.uniqueName('e2e-eval-run');
     await evaluation.startEvaluation({ name: primaryRunName });
     await evaluation.expectRunInTable(primaryRunName);
+    for (const header of EvaluationTab.TABLE_HEADERS) {
+      await expect(evaluation.tableHeader(header).first()).toBeVisible();
+    }
 
     const status = await evaluation.readRunStatus(primaryRunName);
     expect(['COMPLETED', 'FAILED', 'PENDING', 'IN_PROGRESS']).toContain(status);
@@ -585,6 +587,55 @@ test.describe('Journey 63: Mentor Evaluation Tab', () => {
 
     await evaluation.cancelLlmJudge();
     await editMentorPage.close();
+  });
+
+  // EVAL-18: Phone view (< 768px) — run cards instead of the table, the
+  // per-run action sheet and the benchmark picker sheet. Declared before
+  // EVAL-13 so the primary run still exists when it runs.
+  test.describe('phone view', () => {
+    test.use(PHONE_CONTEXT);
+
+    test('on a phone the Evals tab shows run cards, the run action sheet and the benchmark sheet', async ({
+      editMentorPage,
+    }) => {
+      test.skip(!primaryRunName, 'Primary run was not started in EVAL-08');
+      const { evaluation } = editMentorPage;
+      const { phone } = evaluation;
+
+      await phone.expectDialogFillsViewport();
+      await phone.openAndCloseInfoSheet(EvaluationTab.LABELS.header.title);
+
+      await expect(evaluation.phoneRunCard(primaryRunName)).toBeVisible({
+        timeout: 15_000,
+      });
+      await phone.expectNoHorizontalScroll();
+
+      const actions = await evaluation.openPhoneRunActions(primaryRunName);
+      await expect(actions.getByText(/^Status:/)).toBeVisible();
+      for (const label of [
+        EvaluationTab.LABELS.actions.viewResults,
+        EvaluationTab.LABELS.actions.evaluate,
+        EvaluationTab.LABELS.actions.checkStatus,
+        EvaluationTab.LABELS.actions.exportCsv,
+        EvaluationTab.LABELS.actions.delete,
+      ]) {
+        await expect(
+          actions.getByRole('button', { name: label }),
+        ).toBeVisible();
+      }
+      await phone.closeSheetByBackdrop(actions);
+
+      await evaluation.benchmarkCombobox().click();
+      const benchmarkSheet = evaluation.phoneBenchmarkSheet();
+      await expect(benchmarkSheet).toBeVisible({ timeout: 5_000 });
+      await expect(
+        benchmarkSheet.getByText(BENCHMARK_NAME, { exact: true }),
+      ).toBeVisible();
+      await phone.closeSheetByBackdrop(benchmarkSheet);
+      await phone.expectNoHorizontalScroll();
+
+      await editMentorPage.close();
+    });
   });
 
   // EVAL-13: Cancelling a delete confirmation leaves the row in place;

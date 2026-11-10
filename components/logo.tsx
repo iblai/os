@@ -3,6 +3,7 @@
 import React from 'react';
 import Image from 'next/image';
 import { useParams } from 'next/navigation';
+import { useTenantLogoVersion } from '@iblai/iblai-js/web-utils';
 
 import { config } from '@/lib/config';
 import { useHeader } from '@/hooks/use-header';
@@ -29,6 +30,7 @@ export default function Logo({
   const { useSpecialIframeLogo } = useHeader();
   const { data: mentorSettings } = useMentorSettings();
   const embedMode = useEmbedMode();
+  const logoVersion = useTenantLogoVersion(tenantKey);
   const [logoUrl, setLogoUrl] = React.useState('');
 
   // Outside embed mode the logo always navigates home. Inside embed mode it
@@ -37,7 +39,8 @@ export default function Logo({
   const isLogoClickable = !embedMode || (mentorSettings?.showCatalogue ?? true);
 
   const loadLogo = async () => {
-    setLogoUrl(`${config.dmUrl()}/api/core/orgs/${tenantKey}/logo/`);
+    const url = `${config.dmUrl()}/api/core/orgs/${tenantKey}/logo/`;
+    setLogoUrl(logoVersion ? `${url}?v=${logoVersion}` : url);
   };
 
   function handleLogoError() {
@@ -54,7 +57,12 @@ export default function Logo({
     } else {
       setLogoUrl(mentorSettings?.profileImage ?? '');
     }
-  }, [tenantKey, useSpecialIframeLogo, mentorSettings?.profileImage]);
+  }, [
+    tenantKey,
+    useSpecialIframeLogo,
+    mentorSettings?.profileImage,
+    logoVersion,
+  ]);
 
   const logoContent = (
     <>

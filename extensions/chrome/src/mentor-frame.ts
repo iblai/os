@@ -1,7 +1,7 @@
 // Glue between the side panel and the mentor iframe inside <agent-ai> (ported
 // from the original panel.js).
 import { extractPageContent } from './page-scripts';
-import { isAuthed, sessionData, signIn } from './auth';
+import { isAuthed, isSessionExpired, sessionData, signIn } from './auth';
 import { injectable } from './settings';
 
 export interface PageContent {
@@ -60,7 +60,28 @@ export function installSession(
     `?data=${encodeURIComponent(JSON.stringify(session))}` +
     `&redirect-path=${encodeURIComponent(redirectPath)}` +
     (session.tenant ? `&tenant=${encodeURIComponent(session.tenant)}` : '');
+  clearRefreshInstruction(host);
   return true;
+}
+
+/**
+ * Undo `<agent-ai>`'s "Your session has expired. Please refresh the page."
+ *
+ * When its own re-mint fails the widget shows that notice and sets the
+ * iframe's `display: none`, and it has no counterpart that puts either back.
+ * Installing a session means we have a working one, so without this a
+ * successful recovery happens behind a hidden iframe and looks like nothing.
+ */
+function clearRefreshInstruction(host: Element): void {
+  const notice = host.shadowRoot?.querySelector<HTMLElement>(
+    '#refresh-instruction',
+  );
+  if (notice) {
+    notice.innerHTML = '';
+    notice.style.display = 'none';
+  }
+  const iframe = mentorIframe(host);
+  if (iframe) iframe.style.display = '';
 }
 
 // Try immediately, then poll until the iframe appears and rewrite it once. Give
@@ -146,16 +167,77 @@ export function refreshHostAuthCache(host: Element): void {
 // target tenant + edX JWT — then re-install the session via /sso-login-complete,
 // landing on the app root (embed params preserved) so the app opens the newly
 // selected tenant.
+/**
+ * Watch a chooser tab until the user picks an organization, and report which.
+ *
+ * The chooser hands its answer to `/login/complete?tenant=<key>`, so that
+ * navigation IS the pick. We take the key from the URL and close the tab there
+ * rather than letting it run on — completing it would land the full web app in
+ * a browser tab, while the session that matters is the panel's, which we mint
+ * ourselves through `signIn`.
+ *
+ * Resolves null when the user closes the tab instead of choosing: no pick, no
+ * switch, nothing to undo.
+ */
+function awaitChosenOrganization(tabId: number): Promise<string | null> {
+  return new Promise((resolve) => {
+    const done = (tenant: string | null) => {
+      chrome.tabs.onUpdated.removeListener(onUpdated);
+      chrome.tabs.onRemoved.removeListener(onRemoved);
+      resolve(tenant);
+    };
+    const onUpdated = (id: number, _info: unknown, tab: chrome.tabs.Tab) => {
+      if (id !== tabId || !tab.url) return;
+      let url: URL;
+      try {
+        url = new URL(tab.url);
+      } catch {
+        return;
+      }
+      if (!url.pathname.endsWith('/login/complete')) return;
+      const tenant = url.searchParams.get('tenant');
+      if (!tenant) return;
+      chrome.tabs.remove(tabId).catch(() => {});
+      done(tenant);
+    };
+    const onRemoved = (id: number) => {
+      if (id === tabId) done(null);
+    };
+    chrome.tabs.onUpdated.addListener(onUpdated);
+    chrome.tabs.onRemoved.addListener(onRemoved);
+  });
+}
+
 export function watchTenantSwitch(host: Element): () => void {
-  let switching = false;
   const onMessage = async (event: MessageEvent) => {
     const data = event.data as {
       tenantSwitch?: boolean;
       tenant?: string;
+      chooserUrl?: string;
     } | null;
-    if (!data?.tenantSwitch || !data.tenant || switching) return;
-    switching = true;
-    try {
+    if (!data?.tenantSwitch || authInFlight) return;
+
+    // No tenant, but an address: the user asked to CHOOSE one. The panel's
+    // iframe cannot go there itself — navigating it would tear the mentor out
+    // of the panel — so the chooser opens in a real tab and we resume the
+    // normal switch below with whatever they pick.
+    if (!data.tenant && data.chooserUrl) {
+      await withAuthFlow('organization chooser', async () => {
+        const url = data.chooserUrl as string;
+        const tab = await chrome.tabs.create({ url });
+        const tenant = tab.id ? await awaitChosenOrganization(tab.id) : null;
+        if (!tenant) return;
+        const redirectPath = embedRedirectPath(host);
+        await signIn(tenant);
+        refreshHostAuthCache(host);
+        installSession(host, redirectPath);
+      });
+      return;
+    }
+
+    if (!data.tenant) return;
+    const tenant = data.tenant;
+    await withAuthFlow('tenant switch', async () => {
       // Capture the return path from the CURRENT chat URL *before* the auth
       // round-trip. signIn() is async (seconds), and the app may navigate the
       // iframe meanwhile — often to a /sso-login-complete URL, from which
@@ -166,16 +248,103 @@ export function watchTenantSwitch(host: Element): () => void {
       const redirectPath = embedRedirectPath(host);
       // The auth app issues the target tenant's tokens and returns them in the
       // redirect `data`, which signIn() stores in this page's localStorage.
-      await signIn(data.tenant);
+      await signIn(tenant);
       // Point agent-ai's cached host auth at the NEW session BEFORE it re-mounts
       // the iframe, so its authrelyonhost re-broadcast can't revert the switch.
       refreshHostAuthCache(host);
       installSession(host, redirectPath);
-    } catch (err) {
-      console.warn('[ibl.ai panel] tenant switch failed:', err);
-    } finally {
-      switching = false;
+    });
+  };
+  window.addEventListener('message', onMessage);
+  return () => window.removeEventListener('message', onMessage);
+}
+
+// ---- Expired session ---------------------------------------------------------
+/**
+ * One interactive sign-in at a time, across every reason we might start one.
+ *
+ * `authExpired` and `tenantSwitch` both arrive from the same dead session, so
+ * without a shared guard the panel can run two auth flows at once and let the
+ * slower one overwrite the session the faster one installed.
+ */
+let authInFlight = false;
+
+/** How long agent-ai gets to fix an expiry before we stop believing its stamp. */
+const STAND_ASIDE_WINDOW_MS = 8_000;
+
+async function withAuthFlow(
+  what: string,
+  run: () => Promise<void>,
+): Promise<void> {
+  if (authInFlight) return;
+  authInFlight = true;
+  try {
+    await run();
+  } catch (err) {
+    console.warn(`[ibl.ai panel] ${what} failed:`, err);
+  } finally {
+    authInFlight = false;
+  }
+}
+
+/**
+ * Sign in again, keeping the organization the panel was on.
+ *
+ * A full expiry leaves no JWT to mint with, so recovery has to go through the
+ * interactive `/login` — which returns the user's DEFAULT organization, not
+ * the one they had chosen. The fresh session that login mints is itself the
+ * authority for a second, non-interactive hop back to where they were.
+ */
+async function signInKeepingOrganization(): Promise<void> {
+  const before = localStorage.getItem('tenant');
+  await signIn();
+  const after = localStorage.getItem('tenant');
+  if (before && after && before !== after) await signIn(before);
+}
+
+/**
+ * Re-authenticate the panel when the mentor app reports its session is dead.
+ *
+ * The app posts `{ authExpired: true }` instead of navigating itself to the
+ * auth SPA, because inside the panel's storage-partitioned iframe that
+ * navigation would tear the mentor out of the panel. On a normal page the host
+ * answers from its own session; here the host IS this panel, and when our own
+ * tokens have expired too there is nothing left to answer with — the only way
+ * to mint more is the interactive flow, which only an extension page can run.
+ *
+ * While the stored session still looks valid we stand aside once, so agent-ai
+ * can re-mint from the edX JWT without us popping an auth window over a
+ * refresh that was about to succeed. We do not stand aside twice: a second
+ * report means that refresh did not work, and the embed's 401 is first-hand
+ * evidence that beats our own stamp — which can be absent, unparseable, ahead
+ * of a slow clock, or simply describe a token the server has revoked.
+ */
+export function watchAuthExpired(host: Element): () => void {
+  let stoodAsideAt = 0;
+  const onMessage = async (event: MessageEvent) => {
+    const data = event.data as { authExpired?: boolean } | null;
+    if (!data?.authExpired) return;
+
+    if (!isSessionExpired()) {
+      const now = Date.now();
+      const agentAiHadItsChance =
+        stoodAsideAt > 0 && now - stoodAsideAt < STAND_ASIDE_WINDOW_MS;
+      if (!agentAiHadItsChance) {
+        stoodAsideAt = now;
+        return;
+      }
     }
+
+    await withAuthFlow('session recovery', async () => {
+      // Snapshot the chat URL before the round-trip: signIn() takes seconds and
+      // the app may navigate the iframe meanwhile, after which embedRedirectPath
+      // would strip the embed params down to a bare "/".
+      const redirectPath = embedRedirectPath(host);
+      await signInKeepingOrganization();
+      refreshHostAuthCache(host);
+      installSession(host, redirectPath);
+      stoodAsideAt = 0;
+    });
   };
   window.addEventListener('message', onMessage);
   return () => window.removeEventListener('message', onMessage);

@@ -16,6 +16,8 @@ import type { Picture } from './tools';
 
 /** How long one run may take; it then stops, saying so. Stop ends it any time. */
 export const TIME_LIMIT_MS = 200 * 60_000;
+/** Tries of a failed model call after the first, 2 s apart then doubling: about a minute. */
+export const MODEL_RETRIES = 5;
 /** Only the latest tool result keeps its page state: one numbering per request. */
 export const KEEP_SNAPSHOTS = 1;
 /**
@@ -56,12 +58,12 @@ export function orgBase(base: string, org: string): string {
   return `${base.replace(/\/+$/, '')}/api/ai-mentor/orgs/${encodeURIComponent(org)}/v1`;
 }
 
-/** The DM honours `parallel_tool_calls`; one page cannot take two actions at once. */
+/** Several actions per step are allowed; the tools take them one at a time, in order. */
 export function transformBody(
   body: Record<string, unknown>,
   username: string,
 ): Record<string, unknown> {
-  return { ...body, user: username, parallel_tool_calls: false };
+  return { ...body, user: username, parallel_tool_calls: true };
 }
 
 const retryable = (cause: unknown) =>
@@ -207,8 +209,9 @@ const OMITTED = '(earlier page state omitted)';
 
 /**
  * Older page states drop out of what is sent — the tool results before the
- * last `keep`, and the page a user turn carried once an action followed it —
- * so a request holds one numbering, and stays under the DM's 2.5 MB body cap.
+ * last `keep`, the results before the last one of a step that took several
+ * actions, and the page a user turn carried once an action followed it — so
+ * a request holds one numbering, and stays under the DM's 2.5 MB body cap.
  */
 export function pruneOldSnapshots(
   messages: ModelMessage[],
@@ -235,11 +238,14 @@ export function pruneOldSnapshots(
             content: message.content.slice(0, cut + PAGE_MARK.length) + OMITTED,
           };
     }
-    if (message.role !== 'tool' || !stale.has(index)) return message;
+    if (message.role !== 'tool') return message;
+    const last = stale.has(index) ? -1 : message.content.length - 1;
     return {
       ...message,
-      content: message.content.map((part) =>
-        part.type === 'tool-result' && part.output.type === 'text'
+      content: message.content.map((part, at) =>
+        part.type === 'tool-result' &&
+        part.output.type === 'text' &&
+        at !== last
           ? {
               ...part,
               output: { type: 'text' as const, value: OMITTED },
@@ -251,9 +257,8 @@ export function pruneOldSnapshots(
 }
 
 export type AgentEvent =
+  /** The reply: the words of the step that took no action. */
   | { type: 'text'; text: string }
-  /** Words said before an action in the same step: not the reply. */
-  | { type: 'narration'; text: string }
   | { type: 'tool-call'; toolName: string; input: unknown }
   | { type: 'tool-result'; toolName: string }
   /** A call the SDK could not run or a tool that threw; the run carries on. */
@@ -291,9 +296,13 @@ export function describeError(error: unknown): AgentEvent {
   // A call the SDK retried and gave up on says why the last attempt failed.
   if (RetryError.isInstance(error)) return describeError(error.lastError);
   if (APICallError.isInstance(error)) {
+    // An error page with no JSON body leaves the SDK only the status text,
+    // which is empty over HTTP/2; the status itself still says something.
     return {
       type: 'error',
-      message: error.message,
+      message:
+        error.message ||
+        (error.statusCode == null ? error.name : `HTTP ${error.statusCode}`),
       statusCode: error.statusCode,
     };
   }
@@ -374,6 +383,7 @@ export async function runAgent(options: RunOptions): Promise<RunResult> {
     messages: options.messages,
     tools: options.tools,
     abortSignal: signal,
+    maxRetries: MODEL_RETRIES,
     // No step cap: the SDK's default stops after one step.
     // ponytail: every call re-sends the earlier steps, so a run of a few
     // thousand steps fills the model's context and ends on its error — drop
@@ -407,25 +417,28 @@ export async function runAgent(options: RunOptions): Promise<RunResult> {
 
   let text = '';
   let steps = 0;
-  // A step's words are narration when an action follows them and the reply
-  // when the step ends without one, so they are held until that is known.
-  // ponytail: nothing crosses the port while they are held; a text-only
-  // stretch past ~30 s could idle the MV3 worker — add an `ack` heartbeat if
-  // `errorWorkerGone` ever shows up.
+  // The agent says nothing while it works: a step's words are held until the
+  // step ends, and they are the reply only when no action was taken in it —
+  // words before an action are dropped (the prompt asks for none).
   let said = '';
   let acted = false;
   const flush = () => {
-    if (said)
-      options.onEvent({ type: acted ? 'narration' : 'text', text: said });
-    if (!acted) text += said;
+    if (said && !acted) {
+      options.onEvent({ type: 'text', text: said });
+      text += said;
+    }
     said = '';
   };
+  // Where a step's time went, for the worker's console.
+  let stepStart = Date.now();
+  let actedAt = 0;
   for await (const part of result.stream) {
     switch (part.type) {
       case 'text-delta':
         said += part.text;
         break;
       case 'tool-call':
+        if (!acted) actedAt = Date.now();
         acted = true;
         flush();
         options.onEvent({
@@ -444,11 +457,19 @@ export async function runAgent(options: RunOptions): Promise<RunResult> {
         flush();
         options.onEvent(describeError(part.error));
         break;
-      case 'finish-step':
+      case 'finish-step': {
         flush();
+        const now = Date.now();
+        const seconds = (ms: number) => `${(ms / 1000).toFixed(1)}s`;
+        console.debug(
+          `[ibl.ai] step ${steps + 1}: model ${seconds((actedAt || now) - stepStart)}, actions ${seconds(actedAt ? now - actedAt : 0)}`,
+        );
+        stepStart = now;
+        actedAt = 0;
         acted = false;
         steps += 1;
         break;
+      }
       case 'finish':
         options.onEvent({ type: 'finish', reason: part.finishReason });
         break;

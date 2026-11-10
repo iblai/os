@@ -2,9 +2,8 @@
  * Journey 79: Virtual Machine Network Policies & Secrets
  *
  * An agent with Virtual Machine Shell turned on runs code in an isolated
- * Linux VM that has NO network access by default. This journey covers the
- * UI that lets an org admin decide what that VM can reach and which
- * credentials it can use:
+ * Linux VM. This journey covers the UI that lets an org admin decide what
+ * that VM can reach and which credentials it can use:
  *
  *   Tenant settings — the SDK `Account` rail of the User Profile dialog
  *     (More options → the platform name, as journey 38 reaches the Advanced
@@ -742,6 +741,12 @@ test.describe('Journey 79: Virtual Machine Network Policies & Secrets — agent 
     await createMentorPage.openAndCreate();
     const { mentorId } = await getPlatformContext(page);
 
+    // What a new agent starts on is a per-organization backend setting, so
+    // this test sets its own starting point instead of relying on it.
+    await putMentorVmNetworkSettings(page, mentorId, {
+      virtual_machine_egress: 'none',
+    });
+
     const openNetworkSection = async (): Promise<VmNetworkSection> => {
       await editMentorPage.open('Settings');
       await editMentorPage.navigateToTab('Sandbox');
@@ -760,8 +765,8 @@ test.describe('Journey 79: Virtual Machine Network Policies & Secrets — agent 
       expect(await sandbox.isKindEnabled('virtual-machine')).toBe(true);
 
       // vmn-07: the section renders under the kind selector with the billing
-      // notice and a labelled radio group of the four profiles; a fresh
-      // agent defaults to No Network, so the policy picker is not shown.
+      // notice and a labelled radio group of the four profiles; on No Network
+      // the policy picker is not shown.
       let net = new VmNetworkSection(page, editMentorPage.dialog);
       await net.waitForLoaded();
       await expect(net.billingNotice).toBeVisible();

@@ -9,6 +9,7 @@ import {
 import { MockLanguageModelV4, simulateReadableStream } from 'ai/test';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
+  MODEL_RETRIES,
   orgBase,
   buildModel,
   describeError,
@@ -153,12 +154,12 @@ describe('request shaping', () => {
     );
   });
 
-  it('adds the user and forbids parallel tool calls', () => {
+  it('adds the user and allows several tool calls in a step', () => {
     expect(transformBody({ model: 'm', stream: true }, 'jane')).toEqual({
       model: 'm',
       stream: true,
       user: 'jane',
-      parallel_tool_calls: false,
+      parallel_tool_calls: true,
     });
   });
 
@@ -231,6 +232,29 @@ describe('pruneOldSnapshots', () => {
     expect(pruneOldSnapshots(messages)).toEqual(messages);
   });
 
+  // A step of several actions returns a page per action in one tool message;
+  // only the last is the page as it is now.
+  it('keeps one page per step when the step took several actions', () => {
+    const step: ModelMessage = {
+      role: 'tool',
+      content: ['a', 'b', 'c'].map((id) => ({
+        type: 'tool-result',
+        toolCallId: id,
+        toolName: 'type',
+        output: { type: 'text', value: `page ${id}` },
+      })),
+    };
+    const [, pruned] = pruneOldSnapshots([user('go'), step]);
+    const values = (
+      pruned as { content: Array<{ output: { value: unknown } }> }
+    ).content.map((part) => part.output.value);
+    expect(values).toEqual([
+      '(earlier page state omitted)',
+      '(earlier page state omitted)',
+      'page c',
+    ]);
+  });
+
   // One numbering per request: the page a user turn carried is stale as soon
   // as an action has produced a newer one, and only the latest result keeps its.
   it("blanks a user turn's page once an action followed it, and keeps one tool result", () => {
@@ -273,6 +297,27 @@ describe('describeError', () => {
       message: 'boom',
     });
     expect(describeError('text')).toEqual({ type: 'error', message: 'text' });
+  });
+
+  // An error page with no JSON body gives the SDK only the status text, which
+  // is empty over HTTP/2 — the run said "Something went wrong:" and nothing.
+  it('names the status when the error carries no words', () => {
+    const blank = (statusCode?: number) =>
+      new APICallError({
+        message: '',
+        url: 'u',
+        requestBodyValues: {},
+        statusCode,
+      });
+    expect(describeError(blank(503))).toEqual({
+      type: 'error',
+      message: 'HTTP 503',
+      statusCode: 503,
+    });
+    expect(describeError(blank())).toMatchObject({
+      type: 'error',
+      message: 'AI_APICallError',
+    });
   });
 
   it('describes a call the SDK gave up retrying by its last failure', () => {
@@ -675,7 +720,9 @@ describe('runAgent', () => {
     expect(execute).toHaveBeenCalledTimes(1);
   });
 
-  it('files words said before an action as narration, and only the last step as the reply', async () => {
+  // The agent says nothing while it works: words said before an action are
+  // dropped, and only the step that takes no action is the reply.
+  it('drops words said before an action, and keeps only the last step as the reply', async () => {
     const { events, onEvent } = collect();
     const result = await runAgent({
       model: mockModel(
@@ -688,15 +735,104 @@ describe('runAgent', () => {
       onEvent,
     });
     expect(events.map((event) => event.type)).toEqual([
-      'narration',
       'tool-call',
       'tool-result',
       'text',
       'finish',
     ]);
-    expect(events[0]).toEqual({ type: 'narration', text: 'Opening billing.' });
-    expect(events[3]).toEqual({ type: 'text', text: 'Done.' });
+    expect(events[2]).toEqual({ type: 'text', text: 'Done.' });
     expect(result.text).toBe('Done.');
+  });
+
+  it('holds the reply until its step ends and sends it in one piece', async () => {
+    const { events, onEvent } = collect();
+    const result = await runAgent({
+      model: mockModel({
+        stream: simulateReadableStream({
+          chunks: [
+            { type: 'stream-start', warnings: [] },
+            { type: 'text-start', id: 't1' },
+            { type: 'text-delta', id: 't1', delta: 'All ' },
+            { type: 'text-delta', id: 't1', delta: 'done.' },
+            { type: 'text-end', id: 't1' },
+            finish('stop'),
+          ],
+        }),
+      }),
+      messages: [user('x')],
+      tools: clickTools(),
+      signal: new AbortController().signal,
+      onEvent,
+    });
+    expect(events.map((event) => event.type)).toEqual(['text', 'finish']);
+    expect(events[0]).toEqual({ type: 'text', text: 'All done.' });
+    expect(result.text).toBe('All done.');
+  });
+
+  // A form is filled in one step: the SDK runs the calls together, the tools
+  // queue them, and each result goes back with the step.
+  it('runs a step of several actions in order and feeds every result back', async () => {
+    const order: number[] = [];
+    const execute = vi.fn(async ({ element }: { element: number }) => {
+      order.push(element);
+      return `Typed ${element}.`;
+    });
+    const { events, onEvent } = collect();
+    const result = await runAgent({
+      model: mockModel(
+        {
+          stream: simulateReadableStream({
+            chunks: [
+              { type: 'stream-start', warnings: [] },
+              {
+                type: 'tool-call',
+                toolCallId: 'c1',
+                toolName: 'click',
+                input: JSON.stringify({ element: 1 }),
+              },
+              {
+                type: 'tool-call',
+                toolCallId: 'c2',
+                toolName: 'click',
+                input: JSON.stringify({ element: 2 }),
+              },
+              finish('tool-calls'),
+            ],
+          }),
+        },
+        textStep('Done.'),
+      ),
+      messages: [user('fill the form')],
+      tools: clickTools(execute),
+      signal: new AbortController().signal,
+      onEvent,
+    });
+    expect(order).toEqual([1, 2]);
+    expect(events.filter((event) => event.type === 'tool-result')).toHaveLength(
+      2,
+    );
+    const step = result.messages.find((message) => message.role === 'tool');
+    expect(step?.content).toHaveLength(2);
+    expect(result.steps).toBe(2);
+  });
+
+  it('writes where each step spent its time to the worker console', async () => {
+    const debug = vi.spyOn(console, 'debug').mockImplementation(() => {});
+    try {
+      await runAgent({
+        model: mockModel(toolStep(), textStep()),
+        messages: [user('x')],
+        tools: clickTools(),
+        signal: new AbortController().signal,
+        onEvent: () => undefined,
+      });
+      expect(debug).toHaveBeenCalledTimes(2);
+      expect(debug.mock.calls[0][0]).toMatch(
+        /^\[ibl\.ai\] step 1: model \d+\.\ds, actions \d+\.\ds$/,
+      );
+    } finally {
+      debug.mockRestore();
+    }
   });
 
   it('sends the latest picture on a trailing user message, and never keeps it', async () => {
@@ -782,7 +918,7 @@ describe('buildModel against the DM shim', () => {
       onEvent,
     });
 
-  /** Runs `start` with the SDK's retry waits (2 s, then 4 s) on fake time. */
+  /** Runs `start` with the SDK's retry waits (2 s, then doubling) on fake time. */
   async function withoutWaiting<T>(start: () => Promise<T>): Promise<T> {
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
     try {
@@ -889,7 +1025,7 @@ describe('buildModel against the DM shim', () => {
       stream: true,
       stream_options: { include_usage: true },
       user: 'jane',
-      parallel_tool_calls: false,
+      parallel_tool_calls: true,
     });
     expect(body.messages[0]).toEqual({ role: 'system', content: INSTRUCTIONS });
     expect(body.messages[1]).toEqual({ role: 'user', content: 'hello' });
@@ -971,7 +1107,7 @@ describe('buildModel against the DM shim', () => {
     );
   });
 
-  it('surfaces a mid-stream error frame once two more tries fail too', async () => {
+  it('surfaces a mid-stream error frame once every further try fails too', async () => {
     const fetchMock = vi.fn(async () =>
       respond(sse([chunk({ role: 'assistant' }), errorFrame, 'data: [DONE]'])),
     );
@@ -980,9 +1116,55 @@ describe('buildModel against the DM shim', () => {
     await withoutWaiting(() =>
       run((event) => events.push(event)).catch(() => null),
     );
-    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(fetchMock).toHaveBeenCalledTimes(1 + MODEL_RETRIES);
     expect(events.filter((event) => event.type === 'error')).toEqual([
       { type: 'error', message: 'provider boom' },
+    ]);
+  });
+
+  // Nothing of a step is shown before it ends, so a failure after some words
+  // is tried again too, and the failed attempt's words never reach the chat.
+  it('sends a call again when the DM fails after some words, which stay unseen', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        respond(
+          sse([
+            chunk({ role: 'assistant' }),
+            chunk({ content: 'Half ' }),
+            errorFrame,
+            'data: [DONE]',
+          ]),
+        ),
+      )
+      .mockResolvedValueOnce(answer());
+    vi.stubGlobal('fetch', fetchMock);
+    const events: AgentEvent[] = [];
+    const result = await withoutWaiting(() =>
+      run((event) => events.push(event)),
+    );
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(result.text).toBe('Done.');
+    expect(events.filter((event) => event.type === 'text')).toEqual([
+      { type: 'text', text: 'Done.' },
+    ]);
+    expect(events.filter((event) => event.type === 'error')).toEqual([]);
+  });
+
+  // The edge's own error page: no JSON, no status text over HTTP/2. Tried
+  // again like any 5xx, and named by its status when it keeps failing.
+  it('tries an error page again and then names its status', async () => {
+    const fetchMock = vi.fn(async () =>
+      respond('<html>Service Unavailable</html>', 503, 'text/html'),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    const events: AgentEvent[] = [];
+    await withoutWaiting(() =>
+      run((event) => events.push(event)).catch(() => null),
+    );
+    expect(fetchMock).toHaveBeenCalledTimes(1 + MODEL_RETRIES);
+    expect(events.filter((event) => event.type === 'error')).toEqual([
+      { type: 'error', message: 'HTTP 503', statusCode: 503 },
     ]);
   });
 });

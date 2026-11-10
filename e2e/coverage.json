@@ -1,15 +1,15 @@
 {
   "version": 2,
-  "lastUpdated": "2026-11-06",
+  "lastUpdated": "2026-11-11",
   "summary": {
-    "totalCheckpoints": 1065,
-    "coveredCheckpoints": 1015,
+    "totalCheckpoints": 1093,
+    "coveredCheckpoints": 1043,
     "deprecatedCheckpoints": 17,
     "notReproducibleCheckpoints": 17,
     "pendingCheckpoints": 16,
     "percent": 100,
-    "totalJourneys": 106,
-    "activeJourneys": 105
+    "totalJourneys": 109,
+    "activeJourneys": 108
   },
   "journeys": [
     {
@@ -108,6 +108,7 @@
       "spec": "03-new-user-ui-and-profile-dropdown.spec.ts",
       "sourceFiles": [
         "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx",
+        "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/user-profile.tsx",
         "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx",
         "components/modals/settings-modal.tsx"
       ],
@@ -124,7 +125,7 @@
         },
         {
           "id": "ui-03",
-          "description": "Fresh signup (unauthenticated context, real /account/create registration) lands on the main tenant and the profile dropdown shows exactly 3 items: Profile, Help, Log Out",
+          "description": "Fresh signup (unauthenticated context, real /account/create registration) lands on the main tenant and the profile dropdown shows exactly 4 items: Profile, Organizations, Help, Log Out",
           "status": "covered"
         },
         {
@@ -135,6 +136,11 @@
         {
           "id": "ui-05",
           "description": "Non-admin in the main OR an advertising tenant sees the full admin sidebar (New Agent, Workflows, Analytics, Invites, Management, Secrets, API, Monetization, Memory, Advanced) and clicking any trial-gated entry opens the upgrade/pricing dialog instead of performing the real action; gracefully skips when paywall is off",
+          "status": "covered"
+        },
+        {
+          "id": "ui-06",
+          "description": "Profile dropdown shows the current organization as a label with no in-place picker, and its Organizations entry opens the auth app chooser in its own tab (/me?action=switch-tenant&popup=1 with a return address), leaving this tab untouched; closing that tab means no switch. Skips when the account belongs to a single organization",
           "status": "covered"
         }
       ]
@@ -2688,7 +2694,7 @@
         },
         {
           "id": "cpm-10",
-          "description": "Mentor can be copied to a different tenant",
+          "description": "Copying an agent elsewhere is handed to the auth app chooser with the agent, its organization, the new name and the training-data choice attached, and nothing is copied in this app",
           "status": "covered"
         },
         {
@@ -3386,6 +3392,11 @@
         {
           "id": "ta-08",
           "description": "Admin deletes a task and its row is removed from the list",
+          "status": "covered"
+        },
+        {
+          "id": "ta-09",
+          "description": "Phone view (375x812, touch): the Edit Agent dialog fills the viewport, the header info button opens and closes the About This Tab sheet, a task shows as a card, tapping it opens the full-screen Task Logs screen and Back returns, the Select Date icon opens the calendar sheet and the backdrop closes it, delete works from the Task Logs screen, and the page never scrolls sideways",
           "status": "covered"
         }
       ]
@@ -4138,7 +4149,7 @@
         },
         {
           "id": "eval-05",
-          "description": "With a fresh (zero-run) benchmark selected, the runs table renders all five canonical headers (Evaluation, Status, Initiated by, Created, Actions) and the benchmark-specific empty state",
+          "description": "With a fresh (zero-run) benchmark selected, the tab shows only the benchmark-specific empty state, with no runs table or headers",
           "status": "covered"
         },
         {
@@ -4153,7 +4164,7 @@
         },
         {
           "id": "eval-08",
-          "description": "Admin starts a new evaluation and it appears in the runs table with a valid status badge",
+          "description": "Admin starts a new evaluation and it appears in the runs table, under all five column headers (Evaluation, Status, Initiated by, Created, Actions), with a valid status",
           "status": "covered"
         },
         {
@@ -4199,6 +4210,74 @@
         {
           "id": "eval-17",
           "description": "Non-admin does not see the Evals tab in the Edit Mentor modal (ADMIN-only segment in use-mentor-segments.ts)",
+          "status": "covered"
+        },
+        {
+          "id": "eval-18",
+          "description": "Phone view (375x812, touch): the Edit Agent dialog fills the viewport, the info sheet opens and closes, a run shows as a card, tapping it opens the action sheet (Status plus View results, New review, Check status, Export CSV, Delete) that the backdrop closes, the benchmark picker opens as a sheet listing the benchmark and closes, and the page never scrolls sideways",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "mentor-human-support-tab",
+      "name": "Mentor Human Support Tab",
+      "spec": "65-mentor-human-support-tab.spec.ts",
+      "sourceFiles": [
+        "components/modals/edit-mentor-modal/tabs/human-support-tab.tsx",
+        "components/modals/edit-mentor-modal/tabs/index.ts",
+        "components/modals/edit-mentor-modal/index.tsx",
+        "hooks/use-mentor-segments.ts"
+      ],
+      "checkpoints": [
+        {
+          "id": "support-01",
+          "description": "Admin opens the Support tab and the ticket surface renders (heading, description, and either the ticket list or the empty state)",
+          "status": "covered"
+        },
+        {
+          "id": "support-02",
+          "description": "Admin round-trips the status filter (Open, In Progress, Closed, All) and the surface keeps rendering a valid state after every change",
+          "status": "covered"
+        },
+        {
+          "id": "support-03",
+          "description": "The Support availability toggle is turned on and the setting persists across a reload (skips when the tenant tool catalog has no human-support tool)",
+          "status": "covered"
+        },
+        {
+          "id": "support-04",
+          "description": "Admin asks the agent in chat to open a ticket and it appears in the Support list as Open",
+          "status": "covered"
+        },
+        {
+          "id": "support-05",
+          "description": "Admin opens the ticket and its agent-authored description renders",
+          "status": "covered"
+        },
+        {
+          "id": "support-06",
+          "description": "Admin replies from the ticket detail and the reply appears in the conversation",
+          "status": "covered"
+        },
+        {
+          "id": "support-07",
+          "description": "Admin moves the ticket to In Progress and the list status updates",
+          "status": "covered"
+        },
+        {
+          "id": "support-08",
+          "description": "Admin closes the ticket, the closed notice replaces the composer and the list status reflects Closed",
+          "status": "covered"
+        },
+        {
+          "id": "support-09",
+          "description": "Phone view (375x812, touch) of a ticket: it shows as a card, tapping it opens the full-screen Support Ticket screen with the reply composer, Back returns to the list, the status filter sheet hides it under Closed and brings it back under All Statuses, and the page never scrolls sideways",
+          "status": "covered"
+        },
+        {
+          "id": "support-10",
+          "description": "Phone view (375x812, touch) of an agent with no tickets: the Edit Agent dialog fills the viewport, the info sheet opens and closes, the Available to Users row shows, the status filter sheet lists its options, closes on the backdrop and applies a picked option, and the page never scrolls sideways",
           "status": "covered"
         }
       ]
@@ -4640,7 +4719,7 @@
         },
         {
           "id": "twl-01",
-          "description": "The tenant settings Billing tab (same BillingTab journey 21-B already covers for Plan & Credits) exposes a \"Billing sections\" tablist with Plan & Credits (default), Spend Limits, and Agent Limits, and each tab switches to its section",
+          "description": "The tenant settings Billing tab (same BillingTab journey 21-B already covers for Plan & Credits) exposes a \"Billing sections\" tablist with Plan & Credits (default), Spend Limits, Agent Limits, and User Limits, and each tab switches to its section (User Limits renders both of its cards)",
           "status": "covered"
         },
         {
@@ -4671,6 +4750,31 @@
         {
           "id": "tal-01",
           "description": "Admin filters Agent Limits to an ALREADY-INDEXED mentor (broad query \"E2E Mentor\" against the search-index-backed autocomplete, sampling up to 5 results for the first capless one) — the ONE checkpoint that depends on that index, which lags mentor creation by DAYS on this backend (a known product limitation, not a test bug, reported upstream separately; a freshly-created mentor is never searchable in time, so this borrows a mentor from a past run instead of retrying its own) — sees the \"Set Spend Limit\" empty state, creates that mentor's spend limit (alert-only) from the popup, the row lists it, and the cap is removed again in an unconditional finally-block so the borrowed (shared-tenant) mentor is left exactly as found; if every sampled candidate already has a cap, verifies the filter -> row-visible path on the first one instead (annotated, never a failure)",
+          "status": "covered"
+        },
+        {
+          "id": "tul-01",
+          "description": "The tenant Billing \"User Limits\" tab (4th tab of the \"Billing sections\" tablist, active once switched to) shows both cards: the user caps table (UserLimitsSection — email-only user autocomplete filter, User | Limit | Spent | Remaining | Status columns) and the \"Default for New Users\" card (NewUserDefaultSection) with its visible future-joins note (\"Only people who join after this is turned on get it. To limit someone already here, set their limit above.\"), its switch and its Save button",
+          "status": "covered"
+        },
+        {
+          "id": "tul-02",
+          "description": "Admin creates a tenant-level (all-agents) user spend limit for the acting admin's own account via the filter -> \"Set Spend Limit\" empty state -> user-cap modal opened straight on the form with the filtered user pre-picked (addTenantUserSpendLimit, ALWAYS alert-only), the row lists it with the formatted limit (\"$7.00 / Month\") and its Status on, the row persists after switching tabs away (Plan & Credits) and back, and the cap is removed again in an unconditional finally-block (removeTenantUserCapIfPresent -> deleteTenantUserSpendLimit) so the shared tenant is left capless; a cap left over by a crashed earlier run is removed up front so the empty state is always reachable",
+          "status": "covered"
+        },
+        {
+          "id": "tul-03",
+          "description": "Admin edits an existing tenant-level user limit (created in the test's own setup) through the row's edit icon -> the same user-cap modal in edit mode (editTenantUserSpendLimit) and the row reflects the new limit (\"$12.00 / Week\"); removed again in finally",
+          "status": "covered"
+        },
+        {
+          "id": "tul-04",
+          "description": "Admin flips a tenant-level user limit's Status switch directly in the User Limits row (saves immediately, \"Spend limit saved\" toast) off and back on (setUserLimitsRowEnabled, idempotent); created in the test's own setup and removed again in finally",
+          "status": "covered"
+        },
+        {
+          "id": "tul-05",
+          "description": "Admin turns on the \"Default for New Users\" template with an alert-only amount (setNewUserSpendLimitDefault — enabled first, since the CapabilityGate keeps the fields inert while off; gated on the \"Default for new users saved\" toast), the switch, amount and enforcement persist after switching tabs away and back (expectNewUserSpendLimitDefault — the amount rehydrates as String(Number(max_cost_usd))), and the default is switched back OFF in an unconditional finally-block because a tenant default left on would attach a cap to every future test signup in this tenant",
           "status": "covered"
         }
       ]
@@ -5331,7 +5435,7 @@
         },
         {
           "id": "vmn-07",
-          "description": "With the Virtual Machine Shell kind selected on a dedicated agent, the Sandbox tab renders the Network Access section: the billing notice ($1 per 10 minutes by default, prorated per second) and a labelled \"Egress Profile\" radio group with the four labelled options (No Network / Package Registries / Public Internet / Custom Allowlist); a fresh agent defaults to No Network, so the policy picker does not render and Save is disabled",
+          "description": "With the Virtual Machine Shell kind selected on a dedicated agent, the Sandbox tab renders the Network Access section: the billing notice ($1 per 10 minutes by default, prorated per second) and a labelled \"Egress Profile\" radio group with the four labelled options (No Network / Package Registries / Public Internet / Custom Allowlist); an agent set to No Network through the API shows it selected, with the policy picker hidden and Save disabled",
           "status": "covered"
         },
         {
@@ -5679,7 +5783,7 @@
         },
         {
           "id": "emb-prof-02",
-          "description": "The embed profile menu offers Profile, the tenant switcher and Help, and leaves out Log Out and the Admin/User mode switch (the host owns auth)",
+          "description": "The embed profile menu offers Profile, the current organization as a label, Organizations and Help, and leaves out the in-place picker, Log Out and the Admin/User mode switch (the host owns auth)",
           "status": "covered"
         },
         {
@@ -5689,7 +5793,7 @@
         },
         {
           "id": "emb-prof-04",
-          "description": "Picking another tenant in the embed profile menu posts `{ tenantSwitch: true, tenant }` to the host page and leaves the frame on the chat instead of redirecting it to the auth app",
+          "description": "The embed hands the organization chooser to the host — `{ tenantSwitch: true, chooserUrl }`, with no tenant since nobody has picked one — instead of redirecting the frame, which stays on the chat",
           "status": "covered"
         },
         {
@@ -6136,10 +6240,7 @@
       "id": "create-agent-category-wheel-scroll",
       "name": "Create Agent Category Wheel Scroll",
       "spec": "88-create-agent-category-wheel-scroll.spec.ts",
-      "sourceFiles": [
-        "components/modals/create-mentor-form.tsx",
-        "components/modals/edit-mentor-modal-dialog.tsx"
-      ],
+      "sourceFiles": ["components/modals/create-mentor-modal.tsx"],
       "checkpoints": [
         {
           "id": "promptsave-01",
@@ -6159,6 +6260,11 @@
         {
           "id": "catscroll-01",
           "description": "Admin opens Create Agent, opens the Category picker and wheels the list: scrollTop increases and a lower category can be selected (regression: dialog scroll lock swallowed wheel events on the portaled popover)",
+          "status": "covered"
+        },
+        {
+          "id": "catscroll-02",
+          "description": "Admin types a category name in the Category picker: the list narrows to matching categories at the same height, clearing the search brings back every category, and picking one closes the list and fills the field",
           "status": "covered"
         }
       ]
@@ -6395,7 +6501,12 @@
         },
         {
           "id": "cw-02",
-          "description": "A goal sent in the panel becomes a MENTOR:BROWSE_RUN frame carrying auto: true; scripted worker frames (ack, three log lines — an action, the agent's narration, a failed call — the reply text, done with the time-limit note) render as one assistant turn whose \"Used 1 tool\" row expands to each line's text, whose body ends with the reply then the note, and after which Send is back",
+          "description": "A goal sent in the panel becomes a MENTOR:BROWSE_RUN frame carrying auto: true; scripted worker frames (ack, three log rows — the page read, a typed field, a failed click — the reply text, done with the time-limit note) render as one assistant turn whose \"Used 3 tools\" row expands to the rows numbered and named after their actions, whose body ends with the reply then the note, and after which Send is back",
+          "status": "covered"
+        },
+        {
+          "id": "cw-03",
+          "description": "The mentor WebSocket closing mid-run (proxied to the real server and closed with the DM's idle code 4000) leaves the turn in flight — Stop stays and Send stays hidden — until the worker's done, after which Send is back",
           "status": "covered"
         }
       ]
@@ -6588,7 +6699,7 @@
           "id": "chat-mcp-04",
           "description": "The \"+\" menu's MCP row carries a count badge (composer-count-badge) of the servers on for this chat: \"1\" with one attached server on, gone (the row itself stays) once the admin switches it off for this chat from the panel, \"1\" again once it is switched back on",
           "status": "pending",
-          "note": "Fixed after the stg1 run of 2026-10-31 (PR os#616); flip to covered once the rerun is green."
+          "note": "Root cause fixed in PR os#626: the \"+\" trigger is aria-hidden while the menu is open, so the helpers now leave an open menu alone; flip to covered once the stg rerun is green."
         },
         {
           "id": "chat-mcp-05",
@@ -6654,7 +6765,7 @@
           "id": "chat-mcp-17",
           "description": "Student (non-admin), with the server list, connections and connected services mocked to one signed-in per-user OAuth server the agent uses, and that mocked server's session-preference PUT answered as the backend would: switches it off for this chat (the save names the open conversation), closes the panel and sends a message, which goes out in that same conversation (its request carries the session id), shows as the user's message and gets the agent's reply (or its User Agreement); the \"+\" row then has no badge, and switching the server back on for this chat brings the badge \"1\" back",
           "status": "pending",
-          "note": "Fixed after the stg1 run of 2026-10-31 (PR os#616); flip to covered once the rerun is green."
+          "note": "Root cause fixed in PR os#626: the \"+\" trigger is aria-hidden while the menu is open, so the helpers now leave an open menu alone; flip to covered once the stg rerun is green."
         }
       ]
     },
@@ -6685,6 +6796,62 @@
         {
           "id": "dac-04",
           "description": "The Discovery sub-tab never shows the tenant name or key",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "org-logo-refresh",
+      "name": "Sidebar Logo Refresh After Upload",
+      "spec": "100-org-logo-refresh.spec.ts",
+      "sourceFiles": ["components/logo.tsx"],
+      "checkpoints": [
+        {
+          "id": "logo-01",
+          "description": "With no stored logo version the sidebar logo requests the bare /api/core/orgs/<tenant>/logo/ URL with no ?v=",
+          "status": "covered"
+        },
+        {
+          "id": "logo-02",
+          "description": "A successful light logo upload (POST mocked) adds ?v=<stored version> to the sidebar logo URL with no reload, a second already-open tab updates too, and the version survives a reload",
+          "status": "covered"
+        },
+        {
+          "id": "logo-03",
+          "description": "A failed light logo upload leaves the sidebar logo on the bare URL and stores no version",
+          "status": "covered"
+        },
+        {
+          "id": "logo-04",
+          "description": "A dark logo upload leaves the sidebar logo on the bare URL and stores no version",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "create-agent-field-permissions",
+      "name": "Create Agent Field Permissions",
+      "spec": "101-create-agent-field-permissions.spec.ts",
+      "sourceFiles": ["components/modals/create-mentor-modal.tsx"],
+      "checkpoints": [
+        {
+          "id": "cafp-01",
+          "description": "Issue #2766, real backend: opening Create Agent issues GET /v1/agents/settings/field-permissions (at the DM root, not under /api/ai-mentor/) carrying the iblai-org header equal to the tenant key; the answer is 200 with a {write: boolean} entry per field; with the admin's default roles the Settings tab shows the name, description, category, visibility and image upload",
+          "status": "covered"
+        },
+        {
+          "id": "cafp-02",
+          "description": "Issue #2766, answer mocked with mentor_visibility write:false: once the name input is enabled the Visibility combobox is absent while description, category, image upload and the Prompts tab stay; creating the agent through Next and Save sends a mentor-with-settings POST with name, description, template and prompt parts but no mentor_visibility part, and the agent is created",
+          "status": "covered"
+        },
+        {
+          "id": "cafp-03",
+          "description": "Issue #2766, answer mocked with system_prompt, proactive_prompt and guided_prompt_instructions write:false: the Prompts tab and the Next button are absent, the Settings tab shows Save, saving from it creates the agent and the POST body has none of the three prompt parts but still carries mentor_visibility",
+          "status": "covered"
+        },
+        {
+          "id": "cafp-04",
+          "description": "Issue #2766, answer mocked as 404 (older backend): the dialog fails open and shows every field, the Prompts tab and Next",
           "status": "covered"
         }
       ]

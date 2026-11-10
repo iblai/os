@@ -24,12 +24,7 @@ import { getUserEmail, getUserName } from '@/features/utils';
 import { MentorSubscriptionFlowV2 } from '@/hooks/subscription/subscription-flow-v2';
 import { useAppDispatch, useAppSelector } from '@/lib/hooks';
 import { useSubscriptionHandlerV2 } from '@iblai/iblai-js/web-utils';
-import {
-  handleLogout,
-  handleTenantSwitch,
-  isStripeActivated,
-  onAccountDeleted,
-} from '@/lib/utils';
+import { handleLogout, isStripeActivated, onAccountDeleted } from '@/lib/utils';
 import { Tenant } from '@iblai/iblai-js/web-utils';
 import { useTenantObjectMetadata } from '@/hooks/use-tenant-object-metadata';
 import { UserApp } from '@iblai/iblai-api';
@@ -266,26 +261,15 @@ export function UserProfile({ embed = false }: { embed?: boolean } = {}) {
     }
   };
 
+  // A Tauri build pinned to a tenant has nothing to switch to.
+  const hasOtherTenants =
+    (userIsAdmin ||
+      userTenants.some((t) => t.key !== 'main' && t.key !== tenantKey)) &&
+    !lockedTenant;
+
   const handleProfileClick = () => {
     // Trigger subscription data fetch when profile is opened
     handleGetSubscriptionRelatedData();
-  };
-
-  const handleTenantChange = (newTenantKey: string) => {
-    // In an embed the host owns auth (e.g. the browser extension runs the auth
-    // SPA's login flow via chrome.identity). We can't redirect the storage-
-    // partitioned iframe to the auth app the way the web switch does, so hand
-    // the switch up to the parent — the `{ tenantSwitch }` message `<agent-ai>`
-    // already listens for. The host mints the new tenant's tokens and
-    // re-installs the session. Mirrors notifyParentOnEmbedClose.
-    if (embed) {
-      window.parent?.postMessage(
-        { tenantSwitch: true, tenant: newTenantKey },
-        '*',
-      );
-      return;
-    }
-    handleTenantSwitch(newTenantKey);
   };
 
   const handleHelpClick = (url: string) => {
@@ -326,13 +310,14 @@ export function UserProfile({ embed = false }: { embed?: boolean } = {}) {
       // Configuration
       showProfileTab={true}
       showAccountTab={false}
-      showTenantSwitcher={
-        (userIsAdmin ||
-          userTenants.some((t) => t.key !== 'main' && t.key !== tenantKey)) &&
-        !lockedTenant
-      }
+      showTenantSwitcher={hasOtherTenants}
       showHelpLink={true}
       showLogoutButton={!embed}
+      // Always offered, deliberately: the chooser fetches its own list, and
+      // the tenants this app knows about are going away. In an embed the trip
+      // is handed to the host rather than navigating the iframe, so it is
+      // offered there too; only a build pinned to a tenant has nowhere to go.
+      showOrganizationsLink={!lockedTenant}
       showLearnerModeSwitch={!embed && userIsAdmin && tenantKey !== 'main'}
       // Customization
       helpCenterUrl={config.helpCenterUrl()}
@@ -344,7 +329,6 @@ export function UserProfile({ embed = false }: { embed?: boolean } = {}) {
       onTabChange={handleTabChange}
       onBillingTabRequest={handleGetSubscriptionRelatedData}
       onLogout={handleLogout}
-      onTenantChange={handleTenantChange}
       onHelpClick={handleHelpClick}
       defaultSupportPhone={config.defaultSupportPhoneNumber()}
       enableSupportPhone={config.enableSupportPhone()}
