@@ -243,6 +243,13 @@ export const getEmbedCode = async (
     ['tenant', tenant],
     ['mentor', settings.slug],
     ['extraparams', extraParams],
+    // Unconditional: the app only keeps the chat's Close by default when the
+    // iframe URL has no `mode`, and the component always stamps
+    // `mode=anonymous` on it (see `useShowCloseButton`). This snippet is the
+    // bubble embed — the launcher stays on screen to reopen a closed panel —
+    // so Close belongs here, and the host-side `closeEmbed` listener below is
+    // what it talks to.
+    ['showclosebutton', ''],
   ];
   if (settings.mode === 'advanced') attrs.push(['isadvanced', '']);
   if (settings.allow_anonymous) attrs.push(['isanonymous', '']);

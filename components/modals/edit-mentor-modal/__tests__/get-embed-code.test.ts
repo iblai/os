@@ -355,6 +355,20 @@ describe('getEmbedCode keeps the markers the e2e helpers match', () => {
     ).toBe('https://mentor.example.com');
   });
 
+  /**
+   * The app hides the chat's Close whenever the iframe URL carries
+   * `mode=anonymous`, which the component always stamps on it — see
+   * `hooks/use-show-close-button.ts`. That rule is for agent-ai hosts with no
+   * launcher; this snippet has one, so it has to opt back in. Without the
+   * attribute the panel can be opened and never closed from inside.
+   */
+  it('always asks for the close button, whatever else is set', async () => {
+    expect(attributesOf(await build())).toHaveProperty('showclosebutton');
+    expect(attributesOf(await build({ allow_anonymous: true }))).toHaveProperty(
+      'showclosebutton',
+    );
+  });
+
   it('ends with the DOMContentLoaded hand-off the readiness gate waits for', async () => {
     const code = await build();
 
