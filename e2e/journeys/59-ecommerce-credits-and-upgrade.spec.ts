@@ -424,7 +424,10 @@ test.describe('Journey 59: Ecommerce Credits & Upgrade', () => {
           await expect(sidebarPage.managementButton).toBeVisible({
             timeout: 10_000,
           });
-          await expect(sidebarPage.integrationsButton).toBeVisible({
+          await expect(sidebarPage.secretsButton).toBeVisible({
+            timeout: 10_000,
+          });
+          await expect(sidebarPage.apiButton).toBeVisible({
             timeout: 10_000,
           });
           await expect(sidebarPage.monetizationButton).toBeVisible({
@@ -478,7 +481,10 @@ test.describe('Journey 59: Ecommerce Credits & Upgrade', () => {
           await sidebarPage.managementButton.click();
           await expectSubscribeModalAndClose(page);
 
-          await sidebarPage.integrationsButton.click();
+          await sidebarPage.secretsButton.click();
+          await expectSubscribeModalAndClose(page);
+
+          await sidebarPage.apiButton.click();
           await expectSubscribeModalAndClose(page);
 
           await sidebarPage.monetizationButton.click();

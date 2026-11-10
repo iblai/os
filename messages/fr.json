@@ -166,7 +166,8 @@
     "notifications": "Notifications",
     "invites": "Invitations",
     "management": "Gestion",
-    "integrations": "Intégrations",
+    "secrets": "Secrets",
+    "api": "API",
     "monetization": "Monétisation",
     "advanced": "Avancé",
     "memory": "Mémoire",
@@ -175,7 +176,8 @@
     "accountTabBilling": "Facturation",
     "accountDescOrganization": "Gérez les paramètres de votre organisation.",
     "accountDescManagement": "Gérez les utilisateurs et leurs permissions dans le système.",
-    "accountDescIntegrations": "Gérez vos intégrations avec d'autres services.",
+    "accountDescSecrets": "Clés d'autres services, comme OpenAI ou Stripe, qu'ibl.ai et vos agents utilisent.",
+    "accountDescApi": "Faites fonctionner vos propres logiciels avec ibl.ai.",
     "accountDescMonetization": "Configurez les paywalls, la tarification et les revenus.",
     "accountDescAdvanced": "Configurez les paramètres avancés de l'organisation.",
     "accountDescMemory": "Gérez les mémoires globales des utilisateurs et les mémoires des agents.",
@@ -1922,18 +1924,8 @@
     "embedWidgetNote": "Le widget que vous integrez a votre propre site avec l'extrait de l'onglet Integration.",
     "showLastConversationLabel": "Rouvrir la dernière conversation",
     "showLastConversationTooltip": "Quand quelqu’un ouvre cet agent, sa dernière conversation s’affiche pour qu’il reprenne là où il s’était arrêté. Ce réglage n’a qu’une valeur : il s’applique au chat de l’application et au widget intégré.",
-    "contextLimitsHeading": "Limites de contexte",
-    "chatHistoryMessagesLabel": "Messages de l'historique du chat",
-    "chatHistoryMessagesTooltip": "Nombre maximal de messages précédents envoyés au modèle. Ce paramètre a une seule valeur ; il s'applique donc à la fois au chat dans l'application et au widget intégré.",
-    "chatHistoryMessagesPlaceholder": "20",
     "chatHistoryMessagesMinValueError": "Saisissez 1 ou plus.",
-    "chatHistoryTokensLabel": "Jetons de l'historique du chat",
-    "chatHistoryTokensTooltip": "Nombre maximal de jetons de l'historique du chat envoyés au modèle. Ce paramètre a une seule valeur ; il s'applique donc à la fois au chat dans l'application et au widget intégré.",
-    "chatHistoryTokensPlaceholder": "15000",
     "chatHistoryTokensMinValueError": "Saisissez 1 ou plus.",
-    "documentChunksLabel": "Fragments de documents",
-    "documentChunksTooltip": "Nombre de fragments de la base de connaissances récupérés par requête. Ce paramètre a une seule valeur ; il s'applique donc à la fois au chat dans l'application et au widget intégré.",
-    "documentChunksPlaceholder": "4",
     "documentChunksMinValueError": "Saisissez 1 ou plus.",
     "discoveryAccess": {
       "audienceLabel": "Qui peut utiliser cet agent ?",
@@ -2124,6 +2116,6 @@
     "agentsTitle": "Explorez les agents",
     "agentsContent": "Parcourez les agents disponibles, et créez ou gérez les vôtres, depuis le menu Agents.",
     "accountTitle": "Gérez votre organisation",
-    "accountContent": "Invitez des personnes, gérez les utilisateurs et les groupes, connectez des intégrations et modifiez les paramètres avancés avec les outils en bas de la barre latérale."
+    "accountContent": "Invitez des personnes, gérez les utilisateurs et les groupes, ajoutez des secrets et modifiez les paramètres avancés avec les outils en bas de la barre latérale."
   }
 }

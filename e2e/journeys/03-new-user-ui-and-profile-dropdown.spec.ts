@@ -72,7 +72,7 @@ test.describe('Journey 3: New User UI & Profile Dropdown', () => {
 
   // ui-05: On the MAIN tenant, when the paywall / stripe trial mode is
   // active, a non-admin user now sees the FULL admin sidebar cluster
-  // (New Agent, Workflows, Analytics, Invites, Management, Integrations,
+  // (New Agent, Workflows, Analytics, Invites, Management, Secrets, API,
   // Monetization, Memory, Advanced).  Every entry is trial-gated: clicking it
   // opens the upgrade/pricing dialog instead of performing the real
   // action.  When the paywall is off (non-main tenant, or stripe not
@@ -90,7 +90,8 @@ test.describe('Journey 3: New User UI & Profile Dropdown', () => {
       nonadminSidebarPage.workflowsButton, // "Workflows" section trigger
       nonadminSidebarPage.analyticsButton, // "Analytics" section trigger
       nonadminSidebarPage.managementButton, // footer "Management"
-      nonadminSidebarPage.integrationsButton, // footer "Integrations"
+      nonadminSidebarPage.secretsButton, // footer "Secrets"
+      nonadminSidebarPage.apiButton, // footer "API"
       nonadminSidebarPage.monetizationButton, // footer "Monetization"
       nonadminSidebarPage.memoryButton, // footer "Memory"
       nonadminSidebarPage.settingsButton, // footer "Advanced"

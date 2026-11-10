@@ -22,20 +22,23 @@ export const VM_EGRESS_LABELS: Record<VmEgressProfile, string> = {
  *   - an **Egress Profile** radio group (`vm-egress-group`, one
  *     `vm-egress-{profile}` item per profile — `none` / `registries` /
  *     `public` / `custom`);
- *   - a **Network Policy** picker (`vm-policy-picker`) that renders only
- *     under Custom and is required there, with a "Create Policy" shortcut
- *     that opens the SDK `NetworkPolicyDialog` in place (plus "Edit Policy"
- *     once one is chosen, and "Manage Policies");
- *   - a **Secrets** multi-select (`vm-secrets-picker`, one
- *     `vm-secret-option-{env_var}` checkbox per secret, plus "Manage
- *     Secrets") that renders only under Public or Custom, capped at 20;
+ *   - a **Network** picker (`vm-policy-picker`) that renders only
+ *     under Custom and is required there, with an "Add Network" shortcut
+ *     that opens the SDK `NetworkPolicyDialog` in place (plus "Edit Network"
+ *     once one is chosen, and "Manage Networks");
+ *   - an **Environment Variables** group (`vm-secrets-picker`, one
+ *     `vm-secret-option-{env_var}` checkbox per secret and one
+ *     `vm-secret-option-service-{slug}` per known service's key no agent uses
+ *     yet, plus "Add Environment Variable", `vm-add-secret`) that renders under
+ *     all four profiles, capped at 20; under None / Registries its checkboxes
+ *     are disabled and the `vm-secrets-locked` line says why;
  *   - the billing notice (`vm-billing-notice`).
  *
  * Nothing is sent until **Save Changes** (`vm-network-save`, disabled while
  * the draft is clean or invalid) — the SDK mirrors the backend's rules
  * before saving: Custom needs a policy; narrowing to None / Registries with
- * secrets bound opens the "Unbind Secrets?" confirmation and unbinds them in
- * the same request; under Custom every host a bound secret needs must be in
+ * secrets bound opens the "Remove Environment Variables?" confirmation and
+ * unbinds them in the same request; under Custom every host a bound secret needs must be in
  * the policy, otherwise the `vm-uncovered-hosts` alert lists the gaps and
  * "Add Hosts to {policy} and Save" (`vm-add-hosts-and-save`) patches the
  * policy first.
@@ -44,8 +47,8 @@ export const VM_EGRESS_LABELS: Record<VmEgressProfile, string> = {
  *
  * The section lives inside the Edit Agent dialog, so its controls are
  * queried from that dialog locator. The layers it opens on top — the policy
- * form and the "Unbind Secrets?" confirmation — portal to `document.body`
- * and repeat button names the Edit Agent dialog also has ("Cancel", "Save
+ * form and the "Remove Environment Variables?" confirmation — portal to
+ * `document.body` and repeat button names the Edit Agent dialog also has ("Cancel", "Save
  * Changes"). Each is therefore resolved first by ARIA role AND accessible
  * name (the SDK `DialogTitle`), and its buttons are queried from that
  * locator. Both are plain Radix dialogs (role `dialog`, not `alertdialog`).
@@ -67,11 +70,16 @@ export class VmNetworkSection {
   readonly egressRadioGroup: Locator;
   readonly policyPicker: Locator;
   readonly policySelect: Locator;
-  readonly createPolicyButton: Locator;
+  readonly addPolicyButton: Locator;
   readonly policyHosts: Locator;
   readonly policiesForbidden: Locator;
   readonly policyRequiredMessage: Locator;
   readonly secretsPicker: Locator;
+  /** The checkboxes, as a group named by its "Environment Variables" heading. */
+  readonly secretsGroup: Locator;
+  /** The line under No Network and Package Registries, whose checkboxes are disabled. */
+  readonly secretsLocked: Locator;
+  readonly addSecretButton: Locator;
   readonly noSecrets: Locator;
   readonly secretsCap: Locator;
   readonly uncoveredHosts: Locator;
@@ -84,8 +92,8 @@ export class VmNetworkSection {
   readonly narrowCancelButton: Locator;
   /** The SDK policy dialog in either mode (portaled on top of Edit Agent). */
   readonly policyDialog: Locator;
-  /** The policy dialog as the "Create Policy" shortcut opens it. */
-  readonly newPolicyDialog: Locator;
+  /** The policy dialog as the "Add Network" shortcut opens it. */
+  readonly addPolicyDialog: Locator;
   readonly policyDialogCancelButton: Locator;
 
   constructor(page: Page, dialog: Locator) {
@@ -102,14 +110,20 @@ export class VmNetworkSection {
     });
     this.policyPicker = dialog.getByTestId('vm-policy-picker');
     this.policySelect = dialog.getByTestId('vm-policy-select');
-    this.createPolicyButton = dialog.getByTestId('vm-policy-create');
+    this.addPolicyButton = dialog.getByTestId('vm-policy-create');
     this.policyHosts = dialog.getByTestId('vm-policy-hosts');
     this.policiesForbidden = dialog.getByTestId('vm-policies-forbidden');
     this.policyRequiredMessage = dialog.getByText(
-      'The Custom profile needs a network policy.',
+      'The Custom profile needs a network.',
       { exact: true },
     );
     this.secretsPicker = dialog.getByTestId('vm-secrets-picker');
+    this.secretsGroup = this.secretsPicker.getByRole('group', {
+      name: 'Environment Variables',
+      exact: true,
+    });
+    this.secretsLocked = dialog.getByTestId('vm-secrets-locked');
+    this.addSecretButton = dialog.getByTestId('vm-add-secret');
     this.noSecrets = dialog.getByTestId('vm-no-secrets');
     this.secretsCap = dialog.getByTestId('vm-secrets-cap');
     this.uncoveredHosts = dialog.getByTestId('vm-uncovered-hosts');
@@ -118,7 +132,7 @@ export class VmNetworkSection {
     this.discardButton = dialog.getByTestId('vm-network-discard');
     this.formError = dialog.getByTestId('vm-network-form-error');
     this.narrowConfirmDialog = page.getByRole('dialog', {
-      name: 'Unbind Secrets?',
+      name: 'Remove Environment Variables?',
       exact: true,
     });
     this.narrowConfirmButton = this.narrowConfirmDialog.getByTestId(
@@ -129,10 +143,10 @@ export class VmNetworkSection {
       exact: true,
     });
     this.policyDialog = page.getByRole('dialog', {
-      name: /^(New|Edit) Network Policy$/,
+      name: /^(Add Network|Edit Network)$/,
     });
-    this.newPolicyDialog = page.getByRole('dialog', {
-      name: 'New Network Policy',
+    this.addPolicyDialog = page.getByRole('dialog', {
+      name: 'Add Network',
       exact: true,
     });
     this.policyDialogCancelButton = this.policyDialog.getByRole('button', {
@@ -154,6 +168,11 @@ export class VmNetworkSection {
   /** The radio item for an egress profile. */
   egressOption(profile: VmEgressProfile): Locator {
     return this.dialog.getByTestId(`vm-egress-${profile}`);
+  }
+
+  /** The checkbox for a known service's key no agent uses yet. */
+  serviceOption(slug: string): Locator {
+    return this.dialog.getByTestId(`vm-secret-option-service-${slug}`);
   }
 
   /** The checkbox for a secret, keyed by its environment variable. */

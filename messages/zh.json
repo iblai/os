@@ -166,7 +166,8 @@
     "notifications": "通知",
     "invites": "邀请",
     "management": "管理",
-    "integrations": "集成",
+    "secrets": "机密",
+    "api": "API",
     "monetization": "变现",
     "advanced": "高级",
     "memory": "记忆",
@@ -175,7 +176,8 @@
     "accountTabBilling": "账单",
     "accountDescOrganization": "管理您的组织设置。",
     "accountDescManagement": "管理系统中的用户及其权限。",
-    "accountDescIntegrations": "管理与其他服务的集成。",
+    "accountDescSecrets": "来自其他服务（例如 OpenAI 或 Stripe）的密钥，供 ibl.ai 和您的智能体使用。",
+    "accountDescApi": "让您自己的软件与 ibl.ai 协同工作。",
     "accountDescMonetization": "配置付费墙、定价和收入。",
     "accountDescAdvanced": "配置组织的高级设置。",
     "accountDescMemory": "管理用户的全局记忆和智能体记忆。",
@@ -1922,18 +1924,8 @@
     "embedWidgetNote": "你使用“嵌入”标签页中的代码片段嵌入到自己网站上的挂件。",
     "showLastConversationLabel": "重新打开上次对话",
     "showLastConversationTooltip": "用户打开此智能体时，显示他们的上一次对话，方便从上次中断的地方继续。此设置只有一个值，因此同时适用于应用内聊天和嵌入式小组件。",
-    "contextLimitsHeading": "上下文限制",
-    "chatHistoryMessagesLabel": "聊天历史消息数",
-    "chatHistoryMessagesTooltip": "发送给模型的历史消息数量上限。 此设置只有一个值，因此同时适用于应用内聊天和嵌入式小组件。",
-    "chatHistoryMessagesPlaceholder": "20",
     "chatHistoryMessagesMinValueError": "请输入 1 或更大的数字。",
-    "chatHistoryTokensLabel": "聊天历史令牌数",
-    "chatHistoryTokensTooltip": "发送给模型的聊天历史令牌数量上限。 此设置只有一个值，因此同时适用于应用内聊天和嵌入式小组件。",
-    "chatHistoryTokensPlaceholder": "15000",
     "chatHistoryTokensMinValueError": "请输入 1 或更大的数字。",
-    "documentChunksLabel": "文档片段数",
-    "documentChunksTooltip": "每次查询从知识库检索的片段数量。 此设置只有一个值，因此同时适用于应用内聊天和嵌入式小组件。",
-    "documentChunksPlaceholder": "4",
     "documentChunksMinValueError": "请输入 1 或更大的数字。",
     "discoveryAccess": {
       "audienceLabel": "谁可以使用此智能体？",
@@ -2124,6 +2116,6 @@
     "agentsTitle": "探索智能体",
     "agentsContent": "在“智能体”菜单中浏览可用的智能体，或创建和管理你自己的智能体。",
     "accountTitle": "管理你的组织",
-    "accountContent": "使用侧边栏底部的工具邀请成员、管理用户和群组、连接集成以及更改高级设置。"
+    "accountContent": "使用侧边栏底部的工具邀请成员、管理用户和群组、添加机密以及更改高级设置。"
   }
 }
