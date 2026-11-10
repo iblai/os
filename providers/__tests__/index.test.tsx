@@ -522,9 +522,9 @@ describe('Providers', () => {
           402: expect.any(Function),
         }),
         undefined,
-        // Standalone (not iframed): no refreshAuthToken, so the data layer uses
-        // its own edX-session mint.
-        undefined,
+        // Always ours, standalone included: left undefined the data layer
+        // would mint from the edX session, and this app calls no edX LMS.
+        expect.any(Function),
       );
     });
 
@@ -533,6 +533,36 @@ describe('Providers', () => {
       renderProviders();
       const call = mockInitializeDataLayer.mock.calls.at(-1)!;
       expect(call[6]).toEqual(expect.any(Function));
+    });
+
+    // Standalone it goes to the auth app, which re-mints and returns the user
+    // here — rather than this app minting from the edX session itself.
+    it('sends a standalone 401 to the auth app instead of minting', async () => {
+      mockIsInIframe.mockReturnValue(false);
+      // jsdom refuses real navigation, so watch the assignment instead — and
+      // put the real location back, or the tests after this one lose their
+      // search params.
+      const realLocation = window.location;
+      Object.defineProperty(window, 'location', {
+        value: { ...realLocation, href: 'https://os.ibl.ai/chat' },
+        writable: true,
+        configurable: true,
+      });
+      renderProviders();
+      const refreshAuthToken = mockInitializeDataLayer.mock.calls.at(-1)![6] as
+        | (() => Promise<boolean>)
+        | undefined;
+
+      try {
+        await expect(refreshAuthToken!()).resolves.toBe(false);
+        expect(window.location.href).toContain('/login/complete');
+      } finally {
+        Object.defineProperty(window, 'location', {
+          value: realLocation,
+          writable: true,
+          configurable: true,
+        });
+      }
     });
 
     it('creates a script element when __ENV__ is not defined', () => {

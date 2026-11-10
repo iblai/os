@@ -550,8 +550,38 @@ vi.mock('@iblai/iblai-js/web-containers', () => ({
       Admin SDK Tab
     </div>
   ),
-  IntegrationsTab: () => (
-    <div data-testid="sdk-integrations-tab">Integrations SDK Tab</div>
+  SecretsTab: ({
+    tenantKey,
+    username,
+  }: {
+    tenantKey: string;
+    username: string;
+  }) => (
+    <div
+      data-testid="sdk-secrets-tab"
+      data-tenant-key={tenantKey}
+      data-username={username}
+    >
+      Secrets SDK Tab
+    </div>
+  ),
+  ApiTab: ({
+    tenantKey,
+    username,
+    helpUrl,
+  }: {
+    tenantKey: string;
+    username: string;
+    helpUrl?: string;
+  }) => (
+    <div
+      data-testid="sdk-api-tab"
+      data-tenant-key={tenantKey}
+      data-username={username}
+      data-help-url={helpUrl}
+    >
+      API SDK Tab
+    </div>
   ),
   BillingTab: () => <div data-testid="sdk-billing-tab">Billing SDK Tab</div>,
   MonetizationTab: () => (
@@ -1991,7 +2021,7 @@ describe('AppSidebar — Footer actions', () => {
       screen.getAllByRole('button', { name: 'Management' }).length,
     ).toBeGreaterThan(0);
     // …but the items they DON'T hold a permission for stay hidden, and
-    // Integrations/Memory/Advanced (no dedicated permission) remain admin-only.
+    // Secrets/API/Memory/Advanced (no dedicated permission) remain admin-only.
     expect(
       screen.queryByRole('button', { name: 'Invites' }),
     ).not.toBeInTheDocument();
@@ -1999,7 +2029,10 @@ describe('AppSidebar — Footer actions', () => {
       screen.queryByRole('button', { name: 'Monetization' }),
     ).not.toBeInTheDocument();
     expect(
-      screen.queryByRole('button', { name: 'Integrations' }),
+      screen.queryByRole('button', { name: 'Secrets' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'API' }),
     ).not.toBeInTheDocument();
     expect(
       within(screen.getByTestId('sidebar-footer')).queryByRole('button', {
@@ -2276,12 +2309,13 @@ describe('AppSidebar — non-admin trial-gated full admin menu (main OR advertis
     ).toBeGreaterThan(0);
   });
 
-  it('reveals the full footer admin cluster (Management / Integrations / Monetization / Memory / Advanced)', () => {
+  it('reveals the full footer admin cluster (Management / Secrets / API / Monetization / Memory / Advanced)', () => {
     setupMainTenantNonAdmin();
     renderSidebar();
     [
       'Management',
-      'Integrations',
+      'API',
+      'Secrets',
       'Monetization',
       'Memory',
       'Advanced',
@@ -2335,7 +2369,8 @@ describe('AppSidebar — non-admin trial-gated full admin menu (main OR advertis
     ).toBeGreaterThan(0);
     [
       'Management',
-      'Integrations',
+      'API',
+      'Secrets',
       'Monetization',
       'Memory',
       'Advanced',
@@ -2378,7 +2413,8 @@ describe('AppSidebar — anonymous (not-logged-in) user sees the full menu, clic
     ).toBeGreaterThan(0);
     [
       'Management',
-      'Integrations',
+      'API',
+      'Secrets',
       'Monetization',
       'Memory',
       'Advanced',
@@ -2530,7 +2566,7 @@ describe('AppSidebar — Rail-collapsed mode', () => {
 });
 
 // =============================================================================
-// AccountSheet — exercise each footer-driven tab (management, integrations,
+// AccountSheet — exercise each footer-driven tab (management, secrets, api,
 // monetization, billing). The Advanced tab is covered above; this block
 // covers the remaining branches in the switch.
 // =============================================================================
@@ -2542,15 +2578,34 @@ describe('AppSidebar — AccountSheet tabs', () => {
     expect(await screen.findByTestId('sdk-admin-tab')).toBeInTheDocument();
   });
 
-  it('clicking Integrations opens the IntegrationsTab', async () => {
+  it('clicking Secrets opens the SDK SecretsTab in the account dialog with the tenant and username', async () => {
     renderSidebar();
-    fireEvent.click(screen.getAllByRole('button', { name: 'Integrations' })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Secrets' })[0]);
+    const dialog = await screen.findByRole('dialog', { name: 'Secrets' });
+    const tab = within(dialog).getByTestId('sdk-secrets-tab');
+    expect(tab).toHaveAttribute('data-tenant-key', 'tenant-a');
+    expect(tab).toHaveAttribute('data-username', 'admin-user');
     expect(
-      await screen.findByTestId('sdk-integrations-tab'),
+      within(dialog).getByText(
+        'Keys from other services, like OpenAI or Stripe, that ibl.ai and your agents use.',
+      ),
     ).toBeInTheDocument();
   });
 
-  it('admin sees Memory between Monetization/Integrations and Advanced, matching the SDK Account rail order', () => {
+  it('clicking API opens the SDK ApiTab in the account dialog with the tenant, username and help link', async () => {
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'API' })[0]);
+    const dialog = await screen.findByRole('dialog', { name: 'API' });
+    const tab = within(dialog).getByTestId('sdk-api-tab');
+    expect(tab).toHaveAttribute('data-tenant-key', 'tenant-a');
+    expect(tab).toHaveAttribute('data-username', 'admin-user');
+    expect(tab).toHaveAttribute('data-help-url', 'https://help.example.com');
+    expect(
+      within(dialog).getByText('Let your own software work with ibl.ai.'),
+    ).toBeInTheDocument();
+  });
+
+  it('admin footer lists Management, API, Secrets, Monetization, Memory and Advanced in that order', () => {
     mockCurrentTenant = {
       key: 'tenant-a',
       is_admin: true,
@@ -2559,24 +2614,23 @@ describe('AppSidebar — AccountSheet tabs', () => {
     };
     renderSidebar();
     const footer = within(screen.getByTestId('sidebar-footer'));
-    const labels = [
+    const rows = [
       'Management',
-      'Integrations',
+      'API',
+      'Secrets',
       'Monetization',
       'Memory',
       'Advanced',
     ].map((name) => footer.getByRole('button', { name }));
-    // Every entry is rendered, and Memory sits right before Advanced.
-    const order = labels.map((el) =>
-      el.compareDocumentPosition(labels[labels.length - 1]),
-    );
-    order.slice(0, -1).forEach((pos) => {
-      expect(pos & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    rows.slice(1).forEach((row, index) => {
+      expect(
+        rows[index].compareDocumentPosition(row) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
     });
     expect(
-      labels[3].compareDocumentPosition(labels[2]) &
-        Node.DOCUMENT_POSITION_PRECEDING,
-    ).toBeTruthy();
+      footer.queryByRole('button', { name: 'Integrations' }),
+    ).not.toBeInTheDocument();
   });
 
   it('clicking Memory opens the SDK MemoryAdminTab in the account dialog with the tenant and username', async () => {
