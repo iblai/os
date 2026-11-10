@@ -1,6 +1,7 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
+  act,
   render,
   screen,
   cleanup,
@@ -252,7 +253,14 @@ describe('SettingsModal', () => {
     mockUseLlmProviderCatalogue.mockReturnValue(mockResolveLlmProvider);
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    // Drain whatever a test left in flight while the environment is still up.
+    // Several tests here click a toggle and assert on the call rather than on
+    // the handler finishing; the state update then lands after the test, React
+    // logs an act() warning, and that console line races the worker closing
+    // its rpc — "Closing rpc while onUserConsoleLog was pending". Flushing
+    // inside `act` settles it here instead, where the log is harmless.
+    await act(async () => {});
     cleanup();
   });
 
