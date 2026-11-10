@@ -1205,6 +1205,11 @@ test.describe('Journey 13: Shareable Links & Embed Integration', () => {
     }
 
     const widgetOf = (page: Page) => page.locator(HOST_WIDGET_SELECTOR);
+    // Full screen is the COMPONENT's doing, and it restyles itself — the
+    // snippet's panel around it is never touched. So the box to measure is the
+    // `agent-ai` element: it goes `position: fixed; inset: 0`, which escapes
+    // the panel because nothing on the way up creates a containing block.
+    const agentOf = (page: Page) => widgetOf(page).locator('agent-ai');
     const bubbleOf = (page: Page) => page.locator('.ibl-chat-bubble');
 
     // emb-19: the toggle is present, off by default, and drives the URL param.
@@ -1248,7 +1253,9 @@ test.describe('Journey 13: Shareable Links & Embed Integration', () => {
 
       await bubbleOf(page).click();
       await expect(widgetOf(page)).toBeVisible({ timeout: 15_000 });
-      const normalBox = await widgetOf(page).boundingBox();
+      // The agent's own box, not the panel's, so the comparisons below are
+      // like for like — the panel is a couple of pixels wider for its border.
+      const normalBox = await agentOf(page).boundingBox();
       expect(normalBox).not.toBeNull();
       expect(normalBox!.width).toBeLessThan(1440);
 
@@ -1268,14 +1275,26 @@ test.describe('Journey 13: Shareable Links & Embed Integration', () => {
       await toggle.click();
       await expect(toggle).toHaveAccessibleName('Exit full screen');
       await expect
-        .poll(async () => widgetOf(page).boundingBox(), { timeout: 10_000 })
+        .poll(async () => agentOf(page).boundingBox(), { timeout: 10_000 })
         .toMatchObject({ x: 0, y: 0, width: 1440, height: 900 });
-      await expect(bubbleOf(page)).toBeHidden();
+      // The launcher is covered rather than removed: the full-window agent
+      // sits above it (z-index 2147483647 against the bubble's …646), so it
+      // cannot be seen or clicked. Asserting what is on top says that; the
+      // old snippet hid the bubble by hand, and this one has no reason to.
+      await expect
+        .poll(async () => {
+          const box = (await bubbleOf(page).boundingBox())!;
+          return page.evaluate(
+            ([x, y]) => document.elementFromPoint(x, y)?.tagName.toLowerCase(),
+            [box.x + box.width / 2, box.y + box.height / 2],
+          );
+        })
+        .toBe('agent-ai');
 
       await toggle.click();
       await expect(toggle).toHaveAccessibleName('Full screen');
       await expect
-        .poll(async () => (await widgetOf(page).boundingBox())?.width, {
+        .poll(async () => (await agentOf(page).boundingBox())?.width, {
           timeout: 10_000,
         })
         .toBe(normalBox!.width);
@@ -1284,7 +1303,7 @@ test.describe('Journey 13: Shareable Links & Embed Integration', () => {
       // Close while full screen -> reopens small.
       await toggle.click();
       await expect
-        .poll(async () => (await widgetOf(page).boundingBox())?.width)
+        .poll(async () => (await agentOf(page).boundingBox())?.width)
         .toBe(1440);
       await chat.getByRole('button', { name: /close chat/i }).click();
       await expect(widgetOf(page)).toBeHidden();
