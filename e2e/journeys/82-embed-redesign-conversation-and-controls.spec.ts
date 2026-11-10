@@ -167,6 +167,18 @@ test.describe('Journey 82: Embed Mode Redesign — Conversation & Controls', () 
     // (see its doc comment) — reading the tab's first `<pre>` beforehand can
     // match an unrelated block (e.g. this shared mentor's SSO redirect-token
     // URL) instead of the actual snippet.
+    // Point the embed at the harness before minting: an agent that requires
+    // signing in sends the WHOLE host page through auth, and the round trip
+    // comes back to the website this embed's token was registered for.
+    // Registered elsewhere it lands on a page that does not serve the snippet
+    // and the chat never mounts — which is what the host page sitting on
+    // `example.com/real-snippet?…&ibl-data=…` meant. The harness IS this
+    // embed's customer site, so it is what the token should name.
+    //
+    // Set here rather than passed to `createAndGetEmbedCode`: that only fills
+    // the field when it is EMPTY, and this shared agent carries whatever a
+    // previous run saved.
+    await editMentorPage.embed.fillWebsiteUrl(EMBED_HARNESS_URL);
     const snippet = await editMentorPage.embed.createAndGetEmbedCode();
     expect(snippet.length).toBeGreaterThan(0);
     expect(snippet).toContain('ibl-chat-bubble');
