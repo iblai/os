@@ -124,7 +124,7 @@ beforeEach(async () => {
   ctx = {
     tabId: 7,
     confirm: vi.fn(async () => true),
-    log: vi.fn(),
+    log: vi.fn<(entry: LogEntry) => void>(),
   };
   current = createBrowserTools(ctx);
   await current.snapshot();

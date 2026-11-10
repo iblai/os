@@ -3,11 +3,13 @@ import { renderHook, act } from '@testing-library/react';
 import { useCanvasAwareSend } from '../use-canvas-aware-send';
 
 describe('useCanvasAwareSend', () => {
-  let mockSendMessage: ReturnType<typeof vi.fn>;
+  let mockSendMessage: ReturnType<
+    typeof vi.fn<(text: string, options?: any) => void>
+  >;
   let eventListeners: Map<string, EventListener>;
 
   beforeEach(() => {
-    mockSendMessage = vi.fn();
+    mockSendMessage = vi.fn<(text: string, options?: any) => void>();
     eventListeners = new Map();
 
     // Mock window event listeners

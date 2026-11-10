@@ -107,3 +107,5 @@ serde_json = "1.0"
 
 [patch.crates-io]
 glib = { git = "https://github.com/gtk-rs/gtk-rs-core.git", package = "glib", tag = "0.20.0"}
+quinn-proto = { git = "https://github.com/quinn-rs/quinn", tag = "quinn-proto-0.11.16" }
+rustls = { git = "https://github.com/rustls/rustls", tag = "v/0.23.26" }

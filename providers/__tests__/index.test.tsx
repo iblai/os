@@ -25,6 +25,14 @@ let mockRouter = { push: mockPush, replace: mockReplace };
 
 // AppProvider mounts the agent-settings launcher, which reads navigation and
 // user hooks this suite does not set up; it has its own tests.
+// The real module pulls the whole remark/rehype/KaTeX pipeline. `AppProvider`
+// imports it fire-and-forget in an effect (deliberately — the startup path
+// must not await it), so under load that import is still resolving when this
+// file's last test ends, and vitest tears the environment down underneath it:
+// "Cannot load … after the environment was torn down". Registration itself is
+// covered by lib/__tests__/canvas-markdown-engine.test.ts.
+vi.mock('@/lib/canvas-markdown-engine', () => ({}));
+
 vi.mock('../agent-settings-launcher', () => ({
   AgentSettingsLauncher: ({ children }: { children: React.ReactNode }) => (
     <>{children}</>

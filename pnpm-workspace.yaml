@@ -7,6 +7,17 @@ onlyBuiltDependencies:
   - sharp
   - unrs-resolver
 overrides:
+  glob: '>=14.0.2'
+  minimatch: '>=11.0.1'
+  # ...except for eslint's own two consumers. minimatch dropped its default
+  # export after the 9.x line, and both of these do `import minimatch from
+  # 'minimatch'`, so the global floor above makes eslint fail to load its
+  # config at all ("does not provide an export named 'default'") — `pnpm lint`
+  # cannot run. Pinned back to the 3.x they ask for, which is where they were
+  # before the floor was added; the brace-expansion analysis further down
+  # already covers that pairing. Lint-time only, never shipped.
+  '@eslint/eslintrc>minimatch': '^3.1.2'
+  '@eslint/config-array>minimatch': '^3.1.2'
   tinypool: '>=2.1.2'
   zip: '9.0.5'
   # Floor raised to 8.1.6 for GHSA-587h-7wmj-h5pm (launch-editor existence
@@ -62,7 +73,7 @@ overrides:
   # Floor lifted to 4.13.5 for three more advisories in the same line:
   # GHSA-gqvv-2mrq-wpjv, GHSA-g6gw-c38x-mqfc and GHSA-crvj-82cr-hjcx (request
   # smuggling / header handling). Same reach: @iblai/mcp > MCP SDK.
-  hono: '>=4.13.5'
+  hono: '>=4.13.11'
   # Floor raised 1.16.0 -> 1.20.0 for seven high advisories fixed together in
   # 1.20.0: GHSA-c29m-xwm3-cm6r (data: URL ReDoS), GHSA-mghh-pgcx-3jjj (proxy
   # host ReDoS), GHSA-x97p-jq2g-jp4f (toFormData prototype pollution),
@@ -98,7 +109,7 @@ overrides:
   # @vitejs/plugin-react > @babel/core > @babel/helper-compilation-targets;
   # every consumer already asks for ^4.x, so the floor lifts within the major.
   browserslist: '>=4.28.7'
-  '@hono/node-server': '>=2.0.10'
+  '@hono/node-server': '>=2.1.3'
   bytes: '>=1.11.1'
   # GHSA-9rgm-9g3h-6x36 — DoS via malformed input, patched in 5.9.2. Reached
   # through @iblai/iblai-js > @iblai/web-containers > @tanstack/react-form.
@@ -116,7 +127,7 @@ overrides:
   # Floor lifted 4.1.3 -> 4.1.5 for GHSA-hrr3-gc8f-f4qj and GHSA-jvvf-x445-j334
   # (two more parsing issues in the same 4.1.x line). Same dev-only reach, via
   # @commitlint/config-validator > ajv.
-  fast-uri: '>=4.1.5'
+  fast-uri: '>=4.2.3'
   # GHSA-mwp4-54f8-5fhr — Address4 decodes leading-zero octets as decimal, so an
   # address like 010.0.0.1 parses to an unintended host. Patched in 10.3.1.
   # Reached through @wdio/cli > @wdio/utils > @puppeteer/browsers > proxy-agent.
@@ -125,7 +136,7 @@ overrides:
   # NAT64 local-use range 64:ff9b:1::/48 goes unclassified), both SSRF /
   # trust-boundary bypasses. Dev-only reach, now also via
   # release-it > proxy-agent > socks-proxy-agent > socks. Same major.
-  ip-address: '>=10.5.1'
+  ip-address: '>=10.7.4'
   # brace-expansion GHSA-mh99-v99m-4gvg (DoS/OOM via unbounded expansion) is patched
   # ONLY in 5.0.8 — there is no patched 1.x/2.x/3.x/4.x. But brace-expansion@5 ships
   # ESM-style named exports, so older minimatch majors that import it as a CJS
@@ -169,7 +180,7 @@ overrides:
   ws: '>=8.20.1'
   # Floor lifted to 6.16.0 for GHSA-x5fp-wj9c-mxmx + GHSA-4mjr-xmp4-gh2g
   # (parameter-parsing DoS), reached through the MCP SDK's express.
-  qs: '>=6.16.0'
+  qs: '>=6.16.1'
   # GHSA-253c-mchw-3w2r — two quadratic paths in linkify let a few hundred KB
   # of markdown block the event loop for tens of seconds. Patched in 14.3.1.
   # Reached through @iblai/iblai-js > @iblai/web-containers > @tiptap/pm >
@@ -199,7 +210,7 @@ overrides:
   # needs Node >=20 (this repo is on 25), and mocha's only call site is
   # buffered-worker-pool's serializeOptions, which runs solely under `--parallel` —
   # a mode the wdio runner never enables.
-  serialize-javascript: '>=7.0.5'
+  serialize-javascript: '>=7.1.3'
   # extract-zip GHSA-jmr9-qjv8-65gv (unvalidated symlink path traversal) has NO
   # patched release — 2.0.1 is the latest ever published and the advisory lists
   # "patched: <0.0.0". The only remedy is removing it from the tree:
