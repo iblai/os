@@ -166,7 +166,8 @@
     "notifications": "通知",
     "invites": "邀请",
     "management": "管理",
-    "integrations": "集成",
+    "secrets": "机密",
+    "api": "API",
     "monetization": "变现",
     "advanced": "高级",
     "memory": "记忆",
@@ -175,7 +176,8 @@
     "accountTabBilling": "账单",
     "accountDescOrganization": "管理您的组织设置。",
     "accountDescManagement": "管理系统中的用户及其权限。",
-    "accountDescIntegrations": "管理与其他服务的集成。",
+    "accountDescSecrets": "来自其他服务（例如 OpenAI 或 Stripe）的密钥，供 ibl.ai 和您的智能体使用。",
+    "accountDescApi": "让您自己的软件与 ibl.ai 协同工作。",
     "accountDescMonetization": "配置付费墙、定价和收入。",
     "accountDescAdvanced": "配置组织的高级设置。",
     "accountDescMemory": "管理用户的全局记忆和智能体记忆。",
@@ -2066,6 +2068,6 @@
     "agentsTitle": "探索智能体",
     "agentsContent": "在“智能体”菜单中浏览可用的智能体，或创建和管理你自己的智能体。",
     "accountTitle": "管理你的组织",
-    "accountContent": "使用侧边栏底部的工具邀请成员、管理用户和群组、连接集成以及更改高级设置。"
+    "accountContent": "使用侧边栏底部的工具邀请成员、管理用户和群组、添加机密以及更改高级设置。"
   }
 }

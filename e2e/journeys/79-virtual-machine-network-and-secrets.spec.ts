@@ -7,18 +7,22 @@
  *
  *   Tenant settings — the SDK `Account` rail of the User Profile dialog
  *     (More options → the platform name, as journey 38 reaches the Advanced
- *     tab) lists a "Virtual Machine" entry for admins that hosts the SDK
- *     `VirtualMachineAdminTab`: the **Network Policies** table (named,
- *     reusable `host:port` allowlists) and the **VM secrets** table (keys
- *     the VM can use but never read). Both are managed through SDK dialogs
- *     whose hosts are entered with a keyboard-driven chip input. Nothing in
- *     the app is involved: the SDK owns the rail, the tab and its gating.
+ *     tab) lists a "Network" entry for admins, in its Integrations group,
+ *     that hosts the SDK `VirtualMachineAdminTab`: a table of named, reusable
+ *     allowlists, managed through an SDK dialog whose hosts are entered with a
+ *     keyboard-driven chip input.
+ *   Secrets — the sidebar's "Secrets" footer row opens the SDK `SecretsTab`:
+ *     one sub-tab per kind of key (LLMs, Services, Environment Variables), each with
+ *     its own sentence, Add button and table. Add LLM and Add Service start on a
+ *     type-to-search box; Add Environment Variable opens straight on its form.
+ *     Nothing in the app is involved beyond the footer row: the SDK owns the
+ *     rail, the tabs and their gating.
  *   Agent settings — inside Edit Agent → Sandbox, while the Virtual Machine
  *     Shell kind is active, the SDK `SandboxConfig` renders the
  *     `VirtualMachineNetworkSection`: the egress-profile radio group, the
- *     policy picker (Custom only, required), the secrets multi-select
- *     (Public / Custom only) and the billing notice, with every backend
- *     rule mirrored before the save.
+ *     policy picker (Custom only, required), the Environment Variables group
+ *     (every profile, its boxes disabled without network access) and the
+ *     billing notice, with every backend rule mirrored before the save.
  *
  * ── Fixtures and residue ──────────────────────────────────────────────────
  *
@@ -47,14 +51,17 @@
  *   - No shared agent. Binding a policy / selecting a sandbox kind mutates
  *     mentor settings, so the agent-settings test creates its own mentor
  *     (this project's shared-mentor-isolation convention, journeys 44 / 71).
- *     The tenant-dialog tests only open the User Profile dialog and mutate
- *     no agent.
+ *     The tenant-dialog tests only open the User Profile and Secrets dialogs
+ *     and mutate no agent.
  *   - No mentor deletion mid-run. Other workers land on the account's
  *     most-recently-accessed mentor, which can be the one this file just
  *     created; deleting it under them would redirect their page. The mentor
  *     is registered by `createMentorPage` and reaped once, at the run-level
  *     residue teardown. This file only moves it off the policy / secret so
  *     those can be deleted.
+ *   - No shared singletons. An organization holds one Stripe key and one key
+ *     per AI provider, so the checkpoints that add them answer those lists from
+ *     `page.route` (`e2e/utils/secrets-mock.ts`) instead of touching real keys.
  *   - Serial mode is deliberately absent: it skips every later test in the
  *     file once one fails, which hides their results, and nothing here needs
  *     an order.
@@ -79,6 +86,15 @@ import {
   VirtualMachineAdminPage,
   readPlatformName,
 } from '../page-objects/virtual-machine-admin.page';
+import {
+  ENV_VAR_COLUMNS,
+  KEY_COLUMNS,
+  SecretsPage,
+} from '../page-objects/secrets.page';
+import {
+  mockAiSecretLists,
+  mockStripeSecretLists,
+} from '../utils/secrets-mock';
 import { SandboxTab } from '../page-objects/edit-mentor/sandbox.tab';
 import { VmNetworkSection } from '../page-objects/edit-mentor/vm-network.section';
 
@@ -95,9 +111,15 @@ function stamp(): string {
   return `${clock}${worker}${random}`.toUpperCase();
 }
 
-const HOST_API = 'api.e2e-vm.example.com:443';
-const HOST_AUTH = 'auth.e2e-vm.example.com:443';
-const HOST_FILES = 'files.e2e-vm.example.com:443';
+// As the chips and rows show them; the API stores them with the standard port.
+const HOST_API = 'api.e2e-vm.example.com';
+const HOST_AUTH = 'auth.e2e-vm.example.com';
+const HOST_FILES = 'files.e2e-vm.example.com';
+const stored = (host: string) => `${host}:443`;
+
+/** One of an organization's lists, whatever its query string. */
+const orgList = (path: string) =>
+  new RegExp(String.raw`\/api\/ai-account\/orgs\/[^/]+\/${path}\/(\?.*)?$`);
 
 // ─── Tenant admin dialog ─────────────────────────────────────────────────────
 
@@ -109,10 +131,7 @@ test.describe('Journey 79: Virtual Machine Network Policies & Secrets — admin 
     await navigateToMentorApp(page);
     const isAdmin = await checkAdminStatus(page);
     if (!isAdmin) {
-      test.skip(
-        true,
-        'Virtual Machine policies and secrets require admin access',
-      );
+      test.skip(true, 'Network policies and secrets require admin access');
     }
   });
 
@@ -126,38 +145,62 @@ test.describe('Journey 79: Virtual Machine Network Policies & Secrets — admin 
 
   // ── vmn-01 ──────────────────────────────────────────────────────────────
 
-  test('admin reaches the tenant Virtual Machine settings through the User Profile dialog, which hosts the SDK tab with the Network Policies and Secrets sections', async ({
+  test("admin reaches Network through the User Profile dialog's Integrations group, and the Secrets page through its own footer row and rail entry", async ({
     page,
   }) => {
     const admin = new VirtualMachineAdminPage(page);
     await admin.openTenantSettings();
 
-    // The SDK Account rail lists Virtual Machine for admins, next to the
-    // Memory and Advanced entries journeys 38 / 28 already use.
+    // The SDK Account rail lists Network Policies for admins, in its Integrations group.
     await expect(
       admin.dialog.getByRole('button', { name: 'Advanced', exact: true }),
     ).toBeVisible({ timeout: 10_000 });
-    await expect(admin.virtualMachineTab).toBeVisible({ timeout: 10_000 });
-    await admin.virtualMachineTab.click();
+    await expect(admin.networkPoliciesTab).toBeVisible({ timeout: 10_000 });
+    await admin.networkPoliciesTab.click();
 
     await expect(admin.infoBox).toBeVisible({ timeout: 30_000 });
-    await expect(admin.infoBox).toContainText('no network access by default');
+    await expect(admin.infoBox).toContainText(
+      'with no internet access unless you allow it',
+    );
 
-    // Both sections are reachable for an admin (each would be hidden on a
-    // 403 from its list call — an admin holds both list permissions).
-    await expect(admin.policiesSubTab).toBeVisible({ timeout: 10_000 });
-    await expect(admin.secretsSubTab).toBeVisible({ timeout: 10_000 });
-    await admin.showPolicies();
-    await expect(admin.newPolicyButton).toBeVisible({ timeout: 10_000 });
-    await admin.showSecrets();
-    await expect(admin.newSecretButton).toBeVisible({ timeout: 10_000 });
+    // Network policies are all the page holds: no sub-tabs to choose from.
+    await expect(admin.policiesSection).toBeVisible({ timeout: 15_000 });
+    await expect(admin.addPolicyButton).toHaveText('Add Network', {
+      timeout: 10_000,
+    });
+    await expect(admin.dialog.getByTestId('vm-secrets-section')).toHaveCount(0);
+
+    const integrations = admin.dialog.getByRole('group', {
+      name: 'Integrations',
+      exact: true,
+    });
+    await expect(integrations.getByRole('button')).toHaveText(
+      ['API', 'Secrets', 'Network'],
+      { timeout: 10_000 },
+    );
+    await expect(
+      admin.dialog.getByRole('group', { name: 'Security', exact: true }),
+    ).toHaveCount(0);
 
     await admin.close();
+
+    const secrets = new SecretsPage(page);
+    await secrets.open();
+    await expect(secrets.tabs).toHaveText([
+      'LLMs',
+      'Services',
+      'Environment Variables',
+    ]);
+    await secrets.openTab('env');
+    await expect(secrets.addButton('env')).toHaveText(
+      'Add Environment Variable',
+    );
+    await secrets.close();
   });
 
   // ── vmn-02 / vmn-03 ─────────────────────────────────────────────────────
 
-  test('admin creates a network policy through the chip input (inline host:port validation, keyboard chips) and edits it, seeing the removed-host warning', async ({
+  test('admin adds a network policy through the chip input (inline host:port validation, keyboard chips) and edits it, seeing the removed-host warning', async ({
     page,
   }) => {
     const name = `E2E VM Policy ${stamp()}`;
@@ -165,31 +208,32 @@ test.describe('Journey 79: Virtual Machine Network Policies & Secrets — admin 
 
     const admin = new VirtualMachineAdminPage(page);
     await admin.open();
-    await admin.showPolicies();
-    await admin.openNewPolicy();
-    await expect(admin.newPolicyDialog).toBeVisible({ timeout: 5_000 });
+    await admin.openAddPolicy();
+    await expect(admin.addPolicyDialog).toBeVisible({ timeout: 5_000 });
+    await expect(admin.policySaveButton).toHaveText('Add Network');
     await admin.policyNameInput.fill(name);
 
-    // A scheme is not a host:port — the entry stays in the box and the
+    // An underscore is not an address — the entry stays in the box and the
     // aria-live line explains why; no chip is added.
-    await admin.addHost(
-      admin.policyHostsInput,
-      'https://api.e2e-vm.example.com',
-    );
+    await admin.addHost(admin.policyHostsInput, 'bad_host.example.com');
     await expect(admin.policyHostsError).toBeVisible({ timeout: 5_000 });
-    await expect(admin.policyHostsError).toContainText('must be host:port');
+    await expect(admin.policyHostsError).toContainText(
+      'Enter just the address',
+    );
     await expect(admin.policyHostsList).toHaveCount(0);
     await expect(admin.policyHostsInput).toHaveValue(
-      'https://api.e2e-vm.example.com',
+      'bad_host.example.com:443',
     );
 
     // Reserved hosts are refused client-side too.
-    await admin.addHost(admin.policyHostsInput, 'localhost:443');
-    await expect(admin.policyHostsError).toContainText('reserved');
+    await admin.addHost(admin.policyHostsInput, 'localhost');
+    await expect(admin.policyHostsError).toContainText(
+      "localhost can't be used here.",
+    );
     await expect(admin.policyHostsList).toHaveCount(0);
 
-    // A valid entry becomes a chip and clears the error line.
-    await admin.addHost(admin.policyHostsInput, HOST_API);
+    // A pasted URL becomes its host: a chip, and the error line clears.
+    await admin.addHost(admin.policyHostsInput, `https://${HOST_API}/v1`);
     await expect(admin.hostChip(admin.policyHostsList, HOST_API)).toBeVisible({
       timeout: 5_000,
     });
@@ -207,7 +251,7 @@ test.describe('Journey 79: Virtual Machine Network Policies & Secrets — admin 
 
     await admin.policyDescriptionInput.fill('Created by journey 79');
     await admin.policySaveButton.click();
-    await admin.expectToast('Network policy created');
+    await admin.expectToast('Network added');
     await expect(admin.policyDialog).not.toBeVisible({ timeout: 10_000 });
 
     const row = await admin.findPolicyRow(name);
@@ -231,7 +275,7 @@ test.describe('Journey 79: Virtual Machine Network Policies & Secrets — admin 
     });
     await expect(admin.policyRemovedHostsWarning).toContainText(HOST_API);
     await admin.policySaveButton.click();
-    await admin.expectToast('Network policy updated');
+    await admin.expectToast('Network updated');
     await expect(admin.policyDialog).not.toBeVisible({ timeout: 10_000 });
     await expect(admin.policyRowHosts(name)).toContainText(HOST_AUTH, {
       timeout: 15_000,
@@ -243,108 +287,99 @@ test.describe('Journey 79: Virtual Machine Network Policies & Secrets — admin 
 
   // ── vmn-04 / vmn-05 ─────────────────────────────────────────────────────
 
-  test('admin creates a VM secret from a pasted value, never sees the value again (blank on edit, env var read-only, credential source offered) and deletes it', async ({
+  test('admin adds an environment variable on its tab, never sees its key again (blank on edit, Variable Name locked, Allowed Hosts listed) and deletes it', async ({
     page,
   }) => {
     const suffix = stamp();
     const envVar = `E2E_VM_KEY_${suffix}`;
-    const name = `E2E VM Secret ${suffix}`;
+    const name = `E2E VM Key ${suffix}`;
+    const value = `e2e-secret-value-${suffix}`;
     secretsToDelete.add(envVar);
 
-    const admin = new VirtualMachineAdminPage(page);
-    await admin.open();
-    await admin.showSecrets();
-    await admin.openNewSecret();
-    await expect(admin.newSecretDialog).toBeVisible({ timeout: 5_000 });
+    const secrets = new SecretsPage(page);
+    await secrets.open();
+    await secrets.openTab('env');
+    await secrets.openAdd('env');
+    await expect(secrets.secretDialog).toHaveAccessibleName(
+      'Add Environment Variable',
+    );
+    await expect(secrets.serviceSearch).toHaveCount(0);
 
-    await admin.secretNameInput.fill(name);
-    await admin.secretEnvVarInput.fill(envVar);
+    // The Variable Name is worked out from the name.
+    await secrets.nameInput.fill(name);
+    await expect(secrets.envVarInput).toHaveValue(envVar);
 
     // Secrets take hostnames only — an IP literal is refused client-side.
-    await admin.addHost(admin.secretHostsInput, '203.0.113.10:443');
-    await expect(admin.secretHostsError).toContainText('not an IP address');
-    await expect(admin.secretHostsList).toHaveCount(0);
-    await admin.addHost(admin.secretHostsInput, HOST_FILES);
-    await expect(admin.hostChip(admin.secretHostsList, HOST_FILES)).toBeVisible(
-      { timeout: 5_000 },
-    );
+    await secrets.addHost('203.0.113.10');
+    await expect(secrets.hostsError).toContainText('not a number address');
+    await expect(secrets.hostsList).toHaveCount(0);
+    await secrets.addHost(HOST_FILES);
+    await expect(secrets.hostChip(HOST_FILES)).toBeVisible({ timeout: 5_000 });
 
-    // The value source is a choice: "Enter a Value" (default) or an existing
-    // integration credential. The value box is a password field.
-    await expect(admin.secretSourceValueRadio).toHaveAttribute(
-      'data-state',
-      'checked',
-    );
-    await expect(admin.secretValueInput).toHaveAttribute('type', 'password');
-    await expect(admin.secretValueInput).toHaveAttribute(
+    await expect(secrets.keyInput).toHaveAttribute('type', 'password');
+    await expect(secrets.keyInput).toHaveAttribute(
       'placeholder',
       'Paste the key',
     );
 
-    // Too short and masked-looking values are rejected before any request.
-    await admin.secretValueInput.fill('short');
-    await admin.secretSaveButton.click();
+    // The hidden copy a list shows is refused before any request.
+    await secrets.keyInput.fill('sk-************');
+    await secrets.saveButton.click();
     await expect(
-      admin.secretDialog.getByText('The value must be at least 8 characters.'),
-    ).toBeVisible({ timeout: 5_000 });
-    await admin.secretValueInput.fill('sk-************');
-    await admin.secretSaveButton.click();
-    await expect(
-      admin.secretDialog.getByText(
-        'This looks like a masked value. Paste the real key.',
+      secrets.secretDialog.getByText(
+        'This looks like a hidden copy of the key (it contains ***). Paste the full key.',
       ),
     ).toBeVisible({ timeout: 5_000 });
 
-    await admin.secretValueInput.fill(`e2e-secret-value-${suffix}`);
-    await admin.secretSaveButton.click();
-    await admin.expectToast('VM secret created');
-    await expect(admin.secretDialog).not.toBeVisible({ timeout: 10_000 });
+    await secrets.keyInput.fill(value);
+    await secrets.saveButton.click();
+    await secrets.expectToast(
+      `${name} added. Choose it on an agent's Sandbox tab to let that agent use it.`,
+    );
+    await expect(secrets.secretDialog).not.toBeVisible({ timeout: 10_000 });
 
-    const row = await admin.findSecretRow(envVar);
+    const row = secrets.row(envVar);
     await expect(row).toBeVisible({ timeout: 15_000 });
     await expect(row).toContainText(name);
-    await expect(row).toContainText(HOST_FILES);
-    // The table only says where the value comes from — never the value.
-    await expect(row).toContainText('Stored Value');
-    await expect(row).not.toContainText(`e2e-secret-value-${suffix}`);
+    await expect(secrets.envVarCell(envVar)).toHaveText(envVar);
+    await expect(secrets.hostsCell(envVar)).toHaveText(HOST_FILES);
+    await expect(row).not.toContainText(value);
 
-    // Edit: env var is read-only, the value box is blank and says so, and
-    // switching to a credential source offers the org's credentials (or
-    // says there are none) without ever showing a masked value.
-    await admin.openEditSecret(envVar);
-    await expect(admin.editSecretDialog).toBeVisible({ timeout: 5_000 });
-    await expect(admin.secretEnvVarInput).toHaveValue(envVar);
-    await expect(admin.secretEnvVarInput).toBeDisabled();
-    await expect(admin.secretValueInput).toHaveValue('');
-    await expect(admin.secretValueInput).toHaveAttribute(
-      'placeholder',
-      'Leave blank to keep the current value',
+    // Edit: the variable is locked, the address is listed, and the key box is
+    // blank and says so.
+    await secrets.openEdit(envVar);
+    await expect(secrets.secretDialog).toHaveAccessibleName(
+      'Edit Environment Variable',
     );
-    await admin.secretSourceCredentialRadio.click();
-    await expect(
-      admin.secretCredentialSelect.or(admin.secretNoCredentialsNotice).first(),
-    ).toBeVisible({ timeout: 10_000 });
-    await expect(admin.secretValueInput).not.toBeVisible();
-    await expect(admin.secretDialog).not.toContainText('****');
-    await admin.secretCancelButton.click();
-    await expect(admin.secretDialog).not.toBeVisible({ timeout: 10_000 });
+    await expect(secrets.envVarInput).toHaveValue(envVar);
+    await expect(secrets.envVarInput).toBeDisabled();
+    await expect(secrets.hostChip(HOST_FILES)).toBeVisible();
+    await expect(secrets.keyInput).toHaveValue('');
+    await expect(secrets.keyInput).toHaveAttribute(
+      'placeholder',
+      'Leave blank to keep the current key',
+    );
+    await expect(secrets.secretDialog).not.toContainText('****');
+    await secrets.cancelButton.click();
+    await expect(secrets.secretDialog).not.toBeVisible({ timeout: 10_000 });
 
     // Delete: the confirmation spells out that every agent using it loses it.
-    await admin.openDeleteSecret(envVar);
-    await expect(admin.secretDeleteDialog).toContainText(envVar);
-    await expect(admin.secretDeleteDialog).toContainText(
+    await secrets.openDelete(envVar);
+    await expect(secrets.deleteDialog).toHaveAccessibleName(
+      'Delete Environment Variable',
+    );
+    await expect(secrets.deleteDialog).toContainText(name);
+    await expect(secrets.deleteDialog).toContainText(
       'removed from every agent that uses it',
     );
-    await admin.secretDeleteConfirmButton.click();
-    await admin.expectToast('VM secret deleted');
-    await expect(admin.secretDeleteDialog).not.toBeVisible({ timeout: 10_000 });
-    // No page of the table lists it any more. The helper anchors on the
-    // section first: the table is rooted on the User Profile dialog, which
-    // Radix hides from the accessibility tree while a nested dialog is open.
-    await admin.expectSecretRowGone(envVar);
+    await secrets.deleteConfirmButton.click();
+    await secrets.expectToast('Environment variable deleted');
+    await expect(secrets.deleteDialog).not.toBeVisible({ timeout: 10_000 });
+    await expect(secrets.section).toBeVisible();
+    await expect(secrets.row(envVar)).toHaveCount(0, { timeout: 20_000 });
     secretsToDelete.delete(envVar);
 
-    await admin.close();
+    await secrets.close();
   });
 
   // ── vmn-06 ──────────────────────────────────────────────────────────────
@@ -355,13 +390,12 @@ test.describe('Journey 79: Virtual Machine Network Policies & Secrets — admin 
     // A policy created here and now is bound to no agent, so the delete is
     // a plain one. The unique name keeps it apart from anything else in the
     // org-wide list.
-    const name = `E2E VM Delete Policy ${stamp()}`;
+    const name = `E2E VM Delete Network ${stamp()}`;
     policiesToDelete.add(name);
 
     const admin = new VirtualMachineAdminPage(page);
     await admin.open();
-    await admin.showPolicies();
-    await admin.createPolicy({ name, hosts: [HOST_API] });
+    await admin.addPolicy({ name, hosts: [HOST_API] });
 
     // The list is org-wide and ordered by name: find the row on whichever
     // page it landed (a single page today; the walk covers a paged table).
@@ -383,7 +417,7 @@ test.describe('Journey 79: Virtual Machine Network Policies & Secrets — admin 
     // page of the table lists the policy any more.
     await admin.openDeletePolicy(name);
     await admin.policyDeleteConfirmButton.click();
-    await admin.expectToast('Network policy deleted');
+    await admin.expectToast('Network deleted');
     await expect(admin.policyDeleteDialog).not.toBeVisible({
       timeout: 10_000,
     });
@@ -391,6 +425,260 @@ test.describe('Journey 79: Virtual Machine Network Policies & Secrets — admin 
     policiesToDelete.delete(name);
 
     await admin.close();
+  });
+
+  // ── vmn-15 ──────────────────────────────────────────────────────────────
+
+  test('admin sees AI keys on the LLMs tab and adds and deletes one, with the hidden copy of a key refused (mocked dataset)', async ({
+    page,
+  }) => {
+    await mockAiSecretLists(page);
+    const secrets = new SecretsPage(page);
+    await secrets.open();
+
+    const azure = secrets.row('ai-azure_openai');
+    await expect(azure).toContainText('Azure OpenAI');
+    await expect(azure).toContainText('2 models');
+    await azure
+      .getByRole('button', {
+        name: 'Show models for Azure OpenAI',
+        exact: true,
+      })
+      .click();
+    await expect(secrets.keyCell('ai-azure_openai-gpt-4o')).toHaveText(
+      'az-***1',
+    );
+    await expect(secrets.keyCell('ai-azure_openai-gpt-4o-mini')).toHaveText(
+      'az-***2',
+    );
+
+    await secrets.openAdd('llms');
+    await expect(secrets.secretDialog).toHaveAccessibleName('Add LLM');
+    await secrets.pickService('OpenAI', 'ai-openai');
+    await expect(secrets.aiHint).toHaveText(
+      'Your agents answer with this key. They never see it.',
+    );
+    const key = secrets.field('key');
+    await expect(key).toHaveAttribute('type', 'password');
+    await expect(secrets.hostsInput).toHaveCount(0);
+    await expect(secrets.envVarInput).toHaveCount(0);
+
+    await key.fill('sk-***ab');
+    await secrets.saveButton.click();
+    await expect(
+      secrets.secretDialog.getByText(
+        'This looks like a hidden copy of the key (it contains ***). Paste the full key.',
+      ),
+    ).toBeVisible({ timeout: 5_000 });
+
+    await key.fill('sk-e2e-not-a-real-key');
+    await secrets.saveButton.click();
+    await secrets.expectToast('OpenAI added.');
+    await expect(secrets.secretDialog).not.toBeVisible({ timeout: 10_000 });
+
+    const openAi = secrets.row('ai-openai');
+    await expect(openAi).toBeVisible({ timeout: 15_000 });
+    await expect(openAi).toContainText('sk-***ab');
+    await expect(openAi).not.toContainText('sk-e2e-not-a-real-key');
+
+    await secrets.openDelete('ai-openai');
+    await expect(secrets.deleteDialog).toHaveAccessibleName('Delete LLM');
+    await expect(secrets.deleteDialog).toContainText(
+      'Delete OpenAI? Your agents will no longer be able to use it.',
+    );
+    await secrets.deleteConfirmButton.click();
+    await secrets.expectToast('OpenAI deleted');
+    await expect(secrets.deleteDialog).not.toBeVisible({ timeout: 10_000 });
+    await expect(secrets.row('ai-openai')).toHaveCount(0, { timeout: 15_000 });
+
+    await secrets.close();
+  });
+
+  // ── vmn-16 ──────────────────────────────────────────────────────────────
+
+  test('admin sees one tab per kind of key, each with its own sentence, Add button and columns, and finds a service by typing its name (mocked dataset)', async ({
+    page,
+  }) => {
+    await mockAiSecretLists(page);
+    await mockStripeSecretLists(page);
+    await page.route(orgList('integration-credential'), (route) =>
+      route.fulfill({
+        json: [
+          {
+            id: 8,
+            name: 'acme_mail',
+            value: { key: 'am-****' },
+            service_info: { display_name: 'Acme Mail' },
+          },
+        ],
+      }),
+    );
+    await page.route(orgList('virtual-machine-secret'), (route) =>
+      route.fulfill({
+        json: [
+          {
+            id: 31,
+            name: 'E2E Acme Key',
+            env_var: 'E2E_ACME_KEY',
+            allow_hosts: [stored(HOST_API)],
+            source_credential_id: null,
+            source_field: '',
+            created_at: '2026-11-06T00:00:00Z',
+            updated_at: '2026-11-06T00:00:00Z',
+          },
+        ],
+      }),
+    );
+
+    const secrets = new SecretsPage(page);
+    await secrets.open();
+
+    await expect(secrets.tabs).toHaveText([
+      'LLMs',
+      'Services',
+      'Environment Variables',
+    ]);
+    await expect(secrets.section).toContainText(
+      'your agents can answer using its models',
+    );
+    await expect(secrets.addButton('llms')).toHaveText('Add LLM');
+    await expect(secrets.columnHeaders).toHaveText(KEY_COLUMNS);
+    await expect(secrets.rows).toHaveText([/^Azure OpenAI/]);
+
+    await secrets.openTab('env');
+    await expect(secrets.section).toContainText(
+      'The real key is only sent to the addresses you allow.',
+    );
+    await expect(secrets.addButton('env')).toHaveText(
+      'Add Environment Variable',
+    );
+    await expect(secrets.columnHeaders).toHaveText(ENV_VAR_COLUMNS);
+    await expect(secrets.rows).toHaveText([/^E2E Acme Key/]);
+    await expect(secrets.envVarCell('E2E_ACME_KEY')).toHaveText('E2E_ACME_KEY');
+    await expect(secrets.hostsCell('E2E_ACME_KEY')).toHaveText(HOST_API);
+
+    await secrets.openTab('services');
+    await expect(secrets.section).toContainText(
+      "A key like Stripe's can be given to an agent on its Sandbox tab.",
+    );
+    await expect(secrets.addButton('services')).toHaveText('Add Service');
+    await expect(secrets.columnHeaders).toHaveText(KEY_COLUMNS);
+    await expect(secrets.rows).toHaveText([/^Acme Mail/]);
+    await expect(secrets.keyCell('service-acme_mail')).toHaveText('am-****');
+
+    await secrets.openAdd('services');
+    await expect(secrets.secretDialog).toHaveAccessibleName('Add Service');
+    await expect(secrets.serviceSearch).toHaveAccessibleName('Service');
+    await expect(secrets.serviceSearch).toHaveAttribute(
+      'placeholder',
+      'Type a name, like Stripe',
+    );
+
+    await secrets.serviceSearch.fill('Zebra');
+    await expect(secrets.serviceNoMatch).toHaveText(
+      'Not listed? Add its key on the Environment Variables tab.',
+    );
+
+    await secrets.pickService('Stripe', 'stripe');
+    await expect(secrets.servicePicked).toContainText('Stripe');
+    await expect(secrets.serviceSearch).toHaveCount(0);
+
+    await secrets.serviceChangeButton.click();
+    await expect(secrets.servicePicked).toHaveCount(0);
+    await expect(secrets.serviceSearch).toBeVisible();
+
+    await secrets.cancelButton.click();
+    await expect(secrets.secretDialog).not.toBeVisible({ timeout: 10_000 });
+    await secrets.close();
+  });
+
+  // ── vmn-17 ──────────────────────────────────────────────────────────────
+
+  test('admin whose list of LLM keys could not be read is told so in Add LLM and cannot pick an LLM yet, and Try Again brings them back (mocked dataset)', async ({
+    page,
+  }) => {
+    await mockAiSecretLists(page);
+    let heldKeysDown = true;
+    await page.route(orgList('masked-llm-credential'), (route) =>
+      heldKeysDown
+        ? route.fulfill({ status: 500, json: { detail: 'e2e' } })
+        : route.fallback(),
+    );
+
+    const secrets = new SecretsPage(page);
+    await secrets.open();
+    await secrets.openAdd('llms');
+
+    await expect(secrets.choicesFailed).toContainText(
+      'Some choices could not be loaded, so yours may be missing.',
+    );
+    await expect(secrets.choicesRetry).toHaveText('Try Again');
+    await expect(secrets.serviceSearch).toBeEnabled();
+    await expect(secrets.nameInput).toHaveCount(0);
+    await expect(secrets.field('key')).toHaveCount(0);
+
+    await secrets.serviceSearch.fill('OpenAI');
+    await expect(secrets.serviceOption('ai-openai')).toContainText(
+      'Not loaded',
+    );
+    await expect(secrets.serviceOption('ai-openai')).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
+
+    heldKeysDown = false;
+    await secrets.choicesRetry.click();
+    await expect(secrets.choicesFailed).toHaveCount(0, { timeout: 15_000 });
+    await secrets.pickService('OpenAI', 'ai-openai');
+    await expect(secrets.field('key')).toBeVisible();
+
+    await secrets.cancelButton.click();
+    await expect(secrets.secretDialog).not.toBeVisible({ timeout: 10_000 });
+    await secrets.close();
+  });
+
+  // ── vmn-18 ──────────────────────────────────────────────────────────────
+
+  test("admin of an organization with no keys sees each tab's own sentence as one row inside its table, under its column headings (mocked dataset)", async ({
+    page,
+  }) => {
+    await mockAiSecretLists(page);
+    await mockStripeSecretLists(page);
+    await page.route(orgList('masked-llm-credential'), (route) =>
+      route.fulfill({ json: [] }),
+    );
+
+    const secrets = new SecretsPage(page);
+    await secrets.open();
+
+    for (const { section, columns, sentence } of [
+      {
+        section: 'llms',
+        columns: KEY_COLUMNS,
+        sentence: 'No LLM keys found',
+      },
+      {
+        section: 'services',
+        columns: KEY_COLUMNS,
+        sentence: 'No services found',
+      },
+      {
+        section: 'env',
+        columns: ENV_VAR_COLUMNS,
+        sentence: 'No environment variables found',
+      },
+    ] as const) {
+      await secrets.openTab(section);
+      await expect(secrets.columnHeaders).toHaveText(columns);
+      await expect(secrets.emptyMessage).toHaveText(sentence);
+      await expect(secrets.emptyMessage).toHaveAttribute(
+        'colspan',
+        String(columns.length),
+      );
+      await expect(secrets.rows).toHaveCount(1);
+    }
+
+    await secrets.close();
   });
 });
 
@@ -417,7 +705,7 @@ test.describe('Journey 79: Virtual Machine Network Policies & Secrets — agent 
 
   // ── vmn-07 … vmn-12 ─────────────────────────────────────────────────────
 
-  test('admin configures an agent VM network: labelled egress radio group + billing notice, policy picker only under Custom (required, with Create Policy), secrets only under Public/Custom, uncovered hosts added to the policy on save, persistence, and narrowing that unbinds secrets after confirmation', async ({
+  test('admin configures an agent VM network: labelled egress radio group + billing notice, policy picker only under Custom (required, with Add Network), Environment Variables under every profile but disabled without network access, uncovered hosts added to the policy on save, persistence, and narrowing that removes them after confirmation', async ({
     page,
     createMentorPage,
     editMentorPage,
@@ -428,20 +716,24 @@ test.describe('Journey 79: Virtual Machine Network Policies & Secrets — agent 
 
     const suffix = stamp();
     const policyName = `E2E VM Agent Policy ${suffix}`;
+    const secretName = `E2E VM Agent Secret ${suffix}`;
     const envVar = `E2E_VM_AGENT_KEY_${suffix}`;
+    const addedName = `E2E VM Added Key ${suffix}`;
+    const addedEnvVar = `E2E_VM_ADDED_KEY_${suffix}`;
     policiesToDelete.add(policyName);
     secretsToDelete.add(envVar);
+    secretsToDelete.add(addedEnvVar);
 
     // Org fixtures: a policy that allows the API host only, and a secret
     // sent to the FILES host — which the policy does not allow yet.
     await createVmNetworkPolicy(page, {
       name: policyName,
-      allowed_hosts: [HOST_API],
+      allowed_hosts: [stored(HOST_API)],
     });
     await createVmSecret(page, {
-      name: `E2E VM Agent Secret ${suffix}`,
+      name: secretName,
       env_var: envVar,
-      allow_hosts: [HOST_FILES],
+      allow_hosts: [stored(HOST_FILES)],
       value: `e2e-agent-secret-${suffix}`,
     });
 
@@ -474,7 +766,7 @@ test.describe('Journey 79: Virtual Machine Network Policies & Secrets — agent 
 
       // vmn-07: the section renders under the kind selector with the billing
       // notice and a labelled radio group of the four profiles; on No Network
-      // neither picker is shown.
+      // the policy picker is not shown.
       let net = new VmNetworkSection(page, editMentorPage.dialog);
       await net.waitForLoaded();
       await expect(net.billingNotice).toBeVisible();
@@ -496,28 +788,58 @@ test.describe('Journey 79: Virtual Machine Network Policies & Secrets — agent 
       );
       expect(await net.getSelectedEgress()).toBe('none');
       await expect(net.policyPicker).not.toBeVisible();
-      await expect(net.secretsPicker).not.toBeVisible();
       await expect(net.saveButton).toBeDisabled();
 
-      // vmn-08: secrets need network access — the multi-select appears under
-      // Public (and Custom) only; the policy picker under Custom only.
+      // vmn-08: the Environment Variables group is there under every profile,
+      // its boxes disabled until the profile has network access.
+      await expect(net.secretsGroup).toBeVisible();
+      await expect(net.secretsLocked).toHaveText(
+        'These need network access to work. Choose Public Internet or Custom Allowlist above to turn one on for this agent.',
+      );
+      await expect(net.secretOption(envVar)).toBeDisabled();
+      await expect(net.addSecretButton).toHaveText('Add Environment Variable');
+
+      // Adding one without network access opens straight on its form and
+      // leaves it unticked.
+      await net.addSecretButton.click();
+      const form = new SecretsPage(page);
+      await expect(form.addDialog).toHaveAccessibleName(
+        'Add Environment Variable',
+      );
+      await expect(form.serviceSearch).toHaveCount(0);
+      await form.nameInput.fill(addedName);
+      await expect(form.envVarInput).toHaveValue(addedEnvVar);
+      await form.keyInput.fill(`e2e-added-secret-${suffix}`);
+      await form.addHost(HOST_FILES);
+      await form.saveButton.click();
+      await form.expectToast('Environment variable added');
+      await expect(form.secretDialog).not.toBeVisible({ timeout: 10_000 });
+      await expect(net.secretOption(addedEnvVar)).toBeDisabled();
+      await expect(net.secretOption(addedEnvVar)).toHaveAttribute(
+        'data-state',
+        'unchecked',
+      );
+
       await net.selectEgress('public');
-      await expect(net.secretsPicker).toBeVisible({ timeout: 10_000 });
-      await expect(net.secretOption(envVar)).toBeVisible();
+      await expect(net.secretsLocked).not.toBeVisible();
+      await expect(net.secretOption(envVar)).toBeEnabled();
       await expect(net.policyPicker).not.toBeVisible();
       await net.selectEgress('registries');
-      await expect(net.secretsPicker).not.toBeVisible();
+      await expect(net.secretsLocked).toBeVisible();
+      await expect(net.secretOption(envVar)).toBeDisabled();
+      await expect(net.addSecretButton).toBeEnabled();
       await expect(net.policyPicker).not.toBeVisible();
 
       // vmn-09: Custom requires a policy — the picker is shown and required,
-      // Save stays disabled, and the Create Policy shortcut opens the SDK
-      // policy dialog in place.
+      // Save stays disabled, and the Add Network shortcut opens the SDK policy
+      // dialog in place.
       await net.selectEgress('custom');
       await expect(net.policyPicker).toBeVisible({ timeout: 10_000 });
       await expect(net.policyRequiredMessage).toBeVisible();
       await expect(net.saveButton).toBeDisabled();
-      await net.createPolicyButton.click();
-      await expect(net.newPolicyDialog).toBeVisible({ timeout: 10_000 });
+      await expect(net.addPolicyButton).toHaveText('Add Network');
+      await net.addPolicyButton.click();
+      await expect(net.addPolicyDialog).toBeVisible({ timeout: 10_000 });
       await net.policyDialogCancelButton.click();
       await expect(net.policyDialog).not.toBeVisible({ timeout: 10_000 });
       await net.selectPolicy(policyName);
@@ -531,7 +853,7 @@ test.describe('Journey 79: Virtual Machine Network Policies & Secrets — agent 
       await net.setSecret(envVar, true);
       await expect(net.uncoveredHosts).toBeVisible({ timeout: 10_000 });
       await expect(net.uncoveredHosts).toContainText(
-        `${envVar} needs ${HOST_FILES}, which ${policyName} doesn't allow.`,
+        `${secretName} is sent to ${HOST_FILES}, which ${policyName} doesn't allow.`,
       );
       await expect(net.saveButton).toBeDisabled();
       await expect(net.addHostsAndSaveButton).toBeVisible();
@@ -562,12 +884,14 @@ test.describe('Journey 79: Virtual Machine Network Policies & Secrets — agent 
       // unbinds it in the same request; the reopened agent is on No Network
       // with nothing bound.
       await net.selectEgress('none');
-      await expect(net.secretsPicker).not.toBeVisible();
+      await expect(net.secretsLocked).toBeVisible();
       await net.save();
-      // Resolved by role + its "Unbind Secrets?" title, so being visible is
-      // the title assertion; the body names how many secrets get unbound.
+      // Resolved by role + its "Remove Environment Variables?" title, so being
+      // visible is the title assertion; the body names how many get removed.
       await expect(net.narrowConfirmDialog).toBeVisible({ timeout: 10_000 });
-      await expect(net.narrowConfirmDialog).toContainText('1 secret');
+      await expect(net.narrowConfirmDialog).toContainText(
+        'removes 1 environment variable',
+      );
       await net.narrowConfirmButton.click();
       await net.expectSavedToast();
       await expect(net.narrowConfirmDialog).not.toBeVisible({
@@ -597,6 +921,108 @@ test.describe('Journey 79: Virtual Machine Network Policies & Secrets — agent 
       await releaseMentorVmNetwork(page, mentorId);
     }
   });
+
+  // ── vmn-14 ──────────────────────────────────────────────────────────────
+
+  test('admin adds a Stripe key on the Services tab, which needs both Key and Publishable Key, sees its masked prefix, and lets an agent use it from the Sandbox tab (mocked dataset)', async ({
+    page,
+    createMentorPage,
+    editMentorPage,
+  }) => {
+    test.slow();
+    const { savedCredentials } = await mockStripeSecretLists(page);
+    const value = 'sk_live_e2e_not_a_real_key';
+    const publishableKey = 'pk_live_e2e_not_a_real_key';
+
+    const secrets = new SecretsPage(page);
+    await secrets.open();
+    await secrets.openTab('services');
+    await secrets.openAdd('services');
+    await expect(secrets.secretDialog).toHaveAccessibleName('Add Service');
+    await secrets.pickService('Stripe', 'stripe');
+    await expect(secrets.agentHint).toHaveText(
+      'Agents can use this key once you choose it on their Sandbox tab.',
+    );
+    await secrets.field('key').fill(value);
+    await secrets.saveButton.click();
+    await expect(
+      secrets.secretDialog.getByText('Enter the Publishable Key.'),
+    ).toBeVisible({ timeout: 5_000 });
+
+    await secrets.field('publishable_key').fill(publishableKey);
+    await secrets.saveButton.click();
+    await secrets.expectToast(
+      "Stripe added. To let an agent use it, choose it on the agent's Sandbox tab.",
+    );
+    await expect(secrets.secretDialog).not.toBeVisible({ timeout: 10_000 });
+    expect(savedCredentials[0].value).toEqual({
+      key: value,
+      publishable_key: publishableKey,
+    });
+
+    const added = secrets.row('service-stripe');
+    await expect(added).toBeVisible({ timeout: 15_000 });
+    await expect(secrets.columnHeaders).toHaveText(KEY_COLUMNS);
+    await expect(secrets.keyCell('service-stripe')).toHaveText('sk_live_****');
+    await expect(added).not.toContainText(value);
+    await secrets.close();
+
+    await createMentorPage.openAndCreate();
+    const { mentorId } = await getPlatformContext(page);
+    // A new agent's starting egress is a per-organization backend setting.
+    await putMentorVmNetworkSettings(page, mentorId, {
+      virtual_machine_egress: 'none',
+    });
+    await editMentorPage.open('Settings');
+    await editMentorPage.navigateToTab('Sandbox');
+    await waitForPageReady(page);
+    const sandbox = new SandboxTab(page, editMentorPage.dialog);
+    await sandbox.selectKind('virtual-machine');
+    const net = new VmNetworkSection(page, editMentorPage.dialog);
+    await net.waitForLoaded();
+    await expect(net.serviceOption('stripe')).toBeDisabled();
+    await net.selectEgress('public');
+
+    // Ticking the key asks only where it is sent, already filled in for Stripe.
+    await net.serviceOption('stripe').click();
+    const linkDialog = page.getByRole('dialog', {
+      name: 'Let Agents Use Stripe',
+      exact: true,
+    });
+    await expect(linkDialog).toBeVisible({ timeout: 10_000 });
+    await expect(
+      linkDialog.getByTestId('vm-secret-hosts').getByRole('listitem'),
+    ).toContainText('api.stripe.com');
+    await linkDialog.getByTestId('vm-secret-save').click();
+    await expect(linkDialog).not.toBeVisible({ timeout: 10_000 });
+    await expect(net.secretOption('STRIPE_KEY')).toBeVisible({
+      timeout: 10_000,
+    });
+
+    // The binding is mocked, so the agent's own settings are never saved with it.
+    await net.discardButton.click();
+    await editMentorPage.close();
+
+    await secrets.open();
+    await secrets.openTab('services');
+    await expect(secrets.row('STRIPE_KEY')).toBeVisible({ timeout: 15_000 });
+    await secrets.openEdit('STRIPE_KEY');
+    await expect(secrets.secretDialog).toHaveAccessibleName('Edit Service');
+    await expect(secrets.envVarInput).toHaveValue('STRIPE_KEY');
+    await expect(secrets.hostChip('api.stripe.com')).toBeVisible();
+    await secrets.cancelButton.click();
+    await expect(secrets.secretDialog).not.toBeVisible({ timeout: 10_000 });
+
+    await secrets.openTab('env');
+    await expect(secrets.envVarCell('STRIPE_KEY')).toHaveText('STRIPE_KEY');
+    await secrets.openEdit('STRIPE_KEY');
+    await expect(secrets.secretDialog).toHaveAccessibleName(
+      'Edit Environment Variable',
+    );
+    await secrets.cancelButton.click();
+    await expect(secrets.secretDialog).not.toBeVisible({ timeout: 10_000 });
+    await secrets.close();
+  });
 });
 
 // ─── Non-admin ───────────────────────────────────────────────────────────────
@@ -604,7 +1030,7 @@ test.describe('Journey 79: Virtual Machine Network Policies & Secrets — agent 
 test.describe('Journey 79: Virtual Machine Network Policies & Secrets — non-admin', () => {
   // ── vmn-13 ──────────────────────────────────────────────────────────────
 
-  test('non-admin never reaches the tenant Virtual Machine settings: the tenant entry is missing from More options, does nothing, or its dialog lists no Virtual Machine section', async ({
+  test('non-admin never reaches Network Policies: the tenant entry is missing from More options, does nothing, or its dialog lists no Network Policies entry', async ({
     nonadminPage,
   }) => {
     await navigateToMentorApp(nonadminPage);
@@ -619,7 +1045,7 @@ test.describe('Journey 79: Virtual Machine Network Policies & Secrets — non-ad
 
     // The tenant entry is labelled with the platform name. A non-admin may
     // not get it at all; if they do and it opens, the SDK Account rail
-    // filters Virtual Machine on `isAdmin`, so the section is absent either
+    // filters Network Policies on `isAdmin`, so the entry is absent either
     // way.
     const tenantItem = menu.getByText(await readPlatformName(nonadminPage), {
       exact: true,
@@ -655,7 +1081,7 @@ test.describe('Journey 79: Virtual Machine Network Policies & Secrets — non-ad
     // the rail lists Management for them (the SDK filters every other tenant
     // entry on `isAdmin`). Wait for the rail itself — not just any button,
     // the dialog's own Close button exists before the rail renders — then
-    // check Virtual Machine is not in it.
+    // check Network Policies is not in it.
     const rail = dialog.getByRole('navigation', {
       name: 'Organization settings',
       exact: true,
@@ -664,7 +1090,7 @@ test.describe('Journey 79: Virtual Machine Network Policies & Secrets — non-ad
       rail.getByRole('button', { name: 'Management', exact: true }),
     ).toBeVisible({ timeout: 10_000 });
     await expect(
-      dialog.getByRole('button', { name: 'Virtual Machine', exact: true }),
+      dialog.getByRole('button', { name: 'Network', exact: true }),
     ).toHaveCount(0);
     await nonadminPage.keyboard.press('Escape');
   });

@@ -2,8 +2,8 @@ import { Page, Locator, expect } from '@playwright/test';
 
 /**
  * Copy for the SDK's `AgentApiTab` (`@iblai/web-containers` →
- * `@iblai/iblai-js/web-containers/next`), pinned here against the compiled
- * bundle's `AGENT_API_TAB_LABELS` i18n catalog entry. OS's `ApiTab` wrapper
+ * `@iblai/iblai-js/web-containers/next`), pinned here against the SDK's
+ * `apiTabLabels` i18n catalog entry. OS's `ApiTab` wrapper
  * (`components/modals/edit-mentor-modal/tabs/api-tab.tsx`) passes no
  * `labels` override, so these are exactly what renders (see the
  * `messages/en.json` diff on this branch removing OS's now-dead
@@ -17,37 +17,39 @@ const LABELS = {
     description: 'Manage API keys and integrations.',
   },
   infoBox:
-    'Use this agent from your own apps. Create API keys here to call it programmatically and build it into your product or workflow.',
+    'Use this agent from your own apps. Add API keys here to call it programmatically and build it into your product or workflow.',
   disclaimer: {
     lineOne:
       'Your secret API keys are listed below. Please note that we do not display your secret API keys again after you generate them.',
   },
   table: {
-    emptyState: 'No API keys found',
+    emptyState: 'No API keys yet.',
     notAvailable: 'N/A',
+    never: 'Never',
     deleteAriaLabel: 'Delete API Key',
   },
   actions: {
-    createNew: 'Create New',
+    createNew: 'Add API Key',
   },
   createModal: {
-    title: 'Create API Key',
+    title: 'Add API Key',
     nameLabel: 'API Key Name',
-    nameRequired: 'API Key name is required',
-    nameInvalid: 'can only contain letters, numbers, and hyphens',
+    nameRequired: 'Enter a name for this key.',
+    nameInvalid:
+      'Use letters, numbers, hyphens and underscores only, like my-script.',
     expirationPlaceholder: 'Pick a date',
-    submit: 'Submit',
-    submitting: 'Submitting...',
+    submit: 'Add API Key',
+    submitting: 'Adding...',
     cancel: 'Cancel',
-    successToast: 'API Key created successfully',
-    errorToast: 'Failed to create API Key',
+    successToast: 'API key added',
+    errorToast: 'Failed to add API key',
   },
   deleteModal: {
     title: 'Delete API Key',
     confirm: 'Delete',
     confirming: 'Deleting...',
     cancel: 'Cancel',
-    successToast: 'API Key deleted successfully',
+    successToast: 'API key deleted successfully',
   },
   apiKeyModal: {
     title: 'API Key',
@@ -94,7 +96,10 @@ export class ApiTab {
       exact: true,
     });
     this.infoBox = this.dialog.getByTestId('api-info-box');
-    this.createButton = this.dialog.getByTestId('api-key-create-button');
+    // The agent tab's button, or the same button on the organization's API page.
+    this.createButton = this.dialog
+      .getByTestId('api-key-create-button')
+      .or(this.dialog.getByTestId('api-key-create'));
     this.table = this.dialog.getByRole('table');
     this.rows = this.table.locator('tbody tr');
 
@@ -117,14 +122,14 @@ export class ApiTab {
 
   // ── Table ────────────────────────────────────────────────────────────────
 
-  /** A row matched by its exact NAME cell text. */
+  /** A row matched by its exact Name cell text. */
   rowByName(name: string): Locator {
     return this.rows.filter({
       has: this.page.getByRole('cell', { name, exact: true }),
     });
   }
 
-  /** The EXPIRES cell (4th column) for a row, e.g. a PPP date string or "N/A". */
+  /** The Expires cell (4th column) for a row, e.g. a PPP date string or "N/A". */
   expiresCellFor(name: string): Locator {
     return this.rowByName(name).locator('td').nth(3);
   }
@@ -136,7 +141,7 @@ export class ApiTab {
   }
 
   /**
-   * Every NAME cell's text on the currently-visible page, in row order.
+   * Every Name cell's text on the currently-visible page, in row order.
    * Read in one non-waiting snapshot: counting rows and then reading them one
    * by one races a page change — if the table re-renders shorter mid-loop,
    * textContent() auto-waits on a row that no longer exists and stalls any
@@ -220,9 +225,9 @@ export class ApiTab {
   }
 
   nameInput(): Locator {
-    // The `<Label>` renders "API Key Name" immediately followed by a red
-    // "*" required-marker span with no separating space, so the accessible
-    // name is "API Key Name*" — match the stable prefix.
+    // The agent tab's label carries a red "*" with no separating space, so its
+    // accessible name is "API Key Name*"; the API page's mark sits beside the
+    // label. Match the stable prefix.
     return this.createDialog.getByLabel(
       new RegExp(`^${LABELS.createModal.nameLabel}`),
     );
@@ -318,7 +323,7 @@ export class ApiTab {
     await day.click();
     await expect(
       this.createDialog,
-      'Create API Key dialog closed after picking a calendar day — the popover-overlay click-through bug has regressed',
+      'Add API Key dialog closed after picking a calendar day — the popover-overlay click-through bug has regressed',
     ).toBeVisible({ timeout: 2_000 });
     return label;
   }
@@ -334,7 +339,7 @@ export class ApiTab {
    * the calendar, advancing a month first when asked), submits, and waits
    * for the success toast + reveal ("API Key") dialog. Returns the picked
    * day's accessible-name label (`null` when no date was picked) so callers
-   * can derive the PPP string the new row's EXPIRES cell should show.
+   * can derive the PPP string the new row's Expires cell should show.
    */
   async createKey(options: {
     name: string;
