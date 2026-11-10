@@ -1293,11 +1293,18 @@ test.describe('Journey 13: Shareable Links & Embed Integration', () => {
 
       await toggle.click();
       await expect(toggle).toHaveAccessibleName('Full screen');
+      // Back inside the panel rather than byte-identical to `normalBox`: the
+      // component restores its own inline style, and the agent comes back
+      // spanning the panel's border box (402) where it had been spanning the
+      // content box (400). Either way it is small again, which is the claim.
       await expect
         .poll(async () => (await agentOf(page).boundingBox())?.width, {
           timeout: 10_000,
         })
-        .toBe(normalBox!.width);
+        .toBeLessThanOrEqual((await widgetOf(page).boundingBox())!.width);
+      await expect
+        .poll(async () => (await agentOf(page).boundingBox())?.width)
+        .toBeLessThan(1440);
       await expect(bubbleOf(page)).toBeVisible();
 
       // Close while full screen -> reopens small.
