@@ -21,7 +21,6 @@ beforeEach(() => {
 describe('tokenRefreshUrl', () => {
   it('asks the auth app to re-mint for the active organization', () => {
     localStorage.setItem('current_tenant', JSON.stringify({ key: 'acme' }));
-    localStorage.setItem('edx_jwt_token', 'jwt-123');
 
     const url = new URL(tokenRefreshUrl());
 
@@ -29,7 +28,18 @@ describe('tokenRefreshUrl', () => {
     // the session — it never clears one, so this is a refresh, not a logout.
     expect(url.pathname).toBe('/login/complete');
     expect(url.searchParams.get('tenant')).toBe('acme');
-    expect(url.searchParams.get('token')).toBe('jwt-123');
+  });
+
+  // The edX JWT stays in this app. The auth app authorises the mint with its
+  // own first-party session (`credentials: 'include'`), so forwarding ours
+  // would put the JWT in a URL for nothing.
+  it('never forwards the edX JWT, even when one is stored', () => {
+    localStorage.setItem('edx_jwt_token', 'jwt-123');
+
+    const url = new URL(tokenRefreshUrl());
+
+    expect(url.searchParams.get('token')).toBeNull();
+    expect(url.search).not.toContain('jwt-123');
   });
 
   it('comes back to the page the user was on', () => {
@@ -53,13 +63,8 @@ describe('tokenRefreshUrl', () => {
     expect(new URL(tokenRefreshUrl()).searchParams.get('tenant')).toBe('gamma');
   });
 
-  // Without a JWT the auth app cannot mint, but it still signs the user in and
-  // returns them here — better than refusing to go.
-  it('still goes when no edX JWT is stored', () => {
-    const url = new URL(tokenRefreshUrl());
-
-    expect(url.searchParams.get('token')).toBeNull();
-    expect(url.pathname).toBe('/login/complete');
+  it('goes whether or not this app holds a session', () => {
+    expect(new URL(tokenRefreshUrl()).pathname).toBe('/login/complete');
   });
 
   it('does not double the slash after a trailing-slash auth URL', () => {

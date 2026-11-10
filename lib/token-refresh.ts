@@ -5,15 +5,17 @@ import { LOCAL_STORAGE_KEYS } from '@/lib/constants';
 /**
  * Where to send someone whose app tokens have expired.
  *
- * The auth app's `/login/complete` IS the refresh endpoint: given the edX JWT
- * and a tenant it mints a fresh axd/dm pair through the consolidated-token
- * proxy and hands them back at `/sso-login-complete` with the rest of the
- * session. It does not clear anything, so this is a refresh, not a logout —
- * the user keeps their session and lands back where they were.
+ * The auth app's `/login/complete` IS the refresh endpoint: given a tenant it
+ * mints a fresh axd/dm pair through the consolidated-token proxy and hands
+ * them back at `/sso-login-complete` with the rest of the session. It does not
+ * clear anything, so this is a refresh, not a logout — the user keeps their
+ * session and lands back where they were.
  *
- * When the JWT is itself expired the mint 401s, and the auth app falls through
- * to `/login?logout=1` carrying the same return address: the user signs in
- * again and still ends up back here.
+ * The edX JWT is NOT forwarded. The auth app authorises the mint with its own
+ * first-party edX session, and the direction of travel is for it to stop
+ * handing that JWT to apps at all. When the session is gone the mint 401s and
+ * the auth app falls through to `/login?logout=1` carrying the same return
+ * address: the user signs in once and still ends up back here.
  */
 export function tokenRefreshUrl(
   returnPath = `${window.location.pathname}${window.location.search}`,
@@ -42,10 +44,10 @@ export function tokenRefreshUrl(
   tenantKey ||= getAuthItem(LOCAL_STORAGE_KEYS.DEFAULT_TENANT) ?? '';
   if (tenantKey) params.set('tenant', tenantKey);
 
-  // Authorises the mint. Without it the auth app cannot tell who this is and
-  // sends the user through a full sign-in, which still returns them here.
-  const jwt = getAuthItem(LOCAL_STORAGE_KEYS.EDX_TOKEN_KEY);
-  if (jwt) params.set('token', jwt);
-
+  // Deliberately no `token`: we do not hand the edX JWT back to the auth app.
+  // It does not need one — its calls go out with `credentials: 'include'`, so
+  // the mint is authorised by its own first-party edX session. When that
+  // session is gone it answers 401 and falls through to a sign-in, which still
+  // returns the user here.
   return `${base}/login/complete?${params}`;
 }
