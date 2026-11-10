@@ -585,6 +585,7 @@ describe('SettingsModal', () => {
 
   describe('Featured Toggle', () => {
     it('calls editMentorAndRefresh when featured toggle is clicked', async () => {
+      const { toast } = await import('sonner');
       const store = createTestStore([]);
 
       render(
@@ -608,6 +609,11 @@ describe('SettingsModal', () => {
           },
         });
       });
+      // Then wait for the handler to finish, not just for the call to go out:
+      // the toggle's state update would otherwise land after this test ends,
+      // and React's act() warning (a console.error) races the environment
+      // closing — "Closing rpc while onUserConsoleLog was pending".
+      await waitFor(() => expect(toast.success).toHaveBeenCalled());
     });
 
     it('shows success toast when featured toggle succeeds', async () => {
@@ -634,6 +640,11 @@ describe('SettingsModal', () => {
 
     it('shows error toast when featured toggle fails', async () => {
       const { toast } = await import('sonner');
+      // The component logs the failure AFTER the toast. Waiting only for the
+      // toast lets this test end mid-catch, and the log then lands while the
+      // environment is closing: "Closing rpc while onUserConsoleLog was
+      // pending". Spying both silences it and gives us something to wait for.
+      const logged = vi.spyOn(console, 'error').mockImplementation(() => {});
       mockEditMentorAndRefresh.mockReturnValue({
         unwrap: vi.fn().mockRejectedValue(new Error('Update failed')),
       });
@@ -656,6 +667,8 @@ describe('SettingsModal', () => {
           'Failed to update agent featured status',
         );
       });
+      await waitFor(() => expect(logged).toHaveBeenCalled());
+      logged.mockRestore();
     });
   });
 
@@ -849,6 +862,7 @@ describe('SettingsModal', () => {
 
   describe('Null username handling', () => {
     it('uses empty string fallback for userId when username is null', async () => {
+      const { toast } = await import('sonner');
       mockUsernameModal = null;
       const store = createTestStore([]);
 
@@ -870,6 +884,11 @@ describe('SettingsModal', () => {
           }),
         );
       });
+      // Then wait for the handler to finish, not just for the call to go out:
+      // the toggle's state update would otherwise land after this test ends,
+      // and React's act() warning (a console.error) races the environment
+      // closing — "Closing rpc while onUserConsoleLog was pending".
+      await waitFor(() => expect(toast.success).toHaveBeenCalled());
     });
   });
 
