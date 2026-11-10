@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.193.0](https://github.com/iblai/os/compare/v0.192.2...v0.193.0) (2026-11-10)
+
+### Features
+
+* **sidebar:** open Secrets and API as their own pages from the sidebar ([c30a9ff](https://github.com/iblai/os/commit/c30a9ffff357726287ab31b7dbb9fad95db8ca52))
+
 ## [0.192.2](https://github.com/iblai/os/compare/v0.192.1...v0.192.2) (2026-11-10)
 
 ### Bug Fixes
