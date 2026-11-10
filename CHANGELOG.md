@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.192.2](https://github.com/iblai/os/compare/v0.192.1...v0.192.2) (2026-11-10)
+
+### Bug Fixes
+
+* send a standalone 401 to the auth app instead of minting from edX ([f6aa6af](https://github.com/iblai/os/commit/f6aa6af7221181787ea5e94eaf69a22157259c8a))
+* stop calling the edX LMS for tenants, and refresh chat tokens instead of signing out ([f6da16b](https://github.com/iblai/os/commit/f6da16b4bec49d1f4db50eb9b478666298c187eb))
+* stop forwarding the edX JWT to the auth app on a token refresh ([816f723](https://github.com/iblai/os/commit/816f72371e08747f356a7a87bc0cd57a5cf1ee19))
+
 ## [0.192.1](https://github.com/iblai/os/compare/v0.192.0...v0.192.1) (2026-11-09)
 
 ### Chores
