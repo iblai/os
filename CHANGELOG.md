@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.194.1](https://github.com/iblai/os/compare/v0.194.0...v0.194.1) (2026-11-11)
+
+### Chores
+
+* **deps:** take iblai-js 2.69.1 for the auth session gate ([f2e1393](https://github.com/iblai/os/commit/f2e1393829ca6800b31735832c9e08f0a1bbb711)), closes [iblai-web-frontend#2234](https://github.com/iblai/iblai-web-frontend/issues/2234)
+
 ## [0.194.0](https://github.com/iblai/os/compare/v0.193.1...v0.194.0) (2026-11-11)
 
 ### Features
