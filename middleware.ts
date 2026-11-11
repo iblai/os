@@ -80,10 +80,12 @@ const STRIPE = ['https://js.stripe.com', 'https://api.stripe.com'];
 const GITHUB = ['https://api.github.com'];
 // S3 presigned URLs for media (e.g. iblai-app-dm-media) — chat file uploads PUT
 // straight to the bucket and downloads GET from it, which the browser treats as
-// fetch/XHR connections, so the bucket host must be in connect-src. Virtual-hosted
-// style; a CSP host wildcard only covers the leading label, so this matches
+// fetch/XHR connections, so the bucket host must be in connect-src. It is in
+// frame-src too: the Retrieved Documents preview frames the DM media link, which
+// 302s to the bucket, and CSP checks every redirect hop. Virtual-hosted style; a
+// CSP host wildcard only covers the leading label, so this matches
 // <bucket>.s3.amazonaws.com. Regional endpoints (<bucket>.s3.<region>.amazonaws.com)
-// would need that region added.
+// need adding per deployment (CSP_FRAME_HOSTS for previews).
 const AWS_S3 = ['https://*.s3.amazonaws.com'];
 // Customer/partner institution domains served from the institution's own host
 // (SSO / LMS / API endpoints). Override via CSP_PARTNER_HOSTS (comma/space-
@@ -94,6 +96,15 @@ const partnerHosts = () => {
   const raw = process.env.CSP_PARTNER_HOSTS?.trim();
   return raw ? raw.split(/[\s,]+/).filter(Boolean) : DEFAULT_PARTNER_HOSTS;
 };
+// Extra frame-src hosts for this deployment, e.g. a regional S3 bucket
+// (https://<bucket>.s3.ap-southeast-2.amazonaws.com) that previewed documents
+// redirect to, which the AWS_S3 wildcard can't match. Set via CSP_FRAME_HOSTS
+// (comma/space-separated); adds nothing when unset. Read at request time like
+// CSP_PARTNER_HOSTS.
+const frameHosts = () =>
+  process.env.CSP_FRAME_HOSTS?.trim()
+    .split(/[\s,]+/)
+    .filter(Boolean) ?? [];
 
 /** Allow the configured API base origin if it lives outside the ibl wildcards. */
 function apiBaseOrigin(): string[] {
@@ -187,6 +198,8 @@ function buildCsp(nonce: string): string {
       'blob:',
       ...IBL_HTTP,
       ...partners,
+      ...AWS_S3,
+      ...frameHosts(),
       'https://accounts.google.com',
       'https://content.googleapis.com',
       'https://docs.google.com',
