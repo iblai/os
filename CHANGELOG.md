@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.193.1](https://github.com/iblai/os/compare/v0.193.0...v0.193.1) (2026-11-11)
+
+### Bug Fixes
+
+* **csp:** allow S3 in frame-src so Retrieved Documents previews load ([f539976](https://github.com/iblai/os/commit/f539976a455dec7f65bf40c8101d6c6a7f3032ce))
+* restore package version to 0.193.0 ([7ce31cb](https://github.com/iblai/os/commit/7ce31cb01776993018cdc0c3ba1d0e2f8a5f0fb0))
+
+### Chores
+
+* **deps:** bump @iblai/iblai-js to 2.68.1 ([e7376be](https://github.com/iblai/os/commit/e7376be0115fcc32bae7d63e7ff0638d258bb5da)), closes [iblai/iblai-web-frontend#2233](https://github.com/iblai/iblai-web-frontend/issues/2233)
+
+### Tests
+
+* **csp:** cover S3 and CSP_FRAME_HOSTS in frame-src ([cf9f23f](https://github.com/iblai/os/commit/cf9f23f353e20aed0938b9ea09bbd03fd2da3792))
+* **e2e:** journey 102 for Retrieved Documents previews ([2e833e7](https://github.com/iblai/os/commit/2e833e72868a8af49df0c5d1ef0fa8f22e83a04e))
+
 ## [0.193.0](https://github.com/iblai/os/compare/v0.192.2...v0.193.0) (2026-11-10)
 
 ### Features
