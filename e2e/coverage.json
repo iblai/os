@@ -1,9 +1,9 @@
 {
   "version": 2,
-  "lastUpdated": "2026-11-09",
+  "lastUpdated": "2026-11-11",
   "summary": {
-    "totalCheckpoints": 1087,
-    "coveredCheckpoints": 1037,
+    "totalCheckpoints": 1093,
+    "coveredCheckpoints": 1043,
     "deprecatedCheckpoints": 17,
     "notReproducibleCheckpoints": 17,
     "pendingCheckpoints": 16,
@@ -135,7 +135,7 @@
         },
         {
           "id": "ui-05",
-          "description": "Non-admin in the main OR an advertising tenant sees the full admin sidebar (New Agent, Workflows, Analytics, Invites, Management, Integrations, Monetization, Memory, Advanced) and clicking any trial-gated entry opens the upgrade/pricing dialog instead of performing the real action; gracefully skips when paywall is off",
+          "description": "Non-admin in the main OR an advertising tenant sees the full admin sidebar (New Agent, Workflows, Analytics, Invites, Management, Secrets, API, Monetization, Memory, Advanced) and clicking any trial-gated entry opens the upgrade/pricing dialog instead of performing the real action; gracefully skips when paywall is off",
           "status": "covered"
         },
         {
@@ -2026,7 +2026,7 @@
         },
         {
           "id": "ov-14",
-          "description": "Admin sidebar footer mirrors the SDK tenant-settings rail: a \"Memory\" entry sits next to Integrations/Advanced (admin-only, no dedicated RBAC permission) and clicking it opens the Account dialog titled \"Memory\" (\"Manage user global memories and agent memories.\") hosting the SDK MemoryAdminTab — Global / Agent sub-tabs (or the memsearch-disabled notice), Agent sub-tab renders the agents section, Escape closes it",
+          "description": "Admin sidebar footer mirrors the SDK tenant-settings rail: a \"Memory\" entry sits with Secrets, API and Advanced (admin-only, no dedicated RBAC permission) and clicking it opens the Account dialog titled \"Memory\" (\"Manage user global memories and agent memories.\") hosting the SDK MemoryAdminTab — Global / Agent sub-tabs (or the memsearch-disabled notice), Agent sub-tab renders the agents section, Escape closes it",
           "status": "covered"
         }
       ]
@@ -3878,7 +3878,7 @@
         },
         {
           "id": "ecu-04",
-          "description": "Every gated sidebar entry (Agents > New Agent/My Agents, Workflows > My Workflows, Projects > My Projects, Analytics > Overview, Invites, Management, Integrations, Monetization, Memory, Advanced) opens the shared \"Subscribe to unlock full features\" dialog with an \"Upgrade for free\" CTA",
+          "description": "Every gated sidebar entry (Agents > New Agent/My Agents, Workflows > My Workflows, Projects > My Projects, Analytics > Overview, Invites, Management, Secrets, API, Monetization, Memory, Advanced) opens the shared \"Subscribe to unlock full features\" dialog with an \"Upgrade for free\" CTA",
           "status": "covered"
         },
         {
@@ -5345,22 +5345,22 @@
       "checkpoints": [
         {
           "id": "api-01",
-          "description": "Admin opens the API tab and sees the header, description, info box (with disclaimer text), and Create New button",
+          "description": "Admin opens the API tab and sees the header, description, info box (with disclaimer text), and Add API Key button",
           "status": "covered"
         },
         {
           "id": "api-02",
-          "description": "Admin opens Create, opens the expiration date calendar, navigates to the next month, and picks a day — the Create dialog stays open (regression guard for the popover click-through bug fixed via pointer-events-auto in the SDK's ui/popover.tsx) and the trigger shows the picked PPP date; submitting shows the success toast + reveal dialog, and the new row's EXPIRES cell shows that exact date",
+          "description": "Admin opens Create, opens the expiration date calendar, navigates to the next month, and picks a day — the Create dialog stays open (regression guard for the popover click-through bug fixed via pointer-events-auto in the SDK's ui/popover.tsx) and the trigger shows the picked PPP date; submitting shows the success toast + reveal dialog, and the new row's Expires cell shows that exact date",
           "status": "covered"
         },
         {
           "id": "api-03",
-          "description": "Creating an API key without picking an expiration date leaves its EXPIRES cell showing \"N/A\"",
+          "description": "Creating an API key without picking an expiration date leaves its Expires cell showing \"N/A\"",
           "status": "covered"
         },
         {
           "id": "api-04",
-          "description": "Create dialog validates the API key name (required / letters-numbers-hyphens-underscores only) and keeps Submit disabled until the name is valid",
+          "description": "Create dialog validates the API key name (required / letters-numbers-hyphens-underscores only) and keeps Add API Key disabled until the name is valid",
           "status": "covered"
         },
         {
@@ -5387,6 +5387,11 @@
           "id": "api-09",
           "description": "Non-admin does not see the API tab in the Edit Mentor modal (Settings menu item itself is unreachable; falls back to a direct tab-absence check)",
           "status": "covered"
+        },
+        {
+          "id": "api-10",
+          "description": "Admin opens API from the organization settings rail's Integrations group: the banner says an ibl.ai API key lets their own behind-the-scenes systems connect without signing in each time, Add API Key makes a key, its row shows \"Never\" under Expires, and the delete dialog says what stops working before removing the row",
+          "status": "covered"
         }
       ]
     },
@@ -5400,67 +5405,92 @@
       "checkpoints": [
         {
           "id": "vmn-01",
-          "description": "Admin reaches the tenant Virtual Machine settings through the User Profile dialog (More options, then the platform name, then the SDK Account rail's admin-only \"Virtual Machine\" entry) which hosts the SDK VirtualMachineAdminTab: the info box plus the Network Policies and Secrets sub-tabs, each hosting its table with a New button",
+          "description": "Admin reaches Network through the User Profile dialog (More options, then the platform name, then the admin-only \"Network\" entry in the SDK Account rail's Integrations group), which holds the info box and the policies table with its Add Network button and no sub-tabs; the group lists API, Secrets and Network Policies in that order and there is no Security group; the sidebar's Secrets footer row opens the Secrets page on its LLMs, Services and Environment Variables tabs, the last with Add Environment Variable",
           "status": "covered"
         },
         {
           "id": "vmn-02",
-          "description": "Admin creates a network policy through the SDK dialog: hosts are entered with the keyboard-driven chip input (Enter commits, Backspace on an empty box removes the last chip, every chip has a labelled Remove button) and the client-side host:port check refuses a scheme/path entry and a reserved host inline via the aria-live line without adding a chip; saving shows the \"Network policy created\" toast and the new row lists the host",
+          "description": "Admin adds a network policy through the SDK dialog, whose title and save button read Add Network: hosts are entered with the keyboard-driven chip input (Enter commits, Backspace on an empty box removes the last chip, every chip has a labelled Remove button, a pasted URL becomes its host) and the client-side check refuses a malformed entry and a reserved host inline via the aria-live line without adding a chip; saving shows the \"Network added\" toast and the new row lists the host without the standard port",
           "status": "covered"
         },
         {
           "id": "vmn-03",
-          "description": "Admin edits the policy: adding a host and removing the original shows the removed-hosts warning (a secret sent to a removed host would stop working; the backend does not block the edit); saving shows \"Network policy updated\" and the row reflects the replaced host list",
+          "description": "Admin edits the policy: adding a host and removing the original shows the removed-hosts warning (a secret sent to a removed host would stop working; the backend does not block the edit); saving shows \"Network updated\" and the row reflects the replaced host list",
           "status": "covered"
         },
         {
           "id": "vmn-04",
-          "description": "Admin creates a VM secret from a pasted value: an IP literal is refused inline (hostnames only), the source is a choice between \"Enter a Value\" (default) and an integration credential, the value box is a password field, and values shorter than 8 characters or masked-looking (sk-****) are rejected before any request; saving shows \"VM secret created\" and the row shows name, hosts and the \"Stored Value\" source, never the value",
+          "description": "Admin adds an environment variable on the Secrets page's Environment Variables tab: Add Environment Variable opens straight on its form, with no search box, and asks Name, Key (a password box, \"Paste the key\"), Allowed Hosts (an IP literal refused inline) and a Variable Name worked out from the name; the hidden copy of a key (sk-****) is refused before any request; saving shows \"{name} added. Choose it on an agent's Sandbox tab to let that agent use it.\" and the row shows the name, the Variable Name and the Allowed Hosts, never the key",
           "status": "covered"
         },
         {
           "id": "vmn-05",
-          "description": "On edit the env var is read-only, the value box is blank with the \"Leave blank to keep the current value\" hint, and switching to the credential source offers the org's credentials (or the no-credentials notice) without ever showing a masked value; deleting confirms that every agent using the secret loses it, shows \"VM secret deleted\" and removes the row",
+          "description": "Edit Environment Variable has the Variable Name locked, the Allowed Hosts listed and the Key box blank with the \"Leave blank to keep the current key\" hint, showing no masked value; Delete Environment Variable confirms that every agent using it loses it, shows \"Environment variable deleted\" and removes the row",
           "status": "covered"
         },
         {
           "id": "vmn-06",
-          "description": "Admin deletes a network policy they just created (bound to no agent): the row is found on whichever page of the org-wide table it landed, the confirmation dialog names the policy, Cancel leaves it in place, and confirming shows \"Network policy deleted\", closes the dialog and leaves no page of the table listing it",
+          "description": "Admin deletes a network policy they just created (bound to no agent): the row is found on whichever page of the org-wide table it landed, the confirmation dialog names the policy, Cancel leaves it in place, and confirming shows \"Network deleted\", closes the dialog and leaves no page of the table listing it",
           "status": "covered"
         },
         {
           "id": "vmn-07",
-          "description": "With the Virtual Machine Shell kind selected on a dedicated agent, the Sandbox tab renders the Network Access section: the billing notice ($1 per 10 minutes by default, prorated per second) and a labelled \"Egress Profile\" radio group with the four labelled options (No Network / Package Registries / Public Internet / Custom Allowlist); an agent set to No Network through the API shows it selected, with neither picker and Save disabled",
+          "description": "With the Virtual Machine Shell kind selected on a dedicated agent, the Sandbox tab renders the Network Access section: the billing notice ($1 per 10 minutes by default, prorated per second) and a labelled \"Egress Profile\" radio group with the four labelled options (No Network / Package Registries / Public Internet / Custom Allowlist); an agent set to No Network through the API shows it selected, with the policy picker hidden and Save disabled",
           "status": "covered"
         },
         {
           "id": "vmn-08",
-          "description": "The secrets multi-select renders only under Public or Custom (with one checkbox per org secret) and the policy picker only under Custom; neither renders under No Network or Package Registries",
+          "description": "The Environment Variables group renders under all four profiles with its Add Environment Variable button: under No Network and Package Registries its boxes are disabled with a line saying they need network access, under Public they can be ticked; adding one under No Network opens straight on its form, shows \"Environment variable added\" and leaves it unticked; the policy picker renders only under Custom",
           "status": "covered"
         },
         {
           "id": "vmn-09",
-          "description": "Custom requires a policy: the picker shows the \"The Custom profile needs a network policy.\" message and Save stays disabled until one is chosen; the \"Create Policy\" shortcut opens the SDK network policy dialog in place; picking a policy lists the hosts it allows",
+          "description": "Custom requires a policy: the picker shows the \"The Custom profile needs a network.\" message and Save stays disabled until one is chosen; the \"Add Network\" shortcut opens the SDK network policy dialog in place; picking a policy lists the hosts it allows",
           "status": "covered"
         },
         {
           "id": "vmn-10",
-          "description": "Binding a secret whose host the chosen policy does not allow lists the gap (\"ENV needs host, which policy doesn't allow.\"), keeps Save disabled, and \"Add Hosts to {policy} and Save\" patches the policy (\"Hosts added to {policy}\") and then saves the settings (\"Network settings saved\") in one go",
+          "description": "Ticking an environment variable whose host the chosen policy does not allow lists the gap (\"{name} is sent to {host}, which {policy} doesn't allow.\"), keeps Save disabled, and \"Add Hosts to {policy} and Save\" patches the policy (\"Hosts added to {policy}\") and then saves the settings (\"Network settings saved\") in one go",
           "status": "covered"
         },
         {
           "id": "vmn-11",
-          "description": "The saved configuration persists across closing and reopening the Edit Agent dialog: Custom selected, the policy chosen (now also allowing the secret's host) and the secret still bound",
+          "description": "The saved configuration persists across closing and reopening the Edit Agent dialog: Custom selected, the policy chosen (now also allowing the host of the environment variable) and the environment variable still ticked",
           "status": "covered"
         },
         {
           "id": "vmn-12",
-          "description": "Narrowing the profile to No Network while a secret is bound opens the \"Unbind Secrets?\" confirmation naming the secret count; confirming saves with the secrets unbound, and the reopened agent is on No Network with the secret unchecked under Public",
+          "description": "Narrowing the profile to No Network while an environment variable is ticked opens the \"Remove Environment Variables?\" confirmation naming how many; confirming saves with them removed, and the reopened agent is on No Network with it unticked under Public",
           "status": "covered"
         },
         {
           "id": "vmn-13",
-          "description": "A non-admin never reaches the tenant Virtual Machine settings: the platform entry is missing from More options, does nothing when clicked, or the tenant settings dialog it opens lists no Virtual Machine section (the SDK Account rail filters it on isAdmin)",
+          "description": "A non-admin never reaches Network Policies: the platform entry is missing from More options, does nothing when clicked, or the tenant settings dialog it opens lists no Network Policies entry (the SDK Account rail filters it on isAdmin)",
+          "status": "covered"
+        },
+        {
+          "id": "vmn-14",
+          "description": "_(mocked dataset)_ Admin adds a Stripe key with Add Service on the Services tab: typing the name and clicking the suggestion shows the sentence saying agents can use it once it is chosen on their Sandbox tab, Key alone does not save (\"Enter the Publishable Key.\"), and with both typed both go out; the table (Name, Key, Actions) gets a row with the masked prefix under Key; on an agent's Sandbox tab its box is disabled under No Network and, under Public, ticking it opens \"Let Agents Use Stripe\" with api.stripe.com filled in; saving makes its row open \"Edit Service\" with STRIPE_KEY and api.stripe.com, and the same key is listed on Environment Variables, where it opens \"Edit Environment Variable\"",
+          "status": "covered"
+        },
+        {
+          "id": "vmn-15",
+          "description": "_(mocked dataset)_ AI providers' keys are rows on the LLMs tab: Azure OpenAI shows its model count and a named chevron opening per-model rows whose masked keys line up under Key; Add LLM, then typing OpenAI and clicking the suggestion, says agents answer with the key, asks one Key box and no hosts, refuses the hidden copy of a key, and saving shows \"OpenAI added.\" and a row with the masked key, which its bin deletes through Delete LLM",
+          "status": "covered"
+        },
+        {
+          "id": "vmn-16",
+          "description": "_(mocked dataset)_ The Secrets page has LLMs, Services and Environment Variables tabs, each with its own sentence, Add button (Add LLM, Add Service, Add Environment Variable) and table: LLMs and Services have the columns Name, Key and Actions, Environment Variables has Name, Variable Name, Allowed Hosts and Actions; Add Service's box is labelled Service and reads \"Type a name, like Stripe\", a name that matches nothing shows \"Not listed? Add its key on the Environment Variables tab.\", and a clicked suggestion becomes a row with Change, which brings the box back",
+          "status": "covered"
+        },
+        {
+          "id": "vmn-17",
+          "description": "_(mocked dataset)_ When the list of LLM keys answers an error, Add LLM shows \"Some choices could not be loaded, so yours may be missing.\" with Try Again and no Name or Key box, and an LLM reads \"Not loaded\" and cannot be picked; Try Again reads the lists again, the sentence goes and OpenAI can be picked",
+          "status": "covered"
+        },
+        {
+          "id": "vmn-18",
+          "description": "_(mocked dataset)_ With no keys at all, each tab shows its own sentence (\"No LLM keys found\", \"No services found\", \"No environment variables found\") as one row inside its table, spanning its columns under their headings",
           "status": "covered"
         }
       ]

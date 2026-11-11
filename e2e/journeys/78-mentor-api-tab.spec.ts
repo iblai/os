@@ -86,6 +86,7 @@ import { waitForPageReady } from '../utils/resilient';
 import { dmBaseFromEnv, resolveDmApiBase } from '../utils/dm-api';
 import { reapStaleApiKeyResidue } from '../utils/api-key-residue';
 import { ApiTab } from '../page-objects/edit-mentor/api-tab';
+import { VirtualMachineAdminPage } from '../page-objects/virtual-machine-admin.page';
 
 // ---------------------------------------------------------------------------
 // Worker-scoped fixture: reap stale e2e-named API-key residue once per worker.
@@ -235,7 +236,7 @@ test.describe('Journey 78: Mentor API Tab', () => {
   // the date picker, navigate to next month, pick a day — the dialog must
   // stay open and the trigger must show the picked PPP date. Submitting
   // shows the success toast + reveal dialog; after closing it, the new
-  // row's EXPIRES cell shows that exact date.
+  // row's Expires cell shows that exact date.
   test('admin creates an API key with an expiration date picked via the calendar, and the row shows that exact date', async ({
     page,
     editMentorPage,
@@ -286,7 +287,7 @@ test.describe('Journey 78: Mentor API Tab', () => {
     await editMentorPage.close();
   });
 
-  // API-03: Creating without picking a date leaves EXPIRES as "N/A".
+  // API-03: Creating without picking a date leaves Expires as "N/A".
   test('admin creates an API key without an expiration date and the row shows "N/A"', async ({
     page,
     editMentorPage,
@@ -312,17 +313,17 @@ test.describe('Journey 78: Mentor API Tab', () => {
     await editMentorPage.close();
   });
 
-  // API-04: Name validation. Submit stays disabled with an empty/invalid
+  // API-04: Name validation. Add API Key stays disabled with an empty/invalid
   // name and the matching error text renders; a valid unique name clears
-  // the error and enables Submit.
-  test('create dialog validates the API key name and keeps Submit disabled until it is valid', async ({
+  // the error and enables it.
+  test('create dialog validates the API key name and keeps Add API Key disabled until it is valid', async ({
     editMentorPage,
   }) => {
     await editMentorPage.open('API');
     const { api } = editMentorPage;
 
     await api.openCreateDialog();
-    // A pristine form has an empty required name, so Submit is disabled from
+    // A pristine form has an empty required name, so the button is disabled from
     // the start — there is nothing valid to submit and nothing can be created.
     // (It used to start enabled because the form only computed `canSubmit`
     // after the first onChange; it now computes it on mount.)
@@ -343,7 +344,7 @@ test.describe('Journey 78: Mentor API Tab', () => {
     );
     await expect(api.submitButton()).toBeDisabled();
 
-    // Valid: error clears, Submit enables.
+    // Valid: error clears, the button enables.
     await api.nameInput().fill(ApiTab.uniqueName());
     await expect(api.nameErrorText()).toHaveCount(0);
     await expect(api.submitButton()).toBeEnabled({ timeout: 5_000 });
@@ -560,6 +561,53 @@ test.describe('Journey 78: Mentor API Tab', () => {
     await expect(api.rowByName(name)).toHaveCount(0, { timeout: 10_000 });
 
     await editMentorPage.close();
+  });
+
+  // API-10: The organization's own API page, in the rail's Integrations group.
+  // It says what a key lets their own systems do, shows a key that never
+  // expires as "Never" and creates and deletes through the same dialogs' words.
+  test('admin opens API in the organization settings, which says what an API key lets their own systems do, and creates and deletes a key there', async ({
+    page,
+  }) => {
+    const settings = new VirtualMachineAdminPage(page);
+    await settings.openTenantSettings();
+
+    const integrations = settings.dialog.getByRole('group', {
+      name: 'Integrations',
+      exact: true,
+    });
+    await expect(
+      integrations.getByRole('button', { name: 'Secrets', exact: true }),
+    ).toBeVisible({ timeout: 10_000 });
+    await integrations
+      .getByRole('button', { name: 'API', exact: true })
+      .click();
+
+    await expect(
+      settings.dialog.getByText(
+        /^With an ibl\.ai API key, your own behind-the-scenes systems can connect to your organization .+ without signing in each time\./,
+      ),
+    ).toBeVisible({ timeout: 15_000 });
+
+    const api = new ApiTab(page, settings.dialog);
+    const name = ApiTab.uniqueName();
+    await api.createKey({ name });
+    await api.dismissCreateFlow();
+
+    await expect(api.rowByName(name)).toBeVisible({ timeout: 10_000 });
+    await expect(api.expiresCellFor(name)).toHaveText(
+      ApiTab.LABELS.table.never,
+    );
+
+    await api.openDeleteDialogFor(name);
+    await expect(api.deleteDialog).toContainText(name);
+    await expect(api.deleteDialog).toContainText(
+      'Any app or integration using this key will stop working immediately.',
+    );
+    await api.confirmDelete();
+    await expect(api.rowByName(name)).toHaveCount(0, { timeout: 10_000 });
+
+    await settings.close();
   });
 });
 

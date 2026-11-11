@@ -166,7 +166,8 @@
     "notifications": "Notificaciones",
     "invites": "Invitaciones",
     "management": "Gestión",
-    "integrations": "Integraciones",
+    "secrets": "Secretos",
+    "api": "API",
     "monetization": "Monetización",
     "advanced": "Avanzado",
     "memory": "Memoria",
@@ -175,7 +176,8 @@
     "accountTabBilling": "Facturación",
     "accountDescOrganization": "Gestiona los ajustes de tu organización.",
     "accountDescManagement": "Gestiona los usuarios y sus permisos en el sistema.",
-    "accountDescIntegrations": "Gestiona tus integraciones con otros servicios.",
+    "accountDescSecrets": "Claves de otros servicios, como OpenAI o Stripe, que usan ibl.ai y tus agentes.",
+    "accountDescApi": "Haz que tu propio software funcione con ibl.ai.",
     "accountDescMonetization": "Configura muros de pago, precios e ingresos.",
     "accountDescAdvanced": "Configura los ajustes avanzados de la organización.",
     "accountDescMemory": "Gestiona las memorias globales de los usuarios y las memorias de los agentes.",
@@ -2066,6 +2068,6 @@
     "agentsTitle": "Explora agentes",
     "agentsContent": "Explora los agentes disponibles para ti y crea o administra los tuyos desde el menú Agentes.",
     "accountTitle": "Administra tu organización",
-    "accountContent": "Invita a personas, administra usuarios y grupos, conecta integraciones y cambia la configuración avanzada con las herramientas de la parte inferior de la barra lateral."
+    "accountContent": "Invita a personas, administra usuarios y grupos, agrega secretos y cambia la configuración avanzada con las herramientas de la parte inferior de la barra lateral."
   }
 }
