@@ -47,8 +47,16 @@ describe('useWelcome', () => {
       readyState: 1, // OPEN
     };
 
-    // Mock WebSocket constructor with constants
-    const mockWsConstructor = vi.fn(() => mockWebSocketInstance);
+    // Mock WebSocket constructor with constants.
+    //
+    // A `function`, not an arrow: the hook calls `new WebSocket(...)`, and
+    // vitest 4 no longer wraps a mock's implementation in a constructible
+    // function of its own — an arrow implementation throws "is not a
+    // constructor". Returning an object from a constructor call hands that
+    // object back, which is what makes this stand in for the instance.
+    const mockWsConstructor = vi.fn(function () {
+      return mockWebSocketInstance;
+    });
     MockWebSocketConstructor = Object.assign(mockWsConstructor, {
       CONNECTING: 0,
       OPEN: 1,

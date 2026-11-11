@@ -550,7 +550,12 @@ describe('runAgent', () => {
       tools: clickTools(),
       signal: new AbortController().signal,
       onEvent,
-      timeLimitMs: 50,
+      // Roomy on purpose. The limit is one `AbortSignal.timeout` over the
+      // WHOLE run, so it has to outlast the first step on a machine running
+      // the rest of the suite beside this one — at 50ms a starved worker got
+      // the abort mid-step and recorded no steps at all. The run still ends
+      // the moment the deadline passes, so this costs about a second.
+      timeLimitMs: 1_000,
     });
     expect(result.stoppedBy).toBe('time');
     expect(events[events.length - 1]).toEqual({ type: 'abort' });

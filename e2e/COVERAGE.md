@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-11-11 | 1093 checkpoints (1043 covered, 16 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 109 journeys (108 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-11-11 | 1096 checkpoints (1046 covered, 16 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 110 journeys (109 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -2508,5 +2508,17 @@ Issue iblai-platform#2766. Opening Create Agent asks the DM backend which fields
 - [x] cafp-02: Answer mocked with `mentor_visibility` write:false: the Visibility combobox is absent while description, category, image upload and the Prompts tab stay; creating through Next and Save sends a `mentor-with-settings` POST with name, description, template and prompt parts but no `mentor_visibility` part, and the agent is created
 - [x] cafp-03: Answer mocked with `system_prompt`, `proactive_prompt` and `guided_prompt_instructions` write:false: the Prompts tab and Next are absent and the Settings tab shows Save; saving from it creates the agent and the POST has none of the three prompt parts but still carries `mentor_visibility`
 - [x] cafp-04: Answer mocked as 404 (older backend): the dialog fails open and shows every field, the Prompts tab and Next
+
+---
+
+## Journey 102: Retrieved Documents Preview (3 checkpoints) — `journeys/102-retrieved-documents-preview.spec.ts`
+
+**Source files:** `middleware.ts`
+
+Issue iblai-platform#2855. After an answer the chat lists its sources under "Retrieved Documents". The sources come from `GET **/clean-vector-results/**`, which the backend may answer empty for a throwaway agent, so every test creates its own agent and mocks that one request with `page.route` (`ChatPage.mockRetrievedDocuments`). A dataset file's DM media link 302s to an S3 presigned URL and CSP checks every redirect hop, so the OS `frame-src` must allow `https://*.s3.amazonaws.com`. The browser applies CSP before the request leaves, so rdp-01 frames a bucket URL whose response is stubbed (a real upload would wait on the backend's training queue); run it against a build with CSP enforced. It fails on the pre-fix `middleware.ts`. rdp-02 and rdp-03 check the SDK preview rules without depending on the external sites.
+
+- [x] rdp-01: A dataset file on an `*.s3.amazonaws.com` URL opens in the preview dialog's frame, the frame shows the file's text, and no `frame-src` `securitypolicyviolation` fires
+- [x] rdp-02: A web-page source's row shows an Open Page link (`href` = the page plus a text fragment, `target=_blank`, `rel` with noopener and noreferrer) and no preview toggle
+- [x] rdp-03: A YouTube source's preview shows an iframe on `youtube-nocookie.com/embed/<id>` with `referrerpolicy=strict-origin-when-cross-origin` and no Open Page link
 
 ---

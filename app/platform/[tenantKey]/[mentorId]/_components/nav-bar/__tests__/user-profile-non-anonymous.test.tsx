@@ -84,7 +84,12 @@ vi.mock('@/lib/utils', () => ({
 }));
 
 vi.mock('@/hooks/subscription/subscription-flow-v2', () => ({
-  MentorSubscriptionFlowV2: vi.fn().mockImplementation(() => ({})),
+  // A `function`, not an arrow: `user-profile.tsx` calls this with `new`, and
+  // vitest 4 stopped wrapping a mock's implementation in a constructible
+  // function of its own.
+  MentorSubscriptionFlowV2: vi.fn().mockImplementation(function () {
+    return {};
+  }),
 }));
 
 // Tenant metadata now rides the tenants list via this local hook (raw object).

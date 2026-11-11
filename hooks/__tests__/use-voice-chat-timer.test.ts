@@ -73,7 +73,12 @@ describe('useVoiceChat timer lifecycle', () => {
       configurable: true,
     });
 
-    const Ctor = vi.fn(() => recorder) as unknown as {
+    // `function`, not an arrow: the hook calls `new MediaRecorder(...)`, and
+    // vitest 4 no longer wraps a mock's implementation in a constructible
+    // function of its own.
+    const Ctor = vi.fn(function () {
+      return recorder;
+    }) as unknown as {
       isTypeSupported: (type: string) => boolean;
     };
     Ctor.isTypeSupported = () => true;

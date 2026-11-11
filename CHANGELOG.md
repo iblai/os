@@ -1,5 +1,50 @@
 # Changelog
 
+## [0.194.0](https://github.com/iblai/os/compare/v0.193.1...v0.194.0) (2026-11-11)
+
+### Features
+
+* **embed:** generate an agent-ai snippet instead of 500 lines of our own ([6e5e505](https://github.com/iblai/os/commit/6e5e505afa55749f4fed1cc823a82d96a17b0206))
+
+### Bug Fixes
+
+* **embed:** put the chat's Close back in the generated snippet ([d818168](https://github.com/iblai/os/commit/d818168bcf0efc3020f2c83700987085d4afa47d))
+
+### Chores
+
+* **deps:** take vitest 4, and keep the suite green on it ([4142f1f](https://github.com/iblai/os/commit/4142f1f18d034d27a01a606a60b7a75c94af388c))
+* **deps:** vitest 4.1.12, and settle the settings modal before teardown ([fdd4dd6](https://github.com/iblai/os/commit/fdd4dd667ab6fa54e2991b7a2998e49f1f74a084))
+* **embed:** pin the agent-ai bundle that carries ssoprovider ([bced314](https://github.com/iblai/os/commit/bced314238e990cea1b9bdf09d3bafcf0b1fb5e3)), closes [iblai/iblai-web-frontend#2229](https://github.com/iblai/iblai-web-frontend/issues/2229)
+* **tauri:** release app-v0.95.32 ([3e2d67b](https://github.com/iblai/os/commit/3e2d67b3db3891cd3c9dcf633e0ef189c7c2d237))
+
+### Tests
+
+* **embed:** assert Allow Full Screen as the attribute, not the old URL param ([df47f93](https://github.com/iblai/os/commit/df47f937493655030ecdfee499a8c0964d9db337))
+* **embed:** assert the agent is small again, not 2px-identical ([868b297](https://github.com/iblai/os/commit/868b2976d45070ac3797ad3e3ca1282683b8de69))
+* **embed:** follow the snippet's move to agent-ai in the e2e helpers ([57c3832](https://github.com/iblai/os/commit/57c383255fb210c7107cc57d8986079ca507ea69))
+* **embed:** hand the real-snippet host its session instead of sending it to auth ([10dff76](https://github.com/iblai/os/commit/10dff767645090290dc0fe68018cc36cc1724b9e))
+* **embed:** keep the panel baseline, and reopen after signing in ([0f1f325](https://github.com/iblai/os/commit/0f1f325737d961f5411c56a14f57850a2ba7c108))
+* **embed:** measure the element that actually goes full screen ([7133940](https://github.com/iblai/os/commit/7133940c8740f5a320ff4ee4e8f9ce689940c99f))
+* **embed:** register the real-snippet embed against the harness ([1d568bf](https://github.com/iblai/os/commit/1d568bf5139da687bdb87d7f09db9d2b8e78aa67))
+* give two clock-bound tests room, and let a third finish its work ([65946b3](https://github.com/iblai/os/commit/65946b3b263b590c8b97dacd355c1c9f7211f31e))
+* keep the syntax highlighter out of the test run ([ca2f3fe](https://github.com/iblai/os/commit/ca2f3fe3310d4ecd91df262ad0af18a8a10e7edc))
+
+## [0.193.1](https://github.com/iblai/os/compare/v0.193.0...v0.193.1) (2026-11-11)
+
+### Bug Fixes
+
+* **csp:** allow S3 in frame-src so Retrieved Documents previews load ([f539976](https://github.com/iblai/os/commit/f539976a455dec7f65bf40c8101d6c6a7f3032ce))
+* restore package version to 0.193.0 ([7ce31cb](https://github.com/iblai/os/commit/7ce31cb01776993018cdc0c3ba1d0e2f8a5f0fb0))
+
+### Chores
+
+* **deps:** bump @iblai/iblai-js to 2.68.1 ([e7376be](https://github.com/iblai/os/commit/e7376be0115fcc32bae7d63e7ff0638d258bb5da)), closes [iblai/iblai-web-frontend#2233](https://github.com/iblai/iblai-web-frontend/issues/2233)
+
+### Tests
+
+* **csp:** cover S3 and CSP_FRAME_HOSTS in frame-src ([cf9f23f](https://github.com/iblai/os/commit/cf9f23f353e20aed0938b9ea09bbd03fd2da3792))
+* **e2e:** journey 102 for Retrieved Documents previews ([2e833e7](https://github.com/iblai/os/commit/2e833e72868a8af49df0c5d1ef0fa8f22e83a04e))
+
 ## [0.193.0](https://github.com/iblai/os/compare/v0.192.2...v0.193.0) (2026-11-10)
 
 ### Features
