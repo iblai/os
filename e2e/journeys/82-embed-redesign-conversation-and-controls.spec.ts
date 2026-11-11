@@ -13,6 +13,7 @@ import { ChatPage } from '../page-objects/chat.page';
 import { parsePlatformUrl } from '../utils/navigation';
 import {
   HOST_WIDGET_SELECTOR,
+  iblDataParam,
   postRealSnippetUrl,
   rewriteSnippetOrigin,
 } from '../utils/embed-harness-client';
@@ -129,7 +130,17 @@ async function gotoRealSnippetPage(
     EMBED_HARNESS_URL,
     rewritten,
   );
-  await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30_000 });
+  // Hand the snippet the session on the URL, the way a return from auth
+  // does. This agent requires signing in, and without credentials the embed
+  // sends the WHOLE host page to auth and back — the page that returns is a
+  // fresh load, so the panel this test opened is gone and the chat it was
+  // waiting for never mounts. Read before navigating, while the app's own
+  // origin is still the one in the browser.
+  const iblData = await iblDataParam(page);
+  await page.goto(`${url}&ibl-data=${iblData}`, {
+    waitUntil: 'domcontentloaded',
+    timeout: 30_000,
+  });
   return { originalOrigin };
 }
 

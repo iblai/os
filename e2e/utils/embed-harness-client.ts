@@ -96,6 +96,27 @@ export const HOST_SESSION_KEYS = [
 ];
 
 /**
+ * The signed-in session, shaped the way `agent-ai` reads it off a URL.
+ *
+ * Returning from auth, the component takes its credentials from an
+ * `ibl-data` query parameter, stores them and strips it. Handing it the same
+ * payload up front means a host page that is not signed in never has to make
+ * the trip: no full-page redirect away to auth and back, which a test cannot
+ * follow because the page it returns to is a fresh load.
+ */
+export async function iblDataParam(page: Page): Promise<string> {
+  const session = await page.evaluate((keys) => {
+    const out: Record<string, string> = {};
+    for (const key of keys) {
+      const value = localStorage.getItem(key);
+      if (value !== null) out[key] = value;
+    }
+    return out;
+  }, HOST_SESSION_KEYS);
+  return encodeURIComponent(JSON.stringify(session));
+}
+
+/**
  * Opens the harness's `/agent-ai` page for the signed-in platform and agent.
  * With no session of its own on the harness origin, agent-ai redirects to the
  * login page; `authrelyonhost` makes it read the host's localStorage, which
