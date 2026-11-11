@@ -1256,6 +1256,10 @@ test.describe('Journey 13: Shareable Links & Embed Integration', () => {
       // The agent's own box, not the panel's, so the comparisons below are
       // like for like — the panel is a couple of pixels wider for its border.
       const normalBox = await agentOf(page).boundingBox();
+      // The panel's own baseline, kept separate: it is a couple of pixels
+      // wider than the agent for its border, and the reopen check at the end
+      // measures the panel.
+      const panelBox = await widgetOf(page).boundingBox();
       expect(normalBox).not.toBeNull();
       expect(normalBox!.width).toBeLessThan(1440);
 
@@ -1317,9 +1321,7 @@ test.describe('Journey 13: Shareable Links & Embed Integration', () => {
       await expect(bubbleOf(page)).toBeVisible();
       await bubbleOf(page).click();
       await expect(widgetOf(page)).toBeVisible();
-      expect((await widgetOf(page).boundingBox())!.width).toBe(
-        normalBox!.width,
-      );
+      expect((await widgetOf(page).boundingBox())!.width).toBe(panelBox!.width);
       await expect(toggle).toHaveAccessibleName('Full screen');
     });
 

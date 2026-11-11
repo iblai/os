@@ -201,6 +201,17 @@ test.describe('Journey 82: Embed Mode Redesign — Conversation & Controls', () 
 
     // Open: the widget container + its iframe (the chat) become visible.
     await bubble.click();
+    // Opening the panel is what makes the embed ask for a signed-in user, and
+    // an agent that requires one sends the WHOLE host page through auth and
+    // back. The page that returns is a fresh load with the panel closed, so
+    // open it again — a reader signing in sees exactly the same thing. When
+    // no round trip happens this waits on the URL already loaded and the
+    // launcher is already expanded, so both steps fall through.
+    await page.waitForURL(/\/real-snippet/, { timeout: 60_000 });
+    await expect(bubble).toBeVisible({ timeout: 15_000 });
+    if ((await bubble.getAttribute('aria-expanded')) !== 'true') {
+      await bubble.click();
+    }
     const widget = page.locator(HOST_WIDGET_SELECTOR);
     await expect(widget).toBeVisible({ timeout: 15_000 });
     await expect(bubble).toHaveAttribute('aria-expanded', 'true');
