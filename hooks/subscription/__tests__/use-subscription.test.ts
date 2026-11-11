@@ -14,11 +14,17 @@ vi.mock('@iblai/iblai-js/web-utils', () => ({
   })),
 }));
 
+// A `function`, not an arrow: the code under test calls this with `new`, and
+// vitest 4 stopped wrapping a mock's implementation in a constructible
+// function of its own, so an arrow implementation throws "is not a
+// constructor".
 vi.mock('../subscription-flow', () => ({
-  mentorSubscriptionFlow: vi.fn().mockImplementation(() => ({
-    getCurrentTenantOrg: vi.fn(() => 'test-org'),
-    getUsername: vi.fn(() => 'test-user'),
-  })),
+  mentorSubscriptionFlow: vi.fn().mockImplementation(function () {
+    return {
+      getCurrentTenantOrg: vi.fn(() => 'test-org'),
+      getUsername: vi.fn(() => 'test-user'),
+    };
+  }),
 }));
 
 vi.mock('@/features/utils', () => ({
