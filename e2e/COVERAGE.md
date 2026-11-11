@@ -868,20 +868,28 @@ The Sandbox tab used to wrap the SDK's `SandboxConfig` component in an app-level
 
 ---
 
-## Journey 45: Mentor Privacy Tab (8 checkpoints) — `journeys/45-mentor-privacy-tab.spec.ts`
+## Journey 45: Mentor Privacy Tab (16 checkpoints) — `journeys/45-mentor-privacy-tab.spec.ts`
 
 **Source files:** `components/modals/edit-mentor-modal/tabs/privacy-tab.tsx`, `components/modals/edit-mentor-modal/tabs/index.ts`, `components/modals/edit-mentor-modal/index.tsx`, `hooks/use-mentor-segments.ts`, `lib/constants.ts`
 
-The Privacy tab is a thin wrapper around the SDK's `AgentPrivacyTab` (`@iblai/iblai-js/web-containers/next`). The wrapper forwards `tenantKey` / `mentorId` / `username` from URL params + the navigate hook so the SDK's `useGetMentorSettingsQuery` and `useEditMentorJsonMutation` resolve correctly. The `enable_privacy_router` master toggle moved off Settings → Capabilities into an in-tab `CapabilityGate` (`data-testid="privacy-capability-toggle"`, feat/2040), and the Privacy tab is now always mounted — `hooks/use-mentor-segments.ts` no longer gates the segment. Unlike the app-owned capability tabs, `AgentPrivacyTab` is NOT optimistic — the toggle only flips after the `editMentorJson` + refetch round trip lands. The "When PII is detected" dropdown now lists **Allow** first (`PRIVACY_ACTIONS = ['allow','redact','mask','block']`), then Redact, Mask, Block.
+The Privacy tab is a thin wrapper around the SDK's `AgentPrivacyTab` (`@iblai/iblai-js/web-containers/next`), which forwards `rbacPermissions` so the Privacy Log button is RBAC-gated. Filtering is two accordion cards (`privacy-{pii,phi}-card`), each with its own switch (`privacy-filter-{pii,phi}-toggle`), one open at a time; there is no master toggle or PII sub-tab any more. Saves are not optimistic (PUT `/mentors/<id>/settings/` + refetch). Tests that change settings create their own agent (deterministic all-off start) and delete it in `finally`; the Privacy Log test only reads and mocks `**/privacy-flags/**`.
 
-- [x] PR-01: Privacy tab label is visible in the Edit Mentor modal sidebar (always mounted)
+- [x] PR-01: Privacy tab label is visible in the Edit Agent modal sidebar
 - [x] PR-02: Privacy tab heading and description render correctly
-- [x] PR-03: Privacy tab stays mounted regardless of `enable_privacy_router`; `capability-gate-content`'s `data-enabled` tracks the in-tab "PII filtering" toggle
-- [x] PR-04: The CapabilityGate off-state hint is shown only while the router is off
-- [x] PR-05: Enabling the router keeps the action, entity chips and output-filter fields present and interactive
-- [x] PR-05b: The "When PII is detected" action dropdown lists Allow, Redact, Mask, Block in that order
-- [x] PR-06: Block Message textarea is editable only while the action is Block (tolerates conditional-render or render-and-disable SDK shapes)
-- [x] PR-07: Clicking an entity chip flips its aria-checked state and persists when toggled twice
+- [x] PR-03: Removed `privacy-capability-toggle` / `privacy-sub-tab-pii` no longer exist; no unneeded sub-tab strip
+- [x] PR-04: New agent shows both cards off (aria-checked, title, accessible names, "Off." summary); an open off card shows only its off hint
+- [x] PR-05: Turning PII on saves, opens its card, leaves PHI off; summary starts "On."
+- [x] PR-06: PII action dropdown lists Allow, Redact, Mask, Block in order
+- [x] PR-07: Block Message shown/editable only while action is Block
+- [x] PR-08: PII entity chips flip; "none selected = all" hint and "N kind selected" summary track them
+- [x] PR-09: PII settings persist across modal close/reopen; last kind off returns to "Off."
+- [x] PR-10: PHI shows 12 entity chips, "all 12 kinds" by default, "2 kinds selected" + Block after configuring
+- [x] PR-11: One card open at a time (PII on opens PII/closes PHI; chevron swaps back)
+- [x] PR-12: "Also Filter AI Responses" switch named exactly that, toggles on/off
+- [x] PR-13: Turning one kind off leaves the other on; the last off switches filtering off
+- [x] PR-14: Admin sees the Privacy Log row/button; opens the audit-log modal with (mocked) rows
+- [x] PR-15: Privacy Log rail filter narrows the list
+- [x] PR-16: Privacy Log row action opens the flag detail
 
 ---
 
