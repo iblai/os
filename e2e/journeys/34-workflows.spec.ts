@@ -1044,12 +1044,22 @@ test.describe('Journey 34: Workflows', () => {
         (def) => !!nodeOfType(def, 'note'),
       );
       const noteWarning = `Node '${noteId}' is not connected to any other nodes`;
-      const endWarning = "Workflow should have an 'end' node";
       expect(validation).toContain(noteWarning);
-      expect(validation).toContain(endWarning);
+      // Taken from the response because the backend rewords it: dm-pro 4.478.0
+      // turned "should have an 'end' node" into an error that "must have" one.
+      const { errors = [], warnings = [] } = JSON.parse(validation) as {
+        errors?: string[];
+        warnings?: string[];
+      };
+      const endMessage = [...errors, ...warnings].find((message) =>
+        message.includes("'end' node"),
+      );
+      expect(endMessage, "the missing 'end' node is reported").toBeTruthy();
 
-      // The End warning proves the banner already shows this validation.
-      await expect(page.getByText(endWarning)).toBeVisible({ timeout: 10_000 });
+      // The End message proves the banner already shows this validation.
+      await expect(page.getByText(endMessage!)).toBeVisible({
+        timeout: 10_000,
+      });
       await expect(page.getByText(noteWarning)).toHaveCount(0);
     });
   });
