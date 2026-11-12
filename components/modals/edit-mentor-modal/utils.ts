@@ -192,36 +192,31 @@ const getBubbleImage = async (tenant: string) => {
   return bubbleImg;
 };
 
-const getUrl = (
-  settings: EmbedFormValues & {
-    allow_mentor_selection?: boolean;
-    allow_fullscreen?: boolean;
-  },
-  tenant: string,
-  extraBodyClasses = '',
-) => {
-  let url = `${config.mentorIframeUrl()}/platform/${tenant}/${settings?.slug}?embed=true`;
-  if (extraBodyClasses) {
-    url += `&extra-body-classes=${extraBodyClasses}`;
-  }
-  if (settings.mode === 'advanced') {
-    url += `&chat=advanced`;
-  }
-  if (settings.allow_mentor_selection) {
-    url += `&allow-mentor-selection=true`;
-  }
-  if (settings.allow_fullscreen) {
-    url += `&allow-fullscreen=true`;
-  }
-  return url;
-};
-
+/**
+ * The script a customer pastes into their site.
+ *
+ * It loads `@iblai/agent-ai` from a pinned bundle and mounts `<agent-ai>`,
+ * which owns everything hard about an embed: the `ibl-data` handshake,
+ * expiry and re-auth, the auth-SPA redirect, organization switching, context
+ * sharing, the nested-embed relay, fullscreen and the close button. This used
+ * to be ~500 lines of that logic written out by hand into every customer's
+ * page, where it could only be fixed by asking them to re-copy it.
+ *
+ * What stays here is the launcher: a floating bubble, its branding, and
+ * showing or hiding the widget. The component deliberately renders none —
+ * hosts that embed it inline (the Chrome extension side panel, a nested edX
+ * frame) do not want one.
+ *
+ * The bundle is PINNED by `versionId`. A pasted snippet keeps running whatever
+ * it was generated with, so an unpinned URL would hand every existing embed a
+ * new widget with no one re-copying anything.
+ */
 export const getEmbedCode = async (
   tenant: string,
   // `allow_anonymous` is owned by Settings -> Discovery and is no longer an
   // embed-form field (#2476), but the generated snippet still needs it to
-  // decide whether to redirect to auth — the caller passes it in alongside the
-  // form values.
+  // decide whether the agent may be read without signing in — the caller
+  // passes it in alongside the form values.
   settings: EmbedFormValues & {
     allow_anonymous: boolean;
     allow_mentor_selection?: boolean;
@@ -232,542 +227,158 @@ export const getEmbedCode = async (
   customFloatingBubbleConfig?: CustomFloatingBubbleConfig,
 ) => {
   const bubbleImgUrl = await getBubbleImage(tenant);
-  const getIframeContainerStyle = ({
-    right,
-    bottom,
-    top,
-    left,
-  }: {
-    right?: number;
-    bottom?: number;
-    top?: number;
-    left?: number;
-  }) => {
-    if (settings.mode === 'default') {
-      return `position: fixed; border: 1px solid #dfdfdf; bottom: ${bottom ?? 96}px; right: ${right ?? 60}px; z-index: 2147483647; width: 400px; height: 82%;top: ${top ? top + 'px' : 'auto'}; left: ${left ? left + 'px' : 'auto'};`;
-    } else {
-      return `position: fixed; border: 1px solid #dfdfdf; bottom: ${bottom ?? 96}px; right: ${right ?? 60}px; z-index: 2147483647; width: 400px; height: 96%; top: ${top ?? 15}px;`;
-    }
-  };
+  const bubble = customFloatingBubbleConfig;
+
+  // `extra-body-classes` is what tells the agent it is framed by someone
+  // else; the rest of the iframe URL is the component's business.
+  const extraParams = 'extra-body-classes=iframed-externally';
+
+  // Name/value pairs rather than markup: the snippet sets them with
+  // setAttribute, so nothing here has to be HTML-escaped by hand. A boolean
+  // attribute is present-or-absent, which is why its value is ''.
+  const attrs: [string, string][] = [
+    ['mentorurl', config.mentorIframeUrl()],
+    ['authurl', config.authUrl()],
+    ['lmsurl', config.legacyLmsUrl()],
+    ['tenant', tenant],
+    ['mentor', settings.slug],
+    ['extraparams', extraParams],
+    // Unconditional: the app only keeps the chat's Close by default when the
+    // iframe URL has no `mode`, and the component always stamps
+    // `mode=anonymous` on it (see `useShowCloseButton`). This snippet is the
+    // bubble embed — the launcher stays on screen to reopen a closed panel —
+    // so Close belongs here, and the host-side `closeEmbed` listener below is
+    // what it talks to.
+    ['showclosebutton', ''],
+  ];
+  if (settings.mode === 'advanced') attrs.push(['isadvanced', '']);
+  if (settings.allow_anonymous) attrs.push(['isanonymous', '']);
+  if (settings.is_context_aware) attrs.push(['iscontextaware', '']);
+  if (settings.allow_mentor_selection) attrs.push(['allowmentorselection', '']);
+  if (settings.allow_fullscreen) attrs.push(['allowfullscreen', '']);
+  if (settings.sso_provider) attrs.push(['ssoprovider', settings.sso_provider]);
+  // Only an agent that requires signing in needs a way back to this page.
+  if (!settings.allow_anonymous && redirectToken) {
+    attrs.push(['redirecttoken', redirectToken]);
+  }
+
+  const panelPosition =
+    settings.mode === 'default'
+      ? 'bottom: 96px; right: 60px; width: 400px; height: 82%;'
+      : 'bottom: 96px; right: 60px; top: 15px; width: 400px; height: 96%;';
+
+  const bubblePosition =
+    {
+      'bottom-right': 'bottom: 20px; right: 30px;',
+      'bottom-left': 'bottom: 20px; left: 30px;',
+      'top-right': 'top: 20px; right: 30px;',
+      'top-left': 'top: 20px; left: 30px;',
+    }[bubble?.position ?? 'bottom-right'] ??
+    (settings.mode === 'default'
+      ? 'bottom: 20px; right: 60px;'
+      : 'top: 15px; right: 15px;');
+
+  const bubbleInner = useCustomFloatingBubble
+    ? `<img src="${bubble?.image || bubbleImgUrl}" alt="" style="width:${bubble?.imageSize || 32}px;height:${bubble?.imageSize || 32}px;object-fit:contain;">` +
+      (bubble?.title || bubble?.subtitle
+        ? `<span style="display:flex;flex-direction:column;text-align:center;">` +
+          (bubble?.title
+            ? `<span style="font-size:${bubble.fontSize}px;font-weight:500;color:${bubble.textColor};white-space:nowrap;">${bubble.title}</span>`
+            : '') +
+          (bubble?.subtitle
+            ? `<span style="font-size:${bubble.subtitleFontSize}px;color:${bubble.subtitleTextColor};white-space:nowrap;">${bubble.subtitle}</span>`
+            : '') +
+          `</span>`
+        : '')
+    : `<img src="${bubbleImgUrl}" alt="" style="width:100%;height:100%;border-radius:50%;">`;
+
+  const bubbleStyle = useCustomFloatingBubble
+    ? `position:fixed;${bubblePosition}display:flex;align-items:center;gap:8px;` +
+      `background-color:${bubble?.backgroundColor};color:${bubble?.textColor};` +
+      `border-radius:${bubble?.borderRadius}px;padding:${bubble?.padding}px;` +
+      `${bubble?.shadow ? 'box-shadow:0 4px 12px rgba(0,0,0,0.15);' : ''}` +
+      `${bubble?.strokeWidth ? `border:${bubble.strokeWidth}px solid ${bubble.strokeColor};` : 'border:none;'}` +
+      `font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;` +
+      `font-size:${bubble?.fontSize}px;font-weight:500;cursor:pointer;z-index:2147483646;`
+    : `position:fixed;${bubblePosition}height:50px;border:none;background:none;padding:0;cursor:pointer;z-index:2147483646;`;
+
   return `
-            <script>
-            
-            window.onload = function() {
-              let isEmbeddedMentorReady = false;
-              let embedTenant = "${tenant}";
-              let organizationSwitchAttemptKey = 'ibl-org-switch-' + embedTenant;
-              let iblData = new URL(window.location.href).searchParams.get("ibl-data");
-              if (iblData) {
-                const url = new URL(window.location);
-                url.searchParams.delete("ibl-data");
-                window.history.replaceState({}, document.title, url);
-                try {
-                  const userData = JSON.parse(iblData).userData;
-                  document.cookie = \`userData=\${userData}; domain=\${document.domain}; path=/;\`;
-                } catch (error) {
-                  // Unusable session: drop it so every \`if (iblData)\` below
-                  // falls through to the sign-in path instead of replaying auth
-                  // the embed cannot read.
-                  iblData = null;
-                  console.error('Error reading ibl-data:', error);
-                }
-              }
-              
-                ${
-                  settings.is_context_aware
-                    ? `function getCleanBodyContent() {
-                        const bodyClone = document.body.cloneNode(true);
-                        const selectorsToRemove = [
-                            'script', 
-                            'style', 
-                            'nav', 
-                            'footer', 
-                            '.ads', 
-                            '.sidebar', 
-                            '.popup', 
-                            '.cookie-banner', 
-                            '#ibl-chat-widget-container', 
-                            '.ibl-chat-bubble'
-                        ];
-                        selectorsToRemove.forEach(selector => {
-                            const elements = bodyClone.querySelectorAll(selector);
-                            elements.forEach(element => element.remove());
-                        });
-                        const removeComments = (node) => {
-                            for (let i = 0; i < node.childNodes.length; i++) {
-                                const child = node.childNodes[i];
-                                if (child.nodeType === 8) { // Node.COMMENT_NODE
-                                    node.removeChild(child);
-                                    i--; // Adjust index to account for removed node
-                                } else if (child.nodeType === 1) { // Node.ELEMENT_NODE
-                                    removeComments(child);
-                                }
-                            }
-                        };
-                        removeComments(bodyClone);
-                        return bodyClone.innerHTML;
-                      }
+<script src="${config.agentAiSdkUrl()}"></script>
+<script>
+(function () {
+  var panel, agent, bubble, injected = false;
 
-                function sendHostInfoToIframe() {
-                  const iframe = document.querySelector('#ibl-chat-widget-container iframe');
-                  if (iframe && iframe.contentWindow) {
-                    const bodyContent = getCleanBodyContent();
-                    const payload = {
-                      type: 'MENTOR:CONTEXT_UPDATE',
-                      hostInfo: {
-                        title: document.title,
-                        href: window.location.href
-                      },
-                      pageContent: bodyContent
-                    }
-                    iframe.contentWindow.postMessage(payload, '*');
-                  }
-                }`
-                    : ''
-                }
+  function buildPanel() {
+    panel = document.createElement('div');
+    panel.id = 'ibl-chat-widget-container';
+    panel.style.cssText = 'position:fixed;${panelPosition}border:1px solid #dfdfdf;border-radius:13px;overflow:hidden;z-index:2147483647;';
 
-                function sendAuthDataToIframe() {
-                    const iframe = document.querySelector('#ibl-chat-widget-container iframe');
-                    if (iframe && iframe.contentWindow) {
-                        iframe.contentWindow.postMessage({ type: 'MENTOR:AUTH_UPDATE', authData: iblData }, '*');
-                    }
-                }
+    agent = document.createElement('agent-ai');
+    ${attrs
+      .map(
+        ([name, value]) =>
+          `agent.setAttribute(${JSON.stringify(name)}, ${JSON.stringify(value)});`,
+      )
+      .join('\n    ')}
+    agent.style.cssText = 'display:block;width:100%;height:100%;';
 
-                function getIblDataTenant() {
-                    if (!iblData) {
-                        return null;
-                    }
-                    try {
-                        return JSON.parse(iblData).tenant ?? null;
-                    } catch (error) {
-                        console.error('Error parsing ibl-data:', error);
-                        return null;
-                    }
-                }
+    panel.appendChild(agent);
+    document.body.appendChild(panel);
+    injected = true;
+  }
 
-                function isTokenExpired(token_expires) {
-                  const expirationDate = new Date(token_expires);
-                  const now = new Date();
-                  return now >= expirationDate;
-                }
+  function toggle() {
+    if (!injected) {
+      buildPanel();
+      bubble.setAttribute('aria-expanded', 'true');
+      return;
+    }
+    var hidden = panel.style.display === 'none';
+    panel.style.display = hidden ? '' : 'none';
+    bubble.setAttribute('aria-expanded', String(hidden));
+    if (!hidden) bubble.focus();
+  }
 
-                function redirectToAuthSPA(forceLogout) {
-                    const redirectPath = window.location.pathname + window.location.search;
-                    window.location.href = \`${config.authUrl()}/login?redirect-path=\${redirectPath}${!settings.allow_anonymous ? '&redirect-token=' + redirectToken : ''}&tenant=${tenant}${settings.sso_provider ? '&custom_sso_backend_path=' + settings.sso_provider : ''}\${forceLogout ? '&logout=true' : ''}\`;
-                }
+  function init() {
+    var meta = document.createElement('meta');
+    meta.name = 'viewport';
+    meta.content = 'width=device-width, initial-scale=1';
+    document.head.appendChild(meta);
 
-                function switchOrganizationViaAuthSPA() {
-                    // One attempt per organization. The embed re-asks every few
-                    // seconds, so without this a switch that cannot succeed
-                    // would navigate this page over and over.
-                    try {
-                        if (sessionStorage.getItem(organizationSwitchAttemptKey)) {
-                            console.warn('[ibl] Already tried switching to ' + embedTenant + ', not retrying.');
-                            return;
-                        }
-                        sessionStorage.setItem(organizationSwitchAttemptKey, '1');
-                    } catch (error) {
-                        // Private browsing can refuse sessionStorage; switching
-                        // once is better than never switching.
-                    }
-                    const redirectPath = window.location.pathname + window.location.search;
-                    // /join covers every case: a member gets a new session, a
-                    // non-member is linked first where the organization allows
-                    // it, and an invalid session falls back to sign-in and
-                    // returns here.
-                    window.location.href = \`${config.authUrl()}/join?tenant=${tenant}&redirect-to=\${encodeURIComponent(window.location.origin)}&redirect-path=\${encodeURIComponent(redirectPath)}\`;
-                }
+    var style = document.createElement('style');
+    style.textContent = '@media screen and (max-width:768px){#ibl-chat-widget-container{width:90%!important;max-width:400px!important;right:15px!important}.ibl-chat-bubble{right:20px!important}}';
+    document.head.appendChild(style);
 
-                function clearOrganizationSwitchAttempt() {
-                    try {
-                        sessionStorage.removeItem(organizationSwitchAttemptKey);
-                    } catch (error) {
-                        // Nothing to clear if storage is unavailable.
-                    }
-                }
+    bubble = document.createElement('button');
+    bubble.className = 'ibl-chat-bubble';
+    bubble.type = 'button';
+    bubble.style.cssText = ${JSON.stringify(bubbleStyle)};
+    bubble.innerHTML = ${JSON.stringify(bubbleInner)};
+    bubble.setAttribute('aria-label', 'Open chat assistant');
+    bubble.setAttribute('aria-expanded', 'false');
+    bubble.addEventListener('click', toggle);
+    document.body.appendChild(bubble);
 
-                let isWidgetInjected = false;
+    ${settings.auto_open ? 'setTimeout(function () { if (!injected) toggle(); }, 500);' : ''}
+  }
 
-                function createWidget() {
-                    const iframeContainer = document.createElement('div');
-                    iframeContainer.id = 'ibl-chat-widget-container';
-                    iframeContainer.style = "${
-                      useCustomFloatingBubble
-                        ? getIframeContainerStyle({
-                            ...(customFloatingBubbleConfig?.position ===
-                            'bottom-right'
-                              ? {
-                                  right: 30,
-                                  bottom: Number(
-                                    Number(customFloatingBubbleConfig.padding) +
-                                      Number(
-                                        customFloatingBubbleConfig.imageSize,
-                                      ) +
-                                      50,
-                                  ),
-                                }
-                              : {}),
-                            ...(customFloatingBubbleConfig?.position ===
-                            'bottom-left'
-                              ? {
-                                  left: 30,
-                                  bottom: Number(
-                                    Number(customFloatingBubbleConfig.padding) +
-                                      Number(
-                                        customFloatingBubbleConfig.imageSize,
-                                      ) +
-                                      50,
-                                  ),
-                                }
-                              : {}),
-                            ...(customFloatingBubbleConfig?.position ===
-                            'top-right'
-                              ? {
-                                  right: 30,
-                                  top: Number(
-                                    Number(customFloatingBubbleConfig.padding) +
-                                      Number(
-                                        customFloatingBubbleConfig.imageSize,
-                                      ) +
-                                      50,
-                                  ),
-                                }
-                              : {}),
-                            ...(customFloatingBubbleConfig?.position ===
-                            'top-left'
-                              ? {
-                                  left: 30,
-                                  top: Number(
-                                    Number(customFloatingBubbleConfig.padding) +
-                                      Number(
-                                        customFloatingBubbleConfig.imageSize,
-                                      ) +
-                                      50,
-                                  ),
-                                }
-                              : {}),
-                          })
-                        : getIframeContainerStyle(
-                            settings.mode === 'default'
-                              ? { right: 60, bottom: 96 }
-                              : { right: 15, top: 15, bottom: 96 },
-                          )
-                    }";
-                    
-                    const iframe = document.createElement('iframe');
-                    iframe.src = '${getUrl(settings, tenant, 'iframed-externally')}';
-                    ${
-                      settings.mode === 'default'
-                        ? 'iframe.style = "border: 0px white; height:100%;width:100%;border-radius: 13px;";'
-                        : 'iframe.style = "border: 0px white; height:100%;width:100%;border-radius: 0;";'
-                    }
-                    iframe.allow = "clipboard-read; clipboard-write; microphone *; camera *; midi *; geolocation *; encrypted-media *; display-capture *";
-                    iframe.setAttribute('tabindex', '0');
-                    iframe.setAttribute('title', 'Chat assistant iframe');
+  // The agent asks to be closed; the launcher is ours, so the hiding is too.
+  window.addEventListener('message', function (event) {
+    var message = event.data;
+    if (typeof message === 'string') {
+      try { message = JSON.parse(message); } catch (error) { return; }
+    }
+    if (message && message.closeEmbed && injected && panel.style.display !== 'none') {
+      toggle();
+    }
+  });
 
-                    iframeContainer.appendChild(iframe);
-                    document.body.appendChild(iframeContainer);
-                    
-                    return { iframeContainer, iframe };
-                }
-
-                ${
-                  settings.allow_fullscreen
-                    ? `
-                let savedNormalStyles = null;
-
-                function setWidgetFullscreen(fullscreen) {
-                  const widget = document.getElementById('ibl-chat-widget-container');
-                  const bubble = document.querySelector('.ibl-chat-bubble');
-                  const iframe = widget?.querySelector('iframe');
-                  if (!widget) return;
-                  if (fullscreen) {
-                    if (savedNormalStyles === null) {
-                      savedNormalStyles = {
-                        widget: widget.style.cssText,
-                        iframeRadius: iframe ? iframe.style.borderRadius : '',
-                        bubbleDisplay: bubble ? bubble.style.display : '',
-                      };
-                    }
-                    widget.style.cssText = 'position: fixed !important; inset: 0 !important; top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important; width: 100vw !important; max-width: 100vw !important; height: 100vh !important; border: none !important; z-index: 2147483647;';
-                    if (iframe) iframe.style.borderRadius = '0';
-                    if (bubble) bubble.style.display = 'none';
-                  } else if (savedNormalStyles !== null) {
-                    widget.style.cssText = savedNormalStyles.widget;
-                    if (iframe) iframe.style.borderRadius = savedNormalStyles.iframeRadius;
-                    if (bubble) bubble.style.display = savedNormalStyles.bubbleDisplay;
-                    savedNormalStyles = null;
-                  }
-                }
-                `
-                    : ''
-                }
-
-                function toggleWidget() {
-                  let widget = document.getElementById('ibl-chat-widget-container');
-                  const bubble = document.querySelector('.ibl-chat-bubble');
-                  let iframe = widget?.querySelector('iframe');
-
-                  if (!isWidgetInjected) {
-                      // First time opening - inject into DOM
-                      const created = createWidget();
-                      widget = created.iframeContainer;
-                      iframe = created.iframe;
-                      isWidgetInjected = true;
-                      
-                      bubble.setAttribute('aria-expanded', 'true');
-                      setTimeout(() => {
-                        iframe.focus();
-                        setupFocusTrap(iframe);
-                      }, 100);
-                  } else {
-                      // Subsequent toggles - use display toggle
-                      if (widget.style.display === 'none') {
-                          widget.style.display = '';
-                          bubble.setAttribute('aria-expanded', 'true');
-
-                          setTimeout(() => {
-                            iframe.focus();
-                            setupFocusTrap(iframe);
-                          }, 100);
-                      } else {
-                          ${settings.allow_fullscreen ? 'setWidgetFullscreen(false);' : ''}
-                          widget.style.display = 'none';
-                          bubble.setAttribute('aria-expanded', 'false');
-                          bubble.focus();
-                          removeFocusTrap();
-                      }
-                  }
-                }
-
-                let focusTrapHandler = null;
-
-                function setupFocusTrap(iframe) {
-                  focusTrapHandler = function(event) {
-                    if (event.key === 'Tab') {
-                      const widget = document.getElementById('ibl-chat-widget-container');
-                      if (widget && widget.style.display !== 'none') {
-                        if (!iframe.contains(event.target) && event.target !== iframe) {
-                          event.preventDefault();
-                          iframe.focus();
-                        }
-                      }
-                    }
-                  };
-                  document.addEventListener('keydown', focusTrapHandler, true);
-                }
-
-                function removeFocusTrap() {
-                  if (focusTrapHandler) {
-                    document.removeEventListener('keydown', focusTrapHandler, true);
-                    focusTrapHandler = null;
-                  }
-                }
-
-                function initChatWidget() {
-                    //Creating Appropriate Meta Tag for optimized mobile display 
-                    const metaViewportTagEl = document.createElement('meta')
-                    metaViewportTagEl.name="viewport"
-                    metaViewportTagEl.content="width=device-width, initial-scale=1"
-                    document.head.appendChild(metaViewportTagEl)
-                    
-                    //Optimizing mobile display
-                    const additionStyleEl = document.createElement('style')
-                    additionStyleEl.innerHTML = "@media screen and (max-width:768px){#ibl-chat-widget-container{width:90%!important;max-width:400px!important;right:15px!important}img.ibl-chat-bubble{right:20px!important}}"
-                    document.head.appendChild(additionStyleEl)
-                    
-                    // Only create bubble initially - iframe will be injected on first open
-                    let bubble;
-                    ${
-                      !useCustomFloatingBubble
-                        ? `
-                    bubble = document.createElement('button');
-                    const bubbleImg = document.createElement('img');
-                    bubbleImg.src = '${bubbleImgUrl}';
-                    bubbleImg.alt = 'Chat assistant';
-                    bubbleImg.style = 'width: 100%; height: 100%; border: none; background: none; border-radius: 50%;';
-                    bubble.appendChild(bubbleImg);
-                    bubble.setAttribute('tabindex', '0');
-                    ${
-                      settings.mode === 'default'
-                        ? 'bubble.style = "position: fixed; right: 60px; bottom: 20px; height: 50px; cursor:pointer;";'
-                        : 'bubble.style = "position: fixed; right: 15px; top: 15px; height: 50px; cursor:pointer;";'
-                    } 
-                      `
-                        : //GENERATING EMBED BUBBLE HTML WRAPPER
-                          `
-                        bubble = document.createElement('button');
-                        bubble.innerHTML = \`
-                          <button tabindex="0" style="
-                            position: fixed;
-                            ${customFloatingBubbleConfig?.position === 'bottom-right' ? 'bottom: 20px; right: 30px;' : ''}
-                            ${customFloatingBubbleConfig?.position === 'bottom-left' ? 'bottom: 20px; left: 30px;' : ''}
-                            ${customFloatingBubbleConfig?.position === 'top-right' ? 'top: 20px; right: 30px;' : ''}
-                            ${customFloatingBubbleConfig?.position === 'top-left' ? 'top: 20px; left: 30px;' : ''}
-                            height: auto;
-                            background-color: ${customFloatingBubbleConfig?.backgroundColor};
-                            color: ${customFloatingBubbleConfig?.textColor};
-                            border-radius: ${customFloatingBubbleConfig?.borderRadius}px;
-                            padding: ${customFloatingBubbleConfig?.padding}px;
-                            ${customFloatingBubbleConfig?.shadow ? 'box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);' : ''}
-                            ${customFloatingBubbleConfig?.strokeWidth ? `border: ${customFloatingBubbleConfig?.strokeWidth}px solid ${customFloatingBubbleConfig?.strokeColor};` : 'border: none;'}
-                            cursor: pointer;
-                            display: flex;
-                            align-items: center;
-                            gap: 8px;
-                            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-                            font-size: ${customFloatingBubbleConfig?.fontSize}px;
-                            font-weight: 500;
-                            transition: all 0.2s ease;
-                            z-index: 2147483646;
-                            min-width: fit-content;
-                          ">
-                            <img src="${customFloatingBubbleConfig?.image || bubbleImgUrl}" alt="Chat" style="width: ${customFloatingBubbleConfig?.imageSize || 32}px; height: ${customFloatingBubbleConfig?.imageSize || 32}px; object-fit: contain;">
-                            ${
-                              customFloatingBubbleConfig?.title ||
-                              customFloatingBubbleConfig?.subtitle
-                                ? `<span style="display: flex; flex-direction: column; align-items: center; text-align: center;">
-                                    ${customFloatingBubbleConfig?.title ? `<span style="font-size: ${customFloatingBubbleConfig?.fontSize}px; font-weight: 500; color: ${customFloatingBubbleConfig?.textColor}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${customFloatingBubbleConfig?.title}</span>` : ''}
-                                    ${customFloatingBubbleConfig?.subtitle ? `<span style="font-size: ${customFloatingBubbleConfig?.subtitleFontSize}px; color: ${customFloatingBubbleConfig?.subtitleTextColor}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${customFloatingBubbleConfig?.subtitle}</span>` : ''}
-                                   </span>`
-                                : ''
-                            }
-                          </button>
-                        \`;
-                        bubble = bubble.firstElementChild;
-                        `
-                    }
-                    bubble.classList.add('ibl-chat-bubble');
-                    bubble.setAttribute('aria-label', 'Open chat assistant');
-                    bubble.setAttribute('aria-expanded', 'false');
-                    bubble.addEventListener('click', toggleWidget);
-                    bubble.addEventListener('keydown', function(event) {
-                      if (event.key === 'Enter' || event.key === ' ') {
-                        event.preventDefault();
-                        toggleWidget();
-                      }
-                    });
-                    
-                    document.body.appendChild(bubble);
-                    
-                    // Handle auto-open
-                    ${
-                      settings.auto_open
-                        ? `setTimeout(function() { 
-                             if (!isWidgetInjected) {
-                               toggleWidget();
-                             }
-                           }, 500);`
-                        : ''
-                    }
-                }
-
-                ${
-                  settings.is_context_aware
-                    ? `
-                let lastUrl = window.location.href;
-                setInterval(() => {
-                    const currentUrl = window.location.href;
-                    if (currentUrl !== lastUrl) {
-                        lastUrl = currentUrl;
-                        isEmbeddedMentorReady && sendHostInfoToIframe();
-                    }
-                }, 1000);
-                `
-                    : ''
-                }
-                initChatWidget();
-                if (getIblDataTenant() === embedTenant) {
-                    clearOrganizationSwitchAttempt();
-                }
-                window.addEventListener('message', function(event) {
-                    let message = event.data;
-                    if (typeof message === 'string') {
-                        try {
-                            message = JSON.parse(message);
-                        } catch (error) {
-                            return;
-                        }
-                    }
-                    ${
-                      !settings.allow_anonymous
-                        ? `
-                        if (
-                          message?.loaded &&
-                          (!message.auth.axd_token ||
-                            !message.auth.dm_token ||
-                            message.auth.tenant !== embedTenant ||
-                            isTokenExpired(message.auth.dm_token_expires) ||
-                            isTokenExpired(message.auth.axd_token_expires))
-                        ) {
-                          !iblData && redirectToAuthSPA();
-                        } 
-                        
-                        if (message?.loaded && message.auth.userData ) {
-                        const userData = document.cookie.includes('userData=') ? document.cookie.split('userData=')[1].split(';')[0] : null;
-                        if (userData ) {
-                            try {
-                                const parsedUserData = JSON.parse(userData);
-                                if (parsedUserData.user_id !== JSON.parse(message.auth.userData).user_id) {
-                                  if (iblData) {
-                                    sendAuthDataToIframe();
-                                  } else {
-                                    ${!settings.allow_anonymous ? 'redirectToAuthSPA();' : ''}
-                                  }
-                                }
-                            } catch (error) {
-                                console.error('Error parsing userData cookie:', error);
-                            }
-                        }
-                        }`
-                        : ''
-                    }
-                    
-                    if (message?.tenantSwitch) {
-                      // The user asked to pick an organization. The embed cannot
-                      // go there itself without tearing itself out of this page,
-                      // so open the chooser in a real tab; it returns here with
-                      // the session it minted.
-                      if (message.chooserUrl) {
-                        window.open(message.chooserUrl, 'ibl-organizations');
-                        return;
-                      }
-                      // Answer only for this embed's own organization, and only
-                      // with a session that belongs to it.
-                      if (message.tenant === embedTenant) {
-                        if (getIblDataTenant() === embedTenant) {
-                          clearOrganizationSwitchAttempt();
-                          sendAuthDataToIframe();
-                        } else {
-                          ${!settings.allow_anonymous ? 'switchOrganizationViaAuthSPA();' : ''}
-                        }
-                      }
-                    }
-
-                    if (message?.authExpired) {
-                      if(iblData){
-                        sendAuthDataToIframe();
-                      }else{
-                        ${!settings.allow_anonymous ? 'redirectToAuthSPA(true);' : ''}
-                      }
-                    } else if (message?.ready) {
-                      isEmbeddedMentorReady = true
-                    }
-                    if(message?.loaded){
-                      ${settings.is_context_aware ? 'sendHostInfoToIframe();' : ''}
-                    }
-                    if (message?.closeEmbed) {
-                      toggleWidget();
-                    }
-                    ${
-                      settings.allow_fullscreen
-                        ? `if (typeof message?.embedFullscreen === 'boolean') {
-                      setWidgetFullscreen(message.embedFullscreen);
-                    }`
-                        : ''
-                    }
-                });
-            };
-            </script>
-        `;
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>
+`;
 };

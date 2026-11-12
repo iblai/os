@@ -12,6 +12,8 @@ const env = {
   NEXT_PUBLIC_IBL_ENABLE_SPECIAL_LOGO_WHEN_IFRAMED:
     process.env.NEXT_PUBLIC_IBL_ENABLE_SPECIAL_LOGO_WHEN_IFRAMED,
   NEXT_PUBLIC_MENTOR_IFRAME_URL: process.env.NEXT_PUBLIC_MENTOR_IFRAME_URL,
+  NEXT_PUBLIC_AGENT_AI_SDK_VERSION:
+    process.env.NEXT_PUBLIC_AGENT_AI_SDK_VERSION,
   NEXT_PUBLIC_BASE_WS_URL: process.env.NEXT_PUBLIC_BASE_WS_URL,
   NEXT_PUBLIC_IBL_LIVE_KIT_SERVER_URL:
     process.env.NEXT_PUBLIC_IBL_LIVE_KIT_SERVER_URL,
@@ -77,6 +79,21 @@ export const getEnv = (key: keyof typeof env, fallback = ''): string => {
 
 const domain = () => getEnv('NEXT_PUBLIC_PLATFORM_BASE_DOMAIN', 'iblai.app');
 
+/**
+ * S3 `versionId` of the `@iblai/agent-ai` bundle the generated embed loads.
+ *
+ * Pinned rather than latest, because the snippet is pasted into customer sites
+ * and keeps running whatever it was generated with — an unpinned URL would
+ * hand every existing embed a new widget without anyone re-copying anything.
+ * Bumping this changes what NEW embeds get; already-pasted ones stay on the
+ * version they were generated with.
+ */
+const agentAiSdkVersion = () =>
+  getEnv(
+    'NEXT_PUBLIC_AGENT_AI_SDK_VERSION',
+    'CJhD8dFLf8mzV7uPkPMBM.miYdYRS1qx',
+  );
+
 export const config = {
   // Namespaces per-app user state shared with sibling SPAs (e.g. the
   // `<appName>-product-tour` key on the user's public_metadata).
@@ -109,6 +126,10 @@ export const config = {
   mentorUrl: () => getEnv('NEXT_PUBLIC_MENTOR_URL', 'https://mentor.iblai.app'),
   mentorIframeUrl: () =>
     getEnv('NEXT_PUBLIC_MENTOR_IFRAME_URL', 'https://mentor.iblai.app'),
+  agentAiSdkVersion,
+  /** The bundle URL the generated embed loads, pinned to that version. */
+  agentAiSdkUrl: () =>
+    `https://assets.ibl.ai/web/mentorai.js?versionId=${agentAiSdkVersion()}`,
   externalPricingPageUrl: () =>
     getEnv(
       'NEXT_PUBLIC_EXTERNAL_PRICING_PAGE_URL',

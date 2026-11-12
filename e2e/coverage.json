@@ -2,14 +2,14 @@
   "version": 2,
   "lastUpdated": "2026-11-11",
   "summary": {
-    "totalCheckpoints": 1101,
-    "coveredCheckpoints": 1051,
+    "totalCheckpoints": 1104,
+    "coveredCheckpoints": 1054,
     "deprecatedCheckpoints": 17,
     "notReproducibleCheckpoints": 17,
     "pendingCheckpoints": 16,
     "percent": 100,
-    "totalJourneys": 109,
-    "activeJourneys": 108
+    "totalJourneys": 110,
+    "activeJourneys": 109
   },
   "journeys": [
     {
@@ -6892,6 +6892,29 @@
         {
           "id": "cafp-04",
           "description": "Issue #2766, answer mocked as 404 (older backend): the dialog fails open and shows every field, the Prompts tab and Next",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "retrieved-documents-preview",
+      "name": "Retrieved Documents Preview",
+      "spec": "102-retrieved-documents-preview.spec.ts",
+      "sourceFiles": ["middleware.ts"],
+      "checkpoints": [
+        {
+          "id": "rdp-01",
+          "description": "Issue #2855: a dataset file on an *.s3.amazonaws.com URL (response stubbed; CSP is applied before the request leaves) opens in the Retrieved Documents preview frame, the frame shows its text, and no frame-src securitypolicyviolation fires (CSP enforced; fails on the pre-fix middleware)",
+          "status": "covered"
+        },
+        {
+          "id": "rdp-02",
+          "description": "Issue #2855: a web-page source's row shows an Open Page link (href = the page plus a text fragment, target=_blank, rel noopener noreferrer) and no preview toggle",
+          "status": "covered"
+        },
+        {
+          "id": "rdp-03",
+          "description": "Issue #2855: a YouTube source's preview shows an iframe on youtube-nocookie.com/embed/<id> with referrerpolicy strict-origin-when-cross-origin and no Open Page link",
           "status": "covered"
         }
       ]
