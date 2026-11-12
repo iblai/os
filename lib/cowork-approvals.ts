@@ -26,6 +26,19 @@ export function readCoworkApprovals(): CoworkApprovals {
   }
 }
 
+/** The SDK's own Cowork on/off key, written by its pill (`setCoworkEnabled`). */
+const ENABLED_KEY = 'ibl_cowork_enabled';
+
+/** Whether Cowork is on. */
+export function coworkEnabled(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    return window.localStorage.getItem(ENABLED_KEY) === 'true';
+  } catch {
+    return false;
+  }
+}
+
 export function writeCoworkApprovals(mode: CoworkApprovals): void {
   if (typeof window === 'undefined') return;
   try {

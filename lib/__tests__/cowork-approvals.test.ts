@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   coworkConsentGiven,
+  coworkEnabled,
   coworkPermissionAsked,
   coworkSetupPending,
   COWORK_SETUP_RESUME_WINDOW_MS,
@@ -169,5 +170,22 @@ describe('cowork permission asked', () => {
     });
     expect(() => markCoworkPermissionAsked('accessibility')).not.toThrow();
     expect(coworkPermissionAsked('accessibility')).toBe(false);
+  });
+});
+
+describe('coworkEnabled', () => {
+  it('is on only for the SDK pill’s explicit "true"', () => {
+    expect(coworkEnabled()).toBe(false);
+    window.localStorage.setItem('ibl_cowork_enabled', 'false');
+    expect(coworkEnabled()).toBe(false);
+    window.localStorage.setItem('ibl_cowork_enabled', 'true');
+    expect(coworkEnabled()).toBe(true);
+  });
+
+  it('reads unusable storage as off', () => {
+    vi.spyOn(window.localStorage, 'getItem').mockImplementation(() => {
+      throw new Error('blocked');
+    });
+    expect(coworkEnabled()).toBe(false);
   });
 });

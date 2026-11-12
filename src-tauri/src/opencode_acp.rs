@@ -646,6 +646,9 @@ struct Session {
     /// Which agent this process runs: opencode, Codex or Claude Code. Fixed at
     /// spawn — switching agents changes `requested_model`, which respawns.
     backend: Backend,
+    /// Spawned with the screen tools (Cowork on). Fixed at spawn — a flip
+    /// respawns, like a model switch.
+    cowork: bool,
     /// Throwaway key this session uses against the loopback model proxy (cloud only).
     /// The real DM token lives in the proxy, keyed by this.
     proxy_secret: Option<String>,
@@ -3732,7 +3735,7 @@ async fn probe_in(
     skills: &Path,
     cfg: &Path,
 ) -> Result<Value, String> {
-    let launch = agent_launch(backend, ws, skills, cfg, "", false);
+    let launch = agent_launch(backend, ws, skills, cfg, "", false, None);
     let mut cmd = sandboxed_command(key, ws, backend)?;
     wire_agent_command(&mut cmd, &launch, ws, backend);
     let mut child = cmd
@@ -3760,6 +3763,7 @@ async fn probe_in(
         acp_session_id: String::new(),
         requested_model: None,
         backend,
+        cowork: false,
         proxy_secret: None,
         turn: Arc::new(Mutex::new(TurnState::new())),
         last_used: Mutex::new(Instant::now()),
@@ -3776,6 +3780,103 @@ async fn probe_in(
             crate::code_agent_installer::display_name(backend)
         )
     })
+}
+
+/// The screen driver as an ACP MCP server, for a Code chat with Cowork on: the
+/// agent spawns the driver's stdio proxy (`cua_driver_mcp::proxy_argv`) to the
+/// app's own daemon, so the tools ride the agent's permission policy while the
+/// driver keeps the app's grants. `args` and `env` are always present — the
+/// adapters spread the one and map the other.
+fn cowork_mcp_server(driver: &Path, socket: &Path) -> Value {
+    json!({
+        "name": "cowork",
+        "command": driver.to_string_lossy(),
+        "args": crate::cua_driver_mcp::proxy_argv(socket),
+        "env": [],
+    })
+}
+
+/// What Cowork adds to a Code session's guidance: the screen rules the webview's
+/// Cowork prompt carries (`remote-ai-client.ts`), plus the one difference on
+/// this path — no screenshot reaches a Code agent, so the element list is the
+/// whole picture.
+const COWORK_GUIDANCE: &str = "\
+## Screen tools (Cowork)
+You can control the user's computer through the `cowork` tools to complete tasks on their behalf.
+Work by discovery, never by guesswork: use list_apps or list_windows to find the target, then call get_window_state for that pid and window_id to read its elements before you act on it.
+Always pass include_screenshot: false — screenshots are not available here; the element list is the whole picture.
+Prefer the element_token that get_window_state returns for anything you click, type into or set — it is exact.
+A token belongs to the snapshot that produced it, and the next get_window_state on that window invalidates every earlier one: take a snapshot right before you act, and a fresh one before each further action on that window.
+If a call comes back saying the token is stale, do not retry it: take a new snapshot, find the element again, and use the new token.
+Keep each snapshot small: pass `query` to get_window_state to project the tree to the rows you care about, and `max_elements` on large or web-based windows.
+In the reply, say what you did on the screen in everyday words.
+";
+
+/// The guidance a session is spawned with: the ibl.ai guidance, plus the screen
+/// rules when Cowork is on.
+fn with_cowork_guidance(guidance: String, cowork: bool) -> String {
+    if cowork {
+        format!("{guidance}\n\n{COWORK_GUIDANCE}")
+    } else {
+        guidance
+    }
+}
+
+/// Why a Code turn with Cowork on can't run here, decided before anything is
+/// spawned; `Ok` is the driver whose proxy the agent runs. Every agent and both
+/// desktop platforms qualify: the driver is the app's own daemon, outside the
+/// agent's sandbox, and opencode, Codex and Claude Code each ask before a
+/// screen tool runs.
+fn cowork_preflight() -> Result<PathBuf, String> {
+    if cfg!(target_os = "windows") {
+        return Err("Cowork inside Code isn't available on Windows.".to_string());
+    }
+    cowork_preflight_with(
+        &crate::cua_driver_mcp::session_support(&crate::cua_driver_mcp::current_session_env()),
+        crate::cua_driver_mcp::resolved_driver_path(),
+    )
+}
+
+/// The decision itself, with the environment read by the caller.
+fn cowork_preflight_with(
+    support: &crate::cua_driver_mcp::DriverSupport,
+    driver: Option<PathBuf>,
+) -> Result<PathBuf, String> {
+    if !support.supported {
+        return Err("Cowork isn't supported on this desktop session.".to_string());
+    }
+    driver.ok_or_else(|| {
+        "Cowork isn't set up on this computer yet — turn Cowork on from the chat to install it."
+            .to_string()
+    })
+}
+
+/// A live session serves the next turn only when it was spawned for the same
+/// model and the same Cowork setting; either change is a respawn, and the
+/// conversation survives it through `session/load`.
+fn reusable(s: &Session, model: Option<&str>, cowork: bool) -> bool {
+    s.requested_model.as_deref() == model && s.cowork == cowork
+}
+
+/// The chats whose session was spawned with the screen tools, minus `except`.
+fn cowork_session_ids<'a>(
+    sessions: impl Iterator<Item = (&'a String, &'a Arc<Session>)>,
+    except: Option<&str>,
+) -> Vec<String> {
+    sessions
+        .filter(|(id, s)| s.cowork && except != Some(id.as_str()))
+        .map(|(id, _)| id.clone())
+        .collect()
+}
+
+/// Close every session spawned with the screen tools except `except`. The
+/// driver owns the screen, so a new Cowork session — or the webview's own
+/// driver — must not run beside an older one's.
+pub(crate) async fn close_cowork_sessions(except: Option<&str>) {
+    let ids = cowork_session_ids(registry().lock().await.iter(), except);
+    for id in ids {
+        close_session(&id).await;
+    }
 }
 
 /// The `session/new` params per backend. Codex and Claude get the per-spawn
@@ -3808,8 +3909,14 @@ fn agent_launch(
     config_home: &Path,
     guidance: &str,
     auto: bool,
+    // The screen driver and its daemon's socket for a Cowork session, as the
+    // one MCP server every backend receives in `session/new` (and `session/load`).
+    cowork_driver: Option<(&Path, &Path)>,
 ) -> AgentLaunch {
-    let session = session_params(backend, workspace, skills_root, guidance);
+    let mut session = session_params(backend, workspace, skills_root, guidance);
+    if let Some((driver, socket)) = cowork_driver {
+        session["mcpServers"] = json!([cowork_mcp_server(driver, socket)]);
+    }
     let node_launch = |env: Vec<(&'static str, String)>| AgentLaunch {
         program: crate::code_agent_installer::node_bin(),
         args: vec![crate::code_agent_installer::adapter_entry(backend)
@@ -4021,6 +4128,7 @@ async fn spawn_session(
     mentor: Option<String>,
     generation_id: &str,
     resume: Option<String>,
+    cowork: bool,
 ) -> Result<Arc<Session>, String> {
     ensure_workspace(workspace)?;
 
@@ -4074,6 +4182,21 @@ async fn spawn_session(
     // developer instructions and Claude as a system-prompt append (both in
     // `agent_launch`), each with its own wording where opencode's doesn't fit.
     let guidance = crate::opencode_proxy::guidance_for(backend, tenant).await?;
+
+    // Cowork on: the screen driver rides the session as an MCP server and the
+    // screen rules ride the guidance. One driver owns the screen, so any other
+    // Cowork session and the webview's own driver go first.
+    let cowork_driver = if cowork {
+        let driver = cowork_preflight()?;
+        close_cowork_sessions(Some(session_id)).await;
+        crate::cua_driver_mcp::stop_driver();
+        let socket =
+            crate::cua_driver_mcp::ensure_driver_daemon(&driver, &app.config().identifier)?;
+        Some((driver, socket))
+    } else {
+        None
+    };
+    let guidance = with_cowork_guidance(guidance, cowork);
 
     // opencode's model provider: on-device runtimes talk straight to their own
     // local endpoint; cloud goes through the loopback proxy, which holds the
@@ -4154,6 +4277,9 @@ async fn spawn_session(
         &config_home(session_id),
         &guidance,
         auto,
+        cowork_driver
+            .as_ref()
+            .map(|(driver, socket)| (driver.as_path(), socket.as_path())),
     );
     let mut cmd = sandboxed_command(session_id, workspace, backend)?;
     wire_agent_command(&mut cmd, &launch, workspace, backend);
@@ -4225,6 +4351,7 @@ async fn spawn_session(
         acp_session_id: String::new(),
         requested_model: model,
         backend,
+        cowork,
         proxy_secret,
         turn,
         last_used: Mutex::new(Instant::now()),
@@ -4434,12 +4561,13 @@ async fn get_or_spawn(
     mentor: Option<String>,
     generation_id: &str,
     resume: Option<String>,
+    cowork: bool,
 ) -> Result<Arc<Session>, String> {
     let live = { registry().lock().await.get(session_id).cloned() };
     if let Some(s) = live {
         // A dead child can sit here for a beat before its reader's EOF cleanup
         // lands — never hand it out; fall through to the respawn below.
-        if !child_exited(&s).await && s.requested_model.as_deref() == model.as_deref() {
+        if !child_exited(&s).await && reusable(&s, model.as_deref(), cowork) {
             *s.last_used.lock().await = Instant::now();
             if let Some(secret) = &s.proxy_secret {
                 crate::opencode_proxy::set_token(secret, token).await;
@@ -4447,7 +4575,7 @@ async fn get_or_spawn(
             return Ok(s);
         }
     }
-    // Missing, dead, or the model switched → (re)spawn.
+    // Missing, dead, the model switched or Cowork flipped → (re)spawn.
     close_session(session_id).await;
     evict_for_new_session(session_id).await;
     start_reaper();
@@ -4462,6 +4590,7 @@ async fn get_or_spawn(
         mentor,
         generation_id,
         resume,
+        cowork,
     )
     .await?;
     registry()
@@ -4679,6 +4808,9 @@ pub async fn opencode_chat_stream(
     // turn's workspace (and reap its process) so the chat keeps ONE folder.
     // Absent with an older SDK: no migration.
     new_chat_key: Option<String>,
+    // Cowork is on in the chat: the agent gets the screen tools. Absent with
+    // an older SDK: plain Code.
+    cowork: Option<bool>,
 ) -> Result<(), String> {
     let res = chat_stream(
         app.clone(),
@@ -4692,6 +4824,7 @@ pub async fn opencode_chat_stream(
         workspace,
         mentor,
         new_chat_key,
+        cowork.unwrap_or(false),
     )
     .await;
     // The SDK drops its listeners the moment `invoke` resolves: every emit of the
@@ -4713,6 +4846,7 @@ async fn chat_stream(
     workspace: Option<String>,
     mentor: Option<String>,
     new_chat_key: Option<String>,
+    cowork: bool,
 ) -> Result<(), String> {
     // Belt for the UI gate: on Linux the pill is disabled while bwrap is missing,
     // but a stale flag or an older frontend could still send.
@@ -4775,6 +4909,7 @@ async fn chat_stream(
             mentor.clone(),
             &generation_id,
             resume.take(),
+            cowork,
         )
         .await
         {
@@ -6024,6 +6159,7 @@ mod tests {
                 Path::new("/tmp/cfg"),
                 "GUIDE",
                 auto,
+                None,
             );
             assert_eq!(
                 codex
@@ -7028,6 +7164,7 @@ mod tests {
             acp_session_id: "acp-test".to_string(),
             requested_model: Some("m".to_string()),
             backend: Backend::Opencode,
+            cowork: false,
             proxy_secret: None,
             turn: Arc::new(Mutex::new(TurnState::new())),
             last_used: Mutex::new(Instant::now()),
@@ -7794,14 +7931,14 @@ mod tests {
         let skills = Path::new("/tmp/cfg/agent-skills");
         let cfg = Path::new("/tmp/cfg");
 
-        let oc = agent_launch(Backend::Opencode, ws, skills, cfg, "GUIDE", false);
+        let oc = agent_launch(Backend::Opencode, ws, skills, cfg, "GUIDE", false, None);
         assert_eq!(oc.program, PathBuf::from("opencode"));
         assert_eq!(oc.args, ["acp", "--print-logs", "--log-level", "INFO"]);
         assert_eq!(oc.env, vec![("XDG_CONFIG_HOME", "/tmp/cfg".to_string())]);
         assert_eq!(oc.session, json!({ "cwd": "/tmp/ws", "mcpServers": [] }));
         assert_eq!(session_mode(Backend::Opencode, false), None);
 
-        let codex = agent_launch(Backend::Codex, ws, skills, cfg, "GUIDE", false);
+        let codex = agent_launch(Backend::Codex, ws, skills, cfg, "GUIDE", false, None);
         assert!(codex.program.ends_with("bin/node"), "{:?}", codex.program);
         assert!(
             codex.args[0].ends_with("@agentclientprotocol/codex-acp/dist/index.js"),
@@ -7836,7 +7973,7 @@ mod tests {
             session_mode(Backend::Codex, true),
             Some("agent-full-access")
         );
-        let auto = agent_launch(Backend::Codex, ws, skills, cfg, "GUIDE", true);
+        let auto = agent_launch(Backend::Codex, ws, skills, cfg, "GUIDE", true, None);
         assert_eq!(
             auto.env
                 .iter()
@@ -7846,7 +7983,7 @@ mod tests {
             "agent-full-access"
         );
 
-        let claude = agent_launch(Backend::Claude, ws, skills, cfg, "GUIDE", false);
+        let claude = agent_launch(Backend::Claude, ws, skills, cfg, "GUIDE", false, None);
         assert!(claude.program.ends_with("bin/node"));
         assert!(claude.args[0].ends_with("@agentclientprotocol/claude-agent-acp/dist/index.js"));
         assert!(claude.env.is_empty(), "{:?}", claude.env);
@@ -8558,6 +8695,7 @@ mod tests {
             acp_session_id: String::new(),
             requested_model: Some(format!("{}/default", backend.id())),
             backend,
+            cowork: false,
             proxy_secret: None,
             turn: Arc::new(Mutex::new(TurnState::new())),
             last_used: Mutex::new(Instant::now()),
@@ -8597,6 +8735,206 @@ while IFS= read -r l; do
   printf '{"jsonrpc":"2.0","id":%s,"result":%s}\n' "$id" "$r"
 done
 "#;
+
+    /// `piped_agent` with the screen tools flag, for the session bookkeeping
+    /// the Cowork flip and close rely on.
+    fn stub_session(script: &Path, log: &Path, backend: Backend, cowork: bool) -> Arc<Session> {
+        let mut child = Command::new("sh")
+            .arg(script)
+            .env("LOG", log)
+            .env("FAULT", "")
+            .stdin(std::process::Stdio::piped())
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::null())
+            .kill_on_drop(true)
+            .spawn()
+            .unwrap();
+        let stdin = Arc::new(Mutex::new(child.stdin.take().unwrap()));
+        let pending: Arc<Mutex<HashMap<i64, oneshot::Sender<Value>>>> =
+            Arc::new(Mutex::new(HashMap::new()));
+        route_responses(child.stdout.take().unwrap(), pending.clone());
+        Arc::new(Session {
+            child: Mutex::new(child),
+            stdin,
+            next_id: AtomicI64::new(1),
+            pending,
+            acp_session_id: String::new(),
+            requested_model: Some(format!("{}/default", backend.id())),
+            backend,
+            cowork,
+            proxy_secret: None,
+            turn: Arc::new(Mutex::new(TurnState::new())),
+            last_used: Mutex::new(Instant::now()),
+            active_turns: AtomicUsize::new(0),
+            closing: AtomicBool::new(false),
+            context_fresh: AtomicBool::new(false),
+        })
+    }
+
+    #[test]
+    fn cowork_mcp_server_has_command_args_and_env() {
+        let server = cowork_mcp_server(
+            Path::new("/opt/x/cua-driver"),
+            Path::new("/d/iblai/cua-driver.sock"),
+        );
+        assert_eq!(server["name"], json!("cowork"));
+        assert_eq!(server["command"], json!("/opt/x/cua-driver"));
+        // The proxy, never the runtime: `--direct` would put the driver inside
+        // the agent's sandbox, and the grant belongs to the daemon.
+        assert_eq!(
+            server["args"],
+            json!(["mcp", "--embedded", "--socket", "/d/iblai/cua-driver.sock"])
+        );
+        assert_eq!(server["env"], json!([]));
+    }
+
+    /// Every backend's `session/new` params carry the driver when Cowork is on
+    /// and nothing extra when it is off.
+    #[test]
+    fn the_screen_tools_ride_the_launch_only_with_cowork_on() {
+        let (ws, skills, cfg) = (Path::new("/ws"), Path::new("/skills"), Path::new("/cfg"));
+        for backend in [Backend::Opencode, Backend::Codex, Backend::Claude] {
+            let plain = agent_launch(backend, ws, skills, cfg, "G", false, None);
+            assert_eq!(plain.session["mcpServers"], json!([]), "{}", backend.id());
+            let (driver, socket) = (Path::new("/d/cua-driver"), Path::new("/d/cua-driver.sock"));
+            let with = agent_launch(backend, ws, skills, cfg, "G", false, Some((driver, socket)));
+            assert_eq!(
+                with.session["mcpServers"],
+                json!([cowork_mcp_server(driver, socket)]),
+                "{}",
+                backend.id()
+            );
+        }
+    }
+
+    /// A resumed Cowork chat keeps its screen: the load carries the entry too.
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn the_screen_tools_reach_session_new_and_session_load() {
+        let scratch =
+            std::env::temp_dir().join(format!("opencode-cowork-agent-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&scratch);
+        std::fs::create_dir_all(&scratch).unwrap();
+        let script = scratch.join("agent.sh");
+        std::fs::write(&script, STUB_AGENT).unwrap();
+        let ws = scratch.join("ws");
+        let skills = scratch.join("cfg/agent-skills");
+        let driver = scratch.join("cua-driver");
+        let socket = scratch.join("cua-driver.sock");
+        for (resume, method) in [
+            (None, "session/new"),
+            (Some("prev-session"), "session/load"),
+        ] {
+            let log = scratch.join(format!("{}.log", method.replace('/', "-")));
+            let session = piped_agent(&script, &log, Backend::Opencode);
+            let launch = agent_launch(
+                Backend::Opencode,
+                &ws,
+                &skills,
+                &scratch,
+                "G",
+                false,
+                Some((&driver, &socket)),
+            );
+            handshake(&session, &launch.session, resume, None, None)
+                .await
+                .unwrap();
+            let seen = std::fs::read_to_string(&log).unwrap();
+            let lines: Vec<Value> = seen
+                .lines()
+                .map(|l| serde_json::from_str(l).unwrap())
+                .collect();
+            assert_eq!(lines[1]["method"], json!(method), "{seen}");
+            assert_eq!(
+                lines[1]["params"]["mcpServers"],
+                json!([cowork_mcp_server(&driver, &socket)]),
+                "{seen}"
+            );
+            let _ = session.child.lock().await.start_kill();
+        }
+        let _ = std::fs::remove_dir_all(&scratch);
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn a_live_session_is_reused_only_for_the_same_model_and_cowork_setting() {
+        let scratch =
+            std::env::temp_dir().join(format!("opencode-reusable-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&scratch);
+        std::fs::create_dir_all(&scratch).unwrap();
+        let script = scratch.join("agent.sh");
+        std::fs::write(&script, STUB_AGENT).unwrap();
+        let session = piped_agent(&script, &scratch.join("a.log"), Backend::Opencode);
+        assert!(reusable(&session, Some("opencode/default"), false));
+        assert!(
+            !reusable(&session, Some("opencode/default"), true),
+            "a Cowork flip respawns"
+        );
+        assert!(
+            !reusable(&session, Some("openai/gpt-5.5"), false),
+            "a model switch respawns"
+        );
+        let _ = session.child.lock().await.start_kill();
+        let _ = std::fs::remove_dir_all(&scratch);
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn closing_cowork_sessions_spares_plain_code_and_the_newcomer() {
+        let scratch =
+            std::env::temp_dir().join(format!("opencode-cowork-close-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&scratch);
+        std::fs::create_dir_all(&scratch).unwrap();
+        let script = scratch.join("agent.sh");
+        std::fs::write(&script, STUB_AGENT).unwrap();
+        let sessions: HashMap<String, Arc<Session>> =
+            [("plain", false), ("screen", true), ("newcomer", true)]
+                .into_iter()
+                .map(|(id, cowork)| {
+                    let log = scratch.join(format!("{id}.log"));
+                    (
+                        id.to_string(),
+                        stub_session(&script, &log, Backend::Opencode, cowork),
+                    )
+                })
+                .collect();
+        let ids = cowork_session_ids(sessions.iter(), Some("newcomer"));
+        assert_eq!(ids, ["screen"]);
+        let mut all = cowork_session_ids(sessions.iter(), None);
+        all.sort();
+        assert_eq!(all, ["newcomer", "screen"]);
+        for s in sessions.values() {
+            let _ = s.child.lock().await.start_kill();
+        }
+        let _ = std::fs::remove_dir_all(&scratch);
+    }
+
+    #[test]
+    fn cowork_guidance_is_appended_only_when_on() {
+        assert_eq!(with_cowork_guidance("G".into(), false), "G");
+        let on = with_cowork_guidance("G".into(), true);
+        assert!(on.starts_with("G\n\n## Screen tools"), "{on}");
+        assert!(on.contains("include_screenshot: false"), "{on}");
+    }
+
+    #[test]
+    fn cowork_preflight_refuses_only_an_unsupported_session_or_a_missing_driver() {
+        use crate::cua_driver_mcp::DriverSupport;
+        let ok = DriverSupport {
+            supported: true,
+            reason: None,
+        };
+        let driver = PathBuf::from("/opt/x/cua-driver");
+        assert_eq!(cowork_preflight_with(&ok, Some(driver.clone())), Ok(driver));
+        let kde = DriverSupport {
+            supported: false,
+            reason: Some("kde".into()),
+        };
+        let err = cowork_preflight_with(&kde, Some(PathBuf::from("/d"))).unwrap_err();
+        assert!(err.contains("desktop session"), "{err}");
+        let err = cowork_preflight_with(&ok, None).unwrap_err();
+        assert!(err.contains("isn't set up"), "{err}");
+    }
 
     /// The wire contract against a scripted agent: Claude's load/new params
     /// carry the guidance append and the skills view and are followed by the
@@ -8888,6 +9226,7 @@ done
                 &scratch,
                 "# ibl.ai guidance\n",
                 false,
+                None,
             );
             let mut cmd = Command::new(&launch.program);
             cmd.args(&launch.args)
@@ -8925,6 +9264,7 @@ done
                 acp_session_id: String::new(),
                 requested_model: Some(format!("{}/default", backend.id())),
                 backend,
+                cowork: false,
                 proxy_secret: None,
                 turn: Arc::new(Mutex::new(TurnState::new())),
                 last_used: Mutex::new(Instant::now()),

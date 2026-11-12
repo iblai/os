@@ -1993,6 +1993,7 @@
     "permissionModeManual": "Me demander",
     "permissionModeAuto": "Automatique",
     "permissionModeAutoHint": "Code modifie des fichiers et exécute des commandes sans demander. À utiliser uniquement dans des dossiers de confiance.",
+    "permissionModeAutoCoworkHint": "Avec Cowork activé, il agit aussi sur votre écran sans demander.",
     "permissionModeManualHint": "Code vous demande avant de modifier des fichiers ou d’exécuter des commandes.",
     "permissionModeSaveFailed": "Le réglage des approbations n’a pas pu être enregistré. Code garde le réglage précédent.",
     "approvalsAria": "Approbations : {mode}",

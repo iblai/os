@@ -34,6 +34,8 @@
     "allow-cua-driver-start",
     "allow-cua-driver-send",
     "allow-cua-driver-stop",
+    "allow-local-llm-openai-stream",
+    "allow-local-llm-openai-stream-cancel",
     "allow-open-privacy-settings",
     "allow-relaunch-app",
     "allow-request-cowork-permission",
