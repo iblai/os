@@ -40,10 +40,10 @@ const defaultMentors = [
   { unique_id: 'm2', name: 'Beta', description: 'Second agent' },
 ];
 
-let setSearchQuery: ReturnType<typeof vi.fn>;
+let setSearchQuery: ReturnType<typeof vi.fn<(query: string) => void>>;
 let handlePageChange: ReturnType<typeof vi.fn>;
-let onMentorSelect: ReturnType<typeof vi.fn>;
-let onSearchChange: ReturnType<typeof vi.fn>;
+let onMentorSelect: ReturnType<typeof vi.fn<(mentor: any) => void>>;
+let onSearchChange: ReturnType<typeof vi.fn<(query: string) => void>>;
 
 function makeHookReturn(overrides: Record<string, unknown> = {}) {
   return {
@@ -73,10 +73,10 @@ function renderGrid(props: Record<string, unknown> = {}) {
 describe('MentorSelectionGrid', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    setSearchQuery = vi.fn();
+    setSearchQuery = vi.fn<(query: string) => void>();
     handlePageChange = vi.fn();
-    onMentorSelect = vi.fn();
-    onSearchChange = vi.fn();
+    onMentorSelect = vi.fn<(mentor: any) => void>();
+    onSearchChange = vi.fn<(query: string) => void>();
     hoisted.paginationProps = undefined;
     hoisted.itemsPerPageArg = undefined;
     hoisted.hookReturn = makeHookReturn();

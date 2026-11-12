@@ -816,7 +816,14 @@ describe('Chat', () => {
   });
 
   afterEach(() => {
+    // Both, in this order: vitest 4's `restoreAllMocks` only restores the
+    // spies `vi.spyOn` created, so a `mockReturnValue` a test puts on one of
+    // the module mocks above (`useAdvancedChat` especially) would survive into
+    // every later test — which is how 20 of them ended up rendering someone
+    // else's chat state. `resetAllMocks` puts each `vi.fn(impl)` back to the
+    // implementation its factory gave it.
     vi.restoreAllMocks();
+    vi.resetAllMocks();
   });
 
   const renderWithRedux = (

@@ -472,23 +472,33 @@ describe('logger', () => {
     it('should handle edge case where Date methods return unexpected values', () => {
       // This tests resilience of the date formatting function
       const originalDate = global.Date;
-      const mockDate = vi.fn(() => ({
-        getFullYear: () => NaN,
-        getMonth: () => NaN,
-        getDate: () => NaN,
-        getHours: () => NaN,
-        getMinutes: () => NaN,
-        getSeconds: () => NaN,
-      }));
+      // A `function`, not an arrow: the logger calls `new Date()`, and vitest
+      // 4 no longer wraps a mock's implementation in a constructible function
+      // of its own. `Date.now` is carried over because replacing the global
+      // takes it away from everything else running in this file too.
+      const mockDate = vi.fn(function () {
+        return {
+          getFullYear: () => NaN,
+          getMonth: () => NaN,
+          getDate: () => NaN,
+          getHours: () => NaN,
+          getMinutes: () => NaN,
+          getSeconds: () => NaN,
+        };
+      });
+      Object.assign(mockDate, { now: originalDate.now });
 
       // @ts-expect-error - mocking Date constructor
       global.Date = mockDate;
 
-      // Should still not throw even with weird Date behavior
-      expect(() => console.log('test with weird date')).not.toThrow();
-
-      // Restore Date
-      global.Date = originalDate;
+      try {
+        // Should still not throw even with weird Date behavior
+        expect(() => console.log('test with weird date')).not.toThrow();
+      } finally {
+        // In a `finally` so a failure here cannot leave the rest of this file
+        // running without a real `Date`.
+        global.Date = originalDate;
+      }
     });
 
     it('should handle edge case with various empty values combinations', () => {

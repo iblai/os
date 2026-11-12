@@ -15,6 +15,7 @@ import {
 } from '../fixtures/test-data';
 import { waitForPageReady } from '../utils/resilient';
 import {
+  HOST_WIDGET_SELECTOR,
   postRealSnippetUrl,
   rewriteSnippetOrigin,
 } from '../utils/embed-harness-client';
@@ -642,7 +643,7 @@ test.describe('Journey 13: Shareable Links & Embed Integration', () => {
     }
 
     // Open the widget if it is not already visible (click the chat bubble)
-    const widgetContainer = page.locator('#ibl-chat-widget-container');
+    const widgetContainer = page.locator(HOST_WIDGET_SELECTOR);
     let widgetVisible = false;
     try {
       await widgetContainer.waitFor({ state: 'visible', timeout: 5_000 });
@@ -665,9 +666,7 @@ test.describe('Journey 13: Shareable Links & Embed Integration', () => {
     }
 
     // Locate the iframe inside the widget
-    const iframe = page
-      .frameLocator('#ibl-chat-widget-container iframe')
-      .first();
+    const iframe = widgetContainer.frameLocator('iframe').first();
 
     // Find a focusable element inside the iframe — the chat textarea or any input
     const escTarget = iframe.locator('textarea').first();
@@ -1112,11 +1111,15 @@ test.describe('Journey 13: Shareable Links & Embed Integration', () => {
   });
 
   // emb-19..emb-22: Allow Full Screen (issue #2665). The switch is URL-only
-  // (never saved); it adds `allow-fullscreen=true` to the generated iframe URL
-  // and, when on, a host-side `embedFullscreen` handler that the embed nav
-  // bar's maximize button drives via postMessage. The host is built from the
-  // REAL generated snippet, served from a fake origin so the chat really loads
-  // cross-origin inside an iframe (the only place the button renders).
+  // (never saved); it puts the `allowfullscreen` attribute on the snippet's
+  // `<agent-ai>` element, and the component does the rest — it adds
+  // `allow-fullscreen=true` to the iframe URL it builds (which is what makes
+  // the embed nav bar's maximize button render) and resizes itself when that
+  // button posts `embedFullscreen` up. The snippet used to carry both halves
+  // itself, as an `iframe.src` param and a `setWidgetFullscreen` handler;
+  // neither is in it any more. The host is built from the REAL generated
+  // snippet, served from a fake origin so the chat really loads cross-origin
+  // inside an iframe (the only place the button renders).
   test.describe('Embed Allow Full Screen (issue #2665)', () => {
     const fullscreenTracker = new MentorTracker();
     test.afterAll(async ({ browser }, testInfo) => {
@@ -1178,12 +1181,15 @@ test.describe('Journey 13: Shareable Links & Embed Integration', () => {
      * check when framing the local app), iframe pointed at the local app.
      */
     async function openHost(page: Page, code: string): Promise<void> {
-      const localCode = code.replace(
-        /iframe\.src = '[^']*?(\/platform\/[^']*)'/,
-        `iframe.src = '${MENTOR_NEXTJS_HOST}$1'`,
+      // The shared helper, not a second copy of the rewrite: the snippet
+      // carries its origin as the agent-ai component's `mentorurl`
+      // attribute now, and one place to change beats two.
+      const { rewritten: localCode } = rewriteSnippetOrigin(
+        code,
+        MENTOR_NEXTJS_HOST,
       );
       expect(localCode).toContain(
-        `iframe.src = '${MENTOR_NEXTJS_HOST}/platform/`,
+        `setAttribute("mentorurl", "${MENTOR_NEXTJS_HOST}")`,
       );
       const html = `<!doctype html><html><head><title>Host</title></head><body><h1>Host page</h1>${localCode}</body></html>`;
       hostServer = http.createServer((_req, res) => {
@@ -1198,7 +1204,12 @@ test.describe('Journey 13: Shareable Links & Embed Integration', () => {
       await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: 'load' });
     }
 
-    const widgetOf = (page: Page) => page.locator('#ibl-chat-widget-container');
+    const widgetOf = (page: Page) => page.locator(HOST_WIDGET_SELECTOR);
+    // Full screen is the COMPONENT's doing, and it restyles itself — the
+    // snippet's panel around it is never touched. So the box to measure is the
+    // `agent-ai` element: it goes `position: fixed; inset: 0`, which escapes
+    // the panel because nothing on the way up creates a containing block.
+    const agentOf = (page: Page) => widgetOf(page).locator('agent-ai');
     const bubbleOf = (page: Page) => page.locator('.ibl-chat-bubble');
 
     // emb-19: the toggle is present, off by default, and drives the URL param.
@@ -1218,18 +1229,15 @@ test.describe('Journey 13: Shareable Links & Embed Integration', () => {
       ).toHaveAccessibleName(/full screen disabled/i);
 
       const offCode = await editMentorPage.embed.createEmbedAndReadCode();
+      expect(offCode).not.toContain('allowfullscreen');
       expect(offCode).not.toContain('allow-fullscreen');
-      expect(offCode).not.toContain('setWidgetFullscreen');
-      expect(offCode).not.toContain('embedFullscreen');
 
       await editMentorPage.embed.setAllowFullscreen(true);
       await expect(
         editMentorPage.embed.allowFullscreenToggle,
       ).toHaveAccessibleName(/full screen enabled/i);
       const onCode = await editMentorPage.embed.createEmbedAndReadCode();
-      expect(onCode).toMatch(/iframe\.src = '[^']*&allow-fullscreen=true'/);
-      expect(onCode).toContain('setWidgetFullscreen');
-      expect(onCode).toContain('embedFullscreen');
+      expect(onCode).toContain('agent.setAttribute("allowfullscreen", "")');
       await editMentorPage.close();
     });
 
@@ -1245,11 +1253,17 @@ test.describe('Journey 13: Shareable Links & Embed Integration', () => {
 
       await bubbleOf(page).click();
       await expect(widgetOf(page)).toBeVisible({ timeout: 15_000 });
-      const normalBox = await widgetOf(page).boundingBox();
+      // The agent's own box, not the panel's, so the comparisons below are
+      // like for like — the panel is a couple of pixels wider for its border.
+      const normalBox = await agentOf(page).boundingBox();
+      // The panel's own baseline, kept separate: it is a couple of pixels
+      // wider than the agent for its border, and the reopen check at the end
+      // measures the panel.
+      const panelBox = await widgetOf(page).boundingBox();
       expect(normalBox).not.toBeNull();
       expect(normalBox!.width).toBeLessThan(1440);
 
-      const chat = page.frameLocator('#ibl-chat-widget-container iframe');
+      const chat = widgetOf(page).frameLocator('iframe');
       const toggle = chat.getByTestId('embed-fullscreen-toggle');
       await expect(toggle).toBeVisible({ timeout: 60_000 });
       await expect(toggle).toHaveAccessibleName('Full screen');
@@ -1265,32 +1279,49 @@ test.describe('Journey 13: Shareable Links & Embed Integration', () => {
       await toggle.click();
       await expect(toggle).toHaveAccessibleName('Exit full screen');
       await expect
-        .poll(async () => widgetOf(page).boundingBox(), { timeout: 10_000 })
+        .poll(async () => agentOf(page).boundingBox(), { timeout: 10_000 })
         .toMatchObject({ x: 0, y: 0, width: 1440, height: 900 });
-      await expect(bubbleOf(page)).toBeHidden();
+      // The launcher is covered rather than removed: the full-window agent
+      // sits above it (z-index 2147483647 against the bubble's …646), so it
+      // cannot be seen or clicked. Asserting what is on top says that; the
+      // old snippet hid the bubble by hand, and this one has no reason to.
+      await expect
+        .poll(async () => {
+          const box = (await bubbleOf(page).boundingBox())!;
+          return page.evaluate(
+            ([x, y]) => document.elementFromPoint(x, y)?.tagName.toLowerCase(),
+            [box.x + box.width / 2, box.y + box.height / 2],
+          );
+        })
+        .toBe('agent-ai');
 
       await toggle.click();
       await expect(toggle).toHaveAccessibleName('Full screen');
+      // Back inside the panel rather than byte-identical to `normalBox`: the
+      // component restores its own inline style, and the agent comes back
+      // spanning the panel's border box (402) where it had been spanning the
+      // content box (400). Either way it is small again, which is the claim.
       await expect
-        .poll(async () => (await widgetOf(page).boundingBox())?.width, {
+        .poll(async () => (await agentOf(page).boundingBox())?.width, {
           timeout: 10_000,
         })
-        .toBe(normalBox!.width);
+        .toBeLessThanOrEqual((await widgetOf(page).boundingBox())!.width);
+      await expect
+        .poll(async () => (await agentOf(page).boundingBox())?.width)
+        .toBeLessThan(1440);
       await expect(bubbleOf(page)).toBeVisible();
 
       // Close while full screen -> reopens small.
       await toggle.click();
       await expect
-        .poll(async () => (await widgetOf(page).boundingBox())?.width)
+        .poll(async () => (await agentOf(page).boundingBox())?.width)
         .toBe(1440);
       await chat.getByRole('button', { name: /close chat/i }).click();
       await expect(widgetOf(page)).toBeHidden();
       await expect(bubbleOf(page)).toBeVisible();
       await bubbleOf(page).click();
       await expect(widgetOf(page)).toBeVisible();
-      expect((await widgetOf(page).boundingBox())!.width).toBe(
-        normalBox!.width,
-      );
+      expect((await widgetOf(page).boundingBox())!.width).toBe(panelBox!.width);
       await expect(toggle).toHaveAccessibleName('Full screen');
     });
 
@@ -1304,7 +1335,7 @@ test.describe('Journey 13: Shareable Links & Embed Integration', () => {
 
       await bubbleOf(page).click();
       await expect(widgetOf(page)).toBeVisible({ timeout: 15_000 });
-      const chat = page.frameLocator('#ibl-chat-widget-container iframe');
+      const chat = widgetOf(page).frameLocator('iframe');
       await expect(
         chat.getByRole('button', { name: /close chat/i }),
       ).toBeVisible({ timeout: 60_000 });
