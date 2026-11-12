@@ -457,7 +457,7 @@
         },
         {
           "id": "cowork-05",
-          "description": "Once Screen Recording was asked for and still reads off, the checklist says to take macOS's Quit & Reopen and offers Restart ibl.ai; the setup resumes after the restart without asking macOS again; Not Now clears the setup but keeps the consent, so the next switch-on goes straight to what is still missing",
+          "description": "Once Screen Recording was asked for and still reads off, the checklist says to take macOS's Quit & Reopen and offers Restart ibl.ai; the setup resumes after the restart without asking macOS again — within ten minutes of the user's last step, only where the desktop can read the grants and with a backend Cowork can run on; Not Now clears the setup but keeps the consent, so the next switch-on goes straight to what is still missing",
           "status": "pending"
         },
         {
