@@ -1087,6 +1087,12 @@ export async function withFreshPhoneWorkflow(
       await expect(
         page.getByRole('button', { name: 'Add Step', exact: true }),
       ).toBeVisible({ timeout: 30_000 });
+      // The first validation adds the banner above the canvas a second or so
+      // after load and moves every step down, so a tap aimed before it lands
+      // on the wrong spot. A new workflow always has the missing End error.
+      await expect(
+        page.getByTestId('workflow-validation-list').getByText(MISSING_END),
+      ).toBeVisible({ timeout: 30_000 });
       // Unfitted, the Agent step starts at x 350 and runs past a 393px
       // screen; only the editor's fit-to-view puts the whole of it on screen.
       // 0.99, not 1: the fitted edge can fall a fraction of a pixel off it.

@@ -2732,7 +2732,7 @@
           "id": "wf-59",
           "description": "Validation lines link to their step: after an unconnected Transform is added the validate response has a warning about the Transform (in warning_details, or naming it by its quoted id before backend #3218), and clicking the banner line about it (its tooltip reads Show Transform) opens that step's settings panel with the step on screen",
           "status": "pending",
-          "note": "Blocked on backend #3218 until an SDK release links banner lines by error_details/warning_details node_id: @iblai/iblai-js 2.71.0 links a line only by an \" at nodes[i]\" suffix or a quoted step id, and #3218 sends neither. Passes against #3163."
+          "note": "Skipped (test.fixme) while the app pins @iblai/iblai-js 2.71.0 and the backend is #3218: 2.71.0 links a banner line only by an \" at nodes[i]\" suffix or a quoted step id, and #3218 sends neither (it sends error_details/warning_details node_id). Runs again with the next SDK bump; passes against #3163."
         },
         {
           "id": "wf-60",
