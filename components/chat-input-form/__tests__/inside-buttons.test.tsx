@@ -2150,24 +2150,6 @@ describe('InsideButtons', () => {
           expect(localStorage.getItem('ibl_cowork_setup_pending')).toBeNull();
         });
 
-        it('says Cowork answers instead of Code when it finishes the switch-on', async () => {
-          // The user who comes back through a restart is the one least likely
-          // to remember Code was on, so this path must say it too.
-          readyBackend();
-          localStorage.setItem('ibl_cowork_setup_pending', 'true');
-          localStorage.setItem('ibl_coding_mode_enabled', 'true');
-          mockAccessibilityGrant = true;
-          mockScreenRecordingGrant = true;
-          render(<InsideButtons {...defaultProps} />);
-
-          await waitFor(() =>
-            expect(mockToastSuccess).toHaveBeenCalledWith('Cowork is on.'),
-          );
-          expect(mockToastInfo).toHaveBeenCalledWith(
-            expect.stringMatching(/instead of Code/),
-          );
-        });
-
         it('shows what is still missing, without asking macOS', async () => {
           readyBackend();
           localStorage.setItem('ibl_cowork_setup_pending', 'true');
@@ -2336,31 +2318,10 @@ describe('InsideButtons', () => {
         expect(mockGhostInstall).toHaveBeenCalledTimes(2);
       });
 
-      it('says Cowork answers instead of Code while both stay on', async () => {
-        // Both pills may be on at once; the chat hook then gives Cowork the
-        // turn, so the switch says so rather than letting Code go quiet.
+      it('says nothing about Code when both stay on', async () => {
+        // Both pills may be on at once: Code keeps the turn and gets Cowork's
+        // screen tools, so there is nothing to warn about.
         readyBackend();
-        localStorage.setItem('ibl_coding_mode_enabled', 'true');
-        mockAccessibilityGrant = true;
-        mockScreenRecordingGrant = true;
-        render(<InsideButtons {...defaultProps} />);
-
-        await turnOnFromConsent();
-
-        await waitFor(() =>
-          expect(mockToastInfo).toHaveBeenCalledWith(
-            expect.stringMatching(/instead of Code/),
-          ),
-        );
-      });
-
-      it('says nothing about Code when a local model would take the turn', async () => {
-        // The chat hook keeps Code's turns then: the local model's tools have
-        // no screen to drive, so Cowork would not answer anyway.
-        readyBackend();
-        mockHasRemoteAi = false;
-        mockLocalLLMEnabled = true;
-        mockModelSupportsCowork = true;
         localStorage.setItem('ibl_coding_mode_enabled', 'true');
         mockAccessibilityGrant = true;
         mockScreenRecordingGrant = true;

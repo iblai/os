@@ -462,7 +462,7 @@
         },
         {
           "id": "cowork-06",
-          "description": "With both the Code and Cowork pills on, Cowork takes the turn on the desktop whenever the turn would reach its screen tools (signed in, no local model in use) and either switch says so; otherwise, and on a phone paired with a desktop, Code keeps the turn; Stop stops whichever turn is running even if a pill was flipped mid-turn",
+          "description": "With both the Code and Cowork pills on, Code keeps the turn on the desktop and the turn tells the desktop Cowork is on, so the agent gets the screen tools (the desktop side of that lands with iblai/os#594); Cowork on its own answers through the AI SDK transport, on the DM model or, with Local Models in use, on the device's own model; a phone paired with a desktop sends no Cowork; Stop stops whichever turn is running even if a pill was flipped mid-turn",
           "status": "pending"
         },
         {

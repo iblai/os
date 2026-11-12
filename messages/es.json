@@ -488,7 +488,6 @@
     "coworkRelaunchHint": "¿Ya lo activaste pero aún no aparece marcado? Reinicia ibl.ai para terminar.",
     "coworkRelaunch": "Reiniciar ibl.ai",
     "coworkReady": "Cowork está activado.",
-    "coworkOverCode": "Mientras Cowork esté activado, responde a tus mensajes en lugar de Code.",
     "coworkOpenSettingsManually": "Abre Ajustes del Sistema › Privacidad y seguridad › {pane} y activa ibl.ai.",
     "coworkRelaunchManually": "Cierra la app y vuelve a abrirla para terminar de activar Cowork.",
     "coworkApprovalsManualHint": "Cowork te pregunta antes de hacer clic, escribir o enviar formularios."
@@ -2040,8 +2039,7 @@
     "notAPairingCode": "Ese código QR no es un código de emparejamiento de Code.",
     "closeScanner": "Cerrar escáner",
     "turnOffCode": "Desactivar Código",
-    "scanHint": "Apunta la cámara al código QR de emparejamiento que se muestra en tu computadora.",
-    "coworkAnswersInstead": "Cowork está activado, así que por ahora responde a tus mensajes. Desactiva Cowork para usar Code."
+    "scanHint": "Apunta la cámara al código QR de emparejamiento que se muestra en tu computadora."
   },
   "chatCodePermissionCard": {
     "title": "Code necesita tu permiso",

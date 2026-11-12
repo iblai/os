@@ -60,7 +60,6 @@ import {
   type CoworkGrantKind,
 } from '@/lib/cowork-approvals';
 import { callTauri } from '@/lib/call-tauri';
-import { coworkCanTakeTheTurn } from '@/lib/cowork-routing';
 import { TOOLS, hasRemoteAiConfig } from '@iblai/iblai-js/web-utils';
 import {
   useCuaDriver,
@@ -72,7 +71,6 @@ import {
 } from '@iblai/iblai-js/web-containers';
 import { MemoryButton } from './memory-button';
 import { CodingModeButton } from './coding-mode-button';
-import { ENABLED_KEY as CODE_ENABLED_KEY } from './code-agents';
 import { estimatePillWidth, useOverflowFit } from './use-overflow-fit';
 import {
   PERMISSION_MODES,
@@ -473,15 +471,6 @@ export const InsideButtons = ({
     if (!ensuredDriverInstall.current) {
       ensuredDriverInstall.current = true;
       cuaDriver.install();
-    }
-    // Both pills may stay on; the chat hook then gives Cowork the turn, because
-    // Code's agent never gets the screen tools. Say so once, here, rather than
-    // leaving the user to wonder why Code went quiet.
-    if (
-      localStorage.getItem(CODE_ENABLED_KEY) === 'true' &&
-      coworkCanTakeTheTurn()
-    ) {
-      toast.info(t('coworkOverCode'));
     }
   };
 

@@ -488,7 +488,6 @@
     "coworkRelaunchHint": "Switched it on but it isn’t ticked yet? Restart ibl.ai to finish.",
     "coworkRelaunch": "Restart ibl.ai",
     "coworkReady": "Cowork is on.",
-    "coworkOverCode": "While Cowork is on, it answers your messages instead of Code.",
     "coworkOpenSettingsManually": "Open System Settings › Privacy & Security › {pane}, then switch on ibl.ai.",
     "coworkRelaunchManually": "Quit the app and open it again to finish turning on Cowork.",
     "coworkApprovalsManualHint": "Cowork checks with you before it clicks, types or submits."
@@ -2040,8 +2039,7 @@
     "notAPairingCode": "That QR code isn't a Code pairing code.",
     "closeScanner": "Close Scanner",
     "turnOffCode": "Turn off Code",
-    "scanHint": "Point your camera at the pairing QR code shown on your computer.",
-    "coworkAnswersInstead": "Cowork is on, so it answers your messages for now. Turn Cowork off to use Code."
+    "scanHint": "Point your camera at the pairing QR code shown on your computer."
   },
   "chatCodePermissionCard": {
     "title": "Code needs your permission",

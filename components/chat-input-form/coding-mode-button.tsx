@@ -31,7 +31,6 @@ import {
 import { getUserOS } from '@/lib/utils';
 import { isTauriMobile } from '@/types/tauri';
 import type { OpencodeSkillSync } from '@/hooks/use-opencode-skill-sync';
-import { coworkAnswersInsteadOfCode } from '@/lib/cowork-routing';
 import {
   AGENTS,
   AGENT_KEY,
@@ -1077,9 +1076,6 @@ export function CodingModeButton({
       void refresh();
       return;
     }
-    // Cowork keeps answering while it is on (see the composer's Cowork pill),
-    // so a Code switched on beside it would otherwise look broken.
-    if (coworkAnswersInsteadOfCode()) toast.info(t('coworkAnswersInstead'));
     // First enable → force a deliberate folder choice immediately.
     if (!localStorage.getItem(FOLDER_CHOSEN_KEY)) {
       await pickFolder();

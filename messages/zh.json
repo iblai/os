@@ -488,7 +488,6 @@
     "coworkRelaunchHint": "已开启但还没打勾？重新启动 ibl.ai 即可完成。",
     "coworkRelaunch": "重新启动 ibl.ai",
     "coworkReady": "Cowork 已开启。",
-    "coworkOverCode": "Cowork 开启期间，由它而不是 Code 来回复您的消息。",
     "coworkOpenSettingsManually": "打开“系统设置 › 隐私与安全性 › {pane}”，然后开启 ibl.ai。",
     "coworkRelaunchManually": "退出应用并重新打开，即可完成开启 Cowork。",
     "coworkApprovalsManualHint": "Cowork 在点击、输入或提交表单前会先征求你的同意。"
@@ -2040,8 +2039,7 @@
     "notAPairingCode": "该二维码不是 Code 配对码。",
     "closeScanner": "关闭扫描器",
     "turnOffCode": "关闭代码",
-    "scanHint": "将相机对准电脑上显示的配对二维码。",
-    "coworkAnswersInstead": "Cowork 已开启，因此暂时由它回复您的消息。关闭 Cowork 即可使用 Code。"
+    "scanHint": "将相机对准电脑上显示的配对二维码。"
   },
   "chatCodePermissionCard": {
     "title": "Code 需要你的许可",
