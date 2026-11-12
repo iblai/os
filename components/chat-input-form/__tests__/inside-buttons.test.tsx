@@ -93,6 +93,9 @@ vi.mock('@/types/tauri', async (importOriginal) => ({
   isTauriMobile: async () =>
     mockIsTauri &&
     (mockTauriPlatform === 'ios' || mockTauriPlatform === 'android'),
+  isTauriPhone: () =>
+    mockIsTauri &&
+    (mockTauriPlatform === 'ios' || mockTauriPlatform === 'android'),
 }));
 
 vi.mock('@tauri-apps/plugin-os', () => ({
@@ -1170,6 +1173,18 @@ describe('InsideButtons', () => {
         'data-approvals-slot',
         'code-approvals-slot',
       );
+    });
+
+    it('hides Code on phones for now, and stops a paired phone routing its turns there', () => {
+      mockIsTauri = true;
+      mockTauriPlatform = 'ios';
+      localStorage.setItem('ibl_remote_code_ready', 'true');
+      render(<InsideButtons {...defaultProps} />);
+
+      expect(
+        screen.queryByTestId('coding-mode-button'),
+      ).not.toBeInTheDocument();
+      expect(localStorage.getItem('ibl_remote_code_ready')).toBe('false');
     });
 
     it('appears once Tauri injects its globals after mount', () => {

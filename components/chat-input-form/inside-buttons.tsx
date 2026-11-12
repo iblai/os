@@ -67,6 +67,7 @@ import { MemoryMenu } from './memory-menu';
 import { isTauriApp, isTauriMobile } from '@/types/tauri';
 import type { OpencodeSkillSync } from '@/hooks/use-opencode-skill-sync';
 import { useInExtensionPanel } from '@/hooks/use-in-extension-panel';
+import { useCodeShownHere } from '@/hooks/use-code-shown-here';
 
 /**
  * The inline Skills menu. Sizes to its content: min
@@ -328,6 +329,7 @@ export const InsideButtons = ({
     }, 500);
     return () => clearInterval(t);
   }, []);
+  const codeShown = useCodeShownHere(inTauri);
 
   // Cowork is the FIRST entry of the responsive list (right after the fixed
   // Code pill), so it is the last tool to collapse into the ••• overflow.
@@ -677,7 +679,7 @@ export const InsideButtons = ({
       data-testid="inside-buttons-row"
     >
       {/* Code — the desktop assistant, always first and always inline. */}
-      {inTauri && (
+      {codeShown && (
         <div
           ref={fit.itemRef('Code')}
           className="flex"
