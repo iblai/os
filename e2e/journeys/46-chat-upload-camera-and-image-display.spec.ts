@@ -506,4 +506,178 @@ test.describe('Journey 46: Chat Upload — Camera Option & Image Display', () =>
       },
     );
   });
+
+  // ── Drag-drop / paste gated on "Enable File Attachments" (#2886) ───────────
+  // With the setting OFF the "+" menu is hidden, and (since the fix) drag-drop
+  // and paste must not attach or upload either. Before the fix the drop/paste
+  // handlers were gated only on features.fileUpload, so the overlay, chip and
+  // upload-url POST all still happened. Embed follows `embed_show_attachment`
+  // (a separate toggle) and is not covered here: it needs an embed iframe
+  // against an agent with embed enabled, which this journey does not set up.
+
+  test.describe('Drag-drop and paste respect Enable File Attachments (#2886)', () => {
+    const UPLOAD_URL = /chat\/files\/upload-url/;
+
+    test.beforeEach(async ({ page }) => {
+      await navigateToMentorApp(page);
+      const isAdmin = await checkAdminStatus(page);
+      if (!isAdmin) test.skip(true, 'Requires admin access to create a mentor');
+    });
+
+    const dispatchDrag = (
+      page: import('@playwright/test').Page,
+      type: 'dragenter' | 'dragover' | 'drop',
+    ) =>
+      page.evaluate((eventType) => {
+        const dt = new DataTransfer();
+        dt.items.add(
+          new File(['x'], 'cam-gate.pdf', { type: 'application/pdf' }),
+        );
+        const target = document.querySelector('.chat-main-content-area');
+        if (!target) throw new Error('.chat-main-content-area not found');
+        target.dispatchEvent(
+          new DragEvent(eventType, {
+            bubbles: true,
+            cancelable: true,
+            dataTransfer: dt,
+          }),
+        );
+      }, type);
+
+    const pasteInComposer = (
+      page: import('@playwright/test').Page,
+      payload: { text: string } | { file: string },
+    ) =>
+      page.evaluate((p) => {
+        const textarea = document.getElementById(
+          'chat-input-textarea',
+        ) as HTMLTextAreaElement | null;
+        if (!textarea) throw new Error('chat-input-textarea not found');
+        const dt = new DataTransfer();
+        if ('text' in p) dt.setData('text/plain', p.text);
+        else dt.items.add(new File(['x'], p.file, { type: 'application/pdf' }));
+        textarea.focus();
+        textarea.dispatchEvent(
+          new ClipboardEvent('paste', {
+            bubbles: true,
+            cancelable: true,
+            clipboardData: dt,
+          }),
+        );
+      }, payload);
+
+    const setAttachments = async (
+      page: import('@playwright/test').Page,
+      editMentorPage: import('../page-objects/edit-mentor/edit-mentor.page').EditMentorPage,
+      on: boolean,
+    ) => {
+      await editMentorPage.open('Settings');
+      await waitForPageReady(page);
+      if (on) await editMentorPage.settings.enableFileAttachments();
+      else await editMentorPage.settings.disableFileAttachments();
+      await editMentorPage.close();
+      await waitForPageReady(page);
+    };
+
+    test('admin drops a file on an agent with attachments off and nothing is attached or uploaded (CAM-08)', async ({
+      page,
+      createMentorPage,
+      editMentorPage,
+      chatPage,
+    }) => {
+      await createMentorPage.openAndCreate();
+      await waitForPageReady(page);
+      await setAttachments(page, editMentorPage, false);
+      await expect(chatPage.chatInput).toBeVisible({ timeout: 15_000 });
+      // The "+" menu now also hosts tools, so the button stays; only the
+      // Upload File item must be gone.
+      await page.getByTestId('composer-plus-button').click();
+      await expect(page.getByRole('menu')).toBeVisible({ timeout: 10_000 });
+      await expect(
+        page.getByRole('menuitem', { name: /upload file/i }),
+      ).toHaveCount(0);
+      await page.keyboard.press('Escape');
+
+      const uploads: string[] = [];
+      page.on('request', (r) => {
+        if (UPLOAD_URL.test(r.url())) uploads.push(r.url());
+      });
+
+      await dispatchDrag(page, 'dragenter');
+      await dispatchDrag(page, 'dragover');
+      await page.waitForTimeout(1_000);
+      await expect(page.getByText('Drop your files here')).toHaveCount(0);
+
+      await dispatchDrag(page, 'drop');
+      await page.waitForTimeout(2_000);
+      await expect(page.getByTestId('attachment-chip')).toHaveCount(0);
+      expect(uploads).toHaveLength(0);
+
+      logger.info('CAM-08: drop with attachments off attaches/uploads nothing');
+    });
+
+    test('admin pastes a file and long text on an agent with attachments off and nothing is attached (CAM-09)', async ({
+      page,
+      createMentorPage,
+      editMentorPage,
+      chatPage,
+    }) => {
+      await createMentorPage.openAndCreate();
+      await waitForPageReady(page);
+      await setAttachments(page, editMentorPage, false);
+      await expect(chatPage.chatInput).toBeVisible({ timeout: 15_000 });
+
+      const uploads: string[] = [];
+      page.on('request', (r) => {
+        if (UPLOAD_URL.test(r.url())) uploads.push(r.url());
+      });
+
+      await pasteInComposer(page, { file: 'cam-gate-paste.pdf' });
+      await page.waitForTimeout(2_000);
+      await expect(page.getByTestId('attachment-chip')).toHaveCount(0);
+      expect(uploads).toHaveLength(0);
+
+      // Over the 2000-character paste limit, text would normally become a
+      // pasted-*.txt chip. A synthetic paste never inserts text, so only the
+      // missing chip and upload can be checked here.
+      const longText = 'B'.repeat(2_100);
+      await pasteInComposer(page, { text: longText });
+      await expect(page.getByTestId('attachment-chip')).toHaveCount(0);
+      expect(uploads).toHaveLength(0);
+
+      logger.info(
+        'CAM-09: paste with attachments off attaches/uploads nothing',
+      );
+    });
+
+    test('admin drops a file on an agent with attachments on and sees the overlay, a chip and one upload request (CAM-10)', async ({
+      page,
+      createMentorPage,
+      editMentorPage,
+    }) => {
+      await createMentorPage.openAndCreate();
+      await waitForPageReady(page);
+      await setAttachments(page, editMentorPage, true);
+
+      const uploads: string[] = [];
+      page.on('request', (r) => {
+        if (UPLOAD_URL.test(r.url()) && r.method() === 'POST')
+          uploads.push(r.url());
+      });
+
+      await dispatchDrag(page, 'dragenter');
+      await dispatchDrag(page, 'dragover');
+      await expect(page.getByText('Drop your files here')).toBeVisible({
+        timeout: 10_000,
+      });
+
+      await dispatchDrag(page, 'drop');
+      await expect(
+        page.getByTestId('attachment-chip').filter({ hasText: 'cam-gate.pdf' }),
+      ).toBeVisible({ timeout: 15_000 });
+      await expect.poll(() => uploads.length, { timeout: 15_000 }).toBe(1);
+
+      logger.info('CAM-10: drop with attachments on attaches and uploads once');
+    });
+  });
 });
