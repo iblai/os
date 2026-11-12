@@ -7,6 +7,11 @@ import {
   act,
   within,
 } from '@testing-library/react';
+import {
+  COWORK_SETUP_RESUME_WINDOW_MS,
+  coworkSetupPending,
+  writeCoworkSetupPending,
+} from '@/lib/cowork-approvals';
 import userEvent from '@testing-library/user-event';
 import { InsideButtons } from '../inside-buttons';
 
@@ -2135,7 +2140,7 @@ describe('InsideButtons', () => {
       describe('after a restart', () => {
         it('picks the setup back up, without asking macOS again', async () => {
           readyBackend();
-          localStorage.setItem('ibl_cowork_setup_pending', 'true');
+          writeCoworkSetupPending(true);
           mockAccessibilityGrant = true;
           mockScreenRecordingGrant = true;
           render(<InsideButtons {...defaultProps} />);
@@ -2152,7 +2157,7 @@ describe('InsideButtons', () => {
 
         it('shows what is still missing, without asking macOS', async () => {
           readyBackend();
-          localStorage.setItem('ibl_cowork_setup_pending', 'true');
+          writeCoworkSetupPending(true);
           mockAccessibilityGrant = true;
           mockScreenRecordingGrant = false;
           render(<InsideButtons {...defaultProps} />);
@@ -2171,7 +2176,7 @@ describe('InsideButtons', () => {
           // null on both = not answered, not "does not apply": neither the
           // dialog nor Cowork may appear on a guess.
           readyBackend();
-          localStorage.setItem('ibl_cowork_setup_pending', 'true');
+          writeCoworkSetupPending(true);
           render(<InsideButtons {...defaultProps} />);
           await act(async () => {});
 
@@ -2180,11 +2185,94 @@ describe('InsideButtons', () => {
           expect(localStorage.getItem('ibl_cowork_setup_pending')).toBe('true');
         });
 
+        it('lets a setup go once the user last touched it more than ten minutes ago', async () => {
+          // A setup abandoned mid-way must not reopen a dialog on every later
+          // launch, nor switch Cowork on by itself once the grants are held.
+          readyBackend();
+          writeCoworkSetupPending(
+            true,
+            Date.now() - COWORK_SETUP_RESUME_WINDOW_MS - 1,
+          );
+          mockAccessibilityGrant = true;
+          mockScreenRecordingGrant = true;
+          render(<InsideButtons {...defaultProps} />);
+          await act(async () => {});
+
+          expect(screen.queryByTestId('cowork-setup-dialog')).toBeNull();
+          expect(mockSetCoworkEnabled).not.toHaveBeenCalled();
+          expect(invoked(CHECK_ACCESSIBILITY)).toEqual([]);
+        });
+
+        it('does not pick a setup back up with nothing for Cowork to run on', async () => {
+          // Finishing a resumed setup switches Cowork on without another click,
+          // so it is held to the same backend check the pill makes.
+          enableCowork();
+          writeCoworkSetupPending(true);
+          mockAccessibilityGrant = true;
+          mockScreenRecordingGrant = true;
+          render(<InsideButtons {...defaultProps} />);
+          await act(async () => {});
+
+          expect(screen.queryByTestId('cowork-setup-dialog')).toBeNull();
+          expect(mockSetCoworkEnabled).not.toHaveBeenCalled();
+          expect(mockToastWarning).not.toHaveBeenCalled();
+          expect(localStorage.getItem('ibl_cowork_setup_pending')).toBeNull();
+        });
+
+        it('leaves a pending setup alone where the desktop cannot read the grants', async () => {
+          // No driver host, no grants to read: the steps must not poll for an
+          // answer that never comes. The flag stays for the desktop that can.
+          vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
+          try {
+            writeCoworkSetupPending(true);
+            render(<InsideButtons {...defaultProps} />);
+            await act(async () => {
+              vi.advanceTimersByTime(3000);
+            });
+
+            expect(invoked(CHECK_ACCESSIBILITY)).toEqual([]);
+            expect(screen.queryByTestId('cowork-setup-dialog')).toBeNull();
+            expect(localStorage.getItem('ibl_cowork_setup_pending')).toBe(
+              'true',
+            );
+          } finally {
+            vi.useRealTimers();
+          }
+        });
+
+        it('keeps the setup fresh for the restart whenever the user acts on a step', async () => {
+          readyBackend();
+          writeCoworkSetupPending(true);
+          localStorage.setItem(
+            'ibl_cowork_permission_asked_screen_recording',
+            'true',
+          );
+          mockAccessibilityGrant = true;
+          mockScreenRecordingGrant = false;
+          render(<InsideButtons {...defaultProps} />);
+          const dialog = await screen.findByTestId('cowork-setup-dialog');
+
+          // A stamp from long ago: each step the user takes must renew it.
+          localStorage.setItem('ibl_cowork_setup_pending_at', '1');
+          expect(coworkSetupPending()).toBe(false);
+          fireEvent.click(
+            within(dialog).getByRole('button', { name: 'Open Settings' }),
+          );
+          await waitFor(() => expect(coworkSetupPending()).toBe(true));
+
+          localStorage.setItem('ibl_cowork_setup_pending_at', '1');
+          fireEvent.click(
+            within(dialog).getByRole('button', { name: 'Restart ibl.ai' }),
+          );
+          await waitFor(() => expect(invoked('relaunch_app')).toHaveLength(1));
+          expect(coworkSetupPending()).toBe(true);
+        });
+
         it('keeps one dialog, one toast and one install with two composers on screen', async () => {
           // The canvas split layout mounts a desktop and a (hidden) mobile
           // composer at once.
           readyBackend();
-          localStorage.setItem('ibl_cowork_setup_pending', 'true');
+          writeCoworkSetupPending(true);
           mockDriverStatus = { installed: false, supported: true };
           mockAccessibilityGrant = true;
           mockScreenRecordingGrant = false;

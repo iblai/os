@@ -41,23 +41,41 @@ export function writeCoworkApprovals(mode: CoworkApprovals): void {
  * rather than kept in state because a Screen Recording grant only takes effect
  * after the app relaunches, and the setup has to pick itself back up on the
  * other side of that. Cleared the moment Cowork turns on or the user cancels.
+ *
+ * Stamped with when the user last acted on it, and read as pending only within
+ * COWORK_SETUP_RESUME_WINDOW_MS of that. The relaunch takes seconds; a setup
+ * abandoned mid-way must not reopen a dialog on every later launch, nor switch
+ * Cowork on by itself days later once the grants happen to be held. Same keys
+ * and window as the SDK's Cowork pill, which shares the window with this row.
  */
 const SETUP_PENDING_KEY = 'ibl_cowork_setup_pending';
+const SETUP_PENDING_AT_KEY = 'ibl_cowork_setup_pending_at';
+export const COWORK_SETUP_RESUME_WINDOW_MS = 10 * 60 * 1000;
 
-export function coworkSetupPending(): boolean {
+export function coworkSetupPending(now = Date.now()): boolean {
   if (typeof window === 'undefined') return false;
   try {
-    return window.localStorage.getItem(SETUP_PENDING_KEY) === 'true';
+    if (window.localStorage.getItem(SETUP_PENDING_KEY) !== 'true') return false;
+    const at = Number(window.localStorage.getItem(SETUP_PENDING_AT_KEY));
+    return at > 0 && now - at <= COWORK_SETUP_RESUME_WINDOW_MS;
   } catch {
     return false;
   }
 }
 
-export function writeCoworkSetupPending(pending: boolean): void {
+export function writeCoworkSetupPending(
+  pending: boolean,
+  now = Date.now(),
+): void {
   if (typeof window === 'undefined') return;
   try {
-    if (pending) window.localStorage.setItem(SETUP_PENDING_KEY, 'true');
-    else window.localStorage.removeItem(SETUP_PENDING_KEY);
+    if (pending) {
+      window.localStorage.setItem(SETUP_PENDING_KEY, 'true');
+      window.localStorage.setItem(SETUP_PENDING_AT_KEY, String(now));
+    } else {
+      window.localStorage.removeItem(SETUP_PENDING_KEY);
+      window.localStorage.removeItem(SETUP_PENDING_AT_KEY);
+    }
   } catch {
     // Without storage the setup simply does not survive a relaunch.
   }

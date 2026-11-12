@@ -3,6 +3,7 @@ import {
   coworkConsentGiven,
   coworkPermissionAsked,
   coworkSetupPending,
+  COWORK_SETUP_RESUME_WINDOW_MS,
   markCoworkPermissionAsked,
   readCoworkApprovals,
   writeCoworkApprovals,
@@ -56,14 +57,43 @@ describe('cowork setup pending', () => {
   });
 
   it('survives a relaunch and is forgotten once cleared', () => {
-    writeCoworkSetupPending(true);
+    writeCoworkSetupPending(true, 1_000);
     expect(window.localStorage.getItem('ibl_cowork_setup_pending')).toBe(
       'true',
     );
-    expect(coworkSetupPending()).toBe(true);
+    expect(window.localStorage.getItem('ibl_cowork_setup_pending_at')).toBe(
+      '1000',
+    );
+    expect(coworkSetupPending(1_000 + COWORK_SETUP_RESUME_WINDOW_MS)).toBe(
+      true,
+    );
 
     writeCoworkSetupPending(false);
     expect(window.localStorage.getItem('ibl_cowork_setup_pending')).toBeNull();
+    expect(
+      window.localStorage.getItem('ibl_cowork_setup_pending_at'),
+    ).toBeNull();
+    expect(coworkSetupPending()).toBe(false);
+  });
+
+  it('is forgotten once the user last acted on it more than ten minutes ago', () => {
+    // The relaunch takes seconds. Beyond the window a setup abandoned mid-way
+    // must not reopen on every launch, nor switch Cowork on by itself once the
+    // grants happen to be held.
+    writeCoworkSetupPending(true, 1_000);
+    expect(coworkSetupPending(1_000 + COWORK_SETUP_RESUME_WINDOW_MS + 1)).toBe(
+      false,
+    );
+    writeCoworkSetupPending(true, 2_000);
+    expect(coworkSetupPending(1_000 + COWORK_SETUP_RESUME_WINDOW_MS + 1)).toBe(
+      true,
+    );
+  });
+
+  it('does not treat the flag alone, with no stamp, as a pending setup', () => {
+    window.localStorage.setItem('ibl_cowork_setup_pending', 'true');
+    expect(coworkSetupPending()).toBe(false);
+    window.localStorage.setItem('ibl_cowork_setup_pending_at', 'soon');
     expect(coworkSetupPending()).toBe(false);
   });
 

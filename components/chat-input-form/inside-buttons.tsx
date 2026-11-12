@@ -290,6 +290,14 @@ export const InsideButtons = ({
     writeCoworkApprovals(mode);
   };
 
+  // Cowork runs on EITHER a large local model or the remote AI (DM
+  // OpenAI-compatible endpoint) — either backend being ready is enough, so a
+  // local model is not required.
+  const coworkBackendReady = () =>
+    (isLocalLLMEnabled() &&
+      modelSupportsCowork(getLocalLLMModel(), COWORK_MIN_MODEL_GB)) ||
+    hasRemoteAiConfig();
+
   const toggleCowork = () => {
     if (coworkOn) {
       setCoworkOn(false);
@@ -313,15 +321,10 @@ export const InsideButtons = ({
       setCoworkEnabled(true);
       return;
     }
-    // Guard before anything user-visible. Cowork runs on EITHER a large local
-    // model or the remote AI (DM OpenAI-compatible endpoint) — allow enabling
-    // when either backend is ready, so a local model is not required. Running
-    // this first means a turn that is about to be refused never raises a consent
-    // dialog or an OS permission prompt.
-    const localReady =
-      isLocalLLMEnabled() &&
-      modelSupportsCowork(getLocalLLMModel(), COWORK_MIN_MODEL_GB);
-    if (!localReady && !hasRemoteAiConfig()) {
+    // Guard before anything user-visible. Running this first means a turn that
+    // is about to be refused never raises a consent dialog or an OS permission
+    // prompt.
+    if (!coworkBackendReady()) {
       toast.warning(
         isLocalLLMEnabled()
           ? t('coworkModelTooSmall')
@@ -385,11 +388,21 @@ export const InsideButtons = ({
 
   // A setup still waiting on a macOS grant survives the relaunch a Screen
   // Recording grant needs. Read after mount, never during render, which would
-  // mismatch the prerendered HTML during hydration.
+  // mismatch the prerendered HTML during hydration. Only where the desktop can
+  // read the grants, or the steps would poll for an answer that never comes;
+  // and, since finishing from here switches Cowork on without another click,
+  // only with a backend to run on — the check `toggleCowork` makes.
   useEffect(() => {
-    if (coworkSetupPending() && claimCoworkSetup()) showCoworkSetup('steps');
-    return releaseCoworkSetup;
-  }, []);
+    if (inExtensionPanel || !cuaDriver.isAvailable || !coworkSetupPending()) {
+      return;
+    }
+    if (!coworkBackendReady()) {
+      writeCoworkSetupPending(false);
+      return;
+    }
+    if (claimCoworkSetup()) showCoworkSetup('steps');
+  }, [inExtensionPanel, cuaDriver.isAvailable]);
+  useEffect(() => releaseCoworkSetup, []);
 
   const closeCoworkSetup = () => {
     writeCoworkSetupPending(false);
@@ -448,6 +461,8 @@ export const InsideButtons = ({
     // would bury the alert behind it, so only later asks open it.
     const openSettings = coworkAskedBefore(kind);
     markCoworkPermissionAsked(kind);
+    // Acting on a step keeps the setup fresh for the relaunch that may follow.
+    writeCoworkSetupPending(true);
     setCoworkAsked((prev) => ({ ...prev, [kind]: true }));
     await requestCoworkGrant(kind, openSettings);
     await updateCoworkGrants();
@@ -455,6 +470,8 @@ export const InsideButtons = ({
   };
 
   const relaunchApp = async () => {
+    // Refreshes the stamp, so the launch that follows picks the setup back up.
+    writeCoworkSetupPending(true);
     try {
       await callTauri('relaunch_app');
     } catch {
@@ -525,7 +542,7 @@ export const InsideButtons = ({
   // while they are open, plus focus / visibility for an instant update when the
   // user comes back — no "check again" button to find.
   useEffect(() => {
-    if (!coworkStepsOpen) return;
+    if (!coworkStepsOpen || inExtensionPanel || !cuaDriver.isAvailable) return;
     void updateCoworkGrants();
     const poll = setInterval(() => void updateCoworkGrants(), 1000);
     const recheck = () => {
@@ -538,7 +555,12 @@ export const InsideButtons = ({
       window.removeEventListener('focus', recheck);
       document.removeEventListener('visibilitychange', recheck);
     };
-  }, [coworkStepsOpen, updateCoworkGrants]);
+  }, [
+    coworkStepsOpen,
+    inExtensionPanel,
+    cuaDriver.isAvailable,
+    updateCoworkGrants,
+  ]);
 
   // Accessibility is switched on in System Settings, which leaves the app
   // behind it while the next step waits here.
