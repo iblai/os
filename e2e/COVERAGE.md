@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-11-11 | 1096 checkpoints (1046 covered, 16 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 110 journeys (109 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-11-11 | 1099 checkpoints (1049 covered, 16 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 110 journeys (109 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -995,7 +995,7 @@ Also covers the prompt sanitization added in [iblai-platform#2164](https://githu
 
 ---
 
-## Journey 46: Chat Upload — Camera Option & Image Display (7 checkpoints) — `journeys/46-chat-upload-camera-and-image-display.spec.ts`
+## Journey 46: Chat Upload — Camera Option & Image Display (10 checkpoints) — `journeys/46-chat-upload-camera-and-image-display.spec.ts`
 
 **Source files:** `components/chat-input-form/upload-menu.tsx`, `components/chat-input-form/camera-capture-dialog.tsx`, `components/chat-input-form.tsx`, `components/chat/chat-messages/image-message.tsx`, `components/chat/chat-messages/user-message-bubble.tsx`, `features/image-previews/image-previews-slice.ts`, `hooks/use-show-attachment.ts`, `hooks/use-is-mobile-os.ts`
 
@@ -1010,6 +1010,11 @@ Covers the two user-facing features added in [iblai-platform#1902](https://githu
 - [x] CAM-05: Drag-dropping a PNG onto the chat area places the file in the pending attachments list by filename
 - [x] CAM-06: Sending a message with an image attachment renders the image as `<img class="cursor-pointer ...">` in the sent message bubble (not a FileCard icon); local object-URL preview from `image-previews-slice` is used
 - [x] CAM-07: Clicking the `<img>` in the sent bubble triggers `onPreviewImage` without crashing the page
+- [x] CAM-08: ([#2886](https://github.com/iblai/iblai-platform/issues/2886)) Attachments off: no Upload File item, no drop overlay on dragenter/dragover, drop attaches no chip and sends no `upload-url` request
+- [x] CAM-09: (#2886) Attachments off: pasting a file or over-limit text attaches no chip and sends no `upload-url` request
+- [x] CAM-10: (#2886) Control: attachments on: drop overlay shows, drop yields a chip and exactly one `upload-url` POST
+
+CAM-08/09 fail on pre-fix code: the drop/paste handlers were gated only on `features.fileUpload`, so the overlay, chip and upload request still appeared with the setting off. Embed (`embed_show_attachment`) is not covered here (needs an embed iframe on an embed-enabled agent).
 
 ---
 
