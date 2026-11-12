@@ -105,5 +105,44 @@
   },
   "errorRealClicksOff": {
     "message": "Real clicks were stopped from the bar on the tab or by the developer tools, so the run ended. Try again."
+  },
+  "hudLabel": {
+    "message": "ibl.ai is working on this page"
+  },
+  "hudWorking": {
+    "message": "Working on this page"
+  },
+  "hudStop": {
+    "message": "Stop"
+  },
+  "hudStopping": {
+    "message": "Stopping…"
+  },
+  "hudClick": {
+    "message": "Clicking"
+  },
+  "hudDoubleClick": {
+    "message": "Double-clicking"
+  },
+  "hudType": {
+    "message": "Typing into"
+  },
+  "hudSelect": {
+    "message": "Choosing in"
+  },
+  "hudScroll": {
+    "message": "Scrolling"
+  },
+  "hudNavigate": {
+    "message": "Opening"
+  },
+  "hudBack": {
+    "message": "Going back"
+  },
+  "hudReadPage": {
+    "message": "Reading this page"
+  },
+  "hudWait": {
+    "message": "Waiting"
   }
 }

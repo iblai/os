@@ -575,3 +575,105 @@ describe('real clicks', () => {
     expect(signal()!.aborted).toBe(false);
   });
 });
+
+describe('the overlay on the driven tab', () => {
+  const done = () =>
+    runAgent.mockResolvedValue({
+      text: 'ok',
+      messages: [],
+      steps: 1,
+      stoppedBy: null,
+    });
+
+  const overlay = () =>
+    document.querySelector('[data-ibl-agent-overlay]') as HTMLElement | null;
+
+  const stopFromPage = (tabId: number) => {
+    for (const listener of [...chromeStub.messaged])
+      listener(
+        { type: 'MENTOR:HUD_STOP' },
+        { id: 'ibl-extension', tab: { id: tabId } },
+        () => {},
+      );
+  };
+
+  it('goes up for the run and is handed to the tools', async () => {
+    done();
+    const port = openPort();
+    port.emit({ type: 'run', tabId: 7, goal: 'go', creds });
+    await vi.waitFor(() => expect(frames(port, 'done')).toHaveLength(1));
+    expect((await ctxOf()).hud).toBeDefined();
+    // Down again however the run ended: an overlay left behind tells the user
+    // their page is still being driven when it is not.
+    expect(overlay()).toBeNull();
+    expect(chromeStub.grouped.has(7)).toBe(false);
+  });
+
+  it('comes down when the run fails too', async () => {
+    runAgent.mockRejectedValue(new Error('the model fell over'));
+    const port = openPort();
+    port.emit({ type: 'run', tabId: 7, goal: 'go', creds });
+    await vi.waitFor(() => expect(frames(port, 'error')).toHaveLength(1));
+    expect(overlay()).toBeNull();
+    expect(chromeStub.grouped.has(7)).toBe(false);
+  });
+
+  it('comes down when the panel closes mid-run', async () => {
+    const signalOf = pending();
+    const port = openPort();
+    port.emit({ type: 'run', tabId: 7, goal: 'go', creds });
+    await vi.waitFor(() => expect(signalOf()).not.toBeNull());
+    port.close();
+    await vi.waitFor(() => expect(overlay()).toBeNull());
+    expect(chromeStub.grouped.has(7)).toBe(false);
+  });
+
+  it('ends the run when Stop is pressed on the page', async () => {
+    const signalOf = pending();
+    const port = openPort();
+    port.emit({ type: 'run', tabId: 7, goal: 'go', creds });
+    await vi.waitFor(() => expect(signalOf()).not.toBeNull());
+    stopFromPage(7);
+    await vi.waitFor(() => expect(signalOf()?.aborted).toBe(true));
+    await vi.waitFor(() => expect(overlay()).toBeNull());
+  });
+
+  it('ignores a Stop from a tab this run is not driving', async () => {
+    const signalOf = pending();
+    const port = openPort();
+    port.emit({ type: 'run', tabId: 7, goal: 'go', creds });
+    await vi.waitFor(() => expect(signalOf()).not.toBeNull());
+    // An overlay another run left on another tab must not end this one.
+    stopFromPage(8);
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(signalOf()?.aborted).toBe(false);
+    port.close();
+  });
+
+  it('ignores a Stop once the panel has gone', async () => {
+    done();
+    const port = openPort();
+    port.emit({ type: 'run', tabId: 7, goal: 'go', creds });
+    await vi.waitFor(() => expect(frames(port, 'done')).toHaveLength(1));
+    port.close();
+    // The listener is dropped with the port; nothing is left listening for a
+    // message the worker can no longer act on.
+    expect(chromeStub.messaged.size).toBe(0);
+  });
+
+  it('refuses a Stop that did not come from the extension', async () => {
+    const signalOf = pending();
+    const port = openPort();
+    port.emit({ type: 'run', tabId: 7, goal: 'go', creds });
+    await vi.waitFor(() => expect(signalOf()).not.toBeNull());
+    for (const listener of [...chromeStub.messaged])
+      listener(
+        { type: 'MENTOR:HUD_STOP' },
+        { id: 'somebody-else', tab: { id: 7 } },
+        () => {},
+      );
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(signalOf()?.aborted).toBe(false);
+    port.close();
+  });
+});
