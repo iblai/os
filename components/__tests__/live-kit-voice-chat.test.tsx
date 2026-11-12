@@ -75,18 +75,23 @@ const makeRemoteParticipants = () =>
   ]);
 
 vi.mock('livekit-client', () => ({
-  Room: vi.fn(() => ({
-    connect: mockRoomConnect,
-    disconnect: mockRoomDisconnect,
-    localParticipant: mockLocalParticipant,
-    remoteParticipants: makeRemoteParticipants(),
-    name: 'test-room',
-    state: 'disconnected',
-    on: vi.fn((event: string, handler: (...args: any[]) => void) => {
-      roomEventHandlers[event] = handler;
-    }),
-    off: vi.fn(),
-  })),
+  // `function`, not an arrow: the component calls `new Room(...)`, and vitest
+  // 4 no longer wraps a mock's implementation in a constructible function of
+  // its own.
+  Room: vi.fn(function () {
+    return {
+      connect: mockRoomConnect,
+      disconnect: mockRoomDisconnect,
+      localParticipant: mockLocalParticipant,
+      remoteParticipants: makeRemoteParticipants(),
+      name: 'test-room',
+      state: 'disconnected',
+      on: vi.fn((event: string, handler: (...args: any[]) => void) => {
+        roomEventHandlers[event] = handler;
+      }),
+      off: vi.fn(),
+    };
+  }),
   RoomEvent: {
     ConnectionStateChanged: 'connectionStateChanged',
     Disconnected: 'disconnected',

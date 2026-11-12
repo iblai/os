@@ -122,15 +122,24 @@ vi.mock('@/lib/utils', () => ({
 
 // Mock subscription flow class
 vi.mock('@/hooks/subscription/subscription-flow-v2', () => ({
-  MentorSubscriptionFlowV2: vi.fn().mockImplementation(() => ({})),
+  // A `function`, not an arrow: `user-profile.tsx` calls this with `new`, and
+  // vitest 4 stopped wrapping a mock's implementation in a constructible
+  // function of its own.
+  MentorSubscriptionFlowV2: vi.fn().mockImplementation(function () {
+    return {};
+  }),
 }));
 
-// Mock tenant metadata and subscription hooks
-vi.mock('@iblai/iblai-js/web-utils', () => ({
-  useTenantMetadata: () => ({
-    metadata: { help_center_url: 'https://help.example.com', show_help: true },
-    metadataLoaded: true,
+// Tenant metadata now rides the tenants list via this local hook (raw object).
+vi.mock('@/hooks/use-tenant-object-metadata', () => ({
+  useTenantObjectMetadata: () => ({
+    help_center_url: 'https://help.example.com',
+    show_help: true,
   }),
+}));
+
+// Mock subscription hooks
+vi.mock('@iblai/iblai-js/web-utils', () => ({
   Tenant: {},
   useSubscriptionHandlerV2: () => ({
     getBillingURL: mockGetBillingURL,
@@ -201,7 +210,6 @@ vi.mock('@iblai/iblai-js/web-containers/next', () => ({
     capturedCallbacks = {
       onProfileClick: props.onProfileClick,
       onLogout: props.onLogout,
-      onTenantChange: props.onTenantChange,
       onHelpClick: props.onHelpClick,
       onTenantUpdate: props.onTenantUpdate,
       onLoadGroupPermissions: props.onLoadGroupPermissions,
@@ -222,6 +230,9 @@ vi.mock('@iblai/iblai-js/web-containers/next', () => ({
         <span data-testid="billing-url">{props.billingURL || ''}</span>
         <span data-testid="top-up-url">{props.topUpURL || ''}</span>
         <span data-testid="current-plan">{props.currentPlan || ''}</span>
+        <span data-testid="show-organizations-link">
+          {String(props.showOrganizationsLink)}
+        </span>
         <span data-testid="show-tenant-switcher">
           {String(props.showTenantSwitcher)}
         </span>
@@ -250,12 +261,6 @@ vi.mock('@iblai/iblai-js/web-containers/next', () => ({
         </button>
         <button data-testid="logout-btn" onClick={() => props.onLogout?.()}>
           Logout
-        </button>
-        <button
-          data-testid="tenant-change-btn"
-          onClick={() => props.onTenantChange?.('new-tenant')}
-        >
-          Change Tenant
         </button>
         <button
           data-testid="help-btn"
@@ -380,6 +385,19 @@ describe('UserProfile', () => {
         'false',
       );
     });
+
+    // An embed is a scoped, host-owned surface: navigating the iframe to the
+    // auth app would tear it out of the page.
+    // An embed cannot navigate to the auth app itself without tearing itself
+    // out of the host page, so the SDK hands the host the chooser's address —
+    // the entry is still offered.
+    it('still offers the organization chooser when embed', () => {
+      render(<UserProfile embed />);
+
+      expect(screen.getByTestId('show-organizations-link')).toHaveTextContent(
+        'true',
+      );
+    });
   });
 
   describe('rendering', () => {
@@ -458,20 +476,6 @@ describe('UserProfile', () => {
       await user.click(logoutBtn);
 
       expect(mockHandleLogout).toHaveBeenCalled();
-    });
-
-    it('should handle tenant change', async () => {
-      const { default: userEvent } = await import(
-        '@testing-library/user-event'
-      );
-      const user = userEvent.setup();
-
-      render(<UserProfile />);
-
-      const tenantChangeBtn = screen.getByTestId('tenant-change-btn');
-      await user.click(tenantChangeBtn);
-
-      expect(mockHandleTenantSwitch).toHaveBeenCalledWith('new-tenant');
     });
 
     it('should handle help click', async () => {

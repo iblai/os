@@ -23,11 +23,10 @@ import {
 import { useAppDispatch, useAppSelector } from '@/lib/hooks';
 import { useLocalStorage } from '@/hooks/use-local-storage';
 import { LOCAL_STORAGE_KEYS } from '@/lib/constants';
-import { sessionCacheKey } from '@/lib/utils';
 import { getUserName } from '@/features/utils';
 import { ProjectPageParams } from '@/lib/types';
 import eventBus, { RemoteEvents } from '@/lib/eventBus';
-import { exportMessagesToXlsx } from '../export-messages';
+import { selectChatSession } from '@/hooks/use-open-session';
 
 import { ChatRow } from './chat-row-label';
 
@@ -242,27 +241,16 @@ export function useRecentChats({
     const mentorUniqueId = row.mentor?.unique_id;
     if (!mentorUniqueId || !tenantKey) return;
 
-    if (row.session_id !== appSessionId) {
-      // Different session: tear down any in-flight streaming/typing state and
-      // file context from the previous chat before pointing everything at the
-      // newly selected session.
-      dispatch(clearFiles(undefined));
-      eventBus.emit(RemoteEvents.stopChatGenerating);
-      dispatch(chatActions.resetIsTyping(undefined));
-      dispatch(chatActions.setStreaming(false));
-      dispatch(chatActions.resetCurrentStreamingMessage(undefined));
-      dispatch(chatActions.setActiveTab('chat'));
-      dispatch(chatActions.updateSessionIds(row.session_id));
-      dispatch(chatActions.setShouldStartNewChat(false));
-
-      // The localStorage `session_id` value the loader effect watches. This
-      // is the dependency that triggers getChats() → setNewMessages.
-      if (mentorId) {
-        saveCachedSessionId({
-          ...cachedSessionId,
-          [sessionCacheKey(tenantKey, mentorId)]: row.session_id,
-        });
-      }
+    if (row.session_id !== appSessionId && mentorId) {
+      // Shared with the embed's open-a-session path — see selectChatSession.
+      selectChatSession({
+        sessionId: row.session_id,
+        tenantKey,
+        mentorId,
+        dispatch,
+        cachedSessionIds: cachedSessionId,
+        saveCachedSessionIds: saveCachedSessionId,
+      });
     }
 
     if (!isChatPage) {
@@ -394,11 +382,11 @@ export function useRecentChats({
     }
   };
 
-  const handleExport = (row: ChatRow) => {
-    // Delegate to the shared sibling helper — it uses `write-excel-file`
-    // (already a project dep) and is covered by `export-messages.test.ts`.
-    exportMessagesToXlsx(row.messages ?? []);
-  };
+  // The row only carries a summary of the chat (its opening message), so the
+  // export dialog reads the whole session itself.
+  const [exportingRow, setExportingRow] = React.useState<ChatRow | null>(null);
+  const handleExport = (row: ChatRow) => setExportingRow(row);
+  const closeExport = () => setExportingRow(null);
 
   return {
     pinned,
@@ -413,5 +401,7 @@ export function useRecentChats({
     handleUnpin,
     handleDelete,
     handleExport,
+    exportingRow,
+    closeExport,
   };
 }

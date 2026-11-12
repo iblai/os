@@ -16,21 +16,25 @@ const mockRoomOn = vi.fn((event: string, handler: (...args: any[]) => void) => {
 const mockRoomOff = vi.fn();
 
 vi.mock('livekit-client', () => ({
-  Room: vi.fn(() => ({
-    connect: mockRoomConnect,
-    disconnect: mockRoomDisconnect,
-    on: mockRoomOn,
-    off: mockRoomOff,
-    localParticipant: {
-      setMicrophoneEnabled: mockSetMicrophoneEnabled,
-      setScreenShareEnabled: mockSetScreenShareEnabled,
-      get isMicrophoneEnabled() {
-        return mockIsMicrophoneEnabled;
+  // `function`, not an arrow: the hook calls `new Room(...)`, and vitest 4 no
+  // longer wraps a mock's implementation in a constructible function.
+  Room: vi.fn(function () {
+    return {
+      connect: mockRoomConnect,
+      disconnect: mockRoomDisconnect,
+      on: mockRoomOn,
+      off: mockRoomOff,
+      localParticipant: {
+        setMicrophoneEnabled: mockSetMicrophoneEnabled,
+        setScreenShareEnabled: mockSetScreenShareEnabled,
+        get isMicrophoneEnabled() {
+          return mockIsMicrophoneEnabled;
+        },
+        on: vi.fn(),
+        off: vi.fn(),
       },
-      on: vi.fn(),
-      off: vi.fn(),
-    },
-  })),
+    };
+  }),
   VideoPresets: {
     h540: 'h540',
     h216: 'h216',

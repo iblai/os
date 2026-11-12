@@ -1356,20 +1356,44 @@ describe('HistoryTab', () => {
   // Rows: the profile tab's date pattern and the Transcripts sentiment line
   // ==========================================================================
   describe('conversation rows', () => {
-    it('dates the row like the profile History tab and shows the sentiment line under the title', () => {
+    it('shows a short date on the row and keeps the full date for the preview', () => {
       render(<HistoryTab />);
       const list = screen.getByLabelText('Conversation list');
-      expect(
-        within(list).getByText(
-          /^[A-Z][a-z]{2} \d{1,2}, \d{4}, \d{1,2}:\d{2} [AP]M · .+ ago$/,
-        ),
-      ).toBeInTheDocument();
-      const chips = within(list).getByTestId('conversation-topics');
-      const mark = within(chips).getByTestId('conversation-sentiment');
+      const date = within(list).getByText(
+        /^(\d{1,2}:\d{2} [AP]M|[A-Z][a-z]{2} \d{1,2}(, \d{4})?)$/,
+      );
+      expect(date.tagName).toBe('TIME');
+      expect(date).toHaveAttribute('dateTime', baseConversation.inserted_at);
+      expect(within(list).queryByText(/ago$/)).not.toBeInTheDocument();
+    });
+
+    it('puts owner, topics and a compact sentiment thumb on one line under the preview', () => {
+      render(<HistoryTab />);
+      const row = screen.getByTestId('history-conversation-row');
+      const mark = within(row).getByTestId('conversation-sentiment');
       expect(mark).toHaveAttribute('data-compact', 'true');
       expect(mark).toHaveAttribute('data-sentiment', 'positive');
       expect(mark).toHaveTextContent('Positive User Sentiment');
-      expect(chips.firstElementChild).toBe(mark);
+      const meta = within(row).getByTestId('conversation-topics')
+        .parentElement as HTMLElement;
+      expect(meta).toHaveTextContent(/^student@example\.com·general/);
+      expect(meta).toContainElement(mark);
+      // Topics grow from zero into the leftover width only, so the owner is
+      // cut only when it alone is wider than the line.
+      expect(within(row).getByTestId('conversation-topics')).toHaveClass(
+        'min-w-0',
+        'flex-1',
+        'truncate',
+      );
+    });
+
+    it('opens a conversation from the keyboard', () => {
+      render(<HistoryTab />);
+      const row = screen.getByTestId('history-conversation-row');
+      expect(row).toHaveAttribute('role', 'button');
+      fireEvent.keyDown(row, { key: 'Enter' });
+      expect(row).toHaveAttribute('aria-current', 'true');
+      expect(screen.getAllByText('AI Agent').length).toBeGreaterThanOrEqual(1);
     });
   });
 

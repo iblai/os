@@ -22,7 +22,7 @@ export function LLMProviderSelectionModal({ isOpen, onClose }: Props) {
   const t = useTranslations('modalsLlmProviderSelectionModal');
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-h-[90vh] w-full max-w-5xl gap-3 overflow-y-auto">
+      <DialogContent className="max-h-[90dvh] max-w-5xl gap-3 overflow-y-auto">
         <DialogDescription className="sr-only">
           {t('selectProviderDescription')}
         </DialogDescription>

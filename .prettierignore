@@ -29,6 +29,7 @@ pnpm-lock.yaml
 # auto-generated
 *.min.js
 *.min.css
+CHANGELOG.md
 
 # Tauri
 src-tauri/target/
@@ -42,3 +43,6 @@ src-tauri/gen/
 
 # Vendored third-party bundle; kept byte-for-byte as published
 extensions/chrome/public/vendor/
+
+# Byte-for-byte copy of the vendored launcher, so the CI e2e image (no extensions/) can serve it
+e2e/fixtures/agent-ai.umd.js

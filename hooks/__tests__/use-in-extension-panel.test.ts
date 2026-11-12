@@ -21,11 +21,23 @@ const reply = (type: string, source: unknown = window.parent) =>
   );
 
 let postMessage: ReturnType<typeof vi.fn>;
+let mockSearchParams = new URLSearchParams();
+let mockEmbedContext: Record<string, string> | null = null;
+
+vi.mock('next/navigation', () => ({
+  useSearchParams: () => mockSearchParams,
+}));
+
+vi.mock('@/lib/embed-context', () => ({
+  getEmbedContext: () => mockEmbedContext,
+}));
 
 beforeEach(() => {
   vi.useFakeTimers();
   postMessage = vi.fn();
   withParent({ postMessage });
+  mockSearchParams = new URLSearchParams();
+  mockEmbedContext = null;
 });
 
 afterEach(() => {
@@ -34,6 +46,24 @@ afterEach(() => {
 });
 
 describe('useInExtensionPanel', () => {
+  // The SDK's Cowork pill reads this once, when it mounts: the flag the panel
+  // puts on the iframe URL is there on the first render, with nothing to ask.
+  it('says yes at once from the enable-cowork flag, and asks nothing', () => {
+    mockSearchParams = new URLSearchParams('embed=true&enable-cowork=true');
+    const { result } = renderHook(() => useInExtensionPanel());
+    expect(result.current).toBe(true);
+    act(() => vi.advanceTimersByTime(2000));
+    expect(postMessage).not.toHaveBeenCalled();
+  });
+
+  it('keeps saying yes from the embed context once the URL lost the flag', () => {
+    mockEmbedContext = { embed: 'true', 'enable-cowork': 'true' };
+    const { result } = renderHook(() => useInExtensionPanel());
+    expect(result.current).toBe(true);
+    expect(postMessage).not.toHaveBeenCalled();
+  });
+
+  // An extension from before the flag: the handshake still answers, after mount.
   it('says yes once the panel answers the handshake', () => {
     const { result } = renderHook(() => useInExtensionPanel());
     expect(result.current).toBe(false);

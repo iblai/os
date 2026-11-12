@@ -43,6 +43,8 @@ export function useLlmProviderModalLabels(): LLMTabLabels['providerModal'] {
       cancel: tProviderModal('localModel.cancel'),
       inUse: tProviderModal('localModel.inUse'),
       downloadFailedRetry: tProviderModal('localModel.downloadFailedRetry'),
+      downloadFailed: tProviderModal('localModel.downloadFailed'),
+      retry: tProviderModal('localModel.retry'),
       ariaDownload: (modelName, modelSize) =>
         tProviderModal('localModel.ariaDownload', { modelName, modelSize }),
       ariaStarting: (modelName) =>

@@ -1,6 +1,6 @@
 # Playwright test image for CI/CD
 # Built from repo root: docker build -f e2e/Dockerfile .
-FROM mcr.microsoft.com/playwright:v1.56.0-jammy
+FROM mcr.microsoft.com/playwright:v1.64.1-jammy
 
 # Install AWS CLI for S3 log/report uploads
 RUN apt-get update && \
@@ -12,8 +12,9 @@ RUN aws --version
 
 WORKDIR /app
 
-# Enable pnpm via corepack
-RUN corepack enable && corepack prepare pnpm@10 --activate
+# Install pnpm. The Playwright base image's Node no longer bundles corepack,
+# so install the pinned pnpm (matches package.json `packageManager`) with npm.
+RUN npm install -g pnpm@10.11.1
 
 # Copy package manifests from repo root (deps live here, not in e2e/)
 COPY package.json pnpm-lock.yaml ./

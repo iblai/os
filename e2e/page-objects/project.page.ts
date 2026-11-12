@@ -262,15 +262,19 @@ export class ProjectPage {
       name: 'Expand sidebar',
       exact: true,
     });
-    if (await isVisibleWithin(expandToggle, 2_000)) {
-      await expandToggle.click();
-    }
-
     const projectsTrigger = sidebar.getByRole('button', {
       name: 'Projects',
       exact: true,
     });
-    await expect(projectsTrigger).toBeVisible({ timeout: 15_000 });
+    // After a route change the sidebar remounts collapsed for a moment, then
+    // restores its saved expanded state, so a check-then-click on "Expand
+    // sidebar" can target a button that is already gone. Retry as one unit.
+    await expect(async () => {
+      if (await expandToggle.isVisible()) {
+        await expandToggle.click({ timeout: 2_000 });
+      }
+      await expect(projectsTrigger).toBeVisible({ timeout: 2_000 });
+    }).toPass({ timeout: 20_000 });
     // Expand the Projects section (idempotent) so "My Projects" is rendered.
     const expanded = await projectsTrigger
       .getAttribute('aria-expanded')

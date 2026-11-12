@@ -17,6 +17,14 @@ let capturedIframeMessageHandler: {
   defaultHandler?: (data: Record<string, unknown>) => void;
 } = {};
 
+// The real module pulls the whole remark/rehype/KaTeX pipeline. `AppProvider`
+// imports it fire-and-forget in an effect (deliberately — the startup path
+// must not await it), so under load that import is still resolving when this
+// file's last test ends, and vitest tears the environment down underneath it:
+// "Cannot load … after the environment was torn down". Registration itself is
+// covered by lib/__tests__/canvas-markdown-engine.test.ts.
+vi.mock('@/lib/canvas-markdown-engine', () => ({}));
+
 vi.mock('next/navigation', () => ({
   useParams: () => mockParams,
 }));

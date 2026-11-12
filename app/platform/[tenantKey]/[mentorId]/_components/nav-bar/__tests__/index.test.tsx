@@ -7,6 +7,7 @@ import {
   cleanup,
   fireEvent,
   waitFor,
+  within,
 } from '@testing-library/react';
 import { Provider } from 'react-redux';
 import { configureStore } from '@reduxjs/toolkit';
@@ -509,6 +510,14 @@ vi.mock('@iblai/iblai-js/web-containers', () => ({
   // The hook reconciles the tool-support cache against the catalog on read.
   getLocalLLMToolSupport: () => true,
   setLocalLLMToolSupport: () => {},
+  // Same rule as the SDK helper for ids missing from the catalog.
+  localModelDisplayName: (ref?: string | null) =>
+    (ref ?? '')
+      .replace(/:latest$/i, '')
+      .replace(
+        /(^|\s)(\S)/g,
+        (_: string, gap: string, c: string) => gap + c.toUpperCase(),
+      ),
   LOCAL_MODELS: [
     {
       name: 'Llama 3.2',
@@ -997,11 +1006,51 @@ describe('NavBar', () => {
 
       const badge = screen.getByTestId('local-model-indicator');
       expect(badge).toHaveTextContent('Llama 3.2');
-      expect(badge).toHaveTextContent('On-device');
+      expect(badge).toHaveTextContent('On-Device');
+      // Cased like cloud model names, not forced to lowercase.
+      expect(within(badge).getByText('Llama 3.2')).not.toHaveClass('lowercase');
       // The on-device badge replaces the cloud model selector while local is on.
       expect(
         screen.queryByLabelText('LLM Model Selector'),
       ).not.toBeInTheDocument();
+    });
+
+    it('names a stored tag variant of a catalog model by its catalog name', () => {
+      mockIsAdmin = true;
+      mockUserIsStudent = false;
+      mockPathname = '/platform/tenant123/mentor456';
+      mockLocalEnabled = true;
+      mockLocalModelId = 'llama3.2:latest';
+      const store = createTestStore();
+
+      render(
+        <Provider store={store}>
+          <NavBar />
+        </Provider>,
+      );
+
+      expect(screen.getByTestId('local-model-indicator')).toHaveTextContent(
+        'Llama 3.2',
+      );
+    });
+
+    it('capitalizes each word of a stored model id that is not in the catalog', () => {
+      mockIsAdmin = true;
+      mockUserIsStudent = false;
+      mockPathname = '/platform/tenant123/mentor456';
+      mockLocalEnabled = true;
+      mockLocalModelId = 'qwen3.6:latest';
+      const store = createTestStore();
+
+      render(
+        <Provider store={store}>
+          <NavBar />
+        </Provider>,
+      );
+
+      const badge = screen.getByTestId('local-model-indicator');
+      expect(badge).toHaveTextContent('Qwen3.6');
+      expect(badge).not.toHaveTextContent('qwen3.6:latest');
     });
 
     it('opens the model picker when the on-device badge is clicked, so an admin can still choose an LLM while local is on', () => {

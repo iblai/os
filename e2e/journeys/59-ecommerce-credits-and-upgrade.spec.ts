@@ -367,15 +367,19 @@ test.describe('Journey 59: Ecommerce Credits & Upgrade', () => {
       );
 
       await step(
-        'Flow 0: profile dropdown shows exactly Profile / Help / Log Out',
+        'Flow 0: profile dropdown shows exactly Profile / Organizations / Help / Log Out',
         async () => {
           const navbarPage = new NavbarPage(page);
           await navbarPage.openProfileDropdown();
-          await expect(page.getByRole('menuitem')).toHaveCount(3, {
+          // Organizations is always offered — the chooser fetches its own list.
+          await expect(page.getByRole('menuitem')).toHaveCount(4, {
             timeout: 10_000,
           });
           await expect(
             page.getByRole('menuitem', { name: 'Profile' }),
+          ).toBeVisible();
+          await expect(
+            page.getByRole('menuitem', { name: 'Organizations' }),
           ).toBeVisible();
           await expect(
             page.getByRole('menuitem', { name: 'Help' }),
@@ -424,7 +428,10 @@ test.describe('Journey 59: Ecommerce Credits & Upgrade', () => {
           await expect(sidebarPage.managementButton).toBeVisible({
             timeout: 10_000,
           });
-          await expect(sidebarPage.integrationsButton).toBeVisible({
+          await expect(sidebarPage.secretsButton).toBeVisible({
+            timeout: 10_000,
+          });
+          await expect(sidebarPage.apiButton).toBeVisible({
             timeout: 10_000,
           });
           await expect(sidebarPage.monetizationButton).toBeVisible({
@@ -478,7 +485,10 @@ test.describe('Journey 59: Ecommerce Credits & Upgrade', () => {
           await sidebarPage.managementButton.click();
           await expectSubscribeModalAndClose(page);
 
-          await sidebarPage.integrationsButton.click();
+          await sidebarPage.secretsButton.click();
+          await expectSubscribeModalAndClose(page);
+
+          await sidebarPage.apiButton.click();
           await expectSubscribeModalAndClose(page);
 
           await sidebarPage.monetizationButton.click();

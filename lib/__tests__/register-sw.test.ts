@@ -381,6 +381,35 @@ describe('register-sw', () => {
       // Should complete without errors
       expect(true).toBe(true);
     });
+
+    it('should skip registration and the reload listener when embedded in an iframe', async () => {
+      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+      const registerSpy = vi.fn().mockResolvedValue(mockRegistration);
+      const addEventListenerSpy = vi.fn();
+      (mockServiceWorker as { register: any }).register = registerSpy;
+      (mockServiceWorker as { addEventListener: any }).addEventListener =
+        addEventListenerSpy;
+
+      // isEmbeddedInIframe() reads window.self !== window.top.
+      const realTop = Object.getOwnPropertyDescriptor(window, 'top');
+      Object.defineProperty(window, 'top', { configurable: true, value: {} });
+
+      try {
+        vi.resetModules();
+        const { initServiceWorker } = await import('../register-sw');
+        const status = await initServiceWorker();
+
+        expect(registerSpy).not.toHaveBeenCalled();
+        expect(addEventListenerSpy).not.toHaveBeenCalledWith(
+          'controllerchange',
+          expect.any(Function),
+        );
+        expect(status).toMatchObject({ isRegistered: false });
+      } finally {
+        if (realTop) Object.defineProperty(window, 'top', realTop);
+        consoleSpy.mockRestore();
+      }
+    });
   });
 
   describe('registerServiceWorker with basePath', () => {

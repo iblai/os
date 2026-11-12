@@ -1,55 +1,50 @@
 'use client';
 
-import React from 'react';
 import { useParams } from 'next/navigation';
-import { useTranslations } from 'next-intl';
-import { ConnectorManagementContent } from './connector-management-content';
-import { useUsername } from '@/hooks/use-user';
-import { useNavigate } from '@/hooks/user-navigate';
-import { TenantKeyMentorIdParams } from '@/lib/types';
+import {
+  AgentSettingsProvider,
+  McpTab as SdkMcpTab,
+} from '@iblai/iblai-js/web-containers/next';
 import type { MCPServer } from '@iblai/iblai-js/data-layer';
+
+import { useNavigate } from '@/hooks/user-navigate';
+import { useUsername } from '@/hooks/use-user';
+import { useShowFreeTrialDialog } from '@/hooks/user-user-actions';
+import { config } from '@/lib/config';
+import { selectRbacPermissions } from '@/features/rbac/rbac-slice';
+import { useAppSelector } from '@/lib/hooks';
+import { TenantKeyMentorIdParams } from '@/lib/types';
 
 interface McpTabProps {
   onSelect?: (server: MCPServer) => void;
 }
 
+/**
+ * OS wiring for the SDK's `McpTab` (featured and custom connectors, connect /
+ * disconnect, the agent on/off switch, add / edit / delete). Copy comes from
+ * the SDK's own i18n catalog, so no labels are passed. `rbacPermissions` comes
+ * from the Redux RBAC slice, the same source `@/hoc/withPermissions` reads.
+ */
 export function McpTab({ onSelect }: McpTabProps = {}) {
-  const t = useTranslations('tabsMcpTab');
   const { tenantKey, mentorId } = useParams<TenantKeyMentorIdParams>();
-  const username = useUsername();
   const { getMentorId } = useNavigate();
+  const username = useUsername();
+  const rbacPermissions = useAppSelector(selectRbacPermissions);
+  const { executeWithTrialCheck } = useShowFreeTrialDialog();
   const activeMentorId = getMentorId() || mentorId;
 
+  if (!tenantKey || !activeMentorId || !username) return null;
+
   return (
-    <>
-      <div className="flex hidden h-[73px] flex-shrink-0 items-center border-b border-gray-200 bg-white p-4 lg:block">
-        <div>
-          <h3 className="mb-1 text-base font-medium text-gray-900">MCP</h3>
-          <p className="text-xs text-gray-700">
-            Manage Model Context Protocol connectors for your agent.
-          </p>
-        </div>
-      </div>
-      <div
-        className="flex-1 p-3 lg:p-4"
-        style={{
-          overflowY: 'auto',
-          overflowX: 'hidden',
-        }}
-      >
-        <div
-          className="mb-4 rounded-md border border-gray-200 bg-gray-50 p-3 text-xs text-gray-600"
-          data-testid="mcp-info-box"
-        >
-          {t('infoBox')}
-        </div>
-        <ConnectorManagementContent
-          tenantKey={tenantKey}
-          username={username ?? ''}
-          mentorId={activeMentorId}
-          onSelect={onSelect}
-        />
-      </div>
-    </>
+    <AgentSettingsProvider
+      tenantKey={tenantKey}
+      mentorId={activeMentorId}
+      username={username}
+      enableRBAC={config.enableRBAC()}
+      rbacPermissions={rbacPermissions}
+      executeGatedAction={(fn) => executeWithTrialCheck(fn)}
+    >
+      <SdkMcpTab onSelect={onSelect} />
+    </AgentSettingsProvider>
   );
 }

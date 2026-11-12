@@ -6,6 +6,7 @@ import {
   removeWidgetSpinner,
   startContextFeed,
   watchAndInstallSession,
+  watchAuthExpired,
   watchTenantSwitch,
 } from '../mentor-frame';
 import { MENTOR_URL } from '../settings';
@@ -14,6 +15,7 @@ import { installChromeStub } from './chrome.stub';
 vi.mock('../mentor-frame', () => ({
   watchAndInstallSession: vi.fn(),
   watchTenantSwitch: vi.fn(),
+  watchAuthExpired: vi.fn(),
   startContextFeed: vi.fn(),
   removeWidgetSpinner: vi.fn(),
 }));
@@ -21,6 +23,7 @@ vi.mock('../browse-bridge', () => ({ startBrowseBridge: vi.fn() }));
 
 const stopInstall = vi.fn();
 const stopTenantSwitch = vi.fn();
+const stopAuthExpired = vi.fn();
 const stopFeed = vi.fn();
 const stopBridge = vi.fn();
 
@@ -33,10 +36,12 @@ beforeEach(() => {
   vi.mocked(startBrowseBridge).mockClear();
   vi.mocked(watchAndInstallSession).mockReturnValue(stopInstall);
   vi.mocked(watchTenantSwitch).mockReturnValue(stopTenantSwitch);
+  vi.mocked(watchAuthExpired).mockReturnValue(stopAuthExpired);
   vi.mocked(startContextFeed).mockReturnValue(stopFeed);
   vi.mocked(startBrowseBridge).mockReturnValue(stopBridge);
   stopInstall.mockClear();
   stopTenantSwitch.mockClear();
+  stopAuthExpired.mockClear();
   stopFeed.mockClear();
   stopBridge.mockClear();
 });
@@ -53,15 +58,20 @@ describe('MentorChat', () => {
     expect(element.getAttribute('theme')).toBe('light');
     expect(element.getAttribute('component')).toBe('chat');
     expect(element.hasAttribute('authrelyonhost')).toBe(true);
+    // watchTenantSwitch opens the chooser through chrome.tabs and mints the
+    // chosen organization's session, so agent-ai must not open one too.
+    expect(element.hasAttribute('hostownschooser')).toBe(true);
     expect(element.hasAttribute('allowmentorselection')).toBe(true);
     expect(removeWidgetSpinner).toHaveBeenCalledWith(element);
     expect(watchAndInstallSession).toHaveBeenCalledWith(element);
     expect(watchTenantSwitch).toHaveBeenCalledWith(element);
+    expect(watchAuthExpired).toHaveBeenCalledWith(element);
     expect(startContextFeed).toHaveBeenCalledWith(element);
     expect(startBrowseBridge).toHaveBeenCalledWith(element);
     unmount();
     expect(stopInstall).toHaveBeenCalledTimes(1);
     expect(stopTenantSwitch).toHaveBeenCalledTimes(1);
+    expect(stopAuthExpired).toHaveBeenCalledTimes(1);
     expect(stopFeed).toHaveBeenCalledTimes(1);
     expect(stopBridge).toHaveBeenCalledTimes(1);
   });

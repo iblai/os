@@ -16,7 +16,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useNavigate } from '@/hooks/user-navigate';
 import { useAllowMentorSelection } from '@/hooks/use-allow-mentor-selection';
-import { useTenantMetadata } from '@iblai/iblai-js/web-utils';
+import { useTenantObjectMetadata } from '@/hooks/use-tenant-object-metadata';
 import { isLoggedIn, redirectToAuthSpaJoinTenant } from '@/lib/utils';
 import { WithPermissions } from '@/hoc/withPermissions';
 
@@ -71,7 +71,7 @@ export function ExplorePageContent({ tenantKey }: ExplorePageContentProps) {
   const username = useUsername();
   const { navigateToMentor, openCreateMentorModal } = useNavigate();
 
-  const { metadata } = useTenantMetadata({ org: tenantKey });
+  const metadata = useTenantObjectMetadata(tenantKey);
 
   // createdBy starts as null - when community mentors is enabled, null means "show all"
   const [createdBy, setCreatedBy] = React.useState<

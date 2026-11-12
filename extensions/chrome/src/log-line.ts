@@ -3,6 +3,7 @@ import type { LogEntry } from './tools';
 
 const ACTION_LABEL: Record<string, string> = {
   click: 'actionClick',
+  double_click: 'actionDoubleClick',
   type: 'actionType',
   select: 'actionSelect',
   scroll: 'actionScroll',
@@ -26,6 +27,6 @@ export function logLine(entry: LogEntry): string {
   if (entry.code === 'declined') return `${head} — ${t('declined')}`;
   if (entry.code === 'refused')
     return `${head} — ${t('refused', entry.detail ?? '')}`;
-  if (!entry.ok && entry.detail) return `${head} — ${entry.detail}`;
+  if (!entry.ok) return `${head} — ${entry.detail || t('actionFailed')}`;
   return head;
 }

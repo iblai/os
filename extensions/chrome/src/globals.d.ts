@@ -15,8 +15,10 @@ declare module 'react' {
         theme?: 'dark' | 'light';
         component?: string;
         authrelyonhost?: string;
+        hostownschooser?: string;
         showuserprofile?: string;
         allowmentorselection?: string;
+        enablecowork?: string;
       };
     }
   }

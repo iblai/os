@@ -500,7 +500,7 @@ fn unix_now() -> u64 {
 /// than the renewal margin left. Pure over the settings map so the freshness
 /// rule is testable. Entries without `expires_at` (an older build's format)
 /// read as absent — one harmless re-mint.
-fn stored_platform_key(
+pub(crate) fn stored_platform_key(
     settings: &serde_json::Map<String, serde_json::Value>,
     base: &str,
     tenant: &str,
@@ -523,7 +523,7 @@ fn stored_platform_key(
 
 /// Record a freshly minted key in its slot, leaving every other settings owner
 /// (and every other slot) untouched.
-fn record_platform_key(
+pub(crate) fn record_platform_key(
     settings: &mut serde_json::Map<String, serde_json::Value>,
     base: &str,
     tenant: &str,
@@ -663,9 +663,10 @@ pub async fn platform_api_key(tenant: &str, token: &str) -> Option<(String, u64)
     match mint_platform_key(&base, token, &name).await {
         Ok(Some(key)) => {
             let expires_at = now.saturating_add(PLATFORM_KEY_LIFETIME.as_secs());
-            let mut settings = crate::opencode_acp::read_settings();
-            record_platform_key(&mut settings, &base, tenant, &key, expires_at);
-            if let Err(e) = crate::opencode_acp::write_settings(&settings) {
+            let saved = crate::opencode_acp::update_settings(|settings| {
+                record_platform_key(settings, &base, tenant, &key, expires_at);
+            });
+            if let Err(e) = saved {
                 // The key still works for this run; only its persistence failed.
                 crate::telemetry::report("[opencode-proxy] could not persist IBLAI_API_KEY", e);
             }

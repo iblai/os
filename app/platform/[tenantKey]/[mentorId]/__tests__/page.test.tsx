@@ -59,13 +59,15 @@ vi.mock('next/navigation', () => ({
 vi.mock('@/hooks/use-user', () => ({
   useUsername: () => 'testuser',
   useUserTenants: () => ({ userTenants: [] }),
+  useCurrentTenant: () => ({ currentTenant: null }),
 }));
 
 vi.mock('@/lib/utils', () => ({
   isLoggedIn: () => true,
 }));
 
-vi.mock('@/lib/constants', () => ({
+vi.mock('@/lib/constants', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/constants')>()),
   ANONYMOUS_USERNAME: 'anonymous',
 }));
 

@@ -52,7 +52,7 @@ import {
  * pass for any admin, even on a freshly created mentor.
  *
  * CATEGORY: the modal sidebar only mounts the segment tabs of the *active*
- * category (Configurations / Integrations / Analytics — see
+ * category (Setup / Policies / Integrations / Activity — see
  * `edit-mentor.page.ts` `navigateToTab`). LTI lives under **Integrations**, so
  * every navigation/visibility method here first activates that category. The
  * SDK's own `switchToLtiTab` / `isLtiTabVisible` are category-blind (a bare
@@ -167,8 +167,8 @@ export class LtiTab {
   /**
    * Activate the Integrations category so its segment triggers (including the
    * LTI tab, which is always mounted for admins) are shown. No-op when already
-   * active. The Integrations category itself always exists (MCP, Datasets,
-   * API, Embed live there too).
+   * active. The Integrations category itself always exists (MCP, API, Embed
+   * live there too).
    */
   async activateCategory(): Promise<void> {
     // Fail fast with a meaningful signal when the dialog isn't open at all

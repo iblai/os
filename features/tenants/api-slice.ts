@@ -2,7 +2,6 @@ import { createApi } from '@reduxjs/toolkit/query/react';
 
 import type {
   GetTenantMetadataArgs,
-  Tenant,
   TenantMetadata,
 } from '@/features/tenants/types';
 import {
@@ -17,19 +16,9 @@ export const tenantsApiSlice = createApi({
 
   baseQuery: iblFetchBaseQuery,
 
-  tagTypes: [
-    TENANTS_QUERY_KEYS.GET_USER_TENANTS(),
-    TENANTS_QUERY_KEYS.GET_PLATFORM_METADATA(),
-  ],
+  tagTypes: [TENANTS_QUERY_KEYS.GET_PLATFORM_METADATA()],
 
   endpoints: (builder) => ({
-    getUserTenants: builder.query<Tenant[], void>({
-      query: () => ({
-        url: TENANTS_ENDPOINTS.GET_USER_TENANTS.path(),
-        service: TENANTS_ENDPOINTS.GET_USER_TENANTS.service,
-      }),
-      providesTags: () => [TENANTS_QUERY_KEYS.GET_USER_TENANTS()],
-    }),
     getTenantMetadata: builder.query<TenantMetadata, GetTenantMetadataArgs>({
       query: (args) => ({
         url: TENANTS_ENDPOINTS.GET_PLATFORM_METADATA.path(args.tenantKey),
@@ -46,9 +35,5 @@ export const tenantsApiSlice = createApi({
   }),
 });
 
-export const {
-  useGetUserTenantsQuery,
-  useGetTenantMetadataQuery,
-  useLazyGetUserTenantsQuery,
-  useLazyGetTenantMetadataQuery,
-} = tenantsApiSlice;
+export const { useGetTenantMetadataQuery, useLazyGetTenantMetadataQuery } =
+  tenantsApiSlice;

@@ -1,6 +1,13 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import {
+  act,
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+} from '@testing-library/react';
+import { bumpTenantLogoVersion } from '@iblai/iblai-js/web-utils';
 import Logo from '../logo';
 
 // Mock next/navigation
@@ -76,6 +83,7 @@ vi.mock('@/lib/utils', () => ({
 describe('Logo', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    localStorage.clear();
     mockUseParams.mockReturnValue({ tenantKey: 'test-tenant' });
     mockUseHeader.mockReturnValue({ useSpecialIframeLogo: false });
     mockUseMentorSettings.mockReturnValue({ data: null });
@@ -328,6 +336,92 @@ describe('Logo', () => {
         'src',
         'https://dm.example.com/api/core/orgs/param-tenant/logo/',
       );
+    });
+  });
+
+  describe('logo version', () => {
+    const bareUrl = 'https://dm.example.com/api/core/orgs/test-tenant/logo/';
+
+    it('keeps the bare URL when no logo was uploaded in this browser', async () => {
+      render(<Logo />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('logo-image')).toHaveAttribute(
+          'src',
+          bareUrl,
+        );
+      });
+    });
+
+    it('adds the saved version to the URL', async () => {
+      localStorage.setItem('tenant_logo_version:test-tenant', '1234');
+
+      render(<Logo />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('logo-image')).toHaveAttribute(
+          'src',
+          `${bareUrl}?v=1234`,
+        );
+      });
+    });
+
+    it('switches to the new URL on a bump, without a reload', async () => {
+      render(<Logo />);
+      await screen.findByTestId('logo-image');
+
+      act(() => bumpTenantLogoVersion('test-tenant'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('logo-image').getAttribute('src')).toMatch(
+          /\/logo\/\?v=\d+$/,
+        );
+      });
+    });
+
+    it('recovers from the fallback image on a bump', async () => {
+      render(<Logo />);
+      fireEvent.error(await screen.findByTestId('logo-image'));
+      await waitFor(() => {
+        expect(screen.getByTestId('logo-image')).toHaveAttribute(
+          'src',
+          '/iblai-logo-fallback.png',
+        );
+      });
+
+      act(() => bumpTenantLogoVersion('test-tenant'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('logo-image').getAttribute('src')).toMatch(
+          /\/logo\/\?v=\d+$/,
+        );
+      });
+    });
+
+    it("ignores another organization's bump", async () => {
+      render(<Logo />);
+      await screen.findByTestId('logo-image');
+
+      act(() => bumpTenantLogoVersion('other-tenant'));
+
+      expect(screen.getByTestId('logo-image')).toHaveAttribute('src', bareUrl);
+    });
+
+    it('does not version the agent image in the embed logo', async () => {
+      mockUseHeader.mockReturnValue({ useSpecialIframeLogo: true });
+      mockUseMentorSettings.mockReturnValue({
+        data: { profileImage: 'https://example.com/agent.png' },
+      });
+      localStorage.setItem('tenant_logo_version:test-tenant', '1234');
+
+      render(<Logo />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('logo-image')).toHaveAttribute(
+          'src',
+          'https://example.com/agent.png',
+        );
+      });
     });
   });
 

@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import dynamic from 'next/dynamic';
 
 import { useSelector } from 'react-redux';
 
@@ -15,7 +16,16 @@ import {
 
 // Modals
 import { SettingsModal } from '@/components/modals/settings-modal';
-import { EditMentorModal } from '@/components/modals/edit-mentor-modal';
+// EditMentorModal statically pulls ~26 tabs (analytics -> recharts, voice/
+// screen-share -> LiveKit, etc.), a large slice of the initial chat bundle for
+// a surface that only renders when an admin opens it. Load it on demand.
+const EditMentorModal = dynamic(
+  () =>
+    import('@/components/modals/edit-mentor-modal').then(
+      (m) => m.EditMentorModal,
+    ),
+  { ssr: false },
+);
 // import { CreateMentorModal } from '@/components/modals/create-mentor-modal';
 import { CustomAlertDialog } from '../custom-alert-dialog';
 import { UpgradePackageModal } from '@iblai/iblai-js/web-containers';

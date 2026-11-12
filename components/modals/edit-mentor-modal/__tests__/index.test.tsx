@@ -6,6 +6,7 @@ import {
   cleanup,
   waitFor,
   fireEvent,
+  within,
 } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Provider } from 'react-redux';
@@ -216,11 +217,10 @@ vi.mock('@sentry/nextjs', () => ({
 
 // @iblai/iblai-js/web-containers transitively imports @iblai/web-utils which imports
 // axios — which fails to resolve in Vitest's transform pipeline. Stub it here
-// so importing the tabs barrel (which re-exports SandboxTab/SkillsTab that use
+// so importing the tabs barrel (which re-exports SandboxTab/PromptsTab that use
 // these components) doesn't break the test.
 vi.mock('@iblai/iblai-js/web-containers', () => ({
   SandboxConfig: () => null,
-  AgentSkills: () => null,
   AgentConfigPrompts: () => null,
 }));
 
@@ -518,7 +518,7 @@ describe('EditMentorModal', () => {
       userTypes: [UserType.ADMIN, UserType.FREE_TRIAL],
       permissionFieldsCheck: [],
       mentorVisibility: [],
-      navCategory: 'configurations',
+      navCategory: 'setup',
       ...overrides,
     };
   }
@@ -548,7 +548,7 @@ describe('EditMentorModal', () => {
     });
 
     it('hides the category strip when only one category has items', async () => {
-      // Only "Configurations" has items → no point in a strip with a single
+      // Only "Setup" has items → no point in a strip with a single
       // pill. The modal should suppress it entirely. We confirm by asserting
       // the "Agent settings categories" tablist is not in the document.
       mockFilteredSegments = [
@@ -577,7 +577,7 @@ describe('EditMentorModal', () => {
       // the strip wouldn't go unnoticed.
       mockFilteredSegments = [
         makeSegment(MODALS.EDIT_MENTOR.tabs.settings, {
-          navCategory: 'configurations',
+          navCategory: 'setup',
         }),
         makeSegment(MODALS.EDIT_MENTOR.tabs.mcp, {
           navCategory: 'integrations',
@@ -608,18 +608,18 @@ describe('EditMentorModal', () => {
 
   describe('handleCategoryChange', () => {
     it('switches to the first segment in the chosen category', async () => {
-      // The active segment lives in `configurations`. When the user clicks
+      // The active segment lives in `setup`. When the user clicks
       // the `integrations` pill, the modal must call `changeModalTab` with
       // the FIRST segment in the integrations bucket — that's the "open
       // each section to a sensible default" UX the handler exists for.
       mockFilteredSegments = [
         makeSegment(MODALS.EDIT_MENTOR.tabs.settings, {
-          navCategory: 'configurations',
+          navCategory: 'setup',
         }),
         makeSegment(MODALS.EDIT_MENTOR.tabs.mcp, {
           navCategory: 'integrations',
         }),
-        makeSegment(MODALS.EDIT_MENTOR.tabs.datasets, {
+        makeSegment(MODALS.EDIT_MENTOR.tabs.tools, {
           navCategory: 'integrations',
         }),
       ];
@@ -653,7 +653,7 @@ describe('EditMentorModal', () => {
       mockActiveTab = MODALS.EDIT_MENTOR.tabs.mcp;
       mockFilteredSegments = [
         makeSegment(MODALS.EDIT_MENTOR.tabs.settings, {
-          navCategory: 'configurations',
+          navCategory: 'setup',
         }),
         makeSegment(MODALS.EDIT_MENTOR.tabs.mcp, {
           navCategory: 'integrations',
@@ -667,13 +667,13 @@ describe('EditMentorModal', () => {
       );
 
       // The active tab is already in `integrations`, so the integrations
-      // pill renders as the selected one. Click `configurations` then
+      // pill renders as the selected one. Click `setup` then
       // click `integrations` again to invoke the handler with no-op
       // semantics on the second click.
-      const configurationsPills = await screen.findAllByRole('tab', {
-        name: 'Configurations',
+      const setupPills = await screen.findAllByRole('tab', {
+        name: 'Setup',
       });
-      fireEvent.click(configurationsPills[0]);
+      fireEvent.click(setupPills[0]);
       changeModalTabMock.mockClear();
 
       const integrationsPills = await screen.findAllByRole('tab', {
@@ -703,10 +703,10 @@ describe('EditMentorModal', () => {
       // Radix's onValueChange, which we route through `changeModalTab`.
       mockFilteredSegments = [
         makeSegment(MODALS.EDIT_MENTOR.tabs.settings, {
-          navCategory: 'configurations',
+          navCategory: 'setup',
         }),
         makeSegment(MODALS.EDIT_MENTOR.tabs.llm, {
-          navCategory: 'configurations',
+          navCategory: 'setup',
         }),
       ];
 
@@ -741,7 +741,7 @@ describe('EditMentorModal', () => {
   // already matches, so the effect's body never runs without a transition.
   // Force the transition by mutating the segments mock between an initial
   // render where Integrations is active and a rerender where only
-  // Configurations remains — that exercises line 135.
+  // Setup remains — that exercises line 135.
   // --------------------------------------------------------------------------
 
   describe('self-correcting active-category effect', () => {
@@ -750,7 +750,7 @@ describe('EditMentorModal', () => {
       mockActiveTab = MODALS.EDIT_MENTOR.tabs.mcp;
       mockFilteredSegments = [
         makeSegment(MODALS.EDIT_MENTOR.tabs.settings, {
-          navCategory: 'configurations',
+          navCategory: 'setup',
         }),
         makeSegment(MODALS.EDIT_MENTOR.tabs.mcp, {
           navCategory: 'integrations',
@@ -772,15 +772,15 @@ describe('EditMentorModal', () => {
         expect(integrations.getAttribute('aria-selected')).toBe('true');
       });
 
-      // Now remove all Integrations segments — only Configurations
+      // Now remove all Integrations segments — only Setup
       // remains. The active tab `mcp` is gone, so `activeSegment` is
       // undefined and the sync-from-active-segment effect can't recover
       // the category. The self-correcting effect at line 135 must fire
-      // and reset activeCategory to 'configurations' (the only visible
+      // and reset activeCategory to 'setup' (the only visible
       // bucket).
       mockFilteredSegments = [
         makeSegment(MODALS.EDIT_MENTOR.tabs.settings, {
-          navCategory: 'configurations',
+          navCategory: 'setup',
         }),
       ];
 
@@ -791,9 +791,9 @@ describe('EditMentorModal', () => {
       );
 
       // After the effect fires, Integrations pill is gone and
-      // Configurations is the (now sole) active strip option. With only
+      // Setup is the (now sole) active strip option. With only
       // one visible category, the strip itself is hidden — assert via
-      // the rendered segment list: Settings (the only configurations
+      // the rendered segment list: Settings (the only setup
       // segment) must be present.
       await waitFor(() => {
         // Rendered via the `header` translation namespace — "Settings", not
@@ -820,7 +820,7 @@ describe('EditMentorModal', () => {
     it('clicking the mobile-strip category pill also routes through changeModalTab', async () => {
       mockFilteredSegments = [
         makeSegment(MODALS.EDIT_MENTOR.tabs.settings, {
-          navCategory: 'configurations',
+          navCategory: 'setup',
         }),
         makeSegment(MODALS.EDIT_MENTOR.tabs.mcp, {
           navCategory: 'integrations',
@@ -848,6 +848,67 @@ describe('EditMentorModal', () => {
           MODALS.EDIT_MENTOR.tabs.mcp,
         );
       });
+    });
+  });
+
+  describe('category strip columns', () => {
+    const segmentInEveryCategory = () => [
+      makeSegment(MODALS.EDIT_MENTOR.tabs.settings, {
+        navCategory: 'setup',
+      }),
+      makeSegment(MODALS.EDIT_MENTOR.tabs.access, {
+        navCategory: 'policies',
+      }),
+      makeSegment(MODALS.EDIT_MENTOR.tabs.mcp, {
+        navCategory: 'integrations',
+      }),
+      makeSegment(MODALS.EDIT_MENTOR.tabs.memory, {
+        navCategory: 'activity',
+      }),
+    ];
+
+    it('puts all four categories on one row, each column sized to its title', async () => {
+      mockFilteredSegments = segmentInEveryCategory();
+
+      render(
+        <Provider store={createTestStore()}>
+          <EditMentorModal isOpen={true} onClose={vi.fn()} />
+        </Provider>,
+      );
+
+      // The desktop strip renders before the mobile strip in DOM order.
+      const [desktopStrip, mobileStrip] = await screen.findAllByRole(
+        'tablist',
+        { name: 'Agent settings categories' },
+      );
+      const desktopPills = within(desktopStrip).getAllByRole('tab');
+      expect(desktopPills.map((pill) => pill.textContent)).toEqual([
+        'Setup',
+        'Policies',
+        'Integrations',
+        'Activity',
+      ]);
+      expect(desktopStrip.style.gridTemplateColumns).toBe('repeat(4, auto)');
+      expect(mobileStrip.style.gridTemplateColumns).toBe('repeat(4, auto)');
+    });
+
+    it('keeps three categories on one row in both strips', async () => {
+      mockFilteredSegments = segmentInEveryCategory().filter(
+        (segment) => segment.navCategory !== 'activity',
+      );
+
+      render(
+        <Provider store={createTestStore()}>
+          <EditMentorModal isOpen={true} onClose={vi.fn()} />
+        </Provider>,
+      );
+
+      const [desktopStrip, mobileStrip] = await screen.findAllByRole(
+        'tablist',
+        { name: 'Agent settings categories' },
+      );
+      expect(desktopStrip.style.gridTemplateColumns).toBe('repeat(3, auto)');
+      expect(mobileStrip.style.gridTemplateColumns).toBe('repeat(3, auto)');
     });
   });
 });

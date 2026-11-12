@@ -122,20 +122,21 @@ test.describe('Journey 28: App Overview & Navigation UI — Admin', () => {
 
   // ov-14: The sidebar footer mirrors the SDK tenant-settings (`Account`)
   // rail, which lists Memory between Monetization and Advanced and gates it
-  // on `isAdmin` (no dedicated RBAC permission — same as Integrations /
+  // on `isAdmin` (no dedicated RBAC permission — same as Secrets and
   // Advanced). Clicking it opens the Account dialog titled "Memory" hosting
   // the SDK `MemoryAdminTab` with its Global / Agent sub-tabs.
-  test('admin sees the Memory footer entry next to Integrations/Advanced and it opens the tenant Memory tab (Global / Agent)', async ({
+  test('admin sees the Memory footer entry alongside Secrets, API and Advanced and it opens the tenant Memory tab (Global / Agent)', async ({
     page,
     sidebarPage,
   }) => {
     const isAdmin = await checkAdminStatus(page);
     test.skip(!isAdmin, 'Memory footer entry requires admin access');
 
-    // Same admin-only cluster the SDK rail shows: all three are present.
-    await expect(sidebarPage.integrationsButton).toBeVisible({
+    // Same admin-only cluster the SDK rail shows: all four are present.
+    await expect(sidebarPage.secretsButton).toBeVisible({
       timeout: 15_000,
     });
+    await expect(sidebarPage.apiButton).toBeVisible({ timeout: 10_000 });
     await expect(sidebarPage.memoryButton).toBeVisible({ timeout: 10_000 });
     await expect(sidebarPage.settingsButton).toBeVisible({ timeout: 10_000 });
 

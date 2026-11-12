@@ -1,5 +1,8 @@
-import { describe, it, expect, afterEach } from 'vitest';
-import { isTauriApp, initialModelDownloadState } from '../tauri';
+import { describe, it, expect, afterEach, vi } from 'vitest';
+import { isTauriApp, isTauriMobile, initialModelDownloadState } from '../tauri';
+
+const platform = vi.hoisted(() => vi.fn());
+vi.mock('@tauri-apps/plugin-os', () => ({ platform }));
 
 describe('tauri types', () => {
   describe('isTauriApp', () => {
@@ -56,6 +59,46 @@ describe('tauri types', () => {
     it('should have a valid ISO date string for lastUpdated', () => {
       const date = new Date(initialModelDownloadState.lastUpdated);
       expect(date.toString()).not.toBe('Invalid Date');
+    });
+  });
+
+  describe('isTauriMobile', () => {
+    const originalWindow = global.window;
+
+    afterEach(() => {
+      global.window = originalWindow;
+      platform.mockReset();
+    });
+
+    it('resolves false outside Tauri without asking the OS plugin', async () => {
+      // @ts-expect-error - Setting window to empty object
+      global.window = {};
+
+      await expect(isTauriMobile()).resolves.toBe(false);
+      expect(platform).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      ['ios', true],
+      ['android', true],
+      ['macos', false],
+      ['linux', false],
+    ])('resolves %s as mobile=%s inside Tauri', async (os, expected) => {
+      // @ts-expect-error - Adding test property
+      global.window = { __TAURI_INTERNALS__: {} };
+      platform.mockReturnValue(os);
+
+      await expect(isTauriMobile()).resolves.toBe(expected);
+    });
+
+    it('resolves false when the OS plugin is unavailable', async () => {
+      // @ts-expect-error - Adding test property
+      global.window = { __TAURI_INTERNALS__: {} };
+      platform.mockImplementation(() => {
+        throw new Error('plugin os not found');
+      });
+
+      await expect(isTauriMobile()).resolves.toBe(false);
     });
   });
 });

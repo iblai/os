@@ -623,4 +623,41 @@ describe('config', () => {
       expect(result.length).toBeGreaterThan(0);
     });
   });
+
+  /**
+   * The snippet a customer pastes keeps loading whatever bundle it was
+   * generated with, so this default is what every new embed gets until
+   * someone deliberately bumps it. Worth a test for the same reason it is
+   * pinned at all.
+   */
+  describe('agent-ai bundle', () => {
+    it('loads a pinned version, never latest', () => {
+      const url = new URL(config.agentAiSdkUrl());
+
+      expect(url.origin + url.pathname).toBe(
+        'https://assets.ibl.ai/web/mentorai.js',
+      );
+      expect(url.searchParams.get('versionId')).toBe(
+        config.agentAiSdkVersion(),
+      );
+    });
+
+    it('pins a version that carries the ssoprovider attribute', () => {
+      // Below agent-ai 2.13.4 the component cannot forward a custom SSO
+      // backend, and tenants wired to their own identity provider would send
+      // visitors to the default login instead.
+      expect(config.agentAiSdkVersion()).toBe(
+        'CJhD8dFLf8mzV7uPkPMBM.miYdYRS1qx',
+      );
+    });
+
+    it('lets a deployment override the version', () => {
+      (
+        global.window as unknown as { __ENV__?: Record<string, string> }
+      ).__ENV__ = { NEXT_PUBLIC_AGENT_AI_SDK_VERSION: 'other-version' };
+
+      expect(config.agentAiSdkVersion()).toBe('other-version');
+      expect(config.agentAiSdkUrl()).toContain('versionId=other-version');
+    });
+  });
 });

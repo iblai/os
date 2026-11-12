@@ -5,7 +5,8 @@ import * as React from 'react';
 import { ChevronDown, ChevronRight, MessageSquare, Pin } from 'lucide-react';
 
 import { useAppSelector } from '@/lib/hooks';
-import { selectSessionId, useTenantMetadata } from '@iblai/iblai-js/web-utils';
+import { selectSessionId } from '@iblai/iblai-js/web-utils';
+import { useTenantObjectMetadata } from '@/hooks/use-tenant-object-metadata';
 import { getUserName } from '@/features/utils';
 import { useUserIsStudent } from '@/hooks/use-user';
 import { cn } from '@/lib/utils';
@@ -22,7 +23,12 @@ import {
 
 import { ChatRow, chatRowLabel } from './chat-row-label';
 import { ChatRowItem } from './chat-row';
-import { useCodePermissionSessions } from '@iblai/iblai-js/web-containers/next';
+import {
+  ChatDownloadDialog,
+  useCodePermissionSessions,
+} from '@iblai/iblai-js/web-containers/next';
+import { useMentorSettings } from '@/hooks/use-mentors/use-mentor-settings';
+import { saveFile } from '@/lib/save-file';
 import { useRecentChats } from './use-recent-chats';
 
 const NAV_MUTED = '#5f5f61';
@@ -54,7 +60,7 @@ export function SidebarChatsSection({
   const appSessionId = useAppSelector(selectSessionId);
   const resolvedUserId = username ?? getUserName();
   const userIsStudent = useUserIsStudent();
-  const { metadata } = useTenantMetadata({ org: tenantKey });
+  const metadata = useTenantObjectMetadata(tenantKey);
   const canExport =
     !userIsStudent || metadata?.enable_chat_history_export !== false;
 
@@ -68,6 +74,8 @@ export function SidebarChatsSection({
     handleUnpin,
     handleDelete,
     handleExport,
+    exportingRow,
+    closeExport,
   } = useRecentChats({
     tenantKey,
     mentorId,
@@ -80,6 +88,7 @@ export function SidebarChatsSection({
   // Chats where Code is blocked on an answer. Its prompts render only in the chat that
   // raised them, so without this a background chat waits unseen until it times out.
   const awaitingPermission = useCodePermissionSessions();
+  const { data: mentorSettings } = useMentorSettings();
 
   // Render helpers -----------------------------------------------------
 
@@ -250,6 +259,15 @@ export function SidebarChatsSection({
           />
         </div>
       </CollapsibleContent>
+      <ChatDownloadDialog
+        open={!!exportingRow}
+        onOpenChange={(isOpen) => !isOpen && closeExport()}
+        mentorName={mentorSettings?.mentorName ?? ''}
+        tenantKey={tenantKey}
+        username={resolvedUserId}
+        sessionId={exportingRow?.session_id}
+        saveFile={saveFile}
+      />
     </Collapsible>
   );
 }

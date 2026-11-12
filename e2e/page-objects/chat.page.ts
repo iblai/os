@@ -184,6 +184,12 @@ export class ChatPage {
   readonly downloadScopeMessageRadio: Locator;
   /** The dialog's single primary action button ("Download"). There is no Cancel — dismiss via Escape or the dialog's built-in close. */
   readonly downloadConfirmButton: Locator;
+  /** The shared SDK dialog (`data-testid="chat-download-dialog"`) — "Download Chat" from a reply, "Export Chat" from the sidebar row menu. */
+  readonly exportDialogRoot: Locator;
+  /** The "File type" dropdown (Text / Excel) inside the shared dialog. */
+  readonly downloadFormatSelect: Locator;
+  /** Footer status slot — "Getting the whole chat…", "Getting your file ready…" or an error; absent when idle. */
+  readonly downloadStatus: Locator;
   /**
    * One rendered file-attachment chip (SDK `file-attachments-list.tsx`,
    * `data-testid="attachment-chip"`). Use `.first()`/`.nth()` to disambiguate
@@ -318,6 +324,13 @@ export class ChatPage {
       name: 'Download this chat',
     });
     this.downloadDialog = page.getByRole('dialog', { name: 'Download Chat' });
+    this.exportDialogRoot = page.getByTestId('chat-download-dialog');
+    this.downloadFormatSelect = this.exportDialogRoot.getByRole('combobox', {
+      name: 'File type',
+    });
+    this.downloadStatus = this.exportDialogRoot.getByTestId(
+      'chat-download-status',
+    );
     this.downloadScopeChatRadio = this.downloadDialog.getByRole('radio', {
       name: 'Entire chat',
     });
@@ -505,6 +518,23 @@ export class ChatPage {
         return key ? cache[key] : null;
       } catch {
         return null;
+      }
+    }, mentorId);
+  }
+
+  /** Drops `mentorId`'s entry from the device session cache so the next open must look the conversation up. */
+  async forgetCachedSession(mentorId: string): Promise<void> {
+    await this.page.evaluate((mid: string) => {
+      try {
+        const cache = JSON.parse(
+          window.localStorage.getItem('session_id') ?? '{}',
+        ) as Record<string, string>;
+        for (const key of Object.keys(cache)) {
+          if (key.endsWith(`:${mid}`)) delete cache[key];
+        }
+        window.localStorage.setItem('session_id', JSON.stringify(cache));
+      } catch {
+        window.localStorage.removeItem('session_id');
       }
     }, mentorId);
   }
@@ -1341,6 +1371,28 @@ export class ChatPage {
     await expect(this.downloadDialog).toBeVisible({ timeout: 10_000 });
   }
 
+  /** Picks "Text (.txt)" or "Excel (.xlsx)" in the dialog's File type dropdown. */
+  async selectDownloadFormat(format: 'Text' | 'Excel'): Promise<void> {
+    await this.downloadFormatSelect.click();
+    await this.page
+      .getByRole('option', { name: new RegExp(`^${format}`) })
+      .click();
+    await expect(this.downloadFormatSelect).toContainText(format);
+  }
+
+  /** Reads a triggered `Download`'s full content as a Buffer (binary files such as .xlsx). */
+  async readDownloadBuffer(download: Download): Promise<Buffer> {
+    const stream = await download.createReadStream();
+    if (!stream) return Buffer.alloc(0);
+    const chunks: Buffer[] = [];
+    await new Promise<void>((resolve, reject) => {
+      stream.on('data', (chunk: Buffer) => chunks.push(chunk));
+      stream.on('end', () => resolve());
+      stream.on('error', reject);
+    });
+    return Buffer.concat(chunks);
+  }
+
   /**
    * Reads a triggered `Download`'s full content as UTF-8 text. Uses
    * `createReadStream()` rather than `download.path()` — the stream works
@@ -1536,13 +1588,18 @@ export class ChatPage {
    * Opens the composer's "+" menu (desktop dropdown or phone sheet) and
    * waits until it is genuinely showing — retried like `openSkillsMenu()`,
    * since a click landing while a previous Radix instance is still tearing
-   * down can be swallowed or double-toggle.
+   * down can be swallowed or double-toggle. A menu that is already open is
+   * left alone, and left alone BEFORE the trigger is looked for: the open
+   * dropdown hides everything outside itself from the accessibility tree,
+   * its own trigger included, so a role query for "+" cannot succeed until
+   * the menu has closed.
    */
   async openPlusMenu(): Promise<void> {
+    if (await this.openPlusMenuAny().isVisible()) return;
     await expect(this.plusMenuButton).toBeVisible({ timeout: 15_000 });
     await expect(async () => {
       if (!(await this.openPlusMenuAny().isVisible())) {
-        await this.plusMenuButton.click();
+        await this.plusMenuButton.click({ timeout: 5_000 });
       }
       await expect(this.openPlusMenuAny()).toBeVisible({ timeout: 1_000 });
     }).toPass({ timeout: 15_000 });
@@ -1927,5 +1984,49 @@ export class ChatPage {
     });
 
     return { uploadUrl, fileId, fileKey };
+  }
+
+  // ---- Retrieved Documents (iblai/iblai-platform#2855) ----
+
+  get retrievedDocumentsHeading(): Locator {
+    return this.page.getByRole('heading', { name: 'Retrieved Documents' });
+  }
+
+  retrievedDocumentRow(title: string): Locator {
+    return this.page
+      .getByTestId('retrieved-document')
+      .filter({ hasText: title });
+  }
+
+  get retrievedDocumentPreview(): Locator {
+    return this.page.getByTestId('retrieved-document-preview');
+  }
+
+  /**
+   * Answers the sources request (`GET **\/clean-vector-results/**`) with
+   * `docs`, since the backend may return none for a throwaway agent.
+   */
+  async mockRetrievedDocuments(
+    docs: { title: string; source: string; score: number; snippet: string }[],
+  ): Promise<void> {
+    await this.page.route('**/clean-vector-results/**', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(docs),
+      }),
+    );
+  }
+
+  /** Opens the preview dialog of the retrieved document titled `title`. */
+  async openRetrievedDocumentPreview(title: string): Promise<void> {
+    const toggle = this.retrievedDocumentRow(title).getByTestId(
+      'retrieved-document-preview-toggle',
+    );
+    await toggle.scrollIntoViewIfNeeded();
+    await toggle.click();
+    await expect(this.retrievedDocumentPreview).toBeVisible({
+      timeout: 10_000,
+    });
   }
 }

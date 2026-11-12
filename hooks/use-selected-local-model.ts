@@ -10,13 +10,9 @@ import {
   type LocalModel,
 } from '@iblai/iblai-js/web-containers';
 
-/**
- * Window event other OS components dispatch after changing the device-global
- * on-device selection — a model pick in the LLM tab or the Local Models master
- * toggle in Profile → Advanced. `storage` events only fire cross-tab, so this
- * covers the same-tab case so the nav-bar badge updates immediately.
- */
-export const LOCAL_LLM_CHANGED_EVENT = 'ibl:local-llm-changed';
+import { LOCAL_LLM_CHANGED_EVENT } from '@/lib/local-llm-flags';
+
+export { LOCAL_LLM_CHANGED_EVENT };
 
 export interface SelectedLocalModel {
   /** On-device mode is enabled and a model id is selected. */
@@ -45,7 +41,24 @@ export function useSelectedLocalModel(): SelectedLocalModel {
     const read = () => {
       const enabled = isLocalLLMEnabled();
       const id = getLocalLLMModel();
-      const model = id ? (LOCAL_MODELS.find((m) => m.id === id) ?? null) : null;
+      // The SDK's rule: a missing or "latest" tag is a wildcard, but two
+      // explicit tags must agree. Dropping the tag outright matched a stored
+      // "gpt-oss:120b" to the catalog's "gpt-oss:20b", so the badge named the
+      // wrong model and the self-heal below wrote that entry's tool support.
+      const parse = (ref: string) => {
+        const [base, tag] = ref.toLowerCase().split(':');
+        return { base, tag: !tag || tag === 'latest' ? null : tag };
+      };
+      const want = id ? parse(id) : null;
+      const model = want
+        ? (LOCAL_MODELS.find((m) => {
+            const have = parse(m.id);
+            return (
+              have.base === want.base &&
+              (want.tag === null || have.tag === null || have.tag === want.tag)
+            );
+          }) ?? null)
+        : null;
       // Self-heal the derived tool-support cache. Local chat routes on
       // `ibl_local_llm_tool_support` (SDK ollama-client), but an older selection
       // may have left it stale/false — which makes streaming reject a genuinely

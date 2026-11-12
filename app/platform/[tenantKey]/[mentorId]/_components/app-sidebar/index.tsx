@@ -15,6 +15,7 @@ import {
   Brain,
   ChevronDown,
   ChevronRight,
+  CodeXml,
   Coins,
   KeyRound,
   LineChart,
@@ -53,7 +54,8 @@ import {
 } from '@iblai/iblai-js/web-utils';
 import {
   Admin,
-  IntegrationsTab,
+  SecretsTab,
+  ApiTab,
   BillingTab,
   MonetizationTab,
   MemoryAdminTab,
@@ -458,7 +460,8 @@ type SidebarOpenSection =
 type AccountTab =
   | 'organization'
   | 'management'
-  | 'integrations'
+  | 'secrets'
+  | 'api'
   | 'monetization'
   | 'memory'
   | 'advanced'
@@ -1021,7 +1024,12 @@ export function AppSidebar() {
       }
       actions.push({
         id: 'footer-api',
-        label: t('integrations'),
+        label: t('api'),
+        icon: CodeXml,
+      });
+      actions.push({
+        id: 'footer-secrets',
+        label: t('secrets'),
         icon: KeyRound,
       });
       if (canMonetize) {
@@ -1032,7 +1040,7 @@ export function AppSidebar() {
         });
       }
       // Memory mirrors the SDK `Account` rail exactly: it sits between
-      // Monetization and Advanced and, like Integrations/Advanced, has no
+      // Monetization and Advanced and, like Secrets/Advanced, has no
       // dedicated RBAC permission — the rail filters it on `isAdmin`, so
       // here it follows the live-admin gate (and the trial/anonymous
       // cluster below). Non-admins never get it via RBAC alone.
@@ -1059,7 +1067,12 @@ export function AppSidebar() {
       actions.push({ id: 'footer-users', label: t('management'), icon: Users });
       actions.push({
         id: 'footer-api',
-        label: t('integrations'),
+        label: t('api'),
+        icon: CodeXml,
+      });
+      actions.push({
+        id: 'footer-secrets',
+        label: t('secrets'),
         icon: KeyRound,
       });
       actions.push({
@@ -1083,7 +1096,7 @@ export function AppSidebar() {
       // Analytics permission gate. We MUST guard on `config.enableRBAC()`
       // because `checkRbacPermission` returns true when RBAC is off, which
       // would otherwise expose these to every non-admin. `!isAdmin` keeps an
-      // admin-in-learner-mode excluded. Integrations, Memory and Advanced
+      // admin-in-learner-mode excluded. Secrets, Memory and Advanced
       // have no dedicated RBAC permission (the SDK `Account` rail filters
       // them on `isAdmin`), so they stay admin/trial/anonymous-only.
       if (hasInviteUserPermission) {
@@ -1141,8 +1154,11 @@ export function AppSidebar() {
         case 'footer-users':
           openAccountTab('management');
           return;
+        case 'footer-secrets':
+          openAccountTab('secrets');
+          return;
         case 'footer-api':
-          openAccountTab('integrations');
+          openAccountTab('api');
           return;
         case 'footer-monetization':
           openAccountTab('monetization');
@@ -1615,7 +1631,7 @@ export function AppSidebar() {
 
 /**
  * Renders one of the SDK's organization-level tab components in its
- * own dialog — `Admin` (Users), `IntegrationsTab` (API), `BillingTab`,
+ * own dialog — `Admin` (Users), `SecretsTab`, `ApiTab`, `BillingTab`,
  * `MonetizationTab`, `MemoryAdminTab` (user global + agent memories),
  * `AdvancedTab` (Settings). Each footer action opens
  * this dialog with a different `tab`; the body switches the SDK
@@ -1646,7 +1662,8 @@ function AccountSheet({
   const accountTabTitles: Record<AccountTab, string> = {
     organization: t('accountTabOrganization'),
     management: t('management'),
-    integrations: t('integrations'),
+    secrets: t('secrets'),
+    api: t('api'),
     monetization: t('monetization'),
     memory: t('memory'),
     advanced: t('advanced'),
@@ -1656,7 +1673,8 @@ function AccountSheet({
   const accountTabDescriptions: Record<AccountTab, string> = {
     organization: t('accountDescOrganization'),
     management: t('accountDescManagement'),
-    integrations: t('accountDescIntegrations'),
+    secrets: t('accountDescSecrets'),
+    api: t('accountDescApi'),
     monetization: t('accountDescMonetization'),
     memory: t('accountDescMemory'),
     advanced: t('accountDescAdvanced'),
@@ -1670,7 +1688,7 @@ function AccountSheet({
         (`sm:max-w-7xl w-[95vw]`). Height is PINNED to `h-[90vh]`
         (was `max-h-[90vh]`) so the dialog stays the same size as
         the user navigates between sub-tabs inside Management
-        (Users → Groups → Roles → Policies) and Integrations. With
+        (Users → Groups → Roles → Policies). With
         `max-h`, an empty/short sub-tab made the dialog collapse to
         fit, then expand back when content loaded — felt jumpy.
         Pinning the outer height + keeping the inner scroll area
@@ -1706,8 +1724,15 @@ function AccountSheet({
               rbacPermissions={{}}
             />
           )}
-          {tab === 'integrations' && (
-            <IntegrationsTab tenantKey={tenantKey} username={username} />
+          {tab === 'secrets' && (
+            <SecretsTab tenantKey={tenantKey} username={username} />
+          )}
+          {tab === 'api' && (
+            <ApiTab
+              tenantKey={tenantKey}
+              username={username}
+              helpUrl={config.helpCenterUrl() || undefined}
+            />
           )}
           {tab === 'billing' && (
             <BillingTab

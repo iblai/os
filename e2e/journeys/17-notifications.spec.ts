@@ -72,7 +72,8 @@ test.describe('Journey 17: Notifications — Admin', () => {
       .catch(() => false);
     if (!visible) return;
     await createBtn.click();
-    const dialog = page.getByRole('dialog');
+    // The rich-text editor mounts its own Insert Link/Image/Video dialogs.
+    const dialog = page.getByTestId('send-notification-dialog');
     await expect(dialog).toBeVisible({ timeout: 10_000 });
     await page.keyboard.press('Escape');
   });

@@ -367,7 +367,7 @@ describe('StarredMentorsSection', () => {
 
       renderWithContext();
 
-      expect(screen.getByText('See more')).toBeInTheDocument();
+      expect(screen.getByText('See More')).toBeInTheDocument();
     });
 
     it('does not show See more button when there is no next page', () => {
@@ -398,7 +398,7 @@ describe('StarredMentorsSection', () => {
 
       renderWithContext();
 
-      expect(screen.queryByText('See more')).not.toBeInTheDocument();
+      expect(screen.queryByText('See More')).not.toBeInTheDocument();
     });
 
     it('loads more mentors when See more is clicked', async () => {
@@ -434,7 +434,7 @@ describe('StarredMentorsSection', () => {
 
       renderWithContext();
 
-      const seeMoreButton = screen.getByText('See more');
+      const seeMoreButton = screen.getByText('See More');
       fireEvent.click(seeMoreButton);
 
       // Should re-render and make a new query with increased limit

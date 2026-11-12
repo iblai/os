@@ -47,7 +47,9 @@ export function installChromeStub() {
   const store: Record<string, unknown> = {};
   const activated = new Set<Listener>();
   const updated = new Set<Listener>();
+  const removed = new Set<Listener>();
   const connected = new Set<Listener>();
+  const detached = new Set<Listener>();
   const stub = {
     identity: {
       getRedirectURL: vi.fn(() => 'https://abc.chromiumapp.org/'),
@@ -57,11 +59,27 @@ export function installChromeStub() {
       query: vi.fn(async () => [
         { id: 7, url: 'https://app.acme.com/', active: true },
       ]),
-      get: vi.fn(async (id: number) => ({
-        id,
-        url: 'https://app.acme.com/',
-        status: 'complete',
-      })),
+      get: vi.fn(
+        async (
+          id: number,
+        ): Promise<{
+          id: number;
+          url: string;
+          status: string;
+          active?: boolean;
+          windowId?: number;
+        }> => ({
+          id,
+          url: 'https://app.acme.com/',
+          status: 'complete',
+          active: true,
+          windowId: 1,
+        }),
+      ),
+      captureVisibleTab: vi.fn(
+        async (_windowId: number, _options: unknown) =>
+          'data:image/jpeg;base64,xyz',
+      ),
       update: vi.fn(async () => ({})),
       goBack: vi.fn(async () => undefined),
       onActivated: {
@@ -73,6 +91,14 @@ export function installChromeStub() {
       onUpdated: {
         addListener: vi.fn((listener: Listener) => updated.add(listener)),
         removeListener: vi.fn((listener: Listener) => updated.delete(listener)),
+      },
+      // The organization chooser opens in a tab of its own and is watched
+      // until the user picks (or closes it).
+      create: vi.fn(async ({ url }: { url: string }) => ({ id: 99, url })),
+      remove: vi.fn(async (_id: number) => undefined),
+      onRemoved: {
+        addListener: vi.fn((listener: Listener) => removed.add(listener)),
+        removeListener: vi.fn((listener: Listener) => removed.delete(listener)),
       },
     },
     scripting: {
@@ -116,12 +142,26 @@ export function installChromeStub() {
       onStartup: { addListener: vi.fn() },
     },
     sidePanel: { setPanelBehavior: vi.fn(async () => undefined) },
+    // Real clicks: attach/detach bracket a run, sendCommand carries the input.
+    debugger: {
+      attach: vi.fn(async (_target: unknown, _version: string) => undefined),
+      detach: vi.fn(async (_target: unknown) => undefined),
+      sendCommand: vi.fn(
+        async (_target: unknown, _method: string, _params?: unknown) => ({}),
+      ),
+      onDetach: {
+        addListener: vi.fn((listener: Listener) => detached.add(listener)),
+        removeListener: vi.fn((listener: Listener) =>
+          detached.delete(listener),
+        ),
+      },
+    },
     // The panel's own window: what it uses to find the tab to drive, instead of
     // asking for the last-focused window (which can be DevTools).
     windows: { getCurrent: vi.fn(async () => ({ id: 1 })) },
   };
   (globalThis as { chrome?: unknown }).chrome = stub;
-  return { stub, store, activated, updated, connected };
+  return { stub, store, activated, updated, removed, connected, detached };
 }
 
 /**

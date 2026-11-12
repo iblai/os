@@ -14,7 +14,6 @@ import { authApiSlice } from '@/features/auth/api-slice';
 import { authApiSlice as authApiSliceDataLayer } from '@iblai/iblai-js/data-layer';
 import topTrialBannerSlice from '@/features/top-banner/top-banner-slice';
 import subscriptionSlice from '@/features/subscription/subscription-slice';
-import { userApiSlice } from '@/features/users/api-slice';
 import { modalReducer } from '@/features/navigation/slice';
 import { mentorsApiSlice } from '@/features/mentors/api-slice';
 import { tenantsApiSlice } from '@/features/tenants/api-slice';
@@ -29,6 +28,7 @@ import { analyticsReducer } from '@/features/analytics/slice';
 import { chatInputSliceReducer } from '@/features/chat-input/api-slice';
 import rbacReducer from '@/features/rbac/rbac-slice';
 import imagePreviewsReducer from '@/features/image-previews/image-previews-slice';
+import { tenantMetadataStorageSync } from '@/features/tenants/tenant-metadata-storage-sync';
 
 // Bridge: the data layer's `updateMemsearchConfig` mutation only invalidates
 // the MEMSEARCH_PLATFORM_CONFIG tag, but our app reads memsearch state via
@@ -69,7 +69,6 @@ export const store = configureStore({
 
     [mentorsApiSlice.reducerPath]: mentorsApiSlice.reducer,
     [messagesApiSlice.reducerPath]: messagesApiSlice.reducer,
-    [userApiSlice.reducerPath]: userApiSlice.reducer,
     [tenantsApiSlice.reducerPath]: tenantsApiSlice.reducer,
     [coreApiSlice.reducerPath]: coreApiSlice.reducer,
     [authApiSlice.reducerPath]: authApiSlice.reducer,
@@ -87,7 +86,6 @@ export const store = configureStore({
     getDefaultMiddleware().concat(
       mentorsApiSlice.middleware,
       messagesApiSlice.middleware,
-      userApiSlice.middleware,
       tenantsApiSlice.middleware,
       coreApiSlice.middleware,
       authApiSlice.middleware,
@@ -97,6 +95,7 @@ export const store = configureStore({
       providerAssociationApiSlice.middleware,
       ...mentorMiddleware,
       memsearchStatusBridge.middleware,
+      tenantMetadataStorageSync.middleware,
     ),
 });
 

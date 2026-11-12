@@ -32,7 +32,7 @@ export function VoiceCallButton({
           <Button
             variant="ghost"
             size="icon"
-            className="mr-3 flex h-9 w-9 items-center justify-center text-gray-400"
+            className="mr-3 flex h-9 w-9 items-center justify-center text-gray-400 max-[520px]:mr-1 max-[520px]:w-8 max-[380px]:mr-0"
             onClick={onClick}
             disabled={disabled || isPreviewMode}
             type="button"

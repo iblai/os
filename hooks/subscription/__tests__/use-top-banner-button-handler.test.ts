@@ -37,11 +37,11 @@ vi.mock('@iblai/iblai-js/web-utils', () => ({
       }) => `Hello, please top up ${currentTenantOrg} for ${userEmail}`,
     },
   },
-  useTenantMetadata: ({ org }: { org: string }) => ({
-    metadata: mockMetadata,
-    metadataLoaded: true,
-    _org: org,
-  }),
+}));
+
+// Tenant metadata now rides the tenants list via this local hook (raw object).
+vi.mock('@/hooks/use-tenant-object-metadata', () => ({
+  useTenantObjectMetadata: () => mockMetadata,
 }));
 
 vi.mock('@/hooks/use-user', () => ({

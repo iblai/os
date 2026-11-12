@@ -8,7 +8,8 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import type { CanvasOpenPayload } from './types';
-import { markdownToHtml, isHtml } from '@/lib/utils';
+import { isHtml } from '@/lib/utils';
+import { markdownToHtml } from '@/lib/markdown-engine';
 import Markdown from '@/components/markdown';
 
 const SNIPPET_LENGTH = 140;

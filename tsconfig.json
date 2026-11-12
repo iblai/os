@@ -29,6 +29,12 @@
       "@/*": ["./*"]
     }
   },
+  // `exclude` wins over `include`, so the two e2e configs that
+  // __tests__/playwright-security-config.test.ts imports from outside the
+  // excluded e2e/ tree are listed as `files`, which `exclude` does not filter
+  // — under composite every imported file must be listed (TS6307). The e2e
+  // specs themselves stay out. Keep them importing nothing else from e2e/.
+  "files": ["e2e/mcp.config.ts", "e2e/playwright.config.ts"],
   "include": [
     "**/*.ts",
     "**/*.tsx",

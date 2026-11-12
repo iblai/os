@@ -40,7 +40,10 @@ vi.mock('@/features/top-banner/constants', () => ({
 }));
 
 describe('mentorSubscriptionFlow', () => {
-  let mockDispatch: ReturnType<typeof vi.fn>;
+  // Typed as the call signature it stands in for: a bare `ReturnType<typeof
+  // vi.fn>` is `Mock<Procedure | Constructable>` under vitest 4, which no
+  // longer satisfies a plain `Dispatch`.
+  let mockDispatch: ReturnType<typeof vi.fn<(action: unknown) => unknown>>;
   let subscriptionFlow: mentorSubscriptionFlow;
   let defaultConfig: SubscriptionFlowConfig;
 

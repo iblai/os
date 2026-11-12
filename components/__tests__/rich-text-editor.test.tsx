@@ -26,10 +26,10 @@ const focusEditor = async (user: ReturnType<typeof userEvent.setup>) => {
 };
 
 describe('RichTextEditor Component', () => {
-  let mockOnChange: ReturnType<typeof vi.fn>;
+  let mockOnChange: ReturnType<typeof vi.fn<(value: string) => void>>;
 
   beforeEach(() => {
-    mockOnChange = vi.fn();
+    mockOnChange = vi.fn<(value: string) => void>();
   });
 
   afterEach(() => {

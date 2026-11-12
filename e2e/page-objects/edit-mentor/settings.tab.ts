@@ -1,5 +1,4 @@
 import { Page, Locator, expect } from '@playwright/test';
-import { isVisibleWithin } from '../../utils/resilient';
 
 export class SettingsTab {
   readonly page: Page;
@@ -9,6 +8,13 @@ export class SettingsTab {
   readonly copyButton: Locator;
   readonly visibilityCombobox: Locator;
   readonly saveButton: Locator;
+  readonly audienceHelp: Locator;
+  readonly publicCatalogSwitch: Locator;
+  readonly guestChatSwitch: Locator;
+  readonly discoverySummary: Locator;
+  readonly adminVisibilityConfirm: Locator;
+  readonly adminVisibilityConfirmButton: Locator;
+  readonly adminVisibilityCancelButton: Locator;
   readonly deleteButton: Locator;
   readonly advancedCssSection: Locator;
   readonly advancedCssEditor: Locator;
@@ -17,10 +23,9 @@ export class SettingsTab {
   readonly advancedJsEditor: Locator;
   readonly allowCopiesToggle: Locator;
   readonly copyMentorButton: Locator;
-  readonly chatAccessCombobox: Locator;
   readonly verboseReasoningToggle: Locator;
-  /** Capabilities sub-tab: "Allow in-chat model change" (#2633). */
-  readonly inChatModelChangeToggle: Locator;
+  /** Capabilities sub-tab: "Reopen last conversation" (#2629), `show_last_conversation`. */
+  readonly showLastConversationToggle: Locator;
   readonly enhanceDocumentRetrievalToggle: Locator;
   readonly enhanceDocumentRetrievalTooltipTrigger: Locator;
   readonly promptCachingToggle: Locator;
@@ -57,6 +62,18 @@ export class SettingsTab {
   readonly capabilityMatrixRowAttachment: Locator;
   readonly capabilityMatrixRowVoiceRecord: Locator;
   readonly capabilityMatrixRowVoiceCall: Locator;
+
+  /** Capabilities sub-tab: "File Uploads" group, last group (iblai-platform#2528). */
+  readonly contextLimitsGroup: Locator;
+  readonly fileUploadsGroup: Locator;
+  readonly allowedFileTypesBox: Locator;
+  readonly allowedFileTypesInfoButton: Locator;
+  readonly allowedFileTypesButton: Locator;
+  readonly allowedFileTypesDialog: Locator;
+  readonly allowedFileTypesInput: Locator;
+  readonly allowedFileTypesError: Locator;
+  readonly allowedFileTypesDraftCount: Locator;
+  readonly allowedFileTypesCustom: Locator;
 
   /**
    * Basic sub-tab. The Category combobox (iblai-platform#2289 regression
@@ -100,10 +117,23 @@ export class SettingsTab {
       .or(dialog.getByLabel(/unique id/i));
     this.copyButton = dialog.getByRole('button', { name: /copy/i }).first();
     this.visibilityCombobox = dialog.getByRole('combobox', {
-      name: 'Select Who Can View',
+      name: 'Who Can Use This Agent?',
       exact: true,
     });
+    this.publicCatalogSwitch = dialog.getByTestId('discovery-public-catalog');
+    this.guestChatSwitch = dialog.getByTestId('discovery-guest-chat');
+    this.discoverySummary = dialog.getByTestId('discovery-summary');
     this.saveButton = dialog.getByRole('button', { name: /save/i }).first();
+    this.audienceHelp = page.getByTestId('discovery-audience-help');
+    this.adminVisibilityConfirm = page.getByRole('alertdialog');
+    this.adminVisibilityConfirmButton = this.adminVisibilityConfirm.getByRole(
+      'button',
+      { name: 'Limit to Administrators', exact: true },
+    );
+    this.adminVisibilityCancelButton = this.adminVisibilityConfirm.getByRole(
+      'button',
+      { name: 'Cancel', exact: true },
+    );
     this.deleteButton = dialog.getByRole('button', { name: /delete/i }).first();
     this.advancedCssSection = dialog
       .getByText(/advanced css/i)
@@ -131,18 +161,15 @@ export class SettingsTab {
       name: 'Copy',
       exact: true,
     });
-    this.chatAccessCombobox = dialog.getByRole('combobox', {
-      name: 'Select who can chat',
-    });
     // Capabilities sub-tab. The "Enable Verbose Reasoning" toggle (show_reasoning);
     // aria-label is "Enable Verbose Reasoning enabled" / "Enable Verbose Reasoning disabled"
     // depending on current state.
     this.verboseReasoningToggle = dialog.getByRole('switch', {
       name: /^Enable Verbose Reasoning /i,
     });
-    this.inChatModelChangeToggle = dialog.getByRole('switch', {
-      name: /^Allow in-chat model change (enabled|disabled)$/i,
-    });
+    this.showLastConversationToggle = dialog.getByTestId(
+      'settings-show-last-conversation-switch',
+    );
     // Capabilities sub-tab. Visible label "Enhanced Document Retrieval"
     // (source: messages/en.json `enhancedDocRetrievalLabel`); the SDK switch
     // appends the state, so the aria-label reads "Enhanced Document Retrieval
@@ -196,6 +223,30 @@ export class SettingsTab {
     );
     this.capabilityMatrixRowVoiceCall = dialog.getByTestId(
       'capability-matrix-row-voice-call',
+    );
+    this.contextLimitsGroup = dialog.getByTestId('settings-context-limits');
+    this.fileUploadsGroup = dialog.getByTestId('settings-file-uploads');
+    this.allowedFileTypesBox = dialog.getByTestId('allowed-file-types-box');
+    this.allowedFileTypesInfoButton = this.allowedFileTypesBox.getByRole(
+      'button',
+      { name: 'More about file types users can attach' },
+    );
+    this.allowedFileTypesButton = dialog.getByTestId(
+      'allowed-file-types-button',
+    );
+    // The dialog is portaled out of the Edit Agent dialog, so resolve from page.
+    this.allowedFileTypesDialog = page.getByTestId('allowed-file-types-dialog');
+    this.allowedFileTypesInput = this.allowedFileTypesDialog.getByTestId(
+      'allowed-file-types-input',
+    );
+    this.allowedFileTypesError = this.allowedFileTypesDialog.getByTestId(
+      'allowed-file-types-error',
+    );
+    this.allowedFileTypesDraftCount = this.allowedFileTypesDialog.getByTestId(
+      'allowed-file-types-draft-count',
+    );
+    this.allowedFileTypesCustom = this.allowedFileTypesDialog.getByTestId(
+      'allowed-file-types-custom',
     );
     this.categoryTrigger = dialog.getByRole('combobox', {
       name: 'Select a category',
@@ -289,8 +340,8 @@ export class SettingsTab {
    * Each interaction below auto-switches to the right sub-tab so callers
    * don't have to know the layout. No-op when already on the target tab.
    *
-   * The parent category Tabs use distinct names (Configurations /
-   * Integrations / Analytics), so an exact-name role match is sufficient
+   * The parent category Tabs use distinct names (Setup / Policies /
+   * Integrations / Activity), so an exact-name role match is sufficient
    * to target only the inner sub-tab without extra filters.
    */
   async selectSubTab(
@@ -366,48 +417,108 @@ export class SettingsTab {
     await this.copyButton.click();
   }
 
+  /**
+   * Picks the "Who Can Use This Agent?" option. Legacy labels map onto the
+   * Discovery redesign: Administrators -> Admins Only; Users /
+   * Authenticated Users -> All Members with the public catalog off; Anyone ->
+   * All Members with the public catalog on.
+   */
   async setVisibility(label: string): Promise<void> {
+    const key = label.trim().toLowerCase();
+    if (/^admin/.test(key)) return this.setAudience('Admins Only');
+    if (key === 'anyone') {
+      await this.setAudience('All Members');
+      return this.setPublicCatalog(true);
+    }
+    await this.setAudience('All Members');
+    return this.setPublicCatalog(false);
+  }
+
+  async setAudience(option: 'All Members' | 'Admins Only'): Promise<void> {
     await this.selectSubTab('Discovery');
     await expect(this.visibilityCombobox).toBeVisible({ timeout: 5_000 });
+    const current = (await this.visibilityCombobox.textContent()) ?? '';
+    if (current.includes(option)) return;
     await this.visibilityCombobox.click();
-    // Use the Radix UI option (div[role="option"]) rather than native <option>
-    const opt = this.page.locator('div[role="option"]').filter({
-      hasText: new RegExp(`^${label}$`, 'i'),
+    const opt = this.page.getByRole('option', { name: option, exact: true });
+    await expect(opt).toBeVisible({ timeout: 5_000 });
+    await opt.click();
+    await expect(this.visibilityCombobox).toContainText(option);
+  }
+
+  private async setSwitch(sw: Locator, on: boolean): Promise<void> {
+    await this.selectSubTab('Discovery');
+    await expect(sw).toBeVisible({ timeout: 5_000 });
+    if (((await sw.getAttribute('aria-checked')) === 'true') === on) return;
+    await sw.click();
+    await expect(sw).toHaveAttribute('aria-checked', String(on));
+  }
+
+  async setPublicCatalog(on: boolean): Promise<void> {
+    await this.setSwitch(this.publicCatalogSwitch, on);
+  }
+
+  async setGuestChat(on: boolean): Promise<void> {
+    await this.setSwitch(this.guestChatSwitch, on);
+  }
+
+  async confirmAdminVisibility(): Promise<void> {
+    await expect(this.adminVisibilityConfirm).toBeVisible({ timeout: 10_000 });
+    await this.adminVisibilityConfirmButton.click();
+  }
+
+  async cancelAdminVisibility(): Promise<void> {
+    await expect(this.adminVisibilityConfirm).toBeVisible({ timeout: 10_000 });
+    await this.adminVisibilityCancelButton.click();
+    await expect(this.adminVisibilityConfirm).toBeHidden({ timeout: 10_000 });
+  }
+
+  /**
+   * Clicks Save and waits for the success toast, confirming the "Limit this
+   * agent to administrators?" prompt when this save triggers it (saved value
+   * was Users/Anyone and the form now says Administrators).
+   */
+  async saveConfirmingAdminVisibility(): Promise<void> {
+    await expect(this.saveButton).toBeEnabled({ timeout: 10_000 });
+    await this.saveButton.click();
+    const toast = this.page.getByText(/agent updated successfully/i).first();
+    await this.adminVisibilityConfirm.or(toast).first().waitFor({
+      state: 'visible',
+      timeout: 30_000,
     });
-    const radixVisible = await isVisibleWithin(opt.first(), 3_000);
-    if (radixVisible) {
-      await opt.first().click();
-    } else {
-      // Fallback: try any role="option" with matching text
-      const fallback = this.page.getByRole('option', {
-        name: new RegExp(label, 'i'),
-      });
-      await expect(fallback.first()).toBeVisible({ timeout: 5_000 });
-      await fallback.first().click();
+    if (await this.adminVisibilityConfirm.isVisible()) {
+      await this.adminVisibilityConfirmButton.click();
     }
+    await expect(toast).toBeVisible({ timeout: 30_000 });
   }
 
   async setVisibilityAnyone(): Promise<void> {
     await this.setVisibility('Anyone');
   }
 
-  async setChatAccess(label: string): Promise<void> {
+  /** Reads the Discovery state: audience text, catalog and guest switches. */
+  async readDiscovery(): Promise<{
+    audience: string;
+    catalog: boolean;
+    guest: boolean;
+    summary: string;
+  }> {
     await this.selectSubTab('Discovery');
-    await expect(this.chatAccessCombobox).toBeVisible({ timeout: 5_000 });
-    await this.chatAccessCombobox.click();
-    const opt = this.page.locator('div[role="option"]').filter({
-      hasText: new RegExp(`^${label}$`, 'i'),
-    });
-    const radixVisible = await isVisibleWithin(opt.first(), 3_000);
-    if (radixVisible) {
-      await opt.first().click();
-    } else {
-      const fallback = this.page.getByRole('option', {
-        name: new RegExp(label, 'i'),
-      });
-      await expect(fallback.first()).toBeVisible({ timeout: 5_000 });
-      await fallback.first().click();
-    }
+    await expect(this.visibilityCombobox).toBeVisible({ timeout: 10_000 });
+    return {
+      audience: ((await this.visibilityCombobox.textContent()) ?? '').trim(),
+      catalog:
+        (await this.publicCatalogSwitch.getAttribute('aria-checked')) ===
+        'true',
+      guest:
+        (await this.guestChatSwitch.getAttribute('aria-checked')) === 'true',
+      summary: ((await this.discoverySummary.textContent()) ?? '').trim(),
+    };
+  }
+
+  /** "Anyone" -> guest chat on; any other legacy label -> guest chat off. */
+  async setChatAccess(label: string): Promise<void> {
+    await this.setGuestChat(/^anyone$/i.test(label.trim()));
   }
 
   async setChatAccessAnyone(): Promise<void> {
@@ -459,20 +570,22 @@ export class SettingsTab {
   }
 
   /**
-   * Sets "Allow in-chat model change" and saves, returning the settings
-   * request's body, or `null` when the toggle was already in that state.
+   * Sets "Reopen last conversation" and saves. Returns the PUT/PATCH request
+   * that carried `show_last_conversation`, or null when already in `target`.
    */
-  async setInChatModelChange(target: boolean): Promise<string | null> {
+  async setShowLastConversation(
+    target: boolean,
+  ): Promise<{ body: string; url: string; ok: boolean } | null> {
     await this.selectSubTab('Capabilities');
-    await expect(this.inChatModelChangeToggle).toBeVisible({
+    await expect(this.showLastConversationToggle).toBeVisible({
       timeout: 10_000,
     });
     const isChecked =
-      (await this.inChatModelChangeToggle.getAttribute('aria-checked')) ===
+      (await this.showLastConversationToggle.getAttribute('aria-checked')) ===
       'true';
     if (isChecked === target) return null;
-    await this.inChatModelChangeToggle.click();
-    await expect(this.inChatModelChangeToggle).toHaveAttribute(
+    await this.showLastConversationToggle.click();
+    await expect(this.showLastConversationToggle).toHaveAttribute(
       'aria-checked',
       String(target),
       { timeout: 10_000 },
@@ -482,16 +595,20 @@ export class SettingsTab {
       this.page.waitForRequest(
         (req) =>
           ['PUT', 'PATCH'].includes(req.method()) &&
-          (req.postData() ?? '').includes('enable_in_chat_llm_change'),
+          (req.postData() ?? '').includes('show_last_conversation'),
         { timeout: 30_000 },
       ),
       this.saveButton.click(),
     ]);
+    const response = await request.response();
     await expect(
       this.page.getByText(/Agent updated successfully/i).first(),
     ).toBeVisible({ timeout: 30_000 });
-    await this.page.waitForTimeout(500);
-    return request.postData() ?? '';
+    return {
+      body: request.postData() ?? '',
+      url: request.url(),
+      ok: !!response && response.ok(),
+    };
   }
 
   /**
@@ -783,6 +900,65 @@ export class SettingsTab {
    */
   categoryOptionCheck(name: string): Locator {
     return this.categoryOption(name).locator('svg').last();
+  }
+
+  /** A common-extension toggle inside the File Types dialog (aria-pressed). */
+  allowedFileTypeToggle(ext: string): Locator {
+    return this.allowedFileTypesDialog.getByTestId(`allowed-file-type-${ext}`);
+  }
+
+  async openAllowedFileTypes(): Promise<void> {
+    await this.selectSubTab('Capabilities');
+    await this.allowedFileTypesButton.scrollIntoViewIfNeeded();
+    await this.allowedFileTypesButton.click();
+    await expect(this.allowedFileTypesDialog).toBeVisible({ timeout: 10_000 });
+  }
+
+  /** Types into the dialog's input and clicks Add. */
+  async addAllowedFileType(text: string): Promise<void> {
+    await this.allowedFileTypesInput.fill(text);
+    await this.allowedFileTypesDialog
+      .getByRole('button', { name: 'Add', exact: true })
+      .click();
+  }
+
+  async clearAllAllowedFileTypes(): Promise<void> {
+    await this.allowedFileTypesDialog
+      .getByRole('button', { name: 'Clear All' })
+      .click();
+  }
+
+  async doneAllowedFileTypes(): Promise<void> {
+    await this.allowedFileTypesDialog
+      .getByRole('button', { name: 'Done', exact: true })
+      .click();
+    await expect(this.allowedFileTypesDialog).toBeHidden({ timeout: 10_000 });
+  }
+
+  /**
+   * Clicks the tab's Save and returns the JSON PUT that carried
+   * `allowed_file_upload_extensions` (parsed list), once the success toast shows.
+   */
+  async saveAllowedFileTypes(): Promise<{ extensions: string[]; ok: boolean }> {
+    await expect(this.saveButton).toBeEnabled({ timeout: 10_000 });
+    const [request] = await Promise.all([
+      this.page.waitForRequest(
+        (req) =>
+          req.method() === 'PUT' &&
+          (req.postData() ?? '').includes('allowed_file_upload_extensions'),
+        { timeout: 30_000 },
+      ),
+      this.saveButton.click(),
+    ]);
+    const response = await request.response();
+    await expect(
+      this.page.getByText(/Agent updated successfully/i).first(),
+    ).toBeVisible({ timeout: 30_000 });
+    const body = JSON.parse(request.postData() ?? '{}');
+    return {
+      extensions: body.allowed_file_upload_extensions,
+      ok: !!response && response.ok(),
+    };
   }
 
   /**

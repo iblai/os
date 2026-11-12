@@ -209,7 +209,7 @@ describe('AppLayout', () => {
         'h-dvh',
         'flex',
         'flex-col',
-        'overflow-hidden',
+        'overflow-hidden!',
       );
 
       expect(screen.getByTestId('children')).toBeInTheDocument();
@@ -337,6 +337,9 @@ describe('AppLayout', () => {
       const mainContent = screen.getByRole('main');
       expect(mainContent).toHaveAttribute('id', 'main-content-container');
       expect(mainContent).toHaveClass('flex-1', 'flex', 'flex-col', 'min-h-0');
+      // The mobile apps inject unlayered `main { overflow: auto }` CSS; only an
+      // !important utility beats it and keeps the shell from scrolling.
+      expect(mainContent).toHaveClass('overflow-hidden!');
     });
 
     it('passes defaultOpen prop to SidebarProvider', () => {

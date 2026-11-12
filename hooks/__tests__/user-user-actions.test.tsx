@@ -69,8 +69,14 @@ vi.mock('@/features/utils', () => ({
   getUserName: () => 'testuser',
 }));
 
+// A `function`, not an arrow: the code under test calls this with `new`, and
+// vitest 4 stopped wrapping a mock's implementation in a constructible
+// function of its own, so an arrow implementation throws "is not a
+// constructor".
 vi.mock('@/hooks/subscription/subscription-flow-v2', () => ({
-  MentorSubscriptionFlowV2: vi.fn().mockImplementation(() => ({})),
+  MentorSubscriptionFlowV2: vi.fn().mockImplementation(function () {
+    return {};
+  }),
 }));
 
 let mockIsAppleDevice = false;

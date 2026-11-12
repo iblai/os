@@ -19,6 +19,7 @@ import {
   switchToTasksTab,
   type TaskRepeat,
 } from '@iblai/iblai-js/playwright';
+import { ActivityPhoneView } from './activity-phone';
 
 export type { TaskRepeat };
 
@@ -45,6 +46,7 @@ export type { TaskRepeat };
 export class TasksTab {
   readonly page: Page;
   readonly dialog: Locator;
+  readonly phone: ActivityPhoneView;
 
   /** Default labels shipped with the SDK — handy when a test wants to assert
    * the exact heading/description text rather than going through a helper. */
@@ -52,11 +54,11 @@ export class TasksTab {
 
   /**
    * Category-aware tab navigation injected by `EditMentorPage` (see
-   * `bindTabNav` there). The Tasks segment lives in the modal's Runtime
+   * `bindTabNav` there). The Tasks segment lives in the modal's Activity
    * category, and the sidebar only mounts the ACTIVE category's segment
    * triggers — so the SDK's `switchToTasksTab` (which predates the category
    * strip and expects the trigger to already be in the DOM) can't find it
-   * while the modal sits on its default Configurations view.
+   * while the modal sits on its default Setup view.
    */
   private navigateToTab?: (tabName: string) => Promise<void>;
 
@@ -67,6 +69,7 @@ export class TasksTab {
   constructor(page: Page, dialog: Locator) {
     this.page = page;
     this.dialog = dialog;
+    this.phone = new ActivityPhoneView(page, dialog);
   }
 
   // ---------------------------------------------------------------------------
@@ -81,7 +84,7 @@ export class TasksTab {
   /**
    * Click the Tasks tab inside the Edit Mentor modal.
    *
-   * Activates the Runtime category first when the tab nav is bound (the
+   * Activates the Activity category first when the tab nav is bound (the
    * default via `EditMentorPage`'s constructor), then delegates to the SDK
    * helper — its click on the now-active trigger is a no-op, but its
    * wait-for-toolbar-ready assertion is still the readiness signal callers
@@ -343,6 +346,50 @@ export class TasksTab {
 
   expectFailedTasks(n: number): Promise<void> {
     return expectFailedTasks(this.dialog, n);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Phone view (< 768px): task cards, Task Logs screen, date sheet
+  // ---------------------------------------------------------------------------
+
+  /** A task card, matched by (a substring of) the task name. */
+  phoneTaskCard(name: string): Locator {
+    return this.dialog.getByRole('button', { name: new RegExp(name) });
+  }
+
+  /** Tap a card; the full-screen Task Logs screen opens over the dialog. */
+  async openPhoneTaskLogs(name: string): Promise<void> {
+    await this.phoneTaskCard(name).click();
+    await expect(this.phone.screenTitle(TASKS_LABELS.logs.title)).toBeVisible({
+      timeout: 10_000,
+    });
+  }
+
+  /** Delete the task whose Task Logs screen is open (trash in its header). */
+  async deletePhoneTask(): Promise<void> {
+    await this.phone
+      .screen()
+      .getByRole('button', { name: TASKS_LABELS.list.deleteTask, exact: true })
+      .click();
+    const dialog = this.page.locator(
+      `[role="dialog"][aria-label="${TASKS_LABELS.deleteDialog.dialogName}"]`,
+    );
+    await dialog
+      .getByRole('button', { name: TASKS_LABELS.deleteDialog.delete })
+      .click();
+    await expect(dialog).toBeHidden({ timeout: 10_000 });
+  }
+
+  /** The date filter is an icon button named "Select Date" (or the chosen date). */
+  phoneDateButton(): Locator {
+    return this.dialog.getByRole('button', {
+      name: TASKS_LABELS.toolbar.selectDate,
+      exact: true,
+    });
+  }
+
+  phoneDateSheet(): Locator {
+    return this.phone.sheet(TASKS_LABELS.toolbar.selectDate);
   }
 
   // ---------------------------------------------------------------------------

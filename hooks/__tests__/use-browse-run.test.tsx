@@ -75,7 +75,11 @@ describe('useBrowseRun', () => {
     act(() => result.current.browse.run('open billing'));
 
     expect(sent()).toEqual([
-      { type: 'MENTOR:BROWSE_RUN', goal: 'open billing', auto: true },
+      {
+        type: 'MENTOR:BROWSE_RUN',
+        goal: 'open billing',
+        auto: true,
+      },
     ]);
     expect(result.current.browse.isRunning).toBe(true);
     expect(messages().at(-1)).toMatchObject({
@@ -106,15 +110,29 @@ describe('useBrowseRun', () => {
     expect(result.current.browse.isRunning).toBe(false);
   });
 
-  it('lists each action as a tool call on the turn', () => {
+  // The row's `name` is its title and what the chat's "Used N tools" header
+  // counts (distinct names), so each row is numbered and named after its
+  // action: the header counts the actions, and the empty `input` keeps the
+  // row to that one line.
+  it('lists each action as a numbered row named after it', () => {
     const { result } = render();
     act(() => result.current.browse.run('go'));
     act(() => frame({ type: 'log', text: 'Click [1] button "Pay"', ok: true }));
     act(() => frame({ type: 'log', text: 'Type into [2] textbox', ok: false }));
 
     expect(state().currentStreamingMessage.toolCalls).toMatchObject([
-      { log: 'Click [1] button "Pay"', result: 'ok' },
-      { log: 'Type into [2] textbox', result: 'failed' },
+      {
+        name: '1. Click [1] button "Pay"',
+        input: {},
+        log: 'Click [1] button "Pay"',
+        result: 'ok',
+      },
+      {
+        name: '2. Type into [2] textbox',
+        input: {},
+        log: 'Type into [2] textbox',
+        result: 'failed',
+      },
     ]);
   });
 

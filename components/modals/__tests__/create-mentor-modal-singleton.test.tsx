@@ -12,7 +12,11 @@ import { configureStore } from '@reduxjs/toolkit';
 
 import { modalReducer, type ModalInfo } from '@/features/navigation/slice';
 import rbacReducer from '@/features/rbac/rbac-slice';
-import { mentorApiSlice } from '@iblai/iblai-js/data-layer';
+import {
+  agentSettingsApiSlice,
+  mentorApiSlice,
+  mentorCategoriesApiSlice,
+} from '@iblai/iblai-js/data-layer';
 import { MODALS } from '@/lib/constants';
 
 // ============================================================================
@@ -133,28 +137,6 @@ vi.mock('@/hooks/use-tenants', () => ({
   useTenantKey: () => ({ tenant: 'tenant123' }),
 }));
 
-vi.mock('@/hooks/use-mentors/use-create-mentor', () => ({
-  useCreateMentor: () => ({
-    form: {
-      Field: ({ children }: any) =>
-        children({
-          state: { value: '', meta: { isDirty: false } },
-          handleChange: vi.fn(),
-        }),
-      handleSubmit: vi.fn(),
-    },
-    name: '',
-    description: '',
-    category: null,
-    file: null,
-    guidedPrompt: '',
-    systemPrompt: '',
-    proactivePrompt: '',
-    isLoadingCreateMentor: false,
-    editPrompt: vi.fn(),
-  }),
-}));
-
 // Mock EditMentorModal to avoid complex dependencies
 vi.mock('../edit-mentor-modal', () => ({
   EditMentorModal: ({
@@ -185,11 +167,19 @@ function createTestStore(preloadedStack: ModalInfo[] = []) {
       modals: modalReducer,
       rbac: rbacReducer,
       [mentorApiSlice.reducerPath]: mentorApiSlice.reducer,
+      // The SDK form asks the categories and field-permissions queries on
+      // open, from inside the SDK bundle (out of reach of the data-layer mock).
+      [mentorCategoriesApiSlice.reducerPath]: mentorCategoriesApiSlice.reducer,
+      [agentSettingsApiSlice.reducerPath]: agentSettingsApiSlice.reducer,
     },
     middleware: (getDefaultMiddleware) =>
       getDefaultMiddleware({
         serializableCheck: false,
-      }).concat(mentorApiSlice.middleware),
+      }).concat(
+        mentorApiSlice.middleware,
+        mentorCategoriesApiSlice.middleware,
+        agentSettingsApiSlice.middleware,
+      ),
     preloadedState: {
       modals: {
         modalStack: preloadedStack,

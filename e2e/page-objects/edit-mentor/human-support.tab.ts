@@ -1,4 +1,4 @@
-import { Page, Locator } from '@playwright/test';
+import { expect, Page, Locator } from '@playwright/test';
 import {
   SUPPORT_LABELS,
   getSupportTabTrigger,
@@ -36,6 +36,7 @@ import {
   createSupportTicketViaChatAndVerify,
   type SupportTicketStatus,
 } from '@iblai/iblai-js/playwright';
+import { ActivityPhoneView } from './activity-phone';
 
 export type { SupportTicketStatus };
 
@@ -46,7 +47,7 @@ export type { SupportTicketStatus };
  * (`@iblai/iblai-js/web-containers/next`), wrapped in `AgentSettingsProvider`
  * by `components/modals/edit-mentor-modal/tabs/human-support-tab.tsx`. The tab
  * is admin-only (`userTypes: [UserType.ADMIN]`) and lives under the
- * **Runtime** sidebar category (`hooks/use-mentor-segments.ts`), alongside
+ * **Activity** sidebar category (`hooks/use-mentor-segments.ts`), alongside
  * Tasks / Memory / History / Audit. The host sidebar renders the segment's
  * label as **"Support"** (not "Human Support") — `SUPPORT_LABELS.tabName`
  * mirrors this; the SDK still calls its own internal export "Support" too, so
@@ -62,7 +63,7 @@ export type { SupportTicketStatus };
  *
  * CATEGORY: the modal sidebar only mounts the active category's segment
  * triggers (see `EditMentorPage.navigateToTab`). Support lives under
- * **Runtime**, so `switchToTab()` activates that category first via the
+ * **Activity**, so `switchToTab()` activates that category first via the
  * `bindTabNav` callback injected by `EditMentorPage` — mirrors `TasksTab`,
  * which has the identical problem (its SDK helper `switchToTasksTab`
  * predates the category strip and is category-blind).
@@ -80,17 +81,24 @@ export type { SupportTicketStatus };
 export class HumanSupportTab {
   readonly page: Page;
   readonly dialog: Locator;
+  readonly phone: ActivityPhoneView;
 
   /** Default labels shipped with the SDK — use for text assertions. */
   static readonly LABELS = SUPPORT_LABELS;
 
+  /** Phone-only strings the SDK's `SUPPORT_LABELS` does not export. */
+  static readonly PHONE_LABELS = {
+    availableToUsers: 'Available to Users',
+    ticketTitle: 'Support Ticket',
+  } as const;
+
   /**
    * Category-aware tab navigation injected by `EditMentorPage` (see
-   * `bindTabNav` there). The Support segment lives in the modal's Runtime
+   * `bindTabNav` there). The Support segment lives in the modal's Activity
    * category, and the sidebar only mounts the ACTIVE category's segment
    * triggers — so the SDK's `switchToSupportTab` (which predates the
    * category strip and expects the trigger to already be in the DOM) can't
-   * find it while the modal sits on its default Configurations view.
+   * find it while the modal sits on its default Setup view.
    */
   private navigateToTab?: (tabName: string) => Promise<void>;
 
@@ -101,6 +109,7 @@ export class HumanSupportTab {
   constructor(page: Page, dialog: Locator) {
     this.page = page;
     this.dialog = dialog;
+    this.phone = new ActivityPhoneView(page, dialog);
   }
 
   // ---------------------------------------------------------------------------
@@ -120,7 +129,7 @@ export class HumanSupportTab {
   /**
    * Click the Support tab inside the Edit Mentor modal.
    *
-   * Activates the Runtime category first when the tab nav is bound (the
+   * Activates the Activity category first when the tab nav is bound (the
    * default via `EditMentorPage`'s constructor), then delegates to the SDK
    * helper — its click on the now-active trigger is a no-op, but its
    * wait-for-panel-ready assertion is still the readiness signal callers
@@ -334,6 +343,45 @@ export class HumanSupportTab {
 
   expectNoRepliesYet(): Promise<void> {
     return expectNoRepliesYet(this.dialog);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Phone view (< 768px): ticket cards, ticket screen, filter sheets
+  // ---------------------------------------------------------------------------
+
+  /** The "Available to Users" row that holds the switch on a phone. */
+  phoneAvailableToUsersRow(): Locator {
+    return this.dialog.getByText(
+      HumanSupportTab.PHONE_LABELS.availableToUsers,
+      {
+        exact: true,
+      },
+    );
+  }
+
+  /** The status filter is a sheet trigger (`aria-haspopup="dialog"`). */
+  phoneStatusFilterTrigger(): Locator {
+    return this.dialog.getByRole('button', { name: 'Filter by status' });
+  }
+
+  phoneStatusFilterSheet(): Locator {
+    return this.phone.sheet('Filter by status');
+  }
+
+  /** Open the status sheet, pick `label` (e.g. "Closed"); the sheet closes. */
+  async pickPhoneStatusFilter(label: string): Promise<void> {
+    await this.phoneStatusFilterTrigger().click();
+    const sheet = this.phoneStatusFilterSheet();
+    await sheet.getByRole('button', { name: label, exact: true }).click();
+    await expect(sheet).toBeHidden({ timeout: 5_000 });
+  }
+
+  /** Tap a ticket card; the full-screen ticket screen opens. */
+  async openPhoneTicket(subject: string | RegExp): Promise<void> {
+    await this.ticketRow(subject).click();
+    await expect(
+      this.phone.screenTitle(HumanSupportTab.PHONE_LABELS.ticketTitle),
+    ).toBeVisible({ timeout: 10_000 });
   }
 
   // ---------------------------------------------------------------------------

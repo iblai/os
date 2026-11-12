@@ -26,7 +26,7 @@ export function StopStreamingButton({ stopGenerating }: Props) {
             type="button"
             size="icon"
             className={cn(
-              'h-9 w-9 rounded-lg bg-gradient-to-r from-[#2563EB] to-[#93C5FD] hover:opacity-90',
+              'h-9 w-9 rounded-lg bg-gradient-to-r from-[#2563EB] to-[#93C5FD] hover:opacity-90 max-[380px]:h-8 max-[380px]:w-8',
               CSS_CLASS_NAMES.CHAT.STOP_STREAMING_BUTTON,
             )}
             onMouseDown={(e) => e.preventDefault()}

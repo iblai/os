@@ -23,6 +23,8 @@ mod code_agent_installer;
 #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
 mod code_agent_models;
 #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+mod save_file;
+#[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
 #[allow(dead_code)]
 mod foundry_manager;
 mod mcp_bridge_installer;
@@ -893,6 +895,15 @@ async fn stop_ollama(app: AppHandle) -> Result<(), String> {
     Ok(())
 }
 
+/// Starts local chat in the background at launch while Local Models is on —
+/// a switch only the webview knows, so it asks. Mobile chats against its
+/// embedded server directly, with no bridge to start.
+#[command]
+async fn warm_up_local_chat() {
+    #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+    model_manager::warm_up_local_chat().await;
+}
+
 /// Emit an app-wide event to the frontend WITHOUT racing the main thread's
 /// webview-manager mutex.
 ///
@@ -937,6 +948,10 @@ where
 /// Check Ollama installation and model status
 #[command]
 async fn check_ollama_status(app: AppHandle) -> Result<OllamaStatus, String> {
+    // Mobile: a status check is the first thing to reach the embedded server
+    // after the app resumes, so it is where a dead one gets restarted.
+    #[cfg(any(target_os = "ios", target_os = "android"))]
+    let _ = crate::local_llm::ensure_answering().await;
     // Determine availability FIRST (/api/version), then — only once available —
     // wait a short grace period BEFORE reaching /api/tags (it lags /api/version
     // right after start, so reading too early reports "stopped"/"no models").
@@ -1041,6 +1056,12 @@ async fn download_ollama_model(app: AppHandle, model: String) -> Result<(), Stri
         },
     );
 
+    // Mobile: the embedded server. One that stopped answering (iOS reclaims a
+    // suspended app's sockets) is restarted in place, with no 30 s wait on
+    // the dead port first.
+    #[cfg(any(target_os = "ios", target_os = "android"))]
+    crate::local_llm::ensure_answering().await?;
+
     // Check if Ollama is running
     if !is_ollama_running().await {
         emit_on_main(
@@ -1059,26 +1080,14 @@ async fn download_ollama_model(app: AppHandle, model: String) -> Result<(), Stri
         // Wait for it to actually become ready (it can take several seconds; a
         // fixed short delay raced the server and made downloads fail).
         if !wait_for_ollama_ready(30).await {
-            // Mobile: there is no "manually" — the server is embedded. Say
-            // what the probe actually saw so a failure is diagnosable from
-            // the error toast alone (device stdout is not readable in dev).
+            // The model service runs inside the app on a phone, so there is
+            // nothing there for the user to start by hand.
             #[cfg(any(target_os = "ios", target_os = "android"))]
-            {
-                let url = crate::local_llm::server_url();
-                let probe = match url.as_deref() {
-                    Some(u) => match reqwest::get(format!("{u}/api/version")).await {
-                        Ok(r) => format!("HTTP {}", r.status()),
-                        Err(e) => format!("{e}"),
-                    },
-                    None => "embedded server never started".to_string(),
-                };
-                return Err(format!(
-                    "Embedded model server is not responding (url: {}, probe: {probe})",
-                    url.as_deref().unwrap_or("none")
-                ));
-            }
+            let message =
+                "The built-in model service could not be reached. Close the app and open it again.";
             #[cfg(not(any(target_os = "ios", target_os = "android")))]
-            return Err("Could not start Ollama server. Please start Ollama manually.".to_string());
+            let message = "Could not start Ollama server. Please start Ollama manually.";
+            return Err(message.to_string());
         }
 
         emit_on_main(
@@ -1477,11 +1486,11 @@ async fn ollama_chat(
     tool_support: Option<bool>,
 ) -> Result<String, String> {
     let model = model.unwrap_or_else(|| "phi3:mini".to_string());
-    let base = model_manager::chat_base_url(tool_support.unwrap_or(false))?;
-    let ollama_url = format!("{base}/api/chat");
+    #[cfg(any(target_os = "ios", target_os = "android"))]
+    crate::local_llm::ensure_answering().await?;
 
     println!(
-        "[MentorAI] Proxying Ollama chat ({} messages) from {base}",
+        "[MentorAI] Proxying Ollama chat ({} messages)",
         messages.len()
     );
 
@@ -1496,13 +1505,8 @@ async fn ollama_chat(
         "stream": false
     });
 
-    let response = client
-        .post(ollama_url)
-        .header("Content-Type", "application/json")
-        .json(&body)
-        .send()
-        .await
-        .map_err(|e| format!("Failed to connect to Ollama: {}. Is Ollama running?", e))?;
+    let response =
+        model_manager::post_local_chat(&client, &body, tool_support.unwrap_or(false)).await?;
 
     if !response.status().is_success() {
         let status = response.status();
@@ -1530,11 +1534,11 @@ async fn ollama_chat_stream(
     tool_support: Option<bool>,
 ) -> Result<(), String> {
     let model = model.unwrap_or_else(|| "phi3:mini".to_string());
-    let base = model_manager::chat_base_url(tool_support.unwrap_or(false))?;
-    let ollama_url = format!("{base}/api/chat");
+    #[cfg(any(target_os = "ios", target_os = "android"))]
+    crate::local_llm::ensure_answering().await?;
 
     println!(
-        "[MentorAI] Streaming Ollama chat ({} messages) from {base}",
+        "[MentorAI] Streaming Ollama chat ({} messages)",
         messages.len()
     );
 
@@ -1553,13 +1557,8 @@ async fn ollama_chat_stream(
         "stream": true
     });
 
-    let response = client
-        .post(ollama_url)
-        .header("Content-Type", "application/json")
-        .json(&body)
-        .send()
-        .await
-        .map_err(|e| format!("Failed to connect to Ollama: {}. Is Ollama running?", e))?;
+    let response =
+        model_manager::post_local_chat(&client, &body, tool_support.unwrap_or(false)).await?;
 
     if !response.status().is_success() {
         let status = response.status();
@@ -2026,7 +2025,7 @@ const URL_MONITOR_SCRIPT_ONLINE: &str = r#"
 
             var context = {};
             for (var i = 0; i < keysToSave.length; i++) {
-                var value = localStorage.getItem(keysToSave[i]);
+                var value = (sessionStorage.getItem(keysToSave[i]) || localStorage.getItem(keysToSave[i]));
                 if (value) {
                     context[keysToSave[i]] = value;
                 }
@@ -2036,7 +2035,7 @@ const URL_MONITOR_SCRIPT_ONLINE: &str = r#"
             for (var j = 0; j < localStorage.length; j++) {
                 var key = localStorage.key(j);
                 if (key && (key.indexOf('ibl') !== -1 || key.indexOf('token') !== -1 || key.indexOf('user') !== -1)) {
-                    context[key] = localStorage.getItem(key);
+                    context[key] = (sessionStorage.getItem(key) || localStorage.getItem(key));
                 }
             }
 
@@ -2186,12 +2185,22 @@ const URL_MONITOR_SCRIPT_OFFLINE: &str = r#"
                         // Restore all saved localStorage keys
                         for (var key in context) {
                             if (context.hasOwnProperty(key)) {
-                                var existingValue = localStorage.getItem(key);
-                                // Only restore if the value doesn't exist or is different
-                                if (!existingValue || existingValue !== context[key]) {
-                                    localStorage.setItem(key, context[key]);
+                                // Fill only empty stores, each independently. The
+                                // localStorage seed may already hold the key while this
+                                // tab's sessionStorage source-of-truth is empty (or vice
+                                // versa) — restore the missing one without clobbering a
+                                // live value the running tab already set.
+                                var localHas = localStorage.getItem(key) !== null;
+                                var sessionHas = sessionStorage.getItem(key) !== null;
+                                if (!localHas || !sessionHas) {
+                                    if (!localHas) {
+                                        localStorage.setItem(key, context[key]);
+                                    }
+                                    if (!sessionHas) {
+                                        sessionStorage.setItem(key, context[key]);
+                                    }
                                     restoredCount++;
-                                    console.log('[OfflineMode] Restored localStorage key:', key);
+                                    console.log('[OfflineMode] Restored key:', key);
                                 }
                             }
                         }
@@ -2667,9 +2676,306 @@ pub fn run() {
                 let initial_url = tauri::WebviewUrl::External(app_url.parse().unwrap());
                 let app_base_url_json = serde_json::to_string(&app_url).unwrap();
 
-                // Safe area handling script for iOS - ensures content doesn't scroll behind notch/home indicator
-                // Also handles Google OAuth by opening in system browser
-                let safe_area_script = r#"
+                let safe_area_script =
+                    MOBILE_SAFE_AREA_SCRIPT.replace("__IBL_APP_BASE_URL__", &app_base_url_json);
+
+                // Combine safe area script with online monitoring script
+                let combined_script = format!("{}\n{}", safe_area_script, URL_MONITOR_SCRIPT_ONLINE);
+                let app_handle = app.handle().clone();
+
+                // Use online monitoring script with safe area handling
+                let window = tauri::WebviewWindowBuilder::new(
+                    app,
+                    "main",
+                    initial_url,
+                )
+                .initialization_script(&combined_script)
+                .on_navigation(move |url| {
+                    let url_str = url.as_str();
+                    let log_msg = format!("[ibl.ai] [MOBILE] on_navigation called with URL: {}", url_str);
+                    println!("{}", log_msg);
+
+                    let is_oauth = is_oauth_url(url_str);
+                    let oauth_check_msg = format!("[ibl.ai] [MOBILE] is_oauth_url result: {}", is_oauth);
+                    println!("{}", oauth_check_msg);
+
+                    if is_oauth {
+                        let intercept_msg = format!(
+                            "[ibl.ai] [MOBILE] OAuth navigation intercepted, opening Safari VC: {}",
+                            url_str
+                        );
+                        println!("{}", intercept_msg);
+
+                        if let Err(e) = open_oauth_url(&app_handle, url_str) {
+                            let error_msg = format!("[ibl.ai] [MOBILE] Failed to open external URL: {}", e);
+                            println!("{}", error_msg);
+                            return true;
+                        }
+
+                        println!("[ibl.ai] [MOBILE] Returning false to prevent webview navigation");
+                        return false;
+                    }
+                    // Our own deep-link schemes, navigated INSIDE the webview
+                    // (the SSO flow ends by redirecting to
+                    // iblai-mentor:///sso-login-complete?data=…). iOS hands
+                    // such navigations to the OS, which loops them back via
+                    // the deep-link plugin — but Android's WebView just fails
+                    // with ERR_UNKNOWN_URL_SCHEME, so route them into the
+                    // same handler ourselves and block the navigation.
+                    let scheme = url.scheme();
+                    if scheme == "iblai-mentor" || scheme == "ai.ibl.mentorai" {
+                        println!("[ibl.ai] [MOBILE] In-webview deep link intercepted: {url_str}");
+                        handle_deep_link_url(&app_handle, url_str);
+                        return false;
+                    }
+                    println!("[ibl.ai] [MOBILE] Allowing normal navigation");
+                    true
+                })
+                .build()
+                .expect("Failed to create main window");
+
+                if let Ok(mut pending) = get_pending_deep_link().lock() {
+                    if let Some(pending_url) = pending.take() {
+                        if let Ok(js_url) = serde_json::to_string(&pending_url) {
+                            let _ = window.eval(&format!("window.location.href = {};", js_url));
+                        }
+                    }
+                }
+
+                println!("[ibl.ai] Mobile window created with safe area support");
+            }
+
+            Ok(())
+        });
+
+    // Register the custom URI scheme protocol for offline cache (desktop only)
+    #[cfg(not(any(target_os = "ios", target_os = "android")))]
+    let builder =
+        builder.register_asynchronous_uri_scheme_protocol("mentor", |ctx, request, responder| {
+            // Extract the URL path - format: mentor://fetch/<encoded_url>
+            let uri = request.uri();
+            let path = uri.path();
+
+            // Handle the fetch protocol
+            if path.starts_with("/fetch/") {
+                let encoded_url = &path[7..]; // Skip "/fetch/"
+                let url = match urlencoding::decode(encoded_url) {
+                    Ok(u) => u.to_string(),
+                    Err(_) => {
+                        responder.respond(
+                            http::Response::builder()
+                                .status(http::StatusCode::BAD_REQUEST)
+                                .body(b"Invalid URL encoding".to_vec())
+                                .unwrap(),
+                        );
+                        return;
+                    }
+                };
+
+                // Get app handle for accessing cache (unused but kept for future use)
+                let _app = ctx.app_handle().clone();
+
+                std::thread::spawn(move || {
+                    let rt = tokio::runtime::Runtime::new().unwrap();
+                    rt.block_on(async {
+                        let cache_lock = get_web_cache().read().await;
+                        if let Some(cache) = cache_lock.as_ref() {
+                            match cache.fetch(&url).await {
+                                Ok(response) => {
+                                    let mut builder = http::Response::builder()
+                                        .status(response.status)
+                                        .header("Content-Type", response.content_type);
+
+                                    // Add CORS headers to allow the shell to access
+                                    builder = builder
+                                        .header("Access-Control-Allow-Origin", "*")
+                                        .header("Access-Control-Allow-Methods", "GET, OPTIONS")
+                                        .header("Access-Control-Allow-Headers", "*");
+
+                                    responder.respond(builder.body(response.body).unwrap());
+                                }
+                                Err(e) => {
+                                    responder.respond(
+                                        http::Response::builder()
+                                            .status(http::StatusCode::SERVICE_UNAVAILABLE)
+                                            .header("Content-Type", "application/json")
+                                            .body(
+                                                format!(
+                                                    r#"{{"error": "{}",  "offline": true}}"#,
+                                                    e.replace('"', "\\\"")
+                                                )
+                                                .into_bytes(),
+                                            )
+                                            .unwrap(),
+                                    );
+                                }
+                            }
+                        } else {
+                            responder.respond(
+                                http::Response::builder()
+                                    .status(http::StatusCode::INTERNAL_SERVER_ERROR)
+                                    .body(b"Cache not initialized".to_vec())
+                                    .unwrap(),
+                            );
+                        }
+                    });
+                });
+            } else {
+                responder.respond(
+                    http::Response::builder()
+                        .status(http::StatusCode::NOT_FOUND)
+                        .body(b"Not found".to_vec())
+                        .unwrap(),
+                );
+            }
+        });
+
+    // Desktop platforms get all commands including offline/cache features
+    #[cfg(not(any(target_os = "ios", target_os = "android")))]
+    let builder = builder.invoke_handler(tauri::generate_handler![
+        install_ollama,
+        stop_ollama,
+        warm_up_local_chat,
+        check_ollama_status,
+        get_mcp_config_path,
+        cua_driver_installer::install_cua_driver,
+        cua_driver_installer::check_cua_driver_status,
+        cua_driver_mcp::cua_driver_support,
+        cua_driver_mcp::cua_driver_start,
+        cua_driver_mcp::cua_driver_send,
+        cua_driver_mcp::cua_driver_stop,
+        cua_driver_mcp::open_privacy_settings,
+        cua_driver_mcp::relaunch_app,
+        cua_driver_mcp::request_cowork_permission,
+        cua_driver_mcp::bring_app_to_front,
+        check_disk_space_for_model,
+        get_system_memory,
+        download_phi3_model,
+        download_model,
+        cancel_model_download,
+        check_network_status,
+        set_cache_online_status,
+        clear_web_cache,
+        get_web_cache_stats,
+        get_offline_server_url,
+        is_offline_server_ready,
+        precache_app,
+        save_last_mentor_route,
+        get_last_mentor_route,
+        cache_api_response,
+        get_cached_api_response,
+        save_offline_context,
+        get_offline_context,
+        get_os_type,
+        allow_in_app_purchase,
+        get_locked_tenant,
+        open_external_url,
+        navigate_to,
+        ollama_chat,
+        ollama_chat_stream,
+        log_fe,
+        opencode_acp::opencode_chat_stream,
+        opencode_acp::opencode_stop,
+        opencode_acp::opencode_permission_respond,
+        opencode_acp::opencode_close,
+        opencode_acp::get_opencode_workspace,
+        opencode_acp::set_opencode_workspace,
+        opencode_acp::new_opencode_workspace,
+        opencode_acp::get_opencode_permission_mode,
+        opencode_acp::set_opencode_permission_mode,
+        opencode_acp::seed_opencode_permission_mode,
+        opencode_acp::set_opencode_skills,
+        opencode_acp::begin_opencode_skills_sync,
+        opencode_installer::install_opencode,
+        opencode_installer::ensure_vibe_skills,
+        opencode_installer::check_opencode_status,
+        opencode_acp::check_code_local_model,
+        opencode_acp::set_opencode_learner,
+        opencode_acp::ensure_opencode_platform_key,
+        code_agent_installer::check_code_agent_status,
+        code_agent_installer::install_code_agent,
+        code_agent_models::list_code_agent_models,
+        code_agent_models::set_code_agent_model,
+        save_file::save_chat_file,
+        app_update::check_app_update,
+        app_update::install_app_update,
+        remote_code::remote_code_status,
+        remote_code::remote_code_enable,
+        remote_code::remote_code_disable,
+        remote_code::remote_code_pairing_qr,
+    ]);
+
+    // Mobile platforms get only basic commands (no offline/cache features)
+    #[cfg(any(target_os = "ios", target_os = "android"))]
+    let builder = builder.invoke_handler(tauri::generate_handler![
+        install_ollama,
+        stop_ollama,
+        warm_up_local_chat,
+        check_ollama_status,
+        check_disk_space_for_model,
+        get_system_memory,
+        download_phi3_model,
+        download_model,
+        cancel_model_download,
+        check_network_status,
+        get_os_type,
+        allow_in_app_purchase,
+        get_locked_tenant,
+        open_external_url,
+        navigate_to,
+        ollama_chat,
+        ollama_chat_stream,
+        log_fe,
+        app_update::check_app_update,
+        remote_code_client::remote_code_set_host,
+        remote_code_client::remote_code_get_host,
+        remote_code_client::remote_code_clear_host,
+        remote_code_client::opencode_chat_stream,
+        remote_code_client::opencode_stop,
+        remote_code_client::opencode_close,
+        remote_code_client::opencode_permission_respond,
+        remote_code_client::get_opencode_permission_mode,
+        remote_code_client::set_opencode_permission_mode,
+        remote_code_client::seed_opencode_permission_mode,
+        remote_code_client::get_opencode_workspace,
+        remote_code_client::set_opencode_workspace,
+        remote_code_client::new_opencode_workspace,
+        remote_code_client::remote_code_list_workspaces,
+        local_network::local_network_status,
+        local_network::open_app_settings,
+    ]);
+
+    builder
+        .build(tauri::generate_context!())
+        .expect("error while building tauri app")
+        .run(|_app, _event| {
+            // Same exit hook as main.rs: the phone-access opencode server
+            // must die with the app (an orphan with a dead password poisons
+            // opencode's machine-global coordination for every later one).
+            // Desktop only — `remote_code` is not compiled for mobile.
+            #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+            if let tauri::RunEvent::Exit = _event {
+                remote_code::shutdown_sync();
+                mcp_bridge_manager::shutdown();
+            }
+            // Phone back in the foreground: the OS reclaims a suspended
+            // app's sockets, so a Code turn streaming from the desktop
+            // reconnects and catches up (see remote_code_client).
+            #[cfg(any(target_os = "ios", target_os = "android"))]
+            if let tauri::RunEvent::WindowEvent {
+                event: tauri::WindowEvent::Resumed,
+                ..
+            } = _event
+            {
+                remote_code_client::app_resumed();
+            }
+        });
+}
+
+/// Safe area handling script for iOS - ensures content doesn't scroll behind notch/home indicator
+/// Also handles Google OAuth by opening in system browser
+#[cfg(any(target_os = "ios", target_os = "android", test))]
+const MOBILE_SAFE_AREA_SCRIPT: &str = r#"
 (function() {
     // Only run once
     if (window.__safeAreaSetup) return;
@@ -2725,22 +3031,36 @@ pub fn run() {
             padding-right: env(safe-area-inset-right, 0px);
         }
 
+        /* body is position:fixed, so the html padding above cannot move it:
+           the safe-area offset has to be on body's own top/bottom. */
         body {
             /* Ensure body doesn't scroll the entire page */
             position: fixed;
-            top: 0;
+            top: env(safe-area-inset-top, 0px);
             left: 0;
             right: 0;
-            bottom: 0;
+            bottom: env(safe-area-inset-bottom, 0px);
             overflow: hidden;
         }
 
-        /* Main app container should fill the safe area */
+        /* The app shell is h-dvh; pin it to body's inset box or it overflows
+           body and clips the composer. */
+        [data-slot=sidebar-wrapper] {
+            height: 100%;
+            min-height: 0;
+        }
+
+        [data-slot=sidebar-inset] {
+            height: 100%;
+        }
+
+        /* Main app container should fill the safe area. Not <main>: the app
+           shell's <main> must not become a touch scroller, or swiping past the
+           end of a chat scrolls the whole chat card off screen. */
         body > div:first-child,
         #__next,
         #root,
-        [data-radix-portal],
-        main {
+        [data-radix-portal] {
             height: 100%;
             overflow: auto;
             -webkit-overflow-scrolling: touch;
@@ -2985,292 +3305,66 @@ pub fn run() {
     console.log('[ibl.ai] Mobile setup complete (safe area + OAuth)');
 })();
 "#;
-                let safe_area_script =
-                    safe_area_script.replace("__IBL_APP_BASE_URL__", &app_base_url_json);
 
-                // Combine safe area script with online monitoring script
-                let combined_script = format!("{}\n{}", safe_area_script, URL_MONITOR_SCRIPT_ONLINE);
-                let app_handle = app.handle().clone();
+#[cfg(test)]
+mod tests {
+    use super::MOBILE_SAFE_AREA_SCRIPT;
 
-                // Use online monitoring script with safe area handling
-                let window = tauri::WebviewWindowBuilder::new(
-                    app,
-                    "main",
-                    initial_url,
-                )
-                .initialization_script(&combined_script)
-                .on_navigation(move |url| {
-                    let url_str = url.as_str();
-                    let log_msg = format!("[ibl.ai] [MOBILE] on_navigation called with URL: {}", url_str);
-                    println!("{}", log_msg);
+    fn css_rule_for<'a>(css: &'a str, declaration: &str) -> &'a str {
+        let decl = css.find(declaration).expect("declaration present");
+        let open = css[..decl].rfind('{').expect("rule has a block");
+        let start = css[..open].rfind('}').map_or(0, |i| i + 1);
+        &css[start..open]
+    }
 
-                    let is_oauth = is_oauth_url(url_str);
-                    let oauth_check_msg = format!("[ibl.ai] [MOBILE] is_oauth_url result: {}", is_oauth);
-                    println!("{}", oauth_check_msg);
+    #[test]
+    fn mobile_css_does_not_make_the_app_shell_main_a_scroller() {
+        let selectors = css_rule_for(MOBILE_SAFE_AREA_SCRIPT, "-webkit-overflow-scrolling: touch");
+        assert!(
+            selectors.contains("#__next"),
+            "found the scroller rule: {selectors}"
+        );
+        assert!(
+            !selectors.split(',').any(|s| s.trim() == "main"),
+            "`main` must not be in the overflow:auto rule: {selectors}"
+        );
+    }
 
-                    if is_oauth {
-                        let intercept_msg = format!(
-                            "[ibl.ai] [MOBILE] OAuth navigation intercepted, opening Safari VC: {}",
-                            url_str
-                        );
-                        println!("{}", intercept_msg);
+    #[test]
+    fn mobile_css_offsets_the_fixed_body_by_the_safe_area() {
+        let css: String = MOBILE_SAFE_AREA_SCRIPT
+            .split_whitespace()
+            .collect::<Vec<_>>()
+            .join(" ");
+        for needle in [
+            "top: env(safe-area-inset-top, 0px);",
+            "bottom: env(safe-area-inset-bottom, 0px);",
+            "[data-slot=sidebar-wrapper] { height: 100%; min-height: 0; }",
+            "[data-slot=sidebar-inset] { height: 100%; }",
+            "--sat: env(safe-area-inset-top, 0px);",
+        ] {
+            assert!(css.contains(needle), "missing `{needle}`");
+        }
+        let body = &css[css.find("body { ").expect("body rule")..];
+        let body = &body[..body.find('}').unwrap()];
+        assert!(body.contains("position: fixed;"));
+        assert!(
+            body.contains("top: env(safe-area-inset-top, 0px);"),
+            "{body}"
+        );
+        assert!(
+            body.contains("bottom: env(safe-area-inset-bottom, 0px);"),
+            "{body}"
+        );
+    }
 
-                        if let Err(e) = open_oauth_url(&app_handle, url_str) {
-                            let error_msg = format!("[ibl.ai] [MOBILE] Failed to open external URL: {}", e);
-                            println!("{}", error_msg);
-                            return true;
-                        }
-
-                        println!("[ibl.ai] [MOBILE] Returning false to prevent webview navigation");
-                        return false;
-                    }
-                    // Our own deep-link schemes, navigated INSIDE the webview
-                    // (the SSO flow ends by redirecting to
-                    // iblai-mentor:///sso-login-complete?data=…). iOS hands
-                    // such navigations to the OS, which loops them back via
-                    // the deep-link plugin — but Android's WebView just fails
-                    // with ERR_UNKNOWN_URL_SCHEME, so route them into the
-                    // same handler ourselves and block the navigation.
-                    let scheme = url.scheme();
-                    if scheme == "iblai-mentor" || scheme == "ai.ibl.mentorai" {
-                        println!("[ibl.ai] [MOBILE] In-webview deep link intercepted: {url_str}");
-                        handle_deep_link_url(&app_handle, url_str);
-                        return false;
-                    }
-                    println!("[ibl.ai] [MOBILE] Allowing normal navigation");
-                    true
-                })
-                .build()
-                .expect("Failed to create main window");
-
-                if let Ok(mut pending) = get_pending_deep_link().lock() {
-                    if let Some(pending_url) = pending.take() {
-                        if let Ok(js_url) = serde_json::to_string(&pending_url) {
-                            let _ = window.eval(&format!("window.location.href = {};", js_url));
-                        }
-                    }
-                }
-
-                println!("[ibl.ai] Mobile window created with safe area support");
-            }
-
-            Ok(())
-        });
-
-    // Register the custom URI scheme protocol for offline cache (desktop only)
-    #[cfg(not(any(target_os = "ios", target_os = "android")))]
-    let builder =
-        builder.register_asynchronous_uri_scheme_protocol("mentor", |ctx, request, responder| {
-            // Extract the URL path - format: mentor://fetch/<encoded_url>
-            let uri = request.uri();
-            let path = uri.path();
-
-            // Handle the fetch protocol
-            if path.starts_with("/fetch/") {
-                let encoded_url = &path[7..]; // Skip "/fetch/"
-                let url = match urlencoding::decode(encoded_url) {
-                    Ok(u) => u.to_string(),
-                    Err(_) => {
-                        responder.respond(
-                            http::Response::builder()
-                                .status(http::StatusCode::BAD_REQUEST)
-                                .body(b"Invalid URL encoding".to_vec())
-                                .unwrap(),
-                        );
-                        return;
-                    }
-                };
-
-                // Get app handle for accessing cache (unused but kept for future use)
-                let _app = ctx.app_handle().clone();
-
-                std::thread::spawn(move || {
-                    let rt = tokio::runtime::Runtime::new().unwrap();
-                    rt.block_on(async {
-                        let cache_lock = get_web_cache().read().await;
-                        if let Some(cache) = cache_lock.as_ref() {
-                            match cache.fetch(&url).await {
-                                Ok(response) => {
-                                    let mut builder = http::Response::builder()
-                                        .status(response.status)
-                                        .header("Content-Type", response.content_type);
-
-                                    // Add CORS headers to allow the shell to access
-                                    builder = builder
-                                        .header("Access-Control-Allow-Origin", "*")
-                                        .header("Access-Control-Allow-Methods", "GET, OPTIONS")
-                                        .header("Access-Control-Allow-Headers", "*");
-
-                                    responder.respond(builder.body(response.body).unwrap());
-                                }
-                                Err(e) => {
-                                    responder.respond(
-                                        http::Response::builder()
-                                            .status(http::StatusCode::SERVICE_UNAVAILABLE)
-                                            .header("Content-Type", "application/json")
-                                            .body(
-                                                format!(
-                                                    r#"{{"error": "{}",  "offline": true}}"#,
-                                                    e.replace('"', "\\\"")
-                                                )
-                                                .into_bytes(),
-                                            )
-                                            .unwrap(),
-                                    );
-                                }
-                            }
-                        } else {
-                            responder.respond(
-                                http::Response::builder()
-                                    .status(http::StatusCode::INTERNAL_SERVER_ERROR)
-                                    .body(b"Cache not initialized".to_vec())
-                                    .unwrap(),
-                            );
-                        }
-                    });
-                });
-            } else {
-                responder.respond(
-                    http::Response::builder()
-                        .status(http::StatusCode::NOT_FOUND)
-                        .body(b"Not found".to_vec())
-                        .unwrap(),
-                );
-            }
-        });
-
-    // Desktop platforms get all commands including offline/cache features
-    #[cfg(not(any(target_os = "ios", target_os = "android")))]
-    let builder = builder.invoke_handler(tauri::generate_handler![
-        install_ollama,
-        stop_ollama,
-        check_ollama_status,
-        get_mcp_config_path,
-        cua_driver_installer::install_cua_driver,
-        cua_driver_installer::check_cua_driver_status,
-        cua_driver_mcp::cua_driver_support,
-        cua_driver_mcp::cua_driver_start,
-        cua_driver_mcp::cua_driver_send,
-        cua_driver_mcp::cua_driver_stop,
-        cua_driver_mcp::open_privacy_settings,
-        cua_driver_mcp::relaunch_app,
-        cua_driver_mcp::request_cowork_permission,
-        cua_driver_mcp::bring_app_to_front,
-        check_disk_space_for_model,
-        get_system_memory,
-        download_phi3_model,
-        download_model,
-        cancel_model_download,
-        check_network_status,
-        set_cache_online_status,
-        clear_web_cache,
-        get_web_cache_stats,
-        get_offline_server_url,
-        is_offline_server_ready,
-        precache_app,
-        save_last_mentor_route,
-        get_last_mentor_route,
-        cache_api_response,
-        get_cached_api_response,
-        save_offline_context,
-        get_offline_context,
-        get_os_type,
-        allow_in_app_purchase,
-        get_locked_tenant,
-        open_external_url,
-        navigate_to,
-        ollama_chat,
-        ollama_chat_stream,
-        log_fe,
-        opencode_acp::opencode_chat_stream,
-        opencode_acp::opencode_stop,
-        opencode_acp::opencode_permission_respond,
-        opencode_acp::opencode_close,
-        opencode_acp::get_opencode_workspace,
-        opencode_acp::set_opencode_workspace,
-        opencode_acp::new_opencode_workspace,
-        opencode_acp::get_opencode_permission_mode,
-        opencode_acp::set_opencode_permission_mode,
-        opencode_acp::set_opencode_skills,
-        opencode_acp::begin_opencode_skills_sync,
-        opencode_installer::install_opencode,
-        opencode_installer::ensure_vibe_skills,
-        opencode_installer::check_opencode_status,
-        opencode_acp::check_code_local_model,
-        opencode_acp::set_opencode_learner,
-        opencode_acp::ensure_opencode_platform_key,
-        code_agent_installer::check_code_agent_status,
-        code_agent_installer::install_code_agent,
-        code_agent_models::list_code_agent_models,
-        code_agent_models::set_code_agent_model,
-        app_update::check_app_update,
-        app_update::install_app_update,
-        remote_code::remote_code_status,
-        remote_code::remote_code_enable,
-        remote_code::remote_code_disable,
-        remote_code::remote_code_pairing_qr,
-    ]);
-
-    // Mobile platforms get only basic commands (no offline/cache features)
-    #[cfg(any(target_os = "ios", target_os = "android"))]
-    let builder = builder.invoke_handler(tauri::generate_handler![
-        install_ollama,
-        stop_ollama,
-        check_ollama_status,
-        check_disk_space_for_model,
-        get_system_memory,
-        download_phi3_model,
-        download_model,
-        cancel_model_download,
-        check_network_status,
-        get_os_type,
-        allow_in_app_purchase,
-        get_locked_tenant,
-        open_external_url,
-        navigate_to,
-        ollama_chat,
-        ollama_chat_stream,
-        log_fe,
-        app_update::check_app_update,
-        remote_code_client::remote_code_set_host,
-        remote_code_client::remote_code_get_host,
-        remote_code_client::remote_code_clear_host,
-        remote_code_client::opencode_chat_stream,
-        remote_code_client::opencode_stop,
-        remote_code_client::opencode_close,
-        remote_code_client::opencode_permission_respond,
-        remote_code_client::get_opencode_permission_mode,
-        remote_code_client::set_opencode_permission_mode,
-        remote_code_client::get_opencode_workspace,
-        remote_code_client::set_opencode_workspace,
-        remote_code_client::new_opencode_workspace,
-        remote_code_client::remote_code_list_workspaces,
-        local_network::local_network_status,
-        local_network::open_app_settings,
-    ]);
-
-    builder
-        .build(tauri::generate_context!())
-        .expect("error while building tauri app")
-        .run(|_app, _event| {
-            // Same exit hook as main.rs: the phone-access opencode server
-            // must die with the app (an orphan with a dead password poisons
-            // opencode's machine-global coordination for every later one).
-            // Desktop only — `remote_code` is not compiled for mobile.
-            #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
-            if let tauri::RunEvent::Exit = _event {
-                remote_code::shutdown_sync();
-            }
-            // Phone back in the foreground: the OS reclaims a suspended
-            // app's sockets, so a Code turn streaming from the desktop
-            // reconnects and catches up (see remote_code_client).
-            #[cfg(any(target_os = "ios", target_os = "android"))]
-            if let tauri::RunEvent::WindowEvent {
-                event: tauri::WindowEvent::Resumed,
-                ..
-            } = _event
-            {
-                remote_code_client::app_resumed();
-            }
-        });
+    #[test]
+    fn mobile_script_keeps_the_app_base_url_placeholder() {
+        assert_eq!(
+            MOBILE_SAFE_AREA_SCRIPT
+                .matches("__IBL_APP_BASE_URL__")
+                .count(),
+            1
+        );
+    }
 }

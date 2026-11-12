@@ -4,14 +4,17 @@ import { renderHook } from '@testing-library/react';
 import { useHelpCenter } from '../use-help-center';
 
 let mockMetadata: Record<string, unknown> | undefined;
-const mockUseTenantMetadata = vi.fn();
+const mockUseTenantObjectMetadata = vi.fn();
 const mockAddProtocolToUrl = vi.fn((url: string) =>
   url.startsWith('http') ? url : `https://${url}`,
 );
 
 vi.mock('@iblai/iblai-js/web-utils', () => ({
-  useTenantMetadata: (args: { org: string }) => mockUseTenantMetadata(args),
   addProtocolToUrl: (url: string) => mockAddProtocolToUrl(url),
+}));
+
+vi.mock('@/hooks/use-tenant-object-metadata', () => ({
+  useTenantObjectMetadata: (key?: string) => mockUseTenantObjectMetadata(key),
 }));
 
 let mockConfigHelpCenterUrl = 'https://docs.example.com';
@@ -32,22 +35,20 @@ describe('useHelpCenter', () => {
     mockConfigHelpCenterUrl = 'https://docs.example.com';
     mockConfigSupportEmail = 'support@example.com';
     mockConfigDocumentationUrl = 'https://ibl.ai/docs';
-    mockUseTenantMetadata.mockReset();
-    mockUseTenantMetadata.mockImplementation(() => ({
-      metadata: mockMetadata,
-    }));
+    mockUseTenantObjectMetadata.mockReset();
+    mockUseTenantObjectMetadata.mockImplementation(() => mockMetadata ?? {});
     mockAddProtocolToUrl.mockClear();
   });
 
   describe('tenant lookup', () => {
-    it('queries tenant metadata for the given tenant key', () => {
+    it('reads tenant metadata for the given tenant key', () => {
       renderHook(() => useHelpCenter('acme'));
-      expect(mockUseTenantMetadata).toHaveBeenCalledWith({ org: 'acme' });
+      expect(mockUseTenantObjectMetadata).toHaveBeenCalledWith('acme');
     });
 
-    it('passes an empty org when no tenant key is supplied', () => {
+    it('reads the current tenant when no tenant key is supplied', () => {
       renderHook(() => useHelpCenter());
-      expect(mockUseTenantMetadata).toHaveBeenCalledWith({ org: '' });
+      expect(mockUseTenantObjectMetadata).toHaveBeenCalledWith(undefined);
     });
   });
 

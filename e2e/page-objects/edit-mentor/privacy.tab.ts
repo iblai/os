@@ -60,6 +60,18 @@ export class PrivacyTab {
   /** Body container — present regardless of router state (tab is always mounted). */
   readonly body: Locator;
 
+  private reopen?: () => Promise<void>;
+
+  /**
+   * Injected by `EditMentorPage`. The Edit Agent dialog has been observed to
+   * dismiss itself shortly after opening on staging (the app pushes the plain
+   * mentor URL without a user action), so `setRouterEnabled` uses this to
+   * bring it back on the Privacy tab instead of failing on a missing toggle.
+   */
+  bindReopen(reopen: () => Promise<void>): void {
+    this.reopen = reopen;
+  }
+
   constructor(page: Page, dialog: Locator) {
     this.page = page;
     this.dialog = dialog;
@@ -172,6 +184,9 @@ export class PrivacyTab {
     let lastError: unknown;
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
+        if (this.reopen && !(await isVisibleWithin(this.dialog, 2_000))) {
+          await this.reopen();
+        }
         await expect(this.capabilityToggle).toBeVisible({ timeout: 10_000 });
         // Settle any in-flight save FIRST — the toggle disables itself while
         // an editMentorJson PUT + refetch is pending (its own save, or a

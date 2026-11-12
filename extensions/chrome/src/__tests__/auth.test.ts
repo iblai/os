@@ -4,6 +4,7 @@ import {
   dmToken,
   ensureSignedIn,
   isAuthed,
+  isSessionExpired,
   org,
   sessionData,
   signIn,
@@ -95,6 +96,71 @@ describe('signIn / ensureSignedIn', () => {
       undefined as never,
     );
     await expect(signIn()).rejects.toThrow(/no redirect URL/);
+  });
+});
+
+describe('an expired session', () => {
+  // The regression: the panel held tokens that had expired two days earlier.
+  // `isAuthed` only checked that `axd_token` was a string, so the panel called
+  // itself signed in, installed the dead session into the mentor iframe, and
+  // sat there while the embed 401'd and asked for auth nobody minted.
+  it('does not count as signed in', () => {
+    localStorage.setItem('axd_token', 'axd');
+    localStorage.setItem('axd_token_expires', '2026-11-03T18:13:55.050Z');
+    expect(isSessionExpired()).toBe(true);
+    expect(isAuthed()).toBe(false);
+  });
+
+  it('is re-minted by ensureSignedIn instead of being trusted', async () => {
+    localStorage.setItem('axd_token', 'stale');
+    localStorage.setItem('axd_token_expires', '2026-11-03T18:13:55.050Z');
+
+    await expect(ensureSignedIn()).resolves.toBe(true);
+
+    expect(chromeStub.stub.identity.launchWebAuthFlow).toHaveBeenCalledTimes(1);
+    expect(localStorage.getItem('axd_token')).toBe(SESSION.axd_token);
+  });
+
+  // Payloads carry only the keys they have. Writing over the old session left
+  // an orphaned `axd_token_expires` behind, so the session we had just minted
+  // read as already expired and the panel could never get back in.
+  it('does not inherit the old expiry when the new payload has none', async () => {
+    localStorage.setItem('axd_token', 'stale');
+    localStorage.setItem('axd_token_expires', '2026-11-03T18:13:55.050Z');
+
+    const { axd_token_expires: _dropped, ...withoutStamp } = SESSION;
+    chromeStub.stub.identity.launchWebAuthFlow.mockResolvedValueOnce(
+      sessionRedirect(withoutStamp) as never,
+    );
+    await signIn();
+
+    expect(localStorage.getItem('axd_token_expires')).toBeNull();
+    expect(isSessionExpired()).toBe(false);
+    expect(isAuthed()).toBe(true);
+  });
+
+  it('counts a token expiring within the round-trip as already gone', () => {
+    localStorage.setItem('axd_token', 'axd');
+    const inTenSeconds = new Date(Date.now() + 10_000).toISOString();
+    localStorage.setItem('axd_token_expires', inTenSeconds);
+    expect(isSessionExpired()).toBe(true);
+  });
+
+  it('leaves a session with plenty of time alone', () => {
+    localStorage.setItem('axd_token', 'axd');
+    localStorage.setItem('axd_token_expires', SESSION.axd_token_expires);
+    expect(isSessionExpired()).toBe(false);
+    expect(isAuthed()).toBe(true);
+  });
+
+  it.each([
+    ['no expiry recorded', null],
+    ['an unparseable expiry', 'soon'],
+  ])('trusts a session with %s', (_label, stamp) => {
+    localStorage.setItem('axd_token', 'axd');
+    if (stamp) localStorage.setItem('axd_token_expires', stamp);
+    expect(isSessionExpired()).toBe(false);
+    expect(isAuthed()).toBe(true);
   });
 });
 

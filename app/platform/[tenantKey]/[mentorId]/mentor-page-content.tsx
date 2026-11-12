@@ -3,11 +3,8 @@
 import React from 'react';
 
 import { useMediaQuery } from 'react-responsive';
-import {
-  chatActions,
-  selectSessionId,
-  useTenantMetadata,
-} from '@iblai/iblai-js/web-utils';
+import { chatActions, selectSessionId } from '@iblai/iblai-js/web-utils';
+import { useTenantObjectMetadata } from '@/hooks/use-tenant-object-metadata';
 
 import ErrorBoundary from '@/components/error-boundary';
 import { DocumentSidebar } from '@iblai/iblai-js/web-containers';
@@ -25,6 +22,7 @@ import { useParams, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import { config } from '@/lib/config';
 import { TenantKeyMentorIdParams } from '@/lib/types';
+import { useOpenSessionFromUrl } from '@/hooks/use-open-session';
 import { MentorVisibilityEnum } from '@iblai/iblai-api';
 import { isLoggedIn } from '@/lib/utils';
 import { useUsername, useUserTenants } from '@/hooks/use-user';
@@ -65,10 +63,14 @@ export default function MentorPageContent() {
   const searchParams = useSearchParams();
   const { mentorId, tenantKey } = useParams<TenantKeyMentorIdParams>();
 
-  // Skip tenant metadata API call in offline mode
-  const { metadata } = useTenantMetadata({
-    org: tenantKey,
-    skip: isTauriOffline,
+  const metadata = useTenantObjectMetadata(tenantKey);
+
+  // A host embedding this agent can name a conversation to open rather than
+  // starting a fresh one — agent-ai forwards `session` through extraparams.
+  useOpenSessionFromUrl({
+    sessionId: searchParams.get('session'),
+    tenantKey,
+    mentorId,
   });
 
   // Skip mentor public settings API call in offline mode

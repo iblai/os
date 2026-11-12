@@ -25,6 +25,14 @@ let mockRouter = { push: mockPush, replace: mockReplace };
 
 // AppProvider mounts the agent-settings launcher, which reads navigation and
 // user hooks this suite does not set up; it has its own tests.
+// The real module pulls the whole remark/rehype/KaTeX pipeline. `AppProvider`
+// imports it fire-and-forget in an effect (deliberately — the startup path
+// must not await it), so under load that import is still resolving when this
+// file's last test ends, and vitest tears the environment down underneath it:
+// "Cannot load … after the environment was torn down". Registration itself is
+// covered by lib/__tests__/canvas-markdown-engine.test.ts.
+vi.mock('@/lib/canvas-markdown-engine', () => ({}));
+
 vi.mock('../agent-settings-launcher', () => ({
   AgentSettingsLauncher: ({ children }: { children: React.ReactNode }) => (
     <>{children}</>
@@ -200,6 +208,10 @@ vi.mock('@/features/rbac/rbac-slice', () => ({
     type: 'rbac/update',
     payload,
   }),
+  // The composer cannot tell "denied" from "not asked yet" without these:
+  // the permissions object is empty in both cases.
+  markMentorPermissionsLoaded: () => ({ type: 'rbac/markMentorLoaded' }),
+  resetMentorPermissionsLoaded: () => ({ type: 'rbac/resetMentorLoaded' }),
 }));
 
 // ── data-layer ──────────────────────────────────────────────────────────────
@@ -237,6 +249,11 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
 // ── tenant metadata ─────────────────────────────────────────────────────────
 
 let mockMetadata: Record<string, unknown> = {};
+
+// Tenant metadata now rides the tenants list via this local hook (no network).
+vi.mock('@/hooks/use-tenant-object-metadata', () => ({
+  useTenantObjectMetadata: () => mockMetadata,
+}));
 
 let capturedIframeMessageHandler: {
   handlers?: unknown;
@@ -292,15 +309,6 @@ vi.mock('@iblai/iblai-js/web-utils', () => ({
   refreshTenantSwitchLock: vi.fn(),
   isTenantSwitchInProgress: vi.fn(() => false),
   AUTH_TOKENS_UPDATED_EVENT: 'ibl:auth-tokens-updated',
-  useTenantMetadata: () => ({
-    metadata: mockMetadata,
-    platformName: null,
-    isLoading: false,
-    isError: false,
-    metadataLoaded: true,
-    getAllMetadatas: vi.fn(() => []),
-    getSupportEmail: vi.fn(() => null),
-  }),
   AuthProvider: (props: Record<string, unknown>) => {
     capturedAuthProviderProps = props;
     for (const cb of authProviderCallbacksToInvoke) {
@@ -400,7 +408,7 @@ vi.mock('@/components/sentry-init', () => ({
   SentryInit: () => null,
 }));
 
-// Side-effect-only component (syncs language pref via useGetUserMetadataQuery);
+// Side-effect-only component (syncs language pref from the stored user metadata);
 // stub it out so the suite needn't wire up a real RTK store.
 vi.mock('@/components/language-preference-sync', () => ({
   LanguagePreferenceSync: () => null,
@@ -522,9 +530,9 @@ describe('Providers', () => {
           402: expect.any(Function),
         }),
         undefined,
-        // Standalone (not iframed): no refreshAuthToken, so the data layer uses
-        // its own edX-session mint.
-        undefined,
+        // Always ours, standalone included: left undefined the data layer
+        // would mint from the edX session, and this app calls no edX LMS.
+        expect.any(Function),
       );
     });
 
@@ -533,6 +541,36 @@ describe('Providers', () => {
       renderProviders();
       const call = mockInitializeDataLayer.mock.calls.at(-1)!;
       expect(call[6]).toEqual(expect.any(Function));
+    });
+
+    // Standalone it goes to the auth app, which re-mints and returns the user
+    // here — rather than this app minting from the edX session itself.
+    it('sends a standalone 401 to the auth app instead of minting', async () => {
+      mockIsInIframe.mockReturnValue(false);
+      // jsdom refuses real navigation, so watch the assignment instead — and
+      // put the real location back, or the tests after this one lose their
+      // search params.
+      const realLocation = window.location;
+      Object.defineProperty(window, 'location', {
+        value: { ...realLocation, href: 'https://os.ibl.ai/chat' },
+        writable: true,
+        configurable: true,
+      });
+      renderProviders();
+      const refreshAuthToken = mockInitializeDataLayer.mock.calls.at(-1)![6] as
+        | (() => Promise<boolean>)
+        | undefined;
+
+      try {
+        await expect(refreshAuthToken!()).resolves.toBe(false);
+        expect(window.location.href).toContain('/login/complete');
+      } finally {
+        Object.defineProperty(window, 'location', {
+          value: realLocation,
+          writable: true,
+          configurable: true,
+        });
+      }
     });
 
     it('creates a script element when __ENV__ is not defined', () => {
@@ -1044,6 +1082,35 @@ describe('Providers', () => {
       expect(mockDispatch).toHaveBeenCalledWith({
         type: 'rbac/update',
         payload: {},
+      });
+    });
+
+    // The SDK's MentorProvider only fetches mentor RBAC for a signed-in user,
+    // so an anonymous viewer's `onLoadMentorsPermissions` never fires. If the
+    // flag were merely reset and left to that callback, the composer's
+    // `awaitingMentorPermissions` gate would stay stuck and an
+    // anonymous-allowed mentor would render a permanently disabled input.
+    it('on an anonymous load, marks mentor permissions loaded (no RBAC answer is coming)', () => {
+      mockUsername = null;
+      renderProviders();
+      expect(mockDispatch).toHaveBeenCalledWith({
+        type: 'rbac/markMentorLoaded',
+      });
+      expect(mockDispatch).not.toHaveBeenCalledWith({
+        type: 'rbac/resetMentorLoaded',
+      });
+    });
+
+    it('on a signed-in load, resets the flag to wait for the real RBAC answer', () => {
+      mockUsername = 'testuser';
+      renderProviders();
+      expect(mockDispatch).toHaveBeenCalledWith({
+        type: 'rbac/resetMentorLoaded',
+      });
+      // The mark only comes later, from onLoadMentorsPermissions — not from
+      // the reset effect itself.
+      expect(mockDispatch).not.toHaveBeenCalledWith({
+        type: 'rbac/markMentorLoaded',
       });
     });
 

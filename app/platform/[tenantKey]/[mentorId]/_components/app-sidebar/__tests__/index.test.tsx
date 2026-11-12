@@ -77,7 +77,6 @@ const executeWithTrialCheckMock = vi.fn((fn?: () => void) => {
 const redirectToAuthSpaMock = vi.fn();
 const redirectToAuthSpaJoinTenantMock = vi.fn();
 const eventBusEmitMock = vi.fn();
-const exportMessagesToXlsxMock = vi.fn();
 
 // Pageables / search params
 let mockPathname = '/platform/tenant-a/mentor-1';
@@ -348,10 +347,45 @@ vi.mock('@/components/projects/delete-project-modal', () => ({
     ) : null,
 }));
 
-// xlsx export helper — assert it's called with the row's messages.
-vi.mock('../export-messages', () => ({
-  exportMessagesToXlsx: (...args: unknown[]) =>
-    exportMessagesToXlsxMock(...args),
+// The SDK export dialog is covered in the SDK; here we check what it is opened with.
+vi.mock('@iblai/iblai-js/web-containers/next', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  ChatDownloadDialog: (props: {
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+    mentorName: string;
+    sessionId?: string;
+    username?: string | null;
+    tenantKey?: string;
+    saveFile?: unknown;
+  }) =>
+    props.open ? (
+      <div
+        role="dialog"
+        aria-label="Export Chat"
+        data-session={props.sessionId}
+        data-mentor={props.mentorName}
+        data-username={props.username ?? ''}
+        data-tenant={props.tenantKey}
+        data-native-save={String(props.saveFile === mockSaveFile)}
+      >
+        <button onClick={() => props.onOpenChange(false)}>Close Export</button>
+      </div>
+    ) : null,
+}));
+
+const { mockSaveFile, mockMentorSettings } = vi.hoisted(() => ({
+  mockSaveFile: vi.fn(),
+  mockMentorSettings: {
+    current: { mentorName: 'Open Agent' } as
+      | { mentorName?: string }
+      | undefined,
+  },
+}));
+vi.mock('@/lib/save-file', () => ({ saveFile: mockSaveFile }));
+
+vi.mock('@/hooks/use-mentors/use-mentor-settings', () => ({
+  useMentorSettings: () => ({ data: mockMentorSettings.current }),
 }));
 
 // SDK data-layer hooks — return canned data; allow individual tests to
@@ -504,14 +538,50 @@ vi.mock('@iblai/iblai-js/web-utils', () => ({
     /^https?:\/\//.test(url) ? url : `https://${url}`,
 }));
 
+// The sidebar now reads tenant metadata from the tenants list
+// (useTenantObjectMetadata) via useHelpCenter and the chats section.
+vi.mock('@/hooks/use-tenant-object-metadata', () => ({
+  useTenantObjectMetadata: () => mockTenantMetadata,
+}));
+
 vi.mock('@iblai/iblai-js/web-containers', () => ({
   Admin: ({ initialTab }: { initialTab?: string }) => (
     <div data-testid="sdk-admin-tab" data-initial-tab={initialTab}>
       Admin SDK Tab
     </div>
   ),
-  IntegrationsTab: () => (
-    <div data-testid="sdk-integrations-tab">Integrations SDK Tab</div>
+  SecretsTab: ({
+    tenantKey,
+    username,
+  }: {
+    tenantKey: string;
+    username: string;
+  }) => (
+    <div
+      data-testid="sdk-secrets-tab"
+      data-tenant-key={tenantKey}
+      data-username={username}
+    >
+      Secrets SDK Tab
+    </div>
+  ),
+  ApiTab: ({
+    tenantKey,
+    username,
+    helpUrl,
+  }: {
+    tenantKey: string;
+    username: string;
+    helpUrl?: string;
+  }) => (
+    <div
+      data-testid="sdk-api-tab"
+      data-tenant-key={tenantKey}
+      data-username={username}
+      data-help-url={helpUrl}
+    >
+      API SDK Tab
+    </div>
   ),
   BillingTab: () => <div data-testid="sdk-billing-tab">Billing SDK Tab</div>,
   MonetizationTab: () => (
@@ -552,6 +622,7 @@ vi.mock('@/hooks/use-user', () => ({
   useUsername: () => mockUsername,
   useIsAdmin: () => mockIsAdmin,
   useCurrentTenant: () => ({ currentTenant: mockCurrentTenant }),
+  useUserTenants: () => ({ userTenants: [] }),
   useUserIsStudent: () => mockUserIsStudent,
 }));
 
@@ -736,7 +807,6 @@ function resetState() {
     return undefined;
   });
   eventBusEmitMock.mockReset();
-  exportMessagesToXlsxMock.mockReset();
   toggleSidebarMock.mockReset();
   setOpenMobileMock.mockReset();
   closeFreeTrialModalMock.mockReset();
@@ -1685,18 +1755,47 @@ describe('AppSidebar — Chats section', () => {
     });
   });
 
-  it('clicking Export delegates to exportMessagesToXlsx with the row messages', async () => {
+  it('clicking Export opens the export dialog on the whole chat of that row', async () => {
     const user = userEvent.setup();
     renderSidebar();
     fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
+    expect(
+      screen.queryByRole('dialog', { name: 'Export Chat' }),
+    ).not.toBeInTheDocument();
     const menus = screen.getAllByRole('button', { name: 'Chat actions' });
     await user.click(menus[1]);
     await user.click(await screen.findByRole('menuitem', { name: /^Export$/ }));
-    expect(exportMessagesToXlsxMock).toHaveBeenCalled();
-    const calledWith = exportMessagesToXlsxMock.mock.calls[0]?.[0] as
-      | unknown[]
-      | undefined;
-    expect(Array.isArray(calledWith)).toBe(true);
+
+    const dialog = await screen.findByRole('dialog', { name: 'Export Chat' });
+    expect(dialog).toHaveAttribute('data-session', 'sess-recent-1');
+    // Named after the agent open in the app, not the row's summary.
+    expect(dialog).toHaveAttribute('data-mentor', 'Open Agent');
+    expect(dialog).toHaveAttribute('data-username', 'admin-user');
+    expect(dialog).toHaveAttribute('data-native-save', 'true');
+
+    await user.click(screen.getByRole('button', { name: 'Close Export' }));
+    expect(
+      screen.queryByRole('dialog', { name: 'Export Chat' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('names the export without an agent while the agent is still loading', async () => {
+    mockMentorSettings.current = undefined;
+    try {
+      const user = userEvent.setup();
+      renderSidebar();
+      fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
+      const menus = screen.getAllByRole('button', { name: 'Chat actions' });
+      await user.click(menus[1]);
+      await user.click(
+        await screen.findByRole('menuitem', { name: /^Export$/ }),
+      );
+      expect(
+        await screen.findByRole('dialog', { name: 'Export Chat' }),
+      ).toHaveAttribute('data-mentor', '');
+    } finally {
+      mockMentorSettings.current = { mentorName: 'Open Agent' };
+    }
   });
 
   it('clicking Delete triggers the delete mutation', async () => {
@@ -1922,7 +2021,7 @@ describe('AppSidebar — Footer actions', () => {
       screen.getAllByRole('button', { name: 'Management' }).length,
     ).toBeGreaterThan(0);
     // …but the items they DON'T hold a permission for stay hidden, and
-    // Integrations/Memory/Advanced (no dedicated permission) remain admin-only.
+    // Secrets/API/Memory/Advanced (no dedicated permission) remain admin-only.
     expect(
       screen.queryByRole('button', { name: 'Invites' }),
     ).not.toBeInTheDocument();
@@ -1930,7 +2029,10 @@ describe('AppSidebar — Footer actions', () => {
       screen.queryByRole('button', { name: 'Monetization' }),
     ).not.toBeInTheDocument();
     expect(
-      screen.queryByRole('button', { name: 'Integrations' }),
+      screen.queryByRole('button', { name: 'Secrets' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'API' }),
     ).not.toBeInTheDocument();
     expect(
       within(screen.getByTestId('sidebar-footer')).queryByRole('button', {
@@ -2207,12 +2309,13 @@ describe('AppSidebar — non-admin trial-gated full admin menu (main OR advertis
     ).toBeGreaterThan(0);
   });
 
-  it('reveals the full footer admin cluster (Management / Integrations / Monetization / Memory / Advanced)', () => {
+  it('reveals the full footer admin cluster (Management / Secrets / API / Monetization / Memory / Advanced)', () => {
     setupMainTenantNonAdmin();
     renderSidebar();
     [
       'Management',
-      'Integrations',
+      'API',
+      'Secrets',
       'Monetization',
       'Memory',
       'Advanced',
@@ -2266,7 +2369,8 @@ describe('AppSidebar — non-admin trial-gated full admin menu (main OR advertis
     ).toBeGreaterThan(0);
     [
       'Management',
-      'Integrations',
+      'API',
+      'Secrets',
       'Monetization',
       'Memory',
       'Advanced',
@@ -2309,7 +2413,8 @@ describe('AppSidebar — anonymous (not-logged-in) user sees the full menu, clic
     ).toBeGreaterThan(0);
     [
       'Management',
-      'Integrations',
+      'API',
+      'Secrets',
       'Monetization',
       'Memory',
       'Advanced',
@@ -2461,7 +2566,7 @@ describe('AppSidebar — Rail-collapsed mode', () => {
 });
 
 // =============================================================================
-// AccountSheet — exercise each footer-driven tab (management, integrations,
+// AccountSheet — exercise each footer-driven tab (management, secrets, api,
 // monetization, billing). The Advanced tab is covered above; this block
 // covers the remaining branches in the switch.
 // =============================================================================
@@ -2473,15 +2578,34 @@ describe('AppSidebar — AccountSheet tabs', () => {
     expect(await screen.findByTestId('sdk-admin-tab')).toBeInTheDocument();
   });
 
-  it('clicking Integrations opens the IntegrationsTab', async () => {
+  it('clicking Secrets opens the SDK SecretsTab in the account dialog with the tenant and username', async () => {
     renderSidebar();
-    fireEvent.click(screen.getAllByRole('button', { name: 'Integrations' })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Secrets' })[0]);
+    const dialog = await screen.findByRole('dialog', { name: 'Secrets' });
+    const tab = within(dialog).getByTestId('sdk-secrets-tab');
+    expect(tab).toHaveAttribute('data-tenant-key', 'tenant-a');
+    expect(tab).toHaveAttribute('data-username', 'admin-user');
     expect(
-      await screen.findByTestId('sdk-integrations-tab'),
+      within(dialog).getByText(
+        'Keys from other services, like OpenAI or Stripe, that ibl.ai and your agents use.',
+      ),
     ).toBeInTheDocument();
   });
 
-  it('admin sees Memory between Monetization/Integrations and Advanced, matching the SDK Account rail order', () => {
+  it('clicking API opens the SDK ApiTab in the account dialog with the tenant, username and help link', async () => {
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'API' })[0]);
+    const dialog = await screen.findByRole('dialog', { name: 'API' });
+    const tab = within(dialog).getByTestId('sdk-api-tab');
+    expect(tab).toHaveAttribute('data-tenant-key', 'tenant-a');
+    expect(tab).toHaveAttribute('data-username', 'admin-user');
+    expect(tab).toHaveAttribute('data-help-url', 'https://help.example.com');
+    expect(
+      within(dialog).getByText('Let your own software work with ibl.ai.'),
+    ).toBeInTheDocument();
+  });
+
+  it('admin footer lists Management, API, Secrets, Monetization, Memory and Advanced in that order', () => {
     mockCurrentTenant = {
       key: 'tenant-a',
       is_admin: true,
@@ -2490,24 +2614,23 @@ describe('AppSidebar — AccountSheet tabs', () => {
     };
     renderSidebar();
     const footer = within(screen.getByTestId('sidebar-footer'));
-    const labels = [
+    const rows = [
       'Management',
-      'Integrations',
+      'API',
+      'Secrets',
       'Monetization',
       'Memory',
       'Advanced',
     ].map((name) => footer.getByRole('button', { name }));
-    // Every entry is rendered, and Memory sits right before Advanced.
-    const order = labels.map((el) =>
-      el.compareDocumentPosition(labels[labels.length - 1]),
-    );
-    order.slice(0, -1).forEach((pos) => {
-      expect(pos & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    rows.slice(1).forEach((row, index) => {
+      expect(
+        rows[index].compareDocumentPosition(row) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
     });
     expect(
-      labels[3].compareDocumentPosition(labels[2]) &
-        Node.DOCUMENT_POSITION_PRECEDING,
-    ).toBeTruthy();
+      footer.queryByRole('button', { name: 'Integrations' }),
+    ).not.toBeInTheDocument();
   });
 
   it('clicking Memory opens the SDK MemoryAdminTab in the account dialog with the tenant and username', async () => {

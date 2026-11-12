@@ -7,7 +7,7 @@ import { AccessibilityFab } from '../index';
 // Mock hooks
 const mockUsePathname = vi.fn();
 const mockUseParams = vi.fn();
-const mockUseTenantMetadata = vi.fn();
+const mockUseTenantObjectMetadata = vi.fn();
 const mockUseEmbedMode = vi.fn();
 
 vi.mock('next/navigation', () => ({
@@ -17,9 +17,14 @@ vi.mock('next/navigation', () => ({
 }));
 
 vi.mock('@iblai/iblai-js/web-utils', () => ({
-  useTenantMetadata: () => mockUseTenantMetadata(),
   selectChats: (state: any) => state.chatSliceShared?.chats ?? {},
   selectActiveTab: (state: any) => state.chatSliceShared?.activeTab ?? 'chat',
+}));
+
+// Tenant metadata now rides the tenants list via this local hook (raw object).
+vi.mock('@/hooks/use-tenant-object-metadata', () => ({
+  useTenantObjectMetadata: (tenantKey?: string) =>
+    mockUseTenantObjectMetadata(tenantKey),
 }));
 
 vi.mock('@/hooks/use-embed-mode', () => ({
@@ -55,18 +60,14 @@ describe('AccessibilityFab', () => {
   beforeEach(() => {
     mockUsePathname.mockReturnValue('/platform/test-tenant/test-mentor');
     mockUseParams.mockReturnValue({ tenantKey: 'test-tenant' });
-    mockUseTenantMetadata.mockReturnValue({
-      metadata: { accessibility_menu: false },
-    });
+    mockUseTenantObjectMetadata.mockReturnValue({ accessibility_menu: false });
     mockUseEmbedMode.mockReturnValue(false);
   });
 
   describe('Rendering behavior', () => {
     it('renders the SDK AccessibilityFab when conditions are met', () => {
       mockUseEmbedMode.mockReturnValue(false);
-      mockUseTenantMetadata.mockReturnValue({
-        metadata: { accessibility_menu: true },
-      });
+      mockUseTenantObjectMetadata.mockReturnValue({ accessibility_menu: true });
 
       const store = createMockStore();
       render(
@@ -83,8 +84,8 @@ describe('AccessibilityFab', () => {
 
     it('returns null when not in embed mode but accessibility_menu is false', () => {
       mockUseEmbedMode.mockReturnValue(false);
-      mockUseTenantMetadata.mockReturnValue({
-        metadata: { accessibility_menu: false },
+      mockUseTenantObjectMetadata.mockReturnValue({
+        accessibility_menu: false,
       });
 
       const store = createMockStore();
@@ -105,7 +106,7 @@ describe('AccessibilityFab', () => {
 
     it('returns null when not in embed mode and metadata is undefined', () => {
       mockUseEmbedMode.mockReturnValue(false);
-      mockUseTenantMetadata.mockReturnValue({ metadata: undefined });
+      mockUseTenantObjectMetadata.mockReturnValue(undefined);
 
       const store = createMockStore();
       const { container } = render(
@@ -125,9 +126,7 @@ describe('AccessibilityFab', () => {
 
     it('returns null when accessibility_menu is null', () => {
       mockUseEmbedMode.mockReturnValue(false);
-      mockUseTenantMetadata.mockReturnValue({
-        metadata: { accessibility_menu: null },
-      });
+      mockUseTenantObjectMetadata.mockReturnValue({ accessibility_menu: null });
 
       const store = createMockStore();
       const { container } = render(
@@ -143,8 +142,8 @@ describe('AccessibilityFab', () => {
   describe('Embed mode behavior', () => {
     it('returns null when in embed mode regardless of accessibility_menu value', () => {
       mockUseEmbedMode.mockReturnValue(true);
-      mockUseTenantMetadata.mockReturnValue({
-        metadata: { accessibility_menu: false },
+      mockUseTenantObjectMetadata.mockReturnValue({
+        accessibility_menu: false,
       });
 
       const store = createMockStore();
@@ -165,9 +164,7 @@ describe('AccessibilityFab', () => {
 
     it('returns null when in embed mode even if accessibility_menu is true', () => {
       mockUseEmbedMode.mockReturnValue(true);
-      mockUseTenantMetadata.mockReturnValue({
-        metadata: { accessibility_menu: true },
-      });
+      mockUseTenantObjectMetadata.mockReturnValue({ accessibility_menu: true });
 
       const store = createMockStore();
       const { container } = render(
@@ -187,7 +184,7 @@ describe('AccessibilityFab', () => {
 
     it('returns null when in embed mode and accessibility_menu is undefined', () => {
       mockUseEmbedMode.mockReturnValue(true);
-      mockUseTenantMetadata.mockReturnValue({ metadata: undefined });
+      mockUseTenantObjectMetadata.mockReturnValue(undefined);
 
       const store = createMockStore();
       const { container } = render(
@@ -207,7 +204,7 @@ describe('AccessibilityFab', () => {
 
     it('returns null when in embed mode and metadata is null', () => {
       mockUseEmbedMode.mockReturnValue(true);
-      mockUseTenantMetadata.mockReturnValue({ metadata: null });
+      mockUseTenantObjectMetadata.mockReturnValue(null);
 
       const store = createMockStore();
       const { container } = render(
@@ -226,9 +223,7 @@ describe('AccessibilityFab', () => {
         '/platform/test-tenant/test-mentor/analytics',
       );
       mockUseEmbedMode.mockReturnValue(false);
-      mockUseTenantMetadata.mockReturnValue({
-        metadata: { accessibility_menu: true },
-      });
+      mockUseTenantObjectMetadata.mockReturnValue({ accessibility_menu: true });
 
       const store = createMockStore();
       const { container } = render(
@@ -251,9 +246,7 @@ describe('AccessibilityFab', () => {
         '/platform/test-tenant/test-mentor/analytics/details',
       );
       mockUseEmbedMode.mockReturnValue(false);
-      mockUseTenantMetadata.mockReturnValue({
-        metadata: { accessibility_menu: true },
-      });
+      mockUseTenantObjectMetadata.mockReturnValue({ accessibility_menu: true });
 
       const store = createMockStore();
       const { container } = render(
@@ -270,9 +263,7 @@ describe('AccessibilityFab', () => {
         '/platform/test-tenant/test-mentor/analytics',
       );
       mockUseEmbedMode.mockReturnValue(false);
-      mockUseTenantMetadata.mockReturnValue({
-        metadata: { accessibility_menu: true },
-      });
+      mockUseTenantObjectMetadata.mockReturnValue({ accessibility_menu: true });
 
       const store = createMockStore();
       const { container } = render(
@@ -288,9 +279,7 @@ describe('AccessibilityFab', () => {
   describe('Container styling', () => {
     it('renders with correct fixed positioning and styling classes', () => {
       mockUseEmbedMode.mockReturnValue(false);
-      mockUseTenantMetadata.mockReturnValue({
-        metadata: { accessibility_menu: true },
-      });
+      mockUseTenantObjectMetadata.mockReturnValue({ accessibility_menu: true });
 
       // Create store with messages so bottom-[21rem] is applied
       const store = configureStore({
@@ -337,9 +326,7 @@ describe('AccessibilityFab', () => {
       ['an empty chat', { chats: { chat: [] }, activeTab: 'chat' }],
       ['chats that are not loaded yet', {}],
     ])('sits at bottom-4 for %s', (_, chatState) => {
-      mockUseTenantMetadata.mockReturnValue({
-        metadata: { accessibility_menu: true },
-      });
+      mockUseTenantObjectMetadata.mockReturnValue({ accessibility_menu: true });
       const store = configureStore({
         reducer: { chatSliceShared: (state = chatState) => state },
       });
@@ -368,7 +355,7 @@ describe('AccessibilityFab', () => {
       expect(mockUseParams).toHaveBeenCalled();
     });
 
-    it('calls useTenantMetadata with tenantKey from params', () => {
+    it('calls useTenantObjectMetadata with tenantKey from params', () => {
       mockUseParams.mockReturnValue({ tenantKey: 'custom-tenant' });
 
       const store = createMockStore();
@@ -378,7 +365,7 @@ describe('AccessibilityFab', () => {
         </Provider>,
       );
 
-      expect(mockUseTenantMetadata).toHaveBeenCalled();
+      expect(mockUseTenantObjectMetadata).toHaveBeenCalledWith('custom-tenant');
     });
 
     it('calls useEmbedMode hook', () => {
@@ -408,9 +395,7 @@ describe('AccessibilityFab', () => {
     it('handles null pathname gracefully when accessibility is enabled', () => {
       mockUsePathname.mockReturnValue(null);
       mockUseEmbedMode.mockReturnValue(false);
-      mockUseTenantMetadata.mockReturnValue({
-        metadata: { accessibility_menu: true },
-      });
+      mockUseTenantObjectMetadata.mockReturnValue({ accessibility_menu: true });
 
       const store = createMockStore();
       render(
@@ -427,9 +412,7 @@ describe('AccessibilityFab', () => {
     it('handles undefined pathname gracefully when accessibility is enabled', () => {
       mockUsePathname.mockReturnValue(undefined);
       mockUseEmbedMode.mockReturnValue(false);
-      mockUseTenantMetadata.mockReturnValue({
-        metadata: { accessibility_menu: true },
-      });
+      mockUseTenantObjectMetadata.mockReturnValue({ accessibility_menu: true });
 
       const store = createMockStore();
       render(
@@ -448,9 +431,7 @@ describe('AccessibilityFab', () => {
         '/platform/test-tenant/test-mentor/Analytics',
       );
       mockUseEmbedMode.mockReturnValue(false);
-      mockUseTenantMetadata.mockReturnValue({
-        metadata: { accessibility_menu: true },
-      });
+      mockUseTenantObjectMetadata.mockReturnValue({ accessibility_menu: true });
 
       const store = createMockStore();
       const { container } = render(
@@ -468,9 +449,7 @@ describe('AccessibilityFab', () => {
 
     it('order of checks: embed mode checked first', () => {
       mockUseEmbedMode.mockReturnValue(true);
-      mockUseTenantMetadata.mockReturnValue({
-        metadata: { accessibility_menu: true },
-      });
+      mockUseTenantObjectMetadata.mockReturnValue({ accessibility_menu: true });
       mockUsePathname.mockReturnValue('/platform/test-tenant/test-mentor');
 
       const store = createMockStore();
@@ -486,8 +465,8 @@ describe('AccessibilityFab', () => {
 
     it('order of checks: accessibility_menu checked after embed mode', () => {
       mockUseEmbedMode.mockReturnValue(false);
-      mockUseTenantMetadata.mockReturnValue({
-        metadata: { accessibility_menu: false },
+      mockUseTenantObjectMetadata.mockReturnValue({
+        accessibility_menu: false,
       });
       mockUsePathname.mockReturnValue('/platform/test-tenant/test-mentor');
 
@@ -507,9 +486,7 @@ describe('AccessibilityFab', () => {
   // the floating button used to sit on top of its Send button.
   describe('Position', () => {
     beforeEach(() => {
-      mockUseTenantMetadata.mockReturnValue({
-        metadata: { accessibility_menu: true },
-      });
+      mockUseTenantObjectMetadata.mockReturnValue({ accessibility_menu: true });
     });
 
     it('sits above the pinned phone composer on the new-chat screen', () => {

@@ -19,7 +19,7 @@ const mockEnableRBAC = vi.fn();
 const mockExecuteWithTrialCheck = vi.fn();
 const mockDispatch = vi.fn();
 const mockRbacPermissions = { mentors: { '/x/': { read: true } } };
-const mockUseGetUserTenantsQuery = vi.fn();
+const mockUseUserTenants = vi.fn();
 const mockHandleTenantSwitch = vi.fn();
 const mockInvalidateTags = vi.fn((tags: string[]) => ({
   type: 'invalidate',
@@ -51,6 +51,7 @@ vi.mock('@/hooks/user-navigate', () => ({
 
 vi.mock('@/hooks/use-user', () => ({
   useUsername: () => mockUseUsername(),
+  useUserTenants: () => mockUseUserTenants(),
 }));
 
 vi.mock('@/hooks/user-user-actions', () => ({
@@ -76,10 +77,6 @@ vi.mock('@/lib/hooks', () => ({
     void selector;
     return mockRbacPermissions;
   },
-}));
-
-vi.mock('@/features/tenants/api-slice', () => ({
-  useGetUserTenantsQuery: () => mockUseGetUserTenantsQuery(),
 }));
 
 vi.mock('@/lib/utils', async (importOriginal) => {
@@ -139,12 +136,11 @@ describe('SettingsTab', () => {
     mockGetMentorId.mockReturnValue(null);
     mockUseUsername.mockReturnValue('jane');
     mockEnableRBAC.mockReturnValue(false);
-    mockUseGetUserTenantsQuery.mockReturnValue({
-      data: [
+    mockUseUserTenants.mockReturnValue({
+      userTenants: [
         { key: 'acme', name: 'Acme', is_admin: true },
         { key: 'beta', name: null, is_admin: false },
       ],
-      isLoading: false,
     });
   });
 
@@ -175,6 +171,17 @@ describe('SettingsTab', () => {
           }[option.value],
         })),
       );
+    });
+
+    it('keeps the constant label for a visibility option without a translation', () => {
+      const extra = { label: 'Department', value: 'viewable_by_department' };
+      (MENTOR_VISIBILITY as { label: string; value: string }[]).push(extra);
+      try {
+        render(<SettingsTab />);
+        expect(providerValue().visibilityOptions).toContainEqual(extra);
+      } finally {
+        MENTOR_VISIBILITY.pop();
+      }
     });
 
     it('forwards the config-derived enableRBAC flag', () => {
@@ -236,17 +243,19 @@ describe('SettingsTab', () => {
         { key: 'acme', name: 'Acme', is_admin: true },
         { key: 'beta', name: null, is_admin: false },
       ]);
-      expect(tabProps().isLoadingTenants).toBe(false);
     });
 
-    it('defaults to an empty tenant list while the query is loading', () => {
-      mockUseGetUserTenantsQuery.mockReturnValue({
-        data: undefined,
-        isLoading: true,
-      });
+    // Read from storage, so there is no in-flight state to report — and no
+    // request to the edX LMS on every open of this tab.
+    it('defaults to an empty tenant list when nothing is cached', () => {
+      mockUseUserTenants.mockReturnValue({ userTenants: [] });
       render(<SettingsTab />);
       expect(tabProps().tenants).toEqual([]);
-      expect(tabProps().isLoadingTenants).toBe(true);
+    });
+
+    it('reports no loading state, since the list is already in hand', () => {
+      render(<SettingsTab />);
+      expect(tabProps().isLoadingTenants).toBeUndefined();
     });
   });
 
@@ -267,6 +276,15 @@ describe('SettingsTab', () => {
         students: 'usersOption',
         anyone: 'anyoneOption',
       });
+      expect(labels.fields.whoCanView.adminOnlyNote).toBe(
+        'whoCanViewAdminOnlyNote',
+      );
+      expect(labels.adminVisibilityConfirm).toEqual({
+        title: 'title',
+        description: 'description',
+        cancel: 'cancel',
+        confirm: 'confirm',
+      });
       expect(labels.fields.showReasoning).toEqual({
         label: 'enableVerboseReasoningLabel',
         tooltip: 'enableVerboseReasoningTooltip',
@@ -285,6 +303,7 @@ describe('SettingsTab', () => {
         advanced: 'advancedHeading',
         perSurface: 'perSurfaceHeading',
         globalSettings: 'globalSettingsHeading',
+        contextLimits: 'contextLimitsHeading',
       });
       // #2476: the Capabilities sub-tab renders a two-column surface matrix,
       // so the wrapper must supply the column headings and the embed-column
@@ -316,9 +335,10 @@ describe('SettingsTab', () => {
       expect(labels.fields.enhancedDocRetrieval.label).toBe(
         'enhancedDocRetrievalLabel',
       );
-      expect(labels.fields.inChatModelChange).toEqual({
-        label: 'inChatModelChangeLabel',
-        tooltip: 'inChatModelChangeTooltip',
+      expect(labels.fields).not.toHaveProperty('inChatModelChange');
+      expect(labels.fields.showLastConversation).toEqual({
+        label: 'showLastConversationLabel',
+        tooltip: 'showLastConversationTooltip',
       });
       expect(labels.fields.promptCaching.label).toBe(
         'enablePromptCachingLabel',
@@ -326,7 +346,33 @@ describe('SettingsTab', () => {
       expect(labels.fields.smartDocRetrieval.label).toBe(
         'smartDocRetrievalLabel',
       );
+      expect(labels.fields.chatHistoryMessages).toEqual({
+        label: 'chatHistoryMessagesLabel',
+        tooltip: 'chatHistoryMessagesTooltip',
+        placeholder: 'chatHistoryMessagesPlaceholder',
+        minValueError: 'contextLimitMinValueError',
+      });
+      expect(labels.fields.chatHistoryTokens.label).toBe(
+        'chatHistoryTokensLabel',
+      );
+      expect(labels.fields.documentChunks.label).toBe('documentChunksLabel');
+      expect(labels.allowedFileTypes).toMatchObject({
+        heading: 'heading',
+        title: 'title',
+        openButton: 'openButton',
+        removeAriaLabel: 'removeAriaLabel',
+        done: 'done',
+      });
       expect(labels.toasts.voiceCallError).toBe('voiceCallSettingsError');
+    });
+
+    it('passes every Discovery label from its next-intl key', async () => {
+      render(<SettingsTab />);
+      const en = (await import('../../../messages/en.json')).default
+        .tabsSettingsTab.discoveryAccess;
+      expect(tabProps().labels.discoveryAccess).toEqual(
+        Object.fromEntries(Object.keys(en).map((key) => [key, key])),
+      );
     });
   });
 
@@ -361,6 +407,80 @@ describe('SettingsTab', () => {
       expect(catalogs.en.tabsSettingsTab.enableVerboseReasoningLabel).toBe(
         'Enable Verbose Reasoning',
       );
+    });
+
+    it('translates the Context Limits copy in every locale', async () => {
+      const keys = [
+        'contextLimitsHeading',
+        'contextLimitMinValueError',
+        ...[
+          'chatHistoryMessages',
+          'chatHistoryTokens',
+          'documentChunks',
+        ].flatMap((field) => [
+          `${field}Label`,
+          `${field}Tooltip`,
+          `${field}Placeholder`,
+        ]),
+      ];
+
+      for (const locale of ['en', 'es', 'fr', 'zh']) {
+        const messages = (await import(`../../../messages/${locale}.json`))
+          .default as { tabsSettingsTab: Record<string, string> };
+        for (const key of keys) {
+          expect(
+            messages.tabsSettingsTab[key],
+            `${locale}.${key}`,
+          ).toBeTruthy();
+        }
+      }
+    });
+  });
+
+  describe('Allowed File Types catalogs', () => {
+    it('has every label in every locale, with the SDK placeholders kept', async () => {
+      const en = (await import('../../../messages/en.json')).default
+        .tabsSettingsTab.allowedFileTypes as Record<string, string>;
+
+      for (const locale of ['en', 'es', 'fr', 'zh']) {
+        const messages = (await import(`../../../messages/${locale}.json`))
+          .default as {
+          tabsSettingsTab: { allowedFileTypes: Record<string, string> };
+        };
+        const copy = messages.tabsSettingsTab.allowedFileTypes;
+        for (const key of Object.keys(en)) {
+          expect(copy[key], `${locale}.${key}`).toBeTruthy();
+        }
+        expect(copy.countMany, locale).toContain('{count}');
+        for (const key of ['removeAriaLabel', 'duplicateError']) {
+          expect(copy[key], `${locale}.${key}`).toContain('{ext}');
+        }
+      }
+    });
+  });
+
+  describe('Discovery catalogs', () => {
+    it('has every label in every locale and never names the tenant', async () => {
+      const en = (await import('../../../messages/en.json')).default
+        .tabsSettingsTab.discoveryAccess as Record<string, string>;
+      expect(en.audienceLabel).toBe('Who Can Use This Agent?');
+      expect(en.publicCatalogLabel).toBe('List in Public Catalog');
+      expect(en.guestChatLabel).toBe('Allow Chat Without Signing In');
+
+      for (const locale of ['en', 'es', 'fr', 'zh']) {
+        const messages = (await import(`../../../messages/${locale}.json`))
+          .default as {
+          tabsSettingsTab: { discoveryAccess: Record<string, string> };
+        };
+        const copy = messages.tabsSettingsTab.discoveryAccess;
+        expect(Object.keys(copy).sort(), locale).toEqual(
+          Object.keys(en).sort(),
+        );
+        for (const key of Object.keys(en)) {
+          expect(copy[key], `${locale}.${key}`).toBeTruthy();
+          expect(copy[key], `${locale}.${key}`).not.toMatch(/\{|tenant/i);
+        }
+      }
     });
   });
 
@@ -417,13 +537,9 @@ describe('SettingsTab', () => {
   });
 
   describe('onSuccessfulCopy', () => {
-    it('navigates to the new mentor for a same-tenant copy', () => {
+    it('navigates to the new agent with its settings open', () => {
       render(<SettingsTab />);
-      tabProps().onSuccessfulCopy({
-        forkedMentorId: 'fork-1',
-        destinationTenantKey: 'acme',
-        isCrossTenantCopy: false,
-      });
+      tabProps().onSuccessfulCopy({ forkedMentorId: 'fork-1' });
       const expectedStack = JSON.stringify([
         {
           name: MODALS.EDIT_MENTOR.name,
@@ -434,22 +550,20 @@ describe('SettingsTab', () => {
         'fork-1',
         `modal=${expectedStack}`,
       );
+    });
+
+    // Only same-organization copies report back. A copy into any other one is
+    // made by the auth app, which lands the user on the result itself — so
+    // this app never switches organizations on a copy's behalf.
+    it('never switches organizations itself', () => {
+      render(<SettingsTab />);
+      tabProps().onSuccessfulCopy({ forkedMentorId: 'fork-1' });
       expect(mockHandleTenantSwitch).not.toHaveBeenCalled();
     });
 
-    it('switches tenants for a cross-tenant copy', () => {
+    it('hands the auth app URL to the settings tab for copies made elsewhere', () => {
       render(<SettingsTab />);
-      tabProps().onSuccessfulCopy({
-        forkedMentorId: 'fork-2',
-        destinationTenantKey: 'beta',
-        isCrossTenantCopy: true,
-      });
-      expect(mockHandleTenantSwitch).toHaveBeenCalledTimes(1);
-      const [dest, flag, url] = mockHandleTenantSwitch.mock.calls[0];
-      expect(dest).toBe('beta');
-      expect(flag).toBe(false);
-      expect(url).toContain('/platform/beta/fork-2?modal=');
-      expect(mockNavigateToMentor).not.toHaveBeenCalled();
+      expect(tabProps().authUrl).toBeTruthy();
     });
   });
 });

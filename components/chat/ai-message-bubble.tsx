@@ -15,11 +15,11 @@ import { AIMessageDownload } from './ai-message-download';
 import { AIMessageSpeak } from './ai-message-speak';
 import {
   selectShowingSharedChat,
-  useTenantMetadata as useTenantMetadataHook,
   type ChatPhase,
   type Message,
   type ToolCallInfo,
 } from '@iblai/iblai-js/web-utils';
+import { useTenantObjectMetadata } from '@/hooks/use-tenant-object-metadata';
 import { AIMessageRating } from './ai-message-rating';
 import { AIMessageReportInappropriateContent } from './ai-message-report-inappropriate-content';
 import { cn, isLoggedIn, redirectToAuthSpaJoinTenant } from '@/lib/utils';
@@ -135,9 +135,7 @@ export function AIMessageBubble({
   const chatPrivacyActive =
     chatPrivacyReady && chatPrivacyEffective?.mode === 'disabled';
 
-  const { metadata: tenantMetadata } = useTenantMetadataHook({
-    org: tenantKey,
-  });
+  const tenantMetadata = useTenantObjectMetadata(tenantKey);
   const isMentorInappropriateContentEnabled =
     tenantMetadata?.mentor_report_inappropriate_content !== false;
   const supportEmail = tenantMetadata?.support_email || config.supportEmail();

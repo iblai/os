@@ -46,6 +46,7 @@ import {
   closeManageBenchmarksDialog,
   type EvalRunStatus,
 } from '@iblai/iblai-js/playwright';
+import { ActivityPhoneView } from './activity-phone';
 
 /**
  * Page object for the "Evals" tab inside the Edit Mentor modal.
@@ -72,6 +73,7 @@ import {
 export class EvaluationTab {
   readonly page: Page;
   readonly dialog: Locator;
+  readonly phone: ActivityPhoneView;
 
   /** Default labels shipped with the SDK — handy for exact-text assertions. */
   static readonly LABELS = EVALS_LABELS;
@@ -98,6 +100,7 @@ export class EvaluationTab {
   constructor(page: Page, dialog: Locator) {
     this.page = page;
     this.dialog = dialog;
+    this.phone = new ActivityPhoneView(page, dialog);
   }
 
   // ---------------------------------------------------------------------------
@@ -342,6 +345,32 @@ export class EvaluationTab {
 
   closeBenchmarkItemsDialog(): Promise<void> {
     return closeBenchmarkItemsDialog(this.dialog);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Phone view (< 768px): run cards, action sheet, benchmark sheet
+  // ---------------------------------------------------------------------------
+
+  /** A run card, matched by (a substring of) the run name. */
+  phoneRunCard(runName: string): Locator {
+    return this.dialog.getByRole('button').filter({ hasText: runName });
+  }
+
+  /** The action sheet a run card opens; titled with the run name. */
+  phoneRunActionSheet(runName: string): Locator {
+    return this.phone.sheet(runName);
+  }
+
+  async openPhoneRunActions(runName: string): Promise<Locator> {
+    await this.phoneRunCard(runName).click();
+    const sheet = this.phoneRunActionSheet(runName);
+    await expect(sheet).toBeVisible({ timeout: 5_000 });
+    return sheet;
+  }
+
+  /** The benchmark picker opens a sheet titled with its placeholder. */
+  phoneBenchmarkSheet(): Locator {
+    return this.phone.sheet('Select a Benchmark');
   }
 
   // ---------------------------------------------------------------------------
