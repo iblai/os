@@ -7,7 +7,13 @@ import {
 } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from '../App';
-import { installChromeStub, type ChromeStub } from './chrome.stub';
+import {
+  SESSION,
+  installChromeStub,
+  sessionRedirect,
+  type ChromeStub,
+} from './chrome.stub';
+import { t } from '../i18n';
 
 vi.mock('../mentor-chat', () => ({
   MentorChat: () => <div data-testid="mentor-chat" />,
@@ -35,6 +41,60 @@ describe('App', () => {
     // two-surface panel came back.
     expect(screen.queryAllByRole('tab')).toHaveLength(0);
     expect(screen.queryByRole('tablist')).toBeNull();
+  });
+
+  // The panel used to default to "signed out", so anyone already signed in saw
+  // the blue Sign In button for a frame on every open.
+  it('never flashes the sign-in button while the answer is pending', async () => {
+    render(<App />);
+
+    expect(screen.queryByRole('button', { name: t('signIn') })).toBeNull();
+    expect(screen.queryByTestId('mentor-chat')).toBeNull();
+    expect(screen.getByText(t('signingIn'))).toBeInTheDocument();
+
+    await screen.findByTestId('mentor-chat');
+    expect(screen.queryByRole('button', { name: t('signIn') })).toBeNull();
+  });
+
+  it('shows the sign-in button once sign-in has actually failed', async () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    chromeStub.stub.identity.launchWebAuthFlow.mockRejectedValueOnce(
+      new Error('nope'),
+    );
+
+    render(<App />);
+
+    expect(
+      await screen.findByRole('button', { name: t('signIn') }),
+    ).toBeInTheDocument();
+    error.mockRestore();
+  });
+
+  // Two clicks used to start two auth flows, and whichever finished last wrote
+  // the session — so a slow first attempt could land on top of the good one.
+  it('runs one sign-in at a time, however many times the button is clicked', async () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    chromeStub.stub.identity.launchWebAuthFlow.mockRejectedValueOnce(
+      new Error('nope'),
+    );
+    render(<App />);
+    const button = await screen.findByRole('button', { name: t('signIn') });
+
+    let release!: (value: string) => void;
+    chromeStub.stub.identity.launchWebAuthFlow.mockImplementationOnce(
+      () => new Promise<string>((resolve) => (release = resolve)),
+    );
+
+    fireEvent.click(button);
+    fireEvent.click(button);
+    fireEvent.click(button);
+
+    expect(chromeStub.stub.identity.launchWebAuthFlow).toHaveBeenCalledTimes(2);
+
+    await act(async () => {
+      release(sessionRedirect(SESSION));
+    });
+    error.mockRestore();
   });
 
   it('signs in on first open and then renders the chat', async () => {

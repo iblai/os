@@ -105,5 +105,8 @@
   },
   "errorRealClicksOff": {
     "message": "Les clics réels ont été arrêtés depuis la barre de l’onglet ou par les outils de développement, l’exécution s’est donc terminée. Réessayez."
+  },
+  "signingIn": {
+    "message": "Connexion en cours…"
   }
 }

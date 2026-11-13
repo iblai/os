@@ -105,5 +105,8 @@
   },
   "errorRealClicksOff": {
     "message": "真实点击已从标签页的提示栏或开发者工具处停止，本次运行已结束。请重试。"
+  },
+  "signingIn": {
+    "message": "正在登录…"
   }
 }

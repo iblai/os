@@ -1,7 +1,13 @@
 // Glue between the side panel and the mentor iframe inside <agent-ai> (ported
 // from the original panel.js).
 import { extractPageContent } from './page-scripts';
-import { isAuthed, isSessionExpired, sessionData, signIn } from './auth';
+import {
+  AUTH_URL,
+  isAuthed,
+  isSessionExpired,
+  sessionData,
+  signIn,
+} from './auth';
 import { injectable } from './settings';
 
 export interface PageContent {
@@ -168,6 +174,38 @@ export function refreshHostAuthCache(host: Element): void {
 // landing on the app root (embed params preserved) so the app opens the newly
 // selected tenant.
 /**
+ * The address to open for the organization chooser, or null to open nothing.
+ *
+ * Two jobs, both because this string arrives in a `postMessage` and ends up in
+ * a real browser tab:
+ *
+ * 1. It must be on our own auth origin. `watchTenantSwitch` listens on the
+ *    window, so anything able to post to it could otherwise name any address
+ *    and have the panel open it as "the organization chooser".
+ * 2. Any forwarded edX JWT comes off. The app inside the iframe still appends
+ *    one until iblai-web-frontend#2236 ships, and we are the one deciding what
+ *    is actually opened — a live credential should not land in tab history.
+ *    The auth app does not need it; it authorises with its own stored copy.
+ */
+export function chooserUrlToOpen(raw: string): string | null {
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    console.warn('[ibl.ai panel] ignoring an unreadable chooser address');
+    return null;
+  }
+  if (url.origin !== new URL(AUTH_URL).origin) {
+    console.warn(
+      `[ibl.ai panel] ignoring a chooser address that is not ours: ${url.origin}`,
+    );
+    return null;
+  }
+  url.searchParams.delete('token');
+  return url.toString();
+}
+
+/**
  * Watch a chooser tab until the user picks an organization, and report which.
  *
  * The chooser hands its answer to `/login/complete?tenant=<key>`, so that
@@ -222,8 +260,9 @@ export function watchTenantSwitch(host: Element): () => void {
     // of the panel — so the chooser opens in a real tab and we resume the
     // normal switch below with whatever they pick.
     if (!data.tenant && data.chooserUrl) {
+      const url = chooserUrlToOpen(data.chooserUrl);
+      if (!url) return;
       await withAuthFlow('organization chooser', async () => {
-        const url = data.chooserUrl as string;
         const tab = await chrome.tabs.create({ url });
         const tenant = tab.id ? await awaitChosenOrganization(tab.id) : null;
         if (!tenant) return;

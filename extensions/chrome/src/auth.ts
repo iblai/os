@@ -63,21 +63,32 @@ function loginUrl(redirectUri: string): string {
 
 // Build the auth SPA URL for a tenant SWITCH. This mirrors the web tenant switch
 // (SDK `handleTenantSwitch`), which hits `/login/complete` — NOT `/login` — with
-// the target `tenant`, a `redirect-to`, and the preserved edX JWT as `token`.
+// the target `tenant` and a `redirect-to`.
 // The distinction matters: `/login` is the interactive login page, and with an
 // existing auth session it just returns the CURRENT tenant, ignoring `?tenant=`
 // (which is why switching used to land back on the same tenant). `/login/complete`
-// is the token-exchange endpoint that USES the JWT to mint the requested tenant's
-// tokens and returns them in the redirect `data`.
+// is the token-exchange endpoint that mints the requested tenant's tokens and
+// returns them in the redirect `data`.
+//
+// We no longer forward our own edX JWT as `token`. The auth app keeps its own
+// copy in its own storage and authorises the mint with that, so ours duplicated
+// what the other end already had — and it is to stop handing that JWT to apps
+// at all, which would leave us nothing to forward.
+//
+// What makes that safe is that this URL and the one `loginUrl` builds share an
+// origin (`AUTH_URL`): the JWT the auth app writes when we sign in is in the
+// storage it reads when we come back to switch. localStorage is origin-scoped,
+// so that identity is the whole argument.
+//
+// Where that storage does not carry over between `launchWebAuthFlow` windows,
+// the auth app's first call 401s and it sends the user through a sign-in
+// carrying this same `redirect-to` — the flow still ends at our redirect URI
+// with a session, at the cost of one sign-in rather than a failed switch.
 function switchTenantUrl(redirectUri: string, tenant: string): string {
   const params = new URLSearchParams({
     tenant,
     'redirect-to': redirectUri,
   });
-  // The edX JWT is tenant-independent and is what authorises minting the new
-  // tenant's tokens without a fresh interactive login.
-  const jwt = localStorage.getItem('edx_jwt_token');
-  if (jwt) params.set('token', jwt);
   return `${AUTH_URL}/login/complete?${params.toString()}`;
 }
 

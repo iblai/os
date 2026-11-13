@@ -7,6 +7,7 @@ import {
   refreshHostAuthCache,
   removeWidgetSpinner,
   startContextFeed,
+  chooserUrlToOpen,
   watchAndInstallSession,
   watchAuthExpired,
   watchTenantSwitch,
@@ -107,6 +108,44 @@ describe('installSession with an explicit redirect path (tenant switch)', () => 
   });
 });
 
+describe('chooserUrlToOpen', () => {
+  // This string arrives in a postMessage and ends up in a real browser tab, so
+  // anything able to post to the window could otherwise name any address and
+  // have the panel open it as "the organization chooser".
+  it('refuses an address that is not on our auth origin', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    expect(chooserUrlToOpen('https://evil.example/login')).toBeNull();
+
+    expect(warn.mock.calls[0]?.[0]).toContain('not ours');
+    warn.mockRestore();
+  });
+
+  it('refuses an address it cannot read', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    expect(chooserUrlToOpen('not a url')).toBeNull();
+    expect(warn).toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
+  // The app in the iframe still appends the edX JWT until
+  // iblai-web-frontend#2236 ships; a live credential must not reach tab history.
+  it('removes a forwarded token and leaves the rest alone', () => {
+    const url = new URL(
+      chooserUrlToOpen(
+        'https://login.iblai.app/me?action=switch-tenant&redirect-to=https%3A%2F%2Fos.ibl.ai&tenant=main&popup=1&token=secret',
+      )!,
+    );
+
+    expect(url.searchParams.has('token')).toBe(false);
+    expect(url.toString()).not.toContain('secret');
+    expect(url.searchParams.get('action')).toBe('switch-tenant');
+    expect(url.searchParams.get('tenant')).toBe('main');
+    expect(url.searchParams.get('popup')).toBe('1');
+    expect(url.searchParams.get('redirect-to')).toBe('https://os.ibl.ai');
+  });
+});
+
 describe('watchTenantSwitch', () => {
   it('re-auths into the requested tenant and re-installs via sso-login-complete', async () => {
     const { host, iframe } = makeHost(
@@ -147,7 +186,8 @@ describe('watchTenantSwitch', () => {
       new MessageEvent('message', {
         data: {
           tenantSwitch: true,
-          chooserUrl: 'https://login.iblai.app/me?action=switch-tenant&popup=1',
+          chooserUrl:
+            'https://login.iblai.app/me?action=switch-tenant&popup=1&token=secret',
         },
       }),
     );
@@ -159,6 +199,9 @@ describe('watchTenantSwitch', () => {
       { url: string },
     ];
     expect(url).toContain('action=switch-tenant');
+    // Whatever the app sent, the tab we open carries no credential.
+    expect(url).not.toContain('token=');
+    expect(url).not.toContain('secret');
 
     // The chooser answers by sending its tab to /login/complete?tenant=…
     for (const listener of [...chromeStub.updated])
