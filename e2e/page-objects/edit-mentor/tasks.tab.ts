@@ -230,33 +230,60 @@ export class TasksTab {
     const dialog = this.page.getByRole('dialog', {
       name: TASKS_LABELS.scheduleDialog.dialogName,
     });
-    // The dialog's desktop calendar is a hand-rolled 42-cell grid of plain
-    // buttons whose accessible name is just the day number; past days are
-    // `disabled`. For a next-day target the first enabled exact match is
-    // always the target: any earlier cell with the same number belongs to a
-    // past month (disabled), and when today is the month's last day the
-    // target "1" is the next month's spillover cell, which the grid always
-    // shows.
     await dialog
-      .getByRole('button', {
-        name: String(target.getDate()),
-        exact: true,
-        disabled: false,
-      })
-      .first()
-      .click();
-    // The form panel's heading echoes the selected date ("July 4, 2026") —
-    // assert the click landed on the right day before filling the form.
-    await expect(
-      dialog.getByRole('heading', {
-        name: target.toLocaleDateString('en-US', {
-          month: 'long',
-          day: 'numeric',
-          year: 'numeric',
+      .getByLabel(TASKS_LABELS.scheduleDialog.taskName)
+      .waitFor({ state: 'visible' });
+    // On a phone the dialog has no inline calendar: a collapsed "Date"
+    // button opens a day-picker popover whose day buttons are named like
+    // "Saturday, November 14th, 2026".
+    const phoneDate = dialog.getByRole('button', {
+      name: 'Date',
+      exact: true,
+    });
+    if ((await phoneDate.count()) > 0) {
+      await phoneDate.click();
+      const month = target.toLocaleDateString('en-US', { month: 'long' });
+      // The popover is portaled outside the dialog.
+      await this.page
+        .getByRole('button', {
+          name: new RegExp(
+            `, ${month} ${target.getDate()}(st|nd|rd|th), ${target.getFullYear()}$`,
+          ),
+        })
+        .click();
+      await expect(phoneDate).toContainText(
+        new RegExp(`^${month} ${target.getDate()}(st|nd|rd|th), `),
+        { timeout: 5_000 },
+      );
+    } else {
+      // The desktop calendar is a hand-rolled 42-cell grid of plain
+      // buttons whose accessible name is just the day number; past days are
+      // `disabled`. For a next-day target the first enabled exact match is
+      // always the target: any earlier cell with the same number belongs to
+      // a past month (disabled), and when today is the month's last day the
+      // target "1" is the next month's spillover cell, which the grid always
+      // shows.
+      await dialog
+        .getByRole('button', {
+          name: String(target.getDate()),
+          exact: true,
+          disabled: false,
+        })
+        .first()
+        .click();
+      // The form panel's heading echoes the selected date ("July 4, 2026") —
+      // assert the click landed on the right day before filling the form.
+      await expect(
+        dialog.getByRole('heading', {
+          name: target.toLocaleDateString('en-US', {
+            month: 'long',
+            day: 'numeric',
+            year: 'numeric',
+          }),
+          exact: true,
         }),
-        exact: true,
-      }),
-    ).toBeVisible({ timeout: 5_000 });
+      ).toBeVisible({ timeout: 5_000 });
+    }
     await dialog
       .getByLabel(TASKS_LABELS.scheduleDialog.taskName)
       .fill(task.name);
