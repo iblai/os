@@ -1,9 +1,9 @@
 {
   "version": 2,
-  "lastUpdated": "2026-11-12",
+  "lastUpdated": "2026-11-13",
   "summary": {
-    "totalCheckpoints": 1129,
-    "coveredCheckpoints": 1048,
+    "totalCheckpoints": 1137,
+    "coveredCheckpoints": 1056,
     "deprecatedCheckpoints": 18,
     "notReproducibleCheckpoints": 17,
     "pendingCheckpoints": 46,
@@ -3343,7 +3343,7 @@
       "checkpoints": [
         {
           "id": "pr-01",
-          "description": "Privacy tab label is visible in the Edit Mentor modal sidebar (always mounted — no longer gated on enable_privacy_router)",
+          "description": "Privacy tab label is visible in the Edit Agent modal sidebar (always mounted) on a new agent",
           "status": "covered"
         },
         {
@@ -3353,32 +3353,72 @@
         },
         {
           "id": "pr-03",
-          "description": "Privacy tab stays mounted in the sidebar regardless of enable_privacy_router; capability-gate-content's data-enabled attribute tracks the in-tab \"PII filtering\" toggle (feat/2040 — moved off Settings → Capabilities into the Privacy tab's own CapabilityGate)",
+          "description": "The removed master toggle (privacy-capability-toggle) and PII sub-tab (privacy-sub-tab-pii) no longer exist; filtering content renders without a sub-tab strip it does not need",
           "status": "covered"
         },
         {
           "id": "pr-04",
-          "description": "The CapabilityGate off-state hint is shown only while the router is off",
+          "description": "A new agent shows the PII Filtering and PHI Filtering cards both off (aria-checked false, title Off, accessible names, summary \"Off.\"); opening an off card shows only its off hint",
           "status": "covered"
         },
         {
           "id": "pr-05",
-          "description": "Enabling the router keeps the action, entity chips and output-filter fields present and interactive",
-          "status": "covered"
-        },
-        {
-          "id": "pr-05b",
-          "description": "The \"When PII is detected\" action dropdown lists Allow, Redact, Mask, Block in that order (PRIVACY_ACTIONS = ['allow','redact','mask','block'] from @iblai/data-layer — Allow is now first)",
+          "description": "Turning PII Filtering on saves in one click, opens its card and leaves PHI off; summary starts with \"On.\"",
           "status": "covered"
         },
         {
           "id": "pr-06",
-          "description": "Block Message textarea is editable only while the action is Block (tolerates conditional-render or render-and-disable SDK shapes)",
+          "description": "The PII action dropdown lists Allow, Redact, Mask, Block in that order",
           "status": "covered"
         },
         {
           "id": "pr-07",
-          "description": "Clicking an entity chip flips its aria-checked state and persists when toggled twice",
+          "description": "Block Message is shown and editable only while the PII action is Block; the summary names the action",
+          "status": "covered"
+        },
+        {
+          "id": "pr-08",
+          "description": "PII entity chips flip aria-checked, the \"none selected = all\" hint tracks them and the summary counts selected kinds",
+          "status": "covered"
+        },
+        {
+          "id": "pr-09",
+          "description": "PII settings persist after closing and reopening the modal; turning the last kind off returns the card to \"Off.\"",
+          "status": "covered"
+        },
+        {
+          "id": "pr-10",
+          "description": "PHI Filtering shows 12 entity chips, \"all 12 kinds\" when none selected, and a count (\"2 kinds selected\") plus Block action after configuring it",
+          "status": "covered"
+        },
+        {
+          "id": "pr-11",
+          "description": "Only one filter card is open at a time: turning PII on opens PII and closes PHI while PHI stays on; the chevron reopens PHI and closes PII",
+          "status": "covered"
+        },
+        {
+          "id": "pr-12",
+          "description": "\"Also Filter AI Responses\" switch (privacy-output-filter-toggle) is named exactly that and can be turned on and off",
+          "status": "covered"
+        },
+        {
+          "id": "pr-13",
+          "description": "Turning one kind off leaves the other on; turning the last kind off switches filtering off",
+          "status": "covered"
+        },
+        {
+          "id": "pr-14",
+          "description": "Admin sees the Privacy Log row and View Privacy Log button; it opens the audit-log modal with rows (privacy-flags endpoint mocked)",
+          "status": "covered"
+        },
+        {
+          "id": "pr-15",
+          "description": "Privacy Log rail filter narrows the list to the chosen rail (PHI)",
+          "status": "covered"
+        },
+        {
+          "id": "pr-16",
+          "description": "Privacy Log row action opens the flag detail panel",
           "status": "covered"
         }
       ]
