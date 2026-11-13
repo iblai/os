@@ -8,11 +8,11 @@ import {
   type CreateAgentInitialValues,
   type CreatedAgent,
 } from '@iblai/iblai-js/web-containers';
+import { useShowFreeTrialDialog } from '@iblai/iblai-js/web-utils';
 
 import { useTenantKey } from '@/hooks/use-tenants';
 import { useUsername } from '@/hooks/use-user';
 import { useNavigate } from '@/hooks/user-navigate';
-import { useShowFreeTrialDialog } from '@/hooks/user-user-actions';
 import { config } from '@/lib/config';
 import {
   DEFAULT_PROMPTS,

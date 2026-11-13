@@ -1901,12 +1901,6 @@
   "tabsSkillsTab": {
     "heading": "Habilidades"
   },
-  "topTrialBannerTopTrialBanner": {
-    "defaultBannerText": "Actualiza para crear tus propios agentes. No se requiere tarjeta de crédito 😎",
-    "upgradeAriaLabel": "Actualizar",
-    "upgradeButton": "Actualizar",
-    "closeBannerAriaLabel": "Cerrar banner"
-  },
   "uiBreadcrumb": {
     "navAriaLabel": "ruta de navegación",
     "ellipsisMore": "Más"

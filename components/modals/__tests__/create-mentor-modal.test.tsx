@@ -38,18 +38,24 @@ vi.mock('@/hooks/user-navigate', () => ({
   useNavigate: () => ({ navigateToMentor }),
 }));
 
-vi.mock('@/hooks/user-user-actions', () => ({
-  useShowFreeTrialDialog: () => ({
-    executeWithTrialCheck: (fn: () => void) => (freeTrial.blocks ? null : fn()),
-    isModalOpen: freeTrial.isModalOpen,
-    closeModal: freeTrial.closeModal,
-    FreeTrialDialog: ({ onClose }: { onClose: () => void }) => (
-      <div role="dialog" aria-label="Free trial">
-        <button onClick={onClose}>Close free trial</button>
-      </div>
-    ),
-  }),
-}));
+vi.mock('@iblai/iblai-js/web-utils', async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import('@iblai/iblai-js/web-utils')>();
+  return {
+    ...actual,
+    useShowFreeTrialDialog: () => ({
+      executeWithTrialCheck: (fn: () => void) =>
+        freeTrial.blocks ? null : fn(),
+      isModalOpen: freeTrial.isModalOpen,
+      closeModal: freeTrial.closeModal,
+      FreeTrialDialog: ({ onClose }: { onClose: () => void }) => (
+        <div role="dialog" aria-label="Free trial">
+          <button onClick={onClose}>Close free trial</button>
+        </div>
+      ),
+    }),
+  };
+});
 
 vi.mock('@/lib/config', () => ({
   config: {

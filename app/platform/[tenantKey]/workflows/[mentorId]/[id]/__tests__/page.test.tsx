@@ -38,11 +38,16 @@ vi.mock('@/hooks/user-navigate', () => ({
 }));
 
 const mockExecuteWithTrialCheck = vi.fn((fn: () => unknown) => fn());
-vi.mock('@/hooks/user-user-actions', () => ({
-  useShowFreeTrialDialog: () => ({
-    executeWithTrialCheck: mockExecuteWithTrialCheck,
-  }),
-}));
+vi.mock('@iblai/iblai-js/web-utils', async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import('@iblai/iblai-js/web-utils')>();
+  return {
+    ...actual,
+    useShowFreeTrialDialog: () => ({
+      executeWithTrialCheck: mockExecuteWithTrialCheck,
+    }),
+  };
+});
 
 const mockRbacPermissions = { '/mentors/#write': true };
 vi.mock('@/features/rbac/rbac-slice', () => ({

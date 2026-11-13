@@ -37,15 +37,6 @@ vi.mock('@/hooks/use-user', () => ({
   useUserIsStudent: () => false,
 }));
 
-vi.mock('@/hooks/user-user-actions', () => ({
-  useShowFreeTrialDialog: () => ({
-    executeWithTrialCheck: (fn: () => void) => fn(),
-    FreeTrialDialog: null,
-    closeModal: vi.fn(),
-    isModalOpen: false,
-  }),
-}));
-
 vi.mock('@/components/ui/sidebar', () => ({
   useSidebar: () => ({
     toggleSidebar: vi.fn(),
@@ -64,6 +55,12 @@ vi.mock('@iblai/iblai-js/web-utils', async (importOriginal) => {
     await importOriginal<typeof import('@iblai/iblai-js/web-utils')>();
   return {
     ...actual,
+    useShowFreeTrialDialog: () => ({
+      executeWithTrialCheck: (fn: () => void) => fn(),
+      FreeTrialDialog: null,
+      closeModal: vi.fn(),
+      isModalOpen: false,
+    }),
     useTenantContext: () => ({
       setDetermineUserPath: vi.fn(),
       determineUserPath: false,
@@ -231,6 +228,22 @@ vi.mock('@iblai/iblai-js/web-containers', async (importOriginal) => {
           <button onClick={onClose}>Close Apple</button>
         </div>
       ) : null,
+    ContactAdminModal: ({
+      isOpen,
+      onClose,
+    }: {
+      isOpen: boolean;
+      onClose: () => void;
+    }) =>
+      isOpen ? (
+        <div
+          data-testid="contact-admin-modal"
+          role="dialog"
+          aria-label="Contact Admin"
+        >
+          <button onClick={onClose}>Close Contact Admin</button>
+        </div>
+      ) : null,
   };
 });
 
@@ -259,6 +272,7 @@ vi.mock('@/components/custom-alert-dialog', () => ({
 interface StoreOptions {
   modalStack?: ModalInfo[];
   openPricingModal?: boolean;
+  openContactAdminModal?: boolean;
   openAppleRestrictionModal?: boolean;
   customAlertDialogOpen?: boolean;
   shortcutsModal?: boolean;
@@ -268,6 +282,7 @@ function createTestStore(options: StoreOptions = {}) {
   const {
     modalStack = [],
     openPricingModal = false,
+    openContactAdminModal = false,
     openAppleRestrictionModal = false,
     customAlertDialogOpen = false,
     shortcutsModal = false,
@@ -279,6 +294,7 @@ function createTestStore(options: StoreOptions = {}) {
       subscription: (
         state = {
           openPricingModal,
+          openContactAdminModal,
           freeTrialUsageOptions: { count: 0, limitReached: false, message: '' },
           pricingModalData: {
             referenceId: '',
@@ -524,6 +540,34 @@ describe('ModalContainer', () => {
 
       expect(
         screen.queryByTestId('apple-restriction-modal'),
+      ).not.toBeInTheDocument();
+    });
+  });
+
+  describe('ContactAdminModal', () => {
+    it('renders when openContactAdminModal is true', () => {
+      const store = createTestStore({ openContactAdminModal: true });
+
+      render(
+        <Provider store={store}>
+          <ModalContainer />
+        </Provider>,
+      );
+
+      expect(screen.getByTestId('contact-admin-modal')).toBeInTheDocument();
+    });
+
+    it('does not render when openContactAdminModal is false', () => {
+      const store = createTestStore({ openContactAdminModal: false });
+
+      render(
+        <Provider store={store}>
+          <ModalContainer />
+        </Provider>,
+      );
+
+      expect(
+        screen.queryByTestId('contact-admin-modal'),
       ).not.toBeInTheDocument();
     });
   });
