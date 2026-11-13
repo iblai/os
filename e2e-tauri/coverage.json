@@ -2,9 +2,9 @@
   "version": 1,
   "lastUpdated": "2026-11-13",
   "summary": {
-    "totalCheckpoints": 81,
+    "totalCheckpoints": 82,
     "coveredCheckpoints": 25,
-    "pendingCheckpoints": 55,
+    "pendingCheckpoints": 56,
     "deprecatedCheckpoints": 1,
     "notReproducibleCheckpoints": 0,
     "percent": 100,
@@ -130,6 +130,7 @@
         "src-tauri/src/opencode_installer.rs",
         "src-tauri/src/opencode_proxy.rs",
         "components/chat-input-form/coding-mode-button.tsx",
+        "hooks/use-code-shown-here.ts",
         "components/chat-input-form/code-approvals-button.tsx",
         "components/chat-input-form/use-approval-mode-choice.ts",
         "components/chat/code-permission-card.tsx",
@@ -421,6 +422,11 @@
         {
           "id": "code-54",
           "description": "An approval mode saved to the user's profile carries over to a computer that has none saved (an Ask Me chosen on another computer stays Ask Me), never overrides a mode this computer has saved, and a pick in the Code controls is saved to the profile too",
+          "status": "pending"
+        },
+        {
+          "id": "code-55",
+          "description": "The phone apps show no Code pill for now, and a phone that paired with a desktop earlier stops sending its turns to that desktop's Code: the pairing flag is cleared when the composer mounts",
           "status": "pending"
         },
         {
