@@ -388,11 +388,18 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   // anonymous-allowed mentor renders a permanently disabled "no permission to
   // chat" input. Anonymous chat is governed by the mentor's public-access
   // rules, not by a mentor-scoped RBAC grant they can never hold.
+  //
+  // Pages that skip the mentor check (workflows among them) request no mentor
+  // from MentorProvider, so no answer arrives there either: the workflow
+  // Preview's composer stayed disabled for the signed-in editor. The server
+  // still refuses a chat the user may not have.
   useEffect(() => {
     dispatch(
-      username ? resetMentorPermissionsLoaded() : markMentorPermissionsLoaded(),
+      username && !skipMentorCheck
+        ? resetMentorPermissionsLoaded()
+        : markMentorPermissionsLoaded(),
     );
-  }, [mentorId, username, dispatch]);
+  }, [mentorId, username, skipMentorCheck, dispatch]);
   const [useMentorProvider, setUseMentorProvider] = useState(true);
 
   function saveUserTokens(tokenResponse: TokenResponse) {

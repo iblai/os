@@ -1,5 +1,32 @@
 # Changelog
 
+## [0.195.0](https://github.com/iblai/os/compare/v0.194.1...v0.195.0) (2026-11-13)
+
+### Features
+
+* **os:** adding workflows new nodes and improvements ([7a0cd7a](https://github.com/iblai/os/commit/7a0cd7ab5cb8f01f737323ce7ce69fd576586ec9))
+* **privacy:** show the View Privacy Log button to people allowed to see it ([523d757](https://github.com/iblai/os/commit/523d7571c715a307b4f0659132181a48c3df2e49)), closes [#view_privacy_flags](https://github.com/iblai/os/issues/view_privacy_flags)
+
+### Bug Fixes
+
+* **os:** conflicts fixes ([b406753](https://github.com/iblai/os/commit/b406753150e8090d0ec5d66b265f2e7d3511dc28))
+
+### Chores
+
+* **deps:** bump @iblai/iblai-js to 2.70.0 ([fb19779](https://github.com/iblai/os/commit/fb1977956e4185edeb34aca3fa0fed4fd7bc6ba2))
+* **deps:** bump @iblai/iblai-js to 2.73.1 ([a8b56a3](https://github.com/iblai/os/commit/a8b56a32350ff07d0f30545aaf6021637b26c758)), closes [iblai/iblai-web-frontend#2241](https://github.com/iblai/iblai-web-frontend/issues/2241)
+
+### Tests
+
+* **e2e:** aim the phone taps at measured, settled spots ([7d70f80](https://github.com/iblai/os/commit/7d70f80f326a5d15eb48b87c8fc0e5218e1e88e8))
+* **e2e:** close the reopened MCP dialog with its button, not Escape (mcp-05) ([373eb09](https://github.com/iblai/os/commit/373eb09fc878e961360b0fd6458d087b1ccecd8f))
+* **e2e:** cover PII and PHI Filtering and the Privacy Log on the agent Privacy tab ([dfe18e1](https://github.com/iblai/os/commit/dfe18e1ca6b1926f06306a05bc7d690f8b640622))
+* **e2e:** find wf-59's banner line by its step id ([05df7a9](https://github.com/iblai/os/commit/05df7a990451d4e084727219c7d49d0fc9095480)), closes [iblai/iblai-web-frontend#2241](https://github.com/iblai/iblai-web-frontend/issues/2241)
+* **e2e:** pick the next-day date from the phone date sheet in journey 49 ([bfc9c6e](https://github.com/iblai/os/commit/bfc9c6ebb134f3b0d172aa921037bdf5d1f1b318))
+* **e2e:** run wf-59 without the SDK skip ([5a415b7](https://github.com/iblai/os/commit/5a415b758d4c613fa4f69dc58c374cbcf0aa9bcc)), closes [iblai/iblai-web-frontend#2241](https://github.com/iblai/iblai-web-frontend/issues/2241)
+* **e2e:** steady the phone corner tap and gate wf-59 on the SDK version ([2a585d2](https://github.com/iblai/os/commit/2a585d208407c18e38a56930b7868135553a5f51)), closes [#3218](https://github.com/iblai/os/issues/3218)
+* **e2e:** wait for the grader config refetch before editing after re-enable ([708f8df](https://github.com/iblai/os/commit/708f8df43b055396055b64961fb0dc866c58e972))
+
 ## [0.194.1](https://github.com/iblai/os/compare/v0.194.0...v0.194.1) (2026-11-11)
 
 ### Chores

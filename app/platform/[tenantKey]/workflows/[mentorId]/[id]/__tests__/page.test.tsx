@@ -160,13 +160,17 @@ describe('WorkflowDetailPage (thin wrapper)', () => {
     });
   });
 
-  it('onBack goes back in history', () => {
+  // Going back in history reopened the Agent settings popup an Agent step had
+  // opened (its ?modal= entries sit between the list and the editor).
+  it('onBack returns to the workflows list instead of stepping back through history', () => {
     const props = renderAndGetProps();
 
     props.onBack();
 
-    expect(mockBack).toHaveBeenCalledTimes(1);
-    expect(mockPush).not.toHaveBeenCalled();
+    expect(mockPush).toHaveBeenCalledWith(
+      '/platform/test-tenant/workflows/list-mentor',
+    );
+    expect(mockBack).not.toHaveBeenCalled();
   });
 
   it('onDeleted returns to the list of the agent the user came from', () => {
