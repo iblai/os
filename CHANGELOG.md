@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.195.1](https://github.com/iblai/os/compare/v0.195.0...v0.195.1) (2026-11-13)
+
+### Chores
+
+* **deps:** bump @iblai/iblai-js to 2.71.1 ([a9e8fdd](https://github.com/iblai/os/commit/a9e8fdd01ffd76a948b9048359ddc3827093b3ac))
+
+### Documentation
+
+* **e2e:** record journey 46 drop and paste checkpoints in coverage ([05cfae2](https://github.com/iblai/os/commit/05cfae2b80e2e8a58cd044093022486af982be2d))
+
+### Tests
+
+* **e2e:** drop and paste respect Enable File Attachments (CAM-08..10) ([4455efb](https://github.com/iblai/os/commit/4455efb771c68fddd3331dc2e8140a982eb04989))
+* **e2e:** let CAM-08 pass when the composer has no + menu ([7177c33](https://github.com/iblai/os/commit/7177c33fbabd610b4433c525c1c95834b8c26256))
+* **e2e:** match only the In-App Chat attachments switch ([d4d675f](https://github.com/iblai/os/commit/d4d675f9c39d70b1ed55da163531ebc67cb0c0d7))
+* **e2e:** retry the Web Search enable when the default tools land late ([a0b0988](https://github.com/iblai/os/commit/a0b09881152996361c8208cac63933e2a4289c35))
+
 ## [0.195.0](https://github.com/iblai/os/compare/v0.194.1...v0.195.0) (2026-11-13)
 
 ### Features
