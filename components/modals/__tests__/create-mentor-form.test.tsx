@@ -52,14 +52,19 @@ vi.mock('next/navigation', () => ({
   useSearchParams: () => new URLSearchParams(''),
 }));
 
-vi.mock('@/hooks/user-user-actions', () => ({
-  useShowFreeTrialDialog: () => ({
-    executeWithTrialCheck: (fn: () => void) => fn(),
-    isModalOpen: freeTrial.isModalOpen,
-    FreeTrialDialog: freeTrial.FreeTrialDialog,
-    closeModal: vi.fn(),
-  }),
-}));
+vi.mock('@iblai/iblai-js/web-utils', async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import('@iblai/iblai-js/web-utils')>();
+  return {
+    ...actual,
+    useShowFreeTrialDialog: () => ({
+      executeWithTrialCheck: (fn: () => void) => fn(),
+      isModalOpen: freeTrial.isModalOpen,
+      FreeTrialDialog: freeTrial.FreeTrialDialog,
+      closeModal: vi.fn(),
+    }),
+  };
+});
 
 vi.mock('sonner', () => ({
   toast: { success: vi.fn(), error: vi.fn() },

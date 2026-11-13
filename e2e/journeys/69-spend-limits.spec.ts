@@ -683,7 +683,7 @@ test.describe('Journey 69: Spend Limits — Tenant settings (Spend Limits + Agen
         exact: true,
       }),
     ).toHaveAttribute('data-state', 'active', { timeout: 10_000 });
-    await expect(billingPage.billingPlanSection).toBeVisible({
+    await expect(billingPage.creditsSection).toBeVisible({
       timeout: 10_000,
     });
 
@@ -696,7 +696,7 @@ test.describe('Journey 69: Spend Limits — Tenant settings (Spend Limits + Agen
     await expect(agentLimitsSection(page)).toBeVisible({ timeout: 15_000 });
 
     await switchToPlanAndCredits(page);
-    await expect(billingPage.billingPlanSection).toBeVisible({
+    await expect(billingPage.creditsSection).toBeVisible({
       timeout: 10_000,
     });
   });

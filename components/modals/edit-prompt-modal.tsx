@@ -1,5 +1,6 @@
 'use client';
 
+import { useShowFreeTrialDialog } from '@iblai/iblai-js/web-utils';
 import * as React from 'react';
 import { useTranslations } from 'next-intl';
 import { z } from 'zod';
@@ -26,7 +27,6 @@ import { useParams } from 'next/navigation';
 import { TenantKeyMentorIdParams } from '@/lib/types';
 import { useUsername } from '@/hooks/use-user';
 import { useForm } from '@tanstack/react-form';
-import { useShowFreeTrialDialog } from '@/hooks/user-user-actions';
 import { Label } from '../ui/label';
 
 export type SystemPrompt =

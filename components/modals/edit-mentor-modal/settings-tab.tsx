@@ -1,5 +1,6 @@
 'use client';
 
+import { useShowFreeTrialDialog } from '@iblai/iblai-js/web-utils';
 import { useParams, useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import {
@@ -12,7 +13,6 @@ import { chatPrivacyApiSlice } from '@iblai/iblai-js/data-layer';
 
 import { useNavigate } from '@/hooks/user-navigate';
 import { useUsername } from '@/hooks/use-user';
-import { useShowFreeTrialDialog } from '@/hooks/user-user-actions';
 import { config } from '@/lib/config';
 import {
   MENTOR_VISIBILITY,

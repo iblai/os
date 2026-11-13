@@ -20,10 +20,12 @@ import {
 import { LearnerModeSwitch } from './learner-mode-switch';
 import { TenantKeyMentorIdParams } from '@/lib/types';
 import { config } from '@/lib/config';
-import { getUserEmail, getUserName } from '@/features/utils';
-import { MentorSubscriptionFlowV2 } from '@/hooks/subscription/subscription-flow-v2';
+import { getUserEmail } from '@/features/utils';
 import { useAppDispatch, useAppSelector } from '@/lib/hooks';
-import { useSubscriptionHandlerV2 } from '@iblai/iblai-js/web-utils';
+import {
+  useSubscriptionHandlerV2,
+  useSubscriptionFlowV2,
+} from '@iblai/iblai-js/web-utils';
 import {
   handleLogout,
   handleTenantSwitch,
@@ -132,23 +134,7 @@ export function UserProfile({ embed = false }: { embed?: boolean } = {}) {
   const { userTenants = [], saveUserTenants } = useUserTenants();
 
   const dispatch = useAppDispatch();
-  const topBannerOptions = useAppSelector(
-    (state) => state.topBanner.topBannerOptions,
-  );
-
-  const subscriptionFlow = new MentorSubscriptionFlowV2({
-    platformName: config.iblPlatform(),
-    currentTenantKey: currentTenant?.key || '',
-    username: getUserName(),
-    currentTenantOrg: currentTenant?.org || '',
-    userTenants,
-    isAdmin: currentTenant?.is_admin || false,
-    mainTenantKey: config.mainTenantKey(),
-    userEmail: getUserEmail(),
-    dispatch,
-    topBannerOptions,
-    mentorUrl: config.mentorUrl(),
-  });
+  const subscriptionFlow = useSubscriptionFlowV2();
   const { getUserSubscriptionPackage, getUserActiveAppLegacy } =
     useSubscriptionHandlerV2(subscriptionFlow);
 

@@ -501,6 +501,14 @@ const ALL_ANALYTICS_TABS = [
 const mockGetVisibleAnalyticsTabs = vi.hoisted(() => vi.fn());
 
 vi.mock('@iblai/iblai-js/web-utils', () => ({
+  useShowFreeTrialDialog: () => ({
+    executeWithTrialCheck: executeWithTrialCheckMock,
+    FreeTrialDialog: FreeTrialDialogStub,
+    closeModal: closeFreeTrialModalMock,
+    isModalOpen: mockFreeTrialModalOpen,
+    isNewlyUserOnPreFreeOrAdvertisingMode: () =>
+      mockIsNewlyUserOnPreFreeOrAdvertisingMode,
+  }),
   getVisibleAnalyticsTabs: mockGetVisibleAnalyticsTabs,
   chatActions: {
     setShouldStartNewChat: (...a: unknown[]) => ({
@@ -635,17 +643,6 @@ vi.mock('@/hoc/withPermissions', () => ({
 
 vi.mock('@/hooks/use-embed-mode', () => ({
   useEmbedMode: () => mockEmbedMode,
-}));
-
-vi.mock('@/hooks/user-user-actions', () => ({
-  useShowFreeTrialDialog: () => ({
-    executeWithTrialCheck: executeWithTrialCheckMock,
-    FreeTrialDialog: FreeTrialDialogStub,
-    closeModal: closeFreeTrialModalMock,
-    isModalOpen: mockFreeTrialModalOpen,
-    isNewlyUserOnPreFreeOrAdvertisingMode: () =>
-      mockIsNewlyUserOnPreFreeOrAdvertisingMode,
-  }),
 }));
 
 vi.mock('@/lib/utils', async (importOriginal) => {

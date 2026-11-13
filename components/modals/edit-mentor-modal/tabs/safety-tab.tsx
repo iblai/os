@@ -1,3 +1,4 @@
+import { useShowFreeTrialDialog } from '@iblai/iblai-js/web-utils';
 import React from 'react';
 import { useTranslations } from 'next-intl';
 import { useParams } from 'next/navigation';
@@ -35,7 +36,6 @@ import {
 import { toast } from 'sonner';
 import { useNavigate } from '@/hooks/user-navigate';
 import { CopyButton } from '@/components/modals/edit-mentor-modal/tabs/prompts-tab/copy-button';
-import { useShowFreeTrialDialog } from '@/hooks/user-user-actions';
 import WithFormPermissions, { WithPermissions } from '@/hoc/withPermissions';
 import { parsePrompt } from '@/lib/markdown-engine';
 import Markdown from '@/components/markdown';

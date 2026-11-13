@@ -54,6 +54,7 @@ import {
   useIsVisiting,
   useUserIsStudent,
   useUsername,
+  useUserIsOnTrial,
 } from '@/hooks/use-user';
 import { getUserEmail, getUserName } from '@/features/utils';
 import { MODALS, UserType } from '@/lib/constants';
@@ -71,8 +72,8 @@ import { UserProfile } from './user-profile';
 import { TOUR_TARGET } from '@/components/product-tour/tour-targets';
 import { useSidebar } from '@/components/ui/sidebar';
 import { LearnerModeSwitch } from './learner-mode-switch';
-import { useShowFreeTrialDialog } from '@/hooks/user-user-actions';
 // import { useAdvancedChat } from '@iblai/iblai-js/web-utils';
+import { useShowFreeTrialDialog } from '@iblai/iblai-js/web-utils';
 import { useAccessingPublicRoute } from '@/hooks/use-anonymous-mentor';
 import { useEmbedMode } from '@/hooks/use-embed-mode';
 import { EmbedNavBar } from './embed-nav-bar';
@@ -106,7 +107,6 @@ import {
   isOfflineServerOrigin,
 } from '@/hooks/use-tauri-offline';
 import { isTauriApp } from '@/types/tauri';
-import { useFreeTrial } from '@/hooks/use-free-trial';
 import { chatActions, Tenant } from '@iblai/iblai-js/web-utils';
 
 /**
@@ -164,7 +164,7 @@ export function NavBar() {
   const isAdmin = useIsAdmin();
   const userEmail = getUserEmail();
   const userIsStudent = useUserIsStudent();
-  const { userOnFreeTrial } = useFreeTrial();
+  const userIsOnTrial = useUserIsOnTrial();
   // Live admin signal — `useIsAdmin` reads `currentTenant.is_admin` from
   // localStorage (static), `useUserIsStudent` subscribes to the Redux
   // user slice that the User/Admin nav-bar toggle writes to. Combining
@@ -172,9 +172,8 @@ export function NavBar() {
   // toggle in the navbar immediately hides admin-only chrome like the
   // CreditBalance / Billing icon and the sidebar admin items.
   const isLiveAdmin = isAdmin && !userIsStudent;
-  const canViewCreditCoinComponent = isLiveAdmin || userOnFreeTrial();
-  const { executeWithTrialCheck, FreeTrialDialog, closeModal, isModalOpen } =
-    useShowFreeTrialDialog();
+  const canViewCreditCoinComponent = isLiveAdmin || userIsOnTrial;
+  const { executeWithTrialCheck } = useShowFreeTrialDialog();
 
   // Check if we're in Tauri offline mode - skip API calls if so
   const isTauriOffline =
@@ -911,9 +910,6 @@ export function NavBar() {
             onSelectFoundryModel,
           }}
         />
-      )}
-      {isModalOpen && FreeTrialDialog && (
-        <FreeTrialDialog isOpen={isModalOpen} onClose={closeModal} />
       )}
       {openModal && (
         <AuthModal

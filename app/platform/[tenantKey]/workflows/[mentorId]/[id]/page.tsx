@@ -1,5 +1,6 @@
 'use client';
 
+import { useShowFreeTrialDialog } from '@iblai/iblai-js/web-utils';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 
 import { WorkflowEditor } from '@iblai/iblai-js/web-containers/next';
@@ -7,7 +8,6 @@ import { selectRbacPermissions } from '@/features/rbac/rbac-slice';
 import { useAxdToken } from '@/hooks/use-tokens';
 import { useUsername } from '@/hooks/use-user';
 import { useNavigate } from '@/hooks/user-navigate';
-import { useShowFreeTrialDialog } from '@/hooks/user-user-actions';
 import { config } from '@/lib/config';
 import { useAppSelector } from '@/lib/hooks';
 import {

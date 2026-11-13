@@ -47,15 +47,6 @@ vi.mock('@/hooks/use-user', () => ({
   useIsVisiting: () => false,
 }));
 
-vi.mock('@/hooks/user-user-actions', () => ({
-  useShowFreeTrialDialog: () => ({
-    executeWithTrialCheck: (fn: () => void) => fn(),
-    FreeTrialDialog: null,
-    closeModal: vi.fn(),
-    isModalOpen: false,
-  }),
-}));
-
 vi.mock('@/components/ui/sidebar', () => ({
   useSidebar: () => ({
     toggleSidebar: vi.fn(),
@@ -70,6 +61,12 @@ vi.mock('@/lib/eventBus', () => ({
 }));
 
 vi.mock('@iblai/iblai-js/web-utils', () => ({
+  useShowFreeTrialDialog: () => ({
+    executeWithTrialCheck: (fn: () => void) => fn(),
+    FreeTrialDialog: null,
+    closeModal: vi.fn(),
+    isModalOpen: false,
+  }),
   useTenantContext: () => ({
     setDetermineUserPath: vi.fn(),
     determineUserPath: false,

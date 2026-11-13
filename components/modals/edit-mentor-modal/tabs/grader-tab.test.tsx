@@ -39,11 +39,16 @@ vi.mock('@/hooks/use-user', () => ({
   useUsername: () => mockUseUsername(),
 }));
 
-vi.mock('@/hooks/user-user-actions', () => ({
-  useShowFreeTrialDialog: () => ({
-    executeWithTrialCheck: mockExecuteWithTrialCheck,
-  }),
-}));
+vi.mock('@iblai/iblai-js/web-utils', async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import('@iblai/iblai-js/web-utils')>();
+  return {
+    ...actual,
+    useShowFreeTrialDialog: () => ({
+      executeWithTrialCheck: mockExecuteWithTrialCheck,
+    }),
+  };
+});
 
 vi.mock('@/lib/config', () => ({
   config: {

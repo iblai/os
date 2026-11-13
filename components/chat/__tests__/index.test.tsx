@@ -166,6 +166,15 @@ vi.mock('@iblai/iblai-js/web-utils', async () => {
   const actual = await vi.importActual('@iblai/iblai-js/web-utils');
   return {
     ...actual,
+    useShowFreeTrialDialog: vi.fn(() => ({
+      FreeTrialDialog: null,
+      closeModal: vi.fn(),
+      isModalOpen: false,
+      executeWithTrialCheck: vi.fn((fn: () => void, _: boolean) => fn()),
+    })),
+    use402ErrorCheck: vi.fn(() => ({
+      handle402Error: vi.fn(),
+    })),
     ANONYMOUS_USERNAME: 'anonymous',
     chatActions: {
       updateSessionIds: vi.fn((id) => ({
@@ -306,12 +315,6 @@ vi.mock('@/hooks/use-embed-mode', () => ({
   useEmbedMode: vi.fn(() => false),
 }));
 
-vi.mock('@/hooks/subscription/use-402-error-check', () => ({
-  use402ErrorCheck: vi.fn(() => ({
-    handle402Error: vi.fn(),
-  })),
-}));
-
 vi.mock('@/hooks/use-mentors/use-mentor-settings', () => ({
   useMentorSettings: vi.fn(() => ({
     data: {
@@ -328,15 +331,6 @@ vi.mock('@/hooks/use-local-storage', () => ({
 vi.mock('@/components/service-worker-provider', () => ({
   useServiceWorker: vi.fn(() => ({
     status: { isOnline: true },
-  })),
-}));
-
-vi.mock('@/hooks/user-user-actions', () => ({
-  useShowFreeTrialDialog: vi.fn(() => ({
-    FreeTrialDialog: null,
-    closeModal: vi.fn(),
-    isModalOpen: false,
-    executeWithTrialCheck: vi.fn((fn: () => void, _: boolean) => fn()),
   })),
 }));
 
@@ -2864,48 +2858,6 @@ describe('Chat', () => {
     });
   });
 
-  describe('free trial dialog', () => {
-    it('should show free trial dialog when modal is open', async () => {
-      const { useShowFreeTrialDialog } = await import(
-        '@/hooks/user-user-actions'
-      );
-      const MockFreeTrialDialog = () => (
-        <div data-testid="free-trial-dialog">Free Trial</div>
-      );
-      (useShowFreeTrialDialog as any).mockReturnValue({
-        FreeTrialDialog: MockFreeTrialDialog,
-        closeModal: vi.fn(),
-        isModalOpen: true,
-        executeWithTrialCheck: vi.fn((fn: () => void) => fn()),
-      });
-
-      const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
-      (useAdvancedChat as any).mockReturnValue({
-        changeTab: vi.fn(),
-        activeTab: 'chat',
-        currentStreamingMessage: null,
-        enabledGuidedPrompts: [],
-        isStreaming: false,
-        mentorName: 'Test Mentor',
-        messages: [],
-        profileImage: '/avatar.png',
-        sendMessage: vi.fn(),
-        setMessage: vi.fn(),
-        stopGenerating: vi.fn(),
-        uniqueMentorId: 'unique-mentor-123',
-        sessionId: 'session-123',
-        startNewChat: vi.fn(),
-        enableSafetyDisclaimer: false,
-        isPending: false,
-        isLoadingChats: false,
-      });
-
-      renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
-
-      expect(screen.getByTestId('free-trial-dialog')).toBeInTheDocument();
-    });
-  });
-
   describe('user agreement', () => {
     it('should handle user agreement modal', async () => {
       const { useUserAgreement } = await import('@/hooks/use-user-agreement');
@@ -4555,9 +4507,7 @@ describe('Chat', () => {
 
   describe('402 error handling', () => {
     it('should set up 402 error handler', async () => {
-      const { use402ErrorCheck } = await import(
-        '@/hooks/subscription/use-402-error-check'
-      );
+      const { use402ErrorCheck } = await import('@iblai/iblai-js/web-utils');
       const mockHandle402Error = vi.fn();
       (use402ErrorCheck as any).mockReturnValue({
         handle402Error: mockHandle402Error,

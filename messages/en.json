@@ -1939,12 +1939,6 @@
   "tabsSkillsTab": {
     "heading": "Skills"
   },
-  "topTrialBannerTopTrialBanner": {
-    "defaultBannerText": "Upgrade to create your own agents. No credit card required 😎",
-    "upgradeAriaLabel": "Upgrade",
-    "upgradeButton": "Upgrade",
-    "closeBannerAriaLabel": "Close banner"
-  },
   "uiBreadcrumb": {
     "navAriaLabel": "breadcrumb",
     "ellipsisMore": "More"

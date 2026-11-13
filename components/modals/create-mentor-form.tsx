@@ -1,5 +1,6 @@
 'use client';
 
+import { useShowFreeTrialDialog } from '@iblai/iblai-js/web-utils';
 import React from 'react';
 import Image from 'next/image';
 import { useTranslations } from 'next-intl';
@@ -50,7 +51,6 @@ import {
   type CreateMentorFormValues,
 } from '@/hooks/use-mentors/use-create-mentor';
 import { EditMentorModalDialog, Prompt } from './edit-mentor-modal-dialog';
-import { useShowFreeTrialDialog } from '@/hooks/user-user-actions';
 import { cn } from '@/lib/utils';
 import { config } from '@/lib/config';
 

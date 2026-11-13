@@ -132,15 +132,6 @@ vi.mock('@/hooks/use-is-preview-mode', () => ({
   useIsPreviewMode: () => mockIsPreviewMode,
 }));
 
-vi.mock('@/hooks/subscription/use-402-error-check', () => ({
-  use402ErrorCheck: () => ({ handle402Error: mockHandle402Error }),
-}));
-
-vi.mock('@/hooks/subscription/constants', () => ({
-  SUBSCRIPTION_CREDIT_LIMIT_ERROR_MESSAGE:
-    'You do not have enough credits to proceed.',
-}));
-
 // ── lib mocks ───────────────────────────────────────────────────────────────
 
 const mockSendMessageToParentWebsite = vi.fn();
@@ -181,7 +172,9 @@ vi.mock('@/lib/config', () => ({
     iblPlatform: () => 'mentor',
     environment: () => 'test',
     stripeEnabled: () => false,
+    supportEmail: () => 'support@test',
     enableRBAC: () => false,
+    planFeatures: () => ({ free: [], premium: [], max: [], ultra: [] }),
   },
 }));
 
@@ -297,6 +290,14 @@ let mentorProviderCallbacksToInvoke: Array<{ name: string; args?: unknown[] }> =
   [];
 
 vi.mock('@iblai/iblai-js/web-utils', () => ({
+  SubscriptionConfigProvider: ({ children }: { children: React.ReactNode }) => (
+    <>{children}</>
+  ),
+  use402ErrorCheck: () => ({ handle402Error: mockHandle402Error }),
+  // Desktop-only listener; a no-op in the browser.
+  useOpencode402: vi.fn(),
+  SUBSCRIPTION_CREDIT_LIMIT_ERROR_MESSAGE:
+    'You do not have enough credits to proceed.',
   useTenantSwitchSync: vi.fn(),
   refreshTenantSwitchLock: vi.fn(),
   isTenantSwitchInProgress: vi.fn(() => false),

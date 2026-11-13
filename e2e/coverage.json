@@ -1,9 +1,9 @@
 {
   "version": 2,
-  "lastUpdated": "2026-10-31",
+  "lastUpdated": "2026-11-13",
   "summary": {
-    "totalCheckpoints": 1055,
-    "coveredCheckpoints": 1005,
+    "totalCheckpoints": 1068,
+    "coveredCheckpoints": 1018,
     "deprecatedCheckpoints": 17,
     "notReproducibleCheckpoints": 17,
     "pendingCheckpoints": 16,
@@ -1458,7 +1458,9 @@
         "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx",
         "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/user-profile.tsx",
         "app/platform/[tenantKey]/[mentorId]/_components/subscription-wrapper/index.tsx",
-        "app/platform/[tenantKey]/[mentorId]/_components/subscription-wrapper/mentor-e-commerce-wrapper.tsx"
+        "components/modals/modal-container.tsx",
+        "providers/index.tsx",
+        "lib/config.ts"
       ],
       "checkpoints": [
         {
@@ -1473,17 +1475,17 @@
         },
         {
           "id": "bill-03",
-          "description": "CreditBalance dropdown shows the plan badge (Free/Trial/Premium)",
+          "description": "CreditBalance dropdown shows the plan badge (Trial, Free or the plan name)",
           "status": "covered"
         },
         {
           "id": "bill-04",
-          "description": "CreditBalance dropdown footer matches active plan (Upgrade Plan / Manage Usage + Add Credits / Manage Billing)",
+          "description": "CreditBalance dropdown footer matches the billing state (Upgrade on the free trial; Add Credits on a plan, plus Manage Usage with a card on file)",
           "status": "covered"
         },
         {
           "id": "bill-05",
-          "description": "Premium + payment method shows Manage Usage, Add Credits, and inline Auto Recharge section",
+          "description": "On a plan with a card on file the dropdown shows Manage Usage, Add Credits, the inline Auto Recharge section and its Enabled/Disabled pill",
           "status": "covered"
         },
         {
@@ -1493,12 +1495,12 @@
         },
         {
           "id": "bill-07",
-          "description": "Manage Usage in dropdown opens the Auto Recharge modal (payment-gated)",
+          "description": "Manage Usage in the dropdown opens the Manage Usage (auto recharge) dialog (card-gated)",
           "status": "covered"
         },
         {
           "id": "bill-08",
-          "description": "Add Credits in dropdown opens the Add Credits modal (payment-gated)",
+          "description": "Add Credits in the dropdown opens the Add Credits dialog (on a plan, with or without a card)",
           "status": "covered"
         },
         {
@@ -1508,37 +1510,37 @@
         },
         {
           "id": "bill-10",
-          "description": "Billing tab opens via ?profileTab=billing and the Plan section mounts",
+          "description": "Billing tab opens via ?profileTab=billing and the Credits card mounts",
           "status": "covered"
         },
         {
           "id": "bill-11",
-          "description": "Billing tab Plan / Credits / Auto Recharge sections match the active plan",
+          "description": "Billing tab Credits / Auto Recharge cards match the billing state",
           "status": "covered"
         },
         {
           "id": "bill-12",
-          "description": "Billing tab Auto Recharge section is hidden on Free plan and shown on non-Free + payment method",
+          "description": "Billing tab Auto Recharge card is hidden on the free trial and shown on a plan with a card on file",
           "status": "covered"
         },
         {
           "id": "bill-13",
-          "description": "Billing tab Manage Usage opens Auto Recharge modal with toggle, threshold, amount, Cancel, Save Settings (payment-gated)",
+          "description": "Billing tab Manage Usage opens the Manage Usage dialog with toggle, threshold, amount, Cancel, Save Settings (card-gated)",
           "status": "covered"
         },
         {
           "id": "bill-14",
-          "description": "Billing tab Auto Recharge toggle inverts on click and restores on second click (payment-gated)",
+          "description": "Billing tab Auto Recharge toggle inverts on click and restores on second click (card-gated)",
           "status": "covered"
         },
         {
           "id": "bill-15",
-          "description": "Billing tab Auto Recharge threshold and amount inputs accept values (payment-gated)",
+          "description": "Billing tab Auto Recharge threshold and amount inputs accept values (card-gated)",
           "status": "covered"
         },
         {
           "id": "bill-16",
-          "description": "Billing tab Add Credits button opens the Add Credits modal (non-Free + payment method)",
+          "description": "Billing tab Add Credits button opens the Add Credits dialog (on a plan, with or without a card)",
           "status": "covered"
         },
         {
@@ -1548,7 +1550,42 @@
         },
         {
           "id": "bill-18",
-          "description": "Non-admin without subscription sees Stripe pricing modal when creating a mentor",
+          "description": "A gated action for a non-admin never opens the admin billing path: New Agent runs, opens the Choose Your Plan picker (free trial) or the \"Your organization has run out of credits\" dialog; never Add Credits or ?profileTab=billing",
+          "status": "covered"
+        },
+        {
+          "id": "bill-19",
+          "description": "The dropdown Billing row offers Change Plan beside the badge on a known plan, and Upgrade (no Change Plan, Add Credits or Manage Usage) on the free trial",
+          "status": "covered"
+        },
+        {
+          "id": "bill-20",
+          "description": "Change Plan opens the \"Change Your Plan\" picker (current plan marked, Upgrade to / Downgrade to the others, Add One-Time Credits box, enterprise contact link) and Upgrade the \"Choose Your Plan\" picker (Choose <name> each, Pro Most Popular); Close closes it",
+          "status": "covered"
+        },
+        {
+          "id": "bill-21",
+          "description": "Add One-Time Credits in the change-plan picker closes it and opens the Add Credits dialog",
+          "status": "covered"
+        },
+        {
+          "id": "bill-22",
+          "description": "The Add Credits dialog offers $20 / $50 / $100 quick amounts, Other amount reveals the Amount (USD) field, the submit reads Add Credits with a card or Continue without, and an empty amount is refused with \"Please choose an amount\"",
+          "status": "covered"
+        },
+        {
+          "id": "bill-23",
+          "description": "Billing tab Credits card actions and sentence match the state: Upgrade + \"You're on a free trial…\" on the trial; Change Plan (when the plan is known) + Add Credits + \"You're on the <plan> plan…\" on a plan",
+          "status": "covered"
+        },
+        {
+          "id": "bill-24",
+          "description": "Billing tab Change Plan / Upgrade opens the plan picker in the matching mode (change / choose); Close returns to the tab",
+          "status": "covered"
+        },
+        {
+          "id": "bill-25",
+          "description": "A non-admin who is not on the free trial has no credit balance trigger in the nav bar",
           "status": "covered"
         }
       ]
@@ -3730,12 +3767,17 @@
         },
         {
           "id": "fcc-03",
-          "description": "The credit-balance dropdown shows a positive remaining credit balance and a Free plan pill",
+          "description": "The credit-balance dropdown shows a positive remaining credit balance, a \"Free\" plan pill and Add Credits alone (no Upgrade, Manage Usage or Auto Recharge: no card on file yet)",
           "status": "covered"
         },
         {
           "id": "fcc-04",
-          "description": "Clicking Upgrade Plan in the credit dropdown creates a Stripe checkout session and redirects to a Stripe-hosted page requiring credit-card input (secure Stripe Elements card iframe + pay button)",
+          "description": "The dropdown Billing row offers Change Plan; it opens the \"Change Your Plan\" picker with Free marked Current Plan, Pro / Max / Ultra as upgrades and the Add One-Time Credits box",
+          "status": "covered"
+        },
+        {
+          "id": "fcc-05",
+          "description": "Clicking \"Upgrade to Pro\" with no card on file leaves for a Stripe-hosted checkout page (store.ibl.ai) requiring credit-card input (secure Stripe Elements card iframe + pay button)",
           "status": "covered"
         }
       ]
@@ -3845,9 +3887,10 @@
       "sourceFiles": [
         "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx",
         "components/modals/modal-container.tsx",
-        "hooks/subscription/use-402-error-check.ts",
+        "providers/index.tsx",
         "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/user-profile.tsx",
-        "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx"
+        "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx",
+        "app/platform/[tenantKey]/[mentorId]/_components/subscription-wrapper/index.tsx"
       ],
       "checkpoints": [
         {
@@ -3857,7 +3900,7 @@
         },
         {
           "id": "ecu-02",
-          "description": "Credit balance dropdown shows a Free plan badge, a positive remaining balance, and an Upgrade Plan button on the main tenant",
+          "description": "Credit balance dropdown on the main tenant shows a \"Trial\" badge, a positive remaining balance and Upgrade as the one action (no Add Credits, Manage Usage or Change Plan)",
           "status": "covered"
         },
         {
@@ -3867,46 +3910,71 @@
         },
         {
           "id": "ecu-04",
-          "description": "Every gated sidebar entry (Agents > New Agent/My Agents, Workflows > My Workflows, Projects > My Projects, Analytics > Overview, Invites, Management, Integrations, Monetization, Memory, Advanced) opens the shared \"Subscribe to unlock full features\" dialog with an \"Upgrade for free\" CTA",
+          "description": "Every gated sidebar entry (Agents > New Agent/My Agents, Workflows > My Workflows, Projects > New Project, Analytics > Overview, Invites, Management, Integrations, Monetization, Memory, Advanced) opens the \"Choose Your Plan\" picker; the first is verified in full (Free / Pro / Max / Ultra cards with \"Choose <name>\", Pro marked Most Popular, no current-plan card)",
           "status": "covered"
         },
         {
           "id": "ecu-05",
-          "description": "Zero credits (via the DM service credit-cleanup admin endpoint) blocks chat submission on the main tenant and surfaces the same subscribe dialog instead of an AI response",
+          "description": "Zero credits (via the DM service credit-cleanup admin endpoint) blocks chat submission on the main tenant: the trial 402 toast \"You've run out of your free trial credits. Pick a plan to continue.\" and the same plan picker appear instead of an AI response",
           "status": "covered"
         },
         {
           "id": "ecu-06",
-          "description": "Clicking \"Upgrade for free\" redirects to a zero-cost Stripe-hosted checkout; submitting it completes the SSO redirect chain onto a real (non-\"main\") platform id with a fresh Free-plan credit balance and working chat",
+          "description": "Clicking \"Choose Free\" redirects to a zero-cost Stripe-hosted checkout; submitting it completes the SSO redirect chain onto a real (non-\"main\") platform id with a \"Free\" badge, a fresh balance, Add Credits alone (no card) plus Change Plan, and working chat",
           "status": "covered"
         },
         {
           "id": "ecu-07",
-          "description": "The profile dropdown's Account item opens the User Profile dialog; its Billing tab (?profileTab=billing) shows the Free plan, Current badge, Upgrade button, and a positive credit balance",
+          "description": "The profile dropdown's Account item opens the User Profile dialog; its Billing tab (?profileTab=billing) shows the Free plan (\"You're on the Free plan. Add credits whenever you need more.\"), Change Plan + Add Credits, no Auto Recharge card, and a positive credit balance",
           "status": "covered"
         },
         {
           "id": "ecu-08",
-          "description": "Zero credits on the upgraded (non-\"main\") tenant auto-opens the User Profile dialog on the Billing tab (admin 402 handling injects ?profileTab=billing) showing 0 credits, instead of the subscribe dialog used on the main tenant",
+          "description": "Zero credits on the upgraded (non-\"main\") tenant shows the admin 402 toast \"You've run out of credits. Add credits to continue.\" and auto-opens the User Profile dialog on the Billing tab (?profileTab=billing) showing 0 credits, instead of the plan picker used on the main tenant",
           "status": "covered"
         },
         {
           "id": "ecu-09",
-          "description": "The Billing tab's Upgrade button redirects to a real Stripe test-mode checkout; filling the 4242 test card, expiry, CVC, name, and Uruguay billing country completes payment",
+          "description": "The Billing tab's Add Credits with no card on file: the dialog's \"Continue\" (not \"Add Credits\") redirects to the Stripe customer portal payment-method flow; the journey then returns to the workspace, still without a card",
           "status": "covered"
         },
         {
           "id": "ecu-10",
-          "description": "Post-payment, the account modal auto-opens on the Billing tab showing the Premium plan and a Manage Billing button with a restored credit balance; chat continues to work with the new balance",
+          "description": "Change Plan in the credit dropdown opens the \"Change Your Plan\" picker with Free marked Current Plan and Pro offered as an upgrade; with no card on file \"Upgrade to Pro\" leaves for a real Stripe test-mode checkout, and filling the 4242 test card, expiry, CVC, name and Uruguay billing country completes payment",
           "status": "covered"
         },
         {
           "id": "ecu-11",
-          "description": "Before the first credit exhaustion (main tenant), three long agent conversations each deduct credits: after every reply the exact available_credits from the credit dropdown's /api/billing/account/ refetch drops below its pre-turn value, and the dropdown renders that balance",
+          "description": "Post-payment the SSO chain lands back on the same platform: the badge names the Pro plan, Manage Usage + Add Credits + Change Plan and the Auto Recharge section show (card now on file), and the Pro credits are positive",
           "status": "covered"
         },
         {
           "id": "ecu-12",
+          "description": "\"Upgrade to Max\" from the change-plan picker is applied in place (no checkout): toast \"You're now on the Max plan.\", the badge reads Max, and the balance rises once the upgrade invoice is paid against the saved card (iblai-dm-pro#3206)",
+          "status": "covered"
+        },
+        {
+          "id": "ecu-13",
+          "description": "Add Credits with a card on file: \"Other amount\" $1 and \"Add Credits\" charge at once, the toast \"Credits added successfully\" shows, and the balance rises",
+          "status": "covered"
+        },
+        {
+          "id": "ecu-14",
+          "description": "\"Downgrade to Pro\" from the change-plan picker is scheduled for the end of the period (toast \"Your current plan ends…\") and the badge stays Max",
+          "status": "covered"
+        },
+        {
+          "id": "ecu-15",
+          "description": "Chat works with the paid balance",
+          "status": "covered"
+        },
+        {
+          "id": "ecu-16",
+          "description": "Before the first credit exhaustion (main tenant), three long agent conversations each deduct credits: after every reply the exact available_credits from the credit dropdown's /api/billing/account/ refetch drops below its pre-turn value, and the dropdown renders that balance",
+          "status": "covered"
+        },
+        {
+          "id": "ecu-17",
           "description": "Before the second credit exhaustion (upgraded non-\"main\" tenant), three long agent conversations each deduct credits, asserted the same way per turn",
           "status": "covered"
         }

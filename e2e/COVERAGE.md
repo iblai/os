@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-10-28 | 1035 checkpoints (988 covered, 13 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 104 journeys (103 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-11-13 | 1068 checkpoints (1018 covered, 16 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 105 journeys (104 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -408,38 +408,45 @@ The **download-chat** checkpoints (sh-07 … sh-10, issue #2464) cover the "Down
 
 ---
 
-## Journey 21: Billing & Subscription (18 checkpoints) — `journeys/21-billing-and-subscription.spec.ts`
+## Journey 21: Billing & Subscription (25 checkpoints) — `journeys/21-billing-and-subscription.spec.ts`
 
-**Source files:** `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/user-profile.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/subscription-wrapper/index.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/subscription-wrapper/mentor-e-commerce-wrapper.tsx`
+**Source files:** `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/user-profile.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/subscription-wrapper/index.tsx`, `components/modals/modal-container.tsx`, `providers/index.tsx`, `lib/config.ts`
 
-Driven by the shared paywall helpers in `@iblai/iblai-js/playwright`. All tests skip gracefully when `current_tenant.show_paywall=false`.
+Billing is credits-only (SDK `@iblai/iblai-js` ≥ 2.73.0). An account is on the free trial (main tenant, badge "Trial", one "Upgrade" action that opens the "Choose Your Plan" picker) or on a plan (badge names it: Free / Pro / Max / Ultra; "Add Credits" always, "Manage Usage" + inline Auto Recharge with a card on file, "Change Plan" beside the badge once the backend names the plan — it opens the same picker in change mode, "Change Your Plan", with the current plan marked and "Upgrade to" / "Downgrade to" the others plus an "Add One-Time Credits" shortcut). Driven by the shared paywall helpers in `@iblai/iblai-js/playwright` plus `e2e/utils/plan-picker.ts` (both picker modes). The admin account's state depends on the environment, so each test reads it from the UI and asserts what that state must show; nothing charges a card or changes a plan. All tests skip gracefully when `current_tenant.show_paywall=false`.
 
 **A. CreditBalance dropdown (nav-bar)**
 
 - [x] CreditBalance trigger visibility matches `current_tenant.show_paywall`
 - [x] CreditBalance trigger exposes accessible aria-label with credits info _(paywall-gated)_
-- [x] Dropdown shows the plan badge (Free / Trial / Premium) _(paywall-gated)_
-- [x] Dropdown footer matches the active plan via `expectCreditBalanceForCurrentPlan` (Upgrade Plan / Manage Usage + Add Credits / Manage Billing) _(paywall-gated)_
-- [x] Premium + payment method shows Manage Usage, Add Credits, and the inline Auto Recharge section _(paywall-gated; skips on Free/Trial or no payment method)_
+- [x] Dropdown shows the plan badge (Trial, Free or the plan name) _(paywall-gated)_
+- [x] Dropdown footer matches the billing state via `expectCreditBalanceForCurrentPlan` (Upgrade on the trial; Add Credits on a plan, plus Manage Usage with a card) _(paywall-gated)_
+- [x] On a plan with a card: Manage Usage, Add Credits, the inline Auto Recharge section and its Enabled/Disabled pill _(paywall-gated; skips on the trial or without a card)_
 - [x] Dropdown shows the Remaining credits row with a numeric value _(paywall-gated)_
-- [x] Manage Usage opens the Auto Recharge modal _(payment-gated)_
-- [x] Add Credits opens the Add Credits modal _(payment-gated)_
+- [x] Manage Usage opens the Manage Usage (auto recharge) dialog _(card-gated)_
+- [x] Add Credits opens the Add Credits dialog _(on a plan, with or without a card)_
 - [x] Escape closes the dropdown
+- [x] The Billing row offers Change Plan beside the badge on a known plan, and Upgrade (no Change Plan / Add Credits / Manage Usage) on the trial
+- [x] Change Plan opens "Change Your Plan" (current plan marked with a disabled "Current Plan" button, "Upgrade to" / "Downgrade to" the others, Add One-Time Credits box, "contact our team" link); Upgrade opens "Choose Your Plan" ("Choose <name>" each, Pro "Most Popular"); Close closes it
+- [x] Add One-Time Credits in the change-plan picker closes it and opens the Add Credits dialog
+- [x] The Add Credits dialog offers $20 / $50 / $100, Other amount reveals "Amount (USD)", the submit reads "Add Credits" (card) or "Continue" (no card), and an empty amount is refused with "Please choose an amount"
 
 **B. Billing tab (User Profile dialog)**
 
-- [x] Billing tab opens via `?profileTab=billing` and the Plan section mounts _(paywall-gated)_
-- [x] Plan / Credits / Auto Recharge sections match the active plan via `expectBillingTabForCurrentPlan` _(paywall-gated)_
-- [x] Auto Recharge section is hidden on Free plan and shown on non-Free + payment method _(paywall-gated)_
-- [x] Manage Usage opens Auto Recharge modal with toggle, threshold, amount, Cancel, Save Settings _(payment-gated)_
-- [x] Auto Recharge toggle inverts on click and restores on a second click _(payment-gated)_
-- [x] Auto Recharge threshold and amount inputs accept values _(payment-gated)_
-- [x] Add Credits button opens the Add Credits modal _(non-Free + payment method)_
+- [x] Billing tab opens via `?profileTab=billing` and the Credits card mounts _(paywall-gated)_
+- [x] Credits / Auto Recharge cards match the billing state via `expectBillingTabForCurrentPlan` _(paywall-gated)_
+- [x] Auto Recharge card is hidden on the trial and shown on a plan with a card on file _(paywall-gated)_
+- [x] Manage Usage opens the Manage Usage dialog with toggle, threshold, amount, Cancel, Save Settings _(card-gated)_
+- [x] Auto Recharge toggle inverts on click and restores on a second click _(card-gated)_
+- [x] Auto Recharge threshold and amount inputs accept values _(card-gated)_
+- [x] Add Credits button opens the Add Credits dialog _(on a plan, with or without a card)_
 - [x] Plan label is consistent between the CreditBalance dropdown and the Billing tab _(paywall-gated)_
+- [x] Credits card actions and sentence match the state: Upgrade + "You're on a free trial…" on the trial; Change Plan (when the plan is known) + Add Credits + "You're on the <plan> plan. Add credits whenever you need more." on a plan
+- [x] Change Plan / Upgrade opens the plan picker in the matching mode (change / choose); Close returns to the tab
 
-**C. Non-admin pricing**
+**C. Non-admin**
 
-- [x] Non-admin without subscription sees Stripe pricing modal when creating a mentor _(skips when paywall is off)_
+- [x] A gated action never opens the admin billing path: New Agent runs, opens the "Choose Your Plan" picker (a free-trial user) or the "Your organization has run out of credits" dialog with Contact Now; never the Add Credits dialog or `?profileTab=billing`
+- [x] A non-admin who is not on the free trial has no credit balance trigger in the nav bar
 
 ---
 
@@ -1140,16 +1147,17 @@ Covers the `handlePaste` → `extractFilesFromClipboard` → `processFiles` path
 
 ---
 
-## Journey 55: Free Credits Checkout Onboarding (4 checkpoints) — `journeys/55-free-credits-checkout-onboarding.spec.ts`
+## Journey 55: Free Credits Checkout Onboarding (5 checkpoints) — `journeys/55-free-credits-checkout-onboarding.spec.ts`
 
 **Source files:** `app/sso-login-complete/page.tsx`, `app/platform/[tenantKey]/[mentorId]/page.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`
 
-End-to-end onboarding of a brand-new user via the `ECOMMERCE_CHECKOUT_URL` "free credits" Stripe checkout. The endpoint 302-redirects to a Stripe-hosted page exposing a single email field (`input#email`) and a Subscribe button (`[data-testid="hosted-payment-submit-button"]` — a $0 subscription, no card required). Submitting `test+<timestamp>@ibleducation.com` provisions a new account and runs the auth SSO redirect chain (`auth.iblai.org/login` → `/login/complete` → `sso-login-complete` → platform), landing authenticated on the mentor SPA. The base URL is dictated by the checkout session's redirect target (production `mentorai.iblai.org`), independent of `MENTOR_NEXTJS_HOST`, so the test follows the redirect rather than re-invoking `navigateToMentorApp`'s fresh `goto`, and asserts the URL _shape_ (each run is assigned a fresh tenant/mentor). The final step clicks "Upgrade Plan" in the credit dropdown, which creates a Stripe checkout session and redirects the same tab to a Stripe-hosted payment page (`store.ibl.ai`) requiring credit-card input — the test stops there without entering a card. Runs in a clean, unauthenticated context. Skips when `ECOMMERCE_CHECKOUT_URL` is unset. Credit-balance assertions reuse the `@iblai/iblai-js/playwright` helpers (`creditBalanceTrigger`, `openCreditBalanceDropdown`, `creditBalancePlanBadge`, `getCreditBalanceRemaining`).
+End-to-end onboarding of a brand-new user via the `ECOMMERCE_CHECKOUT_URL` "free credits" Stripe checkout. The endpoint 302-redirects to a Stripe-hosted page exposing a single email field (`input#email`) and a Subscribe button (`[data-testid="hosted-payment-submit-button"]` — a $0 subscription, no card required). Submitting `test+<timestamp>@ibleducation.com` provisions a new account and runs the auth SSO redirect chain (`auth.iblai.org/login` → `/login/complete` → `sso-login-complete` → platform), landing authenticated on the mentor SPA. The base URL is dictated by the checkout session's redirect target (production `mentorai.iblai.org`), independent of `MENTOR_NEXTJS_HOST`, so the test follows the redirect rather than re-invoking `navigateToMentorApp`'s fresh `goto`, and asserts the URL _shape_ (each run is assigned a fresh tenant/mentor). The new workspace is on the Free plan with no card on file: the credit dropdown shows a "Free" badge, one "Add Credits" button and a "Change Plan" link. Change Plan opens the "Change Your Plan" picker (Free marked "Current Plan", Pro / Max / Ultra as "Upgrade to …", Add One-Time Credits box); "Upgrade to Pro" has no card to charge, so it leaves the same tab for a Stripe-hosted checkout (`store.ibl.ai`) requiring credit-card input — the test stops there without entering a card. Runs in a clean, unauthenticated context. Skips when `ECOMMERCE_CHECKOUT_URL` is unset. Uses the `@iblai/iblai-js/playwright` credit helpers and `e2e/utils/plan-picker.ts`.
 
 - [x] fcc-01: `ECOMMERCE_CHECKOUT_URL` redirects to the Stripe-hosted checkout page exposing the email field and Subscribe submit button
 - [x] fcc-02: Submitting the email completes checkout and lands authenticated on the mentor SPA at `<base-url>/platform/<platform-key>/<mentor-id>`
-- [x] fcc-03: The credit-balance dropdown shows a positive remaining credit balance and a "Free" plan pill
-- [x] fcc-04: Clicking "Upgrade Plan" in the credit dropdown redirects to a Stripe-hosted checkout page (`store.ibl.ai`) requiring credit-card input (secure Stripe Elements card iframe + pay button)
+- [x] fcc-03: The credit-balance dropdown shows a positive remaining credit balance, a "Free" plan pill and Add Credits alone (no Upgrade, Manage Usage or Auto Recharge: no card on file yet)
+- [x] fcc-04: The dropdown's Billing row offers Change Plan; it opens "Change Your Plan" with Free marked Current Plan, Pro / Max / Ultra as upgrades and the Add One-Time Credits box
+- [x] fcc-05: "Upgrade to Pro" with no card on file leaves for a Stripe-hosted checkout page (`store.ibl.ai`) requiring credit-card input (secure Stripe Elements card iframe + pay button)
 
 ---
 
@@ -1193,24 +1201,29 @@ Regression guard for issue #2067 (LAIA-684): selecting a chat from the sidebar h
 
 ---
 
-## Journey 59: Ecommerce Credits & Upgrade (12 checkpoints) — `journeys/59-ecommerce-credits-and-upgrade.spec.ts`
+## Journey 59: Ecommerce Credits & Upgrade (17 checkpoints) — `journeys/59-ecommerce-credits-and-upgrade.spec.ts`
 
-**Source files:** `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`, `components/modals/modal-container.tsx`, `hooks/subscription/use-402-error-check.ts`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/user-profile.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`
+**Source files:** `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`, `components/modals/modal-container.tsx`, `providers/index.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/user-profile.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/subscription-wrapper/index.tsx`
 
-Full-lifecycle regression guard for the ecommerce credits/upgrade flow, run as a single serial test with `test.step()` per flow (state — platform id, mentor id, credit balance — carries across the whole run). A brand-new account signs up via the auth service's `/account/create` form and lands on the "main" tenant with a Free-plan trial balance. The credit balance dropdown (`@iblai/iblai-js/playwright` helpers), the profile dropdown (exactly Profile/Help/Log Out), the collapsed sidebar's visible top-level items, and every gated sidebar entry point (`components/modals/modal-container.tsx` renders the shared `UpgradePackageModal` from `@iblai/web-containers`, titled "Subscribe to unlock full features" with an "Upgrade for free" CTA) are all verified. The DM service's admin credit-cleanup endpoint (`${DM_URL}/api/service/credits/cleanup/`, authenticated with the `dm_token` written to localStorage) deterministically drains the balance to 0 rather than waiting on organic credit burn — this is what makes the "zero credits" checkpoints reproducible. Before each cleanup, the test holds three long agent conversations and asserts every turn deducts credits: the credit dropdown renders `parseInt(available_credits)`, which hides sub-credit charges, so the check reads the exact `available_credits` from the `GET <DM>/api/billing/account/` refetch fired on each dropdown open (polling, since charges land after the reply streams) and confirms the dropdown shows the same balance. On the "main" tenant, zero credits blocks chat submission and shows the same subscribe dialog; clicking "Upgrade for free" redirects to a zero-cost Stripe-hosted checkout (`hosted-payment-submit-button`) whose SSO redirect chain lands back on the app under a REAL (non-"main") platform id with a fresh Free-plan balance. From there, the profile dropdown's "Account" item opens the "User Profile" dialog (`@iblai/web-containers`' `UserProfileDropdown`/account modal), whose Billing tab (`?profileTab=billing`, `hooks/subscription/use-402-error-check.ts` also drives this URL injection on 402 for admins) shows the Plan/Credits sections via the SDK's `billing-plan-section`/`billing-credits-section` test ids. A second credit-cleanup + reload triggers the admin-only 402 path, which auto-opens the Billing tab directly (no subscribe dialog on non-"main" tenants) showing 0 credits. The Billing tab's real "Upgrade" button (`clickBillingUpgrade`) redirects to a real Stripe test-mode checkout; the test fills the `4242 4242 4242 4242` test card with a Uruguay billing country (removes the postal-code field) and submits, landing back on the same platform/mentor URL with the account modal auto-opening on a restored Premium-plan balance, after which chat continues to work. All Stripe-page assertions are written locale-proof (the hosted checkout renders in the browser locale — validated in French) using stable `data-testid`s, element ids, and currency/credit regexes rather than button text. Runs in a clean, unauthenticated context (`browser.newContext()`, no storageState). Skips when `DM_URL` or `ECOMMERCE_CREDIT_CLEANUP_TOKEN` are unset.
+Full-lifecycle regression guard for the credits-only ecommerce flow, run as a single serial test with `test.step()` per flow (state — platform id, mentor id, app origin, credit balances — carries across the whole run). A brand-new account signs up via the auth service's `/account/create` form and lands on the "main" tenant as a free-trial user: the credit dropdown (`@iblai/iblai-js/playwright` helpers) shows a "Trial" badge and "Upgrade" as its one action, the profile dropdown shows exactly Profile/Help/Log Out, the collapsed sidebar's top-level items are visible, and every gated sidebar entry point opens the shared `UpgradePackageModal` plan picker ("Choose Your Plan": Free / Pro / Max / Ultra cards with "Choose <name>", Pro marked "Most Popular"; `e2e/utils/plan-picker.ts` verifies it in full on the first entry; `components/modals/modal-container.tsx` renders it from the SDK's `subscription` slice). The DM service's admin credit-cleanup endpoint (`${DM_URL}/api/service/credits/cleanup/`, authenticated with the `dm_token` written to localStorage) deterministically drains the balance to 0 rather than waiting on organic credit burn — this is what makes the "zero credits" checkpoints reproducible. Before each cleanup, the test holds three long agent conversations and asserts every turn deducts credits: the credit dropdown renders `parseInt(available_credits)`, which hides sub-credit charges, so the check reads the exact `available_credits` from the `GET <DM>/api/billing/account/` refetch fired on each dropdown open (polling, since charges land after the reply streams) and confirms the dropdown shows the same balance. On the "main" tenant, zero credits blocks chat submission with the trial 402 toast ("You've run out of your free trial credits. Pick a plan to continue.") and the same picker; "Choose Free" redirects to a zero-cost Stripe-hosted checkout (`hosted-payment-submit-button`) whose SSO redirect chain lands back on the app under a REAL (non-"main") platform id on the Free plan (badge "Free", Add Credits alone, Change Plan offered). From there, the profile dropdown's "Account" item opens the "User Profile" dialog, whose Billing tab (`?profileTab=billing`) shows the Free plan sentence, Change Plan + Add Credits and no Auto Recharge card (`billing-credits-section` / `billing-auto-recharge-section` test ids). A second credit-cleanup + reload triggers the admin 402 path (toast "You've run out of credits. Add credits to continue.") which auto-opens the Billing tab directly showing 0 credits. With no card on file, Add Credits → "Continue" redirects to the Stripe customer portal (payment-method flow; saving the card there is not automated, so the journey returns to the workspace). The card arrives through a plan change instead: Change Plan opens "Change Your Plan" (Free marked "Current Plan"), "Upgrade to Pro" leaves for a real Stripe test-mode checkout, the test fills the `4242 4242 4242 4242` test card with a Uruguay billing country (removes the postal-code field) and submits, and the SSO chain lands back on the same platform on the Pro plan with the card on file (Manage Usage + Add Credits + Auto Recharge) and Pro credits. From Pro, "Upgrade to Max" is applied in place (toast "You're now on the Max plan.", badge Max) and the Max allowance lands once the upgrade invoice is paid against the saved card (iblai-dm-pro#3206 grants it on `invoice.paid` / the subscription webhook); Add Credits with a card on file charges $1 at once ("Credits added successfully") and raises the balance; "Downgrade to Pro" is scheduled for the end of the period ("Your current plan ends…") while the badge stays Max; and chat keeps working. All Stripe-page assertions are written locale-proof (the hosted checkout renders in the browser locale — validated in French) using stable `data-testid`s, element ids, and currency/credit regexes rather than button text. Runs in a clean, unauthenticated context (`browser.newContext()`, no storageState). Skips when `DM_URL` or `ECOMMERCE_CREDIT_CLEANUP_TOKEN` are unset, or `ECOMMERCE_E2E` is not `1`.
 
 - [x] ecu-01: New user signs up via `/account/create` and lands authenticated on `<base-url>/platform/main/<mentor-id>` with the mentor dropdown ready
-- [x] ecu-02: Credit balance dropdown shows a Free plan badge, a positive remaining balance, and an Upgrade Plan button on the main tenant
+- [x] ecu-02: Credit balance dropdown on the main tenant shows a "Trial" badge, a positive remaining balance and Upgrade as the one action (no Add Credits, Manage Usage or Change Plan)
 - [x] ecu-03: Profile dropdown shows exactly Profile / Help / Log Out on a brand-new free-trial account
-- [x] ecu-04: Every gated sidebar entry (Agents > New Agent/My Agents, Workflows > My Workflows, Projects > My Projects, Analytics > Overview, Invites, Management, Integrations, Monetization, Memory, Advanced) opens the shared "Subscribe to unlock full features" dialog with an "Upgrade for free" CTA
-- [x] ecu-05: Zero credits (via the DM service credit-cleanup admin endpoint) blocks chat submission on the main tenant and surfaces the same subscribe dialog instead of an AI response
-- [x] ecu-06: Clicking "Upgrade for free" redirects to a zero-cost Stripe-hosted checkout; submitting it completes the SSO redirect chain onto a real (non-"main") platform id with a fresh Free-plan credit balance and working chat
-- [x] ecu-07: The profile dropdown's Account item opens the User Profile dialog; its Billing tab (`?profileTab=billing`) shows the Free plan, Current badge, Upgrade button, and a positive credit balance
-- [x] ecu-08: Zero credits on the upgraded (non-"main") tenant auto-opens the User Profile dialog on the Billing tab (admin 402 handling injects `?profileTab=billing`) showing 0 credits, instead of the subscribe dialog used on the main tenant
-- [x] ecu-09: The Billing tab's Upgrade button redirects to a real Stripe test-mode checkout; filling the 4242 test card, expiry, CVC, name, and Uruguay billing country completes payment
-- [x] ecu-10: Post-payment, the account modal auto-opens on the Billing tab showing the Premium plan and a Manage Billing button with a restored credit balance; chat continues to work with the new balance
-- [x] ecu-11: Before the first credit exhaustion (main tenant), three long agent conversations each deduct credits: after every reply the exact `available_credits` from the credit dropdown's `/api/billing/account/` refetch drops below its pre-turn value, and the dropdown renders that balance
-- [x] ecu-12: Before the second credit exhaustion (upgraded non-"main" tenant), three long agent conversations each deduct credits, asserted the same way per turn
+- [x] ecu-04: Every gated sidebar entry (Agents > New Agent/My Agents, Workflows > My Workflows, Projects > New Project, Analytics > Overview, Invites, Management, Integrations, Monetization, Memory, Advanced) opens the "Choose Your Plan" picker; the first is verified in full (Free / Pro / Max / Ultra cards with "Choose <name>", Pro "Most Popular", no current-plan card)
+- [x] ecu-05: Zero credits (via the DM service credit-cleanup admin endpoint) blocks chat submission on the main tenant: the trial 402 toast and the same plan picker appear instead of an AI response
+- [x] ecu-06: "Choose Free" redirects to a zero-cost Stripe-hosted checkout; submitting it completes the SSO redirect chain onto a real (non-"main") platform id with a "Free" badge, a fresh balance, Add Credits alone (no card) plus Change Plan, and working chat
+- [x] ecu-07: The profile dropdown's Account item opens the User Profile dialog; its Billing tab (`?profileTab=billing`) shows the Free plan sentence, Change Plan + Add Credits, no Auto Recharge card, and a positive credit balance
+- [x] ecu-08: Zero credits on the upgraded (non-"main") tenant shows the admin 402 toast and auto-opens the User Profile dialog on the Billing tab showing 0 credits, instead of the plan picker used on the main tenant
+- [x] ecu-09: Add Credits with no card on file: the dialog's "Continue" (not "Add Credits") redirects to the Stripe customer portal payment-method flow; the journey returns to the workspace still without a card
+- [x] ecu-10: Change Plan opens "Change Your Plan" with Free marked Current Plan and Pro as an upgrade; with no card on file "Upgrade to Pro" leaves for a real Stripe test-mode checkout, and the 4242 test card, expiry, CVC, name and Uruguay billing country complete payment
+- [x] ecu-11: Post-payment the SSO chain lands back on the same platform: the badge names the Pro plan, Manage Usage + Add Credits + Change Plan and the Auto Recharge section show (card on file), and the Pro credits are positive
+- [x] ecu-12: "Upgrade to Max" is applied in place (no checkout): toast "You're now on the Max plan.", badge Max, and the balance rises once the upgrade invoice is paid against the saved card (iblai-dm-pro#3206)
+- [x] ecu-13: Add Credits with a card on file: "Other amount" $1 and "Add Credits" charge at once, "Credits added successfully" shows, and the balance rises
+- [x] ecu-14: "Downgrade to Pro" is scheduled for the end of the period ("Your current plan ends…") and the badge stays Max
+- [x] ecu-15: Chat works with the paid balance
+- [x] ecu-16: Before the first credit exhaustion (main tenant), three long agent conversations each deduct credits: after every reply the exact `available_credits` from the credit dropdown's `/api/billing/account/` refetch drops below its pre-turn value, and the dropdown renders that balance
+- [x] ecu-17: Before the second credit exhaustion (upgraded non-"main" tenant), three long agent conversations each deduct credits, asserted the same way per turn
 
 ---
 

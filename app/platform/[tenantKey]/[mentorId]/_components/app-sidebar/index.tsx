@@ -50,6 +50,7 @@ import {
   getVisibleAnalyticsTabs,
   selectSessionId,
   type AnalyticsTab,
+  useShowFreeTrialDialog,
 } from '@iblai/iblai-js/web-utils';
 import {
   Admin,
@@ -74,7 +75,6 @@ import { checkRbacPermission } from '@/hoc/withPermissions';
 import { useEmbedMode } from '@/hooks/use-embed-mode';
 import { useAllowMentorSelection } from '@/hooks/use-allow-mentor-selection';
 import { useHelpCenter } from '@/hooks/use-help-center';
-import { useShowFreeTrialDialog } from '@/hooks/user-user-actions';
 import { cn, isLoggedIn, redirectToLogin } from '@/lib/utils';
 import { isTauriApp } from '@/types/tauri';
 import { config } from '@/lib/config';
@@ -519,13 +519,8 @@ export function AppSidebar() {
     navigateToNotifications,
   } = useNavigate();
 
-  const {
-    executeWithTrialCheck,
-    FreeTrialDialog,
-    closeModal,
-    isModalOpen,
-    isNewlyUserOnPreFreeOrAdvertisingMode,
-  } = useShowFreeTrialDialog();
+  const { executeWithTrialCheck, isNewlyUserOnPreFreeOrAdvertisingMode } =
+    useShowFreeTrialDialog();
 
   // A non-admin user in the MAIN tenant OR an ADVERTISING tenant should
   // see the FULL admin sidebar — agents, workflows, analytics, and every
@@ -1594,10 +1589,6 @@ export function AppSidebar() {
           openInviteUserModal();
         }}
       />
-
-      {isModalOpen && FreeTrialDialog && (
-        <FreeTrialDialog onClose={closeModal} isOpen={isModalOpen} />
-      )}
 
       {showSearchChats && (
         <ChatSearchDialog
