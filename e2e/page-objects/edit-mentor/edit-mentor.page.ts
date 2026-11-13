@@ -15,6 +15,7 @@ import { McpTab } from './mcp.tab';
 import { EmbedTab } from './embed.tab';
 import { CopyMentorPage } from './copy-mentor.page';
 import { AccessTab } from './access.tab';
+import { SafetyTab } from './safety.tab';
 import { PrivacyTab } from './privacy.tab';
 import { TasksTab } from './tasks.tab';
 import { VoiceTab } from './voice.tab';
@@ -92,6 +93,7 @@ export class EditMentorPage {
   readonly embed: EmbedTab;
   readonly access: AccessTab;
   readonly privacy: PrivacyTab;
+  readonly safety: SafetyTab;
   readonly tasks: TasksTab;
   readonly voice: VoiceTab;
   readonly screenshare: ScreenShareTab;
@@ -123,6 +125,7 @@ export class EditMentorPage {
     this.embed = new EmbedTab(page, this.dialog);
     this.access = new AccessTab(page, this.dialog);
     this.privacy = new PrivacyTab(page, this.dialog);
+    this.safety = new SafetyTab(page, this.dialog);
     this.tasks = new TasksTab(page, this.dialog);
     this.voice = new VoiceTab(page, this.dialog);
     this.screenshare = new ScreenShareTab(page, this.dialog);
