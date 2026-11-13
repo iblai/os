@@ -82,6 +82,7 @@ export function FlaggedPromptDetail({
             isOpen={showDeleteModal}
             onClose={() => setShowDeleteModal(false)}
             logId={prompt.id}
+            logType={prompt.type}
             onDeleteSuccess={onDeleteSuccess}
           />
         </>
