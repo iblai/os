@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-11-11 | 1096 checkpoints (1046 covered, 16 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 110 journeys (109 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-11-13 | 1137 checkpoints (1056 covered, 46 pending/fixme, 17 not-reproducible in default env, 18 deprecated) | 110 journeys (109 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -369,7 +369,7 @@ The **download-chat** checkpoints (sh-07 … sh-10, issue #2464) cover the "Down
 
 ## Journey 20: Dataset Management (30 checkpoints) — `journeys/20-dataset-management.spec.ts`
 
-**Source files:** `components/modals/edit-mentor-modal/tabs/datasets-tab/agent-datasets-tab.tsx`, `app/platform/[tenantKey]/workflows/[mentorId]/[id]/page.tsx`, `hooks/user-navigate.ts`, `lib/constants.ts`, `lib/config.ts`, `lib/utils.ts`. The Datasets tab and its Add Resources / Train-or-Delete / Retrain Schedule modals now come from the `@iblai/iblai-js` SDK (`@iblai/web-containers`, linked locally via yalc); `agent-datasets-tab.tsx` is the OS host wrapper around the SDK's `AgentDatasetsTab`. The workflow builder's File Search node renders the same SDK `AgentDatasetsTab` in picker mode inside the SDK `WorkflowEditor`; the OS workflow page only hands it the disabled resource types and max upload size (see Journey 34).
+**Source files:** `components/modals/edit-mentor-modal/tabs/datasets-tab/agent-datasets-tab.tsx`, `app/platform/[tenantKey]/workflows/[mentorId]/[id]/page.tsx`, `hooks/user-navigate.ts`, `lib/constants.ts`, `lib/config.ts`, `lib/utils.ts`. The Datasets tab and its Add Resources / Train-or-Delete / Retrain Schedule modals now come from the `@iblai/iblai-js` SDK (`@iblai/web-containers`, linked locally via yalc); `agent-datasets-tab.tsx` is the OS host wrapper around the SDK's `AgentDatasetsTab`. The workflow builder's File Search node renders the same SDK `AgentDatasetsTab` in picker mode inside the SDK `WorkflowEditor`; the OS workflow page only hands it the disabled resource types and max upload size. That picker has no e2e coverage while File Search is a planned step the builder hides (Journey 34's wf-16 was deprecated in iblai/iblai-platform#2827).
 
 - [x] Datasets tab header and description display correctly (TC01)
 - [x] Search input is visible and filters the dataset list (TC02–TC03)
@@ -665,9 +665,9 @@ The "Remember past conversations" (`enable_memory_component`) master toggle move
 
 ---
 
-## Journey 34: Workflows (34 checkpoints) — `journeys/34-workflows.spec.ts`
+## Journey 34: Workflows (67 checkpoints; 1 deprecated, 30 pending) — `journeys/34-workflows.spec.ts`
 
-**Source files:** `app/platform/[tenantKey]/workflows/[mentorId]/page.tsx`, `app/platform/[tenantKey]/workflows/[mentorId]/[id]/page.tsx`. The workflow builder itself — `WorkflowsList`, `WorkflowEditor`, `WorkflowCanvas`, `NodeConfigPanel`, `WorkflowPreviewChat` and the definition helpers — lives in the SDK at `packages/web-containers/src/components/workflows/` and is imported from `@iblai/iblai-js/web-containers/next`; the two OS pages are thin route wrappers that pass the route ids, user identity, socket URL, RBAC / free-trial gate and dataset upload config, and turn its callbacks into navigation (back, the list after a delete, the edit-agent modal for an Agent step).
+**Source files:** `app/platform/[tenantKey]/workflows/[mentorId]/page.tsx`, `app/platform/[tenantKey]/workflows/[mentorId]/[id]/page.tsx`. The workflow builder itself — `WorkflowsList`, `WorkflowEditor`, `WorkflowCanvas`, `NodeConfigPanel`, `ClassifierPanel`, `WorkflowPreviewChat` and the definition helpers — lives in the SDK at `packages/web-containers/src/components/workflows/` and is imported from `@iblai/iblai-js/web-containers/next`; the two OS pages are thin route wrappers that pass the route ids, user identity, socket URL, RBAC / free-trial gate and dataset upload config, and turn its callbacks into navigation (back, the list after a delete, the edit-agent modal for an Agent step).
 
 - [x] Workflows page displays heading, description, and Create Workflow button
 - [x] Search input is visible on the workflows list page
@@ -680,11 +680,11 @@ The "Remember past conversations" (`enable_memory_component`) master toggle move
 - [x] Workflow name can be renamed inline via the pencil button
 - [x] Workflow can be saved without errors
 - [x] Default nodes (Start and Agent) are visible with an edge connecting them
-- [x] More options menu shows Activate and Delete items
+- [x] The editor header offers Activate / Deactivate and Delete: as buttons while the header has room, otherwise in More workflow options
 - [x] Preview mode can be entered and exited; Close preview, New Chat, and Publish are visible
 - [x] Canvas and chat panel are visible in preview mode
-- [x] Workflow can be published; active workflow can be deactivated back to Draft
-- [x] File Search node's dataset picker dialog (the SDK Datasets tab in picker mode, page/search kept in its own state): opening/searching/paging never touch the `datasetsPage`/`datasetsSearch` URL params; picking a row closes the dialog and shows the dataset name with a Change button; reopening highlights the previously selected row (self-seeded mentor)
+- [x] Publishing: a workflow with an End step after its Agent is published (200, with a `published_at`), Workflow published shows and the status is Active; without an End step the backend refuses it (400, an error about the missing End step, in either backend wording); a published workflow can be deactivated back to Draft
+- [x] ~~File Search node's dataset picker dialog (the SDK Datasets tab in picker mode, page/search kept in its own state): opening/searching/paging never touch the `datasetsPage`/`datasetsSearch` URL params; picking a row closes the dialog and shows the dataset name with a Change button; reopening highlights the previously selected row (self-seeded mentor)~~ _(deprecated in iblai/iblai-platform#2827 — File Search can't run in a workflow yet, so the step list no longer offers it)_
 - [x] Hovering a step and clicking its trash button removes it from the canvas and the saved workflow
 - [x] Step panel header Delete button removes the step and closes the panel
 - [x] The Agent step's trash button removes it and its connection
@@ -693,16 +693,49 @@ The "Remember past conversations" (`enable_memory_component`) master toggle move
 - [x] Start step: Number and Boolean state variables are listed and saved with typed defaults
 - [x] Start step: Remove {name} asks to confirm in the Delete Variable dialog (Cancel keeps it, Delete removes it); an invalid or taken name keeps Save disabled
 - [x] Set State: To Variable lists Start variables (never Variable 1); New creates and selects a variable
-- [x] Set State saves data.assignments and passes backend validation
-- [x] Transform saves data.expressions and passes backend validation
-- [x] While: an invalid Max Iterations (0) shows the whole-number error; a valid Condition and Max Iterations are saved and pass backend validation
+- [x] Set State saves data.assignments and the validate response has no message about the step's own settings (none tied to the step — by `error_details`/`warning_details` on backend #3218, by ` at nodes[<index>]` before it — however worded; messages about its connections are expected)
+- [x] Transform saves data.expressions and the validate response has no message about the step's own settings (none tied to the step — by `error_details`/`warning_details` on backend #3218, by ` at nodes[<index>]` before it; messages about its connections are expected)
+- [x] While: an invalid Max Iterations (0) shows the whole-number error; a valid Condition and Max Iterations are saved, and the validate response has no message about the step's own settings (none tied to the step — by `error_details`/`warning_details` on backend #3218, by ` at nodes[<index>]` before it; messages about its connections are expected)
 - [x] While Loop and Done handles save edges with sourceHandle continue and done
-- [x] If / Else saves data.conditions[0].expression
+- [x] If / Else saves data.conditions[0].expression, and the validate response has no message about the step's own settings (none tied to the step — by `error_details`/`warning_details` on backend #3218, by ` at nodes[<index>]` before it; messages about its connections are expected)
 - [x] If / Else condition-0 and else handles save edges
 - [x] Legacy field names (including a two-way If / Else) open marked Unsaved with no auto-save; Save stores the new names and condition-0/else edges and clears Unsaved
 - [x] If / Else: rewiring the If output to a second step leaves a single connection from that output
 - [x] Start variable in use by a Set State step: Remove opens Variable In Use listing the step; Cancel keeps the variable
-- [x] Adding a Note: the backend warns it is not connected, but the validation banner never shows that warning (other warnings stay)
+- [x] Adding a Note: the validation banner never shows a line about the Note, whether the backend warns that it is not connected (#3163) or leaves Notes out (#3218), and the missing End step message (either backend wording) stays; the banner the editor shows on open is collapsed first, so the End message coming back proves the post-save validation is on screen
+- [ ] Once the backend's node types are on screen, the step list offers Classifier and leaves out every node type the backend marks planned (today File Search, Guardrails, MCP and User Approval) _(pending: in `@iblai/iblai-js` 2.71.0, which the app now uses; flip to covered once journey 34 runs green)_
+- [ ] Classifier: a new one is saved with `answer_type` `choice`, model `iblai` and categories `category_1`/`category_2`; renaming Category 1 to Billing saves its id as `billing`; connecting its Fallback to an End saves an edge with sourceHandle `fallback` _(pending: in `@iblai/iblai-js` 2.71.0, which the app now uses; flip to covered once journey 34 runs green)_
+- [ ] Agent step added from the step list is saved with no `mentor_id` and shows no Agent Settings button (it has no agent yet); clicking its card opens its panel like any other step, with an empty Instructions box, and its Output Variable is saved as `output_variable`; the banner says An Agent step has no agent selected. instead of the backend's mentor wording _(pending: in `@iblai/iblai-js` 2.71.0, which the app now uses; flip to covered once journey 34 runs green)_
+- [ ] If / Else: a new one is saved right away with one empty condition (`conditions [{caseName: '', expression: ''}]`) _(pending: in `@iblai/iblai-js` 2.71.0, which the app now uses; flip to covered once journey 34 runs green)_
+- [ ] While: Loop and Done show Not connected until each is connected _(pending: in `@iblai/iblai-js` 2.71.0, which the app now uses; flip to covered once journey 34 runs green)_
+- [ ] Classifier Try (`classifier-test` mocked): the instructions are saved (by Try or the auto-save) before the answer shows; Try sends the step and the Sample Message, and shows the answer (Billing (0.90)) _(pending: in `@iblai/iblai-js` 2.71.0, which the app now uses; flip to covered once journey 34 runs green)_
+- [ ] Preview: the Preview chat input is usable for the signed-in editor (never "You don't have permission to chat"), the whole message box stays on screen below the app's top bar even when the chat is taller than the page (checked in a 360px-tall window), and a message sent from it goes out on the socket with `preview: true` _(pending: in `@iblai/iblai-js` 2.71.0, which the app now uses; flip to covered once journey 34 runs green)_
+- [ ] Unpublished changes shows beside the status only while a published copy exists: with the workflow GET mocked to `published_at` set and `has_unpublished_changes` true it shows; after a save refetches it with `published_at` null it is gone _(pending: in `@iblai/iblai-js` 2.71.0, which the app now uses; flip to covered once journey 34 runs green)_
+- [ ] A step with a result (here a Transform) has a Copy button just before Delete, on its card and in its settings header (Copy, Delete, Close, checked by position); both copy `{{steps.<id>}}`, the form an Agent's Instructions take, and the card's button copies without opening the step (Chromium only: the other browsers don't let a test read the clipboard) _(pending: in `@iblai/iblai-js` 2.71.0, which the app now uses; flip to covered once journey 34 runs green)_
+- [ ] Cmd+S (Ctrl+S off a Mac) while typing in a step's field saves the workflow (the PATCH carries the new Key and the Workflow saved toast shows) and the keydown is default-prevented, so the browser's Save Page dialog never opens _(pending: in `@iblai/iblai-js` 2.71.0, which the app now uses; flip to covered once journey 34 runs green)_
+- [ ] At 1600px every editor header action (Delete, Deactivate, Preview, Save, Publish) is a 36px button with no More workflow options menu; at 900px Delete has moved into that menu and Publish is still a button (they move in that order: Delete, Activate / Deactivate, Preview, Save, Publish) _(pending: in `@iblai/iblai-js` 2.71.0, which the app now uses; flip to covered once journey 34 runs green)_
+- [ ] Phone (393x852, touch; the phone checkpoints skip Firefox, which has no isMobile; the two that drag through CDP and the tap check run in Chromium only): a workflow created at phone size opens with its default steps fitted into view (the whole Start and Agent steps on screen); the step list is in the page but hidden beside the canvas, and the canvas's Add Step button opens a sheet (dialog named Add Step) listing the steps; tapping Transform there closes the sheet and the new step lands fully on screen _(pending: in `@iblai/iblai-js` 2.71.0, which the app now uses; flip to covered once journey 34 runs green)_
+- [ ] Phone: a one-finger drag on bare canvas pans it (the step layer's transform changes) and a two-finger pinch outwards raises the zoom percentage in the canvas toolbar (touch sent through CDP `Input.dispatchTouchEvent`, since Playwright's touchscreen only taps, so Chromium only) _(pending: in `@iblai/iblai-js` 2.71.0, which the app now uses; flip to covered once journey 34 runs green)_
+- [ ] Phone: every canvas toolbar button (Pan, Select, Undo, Redo, Zoom Out, Zoom In) is fully on screen, and tapping the Start step opens its settings panel fully inside the 393px screen _(pending: in `@iblai/iblai-js` 2.71.0, which the app now uses; flip to covered once journey 34 runs green)_
+- [ ] Phone: pressing a While step's Done connection dot and dragging one finger onto the Agent step connects them (the auto-save carries an edge to `mentor-1` with sourceHandle `done`) and Done's Not connected note goes away (the drag goes through CDP, so Chromium only) _(pending: in `@iblai/iblai-js` 2.71.0, which the app now uses; flip to covered once journey 34 runs green)_
+- [ ] Phone Preview: the canvas is hidden and the chat takes the whole width; its message box is editable, fully on screen and as wide as the screen apart from the chat's padding _(pending: in `@iblai/iblai-js` 2.71.0, which the app now uses; flip to covered once journey 34 runs green)_
+- [ ] Phone: tapping the middle of the Start-to-Agent connection selects it (Delete Connection shows where the finger is) without deleting it, and tapping the top-right corner of the unselected Agent step on the outer part of the spot where its Delete button shows once the press selects the step (past the card, since a tap inside it goes to the Agent Settings button nearby), deletes neither the step nor the connection _(pending: in `@iblai/iblai-js` 2.71.0, which the app now uses; flip to covered once journey 34 runs green)_
+- [ ] Cmd+Z (Ctrl+Z off a Mac) right after adding a Transform removes it (the auto-save no longer has it), Cmd+Shift+Z (Ctrl+Shift+Z) brings it back, and Delete after clicking the step, with its panel open, removes it _(pending: in `@iblai/iblai-js` 2.71.0, which the app now uses; flip to covered once journey 34 runs green)_
+- [ ] Clicking the default Agent step opens its step settings panel (Instructions), like any other step; its gear, named Agent Settings, opens that agent's Edit Agent dialog and no step panel _(pending: in `@iblai/iblai-js` 2.71.0, which the app now uses; flip to covered once journey 34 runs green)_
+- [ ] The validation banner a new workflow shows on open has a header named Warnings and Errors followed by its counts (e.g. 1 error, 1 warning), matching the listed lines; the header carries no alert icon, and every listed line has its own error or warning icon; the backend's runtime check of each Agent step shows as The agent in each Agent step is checked when the workflow runs. _(pending: in `@iblai/iblai-js` 2.71.0, which the app now uses; flip to covered once journey 34 runs green)_
+- [ ] Insert Variable or Step: the icon button on a Transform's Value opens a searchable picker; choosing the Start variable `counter` inserts `variables['counter']` at the caret (in front of the typed ` + 1`), returns focus to the field with the caret right after it, and the auto-save carries the expression; on the Agent step's Instructions the same picker inserts `{{variables.counter}}` at the caret and the auto-save carries it _(pending: in `@iblai/iblai-js` 2.71.0, which the app now uses; flip to covered once journey 34 runs green)_
+- [ ] Copy and paste steps: with a Transform selected, Cmd+C then Cmd+V (Ctrl off a Mac) adds a copy with a new id that the next auto-save carries, and Cmd+Z (Ctrl+Z) removes the copy again _(pending: in `@iblai/iblai-js` 2.71.0, which the app now uses; flip to covered once journey 34 runs green)_
+- [ ] Wheel over bare canvas: a plain wheel pans it (the step layer's transform changes, the zoom percentage does not), and the wheel with Cmd (Ctrl off a Mac) held, as a trackpad pinch arrives, raises the zoom percentage _(pending: in `@iblai/iblai-js` 2.71.0, which the app now uses; flip to covered once journey 34 runs green)_
+- [ ] Canvas toolbar tooltips show the keyboard shortcut in brackets: hovering Undo (once there is a change) shows Undo (⌘Z) on a Mac and Undo (Ctrl+Z) elsewhere (the test decides Mac with the editor's own check of the browser's reported platform, so WebKit, whose Desktop Safari user agent claims a Mac, expects ⌘Z); its accessible name stays Undo and it carries `aria-keyshortcuts` _(pending: in `@iblai/iblai-js` 2.71.0, which the app now uses; flip to covered once journey 34 runs green)_
+- [ ] Validation lines link to their step: after an unconnected Transform is added and saved, the banner line marked with that step's id (`data-step-id`, so a backend rewording of the message changes nothing) shows the tooltip Show Transform on hover, and clicking it opens that step's settings panel (Delete Transform) with the step on screen _(pending: fails until the app moves to the `@iblai/iblai-js` release with iblai/iblai-web-frontend#2241, which marks each banner line with `data-step-id` and links it by the `error_details`/`warning_details` `node_id`; 2.71.0 to 2.73.0 link a line only by an ` at nodes[i]` ending or a quoted step id, both gone since backend #3218; flip to covered once it passes)_
+- [ ] Undo in a text field is the field's own: in the Agent Instructions (resizable up and down) Cmd+Z or Ctrl+Z takes back a run of typing in one step and Cmd/Ctrl+Shift+Z brings it back, an insert from Insert Variable or Step is taken back in one step, and the keys never reach the canvas: a Transform added before stays, even after Cmd+Z in the still-empty field _(pending: in `@iblai/iblai-js` 2.71.0, which the app now uses; flip to covered once journey 34 runs green)_
+- [ ] Add buttons sit with their rows: in the settings of a Transform, a Set State and an If / Else the Add button comes right under the rows it adds to, above the expression hint and the Step IDs list _(pending: in `@iblai/iblai-js` 2.71.0, which the app now uses; flip to covered once journey 34 runs green)_
+- [ ] A refused publish lists what to fix: publishing a new workflow (no End step) gets a 400, the toast Workflow has validation issues (never Failed to publish workflow) and the banner, collapsed beforehand, opens again with the line about the missing End step _(pending: in `@iblai/iblai-js` 2.71.0, which the app now uses; flip to covered once journey 34 runs green)_
+- [ ] Choosing an agent: an Agent step's Select opens the Select Agent dialog, where searching for the last word of the workflow's name returns the workflow's own agent (named after the workflow) from the backend, yet the dialog lists no agents; picking the first agent closes the dialog, the auto-save carries its `mentor_id` and the card gets its Agent Settings gear _(pending: in `@iblai/iblai-js` 2.71.0, which the app now uses; flip to covered once journey 34 runs green)_
+- [ ] Classifier answer types and chat history: choosing Answer Type Yes or No saves `answer_type` `noul` and shows true, false and fallback outputs (no category ones); under Advanced, turning on Include Chat History saves `include_history.enabled` true, and the switch shows on in the admin Users blue (Tailwind blue-500) _(pending: in `@iblai/iblai-js` 2.71.0, which the app now uses; flip to covered once journey 34 runs green)_
+- [x] Running a workflow in Preview: built in the editor as Start → If / Else (condition `'refund' in input`) → a Transform on each branch setting `output` to `'Refund path'` or `'General path'` → End, with the Agent step deleted, the saved workflow has no validation errors; in Preview, "I want a refund" gets exactly Refund path and then "hello" gets exactly General path (no model involved: End replies with the Transform's output)
+- [x] Running an Agent step in Preview: in a workflow of a freshly created agent (its virtual machine turned off, so it answers without starting one), the default Agent step keeps that agent's `mentor_id` and, connected to an End, saves with no validation errors; a message sent in Preview gets the agent's own reply, neither empty nor the workflow's "went wrong" apology
+- [x] A published workflow answers its own agent's chat: the If / Else workflow above publishes (200, returning the `entry_mentor_id` of the agent created with the workflow), and in a second tab that agent's normal chat answers "I want a refund" with exactly Refund path
 
 ---
 
@@ -868,20 +901,28 @@ The Sandbox tab used to wrap the SDK's `SandboxConfig` component in an app-level
 
 ---
 
-## Journey 45: Mentor Privacy Tab (8 checkpoints) — `journeys/45-mentor-privacy-tab.spec.ts`
+## Journey 45: Mentor Privacy Tab (16 checkpoints) — `journeys/45-mentor-privacy-tab.spec.ts`
 
 **Source files:** `components/modals/edit-mentor-modal/tabs/privacy-tab.tsx`, `components/modals/edit-mentor-modal/tabs/index.ts`, `components/modals/edit-mentor-modal/index.tsx`, `hooks/use-mentor-segments.ts`, `lib/constants.ts`
 
-The Privacy tab is a thin wrapper around the SDK's `AgentPrivacyTab` (`@iblai/iblai-js/web-containers/next`). The wrapper forwards `tenantKey` / `mentorId` / `username` from URL params + the navigate hook so the SDK's `useGetMentorSettingsQuery` and `useEditMentorJsonMutation` resolve correctly. The `enable_privacy_router` master toggle moved off Settings → Capabilities into an in-tab `CapabilityGate` (`data-testid="privacy-capability-toggle"`, feat/2040), and the Privacy tab is now always mounted — `hooks/use-mentor-segments.ts` no longer gates the segment. Unlike the app-owned capability tabs, `AgentPrivacyTab` is NOT optimistic — the toggle only flips after the `editMentorJson` + refetch round trip lands. The "When PII is detected" dropdown now lists **Allow** first (`PRIVACY_ACTIONS = ['allow','redact','mask','block']`), then Redact, Mask, Block.
+The Privacy tab is a thin wrapper around the SDK's `AgentPrivacyTab` (`@iblai/iblai-js/web-containers/next`), which forwards `rbacPermissions` so the Privacy Log button is RBAC-gated. Filtering is two accordion cards (`privacy-{pii,phi}-card`), each with its own switch (`privacy-filter-{pii,phi}-toggle`), one open at a time; there is no master toggle or PII sub-tab any more. Saves are not optimistic (PUT `/mentors/<id>/settings/` + refetch). Tests that change settings create their own agent (deterministic all-off start) and delete it in `finally`; the Privacy Log test only reads and mocks `**/privacy-flags/**`.
 
-- [x] PR-01: Privacy tab label is visible in the Edit Mentor modal sidebar (always mounted)
+- [x] PR-01: Privacy tab label is visible in the Edit Agent modal sidebar
 - [x] PR-02: Privacy tab heading and description render correctly
-- [x] PR-03: Privacy tab stays mounted regardless of `enable_privacy_router`; `capability-gate-content`'s `data-enabled` tracks the in-tab "PII filtering" toggle
-- [x] PR-04: The CapabilityGate off-state hint is shown only while the router is off
-- [x] PR-05: Enabling the router keeps the action, entity chips and output-filter fields present and interactive
-- [x] PR-05b: The "When PII is detected" action dropdown lists Allow, Redact, Mask, Block in that order
-- [x] PR-06: Block Message textarea is editable only while the action is Block (tolerates conditional-render or render-and-disable SDK shapes)
-- [x] PR-07: Clicking an entity chip flips its aria-checked state and persists when toggled twice
+- [x] PR-03: Removed `privacy-capability-toggle` / `privacy-sub-tab-pii` no longer exist; no unneeded sub-tab strip
+- [x] PR-04: New agent shows both cards off (aria-checked, title, accessible names, "Off." summary); an open off card shows only its off hint
+- [x] PR-05: Turning PII on saves, opens its card, leaves PHI off; summary starts "On."
+- [x] PR-06: PII action dropdown lists Allow, Redact, Mask, Block in order
+- [x] PR-07: Block Message shown/editable only while action is Block
+- [x] PR-08: PII entity chips flip; "none selected = all" hint and "N kind selected" summary track them
+- [x] PR-09: PII settings persist across modal close/reopen; last kind off returns to "Off."
+- [x] PR-10: PHI shows 12 entity chips, "all 12 kinds" by default, "2 kinds selected" + Block after configuring
+- [x] PR-11: One card open at a time (PII on opens PII/closes PHI; chevron swaps back)
+- [x] PR-12: "Also Filter AI Responses" switch named exactly that, toggles on/off
+- [x] PR-13: Turning one kind off leaves the other on; the last off switches filtering off
+- [x] PR-14: Admin sees the Privacy Log row/button; opens the audit-log modal with (mocked) rows
+- [x] PR-15: Privacy Log rail filter narrows the list
+- [x] PR-16: Privacy Log row action opens the flag detail
 
 ---
 
@@ -1923,7 +1964,7 @@ sequence from the reporter's real trace.
 
 ## Journey 74: Dataset Cloud Pickers (3 checkpoints) — `journeys/74-dataset-cloud-pickers.spec.ts`
 
-**Source files:** `app/platform/[tenantKey]/workflows/[mentorId]/[id]/page.tsx`, `components/modals/edit-mentor-modal/tabs/datasets-tab/agent-datasets-tab.tsx` — the cloud-picker hooks and Add Resources modal now live in the `@iblai/iblai-js` SDK (`@iblai/web-containers`, linked locally via yalc), not in OS source; the workflow builder's File Search picker (SDK `WorkflowEditor`) reaches the same modal with the upload config the workflow page passes.
+**Source files:** `app/platform/[tenantKey]/workflows/[mentorId]/[id]/page.tsx`, `components/modals/edit-mentor-modal/tabs/datasets-tab/agent-datasets-tab.tsx` — the cloud-picker hooks and Add Resources modal now live in the `@iblai/iblai-js` SDK (`@iblai/web-containers`, linked locally via yalc), not in OS source; the workflow builder's File Search picker (SDK `WorkflowEditor`) reaches the same modal with the upload config the workflow page passes, though no journey reaches it while File Search is a planned step the builder hides.
 
 Verifies the Google Drive, Microsoft OneDrive, and Dropbox buttons in the Add Resources modal. Each test creates a fresh mentor (matching journey 36 / 75 pattern), opens the Datasets tab → Add Resources modal, and asserts the behaviour the **tenant's own configuration** selects.
 

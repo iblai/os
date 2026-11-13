@@ -1,5 +1,14 @@
+import type { Locator } from '@playwright/test';
 import { test, expect } from '../fixtures/mentor-test';
-import { navigateToMentorApp, checkAdminStatus } from '../utils/auth';
+import { MENTOR_NEXTJS_HOST } from '../fixtures/test-data';
+import { ChatPage } from '../page-objects/chat.page';
+import {
+  navigateToMentorApp,
+  checkAdminStatus,
+  getPlatformContext,
+} from '../utils/auth';
+import { parsePlatformUrl } from '../utils/navigation';
+import { putMentorVmNetworkSettings } from '../utils/virtual-machine-api';
 import {
   navigateToWorkflowsPage,
   createWorkflow,
@@ -13,6 +22,7 @@ import {
   exitPreviewMode,
   saveWorkflow,
   publishWorkflow,
+  addEndStepOnLoad,
   getWorkflowStatus,
   withFreshWorkflow,
   deleteWorkflowAfter,
@@ -26,20 +36,34 @@ import {
   addStartVariable,
   createVariableFromSetState,
   selectConnection,
+  connectionPoint,
   connectHandle,
   canvasNode,
   canvasEdge,
   nodePanel,
   nodeOfType,
+  nodeById,
   recordWorkflowPatches,
+  unconnectedBranch,
+  validationMessages,
+  stepMessages,
+  validationMessageText,
+  waitForDefinitionSave,
+  mockClassifierTry,
+  workflowHeaderAction,
+  overrideWorkflowFields,
+  withFreshPhoneWorkflow,
+  addNodeFromStepSheet,
+  touchGesture,
+  bareCanvasPoint,
+  settledCentreOf,
+  insertFromPicker,
+  caretOf,
+  buildRefundRouter,
+  REFUND_REPLY,
+  GENERAL_REPLY,
+  MISSING_END,
 } from '../utils/workflows';
-import {
-  seedDatasetsForMentor,
-  waitForDatasetsReady,
-  deleteDatasetDocumentsByStamp,
-} from '../utils/dataset-seeding';
-import { deleteMentorById } from '../utils/mentor-cleanup';
-import { logger } from '@iblai/iblai-js/playwright';
 
 test.describe('Journey 34: Workflows', () => {
   test.beforeEach(async ({ page }) => {
@@ -237,31 +261,24 @@ test.describe('Journey 34: Workflows', () => {
     await deleteCurrentWorkflow(page);
   });
 
-  test('admin goes to workflow editor and opens more options menu with Deactivate and Delete', async ({
+  test('admin goes to workflow editor and finds Deactivate and Delete in its header or More workflow options', async ({
     page,
   }) => {
-    await navigateToWorkflowsPage(page);
-    await createWorkflow(page);
-    await waitForWorkflowEditorReady(page);
+    await withFreshWorkflow(page, async () => {
+      // Delete is the first to leave the bar: once it is found, Deactivate is
+      // either inline too or in the menu that finding Delete opened.
+      await expect(await workflowHeaderAction(page, 'Delete')).toBeVisible({
+        timeout: 5_000,
+      });
+      await expect(
+        page
+          .getByTestId('workflow-header-actions')
+          .getByRole('button', { name: 'Deactivate', exact: true })
+          .or(page.getByRole('menuitem', { name: 'Deactivate', exact: true })),
+      ).toBeVisible({ timeout: 5_000 });
 
-    const moreButton = page.getByRole('button', {
-      name: 'More workflow options',
+      await page.keyboard.press('Escape');
     });
-    await expect(moreButton).toBeVisible({ timeout: 10_000 });
-    await moreButton.click();
-
-    await expect(
-      page.getByRole('menuitem', { name: 'Deactivate' }),
-    ).toBeVisible({
-      timeout: 5_000,
-    });
-    await expect(page.getByRole('menuitem', { name: 'Delete' })).toBeVisible({
-      timeout: 5_000,
-    });
-
-    await page.keyboard.press('Escape');
-
-    await deleteCurrentWorkflow(page);
   });
 
   // ── Preview Mode ──────────────────────────────────────────────────────────
@@ -311,87 +328,65 @@ test.describe('Journey 34: Workflows', () => {
   test('admin goes to workflow editor and publishes a workflow', async ({
     page,
   }) => {
-    await navigateToWorkflowsPage(page);
-    await createWorkflow(page);
-    await waitForWorkflowEditorReady(page);
+    await addEndStepOnLoad(page);
+    await withFreshWorkflow(page, async () => {
+      const published = await publishWorkflow(page);
 
-    await publishWorkflow(page);
-
-    const hasValidationErrors = await page
-      .getByText(/error/)
-      .first()
-      .isVisible()
-      .catch(() => false);
-
-    if (!hasValidationErrors) {
+      expect(published.status()).toBe(200);
+      // A new workflow is already Active, so the publish time is the proof.
+      expect((await published.json()).workflow?.published_at).toBeTruthy();
+      await expect(page.getByText('Workflow published')).toBeVisible({
+        timeout: 10_000,
+      });
       await expect
         .poll(() => getWorkflowStatus(page), { timeout: 10_000 })
         .toBe('Active');
-    }
-
-    await deleteCurrentWorkflow(page);
+    });
   });
 
-  test('admin goes to workflow editor and publishes an invalid workflow to check for validation errors', async ({
+  test('admin goes to workflow editor and the backend refuses to publish a workflow with no End step', async ({
     page,
   }) => {
-    await navigateToWorkflowsPage(page);
-    await createWorkflow(page);
-    await waitForWorkflowEditorReady(page);
+    await withFreshWorkflow(page, async () => {
+      const refused = await publishWorkflow(page);
 
-    await publishWorkflow(page);
-
-    // Either validation errors appear or it succeeds — both are valid outcomes
-    const validationBanner = page.locator('text=/error|warning/i').first();
-    const hasValidation = await validationBanner.isVisible().catch(() => false);
-
-    // Test passes regardless — we're just verifying no crash
-    expect(typeof hasValidation).toBe('boolean');
-
-    await deleteCurrentWorkflow(page);
+      expect(refused.status()).toBe(400);
+      const body = await refused.json();
+      expect(body.is_valid).toBe(false);
+      expect(
+        (body.errors as string[]).some((error) => MISSING_END.test(error)),
+      ).toBe(true);
+      await expect(page.getByText('Workflow published')).toHaveCount(0);
+    });
   });
 
   test('admin goes to workflow editor and deactivates an active workflow', async ({
     page,
   }) => {
-    await navigateToWorkflowsPage(page);
-    await createWorkflow(page);
-    await waitForWorkflowEditorReady(page);
-
-    await publishWorkflow(page);
-
-    try {
+    await addEndStepOnLoad(page);
+    await withFreshWorkflow(page, async () => {
+      const published = await publishWorkflow(page);
+      expect(published.status()).toBe(200);
       await expect
         .poll(() => getWorkflowStatus(page), { timeout: 10_000 })
         .toBe('Active');
-    } catch {
-      await deleteCurrentWorkflow(page);
-      test.skip(true, 'Workflow did not become active after publish');
-      return;
-    }
 
-    const moreButton = page.getByRole('button', {
-      name: 'More workflow options',
+      const deactivateItem = await workflowHeaderAction(page, 'Deactivate');
+      await expect(deactivateItem).toBeVisible({ timeout: 5_000 });
+      const [deactivateResponse] = await Promise.all([
+        page.waitForResponse(
+          (resp) =>
+            resp.url().includes('/workflows') &&
+            resp.request().method() === 'POST',
+        ),
+        deactivateItem.click(),
+      ]);
+      expect(deactivateResponse.ok()).toBeTruthy();
+
+      await expect
+        .poll(() => getWorkflowStatus(page), { timeout: 10_000 })
+        .toBe('Draft');
     });
-    await moreButton.click();
-
-    const deactivateItem = page.getByRole('menuitem', { name: 'Deactivate' });
-    await expect(deactivateItem).toBeVisible({ timeout: 5_000 });
-    const [deactivateResponse] = await Promise.all([
-      page.waitForResponse(
-        (resp) =>
-          resp.url().includes('/workflows') &&
-          resp.request().method() === 'POST',
-      ),
-      deactivateItem.click(),
-    ]);
-    expect(deactivateResponse.ok()).toBeTruthy();
-
-    await expect
-      .poll(() => getWorkflowStatus(page), { timeout: 10_000 })
-      .toBe('Draft');
-
-    await deleteCurrentWorkflow(page);
   });
 
   const DEFAULT_EDGE_ID = 'e-start-mentor-1';
@@ -402,7 +397,7 @@ test.describe('Journey 34: Workflows', () => {
     page,
   }) => {
     await withFreshWorkflow(page, async () => {
-      const nodeId = await addSavedNodeFromSidebar(
+      const { id: nodeId } = await addSavedNodeFromSidebar(
         page,
         'Transform',
         'transform',
@@ -425,7 +420,7 @@ test.describe('Journey 34: Workflows', () => {
     page,
   }) => {
     await withFreshWorkflow(page, async () => {
-      const nodeId = await addSavedNodeFromSidebar(
+      const { id: nodeId } = await addSavedNodeFromSidebar(
         page,
         'Set State',
         'set-state',
@@ -658,8 +653,7 @@ test.describe('Journey 34: Workflows', () => {
         expect.objectContaining({ variable: 'total', expression }),
       ]);
       expect(data).not.toHaveProperty('setStateAssignments');
-      expect(validation).not.toContain('Set-state node has no assignments');
-      expect(validation).not.toContain('Attribute access not allowed');
+      expect(stepMessages(validation, definition, nodeId)).toEqual([]);
     });
   });
 
@@ -686,8 +680,7 @@ test.describe('Journey 34: Workflows', () => {
       ]);
       expect(data).not.toHaveProperty('transformExpressions');
       expect(data).not.toHaveProperty('transformMode');
-      expect(validation).not.toContain('Transform node has no expressions');
-      expect(validation).not.toContain('Attribute access not allowed');
+      expect(stepMessages(validation, definition, nodeId)).toEqual([]);
     });
   });
 
@@ -718,8 +711,7 @@ test.describe('Journey 34: Workflows', () => {
       expect(data.condition).toBe(condition);
       expect(data.maxIterations).toBe(5);
       expect(data).not.toHaveProperty('whileExpression');
-      expect(validation).not.toContain("missing required field 'condition'");
-      expect(validation).not.toContain('Attribute access not allowed');
+      expect(stepMessages(validation, definition, nodeId)).toEqual([]);
     });
   });
 
@@ -782,7 +774,7 @@ test.describe('Journey 34: Workflows', () => {
       expect(nodeOfType(definition, 'conditional')!.data.conditions[0]).toEqual(
         expect.objectContaining({ expression }),
       );
-      expect(validation).not.toContain('Attribute access not allowed');
+      expect(stepMessages(validation, definition, nodeId)).toEqual([]);
     });
   });
 
@@ -1035,6 +1027,18 @@ test.describe('Journey 34: Workflows', () => {
     page,
   }) => {
     await withFreshWorkflow(page, async () => {
+      // The editor validates when the workflow opens. Collapsing that banner
+      // means the End message can only come back from the validation after
+      // the Note is saved.
+      const endOnOpen = page
+        .getByTestId('workflow-validation-list')
+        .getByText(MISSING_END);
+      await expect(endOnOpen).toBeVisible({ timeout: 15_000 });
+      await page
+        .getByRole('button', { name: /^Warnings and Errors\b/ })
+        .click();
+      await expect(endOnOpen).toHaveCount(0);
+
       let noteId = '';
       const { validation } = await captureAutosave(
         page,
@@ -1043,163 +1047,1282 @@ test.describe('Journey 34: Workflows', () => {
         },
         (def) => !!nodeOfType(def, 'note'),
       );
-      const noteWarning = `Node '${noteId}' is not connected to any other nodes`;
-      const endWarning = "Workflow should have an 'end' node";
-      expect(validation).toContain(noteWarning);
-      expect(validation).toContain(endWarning);
+      const endMessage = validationMessages(validation).find((message) =>
+        MISSING_END.test(message),
+      );
+      expect(
+        endMessage,
+        'missing End message in the validate body',
+      ).toBeTruthy();
 
-      // The End warning proves the banner already shows this validation.
-      await expect(page.getByText(endWarning)).toBeVisible({ timeout: 10_000 });
-      await expect(page.getByText(noteWarning)).toHaveCount(0);
+      // The banner was collapsed before the Note was added, so the End
+      // message reappearing proves the post-save validation is on screen.
+      await expect(
+        page.getByText(validationMessageText(endMessage!)),
+      ).toBeVisible({ timeout: 10_000 });
+      // Backend #3163 warns that the Note is not connected and names it by
+      // its quoted id; #3218 leaves Notes out. Either way no line is about it.
+      await expect(page.getByText(`'${noteId}'`)).toHaveCount(0);
+      await expect(
+        page.getByTestId('workflow-validation-list').getByText(/\bNote\b/),
+      ).toHaveCount(0);
     });
   });
 
-  // ── File Search node: dataset picker dialog ────────────────────────────────
-  // The File Search node's "Select" button opens the workflow's ENTRY
-  // mentor's Datasets tab in picker mode (the SDK `AgentDatasetsTab` with no
-  // page/search props, rendered by `NodeConfigPanel` in
-  // `@iblai/web-containers`), unlike the edit-mentor modal's Datasets tab,
-  // which drives page/search off the URL. This checkpoint asserts that distinction holds: searching/paging
-  // inside the picker must NOT touch `datasetsPage`/`datasetsSearch`.
-  //
-  // IMPORTANT: the entry mentor is NOT whichever mentor is active in the
-  // browser when "Create Workflow" is clicked — verified live (2026-09-28)
-  // that creating a fresh mentor first and immediately creating a workflow
-  // still yields a DIFFERENT id in the resulting `/workflows/{mentorId}/...`
-  // route. The backend auto-provisions a dedicated entry mentor per workflow
-  // (the canvas's default "Agent" node's backing mentor). So this test reads
-  // the REAL entry mentor id off the post-creation URL and seeds datasets
-  // there — not onto a mentor it created itself.
-  //
-  // Cleanup: `deleteCurrentWorkflow` appears to cascade-delete the entry
-  // mentor (verified empirically — residue delta was 0 after it). `
-  // registerMentor` can't be used here to double-track it: it derives the
-  // mentor id by parsing `page.url()` as `/platform/{tenant}/{mentorId}`,
-  // which misreads this route's `/platform/{tenant}/workflows/{mentorId}/...`
-  // shape (it took the literal segment "workflows" as the id). So the
-  // fallback instead calls `deleteMentorById(page, entryMentorId)` directly
-  // (explicit id, no URL parsing) in a `finally`, in case the workflow delete
-  // itself ever fails.
-
-  test('admin adds a File Search node and picks a dataset from its picker dialog without touching the URL', async ({
+  test('admin opens the step list and it offers Classifier but no steps that cannot run yet', async ({
     page,
   }) => {
-    test.setTimeout(240_000);
-
-    await navigateToWorkflowsPage(page);
-    await createWorkflow(page);
-    await waitForWorkflowEditorReady(page);
-
-    const entryMentorId = new URL(page.url()).pathname
-      .split('/workflows/')[1]
-      ?.split('/')[0];
-    expect(
-      entryMentorId,
-      'Could not parse entry mentor id from workflow URL',
-    ).toBeTruthy();
-
-    const stamp = `wf16-${Date.now()}`;
-    const seedCount = 6; // > 5/page, so pagination actually renders (see below)
-    await seedDatasetsForMentor(page, entryMentorId, seedCount, { stamp });
-    await waitForDatasetsReady(page, entryMentorId, seedCount);
-
-    const fileSearchItem = page.getByRole('button', { name: 'File Search' });
-    await expect(fileSearchItem).toBeVisible({ timeout: 15_000 });
-    await fileSearchItem.click();
-
-    const canvas = page.locator('[data-testid="workflow-canvas"]');
-    const fileSearchNode = canvas.getByText('File Search', { exact: true });
-    await expect(fileSearchNode).toBeVisible({ timeout: 10_000 });
-    await fileSearchNode.click();
-
-    const configPanel = page.locator('div.absolute.top-4.right-4');
-    const selectButton = configPanel.getByRole('button', { name: 'Select' });
-    await expect(selectButton).toBeVisible({ timeout: 10_000 });
-
-    const urlBeforeOpen = page.url();
-    await selectButton.click();
-
-    const pickerDialog = page.getByRole('dialog', { name: 'Select Dataset' });
-    await expect(pickerDialog).toBeVisible({ timeout: 10_000 });
-
-    const searchInput = pickerDialog.getByPlaceholder(/search datasets/i);
-    await expect(searchInput).toBeVisible({ timeout: 10_000 });
-
-    // 6 seeded rows at 5/page means pagination must render — assert on it
-    // rather than conditionally skipping (this is a self-seeded fixture, so
-    // "no pagination" would itself be a real regression, not a data gap).
-    const paginationNav = pickerDialog.getByRole('navigation', {
-      name: /pagination/i,
+    const nodeTypesResponse = page.waitForResponse(
+      (response) =>
+        /\/workflows\/node-types\/?$/.test(new URL(response.url()).pathname),
+      { timeout: 60_000 },
+    );
+    await withFreshWorkflow(page, async () => {
+      const { node_types: nodeTypes } = (await (
+        await nodeTypesResponse
+      ).json()) as {
+        node_types: Record<string, { label: string; status?: string }>;
+      };
+      // Until node types load, the step list is a built-in one that already
+      // leaves the planned steps out. Its "Set state" becomes the backend's
+      // "Set State" once the backend's list is on screen.
+      await expect(
+        page.getByRole('button', {
+          name: nodeTypes['set-state'].label,
+          exact: true,
+        }),
+      ).toBeVisible({ timeout: 15_000 });
+      await expect(
+        page.getByRole('button', { name: 'Classifier', exact: true }),
+      ).toBeVisible();
+      const planned = Object.values(nodeTypes).filter(
+        (nodeType) => nodeType.status === 'planned',
+      );
+      for (const { label } of planned) {
+        await expect(
+          page.getByRole('button', { name: label, exact: true }),
+        ).toHaveCount(0);
+      }
     });
-    await expect(paginationNav).toBeVisible({ timeout: 10_000 });
+  });
 
-    const page2Link = paginationNav.locator('a').filter({ hasText: /^2$/ });
-    await page2Link.click();
-    await page.waitForTimeout(1_000);
-    expect(new URL(page.url()).searchParams.get('datasetsPage')).toBeNull();
-    expect(page.url()).toBe(urlBeforeOpen);
-    logger.info(
-      'File Search picker: paging did not add a datasetsPage URL param',
+  test('admin adds a Classifier, renames a category and connects its Fallback, and each change is saved', async ({
+    page,
+  }) => {
+    await withFreshWorkflow(page, async () => {
+      const classifier = await addSavedNodeFromSidebar(
+        page,
+        'Classifier',
+        'classifier',
+      );
+      expect(classifier.type).toBe('classifier');
+      expect(classifier.data).toMatchObject({
+        answer_type: 'choice',
+        model: 'iblai',
+      });
+      expect(
+        classifier.data.categories.map(
+          (category: { id: string }) => category.id,
+        ),
+      ).toEqual(['category_1', 'category_2']);
+
+      const panel = await openNodePanel(page, classifier.id);
+      const renamed = await captureAutosave(
+        page,
+        () =>
+          panel
+            .getByLabel('Label for Category 1', { exact: true })
+            .fill('Billing'),
+        (def) =>
+          nodeById(def, classifier.id)?.data.categories?.[0]?.id === 'billing',
+      );
+      expect(
+        nodeById(renamed.definition, classifier.id)!.data.categories[0],
+      ).toMatchObject({ id: 'billing', label: 'Billing' });
+      await closeNodePanel(page);
+
+      const endId = await addNodeFromSidebar(page, 'End', 'end');
+      const connected = await captureAutosave(
+        page,
+        () => connectHandle(page, classifier.id, 'fallback', endId),
+        (def) =>
+          def.edges.some(
+            (edge) =>
+              edge.source === classifier.id && edge.sourceHandle === 'fallback',
+          ),
+      );
+      expect(connected.definition.edges).toContainEqual(
+        expect.objectContaining({
+          source: classifier.id,
+          target: endId,
+          sourceHandle: 'fallback',
+        }),
+      );
+    });
+  });
+
+  test('admin adds an Agent step, clicks it to open its Step Settings and its Output Variable is saved', async ({
+    page,
+  }) => {
+    await withFreshWorkflow(page, async () => {
+      const agent = await addSavedNodeFromSidebar(page, 'Agent', 'mentor');
+      expect(agent.data.mentor_id).toBeFalsy();
+      await expect(
+        canvasNode(page, agent.id).getByRole('button', {
+          name: 'Agent Settings',
+          exact: true,
+        }),
+      ).toHaveCount(0);
+      // The backend words this in terms of mentors; the banner never does.
+      await expect(page.getByTestId('workflow-validation-list')).toContainText(
+        'An Agent step has no agent selected.',
+        { timeout: 10_000 },
+      );
+
+      const panel = await openNodePanel(page, agent.id);
+      await expect(
+        panel.getByLabel('Instructions', { exact: true }),
+      ).toHaveValue('');
+
+      const { definition } = await captureAutosave(
+        page,
+        () =>
+          panel.getByLabel('Output Variable', { exact: true }).fill('summary'),
+        (def) => nodeById(def, agent.id)?.data.output_variable === 'summary',
+      );
+      expect(nodeById(definition, agent.id)!.data.output_variable).toBe(
+        'summary',
+      );
+    });
+  });
+
+  test('admin adds an If / Else and it is saved with one empty condition', async ({
+    page,
+  }) => {
+    await withFreshWorkflow(page, async () => {
+      const ifElse = await addSavedNodeFromSidebar(
+        page,
+        'If / Else',
+        'conditional',
+      );
+      expect(ifElse.data.conditions).toEqual([
+        expect.objectContaining({ caseName: '', expression: '' }),
+      ]);
+    });
+  });
+
+  test('admin adds a While and its Loop and Done show Not connected until each is connected', async ({
+    page,
+  }) => {
+    await withFreshWorkflow(page, async () => {
+      const whileId = await addNodeFromSidebar(page, 'While', 'while');
+      const loop = unconnectedBranch(page, whileId, 'continue');
+      const done = unconnectedBranch(page, whileId, 'done');
+      await expect(loop).toHaveText('Not connected');
+      await expect(done).toHaveText('Not connected');
+
+      const endId = await addNodeFromSidebar(page, 'End', 'end');
+      await connectHandle(page, whileId, 'continue', endId);
+      await expect(loop).toHaveCount(0);
+      await expect(done).toHaveText('Not connected');
+
+      await connectHandle(page, whileId, 'done', 'mentor-1');
+      await expect(done).toHaveCount(0);
+    });
+  });
+
+  test('admin tries a Classifier on a sample message and sees its answer', async ({
+    page,
+  }) => {
+    const tries = await mockClassifierTry(page, {
+      answer: 'billing',
+      confidence: 0.9,
+      probabilities: null,
+      route: 'billing',
+      uncertain: false,
+      output: 'Billing (0.90)',
+      model: 'typesafe/jev-1.14',
+    });
+    await withFreshWorkflow(page, async () => {
+      const { id: classifierId } = await addSavedNodeFromSidebar(
+        page,
+        'Classifier',
+        'classifier',
+      );
+      const panel = await openNodePanel(page, classifierId);
+
+      const instructions = 'Classify what the user needs right now.';
+      const sample = 'I was charged twice this month';
+      // The backend tries the saved step, so the editor saves before a try;
+      // the auto-save may get there first.
+      const saved = waitForDefinitionSave(
+        page,
+        (def) =>
+          nodeById(def, classifierId)?.data.instructions === instructions,
+      );
+      await panel
+        .getByLabel('Instructions', { exact: true })
+        .fill(instructions);
+      await panel.getByLabel('Sample Message', { exact: true }).fill(sample);
+      await panel.getByRole('button', { name: 'Try', exact: true }).click();
+      await saved;
+
+      await expect(panel.getByTestId('classifier-try-result')).toContainText(
+        'Billing (0.90)',
+        { timeout: 30_000 },
+      );
+      expect(tries[0].postDataJSON()).toMatchObject({
+        node_id: classifierId,
+        input: sample,
+      });
+    });
+  });
+
+  test('admin sends a message in Preview and the chat runs the draft', async ({
+    page,
+    chatPage,
+  }) => {
+    const frames = chatPage.recordChatFrames();
+    await withFreshWorkflow(page, async () => {
+      await enterPreviewMode(page);
+      // Nothing loaded the workflow agent's permissions on this page, so the
+      // input stayed disabled with "You don't have permission to chat".
+      const composer = chatPage.getComposerTextarea();
+      await expect(composer).toBeEditable({ timeout: 15_000 });
+      await expect(composer).not.toHaveAttribute(
+        'placeholder',
+        /permission to chat/,
+      );
+      // The editor was as tall as the window under the app's top bar, so once
+      // the chat outgrew the page the bottom of the message box was cut off. A
+      // short window makes even the empty chat outgrow it. Checked before
+      // typing: Playwright scrolls the page to reach the box, hiding the cut.
+      const viewport = page.viewportSize();
+      await page.setViewportSize({
+        width: viewport?.width ?? 1280,
+        height: 360,
+      });
+      await expect(page.locator('form', { has: composer })).toBeInViewport({
+        ratio: 1,
+      });
+      const overflow = await page
+        .locator('#main-content-container')
+        .evaluate((main) => main.scrollHeight - main.clientHeight);
+      expect(overflow).toBeLessThanOrEqual(1);
+      if (viewport) await page.setViewportSize(viewport);
+      const message = `Workflow preview check ${Date.now()}`;
+      await chatPage.sendMessage(message);
+
+      await expect
+        .poll(() => frames.find((frame) => frame.prompt === message)?.preview, {
+          timeout: 30_000,
+        })
+        .toBe(true);
+      await exitPreviewMode(page);
+    });
+  });
+
+  // ── Running a Workflow ────────────────────────────────────────────────────
+
+  const errorsOf = (validation: string) =>
+    (JSON.parse(validation) as { errors?: string[] }).errors ?? [];
+
+  // A workflow's End step sends its reply in one piece, so the newest reply is
+  // complete once it shows; the stop button going away ends the turn.
+  async function expectLastReply(chat: ChatPage, text: string): Promise<void> {
+    await expect(chat.getAiMessageBody(chat.getLastAiMessage())).toHaveText(
+      text,
+      { timeout: 60_000 },
     );
+    await expect(chat.stopStreamingButton).toHaveCount(0, { timeout: 30_000 });
+  }
 
-    await searchInput.fill('e2e-dataset');
-    await page.waitForTimeout(1_000);
-    expect(new URL(page.url()).searchParams.get('datasetsSearch')).toBeNull();
-    expect(page.url()).toBe(urlBeforeOpen);
-    logger.info(
-      'File Search picker: searching did not add a datasetsSearch URL param',
+  test('admin builds an If / Else with a Transform on each branch, and Preview replies with the branch each message takes', async ({
+    page,
+    chatPage,
+  }) => {
+    test.setTimeout(240_000);
+    await withFreshWorkflow(page, async () => {
+      const { validation } = await buildRefundRouter(page);
+      expect(errorsOf(validation)).toEqual([]);
+
+      await enterPreviewMode(page);
+      await expect(chatPage.getComposerTextarea()).toBeEditable({
+        timeout: 15_000,
+      });
+      await chatPage.sendMessage('I want a refund');
+      await expectLastReply(chatPage, REFUND_REPLY);
+      await chatPage.sendMessage('hello');
+      await expectLastReply(chatPage, GENERAL_REPLY);
+    });
+  });
+
+  test("admin connects the Agent step to an End, and Preview shows the agent's own reply", async ({
+    page,
+    chatPage,
+    createMentorPage,
+  }) => {
+    test.setTimeout(300_000);
+    // Its own agent, which the new workflow's Agent step starts with. The
+    // end-of-run cleanup deletes it: deleting it now could pull it from under
+    // another worker's test that landed on it as the newest agent.
+    await createMentorPage.openAndCreate();
+    const { mentorId: agentId } = await getPlatformContext(page);
+    // New agents can start with their own computer on, and then answer only
+    // once it has started, if it starts at all.
+    await putMentorVmNetworkSettings(page, agentId, {
+      enable_virtual_machine: false,
+    });
+    await withFreshWorkflow(page, async () => {
+      // The editor places a new step as if the Agent card were 140px wide,
+      // but it is as wide as the agent's name, so an End added beside it
+      // covers its output dot. Scrolled sideways first, the End lands clear.
+      const bare = await bareCanvasPoint(page);
+      await page.mouse.move(bare.x, bare.y);
+      await page.mouse.wheel(400, 0);
+      const endId = await addNodeFromSidebar(page, 'End', 'end');
+      const { definition, validation } = await captureAutosave(
+        page,
+        () => connectHandle(page, 'mentor-1', 'right', endId),
+        (def) =>
+          def.edges.some(
+            (edge) => edge.source === 'mentor-1' && edge.target === endId,
+          ),
+      );
+      expect(nodeById(definition, 'mentor-1')?.data.mentor_id).toBe(agentId);
+      expect(errorsOf(validation)).toEqual([]);
+
+      await enterPreviewMode(page);
+      await expect(chatPage.getComposerTextarea()).toBeEditable({
+        timeout: 15_000,
+      });
+      await chatPage.sendMessage('Say hello in one short sentence.');
+      const reply = chatPage.getAiMessageBody(chatPage.getLastAiMessage());
+      await expect(reply).toBeVisible({ timeout: 120_000 });
+      await expect(chatPage.stopStreamingButton).toHaveCount(0, {
+        timeout: 60_000,
+      });
+      // A run that fails replies with the workflow's apology instead.
+      const text = (await reply.innerText()).trim();
+      expect(text).not.toBe('');
+      expect(text).not.toContain('went wrong');
+    });
+  });
+
+  test('admin publishes the If / Else workflow, and its own agent replies with the branch in a normal chat', async ({
+    page,
+  }) => {
+    test.setTimeout(300_000);
+    await withFreshWorkflow(page, async () => {
+      await buildRefundRouter(page);
+      const published = await publishWorkflow(page);
+      expect(published.status()).toBe(200);
+      const agentId = (await published.json()).workflow?.entry_mentor_id;
+      expect(agentId, "the workflow's own agent").toBeTruthy();
+
+      // A second tab, so the editor stays open for the cleanup to delete the
+      // workflow from it.
+      const { platformKey } = parsePlatformUrl(page.url());
+      const agentPage = await page.context().newPage();
+      try {
+        await navigateToMentorApp(
+          agentPage,
+          `${MENTOR_NEXTJS_HOST}/platform/${platformKey}/${agentId}`,
+        );
+        expect(agentPage.url()).toContain(agentId);
+        const agentChat = new ChatPage(agentPage);
+        await agentChat.sendMessage('I want a refund');
+        await expectLastReply(agentChat, REFUND_REPLY);
+      } finally {
+        await agentPage.close();
+      }
+    });
+  });
+
+  test('admin sees Unpublished changes only while a published copy of the workflow exists', async ({
+    page,
+  }) => {
+    let publishedAt: string | null = '2026-11-01T12:00:00Z';
+    await overrideWorkflowFields(page, () => ({
+      published_at: publishedAt,
+      has_unpublished_changes: true,
+    }));
+    await withFreshWorkflow(page, async () => {
+      const marker = page.getByTestId('workflow-unpublished-changes');
+      await expect(marker).toHaveText('Unpublished changes', {
+        timeout: 15_000,
+      });
+
+      publishedAt = null;
+      // A save refetches the workflow, which now reports no published copy.
+      await captureManualSave(page, () =>
+        page.getByRole('button', { name: 'Save', exact: true }).click(),
+      );
+      await expect(marker).toHaveCount(0, { timeout: 15_000 });
+    });
+  });
+
+  test('admin copies a step placeholder from its card and from its settings', async ({
+    page,
+    browserName,
+  }) => {
+    test.skip(
+      browserName !== 'chromium',
+      'Only Chromium lets a test grant and read the clipboard',
     );
-    await searchInput.fill('');
-    await page.waitForTimeout(500);
+    await page
+      .context()
+      .grantPermissions(['clipboard-read', 'clipboard-write']);
+    const clipboard = () => page.evaluate(() => navigator.clipboard.readText());
+    await withFreshWorkflow(page, async () => {
+      const { id } = await addSavedNodeFromSidebar(
+        page,
+        'Transform',
+        'transform',
+      );
+      // What an Agent's Instructions take; the Step IDs rows copy
+      // step_results['…'], which only works inside a Value or condition.
+      const placeholder = `{{steps.${id}}}`;
+      const card = canvasNode(page, id);
 
-    const firstRow = pickerDialog.getByRole('row').nth(1); // nth(0) is the header row
-    const rowText = await firstRow.innerText();
-    await firstRow.click();
+      const leftOf = async (locator: Locator) =>
+        (await locator.boundingBox())?.x ?? Number.NaN;
 
-    await expect(pickerDialog).not.toBeVisible({ timeout: 10_000 });
-    const changeButton = configPanel.getByRole('button', { name: 'Change' });
-    await expect(changeButton).toBeVisible({ timeout: 10_000 });
-    const datasetNameShown = configPanel
-      .locator('p')
-      .filter({ hasText: rowText.split('\t')[0] });
-    await expect(datasetNameShown).toBeVisible({ timeout: 5_000 });
+      await card.hover();
+      const cardCopy = card.getByRole('button', {
+        name: `Copy ${placeholder}`,
+      });
+      expect(await leftOf(cardCopy)).toBeLessThan(
+        await leftOf(card.getByRole('button', { name: 'Delete Transform' })),
+      );
+      await cardCopy.click();
+      await expect.poll(clipboard).toBe(placeholder);
+      await expect(nodePanel(page)).toBeHidden();
 
-    // Reopening highlights the previously selected row.
-    await changeButton.click();
-    const reopenedDialog = page.getByRole('dialog', { name: 'Select Dataset' });
-    await expect(reopenedDialog).toBeVisible({ timeout: 10_000 });
-    const selectedRow = reopenedDialog
-      .getByRole('row')
-      .filter({ hasText: rowText.split('\t')[0] });
-    await expect(selectedRow).toHaveClass(/bg-blue-50/, { timeout: 10_000 });
-    await page.keyboard.press('Escape');
-    await expect(reopenedDialog).not.toBeVisible({ timeout: 5_000 });
+      await page.evaluate(() => navigator.clipboard.writeText(''));
+      const panel = await openNodePanel(page, id);
+      const panelCopy = panel.getByRole('button', {
+        name: `Copy ${placeholder}`,
+      });
+      const panelDelete = panel.getByRole('button', {
+        name: 'Delete Transform',
+      });
+      expect(await leftOf(panelCopy)).toBeLessThan(await leftOf(panelDelete));
+      expect(await leftOf(panelDelete)).toBeLessThan(
+        await leftOf(panel.getByRole('button', { name: 'Close', exact: true })),
+      );
+      await panelCopy.click();
+      await expect.poll(clipboard).toBe(placeholder);
+    });
+  });
 
-    // Close the node config panel before deleting the workflow so its X
-    // button doesn't intercept the "More workflow options" click.
-    const closePanelButton = configPanel
-      .getByRole('button')
-      .filter({ has: page.locator('svg.lucide-x') });
-    await closePanelButton.click();
-    await expect(configPanel).not.toBeVisible({ timeout: 5_000 });
+  test('admin saves with Cmd+S or Ctrl+S while typing in a step, and the browser Save dialog stays shut', async ({
+    page,
+  }) => {
+    await withFreshWorkflow(page, async () => {
+      const { id } = await addSavedNodeFromSidebar(
+        page,
+        'Transform',
+        'transform',
+      );
+      const panel = await openNodePanel(page, id);
+      await panel.getByLabel('Key', { exact: true }).fill('reply');
+      // Installed and awaited before the press, so the key can't arrive first.
+      await page.evaluate(() => {
+        (window as unknown as { saveKey: Promise<boolean> }).saveKey =
+          new Promise((resolve) => {
+            window.addEventListener('keydown', (event) => {
+              if (event.code === 'KeyS') resolve(event.defaultPrevented);
+            });
+          });
+      });
 
-    try {
-      await deleteCurrentWorkflow(page);
-    } finally {
-      // Best-effort fallback: deleteCurrentWorkflow appears to already
-      // cascade-delete the entry mentor (verified empirically), but delete it
-      // explicitly too in case the workflow delete itself fails.
-      await deleteMentorById(page, entryMentorId).catch(() => {});
-    }
+      // The auto-save waits a second after typing, so the first save after
+      // the press is the shortcut's own.
+      const saved = await captureManualSave(page, () =>
+        page.keyboard.press('ControlOrMeta+s'),
+      );
 
-    // Best-effort: remove exactly the documents this test added, in case the
-    // mentor itself somehow survived.
-    await deleteDatasetDocumentsByStamp(page, entryMentorId, stamp).catch(
-      () => {},
+      expect(nodeById(saved, id)?.data.expressions?.[0]?.target).toBe('reply');
+      expect(
+        await page.evaluate(
+          () => (window as unknown as { saveKey: Promise<boolean> }).saveKey,
+        ),
+      ).toBe(true);
+      // The auto-save shows no toast, so this one comes from the shortcut.
+      await expect(page.getByText('Workflow saved')).toBeVisible({
+        timeout: 15_000,
+      });
+    });
+  });
+  test('admin sees the editor header actions as buttons while they fit and in More workflow options once the window narrows', async ({
+    page,
+  }) => {
+    await withFreshWorkflow(page, async () => {
+      const header = page.getByTestId('workflow-header-actions');
+      const viewport = page.viewportSize();
+      const height = viewport?.height ?? 900;
+
+      await page.setViewportSize({ width: 1600, height });
+      await expect(header).toHaveAttribute('data-fit', 'done', {
+        timeout: 10_000,
+      });
+      for (const name of [
+        'Delete',
+        'Deactivate',
+        'Preview',
+        'Save',
+        'Publish',
+      ]) {
+        await expect(
+          header.getByRole('button', { name, exact: true }),
+        ).toBeVisible();
+      }
+      await expect(
+        page.getByRole('button', { name: 'More workflow options' }),
+      ).toHaveCount(0);
+      const heights = await header
+        .getByRole('button')
+        .evaluateAll((buttons) =>
+          buttons.map((button) =>
+            Math.round(button.getBoundingClientRect().height),
+          ),
+        );
+      expect(new Set(heights)).toEqual(new Set([36]));
+
+      // Delete goes into the menu first and Publish last.
+      await page.setViewportSize({ width: 900, height });
+      await expect(
+        header.getByRole('button', { name: 'Delete', exact: true }),
+      ).toHaveCount(0);
+      await expect(
+        header.getByRole('button', { name: 'Publish', exact: true }),
+      ).toBeVisible();
+      await page.getByRole('button', { name: 'More workflow options' }).click();
+      await expect(
+        page.getByRole('menuitem', { name: 'Delete', exact: true }),
+      ).toBeVisible();
+      await page.keyboard.press('Escape');
+      if (viewport) await page.setViewportSize(viewport);
+    });
+  });
+
+  test('admin undoes adding a step with Cmd+Z or Ctrl+Z, redoes it with Shift, and deletes the selected step with Delete', async ({
+    page,
+  }) => {
+    await withFreshWorkflow(page, async () => {
+      const { id } = await addSavedNodeFromSidebar(
+        page,
+        'Transform',
+        'transform',
+      );
+      const step = canvasNode(page, id);
+
+      await captureAutosave(
+        page,
+        () => page.keyboard.press('ControlOrMeta+z'),
+        (def) => !nodeById(def, id),
+      );
+      await expect(step).toHaveCount(0);
+
+      await captureAutosave(
+        page,
+        () => page.keyboard.press('ControlOrMeta+Shift+z'),
+        (def) => !!nodeById(def, id),
+      );
+      await expect(step).toBeVisible();
+
+      await openNodePanel(page, id);
+      await captureAutosave(
+        page,
+        () => page.keyboard.press('Delete'),
+        (def) => !nodeById(def, id),
+      );
+      await expect(step).toHaveCount(0);
+    });
+  });
+
+  test('admin clicks an Agent step to open its Step Settings and opens the agent itself with its Agent Settings button', async ({
+    page,
+    editMentorPage,
+  }) => {
+    await withFreshWorkflow(page, async () => {
+      const panel = await openNodePanel(page, 'mentor-1');
+      await expect(
+        panel.getByLabel('Instructions', { exact: true }),
+      ).toBeVisible();
+      await closeNodePanel(page);
+
+      await canvasNode(page, 'mentor-1')
+        .getByRole('button', { name: 'Agent Settings', exact: true })
+        .click();
+      await expect(editMentorPage.dialog).toBeVisible({ timeout: 30_000 });
+      await expect(nodePanel(page)).toBeHidden();
+      await editMentorPage.close();
+    });
+  });
+
+  test('admin sees the validation banner titled Warnings and Errors with its count, and alert icons only on its lines', async ({
+    page,
+  }) => {
+    const errorIcon = 'svg.lucide-circle-alert';
+    const warningIcon = 'svg.lucide-triangle-alert';
+    await withFreshWorkflow(page, async () => {
+      // The editor validates when it opens, and a new workflow has no End.
+      const header = page.getByRole('button', {
+        name: /^Warnings and Errors\b/,
+      });
+      await expect(header).toBeVisible({ timeout: 15_000 });
+      const lines = page
+        .getByTestId('workflow-validation-list')
+        .locator(':scope > div');
+      await expect(lines.first()).toBeVisible();
+
+      const total = await lines.count();
+      const errors = await lines
+        .filter({ has: page.locator(errorIcon) })
+        .count();
+      const warnings = await lines
+        .filter({ has: page.locator(warningIcon) })
+        .count();
+      expect(errors + warnings).toBe(total);
+
+      const counts = [
+        errors > 0 && `${errors} error${errors === 1 ? '' : 's'}`,
+        warnings > 0 && `${warnings} warning${warnings === 1 ? '' : 's'}`,
+      ]
+        .filter(Boolean)
+        .join(', ');
+      await expect(header).toContainText(counts);
+      await expect(header.locator(`${errorIcon}, ${warningIcon}`)).toHaveCount(
+        0,
+      );
+      // The backend's "Mentor existence will be validated at runtime".
+      await expect(page.getByTestId('workflow-validation-list')).toContainText(
+        'The agent in each Agent step is checked when the workflow runs.',
+      );
+    });
+  });
+
+  test('admin inserts a Start variable at the cursor with the insert button of a Transform Value and of the Agent Instructions', async ({
+    page,
+  }) => {
+    await withFreshWorkflow(page, async () => {
+      await openNodePanel(page, 'start');
+      await addStartVariable(page, { name: 'counter', type: 'Number' });
+      await closeNodePanel(page);
+
+      const transformId = await addNodeFromSidebar(
+        page,
+        'Transform',
+        'transform',
+      );
+      const transformPanel = await openNodePanel(page, transformId);
+      await transformPanel.getByLabel('Key', { exact: true }).fill('next');
+      const value = transformPanel.getByLabel('Value', { exact: true });
+      const reference = "variables['counter']";
+      const expression = `${reference} + 1`;
+      await value.fill(' + 1');
+      for (let step = 0; step < ' + 1'.length; step++) {
+        await page.keyboard.press('ArrowLeft');
+      }
+      await captureAutosave(
+        page,
+        () => insertFromPicker(page, transformPanel, 'counter'),
+        (def) =>
+          nodeById(def, transformId)?.data.expressions?.[0]?.expression ===
+          expression,
+      );
+      await expect(value).toHaveValue(expression);
+      await expect(value).toBeFocused();
+      expect(await caretOf(value)).toBe(reference.length);
+      await closeNodePanel(page);
+
+      const agentPanel = await openNodePanel(page, 'mentor-1');
+      const instructions = agentPanel.getByLabel('Instructions', {
+        exact: true,
+      });
+      const greeting = 'Greet {{variables.counter}}';
+      await instructions.fill('Greet !');
+      await page.keyboard.press('ArrowLeft');
+      await captureAutosave(
+        page,
+        () => insertFromPicker(page, agentPanel, 'counter'),
+        (def) =>
+          nodeById(def, 'mentor-1')?.data.instructions === `${greeting}!`,
+      );
+      await expect(instructions).toHaveValue(`${greeting}!`);
+      await expect(instructions).toBeFocused();
+      expect(await caretOf(instructions)).toBe(greeting.length);
+    });
+  });
+
+  test('admin copies a selected step with Cmd+C or Ctrl+C, pastes it with V and undoes the paste', async ({
+    page,
+  }) => {
+    await withFreshWorkflow(page, async () => {
+      const { id } = await addSavedNodeFromSidebar(
+        page,
+        'Transform',
+        'transform',
+      );
+      const transformCount = (def: { nodes: { type: string }[] }) =>
+        def.nodes.filter((node) => node.type === 'transform').length;
+      await openNodePanel(page, id);
+
+      const pasted = await captureAutosave(
+        page,
+        async () => {
+          await page.keyboard.press('ControlOrMeta+c');
+          await page.keyboard.press('ControlOrMeta+v');
+        },
+        (def) => transformCount(def) === 2,
+      );
+      const copy = pasted.definition.nodes.find(
+        (node) => node.type === 'transform' && node.id !== id,
+      );
+      expect(copy, 'pasted Transform in the saved definition').toBeDefined();
+      await expect(canvasNode(page, copy!.id)).toBeVisible();
+
+      await captureAutosave(
+        page,
+        () => page.keyboard.press('ControlOrMeta+z'),
+        (def) => transformCount(def) === 1 && !!nodeById(def, id),
+      );
+      await expect(canvasNode(page, copy!.id)).toHaveCount(0);
+      await expect(canvasNode(page, id)).toBeVisible();
+    });
+  });
+
+  test('admin pans the canvas with the mouse wheel and zooms it with the wheel while holding Cmd or Ctrl', async ({
+    page,
+  }) => {
+    await withFreshWorkflow(page, async () => {
+      const layer = canvasNode(page, 'start').locator('xpath=..');
+      const layerTransform = () =>
+        layer.evaluate((element) => (element as HTMLElement).style.transform);
+      const zoomLabel = page.getByTestId('workflow-canvas').getByText(/^\d+%$/);
+      const zoomPercent = async () =>
+        parseInt((await zoomLabel.textContent()) ?? '', 10);
+
+      // A wheel up moves the steps down, away from the pointer, so the zoom
+      // below still starts on bare canvas.
+      const point = await bareCanvasPoint(page);
+      await page.mouse.move(point.x, point.y);
+      const startTransform = await layerTransform();
+      const startZoom = await zoomPercent();
+      await page.mouse.wheel(0, -120);
+      await expect.poll(layerTransform).not.toBe(startTransform);
+      expect(await zoomPercent()).toBe(startZoom);
+
+      await page.keyboard.down('ControlOrMeta');
+      await page.mouse.wheel(0, -100);
+      await page.keyboard.up('ControlOrMeta');
+      await expect.poll(zoomPercent).toBeGreaterThan(startZoom);
+    });
+  });
+
+  test('admin hovers Undo and its tooltip shows the keyboard shortcut in brackets', async ({
+    page,
+  }) => {
+    await withFreshWorkflow(page, async () => {
+      // Undo stays disabled, and shows no tooltip, until there is a change.
+      await addNodeFromSidebar(page, 'Transform', 'transform');
+      const undo = page
+        .getByTestId('workflow-canvas')
+        .getByRole('button', { name: 'Undo', exact: true });
+      await expect(undo).toBeEnabled();
+      await expect(undo).toHaveAttribute(
+        'aria-keyshortcuts',
+        /\b(Meta|Control)\+Z\b/,
+      );
+
+      // The same test the app makes, so a device user agent can't split them.
+      const onMac = await page.evaluate(() => {
+        const { userAgentData, platform, userAgent } =
+          navigator as Navigator & {
+            userAgentData?: { platform?: string };
+          };
+        return /mac|iphone|ipad|ipod/i.test(
+          userAgentData?.platform || platform || userAgent || '',
+        );
+      });
+      await undo.hover();
+      await expect(
+        page.getByRole('tooltip', {
+          name: onMac ? /^Undo \(⌘Z\)$/ : /^Undo \(Ctrl\+Z\)$/,
+        }),
+      ).toBeVisible({ timeout: 5_000 });
+    });
+  });
+
+  test('admin clicks a validation line that names a step and the step settings open', async ({
+    page,
+  }) => {
+    await withFreshWorkflow(page, async () => {
+      const { id } = await addSavedNodeFromSidebar(
+        page,
+        'Transform',
+        'transform',
+      );
+      await expect(nodePanel(page)).toBeHidden();
+
+      // Found by the step's id, so a backend rewording changes nothing.
+      const line = page
+        .getByTestId('workflow-validation-list')
+        .locator(`[data-step-id="${id}"]`)
+        .first();
+      await line.hover();
+      await expect(
+        page.getByRole('tooltip', { name: 'Show Transform' }),
+      ).toBeVisible({ timeout: 5_000 });
+      await line.click();
+
+      const panel = nodePanel(page);
+      await expect(panel).toBeVisible({ timeout: 10_000 });
+      await expect(
+        panel.getByRole('button', { name: 'Delete Transform' }),
+      ).toBeVisible();
+      await expect(canvasNode(page, id)).toBeInViewport();
+    });
+  });
+
+  test('admin takes back typing and an insert in the Agent Instructions with Cmd+Z or Ctrl+Z, one step each, and the canvas keeps its steps', async ({
+    page,
+  }) => {
+    await withFreshWorkflow(page, async () => {
+      // The canvas can undo adding this Transform, so a Cmd+Z that reached
+      // the canvas would take it away.
+      const transform = await addSavedNodeFromSidebar(
+        page,
+        'Transform',
+        'transform',
+      );
+      const steps = page.locator('[data-node-type]');
+      const stepCount = await steps.count();
+      const panel = await openNodePanel(page, 'mentor-1');
+      const instructions = panel.getByLabel('Instructions', { exact: true });
+      await expect(instructions).toHaveCSS('resize', 'vertical');
+
+      await instructions.click();
+      await page.keyboard.press('ControlOrMeta+z');
+      await page.keyboard.press('ControlOrMeta+z');
+      await expect(canvasNode(page, transform.id)).toBeVisible();
+      await expect(steps).toHaveCount(stepCount);
+
+      await page.keyboard.type('Answer briefly');
+      await page.keyboard.press('ControlOrMeta+z');
+      await expect(instructions).toHaveValue('');
+      await page.keyboard.press('ControlOrMeta+Shift+z');
+      await expect(instructions).toHaveValue('Answer briefly');
+
+      await insertFromPicker(page, panel, 'User');
+      await expect(instructions).toHaveValue('Answer briefly{{input}}');
+      await expect(instructions).toBeFocused();
+      await page.keyboard.press('ControlOrMeta+z');
+      await expect(instructions).toHaveValue('Answer briefly');
+      await expect(canvasNode(page, transform.id)).toBeVisible();
+      await expect(steps).toHaveCount(stepCount);
+    });
+  });
+
+  test('admin finds the Add button of a Transform, a Set State and an If / Else right under its rows, above the hint and the Step IDs', async ({
+    page,
+  }) => {
+    const topOf = async (locator: Locator) =>
+      (await locator.boundingBox())?.y ?? Number.NaN;
+    const steps = [
+      {
+        label: 'Transform',
+        type: 'transform',
+        row: (panel: Locator) => panel.getByLabel('Value', { exact: true }),
+      },
+      {
+        label: 'Set State',
+        type: 'set-state',
+        row: (panel: Locator) => panel.getByLabel('Assign Value'),
+      },
+      {
+        label: 'If / Else',
+        type: 'conditional',
+        row: (panel: Locator) =>
+          panel.getByRole('textbox', { name: 'If', exact: true }),
+      },
+    ];
+    await withFreshWorkflow(page, async () => {
+      for (const step of steps) {
+        const id = await addNodeFromSidebar(page, step.label, step.type);
+        const panel = await openNodePanel(page, id);
+
+        const row = step.row(panel);
+        const add = panel.getByRole('button', { name: 'Add', exact: true });
+        const hint = panel.getByText(/^Use variables\['name'\]/);
+        // The Agent step is always listed, so every one of these has the list.
+        const stepIds = panel.getByRole('heading', { name: 'Step IDs' });
+        await expect(hint).toBeVisible();
+        await expect(stepIds).toBeVisible();
+
+        expect(await topOf(add), step.label).toBeGreaterThan(await topOf(row));
+        expect(await topOf(add), step.label).toBeLessThan(await topOf(hint));
+        expect(await topOf(add), step.label).toBeLessThan(await topOf(stepIds));
+        await closeNodePanel(page);
+      }
+    });
+  });
+
+  test('admin publishes a workflow with no End step and the banner lists what to fix', async ({
+    page,
+  }) => {
+    await withFreshWorkflow(page, async () => {
+      // Collapse the banner the editor shows on open, so its coming back is
+      // the refused publish's own list.
+      const endLine = page
+        .getByTestId('workflow-validation-list')
+        .getByText(MISSING_END);
+      await expect(endLine).toBeVisible({ timeout: 15_000 });
+      await page
+        .getByRole('button', { name: /^Warnings and Errors\b/ })
+        .click();
+      await expect(endLine).toBeHidden();
+
+      const refused = await publishWorkflow(page);
+
+      expect(refused.status()).toBe(400);
+      await expect(
+        page.getByText('Workflow has validation issues'),
+      ).toBeVisible({ timeout: 10_000 });
+      await expect(endLine).toBeVisible();
+      await expect(page.getByText('Failed to publish workflow')).toHaveCount(0);
+    });
+  });
+
+  test("admin picks the agent for a new Agent step, and the picker leaves out the workflow's own agent", async ({
+    page,
+  }) => {
+    const workflowName = generateWorkflowName();
+    await navigateToWorkflowsPage(page);
+    await deleteWorkflowAfter(page, async () => {
+      await createWorkflow(page, workflowName);
+      await waitForWorkflowEditorReady(page);
+
+      const agent = await addSavedNodeFromSidebar(page, 'Agent', 'mentor');
+      const panel = await openNodePanel(page, agent.id);
+      await panel.getByRole('button', { name: 'Select', exact: true }).click();
+      const picker = page.getByRole('dialog', { name: 'Select Agent' });
+      await expect(picker).toBeVisible({ timeout: 10_000 });
+
+      // The backend names the workflow's own agent after the workflow, and a
+      // workflow can't use it as a step. Agent search matches each word of a
+      // query on its own, so only the name's last word finds that agent
+      // alone; the search must return it for the empty list to mean anything.
+      const ownAgentWord = workflowName.split(' ').at(-1)!;
+      const searched = page.waitForResponse(
+        (response) => {
+          const url = new URL(response.url());
+          return (
+            /\/ai-search\/mentors\/?$/.test(url.pathname) &&
+            url.searchParams.get('query') === ownAgentWord
+          );
+        },
+        { timeout: 15_000 },
+      );
+      await picker.getByPlaceholder('Search Agents').fill(ownAgentWord);
+      expect(
+        JSON.stringify(await (await searched).json()),
+        "the search returns the workflow's own agent",
+      ).toContain(workflowName);
+      await expect(
+        picker.getByText('No agents found matching your search.'),
+      ).toBeVisible({ timeout: 15_000 });
+
+      await picker.getByPlaceholder('Search Agents').fill('');
+      const firstAgent = picker
+        .getByRole('button', { name: /^Select agent / })
+        .first();
+      await expect(firstAgent).toBeVisible({ timeout: 15_000 });
+      const { definition } = await captureAutosave(
+        page,
+        () => firstAgent.click(),
+        (def) => !!nodeById(def, agent.id)?.data.mentor_id,
+      );
+
+      expect(nodeById(definition, agent.id)!.data.mentor_id).toBeTruthy();
+      await expect(picker).toBeHidden({ timeout: 10_000 });
+      await expect(
+        canvasNode(page, agent.id).getByRole('button', {
+          name: 'Agent Settings',
+          exact: true,
+        }),
+      ).toBeAttached();
+    });
+  });
+
+  test('admin switches a Classifier to Yes or No and turns on Include Chat History, and both are saved', async ({
+    page,
+  }) => {
+    await withFreshWorkflow(page, async () => {
+      const classifier = await addSavedNodeFromSidebar(
+        page,
+        'Classifier',
+        'classifier',
+      );
+      const panel = await openNodePanel(page, classifier.id);
+
+      await captureAutosave(
+        page,
+        async () => {
+          await panel.getByRole('combobox', { name: 'Answer Type' }).click();
+          await page.getByRole('option', { name: 'Yes or No' }).click();
+        },
+        (def) => nodeById(def, classifier.id)?.data.answer_type === 'noul',
+      );
+      for (const handle of ['true', 'false', 'fallback']) {
+        await expect(
+          unconnectedBranch(page, classifier.id, handle),
+        ).toBeVisible();
+      }
+      await expect(
+        unconnectedBranch(page, classifier.id, 'category_1'),
+      ).toHaveCount(0);
+
+      await panel
+        .getByRole('button', { name: 'Advanced', exact: true })
+        .click();
+      const history = panel.getByRole('switch', {
+        name: 'Include Chat History',
+      });
+      const { definition } = await captureAutosave(
+        page,
+        () => history.click(),
+        (def) =>
+          nodeById(def, classifier.id)?.data.include_history?.enabled === true,
+      );
+      expect(
+        nodeById(definition, classifier.id)!.data.include_history.enabled,
+      ).toBe(true);
+
+      // On is the blue of the admin Users switches (Tailwind's blue-500).
+      await expect(history).toHaveAttribute('data-state', 'checked');
+      const adminBlue = await page.evaluate(() => {
+        const probe = document.createElement('div');
+        probe.style.backgroundColor = 'oklch(62.3% 0.214 259.815)';
+        document.body.append(probe);
+        const color = getComputedStyle(probe).backgroundColor;
+        probe.remove();
+        return color;
+      });
+      await expect(history).toHaveCSS('background-color', adminBlue);
+    });
+  });
+
+  test.describe('on a phone', () => {
+    test.use({
+      viewport: { width: 393, height: 852 },
+      hasTouch: true,
+      isMobile: true,
+    });
+    test.skip(
+      ({ browserName }) => browserName === 'firefox',
+      'Firefox has no isMobile',
     );
+    const CDP_ONLY =
+      'Playwright only taps, so drags and pinches go through CDP, which only Chromium has';
 
-    logger.info(
-      'File Search node: dataset picked, URL untouched, selection persisted and highlighted on reopen',
-    );
+    test('admin on a phone finds no step list beside the canvas and adds a step from the Add Step sheet', async ({
+      page,
+    }) => {
+      await withFreshPhoneWorkflow(page, async () => {
+        const railItem = page.getByRole('button', {
+          name: 'Transform',
+          exact: true,
+          includeHidden: true,
+        });
+        await expect(railItem).toBeAttached();
+        await expect(railItem).toBeHidden();
+        const id = await addNodeFromStepSheet(page, 'Transform', 'transform');
+        await expect(canvasNode(page, id)).toBeInViewport({ ratio: 0.99 });
+      });
+    });
+
+    test('admin on a phone pans the canvas with one finger and zooms it with a two-finger pinch', async ({
+      page,
+      browserName,
+    }) => {
+      test.skip(browserName !== 'chromium', CDP_ONLY);
+      await withFreshPhoneWorkflow(page, async () => {
+        const layer = canvasNode(page, 'start').locator('xpath=..');
+        const layerTransform = () =>
+          layer.evaluate((element) => (element as HTMLElement).style.transform);
+        const zoomLabel = page
+          .getByTestId('workflow-canvas')
+          .getByText(/^\d+%$/);
+        const zoomPercent = async () =>
+          parseInt((await zoomLabel.textContent()) ?? '', 10);
+
+        const startTransform = await layerTransform();
+        const finger = await bareCanvasPoint(page, 60);
+        await touchGesture(page, [
+          { from: finger, to: { x: finger.x - 120, y: finger.y } },
+        ]);
+        await expect.poll(layerTransform).not.toBe(startTransform);
+
+        const startZoom = await zoomPercent();
+        const left = await bareCanvasPoint(page, -40);
+        const right = await bareCanvasPoint(page, 40);
+        await touchGesture(page, [
+          { from: left, to: { x: left.x - 80, y: left.y } },
+          { from: right, to: { x: right.x + 80, y: right.y } },
+        ]);
+        await expect.poll(zoomPercent).toBeGreaterThan(startZoom);
+      });
+    });
+
+    test('admin on a phone sees the whole canvas toolbar and a step panel that fits the screen', async ({
+      page,
+    }) => {
+      await withFreshPhoneWorkflow(page, async () => {
+        const canvas = page.getByTestId('workflow-canvas');
+        for (const name of [
+          'Pan',
+          'Select',
+          'Undo',
+          'Redo',
+          'Zoom Out',
+          'Zoom In',
+        ]) {
+          await expect(
+            canvas.getByRole('button', { name, exact: true }),
+          ).toBeInViewport({ ratio: 1 });
+        }
+
+        await canvasNode(page, 'start').tap();
+        const panel = nodePanel(page);
+        await expect(panel).toBeVisible({ timeout: 10_000 });
+        await expect(panel).toBeInViewport({ ratio: 1 });
+        await closeNodePanel(page);
+      });
+    });
+
+    test('admin on a phone drags from a connection dot onto another step and the connection is saved', async ({
+      page,
+      browserName,
+    }) => {
+      test.skip(browserName !== 'chromium', CDP_ONLY);
+      await withFreshPhoneWorkflow(page, async () => {
+        // The While's auto-save is validated and the banner grows with its
+        // lines, moving the canvas, so positions are read only after that.
+        let whileId = '';
+        await captureAutosave(
+          page,
+          async () => {
+            whileId = await addNodeFromStepSheet(page, 'While', 'while');
+          },
+          (def) => !!nodeOfType(def, 'while'),
+        );
+        const done = unconnectedBranch(page, whileId, 'done');
+        await expect(done).toHaveText('Not connected');
+
+        const dot = page.getByTestId(`workflow-handle-${whileId}-done`);
+        const agent = canvasNode(page, 'mentor-1');
+        await expect(dot).toBeInViewport();
+        await expect(agent).toBeInViewport();
+        const from = await settledCentreOf(dot);
+        const to = await settledCentreOf(agent);
+
+        const { definition } = await captureAutosave(
+          page,
+          () => touchGesture(page, [{ from, to }]),
+          (def) =>
+            def.edges.some(
+              (edge) => edge.source === whileId && edge.sourceHandle === 'done',
+            ),
+        );
+        expect(definition.edges).toContainEqual(
+          expect.objectContaining({
+            source: whileId,
+            target: 'mentor-1',
+            sourceHandle: 'done',
+          }),
+        );
+        await expect(done).toHaveCount(0);
+      });
+    });
+
+    test('admin on a phone opens Preview and the chat takes the whole width with its message box on screen', async ({
+      page,
+      chatPage,
+    }) => {
+      await withFreshPhoneWorkflow(page, async () => {
+        await (await workflowHeaderAction(page, 'Preview')).click();
+        await expect(
+          page.getByRole('button', { name: 'Close Preview', exact: true }),
+        ).toBeVisible({ timeout: 10_000 });
+        await expect(page.getByTestId('workflow-canvas')).toBeHidden();
+
+        const composer = chatPage.getComposerTextarea();
+        await expect(composer).toBeEditable({ timeout: 15_000 });
+        const form = page.locator('form', { has: composer });
+        await expect(form).toBeInViewport({ ratio: 1 });
+        const box = await form.boundingBox();
+        // Only the chat's own padding is left either side.
+        expect(box!.width).toBeGreaterThanOrEqual(
+          page.viewportSize()!.width - 64,
+        );
+      });
+    });
+
+    test('admin on a phone taps the middle of a connection and the corner of a step and deletes neither', async ({
+      page,
+      browserName,
+    }) => {
+      // WebKit's touch emulation may not report a coarse pointer, which would
+      // leave the hidden Delete pressable and turn the tap into a real press.
+      test.skip(
+        browserName !== 'chromium',
+        'Coarse pointer checked in Chromium',
+      );
+      await withFreshPhoneWorkflow(page, async () => {
+        const connection = canvasEdge(page, DEFAULT_EDGE_ID);
+        const agent = canvasNode(page, 'mentor-1');
+
+        // The press selects the connection and shows Delete Connection right
+        // under the finger, before the tap's click.
+        const middle = await connectionPoint(page, DEFAULT_EDGE_ID, 0.5);
+        await page.touchscreen.tap(middle.x, middle.y);
+        await expect(
+          page.getByTestId(`workflow-edge-delete-${DEFAULT_EDGE_ID}`),
+        ).toBeVisible();
+        await expect(connection).toBeAttached();
+
+        // The step's Delete is centred on this corner and shows once the press
+        // selects the step. The tap goes to its outer part, past the card:
+        // inside the card, Chrome's touch targeting moves the tap onto the
+        // Agent Settings button nearby, and the step is never pressed.
+        const spot = await agent
+          .getByRole('button', { name: /^Delete / })
+          .boundingBox();
+        expect(spot, "the Agent step's Delete spot").not.toBeNull();
+        const corner = {
+          x: spot!.x + spot!.width * 0.8,
+          y: spot!.y + spot!.height * 0.2,
+        };
+        const reachesStep = await page.evaluate(({ x, y }) => {
+          const hit = document.elementFromPoint(x, y);
+          return (
+            !!hit?.closest('[data-testid="workflow-node-mentor-1"]') &&
+            !hit.closest('button')
+          );
+        }, corner);
+        expect(
+          reachesStep,
+          'a press there reaches the step, not its hidden Delete',
+        ).toBe(true);
+        await page.touchscreen.tap(corner.x, corner.y);
+        // The tap's click opens the step's settings, so by now it has landed.
+        await expect(nodePanel(page)).toBeVisible({ timeout: 10_000 });
+        await expect(agent).toBeAttached();
+        await expect(connection).toBeAttached();
+      });
+    });
   });
 });

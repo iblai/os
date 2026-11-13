@@ -1114,6 +1114,21 @@ describe('Providers', () => {
       });
     });
 
+    // Workflow pages skip the mentor check, so MentorProvider loads no mentor's
+    // permissions there; a reset left the Preview chat's input disabled with
+    // "You don't have permission to chat" for the editor.
+    it('on a workflow page, marks mentor permissions loaded for a signed-in user', () => {
+      mockUsername = 'testuser';
+      mockPathname = '/platform/test-tenant/workflows/entry-agent/workflow-1';
+      renderProviders();
+      expect(mockDispatch).toHaveBeenCalledWith({
+        type: 'rbac/markMentorLoaded',
+      });
+      expect(mockDispatch).not.toHaveBeenCalledWith({
+        type: 'rbac/resetMentorLoaded',
+      });
+    });
+
     it('handleMentorNotFound navigates to error page', async () => {
       renderProviders();
       const fn = capturedMentorProviderProps.handleMentorNotFound as Function;

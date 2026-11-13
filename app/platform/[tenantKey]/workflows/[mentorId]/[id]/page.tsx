@@ -25,6 +25,9 @@ export default function WorkflowDetailPage() {
   }>();
   const searchParams = useSearchParams();
   const listMentorId = searchParams.get('listMentorId') || mentorId;
+  // Not router.back(): opening an Agent step's settings adds ?modal= entries to
+  // the history, so "back" reopened that popup instead of leaving the editor.
+  const workflowsListPath = `/platform/${tenantKey}/workflows/${listMentorId}`;
   const username = useUsername();
   const axdToken = useAxdToken();
   const { openEditMentorModal } = useNavigate();
@@ -39,10 +42,8 @@ export default function WorkflowDetailPage() {
       axdToken={axdToken ?? ''}
       baseWsUrl={config.baseWsUrl()}
       redirectToAuthSpa={redirectToAuthSpa}
-      onBack={() => router.back()}
-      onDeleted={() =>
-        router.push(`/platform/${tenantKey}/workflows/${listMentorId}`)
-      }
+      onBack={() => router.push(workflowsListPath)}
+      onDeleted={() => router.push(workflowsListPath)}
       onOpenAgentSettings={(agentId) => openEditMentorModal(undefined, agentId)}
       agentSettings={{
         enableRBAC: config.enableRBAC(),

@@ -1,12 +1,12 @@
 {
   "version": 2,
-  "lastUpdated": "2026-11-11",
+  "lastUpdated": "2026-11-13",
   "summary": {
-    "totalCheckpoints": 1096,
-    "coveredCheckpoints": 1046,
-    "deprecatedCheckpoints": 17,
+    "totalCheckpoints": 1137,
+    "coveredCheckpoints": 1056,
+    "deprecatedCheckpoints": 18,
     "notReproducibleCheckpoints": 17,
-    "pendingCheckpoints": 16,
+    "pendingCheckpoints": 46,
     "percent": 100,
     "totalJourneys": 110,
     "activeJourneys": 109
@@ -2469,7 +2469,7 @@
         },
         {
           "id": "wf-12",
-          "description": "More options menu shows Activate and Delete items",
+          "description": "The editor header offers Activate / Deactivate and Delete: as buttons while the header has room, otherwise in More workflow options",
           "status": "covered"
         },
         {
@@ -2484,13 +2484,15 @@
         },
         {
           "id": "wf-15",
-          "description": "Workflow can be published; active workflow can be deactivated back to Draft",
+          "description": "Publishing: a workflow with an End step after its Agent is published (the publish POST answers 200 with a published_at), Workflow published shows and the status is Active; without an End step the backend refuses it (400, is_valid false, an error about the missing End step, in either backend wording); a published workflow can be deactivated back to Draft",
           "status": "covered"
         },
         {
           "id": "wf-16",
           "description": "File Search node's dataset picker dialog: opening/searching/paging never touch datasetsPage/datasetsSearch URL params (the picker keeps page/search in its own state, unlike the edit-mentor modal's Datasets tab); picking a row closes the dialog and shows the dataset name with a Change button; reopening highlights the previously selected row (self-seeded mentor)",
-          "status": "covered"
+          "status": "deprecated",
+          "deprecatedIn": "iblai/iblai-platform#2827",
+          "deprecatedReason": "File Search can't run in a workflow yet (the backend marks it as planned), so the step list no longer offers it and its dataset picker can't be reached."
         },
         {
           "id": "wf-17",
@@ -2534,17 +2536,17 @@
         },
         {
           "id": "wf-25",
-          "description": "Set State: an expression is saved as data.assignments [{variable, expression}] with no setStateAssignments, and validation has no empty-assignments or attribute-access message",
+          "description": "Set State: an expression is saved as data.assignments [{variable, expression}] with no setStateAssignments, and the validate response has no message about the step's own settings (none tied to the step, by error_details/warning_details on backend #3218 or by \" at nodes[<index>]\" before it, however worded; messages about its connections are expected)",
           "status": "covered"
         },
         {
           "id": "wf-26",
-          "description": "Transform: Key and Value are saved as data.expressions [{target, expression}] with no transformExpressions/transformMode, and validation has no empty-expressions message",
+          "description": "Transform: Key and Value are saved as data.expressions [{target, expression}] with no transformExpressions/transformMode, and the validate response has no message about the step's own settings (none tied to the step, by error_details/warning_details on backend #3218 or by \" at nodes[<index>]\" before it, however worded; messages about its connections are expected)",
           "status": "covered"
         },
         {
           "id": "wf-27",
-          "description": "While: an invalid Max Iterations (0) shows \"Enter a whole number of 1 or more.\"; a valid Condition and Max Iterations are saved as data.condition and data.maxIterations (a number), and validation has no missing-condition message",
+          "description": "While: an invalid Max Iterations (0) shows \"Enter a whole number of 1 or more.\"; a valid Condition and Max Iterations are saved as data.condition and data.maxIterations (a number), and the validate response has no message about the step's own settings (none tied to the step, by error_details/warning_details on backend #3218 or by \" at nodes[<index>]\" before it, however worded; messages about its connections are expected)",
           "status": "covered"
         },
         {
@@ -2554,7 +2556,7 @@
         },
         {
           "id": "wf-29",
-          "description": "If / Else: the condition is saved in data.conditions[0].expression and validation has no attribute-access message",
+          "description": "If / Else: the condition is saved in data.conditions[0].expression and the validate response has no message about the step's own settings (none tied to the step, by error_details/warning_details on backend #3218 or by \" at nodes[<index>]\" before it, however worded; messages about its connections are expected)",
           "status": "covered"
         },
         {
@@ -2579,7 +2581,202 @@
         },
         {
           "id": "wf-34",
-          "description": "Adding a Note: the backend's validate response warns that the Note is not connected, but the validation banner shows only the other warnings (Workflow should have an 'end' node) and never the Note's",
+          "description": "Adding a Note: the validation banner never shows a line about the Note, whether the backend warns that it is not connected (#3163) or leaves Notes out (#3218), and still shows the missing End step (found in either backend wording); the banner the editor shows on open is collapsed before the Note is added, so the End message coming back proves the post-save validation is on screen",
+          "status": "covered"
+        },
+        {
+          "id": "wf-35",
+          "description": "Once the backend's node types are on screen (its Set State label replaces the built-in list's Set state), the step list offers Classifier and leaves out every node type the backend marks planned (today File Search, Guardrails, MCP and User Approval)",
+          "status": "pending",
+          "note": "In @iblai/iblai-js 2.71.0, which the app now uses; flip to covered once journey 34 runs green."
+        },
+        {
+          "id": "wf-36",
+          "description": "Classifier: a new one is saved with answer_type 'choice', model 'iblai' and two categories with ids category_1 and category_2; renaming Category 1 to Billing in its panel saves its id as billing; connecting its Fallback handle to an End saves an edge with sourceHandle fallback",
+          "status": "pending",
+          "note": "In @iblai/iblai-js 2.71.0, which the app now uses; flip to covered once journey 34 runs green."
+        },
+        {
+          "id": "wf-37",
+          "description": "Agent step added from the step list is saved with no mentor_id (never this workflow's own agent) and shows no Agent Settings button, since it has no agent yet; clicking its card opens its panel like any other step, with an empty Instructions box, and an Output Variable typed there is saved as output_variable; the banner says An Agent step has no agent selected. instead of the backend's mentor wording",
+          "status": "pending",
+          "note": "In @iblai/iblai-js 2.71.0, which the app now uses; flip to covered once journey 34 runs green."
+        },
+        {
+          "id": "wf-38",
+          "description": "If / Else: a new one is saved right away with one empty condition (conditions [{caseName: '', expression: ''}])",
+          "status": "pending",
+          "note": "In @iblai/iblai-js 2.71.0, which the app now uses; flip to covered once journey 34 runs green."
+        },
+        {
+          "id": "wf-39",
+          "description": "While: its Loop and Done rows show Not connected (workflow-branch-unconnected-{id}-continue / -done) until each is connected",
+          "status": "pending",
+          "note": "In @iblai/iblai-js 2.71.0, which the app now uses; flip to covered once journey 34 runs green."
+        },
+        {
+          "id": "wf-40",
+          "description": "Classifier Try (classifier-test mocked): after Instructions and a Sample Message are typed, the instructions are saved (by Try or the auto-save) before the answer shows, sends the step's node_id and the message as input, and classifier-try-result shows the answer (Billing (0.90))",
+          "status": "pending",
+          "note": "In @iblai/iblai-js 2.71.0, which the app now uses; flip to covered once journey 34 runs green."
+        },
+        {
+          "id": "wf-41",
+          "description": "Preview: the Preview chat input is usable for the signed-in editor (never \"You don't have permission to chat\"), the whole message box stays on screen below the app's top bar even when the chat is taller than the page (checked in a 360px-tall window), and a message sent from it goes out on the chat socket with preview: true, so the chat runs the saved draft",
+          "status": "pending",
+          "note": "In @iblai/iblai-js 2.71.0, which the app now uses; flip to covered once journey 34 runs green."
+        },
+        {
+          "id": "wf-42",
+          "description": "Unpublished changes (workflow-unpublished-changes) shows beside the status only while a published copy exists: with the workflow GET mocked to published_at set and has_unpublished_changes true it shows; after a save refetches it with published_at null (never published) it is gone",
+          "status": "pending",
+          "note": "In @iblai/iblai-js 2.71.0, which the app now uses; flip to covered once journey 34 runs green."
+        },
+        {
+          "id": "wf-43",
+          "description": "A step with a result (here a Transform) has a Copy button just before Delete, on its card and in its settings header (Copy, Delete, Close, checked by position); both copy {{steps.<id>}}, the form an Agent's Instructions take, and the card's button copies without opening the step (Chromium only: the other browsers don't let a test read the clipboard)",
+          "status": "pending",
+          "note": "In @iblai/iblai-js 2.71.0, which the app now uses; flip to covered once journey 34 runs green."
+        },
+        {
+          "id": "wf-44",
+          "description": "Cmd+S (Ctrl+S off a Mac) while typing in a step's field saves the workflow (the PATCH carries the new Key, and the Workflow saved toast shows) and the keydown is default-prevented, so the browser's Save Page dialog never opens",
+          "status": "pending",
+          "note": "In @iblai/iblai-js 2.71.0, which the app now uses; flip to covered once journey 34 runs green."
+        },
+        {
+          "id": "wf-45",
+          "description": "At 1600px every editor header action (Delete, Deactivate, Preview, Save, Publish) is a 36px button with no More workflow options menu; at 900px Delete has moved into that menu and Publish is still a button (they move in that order: Delete, Activate / Deactivate, Preview, Save, Publish)",
+          "status": "pending",
+          "note": "In @iblai/iblai-js 2.71.0, which the app now uses; flip to covered once journey 34 runs green."
+        },
+        {
+          "id": "wf-46",
+          "description": "Phone (393x852, touch; wf-46 to wf-51 skip Firefox, which has no isMobile, and wf-47, wf-49 and wf-51 run in Chromium only): a workflow created at phone size opens with its default steps fitted into view (the whole Start and Agent steps on screen); the step list is in the page but hidden beside the canvas, and the canvas's Add Step button opens a sheet (dialog named Add Step) listing the steps; tapping Transform there closes the sheet and the new step lands fully on screen",
+          "status": "pending",
+          "note": "In @iblai/iblai-js 2.71.0, which the app now uses; flip to covered once journey 34 runs green."
+        },
+        {
+          "id": "wf-47",
+          "description": "Phone: a one-finger drag on bare canvas pans it (the step layer's transform changes) and a two-finger pinch outwards raises the zoom percentage in the canvas toolbar (touch sent through CDP Input.dispatchTouchEvent, since Playwright's touchscreen only taps, so Chromium only)",
+          "status": "pending",
+          "note": "In @iblai/iblai-js 2.71.0, which the app now uses; flip to covered once journey 34 runs green."
+        },
+        {
+          "id": "wf-48",
+          "description": "Phone: every canvas toolbar button (Pan, Select, Undo, Redo, Zoom Out, Zoom In) is fully on screen, and tapping the Start step opens its settings panel fully inside the 393px screen",
+          "status": "pending",
+          "note": "In @iblai/iblai-js 2.71.0, which the app now uses; flip to covered once journey 34 runs green."
+        },
+        {
+          "id": "wf-49",
+          "description": "Phone: pressing a While step's Done connection dot and dragging one finger onto the Agent step connects them (the auto-save carries an edge to mentor-1 with sourceHandle done) and Done's Not connected note goes away (the drag goes through CDP, so Chromium only)",
+          "status": "pending",
+          "note": "In @iblai/iblai-js 2.71.0, which the app now uses; flip to covered once journey 34 runs green."
+        },
+        {
+          "id": "wf-50",
+          "description": "Phone Preview: the canvas is hidden and the chat takes the whole width; its message box is editable, fully on screen and as wide as the screen apart from the chat's padding",
+          "status": "pending",
+          "note": "In @iblai/iblai-js 2.71.0, which the app now uses; flip to covered once journey 34 runs green."
+        },
+        {
+          "id": "wf-51",
+          "description": "Phone: tapping the middle of the Start-to-Agent connection selects it (its Delete Connection button shows where the finger is) without deleting it, and tapping the top-right corner of the unselected Agent step on the outer part of the spot where its Delete button shows once the press selects the step (past the card, since a tap inside it goes to the Agent Settings button nearby), deletes neither the step nor the connection (a control that appears under a finger never takes that tap)",
+          "status": "pending",
+          "note": "In @iblai/iblai-js 2.71.0, which the app now uses; flip to covered once journey 34 runs green."
+        },
+        {
+          "id": "wf-52",
+          "description": "Cmd+Z (Ctrl+Z off a Mac) right after adding a Transform from the step list removes it (the auto-save no longer has it), Cmd+Shift+Z (Ctrl+Shift+Z) brings it back (saved again), and Delete after clicking the step, with its panel open, removes it",
+          "status": "pending",
+          "note": "In @iblai/iblai-js 2.71.0, which the app now uses; flip to covered once journey 34 runs green."
+        },
+        {
+          "id": "wf-53",
+          "description": "Clicking the default Agent step opens its step settings panel (Instructions), like any other step; its gear button, named Agent Settings, opens that agent's Edit Agent dialog and no step panel",
+          "status": "pending",
+          "note": "In @iblai/iblai-js 2.71.0, which the app now uses; flip to covered once journey 34 runs green."
+        },
+        {
+          "id": "wf-54",
+          "description": "The validation banner a new workflow shows on open has a header button named Warnings and Errors followed by its counts (e.g. 1 error, 1 warning), which match the listed lines; the header carries no alert icon, and every listed line has its own error or warning icon; the backend's runtime check of each Agent step shows as The agent in each Agent step is checked when the workflow runs.",
+          "status": "pending",
+          "note": "In @iblai/iblai-js 2.71.0, which the app now uses; flip to covered once journey 34 runs green."
+        },
+        {
+          "id": "wf-55",
+          "description": "Insert Variable or Step: the icon button on a Transform's Value opens a searchable picker (Search variables and steps); choosing the Start variable counter inserts variables['counter'] at the caret (in front of the typed ' + 1'), returns focus to the field with the caret right after it, and the auto-save carries the expression; on the Agent step's Instructions the same picker inserts {{variables.counter}} at the caret and the auto-save carries it as instructions",
+          "status": "pending",
+          "note": "In @iblai/iblai-js 2.71.0, which the app now uses; flip to covered once journey 34 runs green."
+        },
+        {
+          "id": "wf-56",
+          "description": "Copy and paste steps: with a Transform selected (clicked, its panel open), Cmd+C then Cmd+V (Ctrl off a Mac) adds a copy with a new id that the next auto-save carries (two Transforms), and Cmd+Z (Ctrl+Z) removes the copy again (the auto-save is back to the original Transform alone)",
+          "status": "pending",
+          "note": "In @iblai/iblai-js 2.71.0, which the app now uses; flip to covered once journey 34 runs green."
+        },
+        {
+          "id": "wf-57",
+          "description": "Wheel over bare canvas: a plain wheel pans it (the step layer's transform changes, the zoom percentage does not), and the wheel with Cmd (Ctrl off a Mac) held, which is how a trackpad pinch arrives, raises the zoom percentage in the canvas toolbar",
+          "status": "pending",
+          "note": "In @iblai/iblai-js 2.71.0, which the app now uses; flip to covered once journey 34 runs green."
+        },
+        {
+          "id": "wf-58",
+          "description": "Canvas toolbar tooltips show the keyboard shortcut in brackets: once a step is added, hovering Undo shows Undo (⌘Z) on a Mac and Undo (Ctrl+Z) elsewhere (the test decides Mac with the editor's own check of the browser's reported platform, so WebKit, whose Desktop Safari user agent claims a Mac, expects ⌘Z), while the button's accessible name stays Undo and it carries aria-keyshortcuts",
+          "status": "pending",
+          "note": "In @iblai/iblai-js 2.71.0, which the app now uses; flip to covered once journey 34 runs green."
+        },
+        {
+          "id": "wf-59",
+          "description": "Validation lines link to their step: after an unconnected Transform is added and saved, the banner line marked with that step's id (data-step-id, so a backend rewording of the message changes nothing) shows the tooltip Show Transform on hover, and clicking it opens that step's settings panel (Delete Transform) with the step on screen",
+          "status": "pending",
+          "note": "Fails until the app moves to the @iblai/iblai-js release with iblai/iblai-web-frontend#2241, which marks each banner line with data-step-id and links it by the error_details/warning_details node_id. 2.71.0 to 2.73.0 link a line only by an \" at nodes[i]\" ending or a quoted step id, both gone since backend #3218. Flip to covered once it passes."
+        },
+        {
+          "id": "wf-60",
+          "description": "Undo in a text field is the field's own: in the Agent Instructions (resizable up and down) Cmd+Z or Ctrl+Z takes back a run of typing in one step and Cmd/Ctrl+Shift+Z brings it back, an insert from Insert Variable or Step is taken back in one step, and the keys never reach the canvas: a Transform added before stays, even after Cmd+Z in the still-empty field",
+          "status": "pending",
+          "note": "In @iblai/iblai-js 2.71.0, which the app now uses; flip to covered once journey 34 runs green."
+        },
+        {
+          "id": "wf-61",
+          "description": "Add buttons sit with their rows: in the settings of a Transform, a Set State and an If / Else the Add button comes right under the rows it adds to, above the expression hint and the Step IDs list",
+          "status": "pending",
+          "note": "In @iblai/iblai-js 2.71.0, which the app now uses; flip to covered once journey 34 runs green."
+        },
+        {
+          "id": "wf-62",
+          "description": "A refused publish lists what to fix: publishing a new workflow (no End step) gets a 400, the toast Workflow has validation issues (never Failed to publish workflow) and the banner, collapsed beforehand, opens again with the line about the missing End step",
+          "status": "pending",
+          "note": "In @iblai/iblai-js 2.71.0, which the app now uses; flip to covered once journey 34 runs green."
+        },
+        {
+          "id": "wf-63",
+          "description": "Choosing an agent: an Agent step's Select opens the Select Agent dialog, where searching for the last word of the workflow's name returns the workflow's own agent (named after the workflow) from the backend, yet the dialog lists no agents; picking the first agent closes the dialog, the auto-save carries its mentor_id and the card gets its Agent Settings gear",
+          "status": "pending",
+          "note": "In @iblai/iblai-js 2.71.0, which the app now uses; flip to covered once journey 34 runs green."
+        },
+        {
+          "id": "wf-64",
+          "description": "Classifier answer types and chat history: choosing Answer Type Yes or No saves answer_type noul and shows true, false and fallback outputs (no category ones); under Advanced, turning on Include Chat History saves include_history.enabled true, and the switch shows on in the admin Users blue (Tailwind blue-500)",
+          "status": "pending",
+          "note": "In @iblai/iblai-js 2.71.0, which the app now uses; flip to covered once journey 34 runs green."
+        },
+        {
+          "id": "wf-65",
+          "description": "Running a workflow in Preview: built in the editor as Start → If / Else (condition 'refund' in input) → a Transform on each branch setting output to 'Refund path' or 'General path' → End, with the Agent step deleted, the saved workflow has no validation errors; in Preview, 'I want a refund' gets exactly Refund path and then 'hello' gets exactly General path (no model involved: End replies with the Transform's output)",
+          "status": "covered"
+        },
+        {
+          "id": "wf-66",
+          "description": "Running an Agent step in Preview: in a workflow of a freshly created agent (its virtual machine turned off, so it answers without starting one), the default Agent step keeps that agent's mentor_id and, connected to an End, saves with no validation errors; a message sent in Preview gets the agent's own reply, neither empty nor the workflow's 'went wrong' apology",
+          "status": "covered"
+        },
+        {
+          "id": "wf-67",
+          "description": "A published workflow answers its own agent's chat: the If / Else workflow of wf-65 publishes (200, returning the entry_mentor_id of the agent created with the workflow), and in a second tab that agent's normal chat answers 'I want a refund' with exactly Refund path",
           "status": "covered"
         }
       ]
@@ -3146,7 +3343,7 @@
       "checkpoints": [
         {
           "id": "pr-01",
-          "description": "Privacy tab label is visible in the Edit Mentor modal sidebar (always mounted — no longer gated on enable_privacy_router)",
+          "description": "Privacy tab label is visible in the Edit Agent modal sidebar (always mounted) on a new agent",
           "status": "covered"
         },
         {
@@ -3156,32 +3353,72 @@
         },
         {
           "id": "pr-03",
-          "description": "Privacy tab stays mounted in the sidebar regardless of enable_privacy_router; capability-gate-content's data-enabled attribute tracks the in-tab \"PII filtering\" toggle (feat/2040 — moved off Settings → Capabilities into the Privacy tab's own CapabilityGate)",
+          "description": "The removed master toggle (privacy-capability-toggle) and PII sub-tab (privacy-sub-tab-pii) no longer exist; filtering content renders without a sub-tab strip it does not need",
           "status": "covered"
         },
         {
           "id": "pr-04",
-          "description": "The CapabilityGate off-state hint is shown only while the router is off",
+          "description": "A new agent shows the PII Filtering and PHI Filtering cards both off (aria-checked false, title Off, accessible names, summary \"Off.\"); opening an off card shows only its off hint",
           "status": "covered"
         },
         {
           "id": "pr-05",
-          "description": "Enabling the router keeps the action, entity chips and output-filter fields present and interactive",
-          "status": "covered"
-        },
-        {
-          "id": "pr-05b",
-          "description": "The \"When PII is detected\" action dropdown lists Allow, Redact, Mask, Block in that order (PRIVACY_ACTIONS = ['allow','redact','mask','block'] from @iblai/data-layer — Allow is now first)",
+          "description": "Turning PII Filtering on saves in one click, opens its card and leaves PHI off; summary starts with \"On.\"",
           "status": "covered"
         },
         {
           "id": "pr-06",
-          "description": "Block Message textarea is editable only while the action is Block (tolerates conditional-render or render-and-disable SDK shapes)",
+          "description": "The PII action dropdown lists Allow, Redact, Mask, Block in that order",
           "status": "covered"
         },
         {
           "id": "pr-07",
-          "description": "Clicking an entity chip flips its aria-checked state and persists when toggled twice",
+          "description": "Block Message is shown and editable only while the PII action is Block; the summary names the action",
+          "status": "covered"
+        },
+        {
+          "id": "pr-08",
+          "description": "PII entity chips flip aria-checked, the \"none selected = all\" hint tracks them and the summary counts selected kinds",
+          "status": "covered"
+        },
+        {
+          "id": "pr-09",
+          "description": "PII settings persist after closing and reopening the modal; turning the last kind off returns the card to \"Off.\"",
+          "status": "covered"
+        },
+        {
+          "id": "pr-10",
+          "description": "PHI Filtering shows 12 entity chips, \"all 12 kinds\" when none selected, and a count (\"2 kinds selected\") plus Block action after configuring it",
+          "status": "covered"
+        },
+        {
+          "id": "pr-11",
+          "description": "Only one filter card is open at a time: turning PII on opens PII and closes PHI while PHI stays on; the chevron reopens PHI and closes PII",
+          "status": "covered"
+        },
+        {
+          "id": "pr-12",
+          "description": "\"Also Filter AI Responses\" switch (privacy-output-filter-toggle) is named exactly that and can be turned on and off",
+          "status": "covered"
+        },
+        {
+          "id": "pr-13",
+          "description": "Turning one kind off leaves the other on; turning the last kind off switches filtering off",
+          "status": "covered"
+        },
+        {
+          "id": "pr-14",
+          "description": "Admin sees the Privacy Log row and View Privacy Log button; it opens the audit-log modal with rows (privacy-flags endpoint mocked)",
+          "status": "covered"
+        },
+        {
+          "id": "pr-15",
+          "description": "Privacy Log rail filter narrows the list to the chosen rail (PHI)",
+          "status": "covered"
+        },
+        {
+          "id": "pr-16",
+          "description": "Privacy Log row action opens the flag detail panel",
           "status": "covered"
         }
       ]
