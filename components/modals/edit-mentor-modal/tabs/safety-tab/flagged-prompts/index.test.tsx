@@ -1,6 +1,12 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import {
+  render,
+  screen,
+  fireEvent,
+  cleanup,
+  act,
+} from '@testing-library/react';
 
 import { FlaggedPromptsModal } from './index';
 import { FlaggedPrompt } from './types';
@@ -23,8 +29,15 @@ vi.mock('./flagged-prompts-summary', () => ({
 }));
 
 vi.mock('./flagged-prompts-filters', () => ({
-  FlaggedPromptsFilters: (_props: any) => (
-    <div data-testid="filters">Filters</div>
+  FlaggedPromptsFilters: (props: any) => (
+    <div data-testid="filters">
+      <button
+        onClick={() => props.onFilterTypeChange('safety')}
+        data-testid="filter-safety"
+      >
+        Safety
+      </button>
+    </div>
   ),
 }));
 
@@ -74,6 +87,10 @@ vi.mock('./flagged-prompt-detail', () => ({
       </div>
     );
   },
+}));
+
+vi.mock('./flagged-prompt-mobile-detail', () => ({
+  FlaggedPromptMobileDetail: () => null,
 }));
 
 vi.mock('next/dynamic', () => ({
@@ -177,7 +194,7 @@ const defaultHookReturn = {
   totalFlagged: 2,
   searchQuery: '',
   setSearchQuery: vi.fn(),
-  filterType: 'all',
+  filterType: 'moderation',
   setFilterType: vi.fn(),
   dateRange: undefined,
   setDateRange: vi.fn(),
@@ -293,6 +310,12 @@ describe('FlaggedPromptsModal', () => {
     expect(screen.getByTestId('notification-dialog')).toBeInTheDocument();
   });
 
+  it('ignores contact user while no prompt is selected', () => {
+    render(<FlaggedPromptsModal {...defaultProps} />);
+    act(() => capturedDetailProps.onContactUser());
+    expect(capturedNotificationProps.isOpen).toBeFalsy();
+  });
+
   it('does not show notification dialog by default', () => {
     render(<FlaggedPromptsModal {...defaultProps} />);
     expect(screen.queryByTestId('notification-dialog')).not.toBeInTheDocument();
@@ -309,6 +332,16 @@ describe('FlaggedPromptsModal', () => {
       email: 'alice@example.com',
       avatar: undefined,
     });
+  });
+
+  it('clears the selected prompt when the type filter changes', () => {
+    render(<FlaggedPromptsModal {...defaultProps} />);
+    fireEvent.click(screen.getByTestId('prompt-p1'));
+    expect(screen.getByText('Detail: alice@example.com')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('filter-safety'));
+    expect(defaultHookReturn.setFilterType).toHaveBeenCalledWith('safety');
+    expect(screen.getByText('No selection')).toBeInTheDocument();
   });
 
   it('clears selected prompt on delete success', () => {
