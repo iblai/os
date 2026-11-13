@@ -758,7 +758,6 @@
   "flaggedPromptsFlaggedPromptsFilters": {
     "searchPlaceholder": "Rechercher un utilisateur",
     "pickDateRange": "Choisir une plage de dates",
-    "allTypes": "Tous les types",
     "moderation": "Modération",
     "safety": "Sécurité"
   },
@@ -1900,6 +1899,12 @@
   },
   "tabsSkillsTab": {
     "heading": "Compétences"
+  },
+  "topTrialBannerTopTrialBanner": {
+    "defaultBannerText": "Passez à la version supérieure pour créer vos propres agents. Aucune carte de crédit requise 😎",
+    "upgradeAriaLabel": "Mettre à niveau",
+    "upgradeButton": "Mettre à niveau",
+    "closeBannerAriaLabel": "Fermer la bannière"
   },
   "uiBreadcrumb": {
     "navAriaLabel": "fil d'Ariane",

@@ -758,7 +758,6 @@
   "flaggedPromptsFlaggedPromptsFilters": {
     "searchPlaceholder": "搜索用户",
     "pickDateRange": "选择日期范围",
-    "allTypes": "所有类型",
     "moderation": "审核",
     "safety": "安全"
   },
@@ -1900,6 +1899,12 @@
   },
   "tabsSkillsTab": {
     "heading": "技能"
+  },
+  "topTrialBannerTopTrialBanner": {
+    "defaultBannerText": "升级以创建您自己的智能体。无需信用卡 😎",
+    "upgradeAriaLabel": "升级",
+    "upgradeButton": "升级",
+    "closeBannerAriaLabel": "关闭横幅"
   },
   "uiBreadcrumb": {
     "navAriaLabel": "面包屑导航",
