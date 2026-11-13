@@ -589,14 +589,22 @@ test.describe('Journey 46: Chat Upload — Camera Option & Image Display', () =>
       await waitForPageReady(page);
       await setAttachments(page, editMentorPage, false);
       await expect(chatPage.chatInput).toBeVisible({ timeout: 15_000 });
-      // The "+" menu now also hosts tools, so the button stays; only the
-      // Upload File item must be gone.
-      await page.getByTestId('composer-plus-button').click();
-      await expect(page.getByRole('menu')).toBeVisible({ timeout: 10_000 });
-      await expect(
-        page.getByRole('menuitem', { name: /upload file/i }),
-      ).toHaveCount(0);
-      await page.keyboard.press('Escape');
+      // The SDK hides "+" when its menu would be empty, which depends on the
+      // tenant's tools/skills (absent on stg1, present on .org). Either way
+      // Upload File must not be offered.
+      const plusButton = page.getByTestId('composer-plus-button');
+      const hasPlusMenu = await plusButton.waitFor({ timeout: 3_000 }).then(
+        () => true,
+        () => false,
+      );
+      if (hasPlusMenu) {
+        await plusButton.click();
+        await expect(page.getByRole('menu')).toBeVisible({ timeout: 10_000 });
+        await expect(
+          page.getByRole('menuitem', { name: /upload file/i }),
+        ).toHaveCount(0);
+        await page.keyboard.press('Escape');
+      }
 
       const uploads: string[] = [];
       page.on('request', (r) => {
