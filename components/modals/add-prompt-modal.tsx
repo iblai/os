@@ -1,5 +1,6 @@
 'use client';
 
+import { useShowFreeTrialDialog } from '@iblai/iblai-js/web-utils';
 import React from 'react';
 import { useParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
@@ -32,7 +33,6 @@ import { RichTextEditor } from '@iblai/iblai-js/web-containers';
 import { TenantKeyMentorIdParams } from '@/lib/types';
 import { toast } from 'sonner';
 import { Label } from '@radix-ui/react-label';
-import { useShowFreeTrialDialog } from '@/hooks/user-user-actions';
 import { useNavigate } from '@/hooks/user-navigate';
 
 interface AddPromptForm {

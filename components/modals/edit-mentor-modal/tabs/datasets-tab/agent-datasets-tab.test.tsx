@@ -35,11 +35,16 @@ vi.mock('@/hooks/user-navigate', () => ({
   }),
 }));
 
-vi.mock('@/hooks/user-user-actions', () => ({
-  useShowFreeTrialDialog: () => ({
-    executeWithTrialCheck: mockExecuteWithTrialCheck,
-  }),
-}));
+vi.mock('@iblai/iblai-js/web-utils', async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import('@iblai/iblai-js/web-utils')>();
+  return {
+    ...actual,
+    useShowFreeTrialDialog: () => ({
+      executeWithTrialCheck: mockExecuteWithTrialCheck,
+    }),
+  };
+});
 
 vi.mock('@/lib/hooks', () => ({
   useAppSelector: () => ['perm'],

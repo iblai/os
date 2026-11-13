@@ -51,11 +51,16 @@ vi.mock('sonner', () => ({
   toast: (...args: unknown[]) => toastMock(...args),
 }));
 
-vi.mock('@/hooks/user-user-actions', () => ({
-  useShowFreeTrialDialog: () => ({
-    executeWithTrialCheck: executeWithTrialCheckMock,
-  }),
-}));
+vi.mock('@iblai/iblai-js/web-utils', async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import('@iblai/iblai-js/web-utils')>();
+  return {
+    ...actual,
+    useShowFreeTrialDialog: () => ({
+      executeWithTrialCheck: executeWithTrialCheckMock,
+    }),
+  };
+});
 
 vi.mock('@/lib/utils', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/utils')>();

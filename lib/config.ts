@@ -55,6 +55,10 @@ const env = {
     process.env.NEXT_PUBLIC_ENABLE_SUPPORT_PHONE,
   NEXT_PUBLIC_ENABLE_GRADEBOOK_TAB:
     process.env.NEXT_PUBLIC_ENABLE_GRADEBOOK_TAB,
+  NEXT_PUBLIC_PLAN_FEATURES_FREE: process.env.NEXT_PUBLIC_PLAN_FEATURES_FREE,
+  NEXT_PUBLIC_PLAN_FEATURES_PRO: process.env.NEXT_PUBLIC_PLAN_FEATURES_PRO,
+  NEXT_PUBLIC_PLAN_FEATURES_MAX: process.env.NEXT_PUBLIC_PLAN_FEATURES_MAX,
+  NEXT_PUBLIC_PLAN_FEATURES_ULTRA: process.env.NEXT_PUBLIC_PLAN_FEATURES_ULTRA,
 };
 
 const runtimeEnv = () =>
@@ -76,6 +80,13 @@ export const getEnv = (key: keyof typeof env, fallback = ''): string => {
   }
   return fallback;
 };
+
+/** A `|`-separated env list as trimmed, non-empty entries. */
+const getEnvList = (key: keyof typeof env): string[] =>
+  getEnv(key)
+    .split('|')
+    .map((entry) => entry.trim())
+    .filter(Boolean);
 
 const domain = () => getEnv('NEXT_PUBLIC_PLATFORM_BASE_DOMAIN', 'iblai.app');
 
@@ -194,4 +205,13 @@ export const config = {
     getEnv('NEXT_PUBLIC_ENABLE_SUPPORT_PHONE', 'false') === 'true',
   enableGradebookTab: () =>
     getEnv('NEXT_PUBLIC_ENABLE_GRADEBOOK_TAB', 'false') === 'true',
+  // The bullets on each card of the plan picker, by the SDK's plan key (Pro is
+  // `premium`). Each variable is a `|`-separated list; `**text**` shows in
+  // bold. A plan whose variable is unset or empty keeps the SDK's bullets.
+  planFeatures: (): Record<string, string[]> => ({
+    free: getEnvList('NEXT_PUBLIC_PLAN_FEATURES_FREE'),
+    premium: getEnvList('NEXT_PUBLIC_PLAN_FEATURES_PRO'),
+    max: getEnvList('NEXT_PUBLIC_PLAN_FEATURES_MAX'),
+    ultra: getEnvList('NEXT_PUBLIC_PLAN_FEATURES_ULTRA'),
+  }),
 };

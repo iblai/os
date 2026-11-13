@@ -53,6 +53,10 @@ import {
   refreshTenantSwitchLock,
   isTenantSwitchInProgress,
   AUTH_TOKENS_UPDATED_EVENT,
+  use402ErrorCheck,
+  SUBSCRIPTION_CREDIT_LIMIT_ERROR_MESSAGE,
+  useOpencode402,
+  SubscriptionConfigProvider,
 } from '@iblai/iblai-js/web-utils';
 import {
   AuthProvider,
@@ -72,8 +76,6 @@ import {
   appendEmbedContext,
   persistEmbedContextFromUrl,
 } from '@/lib/embed-context';
-import { use402ErrorCheck } from '@/hooks/subscription/use-402-error-check';
-import { SUBSCRIPTION_CREDIT_LIMIT_ERROR_MESSAGE } from '@/hooks/subscription/constants';
 import { customErrorMessages } from '@/lib/error';
 import { useIframeHandlers } from '@/lib/handlers';
 import { useIframeMessageHandler } from '@iblai/iblai-js/web-containers';
@@ -100,12 +102,13 @@ import {
 import { isTauriApp } from '@/types/tauri';
 import { hideInitialLoader } from '@/lib/initial-loader';
 import { useOpencodeLearner } from '@/hooks/use-opencode-learner';
-import { useOpencode402 } from '@/hooks/use-opencode-402';
 import { useOpencodeAuthRequired } from '@/hooks/use-opencode-auth-required';
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   const { handle402Error } = use402ErrorCheck();
   const [ready, setReady] = useState(false);
+  // The plan picker's bullets, from env; read once so the config stays stable.
+  const planFeatures = useMemo(() => config.planFeatures(), []);
 
   // Desktop only (no-op elsewhere): tell the Rust model proxy who is signed in,
   // before any chat surface can send a Code turn.
@@ -639,85 +642,58 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <WebContainersLocaleProvider>
-      <SentryInit />
-      <LanguagePreferenceSync />
-      <MentorTimeTrackingProvider intervalSeconds={30} enabled={true} />
-
-      <AuthProvider
-        skip={isSsoLoginRoute || isVersionRoute || isTauriOffline}
-        redirectToAuthSpa={(
-          redirectTo = undefined,
-          platformKey = undefined,
-          logout = false,
-          saveRedirect = true,
-        ) => {
-          // Don't redirect to auth when in Tauri offline mode
-          /* istanbul ignore next -- @preserve Tauri offline guard unreachable: component returns early at L223 */
-          if (isTauriOffline) {
-            console.log(
-              '[Providers] Skipping auth redirect - Tauri offline mode',
-            );
-            return;
-          }
-          redirectToAuthSpa(redirectTo, platformKey, logout, saveRedirect);
-        }}
-        username={username || ''}
-        middleware={middleware}
-        pathname={fullPathname}
-        token={searchParams.get('token') ?? undefined}
-        storageService={LocalStorageService.getInstance()}
-        enableStorageSync={
-          !showingSharedChat &&
-          !isTauriOffline &&
-          !searchParams.get('token') &&
-          // Never in an embed. The embed owns its session in localStorage
-          // (installed via /sso-login-complete); the shared base-domain cookies
-          // belong to the HOST. Cross-SPA sync here reads the host's stale
-          // cookies back over a freshly-installed session — e.g. after a tenant
-          // switch it reverts the embed to the previous tenant's tokens. This
-          // mirrors the write-side guard in saveUserObjectToLocalStorage.
-          !isInIframe()
-        }
-        fallback={
-          isPreviewMode ? null : (
-            <div className="flex h-dvh w-screen items-center justify-center">
-              <div className="space-y-3">
-                <Spinner />
-              </div>
-            </div>
-          )
-        }
-      >
+    <SubscriptionConfigProvider
+      config={{
+        mainTenantKey: config.mainTenantKey(),
+        platformName: config.iblPlatform(),
+        mentorUrl: config.mentorUrl(),
+        stripeEnabled: config.stripeEnabled() === 'true',
+        supportEmail: config.supportEmail(),
+        planFeatures,
+      }}
+    >
+      <WebContainersLocaleProvider>
+        <SentryInit />
         <LanguagePreferenceSync />
-        <TenantLock />
-        <TenantProvider
+        <MentorTimeTrackingProvider intervalSeconds={30} enabled={true} />
+
+        <AuthProvider
           skip={isSsoLoginRoute || isVersionRoute || isTauriOffline}
-          isIframed={isInIframe()}
-          currentTenant={tenantKey || ''}
-          requestedTenant={tenantKeyParams || ''}
-          saveCurrentTenant={saveCurrentTenant}
-          saveUserTenants={saveUserTenants}
-          handleTenantSwitch={async (
-            tenant: string,
-            saveRedirect: boolean,
-            useCurrentDomain = true,
+          redirectToAuthSpa={(
+            redirectTo = undefined,
+            platformKey = undefined,
+            logout = false,
+            saveRedirect = true,
           ) => {
-            console.log('[TenantProvider] handling tenant switching');
-            if (!showingSharedChat)
-              await handleTenantSwitch(
-                tenant,
-                saveRedirect,
-                !useCurrentDomain ? config.mentorUrl() : undefined,
+            // Don't redirect to auth when in Tauri offline mode
+            /* istanbul ignore next -- @preserve Tauri offline guard unreachable: component returns early at L223 */
+            if (isTauriOffline) {
+              console.log(
+                '[Providers] Skipping auth redirect - Tauri offline mode',
               );
+              return;
+            }
+            redirectToAuthSpa(redirectTo, platformKey, logout, saveRedirect);
           }}
-          saveVisitingTenant={saveVisitingTenant}
-          removeVisitingTenant={removeVisitingTenant}
-          saveUserTokens={saveUserTokens}
-          saveTenant={saveTenant}
-          username={username}
+          username={username || ''}
+          middleware={middleware}
+          pathname={fullPathname}
+          token={searchParams.get('token') ?? undefined}
+          storageService={LocalStorageService.getInstance()}
+          enableStorageSync={
+            !showingSharedChat &&
+            !isTauriOffline &&
+            !searchParams.get('token') &&
+            // Never in an embed. The embed owns its session in localStorage
+            // (installed via /sso-login-complete); the shared base-domain cookies
+            // belong to the HOST. Cross-SPA sync here reads the host's stale
+            // cookies back over a freshly-installed session — e.g. after a tenant
+            // switch it reverts the embed to the previous tenant's tokens. This
+            // mirrors the write-side guard in saveUserObjectToLocalStorage.
+            !isInIframe()
+          }
           fallback={
-            isPreviewMode || isTauriOffline ? null : (
+            isPreviewMode ? null : (
               <div className="flex h-dvh w-screen items-center justify-center">
                 <div className="space-y-3">
                   <Spinner />
@@ -725,155 +701,195 @@ export default function Providers({ children }: { children: React.ReactNode }) {
               </div>
             )
           }
-          redirectToAuthSpa={(
-            redirectTo,
-            platformKey,
-            logout,
-            saveRedirect,
-          ) => {
-            // Don't redirect to auth when in Tauri offline mode
-            /* istanbul ignore next -- @preserve Tauri offline guard unreachable: component returns early at L223 */
-            if (isTauriOffline) {
-              console.log(
-                '[Providers] Skipping TenantProvider auth redirect - Tauri offline mode',
-              );
-              return;
-            }
-            redirectToAuthSpa(redirectTo, platformKey, logout, saveRedirect);
-          }}
-          onAuthFailure={(reason) => {
-            console.error('[TenantProvider] Auth failure:', reason);
-            router.push('/error/403');
-          }}
-          setUseMentorProvider={setUseMentorProvider}
-          onLoadPlatformPermissions={onLoadPlatformpermissions}
-          skipCustomDomainCheck={window.location.origin === config.mentorUrl()}
-          onTenantMismatch={() => {
-            // During a switch window, a stale tab legitimately sees its old
-            // route != the new session tenant. Suppress the revert so tabs
-            // don't ping-pong; once the lock TTL expires and the session is
-            // consistent, a real mismatch resolves normally.
-            if (isTenantSwitchInProgress()) {
-              console.log(
-                '[TenantProvider] Tenant mismatch during switch window — suppressing revert',
-              );
-              return;
-            }
-            console.log(
-              '[TenantProvider] Tenant mismatch - redirecting to home',
-            );
-            // Carry embed params onto '/' so an embedded iframe isn't flipped
-            // back to the full app by this hard reset (sessionStorage also
-            // recovers them on the '/' load; this makes it immediate).
-            window.location.href = appendEmbedContext('/');
-          }}
         >
-          {useMentorProvider ? (
-            <MentorProvider
-              skip={isSsoLoginRoute || isVersionRoute || isTauriOffline}
-              redirectToAuthSpa={() => {
-                // Don't redirect to auth when in Tauri offline mode
-                /* istanbul ignore next -- @preserve Tauri offline guard unreachable: component returns early at L223 */
-                if (isTauriOffline) {
-                  console.log(
-                    '[Providers] Skipping MentorProvider auth redirect - Tauri offline mode',
-                  );
-                  return;
-                }
-                redirectToAuthSpa();
-              }}
-              username={username || ANONYMOUS_USERNAME}
-              isAdmin={isAdmin}
-              mainTenantKey={config.mainTenantKey()}
-              redirectToNoMentorsPage={() => {
-                // Don't redirect when in Tauri offline mode
-                /* istanbul ignore next -- @preserve Tauri offline guard unreachable: component returns early at L223 */
-                if (isTauriOffline) return;
-                if (skipMentorCheck) return;
-                if (!embed) redirectToNoMentorsPage();
-              }}
-              redirectToCreateMentor={() => {
-                // Don't redirect when in Tauri offline mode
-                /* istanbul ignore next -- @preserve Tauri offline guard unreachable: component returns early at L223 */
-                if (isTauriOffline) return;
-                if (skipMentorCheck) return;
-                redirectToCreateMentor();
-              }}
-              redirectToMentor={(tKey: string, mId: string) => {
-                // Don't redirect when in Tauri offline mode
-                /* istanbul ignore next -- @preserve Tauri offline guard unreachable: component returns early at L223 */
-                if (isTauriOffline) return;
-                if (skipMentorCheck) return;
-                redirectToMentor(tKey, mId);
-              }}
-              onLoadMentorsPermissions={onLoadMentorsPermissions}
-              requestedMentorId={skipMentorCheck ? undefined : mentorId}
-              onAuthSuccess={() =>
-                sendMessageToParentWebsite({
-                  loaded: true,
-                  auth: getPerTabAuthSnapshot(),
-                })
-              }
-              fallback={
-                isPreviewMode || isTauriOffline ? null : (
-                  <div className="flex h-dvh w-screen items-center justify-center">
-                    <div className="space-y-3">
-                      <Spinner />
-                    </div>
+          <LanguagePreferenceSync />
+          <TenantLock />
+          <TenantProvider
+            skip={isSsoLoginRoute || isVersionRoute || isTauriOffline}
+            isIframed={isInIframe()}
+            currentTenant={tenantKey || ''}
+            requestedTenant={tenantKeyParams || ''}
+            saveCurrentTenant={saveCurrentTenant}
+            saveUserTenants={saveUserTenants}
+            handleTenantSwitch={async (
+              tenant: string,
+              saveRedirect: boolean,
+              useCurrentDomain = true,
+            ) => {
+              console.log('[TenantProvider] handling tenant switching');
+              if (!showingSharedChat)
+                await handleTenantSwitch(
+                  tenant,
+                  saveRedirect,
+                  !useCurrentDomain ? config.mentorUrl() : undefined,
+                );
+            }}
+            saveVisitingTenant={saveVisitingTenant}
+            removeVisitingTenant={removeVisitingTenant}
+            saveUserTokens={saveUserTokens}
+            saveTenant={saveTenant}
+            username={username}
+            fallback={
+              isPreviewMode || isTauriOffline ? null : (
+                <div className="flex h-dvh w-screen items-center justify-center">
+                  <div className="space-y-3">
+                    <Spinner />
                   </div>
-                )
+                </div>
+              )
+            }
+            redirectToAuthSpa={(
+              redirectTo,
+              platformKey,
+              logout,
+              saveRedirect,
+            ) => {
+              // Don't redirect to auth when in Tauri offline mode
+              /* istanbul ignore next -- @preserve Tauri offline guard unreachable: component returns early at L223 */
+              if (isTauriOffline) {
+                console.log(
+                  '[Providers] Skipping TenantProvider auth redirect - Tauri offline mode',
+                );
+                return;
               }
-              handleMentorNotFound={async () => {
-                // Don't show mentor not found when in Tauri offline mode
-                /* istanbul ignore next -- @preserve Tauri offline guard unreachable: component returns early at L223 */
-                if (isTauriOffline) {
-                  console.log(
-                    '[Providers] Skipping mentor not found - Tauri offline mode',
-                  );
-                  return;
+              redirectToAuthSpa(redirectTo, platformKey, logout, saveRedirect);
+            }}
+            onAuthFailure={(reason) => {
+              console.error('[TenantProvider] Auth failure:', reason);
+              router.push('/error/403');
+            }}
+            setUseMentorProvider={setUseMentorProvider}
+            onLoadPlatformPermissions={onLoadPlatformpermissions}
+            skipCustomDomainCheck={
+              window.location.origin === config.mentorUrl()
+            }
+            onTenantMismatch={() => {
+              // During a switch window, a stale tab legitimately sees its old
+              // route != the new session tenant. Suppress the revert so tabs
+              // don't ping-pong; once the lock TTL expires and the session is
+              // consistent, a real mismatch resolves normally.
+              if (isTenantSwitchInProgress()) {
+                console.log(
+                  '[TenantProvider] Tenant mismatch during switch window — suppressing revert',
+                );
+                return;
+              }
+              console.log(
+                '[TenantProvider] Tenant mismatch - redirecting to home',
+              );
+              // Carry embed params onto '/' so an embedded iframe isn't flipped
+              // back to the full app by this hard reset (sessionStorage also
+              // recovers them on the '/' load; this makes it immediate).
+              window.location.href = appendEmbedContext('/');
+            }}
+          >
+            {useMentorProvider ? (
+              <MentorProvider
+                skip={isSsoLoginRoute || isVersionRoute || isTauriOffline}
+                redirectToAuthSpa={() => {
+                  // Don't redirect to auth when in Tauri offline mode
+                  /* istanbul ignore next -- @preserve Tauri offline guard unreachable: component returns early at L223 */
+                  if (isTauriOffline) {
+                    console.log(
+                      '[Providers] Skipping MentorProvider auth redirect - Tauri offline mode',
+                    );
+                    return;
+                  }
+                  redirectToAuthSpa();
+                }}
+                username={username || ANONYMOUS_USERNAME}
+                isAdmin={isAdmin}
+                mainTenantKey={config.mainTenantKey()}
+                redirectToNoMentorsPage={() => {
+                  // Don't redirect when in Tauri offline mode
+                  /* istanbul ignore next -- @preserve Tauri offline guard unreachable: component returns early at L223 */
+                  if (isTauriOffline) return;
+                  if (skipMentorCheck) return;
+                  if (!embed) redirectToNoMentorsPage();
+                }}
+                redirectToCreateMentor={() => {
+                  // Don't redirect when in Tauri offline mode
+                  /* istanbul ignore next -- @preserve Tauri offline guard unreachable: component returns early at L223 */
+                  if (isTauriOffline) return;
+                  if (skipMentorCheck) return;
+                  redirectToCreateMentor();
+                }}
+                redirectToMentor={(tKey: string, mId: string) => {
+                  // Don't redirect when in Tauri offline mode
+                  /* istanbul ignore next -- @preserve Tauri offline guard unreachable: component returns early at L223 */
+                  if (isTauriOffline) return;
+                  if (skipMentorCheck) return;
+                  redirectToMentor(tKey, mId);
+                }}
+                onLoadMentorsPermissions={onLoadMentorsPermissions}
+                requestedMentorId={skipMentorCheck ? undefined : mentorId}
+                onAuthSuccess={() =>
+                  sendMessageToParentWebsite({
+                    loaded: true,
+                    auth: getPerTabAuthSnapshot(),
+                  })
                 }
-                if (skipMentorCheck) return;
-                await handleMentorNotFound();
-              }}
-              onComplete={() => {
-                // Hide initial loader when mentor provider is ready
-                hideInitialLoader();
-
-                if (switchingMentor === 'true') {
-                  const params = new URLSearchParams(searchParams);
-                  params.delete('switching-mentor');
-
-                  router.replace(`?${params.toString()}`);
-
-                  setTimeout(() => {
-                    toast.success('Agent switched successfully');
-                  }, 1000);
+                fallback={
+                  isPreviewMode || isTauriOffline ? null : (
+                    <div className="flex h-dvh w-screen items-center justify-center">
+                      <div className="space-y-3">
+                        <Spinner />
+                      </div>
+                    </div>
+                  )
                 }
-              }}
-            >
-              <AppProvider>
-                {tenantAdvancedCSS && <style>{tenantAdvancedCSS}</style>}
-                {defaultEmbedCSS && (
-                  <style
-                    dangerouslySetInnerHTML={{
-                      __html: `@import url(${defaultEmbedCSS});`,
-                    }}
-                  ></style>
-                )}
-                {externalCSS && <style>{externalCSS}</style>}
-                {externalJS && (
-                  <Script id="mentor-custom-js" strategy="afterInteractive">
-                    {externalJS}
-                  </Script>
-                )}
-                {children}
-              </AppProvider>
-            </MentorProvider>
-          ) : (
-            <>{children}</>
-          )}
-        </TenantProvider>
-      </AuthProvider>
-    </WebContainersLocaleProvider>
+                handleMentorNotFound={async () => {
+                  // Don't show mentor not found when in Tauri offline mode
+                  /* istanbul ignore next -- @preserve Tauri offline guard unreachable: component returns early at L223 */
+                  if (isTauriOffline) {
+                    console.log(
+                      '[Providers] Skipping mentor not found - Tauri offline mode',
+                    );
+                    return;
+                  }
+                  if (skipMentorCheck) return;
+                  await handleMentorNotFound();
+                }}
+                onComplete={() => {
+                  // Hide initial loader when mentor provider is ready
+                  hideInitialLoader();
+
+                  if (switchingMentor === 'true') {
+                    const params = new URLSearchParams(searchParams);
+                    params.delete('switching-mentor');
+
+                    router.replace(`?${params.toString()}`);
+
+                    setTimeout(() => {
+                      toast.success('Agent switched successfully');
+                    }, 1000);
+                  }
+                }}
+              >
+                <AppProvider>
+                  {tenantAdvancedCSS && <style>{tenantAdvancedCSS}</style>}
+                  {defaultEmbedCSS && (
+                    <style
+                      dangerouslySetInnerHTML={{
+                        __html: `@import url(${defaultEmbedCSS});`,
+                      }}
+                    ></style>
+                  )}
+                  {externalCSS && <style>{externalCSS}</style>}
+                  {externalJS && (
+                    <Script id="mentor-custom-js" strategy="afterInteractive">
+                      {externalJS}
+                    </Script>
+                  )}
+                  {children}
+                </AppProvider>
+              </MentorProvider>
+            ) : (
+              <>{children}</>
+            )}
+          </TenantProvider>
+        </AuthProvider>
+      </WebContainersLocaleProvider>
+    </SubscriptionConfigProvider>
   );
 }

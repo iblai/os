@@ -1,5 +1,6 @@
 'use client';
 
+import { useShowFreeTrialDialog } from '@iblai/iblai-js/web-utils';
 import { useParams } from 'next/navigation';
 
 import { ProjectsPage } from '@iblai/iblai-js/web-containers';
@@ -8,7 +9,6 @@ import { useLazyGetUserProjectDetailsQuery } from '@iblai/iblai-js/data-layer';
 import { toast } from 'sonner';
 import { useUsername } from '@/hooks/use-user';
 import { useNavigate } from '@/hooks/user-navigate';
-import { useShowFreeTrialDialog } from '@/hooks/user-user-actions';
 import { TenantKeyMentorIdParams } from '@/lib/types';
 
 export default function ProjectsRoute() {
