@@ -2682,7 +2682,7 @@
         },
         {
           "id": "wf-51",
-          "description": "Phone: tapping the middle of the Start-to-Agent connection selects it (its Delete Connection button shows where the finger is) without deleting it, and tapping the top-right corner of the unselected Agent step, where its Delete button shows once the press selects the step, deletes neither the step nor the connection (a control that appears under a finger never takes that tap)",
+          "description": "Phone: tapping the middle of the Start-to-Agent connection selects it (its Delete Connection button shows where the finger is) without deleting it, and tapping the top-right corner of the unselected Agent step on the outer part of the spot where its Delete button shows once the press selects the step (past the card, since a tap inside it goes to the Agent Settings button nearby), deletes neither the step nor the connection (a control that appears under a finger never takes that tap)",
           "status": "pending",
           "note": "In @iblai/iblai-js 2.71.0, which the app now uses; flip to covered once journey 34 runs green."
         },

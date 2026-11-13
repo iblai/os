@@ -1,4 +1,4 @@
-import * as fs from 'fs';
+import fs from 'fs';
 import path from 'path';
 import type { Locator } from '@playwright/test';
 import { test, expect } from '../fixtures/mentor-test';
@@ -59,6 +59,7 @@ import {
   touchGesture,
   bareCanvasPoint,
   centreOf,
+  settledCentreOf,
   insertFromPicker,
   caretOf,
   buildRefundRouter,
@@ -67,9 +68,13 @@ import {
   MISSING_END,
 } from '../utils/workflows';
 
+// The installed build, not the version package.json asks for.
 const SDK_VERSION: string = JSON.parse(
-  fs.readFileSync(path.resolve(__dirname, '../../package.json'), 'utf8'),
-).dependencies['@iblai/iblai-js'];
+  fs.readFileSync(
+    path.resolve(__dirname, '../../node_modules/@iblai/iblai-js/package.json'),
+    'utf8',
+  ),
+).version;
 
 test.describe('Journey 34: Workflows', () => {
   test.beforeEach(async ({ page }) => {
@@ -1867,28 +1872,38 @@ test.describe('Journey 34: Workflows', () => {
   }) => {
     await withFreshWorkflow(page, async () => {
       let id = '';
-      const { validation } = await captureAutosave(
+      const { definition, validation } = await captureAutosave(
         page,
         async () => {
           id = await addNodeFromSidebar(page, 'Transform', 'transform');
         },
         (def) => !!nodeOfType(def, 'transform'),
       );
-      // Backend #3218 ties a message to its step in warning_details; before
-      // it, the message named the step by its quoted id.
-      const { warning_details: details = [] } = JSON.parse(validation) as {
+      // Backend #3218 ties a message to its step in error_details /
+      // warning_details; before it, the message named the step by its quoted
+      // id or ended with " at nodes[<index>]". SDK 2.71.0 links a banner line
+      // to its step only by those last two.
+      const parsed = JSON.parse(validation) as {
+        error_details?: { node_id: string | null }[];
         warning_details?: { node_id: string | null }[];
       };
+      const index = definition.nodes.findIndex((node) => node.id === id);
+      const linkable = validationMessages(validation).some(
+        (message) =>
+          message.includes(`'${id}'`) ||
+          message.includes(` at nodes[${index}]`),
+      );
       expect(
-        details.some((detail) => detail.node_id === id) ||
-          validationMessages(validation).some((message) =>
-            message.includes(`'${id}'`),
-          ),
-        'a warning about the Transform in the validate body',
+        linkable ||
+          [
+            ...(parsed.error_details ?? []),
+            ...(parsed.warning_details ?? []),
+          ].some((detail) => detail.node_id === id),
+        'a message about the Transform in the validate body',
       ).toBe(true);
-      // Runs again on its own with the next SDK bump.
+      // Runs again on its own once the SDK is bumped.
       test.fixme(
-        details.length > 0 && SDK_VERSION === '2.71.0',
+        SDK_VERSION === '2.71.0' && !linkable,
         '@iblai/iblai-js 2.71.0 links a banner line only by an " at nodes[i]" suffix or a quoted step id, and backend #3218 sends neither',
       );
       await expect(nodePanel(page)).toBeHidden();
@@ -2235,7 +2250,16 @@ test.describe('Journey 34: Workflows', () => {
     }) => {
       test.skip(browserName !== 'chromium', CDP_ONLY);
       await withFreshPhoneWorkflow(page, async () => {
-        const whileId = await addNodeFromStepSheet(page, 'While', 'while');
+        // The While's auto-save is validated and the banner grows with its
+        // lines, moving the canvas, so positions are read only after that.
+        let whileId = '';
+        await captureAutosave(
+          page,
+          async () => {
+            whileId = await addNodeFromStepSheet(page, 'While', 'while');
+          },
+          (def) => !!nodeOfType(def, 'while'),
+        );
         const done = unconnectedBranch(page, whileId, 'done');
         await expect(done).toHaveText('Not connected');
 
@@ -2243,8 +2267,8 @@ test.describe('Journey 34: Workflows', () => {
         const agent = canvasNode(page, 'mentor-1');
         await expect(dot).toBeInViewport();
         await expect(agent).toBeInViewport();
-        const from = await centreOf(dot);
-        const to = await centreOf(agent);
+        const from = await settledCentreOf(dot);
+        const to = await settledCentreOf(agent);
 
         const { definition } = await captureAutosave(
           page,
@@ -2312,12 +2336,29 @@ test.describe('Journey 34: Workflows', () => {
         await expect(connection).toBeAttached();
 
         // The step's Delete is centred on this corner and shows once the press
-        // selects the step. The tap stays just outside the card: inside it,
-        // Chrome's touch targeting moves the tap onto the Agent Settings
-        // button nearby, and the step is never pressed.
-        const box = await agent.boundingBox();
-        expect(box, 'Agent step on screen').not.toBeNull();
-        await page.touchscreen.tap(box!.x + box!.width + 6, box!.y - 3);
+        // selects the step. The tap goes to its outer part, past the card:
+        // inside the card, Chrome's touch targeting moves the tap onto the
+        // Agent Settings button nearby, and the step is never pressed.
+        const spot = await agent
+          .getByRole('button', { name: /^Delete / })
+          .boundingBox();
+        expect(spot, "the Agent step's Delete spot").not.toBeNull();
+        const corner = {
+          x: spot!.x + spot!.width * 0.8,
+          y: spot!.y + spot!.height * 0.2,
+        };
+        const reachesStep = await page.evaluate(({ x, y }) => {
+          const hit = document.elementFromPoint(x, y);
+          return (
+            !!hit?.closest('[data-testid="workflow-node-mentor-1"]') &&
+            !hit.closest('button')
+          );
+        }, corner);
+        expect(
+          reachesStep,
+          'a press there reaches the step, not its hidden Delete',
+        ).toBe(true);
+        await page.touchscreen.tap(corner.x, corner.y);
         // The tap's click opens the step's settings, so by now it has landed.
         await expect(nodePanel(page)).toBeVisible({ timeout: 10_000 });
         await expect(agent).toBeAttached();

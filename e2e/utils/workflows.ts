@@ -1092,6 +1092,7 @@ export async function withFreshPhoneWorkflow(
       // on the wrong spot. A new workflow always has the missing End error.
       await expect(
         page.getByTestId('workflow-validation-list').getByText(MISSING_END),
+        'the banner from the validation on open',
       ).toBeVisible({ timeout: 30_000 });
       // Unfitted, the Agent step starts at x 350 and runs past a 393px
       // screen; only the editor's fit-to-view puts the whole of it on screen.
@@ -1198,4 +1199,23 @@ export async function centreOf(locator: Locator): Promise<Point> {
   const box = await locator.boundingBox();
   expect(box, 'element on screen').not.toBeNull();
   return { x: box!.x + box!.width / 2, y: box!.y + box!.height / 2 };
+}
+
+/** centreOf once two reads 150ms apart agree, for a raw touch to aim at. */
+export async function settledCentreOf(locator: Locator): Promise<Point> {
+  let point: Point = { x: 0, y: 0 };
+  let last = '';
+  await expect
+    .poll(
+      async () => {
+        point = await centreOf(locator);
+        const now = `${Math.round(point.x)},${Math.round(point.y)}`;
+        const settled = now === last;
+        last = now;
+        return settled;
+      },
+      { message: 'the canvas stops moving', intervals: [150], timeout: 10_000 },
+    )
+    .toBe(true);
+  return point;
 }
