@@ -1,15 +1,15 @@
 {
   "version": 2,
-  "lastUpdated": "2026-11-13",
+  "lastUpdated": "2026-11-14",
   "summary": {
-    "totalCheckpoints": 1153,
-    "coveredCheckpoints": 1072,
+    "totalCheckpoints": 1158,
+    "coveredCheckpoints": 1077,
     "deprecatedCheckpoints": 18,
     "notReproducibleCheckpoints": 17,
     "pendingCheckpoints": 46,
     "percent": 100,
-    "totalJourneys": 110,
-    "activeJourneys": 109
+    "totalJourneys": 111,
+    "activeJourneys": 110
   },
   "journeys": [
     {
@@ -7195,6 +7195,42 @@
         {
           "id": "rdp-03",
           "description": "Issue #2855: a YouTube source's preview shows an iframe on youtube-nocookie.com/embed/<id> with referrerpolicy strict-origin-when-cross-origin and no Open Page link",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "blocked-message-saved-response",
+      "name": "Blocked Message Shows Saved Response",
+      "spec": "104-blocked-message-shows-saved-response.spec.ts",
+      "sourceFiles": [
+        "components/modals/edit-mentor-modal/tabs/safety-tab.tsx",
+        "components/modals/edit-prompt-modal.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "sfr-01",
+          "description": "Issue #2883: on a new agent the admin saves a Moderation Response and a Safety Response from Edit Agent > Policies > Safety (PUT settings ok) and the tab shows both texts",
+          "status": "covered"
+        },
+        {
+          "id": "sfr-02",
+          "description": "Issue #2883: a moderation block frame (string error, kind innappropriate_prompt, reason set, socket closed) shows the saved Moderation Response as the agent reply, no toast, reason text not on the page",
+          "status": "covered"
+        },
+        {
+          "id": "sfr-03",
+          "description": "Issue #2883: a safety block frame (list-wrapped error) shows the saved Safety Response as the agent reply, no toast, reason text not on the page",
+          "status": "covered"
+        },
+        {
+          "id": "sfr-04",
+          "description": "Issue #2883: after a block the next message is sent on a new socket and answered normally with no toast",
+          "status": "covered"
+        },
+        {
+          "id": "sfr-05",
+          "description": "Issue #2883: a block arriving mid-stream replaces the partial answer with the saved response, no toast",
           "status": "covered"
         }
       ]
