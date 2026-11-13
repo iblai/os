@@ -2732,7 +2732,7 @@
           "id": "wf-59",
           "description": "Validation lines link to their step: after an unconnected Transform is added and saved, the banner line marked with that step's id (data-step-id, so a backend rewording of the message changes nothing) shows the tooltip Show Transform on hover, and clicking it opens that step's settings panel (Delete Transform) with the step on screen",
           "status": "pending",
-          "note": "Skipped (test.fixme) until the installed @iblai/iblai-js marks banner lines with data-step-id: 2.71.0 to 2.73.0 do not, and link a line only by an \" at nodes[i]\" ending or a quoted step id, both gone since backend #3218 (it sends error_details/warning_details node_id). iblai/iblai-web-frontend#2241 adds both; the test runs again on its own once the app takes that release."
+          "note": "Fails until the app moves to the @iblai/iblai-js release with iblai/iblai-web-frontend#2241, which marks each banner line with data-step-id and links it by the error_details/warning_details node_id. 2.71.0 to 2.73.0 link a line only by an \" at nodes[i]\" ending or a quoted step id, both gone since backend #3218. Flip to covered once it passes."
         },
         {
           "id": "wf-60",

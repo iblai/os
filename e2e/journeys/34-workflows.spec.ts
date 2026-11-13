@@ -1,5 +1,3 @@
-import fs from 'fs';
-import path from 'path';
 import type { Locator } from '@playwright/test';
 import { test, expect } from '../fixtures/mentor-test';
 import { MENTOR_NEXTJS_HOST } from '../fixtures/test-data';
@@ -66,18 +64,6 @@ import {
   GENERAL_REPLY,
   MISSING_END,
 } from '../utils/workflows';
-
-// What the installed build renders, not its version number: releases after
-// 2.71.0 shipped without it, and a yalc build keeps the old number.
-const SDK_MARKS_LINE_STEPS = fs
-  .readFileSync(
-    path.resolve(
-      __dirname,
-      '../../node_modules/@iblai/iblai-js/dist/web-containers/source/components/workflows/workflow-editor.js',
-    ),
-    'utf8',
-  )
-  .includes('data-step-id');
 
 test.describe('Journey 34: Workflows', () => {
   test.beforeEach(async ({ page }) => {
@@ -1873,13 +1859,6 @@ test.describe('Journey 34: Workflows', () => {
   test('admin clicks a validation line that names a step and the step settings open', async ({
     page,
   }) => {
-    // Older builds link a line only by the message's " at nodes[i]" ending or
-    // a quoted step id, both gone since backend #3218. Runs again on its own
-    // once the installed SDK marks each line with its step.
-    test.fixme(
-      !SDK_MARKS_LINE_STEPS,
-      'The installed @iblai/iblai-js marks no banner line with its step id',
-    );
     await withFreshWorkflow(page, async () => {
       const { id } = await addSavedNodeFromSidebar(
         page,
