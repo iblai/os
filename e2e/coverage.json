@@ -2,8 +2,8 @@
   "version": 2,
   "lastUpdated": "2026-11-13",
   "summary": {
-    "totalCheckpoints": 1150,
-    "coveredCheckpoints": 1069,
+    "totalCheckpoints": 1153,
+    "coveredCheckpoints": 1072,
     "deprecatedCheckpoints": 18,
     "notReproducibleCheckpoints": 17,
     "pendingCheckpoints": 46,
@@ -3508,6 +3508,21 @@
         {
           "id": "cam-07",
           "description": "Clicking the <img> in the sent message bubble triggers the preview handler (onPreviewImage) without crashing the page",
+          "status": "covered"
+        },
+        {
+          "id": "cam-08",
+          "description": "With 'Enable File Attachments' off, the + menu has no Upload File item and dragging a file over the chat shows no drop overlay; dropping attaches no chip and sends no upload-url request (#2886)",
+          "status": "covered"
+        },
+        {
+          "id": "cam-09",
+          "description": "With 'Enable File Attachments' off, pasting a file or over-limit text into the composer attaches no chip and sends no upload-url request (#2886)",
+          "status": "covered"
+        },
+        {
+          "id": "cam-10",
+          "description": "Control: with 'Enable File Attachments' on, dragging a file shows the drop overlay and dropping yields an attachment chip plus exactly one upload-url POST (#2886)",
           "status": "covered"
         }
       ]

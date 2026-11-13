@@ -110,16 +110,26 @@ test.describe('Journey 77: SDK Chat Migration — Stage 1', () => {
       expect(await chatPage.isToolActive('Web Search')).toBe(false);
     }).toPass({ timeout: 30_000 });
 
-    // Timeouts here exceed enableTool/disableTool's own ~20s
-    // click-until-it-holds retry budget (see `setToolState`) — that budget
-    // can legitimately spend several click cycles settling, and a shorter
-    // wait here could time out before a real (delayed) matching PUT lands.
-    const [enableBody] = await Promise.all([
-      chatPage.waitForSessionToolsUpdate(25_000, (body) =>
+    // The inherited defaults can land just AFTER the baseline above passes
+    // (seen in CI): Web Search turns on with no PUT, enableTool clicks
+    // nothing, and no request ever comes. enableTool returns only once its
+    // click has held for 1s, so a real click's PUT has already been sent by
+    // then; none means it was a no-op, so turn it off and try again.
+    let enableBody: { tools?: string[] } = {};
+    await expect(async () => {
+      await chatPage.disableTool('Web Search');
+      const enablePut = chatPage.waitForSessionToolsUpdate(40_000, (body) =>
         (body.tools ?? []).includes('web-search'),
-      ),
-      chatPage.enableTool('Web Search'),
-    ]);
+      );
+      enablePut.catch(() => {});
+      await chatPage.enableTool('Web Search');
+      enableBody = await Promise.race([
+        enablePut,
+        page.waitForTimeout(2_000).then(() => {
+          throw new Error('Web Search was already on, so no PUT was sent');
+        }),
+      ]);
+    }).toPass({ timeout: 50_000 });
     expect(enableBody.tools).toContain('web-search');
     expect(await chatPage.isToolActive('Web Search')).toBe(true);
 
