@@ -2730,9 +2730,9 @@
         },
         {
           "id": "wf-59",
-          "description": "Validation lines link to their step: after an unconnected Transform is added the validate response has a warning about the Transform (in warning_details, or naming it by its quoted id before backend #3218), and clicking the banner line about it (its tooltip reads Show Transform) opens that step's settings panel with the step on screen",
+          "description": "Validation lines link to their step: after an unconnected Transform is added and saved, the banner line marked with that step's id (data-step-id, so a backend rewording of the message changes nothing) shows the tooltip Show Transform on hover, and clicking it opens that step's settings panel (Delete Transform) with the step on screen",
           "status": "pending",
-          "note": "Skipped (test.fixme) while the app pins @iblai/iblai-js 2.71.0 and the backend is #3218: 2.71.0 links a banner line only by an \" at nodes[i]\" suffix or a quoted step id, and #3218 sends neither (it sends error_details/warning_details node_id). Runs again with the next SDK bump; passes against #3163."
+          "note": "Skipped (test.fixme) until the installed @iblai/iblai-js marks banner lines with data-step-id: 2.71.0 to 2.73.0 do not, and link a line only by an \" at nodes[i]\" ending or a quoted step id, both gone since backend #3218 (it sends error_details/warning_details node_id). iblai/iblai-web-frontend#2241 adds both; the test runs again on its own once the app takes that release."
         },
         {
           "id": "wf-60",

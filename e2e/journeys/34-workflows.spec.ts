@@ -58,7 +58,6 @@ import {
   addNodeFromStepSheet,
   touchGesture,
   bareCanvasPoint,
-  centreOf,
   settledCentreOf,
   insertFromPicker,
   caretOf,
@@ -68,13 +67,17 @@ import {
   MISSING_END,
 } from '../utils/workflows';
 
-// The installed build, not the version package.json asks for.
-const SDK_VERSION: string = JSON.parse(
-  fs.readFileSync(
-    path.resolve(__dirname, '../../node_modules/@iblai/iblai-js/package.json'),
+// What the installed build renders, not its version number: releases after
+// 2.71.0 shipped without it, and a yalc build keeps the old number.
+const SDK_MARKS_LINE_STEPS = fs
+  .readFileSync(
+    path.resolve(
+      __dirname,
+      '../../node_modules/@iblai/iblai-js/dist/web-containers/source/components/workflows/workflow-editor.js',
+    ),
     'utf8',
-  ),
-).version;
+  )
+  .includes('data-step-id');
 
 test.describe('Journey 34: Workflows', () => {
   test.beforeEach(async ({ page }) => {
@@ -1870,48 +1873,25 @@ test.describe('Journey 34: Workflows', () => {
   test('admin clicks a validation line that names a step and the step settings open', async ({
     page,
   }) => {
+    // Older builds link a line only by the message's " at nodes[i]" ending or
+    // a quoted step id, both gone since backend #3218. Runs again on its own
+    // once the installed SDK marks each line with its step.
+    test.fixme(
+      !SDK_MARKS_LINE_STEPS,
+      'The installed @iblai/iblai-js marks no banner line with its step id',
+    );
     await withFreshWorkflow(page, async () => {
-      let id = '';
-      const { definition, validation } = await captureAutosave(
+      const { id } = await addSavedNodeFromSidebar(
         page,
-        async () => {
-          id = await addNodeFromSidebar(page, 'Transform', 'transform');
-        },
-        (def) => !!nodeOfType(def, 'transform'),
-      );
-      // Backend #3218 ties a message to its step in error_details /
-      // warning_details; before it, the message named the step by its quoted
-      // id or ended with " at nodes[<index>]". SDK 2.71.0 links a banner line
-      // to its step only by those last two.
-      const parsed = JSON.parse(validation) as {
-        error_details?: { node_id: string | null }[];
-        warning_details?: { node_id: string | null }[];
-      };
-      const index = definition.nodes.findIndex((node) => node.id === id);
-      const linkable = validationMessages(validation).some(
-        (message) =>
-          message.includes(`'${id}'`) ||
-          message.includes(` at nodes[${index}]`),
-      );
-      expect(
-        linkable ||
-          [
-            ...(parsed.error_details ?? []),
-            ...(parsed.warning_details ?? []),
-          ].some((detail) => detail.node_id === id),
-        'a message about the Transform in the validate body',
-      ).toBe(true);
-      // Runs again on its own once the SDK is bumped.
-      test.fixme(
-        SDK_VERSION === '2.71.0' && !linkable,
-        '@iblai/iblai-js 2.71.0 links a banner line only by an " at nodes[i]" suffix or a quoted step id, and backend #3218 sends neither',
+        'Transform',
+        'transform',
       );
       await expect(nodePanel(page)).toBeHidden();
 
+      // Found by the step's id, so a backend rewording changes nothing.
       const line = page
         .getByTestId('workflow-validation-list')
-        .getByRole('button')
-        .filter({ hasText: 'Transform' })
+        .locator(`[data-step-id="${id}"]`)
         .first();
       await line.hover();
       await expect(
