@@ -1,5 +1,6 @@
 'use client';
 
+import { useShowFreeTrialDialog } from '@iblai/iblai-js/web-utils';
 import React from 'react';
 import { useParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
@@ -39,7 +40,6 @@ import {
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { useShowFreeTrialDialog } from '@/hooks/user-user-actions';
 
 export interface EditFormValues {
   category: string;

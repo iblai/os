@@ -2,12 +2,17 @@ import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, cleanup, fireEvent } from '@testing-library/react';
 import { Provider } from 'react-redux';
-import { configureStore } from '@reduxjs/toolkit';
+import { configureStore, type Reducer } from '@reduxjs/toolkit';
 
 import { ModalContainer } from '../modal-container';
 import { modalReducer, type ModalInfo } from '@/features/navigation/slice';
 import { mentorApiSlice } from '@iblai/iblai-js/data-layer';
-import { appleRestrictionReducer } from '@iblai/iblai-js/web-utils';
+import {
+  appleRestrictionReducer,
+  subscriptionReducer,
+  type AppleRestrictionState,
+  type SubscriptionState,
+} from '@iblai/iblai-js/web-utils';
 import { MODALS } from '@/lib/constants';
 
 // ============================================================================
@@ -37,15 +42,6 @@ vi.mock('@/hooks/use-user', () => ({
   useUserIsStudent: () => false,
 }));
 
-vi.mock('@/hooks/user-user-actions', () => ({
-  useShowFreeTrialDialog: () => ({
-    executeWithTrialCheck: (fn: () => void) => fn(),
-    FreeTrialDialog: null,
-    closeModal: vi.fn(),
-    isModalOpen: false,
-  }),
-}));
-
 vi.mock('@/components/ui/sidebar', () => ({
   useSidebar: () => ({
     toggleSidebar: vi.fn(),
@@ -64,6 +60,12 @@ vi.mock('@iblai/iblai-js/web-utils', async (importOriginal) => {
     await importOriginal<typeof import('@iblai/iblai-js/web-utils')>();
   return {
     ...actual,
+    useShowFreeTrialDialog: () => ({
+      executeWithTrialCheck: (fn: () => void) => fn(),
+      FreeTrialDialog: null,
+      closeModal: vi.fn(),
+      isModalOpen: false,
+    }),
     useTenantContext: () => ({
       setDetermineUserPath: vi.fn(),
       determineUserPath: false,
@@ -114,6 +116,48 @@ vi.mock('@/lib/config', async (importOriginal) => {
     },
   };
 });
+
+// The real `next/dynamic` is replaced by a lazy wrapper that still invokes the
+// loader, so ModalContainer's own `import(...).then((m) => m.EditMentorModal)`
+// runs rather than being bypassed by a static stub.
+vi.mock('next/dynamic', () => ({
+  default: (
+    loader: () => Promise<
+      React.ComponentType<any> | { default: React.ComponentType<any> }
+    >,
+  ) => {
+    const Lazy = React.lazy(() =>
+      loader().then((mod) => ({
+        default: 'default' in mod ? mod.default : mod,
+      })),
+    );
+    const Dynamic = (props: Record<string, unknown>) => (
+      <React.Suspense fallback={null}>
+        <Lazy {...props} />
+      </React.Suspense>
+    );
+    return Dynamic;
+  },
+}));
+
+vi.mock('@/components/modals/edit-mentor-modal', () => ({
+  EditMentorModal: ({
+    isOpen,
+    onClose,
+  }: {
+    isOpen: boolean;
+    onClose: () => void;
+  }) =>
+    isOpen ? (
+      <div
+        data-testid="edit-mentor-modal"
+        role="dialog"
+        aria-label="Edit Agent"
+      >
+        <button onClick={onClose}>Close Edit Agent</button>
+      </div>
+    ) : null,
+}));
 
 // Mock child modals to simple stubs — use absolute (@/) paths
 vi.mock('@/components/modals/settings-modal', () => ({
@@ -231,6 +275,22 @@ vi.mock('@iblai/iblai-js/web-containers', async (importOriginal) => {
           <button onClick={onClose}>Close Apple</button>
         </div>
       ) : null,
+    ContactAdminModal: ({
+      isOpen,
+      onClose,
+    }: {
+      isOpen: boolean;
+      onClose: () => void;
+    }) =>
+      isOpen ? (
+        <div
+          data-testid="contact-admin-modal"
+          role="dialog"
+          aria-label="Contact Admin"
+        >
+          <button onClick={onClose}>Close Contact Admin</button>
+        </div>
+      ) : null,
   };
 });
 
@@ -259,6 +319,7 @@ vi.mock('@/components/custom-alert-dialog', () => ({
 interface StoreOptions {
   modalStack?: ModalInfo[];
   openPricingModal?: boolean;
+  openContactAdminModal?: boolean;
   openAppleRestrictionModal?: boolean;
   customAlertDialogOpen?: boolean;
   shortcutsModal?: boolean;
@@ -268,29 +329,35 @@ function createTestStore(options: StoreOptions = {}) {
   const {
     modalStack = [],
     openPricingModal = false,
+    openContactAdminModal = false,
     openAppleRestrictionModal = false,
     customAlertDialogOpen = false,
     shortcutsModal = false,
   } = options;
 
+  // The SDK's real reducers, so a modal's Close can be asserted to flip the
+  // flag that opened it rather than only to have fired.
+  const subscription: SubscriptionState = {
+    openPricingModal,
+    openContactAdminModal,
+    freeTrialUsageOptions: { count: 0, limitReached: false, message: '' },
+    pricingModalData: {
+      referenceId: '',
+      customerEmail: '',
+      publishableKey: '',
+      pricingTableId: '',
+    },
+    subscriptionStatus: { creditExhausted: false },
+    error402Detected: '',
+  };
+  const appleRestriction: AppleRestrictionState = { openAppleRestrictionModal };
+
   return configureStore({
     reducer: {
       modals: modalReducer,
-      subscription: (
-        state = {
-          openPricingModal,
-          freeTrialUsageOptions: { count: 0, limitReached: false, message: '' },
-          pricingModalData: {
-            referenceId: '',
-            customerEmail: '',
-            publishableKey: '',
-            pricingTableId: '',
-          },
-          subscriptionStatus: { creditExhausted: false },
-          error402Detected: '',
-        },
-      ) => state,
-      appleRestriction: appleRestrictionReducer,
+      subscription: subscriptionReducer as Reducer<SubscriptionState>,
+      appleRestriction:
+        appleRestrictionReducer as Reducer<AppleRestrictionState>,
       [mentorApiSlice.reducerPath]: mentorApiSlice.reducer,
     },
     middleware: (getDefaultMiddleware) =>
@@ -311,7 +378,8 @@ function createTestStore(options: StoreOptions = {}) {
         darkMode: false,
         shortcutsModal,
       },
-      appleRestriction: { openAppleRestrictionModal },
+      subscription,
+      appleRestriction,
     },
   });
 }
@@ -394,6 +462,52 @@ describe('ModalContainer', () => {
       );
 
       expect(screen.getByTestId('settings-modal')).toBeInTheDocument();
+    });
+  });
+
+  describe('EditMentorModal', () => {
+    it('loads the modal on demand when edit_mentor is in the stack', async () => {
+      const modalStack: ModalInfo[] = [{ name: MODALS.EDIT_MENTOR.name }];
+      mockSearchParamsRaw = `modal=${encodeURIComponent(JSON.stringify(modalStack))}`;
+      const store = createTestStore({ modalStack });
+
+      render(
+        <Provider store={store}>
+          <ModalContainer />
+        </Provider>,
+      );
+
+      // Resolved through the dynamic loader, so it appears asynchronously.
+      expect(
+        await screen.findByTestId('edit-mentor-modal'),
+      ).toBeInTheDocument();
+    });
+
+    it('does not load the modal when edit_mentor is not in the stack', () => {
+      const store = createTestStore();
+      render(
+        <Provider store={store}>
+          <ModalContainer />
+        </Provider>,
+      );
+      expect(screen.queryByTestId('edit-mentor-modal')).not.toBeInTheDocument();
+    });
+
+    it('closing it drops the modal param from the URL', async () => {
+      const modalStack: ModalInfo[] = [{ name: MODALS.EDIT_MENTOR.name }];
+      mockSearchParamsRaw = `modal=${encodeURIComponent(JSON.stringify(modalStack))}`;
+      const store = createTestStore({ modalStack });
+
+      render(
+        <Provider store={store}>
+          <ModalContainer />
+        </Provider>,
+      );
+
+      fireEvent.click(await screen.findByText('Close Edit Agent'));
+
+      expect(pushMock).toHaveBeenCalledTimes(1);
+      expect(String(pushMock.mock.calls[0][0])).not.toContain('modal=');
     });
   });
 
@@ -528,6 +642,34 @@ describe('ModalContainer', () => {
     });
   });
 
+  describe('ContactAdminModal', () => {
+    it('renders when openContactAdminModal is true', () => {
+      const store = createTestStore({ openContactAdminModal: true });
+
+      render(
+        <Provider store={store}>
+          <ModalContainer />
+        </Provider>,
+      );
+
+      expect(screen.getByTestId('contact-admin-modal')).toBeInTheDocument();
+    });
+
+    it('does not render when openContactAdminModal is false', () => {
+      const store = createTestStore({ openContactAdminModal: false });
+
+      render(
+        <Provider store={store}>
+          <ModalContainer />
+        </Provider>,
+      );
+
+      expect(
+        screen.queryByTestId('contact-admin-modal'),
+      ).not.toBeInTheDocument();
+    });
+  });
+
   describe('ShortcutsModal', () => {
     it('renders when shortcutsModal is true', () => {
       const store = createTestStore({ shortcutsModal: true });
@@ -657,6 +799,13 @@ describe('ModalContainer', () => {
 
       expect(screen.getByTestId('apple-restriction-modal')).toBeInTheDocument();
       fireEvent.click(screen.getByText('Close Apple'));
+
+      expect(store.getState().appleRestriction.openAppleRestrictionModal).toBe(
+        false,
+      );
+      expect(
+        screen.queryByTestId('apple-restriction-modal'),
+      ).not.toBeInTheDocument();
     });
 
     it('closes pricing modal via dispatch', () => {
@@ -670,6 +819,27 @@ describe('ModalContainer', () => {
 
       expect(screen.getByTestId('pricing-modal')).toBeInTheDocument();
       fireEvent.click(screen.getByText('Close Pricing'));
+
+      expect(store.getState().subscription.openPricingModal).toBe(false);
+      expect(screen.queryByTestId('pricing-modal')).not.toBeInTheDocument();
+    });
+
+    it('closes contact admin modal via dispatch', () => {
+      const store = createTestStore({ openContactAdminModal: true });
+
+      render(
+        <Provider store={store}>
+          <ModalContainer />
+        </Provider>,
+      );
+
+      expect(screen.getByTestId('contact-admin-modal')).toBeInTheDocument();
+      fireEvent.click(screen.getByText('Close Contact Admin'));
+
+      expect(store.getState().subscription.openContactAdminModal).toBe(false);
+      expect(
+        screen.queryByTestId('contact-admin-modal'),
+      ).not.toBeInTheDocument();
     });
 
     it('closes shortcuts modal via dispatch', () => {

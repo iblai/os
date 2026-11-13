@@ -1901,12 +1901,6 @@
   "tabsSkillsTab": {
     "heading": "技能"
   },
-  "topTrialBannerTopTrialBanner": {
-    "defaultBannerText": "升级以创建您自己的智能体。无需信用卡 😎",
-    "upgradeAriaLabel": "升级",
-    "upgradeButton": "升级",
-    "closeBannerAriaLabel": "关闭横幅"
-  },
   "uiBreadcrumb": {
     "navAriaLabel": "面包屑导航",
     "ellipsisMore": "更多"

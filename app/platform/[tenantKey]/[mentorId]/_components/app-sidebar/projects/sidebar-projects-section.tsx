@@ -1,5 +1,6 @@
 'use client';
 
+import { useShowFreeTrialDialog } from '@iblai/iblai-js/web-utils';
 import { useTranslations } from 'next-intl';
 import * as React from 'react';
 import dynamic from 'next/dynamic';
@@ -33,7 +34,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { useShowFreeTrialDialog } from '@/hooks/user-user-actions';
 import { cn, isLoggedIn, redirectToLogin } from '@/lib/utils';
 
 import { SdkProject, useSidebarProjects } from './use-sidebar-projects';

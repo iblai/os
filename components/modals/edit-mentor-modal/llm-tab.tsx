@@ -1,5 +1,6 @@
 'use client';
 
+import { useShowFreeTrialDialog } from '@iblai/iblai-js/web-utils';
 import { useParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import {
@@ -10,7 +11,6 @@ import {
 
 import { useNavigate } from '@/hooks/user-navigate';
 import { useIsAdmin, useUserIsStudent, useUsername } from '@/hooks/use-user';
-import { useShowFreeTrialDialog } from '@/hooks/user-user-actions';
 import { config } from '@/lib/config';
 import { MENTOR_VISIBILITY } from '@/lib/constants';
 import { selectRbacPermissions } from '@/features/rbac/rbac-slice';

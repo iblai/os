@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.196.0](https://github.com/iblai/os/compare/v0.195.1...v0.196.0) (2026-11-13)
+
+### Features
+
+* plan picker, plan changes, SDK-owned subscription flow ([0c45a41](https://github.com/iblai/os/commit/0c45a41d7f925b7301fa25a4f6efb40de67af388))
+
+### Chores
+
+* release 0.194.1.patch-1 for test ([11c451e](https://github.com/iblai/os/commit/11c451e7d2ee60c193b32fc395be321c010859e7))
+
 ## [0.195.1](https://github.com/iblai/os/compare/v0.195.0...v0.195.1) (2026-11-13)
 
 ### Chores
