@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-11-12 | 1104 checkpoints (1054 covered, 16 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 111 journeys (110 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-11-17 | 1109 checkpoints (1059 covered, 16 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 112 journeys (111 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -2537,5 +2537,19 @@ Issue iblai-platform#2885. Safety › View Flagged Prompts used to send `usernam
 - [x] fp-06: Issue #2885: deleting a Safety row sends `DELETE .../safety-logs/<id>/` and the row disappears
 - [x] fp-07: Issue #2885 (Safety list stubbed): paging within one type shows 5 rows then the rest, and page 2 requests `page=2&page_size=5` from that list only
 - [x] fp-08: Issue #2885: deleting a real Moderation row sends `DELETE .../moderation-logs/<id>/` and the row disappears
+
+---
+
+## Journey 104: Blocked Message Shows Saved Response (5 checkpoints) — `journeys/104-blocked-message-shows-saved-response.spec.ts`
+
+**Source files:** `components/modals/edit-mentor-modal/tabs/safety-tab.tsx`, `components/modals/edit-prompt-modal.tsx`
+
+Issue iblai-platform#2883. When moderation or safety blocks a prompt the server sends one websocket frame (`error` = the agent's saved response, `kind` `innappropriate_prompt`, `target_system`, `reason`) and closes the socket; the chat must show the saved text as a normal agent reply, never a toast, never `reason`. The responses are saved through the real Safety tab on a throwaway agent (tracked with `MentorTracker`); only the chat websocket is mocked (`page.routeWebSocket`, counting connections). Needs the SDK `@iblai/web-utils` fix.
+
+- [x] sfr-01: Admin saves a Moderation Response and a Safety Response on a new agent and the Safety tab shows both
+- [x] sfr-02: A moderation block frame shows the saved Moderation Response as the agent reply, no toast, no reason text
+- [x] sfr-03: A safety block frame (list-wrapped error) shows the saved Safety Response as the agent reply, no toast, no reason text
+- [x] sfr-04: After a block the next message goes out on a new socket and is answered normally
+- [x] sfr-05: A block arriving mid-stream replaces the partial answer with the saved response
 
 ---
