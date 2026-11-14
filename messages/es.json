@@ -758,7 +758,6 @@
   "flaggedPromptsFlaggedPromptsFilters": {
     "searchPlaceholder": "Buscar usuario",
     "pickDateRange": "Seleccionar rango de fechas",
-    "allTypes": "Todos los tipos",
     "moderation": "Moderación",
     "safety": "Seguridad"
   },
@@ -1900,6 +1899,12 @@
   },
   "tabsSkillsTab": {
     "heading": "Habilidades"
+  },
+  "topTrialBannerTopTrialBanner": {
+    "defaultBannerText": "Actualiza para crear tus propios agentes. No se requiere tarjeta de crédito 😎",
+    "upgradeAriaLabel": "Actualizar",
+    "upgradeButton": "Actualizar",
+    "closeBannerAriaLabel": "Cerrar banner"
   },
   "uiBreadcrumb": {
     "navAriaLabel": "ruta de navegación",

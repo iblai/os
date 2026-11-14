@@ -16,8 +16,9 @@ import { DeleteModerationLogModal } from './delete-moderation-log-modal';
 // ============================================================================
 
 const mockDeleteModerationLog = vi.fn();
+const mockDeleteSafetyLog = vi.fn();
 const mockUseParams = vi.fn();
-const mockUsername = 'testuser';
+let mockUsername: string | null = 'testuser';
 
 vi.mock('next/navigation', () => ({
   useParams: () => mockUseParams(),
@@ -28,11 +29,16 @@ vi.mock('@/hooks/use-user', () => ({
 }));
 
 const mockDeleteModerationLogLoading = vi.fn();
+const mockDeleteSafetyLogLoading = vi.fn();
 
 vi.mock('@iblai/iblai-js/data-layer', () => ({
   useDeleteModerationLogMutation: () => [
     mockDeleteModerationLog,
     { isLoading: mockDeleteModerationLogLoading() },
+  ],
+  useDeleteSafetyLogMutation: () => [
+    mockDeleteSafetyLog,
+    { isLoading: mockDeleteSafetyLogLoading() },
   ],
 }));
 
@@ -73,6 +79,7 @@ const defaultProps = {
   isOpen: true,
   onClose: vi.fn(),
   logId: 'log-123',
+  logType: 'Moderation' as const,
   onDeleteSuccess: vi.fn(),
 };
 
@@ -84,8 +91,13 @@ describe('DeleteModerationLogModal', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockUseParams.mockReturnValue(defaultParams);
+    mockUsername = 'testuser';
     mockDeleteModerationLogLoading.mockReturnValue(false);
+    mockDeleteSafetyLogLoading.mockReturnValue(false);
     mockDeleteModerationLog.mockReturnValue({
+      unwrap: vi.fn().mockResolvedValue({}),
+    });
+    mockDeleteSafetyLog.mockReturnValue({
       unwrap: vi.fn().mockResolvedValue({}),
     });
   });
@@ -148,6 +160,49 @@ describe('DeleteModerationLogModal', () => {
     });
   });
 
+  it('never calls the safety delete for a moderation row', async () => {
+    render(<DeleteModerationLogModal {...defaultProps} />);
+    fireEvent.click(screen.getByText('Delete'));
+
+    await waitFor(() => {
+      expect(mockDeleteModerationLog).toHaveBeenCalled();
+    });
+    expect(mockDeleteSafetyLog).not.toHaveBeenCalled();
+  });
+
+  it('deletes a safety row through the safety-logs endpoint', async () => {
+    render(<DeleteModerationLogModal {...defaultProps} logType="Safety" />);
+    fireEvent.click(screen.getByText('Delete'));
+
+    await waitFor(() => {
+      expect(mockDeleteSafetyLog).toHaveBeenCalledWith({
+        id: 'log-123',
+        org: 'test-tenant',
+        userId: 'testuser',
+      });
+    });
+    expect(mockDeleteModerationLog).not.toHaveBeenCalled();
+  });
+
+  it('sends an empty userId when no one is signed in', async () => {
+    mockUsername = null;
+    render(<DeleteModerationLogModal {...defaultProps} logType="Safety" />);
+    fireEvent.click(screen.getByText('Delete'));
+
+    await waitFor(() => {
+      expect(mockDeleteSafetyLog).toHaveBeenCalledWith(
+        expect.objectContaining({ userId: '' }),
+      );
+    });
+  });
+
+  it('disables buttons while a safety row is deleting', () => {
+    mockDeleteSafetyLogLoading.mockReturnValue(true);
+    render(<DeleteModerationLogModal {...defaultProps} logType="Safety" />);
+    expect(screen.getByText('Cancel')).toBeDisabled();
+    expect(screen.getByText('Deleting...')).toBeDisabled();
+  });
+
   it('calls onClose and onDeleteSuccess and shows success toast after successful delete', async () => {
     const mockUnwrap = vi.fn().mockResolvedValue({});
     mockDeleteModerationLog.mockReturnValue({ unwrap: mockUnwrap });
@@ -197,6 +252,7 @@ describe('DeleteModerationLogModal', () => {
         isOpen={true}
         onClose={vi.fn()}
         logId="log-123"
+        logType="Moderation"
       />,
     );
     fireEvent.click(screen.getByText('Delete'));
