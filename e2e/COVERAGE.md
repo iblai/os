@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-11-13 | 1153 checkpoints (1072 covered, 46 pending/fixme, 17 not-reproducible in default env, 18 deprecated) | 110 journeys (109 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-11-12 | 1104 checkpoints (1054 covered, 16 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 111 journeys (110 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -369,7 +369,7 @@ The **download-chat** checkpoints (sh-07 … sh-10, issue #2464) cover the "Down
 
 ## Journey 20: Dataset Management (30 checkpoints) — `journeys/20-dataset-management.spec.ts`
 
-**Source files:** `components/modals/edit-mentor-modal/tabs/datasets-tab/agent-datasets-tab.tsx`, `app/platform/[tenantKey]/workflows/[mentorId]/[id]/page.tsx`, `hooks/user-navigate.ts`, `lib/constants.ts`, `lib/config.ts`, `lib/utils.ts`. The Datasets tab and its Add Resources / Train-or-Delete / Retrain Schedule modals now come from the `@iblai/iblai-js` SDK (`@iblai/web-containers`, linked locally via yalc); `agent-datasets-tab.tsx` is the OS host wrapper around the SDK's `AgentDatasetsTab`. The workflow builder's File Search node renders the same SDK `AgentDatasetsTab` in picker mode inside the SDK `WorkflowEditor`; the OS workflow page only hands it the disabled resource types and max upload size. That picker has no e2e coverage while File Search is a planned step the builder hides (Journey 34's wf-16 was deprecated in iblai/iblai-platform#2827).
+**Source files:** `components/modals/edit-mentor-modal/tabs/datasets-tab/agent-datasets-tab.tsx`, `app/platform/[tenantKey]/workflows/[mentorId]/[id]/page.tsx`, `hooks/user-navigate.ts`, `lib/constants.ts`, `lib/config.ts`, `lib/utils.ts`. The Datasets tab and its Add Resources / Train-or-Delete / Retrain Schedule modals now come from the `@iblai/iblai-js` SDK (`@iblai/web-containers`, linked locally via yalc); `agent-datasets-tab.tsx` is the OS host wrapper around the SDK's `AgentDatasetsTab`. The workflow builder's File Search node renders the same SDK `AgentDatasetsTab` in picker mode inside the SDK `WorkflowEditor`; the OS workflow page only hands it the disabled resource types and max upload size (see Journey 34).
 
 - [x] Datasets tab header and description display correctly (TC01)
 - [x] Search input is visible and filters the dataset list (TC02–TC03)
@@ -409,45 +409,38 @@ The **download-chat** checkpoints (sh-07 … sh-10, issue #2464) cover the "Down
 
 ---
 
-## Journey 21: Billing & Subscription (25 checkpoints) — `journeys/21-billing-and-subscription.spec.ts`
+## Journey 21: Billing & Subscription (18 checkpoints) — `journeys/21-billing-and-subscription.spec.ts`
 
-**Source files:** `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/user-profile.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/subscription-wrapper/index.tsx`, `components/modals/modal-container.tsx`, `providers/index.tsx`, `lib/config.ts`
+**Source files:** `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/user-profile.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/subscription-wrapper/index.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/subscription-wrapper/mentor-e-commerce-wrapper.tsx`
 
-Billing is credits-only (SDK `@iblai/iblai-js` ≥ 2.73.0). An account is on the free trial (main tenant, badge "Trial", one "Upgrade" action that opens the "Choose Your Plan" picker) or on a plan (badge names it: Free / Pro / Max / Ultra; "Add Credits" always, "Manage Usage" + inline Auto Recharge with a card on file, "Change Plan" beside the badge once the backend names the plan — it opens the same picker in change mode, "Change Your Plan", with the current plan marked and "Upgrade to" / "Downgrade to" the others plus an "Add One-Time Credits" shortcut). Driven by the shared paywall helpers in `@iblai/iblai-js/playwright` plus `e2e/utils/plan-picker.ts` (both picker modes). The admin account's state depends on the environment, so each test reads it from the UI and asserts what that state must show; nothing charges a card or changes a plan. All tests skip gracefully when `current_tenant.show_paywall=false`.
+Driven by the shared paywall helpers in `@iblai/iblai-js/playwright`. All tests skip gracefully when `current_tenant.show_paywall=false`.
 
 **A. CreditBalance dropdown (nav-bar)**
 
 - [x] CreditBalance trigger visibility matches `current_tenant.show_paywall`
 - [x] CreditBalance trigger exposes accessible aria-label with credits info _(paywall-gated)_
-- [x] Dropdown shows the plan badge (Trial, Free or the plan name) _(paywall-gated)_
-- [x] Dropdown footer matches the billing state via `expectCreditBalanceForCurrentPlan` (Upgrade on the trial; Add Credits on a plan, plus Manage Usage with a card) _(paywall-gated)_
-- [x] On a plan with a card: Manage Usage, Add Credits, the inline Auto Recharge section and its Enabled/Disabled pill _(paywall-gated; skips on the trial or without a card)_
+- [x] Dropdown shows the plan badge (Free / Trial / Premium) _(paywall-gated)_
+- [x] Dropdown footer matches the active plan via `expectCreditBalanceForCurrentPlan` (Upgrade Plan / Manage Usage + Add Credits / Manage Billing) _(paywall-gated)_
+- [x] Premium + payment method shows Manage Usage, Add Credits, and the inline Auto Recharge section _(paywall-gated; skips on Free/Trial or no payment method)_
 - [x] Dropdown shows the Remaining credits row with a numeric value _(paywall-gated)_
-- [x] Manage Usage opens the Manage Usage (auto recharge) dialog _(card-gated)_
-- [x] Add Credits opens the Add Credits dialog _(on a plan, with or without a card)_
+- [x] Manage Usage opens the Auto Recharge modal _(payment-gated)_
+- [x] Add Credits opens the Add Credits modal _(payment-gated)_
 - [x] Escape closes the dropdown
-- [x] The Billing row offers Change Plan beside the badge on a known plan, and Upgrade (no Change Plan / Add Credits / Manage Usage) on the trial
-- [x] Change Plan opens "Change Your Plan" (current plan marked with a disabled "Current Plan" button, "Upgrade to" / "Downgrade to" the others, Add One-Time Credits box, "contact our team" link); Upgrade opens "Choose Your Plan" ("Choose <name>" each, Pro "Most Popular"); Close closes it
-- [x] Add One-Time Credits in the change-plan picker closes it and opens the Add Credits dialog
-- [x] The Add Credits dialog offers $20 / $50 / $100, Other amount reveals "Amount (USD)", the submit reads "Add Credits" (card) or "Continue" (no card), and an empty amount is refused with "Please choose an amount"
 
 **B. Billing tab (User Profile dialog)**
 
-- [x] Billing tab opens via `?profileTab=billing` and the Credits card mounts _(paywall-gated)_
-- [x] Credits / Auto Recharge cards match the billing state via `expectBillingTabForCurrentPlan` _(paywall-gated)_
-- [x] Auto Recharge card is hidden on the trial and shown on a plan with a card on file _(paywall-gated)_
-- [x] Manage Usage opens the Manage Usage dialog with toggle, threshold, amount, Cancel, Save Settings _(card-gated)_
-- [x] Auto Recharge toggle inverts on click and restores on a second click _(card-gated)_
-- [x] Auto Recharge threshold and amount inputs accept values _(card-gated)_
-- [x] Add Credits button opens the Add Credits dialog _(on a plan, with or without a card)_
+- [x] Billing tab opens via `?profileTab=billing` and the Plan section mounts _(paywall-gated)_
+- [x] Plan / Credits / Auto Recharge sections match the active plan via `expectBillingTabForCurrentPlan` _(paywall-gated)_
+- [x] Auto Recharge section is hidden on Free plan and shown on non-Free + payment method _(paywall-gated)_
+- [x] Manage Usage opens Auto Recharge modal with toggle, threshold, amount, Cancel, Save Settings _(payment-gated)_
+- [x] Auto Recharge toggle inverts on click and restores on a second click _(payment-gated)_
+- [x] Auto Recharge threshold and amount inputs accept values _(payment-gated)_
+- [x] Add Credits button opens the Add Credits modal _(non-Free + payment method)_
 - [x] Plan label is consistent between the CreditBalance dropdown and the Billing tab _(paywall-gated)_
-- [x] Credits card actions and sentence match the state: Upgrade + "You're on a free trial…" on the trial; Change Plan (when the plan is known) + Add Credits + "You're on the <plan> plan. Add credits whenever you need more." on a plan
-- [x] Change Plan / Upgrade opens the plan picker in the matching mode (change / choose); Close returns to the tab
 
-**C. Non-admin**
+**C. Non-admin pricing**
 
-- [x] A gated action never opens the admin billing path: New Agent runs, opens the "Choose Your Plan" picker (a free-trial user) or the "Your organization has run out of credits" dialog with Contact Now; never the Add Credits dialog or `?profileTab=billing`
-- [x] A non-admin who is not on the free trial has no credit balance trigger in the nav bar
+- [x] Non-admin without subscription sees Stripe pricing modal when creating a mentor _(skips when paywall is off)_
 
 ---
 
@@ -672,9 +665,9 @@ The "Remember past conversations" (`enable_memory_component`) master toggle move
 
 ---
 
-## Journey 34: Workflows (67 checkpoints; 1 deprecated, 30 pending) — `journeys/34-workflows.spec.ts`
+## Journey 34: Workflows (34 checkpoints) — `journeys/34-workflows.spec.ts`
 
-**Source files:** `app/platform/[tenantKey]/workflows/[mentorId]/page.tsx`, `app/platform/[tenantKey]/workflows/[mentorId]/[id]/page.tsx`. The workflow builder itself — `WorkflowsList`, `WorkflowEditor`, `WorkflowCanvas`, `NodeConfigPanel`, `ClassifierPanel`, `WorkflowPreviewChat` and the definition helpers — lives in the SDK at `packages/web-containers/src/components/workflows/` and is imported from `@iblai/iblai-js/web-containers/next`; the two OS pages are thin route wrappers that pass the route ids, user identity, socket URL, RBAC / free-trial gate and dataset upload config, and turn its callbacks into navigation (back, the list after a delete, the edit-agent modal for an Agent step).
+**Source files:** `app/platform/[tenantKey]/workflows/[mentorId]/page.tsx`, `app/platform/[tenantKey]/workflows/[mentorId]/[id]/page.tsx`. The workflow builder itself — `WorkflowsList`, `WorkflowEditor`, `WorkflowCanvas`, `NodeConfigPanel`, `WorkflowPreviewChat` and the definition helpers — lives in the SDK at `packages/web-containers/src/components/workflows/` and is imported from `@iblai/iblai-js/web-containers/next`; the two OS pages are thin route wrappers that pass the route ids, user identity, socket URL, RBAC / free-trial gate and dataset upload config, and turn its callbacks into navigation (back, the list after a delete, the edit-agent modal for an Agent step).
 
 - [x] Workflows page displays heading, description, and Create Workflow button
 - [x] Search input is visible on the workflows list page
@@ -687,11 +680,11 @@ The "Remember past conversations" (`enable_memory_component`) master toggle move
 - [x] Workflow name can be renamed inline via the pencil button
 - [x] Workflow can be saved without errors
 - [x] Default nodes (Start and Agent) are visible with an edge connecting them
-- [x] The editor header offers Activate / Deactivate and Delete: as buttons while the header has room, otherwise in More workflow options
+- [x] More options menu shows Activate and Delete items
 - [x] Preview mode can be entered and exited; Close preview, New Chat, and Publish are visible
 - [x] Canvas and chat panel are visible in preview mode
-- [x] Publishing: a workflow with an End step after its Agent is published (200, with a `published_at`), Workflow published shows and the status is Active; without an End step the backend refuses it (400, an error about the missing End step, in either backend wording); a published workflow can be deactivated back to Draft
-- [x] ~~File Search node's dataset picker dialog (the SDK Datasets tab in picker mode, page/search kept in its own state): opening/searching/paging never touch the `datasetsPage`/`datasetsSearch` URL params; picking a row closes the dialog and shows the dataset name with a Change button; reopening highlights the previously selected row (self-seeded mentor)~~ _(deprecated in iblai/iblai-platform#2827 — File Search can't run in a workflow yet, so the step list no longer offers it)_
+- [x] Workflow can be published; active workflow can be deactivated back to Draft
+- [x] File Search node's dataset picker dialog (the SDK Datasets tab in picker mode, page/search kept in its own state): opening/searching/paging never touch the `datasetsPage`/`datasetsSearch` URL params; picking a row closes the dialog and shows the dataset name with a Change button; reopening highlights the previously selected row (self-seeded mentor)
 - [x] Hovering a step and clicking its trash button removes it from the canvas and the saved workflow
 - [x] Step panel header Delete button removes the step and closes the panel
 - [x] The Agent step's trash button removes it and its connection
@@ -700,49 +693,16 @@ The "Remember past conversations" (`enable_memory_component`) master toggle move
 - [x] Start step: Number and Boolean state variables are listed and saved with typed defaults
 - [x] Start step: Remove {name} asks to confirm in the Delete Variable dialog (Cancel keeps it, Delete removes it); an invalid or taken name keeps Save disabled
 - [x] Set State: To Variable lists Start variables (never Variable 1); New creates and selects a variable
-- [x] Set State saves data.assignments and the validate response has no message about the step's own settings (none tied to the step — by `error_details`/`warning_details` on backend #3218, by ` at nodes[<index>]` before it — however worded; messages about its connections are expected)
-- [x] Transform saves data.expressions and the validate response has no message about the step's own settings (none tied to the step — by `error_details`/`warning_details` on backend #3218, by ` at nodes[<index>]` before it; messages about its connections are expected)
-- [x] While: an invalid Max Iterations (0) shows the whole-number error; a valid Condition and Max Iterations are saved, and the validate response has no message about the step's own settings (none tied to the step — by `error_details`/`warning_details` on backend #3218, by ` at nodes[<index>]` before it; messages about its connections are expected)
+- [x] Set State saves data.assignments and passes backend validation
+- [x] Transform saves data.expressions and passes backend validation
+- [x] While: an invalid Max Iterations (0) shows the whole-number error; a valid Condition and Max Iterations are saved and pass backend validation
 - [x] While Loop and Done handles save edges with sourceHandle continue and done
-- [x] If / Else saves data.conditions[0].expression, and the validate response has no message about the step's own settings (none tied to the step — by `error_details`/`warning_details` on backend #3218, by ` at nodes[<index>]` before it; messages about its connections are expected)
+- [x] If / Else saves data.conditions[0].expression
 - [x] If / Else condition-0 and else handles save edges
 - [x] Legacy field names (including a two-way If / Else) open marked Unsaved with no auto-save; Save stores the new names and condition-0/else edges and clears Unsaved
 - [x] If / Else: rewiring the If output to a second step leaves a single connection from that output
 - [x] Start variable in use by a Set State step: Remove opens Variable In Use listing the step; Cancel keeps the variable
-- [x] Adding a Note: the validation banner never shows a line about the Note, whether the backend warns that it is not connected (#3163) or leaves Notes out (#3218), and the missing End step message (either backend wording) stays; the banner the editor shows on open is collapsed first, so the End message coming back proves the post-save validation is on screen
-- [ ] Once the backend's node types are on screen, the step list offers Classifier and leaves out every node type the backend marks planned (today File Search, Guardrails, MCP and User Approval) _(pending: in `@iblai/iblai-js` 2.71.0, which the app now uses; flip to covered once journey 34 runs green)_
-- [ ] Classifier: a new one is saved with `answer_type` `choice`, model `iblai` and categories `category_1`/`category_2`; renaming Category 1 to Billing saves its id as `billing`; connecting its Fallback to an End saves an edge with sourceHandle `fallback` _(pending: in `@iblai/iblai-js` 2.71.0, which the app now uses; flip to covered once journey 34 runs green)_
-- [ ] Agent step added from the step list is saved with no `mentor_id` and shows no Agent Settings button (it has no agent yet); clicking its card opens its panel like any other step, with an empty Instructions box, and its Output Variable is saved as `output_variable`; the banner says An Agent step has no agent selected. instead of the backend's mentor wording _(pending: in `@iblai/iblai-js` 2.71.0, which the app now uses; flip to covered once journey 34 runs green)_
-- [ ] If / Else: a new one is saved right away with one empty condition (`conditions [{caseName: '', expression: ''}]`) _(pending: in `@iblai/iblai-js` 2.71.0, which the app now uses; flip to covered once journey 34 runs green)_
-- [ ] While: Loop and Done show Not connected until each is connected _(pending: in `@iblai/iblai-js` 2.71.0, which the app now uses; flip to covered once journey 34 runs green)_
-- [ ] Classifier Try (`classifier-test` mocked): the instructions are saved (by Try or the auto-save) before the answer shows; Try sends the step and the Sample Message, and shows the answer (Billing (0.90)) _(pending: in `@iblai/iblai-js` 2.71.0, which the app now uses; flip to covered once journey 34 runs green)_
-- [ ] Preview: the Preview chat input is usable for the signed-in editor (never "You don't have permission to chat"), the whole message box stays on screen below the app's top bar even when the chat is taller than the page (checked in a 360px-tall window), and a message sent from it goes out on the socket with `preview: true` _(pending: in `@iblai/iblai-js` 2.71.0, which the app now uses; flip to covered once journey 34 runs green)_
-- [ ] Unpublished changes shows beside the status only while a published copy exists: with the workflow GET mocked to `published_at` set and `has_unpublished_changes` true it shows; after a save refetches it with `published_at` null it is gone _(pending: in `@iblai/iblai-js` 2.71.0, which the app now uses; flip to covered once journey 34 runs green)_
-- [ ] A step with a result (here a Transform) has a Copy button just before Delete, on its card and in its settings header (Copy, Delete, Close, checked by position); both copy `{{steps.<id>}}`, the form an Agent's Instructions take, and the card's button copies without opening the step (Chromium only: the other browsers don't let a test read the clipboard) _(pending: in `@iblai/iblai-js` 2.71.0, which the app now uses; flip to covered once journey 34 runs green)_
-- [ ] Cmd+S (Ctrl+S off a Mac) while typing in a step's field saves the workflow (the PATCH carries the new Key and the Workflow saved toast shows) and the keydown is default-prevented, so the browser's Save Page dialog never opens _(pending: in `@iblai/iblai-js` 2.71.0, which the app now uses; flip to covered once journey 34 runs green)_
-- [ ] At 1600px every editor header action (Delete, Deactivate, Preview, Save, Publish) is a 36px button with no More workflow options menu; at 900px Delete has moved into that menu and Publish is still a button (they move in that order: Delete, Activate / Deactivate, Preview, Save, Publish) _(pending: in `@iblai/iblai-js` 2.71.0, which the app now uses; flip to covered once journey 34 runs green)_
-- [ ] Phone (393x852, touch; the phone checkpoints skip Firefox, which has no isMobile; the two that drag through CDP and the tap check run in Chromium only): a workflow created at phone size opens with its default steps fitted into view (the whole Start and Agent steps on screen); the step list is in the page but hidden beside the canvas, and the canvas's Add Step button opens a sheet (dialog named Add Step) listing the steps; tapping Transform there closes the sheet and the new step lands fully on screen _(pending: in `@iblai/iblai-js` 2.71.0, which the app now uses; flip to covered once journey 34 runs green)_
-- [ ] Phone: a one-finger drag on bare canvas pans it (the step layer's transform changes) and a two-finger pinch outwards raises the zoom percentage in the canvas toolbar (touch sent through CDP `Input.dispatchTouchEvent`, since Playwright's touchscreen only taps, so Chromium only) _(pending: in `@iblai/iblai-js` 2.71.0, which the app now uses; flip to covered once journey 34 runs green)_
-- [ ] Phone: every canvas toolbar button (Pan, Select, Undo, Redo, Zoom Out, Zoom In) is fully on screen, and tapping the Start step opens its settings panel fully inside the 393px screen _(pending: in `@iblai/iblai-js` 2.71.0, which the app now uses; flip to covered once journey 34 runs green)_
-- [ ] Phone: pressing a While step's Done connection dot and dragging one finger onto the Agent step connects them (the auto-save carries an edge to `mentor-1` with sourceHandle `done`) and Done's Not connected note goes away (the drag goes through CDP, so Chromium only) _(pending: in `@iblai/iblai-js` 2.71.0, which the app now uses; flip to covered once journey 34 runs green)_
-- [ ] Phone Preview: the canvas is hidden and the chat takes the whole width; its message box is editable, fully on screen and as wide as the screen apart from the chat's padding _(pending: in `@iblai/iblai-js` 2.71.0, which the app now uses; flip to covered once journey 34 runs green)_
-- [ ] Phone: tapping the middle of the Start-to-Agent connection selects it (Delete Connection shows where the finger is) without deleting it, and tapping the top-right corner of the unselected Agent step on the outer part of the spot where its Delete button shows once the press selects the step (past the card, since a tap inside it goes to the Agent Settings button nearby), deletes neither the step nor the connection _(pending: in `@iblai/iblai-js` 2.71.0, which the app now uses; flip to covered once journey 34 runs green)_
-- [ ] Cmd+Z (Ctrl+Z off a Mac) right after adding a Transform removes it (the auto-save no longer has it), Cmd+Shift+Z (Ctrl+Shift+Z) brings it back, and Delete after clicking the step, with its panel open, removes it _(pending: in `@iblai/iblai-js` 2.71.0, which the app now uses; flip to covered once journey 34 runs green)_
-- [ ] Clicking the default Agent step opens its step settings panel (Instructions), like any other step; its gear, named Agent Settings, opens that agent's Edit Agent dialog and no step panel _(pending: in `@iblai/iblai-js` 2.71.0, which the app now uses; flip to covered once journey 34 runs green)_
-- [ ] The validation banner a new workflow shows on open has a header named Warnings and Errors followed by its counts (e.g. 1 error, 1 warning), matching the listed lines; the header carries no alert icon, and every listed line has its own error or warning icon; the backend's runtime check of each Agent step shows as The agent in each Agent step is checked when the workflow runs. _(pending: in `@iblai/iblai-js` 2.71.0, which the app now uses; flip to covered once journey 34 runs green)_
-- [ ] Insert Variable or Step: the icon button on a Transform's Value opens a searchable picker; choosing the Start variable `counter` inserts `variables['counter']` at the caret (in front of the typed ` + 1`), returns focus to the field with the caret right after it, and the auto-save carries the expression; on the Agent step's Instructions the same picker inserts `{{variables.counter}}` at the caret and the auto-save carries it _(pending: in `@iblai/iblai-js` 2.71.0, which the app now uses; flip to covered once journey 34 runs green)_
-- [ ] Copy and paste steps: with a Transform selected, Cmd+C then Cmd+V (Ctrl off a Mac) adds a copy with a new id that the next auto-save carries, and Cmd+Z (Ctrl+Z) removes the copy again _(pending: in `@iblai/iblai-js` 2.71.0, which the app now uses; flip to covered once journey 34 runs green)_
-- [ ] Wheel over bare canvas: a plain wheel pans it (the step layer's transform changes, the zoom percentage does not), and the wheel with Cmd (Ctrl off a Mac) held, as a trackpad pinch arrives, raises the zoom percentage _(pending: in `@iblai/iblai-js` 2.71.0, which the app now uses; flip to covered once journey 34 runs green)_
-- [ ] Canvas toolbar tooltips show the keyboard shortcut in brackets: hovering Undo (once there is a change) shows Undo (⌘Z) on a Mac and Undo (Ctrl+Z) elsewhere (the test decides Mac with the editor's own check of the browser's reported platform, so WebKit, whose Desktop Safari user agent claims a Mac, expects ⌘Z); its accessible name stays Undo and it carries `aria-keyshortcuts` _(pending: in `@iblai/iblai-js` 2.71.0, which the app now uses; flip to covered once journey 34 runs green)_
-- [ ] Validation lines link to their step: after an unconnected Transform is added and saved, the banner line marked with that step's id (`data-step-id`, so a backend rewording of the message changes nothing) shows the tooltip Show Transform on hover, and clicking it opens that step's settings panel (Delete Transform) with the step on screen _(pending: fails until the app moves to the `@iblai/iblai-js` release with iblai/iblai-web-frontend#2241, which marks each banner line with `data-step-id` and links it by the `error_details`/`warning_details` `node_id`; 2.71.0 to 2.73.0 link a line only by an ` at nodes[i]` ending or a quoted step id, both gone since backend #3218; flip to covered once it passes)_
-- [ ] Undo in a text field is the field's own: in the Agent Instructions (resizable up and down) Cmd+Z or Ctrl+Z takes back a run of typing in one step and Cmd/Ctrl+Shift+Z brings it back, an insert from Insert Variable or Step is taken back in one step, and the keys never reach the canvas: a Transform added before stays, even after Cmd+Z in the still-empty field _(pending: in `@iblai/iblai-js` 2.71.0, which the app now uses; flip to covered once journey 34 runs green)_
-- [ ] Add buttons sit with their rows: in the settings of a Transform, a Set State and an If / Else the Add button comes right under the rows it adds to, above the expression hint and the Step IDs list _(pending: in `@iblai/iblai-js` 2.71.0, which the app now uses; flip to covered once journey 34 runs green)_
-- [ ] A refused publish lists what to fix: publishing a new workflow (no End step) gets a 400, the toast Workflow has validation issues (never Failed to publish workflow) and the banner, collapsed beforehand, opens again with the line about the missing End step _(pending: in `@iblai/iblai-js` 2.71.0, which the app now uses; flip to covered once journey 34 runs green)_
-- [ ] Choosing an agent: an Agent step's Select opens the Select Agent dialog, where searching for the last word of the workflow's name returns the workflow's own agent (named after the workflow) from the backend, yet the dialog lists no agents; picking the first agent closes the dialog, the auto-save carries its `mentor_id` and the card gets its Agent Settings gear _(pending: in `@iblai/iblai-js` 2.71.0, which the app now uses; flip to covered once journey 34 runs green)_
-- [ ] Classifier answer types and chat history: choosing Answer Type Yes or No saves `answer_type` `noul` and shows true, false and fallback outputs (no category ones); under Advanced, turning on Include Chat History saves `include_history.enabled` true, and the switch shows on in the admin Users blue (Tailwind blue-500) _(pending: in `@iblai/iblai-js` 2.71.0, which the app now uses; flip to covered once journey 34 runs green)_
-- [x] Running a workflow in Preview: built in the editor as Start → If / Else (condition `'refund' in input`) → a Transform on each branch setting `output` to `'Refund path'` or `'General path'` → End, with the Agent step deleted, the saved workflow has no validation errors; in Preview, "I want a refund" gets exactly Refund path and then "hello" gets exactly General path (no model involved: End replies with the Transform's output)
-- [x] Running an Agent step in Preview: in a workflow of a freshly created agent (its virtual machine turned off, so it answers without starting one), the default Agent step keeps that agent's `mentor_id` and, connected to an End, saves with no validation errors; a message sent in Preview gets the agent's own reply, neither empty nor the workflow's "went wrong" apology
-- [x] A published workflow answers its own agent's chat: the If / Else workflow above publishes (200, returning the `entry_mentor_id` of the agent created with the workflow), and in a second tab that agent's normal chat answers "I want a refund" with exactly Refund path
+- [x] Adding a Note: the backend warns it is not connected, but the validation banner never shows that warning (other warnings stay)
 
 ---
 
@@ -908,28 +868,20 @@ The Sandbox tab used to wrap the SDK's `SandboxConfig` component in an app-level
 
 ---
 
-## Journey 45: Mentor Privacy Tab (16 checkpoints) — `journeys/45-mentor-privacy-tab.spec.ts`
+## Journey 45: Mentor Privacy Tab (8 checkpoints) — `journeys/45-mentor-privacy-tab.spec.ts`
 
 **Source files:** `components/modals/edit-mentor-modal/tabs/privacy-tab.tsx`, `components/modals/edit-mentor-modal/tabs/index.ts`, `components/modals/edit-mentor-modal/index.tsx`, `hooks/use-mentor-segments.ts`, `lib/constants.ts`
 
-The Privacy tab is a thin wrapper around the SDK's `AgentPrivacyTab` (`@iblai/iblai-js/web-containers/next`), which forwards `rbacPermissions` so the Privacy Log button is RBAC-gated. Filtering is two accordion cards (`privacy-{pii,phi}-card`), each with its own switch (`privacy-filter-{pii,phi}-toggle`), one open at a time; there is no master toggle or PII sub-tab any more. Saves are not optimistic (PUT `/mentors/<id>/settings/` + refetch). Tests that change settings create their own agent (deterministic all-off start) and delete it in `finally`; the Privacy Log test only reads and mocks `**/privacy-flags/**`.
+The Privacy tab is a thin wrapper around the SDK's `AgentPrivacyTab` (`@iblai/iblai-js/web-containers/next`). The wrapper forwards `tenantKey` / `mentorId` / `username` from URL params + the navigate hook so the SDK's `useGetMentorSettingsQuery` and `useEditMentorJsonMutation` resolve correctly. The `enable_privacy_router` master toggle moved off Settings → Capabilities into an in-tab `CapabilityGate` (`data-testid="privacy-capability-toggle"`, feat/2040), and the Privacy tab is now always mounted — `hooks/use-mentor-segments.ts` no longer gates the segment. Unlike the app-owned capability tabs, `AgentPrivacyTab` is NOT optimistic — the toggle only flips after the `editMentorJson` + refetch round trip lands. The "When PII is detected" dropdown now lists **Allow** first (`PRIVACY_ACTIONS = ['allow','redact','mask','block']`), then Redact, Mask, Block.
 
-- [x] PR-01: Privacy tab label is visible in the Edit Agent modal sidebar
+- [x] PR-01: Privacy tab label is visible in the Edit Mentor modal sidebar (always mounted)
 - [x] PR-02: Privacy tab heading and description render correctly
-- [x] PR-03: Removed `privacy-capability-toggle` / `privacy-sub-tab-pii` no longer exist; no unneeded sub-tab strip
-- [x] PR-04: New agent shows both cards off (aria-checked, title, accessible names, "Off." summary); an open off card shows only its off hint
-- [x] PR-05: Turning PII on saves, opens its card, leaves PHI off; summary starts "On."
-- [x] PR-06: PII action dropdown lists Allow, Redact, Mask, Block in order
-- [x] PR-07: Block Message shown/editable only while action is Block
-- [x] PR-08: PII entity chips flip; "none selected = all" hint and "N kind selected" summary track them
-- [x] PR-09: PII settings persist across modal close/reopen; last kind off returns to "Off."
-- [x] PR-10: PHI shows 12 entity chips, "all 12 kinds" by default, "2 kinds selected" + Block after configuring
-- [x] PR-11: One card open at a time (PII on opens PII/closes PHI; chevron swaps back)
-- [x] PR-12: "Also Filter AI Responses" switch named exactly that, toggles on/off
-- [x] PR-13: Turning one kind off leaves the other on; the last off switches filtering off
-- [x] PR-14: Admin sees the Privacy Log row/button; opens the audit-log modal with (mocked) rows
-- [x] PR-15: Privacy Log rail filter narrows the list
-- [x] PR-16: Privacy Log row action opens the flag detail
+- [x] PR-03: Privacy tab stays mounted regardless of `enable_privacy_router`; `capability-gate-content`'s `data-enabled` tracks the in-tab "PII filtering" toggle
+- [x] PR-04: The CapabilityGate off-state hint is shown only while the router is off
+- [x] PR-05: Enabling the router keeps the action, entity chips and output-filter fields present and interactive
+- [x] PR-05b: The "When PII is detected" action dropdown lists Allow, Redact, Mask, Block in that order
+- [x] PR-06: Block Message textarea is editable only while the action is Block (tolerates conditional-render or render-and-disable SDK shapes)
+- [x] PR-07: Clicking an entity chip flips its aria-checked state and persists when toggled twice
 
 ---
 
@@ -1043,7 +995,7 @@ Also covers the prompt sanitization added in [iblai-platform#2164](https://githu
 
 ---
 
-## Journey 46: Chat Upload — Camera Option & Image Display (10 checkpoints) — `journeys/46-chat-upload-camera-and-image-display.spec.ts`
+## Journey 46: Chat Upload — Camera Option & Image Display (7 checkpoints) — `journeys/46-chat-upload-camera-and-image-display.spec.ts`
 
 **Source files:** `components/chat-input-form/upload-menu.tsx`, `components/chat-input-form/camera-capture-dialog.tsx`, `components/chat-input-form.tsx`, `components/chat/chat-messages/image-message.tsx`, `components/chat/chat-messages/user-message-bubble.tsx`, `features/image-previews/image-previews-slice.ts`, `hooks/use-show-attachment.ts`, `hooks/use-is-mobile-os.ts`
 
@@ -1058,11 +1010,6 @@ Covers the two user-facing features added in [iblai-platform#1902](https://githu
 - [x] CAM-05: Drag-dropping a PNG onto the chat area places the file in the pending attachments list by filename
 - [x] CAM-06: Sending a message with an image attachment renders the image as `<img class="cursor-pointer ...">` in the sent message bubble (not a FileCard icon); local object-URL preview from `image-previews-slice` is used
 - [x] CAM-07: Clicking the `<img>` in the sent bubble triggers `onPreviewImage` without crashing the page
-- [x] CAM-08: ([#2886](https://github.com/iblai/iblai-platform/issues/2886)) Attachments off: no Upload File item, no drop overlay on dragenter/dragover, drop attaches no chip and sends no `upload-url` request
-- [x] CAM-09: (#2886) Attachments off: pasting a file or over-limit text attaches no chip and sends no `upload-url` request
-- [x] CAM-10: (#2886) Control: attachments on: drop overlay shows, drop yields a chip and exactly one `upload-url` POST
-
-CAM-08/09 fail on pre-fix code: the drop/paste handlers were gated only on `features.fileUpload`, so the overlay, chip and upload request still appeared with the setting off. Embed (`embed_show_attachment`) is not covered here (needs an embed iframe on an embed-enabled agent).
 
 ---
 
@@ -1215,17 +1162,16 @@ Covers the `handlePaste` → `extractFilesFromClipboard` → `processFiles` path
 
 ---
 
-## Journey 55: Free Credits Checkout Onboarding (5 checkpoints) — `journeys/55-free-credits-checkout-onboarding.spec.ts`
+## Journey 55: Free Credits Checkout Onboarding (4 checkpoints) — `journeys/55-free-credits-checkout-onboarding.spec.ts`
 
 **Source files:** `app/sso-login-complete/page.tsx`, `app/platform/[tenantKey]/[mentorId]/page.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`
 
-End-to-end onboarding of a brand-new user via the `ECOMMERCE_CHECKOUT_URL` "free credits" Stripe checkout. The endpoint 302-redirects to a Stripe-hosted page exposing a single email field (`input#email`) and a Subscribe button (`[data-testid="hosted-payment-submit-button"]` — a $0 subscription, no card required). Submitting `test+<timestamp>@ibleducation.com` provisions a new account and runs the auth SSO redirect chain (`auth.iblai.org/login` → `/login/complete` → `sso-login-complete` → platform), landing authenticated on the mentor SPA. The base URL is dictated by the checkout session's redirect target (production `mentorai.iblai.org`), independent of `MENTOR_NEXTJS_HOST`, so the test follows the redirect rather than re-invoking `navigateToMentorApp`'s fresh `goto`, and asserts the URL _shape_ (each run is assigned a fresh tenant/mentor). The new workspace is on the Free plan with no card on file: the credit dropdown shows a "Free" badge, one "Add Credits" button and a "Change Plan" link. Change Plan opens the "Change Your Plan" picker (Free marked "Current Plan", Pro / Max / Ultra as "Upgrade to …", Add One-Time Credits box); "Upgrade to Pro" has no card to charge, so it leaves the same tab for a Stripe-hosted checkout (`store.ibl.ai`) requiring credit-card input — the test stops there without entering a card. Runs in a clean, unauthenticated context. Skips when `ECOMMERCE_CHECKOUT_URL` is unset. Uses the `@iblai/iblai-js/playwright` credit helpers and `e2e/utils/plan-picker.ts`.
+End-to-end onboarding of a brand-new user via the `ECOMMERCE_CHECKOUT_URL` "free credits" Stripe checkout. The endpoint 302-redirects to a Stripe-hosted page exposing a single email field (`input#email`) and a Subscribe button (`[data-testid="hosted-payment-submit-button"]` — a $0 subscription, no card required). Submitting `test+<timestamp>@ibleducation.com` provisions a new account and runs the auth SSO redirect chain (`auth.iblai.org/login` → `/login/complete` → `sso-login-complete` → platform), landing authenticated on the mentor SPA. The base URL is dictated by the checkout session's redirect target (production `mentorai.iblai.org`), independent of `MENTOR_NEXTJS_HOST`, so the test follows the redirect rather than re-invoking `navigateToMentorApp`'s fresh `goto`, and asserts the URL _shape_ (each run is assigned a fresh tenant/mentor). The final step clicks "Upgrade Plan" in the credit dropdown, which creates a Stripe checkout session and redirects the same tab to a Stripe-hosted payment page (`store.ibl.ai`) requiring credit-card input — the test stops there without entering a card. Runs in a clean, unauthenticated context. Skips when `ECOMMERCE_CHECKOUT_URL` is unset. Credit-balance assertions reuse the `@iblai/iblai-js/playwright` helpers (`creditBalanceTrigger`, `openCreditBalanceDropdown`, `creditBalancePlanBadge`, `getCreditBalanceRemaining`).
 
 - [x] fcc-01: `ECOMMERCE_CHECKOUT_URL` redirects to the Stripe-hosted checkout page exposing the email field and Subscribe submit button
 - [x] fcc-02: Submitting the email completes checkout and lands authenticated on the mentor SPA at `<base-url>/platform/<platform-key>/<mentor-id>`
-- [x] fcc-03: The credit-balance dropdown shows a positive remaining credit balance, a "Free" plan pill and Add Credits alone (no Upgrade, Manage Usage or Auto Recharge: no card on file yet)
-- [x] fcc-04: The dropdown's Billing row offers Change Plan; it opens "Change Your Plan" with Free marked Current Plan, Pro / Max / Ultra as upgrades and the Add One-Time Credits box
-- [x] fcc-05: "Upgrade to Pro" with no card on file leaves for a Stripe-hosted checkout page (`store.ibl.ai`) requiring credit-card input (secure Stripe Elements card iframe + pay button)
+- [x] fcc-03: The credit-balance dropdown shows a positive remaining credit balance and a "Free" plan pill
+- [x] fcc-04: Clicking "Upgrade Plan" in the credit dropdown redirects to a Stripe-hosted checkout page (`store.ibl.ai`) requiring credit-card input (secure Stripe Elements card iframe + pay button)
 
 ---
 
@@ -1269,29 +1215,24 @@ Regression guard for issue #2067 (LAIA-684): selecting a chat from the sidebar h
 
 ---
 
-## Journey 59: Ecommerce Credits & Upgrade (17 checkpoints) — `journeys/59-ecommerce-credits-and-upgrade.spec.ts`
+## Journey 59: Ecommerce Credits & Upgrade (12 checkpoints) — `journeys/59-ecommerce-credits-and-upgrade.spec.ts`
 
-**Source files:** `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`, `components/modals/modal-container.tsx`, `providers/index.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/user-profile.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/subscription-wrapper/index.tsx`
+**Source files:** `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`, `components/modals/modal-container.tsx`, `hooks/subscription/use-402-error-check.ts`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/user-profile.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`
 
-Full-lifecycle regression guard for the credits-only ecommerce flow, run as a single serial test with `test.step()` per flow (state — platform id, mentor id, app origin, credit balances — carries across the whole run). A brand-new account signs up via the auth service's `/account/create` form and lands on the "main" tenant as a free-trial user: the credit dropdown (`@iblai/iblai-js/playwright` helpers) shows a "Trial" badge and "Upgrade" as its one action, the profile dropdown shows exactly Profile/Help/Log Out, the collapsed sidebar's top-level items are visible, and every gated sidebar entry point opens the shared `UpgradePackageModal` plan picker ("Choose Your Plan": Free / Pro / Max / Ultra cards with "Choose <name>", Pro marked "Most Popular"; `e2e/utils/plan-picker.ts` verifies it in full on the first entry; `components/modals/modal-container.tsx` renders it from the SDK's `subscription` slice). The DM service's admin credit-cleanup endpoint (`${DM_URL}/api/service/credits/cleanup/`, authenticated with the `dm_token` written to localStorage) deterministically drains the balance to 0 rather than waiting on organic credit burn — this is what makes the "zero credits" checkpoints reproducible. Before each cleanup, the test holds three long agent conversations and asserts every turn deducts credits: the credit dropdown renders `parseInt(available_credits)`, which hides sub-credit charges, so the check reads the exact `available_credits` from the `GET <DM>/api/billing/account/` refetch fired on each dropdown open (polling, since charges land after the reply streams) and confirms the dropdown shows the same balance. On the "main" tenant, zero credits blocks chat submission with the trial 402 toast ("You've run out of your free trial credits. Pick a plan to continue.") and the same picker; "Choose Free" redirects to a zero-cost Stripe-hosted checkout (`hosted-payment-submit-button`) whose SSO redirect chain lands back on the app under a REAL (non-"main") platform id on the Free plan (badge "Free", Add Credits alone, Change Plan offered). From there, the profile dropdown's "Account" item opens the "User Profile" dialog, whose Billing tab (`?profileTab=billing`) shows the Free plan sentence, Change Plan + Add Credits and no Auto Recharge card (`billing-credits-section` / `billing-auto-recharge-section` test ids). A second credit-cleanup + reload triggers the admin 402 path (toast "You've run out of credits. Add credits to continue.") which auto-opens the Billing tab directly showing 0 credits. With no card on file, Add Credits → "Continue" redirects to the Stripe customer portal (payment-method flow; saving the card there is not automated, so the journey returns to the workspace). The card arrives through a plan change instead: Change Plan opens "Change Your Plan" (Free marked "Current Plan"), "Upgrade to Pro" leaves for a real Stripe test-mode checkout, the test fills the `4242 4242 4242 4242` test card with a Uruguay billing country (removes the postal-code field) and submits, and the SSO chain lands back on the same platform on the Pro plan with the card on file (Manage Usage + Add Credits + Auto Recharge) and Pro credits. From Pro, "Upgrade to Max" is applied in place (toast "You're now on the Max plan.", badge Max) and the Max allowance lands once the upgrade invoice is paid against the saved card (iblai-dm-pro#3206 grants it on `invoice.paid` / the subscription webhook); Add Credits with a card on file charges $1 at once ("Credits added successfully") and raises the balance; "Downgrade to Pro" is scheduled for the end of the period ("Your current plan ends…") while the badge stays Max; and chat keeps working. All Stripe-page assertions are written locale-proof (the hosted checkout renders in the browser locale — validated in French) using stable `data-testid`s, element ids, and currency/credit regexes rather than button text. Runs in a clean, unauthenticated context (`browser.newContext()`, no storageState). Skips when `DM_URL` or `ECOMMERCE_CREDIT_CLEANUP_TOKEN` are unset, or `ECOMMERCE_E2E` is not `1`.
+Full-lifecycle regression guard for the ecommerce credits/upgrade flow, run as a single serial test with `test.step()` per flow (state — platform id, mentor id, credit balance — carries across the whole run). A brand-new account signs up via the auth service's `/account/create` form and lands on the "main" tenant with a Free-plan trial balance. The credit balance dropdown (`@iblai/iblai-js/playwright` helpers), the profile dropdown (exactly Profile/Help/Log Out), the collapsed sidebar's visible top-level items, and every gated sidebar entry point (`components/modals/modal-container.tsx` renders the shared `UpgradePackageModal` from `@iblai/web-containers`, titled "Subscribe to unlock full features" with an "Upgrade for free" CTA) are all verified. The DM service's admin credit-cleanup endpoint (`${DM_URL}/api/service/credits/cleanup/`, authenticated with the `dm_token` written to localStorage) deterministically drains the balance to 0 rather than waiting on organic credit burn — this is what makes the "zero credits" checkpoints reproducible. Before each cleanup, the test holds three long agent conversations and asserts every turn deducts credits: the credit dropdown renders `parseInt(available_credits)`, which hides sub-credit charges, so the check reads the exact `available_credits` from the `GET <DM>/api/billing/account/` refetch fired on each dropdown open (polling, since charges land after the reply streams) and confirms the dropdown shows the same balance. On the "main" tenant, zero credits blocks chat submission and shows the same subscribe dialog; clicking "Upgrade for free" redirects to a zero-cost Stripe-hosted checkout (`hosted-payment-submit-button`) whose SSO redirect chain lands back on the app under a REAL (non-"main") platform id with a fresh Free-plan balance. From there, the profile dropdown's "Account" item opens the "User Profile" dialog (`@iblai/web-containers`' `UserProfileDropdown`/account modal), whose Billing tab (`?profileTab=billing`, `hooks/subscription/use-402-error-check.ts` also drives this URL injection on 402 for admins) shows the Plan/Credits sections via the SDK's `billing-plan-section`/`billing-credits-section` test ids. A second credit-cleanup + reload triggers the admin-only 402 path, which auto-opens the Billing tab directly (no subscribe dialog on non-"main" tenants) showing 0 credits. The Billing tab's real "Upgrade" button (`clickBillingUpgrade`) redirects to a real Stripe test-mode checkout; the test fills the `4242 4242 4242 4242` test card with a Uruguay billing country (removes the postal-code field) and submits, landing back on the same platform/mentor URL with the account modal auto-opening on a restored Premium-plan balance, after which chat continues to work. All Stripe-page assertions are written locale-proof (the hosted checkout renders in the browser locale — validated in French) using stable `data-testid`s, element ids, and currency/credit regexes rather than button text. Runs in a clean, unauthenticated context (`browser.newContext()`, no storageState). Skips when `DM_URL` or `ECOMMERCE_CREDIT_CLEANUP_TOKEN` are unset.
 
 - [x] ecu-01: New user signs up via `/account/create` and lands authenticated on `<base-url>/platform/main/<mentor-id>` with the mentor dropdown ready
-- [x] ecu-02: Credit balance dropdown on the main tenant shows a "Trial" badge, a positive remaining balance and Upgrade as the one action (no Add Credits, Manage Usage or Change Plan)
+- [x] ecu-02: Credit balance dropdown shows a Free plan badge, a positive remaining balance, and an Upgrade Plan button on the main tenant
 - [x] ecu-03: Profile dropdown shows exactly Profile / Help / Log Out on a brand-new free-trial account
-- [x] ecu-04: Every gated sidebar entry (Agents > New Agent/My Agents, Workflows > My Workflows, Projects > New Project, Analytics > Overview, Invites, Management, Secrets, API, Monetization, Memory, Advanced) opens the "Choose Your Plan" picker; the first is verified in full (Free / Pro / Max / Ultra cards with "Choose <name>", Pro "Most Popular", no current-plan card)
-- [x] ecu-05: Zero credits (via the DM service credit-cleanup admin endpoint) blocks chat submission on the main tenant: the trial 402 toast and the same plan picker appear instead of an AI response
-- [x] ecu-06: "Choose Free" redirects to a zero-cost Stripe-hosted checkout; submitting it completes the SSO redirect chain onto a real (non-"main") platform id with a "Free" badge, a fresh balance, Add Credits alone (no card) plus Change Plan, and working chat
-- [x] ecu-07: The profile dropdown's Account item opens the User Profile dialog; its Billing tab (`?profileTab=billing`) shows the Free plan sentence, Change Plan + Add Credits, no Auto Recharge card, and a positive credit balance
-- [x] ecu-08: Zero credits on the upgraded (non-"main") tenant shows the admin 402 toast and auto-opens the User Profile dialog on the Billing tab showing 0 credits, instead of the plan picker used on the main tenant
-- [x] ecu-09: Add Credits with no card on file: the dialog's "Continue" (not "Add Credits") redirects to the Stripe customer portal payment-method flow; the journey returns to the workspace still without a card
-- [x] ecu-10: Change Plan opens "Change Your Plan" with Free marked Current Plan and Pro as an upgrade; with no card on file "Upgrade to Pro" leaves for a real Stripe test-mode checkout, and the 4242 test card, expiry, CVC, name and Uruguay billing country complete payment
-- [x] ecu-11: Post-payment the SSO chain lands back on the same platform: the badge names the Pro plan, Manage Usage + Add Credits + Change Plan and the Auto Recharge section show (card on file), and the Pro credits are positive
-- [x] ecu-12: "Upgrade to Max" is applied in place (no checkout): toast "You're now on the Max plan.", badge Max, and the balance rises once the upgrade invoice is paid against the saved card (iblai-dm-pro#3206)
-- [x] ecu-13: Add Credits with a card on file: "Other amount" $1 and "Add Credits" charge at once, "Credits added successfully" shows, and the balance rises
-- [x] ecu-14: "Downgrade to Pro" is scheduled for the end of the period ("Your current plan ends…") and the badge stays Max
-- [x] ecu-15: Chat works with the paid balance
-- [x] ecu-16: Before the first credit exhaustion (main tenant), three long agent conversations each deduct credits: after every reply the exact `available_credits` from the credit dropdown's `/api/billing/account/` refetch drops below its pre-turn value, and the dropdown renders that balance
-- [x] ecu-17: Before the second credit exhaustion (upgraded non-"main" tenant), three long agent conversations each deduct credits, asserted the same way per turn
+- [x] ecu-04: Every gated sidebar entry (Agents > New Agent/My Agents, Workflows > My Workflows, Projects > My Projects, Analytics > Overview, Invites, Management, Secrets, API, Monetization, Memory, Advanced) opens the shared "Subscribe to unlock full features" dialog with an "Upgrade for free" CTA
+- [x] ecu-05: Zero credits (via the DM service credit-cleanup admin endpoint) blocks chat submission on the main tenant and surfaces the same subscribe dialog instead of an AI response
+- [x] ecu-06: Clicking "Upgrade for free" redirects to a zero-cost Stripe-hosted checkout; submitting it completes the SSO redirect chain onto a real (non-"main") platform id with a fresh Free-plan credit balance and working chat
+- [x] ecu-07: The profile dropdown's Account item opens the User Profile dialog; its Billing tab (`?profileTab=billing`) shows the Free plan, Current badge, Upgrade button, and a positive credit balance
+- [x] ecu-08: Zero credits on the upgraded (non-"main") tenant auto-opens the User Profile dialog on the Billing tab (admin 402 handling injects `?profileTab=billing`) showing 0 credits, instead of the subscribe dialog used on the main tenant
+- [x] ecu-09: The Billing tab's Upgrade button redirects to a real Stripe test-mode checkout; filling the 4242 test card, expiry, CVC, name, and Uruguay billing country completes payment
+- [x] ecu-10: Post-payment, the account modal auto-opens on the Billing tab showing the Premium plan and a Manage Billing button with a restored credit balance; chat continues to work with the new balance
+- [x] ecu-11: Before the first credit exhaustion (main tenant), three long agent conversations each deduct credits: after every reply the exact `available_credits` from the credit dropdown's `/api/billing/account/` refetch drops below its pre-turn value, and the dropdown renders that balance
+- [x] ecu-12: Before the second credit exhaustion (upgraded non-"main" tenant), three long agent conversations each deduct credits, asserted the same way per turn
 
 ---
 
@@ -1982,7 +1923,7 @@ sequence from the reporter's real trace.
 
 ## Journey 74: Dataset Cloud Pickers (3 checkpoints) — `journeys/74-dataset-cloud-pickers.spec.ts`
 
-**Source files:** `app/platform/[tenantKey]/workflows/[mentorId]/[id]/page.tsx`, `components/modals/edit-mentor-modal/tabs/datasets-tab/agent-datasets-tab.tsx` — the cloud-picker hooks and Add Resources modal now live in the `@iblai/iblai-js` SDK (`@iblai/web-containers`, linked locally via yalc), not in OS source; the workflow builder's File Search picker (SDK `WorkflowEditor`) reaches the same modal with the upload config the workflow page passes, though no journey reaches it while File Search is a planned step the builder hides.
+**Source files:** `app/platform/[tenantKey]/workflows/[mentorId]/[id]/page.tsx`, `components/modals/edit-mentor-modal/tabs/datasets-tab/agent-datasets-tab.tsx` — the cloud-picker hooks and Add Resources modal now live in the `@iblai/iblai-js` SDK (`@iblai/web-containers`, linked locally via yalc), not in OS source; the workflow builder's File Search picker (SDK `WorkflowEditor`) reaches the same modal with the upload config the workflow page passes.
 
 Verifies the Google Drive, Microsoft OneDrive, and Dropbox buttons in the Add Resources modal. Each test creates a fresh mentor (matching journey 36 / 75 pattern), opens the Datasets tab → Add Resources modal, and asserts the behaviour the **tenant's own configuration** selects.
 
@@ -2579,5 +2520,22 @@ Issue iblai-platform#2855. After an answer the chat lists its sources under "Ret
 - [x] rdp-01: A dataset file on an `*.s3.amazonaws.com` URL opens in the preview dialog's frame, the frame shows the file's text, and no `frame-src` `securitypolicyviolation` fires
 - [x] rdp-02: A web-page source's row shows an Open Page link (`href` = the page plus a text fragment, `target=_blank`, `rel` with noopener and noreferrer) and no preview toggle
 - [x] rdp-03: A YouTube source's preview shows an iframe on `youtube-nocookie.com/embed/<id>` with `referrerpolicy=strict-origin-when-cross-origin` and no Open Page link
+
+---
+
+## Journey 103: Flagged Prompts for All Users (8 checkpoints) — `journeys/103-flagged-prompts-all-users.spec.ts`
+
+**Source files:** `components/modals/edit-mentor-modal/tabs/safety-tab.tsx`, `components/modals/edit-mentor-modal/tabs/safety-tab/flagged-prompts/*`
+
+Issue iblai-platform#2885. Safety › View Flagged Prompts used to send `username=<admin>` as an exact filter, used `users/undefined/` in its path and never read `safety-logs`, so an admin only saw their own Moderation blocks. The Type select now has exactly Moderation (default) and Safety, one list at a time with plain server paging. The Moderation checkpoints use REAL blocks on iblai.org: the admin creates an agent (pinned to the cheap ibl.ai model) with a codeword Moderation prompt, then a second user and a guest chat with prompts that trip them, and the admin finds them in the dialog. iblai.org never writes Safety logs, so the Safety rows (fp-04, fp-06, fp-07) are `page.route` stubs of `GET safety-logs/`. Serial: one agent is shared by every test.
+
+- [x] fp-01: Issue #2885: admin creates an agent, sets Who Can View to all members and guest chat on, then writes a codeword Moderation prompt and turns Moderation and Safety on
+- [x] fp-02: Issue #2885: a second user and a guest (no sign-in) each send a codeword prompt on the admin's agent and get the blocked reply (real Moderation blocks)
+- [x] fp-03: Issue #2885: View Flagged Prompts opens on Moderation and lists the other user's row and the guest's row ("Unknown User") from moderation-logs only (`page=1&page_size=5`); the Type select offers exactly Moderation and Safety; no request carries `username=` or `users/undefined`
+- [x] fp-04: Issue #2885: (Safety list stubbed) switching Type to Safety requests only safety-logs and shows only the Safety row, changing the type clears the open detail, and switching back to Moderation shows only Moderation rows
+- [x] fp-05: Issue #2885: after closing the dialog and a new block by another user, reopening it shows the new row with no wait (refetch on every open)
+- [x] fp-06: Issue #2885: deleting a Safety row sends `DELETE .../safety-logs/<id>/` and the row disappears
+- [x] fp-07: Issue #2885 (Safety list stubbed): paging within one type shows 5 rows then the rest, and page 2 requests `page=2&page_size=5` from that list only
+- [x] fp-08: Issue #2885: deleting a real Moderation row sends `DELETE .../moderation-logs/<id>/` and the row disappears
 
 ---
