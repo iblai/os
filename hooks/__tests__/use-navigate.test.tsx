@@ -36,10 +36,6 @@ vi.mock('@/hooks/use-user', () => ({
   useUsername: () => 'testuser',
 }));
 
-vi.mock('@/hooks/user-user-actions', () => ({
-  useShowFreeTrialDialog: () => vi.fn(),
-}));
-
 vi.mock('@/components/ui/sidebar', () => ({
   useSidebar: () => ({}),
 }));
@@ -50,6 +46,7 @@ vi.mock('@/lib/eventBus', () => ({
 }));
 
 vi.mock('@iblai/iblai-js/web-utils', () => ({
+  useShowFreeTrialDialog: () => vi.fn(),
   useTenantContext: () => ({
     setDetermineUserPath: vi.fn(),
     determineUserPath: false,

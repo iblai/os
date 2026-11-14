@@ -1,5 +1,6 @@
 'use client';
 
+import { useShowFreeTrialDialog } from '@iblai/iblai-js/web-utils';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 
 import { WorkflowEditor } from '@iblai/iblai-js/web-containers/next';
@@ -7,7 +8,6 @@ import { selectRbacPermissions } from '@/features/rbac/rbac-slice';
 import { useAxdToken } from '@/hooks/use-tokens';
 import { useUsername } from '@/hooks/use-user';
 import { useNavigate } from '@/hooks/user-navigate';
-import { useShowFreeTrialDialog } from '@/hooks/user-user-actions';
 import { config } from '@/lib/config';
 import { useAppSelector } from '@/lib/hooks';
 import {
@@ -25,6 +25,9 @@ export default function WorkflowDetailPage() {
   }>();
   const searchParams = useSearchParams();
   const listMentorId = searchParams.get('listMentorId') || mentorId;
+  // Not router.back(): opening an Agent step's settings adds ?modal= entries to
+  // the history, so "back" reopened that popup instead of leaving the editor.
+  const workflowsListPath = `/platform/${tenantKey}/workflows/${listMentorId}`;
   const username = useUsername();
   const axdToken = useAxdToken();
   const { openEditMentorModal } = useNavigate();
@@ -39,10 +42,8 @@ export default function WorkflowDetailPage() {
       axdToken={axdToken ?? ''}
       baseWsUrl={config.baseWsUrl()}
       redirectToAuthSpa={redirectToAuthSpa}
-      onBack={() => router.back()}
-      onDeleted={() =>
-        router.push(`/platform/${tenantKey}/workflows/${listMentorId}`)
-      }
+      onBack={() => router.push(workflowsListPath)}
+      onDeleted={() => router.push(workflowsListPath)}
       onOpenAgentSettings={(agentId) => openEditMentorModal(undefined, agentId)}
       agentSettings={{
         enableRBAC: config.enableRBAC(),

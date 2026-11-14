@@ -39,9 +39,14 @@ vi.mock('@/features/rbac/rbac-slice', () => ({
   selectRbacPermissions: vi.fn(() => 'selectRbacPermissions'),
 }));
 
-vi.mock('@/hooks/user-user-actions', () => ({
-  useShowFreeTrialDialog: () => mockUseShowFreeTrialDialog(),
-}));
+vi.mock('@iblai/iblai-js/web-utils', async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import('@iblai/iblai-js/web-utils')>();
+  return {
+    ...actual,
+    useShowFreeTrialDialog: () => mockUseShowFreeTrialDialog(),
+  };
+});
 
 vi.mock('@/lib/config', () => ({
   config: {

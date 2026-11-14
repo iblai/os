@@ -229,6 +229,13 @@ test.describe('Journey 25: Mentor MCP Tab', () => {
     // After the save the SDK closes the form, then refetches the list; the
     // gear reopens the form on the list's copy of the connector, so the
     // reopened form reads what was saved only once that refetch has landed.
+    const includeGlobalListed = page.waitForResponse(
+      (res) =>
+        res.request().method() === 'GET' &&
+        /\/mcp-servers\/$/.test(new URL(res.url()).pathname) &&
+        res.url().includes('include_global=true'),
+      { timeout: 30_000 },
+    );
     const refreshed = page.waitForResponse(
       (res) =>
         res.request().method() === 'GET' &&
@@ -251,13 +258,15 @@ test.describe('Journey 25: Mentor MCP Tab', () => {
     await tab.expectToast(LABELS.updatedToast(name));
     await expect(dialog).toBeHidden({ timeout: 30_000 });
     await refreshed;
+    await includeGlobalListed;
 
     // The form reopens on what was saved.
     const reopened = await tab.openConfigure(serverId);
     const reopenedSwitch = tab.userCanDisableSwitch(reopened);
     await expect(reopenedSwitch).toBeEnabled({ timeout: 10_000 });
     await expect(reopenedSwitch).toHaveAttribute('aria-checked', 'false');
-    await page.keyboard.press('Escape');
+    // Escape can land on the gear's still-open tooltip instead of the dialog.
+    await reopened.getByRole('button', { name: 'Close', exact: true }).click();
     await expect(reopened).toBeHidden({ timeout: 10_000 });
 
     await editMentorPage.close();

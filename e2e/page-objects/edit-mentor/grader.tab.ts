@@ -340,6 +340,15 @@ export class GraderTab {
     if (await isGradingEnabled(this.page)) return true;
 
     await expect(toggle).toBeEnabled({ timeout: 10_000 });
+    // Enabling refetches the config and rubric right after the settings PUT;
+    // the config response resets the form, so edits made before it lands are wiped.
+    const refetched = this.page.waitForResponse(
+      (res) =>
+        res.request().method() === 'GET' &&
+        /\/grader-config\/$/.test(new URL(res.url()).pathname),
+      { timeout: 15_000 },
+    );
+    refetched.catch(() => {});
     await toggle.click();
 
     const successToast = this.page
@@ -384,6 +393,7 @@ export class GraderTab {
       'true',
       { timeout: 10_000 },
     );
+    await refetched.catch(() => {});
     return true;
   }
 

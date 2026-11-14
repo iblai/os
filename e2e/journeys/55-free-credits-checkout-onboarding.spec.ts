@@ -2,6 +2,10 @@ import { test, expect } from '../fixtures/mentor-test';
 import { ECOMMERCE_CHECKOUT_URL } from '../fixtures/test-data';
 import { dismissProductTourIfShown } from '../utils/product-tour';
 import {
+  expectChangePlanPicker,
+  pickPlanExpectingCheckout,
+} from '../utils/plan-picker';
+import {
   creditBalancePlanBadge,
   creditBalanceTrigger,
   getCreditBalanceRemaining,
@@ -14,7 +18,7 @@ test.describe('Journey 55: Free Credits Checkout Onboarding', () => {
   // External multi-hop flow (Stripe → auth SSO → mentor SPA → Stripe) — give it room.
   test.setTimeout(240_000);
 
-  test('new user completes the free-credits Stripe checkout, lands on the mentor SPA with a Free-plan credit balance, and Upgrade Plan opens the Stripe card checkout', async ({
+  test('new user completes the free-credits Stripe checkout, lands on the mentor SPA on the Free plan, and Change Plan offers Pro through the Stripe card checkout', async ({
     browser,
   }) => {
     test.skip(
@@ -72,7 +76,7 @@ test.describe('Journey 55: Free Credits Checkout Onboarding', () => {
         `[free-credits] landed on ${finalUrl.origin}/platform/${platformKey}/${mentorId}`,
       );
 
-      // ── Step 3: credit dropdown shows X credits + a "Free" plan pill ───────
+      // ── Step 3: credit dropdown: X credits, "Free" badge, Add Credits only ─
       await expect(creditBalanceTrigger(page)).toBeVisible({ timeout: 30_000 });
       const panel = await openCreditBalanceDropdown(page);
 
@@ -90,18 +94,34 @@ test.describe('Journey 55: Free Credits Checkout Onboarding', () => {
         `[free-credits] Free plan with ${remaining} credits remaining`,
       );
 
-      // ── Step 4: Upgrade Plan → Stripe checkout requiring credit-card input ─
-      const upgradeButton = panel.getByRole('button', {
-        name: /^Upgrade Plan$/,
-      });
-      await expect(upgradeButton).toBeVisible({ timeout: 10_000 });
-      await upgradeButton.click();
+      // A new workspace has no card on file: one "Add Credits" button (its
+      // dialog collects the card on Stripe first), no Manage Usage, no Auto
+      // Recharge, and never the trial's "Upgrade".
+      await expect(
+        panel.getByRole('button', { name: /^Add Credits$/ }),
+      ).toBeVisible({ timeout: 10_000 });
+      await expect(
+        panel.getByRole('button', { name: /^(Manage Usage|Upgrade)$/ }),
+      ).toHaveCount(0);
+      await expect(panel.getByText(/^Auto Recharge$/)).toHaveCount(0);
 
-      //expect to have store.ibl.ai or buy.stripe.com in the url
-      await expect(page).toHaveURL(/store\.ibl\.ai|buy\.stripe\.com/, {
-        timeout: 60_000,
-      });
-      logger.info(`[free-credits] upgrade redirected to ${page.url()}`);
+      // ── Step 4: Change Plan → "Change Your Plan" with Free as the current plan
+      const changePlan = panel.getByRole('button', { name: /^Change Plan$/ });
+      await expect(changePlan).toBeVisible({ timeout: 10_000 });
+      await changePlan.click();
+      const keys = await expectChangePlanPicker(page, 'free');
+      expect(keys, 'expected Pro to be offered as an upgrade').toContain(
+        'premium',
+      );
+
+      // ── Step 5: Upgrade to Pro → Stripe checkout requiring a card ──────────
+      // No card on file yet, so the change goes through a Stripe checkout.
+      await pickPlanExpectingCheckout(page, 'premium');
+      await expect(page).toHaveURL(
+        /store\.ibl\.ai|buy\.stripe\.com|checkout\.stripe\.com/,
+        { timeout: 60_000 },
+      );
+      logger.info(`[free-credits] Pro upgrade redirected to ${page.url()}`);
 
       await expect(
         page.locator('iframe[name^="__privateStripeFrame"]').first(),

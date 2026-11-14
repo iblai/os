@@ -1,14 +1,10 @@
 'use client';
 
-import { isLoggedIn, isStripeActivated } from '@/lib/utils';
-import { MentorECommerceWrapper } from './mentor-e-commerce-wrapper';
-import { useCurrentTenant } from '@/hooks/use-user';
-import { Tenant } from '@iblai/iblai-js/web-utils';
+import { SubscriptionTopBanner } from '@iblai/iblai-js/web-containers';
+import { useIsPreviewMode } from '@/hooks/use-is-preview-mode';
 
+/** The credits banner across the top of the app; off while previewing an agent. */
 export function SubscriptionWrapper() {
-  const { currentTenant } = useCurrentTenant();
-  if (isLoggedIn() && isStripeActivated(currentTenant as Tenant))
-    return <MentorECommerceWrapper />;
-
-  return null;
+  const isPreviewMode = useIsPreviewMode();
+  return <SubscriptionTopBanner hidden={isPreviewMode} />;
 }

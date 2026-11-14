@@ -1,5 +1,6 @@
 'use client';
 
+import { useShowFreeTrialDialog } from '@iblai/iblai-js/web-utils';
 import { useParams } from 'next/navigation';
 
 import {
@@ -12,7 +13,6 @@ import { useGetMentorSettingsQuery } from '@iblai/iblai-js/data-layer';
 import { selectRbacPermissions } from '@/features/rbac/rbac-slice';
 import { useAppSelector } from '@/lib/hooks';
 import { useUsername } from '@/hooks/use-user';
-import { useShowFreeTrialDialog } from '@/hooks/user-user-actions';
 import { config } from '@/lib/config';
 import { TenantKeyMentorIdParams } from '@/lib/types';
 

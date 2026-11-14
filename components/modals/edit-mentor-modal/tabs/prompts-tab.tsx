@@ -1,5 +1,6 @@
 'use client';
 
+import { useShowFreeTrialDialog } from '@iblai/iblai-js/web-utils';
 import React from 'react';
 import { useParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
@@ -36,7 +37,6 @@ import { useNavigate } from '@/hooks/user-navigate';
 import { GreetingMethod } from '@/lib/constants';
 import { toast } from 'sonner';
 import { CopyButton } from './prompts-tab/copy-button';
-import { useShowFreeTrialDialog } from '@/hooks/user-user-actions';
 import WithFormPermissions from '@/hoc/withPermissions';
 import { useAppDispatch } from '@/lib/hooks';
 import { chatInputSliceActions } from '@/features/chat-input/api-slice';

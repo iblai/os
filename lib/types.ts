@@ -26,11 +26,3 @@ export type ProjectPageParams = {
   projectId: string;
   mentorId: string;
 };
-
-export interface TopTrialBannerProps {
-  parentContainer: string;
-  bannerText?: string;
-  onUpgrade?: string;
-  loading?: boolean;
-  tooltipText?: string;
-}

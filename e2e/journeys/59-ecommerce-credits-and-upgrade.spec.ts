@@ -15,6 +15,16 @@ import {
 import { parsePlatformUrl, safeWaitForURL } from '../utils/navigation';
 import { dismissProductTourIfShown } from '../utils/product-tour';
 import {
+  closePlanPicker,
+  expectChangePlanPicker,
+  expectTrialPlanPicker,
+  pickPlanExpectingCheckout,
+  pickPlanInPlace,
+  planCardButton,
+  planPickerDialog,
+} from '../utils/plan-picker';
+import {
+  addCreditsDialog,
   closeCreditBalanceDropdown,
   creditBalancePanel,
   creditBalancePlanBadge,
@@ -24,7 +34,8 @@ import {
   logger,
   openCreditBalanceDropdown,
   waitForBillingTabReady,
-  clickBillingUpgrade,
+  clickBillingAddCredits,
+  submitAddCreditsAmount,
 } from '@iblai/iblai-js/playwright';
 
 // ─── Journey 59: Ecommerce Credits & Upgrade ─────────────────────────────────
@@ -34,34 +45,57 @@ import {
 //
 //   Flow 0 — free-trial signup via the auth service's /account/create form,
 //            landing on <base>/platform/main/<mentorId>. Verifies the credit
-//            dropdown (Free plan, positive balance, Upgrade Plan), the
-//            profile dropdown (exactly Profile/Help/Log Out), the collapsed
-//            sidebar's visible items, the "Subscribe to unlock full
-//            features" paywall dialog on every gated sidebar entry, and a
+//            dropdown ("Trial" badge, positive balance, "Upgrade" as the one
+//            action), the profile dropdown (exactly Profile/Help/Log Out),
+//            the collapsed sidebar's visible items, the "Choose Your Plan"
+//            picker on every gated sidebar entry (Free / Pro / Max / Ultra
+//            cards, "Choose <name>" each, Pro marked "Most Popular"), and a
 //            working chat.
 //   Flow 1 — three long agent conversations, each asserted to deduct
 //            credits, then cleanup credits via the DM service's admin
 //            cleanup endpoint.
-//   Flow 2 — zero credits on the "main" tenant blocks chat and surfaces the
-//            same paywall dialog (CTA: "Upgrade for free").
-//   Flow 3 — clicking "Upgrade for free" redirects to a Stripe-hosted,
+//   Flow 2 — zero credits on the "main" tenant blocks chat: the trial 402
+//            toast ("You've run out of your free trial credits. Pick a plan
+//            to continue.") and the same plan picker instead of a reply.
+//   Flow 3 — choosing the Free plan redirects to a Stripe-hosted,
 //            zero-cost checkout (email pre-filled, no card required).
 //   Flow 4 — the checkout's SSO redirect chain lands back on the app under a
 //            REAL platform id (not "main") with a fresh Free-plan balance;
 //            chat works again.
 //   Flow 5 — the profile dropdown's "Account" item opens the "User Profile"
 //            dialog; its Billing tab (?profileTab=billing) shows the Free
-//            plan, an Upgrade button, and a positive credit balance.
+//            plan ("You're on the Free plan…", Change Plan + Add Credits; no
+//            Auto Recharge section since no card is on file yet) and a
+//            positive credit balance.
 //   Flow 6 — three more long conversations, each asserted to deduct credits,
 //            then cleanup credits again on the upgraded tenant.
-//   Flow 7 — zero credits on the upgraded tenant auto-opens the Billing tab
-//            (admin 402 handling redirects straight to ?profileTab=billing)
-//            showing 0 credits.
-//   Flow 8 — clicking "Upgrade" in the Billing tab redirects to a real
-//            Stripe test-mode checkout; fills the 4242 test card, submits,
-//            and lands back on the same platform/mentor URL with a Premium
-//            plan + restored credit balance.
-//   Flow 9 — chat works again with the restored (Premium) balance.
+//   Flow 7 — zero credits on the upgraded tenant: the admin 402 toast
+//            ("You've run out of credits. Add credits to continue.") and the
+//            Billing tab auto-opens (?profileTab=billing) showing 0 credits.
+//   Flow 8 — "Add Credits" in the Billing tab opens the Add Credits dialog;
+//            with no card on file its "Continue" redirects to the Stripe
+//            customer portal (payment-method flow) with the amount + a
+//            one-time nonce on the after-completion URL, so the app charges
+//            that amount automatically once the card is saved. Saving the
+//            card inside the portal is NOT automated; the journey confirms
+//            the redirect and returns to the workspace without a card.
+//   Flow 9 — "Change Plan" in the credit dropdown opens the "Change Your
+//            Plan" picker with Free marked "Current Plan" and Pro / Max /
+//            Ultra as upgrades. With no card on file "Upgrade to Pro" leaves
+//            for a real Stripe test-mode checkout; the 4242 test card (Uruguay
+//            billing country) completes it and the SSO chain lands back on
+//            the workspace on the Pro plan, with the card now on file
+//            (Manage Usage + Add Credits + Auto Recharge) and Pro credits.
+//   Flow 10 — "Upgrade to Max" is applied in place (no checkout): the toast
+//            "You're now on the Max plan.", the badge reads Max, and the Max
+//            allowance is granted once the upgrade invoice is paid against
+//            the saved card (iblai-dm-pro#3206).
+//   Flow 11 — "Add Credits" with a card on file: the dialog's "Other amount"
+//            takes $1 and "Add Credits" charges at once ("Credits added
+//            successfully"), and the balance grows.
+//   Flow 12 — "Downgrade to Pro" is scheduled for the end of the period
+//            ("Your current plan ends…") and the badge stays Max.
+//   Flow 13 — chat works with the paid balance.
 //
 // Runs in a clean, unauthenticated context (the signup flow provisions +
 // authenticates its own account). Skips when DM_URL or
@@ -234,31 +268,30 @@ async function converseAndExpectCreditsDeducted(
 }
 
 /**
- * The `UpgradePackageModal` gated-feature dialog (`@iblai/web-containers`)
- * shown for both the sidebar paywall gates and the zero-credit chat block on
- * the "main" tenant. Its title/CTA default to "Subscribe to unlock full
- * features" / "Upgrade for free".
+ * The `UpgradePackageModal` plan picker (`@iblai/web-containers`) shown for
+ * both the sidebar paywall gates and the zero-credit chat block on the "main"
+ * tenant: title "Choose Your Plan", one card per plan with a "Choose <name>"
+ * button (see `utils/plan-picker` for both of its modes).
  */
-function subscribeDialog(page: Page): Locator {
-  return page.getByRole('dialog', {
-    name: /subscribe to unlock full features/i,
-  });
+const subscribeDialog = planPickerDialog;
+
+/** The free plan's button in the picker: "Choose Free". */
+function chooseFreeButton(page: Page): Locator {
+  return planCardButton(page, 'free');
 }
 
 /**
- * Asserts the gated-feature "Subscribe to unlock full features" dialog is
- * visible with its "Upgrade for free" CTA, then closes it via the dialog's
- * Close button and waits for it to detach. Used for every gated sidebar
- * entry point, which all render the same shared modal.
+ * Asserts the gated-feature plan picker is visible with its "Choose Free"
+ * button, then closes it via the dialog's Close button and waits for it to
+ * detach. Used for every gated sidebar entry point, which all render the same
+ * shared modal (the first entry verifies the whole picker).
  */
 async function expectSubscribeModalAndClose(page: Page): Promise<void> {
-  const dialog = subscribeDialog(page);
-  await expect(dialog).toBeVisible({ timeout: 15_000 });
-  await expect(
-    dialog.getByRole('button', { name: 'Upgrade for free' }),
-  ).toBeVisible({ timeout: 10_000 });
-  await dialog.getByRole('button', { name: 'Close' }).click();
-  await expect(dialog).not.toBeVisible({ timeout: 10_000 });
+  await expect(subscribeDialog(page)).toBeVisible({ timeout: 15_000 });
+  await expect(chooseFreeButton(page)).toHaveText('Choose Free', {
+    timeout: 15_000,
+  });
+  await closePlanPicker(page);
 }
 
 test.describe('Journey 59: Ecommerce Credits & Upgrade', () => {
@@ -266,9 +299,9 @@ test.describe('Journey 59: Ecommerce Credits & Upgrade', () => {
   // three long credit-metered conversations + two credit cleanups — give the
   // whole lifecycle plenty of room.
   test.use({ storageState: { cookies: [], origins: [] } });
-  test.setTimeout(1_200_000);
+  test.setTimeout(1_500_000);
 
-  test('new user signs up for a free trial, exhausts credits, upgrades to the free plan via Stripe, exhausts credits again, and upgrades to Premium with a test card', async ({
+  test('new user signs up for a free trial, exhausts credits, starts the Free plan via Stripe, exhausts credits again, is sent to add a payment method, upgrades to Pro with a test card, moves to Max in place, tops up, and schedules a downgrade', async ({
     browser,
     step,
   }) => {
@@ -289,6 +322,10 @@ test.describe('Journey 59: Ecommerce Credits & Upgrade', () => {
     const chatPage = new ChatPage(page);
     let platformKey = '';
     let mentorId = '';
+    /** The app's origin once the Free checkout returned to the workspace. */
+    let appOrigin = '';
+    let proBalance = 0;
+    let maxBalance = 0;
 
     try {
       // ── Flow 0: free-trial signup ──────────────────────────────────────
@@ -344,24 +381,31 @@ test.describe('Journey 59: Ecommerce Credits & Upgrade', () => {
       );
 
       await step(
-        'Flow 0: credit dropdown shows a positive Free-plan balance',
+        'Flow 0: credit dropdown shows a positive free-trial balance',
         async () => {
           await expect(creditBalanceTrigger(page)).toBeVisible({
             timeout: 30_000,
           });
           const panel = await openCreditBalanceDropdown(page);
-          await expect(creditBalancePlanBadge(page)).toHaveText('Free', {
+          await expect(creditBalancePlanBadge(page)).toHaveText('Trial', {
             timeout: 10_000,
           });
           const remaining = await getCreditBalanceRemaining(page);
           expect(remaining).not.toBeNull();
           expect(remaining!).toBeGreaterThan(0);
           logger.info(
-            `[ecommerce] main tenant: Free plan, ${remaining} credits`,
+            `[ecommerce] main tenant: free trial, ${remaining} credits`,
           );
+          // "Upgrade" is the trial's one action: no Add Credits, Manage Usage
+          // or Change Plan until a plan is chosen.
           await expect(
-            panel.getByRole('button', { name: /^Upgrade Plan$/ }),
+            panel.getByRole('button', { name: /^Upgrade$/ }),
           ).toBeVisible({ timeout: 10_000 });
+          await expect(
+            panel.getByRole('button', {
+              name: /^(Add Credits|Manage Usage|Change Plan)$/,
+            }),
+          ).toHaveCount(0);
           await closeCreditBalanceDropdown(page);
         },
       );
@@ -448,13 +492,20 @@ test.describe('Journey 59: Ecommerce Credits & Upgrade', () => {
       );
 
       await step(
-        'Flow 0: gated sidebar entries all show the Subscribe-to-unlock dialog',
+        'Flow 0: gated sidebar entries all open the Choose Your Plan picker',
         async () => {
           const sidebarPage = new SidebarPage(page);
 
           await sidebarPage.expandSection('Agents');
           await sidebarPage.newMentorButton.click(); // "New Agent"
-          await expectSubscribeModalAndClose(page);
+          // The first gate is verified in full (every card, its "Choose
+          // <name>" button, the "Most Popular" chip); the rest only need the
+          // same picker to open.
+          const planKeys = await expectTrialPlanPicker(page);
+          expect(planKeys, 'expected the Free plan to be offered').toContain(
+            'free',
+          );
+          await closePlanPicker(page);
 
           await sidebarPage.sidebar
             .getByRole('button', { name: 'My Agents', exact: true })
@@ -550,22 +601,23 @@ test.describe('Journey 59: Ecommerce Credits & Upgrade', () => {
           // (~2-4s) instead of an AI response. Leave it open — Flow 3 clicks
           // through it.
           await chatPage.sendMessage('Will this go through with zero credits?');
-          await expect(subscribeDialog(page)).toBeVisible({ timeout: 15_000 });
           await expect(
-            subscribeDialog(page).getByRole('button', {
-              name: 'Upgrade for free',
-            }),
-          ).toBeVisible({ timeout: 10_000 });
+            page.getByText(
+              "You've run out of your free trial credits. Pick a plan to continue.",
+            ),
+          ).toBeVisible({ timeout: 15_000 });
+          await expect(subscribeDialog(page)).toBeVisible({ timeout: 15_000 });
+          await expect(chooseFreeButton(page)).toBeVisible({
+            timeout: 15_000,
+          });
         },
       );
 
-      // ── Flow 3: upgrade to the free plan via Stripe ────────────────────
+      // ── Flow 3: choose the Free plan in the picker → Stripe ───────────
       await step(
-        'Flow 3: Upgrade for free redirects to a zero-cost Stripe checkout',
+        'Flow 3: choosing the Free plan redirects to a zero-cost Stripe checkout',
         async () => {
-          await subscribeDialog(page)
-            .getByRole('button', { name: 'Upgrade for free' })
-            .click();
+          await pickPlanExpectingCheckout(page, 'free');
 
           await expect(page).toHaveURL(
             /store\.ibl\.ai|buy\.stripe\.com|checkout\.stripe\.com/,
@@ -601,6 +653,7 @@ test.describe('Journey 59: Ecommerce Credits & Upgrade', () => {
           const parsed = parsePlatformUrl(page.url());
           platformKey = parsed.platformKey;
           mentorId = parsed.mentorId;
+          appOrigin = new URL(page.url()).origin;
           expect(platformKey).not.toBe('main');
           logger.info(
             `[ecommerce] landed on real platform ${platformKey}/${mentorId}`,
@@ -622,9 +675,23 @@ test.describe('Journey 59: Ecommerce Credits & Upgrade', () => {
           logger.info(
             `[ecommerce] real tenant: Free plan, ${remaining} credits`,
           );
+          // A brand-new workspace has no card on file yet: still one
+          // "Add Credits" button (its dialog collects the card on Stripe
+          // first), and no Auto Recharge section.
           await expect(
-            panel.getByRole('button', { name: /^Upgrade Plan$/ }),
+            panel.getByRole('button', { name: /^Add Credits$/ }),
           ).toBeVisible({ timeout: 10_000 });
+          await expect(
+            panel.getByRole('button', { name: /^Manage Usage$/ }),
+          ).toHaveCount(0);
+          await expect(panel.getByText(/^Auto Recharge$/)).toHaveCount(0);
+          // The backend names the plan, so the Billing row offers Change Plan.
+          await expect(
+            panel.getByRole('button', { name: /^Change Plan$/ }),
+          ).toBeVisible({ timeout: 10_000 });
+          await expect(
+            panel.getByRole('button', { name: /^Upgrade$/ }),
+          ).toHaveCount(0);
           await closeCreditBalanceDropdown(page);
 
           await sendMessageAndAwaitNewResponse(
@@ -668,13 +735,18 @@ test.describe('Journey 59: Ecommerce Credits & Upgrade', () => {
           const plan = await getBillingPlanLabel(page);
           expect(plan).toBe('Free');
           await expect(
-            billingPage.billingPlanSection.getByText(/^Current$/),
-          ).toBeVisible({ timeout: 10_000 });
-          await expect(
-            billingPage.billingPlanSection.getByRole('button', {
-              name: /^Upgrade$/,
+            billingPage.creditsSection.getByRole('button', {
+              name: /^Add Credits$/,
             }),
           ).toBeVisible({ timeout: 10_000 });
+          await expect(billingPage.autoRechargeSection).toHaveCount(0);
+          await expect(billingPage.changePlanButton).toBeVisible({
+            timeout: 10_000,
+          });
+          await expect(billingPage.upgradeButton).toHaveCount(0);
+          expect(await billingPage.getCreditsDescription()).toMatch(
+            /^You're on the Free plan\. Add credits whenever you need more\./,
+          );
           await expect(
             billingPage.creditsSection.getByText(/^Available$/i),
           ).toBeVisible({ timeout: 10_000 });
@@ -735,6 +807,11 @@ test.describe('Journey 59: Ecommerce Credits & Upgrade', () => {
           // showing the "Subscribe to unlock" dialog (that dialog is only used
           // on the "main" tenant — see Flow 2).
           await chatPage.sendMessage('Zero credits should auto-open billing.');
+          await expect(
+            page.getByText(
+              "You've run out of credits. Add credits to continue.",
+            ),
+          ).toBeVisible({ timeout: 20_000 });
 
           const accountDialog = page.getByRole('dialog', {
             name: 'User Profile',
@@ -757,17 +834,78 @@ test.describe('Journey 59: Ecommerce Credits & Upgrade', () => {
         },
       );
 
-      // ── Flow 8: paid upgrade with a test card ──────────────────────────
+      // ── Flow 8: Add Credits without a card goes through the Stripe portal ─
       await step(
-        'Flow 8: Billing tab Upgrade redirects to a real Stripe checkout',
+        'Flow 8: Billing tab Add Credits (no card) redirects to the Stripe customer portal',
         async () => {
-          await clickBillingUpgrade(page);
+          await clickBillingAddCredits(page);
+          // No card on file: the dialog's button reads "Continue", not
+          // "Add Credits", and nothing is charged before the redirect.
+          const pressed = await submitAddCreditsAmount(page, 5);
+          expect(pressed).toBe('Continue');
+          // The customer portal is served from the platform's Stripe domain
+          // (validated live: store.ibl.ai/p/session/payment-methods).
+          await expect(page).toHaveURL(
+            /store\.ibl\.ai\/p\/session|billing\.stripe\.com/,
+            { timeout: 60_000 },
+          );
+          logger.info(`[ecommerce] Add Credits redirected to ${page.url()}`);
+          // Saving the 4242 test card inside the portal is not automated:
+          // the portal's payment-method form is a different hosted page from
+          // the checkout this journey fills. Once it is saved, Stripe returns
+          // to the app with the amount + nonce on the URL and the app charges
+          // $5 and adds the credits on its own. The card arrives through the
+          // Pro checkout below instead.
+        },
+      );
+
+      await step(
+        'Flow 8: back on the workspace, still without a card',
+        async () => {
+          await page.goto(`${appOrigin}/platform/${platformKey}/${mentorId}`, {
+            waitUntil: 'domcontentloaded',
+            timeout: 60_000,
+          });
+          await expect(
+            page.getByRole('button', {
+              name: 'Selected agent dropdown button',
+            }),
+          ).toBeVisible({ timeout: 60_000 });
+          await dismissProductTourIfShown(page);
+          const panel = await openCreditBalanceDropdown(page);
+          await expect(
+            panel.getByRole('button', { name: /^Add Credits$/ }),
+          ).toBeVisible({ timeout: 10_000 });
+          await expect(
+            panel.getByRole('button', { name: /^Manage Usage$/ }),
+          ).toHaveCount(0);
+          await closeCreditBalanceDropdown(page);
+        },
+      );
+
+      // ── Flow 9: Free → Pro through the Stripe card checkout ────────────
+      await step(
+        'Flow 9: Change Plan offers Pro as an upgrade and leaves for the Stripe checkout',
+        async () => {
+          const panel = await openCreditBalanceDropdown(page);
+          await panel.getByRole('button', { name: /^Change Plan$/ }).click();
+          const keys = await expectChangePlanPicker(page, 'free');
+          expect(keys, 'expected the Pro plan to be offered').toContain(
+            'premium',
+          );
+          // No card on file yet, so the change goes through a Stripe checkout.
+          await pickPlanExpectingCheckout(page, 'premium');
           await expect(page).toHaveURL(
             /store\.ibl\.ai|buy\.stripe\.com|checkout\.stripe\.com/,
             { timeout: 60_000 },
           );
-          logger.info(`[ecommerce] paid upgrade redirected to ${page.url()}`);
+          logger.info(`[ecommerce] Pro upgrade redirected to ${page.url()}`);
+        },
+      );
 
+      await step(
+        'Flow 9: the 4242 test card completes the Pro checkout',
+        async () => {
           const submitButton = page.getByTestId('hosted-payment-submit-button');
           await expect(submitButton).toBeVisible({ timeout: 30_000 });
 
@@ -829,76 +967,160 @@ test.describe('Journey 59: Ecommerce Credits & Upgrade', () => {
       );
 
       await step(
-        'Flow 8: lands back on the same platform with a restored Premium balance',
+        'Flow 9: back on the workspace on the Pro plan, with a card on file and Pro credits',
         async () => {
           await safeWaitForURL(
             page,
-            (u) => {
-              const parts = u.pathname.split('/').filter(Boolean);
-              return (
-                parts[0] === 'platform' &&
-                parts[1] === platformKey &&
-                parts[2] === mentorId
-              );
-            },
-            { timeout: 120_000 },
+            (u) =>
+              u.origin === appOrigin &&
+              u.pathname.startsWith(`/platform/${platformKey}/`),
+            { timeout: 180_000 },
           );
+          await expect(
+            page.getByRole('button', {
+              name: 'Selected agent dropdown button',
+            }),
+          ).toBeVisible({ timeout: 60_000 });
+          await dismissProductTourIfShown(page);
 
+          // The return may auto-open the account dialog on Billing; close it
+          // so the nav bar is reachable.
           const accountDialog = page.getByRole('dialog', {
             name: 'User Profile',
           });
-          const dialogAppeared = await isVisibleWithin(accountDialog, 30_000);
-          if (!dialogAppeared) {
-            logger.warn(
-              '[ecommerce] account dialog did not auto-open after paid checkout — continuing',
-            );
-            return;
+          if (await isVisibleWithin(accountDialog, 15_000)) {
+            await accountDialog.getByRole('button', { name: 'Close' }).click();
+            await expect(accountDialog).toBeHidden({ timeout: 10_000 });
           }
 
-          await waitForBillingTabReady(page);
-          const plan = await getBillingPlanLabel(page);
-          expect(plan).toBe('Premium');
+          // The plan and the saved card arrive through Stripe's webhooks:
+          // re-open the dropdown (each open refetches) until both show.
+          await expect(async () => {
+            if (await creditBalancePanel(page).isVisible()) {
+              await closeCreditBalanceDropdown(page);
+            }
+            const panel = await openCreditBalanceDropdown(page);
+            await expect(creditBalancePlanBadge(page)).toHaveText(
+              /^(Pro|Premium)$/i,
+            );
+            await expect(
+              panel.getByRole('button', { name: /^Manage Usage$/ }),
+            ).toBeVisible();
+          }).toPass({ timeout: 120_000, intervals: [3_000, 5_000] });
 
-          const billingPage = new BillingPage(page);
+          const panel = await openCreditBalanceDropdown(page);
           await expect(
-            billingPage.creditsSection.getByRole('button', {
-              name: /^Manage Billing$/,
-            }),
-          ).toBeVisible({ timeout: 15_000 });
-          const creditsAfterPayment = await billingPage.getCreditsRemaining();
-          expect(creditsAfterPayment).not.toBeNull();
-          expect(creditsAfterPayment!).toBeGreaterThan(0);
-          logger.info(
-            `[ecommerce] Premium plan restored with ${creditsAfterPayment} credits`,
-          );
-
-          await accountDialog.getByRole('button', { name: 'Close' }).click();
-          await expect(accountDialog).not.toBeVisible({ timeout: 10_000 });
-        },
-      );
-
-      // ── Flow 9: has credits, can chat ───────────────────────────────────
-      await step(
-        'Flow 9: Premium plan has credits and chat works',
-        async () => {
-          await expect(creditBalanceTrigger(page)).toBeVisible({
-            timeout: 60_000,
-          });
-          await openCreditBalanceDropdown(page);
-          const remaining = await getCreditBalanceRemaining(page);
-          expect(remaining).not.toBeNull();
-          expect(remaining!).toBeGreaterThan(0);
-          logger.info(
-            `[ecommerce] Premium plan: ${remaining} credits remaining`,
-          );
+            panel.getByRole('button', { name: /^Add Credits$/ }),
+          ).toBeVisible();
+          await expect(
+            panel.getByRole('button', { name: /^Change Plan$/ }),
+          ).toBeVisible();
+          await expect(panel.getByText(/^Auto Recharge$/)).toBeVisible();
+          await expect(
+            panel.getByRole('button', { name: /^Upgrade$/ }),
+          ).toHaveCount(0);
           await closeCreditBalanceDropdown(page);
 
-          await sendMessageAndAwaitNewResponse(
-            chatPage,
-            'Final check - do you still respond with credits available?',
+          proBalance = await readCreditBalance(page);
+          expect(proBalance, 'expected Pro credits').toBeGreaterThan(0);
+          logger.info(`[ecommerce] Pro plan with ${proBalance} credits`);
+        },
+      );
+
+      // ── Flow 10: Pro → Max in place ───────────────────────────────────
+      await step(
+        'Flow 10: Upgrade to Max is applied in place and grants the Max credits',
+        async () => {
+          const before = proBalance;
+          const panel = await openCreditBalanceDropdown(page);
+          await panel.getByRole('button', { name: /^Change Plan$/ }).click();
+          const keys = await expectChangePlanPicker(page, 'premium');
+          expect(keys, 'expected the Max plan to be offered').toContain('max');
+          // A card is on file now, so the upgrade is charged today and
+          // applied without leaving the app.
+          await pickPlanInPlace(page, 'max', /You're now on the Max plan\./);
+
+          await expect(async () => {
+            if (await creditBalancePanel(page).isVisible()) {
+              await closeCreditBalanceDropdown(page);
+            }
+            await openCreditBalanceDropdown(page);
+            await expect(creditBalancePlanBadge(page)).toHaveText('Max');
+          }).toPass({ timeout: 60_000, intervals: [2_000, 5_000] });
+          await closeCreditBalanceDropdown(page);
+
+          // The upgrade invoice is charged to the card saved at the Pro
+          // checkout, and the Max allowance is granted once it is paid
+          // (iblai-dm-pro#3206): the balance must rise above the Pro one.
+          await expect(async () => {
+            maxBalance = await readCreditBalance(page);
+            expect(
+              maxBalance,
+              'expected the Max upgrade to add credits',
+            ).toBeGreaterThan(before);
+          }).toPass({ timeout: 120_000, intervals: [3_000, 5_000] });
+          logger.info(
+            `[ecommerce] Max plan: ${before} -> ${maxBalance} credits`,
           );
         },
       );
+
+      // ── Flow 11: Add Credits with a card on file ──────────────────────
+      await step(
+        'Flow 11: Add Credits with a card on file charges at once and adds the credits',
+        async () => {
+          const before = maxBalance;
+          const panel = await openCreditBalanceDropdown(page);
+          await panel.getByRole('button', { name: /^Add Credits$/ }).click();
+          const dialog = addCreditsDialog(page);
+          await expect(dialog).toBeVisible({ timeout: 10_000 });
+          await expect(
+            dialog.getByText(
+              'Add credits to your account using your payment method on file.',
+            ),
+          ).toBeVisible();
+          // $1 is not a preset, so this goes through "Other amount".
+          const pressed = await submitAddCreditsAmount(page, 1);
+          expect(pressed).toBe('Add Credits');
+          await expect(
+            page.getByText('Credits added successfully').first(),
+          ).toBeVisible({ timeout: 10_000 });
+
+          await expect(async () => {
+            const balance = await readCreditBalance(page);
+            expect(
+              balance,
+              'expected the top-up to add credits',
+            ).toBeGreaterThan(before);
+          }).toPass({ timeout: 60_000, intervals: [2_000, 5_000] });
+        },
+      );
+
+      // ── Flow 12: Max → Pro is scheduled, not immediate ────────────────
+      await step(
+        'Flow 12: Downgrade to Pro is scheduled for the end of the period and the plan stays Max',
+        async () => {
+          const panel = await openCreditBalanceDropdown(page);
+          await panel.getByRole('button', { name: /^Change Plan$/ }).click();
+          await expectChangePlanPicker(page, 'max');
+          await pickPlanInPlace(
+            page,
+            'premium',
+            /Your current plan ends (on .+|at the end of the billing period)\. You'll be on Pro after that\./,
+          );
+          await openCreditBalanceDropdown(page);
+          await expect(creditBalancePlanBadge(page)).toHaveText('Max');
+          await closeCreditBalanceDropdown(page);
+        },
+      );
+
+      // ── Flow 13: has credits, can chat ────────────────────────────────
+      await step('Flow 13: chat works with the paid balance', async () => {
+        await sendMessageAndAwaitNewResponse(
+          chatPage,
+          'Final check - do you still respond with credits available?',
+        );
+      });
     } finally {
       await context.close();
     }

@@ -193,7 +193,7 @@ export class SettingsTab {
     );
     // Capabilities sub-tab. Labelled "Enable File Attachments" (feat/1902).
     this.allowFileAttachmentsToggle = dialog.getByRole('switch', {
-      name: /enable file attachments/i,
+      name: /^enable file attachments (enabled|disabled)$/i,
     });
     // Capabilities sub-tab, Advanced section (issue #2544). Labelled "Show
     // additional agents"; persists `show_explore_mentors`.

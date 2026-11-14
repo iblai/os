@@ -151,8 +151,6 @@ export class EditMentorPage {
     // Human Support has the identical problem — it also lives in the Activity
     // category and its SDK helper `switchToSupportTab` is category-blind.
     this.humanSupport.bindTabNav(this.navigateToTab.bind(this));
-
-    this.privacy.bindReopen(() => this.open('Privacy'));
   }
 
   /**

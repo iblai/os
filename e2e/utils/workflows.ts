@@ -1,4 +1,11 @@
-import { Page, Locator, Request, expect, test } from '@playwright/test';
+import {
+  Page,
+  Locator,
+  Request,
+  Response,
+  expect,
+  test,
+} from '@playwright/test';
 import { logger } from '@iblai/iblai-js/playwright';
 import { safeWaitForURL } from './navigation';
 
@@ -87,14 +94,17 @@ export async function createWorkflow(
   await expect(createButton).toBeVisible({ timeout: 10_000 });
   await createButton.click();
 
-  const modal = page.getByRole('dialog');
+  const modal = page.getByRole('dialog', { name: 'Create Workflow' });
   await expect(modal).toBeVisible({ timeout: 10_000 });
 
   const nameInput = modal.getByRole('textbox');
   await expect(nameInput).toBeVisible({ timeout: 5_000 });
   await nameInput.fill(workflowName);
 
-  const submitButton = modal.getByRole('button', { name: /create/i });
+  const submitButton = modal.getByRole('button', {
+    name: 'Create',
+    exact: true,
+  });
   await expect(submitButton).toBeEnabled({ timeout: 5_000 });
   await submitButton.click();
 
@@ -124,14 +134,11 @@ export async function waitForWorkflowEditorReady(page: Page): Promise<void> {
 }
 
 /**
- * Click the back button to return to the workflows list.
+ * Return to the workflows list through the sidebar: the editor has no back
+ * arrow.
  */
 export async function navigateBackToWorkflowsList(page: Page): Promise<void> {
-  const backButton = page
-    .locator('button')
-    .filter({ has: page.locator('svg.lucide-chevron-left') });
-  await expect(backButton).toBeVisible({ timeout: 10_000 });
-  await backButton.click();
+  await navigateToWorkflowsPage(page);
 
   const heading = page.getByRole('heading', {
     name: 'Workflows',
@@ -174,23 +181,64 @@ export async function openWorkflowByName(
 }
 
 /**
- * Delete the currently open workflow via the more options menu.
+ * The editor header shows Delete, Activate / Deactivate, Preview, Save and
+ * Publish as buttons while they fit and moves them, in that order, into "More
+ * workflow options" as it narrows. Returns the inline button when the header
+ * shows one, otherwise opens the menu and returns its item.
  */
-export async function deleteCurrentWorkflow(page: Page): Promise<void> {
+export async function workflowHeaderAction(
+  page: Page,
+  name: string,
+): Promise<Locator> {
+  const header = page.getByTestId('workflow-header-actions');
+  // Settle first: until it has measured, the header guesses which actions fit
+  // and can still move one between the bar and the menu.
+  await expect(header).toHaveAttribute('data-fit', 'done', {
+    timeout: 10_000,
+  });
+  const inline = header.getByRole('button', { name, exact: true });
   const moreButton = page.getByRole('button', {
     name: 'More workflow options',
   });
-  await expect(moreButton).toBeVisible({ timeout: 10_000 });
-  await moreButton.click();
+  // A menu just closed with Escape stays in the page while it fades out; only
+  // an open one counts, so a closing menu is opened again.
+  const menuItem = page
+    .locator('[role="menu"][data-state="open"]')
+    .getByRole('menuitem', { name, exact: true });
+  let action = menuItem;
+  // Retried: a resize just before (a test changing the window) can move the
+  // action between the bar and the menu while this looks for it.
+  await expect(async () => {
+    if (await inline.isVisible()) {
+      action = inline;
+      return;
+    }
+    if (!(await menuItem.isVisible())) {
+      await moreButton.click({ timeout: 2_000 });
+    }
+    await expect(menuItem).toBeVisible({ timeout: 2_000 });
+    action = menuItem;
+  }).toPass({ timeout: 15_000 });
+  return action;
+}
 
-  const deleteItem = page.getByRole('menuitem', { name: 'Delete' });
-  await expect(deleteItem).toBeVisible({ timeout: 5_000 });
-  await deleteItem.click();
+/**
+ * Delete the currently open workflow from its header.
+ */
+export async function deleteCurrentWorkflow(page: Page): Promise<void> {
+  const deleteAction = await workflowHeaderAction(page, 'Delete');
+  await expect(deleteAction).toBeVisible({ timeout: 5_000 });
+  await deleteAction.click();
 
-  const deleteModal = page.getByRole('alertdialog');
+  const deleteModal = page.getByRole('alertdialog', {
+    name: 'Delete Workflow',
+  });
   await expect(deleteModal).toBeVisible({ timeout: 10_000 });
 
-  const confirmButton = deleteModal.getByRole('button', { name: /delete/i });
+  const confirmButton = deleteModal.getByRole('button', {
+    name: 'Delete',
+    exact: true,
+  });
   await expect(confirmButton).toBeVisible({ timeout: 5_000 });
   await confirmButton.click();
 
@@ -211,7 +259,7 @@ export async function editWorkflowName(
   page: Page,
   newName: string,
 ): Promise<void> {
-  const nameButton = page.getByRole('button', { name: 'Edit workflow name' });
+  const nameButton = page.getByRole('button', { name: 'Edit Workflow Name' });
   await expect(nameButton).toBeVisible({ timeout: 10_000 });
   await nameButton.click();
 
@@ -266,17 +314,26 @@ export async function saveWorkflow(page: Page): Promise<void> {
   logger.info('Saved workflow');
 }
 
+const WORKFLOW_PUBLISH_URL = /\/workflows\/[^/]+\/publish\/?$/;
+
 /**
  * Click the Publish button.
  */
-export async function publishWorkflow(page: Page): Promise<void> {
+export async function publishWorkflow(page: Page): Promise<Response> {
   const publishButton = page.getByRole('button', { name: 'Publish' });
   await expect(publishButton).toBeVisible({ timeout: 10_000 });
   await expect(publishButton).toBeEnabled();
-  await publishButton.click();
-
-  await page.waitForTimeout(3_000);
-  logger.info('Published workflow');
+  const [response] = await Promise.all([
+    page.waitForResponse(
+      (resp) =>
+        resp.request().method() === 'POST' &&
+        WORKFLOW_PUBLISH_URL.test(new URL(resp.url()).pathname),
+      { timeout: 30_000 },
+    ),
+    publishButton.click(),
+  ]);
+  logger.info(`Published workflow: ${response.status()}`);
+  return response;
 }
 
 /**
@@ -352,7 +409,17 @@ export async function deleteWorkflowAfter(
     passed = true;
   } finally {
     const cleanup = (async () => {
-      // The open panel's header buttons would sit over "More workflow options".
+      // A failure can leave a dialog open (the agent picker, Edit Agent), and
+      // a modal one hides the editor from every locator below.
+      if (!passed) {
+        for (let press = 0; press < 2; press++) {
+          await page.keyboard.press('Escape');
+        }
+      }
+      // Delete is only in the edit header, and the open panel's header
+      // buttons would sit over it.
+      const closePreview = page.getByRole('button', { name: 'Close preview' });
+      if ((await closePreview.count()) > 0) await exitPreviewMode(page);
       const closeButton = nodePanel(page).getByRole('button', {
         name: 'Close',
         exact: true,
@@ -384,6 +451,40 @@ function savedDefinitionOf(body: unknown): SavedDefinition | null {
   return definition && Array.isArray(definition.nodes) ? definition : null;
 }
 
+function savesDefinition(
+  request: Request,
+  matches: (definition: SavedDefinition) => boolean,
+): boolean {
+  if (request.method() !== 'PATCH') return false;
+  if (!WORKFLOW_PATCH_URL.test(new URL(request.url()).pathname)) return false;
+  try {
+    const definition = savedDefinitionOf(request.postDataJSON());
+    return !!definition && matches(definition);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Resolve with the first saved definition that satisfies `matches`, whether
+ * an auto-save or a save the editor makes before another action sends it.
+ * Call it before the change that leads to the save.
+ */
+export function waitForDefinitionSave(
+  page: Page,
+  matches: (definition: SavedDefinition) => boolean,
+): Promise<SavedDefinition> {
+  const saved = page
+    .waitForRequest((request) => savesDefinition(request, matches), {
+      timeout: 60_000,
+    })
+    .then(
+      (request) => savedDefinitionOf(request.postDataJSON()) as SavedDefinition,
+    );
+  saved.catch(() => {});
+  return saved;
+}
+
 /**
  * Run `action`, then return the first auto-save PATCH body that satisfies
  * `matches` together with the validate response that follows it. The editor
@@ -402,15 +503,7 @@ export async function captureAutosave(
   let savedAnswered = false;
   const patchRequest = page.waitForRequest(
     (request) => {
-      if (saved || request.method() !== 'PATCH') return false;
-      if (!WORKFLOW_PATCH_URL.test(new URL(request.url()).pathname))
-        return false;
-      try {
-        const definition = savedDefinitionOf(request.postDataJSON());
-        if (!definition || !matches(definition)) return false;
-      } catch {
-        return false;
-      }
+      if (saved || !savesDefinition(request, matches)) return false;
       saved = request;
       return true;
     },
@@ -514,26 +607,199 @@ export async function addNodeFromSidebar(
 }
 
 /**
- * Add a step and wait until it is auto-saved. The editor only saves a graph
- * that differs from its last save, so a step added and removed within one
- * debounce window never sends a request.
+ * Add a step, wait until it is auto-saved and return it as saved. The editor
+ * only saves a graph that differs from its last save, so a step added and
+ * removed within one debounce window never sends a request.
  */
 export async function addSavedNodeFromSidebar(
   page: Page,
   label: string,
   nodeType: string,
-): Promise<string> {
+): Promise<SavedNode> {
   const before = await page.locator(`[data-node-type="${nodeType}"]`).count();
   let nodeId = '';
-  await captureAutosave(
+  const { definition } = await captureAutosave(
     page,
     async () => {
       nodeId = await addNodeFromSidebar(page, label, nodeType);
     },
-    (definition) =>
-      definition.nodes.filter((node) => node.type === nodeType).length > before,
+    (saved) =>
+      saved.nodes.filter((node) => node.type === nodeType).length > before,
   );
-  return nodeId;
+  const node = nodeById(definition, nodeId);
+  expect(node, `${label} step in the saved definition`).toBeDefined();
+  return node!;
+}
+
+export function nodeById(
+  definition: SavedDefinition,
+  nodeId: string,
+): SavedNode | undefined {
+  return definition.nodes.find((node) => node.id === nodeId);
+}
+
+/** The "Not connected" note a branch row shows until its output is wired. */
+export function unconnectedBranch(
+  page: Page,
+  nodeId: string,
+  handle: string,
+): Locator {
+  return page.getByTestId(`workflow-branch-unconnected-${nodeId}-${handle}`);
+}
+
+/** Every error and warning in a validate response body. */
+export function validationMessages(body: string): string[] {
+  const { errors = [], warnings = [] } = JSON.parse(body) as {
+    errors?: string[];
+    warnings?: string[];
+  };
+  return [...errors, ...warnings];
+}
+
+/**
+ * The validation messages about one step's own settings, however they are
+ * worded, leaving out the ones about its connections. Backend #3218 ties each
+ * message to its step in error_details / warning_details; before it, a
+ * message carried " at nodes[<index>]..." for the step's place in the saved
+ * definition.
+ */
+export function stepMessages(
+  body: string,
+  definition: SavedDefinition,
+  nodeId: string,
+): string[] {
+  const index = definition.nodes.findIndex((node) => node.id === nodeId);
+  expect(index, `${nodeId} in the saved definition`).toBeGreaterThanOrEqual(0);
+  const parsed = JSON.parse(body) as {
+    error_details?: IssueDetail[];
+    warning_details?: IssueDetail[];
+  };
+  if (parsed.error_details || parsed.warning_details) {
+    return [...(parsed.error_details ?? []), ...(parsed.warning_details ?? [])]
+      .filter(
+        (detail) =>
+          detail.node_id === nodeId &&
+          !detail.edge_id &&
+          !/connect/i.test(detail.message),
+      )
+      .map((detail) => detail.message);
+  }
+  return validationMessages(body).filter((message) =>
+    message.includes(` at nodes[${index}]`),
+  );
+}
+
+interface IssueDetail {
+  message: string;
+  node_id: string | null;
+  edge_id: string | null;
+}
+
+/**
+ * The missing End error in either backend wording: #3163 says the workflow
+ * "must have an 'end' node", #3218 says "Add an End step".
+ */
+export const MISSING_END = /'end' node|an End step\b/;
+
+/**
+ * A backend validation message without the " at <context> (field: <name>)"
+ * the API appends, so a check matches the banner line with or without it.
+ */
+export function validationMessageText(message: string): string {
+  return message.replace(/ at \S+( \(field: [^)]*\))?$/, '');
+}
+
+const WORKFLOW_DETAIL_URL =
+  /\/api\/ai-mentor\/orgs\/[^/]+\/workflows\/[^/?]+\/?(\?.*)?$/;
+
+/**
+ * Answer every workflow GET with the real workflow plus the fields `fields`
+ * returns at that moment, so a test can change what the next refetch says.
+ */
+export async function overrideWorkflowFields(
+  page: Page,
+  fields: () => Record<string, unknown>,
+): Promise<void> {
+  await page.route(WORKFLOW_DETAIL_URL, async (route) => {
+    if (route.request().method() !== 'GET') {
+      await route.fallback();
+      return;
+    }
+    const response = await route.fetch();
+    const body = await response.json().catch(() => null);
+    // workflows/node-types/ matches this pattern too; only the workflow
+    // itself carries a definition.
+    if (!body?.unique_id || !Array.isArray(body.definition?.nodes)) {
+      await route.fulfill({ response });
+      return;
+    }
+    await route.fulfill({ response, json: { ...body, ...fields() } });
+  });
+}
+
+/**
+ * Give the next workflow the editor loads an End step after its Agent step.
+ * The backend refuses to publish a workflow without one, and a new workflow
+ * has only Start and Agent. Call it before the workflow is opened.
+ */
+export async function addEndStepOnLoad(page: Page): Promise<void> {
+  let added = false;
+  await page.route(WORKFLOW_DETAIL_URL, async (route) => {
+    if (added || route.request().method() !== 'GET') {
+      await route.fallback();
+      return;
+    }
+    const response = await route.fetch();
+    const body = await response.json().catch(() => null);
+    // workflows/node-types/ matches this pattern too; only the workflow
+    // itself carries a definition.
+    if (!body?.unique_id || !Array.isArray(body.definition?.nodes)) {
+      await route.fulfill({ response });
+      return;
+    }
+    added = true;
+    body.definition.nodes = [
+      ...body.definition.nodes,
+      {
+        id: 'end-1',
+        type: 'end',
+        position: { x: 700, y: 250 },
+        data: { label: 'End' },
+      },
+    ];
+    body.definition.edges = [
+      ...(body.definition.edges ?? []),
+      {
+        id: 'e-mentor-1-right-end-1',
+        source: 'mentor-1',
+        target: 'end-1',
+        sourceHandle: 'right',
+      },
+    ];
+    await route.fulfill({ response, json: body });
+  });
+}
+
+const CLASSIFIER_TEST_URL = /\/workflows\/[^/]+\/classifier-test\/?(\?.*)?$/;
+
+/**
+ * Answer every classifier Try with `result` instead of calling the decision
+ * model (each real try uses credits). Returns the Try requests as they come.
+ */
+export async function mockClassifierTry(
+  page: Page,
+  result: Record<string, unknown>,
+): Promise<Request[]> {
+  const requests: Request[] = [];
+  await page.route(CLASSIFIER_TEST_URL, async (route) => {
+    if (route.request().method() !== 'POST') {
+      await route.fallback();
+      return;
+    }
+    requests.push(route.request());
+    await route.fulfill({ json: result });
+  });
+  return requests;
 }
 
 export async function openNodePanel(
@@ -544,6 +810,33 @@ export async function openNodePanel(
   const panel = nodePanel(page);
   await expect(panel).toBeVisible({ timeout: 10_000 });
   return panel;
+}
+
+/**
+ * Open the Insert Variable or Step picker of the one reference field in
+ * `scope`, search for `query` and choose the item that matches it.
+ */
+export async function insertFromPicker(
+  page: Page,
+  scope: Locator,
+  query: string,
+): Promise<void> {
+  await scope
+    .getByRole('button', { name: 'Insert Variable or Step', exact: true })
+    .click();
+  const search = page.getByPlaceholder('Search variables and steps');
+  await expect(search).toBeVisible({ timeout: 5_000 });
+  await search.fill(query);
+  await page.getByRole('option', { name: new RegExp(query) }).click();
+  await expect(search).toBeHidden({ timeout: 5_000 });
+}
+
+/** Where the caret sits in a text field. */
+export async function caretOf(field: Locator): Promise<number | null> {
+  return field.evaluate(
+    (element) =>
+      (element as HTMLInputElement | HTMLTextAreaElement).selectionStart,
+  );
 }
 
 export async function closeNodePanel(page: Page): Promise<void> {
@@ -599,6 +892,28 @@ export async function createVariableFromSetState(
 }
 
 /**
+ * The screen point `fraction` of the way along a connection's hit path. A
+ * point, not the path's box: a level connection's box has no height.
+ */
+export async function connectionPoint(
+  page: Page,
+  edgeId: string,
+  fraction: number,
+): Promise<Point> {
+  const hitPath = canvasEdge(page, edgeId);
+  await expect(hitPath).toBeAttached({ timeout: 10_000 });
+  return hitPath.evaluate((element, along) => {
+    const path = element as unknown as SVGGeometryElement;
+    const onPath = path.getPointAtLength(path.getTotalLength() * along);
+    const matrix = path.getScreenCTM()!;
+    return {
+      x: matrix.a * onPath.x + matrix.c * onPath.y + matrix.e,
+      y: matrix.b * onPath.x + matrix.d * onPath.y + matrix.f,
+    };
+  }, fraction);
+}
+
+/**
  * Select a connection by pressing on its hit path. The press lands a third of
  * the way along the path: the midpoint is where the Delete Connection button
  * appears on hover, and it would swallow the press.
@@ -607,17 +922,7 @@ export async function selectConnection(
   page: Page,
   edgeId: string,
 ): Promise<void> {
-  const hitPath = canvasEdge(page, edgeId);
-  await expect(hitPath).toBeAttached({ timeout: 10_000 });
-  const point = await hitPath.evaluate((element) => {
-    const path = element as unknown as SVGGeometryElement;
-    const onPath = path.getPointAtLength(path.getTotalLength() * 0.35);
-    const matrix = path.getScreenCTM()!;
-    return {
-      x: matrix.a * onPath.x + matrix.c * onPath.y + matrix.e,
-      y: matrix.b * onPath.x + matrix.d * onPath.y + matrix.f,
-    };
-  });
+  const point = await connectionPoint(page, edgeId, 0.35);
   await page.mouse.move(point.x, point.y);
   await page.mouse.down();
   await page.mouse.up();
@@ -640,8 +945,10 @@ async function zoomCanvasOut(page: Page): Promise<void> {
 }
 
 /**
- * Drag from a step's output handle onto another step. The handle is
- * transparent until its step is hovered, but it takes the pointer all the same.
+ * Drag from a step's output handle onto another step: `right` for a step with
+ * one output, otherwise the branch's handle (`condition-0`, `else`, …). The
+ * handle is transparent until its step is hovered, but it takes the pointer
+ * all the same.
  */
 export async function connectHandle(
   page: Page,
@@ -650,9 +957,13 @@ export async function connectHandle(
   toNodeId: string,
 ): Promise<void> {
   await zoomCanvasOut(page);
-  await page
-    .locator(`[data-testid="workflow-handle-${fromNodeId}-${handle}"]`)
-    .hover();
+  // Only branch outputs have a test id. A step's single output dot is the one
+  // element on its card positioned with -right-2.
+  const dot =
+    handle === 'right'
+      ? canvasNode(page, fromNodeId).locator('[class~="-right-2"]')
+      : page.locator(`[data-testid="workflow-handle-${fromNodeId}-${handle}"]`);
+  await dot.hover();
   await page.mouse.down();
   const target = canvasNode(page, toNodeId);
   // The drop target comes from the step's mouseenter state, so the second
@@ -663,4 +974,248 @@ export async function connectHandle(
   await expect(
     canvasEdge(page, `e-${fromNodeId}-${handle}-${toNodeId}`),
   ).toBeAttached({ timeout: 5_000 });
+}
+
+export const REFUND_CONDITION = "'refund' in input";
+export const REFUND_REPLY = 'Refund path';
+export const GENERAL_REPLY = 'General path';
+
+export interface RefundRouter extends AutosaveResult {
+  ifElseId: string;
+  refundId: string;
+  generalId: string;
+  endId: string;
+}
+
+/**
+ * Replace the default Agent step with Start -> If / Else (REFUND_CONDITION on
+ * the user's message) -> one Transform per branch -> End, and return it once
+ * it is saved. Each Transform sets `output`, which the backend's End step
+ * sends as the reply, so a run answers REFUND_REPLY or GENERAL_REPLY exactly,
+ * with no model involved.
+ */
+export async function buildRefundRouter(page: Page): Promise<RefundRouter> {
+  const agentNode = canvasNode(page, 'mentor-1');
+  await agentNode.hover();
+  await captureAutosave(
+    page,
+    () => agentNode.getByRole('button', { name: /^Delete / }).click(),
+    (definition) => !nodeOfType(definition, 'mentor'),
+  );
+
+  // The If / Else goes last: with it in the middle of the view, every spot
+  // the editor tries for a new step overlaps it, and the steps added after it
+  // all land on the same fallback spot, one on top of the other.
+  const refundId = await addNodeFromSidebar(page, 'Transform', 'transform');
+  const generalId = await addNodeFromSidebar(page, 'Transform', 'transform');
+  const endId = await addNodeFromSidebar(page, 'End', 'end');
+  const ifElseId = await addNodeFromSidebar(page, 'If / Else', 'conditional');
+
+  const ifPanel = await openNodePanel(page, ifElseId);
+  await ifPanel
+    .getByRole('textbox', { name: 'If', exact: true })
+    .fill(REFUND_CONDITION);
+  await closeNodePanel(page);
+  const replies: [string, string][] = [
+    [refundId, REFUND_REPLY],
+    [generalId, GENERAL_REPLY],
+  ];
+  for (const [nodeId, reply] of replies) {
+    const panel = await openNodePanel(page, nodeId);
+    await panel.getByLabel('Key', { exact: true }).fill('output');
+    await panel.getByLabel('Value', { exact: true }).fill(`'${reply}'`);
+    await closeNodePanel(page);
+  }
+
+  const connections: [string, string, string][] = [
+    ['start', 'right', ifElseId],
+    [ifElseId, 'condition-0', refundId],
+    [ifElseId, 'else', generalId],
+    [refundId, 'right', endId],
+    [generalId, 'right', endId],
+  ];
+  const isBuilt = (definition: SavedDefinition) =>
+    connections.every(([source, handle, target]) =>
+      definition.edges.some(
+        (edge) =>
+          edge.source === source &&
+          edge.sourceHandle === handle &&
+          edge.target === target,
+      ),
+    ) &&
+    nodeById(definition, ifElseId)?.data.conditions?.[0]?.expression ===
+      REFUND_CONDITION &&
+    replies.every(([nodeId, reply]) => {
+      const row = nodeById(definition, nodeId)?.data.expressions?.[0];
+      return row?.target === 'output' && row?.expression === `'${reply}'`;
+    });
+  for (const connection of connections.slice(0, -1)) {
+    await connectHandle(page, ...connection);
+  }
+  const saved = await captureAutosave(
+    page,
+    () => connectHandle(page, ...connections[connections.length - 1]),
+    isBuilt,
+  );
+  return { ...saved, ifElseId, refundId, generalId, endId };
+}
+
+export interface Point {
+  x: number;
+  y: number;
+}
+
+/**
+ * withFreshWorkflow at the test's phone size. The list is reached at desktop
+ * width, where the app's sidebar is on screen, and the workflow is created at
+ * phone size so the editor opens as it does on a phone. Cleanup runs at
+ * desktop width, where exitPreviewMode finds Preview as a header button.
+ */
+export async function withFreshPhoneWorkflow(
+  page: Page,
+  body: () => Promise<void>,
+): Promise<void> {
+  const phone = page.viewportSize();
+  expect(phone, 'phone viewport from test.use').not.toBeNull();
+  const desktop = { width: 1280, height: phone!.height };
+  await page.setViewportSize(desktop);
+  await navigateToWorkflowsPage(page);
+  await page.setViewportSize(phone!);
+  await createWorkflow(page, generateWorkflowName());
+  await deleteWorkflowAfter(page, async () => {
+    try {
+      await expect(
+        page.getByRole('button', { name: 'Add Step', exact: true }),
+      ).toBeVisible({ timeout: 30_000 });
+      // The first validation adds the banner above the canvas a second or so
+      // after load and moves every step down, so a tap aimed before it lands
+      // on the wrong spot. A new workflow always has the missing End error.
+      await expect(
+        page.getByTestId('workflow-validation-list').getByText(MISSING_END),
+        'the banner from the validation on open',
+      ).toBeVisible({ timeout: 30_000 });
+      // Unfitted, the Agent step starts at x 350 and runs past a 393px
+      // screen; only the editor's fit-to-view puts the whole of it on screen.
+      // 0.99, not 1: the fitted edge can fall a fraction of a pixel off it.
+      await expect(canvasNode(page, 'start')).toBeInViewport({
+        ratio: 0.99,
+        timeout: 15_000,
+      });
+      await expect(canvasNode(page, 'mentor-1')).toBeInViewport({
+        ratio: 0.99,
+        timeout: 15_000,
+      });
+      await body();
+    } finally {
+      await page.setViewportSize(desktop);
+    }
+  });
+}
+
+/**
+ * Phone counterpart of addNodeFromSidebar: below 768px the step list is a
+ * sheet behind the canvas's Add Step button, and tapping a step adds it and
+ * closes the sheet.
+ */
+export async function addNodeFromStepSheet(
+  page: Page,
+  label: string,
+  nodeType: string,
+): Promise<string> {
+  const nodes = page.locator(`[data-node-type="${nodeType}"]`);
+  const before = await nodes.count();
+  await page.getByRole('button', { name: 'Add Step', exact: true }).tap();
+  const sheet = page.getByRole('dialog', { name: 'Add Step', exact: true });
+  await expect(sheet).toBeVisible({ timeout: 10_000 });
+  await sheet.getByRole('button', { name: label, exact: true }).tap();
+  await expect(sheet).toBeHidden({ timeout: 5_000 });
+  await expect(nodes).toHaveCount(before + 1, { timeout: 10_000 });
+  const testId = await nodes.last().getAttribute('data-testid');
+  return testId!.replace('workflow-node-', '');
+}
+
+/**
+ * A one- or two-finger touch gesture: each finger goes down at `from`, moves
+ * to `to` in even steps, and all lift together. Sent through CDP because
+ * Playwright's touchscreen only taps, so Chromium only.
+ */
+export async function touchGesture(
+  page: Page,
+  fingers: { from: Point; to: Point }[],
+  steps = 12,
+): Promise<void> {
+  const at = (step: number) =>
+    fingers.map(({ from, to }, id) => ({
+      id,
+      x: from.x + ((to.x - from.x) * step) / steps,
+      y: from.y + ((to.y - from.y) * step) / steps,
+    }));
+  const cdp = await page.context().newCDPSession(page);
+  try {
+    await cdp.send('Input.dispatchTouchEvent', {
+      type: 'touchStart',
+      touchPoints: at(0),
+    });
+    for (let step = 1; step <= steps; step++) {
+      await cdp.send('Input.dispatchTouchEvent', {
+        type: 'touchMove',
+        touchPoints: at(step),
+      });
+    }
+    await cdp.send('Input.dispatchTouchEvent', {
+      type: 'touchEnd',
+      touchPoints: [],
+    });
+  } finally {
+    await cdp.detach();
+  }
+}
+
+/**
+ * A point on bare canvas `offsetX` from the middle, 100px from the top: below
+ * the Add Step button and above the steps a phone fits into view.
+ */
+export async function bareCanvasPoint(page: Page, offsetX = 0): Promise<Point> {
+  const box = await page.getByTestId('workflow-canvas').boundingBox();
+  expect(box, 'canvas on screen').not.toBeNull();
+  const point = { x: box!.x + box!.width / 2 + offsetX, y: box!.y + 100 };
+  const bare = await page.evaluate(({ x, y }) => {
+    const hit = document.elementFromPoint(x, y);
+    return (
+      !!hit?.closest('[data-testid="workflow-canvas"]') &&
+      !hit.closest(
+        '[data-node-type], [data-testid="workflow-node-panel"], button',
+      )
+    );
+  }, point);
+  expect(
+    bare,
+    `bare canvas at ${Math.round(point.x)},${Math.round(point.y)}`,
+  ).toBe(true);
+  return point;
+}
+
+export async function centreOf(locator: Locator): Promise<Point> {
+  const box = await locator.boundingBox();
+  expect(box, 'element on screen').not.toBeNull();
+  return { x: box!.x + box!.width / 2, y: box!.y + box!.height / 2 };
+}
+
+/** centreOf once two reads 150ms apart agree, for a raw touch to aim at. */
+export async function settledCentreOf(locator: Locator): Promise<Point> {
+  let point: Point = { x: 0, y: 0 };
+  let last = '';
+  await expect
+    .poll(
+      async () => {
+        point = await centreOf(locator);
+        const now = `${Math.round(point.x)},${Math.round(point.y)}`;
+        const settled = now === last;
+        last = now;
+        return settled;
+      },
+      { message: 'the canvas stops moving', intervals: [150], timeout: 10_000 },
+    )
+    .toBe(true);
+  return point;
 }

@@ -6,8 +6,10 @@ import { configureStore } from '@reduxjs/toolkit';
 import { WelcomeChatNew } from '../welcome-chat-new';
 import { Project } from '@iblai/iblai-js/data-layer';
 import { chatInputSliceReducer } from '@/features/chat-input/api-slice';
-import subscriptionSlice from '@/features/subscription/subscription-slice';
-import topBannerSlice from '@/features/top-banner/top-banner-slice';
+import {
+  subscriptionReducer,
+  topBannerReducer,
+} from '@iblai/iblai-js/web-utils';
 
 // Mock dependencies - hoist variables used in vi.mock factories
 const {
@@ -218,8 +220,8 @@ const createMockStore = (preloadedState = {}) =>
       chatInput: chatInputSliceReducer,
       files: (state = { attachedFiles: [] }) => state,
       chatSliceShared: (state = defaultChatSliceState) => state,
-      subscription: subscriptionSlice.reducer,
-      topBanner: topBannerSlice.reducer,
+      subscription: subscriptionReducer,
+      topBanner: topBannerReducer,
     },
     preloadedState: {
       chatInput: { textareaInput: '' },
@@ -227,6 +229,7 @@ const createMockStore = (preloadedState = {}) =>
       chatSliceShared: defaultChatSliceState,
       subscription: {
         openPricingModal: false,
+        openContactAdminModal: false,
         freeTrialUsageOptions: {
           count: 0,
           limitReached: false,
