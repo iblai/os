@@ -16,6 +16,28 @@ nothing else — no tabs, no settings row, nothing above it.
   until it answers. Model calls go through the platform's
   OpenAI-compatible endpoint with your own session; nothing else leaves the
   browser.
+- While a run is live the **tab itself says so**: a brand-coloured ring round
+  the viewport, a bar naming the action as it happens with a **Stop** in it, and
+  a ring on the element about to be clicked or typed into (`src/hud.ts`, painted
+  by the injected functions at the end of `src/page-scripts.ts`). The driven tab
+  also goes into a Chrome tab group named _ibl.ai_ for as long as the run lasts,
+  so it stays marked in the tab strip when you switch away (`src/tab-group.ts`);
+  a tab you have already grouped yourself is left exactly where it is.
+
+  Three things about it are load-bearing, and each has a test that fails without
+  it:
+
+  - The overlay is **not part of the page**. It hangs off `<html>` rather than
+    `<body>`, its controls live in a **closed** shadow root, and anything
+    carrying `data-ibl-agent-overlay` is skipped by the page reader and seen
+    through by the hit tests — so the model never reads it, never gets a picture
+    with it in, and can never click its own Stop.
+  - It **gets out of the way**: hidden outright for the capture the model sees,
+    and stepped aside for a trusted click that would otherwise land on the bar.
+  - It **takes itself down**. The worker beats on it every two seconds; if the
+    beats stop — an MV3 worker can be killed mid-run — the page clears the
+    overlay by itself within fifteen seconds. The same beat is what puts it back
+    after a navigation.
 
 ## Build and load
 

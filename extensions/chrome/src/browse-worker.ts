@@ -10,6 +10,8 @@ import {
   type AgentEvent,
   type Credentials,
 } from './agent';
+import { startHud, type Hud } from './hud';
+import { HUD_STOP } from './page-scripts';
 import { attach, detach, onDetach, realInput } from './real-input';
 import { t as translate, userLanguage } from './i18n';
 import { userTurn } from './prompt';
@@ -65,6 +67,8 @@ const stopNote = (stoppedBy: 'time' | null) =>
 export function handleBrowsePort(port: chrome.runtime.Port): void {
   let controller: AbortController | null = null;
   let history: ModelMessage[] = [];
+  /** The tab the live run is driving; only its overlay may end that run. */
+  let drivenTab: number | null = null;
   const pending = new Map<number, (ok: boolean) => void>();
   let nextConfirm = 0;
   // Set per run from the app's Approvals setting. Automatic means no card is
@@ -72,6 +76,21 @@ export function handleBrowsePort(port: chrome.runtime.Port): void {
   let autoApprove = false;
 
   const send = (outbound: OutboundMessage) => port.postMessage(outbound);
+
+  // Stop pressed on the page itself. The page cannot reach this channel —
+  // there is no externally_connectable — so the sender is one of our own
+  // injected scripts; the tab check is what keeps an overlay another run left
+  // behind from ending this one.
+  const onStopFromPage = (
+    message: unknown,
+    sender: chrome.runtime.MessageSender,
+  ): void => {
+    if ((message as { type?: string } | null)?.type !== HUD_STOP) return;
+    if (sender.id !== chrome.runtime.id) return;
+    if (drivenTab === null || sender.tab?.id !== drivenTab) return;
+    controller?.abort();
+  };
+  chrome.runtime.onMessage.addListener(onStopFromPage);
 
   const confirm = (description: string, signal?: AbortSignal) =>
     autoApprove
@@ -104,6 +123,7 @@ export function handleBrowsePort(port: chrome.runtime.Port): void {
     // is aborted and ends saying so, never quietly on scripted clicks.
     let lostRealInput = false;
     let stopWatching: (() => void) | undefined;
+    let hud: Hud | null = null;
     try {
       const settings = await loadSettings();
       // A model cached under a different preference is stale, not a choice: the
@@ -145,6 +165,11 @@ export function handleBrowsePort(port: chrome.runtime.Port): void {
         lostRealInput = true;
         controller?.abort();
       });
+      // Up alongside Chrome's own debug bar, and down in the `finally` below:
+      // between the two the user can see on the page itself which tab is
+      // being driven, what it is doing, and how to end it.
+      drivenTab = tabId;
+      hud = startHud(tabId);
       const withPicture = wantsPicture(model);
       const { tools, snapshot, picture } = createBrowserTools({
         tabId,
@@ -154,6 +179,7 @@ export function handleBrowsePort(port: chrome.runtime.Port): void {
         withPicture,
         real: realInput(tabId),
         signal: controller.signal,
+        hud,
       });
       // The run's first sign of life. Reading the page and then waiting for
       // the model's first token is the longest stretch of a run with nothing to
@@ -214,6 +240,10 @@ export function handleBrowsePort(port: chrome.runtime.Port): void {
       stopWatching?.();
       // Ends what the run left going, like a page read waiting to try again.
       controller.abort();
+      // Never conditional on how the run ended: an overlay left behind would
+      // tell the user their page is still being driven when it is not.
+      await hud?.stop();
+      drivenTab = null;
       await detach(tabId);
       controller = null;
     }
@@ -236,6 +266,7 @@ export function handleBrowsePort(port: chrome.runtime.Port): void {
   // Closing the panel drops the port, which both ends the run and lets the
   // worker be torn down; leaving the abort out would strand the loop.
   port.onDisconnect.addListener(() => {
+    chrome.runtime.onMessage.removeListener(onStopFromPage);
     controller?.abort();
     for (const settle of [...pending.values()]) settle(false);
   });
