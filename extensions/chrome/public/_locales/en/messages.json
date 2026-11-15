@@ -108,5 +108,44 @@
   },
   "signingIn": {
     "message": "Signing you in…"
+  },
+  "hudLabel": {
+    "message": "ibl.ai is working on this page"
+  },
+  "hudWorking": {
+    "message": "Working on this page"
+  },
+  "hudStop": {
+    "message": "Stop"
+  },
+  "hudStopping": {
+    "message": "Stopping…"
+  },
+  "hudClick": {
+    "message": "Clicking"
+  },
+  "hudDoubleClick": {
+    "message": "Double-clicking"
+  },
+  "hudType": {
+    "message": "Typing into"
+  },
+  "hudSelect": {
+    "message": "Choosing in"
+  },
+  "hudScroll": {
+    "message": "Scrolling"
+  },
+  "hudNavigate": {
+    "message": "Opening"
+  },
+  "hudBack": {
+    "message": "Going back"
+  },
+  "hudReadPage": {
+    "message": "Reading this page"
+  },
+  "hudWait": {
+    "message": "Waiting"
   }
 }

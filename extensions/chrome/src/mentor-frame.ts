@@ -170,9 +170,27 @@ export function refreshHostAuthCache(host: Element): void {
 // web page the SDK redirects to the auth SPA to mint the new tenant's tokens;
 // inside the side panel the host owns auth, so we run the auth round-trip
 // ourselves via signIn(tenant) — which hits the SPA's /login/complete with the
-// target tenant + edX JWT — then re-install the session via /sso-login-complete,
+// target tenant — then re-install the session via /sso-login-complete,
 // landing on the app root (embed params preserved) so the app opens the newly
 // selected tenant.
+/** The domains the manifest already lets this panel frame. */
+const IBL_DOMAINS = ['.iblai.app', '.ibl.ai'];
+
+/**
+ * Whether an address belongs to us.
+ *
+ * Not a comparison against `AUTH_URL`: the chooser address is built by the
+ * embedded app from its own `NEXT_PUBLIC_AUTH_URL`, which differs per
+ * deployment, and a mismatch would silently refuse the chooser — the click
+ * would do nothing. This is the same trust boundary the manifest's `frame-src`
+ * already draws, plus our own auth host for builds pointed outside it.
+ */
+function isOurAuthOrigin(url: URL): boolean {
+  if (url.protocol !== 'https:') return false;
+  if (url.origin === new URL(AUTH_URL).origin) return true;
+  return IBL_DOMAINS.some((domain) => url.hostname.endsWith(domain));
+}
+
 /**
  * The address to open for the organization chooser, or null to open nothing.
  *
@@ -195,7 +213,7 @@ export function chooserUrlToOpen(raw: string): string | null {
     console.warn('[ibl.ai panel] ignoring an unreadable chooser address');
     return null;
   }
-  if (url.origin !== new URL(AUTH_URL).origin) {
+  if (!isOurAuthOrigin(url)) {
     console.warn(
       `[ibl.ai panel] ignoring a chooser address that is not ours: ${url.origin}`,
     );

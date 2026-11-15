@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.197.0](https://github.com/iblai/os/compare/v0.196.0...v0.197.0) (2026-11-15)
+
+### Features
+
+* **ext:** say on the tab itself which page a run is driving, and group it ([8ffe759](https://github.com/iblai/os/commit/8ffe7591707db9f9895f65fdb39da045ff26a23f))
+
 ## [0.196.0](https://github.com/iblai/os/compare/v0.195.1...v0.196.0) (2026-11-13)
 
 ### Features

@@ -121,6 +121,28 @@ describe('chooserUrlToOpen', () => {
     warn.mockRestore();
   });
 
+  // The app builds this address from its own NEXT_PUBLIC_AUTH_URL, which
+  // differs per deployment, so gating on one hardcoded host would refuse a
+  // perfectly good chooser and make the click do nothing.
+  it('accepts any ibl.ai auth host, not just the one we sign in through', () => {
+    for (const host of [
+      'https://auth.iblai.app',
+      'https://auth.ibl.ai',
+      'https://login-staging.iblai.app',
+    ]) {
+      expect(chooserUrlToOpen(`${host}/me?action=switch-tenant`)).toContain(
+        host,
+      );
+    }
+  });
+
+  // http would put the request, and anything in it, on the wire in clear.
+  it('refuses a plain-http address', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    expect(chooserUrlToOpen('http://login.iblai.app/me')).toBeNull();
+    warn.mockRestore();
+  });
+
   it('refuses an address it cannot read', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     expect(chooserUrlToOpen('not a url')).toBeNull();

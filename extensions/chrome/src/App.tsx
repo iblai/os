@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ensureSignedIn, isAuthed } from './auth';
 import { t } from './i18n';
 import { MentorChat } from './mentor-chat';
+import { BrandMark } from './brand-mark';
 
 /**
  * The whole panel: the mentor chat, and nothing above it. Browsing is not a
@@ -55,7 +56,7 @@ export function App() {
   if (authed === null) {
     return (
       <div className="panel">
-        <div className="signin">{t('signingIn')}</div>
+        <BrandMark label={t('signingIn')} />
       </div>
     );
   }

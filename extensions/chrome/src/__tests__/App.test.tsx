@@ -50,7 +50,7 @@ describe('App', () => {
 
     expect(screen.queryByRole('button', { name: t('signIn') })).toBeNull();
     expect(screen.queryByTestId('mentor-chat')).toBeNull();
-    expect(screen.getByText(t('signingIn'))).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveAccessibleName(t('signingIn'));
 
     await screen.findByTestId('mentor-chat');
     expect(screen.queryByRole('button', { name: t('signIn') })).toBeNull();
