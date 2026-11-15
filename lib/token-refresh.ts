@@ -11,11 +11,13 @@ import { LOCAL_STORAGE_KEYS } from '@/lib/constants';
  * clear anything, so this is a refresh, not a logout — the user keeps their
  * session and lands back where they were.
  *
- * The edX JWT is NOT forwarded. The auth app authorises the mint with its own
- * first-party edX session, and the direction of travel is for it to stop
- * handing that JWT to apps at all. When the session is gone the mint 401s and
- * the auth app falls through to `/login?logout=1` carrying the same return
- * address: the user signs in once and still ends up back here.
+ * The edX JWT is NOT forwarded. The auth app already has what it needs: a copy
+ * of that JWT in its own storage, which it sends as `Authorization`, and its
+ * calls go out with credentials besides. Ours only duplicated that — and the
+ * direction of travel is for it to stop handing the JWT to apps at all.
+ *
+ * With neither, the mint 401s and the auth app sends the user to sign in
+ * again, which returns them here.
  */
 export function tokenRefreshUrl(
   returnPath = `${window.location.pathname}${window.location.search}`,
@@ -45,9 +47,8 @@ export function tokenRefreshUrl(
   if (tenantKey) params.set('tenant', tenantKey);
 
   // Deliberately no `token`: we do not hand the edX JWT back to the auth app.
-  // It does not need one — its calls go out with `credentials: 'include'`, so
-  // the mint is authorised by its own first-party edX session. When that
-  // session is gone it answers 401 and falls through to a sign-in, which still
-  // returns the user here.
+  // It does not need one — it authorises the mint with its own stored copy,
+  // read back on its own origin. Failing that it sends the user to sign in,
+  // which still returns them here.
   return `${base}/login/complete?${params}`;
 }
