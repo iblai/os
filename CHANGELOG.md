@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.198.4](https://github.com/iblai/os/compare/v0.198.3...v0.198.4) (2026-11-16)
+
+### Chores
+
+* take the SDK that stops writing the profile to edX ([f2cec69](https://github.com/iblai/os/commit/f2cec696aa99fa10e8bdd69c482edc5fbe4b6562)), closes [iblai-web-frontend#2246](https://github.com/iblai/iblai-web-frontend/issues/2246)
+
 ## [0.198.3](https://github.com/iblai/os/compare/v0.198.2...v0.198.3) (2026-11-16)
 
 ### Bug Fixes
