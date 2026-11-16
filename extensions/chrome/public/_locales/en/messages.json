@@ -147,5 +147,8 @@
   },
   "hudWait": {
     "message": "Waiting"
+  },
+  "errorModelNoKey": {
+    "message": "None of the models this organization can use are set up with a key. Ask whoever manages the organization to add one."
   }
 }
