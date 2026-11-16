@@ -197,6 +197,68 @@ describe('OrgPicker', () => {
     warn.mockRestore();
   });
 
+  // It covers the chat, so it has to behave like a dialog rather than an
+  // opaque sheet with the keyboard still behind it.
+  it('starts the keyboard inside itself', async () => {
+    show();
+    await screen.findByText('Acme Inc');
+
+    expect(document.activeElement).toBe(
+      screen.getByRole('button', { name: 'Close' }),
+    );
+  });
+
+  it('closes on Escape', async () => {
+    const { onCancel } = show();
+    await screen.findByText('Acme Inc');
+    const user = userEvent.setup();
+
+    await user.keyboard('{Escape}');
+
+    expect(onCancel).toHaveBeenCalledTimes(1);
+  });
+
+  it('is announced as a dialog', async () => {
+    show();
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog.getAttribute('aria-modal')).toBe('true');
+  });
+
+  // A notice from the panel must not sit on top of the picker's own, newer and
+  // more specific, problem.
+  it('shows its own error rather than the panel notice', async () => {
+    mocks.setDefaultOrganization.mockRejectedValue(new Error('nope'));
+    const warn = vi.spyOn(console, 'error').mockImplementation(() => {});
+    show({ notice: 'a panel notice' });
+    const user = userEvent.setup();
+    await screen.findByText('Globex');
+
+    await user.click(
+      screen.getByRole('button', {
+        name: /Open in this one by default: Globex/,
+      }),
+    );
+
+    expect(
+      await screen.findByText(
+        'Could not save which one opens by default. Try again.',
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByText('a panel notice')).toBeNull();
+    warn.mockRestore();
+  });
+
+  // The sign-in window can stay open as long as the person needs it.
+  it('says a switch is happening and stops taking picks', async () => {
+    const { onPick } = show({ switching: true });
+    const user = userEvent.setup();
+
+    expect(await screen.findByText('Switching organization…')).toBeTruthy();
+    expect(screen.queryByText('Acme Inc')).toBeNull();
+    await user.keyboard('{Tab}');
+    expect(onPick).not.toHaveBeenCalled();
+  });
+
   it('says so when the list cannot be loaded', async () => {
     mocks.listOrganizations.mockRejectedValue(new Error('offline'));
     const warn = vi.spyOn(console, 'error').mockImplementation(() => {});

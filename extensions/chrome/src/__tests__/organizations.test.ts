@@ -156,6 +156,54 @@ describe('listOrganizations', () => {
     expect(fetchMock.mock.calls[1][0]).toBe('https://one.test/page2');
   });
 
+  // `next` is a server-provided URL and we send a bearer token with it, so
+  // anything off the base's own origin is dropped rather than followed.
+  it('does not follow a next that points at another host', async () => {
+    fetchMock.mockResolvedValueOnce(
+      answer({ results: [row()], next: 'https://evil.example/page2' }),
+    );
+
+    await expect(listOrganizations(CREDS, BASES)).resolves.toHaveLength(1);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls.map(([u]) => u).join(' ')).not.toContain(
+      'evil.example',
+    );
+  });
+
+  it('does not follow an unreadable next', async () => {
+    fetchMock.mockResolvedValueOnce(
+      answer({ results: [row()], next: 'not a url' }),
+    );
+    await expect(listOrganizations(CREDS, BASES)).resolves.toHaveLength(1);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  // A 200 with nothing recognisable is not an answer to stop on: another base
+  // may hold the real list. Same shape as `listModels`.
+  it('tries the next base when one answers with nothing usable', async () => {
+    fetchMock
+      .mockResolvedValueOnce(answer([]))
+      .mockResolvedValueOnce(answer([row()]));
+
+    await expect(listOrganizations(CREDS, BASES)).resolves.toHaveLength(1);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('is empty only when every base says so', async () => {
+    fetchMock.mockResolvedValue(answer([]));
+    await expect(listOrganizations(CREDS, BASES)).resolves.toEqual([]);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  // The token is present but the server will not take it. Presence is not
+  // validity, and "check your connection" would be the wrong advice.
+  it('treats a refused token as a dead session, not a network problem', async () => {
+    fetchMock.mockResolvedValue(answer({ detail: 'invalid token' }, 401));
+    await expect(listOrganizations(CREDS, BASES)).rejects.toThrow(
+      NoSessionError,
+    );
+  });
+
   it('sorts by name so the list does not reorder between openings', async () => {
     fetchMock.mockResolvedValueOnce(
       answer([
@@ -259,6 +307,15 @@ describe('setDefaultOrganization', () => {
 
     await setDefaultOrganization('acme', CREDS, BASES);
     expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('treats a refused token as a dead session when saving too', async () => {
+    fetchMock.mockResolvedValueOnce(answer({}, 401));
+    await expect(setDefaultOrganization('acme', CREDS, BASES)).rejects.toThrow(
+      NoSessionError,
+    );
+    // No point asking the next base with a token the server has rejected.
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   it('throws NoSessionError without a session', async () => {

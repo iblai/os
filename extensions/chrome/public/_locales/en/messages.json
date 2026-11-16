@@ -181,7 +181,10 @@
   "orgsSignedOut": {
     "message": "Your session has ended. Close and reopen the panel to sign in again."
   },
-  "orgsBusy": {
-    "message": "Something else is signing in right now. Try again in a moment."
+  "orgsSwitching": {
+    "message": "Switching organization…"
+  },
+  "orgsSwitchFailed": {
+    "message": "That did not go through. Pick an organization to try again."
   }
 }

@@ -98,17 +98,37 @@ const nextOf = (body: unknown): string | null =>
 async function getJson(
   url: string,
   creds: Credentials,
-): Promise<{ body: unknown; base: string } | { error: string }> {
+): Promise<{ body: unknown } | { error: string; unauthorized?: boolean }> {
   try {
     const response = await fetch(url, {
       headers: { Authorization: `Token ${creds.dmToken}` },
     });
-    if (!response.ok) return { error: `${url} → HTTP ${response.status}` };
-    return { body: await response.json(), base: url };
+    if (!response.ok) {
+      return {
+        error: `${url} → HTTP ${response.status}`,
+        // The token is there but the server will not take it. Presence is not
+        // validity, and "check your connection" would be the wrong advice.
+        unauthorized: response.status === 401,
+      };
+    }
+    return { body: await response.json() };
   } catch (err) {
     return {
       error: `${url} → ${err instanceof Error ? err.message : 'failed'}`,
     };
+  }
+}
+
+/**
+ * `next` comes from the server, and we send a bearer token with it. Anything
+ * off the base's own origin is dropped rather than followed, so a mangled or
+ * hostile value cannot walk the DM token to another host.
+ */
+function samePlace(next: string, base: string): string | null {
+  try {
+    return new URL(next).origin === new URL(base).origin ? next : null;
+  } catch {
+    return null;
   }
 }
 
@@ -129,6 +149,11 @@ export async function listOrganizations(
   const path = `/api/core/users/platforms/?username=${encodeURIComponent(creds.username)}`;
   const failures: string[] = [];
   const now = Date.now();
+  let unauthorized = false;
+  // A base can answer 200 with nothing we recognise. That is not an answer to
+  // stop on — another base may hold the real list — but if every base says the
+  // same, an empty list is the truth. Same shape as `listModels`.
+  let answeredEmpty = false;
 
   for (const base of bases) {
     const rows: PlatformRow[] = [];
@@ -139,10 +164,12 @@ export async function listOrganizations(
       const answer = await getJson(url, creds);
       if ('error' in answer) {
         failed = answer.error;
+        if (answer.unauthorized) unauthorized = true;
         break;
       }
       rows.push(...rowsOf(answer.body));
-      url = nextOf(answer.body);
+      const next = nextOf(answer.body);
+      url = next ? samePlace(next, base) : null;
     }
     if (failed) {
       failures.push(failed);
@@ -154,11 +181,17 @@ export async function listOrganizations(
       .map(toOrganization)
       .filter((org): org is Organization => org !== null);
     // A duplicate key would make two rows that switch to the same place.
+    if (!organizations.length) {
+      answeredEmpty = true;
+      continue;
+    }
     const seen = new Set<string>();
     return organizations
       .filter((org) => !seen.has(org.key) && seen.add(org.key))
       .sort((a, b) => a.name.localeCompare(b.name));
   }
+  if (unauthorized) throw new NoSessionError();
+  if (answeredEmpty) return [];
   throw new Error(failures.join('; ') || 'no API base answered');
 }
 
@@ -184,8 +217,12 @@ export async function setDefaultOrganization(
         },
       );
       if (response.ok) return;
+      if (response.status === 401) throw new NoSessionError();
       failures.push(`${base} → HTTP ${response.status}`);
     } catch (err) {
+      // A refused token is refused everywhere; trying the next base would just
+      // repeat it, and the message the person needs is a different one.
+      if (err instanceof NoSessionError) throw err;
       failures.push(
         `${base} → ${err instanceof Error ? err.message : 'failed'}`,
       );

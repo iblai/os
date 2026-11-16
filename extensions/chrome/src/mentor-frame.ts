@@ -180,11 +180,11 @@ export async function switchToOrganization(
   host: Element,
   tenant: string,
 ): Promise<boolean> {
-  // False when another auth flow holds the guard (a session recovery, say).
-  // The caller has a picker open and has to say something rather than closing
-  // it on a switch that never started.
-  if (authInFlight) return false;
-  await withAuthFlow('tenant switch', async () => {
+  // False when the switch did not happen: another auth flow holds the guard (a
+  // session recovery, say), or the sign-in was cancelled or failed. The caller
+  // has a picker open and has to say something rather than closing it on a
+  // switch that never landed.
+  return withAuthFlow('tenant switch', async () => {
     // Capture the return path from the CURRENT chat URL *before* the auth
     // round-trip. signIn() is async (seconds), and the app may navigate the
     // iframe meanwhile — often to a /sso-login-complete URL, from which
@@ -201,7 +201,6 @@ export async function switchToOrganization(
     refreshHostAuthCache(host);
     installSession(host, redirectPath);
   });
-  return true;
 }
 
 /**
@@ -250,16 +249,23 @@ let authInFlight = false;
 /** How long agent-ai gets to fix an expiry before we stop believing its stamp. */
 const STAND_ASIDE_WINDOW_MS = 8_000;
 
+/**
+ * Returns false when the flow did not complete — either another one held the
+ * guard, or this one threw. Callers that show a screen need to tell those apart
+ * from success; the ones that fire and forget can ignore it.
+ */
 async function withAuthFlow(
   what: string,
   run: () => Promise<void>,
-): Promise<void> {
-  if (authInFlight) return;
+): Promise<boolean> {
+  if (authInFlight) return false;
   authInFlight = true;
   try {
     await run();
+    return true;
   } catch (err) {
     console.warn(`[ibl.ai panel] ${what} failed:`, err);
+    return false;
   } finally {
     authInFlight = false;
   }

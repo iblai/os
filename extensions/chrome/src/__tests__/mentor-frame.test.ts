@@ -9,6 +9,7 @@ import {
   startContextFeed,
   watchAndInstallSession,
   watchAuthExpired,
+  switchToOrganization,
   watchTenantSwitch,
 } from '../mentor-frame';
 import {
@@ -165,6 +166,29 @@ describe('watchTenantSwitch', () => {
   // `chooserUrl` is the app offering to host the chooser, and its value is
   // ignored now. Requiring it would mean the SDK dropping that field silently
   // kills organization switching here, so a tenant-less switch is enough.
+  // `withAuthFlow` logs and swallows, so "it ran" and "it worked" are not the
+  // same answer. A cancelled sign-in must not read as a completed switch.
+  it('reports a failed switch rather than claiming it worked', async () => {
+    const { host } = makeHost(
+      'https://os.ibl.ai/platform/acme/bot?embed=true&mode=anonymous',
+    );
+    chromeStub.stub.identity.launchWebAuthFlow.mockRejectedValueOnce(
+      new Error('the user closed the window'),
+    );
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    await expect(switchToOrganization(host, 'beta')).resolves.toBe(false);
+
+    warn.mockRestore();
+  });
+
+  it('reports a completed switch', async () => {
+    const { host } = makeHost(
+      'https://os.ibl.ai/platform/acme/bot?embed=true&mode=anonymous',
+    );
+    await expect(switchToOrganization(host, 'beta')).resolves.toBe(true);
+  });
+
   it('chooses on a tenant-less switch even without a chooser address', async () => {
     const { host } = makeHost('https://os.ibl.ai/platform/acme/bot?embed=true');
     const onChoose = vi.fn();

@@ -181,7 +181,10 @@
   "orgsSignedOut": {
     "message": "Votre session est terminée. Fermez puis réouvrez le panneau pour vous reconnecter."
   },
-  "orgsBusy": {
-    "message": "Une autre connexion est en cours. Réessayez dans un instant."
+  "orgsSwitching": {
+    "message": "Changement d'organisation…"
+  },
+  "orgsSwitchFailed": {
+    "message": "Cela n'a pas abouti. Choisissez une organisation pour réessayer."
   }
 }

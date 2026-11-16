@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { t } from './i18n';
 import {
   listOrganizations,
@@ -14,6 +14,8 @@ interface OrgPickerProps {
   onCancel: () => void;
   /** Set when a pick could not be started, so the person is not left guessing. */
   notice?: string | null;
+  /** A switch is under way: the rows stop taking clicks until it lands. */
+  switching?: boolean;
 }
 
 /**
@@ -29,6 +31,7 @@ export function OrgPicker({
   onPick,
   onCancel,
   notice,
+  switching = false,
 }: OrgPickerProps) {
   const [organizations, setOrganizations] = useState<Organization[] | null>(
     null,
@@ -36,6 +39,21 @@ export function OrgPicker({
   const [preferred, setPreferred] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const closeRef = useRef<HTMLButtonElement>(null);
+
+  // It covers the chat, so it has to behave like a dialog: the keyboard starts
+  // inside it, and Escape leaves. Without this, focus stays in the chat behind
+  // an opaque overlay.
+  useEffect(() => {
+    closeRef.current?.focus();
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      event.stopPropagation();
+      onCancel();
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [onCancel]);
 
   useEffect(() => {
     let live = true;
@@ -81,13 +99,22 @@ export function OrgPicker({
     }
   };
 
-  const message = notice ?? error;
+  // The picker's own problem wins: it is the newer and more specific of the
+  // two, and a notice from the panel would otherwise sit there masking a save
+  // failure or a dead session for as long as the list stays open.
+  const message = error ?? notice;
 
   return (
-    <div className="orgs" role="group" aria-label={t('orgsTitle')}>
+    <div
+      className="orgs"
+      role="dialog"
+      aria-modal="true"
+      aria-label={t('orgsTitle')}
+    >
       <div className="orgs-head">
         <span className="orgs-title">{t('orgsTitle')}</span>
         <button
+          ref={closeRef}
           type="button"
           className="orgs-close"
           onClick={onCancel}
@@ -100,7 +127,9 @@ export function OrgPicker({
 
       {message && <div className="row-error">{message}</div>}
 
-      {organizations === null ? (
+      {switching ? (
+        <div className="orgs-note">{t('orgsSwitching')}</div>
+      ) : organizations === null ? (
         <div className="orgs-note">{t('orgsLoading')}</div>
       ) : organizations.length === 0 ? (
         !message && <div className="orgs-note">{t('orgsEmpty')}</div>
@@ -115,7 +144,7 @@ export function OrgPicker({
                   type="button"
                   className="orgs-name"
                   onClick={() => !isCurrent && onPick(org.key)}
-                  disabled={isCurrent}
+                  disabled={isCurrent || switching}
                   aria-current={isCurrent || undefined}
                 >
                   <span className="orgs-label">{org.name}</span>
@@ -137,7 +166,7 @@ export function OrgPicker({
                     type="button"
                     className="orgs-star"
                     onClick={() => void makeDefault(org.key)}
-                    disabled={saving}
+                    disabled={saving || switching}
                     title={t('orgsMakeDefault')}
                     aria-label={`${t('orgsMakeDefault')}: ${org.name}`}
                   >

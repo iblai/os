@@ -22,6 +22,7 @@ export function MentorChat() {
   const ref = useRef<HTMLElement>(null);
   const [choosing, setChoosing] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [switching, setSwitching] = useState(false);
 
   useEffect(() => {
     const host = ref.current;
@@ -55,13 +56,21 @@ export function MentorChat() {
   const pick = async (tenant: string) => {
     const host = ref.current;
     if (!host) return;
-    // Keep the list up until the switch is actually under way: a pick that
-    // cannot start must not close the picker and leave nothing happening.
-    if (await switchToOrganization(host, tenant)) {
-      setChoosing(false);
-      return;
+    // The sign-in window can stay open for as long as the person needs, so say
+    // a switch is happening and stop taking picks until it lands. Keep the list
+    // up until then: a pick that cannot complete must not close the picker and
+    // leave nothing happening.
+    setNotice(null);
+    setSwitching(true);
+    try {
+      if (await switchToOrganization(host, tenant)) {
+        setChoosing(false);
+        return;
+      }
+      setNotice(t('orgsSwitchFailed'));
+    } finally {
+      setSwitching(false);
     }
-    setNotice(t('orgsBusy'));
   };
 
   // The picker sits over the chat rather than replacing it: the switch
@@ -75,6 +84,7 @@ export function MentorChat() {
           onPick={(tenant) => void pick(tenant)}
           onCancel={() => setChoosing(false)}
           notice={notice}
+          switching={switching}
         />
       )}
       <agent-ai
