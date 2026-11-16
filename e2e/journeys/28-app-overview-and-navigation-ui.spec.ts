@@ -152,8 +152,13 @@ test.describe('Journey 28: App Overview & Navigation UI — Admin', () => {
     await expect(
       memoryDialog.getByRole('heading', { name: 'Memory', exact: true }),
     ).toBeVisible({ timeout: 10_000 });
+    // The SDK renders the title and description twice (a wide-screen header
+    // and a narrow-screen one, each hidden by CSS on the other size), so match
+    // by role, which skips the hidden copy.
     await expect(
-      memoryDialog.getByText('Manage user global memories and agent memories.'),
+      memoryDialog
+        .getByRole('paragraph')
+        .filter({ hasText: 'Manage user global memories and agent memories.' }),
     ).toBeVisible({ timeout: 5_000 });
 
     // The whole Account rail rides along: Memory is the current entry and the

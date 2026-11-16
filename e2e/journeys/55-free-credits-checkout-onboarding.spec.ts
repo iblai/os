@@ -1,4 +1,4 @@
-import type { Locator, Page } from '@playwright/test';
+import type { FrameLocator, Locator, Page } from '@playwright/test';
 import { test, expect } from '../fixtures/mentor-test';
 import { ECOMMERCE_CHECKOUT_URL } from '../fixtures/test-data';
 import { dismissProductTourIfShown } from '../utils/product-tour';
@@ -14,37 +14,49 @@ import {
   openCreditBalanceDropdown,
 } from '@iblai/iblai-js/playwright';
 
-// Stripe shows the email either directly on the page or inside one of several
-// `__privateStripeFrame<N>` iframes whose number changes per load, so a prefix
-// match is ambiguous under strict mode. Resolve whichever holds the field and,
-// for the iframe, pin it by its exact name for this page.
-async function stripeEmailField(page: Page): Promise<Locator> {
-  const pageEmail = page.locator('input#email');
+// Stripe renders a checkout control either directly on the page or inside one
+// of several `__privateStripeFrame<N>` iframes whose number changes per load,
+// so a prefix match is ambiguous under strict mode. Resolve whichever holds the
+// control and, for an iframe, pin it by its exact name for this page.
+async function stripeControl(
+  page: Page,
+  label: string,
+  onPage: Locator,
+  inFrame: (frame: FrameLocator) => Locator,
+): Promise<Locator> {
   const stripeFrames = page.locator('iframe[name^="__privateStripeFrame"]');
-  let frameName: string | null = null;
-  let onPage = false;
+  let resolved: Locator | null = null;
   await expect(async () => {
-    if (await pageEmail.isVisible()) {
-      onPage = true;
+    if (await onPage.isVisible()) {
+      resolved = onPage;
       return;
     }
     for (const frame of await stripeFrames.all()) {
-      const email = frame
-        .contentFrame()
-        .getByRole('textbox', { name: 'Email' });
-      if (await email.isVisible()) {
-        frameName = await frame.getAttribute('name');
+      if (await inFrame(frame.contentFrame()).isVisible()) {
+        const name = await frame.getAttribute('name');
+        resolved = inFrame(
+          page.locator(`iframe[name="${name}"]`).contentFrame(),
+        );
         return;
       }
     }
-    throw new Error('Stripe Email textbox not rendered yet');
+    throw new Error(`Stripe ${label} not rendered yet`);
   }).toPass({ timeout: 30_000 });
-  if (onPage) return pageEmail;
-  return page
-    .locator(`iframe[name="${frameName}"]`)
-    .contentFrame()
-    .getByRole('textbox', { name: 'Email' });
+  return resolved!;
 }
+
+const stripeEmailField = (page: Page) =>
+  stripeControl(page, 'Email textbox', page.locator('input#email'), (frame) =>
+    frame.getByRole('textbox', { name: 'Email' }),
+  );
+
+const stripeSubmitButton = (page: Page) =>
+  stripeControl(
+    page,
+    'submit button',
+    page.getByTestId('hosted-payment-submit-button'),
+    (frame) => frame.getByTestId('payment-form-submit-button'),
+  );
 
 test.describe('Journey 55: Free Credits Checkout Onboarding', () => {
   test.use({ storageState: { cookies: [], origins: [] } });
@@ -76,7 +88,7 @@ test.describe('Journey 55: Free Credits Checkout Onboarding', () => {
 
       const emailField = await stripeEmailField(page);
       await expect(emailField).toBeVisible({ timeout: 30_000 });
-      const submitButton = page.getByTestId('hosted-payment-submit-button');
+      const submitButton = await stripeSubmitButton(page);
       await expect(submitButton).toBeVisible({ timeout: 15_000 });
 
       // ── Step 2: submit email → SSO redirect chain → mentor SPA platform ────
@@ -159,9 +171,9 @@ test.describe('Journey 55: Free Credits Checkout Onboarding', () => {
       await expect(
         page.locator('iframe[name^="__privateStripeFrame"]').first(),
       ).toBeAttached({ timeout: 30_000 });
-      await expect(
-        page.getByTestId('hosted-payment-submit-button'),
-      ).toBeVisible({ timeout: 30_000 });
+      await expect(await stripeSubmitButton(page)).toBeVisible({
+        timeout: 30_000,
+      });
       await expect(page.getByText(/payment method/i).first()).toBeVisible({
         timeout: 15_000,
       });
