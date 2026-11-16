@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.197.1](https://github.com/iblai/os/compare/v0.197.0...v0.197.1) (2026-11-16)
+
+### Tests
+
+* stop the canvas markdown test timing out by taking the cost off its clock ([3407c67](https://github.com/iblai/os/commit/3407c672eb7c619f32fe27c098d9c2ff0b8bd0ac))
+
 ## [0.197.0](https://github.com/iblai/os/compare/v0.196.0...v0.197.0) (2026-11-15)
 
 ### Features
