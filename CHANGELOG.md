@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.198.2](https://github.com/iblai/os/compare/v0.198.1...v0.198.2) (2026-11-16)
+
+### Chores
+
+* **security:** clear five of the fourteen open advisories ([4fb6f0b](https://github.com/iblai/os/commit/4fb6f0b2630a4e10e909bc221ee258417a7c0549))
+* **tauri:** release app-v0.95.33 ([0bf818b](https://github.com/iblai/os/commit/0bf818b41a31f7b8ab1b73428d394cce1b9e64a3))
+
 ## [0.198.1](https://github.com/iblai/os/compare/v0.198.0...v0.198.1) (2026-11-16)
 
 ### Documentation
