@@ -1,12 +1,12 @@
 {
   "version": 2,
-  "lastUpdated": "2026-11-16",
+  "lastUpdated": "2026-11-17",
   "summary": {
     "totalCheckpoints": 1159,
-    "coveredCheckpoints": 1072,
+    "coveredCheckpoints": 1078,
     "deprecatedCheckpoints": 18,
     "notReproducibleCheckpoints": 17,
-    "pendingCheckpoints": 52,
+    "pendingCheckpoints": 46,
     "percent": 100,
     "totalJourneys": 110,
     "activeJourneys": 109
@@ -4540,38 +4540,32 @@
         {
           "id": "eval-19",
           "description": "Q&A is optional in the New Benchmark dialog, but a benchmark with none cannot be evaluated: admin creates a second benchmark with a name alone (Details, Next, Create on a blank Q&A step), the toast says to add Q&A before running an evaluation, the Evals tab selects it and says why with one Add Q&A button, and New Evaluation is disabled with the same sentence as its hover text",
-          "status": "pending",
-          "note": "Needs the @iblai/iblai-js release with the evals changes (New Benchmark in two steps with optional Q&A, a benchmark with no Q&A cannot be evaluated); flip to covered once journey 63 runs green on it."
+          "status": "covered"
         },
         {
           "id": "eval-20",
           "description": "Add Q&A on the Evals tab opens the Add Q&A dialog for the selected benchmark (the one created without Q&A); saving a pair there removes the no-Q&A prompt, turns New Evaluation on and brings back the benchmark's regular empty state",
-          "status": "pending",
-          "note": "Needs the @iblai/iblai-js release with the evals changes (New Benchmark in two steps with optional Q&A, a benchmark with no Q&A cannot be evaluated); flip to covered once journey 63 runs green on it."
+          "status": "covered"
         },
         {
           "id": "eval-21",
           "description": "The New Benchmark dialog is two steps with Details and Q&A tabs: on Details the Q&A tab and Next are disabled until Name has text, and Next refuses a name with a slash under Name and stays on Details; Next moves to the Q&A step with the cursor in the first Question, where a note on screen says Q&A can be added later and that an evaluation needs at least one question, and Create is enabled without any Q&A; on the CSV Upload tab a file whose first row has no \"input\" column is refused under CSV File and Create is disabled; the Details tab goes back with the name kept; Cancel closes the dialog and no benchmark is created",
-          "status": "pending",
-          "note": "Needs the @iblai/iblai-js release with the evals changes (New Benchmark in two steps with optional Q&A, a benchmark with no Q&A cannot be evaluated); flip to covered once journey 63 runs green on it."
+          "status": "covered"
         },
         {
           "id": "eval-22",
           "description": "Deleting a benchmark's only Q&A pair in Manage Benchmarks -> View Q&A (the dialog then loses its \"1 Q&A pair\" count, says the benchmark has no Q&A yet and offers Add Q&A) puts it back in the no-Q&A state: the Evals tab offers Add Q&A again and New Evaluation is disabled",
-          "status": "pending",
-          "note": "Needs the @iblai/iblai-js release with the evals changes (New Benchmark in two steps with optional Q&A, a benchmark with no Q&A cannot be evaluated); flip to covered once journey 63 runs green on it."
+          "status": "covered"
         },
         {
           "id": "eval-23",
           "description": "The New Benchmark dialog refuses a name another benchmark already has: with the existing benchmark's name and a question typed on the Q&A step, Create goes back to Details with \"A benchmark with this name already exists. Enter a different name.\" under Name, Name marked invalid and holding the cursor; after Cancel the existing benchmark's Q&A does not contain the typed question",
-          "status": "pending",
-          "note": "Needs the @iblai/iblai-js release with the evals changes (New Benchmark in two steps with optional Q&A, a benchmark with no Q&A cannot be evaluated); flip to covered once journey 63 runs green on it."
+          "status": "covered"
         },
         {
           "id": "eval-24",
           "description": "Phone view (375x812, touch) of the benchmark surfaces: with a benchmark without Q&A selected the tab says why with an Add Q&A button and New Evaluation is disabled; a benchmark's Q&A dialog (Manage Benchmarks -> View Q&A) shows each answer under its question with the ANSWER column hidden; and the page never scrolls sideways",
-          "status": "pending",
-          "note": "Needs the @iblai/iblai-js release with the evals changes (New Benchmark in two steps with optional Q&A, a benchmark with no Q&A cannot be evaluated); flip to covered once journey 63 runs green on it."
+          "status": "covered"
         }
       ]
     },
