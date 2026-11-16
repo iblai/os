@@ -5,7 +5,8 @@
   --border: #e5e7eb;
   --text: #111827;
   --muted: #6b7280;
-  --primary: #3b82f6;
+  /* The ibl.ai primary colour; `BRAND` in src/hud.ts is the same value. */
+  --primary: #2467eb;
   --danger: #dc2626;
   font-family: ui-sans-serif, system-ui, sans-serif;
   font-size: 13px;

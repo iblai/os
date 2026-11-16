@@ -20,6 +20,13 @@ overrides:
   '@eslint/eslintrc>minimatch': '^3.1.2'
   '@eslint/config-array>minimatch': '^3.1.2'
   tinypool: '>=2.1.2'
+  # GHSA-mrhx-c7xc-m3w5 — memory exhaustion validating oversized constrained
+  # collections, affecting <4.6.6. Our own dependency is already 4.6.6; the
+  # vulnerable copy is the 3.x branch pnpm picked for `ai`, whose peer range is
+  # '^3.25.76 || ^4.1.8' and so is satisfied by 4.6.6 just as well.
+  # zod-to-json-schema peers on '^3.25.28 || ^4' and already resolves against
+  # 4.6.6 elsewhere in the tree. Upper bound keeps a future major out.
+  zod: '>=4.6.6 <5'
   zip: '9.0.5'
   # Floor raised to 8.1.6 for GHSA-587h-7wmj-h5pm (launch-editor existence
   # check bypass on Windows, >=8.0.0 <=8.1.5). Dev server only.
@@ -31,7 +38,18 @@ overrides:
   # get-uri > basic-ftp, so there is no production exposure. The previous floor
   # ('>=5.2.1') already resolved to 6.0.1, so this stays inside the 6.x line;
   # the upper bound keeps a future major from being pulled in unreviewed.
-  basic-ftp: '>=6.2.1 <7'
+  # Floor lifted again to 6.2.4 for GHSA-5pm8-86m8-9m6r (uncaught TypeError in
+  # the MLSD directory-listing parser, <=6.2.3). Same dev-only reach as above,
+  # same 6.x line.
+  basic-ftp: '>=6.2.4 <7'
+  # GHSA-474x-hrwr-fgx4 — quadratic CPU consumption scanning an unterminated
+  # tag, affecting <=5.11.2. Dev-only reach (wdio tooling), and 5.12.0 is a
+  # minor inside the 5.x every consumer asks for.
+  fast-xml-parser: '>=5.12.0 <6'
+  # GHSA-238p-pmpm-9mq7 — existing prototype pollution can bypass KaTeX's trust
+  # restrictions, affecting >=0.11.0 <0.18.2. Reached through react-katex, which
+  # declares no katex peer range, so lifting the floor does not strand it.
+  katex: '>=0.18.2 <0.19'
   # GHSA-p8wg-vrv2-v86f and GHSA-8r5x-fm3f-whwj (critical, JavaScript injection
   # in compile), affecting >=4.0.0 <=4.7.9; 4.7.10 is the patched release.
   # Dev-only reach: @release-it/conventional-changelog > conventional-changelog

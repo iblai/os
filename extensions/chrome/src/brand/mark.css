@@ -1,0 +1,211 @@
+/* Generated from brand/iblai-logo.json — see brand-mark.tsx. */
+@keyframes mark-disc-in {
+  0% {
+    transform: scale(0);
+  }
+  15.0% {
+    transform: scale(1.08);
+  }
+  25.0%,
+  100% {
+    transform: scale(1);
+  }
+}
+@keyframes mark-disc-fade {
+  0% {
+    opacity: 0;
+  }
+  6.667%,
+  100% {
+    opacity: 1;
+  }
+}
+@keyframes mark-i1-in {
+  0%,
+  23.333% {
+    transform: translateY(14px);
+    opacity: 0;
+  }
+  30.0% {
+    opacity: 1;
+  }
+  41.667%,
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+@keyframes mark-b-in {
+  0%,
+  28.333% {
+    transform: translateY(14px);
+    opacity: 0;
+  }
+  35.0% {
+    opacity: 1;
+  }
+  46.667%,
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+@keyframes mark-l-in {
+  0%,
+  33.333% {
+    transform: translateY(14px);
+    opacity: 0;
+  }
+  40.0% {
+    opacity: 1;
+  }
+  51.667%,
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+@keyframes mark-dot-in {
+  0%,
+  38.333% {
+    transform: translateY(14px);
+    opacity: 0;
+  }
+  45.0% {
+    opacity: 1;
+  }
+  56.667%,
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+@keyframes mark-a-in {
+  0%,
+  43.333% {
+    transform: translateY(14px);
+    opacity: 0;
+  }
+  50.0% {
+    opacity: 1;
+  }
+  61.667%,
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+@keyframes mark-i2-in {
+  0%,
+  48.333% {
+    transform: translateY(14px);
+    opacity: 0;
+  }
+  55.0% {
+    opacity: 1;
+  }
+  66.667%,
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+@keyframes mark-d1-pop {
+  0%,
+  35.0% {
+    transform: scale(0);
+  }
+  43.333% {
+    transform: scale(1.25);
+  }
+  50.0%,
+  100% {
+    transform: scale(1);
+  }
+}
+@keyframes mark-d2-pop {
+  0%,
+  38.333% {
+    transform: scale(0);
+  }
+  46.667% {
+    transform: scale(1.25);
+  }
+  53.333%,
+  100% {
+    transform: scale(1);
+  }
+}
+@keyframes mark-d3-pop {
+  0%,
+  60.0% {
+    transform: scale(0);
+  }
+  68.333% {
+    transform: scale(1.25);
+  }
+  75.0%,
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Centred in the panel, and sized to the artwork so it never stretches.
+   `.panel` is a flex column, so `margin: auto` centres on both axes. */
+.mark {
+  /* `.panel` is a flex column, so auto margins centre on both axes. */
+  margin: auto;
+  display: block;
+  /* The artwork is 840x360, so a 160px width is ~69px tall — a mark the panel
+     is waiting behind, not a splash screen filling it. */
+  width: 160px;
+  height: auto;
+}
+
+/* The Lottie's own easing: in {x:.16,y:1}, out {x:.3,y:0}. */
+.mark * {
+  animation-duration: 2s;
+  animation-iteration-count: infinite;
+  animation-timing-function: cubic-bezier(0.3, 0, 0.16, 1);
+}
+.mark-disc {
+  transform-origin: 135px 125px;
+  animation-name: mark-disc-in, mark-disc-fade;
+}
+.mark-i1 {
+  animation-name: mark-i1-in;
+}
+.mark-b {
+  animation-name: mark-b-in;
+}
+.mark-l {
+  animation-name: mark-l-in;
+}
+.mark-dot {
+  animation-name: mark-dot-in;
+}
+.mark-a {
+  animation-name: mark-a-in;
+}
+.mark-i2 {
+  animation-name: mark-i2-in;
+}
+.mark-d1 {
+  transform-origin: 314px 160px;
+  animation-name: mark-d1-pop;
+}
+.mark-d2 {
+  transform-origin: 623px 327px;
+  animation-name: mark-d2-pop;
+}
+.mark-d3 {
+  transform-origin: 799px 160px;
+  animation-name: mark-d3-pop;
+}
+
+/* Someone who asked for less motion gets the finished mark, not a loop. */
+@media (prefers-reduced-motion: reduce) {
+  .mark * {
+    animation: none;
+  }
+}

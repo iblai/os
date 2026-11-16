@@ -105,5 +105,50 @@
   },
   "errorRealClicksOff": {
     "message": "Les clics réels ont été arrêtés depuis la barre de l’onglet ou par les outils de développement, l’exécution s’est donc terminée. Réessayez."
+  },
+  "signingIn": {
+    "message": "Connexion en cours…"
+  },
+  "hudLabel": {
+    "message": "ibl.ai travaille sur cette page"
+  },
+  "hudWorking": {
+    "message": "Travail en cours sur cette page"
+  },
+  "hudStop": {
+    "message": "Arrêter"
+  },
+  "hudStopping": {
+    "message": "Arrêt en cours…"
+  },
+  "hudClick": {
+    "message": "Clic sur"
+  },
+  "hudDoubleClick": {
+    "message": "Double-clic sur"
+  },
+  "hudType": {
+    "message": "Saisie dans"
+  },
+  "hudSelect": {
+    "message": "Sélection dans"
+  },
+  "hudScroll": {
+    "message": "Défilement"
+  },
+  "hudNavigate": {
+    "message": "Ouverture de"
+  },
+  "hudBack": {
+    "message": "Retour en arrière"
+  },
+  "hudReadPage": {
+    "message": "Lecture de cette page"
+  },
+  "hudWait": {
+    "message": "Attente"
+  },
+  "errorModelNoKey": {
+    "message": "Aucun des modèles que cette organisation peut utiliser n'a de clé configurée. Demandez à la personne qui gère l'organisation d'en ajouter une."
   }
 }

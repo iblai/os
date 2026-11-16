@@ -1,5 +1,79 @@
 # Changelog
 
+## [0.198.7](https://github.com/iblai/os/compare/v0.198.6...v0.198.7) (2026-11-16)
+
+### Tests
+
+* **tauri:** point the on-device model journey at files that still exist ([7202bfe](https://github.com/iblai/os/commit/7202bfe6342f6b654b289f68acd580957c7892c2))
+
+## [0.198.6](https://github.com/iblai/os/compare/v0.198.5...v0.198.6) (2026-11-16)
+
+### Bug Fixes
+
+* **ext:** move to another model when the organization has no key for one ([99bfc91](https://github.com/iblai/os/commit/99bfc91f52500591c991e469083654466546a834))
+* **ext:** say why the tab marker never appeared, instead of nothing ([87019fe](https://github.com/iblai/os/commit/87019febefb2a303bc6be0fbab7d1aa174b12986))
+
+## [0.198.5](https://github.com/iblai/os/compare/v0.198.4...v0.198.5) (2026-11-16)
+
+### Chores
+
+* **security:** clear the last six advisories, including the critical zip ([44b7e58](https://github.com/iblai/os/commit/44b7e584d9ba564ca3d10cbd7a60407ecfc77325)), closes [dependabot/#495](https://github.com/dependabot/os/issues/495)
+* **tauri:** release app-v0.95.34 ([97d2388](https://github.com/iblai/os/commit/97d2388a3d79d161fc5240b0e387c64576d6fd89))
+
+## [0.198.4](https://github.com/iblai/os/compare/v0.198.3...v0.198.4) (2026-11-16)
+
+### Chores
+
+* take the SDK that stops writing the profile to edX ([f2cec69](https://github.com/iblai/os/commit/f2cec696aa99fa10e8bdd69c482edc5fbe4b6562)), closes [iblai-web-frontend#2246](https://github.com/iblai/iblai-web-frontend/issues/2246)
+
+## [0.198.3](https://github.com/iblai/os/compare/v0.198.2...v0.198.3) (2026-11-16)
+
+### Bug Fixes
+
+* **ext:** take back the tab marker a run that never ended left behind ([8798087](https://github.com/iblai/os/commit/8798087b6eee52661d43e6bf023a7ca908212401))
+
+## [0.198.2](https://github.com/iblai/os/compare/v0.198.1...v0.198.2) (2026-11-16)
+
+### Chores
+
+* **security:** clear five of the fourteen open advisories ([4fb6f0b](https://github.com/iblai/os/commit/4fb6f0b2630a4e10e909bc221ee258417a7c0549))
+* **tauri:** release app-v0.95.33 ([0bf818b](https://github.com/iblai/os/commit/0bf818b41a31f7b8ab1b73428d394cce1b9e64a3))
+
+## [0.198.1](https://github.com/iblai/os/compare/v0.198.0...v0.198.1) (2026-11-16)
+
+### Documentation
+
+* say correctly why the auth app does not need our edX JWT ([e874dd9](https://github.com/iblai/os/commit/e874dd93676071423242a165e13b98fc721ccd00))
+
+## [0.198.0](https://github.com/iblai/os/compare/v0.197.2...v0.198.0) (2026-11-16)
+
+### Features
+
+* send the edX calls through DM's proxy instead of the LMS ([61346f8](https://github.com/iblai/os/commit/61346f895ec939c488e4d9df62e0918d4f7778c4))
+
+### Bug Fixes
+
+* **safety:** ask for a real user in the flagged-prompts path ([39740f7](https://github.com/iblai/os/commit/39740f70cf721c7ba3f8d756ffba0c79e9848d80))
+
+## [0.197.2](https://github.com/iblai/os/compare/v0.197.1...v0.197.2) (2026-11-16)
+
+### Bug Fixes
+
+* **extension:** stop forwarding the edX JWT on a tenant switch ([2e0db85](https://github.com/iblai/os/commit/2e0db8514ceb06af946e71ed92b1a9502e70a005)), closes [iblai-web-frontend#2236](https://github.com/iblai/iblai-web-frontend/issues/2236) [#2236](https://github.com/iblai/os/issues/2236)
+* **ext:** keep the chooser's bootstrap token, drop only the panel's own ([5c01b62](https://github.com/iblai/os/commit/5c01b6282bf760e4954927806ba7a955be7f546e))
+
+## [0.197.1](https://github.com/iblai/os/compare/v0.197.0...v0.197.1) (2026-11-16)
+
+### Tests
+
+* stop the canvas markdown test timing out by taking the cost off its clock ([3407c67](https://github.com/iblai/os/commit/3407c672eb7c619f32fe27c098d9c2ff0b8bd0ac))
+
+## [0.197.0](https://github.com/iblai/os/compare/v0.196.0...v0.197.0) (2026-11-15)
+
+### Features
+
+* **ext:** say on the tab itself which page a run is driving, and group it ([8ffe759](https://github.com/iblai/os/commit/8ffe7591707db9f9895f65fdb39da045ff26a23f))
+
 ## [0.196.0](https://github.com/iblai/os/compare/v0.195.1...v0.196.0) (2026-11-13)
 
 ### Features

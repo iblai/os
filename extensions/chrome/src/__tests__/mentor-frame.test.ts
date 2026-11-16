@@ -7,6 +7,7 @@ import {
   refreshHostAuthCache,
   removeWidgetSpinner,
   startContextFeed,
+  chooserUrlToOpen,
   watchAndInstallSession,
   watchAuthExpired,
   watchTenantSwitch,
@@ -107,6 +108,69 @@ describe('installSession with an explicit redirect path (tenant switch)', () => 
   });
 });
 
+describe('chooserUrlToOpen', () => {
+  // This string arrives in a postMessage and ends up in a real browser tab, so
+  // anything able to post to the window could otherwise name any address and
+  // have the panel open it as "the organization chooser".
+  it('refuses an address that is not on our auth origin', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    expect(chooserUrlToOpen('https://evil.example/login')).toBeNull();
+
+    expect(warn.mock.calls[0]?.[0]).toContain('not ours');
+    warn.mockRestore();
+  });
+
+  // The app builds this address from its own NEXT_PUBLIC_AUTH_URL, which
+  // differs per deployment, so gating on one hardcoded host would refuse a
+  // perfectly good chooser and make the click do nothing.
+  it('accepts any ibl.ai auth host, not just the one we sign in through', () => {
+    for (const host of [
+      'https://auth.iblai.app',
+      'https://auth.ibl.ai',
+      'https://login-staging.iblai.app',
+    ]) {
+      expect(chooserUrlToOpen(`${host}/me?action=switch-tenant`)).toContain(
+        host,
+      );
+    }
+  });
+
+  // http would put the request, and anything in it, on the wire in clear.
+  it('refuses a plain-http address', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    expect(chooserUrlToOpen('http://login.iblai.app/me')).toBeNull();
+    warn.mockRestore();
+  });
+
+  it('refuses an address it cannot read', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    expect(chooserUrlToOpen('not a url')).toBeNull();
+    expect(warn).toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
+  // The chooser opens in a NORMAL tab, whose storage is partitioned away from
+  // the panel's, so `/me` has no session of its own to read there. The
+  // forwarded token is the only thing that bootstraps the organization list for
+  // a panel-only user — drop it and `/me` redirects to `/login`, which knows
+  // nothing of `action` and never returns to the chooser. It goes in step 5,
+  // with a bootstrap that is not the edX JWT.
+  it('keeps the forwarded token, which is what bootstraps the chooser', () => {
+    const url = new URL(
+      chooserUrlToOpen(
+        'https://login.iblai.app/me?action=switch-tenant&redirect-to=https%3A%2F%2Fos.ibl.ai&tenant=main&popup=1&token=secret',
+      )!,
+    );
+
+    expect(url.searchParams.get('token')).toBe('secret');
+    expect(url.searchParams.get('action')).toBe('switch-tenant');
+    expect(url.searchParams.get('tenant')).toBe('main');
+    expect(url.searchParams.get('popup')).toBe('1');
+    expect(url.searchParams.get('redirect-to')).toBe('https://os.ibl.ai');
+  });
+});
+
 describe('watchTenantSwitch', () => {
   it('re-auths into the requested tenant and re-installs via sso-login-complete', async () => {
     const { host, iframe } = makeHost(
@@ -147,7 +211,8 @@ describe('watchTenantSwitch', () => {
       new MessageEvent('message', {
         data: {
           tenantSwitch: true,
-          chooserUrl: 'https://login.iblai.app/me?action=switch-tenant&popup=1',
+          chooserUrl:
+            'https://login.iblai.app/me?action=switch-tenant&popup=1&token=secret',
         },
       }),
     );
@@ -159,6 +224,10 @@ describe('watchTenantSwitch', () => {
       { url: string },
     ];
     expect(url).toContain('action=switch-tenant');
+    // The chooser tab still carries the bootstrap token: see
+    // `chooserUrlToOpen` for why this one survives when `switchTenantUrl`'s
+    // does not.
+    expect(url).toContain('token=secret');
 
     // The chooser answers by sending its tab to /login/complete?tenant=…
     for (const listener of [...chromeStub.updated])

@@ -50,6 +50,13 @@ export function installChromeStub() {
   const removed = new Set<Listener>();
   const connected = new Set<Listener>();
   const detached = new Set<Listener>();
+  const messaged = new Set<Listener>();
+  /** Which tab sits in which group, as `chrome.tabs.get` reports it. */
+  const grouped = new Map<number, number>();
+  // The tab groups the stub has handed out, by id, so a test can read the
+  // title and colour the overlay asked for.
+  const groups = new Map<number, Record<string, unknown>>();
+  let nextGroup = 100;
   const stub = {
     identity: {
       getRedirectURL: vi.fn(() => 'https://abc.chromiumapp.org/'),
@@ -68,12 +75,14 @@ export function installChromeStub() {
           status: string;
           active?: boolean;
           windowId?: number;
+          groupId?: number;
         }> => ({
           id,
           url: 'https://app.acme.com/',
           status: 'complete',
           active: true,
           windowId: 1,
+          groupId: grouped.get(id) ?? -1,
         }),
       ),
       captureVisibleTab: vi.fn(
@@ -100,6 +109,26 @@ export function installChromeStub() {
         addListener: vi.fn((listener: Listener) => removed.add(listener)),
         removeListener: vi.fn((listener: Listener) => removed.delete(listener)),
       },
+      // The tab-strip marker: the driven tab goes into a group of its own for
+      // as long as a run is live, and comes back out when it ends.
+      group: vi.fn(async ({ tabIds }: { tabIds: number[] }) => {
+        const groupId = nextGroup++;
+        for (const id of tabIds) grouped.set(id, groupId);
+        groups.set(groupId, {});
+        return groupId;
+      }),
+      ungroup: vi.fn(async (tabIds: number[]) => {
+        for (const id of tabIds) grouped.delete(id);
+      }),
+    },
+    tabGroups: {
+      TAB_GROUP_ID_NONE: -1,
+      update: vi.fn(
+        async (groupId: number, options: Record<string, unknown>) => {
+          groups.set(groupId, { ...groups.get(groupId), ...options });
+          return { id: groupId, ...options };
+        },
+      ),
     },
     scripting: {
       // One result, tagged with the frame it was asked for: the page (frame 0)
@@ -134,9 +163,22 @@ export function installChromeStub() {
       getUILanguage: vi.fn(() => 'en-US'),
     },
     runtime: {
+      id: 'ibl-extension',
       connect: vi.fn((info: { name: string }) => fakePort(info.name)),
+      sendMessage: vi.fn((message: unknown) => {
+        // What Chrome does for an injected script: the message reaches the
+        // worker's own onMessage, tagged with the tab it came from.
+        for (const listener of [...messaged])
+          listener(message, { id: 'ibl-extension', tab: { id: 7 } }, () => {});
+      }),
       onConnect: {
         addListener: vi.fn((listener: Listener) => connected.add(listener)),
+      },
+      onMessage: {
+        addListener: vi.fn((listener: Listener) => messaged.add(listener)),
+        removeListener: vi.fn((listener: Listener) =>
+          messaged.delete(listener),
+        ),
       },
       onInstalled: { addListener: vi.fn() },
       onStartup: { addListener: vi.fn() },
@@ -161,7 +203,18 @@ export function installChromeStub() {
     windows: { getCurrent: vi.fn(async () => ({ id: 1 })) },
   };
   (globalThis as { chrome?: unknown }).chrome = stub;
-  return { stub, store, activated, updated, removed, connected, detached };
+  return {
+    stub,
+    store,
+    activated,
+    updated,
+    removed,
+    connected,
+    detached,
+    messaged,
+    grouped,
+    groups,
+  };
 }
 
 /**

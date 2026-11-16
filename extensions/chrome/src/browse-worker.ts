@@ -1,7 +1,9 @@
 import type { ModelMessage } from 'ai';
 import {
   buildModel,
+  isMissingCredential,
   listModels,
+  MISSING_CREDENTIAL,
   MODEL_PREFERENCE,
   pickModel,
   pruneOldSnapshots,
@@ -10,6 +12,8 @@ import {
   type AgentEvent,
   type Credentials,
 } from './agent';
+import { startHud, type Hud } from './hud';
+import { HUD_STOP } from './page-scripts';
 import { attach, detach, onDetach, realInput } from './real-input';
 import { t as translate, userLanguage } from './i18n';
 import { userTurn } from './prompt';
@@ -65,6 +69,8 @@ const stopNote = (stoppedBy: 'time' | null) =>
 export function handleBrowsePort(port: chrome.runtime.Port): void {
   let controller: AbortController | null = null;
   let history: ModelMessage[] = [];
+  /** The tab the live run is driving; only its overlay may end that run. */
+  let drivenTab: number | null = null;
   const pending = new Map<number, (ok: boolean) => void>();
   let nextConfirm = 0;
   // Set per run from the app's Approvals setting. Automatic means no card is
@@ -72,6 +78,21 @@ export function handleBrowsePort(port: chrome.runtime.Port): void {
   let autoApprove = false;
 
   const send = (outbound: OutboundMessage) => port.postMessage(outbound);
+
+  // Stop pressed on the page itself. The page cannot reach this channel —
+  // there is no externally_connectable — so the sender is one of our own
+  // injected scripts; the tab check is what keeps an overlay another run left
+  // behind from ending this one.
+  const onStopFromPage = (
+    message: unknown,
+    sender: chrome.runtime.MessageSender,
+  ): void => {
+    if ((message as { type?: string } | null)?.type !== HUD_STOP) return;
+    if (sender.id !== chrome.runtime.id) return;
+    if (drivenTab === null || sender.tab?.id !== drivenTab) return;
+    controller?.abort();
+  };
+  chrome.runtime.onMessage.addListener(onStopFromPage);
 
   const confirm = (description: string, signal?: AbortSignal) =>
     autoApprove
@@ -104,21 +125,41 @@ export function handleBrowsePort(port: chrome.runtime.Port): void {
     // is aborted and ends saying so, never quietly on scripted clicks.
     let lostRealInput = false;
     let stopWatching: (() => void) | undefined;
+    let hud: Hud | null = null;
     try {
       const settings = await loadSettings();
       // A model cached under a different preference is stale, not a choice: the
       // user has no way to pick one, so the cache exists only to save a round
       // trip.
       const preference = MODEL_PREFERENCE[0];
-      let model = settings.preference === preference ? settings.model : '';
+      let unusable = settings.unusable ?? [];
+      let listed: string[] = [];
+      let model =
+        settings.preference === preference && !unusable.includes(settings.model)
+          ? settings.model
+          : '';
       if (!model) {
-        model = pickModel(await listModels(creds, apiBases()));
+        listed = await listModels(creds, apiBases());
+        model = pickModel(listed, unusable);
         if (!model) {
           send({ type: 'error', message: translate('noModels') });
           return;
         }
-        await saveSettings({ model, preference });
+        await saveSettings({ model, preference, unusable });
       }
+      /**
+       * What to try after `failed` turned out to have no key behind it, or ''
+       * when this organization has nothing else to offer. The list is fetched
+       * here only when the cache answered earlier, since such a run has never
+       * seen one.
+       */
+      const insteadOf = async (failed: string): Promise<string> => {
+        unusable = [...unusable, failed];
+        if (!listed.length) listed = await listModels(creds, apiBases());
+        const next = pickModel(listed, unusable);
+        await saveSettings({ model: next, preference, unusable });
+        return next;
+      };
       // The panel resolved the tab; re-check it because the user can switch
       // tabs between submitting and the run starting.
       const tab = await chrome.tabs.get(tabId).catch(() => null);
@@ -145,59 +186,100 @@ export function handleBrowsePort(port: chrome.runtime.Port): void {
         lostRealInput = true;
         controller?.abort();
       });
-      const withPicture = wantsPicture(model);
-      const { tools, snapshot, picture } = createBrowserTools({
-        tabId,
-        confirm,
-        log: (entry) =>
-          send({ type: 'log', text: logLine(entry), ok: entry.ok }),
-        withPicture,
-        real: realInput(tabId),
-        signal: controller.signal,
-      });
-      // The run's first sign of life. Reading the page and then waiting for
-      // the model's first token is the longest stretch of a run with nothing to
-      // show, and a message on the port is also what resets the worker's idle
-      // timer while it waits.
-      send({
-        type: 'log',
-        text: logLine({
-          tool: 'read_page',
-          target: new URL(tab.url).host,
-          ok: true,
-        }),
-        ok: true,
-      });
-      const page = await snapshot();
-      const result = await runAgent({
-        model: buildModel({
-          base: completionsBase(),
-          model,
-          ...creds,
-        }),
-        messages: [
-          ...history,
-          { role: 'user', content: userTurn(goal, page.text) },
-        ],
-        tools,
-        signal: controller.signal,
-        language: await userLanguage(),
-        picture,
-        positions: withPicture,
-        // A refused call is a row in the action list, like every action;
-        // only a failed model call ends the turn.
-        onEvent: (event) => {
-          if (event.type === 'error')
-            send({ type: 'error', message: describeRunError(event) });
-          else if (event.type === 'tool-error')
-            send({
-              type: 'log',
-              text: logLine({ tool: event.toolName, target: '', ok: false }),
-              ok: false,
-            });
-          else send({ type: 'event', event });
-        },
-      });
+      // Up alongside Chrome's own debug bar, and down in the `finally` below:
+      // between the two the user can see on the page itself which tab is
+      // being driven, what it is doing, and how to end it.
+      drivenTab = tabId;
+      hud = startHud(tabId);
+      /**
+       * Models this run has found it cannot call. A list that advertises a
+       * provider with no key behind it is the ordinary shape of a
+       * half-configured organization, and calling it is the only way to find
+       * out — so the run moves to the next model rather than ending on an
+       * error the user can do nothing about.
+       */
+      const tried: string[] = [];
+      let result: Awaited<ReturnType<typeof runAgent>>;
+      for (;;) {
+        const withPicture = wantsPicture(model);
+        const { tools, snapshot, picture } = createBrowserTools({
+          tabId,
+          confirm,
+          log: (entry) =>
+            send({ type: 'log', text: logLine(entry), ok: entry.ok }),
+          withPicture,
+          real: realInput(tabId),
+          signal: controller.signal,
+          hud,
+        });
+        // The run's first sign of life. Reading the page and then waiting for
+        // the model's first token is the longest stretch of a run with nothing to
+        // show, and a message on the port is also what resets the worker's idle
+        // timer while it waits.
+        if (!tried.length)
+          send({
+            type: 'log',
+            text: logLine({
+              tool: 'read_page',
+              target: new URL(tab.url).host,
+              ok: true,
+            }),
+            ok: true,
+          });
+        const page = await snapshot();
+        try {
+          result = await runAgent({
+            model: buildModel({
+              base: completionsBase(),
+              model,
+              ...creds,
+            }),
+            messages: [
+              ...history,
+              { role: 'user', content: userTurn(goal, page.text) },
+            ],
+            tools,
+            signal: controller.signal,
+            language: await userLanguage(),
+            picture,
+            positions: withPicture,
+            // A refused call is a row in the action list, like every action;
+            // only a failed model call ends the turn.
+            onEvent: (event) => {
+              // A model with no key behind it is about to be swapped for the
+              // next one, so the user never sees the platform's wording for it.
+              if (
+                event.type === 'error' &&
+                MISSING_CREDENTIAL.test(event.message)
+              )
+                return;
+              if (event.type === 'error')
+                send({ type: 'error', message: describeRunError(event) });
+              else if (event.type === 'tool-error')
+                send({
+                  type: 'log',
+                  text: logLine({
+                    tool: event.toolName,
+                    target: '',
+                    ok: false,
+                  }),
+                  ok: false,
+                });
+              else send({ type: 'event', event });
+            },
+          });
+          break;
+        } catch (err) {
+          if (!isMissingCredential(err)) throw err;
+          tried.push(model);
+          const next = await insteadOf(model);
+          if (!next) {
+            send({ type: 'error', message: translate('errorModelNoKey') });
+            return;
+          }
+          model = next;
+        }
+      }
       history = pruneOldSnapshots(result.messages);
       if (lostRealInput) {
         send({ type: 'error', message: translate('errorRealClicksOff') });
@@ -214,6 +296,10 @@ export function handleBrowsePort(port: chrome.runtime.Port): void {
       stopWatching?.();
       // Ends what the run left going, like a page read waiting to try again.
       controller.abort();
+      // Never conditional on how the run ended: an overlay left behind would
+      // tell the user their page is still being driven when it is not.
+      await hud?.stop();
+      drivenTab = null;
       await detach(tabId);
       controller = null;
     }
@@ -236,6 +322,7 @@ export function handleBrowsePort(port: chrome.runtime.Port): void {
   // Closing the panel drops the port, which both ends the run and lets the
   // worker be torn down; leaving the abort out would strand the loop.
   port.onDisconnect.addListener(() => {
+    chrome.runtime.onMessage.removeListener(onStopFromPage);
     controller?.abort();
     for (const settle of [...pending.values()]) settle(false);
   });
