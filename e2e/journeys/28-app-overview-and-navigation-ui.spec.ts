@@ -196,6 +196,85 @@ test.describe('Journey 28: App Overview & Navigation UI — Admin', () => {
     await page.keyboard.press('Escape');
     await expect(memoryDialog).not.toBeVisible({ timeout: 10_000 });
   });
+
+  // ov-15: Every admin footer row opens the same organization Account dialog
+  // (the SDK `PlatformAccountSheet`, as on the LMS sidebar) landed on its own
+  // tab, and the rail moves between tabs without closing it.
+  test('admin opens each footer row and lands on its tab in the organization Account dialog, then moves to another tab from the rail without closing it', async ({
+    page,
+    sidebarPage,
+  }) => {
+    const isAdmin = await checkAdminStatus(page);
+    test.skip(!isAdmin, 'Footer account rows require admin access');
+
+    await expect(sidebarPage.secretsButton).toBeVisible({ timeout: 15_000 });
+
+    const dialog = page.getByRole('dialog', {
+      name: 'Organization settings',
+      exact: true,
+    });
+    const rail = dialog.getByRole('navigation', {
+      name: 'Organization settings',
+      exact: true,
+    });
+    const railEntry = (name: string) =>
+      rail.getByRole('button', { name, exact: true });
+    const pageHeading = (name: string) =>
+      dialog.getByRole('heading', { name, exact: true });
+
+    // Management and Monetization depend on the tenant's permissions and
+    // settings; the others are always there for an admin.
+    const rows = [
+      { name: 'Management', button: sidebarPage.managementButton },
+      { name: 'API', button: sidebarPage.apiButton },
+      { name: 'Secrets', button: sidebarPage.secretsButton },
+      { name: 'Monetization', button: sidebarPage.monetizationButton },
+      { name: 'Memory', button: sidebarPage.memoryButton },
+      { name: 'Advanced', button: sidebarPage.settingsButton },
+    ];
+    const visibleRows: string[] = [];
+    for (const row of rows) {
+      if (!(await row.button.isVisible().catch(() => false))) continue;
+      visibleRows.push(row.name);
+
+      await row.button.click();
+      await expect(dialog).toBeVisible({ timeout: 15_000 });
+      await expect(pageHeading(row.name)).toBeVisible({ timeout: 10_000 });
+      await expect(railEntry(row.name)).toHaveAttribute(
+        'aria-current',
+        'page',
+        {
+          timeout: 10_000,
+        },
+      );
+
+      await page.keyboard.press('Escape');
+      await expect(dialog).not.toBeVisible({ timeout: 10_000 });
+    }
+    expect(visibleRows).toEqual(
+      expect.arrayContaining(['API', 'Secrets', 'Memory', 'Advanced']),
+    );
+
+    // Every tab the footer offers is also in the rail, so moving between them
+    // never needs the footer again.
+    await sidebarPage.settingsButton.click();
+    await expect(pageHeading('Advanced')).toBeVisible({ timeout: 15_000 });
+    for (const name of visibleRows) {
+      await expect(railEntry(name)).toBeVisible({ timeout: 5_000 });
+    }
+
+    await railEntry('Secrets').click();
+    await expect(pageHeading('Secrets')).toBeVisible({ timeout: 10_000 });
+    await expect(railEntry('Secrets')).toHaveAttribute('aria-current', 'page');
+    await expect(railEntry('Advanced')).not.toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+    await expect(dialog).toBeVisible();
+
+    await page.keyboard.press('Escape');
+    await expect(dialog).not.toBeVisible({ timeout: 10_000 });
+  });
 });
 
 // ── Journey 28: Navbar LLM-name overflow fix (desktop) ────────────────────────

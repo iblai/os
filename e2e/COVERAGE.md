@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-11-13 | 1153 checkpoints (1072 covered, 46 pending/fixme, 17 not-reproducible in default env, 18 deprecated) | 110 journeys (109 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-11-16 | 1154 checkpoints (1073 covered, 46 pending/fixme, 17 not-reproducible in default env, 18 deprecated) | 110 journeys (109 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -77,7 +77,7 @@ When adding a new page or modifying an existing user flow:
 - [x] Profile modal has proper ARIA attributes (tablist, tabpanel, aria-selected, aria-controls)
 - [x] User avatar with initials and Admin badge (for admins) are visible
 - [x] History tab on the user's own profile loads (rows or the "No conversations found" empty state) and never shows the 403 permission notice
-- [x] Tenant admin opens another user's profile via sidebar Management → Users → "View profile for …": preview mode (no Security tab) still offers the History tab, which loads that user's history instead of the permission notice (skips without PLAYWRIGHT_NONADMIN_USERNAME or the RBAC-gated Management entry)
+- [x] Tenant admin opens another user's profile via the sidebar Management row (the organization Account dialog, "Organization settings", with Management current in its rail) → Users → "View profile for …": preview mode (no Security tab) still offers the History tab, which loads that user's history instead of the permission notice (skips without PLAYWRIGHT_NONADMIN_USERNAME or the RBAC-gated Management entry)
 - [x] History tab on the user's own profile: every conversation row on the first page shows its title and first-AI-reply preview as plain text (LaTeX converted to readable text, markdown stripped), with no raw `\(`, `\)`, `\[`, `\]`, `\text{`, `\textbf{` or `**`
 
 ---
@@ -555,7 +555,7 @@ The "Remember past conversations" (`enable_memory_component`) master toggle move
 
 ---
 
-## Journey 28: App Overview & Navigation UI (14 checkpoints) — `journeys/28-app-overview-and-navigation-ui.spec.ts`
+## Journey 28: App Overview & Navigation UI (15 checkpoints) — `journeys/28-app-overview-and-navigation-ui.spec.ts`
 
 **Source files:** `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`, `components/modals/llm-provider-selection-modal.tsx`
 
@@ -573,6 +573,7 @@ The "Remember past conversations" (`enable_memory_component`) master toggle move
 - [x] Admin: nav does not overflow on mobile when credit balance is hidden; LLM name span stays ≤150 px _(navbar overflow fix: ov-12)_
 - [x] Admin opens the navbar LLM selector modal (`navbarPage.openLlmProviderModal`, dialog name "LLM Providers") and the "LLM Configuration" heading/description are absent — proves the OS wrapper's `showConfigurationHeader={false}` prop reaches the SDK `AgentLLMTab` component _(ov-13)_
 - [x] Admin sidebar footer mirrors the SDK tenant-settings (`Account`) rail: a "Memory" entry sits with Secrets, API and Advanced (admin-only — no dedicated RBAC permission, so a non-admin never gets it via RBAC alone; hidden when an admin flips to learner mode) and clicking it opens the SDK's whole organization Account dialog ("Organization settings", the `PlatformAccountSheet` the LMS sidebar opens) landed on its Memory tab — the Memory heading ("Manage user global memories and agent memories.") above the SDK `MemoryAdminTab` (Global / Agent sub-tabs, or the memsearch-disabled notice; the Agent sub-tab renders the agents section) with the tab rail beside it, Memory marked current and Management, API, Secrets and Advanced one click away; Escape closes the dialog _(ov-14)_
+- [x] Each admin footer row the admin sees (Management and Monetization when allowed; API, Secrets, Memory and Advanced always) opens the same organization Account dialog ("Organization settings", the SDK `PlatformAccountSheet`) with that tab's heading shown and its rail entry marked current; every footer tab is also in the rail, and clicking Secrets in the rail from Advanced switches the page and the current entry without closing the dialog; Escape closes it _(ov-15)_
 
 ---
 

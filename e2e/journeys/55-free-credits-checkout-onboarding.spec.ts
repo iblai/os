@@ -1,3 +1,4 @@
+import type { Locator, Page } from '@playwright/test';
 import { test, expect } from '../fixtures/mentor-test';
 import { ECOMMERCE_CHECKOUT_URL } from '../fixtures/test-data';
 import { dismissProductTourIfShown } from '../utils/product-tour';
@@ -12,6 +13,38 @@ import {
   logger,
   openCreditBalanceDropdown,
 } from '@iblai/iblai-js/playwright';
+
+// Stripe shows the email either directly on the page or inside one of several
+// `__privateStripeFrame<N>` iframes whose number changes per load, so a prefix
+// match is ambiguous under strict mode. Resolve whichever holds the field and,
+// for the iframe, pin it by its exact name for this page.
+async function stripeEmailField(page: Page): Promise<Locator> {
+  const pageEmail = page.locator('input#email');
+  const stripeFrames = page.locator('iframe[name^="__privateStripeFrame"]');
+  let frameName: string | null = null;
+  let onPage = false;
+  await expect(async () => {
+    if (await pageEmail.isVisible()) {
+      onPage = true;
+      return;
+    }
+    for (const frame of await stripeFrames.all()) {
+      const email = frame
+        .contentFrame()
+        .getByRole('textbox', { name: 'Email' });
+      if (await email.isVisible()) {
+        frameName = await frame.getAttribute('name');
+        return;
+      }
+    }
+    throw new Error('Stripe Email textbox not rendered yet');
+  }).toPass({ timeout: 30_000 });
+  if (onPage) return pageEmail;
+  return page
+    .locator(`iframe[name="${frameName}"]`)
+    .contentFrame()
+    .getByRole('textbox', { name: 'Email' });
+}
 
 test.describe('Journey 55: Free Credits Checkout Onboarding', () => {
   test.use({ storageState: { cookies: [], origins: [] } });
@@ -41,7 +74,7 @@ test.describe('Journey 55: Free Credits Checkout Onboarding', () => {
         timeout: 90_000,
       });
 
-      const emailField = page.locator('input#email');
+      const emailField = await stripeEmailField(page);
       await expect(emailField).toBeVisible({ timeout: 30_000 });
       const submitButton = page.getByTestId('hosted-payment-submit-button');
       await expect(submitButton).toBeVisible({ timeout: 15_000 });

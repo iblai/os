@@ -998,8 +998,18 @@ test.describe('Journey 4: User Profile Management', () => {
     );
     await sidebarPage.managementButton.click();
 
-    const managementDialog = page.getByRole('dialog', { name: 'Management' });
+    // The footer row opens the organization Account dialog, rail included,
+    // landed on its Management tab.
+    const managementDialog = page.getByRole('dialog', {
+      name: 'Organization settings',
+      exact: true,
+    });
     await expect(managementDialog).toBeVisible({ timeout: 15_000 });
+    await expect(
+      managementDialog
+        .getByRole('navigation', { name: 'Organization settings', exact: true })
+        .getByRole('button', { name: 'Management', exact: true }),
+    ).toHaveAttribute('aria-current', 'page', { timeout: 10_000 });
 
     // Users is the default Management sub-tab; find the non-admin user.
     await managementDialog
