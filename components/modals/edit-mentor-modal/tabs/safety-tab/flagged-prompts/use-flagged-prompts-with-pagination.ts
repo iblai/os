@@ -58,6 +58,10 @@ export function useFlaggedPromptsWithPagination({
 
   const { data: moderationLogsData, isLoading } = useGetModerationLogsQuery({
     org: tenantKey,
+    // The path is `/orgs/<org>/users/<user_id>/moderation-logs/` and DM takes
+    // the username in that slot, as everywhere else in this app. Left out, the
+    // request went to `/users/undefined/`.
+    userId: username,
     username,
     // @ts-ignore
     mentor: mentorId,
