@@ -7,7 +7,6 @@ import {
   refreshHostAuthCache,
   removeWidgetSpinner,
   startContextFeed,
-  chooserUrlToOpen,
   watchAndInstallSession,
   watchAuthExpired,
   watchTenantSwitch,
@@ -108,69 +107,6 @@ describe('installSession with an explicit redirect path (tenant switch)', () => 
   });
 });
 
-describe('chooserUrlToOpen', () => {
-  // This string arrives in a postMessage and ends up in a real browser tab, so
-  // anything able to post to the window could otherwise name any address and
-  // have the panel open it as "the organization chooser".
-  it('refuses an address that is not on our auth origin', () => {
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-
-    expect(chooserUrlToOpen('https://evil.example/login')).toBeNull();
-
-    expect(warn.mock.calls[0]?.[0]).toContain('not ours');
-    warn.mockRestore();
-  });
-
-  // The app builds this address from its own NEXT_PUBLIC_AUTH_URL, which
-  // differs per deployment, so gating on one hardcoded host would refuse a
-  // perfectly good chooser and make the click do nothing.
-  it('accepts any ibl.ai auth host, not just the one we sign in through', () => {
-    for (const host of [
-      'https://auth.iblai.app',
-      'https://auth.ibl.ai',
-      'https://login-staging.iblai.app',
-    ]) {
-      expect(chooserUrlToOpen(`${host}/me?action=switch-tenant`)).toContain(
-        host,
-      );
-    }
-  });
-
-  // http would put the request, and anything in it, on the wire in clear.
-  it('refuses a plain-http address', () => {
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    expect(chooserUrlToOpen('http://login.iblai.app/me')).toBeNull();
-    warn.mockRestore();
-  });
-
-  it('refuses an address it cannot read', () => {
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    expect(chooserUrlToOpen('not a url')).toBeNull();
-    expect(warn).toHaveBeenCalled();
-    warn.mockRestore();
-  });
-
-  // The chooser opens in a NORMAL tab, whose storage is partitioned away from
-  // the panel's, so `/me` has no session of its own to read there. The
-  // forwarded token is the only thing that bootstraps the organization list for
-  // a panel-only user — drop it and `/me` redirects to `/login`, which knows
-  // nothing of `action` and never returns to the chooser. It goes in step 5,
-  // with a bootstrap that is not the edX JWT.
-  it('keeps the forwarded token, which is what bootstraps the chooser', () => {
-    const url = new URL(
-      chooserUrlToOpen(
-        'https://login.iblai.app/me?action=switch-tenant&redirect-to=https%3A%2F%2Fos.ibl.ai&tenant=main&popup=1&token=secret',
-      )!,
-    );
-
-    expect(url.searchParams.get('token')).toBe('secret');
-    expect(url.searchParams.get('action')).toBe('switch-tenant');
-    expect(url.searchParams.get('tenant')).toBe('main');
-    expect(url.searchParams.get('popup')).toBe('1');
-    expect(url.searchParams.get('redirect-to')).toBe('https://os.ibl.ai');
-  });
-});
-
 describe('watchTenantSwitch', () => {
   it('re-auths into the requested tenant and re-installs via sso-login-complete', async () => {
     const { host, iframe } = makeHost(
@@ -201,62 +137,15 @@ describe('watchTenantSwitch', () => {
   // iframe cannot go there — navigating it would tear the mentor out of the
   // panel — so the chooser opens in a tab and the pick resumes the normal
   // switch.
-  it('opens the chooser in a tab and switches to whatever the user picks there', async () => {
-    const { host, iframe } = makeHost(
+  // The panel lists organizations itself now. It never opens the auth app's
+  // chooser in a tab: that tab cannot read a side panel's session, so it only
+  // ever worked because a credential rode along in its address.
+  it('asks the panel to choose rather than opening a tab', async () => {
+    const { host } = makeHost(
       'https://os.ibl.ai/platform/acme/bot?embed=true&mode=anonymous',
     );
-    const stop = watchTenantSwitch(host);
-
-    window.dispatchEvent(
-      new MessageEvent('message', {
-        data: {
-          tenantSwitch: true,
-          chooserUrl:
-            'https://login.iblai.app/me?action=switch-tenant&popup=1&token=secret',
-        },
-      }),
-    );
-
-    await vi.waitFor(() =>
-      expect(chromeStub.stub.tabs.create).toHaveBeenCalled(),
-    );
-    const [{ url }] = chromeStub.stub.tabs.create.mock.calls[0] as unknown as [
-      { url: string },
-    ];
-    expect(url).toContain('action=switch-tenant');
-    // The chooser tab still carries the bootstrap token: see
-    // `chooserUrlToOpen` for why this one survives when `switchTenantUrl`'s
-    // does not.
-    expect(url).toContain('token=secret');
-
-    // The chooser answers by sending its tab to /login/complete?tenant=…
-    for (const listener of [...chromeStub.updated])
-      listener(
-        99,
-        {},
-        { id: 99, url: 'https://login.iblai.app/login/complete?tenant=beta' },
-      );
-
-    // That tab is closed rather than left to open the full web app, and the
-    // panel mints its own session for the chosen organization.
-    await vi.waitFor(() =>
-      expect(chromeStub.stub.tabs.remove).toHaveBeenCalledWith(99),
-    );
-    await vi.waitFor(() =>
-      expect(chromeStub.stub.identity.launchWebAuthFlow).toHaveBeenCalled(),
-    );
-    const [{ url: authUrl }] = chromeStub.stub.identity.launchWebAuthFlow.mock
-      .calls[0] as unknown as [{ url: string }];
-    expect(authUrl).toContain('tenant=beta');
-    await vi.waitFor(() => expect(iframe.src).toContain('/sso-login-complete'));
-    stop();
-  });
-
-  // Closing the tab without choosing is not a switch: nothing was minted and
-  // the panel keeps the session it had.
-  it('does nothing when the chooser tab is closed without a pick', async () => {
-    const { host } = makeHost('https://os.ibl.ai/platform/acme/bot?embed=true');
-    const stop = watchTenantSwitch(host);
+    const onChoose = vi.fn();
+    const stop = watchTenantSwitch(host, onChoose);
 
     window.dispatchEvent(
       new MessageEvent('message', {
@@ -266,13 +155,24 @@ describe('watchTenantSwitch', () => {
         },
       }),
     );
-    await vi.waitFor(() =>
-      expect(chromeStub.stub.tabs.create).toHaveBeenCalled(),
+
+    await vi.waitFor(() => expect(onChoose).toHaveBeenCalledTimes(1));
+    expect(chromeStub.stub.tabs.create).not.toHaveBeenCalled();
+    expect(chromeStub.stub.identity.launchWebAuthFlow).not.toHaveBeenCalled();
+    stop();
+  });
+
+  it('ignores a switch that names neither a tenant nor a chooser', async () => {
+    const { host } = makeHost('https://os.ibl.ai/platform/acme/bot?embed=true');
+    const onChoose = vi.fn();
+    const stop = watchTenantSwitch(host, onChoose);
+
+    window.dispatchEvent(
+      new MessageEvent('message', { data: { tenantSwitch: true } }),
     );
 
-    for (const listener of [...chromeStub.removed]) listener(99);
-
     await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(onChoose).not.toHaveBeenCalled();
     expect(chromeStub.stub.identity.launchWebAuthFlow).not.toHaveBeenCalled();
     stop();
   });

@@ -147,5 +147,32 @@
   },
   "hudWait": {
     "message": "Attente"
+  },
+  "orgsTitle": {
+    "message": "Organisations"
+  },
+  "orgsLoading": {
+    "message": "Chargement de vos organisations…"
+  },
+  "orgsEmpty": {
+    "message": "Vous ne faites encore partie d'aucune autre organisation."
+  },
+  "orgsCurrent": {
+    "message": "Actuelle"
+  },
+  "orgsMakeDefault": {
+    "message": "Ouvrir celle-ci par défaut"
+  },
+  "orgsIsDefault": {
+    "message": "S'ouvre par défaut"
+  },
+  "orgsFailed": {
+    "message": "Impossible de charger vos organisations. Vérifiez votre connexion et réessayez."
+  },
+  "defaultOrgFailed": {
+    "message": "Impossible d'enregistrer celle qui s'ouvre par défaut. Réessayez."
+  },
+  "orgsClose": {
+    "message": "Fermer"
   }
 }

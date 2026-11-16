@@ -147,5 +147,32 @@
   },
   "hudWait": {
     "message": "Waiting"
+  },
+  "orgsTitle": {
+    "message": "Organizations"
+  },
+  "orgsLoading": {
+    "message": "Loading your organizations…"
+  },
+  "orgsEmpty": {
+    "message": "You are not in any other organization yet."
+  },
+  "orgsCurrent": {
+    "message": "Current"
+  },
+  "orgsMakeDefault": {
+    "message": "Open in this one by default"
+  },
+  "orgsIsDefault": {
+    "message": "Opens by default"
+  },
+  "orgsFailed": {
+    "message": "Could not load your organizations. Check your connection and try again."
+  },
+  "defaultOrgFailed": {
+    "message": "Could not save which one opens by default. Try again."
+  },
+  "orgsClose": {
+    "message": "Close"
   }
 }

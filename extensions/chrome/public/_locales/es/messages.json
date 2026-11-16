@@ -147,5 +147,32 @@
   },
   "hudWait": {
     "message": "Esperando"
+  },
+  "orgsTitle": {
+    "message": "Organizaciones"
+  },
+  "orgsLoading": {
+    "message": "Cargando tus organizaciones…"
+  },
+  "orgsEmpty": {
+    "message": "Todavía no estás en ninguna otra organización."
+  },
+  "orgsCurrent": {
+    "message": "Actual"
+  },
+  "orgsMakeDefault": {
+    "message": "Abrir esta de forma predeterminada"
+  },
+  "orgsIsDefault": {
+    "message": "Se abre de forma predeterminada"
+  },
+  "orgsFailed": {
+    "message": "No se pudieron cargar tus organizaciones. Revisa tu conexión e inténtalo de nuevo."
+  },
+  "defaultOrgFailed": {
+    "message": "No se pudo guardar cuál se abre de forma predeterminada. Inténtalo de nuevo."
+  },
+  "orgsClose": {
+    "message": "Cerrar"
   }
 }

@@ -1,13 +1,7 @@
 // Glue between the side panel and the mentor iframe inside <agent-ai> (ported
 // from the original panel.js).
 import { extractPageContent } from './page-scripts';
-import {
-  AUTH_URL,
-  isAuthed,
-  isSessionExpired,
-  sessionData,
-  signIn,
-} from './auth';
+import { isAuthed, isSessionExpired, sessionData, signIn } from './auth';
 import { injectable } from './settings';
 
 export interface PageContent {
@@ -173,107 +167,49 @@ export function refreshHostAuthCache(host: Element): void {
 // target tenant — then re-install the session via /sso-login-complete,
 // landing on the app root (embed params preserved) so the app opens the newly
 // selected tenant.
-/** The domains the manifest already lets this panel frame. */
-const IBL_DOMAINS = ['.iblai.app', '.ibl.ai'];
 
 /**
- * Whether an address belongs to us.
+ * Move the panel to `tenant`: mint that organization's tokens and remount the
+ * chat on them.
  *
- * Not a comparison against `AUTH_URL`: the chooser address is built by the
- * embedded app from its own `NEXT_PUBLIC_AUTH_URL`, which differs per
- * deployment, and a mismatch would silently refuse the chooser — the click
- * would do nothing. This is the same trust boundary the manifest's `frame-src`
- * already draws, plus our own auth host for builds pointed outside it.
+ * Shared by the two ways a switch starts — the app naming a tenant outright,
+ * and someone picking one in the panel's own list — so both go through the
+ * same auth flow guard and the same remount.
  */
-function isOurAuthOrigin(url: URL): boolean {
-  if (url.protocol !== 'https:') return false;
-  if (url.origin === new URL(AUTH_URL).origin) return true;
-  return IBL_DOMAINS.some((domain) => url.hostname.endsWith(domain));
-}
-
-/**
- * The address to open for the organization chooser, or null to open nothing.
- *
- * It must be on our own auth origin. `watchTenantSwitch` listens on the window,
- * so anything able to post to it could otherwise name any address and have the
- * panel open it as "the organization chooser".
- *
- * The forwarded edX JWT deliberately stays on the address, unlike
- * `switchTenantUrl`, which drops it. The difference is where each one opens.
- * `switchTenantUrl` runs inside a `launchWebAuthFlow` window on the auth
- * origin, which can read that origin's own stored token. The chooser opens
- * with `chrome.tabs.create`, in a NORMAL tab — a different storage context from
- * the panel's (side panels are storage-partitioned, see auth.ts). A panel-only
- * user therefore has nothing stored for the auth origin in a normal tab, and
- * `/me` renders the chooser only when `userData` is present or the forwarded
- * token bootstraps it; failing both it redirects to `/login`, which knows
- * nothing of `action` and so never comes back to the chooser. Dropping the
- * token here would silently remove organization switching for exactly the
- * people who only use the panel.
- *
- * It goes when the chooser gets a bootstrap that is not the edX JWT — the panel
- * already holds a `dm_token` — which belongs with step 5, where the auth app
- * stops handing the JWT to apps at all.
- */
-export function chooserUrlToOpen(raw: string): string | null {
-  let url: URL;
-  try {
-    url = new URL(raw);
-  } catch {
-    console.warn('[ibl.ai panel] ignoring an unreadable chooser address');
-    return null;
-  }
-  if (!isOurAuthOrigin(url)) {
-    console.warn(
-      `[ibl.ai panel] ignoring a chooser address that is not ours: ${url.origin}`,
-    );
-    return null;
-  }
-  return url.toString();
-}
-
-/**
- * Watch a chooser tab until the user picks an organization, and report which.
- *
- * The chooser hands its answer to `/login/complete?tenant=<key>`, so that
- * navigation IS the pick. We take the key from the URL and close the tab there
- * rather than letting it run on — completing it would land the full web app in
- * a browser tab, while the session that matters is the panel's, which we mint
- * ourselves through `signIn`.
- *
- * Resolves null when the user closes the tab instead of choosing: no pick, no
- * switch, nothing to undo.
- */
-function awaitChosenOrganization(tabId: number): Promise<string | null> {
-  return new Promise((resolve) => {
-    const done = (tenant: string | null) => {
-      chrome.tabs.onUpdated.removeListener(onUpdated);
-      chrome.tabs.onRemoved.removeListener(onRemoved);
-      resolve(tenant);
-    };
-    const onUpdated = (id: number, _info: unknown, tab: chrome.tabs.Tab) => {
-      if (id !== tabId || !tab.url) return;
-      let url: URL;
-      try {
-        url = new URL(tab.url);
-      } catch {
-        return;
-      }
-      if (!url.pathname.endsWith('/login/complete')) return;
-      const tenant = url.searchParams.get('tenant');
-      if (!tenant) return;
-      chrome.tabs.remove(tabId).catch(() => {});
-      done(tenant);
-    };
-    const onRemoved = (id: number) => {
-      if (id === tabId) done(null);
-    };
-    chrome.tabs.onUpdated.addListener(onUpdated);
-    chrome.tabs.onRemoved.addListener(onRemoved);
+export async function switchToOrganization(
+  host: Element,
+  tenant: string,
+): Promise<void> {
+  await withAuthFlow('tenant switch', async () => {
+    // Capture the return path from the CURRENT chat URL *before* the auth
+    // round-trip. signIn() is async (seconds), and the app may navigate the
+    // iframe meanwhile — often to a /sso-login-complete URL, from which
+    // embedRedirectPath would strip everything to a bare "/". Landing on "/"
+    // drops the embed params, so the app resolves the wrong tenant/route and
+    // re-requests the switch (a redirect loop). Snapshotting here keeps the
+    // real embed params (embed/mode/component/…) on the post-switch redirect.
+    const redirectPath = embedRedirectPath(host);
+    // The auth app issues the target tenant's tokens and returns them in the
+    // redirect `data`, which signIn() stores in this page's localStorage.
+    await signIn(tenant);
+    // Point agent-ai's cached host auth at the NEW session BEFORE it re-mounts
+    // the iframe, so its authrelyonhost re-broadcast can't revert the switch.
+    refreshHostAuthCache(host);
+    installSession(host, redirectPath);
   });
 }
 
-export function watchTenantSwitch(host: Element): () => void {
+/**
+ * `onChoose` runs when the app asks for an organization without naming one —
+ * the panel answers with its own list rather than opening the auth app's
+ * chooser in a tab. That tab could not read the panel's session (side panels
+ * are storage-partitioned), so it only ever worked on a forwarded credential
+ * in its address.
+ */
+export function watchTenantSwitch(
+  host: Element,
+  onChoose?: () => void,
+): () => void {
   const onMessage = async (event: MessageEvent) => {
     const data = event.data as {
       tenantSwitch?: boolean;
@@ -282,44 +218,13 @@ export function watchTenantSwitch(host: Element): () => void {
     } | null;
     if (!data?.tenantSwitch || authInFlight) return;
 
-    // No tenant, but an address: the user asked to CHOOSE one. The panel's
-    // iframe cannot go there itself — navigating it would tear the mentor out
-    // of the panel — so the chooser opens in a real tab and we resume the
-    // normal switch below with whatever they pick.
-    if (!data.tenant && data.chooserUrl) {
-      const url = chooserUrlToOpen(data.chooserUrl);
-      if (!url) return;
-      await withAuthFlow('organization chooser', async () => {
-        const tab = await chrome.tabs.create({ url });
-        const tenant = tab.id ? await awaitChosenOrganization(tab.id) : null;
-        if (!tenant) return;
-        const redirectPath = embedRedirectPath(host);
-        await signIn(tenant);
-        refreshHostAuthCache(host);
-        installSession(host, redirectPath);
-      });
+    if (!data.tenant) {
+      // `chooserUrl` is the app offering to host the chooser; we decline and
+      // show ours. Still required, so an empty request stays a no-op.
+      if (data.chooserUrl) onChoose?.();
       return;
     }
-
-    if (!data.tenant) return;
-    const tenant = data.tenant;
-    await withAuthFlow('tenant switch', async () => {
-      // Capture the return path from the CURRENT chat URL *before* the auth
-      // round-trip. signIn() is async (seconds), and the app may navigate the
-      // iframe meanwhile — often to a /sso-login-complete URL, from which
-      // embedRedirectPath would strip everything to a bare "/". Landing on "/"
-      // drops the embed params, so the app resolves the wrong tenant/route and
-      // re-requests the switch (a redirect loop). Snapshotting here keeps the
-      // real embed params (embed/mode/component/…) on the post-switch redirect.
-      const redirectPath = embedRedirectPath(host);
-      // The auth app issues the target tenant's tokens and returns them in the
-      // redirect `data`, which signIn() stores in this page's localStorage.
-      await signIn(tenant);
-      // Point agent-ai's cached host auth at the NEW session BEFORE it re-mounts
-      // the iframe, so its authrelyonhost re-broadcast can't revert the switch.
-      refreshHostAuthCache(host);
-      installSession(host, redirectPath);
-    });
+    await switchToOrganization(host, data.tenant);
   };
   window.addEventListener('message', onMessage);
   return () => window.removeEventListener('message', onMessage);

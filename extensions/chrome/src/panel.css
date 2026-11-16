@@ -29,6 +29,11 @@ body {
   flex-direction: column;
 }
 
+/* The organization picker is positioned against the panel, not the viewport. */
+.panel {
+  position: relative;
+}
+
 button {
   font: inherit;
   border-radius: 6px;
@@ -70,4 +75,116 @@ agent-ai {
 /* Sign-in failures. */
 .row-error {
   color: var(--danger);
+}
+
+/* The organization picker, over the chat. */
+.orgs {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  overflow-y: auto;
+  background: var(--bg);
+}
+
+.orgs-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.orgs-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.orgs-close {
+  padding: 0 6px;
+  font-size: 18px;
+  line-height: 1;
+  color: var(--muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.orgs-note {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.orgs-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Name and star on one line, never wrapping the star onto its own row. */
+.orgs-row {
+  display: flex;
+  align-items: stretch;
+  gap: 4px;
+}
+
+.orgs-name {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  font-size: 13px;
+  color: var(--text);
+  text-align: left;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.orgs-name:hover:not(:disabled) {
+  border-color: var(--primary);
+}
+
+/* The one you are in: still listed, so the list is the whole picture. */
+.orgs-name:disabled {
+  cursor: default;
+  opacity: 1;
+}
+
+.orgs-label {
+  overflow-wrap: anywhere;
+}
+
+.orgs-badge {
+  flex: none;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.orgs-star {
+  flex: none;
+  padding: 0 8px;
+  font-size: 14px;
+  color: var(--border);
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.orgs-star:hover:not(:disabled) {
+  color: var(--muted);
+}
+
+.orgs-star.on {
+  color: var(--primary);
+  cursor: default;
 }

@@ -147,5 +147,32 @@
   },
   "hudWait": {
     "message": "正在等待"
+  },
+  "orgsTitle": {
+    "message": "组织"
+  },
+  "orgsLoading": {
+    "message": "正在加载你的组织…"
+  },
+  "orgsEmpty": {
+    "message": "你还没有加入其他组织。"
+  },
+  "orgsCurrent": {
+    "message": "当前"
+  },
+  "orgsMakeDefault": {
+    "message": "默认打开此组织"
+  },
+  "orgsIsDefault": {
+    "message": "默认打开"
+  },
+  "orgsFailed": {
+    "message": "无法加载你的组织。请检查网络连接后重试。"
+  },
+  "defaultOrgFailed": {
+    "message": "无法保存默认打开的组织。请重试。"
+  },
+  "orgsClose": {
+    "message": "关闭"
   }
 }
