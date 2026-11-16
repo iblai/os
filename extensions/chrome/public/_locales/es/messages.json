@@ -163,9 +163,6 @@
   "orgsMakeDefault": {
     "message": "Abrir esta de forma predeterminada"
   },
-  "orgsIsDefault": {
-    "message": "Se abre de forma predeterminada"
-  },
   "orgsFailed": {
     "message": "No se pudieron cargar tus organizaciones. Revisa tu conexión e inténtalo de nuevo."
   },
@@ -174,5 +171,17 @@
   },
   "orgsClose": {
     "message": "Cerrar"
+  },
+  "orgsDefault": {
+    "message": "Predeterminada"
+  },
+  "orgsAccount": {
+    "message": "Cuenta"
+  },
+  "orgsSignedOut": {
+    "message": "Tu sesión ha terminado. Cierra y vuelve a abrir el panel para iniciar sesión de nuevo."
+  },
+  "orgsBusy": {
+    "message": "Se está iniciando otra sesión en este momento. Inténtalo de nuevo en un momento."
   }
 }

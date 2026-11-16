@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { t } from './i18n';
 import {
-  defaultOrganization,
   listOrganizations,
+  NoSessionError,
   setDefaultOrganization,
   type Organization,
 } from './organizations';
@@ -12,6 +12,8 @@ interface OrgPickerProps {
   current: string | null;
   onPick: (key: string) => void;
   onCancel: () => void;
+  /** Set when a pick could not be started, so the person is not left guessing. */
+  notice?: string | null;
 }
 
 /**
@@ -19,33 +21,38 @@ interface OrgPickerProps {
  *
  * Choosing one is the whole point of the screen, so the row itself is the
  * control — no Select button beside a name. Making one the default is a
- * different decision and gets its own icon, which is why the two are not the
- * same click.
+ * different decision and gets its own control, which is why the two are not
+ * the same click.
  */
-export function OrgPicker({ current, onPick, onCancel }: OrgPickerProps) {
+export function OrgPicker({
+  current,
+  onPick,
+  onCancel,
+  notice,
+}: OrgPickerProps) {
   const [organizations, setOrganizations] = useState<Organization[] | null>(
     null,
   );
   const [preferred, setPreferred] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [saving, setSaving] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     let live = true;
     const load = async () => {
       setError(null);
       try {
-        const [list, fallback] = await Promise.all([
-          listOrganizations(),
-          defaultOrganization(),
-        ]);
+        const list = await listOrganizations();
         if (!live) return;
         setOrganizations(list);
-        setPreferred(fallback);
+        setPreferred(list.find((org) => org.isDefault)?.key ?? null);
       } catch (err) {
         console.error('[ibl.ai panel] could not list organizations:', err);
         if (!live) return;
-        setError(t('orgsFailed'));
+        // A dead session is not a connection problem, and the fix is different.
+        setError(
+          err instanceof NoSessionError ? t('orgsSignedOut') : t('orgsFailed'),
+        );
         setOrganizations([]);
       }
     };
@@ -56,21 +63,25 @@ export function OrgPicker({ current, onPick, onCancel }: OrgPickerProps) {
   }, []);
 
   const makeDefault = async (key: string) => {
-    setSaving(key);
+    setSaving(true);
     // Shown as chosen straight away: the request is a save, and bouncing the
     // mark back on failure says more than a spinner would.
     const previous = preferred;
     setPreferred(key);
     try {
       await setDefaultOrganization(key);
+      // A later success must clear an earlier failure's message.
+      setError(null);
     } catch (err) {
       console.error('[ibl.ai panel] could not save the default:', err);
       setPreferred(previous);
       setError(t('defaultOrgFailed'));
     } finally {
-      setSaving(null);
+      setSaving(false);
     }
   };
+
+  const message = notice ?? error;
 
   return (
     <div className="orgs" role="group" aria-label={t('orgsTitle')}>
@@ -87,12 +98,12 @@ export function OrgPicker({ current, onPick, onCancel }: OrgPickerProps) {
         </button>
       </div>
 
-      {error && <div className="row-error">{error}</div>}
+      {message && <div className="row-error">{message}</div>}
 
       {organizations === null ? (
         <div className="orgs-note">{t('orgsLoading')}</div>
       ) : organizations.length === 0 ? (
-        !error && <div className="orgs-note">{t('orgsEmpty')}</div>
+        !message && <div className="orgs-note">{t('orgsEmpty')}</div>
       ) : (
         <ul className="orgs-list">
           {organizations.map((org) => {
@@ -108,25 +119,31 @@ export function OrgPicker({ current, onPick, onCancel }: OrgPickerProps) {
                   aria-current={isCurrent || undefined}
                 >
                   <span className="orgs-label">{org.name}</span>
-                  {isCurrent && (
-                    <span className="orgs-badge">{t('orgsCurrent')}</span>
-                  )}
+                  <span className="orgs-marks">
+                    {isCurrent && (
+                      <span className="orgs-badge">{t('orgsCurrent')}</span>
+                    )}
+                    {/* The default reads as a word, not a disabled icon whose
+                        only explanation would be a tooltip that never shows. */}
+                    {isDefault && (
+                      <span className="orgs-badge">{t('orgsDefault')}</span>
+                    )}
+                  </span>
                 </button>
-                <button
-                  type="button"
-                  className={isDefault ? 'orgs-star on' : 'orgs-star'}
-                  onClick={() => void makeDefault(org.key)}
-                  disabled={isDefault || saving !== null}
-                  title={isDefault ? t('orgsIsDefault') : t('orgsMakeDefault')}
-                  aria-label={
-                    isDefault
-                      ? t('orgsIsDefault')
-                      : `${t('orgsMakeDefault')}: ${org.name}`
-                  }
-                  aria-pressed={isDefault}
-                >
-                  ★
-                </button>
+                {/* Offered only where it would do something, so no row carries
+                    a control that cannot be used. */}
+                {!isDefault && (
+                  <button
+                    type="button"
+                    className="orgs-star"
+                    onClick={() => void makeDefault(org.key)}
+                    disabled={saving}
+                    title={t('orgsMakeDefault')}
+                    aria-label={`${t('orgsMakeDefault')}: ${org.name}`}
+                  >
+                    ★
+                  </button>
+                )}
               </li>
             );
           })}

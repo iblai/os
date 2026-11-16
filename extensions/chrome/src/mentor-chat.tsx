@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { org } from './auth';
+import { t } from './i18n';
 import { startBrowseBridge } from './browse-bridge';
 import {
   removeWidgetSpinner,
@@ -20,6 +21,7 @@ export const LMS_URL = 'https://learn.iblai.app';
 export function MentorChat() {
   const ref = useRef<HTMLElement>(null);
   const [choosing, setChoosing] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
     const host = ref.current;
@@ -29,7 +31,7 @@ export function MentorChat() {
     // iframe.
     removeWidgetSpinner(host);
     const stopInstall = watchAndInstallSession(host);
-    const stopTenantSwitch = watchTenantSwitch(host, () => setChoosing(true));
+    const stopTenantSwitch = watchTenantSwitch(host, choose);
     const stopAuthExpired = watchAuthExpired(host);
     const stopFeed = startContextFeed(host);
     const stopBridge = startBrowseBridge(host);
@@ -45,10 +47,21 @@ export function MentorChat() {
   // Sizing lives in panel.css so the component fills the panel.
   // `authrelyonhost` makes it read the session this page holds instead of
   // redirecting.
-  const pick = (tenant: string) => {
-    setChoosing(false);
+  const choose = () => {
+    setNotice(null);
+    setChoosing(true);
+  };
+
+  const pick = async (tenant: string) => {
     const host = ref.current;
-    if (host) void switchToOrganization(host, tenant);
+    if (!host) return;
+    // Keep the list up until the switch is actually under way: a pick that
+    // cannot start must not close the picker and leave nothing happening.
+    if (await switchToOrganization(host, tenant)) {
+      setChoosing(false);
+      return;
+    }
+    setNotice(t('orgsBusy'));
   };
 
   // The picker sits over the chat rather than replacing it: the switch
@@ -59,8 +72,9 @@ export function MentorChat() {
       {choosing && (
         <OrgPicker
           current={org()}
-          onPick={pick}
+          onPick={(tenant) => void pick(tenant)}
           onCancel={() => setChoosing(false)}
+          notice={notice}
         />
       )}
       <agent-ai

@@ -179,7 +179,11 @@ export function refreshHostAuthCache(host: Element): void {
 export async function switchToOrganization(
   host: Element,
   tenant: string,
-): Promise<void> {
+): Promise<boolean> {
+  // False when another auth flow holds the guard (a session recovery, say).
+  // The caller has a picker open and has to say something rather than closing
+  // it on a switch that never started.
+  if (authInFlight) return false;
   await withAuthFlow('tenant switch', async () => {
     // Capture the return path from the CURRENT chat URL *before* the auth
     // round-trip. signIn() is async (seconds), and the app may navigate the
@@ -197,6 +201,7 @@ export async function switchToOrganization(
     refreshHostAuthCache(host);
     installSession(host, redirectPath);
   });
+  return true;
 }
 
 /**
@@ -218,10 +223,12 @@ export function watchTenantSwitch(
     } | null;
     if (!data?.tenantSwitch || authInFlight) return;
 
+    // A switch with no tenant named is a request to choose one. `chooserUrl`
+    // rides along — the app offering to host the chooser — but is deliberately
+    // not required: gating on a field whose value we ignore would mean the SDK
+    // dropping it silently kills organization switching here.
     if (!data.tenant) {
-      // `chooserUrl` is the app offering to host the chooser; we decline and
-      // show ours. Still required, so an empty request stays a no-op.
-      if (data.chooserUrl) onChoose?.();
+      onChoose?.();
       return;
     }
     await switchToOrganization(host, data.tenant);

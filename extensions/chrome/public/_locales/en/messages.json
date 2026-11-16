@@ -163,9 +163,6 @@
   "orgsMakeDefault": {
     "message": "Open in this one by default"
   },
-  "orgsIsDefault": {
-    "message": "Opens by default"
-  },
   "orgsFailed": {
     "message": "Could not load your organizations. Check your connection and try again."
   },
@@ -174,5 +171,17 @@
   },
   "orgsClose": {
     "message": "Close"
+  },
+  "orgsDefault": {
+    "message": "Default"
+  },
+  "orgsAccount": {
+    "message": "Account"
+  },
+  "orgsSignedOut": {
+    "message": "Your session has ended. Close and reopen the panel to sign in again."
+  },
+  "orgsBusy": {
+    "message": "Something else is signing in right now. Try again in a moment."
   }
 }

@@ -1,9 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
-  defaultOrganization,
   listOrganizations,
+  NoSessionError,
   setDefaultOrganization,
 } from '../organizations';
+import { installChromeStub } from './chrome.stub';
 
 const CREDS = { dmToken: 'dm-token', org: 'acme', username: 'ada' };
 const BASES = ['https://one.test', 'https://two.test'];
@@ -16,14 +17,21 @@ const answer = (body: unknown, status = 200) =>
     headers: { 'Content-Type': 'application/json' },
   });
 
+const row = (over: Record<string, unknown> = {}) => ({
+  platform_key: 'acme',
+  name: 'Acme Inc',
+  ...over,
+});
+
 beforeEach(() => {
+  installChromeStub();
   fetchMock = vi.fn();
   globalThis.fetch = fetchMock as unknown as typeof fetch;
 });
 
 describe('listOrganizations', () => {
   it('asks DM for the signed-in user and authorises with the DM token', async () => {
-    fetchMock.mockResolvedValueOnce(answer([{ platform_key: 'acme' }]));
+    fetchMock.mockResolvedValueOnce(answer([row()]));
 
     await listOrganizations(CREDS, BASES);
 
@@ -36,59 +44,132 @@ describe('listOrganizations', () => {
 
   it('reads a name, and falls back to the key when there is none', async () => {
     fetchMock.mockResolvedValueOnce(
-      answer([
-        { platform_key: 'acme', name: 'Acme Inc' },
-        { platform_key: 'globex' },
-      ]),
+      answer([row(), row({ platform_key: 'globex', name: undefined })]),
     );
 
     await expect(listOrganizations(CREDS, BASES)).resolves.toEqual([
-      { key: 'acme', name: 'Acme Inc' },
-      { key: 'globex', name: 'globex' },
+      { key: 'acme', name: 'Acme Inc', isDefault: false },
+      { key: 'globex', name: 'globex', isDefault: false },
     ]);
   });
 
   // DM has spelled the key three ways across these endpoints; a rename should
   // not empty the list.
   it.each([
-    ['platform_key', { platform_key: 'acme' }],
-    ['key', { key: 'acme' }],
-    ['org', { org: 'acme' }],
-  ])('accepts the key spelled %s', async (_label, row) => {
-    fetchMock.mockResolvedValueOnce(answer([row]));
+    ['platform_key', { platform_key: 'zz', key: undefined }],
+    ['key', { platform_key: undefined, key: 'zz' }],
+    ['org', { platform_key: undefined, org: 'zz' }],
+  ])('accepts the key spelled %s', async (_label, over) => {
+    fetchMock.mockResolvedValueOnce(answer([row({ ...over, name: 'Zed' })]));
     await expect(listOrganizations(CREDS, BASES)).resolves.toEqual([
-      { key: 'acme', name: 'acme' },
+      { key: 'zz', name: 'Zed', isDefault: false },
     ]);
   });
 
-  it('reads a paginated body as well as a bare array', async () => {
+  // `is_default` comes back as a string, not a boolean, so the list itself says
+  // which one opens by default — no second request that 503s where the backing
+  // table is not migrated.
+  it.each([
+    ['the string "true"', 'true'],
+    ['the string "True"', 'True'],
+    ['a real boolean', true],
+  ])('marks the default from %s on the row', async (_label, value) => {
+    fetchMock.mockResolvedValueOnce(answer([row({ is_default: value })]));
+    const [org] = await listOrganizations(CREDS, BASES);
+    expect(org.isDefault).toBe(true);
+  });
+
+  it.each([
+    ['"false"', 'false'],
+    ['absent', undefined],
+  ])('is not the default when is_default is %s', async (_label, value) => {
+    fetchMock.mockResolvedValueOnce(answer([row({ is_default: value })]));
+    const [org] = await listOrganizations(CREDS, BASES);
+    expect(org.isDefault).toBe(false);
+  });
+
+  // Picking a dead link starts an auth round-trip that cannot land, so it is
+  // never offered.
+  it.each([
+    ['the link is inactive', { active: false }],
+    ['the person is inactive there', { user_active: false }],
+    ['the link has expired', { expired_on: '2000-01-01T00:00:00Z' }],
+  ])('leaves out a row where %s', async (_label, over) => {
+    fetchMock.mockResolvedValueOnce(answer([row(over)]));
+    await expect(listOrganizations(CREDS, BASES)).resolves.toEqual([]);
+  });
+
+  it('keeps a row whose expiry is still in the future', async () => {
     fetchMock.mockResolvedValueOnce(
-      answer({ results: [{ platform_key: 'acme', name: 'Acme' }] }),
+      answer([row({ expired_on: '2999-01-01T00:00:00Z' })]),
     );
-    await expect(listOrganizations(CREDS, BASES)).resolves.toEqual([
-      { key: 'acme', name: 'Acme' },
-    ]);
+    await expect(listOrganizations(CREDS, BASES)).resolves.toHaveLength(1);
+  });
+
+  // Only an explicit false disqualifies: these fields are absent on some rows,
+  // and a missing field is not a dead link.
+  it('keeps a row that says nothing about being active', async () => {
+    fetchMock.mockResolvedValueOnce(
+      answer([row({ active: undefined, user_active: undefined })]),
+    );
+    await expect(listOrganizations(CREDS, BASES)).resolves.toHaveLength(1);
+  });
+
+  it('keeps a row whose expiry cannot be read', async () => {
+    fetchMock.mockResolvedValueOnce(answer([row({ expired_on: 'whenever' })]));
+    await expect(listOrganizations(CREDS, BASES)).resolves.toHaveLength(1);
+  });
+
+  // A personal platform's key is a 32-character blob that means nothing to the
+  // person reading the list; the app calls it "Account".
+  it('calls an unnamed personal platform Account', async () => {
+    fetchMock.mockResolvedValueOnce(
+      answer([row({ platform_key: 'a'.repeat(32), name: undefined })]),
+    );
+    const [org] = await listOrganizations(CREDS, BASES);
+    expect(org.name).toBe('Account');
+  });
+
+  it('prefers a real name over Account', async () => {
+    fetchMock.mockResolvedValueOnce(
+      answer([row({ platform_key: 'a'.repeat(32), name: 'My Place' })]),
+    );
+    const [org] = await listOrganizations(CREDS, BASES);
+    expect(org.name).toBe('My Place');
+  });
+
+  it('reads a paginated body as well as a bare array', async () => {
+    fetchMock.mockResolvedValueOnce(answer({ results: [row()] }));
+    await expect(listOrganizations(CREDS, BASES)).resolves.toHaveLength(1);
+  });
+
+  it('follows next, so nothing after the first page is lost', async () => {
+    fetchMock
+      .mockResolvedValueOnce(
+        answer({ results: [row()], next: 'https://one.test/page2' }),
+      )
+      .mockResolvedValueOnce(
+        answer({ results: [row({ platform_key: 'globex', name: 'Globex' })] }),
+      );
+
+    await expect(listOrganizations(CREDS, BASES)).resolves.toHaveLength(2);
+    expect(fetchMock.mock.calls[1][0]).toBe('https://one.test/page2');
   });
 
   it('sorts by name so the list does not reorder between openings', async () => {
     fetchMock.mockResolvedValueOnce(
       answer([
-        { platform_key: 'z', name: 'Zebra' },
-        { platform_key: 'a', name: 'Apple' },
+        row({ platform_key: 'z', name: 'Zebra' }),
+        row({ platform_key: 'a', name: 'Apple' }),
       ]),
     );
-    await expect(listOrganizations(CREDS, BASES)).resolves.toEqual([
-      { key: 'a', name: 'Apple' },
-      { key: 'z', name: 'Zebra' },
-    ]);
+    const names = (await listOrganizations(CREDS, BASES)).map((o) => o.name);
+    expect(names).toEqual(['Apple', 'Zebra']);
   });
 
   it('drops a duplicate key, which would switch to the same place twice', async () => {
     fetchMock.mockResolvedValueOnce(
-      answer([
-        { platform_key: 'acme', name: 'Acme' },
-        { platform_key: 'acme', name: 'Acme again' },
-      ]),
+      answer([row(), row({ name: 'Acme again' })]),
     );
     await expect(listOrganizations(CREDS, BASES)).resolves.toHaveLength(1);
   });
@@ -105,7 +186,7 @@ describe('listOrganizations', () => {
   it('falls through to the next base when one refuses', async () => {
     fetchMock
       .mockResolvedValueOnce(answer({ detail: 'no' }, 403))
-      .mockResolvedValueOnce(answer([{ platform_key: 'acme' }]));
+      .mockResolvedValueOnce(answer([row()]));
 
     await expect(listOrganizations(CREDS, BASES)).resolves.toHaveLength(1);
     expect(fetchMock.mock.calls[1][0]).toContain('https://two.test');
@@ -114,7 +195,7 @@ describe('listOrganizations', () => {
   it('falls through when one base cannot be reached at all', async () => {
     fetchMock
       .mockRejectedValueOnce(new Error('offline'))
-      .mockResolvedValueOnce(answer([{ platform_key: 'acme' }]));
+      .mockResolvedValueOnce(answer([row()]));
 
     await expect(listOrganizations(CREDS, BASES)).resolves.toHaveLength(1);
   });
@@ -126,37 +207,12 @@ describe('listOrganizations', () => {
     );
   });
 
-  it('refuses without a session rather than calling out unauthenticated', async () => {
-    await expect(listOrganizations(null, BASES)).rejects.toThrow('no session');
-    expect(fetchMock).not.toHaveBeenCalled();
-  });
-});
-
-describe('defaultOrganization', () => {
-  it.each([
-    ['platform_key', { platform_key: 'acme' }],
-    ['key', { key: 'acme' }],
-    ['org', { org: 'acme' }],
-    ['a nested platform', { platform: { platform_key: 'acme' } }],
-  ])('reads the key from %s', async (_label, body) => {
-    fetchMock.mockResolvedValueOnce(answer(body));
-    await expect(defaultOrganization(CREDS, BASES)).resolves.toBe('acme');
-  });
-
-  // 503 here means the backing table is not migrated in this environment. The
-  // list is still usable, so this must not fail the screen.
-  it('is null when the endpoint cannot answer', async () => {
-    fetchMock.mockResolvedValue(answer({}, 503));
-    await expect(defaultOrganization(CREDS, BASES)).resolves.toBeNull();
-  });
-
-  it('is null when nothing has been chosen', async () => {
-    fetchMock.mockResolvedValueOnce(answer({}));
-    await expect(defaultOrganization(CREDS, BASES)).resolves.toBeNull();
-  });
-
-  it('is null without a session', async () => {
-    await expect(defaultOrganization(null, BASES)).resolves.toBeNull();
+  // A dead session is not a connection problem, and the panel says something
+  // different about each.
+  it('throws NoSessionError without a session, and calls nothing', async () => {
+    await expect(listOrganizations(null, BASES)).rejects.toThrow(
+      NoSessionError,
+    );
     expect(fetchMock).not.toHaveBeenCalled();
   });
 });
@@ -196,9 +252,18 @@ describe('setDefaultOrganization', () => {
     );
   });
 
-  it('refuses without a session', async () => {
+  it('tries the next base when one cannot be reached', async () => {
+    fetchMock
+      .mockRejectedValueOnce(new Error('offline'))
+      .mockResolvedValueOnce(answer({}, 200));
+
+    await setDefaultOrganization('acme', CREDS, BASES);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('throws NoSessionError without a session', async () => {
     await expect(setDefaultOrganization('acme', null, BASES)).rejects.toThrow(
-      'no session',
+      NoSessionError,
     );
   });
 });

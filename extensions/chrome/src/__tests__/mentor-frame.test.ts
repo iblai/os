@@ -162,7 +162,10 @@ describe('watchTenantSwitch', () => {
     stop();
   });
 
-  it('ignores a switch that names neither a tenant nor a chooser', async () => {
+  // `chooserUrl` is the app offering to host the chooser, and its value is
+  // ignored now. Requiring it would mean the SDK dropping that field silently
+  // kills organization switching here, so a tenant-less switch is enough.
+  it('chooses on a tenant-less switch even without a chooser address', async () => {
     const { host } = makeHost('https://os.ibl.ai/platform/acme/bot?embed=true');
     const onChoose = vi.fn();
     const stop = watchTenantSwitch(host, onChoose);
@@ -171,9 +174,22 @@ describe('watchTenantSwitch', () => {
       new MessageEvent('message', { data: { tenantSwitch: true } }),
     );
 
+    await vi.waitFor(() => expect(onChoose).toHaveBeenCalledTimes(1));
+    expect(chromeStub.stub.identity.launchWebAuthFlow).not.toHaveBeenCalled();
+    stop();
+  });
+
+  it('ignores a message that is not a tenant switch at all', async () => {
+    const { host } = makeHost('https://os.ibl.ai/platform/acme/bot?embed=true');
+    const onChoose = vi.fn();
+    const stop = watchTenantSwitch(host, onChoose);
+
+    window.dispatchEvent(
+      new MessageEvent('message', { data: { somethingElse: true } }),
+    );
+
     await new Promise((resolve) => setTimeout(resolve, 20));
     expect(onChoose).not.toHaveBeenCalled();
-    expect(chromeStub.stub.identity.launchWebAuthFlow).not.toHaveBeenCalled();
     stop();
   });
 

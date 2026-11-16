@@ -163,9 +163,6 @@
   "orgsMakeDefault": {
     "message": "Ouvrir celle-ci par défaut"
   },
-  "orgsIsDefault": {
-    "message": "S'ouvre par défaut"
-  },
   "orgsFailed": {
     "message": "Impossible de charger vos organisations. Vérifiez votre connexion et réessayez."
   },
@@ -174,5 +171,17 @@
   },
   "orgsClose": {
     "message": "Fermer"
+  },
+  "orgsDefault": {
+    "message": "Par défaut"
+  },
+  "orgsAccount": {
+    "message": "Compte"
+  },
+  "orgsSignedOut": {
+    "message": "Votre session est terminée. Fermez puis réouvrez le panneau pour vous reconnecter."
+  },
+  "orgsBusy": {
+    "message": "Une autre connexion est en cours. Réessayez dans un instant."
   }
 }

@@ -164,6 +164,13 @@ agent-ai {
   overflow-wrap: anywhere;
 }
 
+/* "Current" and "Default" can both apply to one row. */
+.orgs-marks {
+  display: flex;
+  flex: none;
+  gap: 6px;
+}
+
 .orgs-badge {
   flex: none;
   font-size: 11px;
@@ -182,9 +189,4 @@ agent-ai {
 
 .orgs-star:hover:not(:disabled) {
   color: var(--muted);
-}
-
-.orgs-star.on {
-  color: var(--primary);
-  cursor: default;
 }

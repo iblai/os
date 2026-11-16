@@ -30,12 +30,15 @@ vi.mock('../org-picker', () => ({
     current,
     onPick,
     onCancel,
+    notice,
   }: {
     current: string | null;
     onPick: (key: string) => void;
     onCancel: () => void;
+    notice?: string | null;
   }) => (
     <div data-testid="picker" data-current={current ?? ''}>
+      {notice && <span data-testid="notice">{notice}</span>}
       <button type="button" onClick={() => onPick('globex')}>
         pick globex
       </button>
@@ -61,6 +64,7 @@ beforeEach(() => {
   vi.mocked(startContextFeed).mockClear();
   vi.mocked(startBrowseBridge).mockClear();
   vi.mocked(switchToOrganization).mockClear();
+  vi.mocked(switchToOrganization).mockResolvedValue(true);
   vi.mocked(watchAndInstallSession).mockReturnValue(stopInstall);
   vi.mocked(watchTenantSwitch).mockReturnValue(stopTenantSwitch);
   vi.mocked(watchAuthExpired).mockReturnValue(stopAuthExpired);
@@ -142,6 +146,20 @@ describe('MentorChat', () => {
 
     expect(screen.queryByTestId('picker')).toBeNull();
     expect(switchToOrganization).not.toHaveBeenCalled();
+  });
+
+  // A pick that cannot start must not close the list and leave nothing
+  // happening — which is what a session recovery holding the auth guard does.
+  it('keeps the list up and says so when a pick cannot start', async () => {
+    vi.mocked(switchToOrganization).mockResolvedValue(false);
+    render(<MentorChat />);
+    act(() => vi.mocked(watchTenantSwitch).mock.calls[0][1]!());
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByText('pick globex'));
+
+    expect(await screen.findByTestId('notice')).toBeTruthy();
+    expect(screen.getByTestId('picker')).toBeTruthy();
   });
 
   // The switch remounts the iframe; unmounting the element to show a list

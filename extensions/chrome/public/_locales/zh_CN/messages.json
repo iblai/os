@@ -163,9 +163,6 @@
   "orgsMakeDefault": {
     "message": "默认打开此组织"
   },
-  "orgsIsDefault": {
-    "message": "默认打开"
-  },
   "orgsFailed": {
     "message": "无法加载你的组织。请检查网络连接后重试。"
   },
@@ -174,5 +171,17 @@
   },
   "orgsClose": {
     "message": "关闭"
+  },
+  "orgsDefault": {
+    "message": "默认"
+  },
+  "orgsAccount": {
+    "message": "账户"
+  },
+  "orgsSignedOut": {
+    "message": "你的会话已结束。请关闭并重新打开面板以重新登录。"
+  },
+  "orgsBusy": {
+    "message": "当前正在进行另一次登录。请稍后重试。"
   }
 }
