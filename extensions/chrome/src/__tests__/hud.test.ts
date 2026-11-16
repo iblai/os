@@ -3,7 +3,12 @@ import { resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { BEAT_MS, BRAND, doingLine, startHud, WATCHDOG_MS } from '../hud';
 import { OVERLAY_ATTR } from '../page-scripts';
-import { markTab, unmarkTab } from '../tab-group';
+import {
+  markTab,
+  sweepStaleMarks,
+  unmarkTab,
+  type TabMark,
+} from '../tab-group';
 import { installChromeStub, type ChromeStub } from './chrome.stub';
 
 let chromeStub: ChromeStub;
@@ -224,6 +229,72 @@ describe('unmarkTab', () => {
 
   it('does nothing when there was never a mark', async () => {
     await unmarkTab(null);
+    expect(chromeStub.stub.tabs.ungroup).not.toHaveBeenCalled();
+  });
+});
+
+describe('sweepStaleMarks', () => {
+  /** What a worker killed mid-run leaves behind: a grouped tab, and its record. */
+  const abandonRun = async (tabId: number): Promise<TabMark | null> => {
+    const mark = await markTab(tabId);
+    chromeStub.stub.tabs.group.mockClear();
+    return mark;
+  };
+
+  it('takes back the marker a run that never ended left on the tab', async () => {
+    await abandonRun(7);
+    expect(chromeStub.grouped.has(7)).toBe(true);
+
+    await sweepStaleMarks();
+
+    expect(chromeStub.grouped.has(7)).toBe(false);
+    expect(chromeStub.store.tabMarks).toEqual([]);
+  });
+
+  it('lets the next run mark a tab a dead worker had left grouped', async () => {
+    await abandonRun(7);
+    await sweepStaleMarks();
+
+    // The point of the sweep: without it the tab is still in our group, and
+    // markTab — rightly, since it cannot tell our leftovers from the user's
+    // own grouping — leaves it alone, so every later run goes unmarked.
+    const mark = await markTab(7);
+    expect(mark).not.toBeNull();
+    expect(chromeStub.grouped.get(7)).toBe(mark!.groupId);
+  });
+
+  it('leaves a tab the user has since moved into a group of their own', async () => {
+    await abandonRun(7);
+    chromeStub.grouped.set(7, 999);
+
+    await sweepStaleMarks();
+
+    expect(chromeStub.stub.tabs.ungroup).not.toHaveBeenCalled();
+    expect(chromeStub.grouped.get(7)).toBe(999);
+    // Not ours any more, so there is nothing left to come back for.
+    expect(chromeStub.store.tabMarks).toEqual([]);
+  });
+
+  it('keeps a mark whose tab it could not reach, for the next start', async () => {
+    const mark = await abandonRun(7);
+    chromeStub.stub.tabs.ungroup.mockRejectedValue(new Error('busy'));
+
+    await sweepStaleMarks();
+
+    expect(chromeStub.store.tabMarks).toEqual([mark]);
+  });
+
+  it('drops the mark of a tab that has been closed', async () => {
+    await abandonRun(7);
+    chromeStub.stub.tabs.get.mockRejectedValue(new Error('No tab with id 7'));
+
+    await sweepStaleMarks();
+
+    expect(chromeStub.store.tabMarks).toEqual([]);
+  });
+
+  it('does nothing when no run left anything behind', async () => {
+    await sweepStaleMarks();
     expect(chromeStub.stub.tabs.ungroup).not.toHaveBeenCalled();
   });
 });
