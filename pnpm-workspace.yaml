@@ -20,6 +20,13 @@ overrides:
   '@eslint/eslintrc>minimatch': '^3.1.2'
   '@eslint/config-array>minimatch': '^3.1.2'
   tinypool: '>=2.1.2'
+  # GHSA-mrhx-c7xc-m3w5 — memory exhaustion validating oversized constrained
+  # collections, affecting <4.6.6. Our own dependency is already 4.6.6; the
+  # vulnerable copy is the 3.x branch pnpm picked for `ai`, whose peer range is
+  # '^3.25.76 || ^4.1.8' and so is satisfied by 4.6.6 just as well.
+  # zod-to-json-schema peers on '^3.25.28 || ^4' and already resolves against
+  # 4.6.6 elsewhere in the tree. Upper bound keeps a future major out.
+  zod: '>=4.6.6 <5'
   zip: '9.0.5'
   # Floor raised to 8.1.6 for GHSA-587h-7wmj-h5pm (launch-editor existence
   # check bypass on Windows, >=8.0.0 <=8.1.5). Dev server only.
