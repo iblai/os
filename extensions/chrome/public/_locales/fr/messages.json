@@ -147,5 +147,8 @@
   },
   "hudWait": {
     "message": "Attente"
+  },
+  "errorModelNoKey": {
+    "message": "Aucun des modèles que cette organisation peut utiliser n'a de clé configurée. Demandez à la personne qui gère l'organisation d'en ajouter une."
   }
 }

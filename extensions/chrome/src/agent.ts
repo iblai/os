@@ -197,12 +197,30 @@ export async function listModels(
   throw new Error(`Model list failed. ${misses.join('; ')}`);
 }
 
-export function pickModel(ids: string[]): string {
+export function pickModel(ids: string[], unusable: string[] = []): string {
+  const usable = ids.filter((id) => !unusable.includes(id));
   return (
-    MODEL_PREFERENCE.find((preferred) => ids.includes(preferred)) ??
-    ids[0] ??
+    MODEL_PREFERENCE.find((preferred) => usable.includes(preferred)) ??
+    usable[0] ??
     ''
   );
+}
+
+/**
+ * A model the platform lists but cannot actually call, because the
+ * organization has no key for the provider behind it.
+ *
+ * Not an exceptional case: the model list is all a run has to go on, and it
+ * advertises models whose provider was never set up, so this is the ordinary
+ * shape of a half-configured organization. The platform says so in words
+ * rather than in a status code, which is why this reads the message.
+ */
+export const MISSING_CREDENTIAL = /missing credential|credential value/i;
+
+export function isMissingCredential(error: unknown): boolean {
+  if (RetryError.isInstance(error)) return isMissingCredential(error.lastError);
+  if (!APICallError.isInstance(error)) return false;
+  return MISSING_CREDENTIAL.test(error.message);
 }
 
 const OMITTED = '(earlier page state omitted)';

@@ -147,5 +147,8 @@
   },
   "hudWait": {
     "message": "Esperando"
+  },
+  "errorModelNoKey": {
+    "message": "Ninguno de los modelos que esta organización puede usar tiene una clave configurada. Pide a quien gestiona la organización que añada una."
   }
 }
