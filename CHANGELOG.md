@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.198.5](https://github.com/iblai/os/compare/v0.198.4...v0.198.5) (2026-11-16)
+
+### Chores
+
+* **security:** clear the last six advisories, including the critical zip ([44b7e58](https://github.com/iblai/os/commit/44b7e584d9ba564ca3d10cbd7a60407ecfc77325)), closes [dependabot/#495](https://github.com/dependabot/os/issues/495)
+* **tauri:** release app-v0.95.34 ([97d2388](https://github.com/iblai/os/commit/97d2388a3d79d161fc5240b0e387c64576d6fd89))
+
 ## [0.198.4](https://github.com/iblai/os/compare/v0.198.3...v0.198.4) (2026-11-16)
 
 ### Chores
