@@ -1,7 +1,13 @@
 // Glue between the side panel and the mentor iframe inside <agent-ai> (ported
 // from the original panel.js).
 import { extractPageContent } from './page-scripts';
-import { isAuthed, isSessionExpired, sessionData, signIn } from './auth';
+import {
+  AUTH_URL,
+  isAuthed,
+  isSessionExpired,
+  sessionData,
+  signIn,
+} from './auth';
 import { injectable } from './settings';
 
 export interface PageContent {
@@ -164,9 +170,68 @@ export function refreshHostAuthCache(host: Element): void {
 // web page the SDK redirects to the auth SPA to mint the new tenant's tokens;
 // inside the side panel the host owns auth, so we run the auth round-trip
 // ourselves via signIn(tenant) — which hits the SPA's /login/complete with the
-// target tenant + edX JWT — then re-install the session via /sso-login-complete,
+// target tenant — then re-install the session via /sso-login-complete,
 // landing on the app root (embed params preserved) so the app opens the newly
 // selected tenant.
+/** The domains the manifest already lets this panel frame. */
+const IBL_DOMAINS = ['.iblai.app', '.ibl.ai'];
+
+/**
+ * Whether an address belongs to us.
+ *
+ * Not a comparison against `AUTH_URL`: the chooser address is built by the
+ * embedded app from its own `NEXT_PUBLIC_AUTH_URL`, which differs per
+ * deployment, and a mismatch would silently refuse the chooser — the click
+ * would do nothing. This is the same trust boundary the manifest's `frame-src`
+ * already draws, plus our own auth host for builds pointed outside it.
+ */
+function isOurAuthOrigin(url: URL): boolean {
+  if (url.protocol !== 'https:') return false;
+  if (url.origin === new URL(AUTH_URL).origin) return true;
+  return IBL_DOMAINS.some((domain) => url.hostname.endsWith(domain));
+}
+
+/**
+ * The address to open for the organization chooser, or null to open nothing.
+ *
+ * It must be on our own auth origin. `watchTenantSwitch` listens on the window,
+ * so anything able to post to it could otherwise name any address and have the
+ * panel open it as "the organization chooser".
+ *
+ * The forwarded edX JWT deliberately stays on the address, unlike
+ * `switchTenantUrl`, which drops it. The difference is where each one opens.
+ * `switchTenantUrl` runs inside a `launchWebAuthFlow` window on the auth
+ * origin, which can read that origin's own stored token. The chooser opens
+ * with `chrome.tabs.create`, in a NORMAL tab — a different storage context from
+ * the panel's (side panels are storage-partitioned, see auth.ts). A panel-only
+ * user therefore has nothing stored for the auth origin in a normal tab, and
+ * `/me` renders the chooser only when `userData` is present or the forwarded
+ * token bootstraps it; failing both it redirects to `/login`, which knows
+ * nothing of `action` and so never comes back to the chooser. Dropping the
+ * token here would silently remove organization switching for exactly the
+ * people who only use the panel.
+ *
+ * It goes when the chooser gets a bootstrap that is not the edX JWT — the panel
+ * already holds a `dm_token` — which belongs with step 5, where the auth app
+ * stops handing the JWT to apps at all.
+ */
+export function chooserUrlToOpen(raw: string): string | null {
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    console.warn('[ibl.ai panel] ignoring an unreadable chooser address');
+    return null;
+  }
+  if (!isOurAuthOrigin(url)) {
+    console.warn(
+      `[ibl.ai panel] ignoring a chooser address that is not ours: ${url.origin}`,
+    );
+    return null;
+  }
+  return url.toString();
+}
+
 /**
  * Watch a chooser tab until the user picks an organization, and report which.
  *
@@ -222,8 +287,9 @@ export function watchTenantSwitch(host: Element): () => void {
     // of the panel — so the chooser opens in a real tab and we resume the
     // normal switch below with whatever they pick.
     if (!data.tenant && data.chooserUrl) {
+      const url = chooserUrlToOpen(data.chooserUrl);
+      if (!url) return;
       await withAuthFlow('organization chooser', async () => {
-        const url = data.chooserUrl as string;
         const tab = await chrome.tabs.create({ url });
         const tenant = tab.id ? await awaitChosenOrganization(tab.id) : null;
         if (!tenant) return;

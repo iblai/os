@@ -63,25 +63,35 @@ describe('signIn / ensureSignedIn', () => {
     expect(dmToken()).toBe('dm');
   });
 
-  it('switches tenants via /login/complete with the target tenant and edX JWT', async () => {
-    // The switch mirrors the web tenant switch: the edX JWT authorises minting
-    // the new tenant's tokens through the token-exchange endpoint.
-    localStorage.setItem('edx_jwt_token', 'jwt123');
-    await signIn('beta');
-    const [{ url }] = chromeStub.stub.identity.launchWebAuthFlow.mock
-      .calls[0] as unknown as [{ url: string }];
-    expect(url).toBe(
-      'https://login.iblai.app/login/complete?tenant=beta&redirect-to=https%3A%2F%2Fabc.chromiumapp.org%2F&token=jwt123',
-    );
-    expect(isAuthed()).toBe(true);
-  });
-
-  it('omits the token param on switch when no edX JWT is stored', async () => {
+  it('switches tenants via /login/complete with the target tenant', async () => {
+    // The token-exchange endpoint mints the new tenant's tokens, authorised by
+    // the JWT the auth app holds in its own storage, not by anything we send.
     await signIn('beta');
     const [{ url }] = chromeStub.stub.identity.launchWebAuthFlow.mock
       .calls[0] as unknown as [{ url: string }];
     expect(url).toBe(
       'https://login.iblai.app/login/complete?tenant=beta&redirect-to=https%3A%2F%2Fabc.chromiumapp.org%2F',
+    );
+    expect(isAuthed()).toBe(true);
+  });
+
+  // Our copy duplicates one the auth app already has, and it is to stop giving
+  // apps that JWT at all — so a stored one must not leak into the URL.
+  it('never forwards the edX JWT, even when one is stored', async () => {
+    localStorage.setItem('edx_jwt_token', 'jwt123');
+    await signIn('beta');
+    const [{ url }] = chromeStub.stub.identity.launchWebAuthFlow.mock
+      .calls[0] as unknown as [{ url: string }];
+    expect(new URL(url).searchParams.has('token')).toBe(false);
+    expect(url).not.toContain('jwt123');
+  });
+
+  it('keeps the interactive first sign-in unchanged', async () => {
+    await signIn();
+    const [{ url }] = chromeStub.stub.identity.launchWebAuthFlow.mock
+      .calls[0] as unknown as [{ url: string }];
+    expect(url).toBe(
+      'https://login.iblai.app/login?redirect-to=https%3A%2F%2Fabc.chromiumapp.org%2F',
     );
   });
 

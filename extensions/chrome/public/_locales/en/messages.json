@@ -106,6 +106,9 @@
   "errorRealClicksOff": {
     "message": "Real clicks were stopped from the bar on the tab or by the developer tools, so the run ended. Try again."
   },
+  "signingIn": {
+    "message": "Signing you in…"
+  },
   "hudLabel": {
     "message": "ibl.ai is working on this page"
   },

@@ -106,6 +106,9 @@
   "errorRealClicksOff": {
     "message": "Los clics reales se detuvieron desde la barra de la pestaña o por las herramientas de desarrollo, así que la ejecución terminó. Inténtalo de nuevo."
   },
+  "signingIn": {
+    "message": "Iniciando sesión…"
+  },
   "hudLabel": {
     "message": "ibl.ai está trabajando en esta página"
   },
