@@ -150,17 +150,20 @@ describe('chooserUrlToOpen', () => {
     warn.mockRestore();
   });
 
-  // The app in the iframe still appends the edX JWT until
-  // iblai-web-frontend#2236 ships; a live credential must not reach tab history.
-  it('removes a forwarded token and leaves the rest alone', () => {
+  // The chooser opens in a NORMAL tab, whose storage is partitioned away from
+  // the panel's, so `/me` has no session of its own to read there. The
+  // forwarded token is the only thing that bootstraps the organization list for
+  // a panel-only user — drop it and `/me` redirects to `/login`, which knows
+  // nothing of `action` and never returns to the chooser. It goes in step 5,
+  // with a bootstrap that is not the edX JWT.
+  it('keeps the forwarded token, which is what bootstraps the chooser', () => {
     const url = new URL(
       chooserUrlToOpen(
         'https://login.iblai.app/me?action=switch-tenant&redirect-to=https%3A%2F%2Fos.ibl.ai&tenant=main&popup=1&token=secret',
       )!,
     );
 
-    expect(url.searchParams.has('token')).toBe(false);
-    expect(url.toString()).not.toContain('secret');
+    expect(url.searchParams.get('token')).toBe('secret');
     expect(url.searchParams.get('action')).toBe('switch-tenant');
     expect(url.searchParams.get('tenant')).toBe('main');
     expect(url.searchParams.get('popup')).toBe('1');
@@ -221,9 +224,10 @@ describe('watchTenantSwitch', () => {
       { url: string },
     ];
     expect(url).toContain('action=switch-tenant');
-    // Whatever the app sent, the tab we open carries no credential.
-    expect(url).not.toContain('token=');
-    expect(url).not.toContain('secret');
+    // The chooser tab still carries the bootstrap token: see
+    // `chooserUrlToOpen` for why this one survives when `switchTenantUrl`'s
+    // does not.
+    expect(url).toContain('token=secret');
 
     // The chooser answers by sending its tab to /login/complete?tenant=…
     for (const listener of [...chromeStub.updated])

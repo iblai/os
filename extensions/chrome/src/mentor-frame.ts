@@ -194,16 +194,26 @@ function isOurAuthOrigin(url: URL): boolean {
 /**
  * The address to open for the organization chooser, or null to open nothing.
  *
- * Two jobs, both because this string arrives in a `postMessage` and ends up in
- * a real browser tab:
+ * It must be on our own auth origin. `watchTenantSwitch` listens on the window,
+ * so anything able to post to it could otherwise name any address and have the
+ * panel open it as "the organization chooser".
  *
- * 1. It must be on our own auth origin. `watchTenantSwitch` listens on the
- *    window, so anything able to post to it could otherwise name any address
- *    and have the panel open it as "the organization chooser".
- * 2. Any forwarded edX JWT comes off. The app inside the iframe still appends
- *    one until iblai-web-frontend#2236 ships, and we are the one deciding what
- *    is actually opened — a live credential should not land in tab history.
- *    The auth app does not need it; it authorises with its own stored copy.
+ * The forwarded edX JWT deliberately stays on the address, unlike
+ * `switchTenantUrl`, which drops it. The difference is where each one opens.
+ * `switchTenantUrl` runs inside a `launchWebAuthFlow` window on the auth
+ * origin, which can read that origin's own stored token. The chooser opens
+ * with `chrome.tabs.create`, in a NORMAL tab — a different storage context from
+ * the panel's (side panels are storage-partitioned, see auth.ts). A panel-only
+ * user therefore has nothing stored for the auth origin in a normal tab, and
+ * `/me` renders the chooser only when `userData` is present or the forwarded
+ * token bootstraps it; failing both it redirects to `/login`, which knows
+ * nothing of `action` and so never comes back to the chooser. Dropping the
+ * token here would silently remove organization switching for exactly the
+ * people who only use the panel.
+ *
+ * It goes when the chooser gets a bootstrap that is not the edX JWT — the panel
+ * already holds a `dm_token` — which belongs with step 5, where the auth app
+ * stops handing the JWT to apps at all.
  */
 export function chooserUrlToOpen(raw: string): string | null {
   let url: URL;
@@ -219,7 +229,6 @@ export function chooserUrlToOpen(raw: string): string | null {
     );
     return null;
   }
-  url.searchParams.delete('token');
   return url.toString();
 }
 
