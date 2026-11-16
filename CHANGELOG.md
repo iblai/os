@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.197.2](https://github.com/iblai/os/compare/v0.197.1...v0.197.2) (2026-11-16)
+
+### Bug Fixes
+
+* **extension:** stop forwarding the edX JWT on a tenant switch ([2e0db85](https://github.com/iblai/os/commit/2e0db8514ceb06af946e71ed92b1a9502e70a005)), closes [iblai-web-frontend#2236](https://github.com/iblai/iblai-web-frontend/issues/2236) [#2236](https://github.com/iblai/os/issues/2236)
+* **ext:** keep the chooser's bootstrap token, drop only the panel's own ([5c01b62](https://github.com/iblai/os/commit/5c01b6282bf760e4954927806ba7a955be7f546e))
+
 ## [0.197.1](https://github.com/iblai/os/compare/v0.197.0...v0.197.1) (2026-11-16)
 
 ### Tests
