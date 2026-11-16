@@ -534,6 +534,8 @@ describe('Providers', () => {
         // Always ours, standalone included: left undefined the data layer
         // would mint from the edX session, and this app calls no edX LMS.
         expect.any(Function),
+        // And every LMS/Studio call goes through DM's edX proxy.
+        { edxProxy: true },
       );
     });
 
