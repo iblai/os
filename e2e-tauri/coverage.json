@@ -51,8 +51,9 @@
       "spec": "02-on-device-model-management.spec.ts",
       "sourceFiles": [
         "hooks/use-model-download.ts",
-        "components/modals/llm-provider-modal.tsx",
-        "components/modals/llm-provider-modal/local-model-row.tsx",
+        "hooks/use-selected-local-model.ts",
+        "components/model-download/model-download-status.tsx",
+        "components/modals/model-download-logs-modal.tsx",
         "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx",
         "src-tauri/src/model_manager.rs",
         "src-tauri/src/lib.rs",
