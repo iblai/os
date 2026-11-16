@@ -64,10 +64,23 @@ async function forget(tabId: number): Promise<void> {
  * run simply has no strip marker.
  */
 export async function markTab(tabId: number): Promise<TabMark | null> {
-  if (!chrome.tabGroups || typeof chrome.tabs.group !== 'function') return null;
+  if (!chrome.tabGroups || typeof chrome.tabs.group !== 'function') {
+    // Said out loud because the alternative is indistinguishable from a run
+    // that never started: an extension whose tabGroups permission was not
+    // granted on update silently never marks anything again.
+    console.warn(
+      '[ibl.ai panel] this Chrome does not offer tab groups to the extension, so the tab strip is left alone',
+    );
+    return null;
+  }
   try {
     const tab = await chrome.tabs.get(tabId);
-    if (tab.groupId !== undefined && tab.groupId !== NO_GROUP) return null;
+    if (tab.groupId !== undefined && tab.groupId !== NO_GROUP) {
+      console.info(
+        `[ibl.ai panel] tab ${tabId} is already in a tab group, so this run leaves the tab strip as it is`,
+      );
+      return null;
+    }
     const groupId = await chrome.tabs.group({ tabIds: [tabId] });
     await chrome.tabGroups.update(groupId, {
       title: t('appName'),
@@ -76,8 +89,13 @@ export async function markTab(tabId: number): Promise<TabMark | null> {
     const mark = { tabId, groupId };
     await remember(mark);
     return mark;
-  } catch {
-    // Grouping is a courtesy, never a reason a run cannot start.
+  } catch (err) {
+    // Grouping is a courtesy, never a reason a run cannot start — but a
+    // courtesy that quietly never happens is one nobody can report.
+    console.warn(
+      '[ibl.ai panel] could not mark the tab in the tab strip:',
+      err,
+    );
     return null;
   }
 }

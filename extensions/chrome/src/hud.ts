@@ -73,6 +73,9 @@ export interface Hud {
 export function startHud(tabId: number): Hud {
   let stopped = false;
   let mark: TabMark | null = null;
+  /** Whether the overlay has ever reached the page, and whether we have said why not. */
+  let painted = false;
+  let saidWhyNotPainted = false;
   const state: HudOptions = {
     color: BRAND,
     status: t('hudWorking'),
@@ -91,9 +94,23 @@ export function startHud(tabId: number): Hud {
         func: mountHud,
         args: [{ ...state }],
       });
-    } catch {
+      painted = true;
+    } catch (err) {
       // Mid-navigation, or a page that cannot be injected into: the next beat
       // puts it back. The overlay is never a reason a run fails.
+      //
+      // Said once per run, and only while nothing has been painted yet: a beat
+      // every BEAT_MS would otherwise fill the worker's console with the same
+      // line, and a failure between two good paints is the ordinary kind. A
+      // marker that never appears used to look exactly like a run that was
+      // never started, which is a question only the user's eyes could answer.
+      if (!painted && !saidWhyNotPainted) {
+        saidWhyNotPainted = true;
+        console.warn(
+          '[ibl.ai panel] the on-page marker could not be put on this tab; the run continues without it:',
+          err,
+        );
+      }
     }
   };
 

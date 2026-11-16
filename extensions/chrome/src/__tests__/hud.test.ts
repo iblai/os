@@ -298,3 +298,83 @@ describe('sweepStaleMarks', () => {
     expect(chromeStub.stub.tabs.ungroup).not.toHaveBeenCalled();
   });
 });
+
+describe('saying why a marker never appeared', () => {
+  // The whole point of these lines: a marker that never shows used to look
+  // exactly like a run that was never started, and only the user's eyes could
+  // tell the difference.
+  it('says why the first paint failed, once, not once per beat', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    chromeStub.stub.scripting.executeScript.mockRejectedValue(
+      new Error('Cannot access contents of the page'),
+    );
+    vi.useFakeTimers();
+
+    const hud = startHud(7);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(String(warn.mock.calls[0][0])).toContain(
+      'could not be put on this tab',
+    );
+
+    // Four more beats, still nothing on the page, still one line.
+    await vi.advanceTimersByTimeAsync(BEAT_MS * 4);
+    expect(warn).toHaveBeenCalledTimes(1);
+
+    vi.useRealTimers();
+    await hud.stop();
+    warn.mockRestore();
+  });
+
+  it('stays quiet about a failure between two good paints', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    vi.useFakeTimers();
+
+    const hud = startHud(7);
+    await vi.advanceTimersByTimeAsync(0);
+    // Painted once; a beat that lands mid-navigation is the ordinary kind of
+    // failure, and the next one puts the overlay back.
+    chromeStub.stub.scripting.executeScript.mockRejectedValueOnce(
+      new Error('Frame with ID 0 was removed'),
+    );
+    await vi.advanceTimersByTimeAsync(BEAT_MS * 2);
+
+    expect(warn).not.toHaveBeenCalled();
+    vi.useRealTimers();
+    await hud.stop();
+    warn.mockRestore();
+  });
+
+  it('says why it left the tab strip alone', async () => {
+    const info = vi.spyOn(console, 'info').mockImplementation(() => {});
+    chromeStub.grouped.set(7, 42);
+
+    expect(await markTab(7)).toBeNull();
+
+    expect(String(info.mock.calls[0]?.[0])).toContain('already in a tab group');
+    info.mockRestore();
+  });
+
+  it('says why grouping failed', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    chromeStub.stub.tabs.group.mockRejectedValue(new Error('no'));
+
+    expect(await markTab(7)).toBeNull();
+
+    expect(String(warn.mock.calls[0]?.[0])).toContain('could not mark the tab');
+    warn.mockRestore();
+  });
+
+  it('says when this Chrome offers no tab groups at all', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    // What a permission withheld on update looks like from in here.
+    delete (chromeStub.stub as { tabGroups?: unknown }).tabGroups;
+
+    expect(await markTab(7)).toBeNull();
+
+    expect(String(warn.mock.calls[0]?.[0])).toContain(
+      'does not offer tab groups',
+    );
+    warn.mockRestore();
+  });
+});
