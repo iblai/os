@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.198.3](https://github.com/iblai/os/compare/v0.198.2...v0.198.3) (2026-11-16)
+
+### Bug Fixes
+
+* **ext:** take back the tab marker a run that never ended left behind ([8798087](https://github.com/iblai/os/commit/8798087b6eee52661d43e6bf023a7ca908212401))
+
 ## [0.198.2](https://github.com/iblai/os/compare/v0.198.1...v0.198.2) (2026-11-16)
 
 ### Chores
