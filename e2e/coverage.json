@@ -2063,7 +2063,7 @@
         },
         {
           "id": "ov-14",
-          "description": "Admin sidebar footer mirrors the SDK tenant-settings rail: a \"Memory\" entry sits with Secrets, API and Advanced (admin-only, no dedicated RBAC permission) and clicking it opens the Account dialog titled \"Memory\" (\"Manage user global memories and agent memories.\") hosting the SDK MemoryAdminTab — Global / Agent sub-tabs (or the memsearch-disabled notice), Agent sub-tab renders the agents section, Escape closes it",
+          "description": "Admin sidebar footer mirrors the SDK tenant-settings rail: a \"Memory\" entry sits with Secrets, API and Advanced (admin-only, no dedicated RBAC permission) and clicking it opens the SDK's whole organization Account dialog (\"Organization settings\", the PlatformAccountSheet the LMS sidebar opens) landed on its Memory tab — the Memory heading (\"Manage user global memories and agent memories.\") above the SDK MemoryAdminTab (Global / Agent sub-tabs, or the memsearch-disabled notice; the Agent sub-tab renders the agents section) with the tab rail beside it, Memory marked current and Management, API, Secrets and Advanced one click away; Escape closes it",
           "status": "covered"
         }
       ]

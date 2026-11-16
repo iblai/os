@@ -123,9 +123,11 @@ test.describe('Journey 28: App Overview & Navigation UI — Admin', () => {
   // ov-14: The sidebar footer mirrors the SDK tenant-settings (`Account`)
   // rail, which lists Memory between Monetization and Advanced and gates it
   // on `isAdmin` (no dedicated RBAC permission — same as Secrets and
-  // Advanced). Clicking it opens the Account dialog titled "Memory" hosting
-  // the SDK `MemoryAdminTab` with its Global / Agent sub-tabs.
-  test('admin sees the Memory footer entry alongside Secrets, API and Advanced and it opens the tenant Memory tab (Global / Agent)', async ({
+  // Advanced). Clicking it opens the SDK's whole organization Account dialog
+  // ("Organization settings"), its tab rail included, landed on Memory — the
+  // SDK `MemoryAdminTab` with its Global / Agent sub-tabs — so every other
+  // tab the admin may see is one click away, as on the LMS sidebar.
+  test('admin sees the Memory footer entry alongside Secrets, API and Advanced and it opens the organization Account dialog on its Memory tab, rail included', async ({
     page,
     sidebarPage,
   }) => {
@@ -142,11 +144,32 @@ test.describe('Journey 28: App Overview & Navigation UI — Admin', () => {
 
     await sidebarPage.memoryButton.click();
 
-    const memoryDialog = page.getByRole('dialog', { name: 'Memory' });
+    const memoryDialog = page.getByRole('dialog', {
+      name: 'Organization settings',
+      exact: true,
+    });
     await expect(memoryDialog).toBeVisible({ timeout: 15_000 });
+    await expect(
+      memoryDialog.getByRole('heading', { name: 'Memory', exact: true }),
+    ).toBeVisible({ timeout: 10_000 });
     await expect(
       memoryDialog.getByText('Manage user global memories and agent memories.'),
     ).toBeVisible({ timeout: 5_000 });
+
+    // The whole Account rail rides along: Memory is the current entry and the
+    // other admin tabs sit beside it, so this is not a one-tab dialog.
+    const rail = memoryDialog.getByRole('navigation', {
+      name: 'Organization settings',
+      exact: true,
+    });
+    await expect(
+      rail.getByRole('button', { name: 'Memory', exact: true }),
+    ).toHaveAttribute('aria-current', 'page', { timeout: 10_000 });
+    for (const entry of ['Management', 'API', 'Secrets', 'Advanced']) {
+      await expect(
+        rail.getByRole('button', { name: entry, exact: true }),
+      ).toBeVisible({ timeout: 5_000 });
+    }
 
     // The SDK MemoryAdminTab renders its Global / Agent sub-tabs once the
     // tenant's memsearch status resolves; if memsearch is off for this
