@@ -406,13 +406,19 @@ vi.mock('@/features/utils', () => ({
 const mockResolvePanelAgent = vi.fn<
   (tenantKey: string) => Promise<string | null>
 >(async () => null);
+const mockPeekPanelAgent = vi.fn<() => string | null>(() => null);
+const mockForgetPanelAgent = vi.fn<(mentorId: string) => void>();
 vi.mock('@/hooks/use-chrome-extension-agent', () => ({
-  useChromeExtensionAgent: () => mockResolvePanelAgent,
+  useChromeExtensionAgent: () => ({
+    peek: mockPeekPanelAgent,
+    resolve: mockResolvePanelAgent,
+    forget: mockForgetPanelAgent,
+  }),
 }));
 
 let mockInExtensionPanel = false;
-vi.mock('@/hooks/use-in-extension-panel', () => ({
-  useInExtensionPanel: () => mockInExtensionPanel,
+vi.mock('@/hooks/use-in-chrome-extension', () => ({
+  useInChromeExtension: () => mockInExtensionPanel,
 }));
 
 vi.mock('@/components/spinner', () => ({
@@ -1099,6 +1105,23 @@ describe('Providers', () => {
       mockInExtensionPanel = false;
     });
 
+    it('in the side panel, redirects at once when the organization is known', () => {
+      mockInExtensionPanel = true;
+      mockPeekPanelAgent.mockReturnValue('panel-agent');
+      renderProviders();
+
+      const fn = capturedMentorProviderProps.redirectToMentor as Function;
+      fn('t1', 'm1');
+
+      // A settled organization must not wait on anything: the id is already in
+      // the metadata the app holds.
+      expect(mockPush).toHaveBeenCalledWith('/platform/t1/panel-agent');
+      expect(mockResolvePanelAgent).not.toHaveBeenCalled();
+
+      mockPeekPanelAgent.mockReturnValue(null);
+      mockInExtensionPanel = false;
+    });
+
     it('in the side panel, falls back to the resolved agent when none is bound', async () => {
       mockInExtensionPanel = true;
       mockResolvePanelAgent.mockResolvedValue(null);
@@ -1184,6 +1207,40 @@ describe('Providers', () => {
       expect(mockDispatch).not.toHaveBeenCalledWith({
         type: 'rbac/resetMentorLoaded',
       });
+    });
+
+    it('in the side panel, a deleted agent is replaced rather than 404ing', async () => {
+      mockInExtensionPanel = true;
+      mockResolvePanelAgent.mockResolvedValue('fresh-agent');
+      renderProviders();
+
+      const fn = capturedMentorProviderProps.handleMentorNotFound as Function;
+      await fn();
+
+      expect(mockForgetPanelAgent).toHaveBeenCalledWith('mentor456');
+      expect(mockPush).toHaveBeenCalledWith('/platform/tenant123/fresh-agent');
+      expect(mockPush).not.toHaveBeenCalledWith(
+        '/error/404?errorType=mentorNotFound',
+      );
+
+      mockInExtensionPanel = false;
+    });
+
+    it('in the side panel, falls back to the app when nothing can be bound', async () => {
+      mockInExtensionPanel = true;
+      mockResolvePanelAgent.mockResolvedValue(null);
+      renderProviders();
+
+      const fn = capturedMentorProviderProps.handleMentorNotFound as Function;
+      await fn();
+
+      // A member who may not create one still gets a working panel.
+      expect(mockPush).toHaveBeenCalledWith('/');
+      expect(mockPush).not.toHaveBeenCalledWith(
+        '/error/404?errorType=mentorNotFound',
+      );
+
+      mockInExtensionPanel = false;
     });
 
     it('handleMentorNotFound navigates to error page', async () => {

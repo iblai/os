@@ -102,7 +102,7 @@ export function MentorChat() {
         authrelyonhost=""
         hostownschooser=""
         showuserprofile=""
-        allowmentorselection=""
+        extraparams="client=chrome-extension"
         enablecowork=""
       />
     </>

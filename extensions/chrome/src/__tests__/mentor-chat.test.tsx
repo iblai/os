@@ -96,7 +96,10 @@ describe('MentorChat', () => {
     // The panel lists the organizations and mints the chosen one's session, so
     // agent-ai must not open a chooser of its own.
     expect(element.hasAttribute('hostownschooser')).toBe(true);
-    expect(element.hasAttribute('allowmentorselection')).toBe(true);
+    // The organization binds one agent to this surface, so the panel offers
+    // neither an agent picker nor an organization switch.
+    expect(element.hasAttribute('allowmentorselection')).toBe(false);
+    expect(element.getAttribute('extraparams')).toBe('client=chrome-extension');
     expect(removeWidgetSpinner).toHaveBeenCalledWith(element);
     expect(watchAndInstallSession).toHaveBeenCalledWith(element);
     // Second argument: what the glue calls to raise the panel's own picker.

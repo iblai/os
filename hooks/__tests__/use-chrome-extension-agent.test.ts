@@ -34,6 +34,10 @@ vi.mock('@/features/mentors/api-slice', () => ({
   useLazyGetMentorsQuery: () => [getMentors],
 }));
 
+vi.mock('@/lib/config', () => ({
+  config: { iblTemplateMentor: () => 'ai-mentor' },
+}));
+
 vi.mock('@/hooks/use-user', () => ({
   useIsAdmin: () => isAdmin,
   useUsername: () => username,
@@ -49,8 +53,11 @@ const envelope = (metadata: unknown) => ({
   metadata,
 });
 
-const resolve = () =>
-  renderHook(() => useChromeExtensionAgent()).result.current;
+const panel = () => renderHook(() => useChromeExtensionAgent()).result.current;
+const resolve = () => {
+  const agent = panel();
+  return (tenantKey: string) => agent.resolve(tenantKey);
+};
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -166,5 +173,83 @@ describe('an organization that has not', () => {
     await expect(resolve()('acme')).resolves.toBeNull();
 
     expect(createMentor).not.toHaveBeenCalled();
+  });
+});
+
+describe('an agent that has been deleted', () => {
+  it('is never resolved again once it is known to be gone', async () => {
+    knownMetadata = { [PURPOSE_AGENTS_KEY]: { [CHROME]: 'dead-1' } };
+    const agent = panel();
+    expect(agent.peek()).toBe('dead-1');
+
+    agent.forget('dead-1');
+
+    // Without this the next resolve reads the same dead id straight back out
+    // of metadata and the panel loops between it and the 404.
+    expect(agent.peek()).toBeNull();
+    await expect(agent.resolve('acme')).resolves.toBe('made-1');
+  });
+
+  it('is replaced in the organization, not just skipped', async () => {
+    getTenantMetadata.mockReturnValue(
+      unwrap(envelope({ [PURPOSE_AGENTS_KEY]: { [CHROME]: 'dead-1' } })),
+    );
+    const agent = panel();
+    agent.forget('dead-1');
+
+    await expect(agent.resolve('acme')).resolves.toBe('made-1');
+
+    expect(
+      updateTenantMetadata.mock.calls[0][0][0].requestBody.metadata,
+    ).toEqual({ [PURPOSE_AGENTS_KEY]: { [CHROME]: 'made-1' } });
+  });
+
+  it('is not adopted back by name', async () => {
+    getMentors.mockReturnValue(
+      unwrap({
+        results: [{ name: BROWSING_ASSISTANT_NAME, unique_id: 'dead-1' }],
+      }),
+    );
+    const agent = panel();
+    agent.forget('dead-1');
+
+    await expect(agent.resolve('acme')).resolves.toBe('made-1');
+  });
+
+  it('leaves the choice to the app for someone who may not replace it', async () => {
+    isAdmin = false;
+    knownMetadata = { [PURPOSE_AGENTS_KEY]: { [CHROME]: 'dead-1' } };
+    const agent = panel();
+    agent.forget('dead-1');
+
+    await expect(agent.resolve('acme')).resolves.toBeNull();
+  });
+});
+
+describe('two panels opening at once', () => {
+  it('creates one agent, not one each', async () => {
+    const agent = panel();
+
+    const [first, second] = await Promise.all([
+      agent.resolve('acme'),
+      agent.resolve('acme'),
+    ]);
+
+    // The name search cannot see a sibling's not-yet-indexed create, so the
+    // guard has to be here.
+    expect(createMentor).toHaveBeenCalledTimes(1);
+    expect(first).toBe('made-1');
+    expect(second).toBe('made-1');
+  });
+});
+
+describe('the agent it creates', () => {
+  it("is built from the deployment's template and visible to members", async () => {
+    await resolve()('acme');
+
+    expect(createMentor.mock.calls[0][0].formData).toMatchObject({
+      template_name: 'ai-mentor',
+      mentor_visibility: 'viewable_by_tenant_students',
+    });
   });
 });

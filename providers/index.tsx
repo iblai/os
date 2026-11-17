@@ -102,7 +102,7 @@ import {
 import { isTauriApp } from '@/types/tauri';
 import { hideInitialLoader } from '@/lib/initial-loader';
 import { useChromeExtensionAgent } from '@/hooks/use-chrome-extension-agent';
-import { useInExtensionPanel } from '@/hooks/use-in-extension-panel';
+import { useInChromeExtension } from '@/hooks/use-in-chrome-extension';
 import { useOpencodeLearner } from '@/hooks/use-opencode-learner';
 import { useOpencodeAuthRequired } from '@/hooks/use-opencode-auth-required';
 
@@ -271,8 +271,8 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   };
 
   const embed = useEmbedMode();
-  const inExtensionPanel = useInExtensionPanel();
-  const resolveChromeExtensionAgent = useChromeExtensionAgent();
+  const inExtensionPanel = useInChromeExtension();
+  const panelAgent = useChromeExtensionAgent();
 
   useEffect(() => {
     if (typeof window.__ENV__ !== 'undefined') {
@@ -439,11 +439,37 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   // In the side panel the organization's own agent wins and `mId` is the
   // fallback. Nothing on the way to first render awaits this.
   function redirectToPanelMentor(tKey: string, mId: string) {
-    void resolveChromeExtensionAgent(tKey)
+    const bound = panelAgent.peek();
+    if (bound) return redirectToMentor(tKey, bound);
+    void panelAgent
+      .resolve(tKey)
       .catch(() => null)
       .then((purposeMentorId) =>
         redirectToMentor(tKey, purposeMentorId ?? mId),
       );
+  }
+
+  /**
+   * The panel's agent was deleted. Its id is still in the organization's
+   * metadata, so without this every member gets the 404 page on every open,
+   * with no switcher and no picker to leave by.
+   *
+   * Forgetting it first is what stops the loop: the next resolve would
+   * otherwise read the same dead id straight back out of metadata.
+   */
+  async function rebindPanelMentor(): Promise<boolean> {
+    const tKey = tenantKeyParams || tenantKey;
+    if (!tKey || !mentorId) return false;
+    panelAgent.forget(mentorId);
+    const replacement = await panelAgent.resolve(tKey).catch(() => null);
+    if (replacement && replacement !== mentorId) {
+      redirectToMentor(tKey, replacement);
+      return true;
+    }
+    // Nothing bound and nobody here who may bind one: let the app choose an
+    // agent the way it does everywhere else, rather than show an error.
+    router.push(appendEmbedContext('/'));
+    return true;
   }
 
   function onLoadMentorsPermissions(
@@ -871,6 +897,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
                     return;
                   }
                   if (skipMentorCheck) return;
+                  if (inExtensionPanel && (await rebindPanelMentor())) return;
                   await handleMentorNotFound();
                 }}
                 onComplete={() => {

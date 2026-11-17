@@ -19,8 +19,8 @@ vi.mock('next/navigation', () => ({
   usePathname: () => '/platform/existing-tenant/mentor-1',
 }));
 let inExtensionPanel = false;
-vi.mock('@/hooks/use-in-extension-panel', () => ({
-  useInExtensionPanel: () => inExtensionPanel,
+vi.mock('@/hooks/use-in-chrome-extension', () => ({
+  useInChromeExtension: () => inExtensionPanel,
 }));
 
 vi.mock('@/hooks/use-user', () => ({

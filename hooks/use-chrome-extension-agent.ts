@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
 import {
   useLazyGetTenantMetadataQuery,
   useUpdateTenantMetadataMutation,
@@ -10,6 +10,8 @@ import {
 import { useLazyGetMentorsQuery } from '@/features/mentors/api-slice';
 import { useIsAdmin, useUsername } from '@/hooks/use-user';
 import { useTenantObjectMetadata } from '@/hooks/use-tenant-object-metadata';
+import { config } from '@/lib/config';
+import { MENTOR_VISIBILITY_VALUES } from '@/lib/constants';
 import {
   AGENT_PURPOSES,
   BROWSING_ASSISTANT_NAME,
@@ -18,7 +20,7 @@ import {
   type TenantMetadataBlob,
 } from '@/lib/purpose-agents';
 
-const DEFAULT_AGENT_TEMPLATE = 'ai-mentor';
+const PURPOSE = AGENT_PURPOSES.CHROME_EXTENSION;
 
 type PlatformMetadataEnvelope = {
   platform_key: string;
@@ -26,18 +28,26 @@ type PlatformMetadataEnvelope = {
   metadata?: unknown;
 };
 
-const PURPOSE = AGENT_PURPOSES.CHROME_EXTENSION;
+export interface PanelAgent {
+  /**
+   * The bound agent, from metadata the app already holds — no request. A
+   * function, not a value, so an agent forgotten since the last render is
+   * never handed back.
+   */
+  peek: () => string | null;
+  resolve: (tenantKey: string) => Promise<string | null>;
+  /** An agent that turned out to be gone, so it is never resolved again. */
+  forget: (mentorId: string) => void;
+}
 
 /**
- * Resolves the agent the side panel opens on, creating and recording one when
- * the organization has none and this person may.
+ * The agent the side panel opens on, created and recorded when the
+ * organization has none and this person may.
  *
- * Null means there is nothing bound and nobody here who may bind it, so the
- * caller should choose an agent the normal way.
+ * Null means nothing is bound and nobody here may bind it, so the caller
+ * should choose an agent the normal way.
  */
-export function useChromeExtensionAgent(): (
-  tenantKey: string,
-) => Promise<string | null> {
+export function useChromeExtensionAgent(): PanelAgent {
   const isAdmin = useIsAdmin();
   const username = useUsername();
   const knownMetadata = useTenantObjectMetadata();
@@ -46,48 +56,70 @@ export function useChromeExtensionAgent(): (
   const [createMentor] = useCreateMentorMutation();
   const [getMentors] = useLazyGetMentorsQuery();
 
-  return useCallback(
-    async (tenantKey: string): Promise<string | null> => {
-      // The tenants list already carries metadata, so the settled case costs
-      // no request and the panel opens in the same tick.
-      const alreadyKnown = readPurposeAgent(knownMetadata, PURPOSE);
-      if (alreadyKnown) return alreadyKnown;
+  const gone = useRef<Set<string>>(new Set());
+  // One resolution per organization: MentorProvider can redirect again while
+  // the first is still awaiting, and two of these would each create an agent —
+  // neither search can see the other's not-yet-indexed one.
+  const running = useRef<Map<string, Promise<string | null>>>(new Map());
 
-      // That list holds only this person's organizations and can lag a write
-      // made elsewhere; this read is also the one we merge into.
-      let current: PlatformMetadataEnvelope;
-      try {
-        current = await getTenantMetadata([{ org: tenantKey }]).unwrap();
-      } catch {
-        return null;
-      }
-      const stored = (current?.metadata ?? null) as TenantMetadataBlob | null;
+  const live = useCallback(
+    (id: string | null) => (id && !gone.current.has(id) ? id : null),
+    [],
+  );
 
-      const configured = readPurposeAgent(stored, PURPOSE);
-      if (configured) return configured;
+  const peek = useCallback(
+    () => live(readPurposeAgent(knownMetadata, PURPOSE)),
+    [knownMetadata, live],
+  );
 
-      if (!isAdmin || !username) return null;
+  const resolve = useCallback(
+    (tenantKey: string): Promise<string | null> => {
+      const started = running.current.get(tenantKey);
+      if (started) return started;
 
-      const mentorId =
-        (await findBrowsingAssistant(tenantKey)) ?? (await create(tenantKey));
-      if (!mentorId) return null;
+      const attempt = (async (): Promise<string | null> => {
+        const alreadyKnown = peek();
+        if (alreadyKnown) return alreadyKnown;
 
-      try {
-        await updateTenantMetadata([
-          {
-            org: tenantKey,
-            requestBody: {
-              ...current,
-              metadata: withPurposeAgent(stored, PURPOSE, mentorId),
+        // The list the app holds covers only this person's organizations and
+        // can lag a write made elsewhere; this read is also what we merge into.
+        let current: PlatformMetadataEnvelope;
+        try {
+          current = await getTenantMetadata([{ org: tenantKey }]).unwrap();
+        } catch {
+          return null;
+        }
+        const stored = (current?.metadata ?? null) as TenantMetadataBlob | null;
+
+        const configured = live(readPurposeAgent(stored, PURPOSE));
+        if (configured) return configured;
+
+        if (!isAdmin || !username) return null;
+
+        const mentorId =
+          (await findBrowsingAssistant(tenantKey)) ?? (await create(tenantKey));
+        if (!mentorId) return null;
+
+        try {
+          await updateTenantMetadata([
+            {
+              org: tenantKey,
+              requestBody: {
+                ...current,
+                metadata: withPurposeAgent(stored, PURPOSE, mentorId),
+              },
             },
-          },
-        ]).unwrap();
-      } catch {
-        console.warn(
-          '[purpose-agents] could not record the browsing agent on the organization; it will be adopted by name next time',
-        );
-      }
-      return mentorId;
+          ]).unwrap();
+        } catch {
+          console.warn(
+            '[purpose-agents] could not record the browsing agent on the organization; it will be adopted by name next time',
+          );
+        }
+        return mentorId;
+      })();
+
+      running.current.set(tenantKey, attempt);
+      return attempt.finally(() => running.current.delete(tenantKey));
 
       // Creating and recording are two calls, so a failed write leaves an
       // agent nobody points at. Adopting it stops that breeding a new agent on
@@ -99,11 +131,12 @@ export function useChromeExtensionAgent(): (
             username: username as string,
             params: { query: BROWSING_ASSISTANT_NAME, limit: 20 },
           }).unwrap();
-          return (
-            found?.results?.find(
-              (mentor) => mentor?.name === BROWSING_ASSISTANT_NAME,
-            )?.unique_id ?? null
+          const match = found?.results?.find(
+            (mentor) =>
+              mentor?.name === BROWSING_ASSISTANT_NAME &&
+              !gone.current.has(mentor?.unique_id),
           );
+          return match?.unique_id ?? null;
         } catch {
           return null;
         }
@@ -117,7 +150,10 @@ export function useChromeExtensionAgent(): (
             formData: {
               new_mentor_name: BROWSING_ASSISTANT_NAME,
               display_name: BROWSING_ASSISTANT_NAME,
-              template_name: DEFAULT_AGENT_TEMPLATE,
+              template_name: config.iblTemplateMentor(),
+              // Everyone in the organization opens this one, so admins-only
+              // (the create default) would 404 for most of them.
+              mentor_visibility: MENTOR_VISIBILITY_VALUES.STUDENTS,
             },
           } as never).unwrap();
           return (created as { unique_id?: string })?.unique_id ?? null;
@@ -131,7 +167,7 @@ export function useChromeExtensionAgent(): (
       }
     },
     [
-      knownMetadata,
+      peek,
       isAdmin,
       username,
       getTenantMetadata,
@@ -140,4 +176,10 @@ export function useChromeExtensionAgent(): (
       getMentors,
     ],
   );
+
+  const forget = useCallback((mentorId: string) => {
+    gone.current.add(mentorId);
+  }, []);
+
+  return useMemo(() => ({ peek, resolve, forget }), [peek, resolve, forget]);
 }

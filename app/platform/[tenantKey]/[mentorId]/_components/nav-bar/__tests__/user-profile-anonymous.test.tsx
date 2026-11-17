@@ -26,8 +26,8 @@ const {
   mockGetUserActiveAppLegacy: vi.fn(),
   mockBannerButtonTriggerCallback: vi.fn(),
 }));
-vi.mock('@/hooks/use-in-extension-panel', () => ({
-  useInExtensionPanel: () => false,
+vi.mock('@/hooks/use-in-chrome-extension', () => ({
+  useInChromeExtension: () => false,
 }));
 
 // Mock next/navigation

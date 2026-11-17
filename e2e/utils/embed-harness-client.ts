@@ -150,7 +150,10 @@ export async function openLauncher(
     tenant: tenantKey,
     mentor: mentorId,
     authrelyonhost: '1',
-    ...(cowork ? { enablecowork: '1' } : {}),
+    // The panel names itself the client; Cowork follows from that.
+    ...(cowork
+      ? { enablecowork: '1', extraparams: 'client=chrome-extension' }
+      : {}),
     ...(userProfile ? { showuserprofile: '1' } : {}),
   });
   await page.goto(`${EMBED_HARNESS_URL}/agent-ai?${params}`, {

@@ -36,7 +36,7 @@ import {
 } from '@/features/rbac/rbac-slice';
 import { useModelDownload } from '@/hooks/use-model-download';
 import { useLockedTenant } from '@/hooks/use-tenant-lock';
-import { useInExtensionPanel } from '@/hooks/use-in-extension-panel';
+import { useInChromeExtension } from '@/hooks/use-in-chrome-extension';
 import { LOCAL_LLM_CHANGED_EVENT } from '@/hooks/use-selected-local-model';
 
 // `embed` = rendered inside the embedded mentor navbar. Embeds are a scoped,
@@ -46,7 +46,7 @@ export function UserProfile({ embed = false }: { embed?: boolean } = {}) {
   const username = useUsername();
   // Tauri builds pinned to a tenant hide the switcher entirely.
   const lockedTenant = useLockedTenant();
-  const inExtensionPanel = useInExtensionPanel();
+  const inExtensionPanel = useInChromeExtension();
   const email = getUserEmail();
   const userIsAdmin = useIsAdmin();
   const userIsStudent = useUserIsStudent();
