@@ -161,10 +161,12 @@ describe('OrgPicker', () => {
   });
 
   it('shows a notice handed down from the panel', async () => {
-    show({ notice: 'Something else is signing in right now.' });
+    show({ notice: { kind: 'failed' } });
 
     expect(
-      await screen.findByText('Something else is signing in right now.'),
+      await screen.findByText(
+        'That did not go through. Pick an organization to try again.',
+      ),
     ).toBeTruthy();
   });
 
@@ -203,9 +205,9 @@ describe('OrgPicker', () => {
     show();
     await screen.findByText('Acme Inc');
 
-    expect(document.activeElement).toBe(
-      screen.getByRole('button', { name: 'Close' }),
-    );
+    // The dialog itself: the one node that stays mounted through every state,
+    // and not something a held Enter can activate.
+    expect(document.activeElement).toBe(screen.getByRole('dialog'));
   });
 
   it('closes on Escape', async () => {
@@ -229,7 +231,7 @@ describe('OrgPicker', () => {
   it('shows its own error rather than the panel notice', async () => {
     mocks.setDefaultOrganization.mockRejectedValue(new Error('nope'));
     const warn = vi.spyOn(console, 'error').mockImplementation(() => {});
-    show({ notice: 'a panel notice' });
+    show({ notice: { kind: 'failed' } });
     const user = userEvent.setup();
     await screen.findByText('Globex');
 
@@ -244,7 +246,11 @@ describe('OrgPicker', () => {
         'Could not save which one opens by default. Try again.',
       ),
     ).toBeTruthy();
-    expect(screen.queryByText('a panel notice')).toBeNull();
+    expect(
+      screen.queryByText(
+        'That did not go through. Pick an organization to try again.',
+      ),
+    ).toBeNull();
     warn.mockRestore();
   });
 
@@ -295,12 +301,14 @@ describe('OrgPicker', () => {
         current="acme"
         onPick={onPick}
         onCancel={onCancel}
-        notice="the switch did not go through"
+        notice={{ kind: 'failed' }}
       />,
     );
 
     expect(
-      await screen.findByText('the switch did not go through'),
+      await screen.findByText(
+        'That did not go through. Pick an organization to try again.',
+      ),
     ).toBeTruthy();
     expect(
       screen.queryByText(
@@ -329,10 +337,9 @@ describe('OrgPicker', () => {
       />,
     );
 
-    const note = await screen.findByText('Switching organization…');
-    // The note, not Close: a held Enter from the row would otherwise dismiss
-    // the picker before the outcome could be shown.
-    expect(document.activeElement).toBe(note);
+    await screen.findByText('Switching organization…');
+    // Still the dialog, which outlives both the row and the note.
+    expect(document.activeElement).toBe(screen.getByRole('dialog'));
   });
 
   // Keyed on an unstable callback, the dialog effect re-ran on every parent
@@ -348,6 +355,29 @@ describe('OrgPicker', () => {
     rerender(<OrgPicker current="acme" onPick={onPick} onCancel={() => {}} />);
 
     expect(document.activeElement).toBe(globex.closest('button'));
+  });
+
+  // The switch reports a tenant key; the row above shows a name. The notice has
+  // to agree with the row — a personal platform is "Account" here, not a
+  // 32-character blob.
+  it('names the organization it landed in, rather than its key', async () => {
+    mocks.listOrganizations.mockResolvedValue([
+      { key: 'acme', name: 'Acme Inc', isDefault: false },
+      { key: 'b'.repeat(32), name: 'Account', isDefault: false },
+    ]);
+    show({ notice: { kind: 'elsewhere', landed: 'b'.repeat(32) } });
+
+    // Scoped to the notice: the row is called "Account" too, which is the
+    // point — the two have to agree.
+    const notice = await screen.findByText(/You are now in/);
+    expect(notice.textContent).toContain('Account');
+    expect(notice.textContent).not.toContain('b'.repeat(32));
+  });
+
+  it('falls back to the key for an organization not in the list', async () => {
+    show({ notice: { kind: 'elsewhere', landed: 'elsewhere-co' } });
+    const notice = await screen.findByText(/You are now in/);
+    expect(notice.textContent).toContain('elsewhere-co');
   });
 
   it('says so when the list cannot be loaded', async () => {

@@ -35,10 +35,14 @@ vi.mock('../org-picker', () => ({
     current: string | null;
     onPick: (key: string) => void;
     onCancel: () => void;
-    notice?: string | null;
+    notice?: { kind: 'failed' } | { kind: 'elsewhere'; landed: string } | null;
   }) => (
     <div data-testid="picker" data-current={current ?? ''}>
-      {notice && <span data-testid="notice">{notice}</span>}
+      {notice && (
+        <span data-testid="notice">
+          {notice.kind === 'elsewhere' ? notice.landed : notice.kind}
+        </span>
+      )}
       <button type="button" onClick={() => onPick('globex')}>
         pick globex
       </button>

@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 import { org } from './auth';
-import { t } from './i18n';
 import { startBrowseBridge } from './browse-bridge';
 import {
   removeWidgetSpinner,
@@ -21,7 +20,9 @@ export const LMS_URL = 'https://learn.iblai.app';
 export function MentorChat() {
   const ref = useRef<HTMLElement>(null);
   const [choosing, setChoosing] = useState(false);
-  const [notice, setNotice] = useState<string | null>(null);
+  const [notice, setNotice] = useState<
+    { kind: 'failed' } | { kind: 'elsewhere'; landed: string } | null
+  >(null);
   const [switching, setSwitching] = useState(false);
 
   useEffect(() => {
@@ -69,13 +70,9 @@ export function MentorChat() {
         return;
       }
       // Signed in, but not where they asked. The chat has followed that session,
-      // so say which organization they are actually in rather than calling it a
-      // plain failure.
-      setNotice(
-        outcome.kind === 'elsewhere'
-          ? t('orgsLandedElsewhere', outcome.landed)
-          : t('orgsSwitchFailed'),
-      );
+      // so the picker says which organization they are actually in — it holds
+      // the names, so it can show one rather than a tenant key.
+      setNotice(outcome);
     } finally {
       setSwitching(false);
     }

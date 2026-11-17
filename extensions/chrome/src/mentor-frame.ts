@@ -168,14 +168,6 @@ export function refreshHostAuthCache(host: Element): void {
 // landing on the app root (embed params preserved) so the app opens the newly
 // selected tenant.
 
-/**
- * Move the panel to `tenant`: mint that organization's tokens and remount the
- * chat on them.
- *
- * Shared by the two ways a switch starts — the app naming a tenant outright,
- * and someone picking one in the panel's own list — so both go through the
- * same auth flow guard and the same remount.
- */
 /** Where a switch actually ended up, so the panel can say something true. */
 export type SwitchOutcome =
   /** In the organization that was asked for. */
@@ -190,6 +182,14 @@ export type SwitchOutcome =
   /** Nothing happened: another flow held the guard, or the sign-in failed. */
   | { kind: 'failed' };
 
+/**
+ * Move the panel to `tenant`: mint that organization's tokens and remount the
+ * chat on them.
+ *
+ * Shared by the two ways a switch starts — the app naming a tenant outright,
+ * and someone picking one in the panel's own list — so both go through the
+ * same auth flow guard and the same remount.
+ */
 export async function switchToOrganization(
   host: Element,
   tenant: string,
@@ -263,7 +263,17 @@ export function watchTenantSwitch(
       onChoose?.();
       return;
     }
-    await switchToOrganization(host, data.tenant);
+    const outcome = await switchToOrganization(host, data.tenant);
+    // This path has no picker to show anything, and the outcome no longer
+    // throws, so it would otherwise remount in the wrong organization in
+    // silence — not even the warning `withAuthFlow` used to log.
+    if (outcome.kind === 'elsewhere') {
+      console.warn(
+        `[ibl.ai panel] asked for ${data.tenant} but signed in to ${outcome.landed}`,
+      );
+    } else if (outcome.kind === 'failed') {
+      console.warn(`[ibl.ai panel] could not switch to ${data.tenant}`);
+    }
   };
   window.addEventListener('message', onMessage);
   return () => window.removeEventListener('message', onMessage);

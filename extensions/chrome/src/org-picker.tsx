@@ -12,8 +12,12 @@ interface OrgPickerProps {
   current: string | null;
   onPick: (key: string) => void;
   onCancel: () => void;
-  /** Set when a pick could not be started, so the person is not left guessing. */
-  notice?: string | null;
+  /**
+   * How the last pick went, when it did not simply work. Passed as the outcome
+   * rather than a finished sentence: the names live here, so the key the switch
+   * reports can be shown as the name on the row above it.
+   */
+  notice?: { kind: 'failed' } | { kind: 'elsewhere'; landed: string } | null;
   /** A switch is under way: the rows stop taking clicks until it lands. */
   switching?: boolean;
 }
@@ -39,8 +43,11 @@ export function OrgPicker({
   const [preferred, setPreferred] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const closeRef = useRef<HTMLButtonElement>(null);
-  const switchingRef = useRef<HTMLDivElement>(null);
+  // The dialog itself is the focus target: it is the one node that stays
+  // mounted through every state, and it is not activatable — focusing a button
+  // lets a held Enter press it, and focusing the switching note drops the
+  // keyboard on <body> when that note gives way to the outcome.
+  const dialogRef = useRef<HTMLDivElement>(null);
   // Read through a ref so the effect below can run once. Keyed on `onCancel`
   // it re-ran on every parent render and pulled focus back to the × button,
   // off whatever row the person had arrowed to.
@@ -51,7 +58,7 @@ export function OrgPicker({
   // inside it, and Escape leaves. Without this, focus stays in the chat behind
   // an opaque overlay.
   useEffect(() => {
-    closeRef.current?.focus();
+    dialogRef.current?.focus();
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return;
       event.stopPropagation();
@@ -68,10 +75,8 @@ export function OrgPicker({
   useEffect(() => {
     if (!switching) return;
     setError(null);
-    // The note, not the × button: a held or repeated Enter from the row that
-    // started the switch would otherwise land on Close, unmount the picker, and
-    // the message about how the switch went would never be seen.
-    switchingRef.current?.focus();
+    // The row that started the switch is about to unmount with the list.
+    dialogRef.current?.focus();
   }, [switching]);
 
   useEffect(() => {
@@ -118,23 +123,33 @@ export function OrgPicker({
     }
   };
 
+  const named = (key: string) =>
+    organizations?.find((org) => org.key === key)?.name ?? key;
+
   // Whichever message is current wins. The picker's own error is the more
   // specific of the two, but it survives until a later successful save — so a
   // switch starting clears it (below), and a notice from the panel about that
   // switch is then the only one left to show.
-  const message = error ?? notice;
+  const message =
+    error ??
+    (notice
+      ? notice.kind === 'elsewhere'
+        ? t('orgsLandedElsewhere', named(notice.landed))
+        : t('orgsSwitchFailed')
+      : null);
 
   return (
     <div
+      ref={dialogRef}
       className="orgs"
       role="dialog"
       aria-modal="true"
       aria-label={t('orgsTitle')}
+      tabIndex={-1}
     >
       <div className="orgs-head">
         <span className="orgs-title">{t('orgsTitle')}</span>
         <button
-          ref={closeRef}
           type="button"
           className="orgs-close"
           onClick={onCancel}
@@ -148,9 +163,7 @@ export function OrgPicker({
       {message && <div className="row-error">{message}</div>}
 
       {switching ? (
-        <div className="orgs-note" ref={switchingRef} tabIndex={-1}>
-          {t('orgsSwitching')}
-        </div>
+        <div className="orgs-note">{t('orgsSwitching')}</div>
       ) : organizations === null ? (
         <div className="orgs-note">{t('orgsLoading')}</div>
       ) : organizations.length === 0 ? (

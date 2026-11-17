@@ -188,6 +188,7 @@ export async function listOrganizations(
     let url: string | null = `${base}${path}`;
     let failed: string | null = null;
     let understood = false;
+    let truncated = false;
 
     for (let page = 0; url && page < PAGE_LIMIT; page += 1) {
       const answer = await getJson(url, creds);
@@ -200,6 +201,7 @@ export async function listOrganizations(
         if (page === 0) {
           failed = answer.error;
         } else {
+          truncated = true;
           failures.push(`${answer.error} (list truncated after page ${page})`);
           console.warn(
             `[ibl.ai panel] organization list truncated: ${answer.error}`,
@@ -214,6 +216,7 @@ export async function listOrganizations(
         if (page === 0) {
           failed = `${url} → unreadable body`;
         } else {
+          truncated = true;
           failures.push(`${url} → unreadable body (list truncated)`);
           console.warn(
             `[ibl.ai panel] organization list truncated: ${url} → unreadable body`,
@@ -237,7 +240,9 @@ export async function listOrganizations(
       .filter((org): org is Organization => org !== null);
     // A duplicate key would make two rows that switch to the same place.
     if (!organizations.length) {
-      answeredEmpty = true;
+      // Only a complete answer of "none" is an answer. A list cut short by a
+      // failed page could be hiding every row this person has.
+      if (!truncated) answeredEmpty = true;
       continue;
     }
     const seen = new Set<string>();
