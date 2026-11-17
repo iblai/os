@@ -1,0 +1,170 @@
+import { renderHook } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { useChromeExtensionAgent } from '@/hooks/use-chrome-extension-agent';
+import {
+  AGENT_PURPOSES,
+  BROWSING_ASSISTANT_NAME,
+  PURPOSE_AGENTS_KEY,
+} from '@/lib/purpose-agents';
+
+const CHROME = AGENT_PURPOSES.CHROME_EXTENSION;
+
+const unwrap = <T>(value: T) => ({ unwrap: () => Promise.resolve(value) });
+const rejects = (error: unknown) => ({
+  unwrap: () => Promise.reject(error),
+});
+
+const getTenantMetadata = vi.fn();
+const updateTenantMetadata = vi.fn();
+const createMentor = vi.fn();
+const getMentors = vi.fn();
+
+let isAdmin = true;
+let username: string | null = 'jane';
+let knownMetadata: Record<string, unknown> = {};
+
+vi.mock('@iblai/iblai-js/data-layer', () => ({
+  useLazyGetTenantMetadataQuery: () => [getTenantMetadata],
+  useUpdateTenantMetadataMutation: () => [updateTenantMetadata],
+  useCreateMentorMutation: () => [createMentor],
+}));
+
+vi.mock('@/features/mentors/api-slice', () => ({
+  useLazyGetMentorsQuery: () => [getMentors],
+}));
+
+vi.mock('@/hooks/use-user', () => ({
+  useIsAdmin: () => isAdmin,
+  useUsername: () => username,
+}));
+
+vi.mock('@/hooks/use-tenant-object-metadata', () => ({
+  useTenantObjectMetadata: () => knownMetadata,
+}));
+
+const envelope = (metadata: unknown) => ({
+  platform_key: 'acme',
+  platform_name: 'Acme',
+  metadata,
+});
+
+const resolve = () =>
+  renderHook(() => useChromeExtensionAgent()).result.current;
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  isAdmin = true;
+  username = 'jane';
+  knownMetadata = {};
+  getTenantMetadata.mockReturnValue(unwrap(envelope({})));
+  getMentors.mockReturnValue(unwrap({ results: [] }));
+  createMentor.mockReturnValue(unwrap({ unique_id: 'made-1' }));
+  updateTenantMetadata.mockReturnValue(unwrap({}));
+});
+
+describe('an organization that has already chosen', () => {
+  it('opens its agent without asking the platform anything', async () => {
+    knownMetadata = { [PURPOSE_AGENTS_KEY]: { [CHROME]: 'chosen-1' } };
+
+    await expect(resolve()('acme')).resolves.toBe('chosen-1');
+
+    expect(getTenantMetadata).not.toHaveBeenCalled();
+    expect(createMentor).not.toHaveBeenCalled();
+  });
+
+  it('asks the platform when the list it had was out of date', async () => {
+    getTenantMetadata.mockReturnValue(
+      unwrap(envelope({ [PURPOSE_AGENTS_KEY]: { [CHROME]: 'chosen-2' } })),
+    );
+
+    await expect(resolve()('acme')).resolves.toBe('chosen-2');
+
+    expect(createMentor).not.toHaveBeenCalled();
+  });
+});
+
+describe('an organization that has not', () => {
+  it('creates the agent, records it, and opens it', async () => {
+    await expect(resolve()('acme')).resolves.toBe('made-1');
+
+    expect(createMentor).toHaveBeenCalledWith(
+      expect.objectContaining({
+        org: 'acme',
+        userId: 'jane',
+        formData: expect.objectContaining({
+          new_mentor_name: BROWSING_ASSISTANT_NAME,
+        }),
+      }),
+    );
+    expect(updateTenantMetadata).toHaveBeenCalledWith([
+      expect.objectContaining({
+        org: 'acme',
+        requestBody: expect.objectContaining({
+          metadata: { [PURPOSE_AGENTS_KEY]: { [CHROME]: 'made-1' } },
+        }),
+      }),
+    ]);
+  });
+
+  it('keeps the rest of the metadata when it records the agent', async () => {
+    getTenantMetadata.mockReturnValue(
+      unwrap(envelope({ mentor_advanced_css: '.a{}' })),
+    );
+
+    await resolve()('acme');
+
+    expect(
+      updateTenantMetadata.mock.calls[0][0][0].requestBody.metadata,
+    ).toEqual({
+      mentor_advanced_css: '.a{}',
+      [PURPOSE_AGENTS_KEY]: { [CHROME]: 'made-1' },
+    });
+  });
+
+  it('adopts an agent of that name rather than making a second one', async () => {
+    // A create whose metadata write failed leaves one behind; making another
+    // on every load is how an organization ends up with twenty.
+    getMentors.mockReturnValue(
+      unwrap({
+        results: [{ name: BROWSING_ASSISTANT_NAME, unique_id: 'found-1' }],
+      }),
+    );
+
+    await expect(resolve()('acme')).resolves.toBe('found-1');
+
+    expect(createMentor).not.toHaveBeenCalled();
+    expect(updateTenantMetadata).toHaveBeenCalled();
+  });
+
+  it('opens the agent it made even when recording it failed', async () => {
+    updateTenantMetadata.mockReturnValue(rejects(new Error('403')));
+
+    await expect(resolve()('acme')).resolves.toBe('made-1');
+  });
+
+  it('leaves the choice to the app for someone who may not make one', async () => {
+    isAdmin = false;
+
+    await expect(resolve()('acme')).resolves.toBeNull();
+
+    expect(createMentor).not.toHaveBeenCalled();
+    expect(updateTenantMetadata).not.toHaveBeenCalled();
+  });
+
+  it('leaves the choice to the app when the agent could not be made', async () => {
+    createMentor.mockReturnValue(rejects(new Error('500')));
+
+    await expect(resolve()('acme')).resolves.toBeNull();
+
+    expect(updateTenantMetadata).not.toHaveBeenCalled();
+  });
+
+  it('leaves the choice to the app when the metadata cannot be read', async () => {
+    getTenantMetadata.mockReturnValue(rejects(new Error('403')));
+
+    await expect(resolve()('acme')).resolves.toBeNull();
+
+    expect(createMentor).not.toHaveBeenCalled();
+  });
+});

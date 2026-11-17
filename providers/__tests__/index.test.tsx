@@ -399,6 +399,20 @@ vi.mock('@iblai/iblai-js/web-utils', () => ({
 vi.mock('@/features/utils', () => ({
   getUserId: () => 'user-id',
   getUserName: () => 'user-name',
+  // The panel's agent lookup pulls the mentors api-slice into this graph.
+  iblFetchBaseQuery: vi.fn(),
+}));
+
+const mockResolvePanelAgent = vi.fn<
+  (tenantKey: string) => Promise<string | null>
+>(async () => null);
+vi.mock('@/hooks/use-chrome-extension-agent', () => ({
+  useChromeExtensionAgent: () => mockResolvePanelAgent,
+}));
+
+let mockInExtensionPanel = false;
+vi.mock('@/hooks/use-in-extension-panel', () => ({
+  useInExtensionPanel: () => mockInExtensionPanel,
 }));
 
 vi.mock('@/components/spinner', () => ({
@@ -962,6 +976,18 @@ describe('Providers', () => {
       );
     });
 
+    it('does not switch organizations in the side panel', async () => {
+      mockInExtensionPanel = true;
+      renderProviders();
+
+      const handleSwitchFn =
+        capturedTenantProviderProps.handleTenantSwitch as Function;
+      await handleSwitchFn('new-tenant', true, true);
+
+      expect(mockHandleTenantSwitch).not.toHaveBeenCalled();
+      mockInExtensionPanel = false;
+    });
+
     it('handleTenantSwitch uses mentorUrl when useCurrentDomain is false', async () => {
       renderProviders();
       const handleSwitchFn =
@@ -1057,6 +1083,34 @@ describe('Providers', () => {
       const fn = capturedMentorProviderProps.redirectToMentor as Function;
       fn('t1', 'm1');
       expect(mockPush).toHaveBeenCalledWith('/platform/t1/m1');
+    });
+
+    it('in the side panel, opens the agent the organization chose', async () => {
+      mockInExtensionPanel = true;
+      mockResolvePanelAgent.mockResolvedValue('panel-agent');
+      renderProviders();
+
+      const fn = capturedMentorProviderProps.redirectToMentor as Function;
+      fn('t1', 'm1');
+      await vi.waitFor(() =>
+        expect(mockPush).toHaveBeenCalledWith('/platform/t1/panel-agent'),
+      );
+
+      mockInExtensionPanel = false;
+    });
+
+    it('in the side panel, falls back to the resolved agent when none is bound', async () => {
+      mockInExtensionPanel = true;
+      mockResolvePanelAgent.mockResolvedValue(null);
+      renderProviders();
+
+      const fn = capturedMentorProviderProps.redirectToMentor as Function;
+      fn('t1', 'm1');
+      await vi.waitFor(() =>
+        expect(mockPush).toHaveBeenCalledWith('/platform/t1/m1'),
+      );
+
+      mockInExtensionPanel = false;
     });
 
     it('redirectToAuthSpa calls the real function', () => {

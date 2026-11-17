@@ -26,6 +26,9 @@ vi.mock('next/navigation', () => ({
   }),
   usePathname: () => '/platform/new-tenant/mentor-1',
 }));
+vi.mock('@/hooks/use-in-extension-panel', () => ({
+  useInExtensionPanel: () => false,
+}));
 
 vi.mock('@/hooks/use-user', () => ({
   useUsername: () => 'testuser',

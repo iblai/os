@@ -101,6 +101,8 @@ import {
 } from '@/hooks/use-tauri-offline';
 import { isTauriApp } from '@/types/tauri';
 import { hideInitialLoader } from '@/lib/initial-loader';
+import { useChromeExtensionAgent } from '@/hooks/use-chrome-extension-agent';
+import { useInExtensionPanel } from '@/hooks/use-in-extension-panel';
 import { useOpencodeLearner } from '@/hooks/use-opencode-learner';
 import { useOpencodeAuthRequired } from '@/hooks/use-opencode-auth-required';
 
@@ -269,6 +271,8 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   };
 
   const embed = useEmbedMode();
+  const inExtensionPanel = useInExtensionPanel();
+  const resolveChromeExtensionAgent = useChromeExtensionAgent();
 
   useEffect(() => {
     if (typeof window.__ENV__ !== 'undefined') {
@@ -430,6 +434,16 @@ export default function Providers({ children }: { children: React.ReactNode }) {
 
   function redirectToMentor(tenantKey: string, mentorId: string) {
     router.push(`/platform/${tenantKey}/${mentorId}${embedContextQuery()}`);
+  }
+
+  // In the side panel the organization's own agent wins and `mId` is the
+  // fallback. Nothing on the way to first render awaits this.
+  function redirectToPanelMentor(tKey: string, mId: string) {
+    void resolveChromeExtensionAgent(tKey)
+      .catch(() => null)
+      .then((purposeMentorId) =>
+        redirectToMentor(tKey, purposeMentorId ?? mId),
+      );
   }
 
   function onLoadMentorsPermissions(
@@ -722,6 +736,9 @@ export default function Providers({ children }: { children: React.ReactNode }) {
               useCurrentDomain = true,
             ) => {
               console.log('[TenantProvider] handling tenant switching');
+              // The panel's agent is bound per organization, so a switch would
+              // land on one that organization never chose for it.
+              if (inExtensionPanel) return;
               if (!showingSharedChat)
                 await handleTenantSwitch(
                   tenant,
@@ -824,6 +841,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
                   /* istanbul ignore next -- @preserve Tauri offline guard unreachable: component returns early at L223 */
                   if (isTauriOffline) return;
                   if (skipMentorCheck) return;
+                  if (inExtensionPanel) return redirectToPanelMentor(tKey, mId);
                   redirectToMentor(tKey, mId);
                 }}
                 onLoadMentorsPermissions={onLoadMentorsPermissions}

@@ -36,6 +36,7 @@ import {
 } from '@/features/rbac/rbac-slice';
 import { useModelDownload } from '@/hooks/use-model-download';
 import { useLockedTenant } from '@/hooks/use-tenant-lock';
+import { useInExtensionPanel } from '@/hooks/use-in-extension-panel';
 import { LOCAL_LLM_CHANGED_EVENT } from '@/hooks/use-selected-local-model';
 
 // `embed` = rendered inside the embedded mentor navbar. Embeds are a scoped,
@@ -45,6 +46,7 @@ export function UserProfile({ embed = false }: { embed?: boolean } = {}) {
   const username = useUsername();
   // Tauri builds pinned to a tenant hide the switcher entirely.
   const lockedTenant = useLockedTenant();
+  const inExtensionPanel = useInExtensionPanel();
   const email = getUserEmail();
   const userIsAdmin = useIsAdmin();
   const userIsStudent = useUserIsStudent();
@@ -247,11 +249,13 @@ export function UserProfile({ embed = false }: { embed?: boolean } = {}) {
     }
   };
 
-  // A Tauri build pinned to a tenant has nothing to switch to.
+  // A Tauri build pinned to a tenant has nothing to switch to, and the side
+  // panel's agent is bound per organization, so neither offers a switch.
   const hasOtherTenants =
     (userIsAdmin ||
       userTenants.some((t) => t.key !== 'main' && t.key !== tenantKey)) &&
-    !lockedTenant;
+    !lockedTenant &&
+    !inExtensionPanel;
 
   const handleProfileClick = () => {
     // Trigger subscription data fetch when profile is opened
@@ -303,7 +307,7 @@ export function UserProfile({ embed = false }: { embed?: boolean } = {}) {
       // the tenants this app knows about are going away. In an embed the trip
       // is handed to the host rather than navigating the iframe, so it is
       // offered there too; only a build pinned to a tenant has nowhere to go.
-      showOrganizationsLink={!lockedTenant}
+      showOrganizationsLink={!lockedTenant && !inExtensionPanel}
       showLearnerModeSwitch={!embed && userIsAdmin && tenantKey !== 'main'}
       // Customization
       helpCenterUrl={config.helpCenterUrl()}
