@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.199.1](https://github.com/iblai/os/compare/v0.199.0...v0.199.1) (2026-11-17)
+
+### Bug Fixes
+
+* **product-tour:** keep the spotlight on its target when content loads around it ([5b5d633](https://github.com/iblai/os/commit/5b5d6331e9c5e3a72ce9e631945df815552a0f96))
+
+## [0.199.0](https://github.com/iblai/os/compare/v0.198.7...v0.199.0) (2026-11-17)
+
+### Features
+
+* sidebar footer > playwright test update ([8798991](https://github.com/iblai/os/commit/87989910e95812123503bddc0d486ba54e368616))
+* sidebar footer > playwright test update ([88435de](https://github.com/iblai/os/commit/88435dec6eef70d1197b2423c7131f116576c6d4))
+* sidebar footer opens the full organization Account dialog, side tabs included ([2ce184c](https://github.com/iblai/os/commit/2ce184cdbe9925c8607f4580bf433e144d4e1f67))
+
 ## [0.198.7](https://github.com/iblai/os/compare/v0.198.6...v0.198.7) (2026-11-16)
 
 ### Tests
