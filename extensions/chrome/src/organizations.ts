@@ -165,7 +165,7 @@ function samePlace(next: string, base: string): string | null {
 const PAGE_LIMIT = 20;
 
 /**
- * Every organization this person can switch to, by name.
+ * Every organization this person can switch to.
  *
  * Default first, then the order the source gave us — the auth app's chooser
  * ordering, so the two lists read the same.
@@ -202,7 +202,10 @@ export async function listOrganizations(
         if (page === 0) {
           failed = answer.error;
         } else {
-          truncated = rows.length > 0;
+          // A page that failed is a failure even if earlier pages arrived: a
+          // 401 here means the session died mid-list, and calling that "answered
+          // empty" would show "No organizations found." instead of saying so.
+          truncated = true;
           failures.push(`${answer.error} (list truncated after page ${page})`);
           console.warn(
             `[ibl.ai panel] organization list truncated: ${answer.error}`,
@@ -217,7 +220,7 @@ export async function listOrganizations(
         if (page === 0) {
           failed = `${url} → unreadable body`;
         } else {
-          truncated = rows.length > 0;
+          truncated = true;
           failures.push(`${url} → unreadable body (list truncated)`);
           console.warn(
             `[ibl.ai panel] organization list truncated: ${url} → unreadable body`,

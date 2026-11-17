@@ -321,6 +321,7 @@ export function OrgPicker({
                           className="orgs-key"
                           onClick={() => copyKey(org.key)}
                           title={t('orgsCopyKey')}
+                          aria-label={t('orgsCopyKeyFor', org.key)}
                         >
                           <span>{org.key}</span>
                           <span className="orgs-copied" aria-hidden="true">

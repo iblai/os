@@ -248,5 +248,13 @@
   },
   "orgsNoMatch": {
     "message": "没有符合搜索条件的组织。"
+  },
+  "orgsCopyKeyFor": {
+    "message": "复制平台密钥 $KEY$",
+    "placeholders": {
+      "key": {
+        "content": "$1"
+      }
+    }
   }
 }

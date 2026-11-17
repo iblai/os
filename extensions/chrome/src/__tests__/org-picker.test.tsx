@@ -1,4 +1,10 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { installChromeStub } from './chrome.stub';
@@ -127,7 +133,9 @@ describe('OrgPicker', () => {
     await screen.findByText('Acme Inc');
 
     expect(screen.getByText('globex')).toBeTruthy();
-    await user.click(screen.getByRole('button', { name: /^globex/ }));
+    await user.click(
+      screen.getByRole('button', { name: /Copy platform key globex/ }),
+    );
 
     expect(writeText).toHaveBeenCalledWith('globex');
   });
@@ -159,19 +167,42 @@ describe('OrgPicker', () => {
     expect(await screen.findByText('Default')).toBeTruthy();
   });
 
+  // Must run the clock past the FIRST copy's timeout: asserting straight after
+  // the second click passes even without the fix, because the stale timer has
+  // not fired yet. `fireEvent`, not `userEvent`: the latter coordinates with
+  // the clock and deadlocks against fake timers here.
   it('keeps the tick on the key that was copied last', async () => {
     show();
-    const user = userEvent.setup();
     await screen.findByText('Acme Inc');
+    const key = (k: string) =>
+      screen.getByRole('button', {
+        name: new RegExp(`Copy platform key ${k}`),
+      });
+    vi.useFakeTimers();
+    try {
+      fireEvent.click(key('acme'));
+      // Most of the first copy's window, then the second copy.
+      act(() => {
+        vi.advanceTimersByTime(1200);
+      });
+      fireEvent.click(key('globex'));
+      // Past the first timer's deadline: without clearing it, it fires here and
+      // wipes the tick that belongs to the second key.
+      act(() => {
+        vi.advanceTimersByTime(600);
+      });
 
-    await user.click(screen.getByRole('button', { name: /^acme$/ }));
-    await user.click(screen.getByRole('button', { name: /^globex/ }));
+      expect(screen.getAllByText('✓')).toHaveLength(1);
+      expect(key('globex').textContent).toContain('✓');
 
-    // One tick, on the second key — the first copy's timer must not clear it.
-    expect(screen.getAllByText('✓')).toHaveLength(1);
-    expect(
-      screen.getByRole('button', { name: /^globex/ }).textContent,
-    ).toContain('✓');
+      // And it does clear, on its own deadline.
+      act(() => {
+        vi.advanceTimersByTime(1000);
+      });
+      expect(screen.queryByText('✓')).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('badges an organization the person administers', async () => {

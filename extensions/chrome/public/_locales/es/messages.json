@@ -248,5 +248,13 @@
   },
   "orgsNoMatch": {
     "message": "Ninguna organización coincide con tu búsqueda."
+  },
+  "orgsCopyKeyFor": {
+    "message": "Copiar la clave de plataforma $KEY$",
+    "placeholders": {
+      "key": {
+        "content": "$1"
+      }
+    }
   }
 }

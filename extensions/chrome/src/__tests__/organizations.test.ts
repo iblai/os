@@ -227,6 +227,38 @@ describe('listOrganizations', () => {
     warn.mockRestore();
   });
 
+  // A page that failed is a failure even when earlier pages arrived: calling it
+  // "answered empty" would show "No organizations found." for a dead session.
+  it('does not let a 401 on a later page read as an empty account', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    fetchMock
+      .mockResolvedValueOnce(
+        answer({ results: [], next: 'https://one.test/page2' }),
+      )
+      .mockResolvedValueOnce(answer({ detail: 'no' }, 401))
+      .mockResolvedValueOnce(
+        answer({ results: [], next: 'https://two.test/page2' }),
+      )
+      .mockResolvedValueOnce(answer({ detail: 'no' }, 401));
+
+    await expect(listOrganizations(CREDS, BASES)).rejects.toThrow(
+      NoSessionError,
+    );
+    warn.mockRestore();
+  });
+
+  it('does not let a 500 on a later page read as an empty account', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    fetchMock.mockImplementation(async (url: string) =>
+      url.includes('page2')
+        ? answer({ detail: 'boom' }, 500)
+        : answer({ results: [], next: `${new URL(url).origin}/page2` }),
+    );
+
+    await expect(listOrganizations(CREDS, BASES)).rejects.toThrow(/500/);
+    warn.mockRestore();
+  });
+
   // A 200 with nothing recognisable is not an answer to stop on: another base
   // may hold the real list. Same shape as `listModels`.
   it('tries the next base when one answers with nothing usable', async () => {
