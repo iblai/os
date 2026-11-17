@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-11-16 | 1154 checkpoints (1073 covered, 46 pending/fixme, 17 not-reproducible in default env, 18 deprecated) | 110 journeys (109 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-11-17 | 1160 checkpoints (1079 covered, 46 pending/fixme, 17 not-reproducible in default env, 18 deprecated) | 110 journeys (109 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -954,30 +954,42 @@ The spec drives the tab through the semantic Tasks helpers from `@iblai/iblai-js
 
 ---
 
-## Journey 63: Mentor Evaluation Tab (18 checkpoints) — `journeys/63-mentor-evaluation-tab.spec.ts`
+## Journey 63: Mentor Evaluation Tab (24 checkpoints) — `journeys/63-mentor-evaluation-tab.spec.ts`
 
 **Source files:** `components/modals/edit-mentor-modal/tabs/evaluation-tab/index.tsx`, `hooks/use-mentor-segments.ts`
 
-Wraps the packaged `AgentEvaluationTab` from `@iblai/iblai-js/web-containers/next` with `AgentSettingsProvider`, `getLLMProviderDetails`, and `IblPagination`. All interactions go through the dedicated eval-tab Playwright helpers exported from `@iblai/iblai-js/playwright` (via the `EvaluationTab` page object — mirrors the `VoiceTab`/`TasksTab` thin-delegation pattern from journeys 47/49). Eval datasets ("benchmarks") are tenant-scoped, so the whole file runs serially against one dedicated mentor (created once in `beforeAll`, mirroring journey 14) and one throwaway benchmark created by EVAL-03. Checkpoints that depend on a run reaching `COMPLETED` (EVAL-11/EVAL-12) read the run's live status and skip gracefully instead of assuming either outcome — the real api.iblai.org backend's completion timing is not deterministic, and no test in this journey asserts that a run completes.
+Wraps the packaged `AgentEvaluationTab` from `@iblai/iblai-js/web-containers/next` with `AgentSettingsProvider`, `getLLMProviderDetails`, and `IblPagination`. All interactions go through the dedicated eval-tab Playwright helpers exported from `@iblai/iblai-js/playwright` (via the `EvaluationTab` page object — mirrors the `VoiceTab`/`TasksTab` thin-delegation pattern from journeys 47/49). Eval datasets ("benchmarks") are tenant-scoped, so the whole file runs serially against one dedicated mentor (created once in `beforeAll`, mirroring journey 14) and two throwaway benchmarks, both created in the two-step New Benchmark dialog (Details, Next, Q&A, Create): the shared one, which EVAL-03 creates together with its first Q&A pair and every later checkpoint reuses, and a second one that EVAL-19 creates with a name alone, since Q&A is optional there. EVAL-21 walks the dialog's steps and cancels, and EVAL-23 is refused on a name that is taken, so neither creates one. A benchmark with no Q&A cannot be evaluated; EVAL-19, EVAL-20 and EVAL-22 walk that state on the second benchmark (created empty, given Q&A from the tab, emptied again), so the shared one keeps its Q&A. Names are unique per run and per worker (clock, parallel index and a random part), because a name that is taken is now refused.
+
+What a run leaves behind: benchmarks cannot be deleted or renamed, so both stay in the organization, which is why there are only two. The primary evaluation run is deleted by EVAL-13 and by nothing else, so it stays when a checkpoint between EVAL-08 and EVAL-13 fails. The dedicated mentor is left to the mentor sweeper (globalTeardown, once it is 30 minutes old). The Manage Benchmarks list shows 10 benchmarks per page, newest first, and its search box filters only the page showing, so every lookup in it relies on the benchmark still being among the organization's 10 newest; EVAL-14 sits right after EVAL-04 for that reason.
+
+A run completes on the real api.iblai.org backend in its own time. EVAL-11 asks with Check Status for up to 3 minutes and then skips with the outcome as the reason; EVAL-12 skips unless the run has completed by then. No test in this journey fails because a run did not complete.
+
+The journey needs `@iblai/iblai-js` 2.77.0 or later: the page object imports helpers and labels that release added.
 
 - [x] EVAL-01: Evals tab heading, description, and the info box (`data-testid=evaluation-info-box`) all render when the modal is opened on the Evals tab
-- [x] EVAL-02: Benchmark combobox and both toolbar actions (New Evaluation, Manage benchmarks) render; New Evaluation's disabled/enabled state correctly reflects whether a benchmark is auto-selected
-- [x] EVAL-03: Admin creates a new benchmark via Manage benchmarks and selects it back on the Evals tab toolbar
-- [x] EVAL-04: Admin adds a Q&A pair to a benchmark via Manage benchmarks → View items → Add Q&A (Manual sub-tab)
+- [x] EVAL-02: Benchmark combobox and both toolbar actions (New Evaluation, Manage Benchmarks) render; New Evaluation is on exactly when the auto-selected benchmark can be evaluated — off with the New Benchmark empty state when the organization has no benchmarks, off with the Add Q&A prompt when the selected benchmark has no Q&A, on otherwise
+- [x] EVAL-03: Admin creates a benchmark together with its first Q&A pair in the New Benchmark dialog (Manage Benchmarks → New Benchmark: Name and Description on the Details step, Next, a Manual row on the Q&A step, Create), the toast says it was created with 1 Q&A pair, it is listed, and the Evals tab selects it by itself with New Evaluation on; a backend that cannot create the benchmark fails the checkpoint
+- [x] EVAL-04: The benchmark's Q&A dialog (Manage Benchmarks → View Q&A) lists the pair saved at creation with its answer, under the QUESTION / ANSWER / ACTIONS headers and the count "1 Q&A pair", and admin adds another pair there via Add Q&A (Manual sub-tab) which is listed next to the first and raises the count to "2 Q&A pairs"
 - [x] EVAL-05: With a fresh (zero-run) benchmark selected, the tab shows only the benchmark-specific empty state, with no runs table or headers
 - [x] EVAL-06: New Evaluation dialog shows the benchmark readback and name input, and Cancel dismisses it without creating a run
 - [x] EVAL-07: New Evaluation dialog can be dismissed via Escape without creating a run
-- [x] EVAL-08: Admin starts a new evaluation and it appears in the runs table, under all five column headers (Evaluation, Status, Initiated by, Created, Actions), with a valid status
-- [x] EVAL-09: A run's actions menu reflects its live status — Check status/Delete always enabled; View results/New review/Export CSV enabled once completed, otherwise disabled with the `notReadyHint` tooltip
-- [x] EVAL-10: Check status triggers a fresh fetch and surfaces an outcome toast (pending, completed, or failed)
-- [x] EVAL-11: Once a run has completed, admin can open View results and Export CSV _(opportunistic — skips gracefully while the run has not completed yet)_
-- [x] EVAL-12: Once a run has completed, the New review (LLM-judge) dialog keeps Evaluate disabled until criteria and score name are filled _(opportunistic — skips gracefully while the run has not completed yet)_
-- [x] EVAL-13: Admin can cancel a delete confirmation (row stays) and then delete a run for real (row is removed)
-- [x] EVAL-14: Manage benchmarks lists the created benchmark, and searching for its name filters down to it
+- [x] EVAL-08: Admin starts a new evaluation, the toast names it ("Evaluation started: <name>"), and it appears in the runs table, under all five column headers (EVALUATION, STATUS, INITIATED BY, CREATED, ACTIONS), with a valid status
+- [x] EVAL-09: A run's actions menu, with its items matched by their exact Title Case names (View Results, New Review, Check Status, Export CSV, Delete), reflects its live status — Check Status/Delete always enabled; View Results/New Review/Export CSV enabled once completed, otherwise disabled with the reason as their accessible description (`failedHint` for a failed run, `notReadyHint` for one still queued or running)
+- [x] EVAL-10: Check Status triggers a fresh fetch and surfaces an outcome toast (pending, completed, or failed)
+- [x] EVAL-11: Once a run has completed, admin can open View Results, close it with its Close button, and Export CSV _(asks with Check Status for up to 3 minutes for the run to complete; skips, naming the outcome, when it is still running by then or has failed)_
+- [x] EVAL-12: Once a run has completed, the New Review (LLM-judge) dialog, titled New Review, keeps Start Review disabled until criteria, score name and an LLM are provided _(skips when the run has not completed after the wait in EVAL-11)_
+- [x] EVAL-13: Admin can cancel a delete confirmation, which asks about the run by name (row stays), and then delete a run for real (row is removed)
+- [x] EVAL-14: Manage Benchmarks, titled Manage Benchmarks, lists the created benchmark, and searching for its name filters down to it
 - [x] EVAL-15: Evals tab has no axe-core accessibility violations on visible dialogs
 - [x] EVAL-16: Admin can leave the Evals tab and return without errors (wrapper re-mounts cleanly)
-- [x] EVAL-17: Non-admin does not see the Evals tab in the Edit Mentor modal (ADMIN-only segment in `use-mentor-segments.ts`)
-- [x] EVAL-18: Phone view (375x812, touch): the Edit Agent dialog fills the viewport, the info sheet opens and closes, a run shows as a card, tapping it opens the action sheet (Status plus View results, New review, Check status, Export CSV, Delete) that the backdrop closes, the benchmark picker opens as a sheet listing the benchmark and closes, and the page never scrolls sideways
+- [x] EVAL-17: Non-admin does not see Evals in the agent dropdown, which lists every Edit Agent tab they may open, nor, when the dropdown offers them Settings, in the Edit Agent dialog (ADMIN-only segment in `use-mentor-segments.ts`)
+- [x] EVAL-18: Phone view (375x812, touch): the Edit Agent dialog fills the viewport, the info sheet opens and closes, a run shows as a card, tapping it opens the action sheet (Status plus View Results, New Review, Check Status, Export CSV, Delete, with the reason written under each of the three options that are off until the run completes) that the backdrop closes, the benchmark picker opens as a sheet titled Select a Benchmark listing the benchmark and closes, and the page never scrolls sideways
+- [x] EVAL-19: Q&A is optional in the New Benchmark dialog, but a benchmark with none cannot be evaluated: admin creates a second benchmark with a name alone (Details, Next, Create on a blank Q&A step), the toast says to add Q&A before running an evaluation, the Evals tab selects it and says why with one Add Q&A button, and New Evaluation is disabled with the same sentence as its hover text
+- [x] EVAL-20: Add Q&A on the Evals tab opens the Add Q&A dialog for the selected benchmark (the one created without Q&A); saving a pair there removes the no-Q&A prompt, turns New Evaluation on and brings back the benchmark's regular empty state
+- [x] EVAL-21: The New Benchmark dialog is two steps with Details and Q&A tabs: on Details the Q&A tab and Next are disabled until Name has text, and Next refuses a name with a slash under Name and stays on Details; Next moves to the Q&A step with the cursor in the first Question, where a note on screen says Q&A can be added later and that an evaluation needs at least one question, and Create is enabled without any Q&A; on the CSV Upload tab a file whose first row has no "input" column is refused under CSV File and Create is disabled; the Details tab goes back with the name kept; Cancel closes the dialog and no benchmark is created
+- [x] EVAL-22: Deleting a benchmark's only Q&A pair in Manage Benchmarks → View Q&A (the dialog then loses its "1 Q&A pair" count, says the benchmark has no Q&A yet and offers Add Q&A) puts it back in the no-Q&A state: the Evals tab offers Add Q&A again and New Evaluation is disabled
+- [x] EVAL-23: The New Benchmark dialog refuses a name another benchmark already has: with the existing benchmark's name and a question typed on the Q&A step, Create goes back to Details with "A benchmark with this name already exists. Enter a different name." under Name, Name marked invalid and holding the cursor; after Cancel the existing benchmark's Q&A does not contain the typed question
+- [x] EVAL-24: Phone view (375x812, touch) of the benchmark surfaces: with a benchmark without Q&A selected the tab says why with an Add Q&A button and New Evaluation is disabled; a benchmark's Q&A dialog (Manage Benchmarks → View Q&A) shows each answer under its question with the ANSWER column hidden; and the page never scrolls sideways
 
 ---
 

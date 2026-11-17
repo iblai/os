@@ -226,23 +226,20 @@ test.describe('Journey 25: Mentor MCP Tab', () => {
         ),
       { timeout: 30_000 },
     );
-    // After the save the SDK closes the form, then refetches the list; the
-    // gear reopens the form on the list's copy of the connector, so the
-    // reopened form reads what was saved only once that refetch has landed.
-    const includeGlobalListed = page.waitForResponse(
-      (res) =>
-        res.request().method() === 'GET' &&
-        /\/mcp-servers\/$/.test(new URL(res.url()).pathname) &&
-        res.url().includes('include_global=true'),
-      { timeout: 30_000 },
-    );
-    const refreshed = page.waitForResponse(
-      (res) =>
-        res.request().method() === 'GET' &&
-        /\/mcp-servers\/$/.test(new URL(res.url()).pathname) &&
-        res.url().includes('is_featured=false'),
-      { timeout: 30_000 },
-    );
+    // After the save the SDK closes the form at once, but keeps the form's
+    // submitting state (which locks this switch) until BOTH list refetches
+    // (featured and own connectors) have settled. Reopening earlier shows the
+    // stale connector with the switch still locked.
+    const listRefetched = (isFeatured: 'true' | 'false') =>
+      page.waitForResponse(
+        (res) =>
+          res.request().method() === 'GET' &&
+          /\/mcp-servers\/$/.test(new URL(res.url()).pathname) &&
+          new URL(res.url()).searchParams.get('is_featured') === isFeatured,
+        { timeout: 30_000 },
+      );
+    const featuredRefetched = listRefetched('true');
+    const ownRefetched = listRefetched('false');
     await dialog
       .getByRole('button', { name: LABELS.update, exact: true })
       .click();
@@ -257,8 +254,7 @@ test.describe('Journey 25: Mentor MCP Tab', () => {
     ).toBe(false);
     await tab.expectToast(LABELS.updatedToast(name));
     await expect(dialog).toBeHidden({ timeout: 30_000 });
-    await refreshed;
-    await includeGlobalListed;
+    await Promise.all([featuredRefetched, ownRefetched]);
 
     // The form reopens on what was saved.
     const reopened = await tab.openConfigure(serverId);
