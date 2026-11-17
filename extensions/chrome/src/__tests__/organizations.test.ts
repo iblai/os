@@ -232,6 +232,39 @@ describe('listOrganizations', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
+  // A 200 carrying something we cannot read is not "this person has no
+  // organizations" — another base may still hold the list.
+  it('tries the next base when one answers with an unreadable body', async () => {
+    fetchMock
+      .mockResolvedValueOnce(answer({ unexpected: 'shape' }))
+      .mockResolvedValueOnce(answer([row()]));
+
+    await expect(listOrganizations(CREDS, BASES)).resolves.toHaveLength(1);
+  });
+
+  it('does not let an unreadable body hide a dead session', async () => {
+    fetchMock
+      .mockResolvedValueOnce(answer({ detail: 'no' }, 401))
+      .mockResolvedValueOnce(answer({ unexpected: 'shape' }));
+
+    await expect(listOrganizations(CREDS, BASES)).rejects.toThrow(
+      NoSessionError,
+    );
+  });
+
+  it('says in the log when a list came back short', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    fetchMock
+      .mockResolvedValueOnce(
+        answer({ results: [row()], next: 'https://one.test/page2' }),
+      )
+      .mockResolvedValueOnce(answer({ detail: 'gone' }, 404));
+
+    await expect(listOrganizations(CREDS, BASES)).resolves.toHaveLength(1);
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('truncated'));
+    warn.mockRestore();
+  });
+
   // An account genuinely in one organization must not read as signed out just
   // because another base refused the token.
   it('prefers a base that answered emptily over another base 401', async () => {

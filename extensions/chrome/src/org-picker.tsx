@@ -61,9 +61,13 @@ export function OrgPicker({
   }, []);
 
   // A new switch makes an older save failure stale: leaving it up would hide
-  // the panel's message about the switch itself.
+  // the panel's message about the switch itself. And the rows give way to the
+  // switching note, so the row that had focus unmounts — without moving focus
+  // it lands on <body> and the keyboard is nowhere for the whole switch.
   useEffect(() => {
-    if (switching) setError(null);
+    if (!switching) return;
+    setError(null);
+    closeRef.current?.focus();
   }, [switching]);
 
   useEffect(() => {

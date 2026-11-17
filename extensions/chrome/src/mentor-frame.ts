@@ -196,6 +196,20 @@ export async function switchToOrganization(
     // The auth app issues the target tenant's tokens and returns them in the
     // redirect `data`, which signIn() stores in this page's localStorage.
     await signIn(tenant);
+    // Install whatever came back BEFORE judging it. By now the old session is
+    // gone from localStorage, so bailing out early would leave the panel split:
+    // storage on the organization that was minted, the iframe and agent-ai's
+    // cache still on the old one, and `org()` / `credentials()` answering for
+    // an organization the chat is not in — which the next recovery would then
+    // pin. Install first, report afterwards.
+    //
+    // Point agent-ai's cached host auth at the NEW session BEFORE it re-mounts
+    // the iframe, so its authrelyonhost re-broadcast can't revert the switch.
+    refreshHostAuthCache(host);
+    // installSession is what actually re-routes the chat. Without the iframe
+    // mounted, or with a payload carrying no usable session, it does nothing
+    // and says so.
+    const moved = installSession(host, redirectPath);
     // The auth app falls back to an interactive sign-in when the mint 401s, and
     // that returns the user's DEFAULT organization — not the one they picked.
     // `signInKeepingOrganization` guards the same case on the recovery path.
@@ -203,14 +217,7 @@ export async function switchToOrganization(
     if (landed && landed !== tenant) {
       throw new Error(`signed in to ${landed}, not the requested ${tenant}`);
     }
-    // Point agent-ai's cached host auth at the NEW session BEFORE it re-mounts
-    // the iframe, so its authrelyonhost re-broadcast can't revert the switch.
-    refreshHostAuthCache(host);
-    // installSession is what actually re-routes the chat. Without the iframe
-    // mounted, or with a payload carrying no usable session, it does nothing
-    // and says so — and the old session is already cleared by then, so
-    // reporting success would leave the panel stranded with a closed picker.
-    if (!installSession(host, redirectPath)) {
+    if (!moved) {
       throw new Error('the chat could not be moved to the new session');
     }
   });

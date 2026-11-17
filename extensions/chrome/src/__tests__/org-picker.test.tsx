@@ -310,6 +310,31 @@ describe('OrgPicker', () => {
     warn.mockRestore();
   });
 
+  // The rows give way to the switching note, so the focused row unmounts; the
+  // keyboard has to land somewhere inside the dialog, not on <body>.
+  it('keeps the keyboard in the dialog when the rows give way', async () => {
+    const onPick = vi.fn();
+    const { rerender } = render(
+      <OrgPicker current="acme" onPick={onPick} onCancel={() => {}} />,
+    );
+    const globex = await screen.findByText('Globex');
+    (globex.closest('button') as HTMLButtonElement).focus();
+
+    rerender(
+      <OrgPicker
+        current="acme"
+        onPick={onPick}
+        onCancel={() => {}}
+        switching
+      />,
+    );
+
+    await screen.findByText('Switching organization…');
+    expect(document.activeElement).toBe(
+      screen.getByRole('button', { name: 'Close' }),
+    );
+  });
+
   // Keyed on an unstable callback, the dialog effect re-ran on every parent
   // render and pulled focus back to ×, off whatever row the person was on.
   it('does not steal focus back on a parent re-render', async () => {

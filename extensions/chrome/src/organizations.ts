@@ -73,8 +73,9 @@ const PERSONAL_KEY = /^[a-zA-Z0-9]{32}$/;
  * disqualifies — a missing field is not a dead link.
  */
 function usable(row: PlatformRow, now: number): boolean {
-  // Read through `flag()`: DM sends these as strings as often as booleans, and
-  // `active: "false"` would sail through a `=== false` check.
+  // Read through `says()`, not `flag()`: DM sends these as strings as often as
+  // booleans, so `active: "false"` would sail through a `=== false` check —
+  // and `flag()` cannot tell "the row said false" from "the row said nothing".
   if (says(row.active) === false || says(row.user_active) === false) {
     return false;
   }
@@ -111,6 +112,16 @@ function rowsOf(body: unknown): PlatformRow[] {
 
 const nextOf = (body: unknown): string | null =>
   text((body as { next?: unknown } | null)?.next);
+
+/**
+ * Whether the body is a shape we know how to read at all. A 200 carrying
+ * something unrecognisable is not an answer that this person has no
+ * organizations — it is a base that cannot be understood, and another base may
+ * still have the list.
+ */
+const readable = (body: unknown): boolean =>
+  Array.isArray(body) ||
+  Array.isArray((body as { results?: unknown } | null)?.results);
 
 async function getJson(
   url: string,
@@ -176,6 +187,7 @@ export async function listOrganizations(
     const rows: PlatformRow[] = [];
     let url: string | null = `${base}${path}`;
     let failed: string | null = null;
+    let understood = false;
 
     for (let page = 0; url && page < PAGE_LIMIT; page += 1) {
       const answer = await getJson(url, creds);
@@ -183,16 +195,29 @@ export async function listOrganizations(
         if (answer.unauthorized) unauthorized = true;
         // Only a first-page failure means this base has nothing for us. A later
         // page failing (a `next` the gateway cannot serve, say) leaves the rows
-        // already collected perfectly usable.
-        if (page === 0) failed = answer.error;
+        // already collected perfectly usable — but the list is short of what
+        // the server has, so say so rather than passing it off as complete.
+        if (page === 0) {
+          failed = answer.error;
+        } else {
+          failures.push(`${answer.error} (list truncated after page ${page})`);
+          console.warn(
+            `[ibl.ai panel] organization list truncated: ${answer.error}`,
+          );
+        }
         break;
       }
+      if (!readable(answer.body)) {
+        failed = `${url} → unreadable body`;
+        break;
+      }
+      understood = true;
       rows.push(...rowsOf(answer.body));
       const next = nextOf(answer.body);
       url = next ? samePlace(next, base) : null;
     }
-    if (failed) {
-      failures.push(failed);
+    if (failed || !understood) {
+      if (failed) failures.push(failed);
       continue;
     }
 
