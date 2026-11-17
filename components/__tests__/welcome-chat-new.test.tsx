@@ -247,6 +247,8 @@ const createMockStore = (preloadedState = {}) =>
           callToAction: 'PRICING_MODAL' as any,
         },
         error402Detected: '',
+        hostHandlesCreditExhaustion: false,
+        creditExhaustion: null,
       },
       topBanner: {
         topBannerOptions: {
