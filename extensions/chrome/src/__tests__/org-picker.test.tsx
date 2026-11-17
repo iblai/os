@@ -259,6 +259,72 @@ describe('OrgPicker', () => {
     expect(onPick).not.toHaveBeenCalled();
   });
 
+  // A save failure survives until a later successful save, so it must not sit
+  // on top of the panel's message about a switch that has just failed.
+  it('lets a switch failure through once a switch starts', async () => {
+    mocks.setDefaultOrganization.mockRejectedValue(new Error('nope'));
+    const warn = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const onPick = vi.fn();
+    const onCancel = vi.fn();
+    const { rerender } = render(
+      <OrgPicker current="acme" onPick={onPick} onCancel={onCancel} />,
+    );
+    const user = userEvent.setup();
+    await screen.findByText('Globex');
+
+    await user.click(
+      screen.getByRole('button', {
+        name: /Open in this one by default: Globex/,
+      }),
+    );
+    await screen.findByText(
+      'Could not save which one opens by default. Try again.',
+    );
+
+    // The panel reports a failed switch while that message is still up.
+    rerender(
+      <OrgPicker
+        current="acme"
+        onPick={onPick}
+        onCancel={onCancel}
+        switching
+      />,
+    );
+    rerender(
+      <OrgPicker
+        current="acme"
+        onPick={onPick}
+        onCancel={onCancel}
+        notice="the switch did not go through"
+      />,
+    );
+
+    expect(
+      await screen.findByText('the switch did not go through'),
+    ).toBeTruthy();
+    expect(
+      screen.queryByText(
+        'Could not save which one opens by default. Try again.',
+      ),
+    ).toBeNull();
+    warn.mockRestore();
+  });
+
+  // Keyed on an unstable callback, the dialog effect re-ran on every parent
+  // render and pulled focus back to ×, off whatever row the person was on.
+  it('does not steal focus back on a parent re-render', async () => {
+    const onPick = vi.fn();
+    const { rerender } = render(
+      <OrgPicker current="acme" onPick={onPick} onCancel={() => {}} />,
+    );
+    const globex = await screen.findByText('Globex');
+    (globex.closest('button') as HTMLButtonElement).focus();
+
+    rerender(<OrgPicker current="acme" onPick={onPick} onCancel={() => {}} />);
+
+    expect(document.activeElement).toBe(globex.closest('button'));
+  });
+
   it('says so when the list cannot be loaded', async () => {
     mocks.listOrganizations.mockRejectedValue(new Error('offline'));
     const warn = vi.spyOn(console, 'error').mockImplementation(() => {});

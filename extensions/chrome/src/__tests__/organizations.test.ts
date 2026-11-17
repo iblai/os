@@ -99,6 +99,29 @@ describe('listOrganizations', () => {
     await expect(listOrganizations(CREDS, BASES)).resolves.toEqual([]);
   });
 
+  // DM sends these booleans as strings as often as booleans, which is why this
+  // file has a reader for them. `active: "false"` must not sail through.
+  it.each([
+    ['active', { active: 'false' }],
+    ['user_active', { user_active: 'False' }],
+  ])('leaves out a row whose %s is the string false', async (_label, over) => {
+    fetchMock.mockResolvedValueOnce(answer([row(over)]));
+    await expect(listOrganizations(CREDS, BASES)).resolves.toEqual([]);
+  });
+
+  it.each([
+    ['active', { active: 'true' }],
+    ['user_active', { user_active: 'True' }],
+  ])('keeps a row whose %s is the string true', async (_label, over) => {
+    fetchMock.mockResolvedValueOnce(answer([row(over)]));
+    await expect(listOrganizations(CREDS, BASES)).resolves.toHaveLength(1);
+  });
+
+  it('keeps a row whose active flag is a word it cannot read', async () => {
+    fetchMock.mockResolvedValueOnce(answer([row({ active: 'maybe' })]));
+    await expect(listOrganizations(CREDS, BASES)).resolves.toHaveLength(1);
+  });
+
   it('keeps a row whose expiry is still in the future', async () => {
     fetchMock.mockResolvedValueOnce(
       answer([row({ expired_on: '2999-01-01T00:00:00Z' })]),
@@ -193,6 +216,30 @@ describe('listOrganizations', () => {
     fetchMock.mockResolvedValue(answer([]));
     await expect(listOrganizations(CREDS, BASES)).resolves.toEqual([]);
     expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  // A first page that arrived is still an answer. Losing it because a later
+  // page 404s would empty a list that was perfectly readable.
+  it('keeps the rows it already has when a later page fails', async () => {
+    fetchMock
+      .mockResolvedValueOnce(
+        answer({ results: [row()], next: 'https://one.test/page2' }),
+      )
+      .mockResolvedValueOnce(answer({ detail: 'gone' }, 404));
+
+    await expect(listOrganizations(CREDS, BASES)).resolves.toHaveLength(1);
+    // No falling through to the other base: this one answered.
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  // An account genuinely in one organization must not read as signed out just
+  // because another base refused the token.
+  it('prefers a base that answered emptily over another base 401', async () => {
+    fetchMock
+      .mockResolvedValueOnce(answer({ detail: 'no' }, 401))
+      .mockResolvedValueOnce(answer([]));
+
+    await expect(listOrganizations(CREDS, BASES)).resolves.toEqual([]);
   });
 
   // The token is present but the server will not take it. Presence is not

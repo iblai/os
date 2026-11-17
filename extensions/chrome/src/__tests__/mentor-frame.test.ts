@@ -182,6 +182,39 @@ describe('watchTenantSwitch', () => {
     warn.mockRestore();
   });
 
+  // The auth app falls back to an interactive sign-in when the mint 401s, and
+  // that returns the user's DEFAULT organization. Landing somewhere the person
+  // did not pick is not a completed switch.
+  it('reports a switch that landed in the wrong organization', async () => {
+    const { host } = makeHost(
+      'https://os.ibl.ai/platform/acme/bot?embed=true&mode=anonymous',
+    );
+    chromeStub.stub.identity.launchWebAuthFlow.mockResolvedValueOnce(
+      sessionRedirect({ ...SESSION, tenant: 'somewhere-else' }),
+    );
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    await expect(switchToOrganization(host, 'beta')).resolves.toBe(false);
+
+    warn.mockRestore();
+  });
+
+  // `installSession` is what actually re-routes the chat; it answers false when
+  // the iframe is not there to re-route. The old session is already cleared by
+  // then, so claiming success would strand the panel with a closed picker.
+  it('reports a switch whose chat could not be moved', async () => {
+    const host = document.createElement('agent-ai');
+    host.setAttribute('mentorurl', 'https://os.ibl.ai/');
+    host.attachShadow({ mode: 'open' });
+    document.body.append(host);
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    await expect(switchToOrganization(host, 'beta')).resolves.toBe(false);
+
+    warn.mockRestore();
+    host.remove();
+  });
+
   it('reports a completed switch', async () => {
     const { host } = makeHost(
       'https://os.ibl.ai/platform/acme/bot?embed=true&mode=anonymous',
@@ -230,7 +263,7 @@ describe('watchTenantSwitch', () => {
           'src',
           'https://os.ibl.ai/sso-login-complete?data=x&redirect-path=%2F&tenant=old',
         );
-        return sessionRedirect(SESSION);
+        return sessionRedirect({ ...SESSION, tenant: 'beta' });
       },
     );
     const stop = watchTenantSwitch(host);

@@ -40,6 +40,11 @@ export function OrgPicker({
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const closeRef = useRef<HTMLButtonElement>(null);
+  // Read through a ref so the effect below can run once. Keyed on `onCancel`
+  // it re-ran on every parent render and pulled focus back to the × button,
+  // off whatever row the person had arrowed to.
+  const cancelRef = useRef(onCancel);
+  cancelRef.current = onCancel;
 
   // It covers the chat, so it has to behave like a dialog: the keyboard starts
   // inside it, and Escape leaves. Without this, focus stays in the chat behind
@@ -49,11 +54,17 @@ export function OrgPicker({
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return;
       event.stopPropagation();
-      onCancel();
+      cancelRef.current();
     };
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
-  }, [onCancel]);
+  }, []);
+
+  // A new switch makes an older save failure stale: leaving it up would hide
+  // the panel's message about the switch itself.
+  useEffect(() => {
+    if (switching) setError(null);
+  }, [switching]);
 
   useEffect(() => {
     let live = true;
@@ -99,9 +110,10 @@ export function OrgPicker({
     }
   };
 
-  // The picker's own problem wins: it is the newer and more specific of the
-  // two, and a notice from the panel would otherwise sit there masking a save
-  // failure or a dead session for as long as the list stays open.
+  // Whichever message is current wins. The picker's own error is the more
+  // specific of the two, but it survives until a later successful save — so a
+  // switch starting clears it (below), and a notice from the panel about that
+  // switch is then the only one left to show.
   const message = error ?? notice;
 
   return (

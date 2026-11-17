@@ -48,6 +48,19 @@ const flag = (value: unknown): boolean =>
   value === true ||
   (typeof value === 'string' && value.toLowerCase() === 'true');
 
+/**
+ * The same reading, but able to answer "the row did not say" — these fields are
+ * absent on some rows, and a missing field is not a dead link.
+ */
+const says = (value: unknown): boolean | null => {
+  if (typeof value === 'boolean') return value;
+  if (typeof value !== 'string') return null;
+  const word = value.trim().toLowerCase();
+  if (word === 'true') return true;
+  if (word === 'false') return false;
+  return null;
+};
+
 /** A personal platform's key is a 32-character hex-ish blob, not a name. */
 const PERSONAL_KEY = /^[a-zA-Z0-9]{32}$/;
 
@@ -60,7 +73,11 @@ const PERSONAL_KEY = /^[a-zA-Z0-9]{32}$/;
  * disqualifies — a missing field is not a dead link.
  */
 function usable(row: PlatformRow, now: number): boolean {
-  if (row.active === false || row.user_active === false) return false;
+  // Read through `flag()`: DM sends these as strings as often as booleans, and
+  // `active: "false"` would sail through a `=== false` check.
+  if (says(row.active) === false || says(row.user_active) === false) {
+    return false;
+  }
   const expiry = text(row.expired_on);
   if (expiry) {
     const at = Date.parse(expiry);
@@ -163,8 +180,11 @@ export async function listOrganizations(
     for (let page = 0; url && page < PAGE_LIMIT; page += 1) {
       const answer = await getJson(url, creds);
       if ('error' in answer) {
-        failed = answer.error;
         if (answer.unauthorized) unauthorized = true;
+        // Only a first-page failure means this base has nothing for us. A later
+        // page failing (a `next` the gateway cannot serve, say) leaves the rows
+        // already collected perfectly usable.
+        if (page === 0) failed = answer.error;
         break;
       }
       rows.push(...rowsOf(answer.body));
@@ -190,8 +210,10 @@ export async function listOrganizations(
       .filter((org) => !seen.has(org.key) && seen.add(org.key))
       .sort((a, b) => a.name.localeCompare(b.name));
   }
-  if (unauthorized) throw new NoSessionError();
+  // Order matters: a base that answered properly with nothing outranks another
+  // base's 401, or an account genuinely in one organization reads as signed out.
   if (answeredEmpty) return [];
+  if (unauthorized) throw new NoSessionError();
   throw new Error(failures.join('; ') || 'no API base answered');
 }
 
