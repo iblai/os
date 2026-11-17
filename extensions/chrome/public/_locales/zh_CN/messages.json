@@ -105,5 +105,50 @@
   },
   "errorRealClicksOff": {
     "message": "真实点击已从标签页的提示栏或开发者工具处停止，本次运行已结束。请重试。"
+  },
+  "signingIn": {
+    "message": "正在登录…"
+  },
+  "hudLabel": {
+    "message": "ibl.ai 正在处理此页面"
+  },
+  "hudWorking": {
+    "message": "正在处理此页面"
+  },
+  "hudStop": {
+    "message": "停止"
+  },
+  "hudStopping": {
+    "message": "正在停止…"
+  },
+  "hudClick": {
+    "message": "正在点击"
+  },
+  "hudDoubleClick": {
+    "message": "正在双击"
+  },
+  "hudType": {
+    "message": "正在输入到"
+  },
+  "hudSelect": {
+    "message": "正在选择"
+  },
+  "hudScroll": {
+    "message": "正在滚动"
+  },
+  "hudNavigate": {
+    "message": "正在打开"
+  },
+  "hudBack": {
+    "message": "正在返回"
+  },
+  "hudReadPage": {
+    "message": "正在读取此页面"
+  },
+  "hudWait": {
+    "message": "正在等待"
+  },
+  "errorModelNoKey": {
+    "message": "该组织可用的模型都没有配置密钥。请让管理该组织的人添加一个。"
   }
 }

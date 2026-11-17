@@ -32,14 +32,19 @@ let mockFreeTrialDialog: React.FC<{
   onClose: () => void;
 }> | null = null;
 
-vi.mock('@/hooks/user-user-actions', () => ({
-  useShowFreeTrialDialog: () => ({
-    executeWithTrialCheck: mockExecuteWithTrialCheck,
-    isModalOpen: mockIsModalOpen,
-    FreeTrialDialog: mockFreeTrialDialog,
-    closeModal: mockCloseModal,
-  }),
-}));
+vi.mock('@iblai/iblai-js/web-utils', async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import('@iblai/iblai-js/web-utils')>();
+  return {
+    ...actual,
+    useShowFreeTrialDialog: () => ({
+      executeWithTrialCheck: mockExecuteWithTrialCheck,
+      isModalOpen: mockIsModalOpen,
+      FreeTrialDialog: mockFreeTrialDialog,
+      closeModal: mockCloseModal,
+    }),
+  };
+});
 
 const mockGetMentorId = vi.fn<() => string | undefined>(() => undefined);
 vi.mock('@/hooks/user-navigate', () => ({

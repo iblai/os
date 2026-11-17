@@ -559,6 +559,33 @@ describe('config', () => {
       });
     });
 
+    describe('planFeatures', () => {
+      it('answers a list per plan, keyed the way the SDK names the plans', () => {
+        const result = config.planFeatures();
+        expect(Object.keys(result)).toEqual([
+          'free',
+          'premium',
+          'max',
+          'ultra',
+        ]);
+        Object.values(result).forEach((features) =>
+          expect(Array.isArray(features)).toBe(true),
+        );
+      });
+
+      it('splits each variable on "|" and drops empty entries', () => {
+        (global.window as any).__ENV__ = {
+          NEXT_PUBLIC_PLAN_FEATURES_FREE: 'One| **Two** more ||Three|',
+          NEXT_PUBLIC_PLAN_FEATURES_PRO: 'Only one',
+          NEXT_PUBLIC_PLAN_FEATURES_MAX: ' | ',
+        };
+        const result = config.planFeatures();
+        expect(result.free).toEqual(['One', '**Two** more', 'Three']);
+        expect(result.premium).toEqual(['Only one']);
+        expect(result.max).toEqual([]);
+      });
+    });
+
     describe('enableGradebookTab', () => {
       it('should return boolean value', () => {
         const result = config.enableGradebookTab();

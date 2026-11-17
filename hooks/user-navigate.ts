@@ -45,7 +45,7 @@ import {
   useGetMentorSettingsQuery,
 } from '@iblai/iblai-js/data-layer';
 import { MentorVisibilityEnum } from '@iblai/iblai-api';
-import { useShowFreeTrialDialog } from './user-user-actions';
+import { useShowFreeTrialDialog } from '@iblai/iblai-js/web-utils';
 import { clearFiles } from '@iblai/iblai-js/web-utils';
 import { useTenantContext } from '@iblai/iblai-js/web-utils';
 import { useLocalStorage } from './use-local-storage';

@@ -85,6 +85,7 @@ vi.mock('@iblai/iblai-js/web-utils', () => ({
   },
   clearFiles: mocked.clearFiles,
   useTenantContext: mocked.useTenantContext,
+  useShowFreeTrialDialog: mocked.useShowFreeTrialDialog,
 }));
 
 vi.mock('@/lib/constants', () => ({
@@ -159,10 +160,6 @@ vi.mock('@iblai/iblai-api', () => ({
   MentorVisibilityEnum: {
     VIEWABLE_BY_ANYONE: 'viewable_by_anyone',
   },
-}));
-
-vi.mock('../user-user-actions', () => ({
-  useShowFreeTrialDialog: mocked.useShowFreeTrialDialog,
 }));
 
 vi.mock('../use-local-storage', () => ({

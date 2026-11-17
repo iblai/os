@@ -172,16 +172,6 @@
     "advanced": "高级",
     "memory": "记忆",
     "support": "支持",
-    "accountTabOrganization": "组织",
-    "accountTabBilling": "账单",
-    "accountDescOrganization": "管理您的组织设置。",
-    "accountDescManagement": "管理系统中的用户及其权限。",
-    "accountDescSecrets": "来自其他服务（例如 OpenAI 或 Stripe）的密钥，供 ibl.ai 和您的智能体使用。",
-    "accountDescApi": "让您自己的软件与 ibl.ai 协同工作。",
-    "accountDescMonetization": "配置付费墙、定价和收入。",
-    "accountDescAdvanced": "配置组织的高级设置。",
-    "accountDescMemory": "管理用户的全局记忆和智能体记忆。",
-    "accountDescBilling": "管理您的账单和订阅。",
     "awaitingPermission": "等待你的许可"
   },
   "appSidebarPinnedMessages": {
@@ -1918,12 +1908,6 @@
   },
   "tabsSkillsTab": {
     "heading": "技能"
-  },
-  "topTrialBannerTopTrialBanner": {
-    "defaultBannerText": "升级以创建您自己的智能体。无需信用卡 😎",
-    "upgradeAriaLabel": "升级",
-    "upgradeButton": "升级",
-    "closeBannerAriaLabel": "关闭横幅"
   },
   "uiBreadcrumb": {
     "navAriaLabel": "面包屑导航",

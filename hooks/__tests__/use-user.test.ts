@@ -14,7 +14,6 @@ import {
   useIsAdmin,
   useIsVisiting,
   useGetAllTenants,
-  useUserIsOnTrial,
   useUserIsStudent,
   useLearnerMode,
 } from '../use-user';
@@ -29,6 +28,7 @@ vi.mock('next/navigation', () => ({
 // Mock react-redux
 const mockDispatch = vi.fn();
 const mockUseAppSelector = vi.fn();
+const mockUseUserIsOnTrial = vi.fn(() => false);
 vi.mock('react-redux', () => ({
   useDispatch: () => mockDispatch,
 }));
@@ -38,8 +38,8 @@ vi.mock('react-redux', () => ({
 // query → react-redux `batch`, which this file's react-redux mock omits). Mock it
 // to the flag-OFF localStorage passthrough — matching how the hook behaves today.
 vi.mock('@iblai/iblai-js/web-utils', () => ({
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ...(globalThis as any).__iblAuthStorageMock,
+  useUserIsOnTrial: () => mockUseUserIsOnTrial(),
   Tenant: {},
 }));
 
@@ -456,78 +456,10 @@ describe('useGetAllTenants', () => {
   });
 });
 
-describe('useUserIsOnTrial', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    Object.keys(mockLocalStorageValues).forEach(
-      (key) => delete mockLocalStorageValues[key],
-    );
-  });
-
-  it('should return false when no current tenant', () => {
-    const { result } = renderHook(() => useUserIsOnTrial());
-
-    expect(result.current).toBe(false);
-  });
-
-  it('should return true for main tenant non-admin with single tenant and stripe activated', () => {
-    mockLocalStorageValues[LOCAL_STORAGE_KEYS.CURRENT_TENANT] = {
-      key: 'main',
-      is_admin: false,
-    };
-    mockLocalStorageValues[LOCAL_STORAGE_KEYS.USER_TENANTS] = [{ key: 'main' }];
-
-    const { result } = renderHook(() => useUserIsOnTrial());
-
-    expect(result.current).toBe(true);
-  });
-
-  it('should return false when user is admin', () => {
-    mockLocalStorageValues[LOCAL_STORAGE_KEYS.CURRENT_TENANT] = {
-      key: 'main',
-      is_admin: true,
-    };
-    mockLocalStorageValues[LOCAL_STORAGE_KEYS.USER_TENANTS] = [{ key: 'main' }];
-
-    const { result } = renderHook(() => useUserIsOnTrial());
-
-    expect(result.current).toBe(false);
-  });
-
-  it('should return false when user has multiple tenants', () => {
-    mockLocalStorageValues[LOCAL_STORAGE_KEYS.CURRENT_TENANT] = {
-      key: 'main',
-      is_admin: false,
-    };
-    mockLocalStorageValues[LOCAL_STORAGE_KEYS.USER_TENANTS] = [
-      { key: 'main' },
-      { key: 'other' },
-    ];
-
-    const { result } = renderHook(() => useUserIsOnTrial());
-
-    expect(result.current).toBe(false);
-  });
-
-  it('should return false when not on main tenant', () => {
-    mockLocalStorageValues[LOCAL_STORAGE_KEYS.CURRENT_TENANT] = {
-      key: 'other',
-      is_admin: false,
-    };
-    mockLocalStorageValues[LOCAL_STORAGE_KEYS.USER_TENANTS] = [
-      { key: 'other' },
-    ];
-
-    const { result } = renderHook(() => useUserIsOnTrial());
-
-    // isStripeActivated returns false for non-main tenants
-    expect(result.current).toBe(false);
-  });
-});
-
 describe('useUserIsStudent', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockUseUserIsOnTrial.mockReturnValue(false);
     Object.keys(mockLocalStorageValues).forEach(
       (key) => delete mockLocalStorageValues[key],
     );
@@ -564,6 +496,7 @@ describe('useUserIsStudent', () => {
   });
 
   it('should return false for trial user', () => {
+    mockUseUserIsOnTrial.mockReturnValue(true);
     mockLocalStorageValues[LOCAL_STORAGE_KEYS.USER_DATA] = {
       user_nicename: 'testuser',
       user_email: 'test@test.com',

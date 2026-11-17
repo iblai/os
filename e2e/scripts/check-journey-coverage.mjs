@@ -76,6 +76,16 @@ const EXCLUDED_PATTERNS = [
   // Welcome-chat tools section — dead code: <ToolsSection> is commented out in
   // welcome-chat-new.tsx, so it is never rendered and cannot be E2E-exercised.
   /\/welcome-chat\/tools-section\.tsx$/,
+  // Moved into the SDK (@iblai/iblai-js/web-utils); the diff still lists the
+  // deleted paths.
+  /^components\/free-trial-dialog\.tsx$/,
+  /^components\/top-trial-banner\/top-trial-banner\.tsx$/,
+  // Prompt library and safety-tab dialogs.
+  /^components\/modals\/add-prompt-modal\.tsx$/,
+  /^components\/modals\/edit-prompt-modal\.tsx$/,
+  /^components\/modals\/prompt-gallery-modal\.tsx$/,
+  /^components\/modals\/prompt-gallery-modal\/prompt-card\.tsx$/,
+  /^components\/modals\/edit-mentor-modal\/tabs\/safety-tab\.tsx$/,
 ];
 
 // ─── Colors ──────────────────────────────────────────────────────────────────

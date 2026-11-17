@@ -27,6 +27,12 @@ vi.mock('@/hooks/use-user', () => ({
   useUsername: () => mockUseUsername(),
 }));
 
+const rbacPermissions = { '/mentors/42/#view_privacy_flags': {} };
+vi.mock('@/lib/hooks', () => ({
+  useAppSelector: (selector: (state: unknown) => unknown) =>
+    selector({ rbac: { rbacPermissions } }),
+}));
+
 // PrivacyTab imports from `@iblai/iblai-js/web-containers/next` (the
 // Next-only entry — that's where AgentPrivacyTab is actually exported).
 // Vitest keys mocks by module specifier, so we mock the exact path the
@@ -81,6 +87,7 @@ describe('PrivacyTab', () => {
         tenantKey: 'test-tenant',
         mentorId: 'test-mentor',
         username: 'test-user',
+        rbacPermissions,
       });
     });
   });
@@ -95,6 +102,7 @@ describe('PrivacyTab', () => {
         tenantKey: 'test-tenant',
         mentorId: 'nav-mentor-xyz',
         username: 'test-user',
+        rbacPermissions,
       });
     });
 
@@ -107,6 +115,7 @@ describe('PrivacyTab', () => {
         tenantKey: 'test-tenant',
         mentorId: 'test-mentor',
         username: 'test-user',
+        rbacPermissions,
       });
     });
 
@@ -119,6 +128,7 @@ describe('PrivacyTab', () => {
         tenantKey: 'test-tenant',
         mentorId: 'test-mentor',
         username: 'test-user',
+        rbacPermissions,
       });
     });
   });
@@ -172,6 +182,7 @@ describe('PrivacyTab', () => {
         tenantKey: 'test-tenant',
         mentorId: 'nav-mentor-xyz',
         username: 'test-user',
+        rbacPermissions,
       });
     });
   });

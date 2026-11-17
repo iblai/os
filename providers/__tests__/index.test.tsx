@@ -140,15 +140,6 @@ vi.mock('@/hooks/use-is-preview-mode', () => ({
   useIsPreviewMode: () => mockIsPreviewMode,
 }));
 
-vi.mock('@/hooks/subscription/use-402-error-check', () => ({
-  use402ErrorCheck: () => ({ handle402Error: mockHandle402Error }),
-}));
-
-vi.mock('@/hooks/subscription/constants', () => ({
-  SUBSCRIPTION_CREDIT_LIMIT_ERROR_MESSAGE:
-    'You do not have enough credits to proceed.',
-}));
-
 // ── lib mocks ───────────────────────────────────────────────────────────────
 
 const mockSendMessageToParentWebsite = vi.fn();
@@ -189,7 +180,9 @@ vi.mock('@/lib/config', () => ({
     iblPlatform: () => 'mentor',
     environment: () => 'test',
     stripeEnabled: () => false,
+    supportEmail: () => 'support@test',
     enableRBAC: () => false,
+    planFeatures: () => ({ free: [], premium: [], max: [], ultra: [] }),
   },
 }));
 
@@ -305,6 +298,14 @@ let mentorProviderCallbacksToInvoke: Array<{ name: string; args?: unknown[] }> =
   [];
 
 vi.mock('@iblai/iblai-js/web-utils', () => ({
+  SubscriptionConfigProvider: ({ children }: { children: React.ReactNode }) => (
+    <>{children}</>
+  ),
+  use402ErrorCheck: () => ({ handle402Error: mockHandle402Error }),
+  // Desktop-only listener; a no-op in the browser.
+  useOpencode402: vi.fn(),
+  SUBSCRIPTION_CREDIT_LIMIT_ERROR_MESSAGE:
+    'You do not have enough credits to proceed.',
   useTenantSwitchSync: vi.fn(),
   refreshTenantSwitchLock: vi.fn(),
   isTenantSwitchInProgress: vi.fn(() => false),
@@ -533,6 +534,8 @@ describe('Providers', () => {
         // Always ours, standalone included: left undefined the data layer
         // would mint from the edX session, and this app calls no edX LMS.
         expect.any(Function),
+        // And every LMS/Studio call goes through DM's edX proxy.
+        { edxProxy: true },
       );
     });
 
@@ -1111,6 +1114,21 @@ describe('Providers', () => {
       // the reset effect itself.
       expect(mockDispatch).not.toHaveBeenCalledWith({
         type: 'rbac/markMentorLoaded',
+      });
+    });
+
+    // Workflow pages skip the mentor check, so MentorProvider loads no mentor's
+    // permissions there; a reset left the Preview chat's input disabled with
+    // "You don't have permission to chat" for the editor.
+    it('on a workflow page, marks mentor permissions loaded for a signed-in user', () => {
+      mockUsername = 'testuser';
+      mockPathname = '/platform/test-tenant/workflows/entry-agent/workflow-1';
+      renderProviders();
+      expect(mockDispatch).toHaveBeenCalledWith({
+        type: 'rbac/markMentorLoaded',
+      });
+      expect(mockDispatch).not.toHaveBeenCalledWith({
+        type: 'rbac/resetMentorLoaded',
       });
     });
 

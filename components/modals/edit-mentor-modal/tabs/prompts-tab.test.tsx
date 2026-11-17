@@ -66,9 +66,14 @@ vi.mock('@/features/chat-input/api-slice', () => ({
   },
 }));
 
-vi.mock('@/hooks/user-user-actions', () => ({
-  useShowFreeTrialDialog: () => mockUseShowFreeTrialDialog(),
-}));
+vi.mock('@iblai/iblai-js/web-utils', async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import('@iblai/iblai-js/web-utils')>();
+  return {
+    ...actual,
+    useShowFreeTrialDialog: () => mockUseShowFreeTrialDialog(),
+  };
+});
 
 // Mock data-layer
 const mockEditMentorLoading = vi.fn();

@@ -55,6 +55,9 @@ vi.mock('@iblai/iblai-js/web-containers/next', async (importOriginal) => {
 });
 
 vi.mock('@iblai/iblai-js/web-utils', () => ({
+  useShowFreeTrialDialog: () => ({ executeWithTrialCheck }),
+  use402ErrorCheck: () => ({ handle402Error }),
+  wasRecent402,
   selectSessionId: (state: { sessionId: string }) => state.sessionId,
 }));
 
@@ -134,14 +137,10 @@ vi.mock('@/hooks/use-mentors/use-mentor-settings', () => ({
   useMentorSettings: () => ({ data: { mentorUniqueId: 'uuid-1' } }),
 }));
 const wasRecent402 = vi.fn(() => true);
-vi.mock('@/hooks/use-opencode-402', () => ({ wasRecent402 }));
 const skillSync = { state: 'synced' };
 const useOpencodeSkillSync = vi.fn(() => skillSync);
 vi.mock('@/hooks/use-opencode-skill-sync', () => ({ useOpencodeSkillSync }));
 const handle402Error = vi.fn();
-vi.mock('@/hooks/subscription/use-402-error-check', () => ({
-  use402ErrorCheck: () => ({ handle402Error }),
-}));
 vi.mock('@/hooks/use-tokens', () => ({ useAxdToken: () => 'axd-token' }));
 vi.mock('@/hooks/use-user', () => ({
   useUsername: () => 'jane',
@@ -162,9 +161,6 @@ vi.mock('@/hooks/user-navigate', () => ({
   }),
 }));
 const executeWithTrialCheck = vi.fn((fn: () => unknown) => fn());
-vi.mock('@/hooks/user-user-actions', () => ({
-  useShowFreeTrialDialog: () => ({ executeWithTrialCheck }),
-}));
 let showAppBanner = 'true';
 vi.mock('@/lib/config', () => ({
   config: {

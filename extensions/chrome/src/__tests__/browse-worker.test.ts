@@ -1,3 +1,4 @@
+import { APICallError } from 'ai';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AgentEvent } from '../agent';
 import {
@@ -375,6 +376,7 @@ describe('the browse port', () => {
     expect(stored.browse).toEqual({
       model: 'openai/gpt-5',
       preference: 'anthropic/claude-sonnet-5',
+      unusable: [],
     });
   });
 
@@ -573,5 +575,210 @@ describe('real clicks', () => {
     await vi.waitFor(() => expect(signal()).not.toBeNull());
     for (const listener of [...chromeStub.detached]) listener({ tabId: 9 });
     expect(signal()!.aborted).toBe(false);
+  });
+});
+
+describe('the overlay on the driven tab', () => {
+  const done = () =>
+    runAgent.mockResolvedValue({
+      text: 'ok',
+      messages: [],
+      steps: 1,
+      stoppedBy: null,
+    });
+
+  const overlay = () =>
+    document.querySelector('[data-ibl-agent-overlay]') as HTMLElement | null;
+
+  const stopFromPage = (tabId: number) => {
+    for (const listener of [...chromeStub.messaged])
+      listener(
+        { type: 'MENTOR:HUD_STOP' },
+        { id: 'ibl-extension', tab: { id: tabId } },
+        () => {},
+      );
+  };
+
+  it('goes up for the run and is handed to the tools', async () => {
+    done();
+    const port = openPort();
+    port.emit({ type: 'run', tabId: 7, goal: 'go', creds });
+    await vi.waitFor(() => expect(frames(port, 'done')).toHaveLength(1));
+    expect((await ctxOf()).hud).toBeDefined();
+    // Down again however the run ended: an overlay left behind tells the user
+    // their page is still being driven when it is not.
+    expect(overlay()).toBeNull();
+    expect(chromeStub.grouped.has(7)).toBe(false);
+  });
+
+  it('comes down when the run fails too', async () => {
+    runAgent.mockRejectedValue(new Error('the model fell over'));
+    const port = openPort();
+    port.emit({ type: 'run', tabId: 7, goal: 'go', creds });
+    await vi.waitFor(() => expect(frames(port, 'error')).toHaveLength(1));
+    expect(overlay()).toBeNull();
+    expect(chromeStub.grouped.has(7)).toBe(false);
+  });
+
+  it('comes down when the panel closes mid-run', async () => {
+    const signalOf = pending();
+    const port = openPort();
+    port.emit({ type: 'run', tabId: 7, goal: 'go', creds });
+    await vi.waitFor(() => expect(signalOf()).not.toBeNull());
+    port.close();
+    await vi.waitFor(() => expect(overlay()).toBeNull());
+    expect(chromeStub.grouped.has(7)).toBe(false);
+  });
+
+  it('ends the run when Stop is pressed on the page', async () => {
+    const signalOf = pending();
+    const port = openPort();
+    port.emit({ type: 'run', tabId: 7, goal: 'go', creds });
+    await vi.waitFor(() => expect(signalOf()).not.toBeNull());
+    stopFromPage(7);
+    await vi.waitFor(() => expect(signalOf()?.aborted).toBe(true));
+    await vi.waitFor(() => expect(overlay()).toBeNull());
+  });
+
+  it('ignores a Stop from a tab this run is not driving', async () => {
+    const signalOf = pending();
+    const port = openPort();
+    port.emit({ type: 'run', tabId: 7, goal: 'go', creds });
+    await vi.waitFor(() => expect(signalOf()).not.toBeNull());
+    // An overlay another run left on another tab must not end this one.
+    stopFromPage(8);
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(signalOf()?.aborted).toBe(false);
+    port.close();
+  });
+
+  it('ignores a Stop once the panel has gone', async () => {
+    done();
+    const port = openPort();
+    port.emit({ type: 'run', tabId: 7, goal: 'go', creds });
+    await vi.waitFor(() => expect(frames(port, 'done')).toHaveLength(1));
+    port.close();
+    // The listener is dropped with the port; nothing is left listening for a
+    // message the worker can no longer act on.
+    expect(chromeStub.messaged.size).toBe(0);
+  });
+
+  it('refuses a Stop that did not come from the extension', async () => {
+    const signalOf = pending();
+    const port = openPort();
+    port.emit({ type: 'run', tabId: 7, goal: 'go', creds });
+    await vi.waitFor(() => expect(signalOf()).not.toBeNull());
+    for (const listener of [...chromeStub.messaged])
+      listener(
+        { type: 'MENTOR:HUD_STOP' },
+        { id: 'somebody-else', tab: { id: 7 } },
+        () => {},
+      );
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(signalOf()?.aborted).toBe(false);
+    port.close();
+  });
+});
+
+describe('a model the organization has no key for', () => {
+  /** What the platform answers for a provider it was never given a key for. */
+  const noKey = () =>
+    new APICallError({
+      message: 'Missing credential value for tenant: acme for azure_openai',
+      url: 'https://asgi.data.iblai.app/v1/chat/completions',
+      requestBodyValues: {},
+      statusCode: 400,
+    });
+
+  const sent = (port: ReturnType<typeof fakePort>, type: string) =>
+    port.sent.filter((m) => (m as { type: string }).type === type);
+
+  beforeEach(async () => {
+    runAgent.mockReset();
+    listModels.mockReset();
+    // The file's own seed caches a usable model; these tests are about what
+    // happens when the pick comes from the platform's list instead.
+    await chromeStub.stub.storage.local.set({
+      browse: { model: '', preference: '', unusable: [] },
+    });
+  });
+
+  it('moves to the next model and finishes the run', async () => {
+    listModels.mockResolvedValue(['azure/gpt-4o', 'together/llama-4']);
+    runAgent.mockRejectedValueOnce(noKey()).mockResolvedValueOnce({
+      text: 'done',
+      messages: [],
+      steps: 1,
+      stoppedBy: null,
+    });
+
+    const port = openPort();
+    port.emit({ type: 'run', tabId: 7, goal: 'go', creds, auto: true });
+    await vi.waitFor(() => expect(sent(port, 'done')).toHaveLength(1));
+
+    expect(runAgent).toHaveBeenCalledTimes(2);
+    // The dead model is remembered, so the next run does not pay for it again.
+    const stored = await chromeStub.stub.storage.local.get('browse');
+    expect(stored.browse).toMatchObject({
+      model: 'together/llama-4',
+      unusable: ['azure/gpt-4o'],
+    });
+  });
+
+  it('never shows the platform’s wording for it', async () => {
+    listModels.mockResolvedValue(['azure/gpt-4o', 'together/llama-4']);
+    runAgent.mockRejectedValueOnce(noKey()).mockResolvedValueOnce({
+      text: 'done',
+      messages: [],
+      steps: 1,
+      stoppedBy: null,
+    });
+
+    const port = openPort();
+    port.emit({ type: 'run', tabId: 7, goal: 'go', creds, auto: true });
+    await vi.waitFor(() => expect(sent(port, 'done')).toHaveLength(1));
+
+    // "Missing credential value for tenant" is backend English for someone who
+    // has never coded, and the run recovered anyway: there is nothing to say.
+    expect(sent(port, 'error')).toEqual([]);
+  });
+
+  it('says one plain sentence when nothing else is set up', async () => {
+    listModels.mockResolvedValue(['azure/gpt-4o']);
+    runAgent.mockRejectedValue(noKey());
+
+    const port = openPort();
+    port.emit({ type: 'run', tabId: 7, goal: 'go', creds, auto: true });
+    await vi.waitFor(() => expect(sent(port, 'error')).toHaveLength(1));
+
+    const [error] = sent(port, 'error') as { message: string }[];
+    expect(error.message).toContain('set up with a key');
+    expect(error.message).not.toContain('tenant');
+    expect(runAgent).toHaveBeenCalledTimes(1);
+  });
+
+  it('skips what already failed when the next run picks', async () => {
+    await chromeStub.stub.storage.local.set({
+      browse: {
+        model: 'azure/gpt-4o',
+        preference: 'anthropic/claude-sonnet-5',
+        unusable: ['azure/gpt-4o'],
+      },
+    });
+    listModels.mockResolvedValue(['azure/gpt-4o', 'together/llama-4']);
+    runAgent.mockResolvedValue({
+      text: 'done',
+      messages: [],
+      steps: 1,
+      stoppedBy: null,
+    });
+
+    const port = openPort();
+    port.emit({ type: 'run', tabId: 7, goal: 'go', creds, auto: true });
+    await vi.waitFor(() => expect(runAgent).toHaveBeenCalled());
+
+    // The cache named a model this organization cannot call: it is not a choice.
+    const stored = await chromeStub.stub.storage.local.get('browse');
+    expect(stored.browse).toMatchObject({ model: 'together/llama-4' });
   });
 });

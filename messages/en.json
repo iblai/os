@@ -172,16 +172,6 @@
     "advanced": "Advanced",
     "memory": "Memory",
     "support": "Support",
-    "accountTabOrganization": "Organization",
-    "accountTabBilling": "Billing",
-    "accountDescOrganization": "Manage your organization settings.",
-    "accountDescManagement": "Manage users and their permissions in the system.",
-    "accountDescSecrets": "Keys from other services, like OpenAI or Stripe, that ibl.ai and your agents use.",
-    "accountDescApi": "Let your own software work with ibl.ai.",
-    "accountDescMonetization": "Configure paywalls, pricing, and revenue.",
-    "accountDescAdvanced": "Configure advanced organization settings.",
-    "accountDescMemory": "Manage user global memories and agent memories.",
-    "accountDescBilling": "Manage your billing and subscription.",
     "awaitingPermission": "Waiting for your permission"
   },
   "appSidebarPinnedMessages": {
@@ -1918,12 +1908,6 @@
   },
   "tabsSkillsTab": {
     "heading": "Skills"
-  },
-  "topTrialBannerTopTrialBanner": {
-    "defaultBannerText": "Upgrade to create your own agents. No credit card required 😎",
-    "upgradeAriaLabel": "Upgrade",
-    "upgradeButton": "Upgrade",
-    "closeBannerAriaLabel": "Close banner"
   },
   "uiBreadcrumb": {
     "navAriaLabel": "breadcrumb",

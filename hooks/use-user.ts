@@ -9,8 +9,9 @@ import { userSliceActions } from '@/features/users/slice';
 import { usePathname } from 'next/navigation';
 import { initCustomAlertDialog } from '@/features/navigation/slice';
 import type { Tenant } from '@iblai/iblai-js/web-utils';
+import { useUserIsOnTrial } from '@iblai/iblai-js/web-utils';
+export { useUserIsOnTrial };
 import { getAuthItem } from '@/lib/auth-storage';
-import { isStripeActivated } from '@/lib/utils';
 
 export function useUserData() {
   const [data] = useLocalStorage<z.infer<typeof userDataSchema> | null>(
@@ -154,21 +155,6 @@ export function useGetAllTenants() {
   }
 
   return validationResult.data;
-}
-
-export function useUserIsOnTrial() {
-  const { currentTenant } = useCurrentTenant();
-  const { userTenants } = useUserTenants();
-
-  if (
-    currentTenant &&
-    isStripeActivated(currentTenant as Tenant) &&
-    userTenants.length === 1
-  ) {
-    return currentTenant?.key === 'main' && currentTenant?.is_admin === false;
-  }
-
-  return false;
 }
 
 export function useUserIsStudent() {

@@ -111,6 +111,13 @@ vi.mock('next/navigation', () => ({
 // graph stays resolvable — `chatActions` only needs to produce a plain
 // action object for the "start a new chat off a chat route" assertion.
 vi.mock('@iblai/iblai-js/web-utils', () => ({
+  useShowFreeTrialDialog: () => ({
+    executeWithTrialCheck: (fn: () => void) => fn(),
+    FreeTrialDialog: null,
+    closeModal: vi.fn(),
+    isModalOpen: false,
+    isNewlyUserOnPreFreeOrAdvertisingMode: () => false,
+  }),
   chatActions: {
     setShouldStartNewChat: (payload: boolean) => ({
       type: 'chat/setShouldStartNewChat',
@@ -127,6 +134,12 @@ vi.mock('next/image', () => ({
 
 vi.mock('@/hooks/use-user', () => ({
   useIsAdmin: () => mockIsAdmin,
+  // The SDK's trial predicate, read from the same mock state as before.
+  useUserIsOnTrial: () =>
+    mockCurrentTenant?.key === 'main' &&
+    mockCurrentTenant?.is_admin === false &&
+    !!mockCurrentTenant?.show_paywall &&
+    (mockAllTenants?.length ?? 0) === 1,
   useIsVisiting: () => mockIsVisiting,
   useUserIsStudent: () => mockUserIsStudent,
   useUsername: () => 'testuser',
@@ -154,16 +167,6 @@ vi.mock('@/hooks/use-user-type', () => ({
       );
     },
     userType: mockUserIsStudent ? UserType.STUDENT : UserType.ADMIN,
-  }),
-}));
-
-vi.mock('@/hooks/user-user-actions', () => ({
-  useShowFreeTrialDialog: () => ({
-    executeWithTrialCheck: (fn: () => void) => fn(),
-    FreeTrialDialog: null,
-    closeModal: vi.fn(),
-    isModalOpen: false,
-    isNewlyUserOnPreFreeOrAdvertisingMode: () => false,
   }),
 }));
 
