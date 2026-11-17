@@ -186,5 +186,13 @@
   },
   "orgsSwitchFailed": {
     "message": "未能完成。请选择一个组织重试。"
+  },
+  "orgsLandedElsewhere": {
+    "message": "你现在位于 $ORG$。请重新选择以尝试你想要的组织。",
+    "placeholders": {
+      "org": {
+        "content": "$1"
+      }
+    }
   }
 }

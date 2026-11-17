@@ -176,15 +176,26 @@ export function refreshHostAuthCache(host: Element): void {
  * and someone picking one in the panel's own list — so both go through the
  * same auth flow guard and the same remount.
  */
+/** Where a switch actually ended up, so the panel can say something true. */
+export type SwitchOutcome =
+  /** In the organization that was asked for. */
+  | { kind: 'switched' }
+  /**
+   * Signed in, but somewhere else — the auth app fell back to an interactive
+   * sign-in, which returns the person's DEFAULT organization. By then the old
+   * session is gone, so this is installed rather than abandoned: the panel is
+   * consistent with itself and says where the person actually is.
+   */
+  | { kind: 'elsewhere'; landed: string }
+  /** Nothing happened: another flow held the guard, or the sign-in failed. */
+  | { kind: 'failed' };
+
 export async function switchToOrganization(
   host: Element,
   tenant: string,
-): Promise<boolean> {
-  // False when the switch did not happen: another auth flow holds the guard (a
-  // session recovery, say), or the sign-in was cancelled or failed. The caller
-  // has a picker open and has to say something rather than closing it on a
-  // switch that never landed.
-  return withAuthFlow('tenant switch', async () => {
+): Promise<SwitchOutcome> {
+  let landedElsewhere: string | null = null;
+  const ran = await withAuthFlow('tenant switch', async () => {
     // Capture the return path from the CURRENT chat URL *before* the auth
     // round-trip. signIn() is async (seconds), and the app may navigate the
     // iframe meanwhile — often to a /sso-login-complete URL, from which
@@ -210,17 +221,19 @@ export async function switchToOrganization(
     // mounted, or with a payload carrying no usable session, it does nothing
     // and says so.
     const moved = installSession(host, redirectPath);
-    // The auth app falls back to an interactive sign-in when the mint 401s, and
-    // that returns the user's DEFAULT organization — not the one they picked.
-    // `signInKeepingOrganization` guards the same case on the recovery path.
-    const landed = org();
-    if (landed && landed !== tenant) {
-      throw new Error(`signed in to ${landed}, not the requested ${tenant}`);
-    }
     if (!moved) {
       throw new Error('the chat could not be moved to the new session');
     }
+    // Checked after installing, deliberately: the session that came back is the
+    // only one there is now, so the chat follows it either way and the person
+    // is told where they ended up rather than being left between the two.
+    const landed = org();
+    if (landed && landed !== tenant) landedElsewhere = landed;
   });
+  if (!ran) return { kind: 'failed' };
+  return landedElsewhere
+    ? { kind: 'elsewhere', landed: landedElsewhere }
+    : { kind: 'switched' };
 }
 
 /**

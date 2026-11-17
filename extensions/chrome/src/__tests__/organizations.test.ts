@@ -242,6 +242,22 @@ describe('listOrganizations', () => {
     await expect(listOrganizations(CREDS, BASES)).resolves.toHaveLength(1);
   });
 
+  // Same as a later page erroring: the rows already in hand stand, and the list
+  // is reported short rather than thrown away — otherwise a live session with
+  // one organization can come back as "you are signed out".
+  it('keeps the rows it has when a later page is unreadable', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    fetchMock
+      .mockResolvedValueOnce(
+        answer({ results: [row()], next: 'https://one.test/page2' }),
+      )
+      .mockResolvedValueOnce(answer({ unexpected: 'shape' }));
+
+    await expect(listOrganizations(CREDS, BASES)).resolves.toHaveLength(1);
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('truncated'));
+    warn.mockRestore();
+  });
+
   it('does not let an unreadable body hide a dead session', async () => {
     fetchMock
       .mockResolvedValueOnce(answer({ detail: 'no' }, 401))

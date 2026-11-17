@@ -186,5 +186,13 @@
   },
   "orgsSwitchFailed": {
     "message": "No se completó. Elige una organización para volver a intentarlo."
+  },
+  "orgsLandedElsewhere": {
+    "message": "Ahora estás en $ORG$. Vuelve a elegir para intentar la que querías.",
+    "placeholders": {
+      "org": {
+        "content": "$1"
+      }
+    }
   }
 }

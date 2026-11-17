@@ -329,10 +329,10 @@ describe('OrgPicker', () => {
       />,
     );
 
-    await screen.findByText('Switching organization…');
-    expect(document.activeElement).toBe(
-      screen.getByRole('button', { name: 'Close' }),
-    );
+    const note = await screen.findByText('Switching organization…');
+    // The note, not Close: a held Enter from the row would otherwise dismiss
+    // the picker before the outcome could be shown.
+    expect(document.activeElement).toBe(note);
   });
 
   // Keyed on an unstable callback, the dialog effect re-ran on every parent

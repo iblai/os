@@ -177,7 +177,9 @@ describe('watchTenantSwitch', () => {
     );
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
-    await expect(switchToOrganization(host, 'beta')).resolves.toBe(false);
+    await expect(switchToOrganization(host, 'beta')).resolves.toEqual({
+      kind: 'failed',
+    });
 
     warn.mockRestore();
   });
@@ -194,7 +196,12 @@ describe('watchTenantSwitch', () => {
     );
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
-    await expect(switchToOrganization(host, 'beta')).resolves.toBe(false);
+    // Installed, so the panel is consistent with the session it was given, and
+    // reported so the person is told where they actually are.
+    await expect(switchToOrganization(host, 'beta')).resolves.toEqual({
+      kind: 'elsewhere',
+      landed: 'somewhere-else',
+    });
 
     warn.mockRestore();
   });
@@ -209,7 +216,9 @@ describe('watchTenantSwitch', () => {
     document.body.append(host);
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
-    await expect(switchToOrganization(host, 'beta')).resolves.toBe(false);
+    await expect(switchToOrganization(host, 'beta')).resolves.toEqual({
+      kind: 'failed',
+    });
 
     warn.mockRestore();
     host.remove();
@@ -219,7 +228,9 @@ describe('watchTenantSwitch', () => {
     const { host } = makeHost(
       'https://os.ibl.ai/platform/acme/bot?embed=true&mode=anonymous',
     );
-    await expect(switchToOrganization(host, 'beta')).resolves.toBe(true);
+    await expect(switchToOrganization(host, 'beta')).resolves.toEqual({
+      kind: 'switched',
+    });
   });
 
   it('chooses on a tenant-less switch even without a chooser address', async () => {

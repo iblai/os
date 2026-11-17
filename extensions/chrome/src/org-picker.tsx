@@ -40,6 +40,7 @@ export function OrgPicker({
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const closeRef = useRef<HTMLButtonElement>(null);
+  const switchingRef = useRef<HTMLDivElement>(null);
   // Read through a ref so the effect below can run once. Keyed on `onCancel`
   // it re-ran on every parent render and pulled focus back to the × button,
   // off whatever row the person had arrowed to.
@@ -67,7 +68,10 @@ export function OrgPicker({
   useEffect(() => {
     if (!switching) return;
     setError(null);
-    closeRef.current?.focus();
+    // The note, not the × button: a held or repeated Enter from the row that
+    // started the switch would otherwise land on Close, unmount the picker, and
+    // the message about how the switch went would never be seen.
+    switchingRef.current?.focus();
   }, [switching]);
 
   useEffect(() => {
@@ -144,7 +148,9 @@ export function OrgPicker({
       {message && <div className="row-error">{message}</div>}
 
       {switching ? (
-        <div className="orgs-note">{t('orgsSwitching')}</div>
+        <div className="orgs-note" ref={switchingRef} tabIndex={-1}>
+          {t('orgsSwitching')}
+        </div>
       ) : organizations === null ? (
         <div className="orgs-note">{t('orgsLoading')}</div>
       ) : organizations.length === 0 ? (

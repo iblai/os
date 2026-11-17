@@ -64,7 +64,7 @@ beforeEach(() => {
   vi.mocked(startContextFeed).mockClear();
   vi.mocked(startBrowseBridge).mockClear();
   vi.mocked(switchToOrganization).mockClear();
-  vi.mocked(switchToOrganization).mockResolvedValue(true);
+  vi.mocked(switchToOrganization).mockResolvedValue({ kind: 'switched' });
   vi.mocked(watchAndInstallSession).mockReturnValue(stopInstall);
   vi.mocked(watchTenantSwitch).mockReturnValue(stopTenantSwitch);
   vi.mocked(watchAuthExpired).mockReturnValue(stopAuthExpired);
@@ -151,7 +151,7 @@ describe('MentorChat', () => {
   // A pick that cannot start must not close the list and leave nothing
   // happening — which is what a session recovery holding the auth guard does.
   it('keeps the list up and says so when a pick cannot start', async () => {
-    vi.mocked(switchToOrganization).mockResolvedValue(false);
+    vi.mocked(switchToOrganization).mockResolvedValue({ kind: 'failed' });
     render(<MentorChat />);
     act(() => vi.mocked(watchTenantSwitch).mock.calls[0][1]!());
     const user = userEvent.setup();
@@ -159,6 +159,24 @@ describe('MentorChat', () => {
     await user.click(await screen.findByText('pick globex'));
 
     expect(await screen.findByTestId('notice')).toBeTruthy();
+    expect(screen.getByTestId('picker')).toBeTruthy();
+  });
+
+  // Signed in, but somewhere else. The chat has followed that session, so the
+  // panel names the organization the person is actually in rather than calling
+  // it a plain failure.
+  it('says which organization it landed in when it is not the one picked', async () => {
+    vi.mocked(switchToOrganization).mockResolvedValue({
+      kind: 'elsewhere',
+      landed: 'acme',
+    });
+    render(<MentorChat />);
+    act(() => vi.mocked(watchTenantSwitch).mock.calls[0][1]!());
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByText('pick globex'));
+
+    expect((await screen.findByTestId('notice')).textContent).toContain('acme');
     expect(screen.getByTestId('picker')).toBeTruthy();
   });
 

@@ -208,7 +208,17 @@ export async function listOrganizations(
         break;
       }
       if (!readable(answer.body)) {
-        failed = `${url} → unreadable body`;
+        // Same reasoning as the error branch above: only a first page we cannot
+        // read means this base has nothing for us. Later on, the rows already
+        // collected stand, and the list is reported short rather than dropped.
+        if (page === 0) {
+          failed = `${url} → unreadable body`;
+        } else {
+          failures.push(`${url} → unreadable body (list truncated)`);
+          console.warn(
+            `[ibl.ai panel] organization list truncated: ${url} → unreadable body`,
+          );
+        }
         break;
       }
       understood = true;

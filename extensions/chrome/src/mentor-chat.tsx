@@ -63,11 +63,19 @@ export function MentorChat() {
     setNotice(null);
     setSwitching(true);
     try {
-      if (await switchToOrganization(host, tenant)) {
+      const outcome = await switchToOrganization(host, tenant);
+      if (outcome.kind === 'switched') {
         setChoosing(false);
         return;
       }
-      setNotice(t('orgsSwitchFailed'));
+      // Signed in, but not where they asked. The chat has followed that session,
+      // so say which organization they are actually in rather than calling it a
+      // plain failure.
+      setNotice(
+        outcome.kind === 'elsewhere'
+          ? t('orgsLandedElsewhere', outcome.landed)
+          : t('orgsSwitchFailed'),
+      );
     } finally {
       setSwitching(false);
     }
