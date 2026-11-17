@@ -125,7 +125,7 @@ export async function iblDataParam(page: Page): Promise<string> {
  */
 export async function openLauncher(
   page: Page,
-  { cowork = false } = {},
+  { cowork = false, userProfile = false } = {},
 ): Promise<void> {
   const { tenantKey, mentorId } = await getPlatformContext(page);
   const session = await page.evaluate((keys) => {
@@ -151,6 +151,7 @@ export async function openLauncher(
     mentor: mentorId,
     authrelyonhost: '1',
     ...(cowork ? { enablecowork: '1' } : {}),
+    ...(userProfile ? { showuserprofile: '1' } : {}),
   });
   await page.goto(`${EMBED_HARNESS_URL}/agent-ai?${params}`, {
     waitUntil: 'domcontentloaded',

@@ -18,8 +18,9 @@ vi.mock('next/navigation', () => ({
   }),
   usePathname: () => '/platform/existing-tenant/mentor-1',
 }));
+let inExtensionPanel = false;
 vi.mock('@/hooks/use-in-extension-panel', () => ({
-  useInExtensionPanel: () => false,
+  useInExtensionPanel: () => inExtensionPanel,
 }));
 
 vi.mock('@/hooks/use-user', () => ({
@@ -159,6 +160,7 @@ vi.mock('@iblai/iblai-js/web-containers/next', () => ({
 describe('UserProfile organization chooser', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    inExtensionPanel = false;
   });
 
   it('offers the chooser to a user who belongs to another organization', () => {
@@ -175,5 +177,14 @@ describe('UserProfile organization chooser', () => {
 
     expect(screen.getByTestId('organizations-link')).toHaveTextContent('true');
     expect(screen.getByTestId('tenant-switcher')).toHaveTextContent('true');
+  });
+
+  // The panel's agent is bound to the organization, so there is nowhere to go.
+  it('withholds it in the extension panel', () => {
+    inExtensionPanel = true;
+
+    render(<UserProfile embed />);
+
+    expect(screen.getByTestId('organizations-link')).toHaveTextContent('false');
   });
 });
