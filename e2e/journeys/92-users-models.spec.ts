@@ -620,6 +620,13 @@ test.describe.serial('Journey 92: User Models, real end to end', () => {
     dmToken = (await page.evaluate(() => localStorage.getItem('dm_token')))!;
     original = await savedList(page);
 
+    // New agents are Admins Only (iblai-platform#2853); the user in this test
+    // opens the agent, so open it to members first.
+    await editMentorPage.open('Settings');
+    await editMentorPage.settings.setVisibility('Users');
+    await editMentorPage.settings.saveConfirmingAdminVisibility();
+    await editMentorPage.close();
+
     await editMentorPage.open('LLM');
     await waitForPageReady(page);
     await editMentorPage.llm.selectProviderAndModel('ibl.ai', 'iblai-fast');

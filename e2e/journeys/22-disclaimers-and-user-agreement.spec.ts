@@ -420,7 +420,7 @@ test.describe('Journey 22-D: Non-Admin — Agreement Enforcement', () => {
       timeout: 10_000,
     });
 
-    // Navigate to Settings and set visibility to Anyone
+    // Navigate to Settings and set visibility to All Members
     await editMentorPage.navigateToTab('Settings');
     await waitForPageReady(page);
 
@@ -439,7 +439,8 @@ test.describe('Journey 22-D: Non-Admin — Agreement Enforcement', () => {
       visibilityVisible = false;
     }
     if (visibilityVisible) {
-      await editMentorPage.settings.setVisibility('Anyone');
+      await editMentorPage.settings.setVisibility('Users');
+      await editMentorPage.settings.saveConfirmingAdminVisibility();
     }
 
     await editMentorPage.close();
@@ -531,6 +532,13 @@ test.describe('Journey 22-D: Non-Admin — Agreement Enforcement', () => {
       editMentorPage.disclaimers.userAgreementSwitch,
     ).toHaveAttribute('aria-checked', 'false', { timeout: 10_000 });
 
+    // New agents are Admins Only (iblai-platform#2853): open it to members so
+    // the non-admin can reach it, as a real admin would.
+    await editMentorPage.navigateToTab('Settings');
+    await waitForPageReady(page);
+    await editMentorPage.settings.setVisibility('Users');
+    await editMentorPage.settings.saveConfirmingAdminVisibility();
+
     await editMentorPage.close();
 
     const mentorUrl = page.url();
@@ -595,6 +603,13 @@ test.describe('Journey 22-D: Non-Admin — Agreement Enforcement', () => {
     await expect(editMentorPage.disclaimers.activeStatus).toBeVisible({
       timeout: 10_000,
     });
+    // New agents are Admins Only (iblai-platform#2853): open it to members so
+    // the non-admin can reach it, as a real admin would.
+    await editMentorPage.navigateToTab('Settings');
+    await waitForPageReady(page);
+    await editMentorPage.settings.setVisibility('Users');
+    await editMentorPage.settings.saveConfirmingAdminVisibility();
+
     await editMentorPage.close();
 
     const mentorUrl = page.url();
@@ -828,7 +843,8 @@ async function acceptUserAgreementAsNonAdmin({
   await editMentorPage.disclaimers.enableUserAgreement();
   await editMentorPage.navigateToTab('Settings');
   await waitForPageReady(page);
-  await editMentorPage.settings.setVisibilityAnyone();
+  await editMentorPage.settings.setVisibility('Users');
+  await editMentorPage.settings.saveConfirmingAdminVisibility();
   await editMentorPage.close();
 
   await nonadminPage.goto(page.url(), {

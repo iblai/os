@@ -12,23 +12,20 @@ import { observeDmBase } from '../utils/dm-api';
 import { registerMentor } from '../utils/resource-tracker';
 import { E2E_LLM_DISPLAY_NAME, E2E_LLM_NAME } from '../fixtures/test-data';
 
-export type PromptKind = 'system' | 'proactive' | 'guided';
-
 export interface CreatedAgent {
   name: string;
+  /** The agent's id (its slug in the platform URL), from the create response. */
+  mentorId: string;
   /** The `mentor-with-settings` POST that created the agent. */
   request: Request;
 }
 
-const PROMPT_KINDS: Record<
-  PromptKind,
-  { index: number; title: string; label: string }
-> = {
-  system: { index: 0, title: 'System Prompt', label: 'System prompt' },
-  proactive: { index: 1, title: 'Proactive Prompt', label: 'Proactive prompt' },
-  guided: { index: 2, title: 'Guided Prompt', label: 'Guided prompt' },
-};
-
+/**
+ * The Create Agent dialog. Create Agent is a wizard (iblai-platform#2853):
+ * step 1 names the agent and creating it keeps the person in the wizard, so
+ * the helpers that used to "create and land on the new agent" fill step 1,
+ * click Next and then close the wizard, which opens the new agent's chat.
+ */
 export class CreateMentorPage {
   readonly page: Page;
   readonly dialog: Locator;
@@ -36,46 +33,30 @@ export class CreateMentorPage {
   readonly nameInput: Locator;
   readonly descriptionInput: Locator;
   readonly categoryCombobox: Locator;
-  readonly visibilityCombobox: Locator;
   readonly categoryList: Locator;
   readonly categorySearchInput: Locator;
-  readonly imageUploadButton: Locator;
   readonly nextButton: Locator;
-  readonly saveButton: Locator;
   readonly closeButton: Locator;
-  readonly settingsTab: Locator;
-  readonly promptsTab: Locator;
-  readonly systemPromptContent: Locator;
 
   constructor(page: Page) {
     this.page = page;
     this.dialog = page.getByRole('dialog', { name: /create.*agent/i });
     this.heading = this.dialog.getByRole('heading', { name: 'Create Agent' });
-    this.nameInput = this.dialog.getByRole('textbox', {
-      name: 'Agent Name',
-    });
-    this.descriptionInput = this.dialog.getByRole('textbox', {
-      name: 'Agent Description',
-    });
+    this.nameInput = this.dialog.locator('#create-agent-name');
+    this.descriptionInput = this.dialog.locator('#create-agent-description');
     this.categoryCombobox = this.dialog.getByRole('combobox', {
       name: /category/i,
     });
     this.categoryList = page.locator('[cmdk-list]').last();
     this.categorySearchInput =
       this.dialog.getByPlaceholder('Search category...');
-    this.visibilityCombobox = this.dialog.getByRole('combobox', {
-      name: /visibility/i,
+    this.nextButton = this.dialog.getByRole('button', {
+      name: 'Next',
+      exact: true,
     });
-    this.imageUploadButton = this.dialog.getByRole('button', {
-      name: 'Upload agent image',
-    });
-    this.nextButton = this.dialog.getByRole('button', { name: 'Next' });
-    this.saveButton = this.dialog.getByRole('button', { name: /save/i });
-    this.closeButton = this.dialog.getByRole('button', { name: 'Close' });
-    this.settingsTab = this.dialog.getByRole('tab', { name: 'Settings' });
-    this.promptsTab = this.dialog.getByRole('tab', { name: 'Prompts' });
-    this.systemPromptContent = this.dialog.getByRole('textbox', {
-      name: 'System prompt content',
+    this.closeButton = this.dialog.getByRole('button', {
+      name: 'Close',
+      exact: true,
     });
   }
 
@@ -178,36 +159,21 @@ export class CreateMentorPage {
     }
   }
 
-  /**
-   * Fill the required fields on the Settings tab. Fields the caller may not
-   * set are not rendered, so they are skipped. Leaves the Settings tab's
-   * submit control (Next, or Save when the form has no Prompts tab) enabled.
-   */
+  /** Fill step 1's required fields; leaves Next enabled. Category is optional. */
   async fillRequiredFields(name: string, description?: string): Promise<void> {
     await this.waitUntilEditable();
     await this.nameInput.fill(name);
-
-    if ((await this.descriptionInput.count()) > 0) {
-      await this.descriptionInput.fill(
-        description || `E2E test mentor created at ${Date.now()}`,
-      );
-    }
-
-    if ((await this.categoryCombobox.count()) > 0) {
-      await this.pickFirstCategory();
-    }
-
-    await expect(this.nextButton.or(this.saveButton).first()).toBeEnabled({
-      timeout: 10_000,
-    });
+    await this.descriptionInput.fill(
+      description || `E2E test mentor created at ${Date.now()}`,
+    );
+    await expect(this.nextButton).toBeEnabled({ timeout: 10_000 });
   }
 
-  private async pickFirstCategory(): Promise<void> {
-    // Select first available category. The cmdk option list streams in from
-    // the categories API and can be slow — or briefly empty — under parallel
-    // load, so the first <div role="option"> may not exist yet. Wait
-    // generously for it to populate; if it never shows, toggle the combobox
-    // closed and re-open to re-trigger the fetch, then wait again.
+  /** Select the first category of the (optional) Category field. */
+  async pickFirstCategory(): Promise<void> {
+    // The cmdk option list streams in from the categories API and can be slow
+    // or briefly empty under parallel load; toggle the combobox to re-trigger
+    // the fetch if nothing shows.
     await this.categoryCombobox.click();
     const firstCategory = this.page.locator('[role="option"]').first();
     const optionVisible = await firstCategory
@@ -215,115 +181,23 @@ export class CreateMentorPage {
       .then(() => true)
       .catch(() => false);
     if (!optionVisible) {
-      await this.categoryCombobox.click(); // toggle closed
+      await this.categoryCombobox.click();
       await this.page.waitForTimeout(1_000);
-      await this.categoryCombobox.click(); // re-open to re-trigger the fetch
+      await this.categoryCombobox.click();
       await firstCategory.waitFor({ state: 'visible', timeout: 20_000 });
     }
     // The list re-renders as more categories arrive, detaching the first
-    // option mid-click; reliableClick waits for stability and retries the
-    // whole click, so a detach just re-runs.
+    // option mid-click; reliableClick retries the whole click.
     await reliableClick(this.page, firstCategory, 10_000);
   }
 
-  /** Fill the required fields and advance to the Prompts tab (no agent is created). */
-  async goToPromptsTab(name: string): Promise<void> {
-    await this.fillRequiredFields(name);
-    await this.nextButton.click();
-    await expect(this.systemPromptContent).toBeVisible({ timeout: 10_000 });
-  }
-
-  /** The read-only preview of a prompt on the Prompts tab. */
-  promptContent(kind: PromptKind): Locator {
-    return this.dialog.getByRole('textbox', {
-      name: `${PROMPT_KINDS[kind].label} content`,
-    });
-  }
-
-  /** The popup opened by a prompt's Edit button (the SDK titles it "Edit <prompt>"). */
-  promptPopup(kind: PromptKind): Locator {
-    return this.page.getByRole('dialog', {
-      name: `Edit ${PROMPT_KINDS[kind].title}`,
-      exact: true,
-    });
-  }
-
-  /** Opens the popup, replaces its text with `text` and returns it. */
-  async openPromptPopupAndType(
-    kind: PromptKind,
-    text: string,
-  ): Promise<Locator> {
-    await this.dialog
-      .getByRole('button', { name: 'Edit', exact: true })
-      .nth(PROMPT_KINDS[kind].index)
-      .click();
-    const popup = this.promptPopup(kind);
-    await expect(popup).toBeVisible({ timeout: 10_000 });
-    const editor = popup.locator('[contenteditable="true"]').last();
-    await expect(editor).toBeVisible();
-    await editor.click();
-    await this.page.keyboard.press(
-      process.platform === 'darwin' ? 'Meta+A' : 'Control+A',
-    );
-    await this.page.keyboard.press('Delete');
-    await this.page.keyboard.type(text);
-    return popup;
-  }
-
   /**
-   * Fill required fields, click Next, then Save to create the mentor.
-   * Returns the generated mentor name.
+   * Fill step 1 and click Next. Creating keeps the wizard open on its next
+   * step. Returns the agent and the create request.
    */
-  async createWithName(name?: string): Promise<string> {
+  async createInWizard(name?: string): Promise<CreatedAgent> {
     const mentorName = name || `E2E Mentor ${Date.now()}`;
-
     await this.fillRequiredFields(mentorName);
-    await this.nextButton.click();
-
-    await this.saveAndWaitForCreated(mentorName);
-    await this.pinLlm();
-    return mentorName;
-  }
-
-  /**
-   * Like `createWithName` through Settings, Next and Save, but returns the
-   * create request so a test can inspect what was sent. Does not pin the LLM:
-   * use `createWithName` for agents a test chats with.
-   */
-  async createAndCaptureRequest(name?: string): Promise<CreatedAgent> {
-    const mentorName = name || `E2E Mentor ${Date.now()}`;
-
-    await this.fillRequiredFields(mentorName);
-    await this.nextButton.click();
-
-    return this.createdAgent(mentorName);
-  }
-
-  /**
-   * Save straight from the Settings tab, for a form with no Prompts tab (none
-   * of its prompts is writable). Does not pin the LLM.
-   */
-  async createFromSettingsTab(name?: string): Promise<CreatedAgent> {
-    const mentorName = name || `E2E Mentor ${Date.now()}`;
-
-    await this.fillRequiredFields(mentorName);
-
-    return this.createdAgent(mentorName);
-  }
-
-  private async createdAgent(name: string): Promise<CreatedAgent> {
-    const request = await this.saveAndWaitForCreated(name);
-    if (!request) {
-      throw new Error('Saving the agent sent no mentor-with-settings request');
-    }
-    return { name, request };
-  }
-
-  private async saveAndWaitForCreated(
-    name: string,
-  ): Promise<Request | undefined> {
-    await expect(this.saveButton).toBeVisible({ timeout: 5_000 });
-    await expect(this.saveButton).toBeEnabled({ timeout: 5_000 });
 
     let createRequest: Request | undefined;
     const onRequest = (request: Request) => {
@@ -331,21 +205,61 @@ export class CreateMentorPage {
     };
     this.page.on('request', onRequest);
     try {
-      const previousUrl = this.page.url();
-      await this.saveButton.click();
-      await safeWaitForURL(
-        this.page,
-        (url) => url.href.includes('/platform/') && previousUrl != url.href,
-        {
-          timeout: 60_000,
-        },
+      const created = this.page.waitForResponse(
+        (res) => CreateMentorPage.isCreateRequest(res.request()),
+        { timeout: 60_000 },
       );
-      await waitForPageReady(this.page);
+      await this.nextButton.click();
+      const response = await created;
+      if (!response.ok()) {
+        throw new Error(`Creating the agent failed: ${response.status()}`);
+      }
+      const body = (await response.json()) as { unique_id?: string };
+      if (!body.unique_id) {
+        throw new Error('The create response names no agent (unique_id)');
+      }
+      if (!createRequest) {
+        throw new Error('Next sent no mentor-with-settings request');
+      }
+      await registerMentor(this.page, mentorName, body.unique_id);
+      return {
+        name: mentorName,
+        mentorId: body.unique_id,
+        request: createRequest,
+      };
     } finally {
       this.page.off('request', onRequest);
     }
-    await registerMentor(this.page, name);
-    return createRequest;
+  }
+
+  /** Close the wizard after step 1: the new agent's chat opens. */
+  async closeAndOpenAgent(mentorId: string): Promise<void> {
+    await this.closeButton.click();
+    await safeWaitForURL(
+      this.page,
+      (url) => url.pathname.split('/')[3] === mentorId,
+      { timeout: 60_000 },
+    );
+    await waitForPageReady(this.page);
+  }
+
+  /**
+   * Fill step 1, click Next, then close the wizard so the new agent's chat is
+   * open, and pin it to the suite default LLM. Returns the generated name.
+   */
+  async createWithName(name?: string): Promise<string> {
+    const { name: mentorName, mentorId } = await this.createInWizard(name);
+    await this.closeAndOpenAgent(mentorId);
+    await this.pinLlm();
+    return mentorName;
+  }
+
+  /**
+   * Like `createWithName` but leaves the wizard open on step 2 and returns the
+   * create request so a test can inspect what was sent. Does not pin the LLM.
+   */
+  async createAndCaptureRequest(name?: string): Promise<CreatedAgent> {
+    return this.createInWizard(name);
   }
 
   /**

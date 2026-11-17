@@ -9,12 +9,11 @@
  * unknown (403, 404, network error) every field is writable, as before.
  *
  *  - cafp-01 runs against the real backend: the request, its header and the
- *    answer's shape, and an admin getting every Settings field.
+ *    answer's shape, and an admin getting every step 1 field.
  *  - cafp-02..04 mock the answer (the real one grants an admin everything) and
- *    check the form and the create request it sends.
+ *    check the wizard's step 1 and the create request it sends.
  *
- * cafp-02 and cafp-03 each create one throwaway agent. `createAndCaptureRequest`
- * / `createFromSettingsTab` register it for the run-level residue teardown, and
+ * cafp-02 and cafp-03 each create one throwaway agent. `createInWizard` registers it for the run-level residue teardown, and
  * the suite's `MentorTracker` follows the usual afterAll pattern.
  */
 
@@ -110,12 +109,10 @@ async function expectEveryField(
   await expect(createMentorPage.categoryCombobox).toBeVisible({
     timeout: UI_TIMEOUT,
   });
-  await expect(createMentorPage.visibilityCombobox).toBeVisible({
-    timeout: UI_TIMEOUT,
-  });
-  await expect(createMentorPage.imageUploadButton).toBeVisible({
-    timeout: UI_TIMEOUT,
-  });
+  await expect(
+    createMentorPage.dialog.getByRole('combobox', { name: /visibility/i }),
+    'a new agent is Admins Only, so Create Agent never asks for visibility',
+  ).toHaveCount(0);
 }
 
 test.describe.configure({ mode: 'default', timeout: 240_000 });
@@ -134,7 +131,7 @@ test.describe('Journey 101: Create Agent field permissions', () => {
     await tracker.deleteAll(browser, testInfo);
   });
 
-  test('cafp-01: admin opens Create Agent, the field-permissions request carries the tenant key, the answer is {write: boolean} per field, and every Settings field is shown', async ({
+  test('cafp-01: admin opens Create Agent, the field-permissions request carries the tenant key, the answer is {write: boolean} per field, and every step 1 field is shown', async ({
     page,
     createMentorPage,
   }) => {
@@ -171,7 +168,7 @@ test.describe('Journey 101: Create Agent field permissions', () => {
     await expectEveryField(createMentorPage);
   });
 
-  test('cafp-02: admin whose mentor_visibility is write:false sees no Visibility field and creates an agent whose request has no mentor_visibility part', async ({
+  test('cafp-02: admin whose mentor_visibility is write:false creates an agent in the wizard and the create request has no mentor_visibility part', async ({
     page,
     createMentorPage,
   }) => {
@@ -182,32 +179,14 @@ test.describe('Journey 101: Create Agent field permissions', () => {
         await openCreateAgent(page, createMentorPage);
         expect(served, 'the mocked answer was served').not.toHaveLength(0);
 
-        await expect(createMentorPage.visibilityCombobox).toHaveCount(0);
-        await expect(createMentorPage.descriptionInput).toBeVisible({
-          timeout: UI_TIMEOUT,
-        });
-        await expect(createMentorPage.categoryCombobox).toBeVisible({
-          timeout: UI_TIMEOUT,
-        });
-        await expect(createMentorPage.imageUploadButton).toBeVisible({
-          timeout: UI_TIMEOUT,
-        });
-        await expect(createMentorPage.promptsTab).toBeVisible({
-          timeout: UI_TIMEOUT,
-        });
-
-        const { name, request } =
-          await createMentorPage.createAndCaptureRequest(generateMentorName());
-        const { mentorId } = await getPlatformContext(page);
+        await expectEveryField(createMentorPage);
+        const { name, mentorId, request } =
+          await createMentorPage.createInWizard(generateMentorName());
         tracker.add(mentorId);
 
         const fields = CreateMentorPage.createRequestFields(request);
         expect(fields).toEqual(
-          expect.arrayContaining([
-            ...CORE_FIELDS,
-            'template_name',
-            ...PROMPT_FIELDS,
-          ]),
+          expect.arrayContaining([...CORE_FIELDS, 'template_name']),
         );
         expect(fields).not.toContain('mentor_visibility');
         expect(
@@ -217,7 +196,7 @@ test.describe('Journey 101: Create Agent field permissions', () => {
     );
   });
 
-  test('cafp-03: admin whose three prompts are write:false sees no Prompts tab, saves from the Settings tab and the request has none of the prompt parts', async ({
+  test('cafp-03: admin whose three prompts are write:false creates an agent in the wizard and the create request has none of the prompt parts', async ({
     page,
     createMentorPage,
   }) => {
@@ -228,22 +207,13 @@ test.describe('Journey 101: Create Agent field permissions', () => {
         await openCreateAgent(page, createMentorPage);
         expect(served, 'the mocked answer was served').not.toHaveLength(0);
 
-        await expect(createMentorPage.promptsTab).toHaveCount(0);
-        await expect(createMentorPage.nextButton).toHaveCount(0);
-        await expect(createMentorPage.saveButton).toBeVisible({
-          timeout: UI_TIMEOUT,
-        });
         await expectEveryField(createMentorPage);
-
-        const { name, request } =
-          await createMentorPage.createFromSettingsTab(generateMentorName());
-        const { mentorId } = await getPlatformContext(page);
+        const { name, mentorId, request } =
+          await createMentorPage.createInWizard(generateMentorName());
         tracker.add(mentorId);
 
         const fields = CreateMentorPage.createRequestFields(request);
-        expect(fields).toEqual(
-          expect.arrayContaining([...CORE_FIELDS, 'mentor_visibility']),
-        );
+        expect(fields).toEqual(expect.arrayContaining(CORE_FIELDS));
         for (const prompt of PROMPT_FIELDS) {
           expect(fields, `${prompt} is not sent`).not.toContain(prompt);
         }
@@ -254,7 +224,7 @@ test.describe('Journey 101: Create Agent field permissions', () => {
     );
   });
 
-  test('cafp-04: admin whose field-permissions request answers 404 sees every field and the Prompts tab (fail open)', async ({
+  test('cafp-04: admin whose field-permissions request answers 404 sees every wizard step 1 field and Next (fail open)', async ({
     page,
     createMentorPage,
   }) => {
@@ -266,9 +236,6 @@ test.describe('Journey 101: Create Agent field permissions', () => {
         expect(served, 'the mocked 404 was served').not.toHaveLength(0);
 
         await expectEveryField(createMentorPage);
-        await expect(createMentorPage.promptsTab).toBeVisible({
-          timeout: UI_TIMEOUT,
-        });
         await expect(createMentorPage.nextButton).toBeVisible({
           timeout: UI_TIMEOUT,
         });
