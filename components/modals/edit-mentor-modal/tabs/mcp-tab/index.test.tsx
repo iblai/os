@@ -103,6 +103,16 @@ describe('McpTab', () => {
     expect(providerValue()).toMatchObject({ mentorId: 'nav-mentor' });
   });
 
+  it('lets a passed agent and tenant win over the modal stack and route', () => {
+    mockGetMentorId.mockReturnValue('nav-mentor');
+    mockUseParams.mockReturnValue({});
+    render(<McpTab mentorId="new-agent" tenantKey="other-tenant" />);
+    expect(providerValue()).toMatchObject({
+      mentorId: 'new-agent',
+      tenantKey: 'other-tenant',
+    });
+  });
+
   it('forwards onSelect so the workflow node picker can pick a server', () => {
     const onSelect = vi.fn();
     render(<McpTab onSelect={onSelect} />);

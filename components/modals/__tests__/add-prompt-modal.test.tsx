@@ -312,6 +312,34 @@ describe('AddPromptModal', () => {
       });
     });
 
+    it('lets a passed agent and tenant win over useNavigate and the route', async () => {
+      mockGetMentorId.mockReturnValue('navigate-mentor-999');
+
+      render(
+        <AddPromptModal
+          isOpen={true}
+          onClose={vi.fn()}
+          mentorId="new-agent"
+          tenantKey="other-tenant"
+        />,
+      );
+
+      await fillValidForm();
+      fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
+
+      await waitFor(() => {
+        expect(mockCreatePrompt).toHaveBeenCalledWith(
+          expect.objectContaining({
+            org: 'other-tenant',
+            requestBody: expect.objectContaining({
+              mentor: 'new-agent',
+              platform: 'other-tenant',
+            }),
+          }),
+        );
+      });
+    });
+
     it('shows an error toast when prompt creation fails', async () => {
       mockUnwrap.mockRejectedValue(new Error('boom'));
       const onClose = vi.fn();

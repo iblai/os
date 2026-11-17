@@ -50,16 +50,25 @@ const defaultValues: AddPromptForm = {
 interface AddPromptModalProps {
   isOpen: boolean;
   onClose: () => void;
+  /** Adds the prompt to this agent instead of the modal-stack or route agent. */
+  mentorId?: string;
+  /** Tenant of `mentorId`, for routes without a tenant param. */
+  tenantKey?: string;
 }
 
-export function AddPromptModal({ isOpen, onClose }: AddPromptModalProps) {
+export function AddPromptModal({
+  isOpen,
+  onClose,
+  mentorId: mentorIdOverride,
+  tenantKey: tenantKeyOverride,
+}: AddPromptModalProps) {
   const t = useTranslations('modalsAddPromptModal');
   const username = useUsername();
   const { getMentorId } = useNavigate();
-  const { tenantKey, mentorId: mentorIdParam } =
-    useParams<TenantKeyMentorIdParams>();
+  const params = useParams<TenantKeyMentorIdParams>();
+  const tenantKey = tenantKeyOverride || params.tenantKey;
 
-  const mentorId = getMentorId() ?? mentorIdParam;
+  const mentorId = mentorIdOverride || (getMentorId() ?? params.mentorId);
 
   const { executeWithTrialCheck, isModalOpen, FreeTrialDialog, closeModal } =
     useShowFreeTrialDialog();
