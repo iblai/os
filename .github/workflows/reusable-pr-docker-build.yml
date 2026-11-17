@@ -87,6 +87,10 @@ jobs:
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           repository: iblai/ibl-web-ops
+          # Pin to a reviewed iblai-web-ops commit: this checkout's composite
+          # actions run with registry credentials in scope, so an unpinned
+          # default-branch fetch would run whatever HEAD happens to be.
+          ref: c72b19f6a63719a0c3a8accea8c02fae70665ab2 # iblai-web-ops main @ 2026-11-11
           token: ${{ secrets.GIT_TOKEN || github.token }}
           path: .ops
 

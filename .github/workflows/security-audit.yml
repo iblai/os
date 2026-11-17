@@ -1,13 +1,14 @@
 name: Security Audit
 
-# Full-tree `pnpm audit`. Catches vulnerable packages already present in the
-# dependency tree (the category the vitest / dompurify / @opentelemetry/core
-# alerts fell into — all transitive, none introduced by the PR under review).
+# Scans the committed dependency tree against OSV (osv.dev) for known
+# advisories — the category of transitive, already-present vulnerabilities a
+# per-PR dependency review never sees. Replaces `pnpm audit`, whose advisory
+# endpoint npm permanently retired: it now returns 410, which the old script
+# scored as "clean", so the gate had stopped checking anything.
 #
-# - On pull_request: fails the check (blocks merge) on high/critical advisories.
-# - Nightly:         opens/updates a tracking issue when findings appear, so
-#                    newly published advisories against the existing tree get
-#                    surfaced even when no PR is open.
+# - On pull_request: fails the check on any finding, blocking merge.
+# - Nightly:         opens/updates a tracking issue when findings appear, so a
+#                    newly published advisory is surfaced even with no PR open.
 
 on:
   pull_request:
@@ -30,6 +31,9 @@ concurrency:
   group: security-audit-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
+env:
+  OSV_VERSION: v2.7.1
+
 jobs:
   audit:
     runs-on: ubuntu-latest
@@ -37,31 +41,32 @@ jobs:
       - name: Checkout
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
-      - name: Setup pnpm
-        # Reads the pinned version from package.json `packageManager`.
-        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
+      - name: Install osv-scanner (pinned, checksum-verified)
+        run: |
+          set -euo pipefail
+          work="$(mktemp -d)"
+          base="https://github.com/google/osv-scanner/releases/download/${OSV_VERSION}"
+          curl -fsSL -o "$work/osv-scanner" "$base/osv-scanner_linux_amd64"
+          curl -fsSL -o "$work/SHA256SUMS" "$base/osv-scanner_SHA256SUMS"
+          ( cd "$work" \
+            && grep ' osv-scanner_linux_amd64$' SHA256SUMS \
+               | sed 's/osv-scanner_linux_amd64/osv-scanner/' \
+               | sha256sum -c - )
+          chmod +x "$work/osv-scanner"
+          sudo mv "$work/osv-scanner" /usr/local/bin/osv-scanner
+          osv-scanner --version
 
-      - name: Setup Node
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
-        with:
-          node-version: 22
-
-      - name: Run pnpm audit
+      - name: Run osv-scanner
         id: audit
-        # pnpm audit reads pnpm-lock.yaml directly and queries the registry
-        # advisory endpoint — no install / registry auth required.
         run: |
           set +e
-          pnpm audit --audit-level=high | tee audit-report.txt
-          code="${PIPESTATUS[0]}"
-          # npm has retired the legacy audit endpoint that `pnpm audit` calls, so
-          # it now exits non-zero with a 410 / ERR_PNPM_AUDIT_BAD_RESPONSE. That
-          # is an endpoint outage, not a vulnerability — do not block on it. PR
-          # advisory coverage is still enforced by dependency-review-action
-          # (fail-on-severity: moderate). Real high/critical findings, when the
-          # endpoint responds, still produce a non-zero code and block.
-          if grep -qiE "ERR_PNPM_AUDIT_BAD_RESPONSE|being retired|responded with 410" audit-report.txt; then
-            echo "::warning::pnpm audit endpoint unavailable (npm retired the legacy audit endpoint) — skipping the audit gate this run; dependency-review-action still enforces advisories on PRs."
+          osv-scanner scan source . | tee audit-report.txt
+          code=${PIPESTATUS[0]}
+          # 0 = no vulnerabilities, 1 = vulnerabilities found. Any other code is
+          # a scanner/network error, not a verdict — surface it, do not block on
+          # an outage (PR advisories are still enforced by dependency-review).
+          if [ "$code" != "0" ] && [ "$code" != "1" ]; then
+            echo "::warning::osv-scanner exited ${code} (scanner error, not a finding) — skipping the gate this run."
             code=0
           fi
           echo "exit_code=${code}" >> "$GITHUB_OUTPUT"
@@ -70,7 +75,7 @@ jobs:
         if: always()
         run: |
           {
-            echo '## pnpm audit (level: high)'
+            echo '## osv-scanner (OSV advisories)'
             echo ''
             echo '```'
             cat audit-report.txt
@@ -86,8 +91,7 @@ jobs:
             const report = fs.readFileSync('audit-report.txt', 'utf8').slice(0, 60000);
             const title = '🔒 Security audit: vulnerable dependencies detected';
             const body = [
-              'The nightly `pnpm audit --audit-level=high` found vulnerable',
-              'dependencies in the tree.',
+              'The nightly osv-scanner run found vulnerable dependencies in the tree.',
               '',
               `Run: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
               '',
