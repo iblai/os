@@ -940,3 +940,170 @@ export function removeHud(): void {
   const strays = document.querySelectorAll('[data-ibl-agent-overlay]');
   for (const stray of Array.from(strays)) stray.remove();
 }
+
+/** The message an injected watcher sends the worker for each thing the user does. */
+export const RECORDER_STEP = 'MENTOR:RECORDER_STEP';
+
+export interface RecordedEvent {
+  kind: 'click' | 'input' | 'change' | 'submit' | 'flush';
+  role: string;
+  name: string;
+  /** Absent for a secret field: what the user typed there is theirs alone. */
+  value?: string;
+  secret: boolean;
+  url: string;
+  frameUrl?: string;
+}
+
+/**
+ * Watches one frame and reports what the user does, already named.
+ *
+ * Resolution happens here, synchronously, from `event.target`: asking the
+ * worker would answer about the page a moment later — after the click opened a
+ * menu, or navigated — and `change`, `submit` and `blur` carry no coordinates
+ * to resolve from at all.
+ *
+ * The naming rules are `snapshotPage`'s, repeated because an injected function
+ * is re-evaluated in an empty scope and may import nothing.
+ * `page-scripts.test.ts` holds the two in agreement.
+ */
+export function watchPage(secretTokens: string[]): void {
+  const store = globalThis as { __iblRecorder?: () => void };
+  if (store.__iblRecorder) return;
+
+  const collapse = (text: string, max: number): string => {
+    const flat = (text || '').replace(/\s+/g, ' ').trim();
+    return flat.length > max ? `${flat.slice(0, max - 1)}…` : flat;
+  };
+
+  const textOf = (el: Element): string =>
+    collapse((el as HTMLElement).innerText || el.textContent || '', 80);
+
+  const nameOf = (el: Element): string => {
+    const aria = el.getAttribute('aria-label');
+    if (aria && aria.trim()) return collapse(aria, 80);
+    const labelledby = el.getAttribute('aria-labelledby');
+    if (labelledby) {
+      const text = labelledby
+        .split(/\s+/)
+        .map((id) => document.getElementById(id))
+        .filter(Boolean)
+        .map((node) => textOf(node as Element))
+        .join(' ');
+      if (text.trim()) return collapse(text, 80);
+    }
+    const id = el.getAttribute('id');
+    if (id) {
+      const labels = document.querySelectorAll(
+        `label[for="${CSS.escape(id)}"]`,
+      );
+      const text = Array.from(labels)
+        .map((label) => textOf(label))
+        .join(' ');
+      if (text.trim()) return collapse(text, 80);
+    }
+    const wrapping = el.closest('label');
+    if (wrapping && textOf(wrapping).trim())
+      return collapse(textOf(wrapping), 80);
+    for (const attr of ['placeholder', 'title', 'alt', 'name']) {
+      const value = el.getAttribute(attr);
+      if (value && value.trim()) return collapse(value, 80);
+    }
+    if (el instanceof HTMLSelectElement) return '';
+    return textOf(el);
+  };
+
+  const roleOf = (el: Element): string => {
+    const role = (el.getAttribute('role') || '').trim().split(/\s+/)[0];
+    if (role) return role.toLowerCase();
+    const tag = el.tagName.toLowerCase();
+    if (tag === 'a') return 'link';
+    if (tag === 'button' || tag === 'summary') return 'button';
+    if (tag === 'select') return 'combobox';
+    if (tag === 'input') {
+      const type = (el as HTMLInputElement).type;
+      if (type === 'submit' || type === 'button' || type === 'reset')
+        return 'button';
+      if (type === 'checkbox' || type === 'radio') return type;
+      return 'textbox';
+    }
+    if (tag === 'textarea' || el.getAttribute('contenteditable') === 'true')
+      return 'textbox';
+    return el.hasAttribute('tabindex') ? 'focusable' : tag;
+  };
+
+  const isSecret = (el: Element): boolean => {
+    if (el instanceof HTMLInputElement && el.type === 'password') return true;
+    const tokens = (el.getAttribute('autocomplete') || '')
+      .toLowerCase()
+      .split(/\s+/);
+    return tokens.some((token) => (secretTokens || []).includes(token));
+  };
+
+  const valueOf = (el: Element): string | undefined => {
+    if (el instanceof HTMLSelectElement)
+      return el.selectedOptions[0]?.text ?? '';
+    if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement)
+      return el.value;
+    return undefined;
+  };
+
+  const report = (kind: RecordedEvent['kind'], target: EventTarget | null) => {
+    const el =
+      target instanceof Element
+        ? (target.closest(
+            'a, button, input, select, textarea, summary, [role], [contenteditable="true"], [tabindex]',
+          ) ?? target)
+        : null;
+    if (!el) return;
+    const secret = isSecret(el);
+    const step: RecordedEvent = {
+      kind,
+      role: roleOf(el),
+      name: nameOf(el),
+      secret,
+      url: location.href,
+      ...(window.top === window.self ? {} : { frameUrl: location.href }),
+    };
+    if (!secret && kind !== 'click' && kind !== 'submit') {
+      const value = valueOf(el);
+      if (value !== undefined) step.value = value;
+    }
+    try {
+      chrome.runtime.sendMessage({ type: 'MENTOR:RECORDER_STEP', step });
+    } catch {
+      // The worker is gone; recording is over either way.
+    }
+  };
+
+  const onClick = (event: Event) => report('click', event.target);
+  const onChange = (event: Event) => report('change', event.target);
+  const onSubmit = (event: Event) => report('submit', event.target);
+  // Typing is reported when it settles, not per keystroke: the worker would
+  // otherwise coalesce a message per character.
+  const onBlur = (event: Event) => report('input', event.target);
+  const onKeyDown = (event: Event) => {
+    if ((event as KeyboardEvent).key === 'Enter') report('input', event.target);
+  };
+
+  document.addEventListener('click', onClick, true);
+  document.addEventListener('change', onChange, true);
+  document.addEventListener('submit', onSubmit, true);
+  document.addEventListener('blur', onBlur, true);
+  document.addEventListener('keydown', onKeyDown, true);
+
+  store.__iblRecorder = () => {
+    document.removeEventListener('click', onClick, true);
+    document.removeEventListener('change', onChange, true);
+    document.removeEventListener('submit', onSubmit, true);
+    document.removeEventListener('blur', onBlur, true);
+    document.removeEventListener('keydown', onKeyDown, true);
+    delete store.__iblRecorder;
+  };
+}
+
+/** Stops a watcher this frame already has; safe where none was installed. */
+export function unwatchPage(): void {
+  const store = globalThis as { __iblRecorder?: () => void };
+  store.__iblRecorder?.();
+}
