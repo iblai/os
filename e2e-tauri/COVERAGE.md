@@ -1,6 +1,6 @@
 # Tauri Desktop E2E Coverage — Journey Checklist
 
-> Last updated: 2026-11-13 | 82 checkpoints (25 covered, 56 pending, 1 deprecated) | 4 journeys | 100% of reproducible checkpoints covered | Driver: WebdriverIO + tauri-driver
+> Last updated: 2026-11-14 | 86 checkpoints (25 covered, 60 pending, 1 deprecated) | 4 journeys | 100% of reproducible checkpoints covered | Driver: WebdriverIO + tauri-driver
 
 This is the desktop counterpart to the web `e2e/COVERAGE.md`. It tracks only what
 is exercised by driving the **built desktop binary** through `tauri-driver` (see
@@ -61,7 +61,7 @@ two vendored release workflows and are exercised by real releases.
 
 ---
 
-## Journey 1: App Launch & Desktop Shell (4 checkpoints) — `journeys/01-app-launch-and-shell.spec.ts`
+## Journey 1: App Launch & Desktop Shell (5 checkpoints: 4 covered, 1 pending) — `journeys/01-app-launch-and-shell.spec.ts`
 
 **Source files:** `src-tauri/src/lib.rs`, `src-tauri/src/main.rs`, `hooks/use-tauri.ts`, `types/tauri.ts`
 
@@ -69,6 +69,7 @@ two vendored release workflows and are exercised by real releases.
 - [x] `shell-02` The WebView renders a `<body>` element
 - [x] `shell-03` The WebView loads a document with a non-empty URL (the platform shell or the offline fallback)
 - [x] `shell-04` The document exposes a non-empty title
+- [ ] `shell-05` In the phone apps, a page from another site (the sign-in page) is shown as a browser shows it: it does not scroll when it fits the screen, and a longer one scrolls normally; the app's own pages keep the fixed layout inside the notch and the home bar _(needs the iPhone or Android app, which tauri-driver cannot drive; covered meanwhile by the Vitest `mobile-safe-area-script.test.ts`, which runs the injected script on both kinds of page, and the Rust `mobile_layout_is_applied_only_on_the_apps_own_pages`)_
 
 ---
 
@@ -101,7 +102,7 @@ two vendored release workflows and are exercised by real releases.
 
 ---
 
-## Journey 3: Code Mode (opencode) (58 checkpoints: 15 covered, 42 pending, 1 deprecated) — `journeys/03-code-mode.spec.ts`
+## Journey 3: Code Mode (opencode) (59 checkpoints: 15 covered, 43 pending, 1 deprecated) — `journeys/03-code-mode.spec.ts`
 
 > **Partly covered.** The installer and per-chat state (code-01…07) run against
 > the REAL compiled binary through the live Tauri IPC bridge (`window.__TAURI__`):
@@ -216,8 +217,9 @@ two vendored release workflows and are exercised by real releases.
 - [ ] `code-56` Code + Cowork on macOS, on ibl.ai, Codex and Claude Code: with both on, the turn's `session/new` (and `session/load` on resume) carries the `cowork` screen tools as the driver's stdio proxy to the app's own driver daemon (never a driver inside the agent's sandbox, whose keystrokes don't land), the step list shows a connector step, Ask Me raises a card for the first screen action and Allow lands it, Automatic lands it without a card, Stop ends the action, a Cowork flip respawns the session and keeps the chat, and switching Cowork off ends the daemon _(needs the Accessibility and Screen Recording grants on macOS, and a Codex or Claude Code sign-in for those agents; covered meanwhile by the Rust `the_screen_tools_reach_session_new_and_session_load`, `the_screen_tools_ride_the_launch_only_with_cowork_on`, `cowork_mcp_server_has_command_args_and_env`, `the_daemon_argv_keeps_the_hosts_tcc_chain`, `a_live_session_is_reused_only_for_the_same_model_and_cowork_setting`, `closing_cowork_sessions_spares_plain_code_and_the_newcomer` and `cowork_preflight_refuses_only_an_unsupported_session_or_a_missing_driver`, the SDK's `tells the desktop whether Cowork is on`, and the coding-mode-button Vitest `says the screen is included when Cowork is on and Automatic is chosen`)_
 - [ ] `code-57` Local Models + Cowork: with both on and Code off, the turn runs the Cowork loop on the on-device model through `local_llm_openai_stream`, and Stop ends the stream on the desktop _(needs the grants and a tool-capable on-device model; covered meanwhile by the Rust `local_llm_openai` tests and the SDK's `runs a Local Models turn through the Cowork loop when Cowork is on`)_
 - [ ] `code-58` Code + Cowork on Linux: on an X11, Sway or GNOME-with-helper session the driver runs as the app's own child outside the agent's bwrap sandbox, the sandboxed agent's proxy reaches its socket, typing lands, and switching Cowork off ends the daemon _(needs a supported Linux session with the driver installed, and the Linux e2e run is blocked by the dead `tauri-driver` shim; covered meanwhile by the same Rust tests as code-56)_
+- [ ] `code-59` Code on an on-device model: the session runs on a copy of the model sized to a 32,768-token window (Ollama's 4,096 default cut a 54,000-token prompt to its last 2,000, so the model never saw its tools), the request is cut to fit it (only the vibe skills its instructions name, tool results capped, no side-task or task-list tools, no session-naming call ahead of the reply, the agent told the window so it prunes its own history), a slow first read is not dropped at five minutes, and a turn that ends with its answer still in the model's thoughts shows it as the reply _(needs a downloaded local model driving real turns, the same harness gap as code-08..10; covered meanwhile by the Rust `a_local_model_gets_a_full_size_copy_once`, `a_model_that_is_already_big_enough_or_unknown_is_left_alone`, `a_window_never_exceeds_what_the_model_was_trained_for` (`model_manager.rs`), `an_on_device_session_is_written_to_fit_the_models_window`, `an_on_device_session_keeps_only_the_core_tools`, `a_cloud_session_keeps_its_tools_its_skills_and_its_session_name`, `local_guidance_is_appended_only_on_device` and `a_turn_that_ends_with_only_thoughts_shows_the_closing_ones` (`opencode_acp.rs`))_
 
-## Journey 4: Cowork (Cua Driver) (9 checkpoints: 3 covered, 6 pending) — `journeys/04-cowork.spec.ts`
+## Journey 4: Cowork (Cua Driver) (11 checkpoints: 3 covered, 8 pending) — `journeys/04-cowork.spec.ts`
 
 > **Host side only.** `cua_driver_support` and the two commands the macOS setup
 > dialog relies on (`open_privacy_settings`, `relaunch_app`) run against the
@@ -236,3 +238,5 @@ two vendored release workflows and are exercised by real releases.
 - [ ] `cowork-07` The Mac App Store (sandboxed) build shows the Cowork pill disabled with the App Store reason instead of walking the user into grants that cannot work there _(the sandbox exists only in the signed App Store build; covered meanwhile by the Rust `the_sandboxed_mac_app_store_build_is_refused` and `says the App Store build cannot run Cowork` in `inside-buttons.test.tsx`)_
 - [x] `cowork-08` `request_cowork_permission` refuses an unknown kind, naming it, and resolves for both known kinds off macOS; `bring_app_to_front` resolves
 - [ ] `cowork-09` A Cowork turn that drives the computer keeps the app responsive while the driver streams its replies and the page keeps calling the host (no frozen window / spinning cursor); the driver install's progress and log events behave the same _(needs a signed-in model driving real Cowork turns, the same harness gap as cowork-06; covered meanwhile by the Rust `events_go_through_the_main_thread`, which fails on any direct emit in the Cowork modules — a direct emit from the driver's reader thread deadlocked against the main thread's IPC handling)_
+- [ ] `cowork-10` A model can act on what the driver answers, on Cowork alone and inside Code: a reply whose text is only a summary carries its data as text (`list_windows` gives the window ids, not just a count), a window snapshot carries the `snapshot_id` every element index must be sent with, and a refused action reaches the model with the driver's reason instead of an output-schema error _(needs a model driving real Cowork turns, the same harness gap as cowork-06; covered meanwhile by the Rust `a_summary_only_reply_gets_its_data_as_text`, `a_long_reply_gets_its_facts_and_not_its_lists`, `a_refusal_keeps_its_reason_and_loses_its_structured_part`, `the_webviews_tool_list_loses_its_output_schemas_and_its_results_are_readable`, `the_relay_passes_requests_on_and_shapes_the_replies` (`cua_driver_mcp.rs`) and the SDK's `toolResultForModel` cases in `cowork-mcp.test.ts`)_
+- [ ] `cowork-11` Cowork on an on-device model, alone or inside Code: the model is offered the ten screen tools acting on a window needs in compact form (the full 54 are about 22,000 tokens), long results are cut with the way to narrow them, its notes before a tool call stay out of the reply, and a turn that ends without reply text shows its closing thoughts _(needs a downloaded local model driving real Cowork turns; covered meanwhile by the Rust `an_on_device_agent_gets_the_core_tools_in_compact_form`, `a_daemon_reply_is_shaped_and_anything_else_passes_untouched` (`cua_driver_mcp.rs`) and the SDK's `the driver as a model on this device gets it` cases in `cowork-mcp.test.ts` and `offers a local model the compact tools and the rules it needs spelled out`, `keeps a local model's working notes out of the reply`, `shows the closing thoughts when the model ends without a reply` in `remote-ai-client.test.ts`)_
