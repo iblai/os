@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.199.2](https://github.com/iblai/os/compare/v0.199.1...v0.199.2) (2026-11-17)
+
+### Chores
+
+* **deps:** bump @iblai/iblai-js to 2.77.0 for the reworked evals screens ([5fad8da](https://github.com/iblai/os/commit/5fad8dae9d6e75a21aed600cd1e77c9b8e736933)), closes [iblai/iblai-web-frontend#2250](https://github.com/iblai/iblai-web-frontend/issues/2250)
+* **security:** ignore the unpatched picomatch advisory in pnpm audit ([bca734f](https://github.com/iblai/os/commit/bca734f8ca9419ea1125b13e093e9376ff74ffc0))
+
+### Tests
+
+* **e2e:** follow the reworked evals tab and benchmarks screens in journey 63 ([95279f7](https://github.com/iblai/os/commit/95279f7fa386acff13ac314af9157bf33e7e49d2))
+* **e2e:** type into the prompt editor's textbox directly ([de060e1](https://github.com/iblai/os/commit/de060e179fdba500b517571fb548f7cec8fce89b))
+* **e2e:** wait for both connector list refetches in mcp-05 ([1ee2fa4](https://github.com/iblai/os/commit/1ee2fa414eb07bc3e8886cb38f52155a992ea43f))
+
 ## [0.199.1](https://github.com/iblai/os/compare/v0.199.0...v0.199.1) (2026-11-17)
 
 ### Bug Fixes

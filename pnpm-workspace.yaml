@@ -318,3 +318,8 @@ auditConfig:
     # until both move to zod 4. Their schemas check the app's own forms and
     # the platform's responses, not attacker-sized input.
     - GHSA-mrhx-c7xc-m3w5
+    # picomatch ReDoS on repeated extglobs (GHSA-fc5q-39xc-vjpf) — no patched
+    # release; the advisory covers every version up to the latest (4.0.7).
+    # Reached only through tooling (vitest/vite > tinyglobby, mocha > chokidar,
+    # lint-staged, rollup plugins), on the repo's own glob patterns.
+    - GHSA-fc5q-39xc-vjpf

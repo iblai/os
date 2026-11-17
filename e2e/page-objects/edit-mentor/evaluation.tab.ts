@@ -10,6 +10,9 @@ import {
   expectSelectedBenchmark,
   selectBenchmark,
   expectNoBenchmarksNotice,
+  getNoQaPrompt,
+  expectBenchmarkNeedsQa,
+  openAddQaFromEvalsTab,
   getRunRow,
   expectRunInTable,
   expectRunNotInTable,
@@ -35,13 +38,17 @@ import {
   searchBenchmarks,
   expectBenchmarkListed,
   getCreateBenchmarkDialog,
+  openCreateBenchmarkDialog,
+  goToBenchmarkQaStep,
   createBenchmark,
   getBenchmarkItemsDialog,
   openBenchmarkItems,
   expectQaItemListed,
+  expectBenchmarkItemsEmpty,
   getAddItemsDialog,
   openAddItemsDialog,
   addQaPairsManually,
+  deleteQaItem,
   closeBenchmarkItemsDialog,
   closeManageBenchmarksDialog,
   type EvalRunStatus,
@@ -79,14 +86,14 @@ export class EvaluationTab {
   static readonly LABELS = EVALS_LABELS;
 
   /**
-   * `AGENT_EVALUATION_TAB_LABELS.actions.notReadyHint` from the tab's
-   * `labels.ts` ("Available once the evaluation completes") — the native
-   * `title` tooltip on the View results / New review / Export CSV row
-   * actions while a run hasn't completed yet. Not re-exported by the SDK's
-   * `EVALS_LABELS` helper constant (no exported helper asserts on it
-   * directly), so it's hardcoded here against the component source.
+   * Why View Results / New Review / Export CSV are off until a run completes.
+   * It is each disabled item's accessible description (and its hover text,
+   * shown by the SDK tooltip on the wrapper around the item).
    */
-  static readonly NOT_READY_HINT = 'Available once the evaluation completes';
+  static readonly NOT_READY_HINT = EVALS_LABELS.actions.notReadyHint;
+
+  /** The reason the same three items stay off for a run that failed. */
+  static readonly FAILED_HINT = EVALS_LABELS.actions.failedHint;
 
   /** Canonical runs-table column headers (index.tsx `table.*Column` labels — also not re-exported by `EVALS_LABELS`). */
   static readonly TABLE_HEADERS = [
@@ -152,11 +159,28 @@ export class EvaluationTab {
     return expectNoBenchmarksNotice(this.dialog);
   }
 
-  /** Column header locator — tries the semantic `columnheader` role first, falls back to plain text. */
+  /**
+   * What the tab shows while the selected benchmark has no Q&A: the sentence
+   * and the "Add Q&A" button, in the empty state or (when the benchmark has
+   * evaluations) in the line above the runs table.
+   */
+  noQaPrompt(): Locator {
+    return getNoQaPrompt(this.dialog);
+  }
+
+  /** The no-Q&A sentence and "Add Q&A" show, and New Evaluation is off with that sentence as its hover text. */
+  expectBenchmarkNeedsQa(): Promise<void> {
+    return expectBenchmarkNeedsQa(this.dialog);
+  }
+
+  /** Click the tab's own "Add Q&A" (no-Q&A state only); returns the Add Q&A dialog. */
+  openAddQaFromTab(): Promise<Locator> {
+    return openAddQaFromEvalsTab(this.dialog);
+  }
+
+  /** A column header of the runs table, by its exact name. */
   tableHeader(name: string): Locator {
-    return this.dialog
-      .getByRole('columnheader', { name, exact: true })
-      .or(this.dialog.getByText(name, { exact: true }));
+    return this.dialog.getByRole('columnheader', { name, exact: true });
   }
 
   // ---------------------------------------------------------------------------
@@ -193,14 +217,13 @@ export class EvaluationTab {
   async readRunStatus(runName: string): Promise<EvalRunStatus> {
     const cell = this.runRow(runName).locator('td').nth(1);
     await expect(cell).toBeVisible({ timeout: 15_000 });
-    const text = (await cell.innerText()).trim();
-    // The table shows the status as words ("Queued", "Running", "Complete", ...)
-    // since @iblai/iblai-js 2.79.0; older builds showed the raw enum.
-    const normalized = text.toUpperCase().replace(/\s+/g, '_');
-    const status =
-      { QUEUED: 'PENDING', RUNNING: 'IN_PROGRESS', COMPLETE: 'COMPLETED' }[
-        normalized
-      ] ?? normalized;
+    // The icon is named by its translated word; the backend value sits in
+    // `data-status` around it, and a run with no status yet has neither.
+    const marker = cell.locator('[data-status]');
+    const raw = (await marker.count())
+      ? await marker.first().getAttribute('data-status')
+      : null;
+    const status = raw?.toUpperCase();
     if (
       status === 'COMPLETED' ||
       status === 'FAILED' ||
@@ -209,7 +232,9 @@ export class EvaluationTab {
     ) {
       return status;
     }
-    throw new Error(`Unexpected run status text for "${runName}": "${text}"`);
+    throw new Error(
+      `Unexpected run status for "${runName}": "${raw ?? 'none'}"`,
+    );
   }
 
   openRunActionsMenu(runName: string): Promise<Locator> {
@@ -269,7 +294,7 @@ export class EvaluationTab {
   }
 
   // ---------------------------------------------------------------------------
-  // LLM-judge ("New review" / "Evaluate") dialog
+  // New Review (LLM-judge) dialog
   // ---------------------------------------------------------------------------
 
   llmJudgeDialog(): Locator {
@@ -281,19 +306,20 @@ export class EvaluationTab {
   }
 
   // ---------------------------------------------------------------------------
-  // Evaluation detail ("View results") dialog
+  // Evaluation detail ("View Results") dialog
   // ---------------------------------------------------------------------------
 
   evaluationDetailDialog(): Locator {
     return getEvaluationDetailDialog(this.dialog);
   }
 
+  /** Clicks the dialog's own Close button; an Escape can be dropped while the dialog refreshes itself. */
   closeEvaluationDetailDialog(): Promise<void> {
     return closeEvaluationDetailDialog(this.dialog);
   }
 
   // ---------------------------------------------------------------------------
-  // Manage benchmarks (embedded tenant Benchmarks) dialog
+  // Manage Benchmarks (embedded tenant Benchmarks) dialog
   // ---------------------------------------------------------------------------
 
   openManageBenchmarksDialog(): Promise<Locator> {
@@ -312,7 +338,27 @@ export class EvaluationTab {
     return getCreateBenchmarkDialog(this.dialog);
   }
 
-  createBenchmark(opts: { name: string; description?: string }): Promise<void> {
+  /** Click "New Benchmark" in the open Manage Benchmarks dialog; returns the New Benchmark dialog on its Details step. */
+  openNewBenchmarkDialog(): Promise<Locator> {
+    return openCreateBenchmarkDialog(this.dialog);
+  }
+
+  /** Click "Next" in the open New Benchmark dialog and wait for its Q&A step; returns the dialog. */
+  goToBenchmarkQaStep(): Promise<Locator> {
+    return goToBenchmarkQaStep(this.dialog);
+  }
+
+  /**
+   * Goes through both steps of New Benchmark (Details, Next, Q&A, Create) and
+   * waits for the toast that fits. Q&A is optional: without `qaPairs` the
+   * benchmark is created with none, and the toast is the one that says to add
+   * Q&A before running an evaluation.
+   */
+  createBenchmark(opts: {
+    name: string;
+    description?: string;
+    qaPairs?: Array<{ question: string; answer?: string }>;
+  }): Promise<void> {
     return createBenchmark(this.dialog, opts);
   }
 
@@ -334,6 +380,14 @@ export class EvaluationTab {
 
   expectQaItemListed(questionText: string): Promise<void> {
     return expectQaItemListed(this.dialog, questionText);
+  }
+
+  expectBenchmarkItemsEmpty(): Promise<void> {
+    return expectBenchmarkItemsEmpty(this.dialog);
+  }
+
+  deleteQaItem(questionText: string): Promise<void> {
+    return deleteQaItem(this.dialog, questionText);
   }
 
   addItemsDialog(): Locator {
@@ -377,15 +431,25 @@ export class EvaluationTab {
 
   /** The benchmark picker opens a sheet titled with its placeholder. */
   phoneBenchmarkSheet(): Locator {
-    return this.phone.sheet('Select a Benchmark');
+    return this.dialog.getByRole('dialog', {
+      name: EVALS_LABELS.benchmarkPicker.placeholder,
+      exact: true,
+    });
   }
 
   // ---------------------------------------------------------------------------
   // Utilities
   // ---------------------------------------------------------------------------
 
-  /** A benchmark/run name unlikely to collide across parallel workers or retries. */
+  /**
+   * A benchmark/run name unique per run and per worker (clock + parallel
+   * index + random part). The index is read from the environment because
+   * journeys build their names when the file loads, before `test.info()`
+   * exists.
+   */
   static uniqueName(prefix: string): string {
-    return `${prefix}-${Date.now()}`;
+    const worker = process.env.TEST_PARALLEL_INDEX ?? '0';
+    const rand = Math.random().toString(36).slice(2, 7);
+    return `${prefix}-${Date.now()}-${worker}-${rand}`;
   }
 }
