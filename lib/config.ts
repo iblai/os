@@ -174,7 +174,7 @@ export const config = {
     getEnv('NEXT_PUBLIC_ENABLE_GRAVATAR_ON_PROFILE_PIC', 'true'),
   defaultEmbedCssUrl: () => getEnv('NEXT_PUBLIC_DEFAULT_EMBED_CSS_URL', ''),
   appBannerLink: () =>
-    getEnv('NEXT_PUBLIC_APP_BANNER_LINK', 'https://ibl.ai/docs'),
+    getEnv('NEXT_PUBLIC_APP_BANNER_LINK', 'https://ibl.ai/updates'),
   appBannerLinkText: () =>
     getEnv('NEXT_PUBLIC_APP_BANNER_LINK_TEXT', 'Check out'),
   appBannerBadge: () => getEnv('NEXT_PUBLIC_APP_BANNER_BADGE', 'New'),
