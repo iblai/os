@@ -370,7 +370,9 @@ test.describe('Journey 63: Mentor Evaluation Tab', () => {
       { timeout: 5_000 },
     );
     await expect(
-      dialog.getByLabel(EvaluationTab.LABELS.startDialog.experimentNameLabel),
+      dialog.getByLabel(EvaluationTab.LABELS.startDialog.experimentNameLabel, {
+        exact: true,
+      }),
     ).toBeVisible({ timeout: 5_000 });
     await expect(
       dialog.getByRole('button', {
@@ -574,12 +576,16 @@ test.describe('Journey 63: Mentor Evaluation Tab', () => {
     await expect(submit).toBeDisabled({ timeout: 5_000 });
 
     await judgeDialog
-      .getByLabel(EvaluationTab.LABELS.judgeDialog.criteriaLabel)
+      .getByLabel(EvaluationTab.LABELS.judgeDialog.criteriaLabel, {
+        exact: true,
+      })
       .fill('Score the response for clarity and accuracy.');
     await expect(submit).toBeDisabled({ timeout: 5_000 });
 
     await judgeDialog
-      .getByLabel(EvaluationTab.LABELS.judgeDialog.scoreNameLabel)
+      .getByLabel(EvaluationTab.LABELS.judgeDialog.scoreNameLabel, {
+        exact: true,
+      })
       .fill('e2e-quality');
     // LLM still unselected — submit must stay disabled even with both text
     // fields filled in.

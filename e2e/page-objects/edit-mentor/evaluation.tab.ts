@@ -194,13 +194,20 @@ export class EvaluationTab {
     const cell = this.runRow(runName).locator('td').nth(1);
     await expect(cell).toBeVisible({ timeout: 15_000 });
     const text = (await cell.innerText()).trim();
+    // The table shows the status as words ("Queued", "Running", "Complete", ...)
+    // since @iblai/iblai-js 2.79.0; older builds showed the raw enum.
+    const normalized = text.toUpperCase().replace(/\s+/g, '_');
+    const status =
+      { QUEUED: 'PENDING', RUNNING: 'IN_PROGRESS', COMPLETE: 'COMPLETED' }[
+        normalized
+      ] ?? normalized;
     if (
-      text === 'COMPLETED' ||
-      text === 'FAILED' ||
-      text === 'PENDING' ||
-      text === 'IN_PROGRESS'
+      status === 'COMPLETED' ||
+      status === 'FAILED' ||
+      status === 'PENDING' ||
+      status === 'IN_PROGRESS'
     ) {
-      return text;
+      return status;
     }
     throw new Error(`Unexpected run status text for "${runName}": "${text}"`);
   }
