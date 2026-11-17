@@ -60,9 +60,41 @@ export function OrgPicker({
   useEffect(() => {
     dialogRef.current?.focus();
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape') return;
-      event.stopPropagation();
-      cancelRef.current();
+      if (event.key === 'Escape') {
+        event.stopPropagation();
+        cancelRef.current();
+        return;
+      }
+      // `aria-modal` promises the keyboard stays here, and the chat is still
+      // mounted and focusable underneath — without this, Tab walks straight
+      // into an iframe hidden behind an opaque overlay.
+      if (event.key !== 'Tab') return;
+      const dialog = dialogRef.current;
+      if (!dialog) return;
+      const stops = [
+        ...dialog.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ),
+      ];
+      if (!stops.length) {
+        // Nothing to land on (mid-switch, say): hold the dialog itself.
+        event.preventDefault();
+        dialog.focus();
+        return;
+      }
+      const first = stops[0];
+      const last = stops[stops.length - 1];
+      const active = document.activeElement;
+      if (event.shiftKey && (active === first || active === dialog)) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && active === last) {
+        event.preventDefault();
+        first.focus();
+      } else if (!dialog.contains(active)) {
+        event.preventDefault();
+        first.focus();
+      }
     };
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
@@ -79,10 +111,16 @@ export function OrgPicker({
     dialogRef.current?.focus();
   }, [switching]);
 
+  // `attempt` exists so a failed load has a way back: without it the only
+  // escape from "check your connection" is closing the dialog and getting the
+  // embedded app to raise it again.
+  const [attempt, setAttempt] = useState(0);
+
   useEffect(() => {
     let live = true;
     const load = async () => {
       setError(null);
+      setOrganizations(null);
       try {
         const list = await listOrganizations();
         if (!live) return;
@@ -102,7 +140,7 @@ export function OrgPicker({
     return () => {
       live = false;
     };
-  }, []);
+  }, [attempt]);
 
   const makeDefault = async (key: string) => {
     setSaving(true);
@@ -117,7 +155,13 @@ export function OrgPicker({
     } catch (err) {
       console.error('[ibl.ai panel] could not save the default:', err);
       setPreferred(previous);
-      setError(t('defaultOrgFailed'));
+      // `setDefaultOrganization` raises NoSessionError on a refused token; the
+      // fix for that is signing in again, not trying the same save forever.
+      setError(
+        err instanceof NoSessionError
+          ? t('orgsSignedOut')
+          : t('defaultOrgFailed'),
+      );
     } finally {
       setSaving(false);
     }
@@ -161,6 +205,18 @@ export function OrgPicker({
       </div>
 
       {message && <div className="row-error">{message}</div>}
+
+      {/* Offered only where retrying is the way forward — a dead session needs
+          a sign-in, not another attempt at the same call. */}
+      {error === t('orgsFailed') && !switching && (
+        <button
+          type="button"
+          className="orgs-retry"
+          onClick={() => setAttempt((n) => n + 1)}
+        >
+          {t('orgsRetry')}
+        </button>
+      )}
 
       {switching ? (
         <div className="orgs-note">{t('orgsSwitching')}</div>

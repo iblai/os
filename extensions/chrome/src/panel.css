@@ -181,7 +181,9 @@ agent-ai {
   flex: none;
   padding: 0 8px;
   font-size: 14px;
-  color: var(--border);
+  /* Not --border: at #e5e7eb on white this is the only control for setting a
+     default and it was invisible until hovered. */
+  color: var(--muted);
   background: none;
   border: none;
   cursor: pointer;
@@ -189,4 +191,9 @@ agent-ai {
 
 .orgs-star:hover:not(:disabled) {
   color: var(--muted);
+}
+
+.orgs-retry {
+  align-self: flex-start;
+  font-size: 13px;
 }

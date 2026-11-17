@@ -393,6 +393,79 @@ describe('OrgPicker', () => {
     warn.mockRestore();
   });
 
+  // Without a way back, "check your connection" is a dead end: the only escape
+  // is closing the dialog and getting the app to raise it again.
+  it('offers a retry after a failed load, and reloads on it', async () => {
+    mocks.listOrganizations
+      .mockRejectedValueOnce(new Error('offline'))
+      .mockResolvedValueOnce(TWO);
+    const warn = vi.spyOn(console, 'error').mockImplementation(() => {});
+    show();
+    const user = userEvent.setup();
+
+    await screen.findByText(
+      'Could not load your organizations. Check your connection and try again.',
+    );
+    await user.click(screen.getByRole('button', { name: 'Try again' }));
+
+    expect(await screen.findByText('Acme Inc')).toBeTruthy();
+    warn.mockRestore();
+  });
+
+  // A dead session needs a sign-in, not another attempt at the same call.
+  it('offers no retry when the session has ended', async () => {
+    const { NoSessionError } = await import('../organizations');
+    mocks.listOrganizations.mockRejectedValue(new NoSessionError());
+    const warn = vi.spyOn(console, 'error').mockImplementation(() => {});
+    show();
+
+    await screen.findByText(
+      'Your session has ended. Close and reopen the panel to sign in again.',
+    );
+    expect(screen.queryByRole('button', { name: 'Try again' })).toBeNull();
+    warn.mockRestore();
+  });
+
+  it('says the session ended when saving a default is refused', async () => {
+    const { NoSessionError } = await import('../organizations');
+    mocks.setDefaultOrganization.mockRejectedValue(new NoSessionError());
+    const warn = vi.spyOn(console, 'error').mockImplementation(() => {});
+    show();
+    const user = userEvent.setup();
+    await screen.findByText('Globex');
+
+    await user.click(
+      screen.getByRole('button', {
+        name: /Open in this one by default: Globex/,
+      }),
+    );
+
+    expect(
+      await screen.findByText(
+        'Your session has ended. Close and reopen the panel to sign in again.',
+      ),
+    ).toBeTruthy();
+    warn.mockRestore();
+  });
+
+  // `aria-modal` promises the keyboard stays inside, and the chat is still
+  // mounted and focusable under the overlay.
+  it('keeps Tab inside the dialog', async () => {
+    const outside = document.createElement('button');
+    outside.textContent = 'in the chat';
+    document.body.append(outside);
+    show();
+    const user = userEvent.setup();
+    await screen.findByText('Acme Inc');
+
+    for (let i = 0; i < 12; i += 1) await user.tab();
+
+    expect(screen.getByRole('dialog').contains(document.activeElement)).toBe(
+      true,
+    );
+    outside.remove();
+  });
+
   it('says so when there is nowhere else to go', async () => {
     mocks.listOrganizations.mockResolvedValue([]);
     show();

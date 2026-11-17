@@ -227,7 +227,29 @@ export async function listOrganizations(
       understood = true;
       rows.push(...rowsOf(answer.body));
       const next = nextOf(answer.body);
-      url = next ? samePlace(next, base) : null;
+      if (!next) {
+        url = null;
+        break;
+      }
+      const following = samePlace(next, base);
+      if (!following) {
+        // Relative, unreadable, or pointing somewhere else: not followed, and
+        // not silently passed off as the end of the list either.
+        truncated = true;
+        failures.push(`${base} → next not followed: ${next}`);
+        console.warn(
+          `[ibl.ai panel] organization list truncated: next not followed (${next})`,
+        );
+        break;
+      }
+      url = following;
+      if (page + 1 >= PAGE_LIMIT) {
+        truncated = true;
+        failures.push(`${base} → more than ${PAGE_LIMIT} pages`);
+        console.warn(
+          `[ibl.ai panel] organization list truncated: more than ${PAGE_LIMIT} pages`,
+        );
+      }
     }
     if (failed || !understood) {
       if (failed) failures.push(failed);
