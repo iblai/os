@@ -22,8 +22,9 @@ const ADD_BUTTON_TEST_IDS: Record<SecretsSection, string> = {
 /**
  * Page object for the organization's **Secrets** page: the SDK `SecretsTab`
  * (`@iblai/web-containers`) that the admin sidebar's "Secrets" footer row opens
- * in a dialog titled "Secrets". It has one sub-tab per kind of key and opens on
- * the first: LLMs (an AI provider's key), Services (a known service's key) and
+ * inside the SDK's organization Account dialog ("Organization settings", the
+ * tab rail included, landed on its Secrets tab). It has one sub-tab per kind
+ * of key and opens on the first: LLMs (an AI provider's key), Services (a known service's key) and
  * Environment Variables (every VM secret). Each tab has its own sentence, Add
  * button and table, and only the open tab is mounted. Add LLM and Add Service open
  * the SDK `VmSecretDialog` on a type-to-search box whose suggestions sit in the
@@ -32,9 +33,9 @@ const ADD_BUTTON_TEST_IDS: Record<SecretsSection, string> = {
  * ── Dialog-first locators ────────────────────────────────────────────────
  *
  * The form and the delete confirmation portal to `document.body` on top of the
- * "Secrets" dialog and repeat names ("Name", "Cancel"), so each layer is first
+ * Account dialog and repeat names ("Name", "Cancel"), so each layer is first
  * resolved by role AND accessible name and everything inside is queried from it.
- * While one is open Radix hides the "Secrets" dialog from the accessibility
+ * While one is open Radix hides the Account dialog from the accessibility
  * tree, so anything rooted on `dialog` resolves to nothing until it has closed:
  * wait for the nested layer to be hidden before asserting on the rows.
  */
@@ -87,7 +88,10 @@ export class SecretsPage {
     this.page = page;
     this.footerButton = new SidebarPage(page).secretsButton;
 
-    this.dialog = page.getByRole('dialog', { name: 'Secrets', exact: true });
+    this.dialog = page.getByRole('dialog', {
+      name: 'Organization settings',
+      exact: true,
+    });
     this.tabs = this.dialog.getByRole('tab');
     this.section = this.dialog.getByTestId('vm-secrets-section');
     this.table = this.section.getByRole('table');
@@ -155,6 +159,9 @@ export class SecretsPage {
     await expect(this.footerButton).toBeVisible({ timeout: 15_000 });
     await this.footerButton.click();
     await expect(this.dialog).toBeVisible({ timeout: 15_000 });
+    await expect(
+      this.dialog.getByRole('heading', { name: 'Secrets', exact: true }),
+    ).toBeVisible({ timeout: 15_000 });
     await expect(this.section).toBeVisible({ timeout: 30_000 });
   }
 

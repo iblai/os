@@ -172,16 +172,6 @@
     "advanced": "Avanzado",
     "memory": "Memoria",
     "support": "Soporte",
-    "accountTabOrganization": "Organización",
-    "accountTabBilling": "Facturación",
-    "accountDescOrganization": "Gestiona los ajustes de tu organización.",
-    "accountDescManagement": "Gestiona los usuarios y sus permisos en el sistema.",
-    "accountDescSecrets": "Claves de otros servicios, como OpenAI o Stripe, que usan ibl.ai y tus agentes.",
-    "accountDescApi": "Haz que tu propio software funcione con ibl.ai.",
-    "accountDescMonetization": "Configura muros de pago, precios e ingresos.",
-    "accountDescAdvanced": "Configura los ajustes avanzados de la organización.",
-    "accountDescMemory": "Gestiona las memorias globales de los usuarios y las memorias de los agentes.",
-    "accountDescBilling": "Gestiona tu facturación y suscripción.",
     "awaitingPermission": "Esperando tu permiso"
   },
   "appSidebarPinnedMessages": {
