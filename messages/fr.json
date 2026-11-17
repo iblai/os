@@ -2053,5 +2053,7 @@
     "agentsContent": "Parcourez les agents disponibles, et créez ou gérez les vôtres, depuis le menu Agents.",
     "accountTitle": "Gérez votre organisation",
     "accountContent": "Invitez des personnes, gérez les utilisateurs et les groupes, ajoutez des secrets et modifiez les paramètres avancés avec les outils en bas de la barre latérale."
-  }
+  },
+  "recordSkillStart": "Enregistrer une compétence",
+  "recordSkillStop": "Arrêter l'enregistrement ({count})"
 }

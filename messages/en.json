@@ -2053,5 +2053,7 @@
     "agentsContent": "Browse the agents available to you, and create or manage your own, from the Agents menu.",
     "accountTitle": "Manage your organization",
     "accountContent": "Invite people, manage users and groups, add secrets and change advanced settings from the tools at the bottom of the sidebar."
-  }
+  },
+  "recordSkillStart": "Record a skill",
+  "recordSkillStop": "Stop recording ({count})"
 }

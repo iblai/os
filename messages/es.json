@@ -2053,5 +2053,7 @@
     "agentsContent": "Explora los agentes disponibles para ti y crea o administra los tuyos desde el menú Agentes.",
     "accountTitle": "Administra tu organización",
     "accountContent": "Invita a personas, administra usuarios y grupos, agrega secretos y cambia la configuración avanzada con las herramientas de la parte inferior de la barra lateral."
-  }
+  },
+  "recordSkillStart": "Grabar una habilidad",
+  "recordSkillStop": "Detener la grabación ({count})"
 }
