@@ -443,10 +443,26 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     if (bound) return redirectToMentor(tKey, bound);
     void panelAgent
       .resolve(tKey)
-      .catch(() => null)
-      .then((purposeMentorId) =>
-        redirectToMentor(tKey, purposeMentorId ?? mId),
-      );
+      .catch(() => ({ status: 'unavailable' }) as const)
+      .then((resolution) => {
+        if (resolution.status === 'ready')
+          return redirectToMentor(tKey, resolution.mentorId);
+        if (resolution.status === 'needs-setup') return redirectToPanelSetup();
+        // Something we could not see past — a transient failure must not read
+        // as "your organization has not set this up".
+        redirectToMentor(tKey, mId);
+      });
+  }
+
+  // Nobody here can set the panel up, so the only useful thing is telling them
+  // who can. The home button is already hidden in an embed, leaving Contact
+  // Support, which mails the organization's own address.
+  function redirectToPanelSetup() {
+    router.push(
+      appendEmbedContext(
+        `/error/403?errorType=${customErrorMessages.browserAgentNotSetUp.key}`,
+      ),
+    );
   }
 
   /**
@@ -461,13 +477,17 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     const tKey = tenantKeyParams || tenantKey;
     if (!tKey || !mentorId) return false;
     panelAgent.forget(mentorId);
-    const replacement = await panelAgent.resolve(tKey).catch(() => null);
-    if (replacement && replacement !== mentorId) {
-      redirectToMentor(tKey, replacement);
+    const resolution = await panelAgent
+      .resolve(tKey)
+      .catch(() => ({ status: 'unavailable' }) as const);
+    if (resolution.status === 'ready' && resolution.mentorId !== mentorId) {
+      redirectToMentor(tKey, resolution.mentorId);
       return true;
     }
-    // Nothing bound and nobody here who may bind one: let the app choose an
-    // agent the way it does everywhere else, rather than show an error.
+    if (resolution.status === 'needs-setup') {
+      redirectToPanelSetup();
+      return true;
+    }
     router.push(appendEmbedContext('/'));
     return true;
   }

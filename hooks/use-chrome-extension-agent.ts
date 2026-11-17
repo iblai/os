@@ -28,6 +28,16 @@ type PlatformMetadataEnvelope = {
   metadata?: unknown;
 };
 
+/**
+ * `needs-setup` is the only one a person can act on: nothing is bound and
+ * nobody here may bind it. `unavailable` is a failure we could not see past —
+ * a transient one must not become a dead end, so callers fall back instead.
+ */
+export type PanelAgentResolution =
+  | { status: 'ready'; mentorId: string }
+  | { status: 'needs-setup' }
+  | { status: 'unavailable' };
+
 export interface PanelAgent {
   /**
    * The bound agent, from metadata the app already holds — no request. A
@@ -35,7 +45,7 @@ export interface PanelAgent {
    * never handed back.
    */
   peek: () => string | null;
-  resolve: (tenantKey: string) => Promise<string | null>;
+  resolve: (tenantKey: string) => Promise<PanelAgentResolution>;
   /** An agent that turned out to be gone, so it is never resolved again. */
   forget: (mentorId: string) => void;
 }
@@ -60,7 +70,7 @@ export function useChromeExtensionAgent(): PanelAgent {
   // One resolution per organization: MentorProvider can redirect again while
   // the first is still awaiting, and two of these would each create an agent —
   // neither search can see the other's not-yet-indexed one.
-  const running = useRef<Map<string, Promise<string | null>>>(new Map());
+  const running = useRef<Map<string, Promise<PanelAgentResolution>>>(new Map());
 
   const live = useCallback(
     (id: string | null) => (id && !gone.current.has(id) ? id : null),
@@ -73,13 +83,13 @@ export function useChromeExtensionAgent(): PanelAgent {
   );
 
   const resolve = useCallback(
-    (tenantKey: string): Promise<string | null> => {
+    (tenantKey: string): Promise<PanelAgentResolution> => {
       const started = running.current.get(tenantKey);
       if (started) return started;
 
-      const attempt = (async (): Promise<string | null> => {
+      const attempt = (async (): Promise<PanelAgentResolution> => {
         const alreadyKnown = peek();
-        if (alreadyKnown) return alreadyKnown;
+        if (alreadyKnown) return { status: 'ready', mentorId: alreadyKnown };
 
         // The list the app holds covers only this person's organizations and
         // can lag a write made elsewhere; this read is also what we merge into.
@@ -87,18 +97,18 @@ export function useChromeExtensionAgent(): PanelAgent {
         try {
           current = await getTenantMetadata([{ org: tenantKey }]).unwrap();
         } catch {
-          return null;
+          return { status: 'unavailable' };
         }
         const stored = (current?.metadata ?? null) as TenantMetadataBlob | null;
 
         const configured = live(readPurposeAgent(stored, PURPOSE));
-        if (configured) return configured;
+        if (configured) return { status: 'ready', mentorId: configured };
 
-        if (!isAdmin || !username) return null;
+        if (!isAdmin || !username) return { status: 'needs-setup' };
 
         const mentorId =
           (await findBrowsingAssistant(tenantKey)) ?? (await create(tenantKey));
-        if (!mentorId) return null;
+        if (!mentorId) return { status: 'unavailable' };
 
         try {
           await updateTenantMetadata([
@@ -115,7 +125,7 @@ export function useChromeExtensionAgent(): PanelAgent {
             '[purpose-agents] could not record the browsing agent on the organization; it will be adopted by name next time',
           );
         }
-        return mentorId;
+        return { status: 'ready', mentorId };
       })();
 
       running.current.set(tenantKey, attempt);

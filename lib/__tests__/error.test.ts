@@ -21,8 +21,20 @@ describe('lib/error', () => {
       });
     });
 
-    it('should have exactly 2 custom error messages', () => {
-      expect(Object.keys(customErrorMessages)).toHaveLength(2);
+    it('names every message by its own key', () => {
+      // A count would just need bumping; what matters is that the key a URL
+      // carries finds its message.
+      for (const [name, message] of Object.entries(customErrorMessages)) {
+        expect(message.key).toBe(name);
+      }
+    });
+
+    it('tells someone who cannot set the panel up who can', () => {
+      const { header, message } = customErrorMessages.browserAgentNotSetUp;
+
+      expect(header).toBe('Not Set Up Yet');
+      expect(message).toContain('your organization');
+      expect(message).not.toMatch(/tenant|admin rights|API|metadata/i);
     });
   });
 

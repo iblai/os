@@ -189,6 +189,7 @@ vi.mock('@/lib/config', () => ({
 vi.mock('@/lib/error', () => ({
   customErrorMessages: {
     mentorNotFound: { key: 'mentorNotFound' },
+    browserAgentNotSetUp: { key: 'browserAgentNotSetUp' },
   },
 }));
 
@@ -403,9 +404,9 @@ vi.mock('@/features/utils', () => ({
   iblFetchBaseQuery: vi.fn(),
 }));
 
-const mockResolvePanelAgent = vi.fn<
-  (tenantKey: string) => Promise<string | null>
->(async () => null);
+const mockResolvePanelAgent = vi.fn<(tenantKey: string) => Promise<unknown>>(
+  async () => ({ status: 'unavailable' }),
+);
 const mockPeekPanelAgent = vi.fn<() => string | null>(() => null);
 const mockForgetPanelAgent = vi.fn<(mentorId: string) => void>();
 vi.mock('@/hooks/use-chrome-extension-agent', () => ({
@@ -1093,7 +1094,10 @@ describe('Providers', () => {
 
     it('in the side panel, opens the agent the organization chose', async () => {
       mockInExtensionPanel = true;
-      mockResolvePanelAgent.mockResolvedValue('panel-agent');
+      mockResolvePanelAgent.mockResolvedValue({
+        status: 'ready',
+        mentorId: 'panel-agent',
+      });
       renderProviders();
 
       const fn = capturedMentorProviderProps.redirectToMentor as Function;
@@ -1124,7 +1128,7 @@ describe('Providers', () => {
 
     it('in the side panel, falls back to the resolved agent when none is bound', async () => {
       mockInExtensionPanel = true;
-      mockResolvePanelAgent.mockResolvedValue(null);
+      mockResolvePanelAgent.mockResolvedValue({ status: 'unavailable' });
       renderProviders();
 
       const fn = capturedMentorProviderProps.redirectToMentor as Function;
@@ -1209,9 +1213,31 @@ describe('Providers', () => {
       });
     });
 
+    it('in the side panel, sends someone who cannot set it up to the setup page', async () => {
+      mockInExtensionPanel = true;
+      mockResolvePanelAgent.mockResolvedValue({ status: 'needs-setup' });
+      renderProviders();
+
+      const fn = capturedMentorProviderProps.redirectToMentor as Function;
+      fn('t1', 'm1');
+
+      await vi.waitFor(() =>
+        expect(mockPush).toHaveBeenCalledWith(
+          '/error/403?errorType=browserAgentNotSetUp',
+        ),
+      );
+      // The fallback agent would hide the fact that the panel is not set up.
+      expect(mockPush).not.toHaveBeenCalledWith('/platform/t1/m1');
+
+      mockInExtensionPanel = false;
+    });
+
     it('in the side panel, a deleted agent is replaced rather than 404ing', async () => {
       mockInExtensionPanel = true;
-      mockResolvePanelAgent.mockResolvedValue('fresh-agent');
+      mockResolvePanelAgent.mockResolvedValue({
+        status: 'ready',
+        mentorId: 'fresh-agent',
+      });
       renderProviders();
 
       const fn = capturedMentorProviderProps.handleMentorNotFound as Function;
@@ -1228,7 +1254,7 @@ describe('Providers', () => {
 
     it('in the side panel, falls back to the app when nothing can be bound', async () => {
       mockInExtensionPanel = true;
-      mockResolvePanelAgent.mockResolvedValue(null);
+      mockResolvePanelAgent.mockResolvedValue({ status: 'unavailable' });
       renderProviders();
 
       const fn = capturedMentorProviderProps.handleMentorNotFound as Function;

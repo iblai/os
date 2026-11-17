@@ -5,6 +5,7 @@ import { useParams, useSearchParams } from 'next/navigation';
 import { config } from '@/lib/config';
 import { customErrorMessages } from '@/lib/error';
 import { hideInitialLoader } from '@/lib/initial-loader';
+import { useTenantObjectMetadata } from '@/hooks/use-tenant-object-metadata';
 
 import { ClientErrorPage } from '@iblai/iblai-js/web-containers/next';
 
@@ -12,6 +13,9 @@ export default function ErrorPage() {
   const params = useParams();
   const searchParams = useSearchParams();
   const [errorData, setErrorData] = useState<any>(null);
+  // Contact Support should reach whoever can act: for a tenant that set its own
+  // address, that is them, not ibl.ai.
+  const metadata = useTenantObjectMetadata();
 
   const code = params.code as string;
   const errorType = searchParams.get('errorType');
@@ -40,7 +44,7 @@ export default function ErrorPage() {
       header={errorData?.header}
       message={errorData?.message}
       showHomeButton={!isEmbedMode}
-      supportEmail={config.supportEmail()}
+      supportEmail={metadata?.support_email || config.supportEmail()}
       handleError={handleError}
     />
   );

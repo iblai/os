@@ -74,7 +74,10 @@ describe('an organization that has already chosen', () => {
   it('opens its agent without asking the platform anything', async () => {
     knownMetadata = { [PURPOSE_AGENTS_KEY]: { [CHROME]: 'chosen-1' } };
 
-    await expect(resolve()('acme')).resolves.toBe('chosen-1');
+    await expect(resolve()('acme')).resolves.toEqual({
+      status: 'ready',
+      mentorId: 'chosen-1',
+    });
 
     expect(getTenantMetadata).not.toHaveBeenCalled();
     expect(createMentor).not.toHaveBeenCalled();
@@ -85,7 +88,10 @@ describe('an organization that has already chosen', () => {
       unwrap(envelope({ [PURPOSE_AGENTS_KEY]: { [CHROME]: 'chosen-2' } })),
     );
 
-    await expect(resolve()('acme')).resolves.toBe('chosen-2');
+    await expect(resolve()('acme')).resolves.toEqual({
+      status: 'ready',
+      mentorId: 'chosen-2',
+    });
 
     expect(createMentor).not.toHaveBeenCalled();
   });
@@ -93,7 +99,10 @@ describe('an organization that has already chosen', () => {
 
 describe('an organization that has not', () => {
   it('creates the agent, records it, and opens it', async () => {
-    await expect(resolve()('acme')).resolves.toBe('made-1');
+    await expect(resolve()('acme')).resolves.toEqual({
+      status: 'ready',
+      mentorId: 'made-1',
+    });
 
     expect(createMentor).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -138,7 +147,10 @@ describe('an organization that has not', () => {
       }),
     );
 
-    await expect(resolve()('acme')).resolves.toBe('found-1');
+    await expect(resolve()('acme')).resolves.toEqual({
+      status: 'ready',
+      mentorId: 'found-1',
+    });
 
     expect(createMentor).not.toHaveBeenCalled();
     expect(updateTenantMetadata).toHaveBeenCalled();
@@ -147,13 +159,18 @@ describe('an organization that has not', () => {
   it('opens the agent it made even when recording it failed', async () => {
     updateTenantMetadata.mockReturnValue(rejects(new Error('403')));
 
-    await expect(resolve()('acme')).resolves.toBe('made-1');
+    await expect(resolve()('acme')).resolves.toEqual({
+      status: 'ready',
+      mentorId: 'made-1',
+    });
   });
 
-  it('leaves the choice to the app for someone who may not make one', async () => {
+  it('asks someone who may not make one to have it set up', async () => {
     isAdmin = false;
 
-    await expect(resolve()('acme')).resolves.toBeNull();
+    await expect(resolve()('acme')).resolves.toEqual({
+      status: 'needs-setup',
+    });
 
     expect(createMentor).not.toHaveBeenCalled();
     expect(updateTenantMetadata).not.toHaveBeenCalled();
@@ -162,7 +179,10 @@ describe('an organization that has not', () => {
   it('leaves the choice to the app when the agent could not be made', async () => {
     createMentor.mockReturnValue(rejects(new Error('500')));
 
-    await expect(resolve()('acme')).resolves.toBeNull();
+    // A failure we could not see past must not read as "not set up".
+    await expect(resolve()('acme')).resolves.toEqual({
+      status: 'unavailable',
+    });
 
     expect(updateTenantMetadata).not.toHaveBeenCalled();
   });
@@ -170,7 +190,9 @@ describe('an organization that has not', () => {
   it('leaves the choice to the app when the metadata cannot be read', async () => {
     getTenantMetadata.mockReturnValue(rejects(new Error('403')));
 
-    await expect(resolve()('acme')).resolves.toBeNull();
+    await expect(resolve()('acme')).resolves.toEqual({
+      status: 'unavailable',
+    });
 
     expect(createMentor).not.toHaveBeenCalled();
   });
@@ -187,7 +209,10 @@ describe('an agent that has been deleted', () => {
     // Without this the next resolve reads the same dead id straight back out
     // of metadata and the panel loops between it and the 404.
     expect(agent.peek()).toBeNull();
-    await expect(agent.resolve('acme')).resolves.toBe('made-1');
+    await expect(agent.resolve('acme')).resolves.toMatchObject({
+      status: 'ready',
+      mentorId: 'made-1',
+    });
   });
 
   it('is replaced in the organization, not just skipped', async () => {
@@ -197,7 +222,10 @@ describe('an agent that has been deleted', () => {
     const agent = panel();
     agent.forget('dead-1');
 
-    await expect(agent.resolve('acme')).resolves.toBe('made-1');
+    await expect(agent.resolve('acme')).resolves.toMatchObject({
+      status: 'ready',
+      mentorId: 'made-1',
+    });
 
     expect(
       updateTenantMetadata.mock.calls[0][0][0].requestBody.metadata,
@@ -213,7 +241,10 @@ describe('an agent that has been deleted', () => {
     const agent = panel();
     agent.forget('dead-1');
 
-    await expect(agent.resolve('acme')).resolves.toBe('made-1');
+    await expect(agent.resolve('acme')).resolves.toMatchObject({
+      status: 'ready',
+      mentorId: 'made-1',
+    });
   });
 
   it('leaves the choice to the app for someone who may not replace it', async () => {
@@ -222,7 +253,9 @@ describe('an agent that has been deleted', () => {
     const agent = panel();
     agent.forget('dead-1');
 
-    await expect(agent.resolve('acme')).resolves.toBeNull();
+    await expect(agent.resolve('acme')).resolves.toEqual({
+      status: 'needs-setup',
+    });
   });
 });
 
@@ -238,8 +271,8 @@ describe('two panels opening at once', () => {
     // The name search cannot see a sibling's not-yet-indexed create, so the
     // guard has to be here.
     expect(createMentor).toHaveBeenCalledTimes(1);
-    expect(first).toBe('made-1');
-    expect(second).toBe('made-1');
+    expect(first).toMatchObject({ mentorId: 'made-1' });
+    expect(second).toMatchObject({ mentorId: 'made-1' });
   });
 });
 
