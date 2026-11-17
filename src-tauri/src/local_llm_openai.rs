@@ -45,7 +45,31 @@ pub async fn local_llm_openai_stream(
             return Err("Ollama isn't running and couldn't be started.".to_string());
         }
     }
-    run_stream(request_id, chat_completions_url(), body, on_event).await
+    let body = with_sized_model(body).await?;
+    let streamed = run_stream(request_id, chat_completions_url(), body, on_event).await;
+    crate::model_manager::keep_sized_models_loaded();
+    streamed
+}
+
+/// Point the request at the model's copy with a full-size context window
+/// (`model_manager::sized_local_model`): asked for by its plain name, Ollama
+/// loads it with 4,096 tokens and silently drops most of the Cowork prompt.
+/// A body that is not the JSON we expect goes through unchanged. A model that
+/// can't be given room for the Cowork prompt is refused in plain words, which
+/// the page shows as they are.
+async fn with_sized_model(body: String) -> Result<String, String> {
+    let Ok(mut request) = serde_json::from_str::<Value>(&body) else {
+        return Ok(body);
+    };
+    let Some(model) = request["model"].as_str().map(str::to_string) else {
+        return Ok(body);
+    };
+    let sized = crate::model_manager::sized_local_model(&model).await;
+    if let Some(why) = sized.too_small_for(crate::model_manager::LOCAL_COWORK_MIN_CONTEXT_TOKENS) {
+        return Err(why);
+    }
+    request["model"] = json!(sized.name);
+    Ok(request.to_string())
 }
 
 /// Stop the request the page named (its Stop button).
@@ -86,7 +110,9 @@ async fn run_stream(
 
 async fn stream_from(url: String, body: String, on_event: Channel<Value>) -> Result<(), String> {
     let client = reqwest::Client::builder()
-        .timeout(Duration::from_secs(600))
+        // One request, not the turn: a local model can spend minutes reading a
+        // first prompt, and the page's own limit for the whole turn is 30.
+        .timeout(Duration::from_secs(1_800))
         .build()
         .map_err(|e| format!("Couldn't reach the local model: {e}"))?;
     let response = client
