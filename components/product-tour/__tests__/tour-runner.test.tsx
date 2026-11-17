@@ -84,4 +84,36 @@ describe('TourRunner', () => {
     capturedProps?.onEvent(event(EVENTS.TARGET_NOT_FOUND, STATUS.RUNNING));
     expect(onEnd).not.toHaveBeenCalled();
   });
+
+  it('makes joyride re-measure the spotlight when a step target is pushed aside', async () => {
+    const frames: FrameRequestCallback[] = [];
+    vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) =>
+      frames.push(cb),
+    );
+    vi.stubGlobal('cancelAnimationFrame', vi.fn());
+    document.body.innerHTML =
+      '<div id="page"><div data-tour="profile"></div></div>';
+    let top = 580;
+    vi.spyOn(
+      document.querySelector('[data-tour="profile"]')!,
+      'getBoundingClientRect',
+    ).mockImplementation(
+      () => ({ top, left: 670, width: 650, height: 110 }) as DOMRect,
+    );
+    const onResize = vi.fn();
+    window.addEventListener('resize', onResize);
+
+    const { unmount } = render(
+      <TourRunner steps={steps} run onEnd={vi.fn()} />,
+    );
+    top = 510;
+    document.getElementById('page')!.appendChild(document.createElement('div'));
+    await new Promise((resolve) => setTimeout(resolve));
+    while (frames.length) frames.shift()!(0);
+
+    expect(onResize).toHaveBeenCalledTimes(1);
+    unmount();
+    window.removeEventListener('resize', onResize);
+    vi.unstubAllGlobals();
+  });
 });

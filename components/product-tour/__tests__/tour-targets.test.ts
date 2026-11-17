@@ -1,12 +1,14 @@
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
 
 import {
   isBlockingDialogOpen,
   isTourTargetVisible,
   resolvePromptInputTarget,
   resolveTourTarget,
+  TARGET_SETTLE_FRAMES,
   TOUR_TARGET,
   tourSelector,
+  watchTourTargetMoves,
 } from '../tour-targets';
 
 const rect = (width: number, height: number) =>
@@ -128,6 +130,107 @@ describe('tour targets', () => {
     it('returns null when no composer is mounted', () => {
       document.body.innerHTML = '<div></div>';
       expect(resolvePromptInputTarget()).toBeNull();
+    });
+  });
+
+  describe('watchTourTargetMoves', () => {
+    let frames: Map<number, FrameRequestCallback>;
+    let nextFrameId: number;
+    let top: number;
+
+    const flushMutations = () => new Promise((resolve) => setTimeout(resolve));
+    const runFrame = () => {
+      const [id, callback] = frames.entries().next().value ?? [];
+      if (id === undefined || !callback) return false;
+      frames.delete(id);
+      callback(0);
+      return true;
+    };
+    const runAllFrames = () => {
+      while (runFrame());
+    };
+
+    beforeEach(() => {
+      frames = new Map();
+      nextFrameId = 1;
+      top = 580;
+      vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => {
+        frames.set(nextFrameId, cb);
+        return nextFrameId++;
+      });
+      vi.stubGlobal('cancelAnimationFrame', (id: number) => frames.delete(id));
+      document.body.innerHTML = '<div id="page"><div id="input"></div></div>';
+      vi.spyOn(
+        document.getElementById('input')!,
+        'getBoundingClientRect',
+      ).mockImplementation(
+        () => ({ top, left: 670, width: 650, height: 110 }) as DOMRect,
+      );
+    });
+
+    afterEach(() => {
+      vi.unstubAllGlobals();
+    });
+
+    const startersLoad = () => {
+      const starters = document.createElement('div');
+      starters.id = 'starters';
+      document.getElementById('page')!.appendChild(starters);
+    };
+
+    it('reports a target pushed aside, without resizing, by content mounting next to it', async () => {
+      const onMove = vi.fn();
+      const stop = watchTourTargetMoves(['#input'], onMove);
+
+      top = 510;
+      startersLoad();
+      await flushMutations();
+      runAllFrames();
+
+      expect(onMove).toHaveBeenCalledTimes(1);
+      stop();
+    });
+
+    it('stays quiet when the DOM changes but no target moves', async () => {
+      const onMove = vi.fn();
+      const stop = watchTourTargetMoves(['#input'], onMove);
+
+      startersLoad();
+      await flushMutations();
+      runAllFrames();
+
+      expect(onMove).not.toHaveBeenCalled();
+      stop();
+    });
+
+    it('follows a move that animates in, then goes idle once it settles', async () => {
+      const onMove = vi.fn();
+      const stop = watchTourTargetMoves(['#input'], onMove);
+
+      startersLoad();
+      await flushMutations();
+      for (const step of [560, 540, 520, 510]) {
+        top = step;
+        runFrame();
+      }
+      expect(onMove).toHaveBeenCalledTimes(4);
+
+      for (let i = 0; i < TARGET_SETTLE_FRAMES; i += 1) runFrame();
+      expect(frames.size).toBe(0);
+      stop();
+    });
+
+    it('stops watching once cleaned up', async () => {
+      const onMove = vi.fn();
+      const stop = watchTourTargetMoves(['#input'], onMove);
+      stop();
+
+      top = 510;
+      startersLoad();
+      await flushMutations();
+      runAllFrames();
+
+      expect(onMove).not.toHaveBeenCalled();
     });
   });
 });

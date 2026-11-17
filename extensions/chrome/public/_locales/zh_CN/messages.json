@@ -148,6 +148,9 @@
   "hudWait": {
     "message": "正在等待"
   },
+  "errorModelNoKey": {
+    "message": "该组织可用的模型都没有配置密钥。请让管理该组织的人添加一个。"
+  },
   "orgsTitle": {
     "message": "组织"
   },
