@@ -1,9 +1,9 @@
 {
   "version": 2,
-  "lastUpdated": "2026-11-15",
+  "lastUpdated": "2026-11-16",
   "summary": {
-    "totalCheckpoints": 1162,
-    "coveredCheckpoints": 1081,
+    "totalCheckpoints": 1163,
+    "coveredCheckpoints": 1082,
     "deprecatedCheckpoints": 18,
     "notReproducibleCheckpoints": 17,
     "pendingCheckpoints": 46,
@@ -251,7 +251,7 @@
         },
         {
           "id": "prof-16",
-          "description": "Tenant admin opens ANOTHER user's profile via the sidebar Management → Users search → 'View profile for …' row action: the nested 'User profile' dialog is in preview mode (no Security tab) yet offers the History tab (SDK canViewOtherUsersChatHistory: tenant admins + watchers) and loads that user's history (rows or empty state) rather than the 403 permission notice — skips when PLAYWRIGHT_NONADMIN_USERNAME is unset or the RBAC-gated Management entry is unavailable",
+          "description": "Tenant admin opens ANOTHER user's profile via the sidebar Management footer row (which opens the organization Account dialog, \"Organization settings\", with Management marked current in its rail) → Users search → 'View profile for …' row action: the nested 'User profile' dialog is in preview mode (no Security tab) yet offers the History tab (SDK canViewOtherUsersChatHistory: tenant admins + watchers) and loads that user's history (rows or empty state) rather than the 403 permission notice — skips when PLAYWRIGHT_NONADMIN_USERNAME is unset or the RBAC-gated Management entry is unavailable",
           "status": "covered"
         },
         {
@@ -2083,7 +2083,12 @@
         },
         {
           "id": "ov-14",
-          "description": "Admin sidebar footer mirrors the SDK tenant-settings rail: a \"Memory\" entry sits with Secrets, API and Advanced (admin-only, no dedicated RBAC permission) and clicking it opens the Account dialog titled \"Memory\" (\"Manage user global memories and agent memories.\") hosting the SDK MemoryAdminTab — Global / Agent sub-tabs (or the memsearch-disabled notice), Agent sub-tab renders the agents section, Escape closes it",
+          "description": "Admin sidebar footer mirrors the SDK tenant-settings rail: a \"Memory\" entry sits with Secrets, API and Advanced (admin-only, no dedicated RBAC permission) and clicking it opens the SDK's whole organization Account dialog (\"Organization settings\", the PlatformAccountSheet the LMS sidebar opens) landed on its Memory tab — the Memory heading (\"Manage user global memories and agent memories.\") above the SDK MemoryAdminTab (Global / Agent sub-tabs, or the memsearch-disabled notice; the Agent sub-tab renders the agents section) with the tab rail beside it, Memory marked current and Management, API, Secrets and Advanced one click away; Escape closes it",
+          "status": "covered"
+        },
+        {
+          "id": "ov-15",
+          "description": "Each admin footer row the admin sees (Management and Monetization when allowed; API, Secrets, Memory and Advanced always) opens the same organization Account dialog (\"Organization settings\", the SDK PlatformAccountSheet) with that tab's heading shown and its rail entry marked current; every footer tab is also in the rail, and clicking Secrets in the rail from Advanced switches the page and the current entry without closing the dialog; Escape closes it",
           "status": "covered"
         }
       ]
