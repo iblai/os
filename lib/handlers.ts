@@ -9,6 +9,10 @@ import {
 import {
   chatActions,
   selectLessonCompletion,
+  selectCreditExhaustion,
+  setCreditExhaustion,
+  setHostHandlesCreditExhaustion,
+  HOST_HANDLES_CREDIT_EXHAUSTION_MESSAGE_TYPE,
   AUTH_TOKENS_UPDATED_EVENT,
 } from '@iblai/iblai-js/web-utils';
 import {
@@ -37,6 +41,16 @@ export function useIframeHandlers() {
     sendMessageToParentWebsite(lessonCompletion);
     dispatch(chatActions.setLessonCompletion(null));
   }, [lessonCompletion, dispatch]);
+
+  // Same relay for a 402 the host asked to handle (the LMS opens its own plan
+  // picker from the SDK's `handle402Error`); `use402ErrorCheck` parks the
+  // frame instead of opening this app's modals.
+  const creditExhaustion = useAppSelector(selectCreditExhaustion);
+  useEffect(() => {
+    if (!creditExhaustion) return;
+    sendMessageToParentWebsite(creditExhaustion);
+    dispatch(setCreditExhaustion(null));
+  }, [creditExhaustion, dispatch]);
 
   const handleThemePostMessage = (theme: string) => {
     const bodyEl = document.body;
@@ -187,6 +201,12 @@ export function useIframeHandlers() {
     ) => {
       const payload = event.data.data;
       dispatch(chatActions.setEnableLessonCompletion(payload));
+    },
+    [HOST_HANDLES_CREDIT_EXHAUSTION_MESSAGE_TYPE]: (
+      _payload: unknown,
+      event: MessageEvent,
+    ) => {
+      dispatch(setHostHandlesCreditExhaustion(event.data.data === true));
     },
     // Document filter hanlder
     'MENTOR:DOCUMENTFILTER': (_payload: unknown, event: MessageEvent) => {

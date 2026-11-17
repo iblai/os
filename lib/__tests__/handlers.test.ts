@@ -33,6 +33,19 @@ const mockSetLessonCompletion = vi.hoisted(() =>
   vi.fn((value) => ({ type: 'chat/setLessonCompletion', payload: value })),
 );
 const mockSelectLessonCompletion = vi.hoisted(() => vi.fn(() => null));
+const mockSelectCreditExhaustion = vi.hoisted(() => vi.fn(() => null));
+const mockSetCreditExhaustion = vi.hoisted(() =>
+  vi.fn((value) => ({
+    type: 'subscription/setCreditExhaustion',
+    payload: value,
+  })),
+);
+const mockSetHostHandlesCreditExhaustion = vi.hoisted(() =>
+  vi.fn((value) => ({
+    type: 'subscription/setHostHandlesCreditExhaustion',
+    payload: value,
+  })),
+);
 const mockUseAppSelector = vi.hoisted(() =>
   vi.fn((selector: (state: unknown) => unknown) => selector({})),
 );
@@ -71,6 +84,11 @@ vi.mock('@iblai/iblai-js/web-utils', () => ({
     setMetadata: mockSetMetadata,
   },
   selectLessonCompletion: mockSelectLessonCompletion,
+  selectCreditExhaustion: mockSelectCreditExhaustion,
+  setCreditExhaustion: mockSetCreditExhaustion,
+  setHostHandlesCreditExhaustion: mockSetHostHandlesCreditExhaustion,
+  HOST_HANDLES_CREDIT_EXHAUSTION_MESSAGE_TYPE:
+    'MENTOR:HANDLE_CREDIT_EXHAUSTION',
   AUTH_TOKENS_UPDATED_EVENT: 'ibl:auth-tokens-updated',
 }));
 
@@ -91,6 +109,7 @@ describe('useIframeHandlers', () => {
 
   beforeEach(() => {
     mockSelectLessonCompletion.mockReturnValue(null);
+    mockSelectCreditExhaustion.mockReturnValue(null);
     // Mock dispatch
     mockDispatchInstance = vi.fn();
     mockUseAppDispatch.mockReturnValue(mockDispatchInstance);
@@ -1142,6 +1161,69 @@ describe('useIframeHandlers', () => {
       expect(mockSendMessageToParentWebsite).not.toHaveBeenCalled();
       expect(mockDispatchInstance).not.toHaveBeenCalledWith(
         chatActions.setLessonCompletion(null),
+      );
+    });
+  });
+  describe('credits.exhausted relay', () => {
+    const frame = {
+      type: 'credits.exhausted',
+      audience: 'trial',
+      error: 'Insufficient balance',
+      pricing_table: { pricing_table_id: 'prc_1', publishable_key: 'pk_test' },
+    };
+
+    it('posts the parked frame to the parent website', () => {
+      mockSelectCreditExhaustion.mockReturnValue(frame as any);
+      renderHook(() => useIframeHandlers());
+
+      expect(mockSendMessageToParentWebsite).toHaveBeenCalledWith(frame);
+    });
+
+    it('clears the frame once relayed', () => {
+      mockSelectCreditExhaustion.mockReturnValue(frame as any);
+      renderHook(() => useIframeHandlers());
+
+      expect(mockDispatchInstance).toHaveBeenCalledWith(
+        mockSetCreditExhaustion(null),
+      );
+    });
+
+    it('posts nothing while no credits ran out', () => {
+      renderHook(() => useIframeHandlers());
+
+      expect(mockSendMessageToParentWebsite).not.toHaveBeenCalled();
+      expect(mockDispatchInstance).not.toHaveBeenCalledWith(
+        mockSetCreditExhaustion(null),
+      );
+    });
+
+    it('records the host taking over credit exhaustion, and handing it back', () => {
+      const { result } = renderHook(() => useIframeHandlers());
+
+      result.current['MENTOR:HANDLE_CREDIT_EXHAUSTION'](undefined, {
+        data: { type: 'MENTOR:HANDLE_CREDIT_EXHAUSTION', data: true },
+      } as MessageEvent);
+      expect(mockDispatchInstance).toHaveBeenCalledWith(
+        mockSetHostHandlesCreditExhaustion(true),
+      );
+
+      result.current['MENTOR:HANDLE_CREDIT_EXHAUSTION'](undefined, {
+        data: { type: 'MENTOR:HANDLE_CREDIT_EXHAUSTION', data: false },
+      } as MessageEvent);
+      expect(mockDispatchInstance).toHaveBeenCalledWith(
+        mockSetHostHandlesCreditExhaustion(false),
+      );
+    });
+
+    it('treats anything but a true switch as off', () => {
+      const { result } = renderHook(() => useIframeHandlers());
+
+      result.current['MENTOR:HANDLE_CREDIT_EXHAUSTION'](undefined, {
+        data: { type: 'MENTOR:HANDLE_CREDIT_EXHAUSTION', data: 'true' },
+      } as MessageEvent);
+
+      expect(mockDispatchInstance).toHaveBeenCalledWith(
+        mockSetHostHandlesCreditExhaustion(false),
       );
     });
   });
