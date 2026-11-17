@@ -64,6 +64,9 @@ export function OrgPicker({
   // had arrowed to.
   const cancelRef = useRef(onCancel);
   cancelRef.current = onCancel;
+  const copiedTimer = useRef<number | undefined>(undefined);
+
+  useEffect(() => () => window.clearTimeout(copiedTimer.current), []);
 
   useEffect(() => {
     dialogRef.current?.focus();
@@ -148,17 +151,15 @@ export function OrgPicker({
 
   const setDefault = async (key: string) => {
     setSavingKey(key);
-    // Shown as chosen straight away: the request is a save, and bouncing the
-    // mark back on failure says more than a spinner would.
-    const previous = preferred;
-    setPreferred(key);
     try {
       await setDefaultOrganization(key);
+      // Marked once it has actually saved — marking it first would replace the
+      // button with the badge and "Setting…" would never be seen.
+      setPreferred(key);
       // A later success must clear an earlier failure's message.
       setError(null);
     } catch (err) {
       console.error('[ibl.ai panel] could not save the default:', err);
-      setPreferred(previous);
       // `setDefaultOrganization` raises NoSessionError on a refused token; the
       // fix for that is signing in again, not trying the same save forever.
       setError(
@@ -174,7 +175,11 @@ export function OrgPicker({
   const copyKey = (key: string) => {
     void navigator.clipboard?.writeText(key).catch(() => {});
     setCopiedKey(key);
-    window.setTimeout(() => setCopiedKey(null), COPIED_FOR_MS);
+    window.clearTimeout(copiedTimer.current);
+    copiedTimer.current = window.setTimeout(
+      () => setCopiedKey(null),
+      COPIED_FOR_MS,
+    );
   };
 
   const named = (key: string) =>
@@ -316,7 +321,6 @@ export function OrgPicker({
                           className="orgs-key"
                           onClick={() => copyKey(org.key)}
                           title={t('orgsCopyKey')}
-                          aria-label={t('orgsCopyKey')}
                         >
                           <span>{org.key}</span>
                           <span className="orgs-copied" aria-hidden="true">

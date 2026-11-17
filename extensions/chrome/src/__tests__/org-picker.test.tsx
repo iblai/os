@@ -127,11 +127,51 @@ describe('OrgPicker', () => {
     await screen.findByText('Acme Inc');
 
     expect(screen.getByText('globex')).toBeTruthy();
-    await user.click(
-      screen.getAllByRole('button', { name: 'Copy platform key' })[1],
-    );
+    await user.click(screen.getByRole('button', { name: /^globex/ }));
 
     expect(writeText).toHaveBeenCalledWith('globex');
+  });
+
+  // The optimistic mark used to replace the button with the badge, so this
+  // state could never be seen.
+  it('says Setting… on the row while the save is in flight', async () => {
+    let settle: () => void = () => {};
+    mocks.setDefaultOrganization.mockReturnValue(
+      new Promise<void>((resolve) => {
+        settle = resolve;
+      }),
+    );
+    show();
+    const user = userEvent.setup();
+    await screen.findByText('Globex');
+
+    await user.click(
+      screen.getByRole('button', {
+        name: /Set Globex as default organization/,
+      }),
+    );
+
+    expect(await screen.findByText('Setting…')).toBeTruthy();
+    // Not marked until it lands.
+    expect(screen.queryByText('Default')).toBeNull();
+
+    settle();
+    expect(await screen.findByText('Default')).toBeTruthy();
+  });
+
+  it('keeps the tick on the key that was copied last', async () => {
+    show();
+    const user = userEvent.setup();
+    await screen.findByText('Acme Inc');
+
+    await user.click(screen.getByRole('button', { name: /^acme$/ }));
+    await user.click(screen.getByRole('button', { name: /^globex/ }));
+
+    // One tick, on the second key — the first copy's timer must not clear it.
+    expect(screen.getAllByText('✓')).toHaveLength(1);
+    expect(
+      screen.getByRole('button', { name: /^globex/ }).textContent,
+    ).toContain('✓');
   });
 
   it('badges an organization the person administers', async () => {

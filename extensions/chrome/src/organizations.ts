@@ -167,8 +167,8 @@ const PAGE_LIMIT = 20;
 /**
  * Every organization this person can switch to, by name.
  *
- * Sorted by name so the list does not reorder between openings — DM returns
- * them in whatever order the rows come back in.
+ * Default first, then the order the source gave us — the auth app's chooser
+ * ordering, so the two lists read the same.
  */
 export async function listOrganizations(
   creds = credentials(),
@@ -202,7 +202,7 @@ export async function listOrganizations(
         if (page === 0) {
           failed = answer.error;
         } else {
-          truncated = true;
+          truncated = rows.length > 0;
           failures.push(`${answer.error} (list truncated after page ${page})`);
           console.warn(
             `[ibl.ai panel] organization list truncated: ${answer.error}`,
@@ -217,7 +217,7 @@ export async function listOrganizations(
         if (page === 0) {
           failed = `${url} → unreadable body`;
         } else {
-          truncated = true;
+          truncated = rows.length > 0;
           failures.push(`${url} → unreadable body (list truncated)`);
           console.warn(
             `[ibl.ai panel] organization list truncated: ${url} → unreadable body`,
@@ -235,8 +235,9 @@ export async function listOrganizations(
       const following = samePlace(next, base);
       if (!following) {
         // Relative, unreadable, or pointing somewhere else: not followed, and
-        // not silently passed off as the end of the list either.
-        truncated = true;
+        // not silently passed off as the end of the list either — unless there
+        // was nothing to lose, in which case this base simply answered empty.
+        truncated = rows.length > 0;
         failures.push(`${base} → next not followed: ${next}`);
         console.warn(
           `[ibl.ai panel] organization list truncated: next not followed (${next})`,

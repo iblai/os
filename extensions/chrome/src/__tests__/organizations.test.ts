@@ -214,6 +214,19 @@ describe('listOrganizations', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
+  // Nothing was collected, so nothing was cut short: this base answered empty,
+  // and erroring would send the picker to a Try again that repeats the same
+  // deterministic failure.
+  it('is empty, not broken, when an unfollowable next had no rows before it', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    fetchMock.mockResolvedValue(
+      answer({ results: [], next: 'https://evil.example/page2' }),
+    );
+
+    await expect(listOrganizations(CREDS, BASES)).resolves.toEqual([]);
+    warn.mockRestore();
+  });
+
   // A 200 with nothing recognisable is not an answer to stop on: another base
   // may hold the real list. Same shape as `listModels`.
   it('tries the next base when one answers with nothing usable', async () => {
