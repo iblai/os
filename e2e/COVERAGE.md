@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-11-13 | 1153 checkpoints (1072 covered, 46 pending/fixme, 17 not-reproducible in default env, 18 deprecated) | 110 journeys (109 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-11-15 | 1161 checkpoints (1080 covered, 46 pending/fixme, 17 not-reproducible in default env, 18 deprecated) | 112 journeys (111 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -29,7 +29,7 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 2: First-Time User Chat & Navigation (9 checkpoints) — `journeys/02-first-time-user-chat-and-navigation.spec.ts`
+## Journey 2: First-Time User Chat & Navigation (10 checkpoints) — `journeys/02-first-time-user-chat-and-navigation.spec.ts`
 
 **Source files:** `app/platform/[tenantKey]/[mentorId]/page.tsx`, `components/chat/index.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`, `components/welcome-chat.tsx`, `components/advanced-chat/ui-tags/default-tag.tsx`
 
@@ -55,6 +55,14 @@ When adding a new page or modifying an existing user flow:
 - [x] Sidebar admin-only buttons (e.g. New Project) show upgrade/auth dialog for non-admins when visible
 - [x] Non-admin in the main OR an advertising tenant sees full admin sidebar (New Agent, Workflows, Analytics, Invites, Management, Secrets, API, Monetization, Memory, Advanced) and clicking any trial-gated entry opens the upgrade/pricing dialog; gracefully skips when paywall is off
 - [x] Profile dropdown shows the current organization as a label with no in-place picker, and its "Organizations" entry opens the auth app chooser in its own tab (`/me?action=switch-tenant&popup=1` with a return address), leaving this tab untouched; closing that tab means no switch. Skips when the account belongs to a single organization
+
+---
+
+## Journey 3b: Profile Menu Tenant Row Cursor (1 checkpoint) — `journeys/03b-profile-menu-tenant-row-cursor.spec.ts`
+
+**Source files:** `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/user-profile.tsx`
+
+- [x] CUR-01: Admin opens the profile menu and the organization row (the menu item that opens organization settings) shows `cursor: pointer` over the row, its padding, its icon and its name (iblai-platform#2853; passes once the pinned `@iblai/iblai-js` contains the SDK fix)
 
 ---
 
@@ -2356,11 +2364,11 @@ Regression: the camera dialog opened from the "+" menu item left `<body style="p
 
 **Source files:** `components/modals/create-mentor-modal.tsx`
 
-Regression: the Category popover is portaled outside the Create Agent dialog, whose scroll lock swallowed wheel events. Page object: `page-objects/create-mentor.page.ts` (`categoryList`). Also covers the front-end-only Save button on the Create Agent prompt popups (issue #2758; `goToPromptsTab`, `openPromptPopupAndType`, `promptContent`).
+Regression: the Category popover is portaled outside the Create Agent dialog, whose scroll lock swallowed wheel events. Page object: `page-objects/create-mentor.page.ts` (`categoryList`). Also covers the Save button on the prompt popups of the wizard's Prompts step (issue #2758; `openPromptPopupAndType`, `promptContent` on the wizard page object).
 
-- [x] promptsave-01 (issue #2758): The System Prompt popup's Save closes it, the form shows the typed text and no non-GET request is sent
-- [x] promptsave-02 (issue #2758): Save in the Proactive and Guided popups closes them and keeps each text
-- [x] promptsave-03 (issue #2758): Escape in the System Prompt popup still closes it and keeps the text
+- [x] promptsave-01 (issue #2758): The System Prompt popup's Save then Close leaves the wizard step showing the typed text
+- [x] promptsave-02 (issue #2758): Save in the Proactive popup keeps the text in the step
+- [x] promptsave-03 (issue #2758): Escape in the System Prompt popup closes it and keeps the wizard open
 - [x] catscroll-01: Admin opens Create Agent, opens the Category picker and wheels the list: scrollTop increases and a lower category can be selected
 - [x] catscroll-02: Admin types a category name in the Category picker: the list narrows to matching categories at the same height, clearing the search brings back every category, and picking one closes the list and fills the field
 
@@ -2563,10 +2571,10 @@ Issue #2809. After a successful light logo upload the SDK stores `tenant_logo_ve
 
 Issue iblai-platform#2766. Opening Create Agent asks the DM backend which fields of the form the caller may write (`GET <DM base>/v1/agents/settings/field-permissions`, header `iblai-org` = tenant key, answer `{ "<field>": { "write": boolean } }`). A field answered `write: false` is not rendered and not sent, a hidden field no longer counts toward the Next / Save gating, and a form with no writable prompt drops the Prompts tab and saves from the Settings tab. While the answer is unknown (403, 404, network error) every field is writable. The agent name is always shown and sent. cafp-01 runs against the real backend; cafp-02..04 mock only the field-permissions answer (the real one grants an admin everything) with `page.route`, registered before the dialog opens and removed in a `finally`, and every mocked absence is checked only after the name input is enabled, i.e. once the permissions settled. cafp-02 and cafp-03 each create one throwaway agent (registered by the page object for the run-level residue teardown, tracked with `MentorTracker`); they are not pinned to the default LLM since nothing chats with them. The create request is read through `CreateMentorPage.createRequestFields` (multipart part names).
 
-- [x] cafp-01: Real backend: opening Create Agent issues the field-permissions GET at the DM root (not under /api/ai-mentor/) with `iblai-org` equal to the tenant key; the answer is 200 with a `{write: boolean}` entry per field; with the admin's default roles the Settings tab shows the name, description, category, visibility and image upload
-- [x] cafp-02: Answer mocked with `mentor_visibility` write:false: the Visibility combobox is absent while description, category, image upload and the Prompts tab stay; creating through Next and Save sends a `mentor-with-settings` POST with name, description, template and prompt parts but no `mentor_visibility` part, and the agent is created
-- [x] cafp-03: Answer mocked with `system_prompt`, `proactive_prompt` and `guided_prompt_instructions` write:false: the Prompts tab and Next are absent and the Settings tab shows Save; saving from it creates the agent and the POST has none of the three prompt parts but still carries `mentor_visibility`
-- [x] cafp-04: Answer mocked as 404 (older backend): the dialog fails open and shows every field, the Prompts tab and Next
+- [x] cafp-01: Real backend: opening Create Agent issues the field-permissions GET at the DM root (not under /api/ai-mentor/) with `iblai-org` equal to the tenant key; the answer is 200 with a `{write: boolean}` entry per field; with the admin's default roles wizard step 1 shows the name, description and category and no Visibility field (a new agent is Admins Only, iblai-platform#2853)
+- [x] cafp-02: Answer mocked with `mentor_visibility` write:false: step 1 shows name, description and category and no Visibility field; Next creates the agent and the `mentor-with-settings` POST has name and template parts but no `mentor_visibility` part
+- [x] cafp-03: Answer mocked with `system_prompt`, `proactive_prompt` and `guided_prompt_instructions` write:false: step 1 still shows its fields, Next creates the agent and the POST has none of the three prompt parts
+- [x] cafp-04: Answer mocked as 404 (older backend): the wizard fails open and shows every step 1 field and Next
 
 ---
 
@@ -2581,3 +2589,16 @@ Issue iblai-platform#2855. After an answer the chat lists its sources under "Ret
 - [x] rdp-03: A YouTube source's preview shows an iframe on `youtube-nocookie.com/embed/<id>` with `referrerpolicy=strict-origin-when-cross-origin` and no Open Page link
 
 ---
+
+## Journey 105: Create Agent Wizard (6 checkpoints) — `journeys/105-create-agent-wizard.spec.ts`
+
+**Source files:** `components/modals/create-agent-wizard-dialog.tsx`, `components/modals/create-mentor-modal.tsx`
+
+Issue iblai-platform#2853. Create Agent is a wizard (the only create flow); Finish opens the new agent, there is no summary screen. Page objects: `page-objects/create-agent-wizard.page.ts` and `page-objects/create-mentor.page.ts`, whose `createWithName` / `openAndCreate` fill step 1, click Next and close the wizard so the new agent's chat is open. Agents are registered for the run-level residue teardown by id (`registerMentor(page, name, mentorId)`) and tracked for `afterAll`.
+
+- [x] caw-01: Wizard happy path: Next gating, create stays on the page agent, skip LLM, save a prompt, skip Datasets, Finish opens the new agent whose Prompts tab holds the saved prompt
+- [x] caw-02: A wizard-created agent is Admins Only with the public catalog, guest chat and featured switches off (Edit Agent > Settings > Discovery)
+- [x] caw-03: Regression: the wizard's tabs edit the NEW agent (prompt saved there), not the agent the page is on
+- [x] caw-04: Close on step 1 creates nothing and does not navigate; close after step 1 opens the new agent's chat
+- [x] caw-05: Skip on every step, including the last, opens the new agent's chat
+- [x] caw-06: No Back on step 2, Back from step 3 on, and Back returns to the previous step
