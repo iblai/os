@@ -13,6 +13,15 @@ export type AgentPurpose = (typeof AGENT_PURPOSES)[keyof typeof AGENT_PURPOSES];
 
 export const BROWSING_ASSISTANT_NAME = 'Browsing Assistant';
 
+/**
+ * ibl.ai's own router, so a new agent works in every organization: a
+ * third-party provider would only answer where that organization has a key.
+ */
+export const BROWSING_ASSISTANT_MODEL = {
+  provider: 'iblai',
+  name: 'iblai-pro',
+} as const;
+
 export type TenantMetadataBlob = Record<string, unknown>;
 
 /** Older writes stored metadata values as JSON strings. */

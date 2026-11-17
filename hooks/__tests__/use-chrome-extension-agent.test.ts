@@ -283,6 +283,10 @@ describe('the agent it creates', () => {
     expect(createMentor.mock.calls[0][0].formData).toMatchObject({
       template_name: 'ai-mentor',
       mentor_visibility: 'viewable_by_tenant_students',
+      // ibl.ai's own router: a third-party provider would only answer in
+      // organizations holding that key.
+      llm_provider: 'iblai',
+      llm_name: 'iblai-pro',
     });
   });
 });

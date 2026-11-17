@@ -14,6 +14,7 @@ import { config } from '@/lib/config';
 import { MENTOR_VISIBILITY_VALUES } from '@/lib/constants';
 import {
   AGENT_PURPOSES,
+  BROWSING_ASSISTANT_MODEL,
   BROWSING_ASSISTANT_NAME,
   readPurposeAgent,
   withPurposeAgent,
@@ -161,6 +162,8 @@ export function useChromeExtensionAgent(): PanelAgent {
               new_mentor_name: BROWSING_ASSISTANT_NAME,
               display_name: BROWSING_ASSISTANT_NAME,
               template_name: config.iblTemplateMentor(),
+              llm_provider: BROWSING_ASSISTANT_MODEL.provider,
+              llm_name: BROWSING_ASSISTANT_MODEL.name,
               // Everyone in the organization opens this one, so admins-only
               // (the create default) would 404 for most of them.
               mentor_visibility: MENTOR_VISIBILITY_VALUES.STUDENTS,
