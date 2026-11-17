@@ -2,8 +2,8 @@
   "version": 2,
   "lastUpdated": "2026-11-15",
   "summary": {
-    "totalCheckpoints": 1161,
-    "coveredCheckpoints": 1080,
+    "totalCheckpoints": 1162,
+    "coveredCheckpoints": 1081,
     "deprecatedCheckpoints": 18,
     "notReproducibleCheckpoints": 17,
     "pendingCheckpoints": 46,
@@ -7207,7 +7207,7 @@
       "checkpoints": [
         {
           "id": "caw-01",
-          "description": "Issue #2853: Create Agent is a wizard whose Next stays disabled until name and description are filled; Next creates the agent, toasts, stays on the page agent and shows Step 2 (LLM Configuration, no Back); Skip LLM, save a system prompt in Prompts (prompts-info-box, Back shown), skip Datasets, the last step says Finish; Finish opens the new agent's chat and its Prompts tab holds the saved prompt",
+          "description": "Issue #2853: Create Agent is a wizard whose Next stays disabled until name and description are filled; Next creates the agent, toasts, stays on the page agent and shows Step 2 (LLM Configuration, no Back); Skip LLM, save a system prompt in Prompts (prompts-info-box, Back shown), skip Skills, Datasets and MCP, the last step says Finish; Finish opens the new agent's chat and its Prompts tab holds the saved prompt",
           "status": "covered"
         },
         {
@@ -7233,6 +7233,11 @@
         {
           "id": "caw-06",
           "description": "Issue #2853: the wizard shows no Back on step 2, shows Back from step 3, and Back returns to the previous step (LLM Configuration)",
+          "status": "covered"
+        },
+        {
+          "id": "caw-07",
+          "description": "Issue #2853: the wizard's Skills step (between Prompts and Datasets) shows the agent and available skills tabs, and the last step says Finish; the step count follows the tabs the admin may use (6 with Skills, 5 without)",
           "status": "covered"
         }
       ]

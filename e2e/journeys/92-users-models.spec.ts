@@ -491,7 +491,16 @@ test.describe('Journey 92: User Models', () => {
   test('um-13: a non-admin opening the agent LLM tab sees no User Models button', async ({
     page,
     nonadminPage,
+    createMentorPage,
+    editMentorPage,
   }) => {
+    // The page agent can be a new Admins Only one (iblai-platform#2853), which
+    // the non-admin cannot open; use a fresh agent opened to members.
+    await createMentorPage.openAndCreate(generateMentorName());
+    await editMentorPage.open('Settings');
+    await editMentorPage.settings.setVisibility('Users');
+    await editMentorPage.settings.saveConfirmingAdminVisibility();
+    await editMentorPage.close();
     const { tenantKey, mentorId } = await getPlatformContext(page);
     const modal = encodeURIComponent(
       JSON.stringify([{ name: 'edit_mentor', tab: 'llm' }]),

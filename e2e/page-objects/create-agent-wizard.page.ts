@@ -40,9 +40,7 @@ export class CreateAgentWizardPage {
     this.page = page;
     this.create = new CreateMentorPage(page);
     this.dialog = this.create.dialog;
-    this.stepLine = this.dialog.getByText(
-      /^Step \d+ of \d+$|^Your agent is ready\.$/,
-    );
+    this.stepLine = this.dialog.getByText(/^Step \d+ of \d+$/);
     this.nameInput = this.dialog.locator('#create-agent-name');
     this.descriptionInput = this.dialog.locator('#create-agent-description');
     this.categoryCombobox = this.create.categoryCombobox;
@@ -99,6 +97,37 @@ export class CreateAgentWizardPage {
           : new RegExp(`^Step ${step} of \\d+$`),
       ),
     ).toBeVisible({ timeout: 20_000 });
+  }
+
+  /** The "Step N of M" line: how many steps this agent's wizard has depends on the tabs the admin may use. */
+  async stepPosition(): Promise<{ step: number; total: number }> {
+    const line = this.dialog.getByText(/^Step \d+ of \d+$/);
+    await expect(line).toBeVisible({ timeout: 20_000 });
+    const [, step, total] = /Step (\d+) of (\d+)/.exec(
+      (await line.innerText()).trim(),
+    )!;
+    return { step: Number(step), total: Number(total) };
+  }
+
+  /** Clicks Skip until the last step, where the primary button reads Finish. */
+  async skipUntilFinish(): Promise<void> {
+    for (let i = 0; i < 8; i += 1) {
+      if (await this.finishButton.isVisible()) return;
+      const { step } = await this.stepPosition();
+      await this.skipButton.click();
+      await expect
+        .poll(async () => (await this.stepPosition()).step, {
+          timeout: 20_000,
+        })
+        .toBeGreaterThan(step);
+    }
+    await expect(this.finishButton).toBeVisible({ timeout: 20_000 });
+  }
+
+  /** Clicks Skip on every step, the last one included, which finishes the wizard. */
+  async skipAllSteps(): Promise<void> {
+    await this.skipUntilFinish();
+    await this.skipButton.click();
   }
 
   /** Waits for the platform URL to name `mentorId`. */

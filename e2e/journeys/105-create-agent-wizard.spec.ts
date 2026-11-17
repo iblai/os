@@ -14,6 +14,8 @@
  *  - caw-04 closing after step 1 opens the new agent; closing on step 1 creates
  *    nothing and does not navigate.
  *  - caw-05 Skip on every step, including the last, opens the new agent.
+ *  - caw-07 the Skills step (between Prompts and Datasets) shows the agent and
+ *    available skills tabs and the last step says Finish.
  *  - caw-06 Back: absent on step 2, shown from step 3, and returns to the
  *    previous step.
  *
@@ -115,10 +117,8 @@ test.describe('Journey 105: Create Agent wizard', () => {
     await wizard.prompts.setSystemPrompt(marker);
     await wizard.nextButton.click();
 
-    // Datasets and MCP, skipped; the last step says Finish.
-    await expect(wizard.skipButton).toBeVisible({ timeout: UI_TIMEOUT });
-    await wizard.skipButton.click();
-    await expect(wizard.finishButton).toBeVisible({ timeout: UI_TIMEOUT });
+    // Skills, Datasets and MCP, skipped; the last step says Finish.
+    await wizard.skipUntilFinish();
     await wizard.finishButton.click();
     await wizard.waitForAgentUrl(mentorId);
     await waitForPageReady(page);
@@ -180,8 +180,7 @@ test.describe('Journey 105: Create Agent wizard', () => {
     });
     await wizard.prompts.systemPromptEditButton.click();
     await wizard.prompts.setSystemPrompt(marker);
-    await wizard.skipButton.click();
-    await wizard.skipButton.click();
+    await wizard.skipUntilFinish();
     await wizard.finishButton.click();
     await wizard.waitForAgentUrl(newId);
     await waitForPageReady(page);
@@ -233,10 +232,8 @@ test.describe('Journey 105: Create Agent wizard', () => {
     createAgentWizardPage: wizard,
   }) => {
     const { mentorId } = await createThroughWizard(page, wizard);
-    await wizard.expectStep(2, 5);
-    for (let i = 0; i < 4; i += 1) {
-      await wizard.skipButton.click();
-    }
+    await wizard.expectStep(2);
+    await wizard.skipAllSteps();
     await wizard.waitForAgentUrl(mentorId);
     await waitForPageReady(page);
     await expect(wizard.dialog).toBeHidden({ timeout: UI_TIMEOUT });
@@ -247,17 +244,48 @@ test.describe('Journey 105: Create Agent wizard', () => {
     createAgentWizardPage: wizard,
   }) => {
     await createThroughWizard(page, wizard);
-    await wizard.expectStep(2, 5);
+    const { total } = await wizard.stepPosition();
+    await wizard.expectStep(2, total);
     await expect(wizard.backButton).toHaveCount(0);
     await wizard.skipButton.click();
-    await wizard.expectStep(3, 5);
+    await wizard.expectStep(3, total);
     await expect(wizard.dialog.getByTestId('prompts-info-box')).toBeVisible({
       timeout: UI_TIMEOUT,
     });
     await wizard.backButton.click();
-    await wizard.expectStep(2, 5);
+    await wizard.expectStep(2, total);
     await expect(
       wizard.dialog.getByText('LLM Configuration').first(),
     ).toBeVisible({ timeout: UI_TIMEOUT });
+  });
+
+  test('caw-07: admin steps through LLM and Prompts to the Skills step and sees the agent and available skills tabs, and the last step says Finish', async ({
+    page,
+    createAgentWizardPage: wizard,
+  }) => {
+    await createThroughWizard(page, wizard);
+    const { total } = await wizard.stepPosition();
+    expect(
+      total,
+      'name, LLM, Prompts, Skills, Datasets and MCP; fewer only when the admin lacks a tab',
+    ).toBeGreaterThanOrEqual(5);
+    await wizard.skipButton.click();
+    await wizard.skipButton.click();
+    await wizard.expectStep(4, total);
+    if (total === 6) {
+      await expect(
+        wizard.dialog.getByTestId('agent-skills-tab-agent'),
+      ).toBeVisible({ timeout: UI_TIMEOUT });
+      await expect(
+        wizard.dialog.getByTestId('agent-skills-tab-available'),
+      ).toBeVisible({ timeout: UI_TIMEOUT });
+    } else {
+      await expect(
+        wizard.dialog.getByTestId('agent-skills-tab-agent'),
+        'no Skills step for this agent',
+      ).toHaveCount(0);
+    }
+    await wizard.skipUntilFinish();
+    await expect(wizard.finishButton).toBeVisible();
   });
 });

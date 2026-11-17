@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-11-15 | 1161 checkpoints (1080 covered, 46 pending/fixme, 17 not-reproducible in default env, 18 deprecated) | 112 journeys (111 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-11-15 | 1162 checkpoints (1081 covered, 46 pending/fixme, 17 not-reproducible in default env, 18 deprecated) | 112 journeys (111 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -2590,15 +2590,16 @@ Issue iblai-platform#2855. After an answer the chat lists its sources under "Ret
 
 ---
 
-## Journey 105: Create Agent Wizard (6 checkpoints) — `journeys/105-create-agent-wizard.spec.ts`
+## Journey 105: Create Agent Wizard (7 checkpoints) — `journeys/105-create-agent-wizard.spec.ts`
 
 **Source files:** `components/modals/create-agent-wizard-dialog.tsx`, `components/modals/create-mentor-modal.tsx`
 
 Issue iblai-platform#2853. Create Agent is a wizard (the only create flow); Finish opens the new agent, there is no summary screen. Page objects: `page-objects/create-agent-wizard.page.ts` and `page-objects/create-mentor.page.ts`, whose `createWithName` / `openAndCreate` fill step 1, click Next and close the wizard so the new agent's chat is open. Agents are registered for the run-level residue teardown by id (`registerMentor(page, name, mentorId)`) and tracked for `afterAll`.
 
-- [x] caw-01: Wizard happy path: Next gating, create stays on the page agent, skip LLM, save a prompt, skip Datasets, Finish opens the new agent whose Prompts tab holds the saved prompt
+- [x] caw-01: Wizard happy path: Next gating, create stays on the page agent, skip LLM, save a prompt, skip Skills, Datasets and MCP, Finish opens the new agent whose Prompts tab holds the saved prompt
 - [x] caw-02: A wizard-created agent is Admins Only with the public catalog, guest chat and featured switches off (Edit Agent > Settings > Discovery)
 - [x] caw-03: Regression: the wizard's tabs edit the NEW agent (prompt saved there), not the agent the page is on
 - [x] caw-04: Close on step 1 creates nothing and does not navigate; close after step 1 opens the new agent's chat
 - [x] caw-05: Skip on every step, including the last, opens the new agent's chat
 - [x] caw-06: No Back on step 2, Back from step 3 on, and Back returns to the previous step
+- [x] caw-07: The Skills step (between Prompts and Datasets) shows the agent and available skills tabs and the last step says Finish; the step count follows the tabs the admin may use
