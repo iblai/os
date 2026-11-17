@@ -435,6 +435,74 @@ describe('OrgPicker', () => {
     expect(document.activeElement).toBe(screen.getByRole('dialog'));
   });
 
+  it('wraps Shift+Tab from the start of the dialog to its end', async () => {
+    show();
+    const user = userEvent.setup();
+    await screen.findByText('Acme Inc');
+    const dialog = screen.getByRole('dialog');
+    const stops = [
+      ...dialog.querySelectorAll<HTMLElement>('button:not([disabled])'),
+    ];
+
+    stops[0].focus();
+    await user.keyboard('{Shift>}{Tab}{/Shift}');
+
+    expect(document.activeElement).toBe(stops[stops.length - 1]);
+  });
+
+  it('wraps Shift+Tab from the dialog itself to its end', async () => {
+    show();
+    const user = userEvent.setup();
+    await screen.findByText('Acme Inc');
+    const dialog = screen.getByRole('dialog');
+    const stops = [
+      ...dialog.querySelectorAll<HTMLElement>('button:not([disabled])'),
+    ];
+
+    dialog.focus();
+    await user.keyboard('{Shift>}{Tab}{/Shift}');
+
+    expect(document.activeElement).toBe(stops[stops.length - 1]);
+  });
+
+  it('wraps Tab from the end of the dialog back to its start', async () => {
+    show();
+    const user = userEvent.setup();
+    await screen.findByText('Acme Inc');
+    const dialog = screen.getByRole('dialog');
+    const stops = [
+      ...dialog.querySelectorAll<HTMLElement>('button:not([disabled])'),
+    ];
+
+    stops[stops.length - 1].focus();
+    await user.tab();
+
+    expect(document.activeElement).toBe(stops[0]);
+  });
+
+  // Mid-switch there is nothing to land on: the dialog holds the keyboard
+  // rather than letting Tab escape to the chat underneath.
+  it('holds the keyboard when the dialog has nothing to focus', async () => {
+    const outside = document.createElement('button');
+    outside.textContent = 'in the chat';
+    document.body.append(outside);
+    // `switching` leaves the mark, which has no focus stops.
+    show({ switching: true });
+    const user = userEvent.setup();
+    await screen.findByTestId('brand-mark');
+    const dialog = screen.getByRole('dialog');
+    // The close button is the one stop; take it out so there are none.
+    dialog
+      .querySelectorAll('button')
+      .forEach((b) => b.setAttribute('disabled', ''));
+
+    outside.focus();
+    await user.tab();
+
+    expect(document.activeElement).toBe(dialog);
+    outside.remove();
+  });
+
   // Keyed on an unstable callback, the dialog effect re-ran on every parent
   // render and pulled focus back to ×, off whatever row the person was on.
   it('does not steal focus back on a parent re-render', async () => {
