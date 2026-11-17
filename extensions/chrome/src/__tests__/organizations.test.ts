@@ -23,6 +23,12 @@ const row = (over: Record<string, unknown> = {}) => ({
   ...over,
 });
 
+const NO_NAME_KEYS = {
+  name: undefined,
+  platform_name: undefined,
+  org: undefined,
+};
+
 beforeEach(() => {
   installChromeStub();
   fetchMock = vi.fn();
@@ -44,12 +50,12 @@ describe('listOrganizations', () => {
 
   it('reads a name, and falls back to the key when there is none', async () => {
     fetchMock.mockResolvedValueOnce(
-      answer([row(), row({ platform_key: 'globex', name: undefined })]),
+      answer([row(), row({ platform_key: 'globex', ...NO_NAME_KEYS })]),
     );
 
     await expect(listOrganizations(CREDS, BASES)).resolves.toEqual([
-      { key: 'acme', name: 'Acme Inc', isDefault: false },
-      { key: 'globex', name: 'globex', isDefault: false },
+      { key: 'acme', name: 'Acme Inc', isDefault: false, isAdmin: false },
+      { key: 'globex', name: 'globex', isDefault: false, isAdmin: false },
     ]);
   });
 
@@ -58,11 +64,13 @@ describe('listOrganizations', () => {
   it.each([
     ['platform_key', { platform_key: 'zz', key: undefined }],
     ['key', { platform_key: undefined, key: 'zz' }],
-    ['org', { platform_key: undefined, org: 'zz' }],
+    ['org', { platform_key: undefined, org: 'zz', name: 'Zed' }],
   ])('accepts the key spelled %s', async (_label, over) => {
-    fetchMock.mockResolvedValueOnce(answer([row({ ...over, name: 'Zed' })]));
+    fetchMock.mockResolvedValueOnce(
+      answer([row({ ...NO_NAME_KEYS, ...over, name: 'Zed' })]),
+    );
     await expect(listOrganizations(CREDS, BASES)).resolves.toEqual([
-      { key: 'zz', name: 'Zed', isDefault: false },
+      { key: 'zz', name: 'Zed', isDefault: false, isAdmin: false },
     ]);
   });
 
@@ -143,22 +151,27 @@ describe('listOrganizations', () => {
     await expect(listOrganizations(CREDS, BASES)).resolves.toHaveLength(1);
   });
 
-  // A personal platform's key is a 32-character blob that means nothing to the
-  // person reading the list; the app calls it "Account".
-  it('calls an unnamed personal platform Account', async () => {
+  // The auth app's chooser label order, so the two lists read the same.
+  it('labels from platform_name, then name, then org, then the key', async () => {
     fetchMock.mockResolvedValueOnce(
-      answer([row({ platform_key: 'a'.repeat(32), name: undefined })]),
+      answer([
+        row({ platform_key: 'a', platform_name: 'Platform', name: 'Name' }),
+        row({ platform_key: 'b', name: 'Name only' }),
+        row({ platform_key: 'c', ...NO_NAME_KEYS, org: 'Org only' }),
+        row({ platform_key: 'd', ...NO_NAME_KEYS }),
+      ]),
     );
-    const [org] = await listOrganizations(CREDS, BASES);
-    expect(org.name).toBe('Account');
+    const names = (await listOrganizations(CREDS, BASES)).map((o) => o.name);
+    expect(names).toEqual(['Platform', 'Name only', 'Org only', 'd']);
   });
 
-  it('prefers a real name over Account', async () => {
+  it('reads the admin flag the chooser badges', async () => {
     fetchMock.mockResolvedValueOnce(
-      answer([row({ platform_key: 'a'.repeat(32), name: 'My Place' })]),
+      answer([row({ is_admin: 'true' }), row({ platform_key: 'b' })]),
     );
-    const [org] = await listOrganizations(CREDS, BASES);
-    expect(org.name).toBe('My Place');
+    const [admin, member] = await listOrganizations(CREDS, BASES);
+    expect(admin.isAdmin).toBe(true);
+    expect(member.isAdmin).toBe(false);
   });
 
   it('reads a paginated body as well as a bare array', async () => {
@@ -300,15 +313,17 @@ describe('listOrganizations', () => {
     );
   });
 
-  it('sorts by name so the list does not reorder between openings', async () => {
+  // The chooser's ordering: default first, then the order the source gave us.
+  it('puts the default first and leaves the rest as they came', async () => {
     fetchMock.mockResolvedValueOnce(
       answer([
         row({ platform_key: 'z', name: 'Zebra' }),
         row({ platform_key: 'a', name: 'Apple' }),
+        row({ platform_key: 'd', name: 'Delta', is_default: 'true' }),
       ]),
     );
     const names = (await listOrganizations(CREDS, BASES)).map((o) => o.name);
-    expect(names).toEqual(['Apple', 'Zebra']);
+    expect(names).toEqual(['Delta', 'Zebra', 'Apple']);
   });
 
   it('drops a duplicate key, which would switch to the same place twice', async () => {

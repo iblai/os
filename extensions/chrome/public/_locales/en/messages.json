@@ -158,7 +158,7 @@
     "message": "Loading your organizations…"
   },
   "orgsEmpty": {
-    "message": "You are not in any other organization yet."
+    "message": "No organizations found."
   },
   "orgsCurrent": {
     "message": "Current"
@@ -167,19 +167,16 @@
     "message": "Open in this one by default"
   },
   "orgsFailed": {
-    "message": "Could not load your organizations. Check your connection and try again."
+    "message": "Failed to load organizations."
   },
   "defaultOrgFailed": {
-    "message": "Could not save which one opens by default. Try again."
+    "message": "Could not set the default organization. Please try again."
   },
   "orgsClose": {
     "message": "Close"
   },
   "orgsDefault": {
     "message": "Default"
-  },
-  "orgsAccount": {
-    "message": "Account"
   },
   "orgsSignedOut": {
     "message": "Your session has ended. Close and reopen the panel to sign in again."
@@ -200,5 +197,56 @@
   },
   "orgsRetry": {
     "message": "Try again"
+  },
+  "orgsSubtitle": {
+    "message": "Select the organization you want to sign in to"
+  },
+  "orgsCountOne": {
+    "message": "1 org"
+  },
+  "orgsCountMany": {
+    "message": "$COUNT$ orgs",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "orgsSetDefault": {
+    "message": "Set default"
+  },
+  "orgsSettingDefault": {
+    "message": "Setting…"
+  },
+  "orgsAdmin": {
+    "message": "Admin"
+  },
+  "orgsCopyKey": {
+    "message": "Copy platform key"
+  },
+  "orgsSignInTo": {
+    "message": "Sign in to $ORG$",
+    "placeholders": {
+      "org": {
+        "content": "$1"
+      }
+    }
+  },
+  "orgsSetDefaultFor": {
+    "message": "Set $ORG$ as default organization",
+    "placeholders": {
+      "org": {
+        "content": "$1"
+      }
+    }
+  },
+  "orgsSearch": {
+    "message": "Search organizations"
+  },
+  "orgsSearchPlaceholder": {
+    "message": "Search organizations…"
+  },
+  "orgsNoMatch": {
+    "message": "No organizations match your search."
   }
 }

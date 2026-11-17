@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { BrandMark } from './brand-mark';
 import { t } from './i18n';
 import {
   listOrganizations,
@@ -8,7 +9,7 @@ import {
 } from './organizations';
 
 interface OrgPickerProps {
-  /** The one the panel is in now, marked in the list and not offered again. */
+  /** The one the panel is in now, marked Current and not offered as a choice. */
   current: string | null;
   onPick: (key: string) => void;
   onCancel: () => void;
@@ -18,17 +19,23 @@ interface OrgPickerProps {
    * reports can be shown as the name on the row above it.
    */
   notice?: { kind: 'failed' } | { kind: 'elsewhere'; landed: string } | null;
-  /** A switch is under way: the rows stop taking clicks until it lands. */
+  /** A switch is under way: the rows give way to the mark until it lands. */
   switching?: boolean;
 }
+
+const COPIED_FOR_MS = 1500;
 
 /**
  * Pick an organization, in the panel.
  *
- * Choosing one is the whole point of the screen, so the row itself is the
- * control — no Select button beside a name. Making one the default is a
- * different decision and gets its own control, which is why the two are not
- * the same click.
+ * Deliberately the same screen as the auth app's own chooser
+ * (`apps/auth/app/(auth)/me` in iblai-web-frontend): same title and sentence,
+ * same row shape, the key under the name with copy-to-clipboard, the same
+ * Current / Default / Admin badges, the same "Set default" wording, and the
+ * same ordering — default first, then the order the source gave us. It
+ * replaces that page for the side panel, so the two should not feel like
+ * different products; this one just does it without a browser tab and without
+ * a credential in the address.
  */
 export function OrgPicker({
   current,
@@ -42,21 +49,22 @@ export function OrgPicker({
   );
   const [preferred, setPreferred] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
+  const [savingKey, setSavingKey] = useState<string | null>(null);
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
+  const [query, setQuery] = useState('');
+
   // The dialog itself is the focus target: it is the one node that stays
   // mounted through every state, and it is not activatable — focusing a button
-  // lets a held Enter press it, and focusing the switching note drops the
-  // keyboard on <body> when that note gives way to the outcome.
+  // lets a held Enter press it, and focusing a transient note drops the
+  // keyboard on <body> when that note gives way.
   const dialogRef = useRef<HTMLDivElement>(null);
   // Read through a ref so the effect below can run once. Keyed on `onCancel`
-  // it re-ran on every parent render and pulled focus back to the × button,
-  // off whatever row the person had arrowed to.
+  // it re-ran on every parent render and pulled focus off the row the person
+  // had arrowed to.
   const cancelRef = useRef(onCancel);
   cancelRef.current = onCancel;
 
-  // It covers the chat, so it has to behave like a dialog: the keyboard starts
-  // inside it, and Escape leaves. Without this, focus stays in the chat behind
-  // an opaque overlay.
   useEffect(() => {
     dialogRef.current?.focus();
     const onKeyDown = (event: KeyboardEvent) => {
@@ -101,21 +109,17 @@ export function OrgPicker({
   }, []);
 
   // A new switch makes an older save failure stale: leaving it up would hide
-  // the panel's message about the switch itself. And the rows give way to the
-  // switching note, so the row that had focus unmounts — without moving focus
-  // it lands on <body> and the keyboard is nowhere for the whole switch.
+  // the panel's message about the switch itself. The row that started the
+  // switch is also about to unmount with the list.
   useEffect(() => {
     if (!switching) return;
     setError(null);
-    // The row that started the switch is about to unmount with the list.
     dialogRef.current?.focus();
   }, [switching]);
 
   // `attempt` exists so a failed load has a way back: without it the only
   // escape from "check your connection" is closing the dialog and getting the
   // embedded app to raise it again.
-  const [attempt, setAttempt] = useState(0);
-
   useEffect(() => {
     let live = true;
     const load = async () => {
@@ -142,8 +146,8 @@ export function OrgPicker({
     };
   }, [attempt]);
 
-  const makeDefault = async (key: string) => {
-    setSaving(true);
+  const setDefault = async (key: string) => {
+    setSavingKey(key);
     // Shown as chosen straight away: the request is a save, and bouncing the
     // mark back on failure says more than a spinner would.
     const previous = preferred;
@@ -163,8 +167,14 @@ export function OrgPicker({
           : t('defaultOrgFailed'),
       );
     } finally {
-      setSaving(false);
+      setSavingKey(null);
     }
+  };
+
+  const copyKey = (key: string) => {
+    void navigator.clipboard?.writeText(key).catch(() => {});
+    setCopiedKey(key);
+    window.setTimeout(() => setCopiedKey(null), COPIED_FOR_MS);
   };
 
   const named = (key: string) =>
@@ -172,7 +182,7 @@ export function OrgPicker({
 
   // Whichever message is current wins. The picker's own error is the more
   // specific of the two, but it survives until a later successful save — so a
-  // switch starting clears it (below), and a notice from the panel about that
+  // switch starting clears it (above), and a notice from the panel about that
   // switch is then the only one left to show.
   const message =
     error ??
@@ -181,6 +191,21 @@ export function OrgPicker({
         ? t('orgsLandedElsewhere', named(notice.landed))
         : t('orgsSwitchFailed')
       : null);
+
+  const count = organizations?.length ?? 0;
+
+  // Label or key, as the auth app's own organization search does — with 38
+  // organizations the list is unusable without it.
+  const q = query.trim().toLowerCase();
+  const visible = !organizations
+    ? []
+    : q
+      ? organizations.filter(
+          (org) =>
+            org.name.toLowerCase().includes(q) ||
+            org.key.toLowerCase().includes(q),
+        )
+      : organizations;
 
   return (
     <div
@@ -192,7 +217,10 @@ export function OrgPicker({
       tabIndex={-1}
     >
       <div className="orgs-head">
-        <span className="orgs-title">{t('orgsTitle')}</span>
+        <div className="orgs-heading">
+          <span className="orgs-title">{t('orgsTitle')}</span>
+          <span className="orgs-subtitle">{t('orgsSubtitle')}</span>
+        </div>
         <button
           type="button"
           className="orgs-close"
@@ -204,71 +232,130 @@ export function OrgPicker({
         </button>
       </div>
 
-      {message && <div className="row-error">{message}</div>}
+      <div className="orgs-card">
+        {count > 0 && !switching && (
+          <div className="orgs-count">
+            {count === 1
+              ? t('orgsCountOne')
+              : t('orgsCountMany', String(count))}
+          </div>
+        )}
 
-      {/* Offered only where retrying is the way forward — a dead session needs
-          a sign-in, not another attempt at the same call. */}
-      {error === t('orgsFailed') && !switching && (
-        <button
-          type="button"
-          className="orgs-retry"
-          onClick={() => setAttempt((n) => n + 1)}
-        >
-          {t('orgsRetry')}
-        </button>
-      )}
+        {message && (
+          <p role="alert" className="orgs-error">
+            {message}
+          </p>
+        )}
 
-      {switching ? (
-        <div className="orgs-note">{t('orgsSwitching')}</div>
-      ) : organizations === null ? (
-        <div className="orgs-note">{t('orgsLoading')}</div>
-      ) : organizations.length === 0 ? (
-        !message && <div className="orgs-note">{t('orgsEmpty')}</div>
-      ) : (
-        <ul className="orgs-list">
-          {organizations.map((org) => {
-            const isCurrent = org.key === current;
-            const isDefault = org.key === preferred;
-            return (
-              <li key={org.key} className="orgs-row">
-                <button
-                  type="button"
-                  className="orgs-name"
-                  onClick={() => !isCurrent && onPick(org.key)}
-                  disabled={isCurrent || switching}
-                  aria-current={isCurrent || undefined}
-                >
-                  <span className="orgs-label">{org.name}</span>
-                  <span className="orgs-marks">
-                    {isCurrent && (
-                      <span className="orgs-badge">{t('orgsCurrent')}</span>
-                    )}
-                    {/* The default reads as a word, not a disabled icon whose
-                        only explanation would be a tooltip that never shows. */}
-                    {isDefault && (
-                      <span className="orgs-badge">{t('orgsDefault')}</span>
-                    )}
-                  </span>
-                </button>
-                {/* Offered only where it would do something, so no row carries
-                    a control that cannot be used. */}
-                {!isDefault && (
-                  <button
-                    type="button"
-                    className="orgs-star"
-                    onClick={() => void makeDefault(org.key)}
-                    disabled={saving || switching}
-                    title={t('orgsMakeDefault')}
-                    aria-label={`${t('orgsMakeDefault')}: ${org.name}`}
-                  >
-                    ★
-                  </button>
-                )}
-              </li>
-            );
-          })}
-        </ul>
-      )}
+        {error === t('orgsFailed') && !switching && (
+          // Offered only where retrying is the way forward — a dead session
+          // needs a sign-in, not another attempt at the same call.
+          <button
+            type="button"
+            className="orgs-retry"
+            onClick={() => setAttempt((n) => n + 1)}
+          >
+            {t('orgsRetry')}
+          </button>
+        )}
+
+        {switching ? (
+          <div className="orgs-waiting">
+            <BrandMark label={t('orgsSwitching')} />
+          </div>
+        ) : organizations === null ? (
+          <div className="orgs-waiting">
+            <BrandMark label={t('orgsLoading')} />
+          </div>
+        ) : organizations.length === 0 ? (
+          !message && <div className="orgs-note">{t('orgsEmpty')}</div>
+        ) : (
+          <>
+            <input
+              type="search"
+              className="orgs-search"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder={t('orgsSearchPlaceholder')}
+              aria-label={t('orgsSearch')}
+            />
+            {visible.length === 0 ? (
+              <div className="orgs-note">{t('orgsNoMatch')}</div>
+            ) : (
+              <div className="orgs-list">
+                {visible.map((org) => {
+                  const isCurrent = org.key === current;
+                  const isDefault = org.key === preferred;
+                  return (
+                    <div
+                      key={org.key}
+                      className={isCurrent ? 'orgs-row current' : 'orgs-row'}
+                    >
+                      <div className="orgs-main">
+                        <div className="orgs-nameline">
+                          {isCurrent ? (
+                            <p className="orgs-name">{org.name}</p>
+                          ) : (
+                            <button
+                              type="button"
+                              className="orgs-name as-button"
+                              onClick={() => onPick(org.key)}
+                              aria-label={t('orgsSignInTo', org.name)}
+                            >
+                              {org.name}
+                            </button>
+                          )}
+                          {isCurrent && (
+                            <span className="orgs-badge current">
+                              {t('orgsCurrent')}
+                            </span>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          className="orgs-key"
+                          onClick={() => copyKey(org.key)}
+                          title={t('orgsCopyKey')}
+                          aria-label={t('orgsCopyKey')}
+                        >
+                          <span>{org.key}</span>
+                          <span className="orgs-copied" aria-hidden="true">
+                            {copiedKey === org.key ? '✓' : '⧉'}
+                          </span>
+                        </button>
+                      </div>
+                      <div className="orgs-actions">
+                        {isDefault ? (
+                          <span className="orgs-badge default">
+                            {t('orgsDefault')}
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            className="orgs-setdefault"
+                            onClick={() => void setDefault(org.key)}
+                            disabled={savingKey !== null}
+                            aria-label={t('orgsSetDefaultFor', org.name)}
+                          >
+                            {savingKey === org.key
+                              ? t('orgsSettingDefault')
+                              : t('orgsSetDefault')}
+                          </button>
+                        )}
+                        {org.isAdmin && (
+                          <span className="orgs-badge admin">
+                            {t('orgsAdmin')}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </>
+        )}
+      </div>
     </div>
   );
 }

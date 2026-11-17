@@ -158,7 +158,7 @@
     "message": "Chargement de vos organisations…"
   },
   "orgsEmpty": {
-    "message": "Vous ne faites encore partie d'aucune autre organisation."
+    "message": "Aucune organisation trouvée."
   },
   "orgsCurrent": {
     "message": "Actuelle"
@@ -167,19 +167,16 @@
     "message": "Ouvrir celle-ci par défaut"
   },
   "orgsFailed": {
-    "message": "Impossible de charger vos organisations. Vérifiez votre connexion et réessayez."
+    "message": "Impossible de charger les organisations."
   },
   "defaultOrgFailed": {
-    "message": "Impossible d'enregistrer celle qui s'ouvre par défaut. Réessayez."
+    "message": "Impossible de définir l'organisation par défaut. Réessayez."
   },
   "orgsClose": {
     "message": "Fermer"
   },
   "orgsDefault": {
     "message": "Par défaut"
-  },
-  "orgsAccount": {
-    "message": "Compte"
   },
   "orgsSignedOut": {
     "message": "Votre session est terminée. Fermez puis réouvrez le panneau pour vous reconnecter."
@@ -200,5 +197,56 @@
   },
   "orgsRetry": {
     "message": "Réessayer"
+  },
+  "orgsSubtitle": {
+    "message": "Sélectionnez l'organisation à laquelle vous voulez vous connecter"
+  },
+  "orgsCountOne": {
+    "message": "1 org"
+  },
+  "orgsCountMany": {
+    "message": "$COUNT$ orgs",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "orgsSetDefault": {
+    "message": "Définir par défaut"
+  },
+  "orgsSettingDefault": {
+    "message": "Définition…"
+  },
+  "orgsAdmin": {
+    "message": "Admin"
+  },
+  "orgsCopyKey": {
+    "message": "Copier la clé de plateforme"
+  },
+  "orgsSignInTo": {
+    "message": "Se connecter à $ORG$",
+    "placeholders": {
+      "org": {
+        "content": "$1"
+      }
+    }
+  },
+  "orgsSetDefaultFor": {
+    "message": "Définir $ORG$ comme organisation par défaut",
+    "placeholders": {
+      "org": {
+        "content": "$1"
+      }
+    }
+  },
+  "orgsSearch": {
+    "message": "Rechercher des organisations"
+  },
+  "orgsSearchPlaceholder": {
+    "message": "Rechercher des organisations…"
+  },
+  "orgsNoMatch": {
+    "message": "Aucune organisation ne correspond à votre recherche."
   }
 }

@@ -9,14 +9,16 @@
 
 import { credentials } from './auth';
 import type { Credentials } from './agent';
-import { t } from './i18n';
 import { apiBases } from './settings';
 
 export interface Organization {
   key: string;
+  /** `platform_name || name || org || key`, as the auth app's chooser labels it. */
   name: string;
   /** Marked in the list, and the one the person opens in. */
   isDefault: boolean;
+  /** Badged, as in the auth app's chooser. */
+  isAdmin: boolean;
 }
 
 /** Thrown when the panel has no usable session, so the caller can say so. */
@@ -35,6 +37,7 @@ interface PlatformRow {
   name?: unknown;
   platform_name?: unknown;
   is_default?: unknown;
+  is_admin?: unknown;
   active?: unknown;
   user_active?: unknown;
   expired_on?: unknown;
@@ -60,9 +63,6 @@ const says = (value: unknown): boolean | null => {
   if (word === 'false') return false;
   return null;
 };
-
-/** A personal platform's key is a 32-character hex-ish blob, not a name. */
-const PERSONAL_KEY = /^[a-zA-Z0-9]{32}$/;
 
 /**
  * Links the person cannot actually use. Picking one would start an auth
@@ -94,13 +94,14 @@ function usable(row: PlatformRow, now: number): boolean {
 function toOrganization(row: PlatformRow): Organization | null {
   const key = text(row.platform_key) ?? text(row.key) ?? text(row.org);
   if (!key) return null;
-  const given = text(row.name) ?? text(row.platform_name);
   return {
     key,
-    // The app shows a personal platform as "Account"; its key is a 32-character
-    // blob that means nothing to the person reading the list.
-    name: given ?? (PERSONAL_KEY.test(key) ? t('orgsAccount') : key),
+    // The auth app's chooser order: platform_name, then name, then org, then
+    // the key. The key is shown on its own line regardless, so an unnamed
+    // platform is not left looking blank.
+    name: text(row.platform_name) ?? text(row.name) ?? text(row.org) ?? key,
     isDefault: flag(row.is_default),
+    isAdmin: flag(row.is_admin),
   };
 }
 
@@ -268,9 +269,15 @@ export async function listOrganizations(
       continue;
     }
     const seen = new Set<string>();
-    return organizations
-      .filter((org) => !seen.has(org.key) && seen.add(org.key))
-      .sort((a, b) => a.name.localeCompare(b.name));
+    const unique = organizations.filter(
+      (org) => !seen.has(org.key) && seen.add(org.key),
+    );
+    // Default first, everything else in the order the source gave us — the
+    // auth app's chooser ordering, so the two lists read the same.
+    return [
+      ...unique.filter((org) => org.isDefault),
+      ...unique.filter((org) => !org.isDefault),
+    ];
   }
   // Order matters: a base that answered properly with nothing outranks another
   // base's 401, or an account genuinely in one organization reads as signed out.

@@ -18,8 +18,8 @@ vi.mock('../organizations', async (importOriginal) => {
 import { OrgPicker } from '../org-picker';
 
 const TWO = [
-  { key: 'acme', name: 'Acme Inc', isDefault: false },
-  { key: 'globex', name: 'Globex', isDefault: false },
+  { key: 'acme', name: 'Acme Inc', isDefault: false, isAdmin: false },
+  { key: 'globex', name: 'Globex', isDefault: false, isAdmin: false },
 ];
 
 beforeEach(() => {
@@ -85,7 +85,7 @@ describe('OrgPicker', () => {
 
     await user.click(
       screen.getByRole('button', {
-        name: /Open in this one by default: Globex/,
+        name: /Set Globex as default organization/,
       }),
     );
 
@@ -98,7 +98,7 @@ describe('OrgPicker', () => {
 
   // Read off the list rows, so no second request that 503s where the backing
   // table is not migrated.
-  it('shows which one already opens by default, as a word', async () => {
+  it('badges the default and offers no action on that row', async () => {
     mocks.listOrganizations.mockResolvedValue([
       TWO[0],
       { ...TWO[1], isDefault: true },
@@ -106,12 +106,104 @@ describe('OrgPicker', () => {
     show();
 
     expect(await screen.findByText('Default')).toBeTruthy();
-    // No control offered where it would do nothing.
     expect(
       screen.queryByRole('button', {
-        name: /Open in this one by default: Globex/,
+        name: /Set Globex as default organization/,
       }),
     ).toBeNull();
+  });
+
+  // Same row shape as the auth app's chooser.
+  it('shows the platform key under the name, and copies it', async () => {
+    show();
+    // After `setup()`: userEvent installs a clipboard stub of its own, which
+    // would replace this one.
+    const user = userEvent.setup();
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText },
+      configurable: true,
+    });
+    await screen.findByText('Acme Inc');
+
+    expect(screen.getByText('globex')).toBeTruthy();
+    await user.click(
+      screen.getAllByRole('button', { name: 'Copy platform key' })[1],
+    );
+
+    expect(writeText).toHaveBeenCalledWith('globex');
+  });
+
+  it('badges an organization the person administers', async () => {
+    mocks.listOrganizations.mockResolvedValue([
+      { ...TWO[0], isAdmin: true },
+      TWO[1],
+    ]);
+    show();
+
+    expect(await screen.findByText('Admin')).toBeTruthy();
+  });
+
+  // 38 organizations is a real account; the list is unusable without this.
+  it('filters by name', async () => {
+    show();
+    const user = userEvent.setup();
+    await screen.findByText('Acme Inc');
+
+    await user.type(
+      screen.getByRole('searchbox', { name: 'Search organizations' }),
+      'glob',
+    );
+
+    expect(screen.getByText('Globex')).toBeTruthy();
+    expect(screen.queryByText('Acme Inc')).toBeNull();
+  });
+
+  // The key is on the row, so it is searchable too — the auth app's own
+  // organization search matches either.
+  it('filters by platform key', async () => {
+    show();
+    const user = userEvent.setup();
+    await screen.findByText('Acme Inc');
+
+    await user.type(
+      screen.getByRole('searchbox', { name: 'Search organizations' }),
+      'acme',
+    );
+
+    expect(screen.getByText('Acme Inc')).toBeTruthy();
+    expect(screen.queryByText('Globex')).toBeNull();
+  });
+
+  it('says when nothing matches, without losing the search', async () => {
+    show();
+    const user = userEvent.setup();
+    await screen.findByText('Acme Inc');
+
+    await user.type(
+      screen.getByRole('searchbox', { name: 'Search organizations' }),
+      'zzzz',
+    );
+
+    expect(
+      screen.getByText('No organizations match your search.'),
+    ).toBeTruthy();
+    // Still there to clear or correct.
+    expect(
+      screen.getByRole('searchbox', { name: 'Search organizations' }),
+    ).toBeTruthy();
+  });
+
+  it('offers no search before the list has arrived', () => {
+    mocks.listOrganizations.mockReturnValue(new Promise(() => {}));
+    show();
+
+    expect(screen.queryByRole('searchbox')).toBeNull();
+  });
+
+  it('says how many organizations there are', async () => {
+    show();
+    expect(await screen.findByText('2 orgs')).toBeTruthy();
   });
 
   it('says so plainly when the session has ended, not "check your connection"', async () => {
@@ -138,13 +230,13 @@ describe('OrgPicker', () => {
     await screen.findByText('Globex');
     const star = () =>
       screen.getByRole('button', {
-        name: /Open in this one by default: Globex/,
+        name: /Set Globex as default organization/,
       });
 
     await user.click(star());
     expect(
       await screen.findByText(
-        'Could not save which one opens by default. Try again.',
+        'Could not set the default organization. Please try again.',
       ),
     ).toBeTruthy();
 
@@ -153,7 +245,7 @@ describe('OrgPicker', () => {
     await waitFor(() =>
       expect(
         screen.queryByText(
-          'Could not save which one opens by default. Try again.',
+          'Could not set the default organization. Please try again.',
         ),
       ).toBeNull(),
     );
@@ -179,20 +271,20 @@ describe('OrgPicker', () => {
 
     await user.click(
       screen.getByRole('button', {
-        name: /Open in this one by default: Globex/,
+        name: /Set Globex as default organization/,
       }),
     );
 
     expect(
       await screen.findByText(
-        'Could not save which one opens by default. Try again.',
+        'Could not set the default organization. Please try again.',
       ),
     ).toBeTruthy();
     // Back to offerable, not stuck looking chosen.
     await waitFor(() =>
       expect(
         screen.getByRole('button', {
-          name: /Open in this one by default: Globex/,
+          name: /Set Globex as default organization/,
         }),
       ).toBeTruthy(),
     );
@@ -237,13 +329,13 @@ describe('OrgPicker', () => {
 
     await user.click(
       screen.getByRole('button', {
-        name: /Open in this one by default: Globex/,
+        name: /Set Globex as default organization/,
       }),
     );
 
     expect(
       await screen.findByText(
-        'Could not save which one opens by default. Try again.',
+        'Could not set the default organization. Please try again.',
       ),
     ).toBeTruthy();
     expect(
@@ -255,11 +347,12 @@ describe('OrgPicker', () => {
   });
 
   // The sign-in window can stay open as long as the person needs it.
-  it('says a switch is happening and stops taking picks', async () => {
+  it('shows the mark while switching, and stops taking picks', async () => {
     const { onPick } = show({ switching: true });
     const user = userEvent.setup();
 
-    expect(await screen.findByText('Switching organization…')).toBeTruthy();
+    const mark = await screen.findByTestId('brand-mark');
+    expect(mark.getAttribute('aria-label')).toBe('Switching organization…');
     expect(screen.queryByText('Acme Inc')).toBeNull();
     await user.keyboard('{Tab}');
     expect(onPick).not.toHaveBeenCalled();
@@ -280,11 +373,11 @@ describe('OrgPicker', () => {
 
     await user.click(
       screen.getByRole('button', {
-        name: /Open in this one by default: Globex/,
+        name: /Set Globex as default organization/,
       }),
     );
     await screen.findByText(
-      'Could not save which one opens by default. Try again.',
+      'Could not set the default organization. Please try again.',
     );
 
     // The panel reports a failed switch while that message is still up.
@@ -312,7 +405,7 @@ describe('OrgPicker', () => {
     ).toBeTruthy();
     expect(
       screen.queryByText(
-        'Could not save which one opens by default. Try again.',
+        'Could not set the default organization. Please try again.',
       ),
     ).toBeNull();
     warn.mockRestore();
@@ -337,8 +430,8 @@ describe('OrgPicker', () => {
       />,
     );
 
-    await screen.findByText('Switching organization…');
-    // Still the dialog, which outlives both the row and the note.
+    await screen.findByTestId('brand-mark');
+    // Still the dialog, which outlives both the row and the mark.
     expect(document.activeElement).toBe(screen.getByRole('dialog'));
   });
 
@@ -386,9 +479,7 @@ describe('OrgPicker', () => {
     show();
 
     expect(
-      await screen.findByText(
-        'Could not load your organizations. Check your connection and try again.',
-      ),
+      await screen.findByText('Failed to load organizations.'),
     ).toBeTruthy();
     warn.mockRestore();
   });
@@ -403,9 +494,7 @@ describe('OrgPicker', () => {
     show();
     const user = userEvent.setup();
 
-    await screen.findByText(
-      'Could not load your organizations. Check your connection and try again.',
-    );
+    await screen.findByText('Failed to load organizations.');
     await user.click(screen.getByRole('button', { name: 'Try again' }));
 
     expect(await screen.findByText('Acme Inc')).toBeTruthy();
@@ -436,7 +525,7 @@ describe('OrgPicker', () => {
 
     await user.click(
       screen.getByRole('button', {
-        name: /Open in this one by default: Globex/,
+        name: /Set Globex as default organization/,
       }),
     );
 
@@ -470,15 +559,13 @@ describe('OrgPicker', () => {
     mocks.listOrganizations.mockResolvedValue([]);
     show();
 
-    expect(
-      await screen.findByText('You are not in any other organization yet.'),
-    ).toBeTruthy();
+    expect(await screen.findByText('No organizations found.')).toBeTruthy();
   });
 
-  it('says it is working while the list loads', () => {
+  it('shows the mark while the list loads', () => {
     mocks.listOrganizations.mockReturnValue(new Promise(() => {}));
     show();
 
-    expect(screen.getByText('Loading your organizations…')).toBeTruthy();
+    expect(screen.getByTestId('brand-mark')).toBeTruthy();
   });
 });
