@@ -107,6 +107,10 @@ function agentAiPageHtml() {
       });
       if (params.get('authrelyonhost')) el.setAttribute('authrelyonhost', '');
       if (params.get('enablecowork')) el.setAttribute('enablecowork', '');
+      if (params.get('showuserprofile'))
+        el.setAttribute('showuserprofile', '');
+      if (params.get('extraparams'))
+        el.setAttribute('extraparams', params.get('extraparams'));
       document.body.appendChild(el);
     </script>
   </body>

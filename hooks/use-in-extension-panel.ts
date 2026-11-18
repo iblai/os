@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 
 import { QUERY_PARAMS } from '@/lib/constants';
 import { getEmbedContext } from '@/lib/embed-context';
+import { isChromeExtensionClient } from '@/lib/embed-client';
 
 export const BROWSE_HELLO = 'MENTOR:BROWSE_HELLO';
 export const BROWSE_READY = 'MENTOR:BROWSE_READY';
@@ -23,10 +24,13 @@ export const BROWSE_READY = 'MENTOR:BROWSE_READY';
  */
 export function useInExtensionPanel(): boolean {
   const searchParams = useSearchParams();
+  // Naming the extension as the client turns Cowork on by itself: the panel
+  // exists to work on the page, so the surface implies the feature.
   const flagged =
     searchParams?.get(QUERY_PARAMS.ENABLE_COWORK) === 'true' ||
     (typeof window !== 'undefined' &&
-      getEmbedContext()?.[QUERY_PARAMS.ENABLE_COWORK] === 'true');
+      getEmbedContext()?.[QUERY_PARAMS.ENABLE_COWORK] === 'true') ||
+    isChromeExtensionClient(searchParams);
   const [answered, setAnswered] = useState(false);
 
   useEffect(() => {
