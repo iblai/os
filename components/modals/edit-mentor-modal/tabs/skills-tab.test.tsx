@@ -99,6 +99,17 @@ describe('SkillsTab', () => {
     expect(providerValue().mentorId).toBe('nav-mentor');
   });
 
+  it('lets a passed agent and tenant win over the modal stack and route', () => {
+    mockGetMentorId.mockReturnValue('nav-mentor');
+    mockUseParams.mockReturnValue({});
+    render(<SkillsTab mentorId="new-agent" tenantKey="other-tenant" />);
+
+    expect(providerValue()).toMatchObject({
+      mentorId: 'new-agent',
+      tenantKey: 'other-tenant',
+    });
+  });
+
   it('maps only the title so the SDK description keeps its "type /" hint', () => {
     render(<SkillsTab />);
 

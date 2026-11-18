@@ -2,14 +2,14 @@
   "version": 2,
   "lastUpdated": "2026-11-17",
   "summary": {
-    "totalCheckpoints": 1160,
-    "coveredCheckpoints": 1079,
+    "totalCheckpoints": 1169,
+    "coveredCheckpoints": 1088,
     "deprecatedCheckpoints": 18,
     "notReproducibleCheckpoints": 17,
     "pendingCheckpoints": 46,
     "percent": 100,
-    "totalJourneys": 110,
-    "activeJourneys": 109
+    "totalJourneys": 112,
+    "activeJourneys": 111
   },
   "journeys": [
     {
@@ -99,6 +99,11 @@
           "id": "nav-09",
           "description": "A freshly created mentor's session lifecycle stays at exactly ONE session through its first message and through navigating away (Explore) and back (issue #2586 SDK Chat migration) — complements nav-08 by covering the mount-time auto-create path",
           "status": "covered"
+        },
+        {
+          "id": "nav-10",
+          "description": "Latest features banner (served /env.js turns the banner on with the link unset): its link points at https://ibl.ai/updates, is target=_blank, and clicking it opens a new tab (iblai-platform#2853)",
+          "status": "covered"
         }
       ]
     },
@@ -141,6 +146,21 @@
         {
           "id": "ui-06",
           "description": "Profile dropdown shows the current organization as a label with no in-place picker, and its Organizations entry opens the auth app chooser in its own tab (/me?action=switch-tenant&popup=1 with a return address), leaving this tab untouched; closing that tab means no switch. Skips when the account belongs to a single organization",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "profile-menu-tenant-row-cursor",
+      "name": "Profile Menu Tenant Row Cursor",
+      "spec": "03b-profile-menu-tenant-row-cursor.spec.ts",
+      "sourceFiles": [
+        "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/user-profile.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "cur-01",
+          "description": "Admin opens the profile menu: the organization row (menuitem that opens organization settings) shows cursor: pointer over the row, its padding, its icon and its name (iblai-platform#2853; needs the @iblai/iblai-js release containing the SDK fix)",
           "status": "covered"
         }
       ]
@@ -6599,17 +6619,17 @@
       "checkpoints": [
         {
           "id": "promptsave-01",
-          "description": "Issue #2758: in Create Agent the System Prompt popup has a Save button; clicking it closes the popup, the form shows the typed text, and no non-GET request is sent (front-end only)",
+          "description": "Issue #2758 (wizard Prompts step, #2853): the System Prompt popup has a Save button; Save then Close leaves the step showing the typed text",
           "status": "covered"
         },
         {
           "id": "promptsave-02",
-          "description": "Issue #2758: Save in the Proactive and Guided prompt popups closes them and the form keeps each typed text",
+          "description": "Issue #2758 (wizard Prompts step): Save in the Proactive prompt popup keeps the typed text in the step",
           "status": "covered"
         },
         {
           "id": "promptsave-03",
-          "description": "Issue #2758: pressing Escape in the System Prompt popup still closes it and keeps the typed text",
+          "description": "Issue #2758 (wizard Prompts step): pressing Escape in the System Prompt popup closes it and keeps the wizard open",
           "status": "covered"
         },
         {
@@ -7191,22 +7211,68 @@
       "checkpoints": [
         {
           "id": "cafp-01",
-          "description": "Issue #2766, real backend: opening Create Agent issues GET /v1/agents/settings/field-permissions (at the DM root, not under /api/ai-mentor/) carrying the iblai-org header equal to the tenant key; the answer is 200 with a {write: boolean} entry per field; with the admin's default roles the Settings tab shows the name, description, category, visibility and image upload",
+          "description": "Issue #2766, real backend: opening Create Agent issues GET /v1/agents/settings/field-permissions (at the DM root, not under /api/ai-mentor/) carrying the iblai-org header equal to the tenant key; the answer is 200 with a {write: boolean} entry per field; with the admin's default roles wizard step 1 shows the name, description and category and no Visibility field (a new agent is Admins Only, iblai-platform#2853)",
           "status": "covered"
         },
         {
           "id": "cafp-02",
-          "description": "Issue #2766, answer mocked with mentor_visibility write:false: once the name input is enabled the Visibility combobox is absent while description, category, image upload and the Prompts tab stay; creating the agent through Next and Save sends a mentor-with-settings POST with name, description, template and prompt parts but no mentor_visibility part, and the agent is created",
+          "description": "Issue #2766, answer mocked with mentor_visibility write:false: the wizard's step 1 shows name, description and category and no Visibility field; Next creates the agent and the mentor-with-settings POST has name and template parts but no mentor_visibility part",
           "status": "covered"
         },
         {
           "id": "cafp-03",
-          "description": "Issue #2766, answer mocked with system_prompt, proactive_prompt and guided_prompt_instructions write:false: the Prompts tab and the Next button are absent, the Settings tab shows Save, saving from it creates the agent and the POST body has none of the three prompt parts but still carries mentor_visibility",
+          "description": "Issue #2766, answer mocked with system_prompt, proactive_prompt and guided_prompt_instructions write:false: step 1 still shows its fields, Next creates the agent and the POST body has none of the three prompt parts",
           "status": "covered"
         },
         {
           "id": "cafp-04",
-          "description": "Issue #2766, answer mocked as 404 (older backend): the dialog fails open and shows every field, the Prompts tab and Next",
+          "description": "Issue #2766, answer mocked as 404 (older backend): the wizard fails open and shows every step 1 field and Next",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "create-agent-wizard",
+      "name": "Create Agent Wizard",
+      "spec": "105-create-agent-wizard.spec.ts",
+      "sourceFiles": [
+        "components/modals/create-agent-wizard-dialog.tsx",
+        "components/modals/create-mentor-modal.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "caw-01",
+          "description": "Issue #2853: Create Agent is a wizard whose Next stays disabled until name and description are filled; Next creates the agent, toasts, stays on the page agent and shows Step 2 (LLM Configuration, no Back); Skip LLM, save a system prompt in Prompts (prompts-info-box, Back shown), skip Skills, Datasets and MCP, the last step says Finish; Finish opens the new agent's chat and its Prompts tab holds the saved prompt",
+          "status": "covered"
+        },
+        {
+          "id": "caw-02",
+          "description": "Issue #2853: an agent created by the wizard is Admins Only: Edit Agent > Settings > Discovery shows Admins Only and the List in Public Catalog, Allow Chat Without Signing In and Highlight In Featured Listings switches are off",
+          "status": "covered"
+        },
+        {
+          "id": "caw-03",
+          "description": "Issue #2853 regression: starting the wizard from an existing agent's chat page, a system prompt saved in the wizard's Prompts step lands on the NEW agent (Edit Agent > Prompts after Start Chatting) while the page agent's prompt does not contain it",
+          "status": "covered"
+        },
+        {
+          "id": "caw-04",
+          "description": "Issue #2853: closing the wizard on step 1 creates nothing (no mentor-with-settings POST) and does not navigate; closing it after step 1 opens the new agent's chat",
+          "status": "covered"
+        },
+        {
+          "id": "caw-05",
+          "description": "Issue #2853: Skip on every wizard step, including the last, opens the new agent's chat and closes the wizard",
+          "status": "covered"
+        },
+        {
+          "id": "caw-06",
+          "description": "Issue #2853: the wizard shows no Back on step 2, shows Back from step 3, and Back returns to the previous step (LLM Configuration)",
+          "status": "covered"
+        },
+        {
+          "id": "caw-07",
+          "description": "Issue #2853: the wizard's Skills step (between Prompts and Datasets) shows the agent and available skills tabs, and the last step says Finish; the step count follows the tabs the admin may use (6 with Skills, 5 without)",
           "status": "covered"
         }
       ]

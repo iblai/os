@@ -717,6 +717,14 @@ export type UseMentorSegmentsOptions = {
    * @default false
    */
   preferModalMentorId?: boolean;
+  /**
+   * Resolves the segments for exactly this agent, ignoring the modal stack
+   * and the route; `null` waits for one (the Create Agent wizard before its
+   * agent exists).
+   */
+  mentorId?: string | null;
+  /** Tenant of `mentorId`, for routes without a tenant param. */
+  tenantKey?: string;
 };
 
 /**
@@ -732,15 +740,20 @@ export type UseMentorSegmentsOptions = {
  */
 export function useMentorSegments(options: UseMentorSegmentsOptions = {}) {
   const { preferModalMentorId = false } = options;
-  const { tenantKey, mentorId } = useParams<TenantKeyMentorIdParams>();
+  const params = useParams<TenantKeyMentorIdParams>();
+  const tenantKey = options.tenantKey || params.tenantKey;
+  const mentorId = params.mentorId;
   const username = useUsername();
   const isAdmin = useIsAdmin();
   const rbacPermissions = useAppSelector(selectRbacPermissions);
   const { getMentorId } = useNavigate();
 
-  const resolvedMentorId = preferModalMentorId
-    ? getMentorId() || mentorId
-    : mentorId;
+  const resolvedMentorId =
+    options.mentorId !== undefined
+      ? (options.mentorId ?? '')
+      : preferModalMentorId
+        ? getMentorId() || mentorId
+        : mentorId;
 
   const { data: mentorSettings, isSuccess } = useGetMentorSettingsQuery(
     {

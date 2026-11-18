@@ -258,5 +258,20 @@ describe('AgentDatasetsTabWrapper', () => {
 
       expect(lastProviderProps().mentorId).toBe('picked-mentor');
     });
+
+    it('uses the explicit tenantKey over the route tenant', () => {
+      render(
+        <AgentDatasetsTabWrapper
+          syncToUrl={false}
+          mentorId="new-agent"
+          tenantKey="other-tenant"
+        />,
+      );
+
+      expect(lastProviderProps()).toMatchObject({
+        mentorId: 'new-agent',
+        tenantKey: 'other-tenant',
+      });
+    });
   });
 });

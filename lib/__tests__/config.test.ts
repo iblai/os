@@ -343,7 +343,7 @@ describe('config', () => {
       it('should have default fallback', () => {
         (global.window as any).__ENV__ = {};
         const result = config.appBannerLink();
-        expect(result).toBe('https://ibl.ai/docs');
+        expect(result).toBe('https://ibl.ai/updates');
       });
     });
 
