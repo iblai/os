@@ -1,5 +1,36 @@
 # Changelog
 
+## [0.201.0](https://github.com/iblai/os/compare/v0.200.1...v0.201.0) (2026-11-18)
+
+### Features
+
+* **create-agent:** open the create agent wizard ([49f7cfc](https://github.com/iblai/os/commit/49f7cfc66845cc8e5b90f591cfde0d5b5a8d7942))
+
+### Bug Fixes
+
+* **config:** point the latest-features banner at ibl.ai/updates ([bf54925](https://github.com/iblai/os/commit/bf54925c11178ecfee39c2eb2c5f74e95e659330))
+
+### Refactors
+
+* **edit-mentor:** let the agent tabs take an explicit agent id ([534126b](https://github.com/iblai/os/commit/534126bf7cc4eaf83d2a9b5925e8a51fda42b72d))
+
+### Chores
+
+* **deps:** take @iblai/iblai-js 2.78.0 ([e1c63c3](https://github.com/iblai/os/commit/e1c63c3e49ad1d875f7133003ec335f07bc3dbbb)), closes [iblai-web-frontend#2243](https://github.com/iblai/iblai-web-frontend/issues/2243)
+* **deps:** take @iblai/iblai-js 2.79.0 ([37caf31](https://github.com/iblai/os/commit/37caf318869dbef87ca6ad232dff1d81ebd36554))
+
+### Documentation
+
+* **e2e:** update coverage ([2846e07](https://github.com/iblai/os/commit/2846e077f750fe31803de0d24821c3ca37a97761))
+
+### Tests
+
+* **e2e:** cover the banner link and the tenant row cursor ([c380ec4](https://github.com/iblai/os/commit/c380ec491336a06c0955b27ce6b8e09b23495313))
+* **e2e:** drive agent creation through the wizard ([cd41e94](https://github.com/iblai/os/commit/cd41e94947363d845c62668f848eff73a8363911))
+* **e2e:** follow the wizard's skills step and admins-only default ([1cb56cb](https://github.com/iblai/os/commit/1cb56cb05101de07005e6834fb1ba57a1dac5d79))
+* **e2e:** target fields exactly after the SDK's new info buttons ([93a3af8](https://github.com/iblai/os/commit/93a3af856da0b9bc30afe971865973ded2a44f22))
+* **e2e:** target the rich text editor's single textbox ([0e44e15](https://github.com/iblai/os/commit/0e44e1500ba5396a7e4b3788ec142db5136c93fd))
+
 ## [0.200.1](https://github.com/iblai/os/compare/v0.200.0...v0.200.1) (2026-11-18)
 
 ### Chores
