@@ -34,6 +34,7 @@ import { useAccessingPublicRoute } from '@/hooks/use-anonymous-mentor';
 import { useBrowseRun } from '@/hooks/use-browse-run';
 import { useEmbedMode } from '@/hooks/use-embed-mode';
 import { useInExtensionPanel } from '@/hooks/use-in-extension-panel';
+import { useCodeShownHere } from '@/hooks/use-code-shown-here';
 import { useMentorSettings } from '@/hooks/use-mentors/use-mentor-settings';
 import { useOpencodeSkillSync } from '@/hooks/use-opencode-skill-sync';
 import { useAxdToken } from '@/hooks/use-tokens';
@@ -240,6 +241,7 @@ export function SdkChat({
   // Code mode (Tauri only): the pill, the skill sync it reports on, and the
   // approval mode its controls and the permission cards change.
   const inTauri = useInTauri();
+  const codeShown = useCodeShownHere(inTauri);
   usePermissionChime(inTauri);
   const sessionId = useAppSelector(selectSessionId);
   const { data: mentorSettings } = useMentorSettings();
@@ -353,7 +355,7 @@ export function SdkChat({
       showConversationStarters
       showExploreMentors
       slots={{
-        composerExtraControls: inTauri ? (
+        composerExtraControls: codeShown ? (
           <CodingModeButton
             sessionId={sessionId}
             skillSync={skillSync}
@@ -366,7 +368,7 @@ export function SdkChat({
         // Passed only while a pill offers it, because the SDK's action row
         // spaces its buttons with a gap that even an empty slot would take.
         composerActionControls:
-          inTauri && approvalsOffered ? (
+          codeShown && approvalsOffered ? (
             <CodeApprovalsButton
               mode={approvalMode}
               onChange={(mode) => void chooseMode(mode)}

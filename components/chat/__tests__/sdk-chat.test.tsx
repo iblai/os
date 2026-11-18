@@ -200,7 +200,11 @@ vi.mock('@/lib/markdown-engine', () => ({
   htmlToMarkdown,
 }));
 let tauri = false;
-vi.mock('@/types/tauri', () => ({ isTauriApp: () => tauri }));
+let tauriPhone = false;
+vi.mock('@/types/tauri', () => ({
+  isTauriApp: () => tauri,
+  isTauriPhone: () => tauriPhone,
+}));
 
 const unlisten = vi.fn();
 const listen = vi.fn();
@@ -241,6 +245,7 @@ describe('SdkChat', () => {
   beforeEach(() => {
     chatSpy.mockClear();
     tauri = false;
+    tauriPhone = false;
     showAppBanner = 'true';
     mentorIdFromNav = 'nav-mentor';
     codeOn = false;
@@ -423,6 +428,18 @@ describe('SdkChat', () => {
     tauri = true;
     render(<SdkChat isPreviewMode={false} />);
     expect(screen.getByTestId('code-pill')).toHaveTextContent('session-9');
+  });
+
+  it('keeps the Code pill out of the phone apps for now, and clears a stale pairing', () => {
+    tauri = true;
+    tauriPhone = true;
+    localStorage.setItem('ibl_remote_code_ready', 'true');
+    render(<SdkChat isPreviewMode={false} />);
+
+    expect(screen.queryByTestId('code-pill')).toBeNull();
+    expect(lastProps().slots.composerExtraControls).toBeUndefined();
+    expect(lastProps().slots.composerActionControls).toBeUndefined();
+    expect(localStorage.getItem('ibl_remote_code_ready')).toBe('false');
   });
 
   it('shows the Code pill once Tauri globals appear after load', () => {

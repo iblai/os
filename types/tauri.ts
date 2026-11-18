@@ -1,3 +1,5 @@
+import { platform } from '@tauri-apps/plugin-os';
+
 // Tauri types for model download functionality
 
 /**
@@ -105,6 +107,21 @@ export const isTauriMobile = async (): Promise<boolean> => {
   if (!isTauriApp()) return false;
   try {
     const { platform } = await import('@tauri-apps/plugin-os');
+    const os = platform();
+    return os === 'ios' || os === 'android';
+  } catch {
+    return false;
+  }
+};
+
+/**
+ * The same probe, synchronous, for a render-time gate that must not mount a
+ * phone-only path even for one tick (the SDK's `isTauriDesktop` reads the
+ * plugin the same way). Same fallbacks as {@link isTauriMobile}.
+ */
+export const isTauriPhone = (): boolean => {
+  if (!isTauriApp()) return false;
+  try {
     const os = platform();
     return os === 'ios' || os === 'android';
   } catch {

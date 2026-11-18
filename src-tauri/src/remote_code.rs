@@ -67,6 +67,7 @@ fn serve_model_spec() -> crate::opencode_acp::ModelSpec {
         provider: "iblai",
         model: "openai/gpt-4o".to_string(),
         local: false,
+        fit: None,
     }
 }
 

@@ -37,6 +37,7 @@ export const QUERY_PARAMS = {
   ALLOW_FULLSCREEN: 'allow-fullscreen',
   /** Set by the Chrome extension's panel on its iframe URL: Cowork has a tab to drive here. */
   ENABLE_COWORK: 'enable-cowork',
+  CLIENT: 'client',
 };
 
 // URL patterns
@@ -221,3 +222,8 @@ export const CSS_CLASS_NAMES = {
 // Caps the length of the auto-submitted `?prompt=` deep-link payload so an
 // attacker-crafted link cannot smuggle an oversized prompt into the chat.
 export const MAX_PROMPT_PARAM_LENGTH = 4000;
+
+/** Who is embedding the app, when they say so (`client` on the iframe URL). */
+export const EMBED_CLIENTS = {
+  CHROME_EXTENSION: 'chrome-extension',
+} as const;

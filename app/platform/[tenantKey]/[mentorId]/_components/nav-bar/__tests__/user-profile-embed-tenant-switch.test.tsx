@@ -18,6 +18,9 @@ vi.mock('next/navigation', () => ({
   }),
   usePathname: () => '/platform/existing-tenant/mentor-1',
 }));
+vi.mock('@/hooks/use-in-chrome-extension', () => ({
+  useInChromeExtension: () => false,
+}));
 
 vi.mock('@/hooks/use-user', () => ({
   useUsername: () => 'testuser',

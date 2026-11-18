@@ -1,5 +1,91 @@
 # Changelog
 
+## [0.203.2](https://github.com/iblai/os/compare/v0.203.1...v0.203.2) (2026-11-18)
+
+## [0.203.1](https://github.com/iblai/os/compare/v0.203.0...v0.203.1) (2026-11-18)
+
+## [0.203.0](https://github.com/iblai/os/compare/v0.202.2...v0.203.0) (2026-11-18)
+
+### Features
+
+* **os:** fit Code and Cowork to the models on this computer ([bc1a7db](https://github.com/iblai/os/commit/bc1a7db5dfb1d8f74a3a3a74b06f9ef6247a7c57))
+* **os:** give the Code agent the screen when Cowork is on, and stream the local model for Cowork ([fd71a48](https://github.com/iblai/os/commit/fd71a48a78561ac7cbcae75c5b2941ed50beb13e)), closes [iblai/os#594](https://github.com/iblai/os/issues/594)
+
+### Bug Fixes
+
+* **ext:** type the extraparams attribute the panel passes to agent-ai ([d912421](https://github.com/iblai/os/commit/d9124213b0e07e40a41acbfcb01ba0a057cf8b40))
+* **os:** adding fix for the cowork permissions ([d4d488d](https://github.com/iblai/os/commit/d4d488d95adff7c467e01e54bd69abdcc13ab624))
+* **os:** bound a pending Cowork setup to ten minutes from the user's last step ([992589b](https://github.com/iblai/os/commit/992589bcafbcc046f9648b12e6f7231f7b3cb549)), closes [iblai/iblai-web-frontend#2170](https://github.com/iblai/iblai-web-frontend/issues/2170)
+* **os:** fixes for the cowork permissions ([459a175](https://github.com/iblai/os/commit/459a175dcc83f33571e99286365f284f32aab7df))
+* **os:** hide the Code pill in the phone apps for now ([8a04cb3](https://github.com/iblai/os/commit/8a04cb30aed2e3d9bf3a2d187038ae9bfaf8b9ce))
+* **os:** keep Code answering with Cowork on, drop the "Cowork answers instead" toasts ([fe3baeb](https://github.com/iblai/os/commit/fe3baeb64a3373293c004b8d70182548b7bada00)), closes [iblai/iblai-web-frontend#2170](https://github.com/iblai/iblai-web-frontend/issues/2170) [iblai/iblai-web-frontend#2165](https://github.com/iblai/iblai-web-frontend/issues/2165)
+* **os:** show a sign-in page in the iPhone app the way a browser does ([a65b8a3](https://github.com/iblai/os/commit/a65b8a30fc7cfabbf60485a63f8c58ebd8c3aec0))
+
+### Chores
+
+* **os:** move to @iblai/iblai-js 2.81.0 ([dcbdbb5](https://github.com/iblai/os/commit/dcbdbb5fe08f45ba8547bb7858d6249cf33ae88a))
+* **tauri:** release app-v0.95.36 ([5da0392](https://github.com/iblai/os/commit/5da0392b8eff1ec83e63cd3b434a36a46aecfcd5))
+
+### Documentation
+
+* **e2e-tauri:** cowork-05 names the ten-minute resume window and its gates ([77cff76](https://github.com/iblai/os/commit/77cff76821ea5ee31dab6a5986fb42c3ca7f67a7))
+* **e2e-tauri:** ledger checkpoints for on-device models and the phone sign-in page ([febc9e2](https://github.com/iblai/os/commit/febc9e24f212836b7fbb571881ae76ce41a6e0f7))
+* **os:** an on-device model gets eleven screen tools, not ten ([90b24f0](https://github.com/iblai/os/commit/90b24f04ed4a12279e0f170ea85dec0301326076))
+
+### Tests
+
+* **os:** cover isTauriPhone outside the app, per platform, and without the OS plugin ([e020b65](https://github.com/iblai/os/commit/e020b65ba7b2e464071ba8155c40494c734b83bc))
+
+## [0.202.2](https://github.com/iblai/os/compare/v0.202.1...v0.202.2) (2026-11-18)
+
+### Bug Fixes
+
+* **ext:** correct the recovery advice, and actually remove the local-build line ([3ee59ed](https://github.com/iblai/os/commit/3ee59eda3869bd4c57fc0aee7f4d9f0f8f2877b1))
+* **ext:** document a recovery recipe that was actually run ([4ba8fa8](https://github.com/iblai/os/commit/4ba8fa804cff67aaa184b848a16c267520ac7840))
+
+### Documentation
+
+* **ext:** correct why the recovery recipe needs HEAD ([1cb738c](https://github.com/iblai/os/commit/1cb738c396b7b5aeff632565fa6fdee417e509ec))
+
+## [0.202.1](https://github.com/iblai/os/compare/v0.202.0...v0.202.1) (2026-11-18)
+
+### Chores
+
+* iblai-js bumped to 2.82.0 ([6e4ffa2](https://github.com/iblai/os/commit/6e4ffa23a7a710fcda5c3d5b2e61de2ea38392da))
+
+## [0.202.0](https://github.com/iblai/os/compare/v0.201.1...v0.202.0) (2026-11-18)
+
+### Features
+
+* **panel:** create the browsing agent on ibl.ai Pro ([a415e4e](https://github.com/iblai/os/commit/a415e4ea500249fb3bbb3bdbe872f8523b1470e9))
+* **panel:** let the organization change, and follow it to its agent ([b955deb](https://github.com/iblai/os/commit/b955deb3ec286f00186413900547e328ede306db)), closes [#678](https://github.com/iblai/os/issues/678)
+* **panel:** open the agent the organization chose for the browser ([11b58e2](https://github.com/iblai/os/commit/11b58e2306855eb35dfbed925b6a6fc4430225ab))
+* **panel:** tell a member the panel needs setting up, instead of hiding it ([e2c6dd4](https://github.com/iblai/os/commit/e2c6dd49a8209648f6f0ddd2ad467ce673f8ce74))
+
+### Bug Fixes
+
+* **panel:** name the client, survive a deleted agent, and heed the review ([5227510](https://github.com/iblai/os/commit/5227510dff23a5eef335f813c5767f1421b2c374))
+
+### Tests
+
+* **e2e:** cover the panel offering no organization switch ([f449926](https://github.com/iblai/os/commit/f449926b784aa2279e2a5c8f68fc7a3c7d6e989a))
+* **e2e:** prove the panel's profile menu opened, not that Log Out is in it ([4f734ad](https://github.com/iblai/os/commit/4f734ade05989d69a997f22d87d0f2d12e4cc24d))
+
+## [0.201.1](https://github.com/iblai/os/compare/v0.201.0...v0.201.1) (2026-11-18)
+
+### Bug Fixes
+
+* **ext:** record the vendored version, and guard what has actually broken ([5b61857](https://github.com/iblai/os/commit/5b61857de06369bcf86ea50bfd0be216ab9a1b4a)), closes [iblai-platform#2680](https://github.com/iblai/iblai-platform/issues/2680)
+
+### Chores
+
+* **ext:** vendor agent-ai 2.15.1, built from main at last ([e683121](https://github.com/iblai/os/commit/e68312117f617de481420943e46e1e6cf5a6477e)), closes [iblai-web-frontend#2257](https://github.com/iblai/iblai-web-frontend/issues/2257)
+
+### Tests
+
+* **ext:** pin what the panel actually breaks on, and vendor from a release ([96a5b94](https://github.com/iblai/os/commit/96a5b94e7beb10902dc3726b76d555fd10e429c2)), closes [#ibl-chat-widget-container](https://github.com/iblai/os/issues/ibl-chat-widget-container)
+* **ext:** tie the vendored bundle to a release, and to the behaviour ([d4ec10e](https://github.com/iblai/os/commit/d4ec10ee210c12c0daab48ce28c5c4167b1164f2))
+
 ## [0.201.0](https://github.com/iblai/os/compare/v0.200.1...v0.201.0) (2026-11-18)
 
 ### Features

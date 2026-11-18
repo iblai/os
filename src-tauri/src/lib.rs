@@ -10,6 +10,8 @@ mod cua_driver_mcp;
 // the same arrangement as `foundry_manager` below.
 #[allow(dead_code)]
 mod local_llm;
+#[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+mod local_llm_openai;
 // Only the phone asks; desktop builds carry the module unused.
 #[cfg_attr(not(any(target_os = "ios", target_os = "android")), allow(dead_code))]
 mod local_network;
@@ -2676,8 +2678,13 @@ pub fn run() {
                 let initial_url = tauri::WebviewUrl::External(app_url.parse().unwrap());
                 let app_base_url_json = serde_json::to_string(&app_url).unwrap();
 
-                let safe_area_script =
-                    MOBILE_SAFE_AREA_SCRIPT.replace("__IBL_APP_BASE_URL__", &app_base_url_json);
+                let safe_area_script = MOBILE_SAFE_AREA_SCRIPT
+                    .replace("__IBL_APP_BASE_URL__", &app_base_url_json)
+                    .replace(
+                        "__IBL_OTHER_SITES_AS_BROWSER__",
+                        if cfg!(target_os = "ios") { "true" } else { "false" },
+                    );
+                let page_app_url = app_url.to_string();
 
                 // Combine safe area script with online monitoring script
                 let combined_script = format!("{}\n{}", safe_area_script, URL_MONITOR_SCRIPT_ONLINE);
@@ -2690,6 +2697,24 @@ pub fn run() {
                     initial_url,
                 )
                 .initialization_script(&combined_script)
+                .on_page_load(move |window, payload| {
+                    #[cfg(target_os = "ios")]
+                    if let Some(other) = is_other_site(payload.url(), &page_app_url) {
+                        let finished = matches!(
+                            payload.event(),
+                            tauri::webview::PageLoadEvent::Finished
+                        );
+                        let _ = window.with_webview(move |webview| unsafe {
+                            let webview = webview.inner() as *mut Object;
+                            pin_webview(webview, other);
+                            if other && finished {
+                                match_surround_to_page(webview);
+                            }
+                        });
+                    }
+                    #[cfg(not(target_os = "ios"))]
+                    let _ = (&window, &payload, &page_app_url);
+                })
                 .on_navigation(move |url| {
                     let url_str = url.as_str();
                     let log_msg = format!("[ibl.ai] [MOBILE] on_navigation called with URL: {}", url_str);
@@ -2844,6 +2869,12 @@ pub fn run() {
         cua_driver_mcp::cua_driver_start,
         cua_driver_mcp::cua_driver_send,
         cua_driver_mcp::cua_driver_stop,
+        local_llm_openai::local_llm_openai_stream,
+        local_llm_openai::local_llm_openai_stream_cancel,
+        cua_driver_mcp::open_privacy_settings,
+        cua_driver_mcp::relaunch_app,
+        cua_driver_mcp::request_cowork_permission,
+        cua_driver_mcp::bring_app_to_front,
         check_disk_space_for_model,
         get_system_memory,
         download_phi3_model,
@@ -2979,6 +3010,21 @@ const MOBILE_SAFE_AREA_SCRIPT: &str = r#"
 
     var appBaseUrl = __IBL_APP_BASE_URL__;
 
+    // The layout below is the app shell's: a fixed, non-scrolling body with the
+    // shell's own containers as the scrollers. Another site's page (the sign-in
+    // site) is an ordinary document, so on iOS it gets none of it and scrolls
+    // only when it is longer than the screen, as in a browser; the native side
+    // pins the webview to the safe area for it (`pin_webview`). Android keeps
+    // the layout everywhere: nothing there pins the webview.
+    var isAppPage = true;
+    if (__IBL_OTHER_SITES_AS_BROWSER__) {
+        try {
+            isAppPage = window.location.origin === new URL(appBaseUrl).origin;
+        } catch (e) {
+            // An unreadable app URL keeps the layout everywhere, as before.
+        }
+    }
+
     console.log('[ibl.ai] Setting up safe area handling...');
 
     // Wait for document.head to be available before DOM operations
@@ -2991,6 +3037,7 @@ const MOBILE_SAFE_AREA_SCRIPT: &str = r#"
     }
 
     waitForHead(function() {
+        if (!isAppPage) return;
         // Ensure viewport has viewport-fit=cover for safe area support
         var viewport = document.querySelector('meta[name="viewport"]');
         if (viewport) {
@@ -3083,6 +3130,7 @@ const MOBILE_SAFE_AREA_SCRIPT: &str = r#"
     }
 
     waitForBody(function() {
+        if (!isAppPage) return;
         // Prevent overscroll/bounce effect on iOS
         document.body.addEventListener('touchmove', function(e) {
         // Allow scrolling within scrollable elements
@@ -3302,8 +3350,99 @@ const MOBILE_SAFE_AREA_SCRIPT: &str = r#"
 })();
 "#;
 
+/// Whether `url` is a page of another site than the app's own. `None` for a
+/// page that is neither (`about:blank`, a custom scheme): it changes nothing.
+#[cfg(any(target_os = "ios", test))]
+fn is_other_site(url: &tauri::Url, app_url: &str) -> Option<bool> {
+    if !matches!(url.scheme(), "http" | "https") {
+        return None;
+    }
+    let app = tauri::Url::parse(app_url).ok()?;
+    Some(url.origin() != app.origin())
+}
+
+/// Pin the webview to the safe area (`to_safe_area`) or back to the whole view.
+///
+/// A page sized by the screen (`100vh`) measures an embedded WKWebView's whole
+/// view, notch and home bar included, while WebKit lays it out in the area
+/// between them — so a page that fits in a browser scrolls here by the
+/// difference (93pt on an iPhone 15 Pro: 852 against 759). With the webview
+/// itself ending at the safe area the two heights are one. The app's own pages
+/// keep the full-screen webview: their layout never uses `vh`.
+///
+/// Constraints, not a frame: the safe area changes when the phone turns.
+#[cfg(target_os = "ios")]
+#[allow(unexpected_cfgs)]
+unsafe fn pin_webview(webview: *mut Object, to_safe_area: bool) {
+    use std::sync::atomic::{AtomicPtr, Ordering};
+    static FULL: AtomicPtr<Object> = AtomicPtr::new(std::ptr::null_mut());
+    static SAFE: AtomicPtr<Object> = AtomicPtr::new(std::ptr::null_mut());
+
+    if webview.is_null() {
+        return;
+    }
+    let parent: *mut Object = msg_send![webview, superview];
+    if parent.is_null() {
+        return;
+    }
+    if FULL.load(Ordering::SeqCst).is_null() {
+        if !to_safe_area {
+            return;
+        }
+        let guide: *mut Object = msg_send![parent, safeAreaLayoutGuide];
+        FULL.store(edge_constraints(webview, parent), Ordering::SeqCst);
+        SAFE.store(edge_constraints(webview, guide), Ordering::SeqCst);
+        let _: () = msg_send![webview, setTranslatesAutoresizingMaskIntoConstraints: objc::runtime::NO];
+    }
+    let (on, off) = if to_safe_area {
+        (&SAFE, &FULL)
+    } else {
+        (&FULL, &SAFE)
+    };
+    let _: () = msg_send![class!(NSLayoutConstraint), deactivateConstraints: off.load(Ordering::SeqCst)];
+    let _: () = msg_send![class!(NSLayoutConstraint), activateConstraints: on.load(Ordering::SeqCst)];
+}
+
+/// The four edge constraints tying `view` to `to` (a view or a layout guide),
+/// inactive, in an array kept for the app's lifetime.
+#[cfg(target_os = "ios")]
+#[allow(unexpected_cfgs)]
+unsafe fn edge_constraints(view: *mut Object, to: *mut Object) -> *mut Object {
+    let all: *mut Object = msg_send![class!(NSMutableArray), new];
+    macro_rules! edge {
+        ($anchor:ident) => {{
+            let ours: *mut Object = msg_send![view, $anchor];
+            let theirs: *mut Object = msg_send![to, $anchor];
+            let tie: *mut Object = msg_send![ours, constraintEqualToAnchor: theirs];
+            let _: () = msg_send![all, addObject: tie];
+        }};
+    }
+    edge!(topAnchor);
+    edge!(bottomAnchor);
+    edge!(leadingAnchor);
+    edge!(trailingAnchor);
+    all
+}
+
+/// Behind a webview pinned to the safe area the parent view shows above and
+/// below it; give it the page's own background so the strips match the page.
+#[cfg(target_os = "ios")]
+#[allow(unexpected_cfgs)]
+unsafe fn match_surround_to_page(webview: *mut Object) {
+    let parent: *mut Object = msg_send![webview, superview];
+    let known: BOOL = msg_send![webview, respondsToSelector: sel!(underPageBackgroundColor)];
+    if parent.is_null() || known != YES {
+        return;
+    }
+    let color: *mut Object = msg_send![webview, underPageBackgroundColor];
+    if !color.is_null() {
+        let _: () = msg_send![parent, setBackgroundColor: color];
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    use super::is_other_site;
     use super::MOBILE_SAFE_AREA_SCRIPT;
 
     fn css_rule_for<'a>(css: &'a str, declaration: &str) -> &'a str {
@@ -3352,6 +3491,47 @@ mod tests {
             body.contains("bottom: env(safe-area-inset-bottom, 0px);"),
             "{body}"
         );
+    }
+
+    #[test]
+    fn only_another_sites_web_page_counts_as_another_site() {
+        let app = "https://os.ibl.ai";
+        let page = |u: &str| is_other_site(&tauri::Url::parse(u).unwrap(), app);
+        assert_eq!(page("https://os.ibl.ai/platform/x"), Some(false));
+        assert_eq!(page("https://login.iblai.app/login?app=mentor"), Some(true));
+        // A lookalike host and another port are other sites too.
+        assert_eq!(page("https://os.ibl.ai.example.com/"), Some(true));
+        assert_eq!(page("https://os.ibl.ai:8443/"), Some(true));
+        // Neither the app's nor a site's: the webview stays as it is.
+        assert_eq!(page("about:blank"), None);
+        assert_eq!(page("iblai-mentor:///sso-login-complete"), None);
+        let dev = |u: &str| is_other_site(&tauri::Url::parse(u).unwrap(), "http://192.168.0.2:3000");
+        assert_eq!(dev("http://192.168.0.2:3000/"), Some(false));
+        assert_eq!(page("https://os.ibl.ai/"), is_other_site(&tauri::Url::parse("https://os.ibl.ai/").unwrap(), "https://os.ibl.ai/"));
+        assert_eq!(is_other_site(&tauri::Url::parse("https://a.example/").unwrap(), "not a url"), None);
+    }
+
+    #[test]
+    fn mobile_layout_is_applied_only_on_the_apps_own_pages() {
+        // The sign-in site is an ordinary document: under the shell's fixed
+        // body a longer page could not scroll and a fitting one did.
+        let script = MOBILE_SAFE_AREA_SCRIPT;
+        assert_eq!(
+            script.matches("__IBL_OTHER_SITES_AS_BROWSER__").count(),
+            1,
+            "the platform decides whether other sites are left alone"
+        );
+        assert!(
+            script.contains("isAppPage = window.location.origin === new URL(appBaseUrl).origin;"),
+            "the app's own origin decides"
+        );
+        for block in ["waitForHead(function() {", "waitForBody(function() {"] {
+            let body = &script[script.find(block).expect(block) + block.len()..];
+            assert!(
+                body.trim_start().starts_with("if (!isAppPage) return;"),
+                "`{block}` must leave another site's page alone"
+            );
+        }
     }
 
     #[test]
