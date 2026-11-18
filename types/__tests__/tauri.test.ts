@@ -1,5 +1,10 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
-import { isTauriApp, isTauriMobile, initialModelDownloadState } from '../tauri';
+import {
+  isTauriApp,
+  isTauriMobile,
+  isTauriPhone,
+  initialModelDownloadState,
+} from '../tauri';
 
 const platform = vi.hoisted(() => vi.fn());
 vi.mock('@tauri-apps/plugin-os', () => ({ platform }));
@@ -99,6 +104,46 @@ describe('tauri types', () => {
       });
 
       await expect(isTauriMobile()).resolves.toBe(false);
+    });
+  });
+
+  describe('isTauriPhone', () => {
+    const originalWindow = global.window;
+
+    afterEach(() => {
+      global.window = originalWindow;
+      platform.mockReset();
+    });
+
+    it('is false outside Tauri without asking the OS plugin', () => {
+      // @ts-expect-error - Setting window to empty object
+      global.window = {};
+
+      expect(isTauriPhone()).toBe(false);
+      expect(platform).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      ['ios', true],
+      ['android', true],
+      ['macos', false],
+      ['windows', false],
+    ])('reads %s as a phone=%s inside Tauri', (os, expected) => {
+      // @ts-expect-error - Adding test property
+      global.window = { __TAURI_INTERNALS__: {} };
+      platform.mockReturnValue(os);
+
+      expect(isTauriPhone()).toBe(expected);
+    });
+
+    it('is false when the OS plugin is unavailable', () => {
+      // @ts-expect-error - Adding test property
+      global.window = { __TAURI_INTERNALS__: {} };
+      platform.mockImplementation(() => {
+        throw new Error('plugin os not found');
+      });
+
+      expect(isTauriPhone()).toBe(false);
     });
   });
 });

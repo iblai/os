@@ -2233,6 +2233,29 @@ describe('CodingModeButton', () => {
       ).toHaveTextContent(/checks with you before/);
     });
 
+    it('says the screen is included when Cowork is on and Automatic is chosen', async () => {
+      backend({ permissionMode: 'auto' });
+      localStorage.setItem('ibl_cowork_enabled', 'true');
+      renderButton();
+      await openPopover();
+
+      expect(
+        await screen.findByTestId('code-auto-mode-hint'),
+      ).toHaveTextContent(
+        'With Cowork on, it also acts on your screen without asking.',
+      );
+    });
+
+    it('keeps the Automatic hint to files and commands while Cowork is off', async () => {
+      backend({ permissionMode: 'auto' });
+      renderButton();
+      await openPopover();
+
+      expect(
+        await screen.findByTestId('code-auto-mode-hint'),
+      ).not.toHaveTextContent('screen');
+    });
+
     it('keeps Ask Me in the next chat until it is switched back', async () => {
       localStorage.setItem('ibl_coding_mode_enabled', 'true');
       backend();

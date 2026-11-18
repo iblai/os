@@ -752,6 +752,224 @@ pub async fn list_installed_models() -> Option<Vec<String>> {
     }
 }
 
+/// The context window on-device Code and Cowork turns run with. Ollama loads a
+/// model with 4,096 tokens unless told otherwise and cuts a longer prompt down
+/// to its tail without an error, so the model never sees its tools or its
+/// instructions and invents what it did.
+pub const LOCAL_CONTEXT_TOKENS: u32 = 32_768;
+
+/// What Ollama gives a model nobody sized.
+const OLLAMA_DEFAULT_CONTEXT: u32 = 4_096;
+
+/// The smallest window an on-device Code turn can work in: its prompt alone is
+/// about 8,000 tokens, 10,000 with the screen tools.
+pub const LOCAL_CODE_MIN_CONTEXT_TOKENS: u32 = 16_384;
+
+/// The smallest window Cowork on its own can work in (about 3,500 tokens of
+/// prompt, then a window snapshot per step).
+pub const LOCAL_COWORK_MIN_CONTEXT_TOKENS: u32 = 8_192;
+
+/// The model name to send to Ollama and the context window it loads with.
+#[derive(Debug, Clone, PartialEq)]
+pub struct SizedModel {
+    pub name: String,
+    pub context: u32,
+    /// Whether Ollama answered for this model; `false` means `context` is a
+    /// guess, which must never be the reason a turn is refused.
+    pub known: bool,
+    /// The longest window the weights were trained for, when Ollama says.
+    pub trained: Option<u32>,
+}
+
+impl SizedModel {
+    /// Why a turn that needs `min` tokens can't run on this model, in words
+    /// for the user; `None` when it can, or when the window is only a guess.
+    /// Without this a model left on a small window silently loses most of its
+    /// prompt and invents what it did.
+    pub fn too_small_for(&self, min: u32) -> Option<String> {
+        if !self.known || self.context >= min {
+            return None;
+        }
+        Some(if self.trained.is_some_and(|trained| trained < min) {
+            "This model can't hold enough of the conversation to work here. Pick a larger model under Local Models.".to_string()
+        } else {
+            "The model on this computer couldn't be set up for this. Update Ollama, then try again."
+                .to_string()
+        })
+    }
+}
+
+/// The copy of `model` that loads with [`LOCAL_CONTEXT_TOKENS`], made on first
+/// use. Ollama's OpenAI-compatible endpoint takes no context size per request,
+/// and a server someone else started ignores our environment, so the size has
+/// to live in the model itself: a copy that shares the original's weights and
+/// only adds the parameter. A failure leaves the caller on the original model.
+#[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+pub async fn sized_local_model(model: &str) -> SizedModel {
+    sized_local_model_at(&api_base_url(), model, LOCAL_CONTEXT_TOKENS).await
+}
+
+#[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+async fn sized_local_model_at(base: &str, model: &str, wanted: u32) -> SizedModel {
+    let client = Client::new();
+    let Some(info) = show_model(&client, base, model).await else {
+        return SizedModel {
+            name: model.to_string(),
+            context: OLLAMA_DEFAULT_CONTEXT,
+            known: false,
+            trained: None,
+        };
+    };
+    let trained = info.trained_context;
+    let unsized_model = |context: u32| SizedModel {
+        name: model.to_string(),
+        context,
+        known: true,
+        trained,
+    };
+    let wanted = info.trained_context.map_or(wanted, |max| wanted.min(max));
+    if let Some(own) = info.num_ctx.filter(|own| *own >= wanted) {
+        return unsized_model(own);
+    }
+    let name = sized_model_name(model, wanted);
+    let ready = show_model(&client, base, &name)
+        .await
+        .is_some_and(|copy| copy.num_ctx == Some(wanted));
+    if ready {
+        return SizedModel {
+            name,
+            context: wanted,
+            known: true,
+            trained,
+        };
+    }
+    let created = client
+        .post(format!("{base}/api/create"))
+        .timeout(std::time::Duration::from_secs(60))
+        .json(&serde_json::json!({
+            "model": name,
+            "from": model,
+            "parameters": { "num_ctx": wanted },
+            "stream": false,
+        }))
+        .send()
+        .await;
+    match created {
+        Ok(resp) if resp.status().is_success() => {
+            println!("[Ollama] sized {model} to {wanted} tokens as {name}");
+            SizedModel {
+                name,
+                context: wanted,
+                known: true,
+                trained,
+            }
+        }
+        Ok(resp) => {
+            println!("[Ollama] sizing {model} failed: HTTP {}", resp.status());
+            unsized_model(info.num_ctx.unwrap_or(OLLAMA_DEFAULT_CONTEXT))
+        }
+        Err(e) => {
+            println!("[Ollama] sizing {model} failed: {e}");
+            unsized_model(info.num_ctx.unwrap_or(OLLAMA_DEFAULT_CONTEXT))
+        }
+    }
+}
+
+/// How long a sized model stays in memory after a Code or Cowork turn. Ollama
+/// unloads after five idle minutes, and with the model goes everything it had
+/// read: the next message waits for the load and reads the whole prompt again,
+/// a minute or more. The same length as an idle Code session is kept.
+const LOCAL_KEEP_LOADED: &str = "15m";
+
+/// Ask Ollama to keep the sized models it has loaded for [`LOCAL_KEEP_LOADED`].
+/// A request without a prompt only moves the unload time; it runs nothing.
+/// Fire and forget, after a turn: a failure costs a slower next message.
+#[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+pub fn keep_sized_models_loaded() {
+    tauri::async_runtime::spawn(async {
+        let base = api_base_url();
+        let client = Client::new();
+        let Ok(resp) = client
+            .get(format!("{base}/api/ps"))
+            .timeout(std::time::Duration::from_secs(5))
+            .send()
+            .await
+        else {
+            return;
+        };
+        let Ok(loaded) = resp.json::<Value>().await else {
+            return;
+        };
+        let names = loaded["models"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter_map(|m| m["name"].as_str())
+            .filter(|name| name.contains("-ibl-"));
+        for name in names {
+            let _ = client
+                .post(format!("{base}/api/generate"))
+                .timeout(std::time::Duration::from_secs(10))
+                .json(&serde_json::json!({ "model": name, "keep_alive": LOCAL_KEEP_LOADED }))
+                .send()
+                .await;
+        }
+    });
+}
+
+/// `gpt-oss:20b` → `gpt-oss:20b-ibl-32k`; an untagged `llama3.2` is `latest`.
+fn sized_model_name(model: &str, context: u32) -> String {
+    let tagged = model
+        .rsplit('/')
+        .next()
+        .is_some_and(|last| last.contains(':'));
+    let sep = if tagged { "" } else { ":latest" };
+    format!("{model}{sep}-ibl-{}k", context / 1024)
+}
+
+struct ModelInfo {
+    /// `num_ctx` from the model's own parameters, when it sets one.
+    num_ctx: Option<u32>,
+    /// The longest context the weights were trained for.
+    trained_context: Option<u32>,
+}
+
+#[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+async fn show_model(client: &Client, base: &str, model: &str) -> Option<ModelInfo> {
+    let resp = client
+        .post(format!("{base}/api/show"))
+        .timeout(std::time::Duration::from_secs(10))
+        .json(&serde_json::json!({ "model": model }))
+        .send()
+        .await
+        .ok()?;
+    if !resp.status().is_success() {
+        return None;
+    }
+    Some(model_info_from(&resp.json::<Value>().await.ok()?))
+}
+
+fn model_info_from(show: &Value) -> ModelInfo {
+    let num_ctx = show["parameters"].as_str().and_then(|params| {
+        params.lines().find_map(|line| {
+            let mut words = line.split_whitespace();
+            (words.next() == Some("num_ctx"))
+                .then(|| words.next()?.parse().ok())
+                .flatten()
+        })
+    });
+    let trained_context = show["model_info"].as_object().and_then(|info| {
+        info.iter()
+            .find(|(key, _)| key.ends_with(".context_length"))
+            .and_then(|(_, v)| v.as_u64())
+            .map(|n| n.min(u32::MAX as u64) as u32)
+    });
+    ModelInfo {
+        num_ctx,
+        trained_context,
+    }
+}
+
 /// Pull a model from Ollama with streaming progress updates
 pub async fn pull_model<F, G>(model_name: &str, on_progress: F, on_log: G) -> Result<(), String>
 where
@@ -1468,6 +1686,138 @@ mod tests {
 
     /// The pre-existing rule: a model without tool support can't use the
     /// bridge at all, and that refusal comes before any port lookup.
+    #[test]
+    fn a_sized_copy_is_named_after_its_model_and_window() {
+        assert_eq!(
+            sized_model_name("gpt-oss:20b", 32_768),
+            "gpt-oss:20b-ibl-32k"
+        );
+        assert_eq!(
+            sized_model_name("llama3.2", 32_768),
+            "llama3.2:latest-ibl-32k"
+        );
+        assert_eq!(
+            sized_model_name("hf.co/org/model", 16_384),
+            "hf.co/org/model:latest-ibl-16k",
+            "a dot in the host is not a tag"
+        );
+    }
+
+    #[test]
+    fn a_models_own_window_and_trained_limit_are_read_from_show() {
+        let info = model_info_from(&serde_json::json!({
+            "parameters": "stop \"<|eot_id|>\"\nnum_ctx                        32768\ntemperature 0.6",
+            "model_info": { "general.architecture": "llama", "llama.context_length": 131072 },
+        }));
+        assert_eq!(info.num_ctx, Some(32_768));
+        assert_eq!(info.trained_context, Some(131_072));
+
+        let bare = model_info_from(&serde_json::json!({ "parameters": "stop \"x\"" }));
+        assert_eq!(bare.num_ctx, None);
+        assert_eq!(bare.trained_context, None);
+    }
+
+    /// A stand-in Ollama that knows `base` (with `own` as its num_ctx) and
+    /// records what it is asked to create.
+    async fn fake_ollama(
+        own_ctx: Option<u32>,
+        trained: u32,
+    ) -> (u16, std::sync::Arc<std::sync::Mutex<Vec<Value>>>) {
+        use axum::{extract::State, routing::post, Json, Router};
+        type Created = std::sync::Arc<std::sync::Mutex<Vec<Value>>>;
+        let created: Created = Default::default();
+        let show = move |State(created): State<Created>, Json(req): Json<Value>| async move {
+            let model = req["model"].as_str().unwrap_or_default().to_string();
+            let made = created
+                .lock()
+                .unwrap()
+                .iter()
+                .find(|c| c["model"] == model.as_str())
+                .cloned();
+            let ctx = match &made {
+                Some(c) => c["parameters"]["num_ctx"].as_u64().map(|n| n as u32),
+                None if model == "base:1b" => own_ctx,
+                None => return Err(axum::http::StatusCode::NOT_FOUND),
+            };
+            let params = ctx.map(|n| format!("num_ctx {n}")).unwrap_or_default();
+            Ok(Json(serde_json::json!({
+                "parameters": params,
+                "model_info": { "llama.context_length": trained },
+            })))
+        };
+        let create = |State(created): State<Created>, Json(req): Json<Value>| async move {
+            created.lock().unwrap().push(req);
+            Json(serde_json::json!({ "status": "success" }))
+        };
+        let app = Router::new()
+            .route("/api/show", post(show))
+            .route("/api/create", post(create))
+            .with_state(created.clone());
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let port = listener.local_addr().unwrap().port();
+        tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
+        (port, created)
+    }
+
+    #[tokio::test]
+    async fn a_local_model_gets_a_full_size_copy_once() {
+        let (port, created) = fake_ollama(None, 131_072).await;
+        let base = format!("http://127.0.0.1:{port}");
+        let want = SizedModel {
+            name: "base:1b-ibl-32k".to_string(),
+            context: 32_768,
+            known: true,
+            trained: Some(131_072),
+        };
+
+        assert_eq!(sized_local_model_at(&base, "base:1b", 32_768).await, want);
+        assert_eq!(sized_local_model_at(&base, "base:1b", 32_768).await, want);
+        let made = created.lock().unwrap().clone();
+        assert_eq!(made.len(), 1, "made on first use, reused after");
+        assert_eq!(made[0]["from"], "base:1b");
+        assert_eq!(made[0]["parameters"]["num_ctx"], 32_768);
+    }
+
+    #[tokio::test]
+    async fn a_model_that_is_already_big_enough_or_unknown_is_left_alone() {
+        let (port, created) = fake_ollama(Some(65_536), 131_072).await;
+        let base = format!("http://127.0.0.1:{port}");
+        assert_eq!(
+            sized_local_model_at(&base, "base:1b", 32_768).await,
+            SizedModel {
+                name: "base:1b".to_string(),
+                context: 65_536,
+                known: true,
+                trained: Some(131_072),
+            }
+        );
+        assert_eq!(
+            sized_local_model_at(&base, "missing:1b", 32_768).await,
+            SizedModel {
+                name: "missing:1b".to_string(),
+                context: 4_096,
+                known: false,
+                trained: None,
+            }
+        );
+        assert!(created.lock().unwrap().is_empty());
+    }
+
+    #[tokio::test]
+    async fn a_window_never_exceeds_what_the_model_was_trained_for() {
+        let (port, _created) = fake_ollama(None, 8_192).await;
+        let base = format!("http://127.0.0.1:{port}");
+        assert_eq!(
+            sized_local_model_at(&base, "base:1b", 32_768).await,
+            SizedModel {
+                name: "base:1b-ibl-8k".to_string(),
+                context: 8_192,
+                known: true,
+                trained: Some(8_192),
+            }
+        );
+    }
+
     #[test]
     fn a_model_without_tool_support_is_refused_whatever_the_port() {
         let _guard = bridge_state_lock();
