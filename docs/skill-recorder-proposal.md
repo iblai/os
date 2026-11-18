@@ -1,40 +1,58 @@
 # Skill recorder for the Chrome side panel — proposal
 
-**Status:** proposal, not scheduled. **Date:** 16 November 2026.
+**Status:** built, in review as [#685](https://github.com/iblai/os/pull/685).
+**Written:** 16 November 2026. **Updated:** 18 November 2026.
 
-A "skill recorder" would let someone demonstrate a task once, in their own
-browser, and have the assistant repeat it later — on today's data, on a page
-that has since been redesigned, without a second demonstration.
+A skill recorder lets someone demonstrate a task once, in their own browser,
+and have the assistant repeat it later — on today's data, on a page that has
+since been redesigned, without a second demonstration.
 
-This paper says what that means concretely, how it would be built on what the
-extension already does, what it costs, and the three decisions we need before
-anyone estimates it.
+This paper was written to decide whether to build it. Two of its three open
+questions have since been answered and the rest is built, so the decisions
+below now record what was chosen rather than what to choose. The design it
+describes is what shipped, with the corrections noted in place.
 
 ---
 
-## Decisions we need first
+## The decisions, and what was chosen
 
-**1. Who owns a recorded skill — the person or the organization?**
+**1. Who owns a recorded skill — settled: the agent that recorded it.**
 
-A personal macro kept in the browser is a small feature. A catalog where one
-person records a procedure and everyone's assistant can run it is a different
-product, and it is the one that justifies building this at all: the platform
-already has an agent-skills catalog with assign/unassign, so recorded skills
-could land there — worth checking first that its sandbox requirement does not
-make that route more expensive than it looks. If the answer is "personal only",
-Chrome's built-in DevTools Recorder already does much of it for free, and we
-should say so rather than rebuild it.
+It is stored through the platform's own agent-skills catalog, the endpoint
+behind the **New Skill** dialog in agent settings:
 
-**2. Does a workflow have to span more than one tab?**
+```
+POST /api/ai-mentor/orgs/{org}/agent-skills/
+  name, slug, description, version, skill_type, category, source,
+  mentor, instruction
+```
 
-A run today drives one tab. Recording a flow that moves between tabs is an
-architectural change, not a recorder feature. Worth answering before scoping.
+`mentor` set is what the dialog calls **Only This Agent**: the skill is
+private to that agent and takes precedence over platform skills of the same
+slug. Leaving it null would put the recording in the organization's catalog,
+where it needs a separate assignment (`POST .../agents/{uuid}/skills/`) before
+anything runs it.
 
-**3. How much review are we willing to put in front of the user?**
+The sandbox caveat this paper raised was wrong: the agent-skills endpoints
+were deliberately moved out of the Claw slice, and the data layer says in as
+many words that skills work without any sandbox.
 
-Recordings are messy — people take wrong turns and double back. The review
-screen is what turns a recording into a skill, and it is most of the new UI
-work. Cutting it produces a demo that fails on the second real task.
+One constraint found while checking: Agent Skills apply only to **Base Agent**
+mentors (`base-agent`, `ai-mentor`, `ai-agent`). The panel's browsing agent is
+created from the deployment's default template, which is `ai-mentor`, so it
+qualifies.
+
+**2. Does a workflow have to span more than one tab — still open.**
+
+A run drives one tab, and so does a recording. Spanning tabs is an
+architectural change rather than a recorder feature, and nothing built so far
+forecloses it.
+
+**3. How much review — settled: a real one.**
+
+Stop opens a review over the chat: name it, drop the wrong turns, and decide
+which typed values belong to the skill. It is most of the new UI, and it is
+what turns a recording into something that works on the second real task.
 
 ---
 
@@ -210,25 +228,20 @@ difference between a one-shot macro and a skill.
 
 ### What gets stored
 
-One model call turns the reviewed steps into a short document — the stored
-artifact, readable and diffable:
+One skill in the organization's catalog, private to the agent. The playbook is
+its `instruction`, written against what is on screen:
 
-```markdown
----
-name: Weekly sales CSV
-sites: [admin.acme.com]
-inputs:
-  - range: 'which date range to export (default: last 7 days)'
----
-
+```
 1. Go to https://admin.acme.com/reports
-2. Open the "Date range" dropdown and choose {{range}}
-3. Click "Export", choose CSV as the format, then click "Download"
-4. Read the total from the "Total revenue" figure at the top of the table
+2. Click the button "Date range"
+3. Click the option "Last 7 days"
+4. Choose "CSV" in the combobox "Format"
 ```
 
 No selectors, no coordinates, no timings — what you would write for a new
-colleague, which is exactly why it survives a redesign.
+colleague, which is why it survives a redesign. A step whose value was not
+kept reads "Type into the textbox "Search" what the person asked for", so the
+agent fills it from the request rather than repeating one afternoon.
 
 ### Replay
 
@@ -259,7 +272,14 @@ No parser and no form builder: the skill text says what the input means.
 
 ---
 
-## What we would build
+## What was built
+
+Everything below landed in [#685](https://github.com/iblai/os/pull/685), with
+about fifty tests over the parts that would otherwise fail quietly: the
+coalescing rules, the secret-field refusal, the per-tab guard, the worker's
+refusal of a page it cannot watch, and every branch of the review screen.
+
+### The pieces
 
 | File                     | Change                                                                                            |
 | ------------------------ | ------------------------------------------------------------------------------------------------- |
