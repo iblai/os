@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.200.0](https://github.com/iblai/os/compare/v0.199.2...v0.200.0) (2026-11-18)
+
+### Features
+
+* **ext:** make the picker the auth app's chooser, with search ([2f706fb](https://github.com/iblai/os/commit/2f706fb6f45128202125bc3217daf5c07778d077)), closes [#F5F8FF](https://github.com/iblai/os/issues/F5F8FF)
+* **ext:** pick the organization in the panel, not in a browser tab ([16ebc0c](https://github.com/iblai/os/commit/16ebc0cbf7b4222302057c6e36cea4c110593059))
+
+### Bug Fixes
+
+* **ext:** a failed page is a failure, and prove the copy timer ([6325632](https://github.com/iblai/os/commit/632563200c44b981f7734f71ddf27f57c17911ae))
+* **ext:** a switch only counts when the chat actually moved there ([e7fbdbf](https://github.com/iblai/os/commit/e7fbdbf0a22f2dc20b2ddc36f5f7d0ca5ea00848))
+* **ext:** a switch that did not land must not read as one that did ([f6bc6cb](https://github.com/iblai/os/commit/f6bc6cb8a8246f337416eb4777a26175b5b2414d))
+* **ext:** focus the dialog, and name the organization it landed in ([e059d96](https://github.com/iblai/os/commit/e059d967692ef93226ea070341f1e5aa3ec6fdb8))
+* **ext:** install the session before judging it, and tell empty from unreadable ([b05eeec](https://github.com/iblai/os/commit/b05eeec64505cbc6bb45948d9a0c8ce05e01e88d))
+* **ext:** let "Setting…" be seen, and let the key speak for itself ([5b05da1](https://github.com/iblai/os/commit/5b05da191284019ec1506294cd706613d0a5d00a))
+* **ext:** make the default control visible, and keep the keyboard in the dialog ([8b2d9ee](https://github.com/iblai/os/commit/8b2d9ee0550cecd7146130662d963dc6a96e1eb8)), closes [#e5e7eb](https://github.com/iblai/os/issues/e5e7eb)
+* **ext:** say where a switch actually landed ([2f3c33f](https://github.com/iblai/os/commit/2f3c33fd12803ea6df293439a3c28505c66ab41c))
+* **ext:** take the picker's review findings ([2732bdd](https://github.com/iblai/os/commit/2732bdd0b4f49757e1519e0634cd9aaa885cd6f5))
+
+### Tests
+
+* **ext:** cover the focus trap's own branches ([7b62f92](https://github.com/iblai/os/commit/7b62f92f65c716ff3614668e51eb08b228db14ca))
+
 ## [0.199.2](https://github.com/iblai/os/compare/v0.199.1...v0.199.2) (2026-11-17)
 
 ### Chores
