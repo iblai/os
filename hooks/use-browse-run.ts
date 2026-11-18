@@ -92,19 +92,23 @@ export function useBrowseRun() {
             commit(content.current + frame.event.text);
           }
           break;
-        case 'log':
+        case 'log': {
+          // Numbered and named after the action: the chat's "Used N tools"
+          // header counts distinct names, so it counts the actions, and with
+          // nothing in `input` the row is that one line.
+          const n = ++tools.current;
           dispatch(
             chatActions.addToolCall({
-              id: `${generation.current}-${tools.current++}`,
-              name: 'browse',
-              // The row's label: the indicator reads `input.text`, never `log`.
-              input: { text: frame.text },
+              id: `${generation.current}-${n}`,
+              name: `${n}. ${frame.text}`,
+              input: {},
               log: frame.text,
               result: frame.ok ? 'ok' : 'failed',
             }),
           );
           dispatch(chatActions.ensureStreamingAssistantMessage(undefined));
           break;
+        }
         case 'confirm': {
           const requestId = `${generation.current}-confirm-${frame.id}`;
           openConfirms.current.add(requestId);

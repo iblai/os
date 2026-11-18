@@ -24,10 +24,10 @@ const focusEditor = async (user: ReturnType<typeof userEvent.setup>) => {
 };
 
 describe('RichTextEditor (local TipTap toolbar editor)', () => {
-  let onChange: ReturnType<typeof vi.fn>;
+  let onChange: ReturnType<typeof vi.fn<(value: string) => void>>;
 
   beforeEach(() => {
-    onChange = vi.fn();
+    onChange = vi.fn<(value: string) => void>();
   });
 
   afterEach(() => {

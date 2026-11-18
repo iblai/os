@@ -477,11 +477,16 @@ describe('AutoResizeTextarea', () => {
       const observeMock = vi.fn();
       const disconnectMock = vi.fn();
 
-      window.ResizeObserver = vi.fn().mockImplementation(() => ({
-        observe: observeMock,
-        unobserve: vi.fn(),
-        disconnect: disconnectMock,
-      })) as unknown as typeof ResizeObserver;
+      // `function`, not an arrow, in every ResizeObserver stub below: the
+      // component calls `new ResizeObserver(...)`, and vitest 4 no longer
+      // wraps a mock's implementation in a constructible function of its own.
+      window.ResizeObserver = vi.fn().mockImplementation(function () {
+        return {
+          observe: observeMock,
+          unobserve: vi.fn(),
+          disconnect: disconnectMock,
+        };
+      }) as unknown as typeof ResizeObserver;
 
       const { unmount } = renderWithRedux(
         <AutoResizeTextarea {...defaultProps} />,
@@ -507,16 +512,16 @@ describe('AutoResizeTextarea', () => {
       let resizeCallback: ResizeObserverCallback | null = null;
       const observeMock = vi.fn();
 
-      window.ResizeObserver = vi
-        .fn()
-        .mockImplementation((callback: ResizeObserverCallback) => {
-          resizeCallback = callback;
-          return {
-            observe: observeMock,
-            unobserve: vi.fn(),
-            disconnect: vi.fn(),
-          };
-        }) as unknown as typeof ResizeObserver;
+      window.ResizeObserver = vi.fn().mockImplementation(function (
+        callback: ResizeObserverCallback,
+      ) {
+        resizeCallback = callback;
+        return {
+          observe: observeMock,
+          unobserve: vi.fn(),
+          disconnect: vi.fn(),
+        };
+      }) as unknown as typeof ResizeObserver;
 
       // Mock requestAnimationFrame
       const rafSpy = vi
@@ -547,16 +552,16 @@ describe('AutoResizeTextarea', () => {
       let rafCallCount = 0;
       const rafCallbacks: FrameRequestCallback[] = [];
 
-      window.ResizeObserver = vi
-        .fn()
-        .mockImplementation((callback: ResizeObserverCallback) => {
-          resizeCallback = callback;
-          return {
-            observe: vi.fn(),
-            unobserve: vi.fn(),
-            disconnect: vi.fn(),
-          };
-        }) as unknown as typeof ResizeObserver;
+      window.ResizeObserver = vi.fn().mockImplementation(function (
+        callback: ResizeObserverCallback,
+      ) {
+        resizeCallback = callback;
+        return {
+          observe: vi.fn(),
+          unobserve: vi.fn(),
+          disconnect: vi.fn(),
+        };
+      }) as unknown as typeof ResizeObserver;
 
       // Mock requestAnimationFrame to capture callbacks
       vi.spyOn(window, 'requestAnimationFrame').mockImplementation((cb) => {
@@ -622,16 +627,16 @@ describe('AutoResizeTextarea', () => {
       // This tests the branch where isResizing is true during input change
       let resizeCallback: ResizeObserverCallback | null = null;
 
-      window.ResizeObserver = vi
-        .fn()
-        .mockImplementation((callback: ResizeObserverCallback) => {
-          resizeCallback = callback;
-          return {
-            observe: vi.fn(),
-            unobserve: vi.fn(),
-            disconnect: vi.fn(),
-          };
-        }) as unknown as typeof ResizeObserver;
+      window.ResizeObserver = vi.fn().mockImplementation(function (
+        callback: ResizeObserverCallback,
+      ) {
+        resizeCallback = callback;
+        return {
+          observe: vi.fn(),
+          unobserve: vi.fn(),
+          disconnect: vi.fn(),
+        };
+      }) as unknown as typeof ResizeObserver;
 
       // Don't execute the RAF callback to leave isResizing as true
       vi.spyOn(window, 'requestAnimationFrame').mockImplementation(() => {

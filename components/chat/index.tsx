@@ -3,13 +3,19 @@
 import { useTranslations } from 'next-intl';
 import React, { useLayoutEffect } from 'react';
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import { recoverFromChatAuthFailure } from '@/lib/chat-auth-recovery';
 import dynamic from 'next/dynamic';
 
 import {
   addMessage,
   selectEnableChatActionsPopup,
 } from '@/features/chat/chatSlice';
-import { clearFiles } from '@iblai/iblai-js/web-utils';
+import {
+  clearFiles,
+  useShowFreeTrialDialog,
+  use402ErrorCheck,
+  wasRecent402,
+} from '@iblai/iblai-js/web-utils';
 import ErrorBoundary from '@/components/error-boundary';
 import { useAppDispatch, useAppSelector } from '@/lib/hooks';
 import { RootState } from '@/store';
@@ -49,7 +55,6 @@ import {
   useMentorTools,
   CHAT_AREA_SIZE,
   FileReference,
-  use401TokenRefresh,
 } from '@iblai/iblai-js/web-utils';
 import {
   cn,
@@ -91,14 +96,12 @@ import { useNavigate } from '@/hooks/user-navigate';
 import { AdvancedStaticChatBuilder } from '../advanced-chat/advanced-chat-builder';
 import eventBus, { RemoteEvents } from '@/lib/eventBus';
 import { useDebouncedCallback } from 'use-debounce';
-import { useShowFreeTrialDialog } from '@/hooks/user-user-actions';
 import { useUserAgreement } from '@/hooks/use-user-agreement';
 import { CSS_CLASS_NAMES, LOCAL_STORAGE_KEYS } from '@/lib/constants';
 import { WelcomeChatNew } from '../welcome-chat-new';
 import { Spinner } from '@/components/spinner';
 import { useEmbedMode } from '@/hooks/use-embed-mode';
 import { ChatActionBlockingOverlay } from '../modals/chat-action-blocking-overlay';
-import { use402ErrorCheck } from '@/hooks/subscription/use-402-error-check';
 import { ToastErrorMessage } from './toast-error-message';
 import { useMentorSettings } from '@/hooks/use-mentors/use-mentor-settings';
 import { useLocalStorage } from '@/hooks/use-local-storage';
@@ -106,7 +109,6 @@ import { useServiceWorker } from '@/components/service-worker-provider';
 import { FileText } from 'lucide-react';
 import { useFileDragDrop } from '@/hooks/use-file-drag-drop';
 import { useAccessingPublicRoute } from '@/hooks/use-anonymous-mentor';
-import { wasRecent402 } from '@/hooks/use-opencode-402';
 import { wasRecentAuthRequired } from '@/hooks/use-opencode-auth-required';
 
 /* istanbul ignore next -- @preserve dynamic import */
@@ -311,12 +313,7 @@ export function Chat({
   const isEmbeddedMode = useEmbedMode();
   const { visitingTenant } = useVisitingTenant();
   const dispatch = useAppDispatch();
-  const {
-    FreeTrialDialog,
-    closeModal: closeFreeTrialModal,
-    isModalOpen: isFreeTrialModalOpen,
-    executeWithTrialCheck,
-  } = useShowFreeTrialDialog();
+  const { executeWithTrialCheck } = useShowFreeTrialDialog();
 
   const { data: mentorSettings } = useMentorSettings();
   const [cachedSessionId, saveCachedSessionId] = useLocalStorage<
@@ -332,7 +329,7 @@ export function Chat({
   );
 
   const { handle402Error } = use402ErrorCheck();
-  const { handle401Error } = use401TokenRefresh({ tenantKey });
+  const handle401Error = useCallback(() => recoverFromChatAuthFailure(), []);
   const tokenEnabled = useAppSelector(selectTokenEnabled);
   const token = useAppSelector(selectToken);
   const showingSharedChat = useAppSelector(selectShowingSharedChat);
@@ -2320,13 +2317,6 @@ export function Chat({
               refetchChats();
             }
           }}
-        />
-      )}
-
-      {isFreeTrialModalOpen && FreeTrialDialog && (
-        <FreeTrialDialog
-          isOpen={isFreeTrialModalOpen}
-          onClose={closeFreeTrialModal}
         />
       )}
 

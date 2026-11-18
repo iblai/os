@@ -203,10 +203,6 @@ vi.mock('@/components/chat/submit-message-button', () => ({
   ),
 }));
 
-vi.mock('@/hooks/user-user-actions', () => ({
-  useShowFreeTrialDialog: vi.fn(() => mockFreeTrialDialogState),
-}));
-
 vi.mock('@/hooks/use-responsive', () => ({
   useResponsive: vi.fn(() => ({
     containerWidth: 1000,
@@ -285,6 +281,7 @@ vi.mock('@iblai/iblai-js/web-utils', async () => {
   const actual = await vi.importActual('@iblai/iblai-js/web-utils');
   return {
     ...actual,
+    useShowFreeTrialDialog: vi.fn(() => mockFreeTrialDialogState),
     selectShowingSharedChat: (state: any) =>
       state.chatSliceShared?.showingSharedChat ?? false,
   };

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import {
   EVENTS,
@@ -12,6 +12,7 @@ import {
   type Step,
 } from 'react-joyride';
 
+import { watchTourTargetMoves } from './tour-targets';
 import { TourTooltip } from './tour-tooltip';
 import type { TourOutcome } from './use-tour-completion';
 
@@ -57,6 +58,16 @@ export function TourRunner({ steps, run, onEnd }: TourRunnerProps) {
     }),
     [t],
   );
+
+  useEffect(() => {
+    if (!run) return;
+    // A window resize is the only outside trigger that makes Joyride
+    // re-measure the spotlight; it is sent only when a target really moved.
+    return watchTourTargetMoves(
+      steps.map((step) => step.target),
+      () => window.dispatchEvent(new Event('resize')),
+    );
+  }, [run, steps]);
 
   const handleEvent = useCallback(
     (data: EventData) => {

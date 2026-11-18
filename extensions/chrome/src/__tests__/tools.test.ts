@@ -1,9 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { drawBadges } from '../badges';
 import type { ActResult, FrameSnapshot } from '../page-scripts';
+import type { Hud, Rect } from '../hud';
 import { settle, sleep } from '../settle';
 import {
   MAX_WAIT_MS,
+  QUICK_SETTLE,
   READ_RETRIES,
   asElement,
   createBrowserTools,
@@ -123,7 +125,7 @@ beforeEach(async () => {
   ctx = {
     tabId: 7,
     confirm: vi.fn(async () => true),
-    log: vi.fn(),
+    log: vi.fn<(entry: LogEntry) => void>(),
   };
   current = createBrowserTools(ctx);
   await current.snapshot();
@@ -406,6 +408,17 @@ describe('createBrowserTools', () => {
     ]);
   });
 
+  // Typing and choosing cannot start a navigation, so the page is watched
+  // briefly; a submit can, so it gets the full wait like a click.
+  it('settles briefly after typing or choosing, fully after a submit', async () => {
+    await run('type', { element: 2, text: 'jane' });
+    expect(settle).toHaveBeenLastCalledWith(7, { frameId: 0, ...QUICK_SETTLE });
+    await run('select', { element: 6, value: 'Français' });
+    expect(settle).toHaveBeenLastCalledWith(7, { frameId: 0, ...QUICK_SETTLE });
+    await run('type', { element: 2, text: 'jane', submit: true });
+    expect(settle).toHaveBeenLastCalledWith(7, { frameId: 0 });
+  });
+
   it('acts on an element number sent as text', async () => {
     const result = await run('click', { element: '5' });
     expect(result).toMatch(/^Clicked \[5\] link "Forgot password\?"\./);
@@ -619,7 +632,10 @@ describe('createBrowserTools', () => {
       target: { tabId: 7, frameIds: [5] },
       args: [1, 'type', 'hi', false, SECRET_FIELDS],
     });
-    expect(settle).toHaveBeenLastCalledWith(7, { frameId: 5 });
+    expect(settle).toHaveBeenLastCalledWith(7, {
+      frameId: 5,
+      ...QUICK_SETTLE,
+    });
     expect(document.querySelector<HTMLInputElement>('#email')!.value).toBe('');
   });
 
@@ -1269,5 +1285,136 @@ describe('acting on a point of the picture', () => {
     );
     expect(input.click).toHaveBeenCalledWith(3, 3);
     expect(input.insertText).not.toHaveBeenCalled();
+  });
+});
+
+describe('the overlay on the page', () => {
+  /** A stand-in for the real overlay: what tools.ts asks of it, and when. */
+  const fakeHud = () => {
+    const said: Array<[string, string, unknown]> = [];
+    const dodged: Array<{ x: number; y: number }> = [];
+    let away = 0;
+    let awayCalls = 0;
+    const say = vi.fn((tool: string, target: string, rect?: Rect | null) => {
+      said.push([tool, target, rect ?? null]);
+    });
+    const thinking = vi.fn(() => {
+      said.push(['thinking', '', null]);
+    });
+    const hud: Hud = {
+      say,
+      thinking,
+      async dodge(point, fn) {
+        dodged.push(point);
+        return fn();
+      },
+      async away(fn) {
+        awayCalls++;
+        away++;
+        try {
+          return await fn();
+        } finally {
+          away--;
+        }
+      },
+      stop: async () => undefined,
+    };
+    return {
+      hud,
+      said,
+      dodged,
+      say,
+      thinking,
+      isAway: () => away > 0,
+      awayCalls: () => awayCalls,
+    };
+  };
+  const rebuild = async (patch: Partial<BrowserToolsContext>) => {
+    Object.assign(ctx, patch);
+    current = createBrowserTools(ctx);
+    await current.snapshot();
+    chromeStub.stub.scripting.executeScript.mockClear();
+  };
+
+  afterEach(() => {
+    delete (document as { elementFromPoint?: unknown }).elementFromPoint;
+  });
+
+  it('is out of the way while the picture is taken', async () => {
+    // A capture with our own bar in it would have the model reading, and
+    // pointing at, the extension's own controls.
+    document.querySelector('#pw')!.remove();
+    const fake = fakeHud();
+    chromeStub.stub.tabs.captureVisibleTab.mockImplementation(async () => {
+      expect(fake.isAway()).toBe(true);
+      return 'data:image/jpeg;base64,xyz';
+    });
+    await rebuild({ withPicture: true, hud: fake.hud });
+    expect(fake.awayCalls()).toBeGreaterThan(0);
+    expect(fake.isAway()).toBe(false);
+  });
+
+  it('names the action, and rings the element, before the user is asked', async () => {
+    const fake = fakeHud();
+    await rebuild({ hud: fake.hud });
+    const pay = document.querySelector('button[type="button"]')!;
+    Object.defineProperty(pay, 'getBoundingClientRect', {
+      configurable: true,
+      value: () => ({ left: 5, top: 15, width: 80, height: 30 }),
+    });
+    const page = await current.snapshot();
+    const n = page.items.find((item) => item.name === 'Pay now')!.n;
+    fake.said.length = 0;
+    await run('click', { element: n });
+    // The panel raises the card; the ring on the page is what says which
+    // element the card is about.
+    expect(fake.say.mock.invocationCallOrder[0]).toBeLessThan(
+      ctx.confirm.mock.invocationCallOrder[0],
+    );
+    expect(fake.said[0][0]).toBe('click');
+    expect(fake.said[0][1]).toContain('Pay now');
+    expect(fake.said[0][2]).toEqual({ x: 5, y: 15, w: 80, h: 30 });
+    // And back to a plain "working" once the action is over.
+    expect(fake.said.at(-1)![0]).toBe('thinking');
+  });
+
+  it('goes back to thinking even when the action fails', async () => {
+    const fake = fakeHud();
+    await rebuild({ hud: fake.hud });
+    await run('click', { element: 999 });
+    await run('navigate', { url: 'ftp://nope/' });
+    expect(fake.thinking).toHaveBeenCalled();
+  });
+
+  it('steps aside for the point a real click lands on', async () => {
+    const input = {
+      click: vi.fn(async () => undefined),
+      insertText: vi.fn(async () => undefined),
+      pressEnter: vi.fn(async () => undefined),
+    };
+    const fake = fakeHud();
+    await rebuild({ real: input, hud: fake.hud });
+    const link = document.querySelector('a')!;
+    Object.defineProperty(link, 'getBoundingClientRect', {
+      configurable: true,
+      value: () => ({ left: 10, top: 20, width: 100, height: 40 }),
+    });
+    Object.defineProperty(document, 'elementFromPoint', {
+      configurable: true,
+      value: () => link,
+    });
+    await run('click', { element: 5 });
+    // The same point the click is dispatched at: a trusted click lands on
+    // whatever is at it, and the bar must never be what it lands on.
+    expect(fake.dodged).toEqual([{ x: 60, y: 40 }]);
+    expect(input.click).toHaveBeenCalledWith(60, 40, 1);
+  });
+
+  it('asks nothing of an overlay that is not there', async () => {
+    // Every call site is optional: a run without an overlay behaves exactly as
+    // it did before there was one.
+    await rebuild({ hud: undefined, real: undefined });
+    const result = await run('click', { element: 5 });
+    expect(result).toMatch(/^Clicked \[5\]/);
   });
 });

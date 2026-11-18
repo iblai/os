@@ -104,11 +104,6 @@ vi.mock('@/lib/utils', () => ({
   isStripeActivated: vi.fn().mockReturnValue(false),
 }));
 
-// Mock subscription flow class
-vi.mock('@/hooks/subscription/subscription-flow-v2', () => ({
-  MentorSubscriptionFlowV2: vi.fn().mockImplementation(() => ({})),
-}));
-
 // Tenant metadata now rides the tenants list via this local hook (raw object).
 vi.mock('@/hooks/use-tenant-object-metadata', () => ({
   useTenantObjectMetadata: () => ({
@@ -120,6 +115,7 @@ vi.mock('@/hooks/use-tenant-object-metadata', () => ({
 // Mock subscription hooks
 vi.mock('@iblai/iblai-js/web-utils', () => ({
   Tenant: {},
+  useSubscriptionFlowV2: () => ({}),
   useSubscriptionHandlerV2: () => ({
     getBillingURL: mockGetBillingURL,
     getTopUpURL: mockGetTopUpURL,

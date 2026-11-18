@@ -11,9 +11,33 @@ nothing else — no tabs, no settings row, nothing above it.
   on the desktop app; here the driver is the extension's **service worker**, which
   reads the page — every frame of it and every open shadow root, so an embedded
   chat, editor or widget is seen too — as one numbered list of elements, decides
-  one action, performs it, and repeats until it answers. Model calls go through the platform's
+  what to do next — one action, or several when the page cannot change between
+  them, such as the fields of one form — performs them one at a time, and repeats
+  until it answers. Model calls go through the platform's
   OpenAI-compatible endpoint with your own session; nothing else leaves the
   browser.
+- While a run is live the **tab itself says so**: a brand-coloured ring round
+  the viewport, a bar naming the action as it happens with a **Stop** in it, and
+  a ring on the element about to be clicked or typed into (`src/hud.ts`, painted
+  by the injected functions at the end of `src/page-scripts.ts`). The driven tab
+  also goes into a Chrome tab group named _ibl.ai_ for as long as the run lasts,
+  so it stays marked in the tab strip when you switch away (`src/tab-group.ts`);
+  a tab you have already grouped yourself is left exactly where it is.
+
+  Three things about it are load-bearing, and each has a test that fails without
+  it:
+
+  - The overlay is **not part of the page**. It hangs off `<html>` rather than
+    `<body>`, its controls live in a **closed** shadow root, and anything
+    carrying `data-ibl-agent-overlay` is skipped by the page reader and seen
+    through by the hit tests — so the model never reads it, never gets a picture
+    with it in, and can never click its own Stop.
+  - It **gets out of the way**: hidden outright for the capture the model sees,
+    and stepped aside for a trusted click that would otherwise land on the bar.
+  - It **takes itself down**. The worker beats on it every two seconds; if the
+    beats stop — an MV3 worker can be killed mid-run — the page clears the
+    overlay by itself within fifteen seconds. The same beat is what puts it back
+    after a navigation.
 
 ## Build and load
 
@@ -92,9 +116,10 @@ follow-up message ("continue") picks up where it left off, since the
 conversation lasts as long as the panel stays open — and **Stop** aborts it at
 any time. Closing the panel drops the port that keeps the worker alive, which
 ends the run. What fails on the way is tried again: a page read twice, once the
-page settles (never an action, which may have landed); a model call that breaks
-off twice, through the AI SDK's own retry; and a call to a tool that does not
-exist, or with input that is not JSON, goes back to the model once to fix.
+page settles (never an action, which may have landed); a model call that fails,
+five times over about a minute, through the AI SDK's own retry; and a call to a
+tool that does not exist, or with input that is not JSON, goes back to the
+model once to fix.
 
 **The picture.** With a model that reads images, every page read also captures
 the visible part of the tab (`chrome.tabs.captureVisibleTab`), draws each listed
@@ -195,8 +220,12 @@ driver (`shouldUseRemoteAiChat`). Submitting a goal goes to
 The run renders as one ordinary assistant turn, because `use-browse-run` drives
 the same Redux lifecycle `useRemoteChat` uses (`setCurrentStreamingMessage` →
 `ensureStreamingAssistantMessage` per delta → `appendMessageToActiveTab` on
-finish), with each action added via `addToolCall`. Confirmations reuse the
-in-thread approve/deny card in `components/chat/code-permission-card.tsx`.
+finish), with each action added via `addToolCall`, numbered and named after the
+action, so the "Used N tools" header (which counts distinct names) counts the
+actions and each row is that one line. The agent says nothing while it works: a step's words are held
+until the step ends and are the reply only when the step took no action; words
+before an action are dropped, and the prompt asks for none. Confirmations reuse
+the in-thread approve/deny card in `components/chat/code-permission-card.tsx`.
 
 ## Release
 
@@ -210,4 +239,4 @@ workflow header). CI has no `.env.local`, so what it publishes always points at
 
 Copy a fresh `dist/index.umd.js` from the SDK's `packages/agent-ai` build over
 `public/vendor/agent-ai.umd.js` (the directory is prettier-ignored so it stays
-as published). Also copy it byte-for-byte to `e2e/fixtures/agent-ai.umd.js` (journey 89 serves that copy; `scripts/agent-ai-vendor-copy.test.ts` fails when they differ). Vendored: `@iblai/agent-ai` 2.13.2.
+as published). Also copy it byte-for-byte to `e2e/fixtures/agent-ai.umd.js` (journey 89 serves that copy; `scripts/agent-ai-vendor-copy.test.ts` fails when they differ). Vendored: `@iblai/agent-ai` 2.13.3.

@@ -52,14 +52,16 @@ import { useModelDownload } from '../use-model-download';
 describe('useModelDownload hook', () => {
   let mockInvoke: ReturnType<typeof vi.fn>;
   let mockListen: ReturnType<typeof vi.fn>;
-  let mockSetState: ReturnType<typeof vi.fn>;
-  let mockSetIsFirstLaunchDismissed: ReturnType<typeof vi.fn>;
+  let mockSetState: ReturnType<typeof vi.fn<(value: unknown) => void>>;
+  let mockSetIsFirstLaunchDismissed: ReturnType<
+    typeof vi.fn<(value: unknown) => void>
+  >;
   let mockState: any;
 
   beforeEach(() => {
     mockInvoke = vi.fn();
-    mockSetState = vi.fn();
-    mockSetIsFirstLaunchDismissed = vi.fn();
+    mockSetState = vi.fn<(value: unknown) => void>();
+    mockSetIsFirstLaunchDismissed = vi.fn<(value: unknown) => void>();
 
     // Default mock for listen that returns a proper unlisten function
     const unlistenMock = vi.fn();
@@ -77,11 +79,13 @@ describe('useModelDownload hook', () => {
     };
 
     // Mock useTauri
+    // Cast once: `useTauri`'s `invoke`/`listen` are generic, and a mock
+    // cannot carry a generic signature.
     vi.mocked(useTauriModule.useTauri).mockReturnValue({
       isAvailable: true,
       invoke: mockInvoke,
       listen: mockListen,
-    });
+    } as unknown as ReturnType<typeof useTauriModule.useTauri>);
 
     // Mock useLocalStorage - called twice in the hook
     vi.mocked(useLocalStorageModule.useLocalStorage).mockImplementation(
@@ -114,7 +118,7 @@ describe('useModelDownload hook', () => {
         isAvailable: false,
         invoke: mockInvoke,
         listen: mockListen,
-      });
+      } as unknown as ReturnType<typeof useTauriModule.useTauri>);
 
       renderHook(() => useModelDownload());
 
@@ -301,12 +305,14 @@ describe('useModelDownload hook', () => {
         .mockImplementationOnce(() => [
           stateWithManyLogs,
           mockSetState,
-          vi.fn(),
+          // Typed: a bare `vi.fn()` is `Mock<Procedure | Constructable>`
+          // under vitest 4, which no longer satisfies a plain signature.
+          vi.fn<() => void>(),
         ])
         .mockImplementationOnce(() => [
           false,
           mockSetIsFirstLaunchDismissed,
-          vi.fn(),
+          vi.fn<() => void>(),
         ]);
 
       const unlistenMock = vi.fn();
@@ -338,7 +344,9 @@ describe('useModelDownload hook', () => {
           (call) => typeof call[0] === 'function',
         );
         if (setStateCall) {
-          const newState = setStateCall[0](stateWithManyLogs);
+          const newState = (setStateCall[0] as (prev: any) => any)(
+            stateWithManyLogs,
+          );
           expect(newState.logs.length).toBeLessThanOrEqual(100);
         }
       }
@@ -598,7 +606,12 @@ describe('useModelDownload hook', () => {
       });
       localStorage.setItem(SELECTED_LOCAL_MODEL, 'qwen3');
       stubBackend({ installed: true });
-      const backend = mockInvoke.getMockImplementation()!;
+      // Narrowed: under vitest 4 `getMockImplementation()` is typed as a
+      // union that includes a constructor, which has no call signature.
+      const backend = mockInvoke.getMockImplementation() as (
+        cmd: string,
+        args?: unknown,
+      ) => Promise<unknown>;
       let selectedDuringDownload: string | null = 'not downloaded';
       mockInvoke.mockImplementation(async (cmd: string, args?: unknown) => {
         if (cmd === 'download_model') {
@@ -624,7 +637,12 @@ describe('useModelDownload hook', () => {
       localStorage.setItem(LOCAL_MODELS_ENABLED, 'true');
       localStorage.setItem(SELECTED_LOCAL_MODEL, 'qwen3');
       stubBackend({ installed: true });
-      const backend = mockInvoke.getMockImplementation()!;
+      // Narrowed: under vitest 4 `getMockImplementation()` is typed as a
+      // union that includes a constructor, which has no call signature.
+      const backend = mockInvoke.getMockImplementation() as (
+        cmd: string,
+        args?: unknown,
+      ) => Promise<unknown>;
       mockInvoke.mockImplementation(async (cmd: string, args?: unknown) => {
         if (cmd === 'download_model') throw new Error('connection reset');
         return backend(cmd, args);
@@ -648,7 +666,12 @@ describe('useModelDownload hook', () => {
       localStorage.setItem(LOCAL_MODELS_ENABLED, 'true');
       localStorage.setItem(SELECTED_LOCAL_MODEL, 'qwen3');
       stubBackend({ installed: true });
-      const backend = mockInvoke.getMockImplementation()!;
+      // Narrowed: under vitest 4 `getMockImplementation()` is typed as a
+      // union that includes a constructor, which has no call signature.
+      const backend = mockInvoke.getMockImplementation() as (
+        cmd: string,
+        args?: unknown,
+      ) => Promise<unknown>;
       mockInvoke.mockImplementation(async (cmd: string, args?: unknown) => {
         if (cmd === 'download_model') {
           // Cancel lands while the pull runs; the backend then resolves cleanly.
@@ -674,7 +697,12 @@ describe('useModelDownload hook', () => {
       localStorage.setItem(LOCAL_MODELS_ENABLED, 'true');
       localStorage.setItem(SELECTED_LOCAL_MODEL, 'qwen3');
       stubBackend({ installed: true });
-      const backend = mockInvoke.getMockImplementation()!;
+      // Narrowed: under vitest 4 `getMockImplementation()` is typed as a
+      // union that includes a constructor, which has no call signature.
+      const backend = mockInvoke.getMockImplementation() as (
+        cmd: string,
+        args?: unknown,
+      ) => Promise<unknown>;
       mockInvoke.mockImplementation(async (cmd: string, args?: unknown) => {
         if (cmd === 'download_model') {
           localStorage.setItem(SELECTED_LOCAL_MODEL, 'phi3:mini');
@@ -924,7 +952,7 @@ describe('useModelDownload hook', () => {
           (c) => typeof c[0] === 'function',
         );
         if (call) {
-          const updater = call[0];
+          const updater = call[0] as (prev: any) => any;
           const newState = updater(mockState);
           expect(newState.lastUpdated).toBeDefined();
         }

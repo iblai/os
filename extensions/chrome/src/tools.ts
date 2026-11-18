@@ -1,5 +1,6 @@
 import { jsonSchema, tool, type ToolSet } from 'ai';
 import { drawBadges } from './badges';
+import type { Hud } from './hud';
 import {
   actOnPage,
   scrollPage,
@@ -11,7 +12,7 @@ import {
 import type { RealInput } from './real-input';
 import { SECRET_FIELDS } from './secret-fields';
 import { injectable } from './settings';
-import { settle, sleep } from './settle';
+import { settle, sleep, type SettleOptions } from './settle';
 
 export const MAX_ITEMS = 200;
 export const STEP_CHARS = 1500;
@@ -19,6 +20,8 @@ export const READ_PAGE_CHARS = 6000;
 export const MAX_WAIT_MS = 3000;
 /** Further tries of a page read that failed, each once the page settles. */
 export const READ_RETRIES = 2;
+/** After typing or choosing, which cannot start a navigation: a shorter look. */
+export const QUICK_SETTLE: SettleOptions = { graceMs: 100, quietMs: 250 };
 /** Names of things the user should be asked about before they are clicked. */
 export const CONFIRM_NAME =
   /\b(pay|purchase|buy|checkout|send|submit|delete|remove|confirm|order|place|sign out|log out)\b/i;
@@ -44,6 +47,8 @@ export interface BrowserToolsContext {
   real?: RealInput;
   /** Aborted once the run is over: a read waiting to try again gives up. */
   signal?: AbortSignal;
+  /** The overlay on the tab itself; absent leaves every action unannounced. */
+  hud?: Hud;
 }
 
 /** The latest capture, with its pixels per CSS px, or why there is none this step. */
@@ -209,12 +214,19 @@ function injectAll<Args extends unknown[], Result>(
 }
 
 export function createBrowserTools(ctx: BrowserToolsContext): BrowserTools {
+  const hud = ctx.hud;
+  // A real click lands on whatever is at the point, so the overlay's own bar
+  // steps aside for the one that would land on it — and only for that one.
+  const dodge = <T>(
+    point: { x: number; y: number },
+    fn: () => Promise<T>,
+  ): Promise<T> => (hud ? hud.dodge(point, fn) : fn());
   let last: Snapshot | null = null;
   let targets = new Map<number, FrameRef>();
   let queue: Promise<unknown> = Promise.resolve();
 
   // The AI SDK runs a step's tool calls concurrently; one page can only take
-  // them one at a time (and the request also asks for parallel_tool_calls: false).
+  // them one at a time, in the order they were made.
   const serial = <T>(fn: () => Promise<T>): Promise<T> => {
     const run = queue.then(fn, fn);
     queue = run.catch(() => undefined);
@@ -255,9 +267,11 @@ export function createBrowserTools(ctx: BrowserToolsContext): BrowserTools {
       return;
     }
     try {
-      const shot = await chrome.tabs.captureVisibleTab(tab.windowId, {
-        format: 'png',
-      });
+      // Out of the way first: a picture with our own bar in it would have the
+      // model reading, and pointing at, the extension's controls.
+      const grab = () =>
+        chrome.tabs.captureVisibleTab(tab.windowId, { format: 'png' });
+      const shot = await (hud ? hud.away(grab) : grab());
       const marks = last.items.flatMap((item) =>
         item.rect ? [{ n: item.n, x: item.rect.x, y: item.rect.y }] : [],
       );
@@ -340,6 +354,8 @@ export function createBrowserTools(ctx: BrowserToolsContext): BrowserTools {
     confirmText?: string | (() => Promise<string | undefined>);
     signal?: AbortSignal;
     textChars?: number;
+    /** How long to watch the page after the action; the default waits for a navigation. */
+    settle?: SettleOptions;
   }
 
   // Gate, act, settle, re-read, log — every acting tool goes through here.
@@ -347,6 +363,13 @@ export function createBrowserTools(ctx: BrowserToolsContext): BrowserTools {
     serial(async () => {
       try {
         assertAllowed(await currentUrl());
+        // Before the confirmation, not after: while the panel asks, the ring
+        // on the page shows which element it is asking about.
+        hud?.say(
+          p.tool,
+          p.target,
+          p.element === undefined ? null : (item(p.element)?.rect ?? null),
+        );
         const ask =
           typeof p.confirmText === 'function'
             ? await p.confirmText()
@@ -368,7 +391,7 @@ export function createBrowserTools(ctx: BrowserToolsContext): BrowserTools {
             throw new Refusal('refused', message.replace(/^Refused:\s*/, ''));
           throw new Error(message);
         }
-        await settle(ctx.tabId, { frameId: at.frameId });
+        await settle(ctx.tabId, { frameId: at.frameId, ...p.settle });
         // A click or back may have left the allowed sites; never read what is there.
         assertAllowed(await currentUrl());
         const page = await snapshot(p.textChars);
@@ -376,6 +399,8 @@ export function createBrowserTools(ctx: BrowserToolsContext): BrowserTools {
         return `${p.outcome}${result.note ? ` ${result.note}` : ''}\n\n${page.text}`;
       } catch (err) {
         return fail(p.tool, p.target, err);
+      } finally {
+        hud?.thinking();
       }
     });
 
@@ -421,7 +446,11 @@ export function createBrowserTools(ctx: BrowserToolsContext): BrowserTools {
             );
             if (!found.ok) return found;
             if (found.top && !found.covered) {
-              await ctx.real.click(found.x ?? 0, found.y ?? 0, twice ? 2 : 1);
+              const input = ctx.real;
+              const point = { x: found.x ?? 0, y: found.y ?? 0 };
+              await dodge(point, () =>
+                input.click(point.x, point.y, twice ? 2 : 1),
+              );
               return { ok: true };
             }
             const result = await scripted();
@@ -494,6 +523,7 @@ export function createBrowserTools(ctx: BrowserToolsContext): BrowserTools {
             ? `Type into ${target} and submit on "${last?.title ?? ''}"`
             : undefined,
           signal: abortSignal,
+          settle: doSubmit ? undefined : QUICK_SETTLE,
         });
       },
     }),
@@ -522,6 +552,7 @@ export function createBrowserTools(ctx: BrowserToolsContext): BrowserTools {
               [at.n, 'select', String(value ?? ''), false],
               at.frameId,
             ),
+          settle: QUICK_SETTLE,
         });
       },
     }),
@@ -580,6 +611,7 @@ export function createBrowserTools(ctx: BrowserToolsContext): BrowserTools {
         return serial(async () => {
           try {
             assertAllowed(target);
+            hud?.say('navigate', target);
             await chrome.tabs.update(ctx.tabId, { url: target });
             await settle(ctx.tabId);
             assertAllowed(await currentUrl());
@@ -588,6 +620,8 @@ export function createBrowserTools(ctx: BrowserToolsContext): BrowserTools {
             return `Opened ${target}.\n\n${page.text}`;
           } catch (err) {
             return fail('navigate', target, err);
+          } finally {
+            hud?.thinking();
           }
         });
       },
@@ -613,11 +647,14 @@ export function createBrowserTools(ctx: BrowserToolsContext): BrowserTools {
         serial(async () => {
           try {
             assertAllowed(await currentUrl());
+            hud?.say('read_page', '');
             const page = await snapshot(READ_PAGE_CHARS);
             ctx.log({ tool: 'read_page', target: '', ok: true });
             return page.text;
           } catch (err) {
             return fail('read_page', '', err);
+          } finally {
+            hud?.thinking();
           }
         }),
     }),
@@ -635,6 +672,7 @@ export function createBrowserTools(ctx: BrowserToolsContext): BrowserTools {
         const delay = Math.min(Math.max(Number(ms) || 0, 0), MAX_WAIT_MS);
         return serial(async () => {
           try {
+            hud?.say('wait', `${delay} ms`);
             await sleep(delay);
             assertAllowed(await currentUrl());
             const page = await snapshot();
@@ -642,6 +680,8 @@ export function createBrowserTools(ctx: BrowserToolsContext): BrowserTools {
             return `Waited ${delay} ms.\n\n${page.text}`;
           } catch (err) {
             return fail('wait', `${delay} ms`, err);
+          } finally {
+            hud?.thinking();
           }
         });
       },
@@ -726,7 +766,9 @@ export function createBrowserTools(ctx: BrowserToolsContext): BrowserTools {
               : undefined;
           },
           step: async () => {
-            await real.click(point.x, point.y, twice ? 2 : 1);
+            await dodge(point, () =>
+              real.click(point.x, point.y, twice ? 2 : 1),
+            );
             return { ok: true };
           },
           signal: abortSignal,
@@ -777,7 +819,7 @@ export function createBrowserTools(ctx: BrowserToolsContext): BrowserTools {
           // it, behind the secret-field refusal, and the text follows through
           // the protocol, which reaches a cross-origin frame too.
           step: async () => {
-            await real.click(point.x, point.y);
+            await dodge(point, () => real.click(point.x, point.y));
             const answers = (
               await again(() =>
                 injectAll(ctx.tabId, actOnPage, [

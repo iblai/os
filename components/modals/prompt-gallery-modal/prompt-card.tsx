@@ -1,3 +1,4 @@
+import { useShowFreeTrialDialog } from '@iblai/iblai-js/web-utils';
 import {
   Edit,
   MessageSquare,
@@ -19,7 +20,6 @@ import { cn } from '@/lib/utils';
 import { parsePrompt } from '@/lib/markdown-engine';
 import { SelectedPrompt } from '../edit-prompt-modal';
 import { useUserIsStudent } from '@/hooks/use-user';
-import { useShowFreeTrialDialog } from '@/hooks/user-user-actions';
 import Markdown from '@/components/markdown';
 
 type Props = {

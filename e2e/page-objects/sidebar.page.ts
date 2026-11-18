@@ -19,7 +19,8 @@ export class SidebarPage {
   readonly newProjectButton: Locator;
   readonly inviteUsersButton: Locator;
   readonly managementButton: Locator;
-  readonly integrationsButton: Locator;
+  readonly secretsButton: Locator;
+  readonly apiButton: Locator;
   readonly monetizationButton: Locator;
   readonly memoryButton: Locator;
   readonly workflowsButton: Locator;
@@ -111,8 +112,12 @@ export class SidebarPage {
       name: 'Management',
       exact: true,
     });
-    this.integrationsButton = this.sidebar.getByRole('button', {
-      name: 'Integrations',
+    this.secretsButton = this.sidebar.getByRole('button', {
+      name: 'Secrets',
+      exact: true,
+    });
+    this.apiButton = this.sidebar.getByRole('button', {
+      name: 'API',
       exact: true,
     });
     this.monetizationButton = this.sidebar.getByRole('button', {
@@ -121,7 +126,7 @@ export class SidebarPage {
     });
     // "Memory" opens the Account dialog at the tenant-settings Memory tab
     // (SDK `MemoryAdminTab`: Global / Agent sub-tabs). Admin-only like
-    // Integrations/Advanced — no dedicated RBAC permission. Scoped to the
+    // Secrets/Advanced — no dedicated RBAC permission. Scoped to the
     // footer container because the Analytics section has a same-named
     // "Memory" sub-item once expanded.
     this.memoryButton = this.sidebar

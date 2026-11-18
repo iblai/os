@@ -40,11 +40,16 @@ vi.mock('@/hooks/user-navigate', () => ({
 
 // Mock free-trial gate
 const mockExecuteWithTrialCheck = vi.fn((fn: () => void) => fn());
-vi.mock('@/hooks/user-user-actions', () => ({
-  useShowFreeTrialDialog: () => ({
-    executeWithTrialCheck: mockExecuteWithTrialCheck,
-  }),
-}));
+vi.mock('@iblai/iblai-js/web-utils', async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import('@iblai/iblai-js/web-utils')>();
+  return {
+    ...actual,
+    useShowFreeTrialDialog: () => ({
+      executeWithTrialCheck: mockExecuteWithTrialCheck,
+    }),
+  };
+});
 
 // Mock lazy project-details query
 const mockUnwrap = vi.fn();

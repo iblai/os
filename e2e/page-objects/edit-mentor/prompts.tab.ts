@@ -90,8 +90,7 @@ export class PromptsTab {
     const textarea = this.page
       .getByRole('dialog', { name: 'Edit System Prompt', exact: true })
       .getByRole('textbox')
-      .first()
-      .locator('div');
+      .first();
     await expect(textarea).toBeVisible({ timeout: 10_000 });
     await textarea.clear();
     await textarea.fill(content);
@@ -201,7 +200,7 @@ export class PromptsTab {
     }
 
     // Fill in the prompt text via the rich text editor
-    const editor = addDialog.getByRole('textbox').first().locator('div');
+    const editor = addDialog.getByRole('textbox').first();
     await expect(editor).toBeVisible({ timeout: 5_000 });
     await editor.fill(promptText);
 
@@ -244,7 +243,7 @@ export class PromptsTab {
     });
     await expect(editDialog).toBeVisible({ timeout: 10_000 });
 
-    const editor = editDialog.getByRole('textbox').first().locator('div');
+    const editor = editDialog.getByRole('textbox').first();
     await expect(editor).toBeVisible({ timeout: 5_000 });
     await editor.clear();
     await editor.fill(newPromptText);

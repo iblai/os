@@ -290,14 +290,7 @@ export function EditMentorModal({ isOpen, onClose }: Props) {
       }}
     >
       {isOpen && (
-        <DialogContent
-          className={`mx-auto w-[85vw] max-w-[90rem] gap-0 overflow-hidden p-0 md:w-full`}
-          style={{
-            height: '85vh',
-            display: 'flex',
-            flexDirection: 'column',
-          }}
-        >
+        <DialogContent className="mx-auto flex h-dvh w-screen max-w-none flex-col gap-0 overflow-hidden rounded-none p-0 md:h-[85vh] md:w-full md:max-w-[90rem] md:rounded-lg">
           <DialogDescription className="sr-only">
             {t('dialogDescription')}
           </DialogDescription>
@@ -326,10 +319,12 @@ export function EditMentorModal({ isOpen, onClose }: Props) {
               >
                 {/* Mobile Header */}
                 <div className="lg:hidden">
-                  <DialogHeader className="border-b border-gray-200 px-3 py-4">
-                    <DialogTitle className="text-lg font-semibold text-gray-900">
+                  <DialogHeader className="flex h-[52px] flex-row items-center justify-between space-y-0 border-b border-gray-200 pr-12 pl-4 md:h-auto md:px-3 md:py-4">
+                    <DialogTitle className="text-base font-semibold text-gray-900 md:text-lg">
                       {t('editAgentTitle')}
                     </DialogTitle>
+                    {/* An Activity tab puts its info button here on a phone. */}
+                    <div data-activity-info-slot />
                   </DialogHeader>
                 </div>
                 {/* Desktop Sidebar - category tab strip + filtered segment list */}
@@ -465,7 +460,7 @@ export function EditMentorModal({ isOpen, onClose }: Props) {
                     </div>
                   )}
                   <TabsList
-                    className="h-auto w-full justify-start gap-1 overflow-x-auto rounded-none bg-white px-3 py-2"
+                    className="h-auto w-full justify-start gap-5 overflow-x-auto rounded-none bg-white px-4 py-0 md:gap-1 md:px-3 md:py-2"
                     aria-label={t('agentSettingsTabs')}
                   >
                     {visibleSidebarItems.map((tab) => (
@@ -473,13 +468,13 @@ export function EditMentorModal({ isOpen, onClose }: Props) {
                         key={tab.value}
                         value={tab.value}
                         className={cn(
-                          'flex items-center gap-2 px-2 text-xs whitespace-nowrap data-[state=active]:bg-blue-50 data-[state=active]:text-blue-600 sm:px-3 sm:text-sm',
+                          'flex items-center gap-2 text-sm whitespace-nowrap data-[state=active]:text-blue-600 max-md:h-11 max-md:!rounded-none max-md:border-b-2 max-md:border-transparent max-md:px-0 max-md:shadow-none max-md:data-[state=active]:border-blue-600 max-md:data-[state=active]:bg-transparent max-md:data-[state=active]:shadow-none md:px-3 md:data-[state=active]:bg-blue-50',
                         )}
                         id={`tab-${tab.value}`}
                         aria-controls={`panel-${tab.value}`}
                       >
                         <tab.icon
-                          className="h-3 w-3 sm:h-4 sm:w-4"
+                          className="h-4 w-4 max-md:hidden"
                           aria-hidden="true"
                         />
                         <span>{tHeader(tab.labelKey)}</span>

@@ -29,12 +29,16 @@ const EditMentorModal = dynamic(
 // import { CreateMentorModal } from '@/components/modals/create-mentor-modal';
 import { CustomAlertDialog } from '../custom-alert-dialog';
 import { UpgradePackageModal } from '@iblai/iblai-js/web-containers';
-import { setOpenPricingModal } from '@/features/subscription/subscription-slice';
 import {
   setOpenAppleRestrictionModal,
+  setOpenContactAdminModal,
   type AppleRestrictionState,
+  setOpenPricingModal,
 } from '@iblai/iblai-js/web-utils';
-import { AppleRestrictionModal } from '@iblai/iblai-js/web-containers';
+import {
+  AppleRestrictionModal,
+  ContactAdminModal,
+} from '@iblai/iblai-js/web-containers';
 import { useAppDispatch, useAppSelector } from '@/lib/hooks';
 import {
   InvitedUsersDialog,
@@ -70,7 +74,7 @@ export const ModalContainer = () => {
 
   const { customAlertDialog } = state.modals;
 
-  const { openPricingModal } = state.subscription;
+  const { openPricingModal, openContactAdminModal } = state.subscription;
   const { openAppleRestrictionModal } =
     state.appleRestriction as AppleRestrictionState;
 
@@ -175,6 +179,14 @@ export const ModalContainer = () => {
         <AppleRestrictionModal
           isOpen={openAppleRestrictionModal}
           onClose={() => dispatch(setOpenAppleRestrictionModal(false))}
+        />
+      )}
+
+      {/* A non-admin whose organization ran out of credits */}
+      {openContactAdminModal && (
+        <ContactAdminModal
+          isOpen={openContactAdminModal}
+          onClose={() => dispatch(setOpenContactAdminModal(false))}
         />
       )}
     </>

@@ -2676,326 +2676,8 @@ pub fn run() {
                 let initial_url = tauri::WebviewUrl::External(app_url.parse().unwrap());
                 let app_base_url_json = serde_json::to_string(&app_url).unwrap();
 
-                // Safe area handling script for iOS - ensures content doesn't scroll behind notch/home indicator
-                // Also handles Google OAuth by opening in system browser
-                let safe_area_script = r#"
-(function() {
-    // Only run once
-    if (window.__safeAreaSetup) return;
-    window.__safeAreaSetup = true;
-
-    var appBaseUrl = __IBL_APP_BASE_URL__;
-
-    console.log('[ibl.ai] Setting up safe area handling...');
-
-    // Wait for document.head to be available before DOM operations
-    function waitForHead(callback) {
-        if (document.head) {
-            callback();
-        } else {
-            setTimeout(function() { waitForHead(callback); }, 10);
-        }
-    }
-
-    waitForHead(function() {
-        // Ensure viewport has viewport-fit=cover for safe area support
-        var viewport = document.querySelector('meta[name="viewport"]');
-        if (viewport) {
-            var content = viewport.getAttribute('content') || '';
-            if (!content.includes('viewport-fit=cover')) {
-                viewport.setAttribute('content', content + ', viewport-fit=cover');
-                console.log('[ibl.ai] Added viewport-fit=cover to viewport meta');
-            }
-        } else {
-            var meta = document.createElement('meta');
-            meta.name = 'viewport';
-            meta.content = 'width=device-width, initial-scale=1, viewport-fit=cover';
-            document.head.appendChild(meta);
-            console.log('[ibl.ai] Created viewport meta with viewport-fit=cover');
-        }
-
-        // Add CSS for safe area handling
-        var style = document.createElement('style');
-    style.id = 'ibl-safe-area-styles';
-    style.textContent = `
-        /* Safe area support for iOS */
-        :root {
-            --sat: env(safe-area-inset-top, 0px);
-            --sar: env(safe-area-inset-right, 0px);
-            --sab: env(safe-area-inset-bottom, 0px);
-            --sal: env(safe-area-inset-left, 0px);
-        }
-
-        /* Apply safe area padding to html/body */
-        html {
-            padding-top: env(safe-area-inset-top, 0px);
-            padding-bottom: env(safe-area-inset-bottom, 0px);
-            padding-left: env(safe-area-inset-left, 0px);
-            padding-right: env(safe-area-inset-right, 0px);
-        }
-
-        body {
-            /* Ensure body doesn't scroll the entire page */
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            overflow: hidden;
-        }
-
-        /* Main app container should fill the safe area */
-        body > div:first-child,
-        #__next,
-        #root,
-        [data-radix-portal],
-        main {
-            height: 100%;
-            overflow: auto;
-            -webkit-overflow-scrolling: touch;
-        }
-
-        /* Ensure fixed elements respect safe areas */
-        [style*="position: fixed"],
-        [style*="position:fixed"] {
-            padding-top: env(safe-area-inset-top, 0px);
-            padding-bottom: env(safe-area-inset-bottom, 0px);
-        }
-    `;
-        document.head.appendChild(style);
-        console.log('[ibl.ai] Safe area CSS applied');
-    }); // End waitForHead callback
-
-    // Wait for document.body before adding event listeners
-    function waitForBody(callback) {
-        if (document.body) {
-            callback();
-        } else {
-            setTimeout(function() { waitForBody(callback); }, 10);
-        }
-    }
-
-    waitForBody(function() {
-        // Prevent overscroll/bounce effect on iOS
-        document.body.addEventListener('touchmove', function(e) {
-        // Allow scrolling within scrollable elements
-        var target = e.target;
-        while (target && target !== document.body) {
-            var style = window.getComputedStyle(target);
-            if (style.overflow === 'auto' || style.overflow === 'scroll' ||
-                style.overflowY === 'auto' || style.overflowY === 'scroll') {
-                return; // Allow scroll within this element
-            }
-            target = target.parentElement;
-        }
-            // Prevent bounce on body
-            e.preventDefault();
-        }, { passive: false });
-
-        console.log('[ibl.ai] Safe area setup complete');
-    }); // End waitForBody callback
-
-    // =====================
-    // GOOGLE OAUTH HANDLING
-    // =====================
-    // Google blocks OAuth in WebViews, so we need to open Google login in the system browser
-    // The app uses window.location.href = provider.url to redirect, so we need to intercept that
-
-    function isOAuthUrl(url) {
-        if (!url || typeof url !== 'string') return false;
-        return (
-            url.includes('accounts.google.com') ||
-            url.includes('google.com/o/oauth') ||
-            url.includes('googleapis.com/oauth') ||
-            url.includes('/auth/login/google') ||
-            url.includes('/login/google') ||
-            url.includes('google-oauth2') ||
-            url.includes('appleid.apple.com') ||
-            url.includes('/auth/login/apple') ||
-            url.includes('/login/apple') ||
-            url.includes('login.microsoftonline.com') ||
-            url.includes('login.live.com') ||
-            url.includes('azuread-oauth2') ||
-            url.includes('/auth/login/azuread') ||
-            url.includes('/login/azuread') ||
-            url.includes('microsoft-graph') ||
-            url.includes('/auth/login/microsoft-graph') ||
-            url.includes('/login/microsoft-graph')
-        );
-    }
-
-    function openInSystemBrowser(url) {
-        console.log('[ibl.ai] Opening OAuth URL in system browser:', url);
-        if (window.__TAURI__ && window.__TAURI__.core && window.__TAURI__.core.invoke) {
-            window.__TAURI__.core.invoke('open_external_url', { url: url })
-                .then(function() {
-                    console.log('[ibl.ai] Successfully opened URL in system browser');
-                })
-                .catch(function(e) {
-                    console.error('[ibl.ai] Failed to open URL:', e);
-                    alert('Please open Safari and go to:\n' + url);
-                });
-            return true;
-        }
-        return false;
-    }
-
-    // CRITICAL: Intercept window.location.href assignments
-    // This is how the auth app redirects to OAuth providers
-    (function() {
-        var currentHref = window.location.href;
-
-        // Create a proxy for location to intercept href changes
-        var locationProxy = {
-            get href() {
-                return currentHref;
-            },
-            set href(url) {
-                console.log('[ibl.ai] Intercepted location.href =', url);
-                if (isOAuthUrl(url)) {
-                    console.log('[ibl.ai] Detected OAuth redirect, opening in system browser');
-                    // Make URL absolute if relative
-                    var absoluteUrl = url;
-                    if (url.startsWith('/')) {
-                        absoluteUrl = window.location.origin + url;
-                    }
-                    openInSystemBrowser(absoluteUrl);
-                    // Don't actually navigate - we opened in external browser
-                    return;
-                }
-                // Allow normal navigation
-                currentHref = url;
-                Object.getOwnPropertyDescriptor(window, 'location').set.call(window, url);
-            },
-            get origin() { return window.location.origin; },
-            get protocol() { return window.location.protocol; },
-            get host() { return window.location.host; },
-            get hostname() { return window.location.hostname; },
-            get port() { return window.location.port; },
-            get pathname() { return window.location.pathname; },
-            get search() { return window.location.search; },
-            get hash() { return window.location.hash; },
-            assign: function(url) {
-                console.log('[ibl.ai] Intercepted location.assign()', url);
-                if (isOAuthUrl(url)) {
-                    var absoluteUrl = url.startsWith('/') ? window.location.origin + url : url;
-                    openInSystemBrowser(absoluteUrl);
-                    return;
-                }
-                window.location.assign(url);
-            },
-            replace: function(url) {
-                console.log('[ibl.ai] Intercepted location.replace()', url);
-                if (isOAuthUrl(url)) {
-                    var absoluteUrl = url.startsWith('/') ? window.location.origin + url : url;
-                    openInSystemBrowser(absoluteUrl);
-                    return;
-                }
-                window.location.replace(url);
-            },
-            reload: function() { window.location.reload(); },
-            toString: function() { return window.location.toString(); }
-        };
-
-        // Try to override window.location (may not work in all browsers)
-        try {
-            // This approach works better: intercept direct href setting via defineProperty
-            var originalLocation = window.location;
-
-            // Wrap the location object's href setter
-            var hrefDescriptor = Object.getOwnPropertyDescriptor(Location.prototype, 'href');
-            if (hrefDescriptor && hrefDescriptor.set) {
-                var originalHrefSetter = hrefDescriptor.set;
-                Object.defineProperty(Location.prototype, 'href', {
-                    get: hrefDescriptor.get,
-                    set: function(url) {
-                        console.log('[ibl.ai] Location.href setter intercepted:', url);
-                        if (isOAuthUrl(url)) {
-                            console.log('[ibl.ai] OAuth URL detected, redirecting to system browser');
-                            var absoluteUrl = url;
-                            if (url.startsWith('/')) {
-                                absoluteUrl = this.origin + url;
-                            }
-                            if (openInSystemBrowser(absoluteUrl)) {
-                                return; // Prevent WebView navigation
-                            }
-                        }
-                        // Normal navigation
-                        originalHrefSetter.call(this, url);
-                    },
-                    configurable: true,
-                    enumerable: true
-                });
-                console.log('[ibl.ai] Location.href setter intercepted successfully');
-            }
-
-            // Also intercept assign and replace
-            var originalAssign = Location.prototype.assign;
-            Location.prototype.assign = function(url) {
-                console.log('[ibl.ai] location.assign() intercepted:', url);
-                if (isOAuthUrl(url)) {
-                    var absoluteUrl = url.startsWith('/') ? this.origin + url : url;
-                    if (openInSystemBrowser(absoluteUrl)) return;
-                }
-                originalAssign.call(this, url);
-            };
-
-            var originalReplace = Location.prototype.replace;
-            Location.prototype.replace = function(url) {
-                console.log('[ibl.ai] location.replace() intercepted:', url);
-                if (isOAuthUrl(url)) {
-                    var absoluteUrl = url.startsWith('/') ? this.origin + url : url;
-                    if (openInSystemBrowser(absoluteUrl)) return;
-                }
-                originalReplace.call(this, url);
-            };
-
-        } catch (e) {
-            console.error('[ibl.ai] Failed to intercept location:', e);
-        }
-    })();
-
-    // Also intercept window.open for OAuth popups
-    var originalWindowOpen = window.open;
-    window.open = function(url, target, features) {
-        console.log('[ibl.ai] window.open() intercepted:', url);
-        if (url && isOAuthUrl(url)) {
-            var absoluteUrl = url;
-            if (url.startsWith('/')) {
-                absoluteUrl = window.location.origin + url;
-            }
-            if (openInSystemBrowser(absoluteUrl)) {
-                return null; // Return null as if popup was blocked
-            }
-        }
-        return originalWindowOpen.call(window, url, target, features);
-    };
-
-    // Click interceptor as backup for buttons that might trigger OAuth
-    document.addEventListener('click', function(e) {
-        var target = e.target;
-        var depth = 0;
-
-        while (target && depth < 10) {
-            // Check for links with OAuth URLs
-            if (target.tagName === 'A' && target.href && isOAuthUrl(target.href)) {
-                e.preventDefault();
-                e.stopPropagation();
-                openInSystemBrowser(target.href);
-                return false;
-            }
-            target = target.parentElement;
-            depth++;
-        }
-    }, true);
-
-    console.log('[ibl.ai] OAuth interceptor installed (location.href + window.open + click)');
-
-    console.log('[ibl.ai] Mobile setup complete (safe area + OAuth)');
-})();
-"#;
                 let safe_area_script =
-                    safe_area_script.replace("__IBL_APP_BASE_URL__", &app_base_url_json);
+                    MOBILE_SAFE_AREA_SCRIPT.replace("__IBL_APP_BASE_URL__", &app_base_url_json);
 
                 // Combine safe area script with online monitoring script
                 let combined_script = format!("{}\n{}", safe_area_script, URL_MONITOR_SCRIPT_ONLINE);
@@ -3284,4 +2966,401 @@ pub fn run() {
                 remote_code_client::app_resumed();
             }
         });
+}
+
+/// Safe area handling script for iOS - ensures content doesn't scroll behind notch/home indicator
+/// Also handles Google OAuth by opening in system browser
+#[cfg(any(target_os = "ios", target_os = "android", test))]
+const MOBILE_SAFE_AREA_SCRIPT: &str = r#"
+(function() {
+    // Only run once
+    if (window.__safeAreaSetup) return;
+    window.__safeAreaSetup = true;
+
+    var appBaseUrl = __IBL_APP_BASE_URL__;
+
+    console.log('[ibl.ai] Setting up safe area handling...');
+
+    // Wait for document.head to be available before DOM operations
+    function waitForHead(callback) {
+        if (document.head) {
+            callback();
+        } else {
+            setTimeout(function() { waitForHead(callback); }, 10);
+        }
+    }
+
+    waitForHead(function() {
+        // Ensure viewport has viewport-fit=cover for safe area support
+        var viewport = document.querySelector('meta[name="viewport"]');
+        if (viewport) {
+            var content = viewport.getAttribute('content') || '';
+            if (!content.includes('viewport-fit=cover')) {
+                viewport.setAttribute('content', content + ', viewport-fit=cover');
+                console.log('[ibl.ai] Added viewport-fit=cover to viewport meta');
+            }
+        } else {
+            var meta = document.createElement('meta');
+            meta.name = 'viewport';
+            meta.content = 'width=device-width, initial-scale=1, viewport-fit=cover';
+            document.head.appendChild(meta);
+            console.log('[ibl.ai] Created viewport meta with viewport-fit=cover');
+        }
+
+        // Add CSS for safe area handling
+        var style = document.createElement('style');
+    style.id = 'ibl-safe-area-styles';
+    style.textContent = `
+        /* Safe area support for iOS */
+        :root {
+            --sat: env(safe-area-inset-top, 0px);
+            --sar: env(safe-area-inset-right, 0px);
+            --sab: env(safe-area-inset-bottom, 0px);
+            --sal: env(safe-area-inset-left, 0px);
+        }
+
+        /* Apply safe area padding to html/body */
+        html {
+            padding-top: env(safe-area-inset-top, 0px);
+            padding-bottom: env(safe-area-inset-bottom, 0px);
+            padding-left: env(safe-area-inset-left, 0px);
+            padding-right: env(safe-area-inset-right, 0px);
+        }
+
+        /* body is position:fixed, so the html padding above cannot move it:
+           the safe-area offset has to be on body's own top/bottom. */
+        body {
+            /* Ensure body doesn't scroll the entire page */
+            position: fixed;
+            top: env(safe-area-inset-top, 0px);
+            left: 0;
+            right: 0;
+            bottom: env(safe-area-inset-bottom, 0px);
+            overflow: hidden;
+        }
+
+        /* The app shell is h-dvh; pin it to body's inset box or it overflows
+           body and clips the composer. */
+        [data-slot=sidebar-wrapper] {
+            height: 100%;
+            min-height: 0;
+        }
+
+        [data-slot=sidebar-inset] {
+            height: 100%;
+        }
+
+        /* Main app container should fill the safe area. Not <main>: the app
+           shell's <main> must not become a touch scroller, or swiping past the
+           end of a chat scrolls the whole chat card off screen. */
+        body > div:first-child,
+        #__next,
+        #root,
+        [data-radix-portal] {
+            height: 100%;
+            overflow: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        /* Ensure fixed elements respect safe areas */
+        [style*="position: fixed"],
+        [style*="position:fixed"] {
+            padding-top: env(safe-area-inset-top, 0px);
+            padding-bottom: env(safe-area-inset-bottom, 0px);
+        }
+    `;
+        document.head.appendChild(style);
+        console.log('[ibl.ai] Safe area CSS applied');
+    }); // End waitForHead callback
+
+    // Wait for document.body before adding event listeners
+    function waitForBody(callback) {
+        if (document.body) {
+            callback();
+        } else {
+            setTimeout(function() { waitForBody(callback); }, 10);
+        }
+    }
+
+    waitForBody(function() {
+        // Prevent overscroll/bounce effect on iOS
+        document.body.addEventListener('touchmove', function(e) {
+        // Allow scrolling within scrollable elements
+        var target = e.target;
+        while (target && target !== document.body) {
+            var style = window.getComputedStyle(target);
+            if (style.overflow === 'auto' || style.overflow === 'scroll' ||
+                style.overflowY === 'auto' || style.overflowY === 'scroll') {
+                return; // Allow scroll within this element
+            }
+            target = target.parentElement;
+        }
+            // Prevent bounce on body
+            e.preventDefault();
+        }, { passive: false });
+
+        console.log('[ibl.ai] Safe area setup complete');
+    }); // End waitForBody callback
+
+    // =====================
+    // GOOGLE OAUTH HANDLING
+    // =====================
+    // Google blocks OAuth in WebViews, so we need to open Google login in the system browser
+    // The app uses window.location.href = provider.url to redirect, so we need to intercept that
+
+    function isOAuthUrl(url) {
+        if (!url || typeof url !== 'string') return false;
+        return (
+            url.includes('accounts.google.com') ||
+            url.includes('google.com/o/oauth') ||
+            url.includes('googleapis.com/oauth') ||
+            url.includes('/auth/login/google') ||
+            url.includes('/login/google') ||
+            url.includes('google-oauth2') ||
+            url.includes('appleid.apple.com') ||
+            url.includes('/auth/login/apple') ||
+            url.includes('/login/apple') ||
+            url.includes('login.microsoftonline.com') ||
+            url.includes('login.live.com') ||
+            url.includes('azuread-oauth2') ||
+            url.includes('/auth/login/azuread') ||
+            url.includes('/login/azuread') ||
+            url.includes('microsoft-graph') ||
+            url.includes('/auth/login/microsoft-graph') ||
+            url.includes('/login/microsoft-graph')
+        );
+    }
+
+    function openInSystemBrowser(url) {
+        console.log('[ibl.ai] Opening OAuth URL in system browser:', url);
+        if (window.__TAURI__ && window.__TAURI__.core && window.__TAURI__.core.invoke) {
+            window.__TAURI__.core.invoke('open_external_url', { url: url })
+                .then(function() {
+                    console.log('[ibl.ai] Successfully opened URL in system browser');
+                })
+                .catch(function(e) {
+                    console.error('[ibl.ai] Failed to open URL:', e);
+                    alert('Please open Safari and go to:\n' + url);
+                });
+            return true;
+        }
+        return false;
+    }
+
+    // CRITICAL: Intercept window.location.href assignments
+    // This is how the auth app redirects to OAuth providers
+    (function() {
+        var currentHref = window.location.href;
+
+        // Create a proxy for location to intercept href changes
+        var locationProxy = {
+            get href() {
+                return currentHref;
+            },
+            set href(url) {
+                console.log('[ibl.ai] Intercepted location.href =', url);
+                if (isOAuthUrl(url)) {
+                    console.log('[ibl.ai] Detected OAuth redirect, opening in system browser');
+                    // Make URL absolute if relative
+                    var absoluteUrl = url;
+                    if (url.startsWith('/')) {
+                        absoluteUrl = window.location.origin + url;
+                    }
+                    openInSystemBrowser(absoluteUrl);
+                    // Don't actually navigate - we opened in external browser
+                    return;
+                }
+                // Allow normal navigation
+                currentHref = url;
+                Object.getOwnPropertyDescriptor(window, 'location').set.call(window, url);
+            },
+            get origin() { return window.location.origin; },
+            get protocol() { return window.location.protocol; },
+            get host() { return window.location.host; },
+            get hostname() { return window.location.hostname; },
+            get port() { return window.location.port; },
+            get pathname() { return window.location.pathname; },
+            get search() { return window.location.search; },
+            get hash() { return window.location.hash; },
+            assign: function(url) {
+                console.log('[ibl.ai] Intercepted location.assign()', url);
+                if (isOAuthUrl(url)) {
+                    var absoluteUrl = url.startsWith('/') ? window.location.origin + url : url;
+                    openInSystemBrowser(absoluteUrl);
+                    return;
+                }
+                window.location.assign(url);
+            },
+            replace: function(url) {
+                console.log('[ibl.ai] Intercepted location.replace()', url);
+                if (isOAuthUrl(url)) {
+                    var absoluteUrl = url.startsWith('/') ? window.location.origin + url : url;
+                    openInSystemBrowser(absoluteUrl);
+                    return;
+                }
+                window.location.replace(url);
+            },
+            reload: function() { window.location.reload(); },
+            toString: function() { return window.location.toString(); }
+        };
+
+        // Try to override window.location (may not work in all browsers)
+        try {
+            // This approach works better: intercept direct href setting via defineProperty
+            var originalLocation = window.location;
+
+            // Wrap the location object's href setter
+            var hrefDescriptor = Object.getOwnPropertyDescriptor(Location.prototype, 'href');
+            if (hrefDescriptor && hrefDescriptor.set) {
+                var originalHrefSetter = hrefDescriptor.set;
+                Object.defineProperty(Location.prototype, 'href', {
+                    get: hrefDescriptor.get,
+                    set: function(url) {
+                        console.log('[ibl.ai] Location.href setter intercepted:', url);
+                        if (isOAuthUrl(url)) {
+                            console.log('[ibl.ai] OAuth URL detected, redirecting to system browser');
+                            var absoluteUrl = url;
+                            if (url.startsWith('/')) {
+                                absoluteUrl = this.origin + url;
+                            }
+                            if (openInSystemBrowser(absoluteUrl)) {
+                                return; // Prevent WebView navigation
+                            }
+                        }
+                        // Normal navigation
+                        originalHrefSetter.call(this, url);
+                    },
+                    configurable: true,
+                    enumerable: true
+                });
+                console.log('[ibl.ai] Location.href setter intercepted successfully');
+            }
+
+            // Also intercept assign and replace
+            var originalAssign = Location.prototype.assign;
+            Location.prototype.assign = function(url) {
+                console.log('[ibl.ai] location.assign() intercepted:', url);
+                if (isOAuthUrl(url)) {
+                    var absoluteUrl = url.startsWith('/') ? this.origin + url : url;
+                    if (openInSystemBrowser(absoluteUrl)) return;
+                }
+                originalAssign.call(this, url);
+            };
+
+            var originalReplace = Location.prototype.replace;
+            Location.prototype.replace = function(url) {
+                console.log('[ibl.ai] location.replace() intercepted:', url);
+                if (isOAuthUrl(url)) {
+                    var absoluteUrl = url.startsWith('/') ? this.origin + url : url;
+                    if (openInSystemBrowser(absoluteUrl)) return;
+                }
+                originalReplace.call(this, url);
+            };
+
+        } catch (e) {
+            console.error('[ibl.ai] Failed to intercept location:', e);
+        }
+    })();
+
+    // Also intercept window.open for OAuth popups
+    var originalWindowOpen = window.open;
+    window.open = function(url, target, features) {
+        console.log('[ibl.ai] window.open() intercepted:', url);
+        if (url && isOAuthUrl(url)) {
+            var absoluteUrl = url;
+            if (url.startsWith('/')) {
+                absoluteUrl = window.location.origin + url;
+            }
+            if (openInSystemBrowser(absoluteUrl)) {
+                return null; // Return null as if popup was blocked
+            }
+        }
+        return originalWindowOpen.call(window, url, target, features);
+    };
+
+    // Click interceptor as backup for buttons that might trigger OAuth
+    document.addEventListener('click', function(e) {
+        var target = e.target;
+        var depth = 0;
+
+        while (target && depth < 10) {
+            // Check for links with OAuth URLs
+            if (target.tagName === 'A' && target.href && isOAuthUrl(target.href)) {
+                e.preventDefault();
+                e.stopPropagation();
+                openInSystemBrowser(target.href);
+                return false;
+            }
+            target = target.parentElement;
+            depth++;
+        }
+    }, true);
+
+    console.log('[ibl.ai] OAuth interceptor installed (location.href + window.open + click)');
+
+    console.log('[ibl.ai] Mobile setup complete (safe area + OAuth)');
+})();
+"#;
+
+#[cfg(test)]
+mod tests {
+    use super::MOBILE_SAFE_AREA_SCRIPT;
+
+    fn css_rule_for<'a>(css: &'a str, declaration: &str) -> &'a str {
+        let decl = css.find(declaration).expect("declaration present");
+        let open = css[..decl].rfind('{').expect("rule has a block");
+        let start = css[..open].rfind('}').map_or(0, |i| i + 1);
+        &css[start..open]
+    }
+
+    #[test]
+    fn mobile_css_does_not_make_the_app_shell_main_a_scroller() {
+        let selectors = css_rule_for(MOBILE_SAFE_AREA_SCRIPT, "-webkit-overflow-scrolling: touch");
+        assert!(
+            selectors.contains("#__next"),
+            "found the scroller rule: {selectors}"
+        );
+        assert!(
+            !selectors.split(',').any(|s| s.trim() == "main"),
+            "`main` must not be in the overflow:auto rule: {selectors}"
+        );
+    }
+
+    #[test]
+    fn mobile_css_offsets_the_fixed_body_by_the_safe_area() {
+        let css: String = MOBILE_SAFE_AREA_SCRIPT
+            .split_whitespace()
+            .collect::<Vec<_>>()
+            .join(" ");
+        for needle in [
+            "top: env(safe-area-inset-top, 0px);",
+            "bottom: env(safe-area-inset-bottom, 0px);",
+            "[data-slot=sidebar-wrapper] { height: 100%; min-height: 0; }",
+            "[data-slot=sidebar-inset] { height: 100%; }",
+            "--sat: env(safe-area-inset-top, 0px);",
+        ] {
+            assert!(css.contains(needle), "missing `{needle}`");
+        }
+        let body = &css[css.find("body { ").expect("body rule")..];
+        let body = &body[..body.find('}').unwrap()];
+        assert!(body.contains("position: fixed;"));
+        assert!(
+            body.contains("top: env(safe-area-inset-top, 0px);"),
+            "{body}"
+        );
+        assert!(
+            body.contains("bottom: env(safe-area-inset-bottom, 0px);"),
+            "{body}"
+        );
+    }
+
+    #[test]
+    fn mobile_script_keeps_the_app_base_url_placeholder() {
+        assert_eq!(
+            MOBILE_SAFE_AREA_SCRIPT
+                .matches("__IBL_APP_BASE_URL__")
+                .count(),
+            1
+        );
+    }
 }

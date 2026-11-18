@@ -22,6 +22,7 @@ import { useParams, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import { config } from '@/lib/config';
 import { TenantKeyMentorIdParams } from '@/lib/types';
+import { useOpenSessionFromUrl } from '@/hooks/use-open-session';
 import { MentorVisibilityEnum } from '@iblai/iblai-api';
 import { isLoggedIn } from '@/lib/utils';
 import { useUsername, useUserTenants } from '@/hooks/use-user';
@@ -63,6 +64,14 @@ export default function MentorPageContent() {
   const { mentorId, tenantKey } = useParams<TenantKeyMentorIdParams>();
 
   const metadata = useTenantObjectMetadata(tenantKey);
+
+  // A host embedding this agent can name a conversation to open rather than
+  // starting a fresh one — agent-ai forwards `session` through extraparams.
+  useOpenSessionFromUrl({
+    sessionId: searchParams.get('session'),
+    tenantKey,
+    mentorId,
+  });
 
   // Skip mentor public settings API call in offline mode
   const { data: mentorPublicSettings } = useGetMentorPublicSettingsQuery(

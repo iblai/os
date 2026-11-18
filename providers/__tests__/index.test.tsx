@@ -25,6 +25,14 @@ let mockRouter = { push: mockPush, replace: mockReplace };
 
 // AppProvider mounts the agent-settings launcher, which reads navigation and
 // user hooks this suite does not set up; it has its own tests.
+// The real module pulls the whole remark/rehype/KaTeX pipeline. `AppProvider`
+// imports it fire-and-forget in an effect (deliberately — the startup path
+// must not await it), so under load that import is still resolving when this
+// file's last test ends, and vitest tears the environment down underneath it:
+// "Cannot load … after the environment was torn down". Registration itself is
+// covered by lib/__tests__/canvas-markdown-engine.test.ts.
+vi.mock('@/lib/canvas-markdown-engine', () => ({}));
+
 vi.mock('../agent-settings-launcher', () => ({
   AgentSettingsLauncher: ({ children }: { children: React.ReactNode }) => (
     <>{children}</>
@@ -132,15 +140,6 @@ vi.mock('@/hooks/use-is-preview-mode', () => ({
   useIsPreviewMode: () => mockIsPreviewMode,
 }));
 
-vi.mock('@/hooks/subscription/use-402-error-check', () => ({
-  use402ErrorCheck: () => ({ handle402Error: mockHandle402Error }),
-}));
-
-vi.mock('@/hooks/subscription/constants', () => ({
-  SUBSCRIPTION_CREDIT_LIMIT_ERROR_MESSAGE:
-    'You do not have enough credits to proceed.',
-}));
-
 // ── lib mocks ───────────────────────────────────────────────────────────────
 
 const mockSendMessageToParentWebsite = vi.fn();
@@ -181,7 +180,9 @@ vi.mock('@/lib/config', () => ({
     iblPlatform: () => 'mentor',
     environment: () => 'test',
     stripeEnabled: () => false,
+    supportEmail: () => 'support@test',
     enableRBAC: () => false,
+    planFeatures: () => ({ free: [], premium: [], max: [], ultra: [] }),
   },
 }));
 
@@ -297,6 +298,14 @@ let mentorProviderCallbacksToInvoke: Array<{ name: string; args?: unknown[] }> =
   [];
 
 vi.mock('@iblai/iblai-js/web-utils', () => ({
+  SubscriptionConfigProvider: ({ children }: { children: React.ReactNode }) => (
+    <>{children}</>
+  ),
+  use402ErrorCheck: () => ({ handle402Error: mockHandle402Error }),
+  // Desktop-only listener; a no-op in the browser.
+  useOpencode402: vi.fn(),
+  SUBSCRIPTION_CREDIT_LIMIT_ERROR_MESSAGE:
+    'You do not have enough credits to proceed.',
   useTenantSwitchSync: vi.fn(),
   refreshTenantSwitchLock: vi.fn(),
   isTenantSwitchInProgress: vi.fn(() => false),
@@ -522,9 +531,11 @@ describe('Providers', () => {
           402: expect.any(Function),
         }),
         undefined,
-        // Standalone (not iframed): no refreshAuthToken, so the data layer uses
-        // its own edX-session mint.
-        undefined,
+        // Always ours, standalone included: left undefined the data layer
+        // would mint from the edX session, and this app calls no edX LMS.
+        expect.any(Function),
+        // And every LMS/Studio call goes through DM's edX proxy.
+        { edxProxy: true },
       );
     });
 
@@ -533,6 +544,36 @@ describe('Providers', () => {
       renderProviders();
       const call = mockInitializeDataLayer.mock.calls.at(-1)!;
       expect(call[6]).toEqual(expect.any(Function));
+    });
+
+    // Standalone it goes to the auth app, which re-mints and returns the user
+    // here — rather than this app minting from the edX session itself.
+    it('sends a standalone 401 to the auth app instead of minting', async () => {
+      mockIsInIframe.mockReturnValue(false);
+      // jsdom refuses real navigation, so watch the assignment instead — and
+      // put the real location back, or the tests after this one lose their
+      // search params.
+      const realLocation = window.location;
+      Object.defineProperty(window, 'location', {
+        value: { ...realLocation, href: 'https://os.ibl.ai/chat' },
+        writable: true,
+        configurable: true,
+      });
+      renderProviders();
+      const refreshAuthToken = mockInitializeDataLayer.mock.calls.at(-1)![6] as
+        | (() => Promise<boolean>)
+        | undefined;
+
+      try {
+        await expect(refreshAuthToken!()).resolves.toBe(false);
+        expect(window.location.href).toContain('/login/complete');
+      } finally {
+        Object.defineProperty(window, 'location', {
+          value: realLocation,
+          writable: true,
+          configurable: true,
+        });
+      }
     });
 
     it('creates a script element when __ENV__ is not defined', () => {
@@ -1073,6 +1114,21 @@ describe('Providers', () => {
       // the reset effect itself.
       expect(mockDispatch).not.toHaveBeenCalledWith({
         type: 'rbac/markMentorLoaded',
+      });
+    });
+
+    // Workflow pages skip the mentor check, so MentorProvider loads no mentor's
+    // permissions there; a reset left the Preview chat's input disabled with
+    // "You don't have permission to chat" for the editor.
+    it('on a workflow page, marks mentor permissions loaded for a signed-in user', () => {
+      mockUsername = 'testuser';
+      mockPathname = '/platform/test-tenant/workflows/entry-agent/workflow-1';
+      renderProviders();
+      expect(mockDispatch).toHaveBeenCalledWith({
+        type: 'rbac/markMentorLoaded',
+      });
+      expect(mockDispatch).not.toHaveBeenCalledWith({
+        type: 'rbac/resetMentorLoaded',
       });
     });
 
