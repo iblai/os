@@ -13,7 +13,7 @@ const E2E_COPY = 'e2e/fixtures/agent-ai.umd.js';
  * to run a branch build for two weeks with nothing noticing. Re-vendoring means
  * updating both, deliberately:
  *
- *   npm pack @iblai/agent-ai@<version>     # or: pnpm --filter @iblai/agent-ai build
+ *   npm pack @iblai/agent-ai@<version>
  *   shasum -a 256 <dist/index.umd.js>
  */
 const VENDORED_VERSION = '2.15.1';
@@ -64,33 +64,39 @@ describe('what the panel needs from the vendored bundle', () => {
     ).toBe(true);
   });
 
-  // The embed authorises against the host's session rather than redirecting,
-  // which is the whole basis of the panel's auth. `authrelyonhost` alone is
-  // just the attribute accessor a minifier emits for any attribute, so pin the
-  // relay it gates too.
-  it('supports authrelyonhost, and the relay behind it', () => {
-    expect(bundle.includes('authrelyonhost')).toBe(true);
+  // `mentor-chat.tsx` sets this, and the embed reads the host's session instead
+  // of redirecting — the basis of the panel's auth.
+  //
+  // This is an attribute pin only, and says so: the string a minifier emits is
+  // the accessor, so a bundle that keeps the attribute and drops the behaviour
+  // still passes. Pinning the behaviour needs a string from inside it, the way
+  // `defer-to-host` backs `hostownschooser`; I have not found one I can show is
+  // load-bearing, and a guard that reads stronger than it is has already been
+  // removed twice from this file.
+  it('still declares authrelyonhost', () => {
     expect(
-      bundle.includes('relayauthmessage'),
-      'the vendored agent-ai declares `authrelyonhost` but has no auth relay: ' +
-        'the panel hands it a session it would ignore',
+      bundle.includes('authrelyonhost'),
+      'the vendored agent-ai no longer declares `authrelyonhost`: the embed ' +
+        'would redirect for its own auth instead of reading the session the ' +
+        'panel holds. Check the release this was vendored from.',
     ).toBe(true);
   });
 
-  // `mentor-frame.ts` reaches into the bundle's shadow DOM by these ids —
-  // `mentorIframe()` and the spinner removal. Rename either upstream and
-  // `installSession()` returns false forever, silently: the chat never routes
-  // and nothing here would have said why.
+  // `mentor-frame.ts` reaches into the bundle's shadow DOM by these two ids.
   it('keeps the shadow-DOM ids the panel reaches for', () => {
     expect(
       bundle.includes('ibl-chat-widget-container'),
       'the vendored agent-ai renamed its chat container: `mentorIframe()` ' +
         'finds nothing and the panel can never install a session',
     ).toBe(true);
+    // `clearRefreshInstruction` undoes agent-ai's "Your session has expired.
+    // Please refresh the page." — the widget shows it and sets the iframe to
+    // `display: none`, with nothing to put either back. Renamed, a successful
+    // recovery renders behind a hidden iframe and looks like nothing happened.
     expect(
       bundle.includes('refresh-instruction'),
-      'the vendored agent-ai renamed its refresh element: the panel cannot ' +
-        'remove the widget spinner that sits over the chat',
+      'the vendored agent-ai renamed its expiry notice: a recovered session ' +
+        'would render behind an iframe left hidden',
     ).toBe(true);
   });
 
@@ -116,7 +122,8 @@ describe('what the panel needs from the vendored bundle', () => {
       sha,
       `the vendored bundle is not @iblai/agent-ai@${VENDORED_VERSION}. ` +
         'If you re-vendored, update VENDORED_VERSION and VENDORED_SHA256 ' +
-        'here and the version line in extensions/chrome/README.md.',
+        'here and in the "Updating the agent component" section of ' +
+        'extensions/chrome/README.md.',
     ).toBe(VENDORED_SHA256);
   });
 });
