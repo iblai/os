@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.200.1](https://github.com/iblai/os/compare/v0.200.0...v0.200.1) (2026-11-18)
+
+### Chores
+
+* **ci:** add cargo-deny supply-chain gate for the Rust app (F4) ([b108423](https://github.com/iblai/os/commit/b108423677723d9683723c218c4e8869e49f91d2))
+* **tauri:** release app-v0.95.35 ([09cd312](https://github.com/iblai/os/commit/09cd31212fc52a17d81e9fbad9079df150122492))
+
 ## [0.200.0](https://github.com/iblai/os/compare/v0.199.2...v0.200.0) (2026-11-18)
 
 ### Features
