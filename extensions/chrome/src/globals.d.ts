@@ -19,6 +19,7 @@ declare module 'react' {
         showuserprofile?: string;
         allowmentorselection?: string;
         enablecowork?: string;
+        extraparams?: string;
       };
     }
   }
