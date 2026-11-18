@@ -237,6 +237,17 @@ workflow header). CI has no `.env.local`, so what it publishes always points at
 
 ## Updating the agent component
 
-Copy a fresh `dist/index.umd.js` from the SDK's `packages/agent-ai` build over
-`public/vendor/agent-ai.umd.js` (the directory is prettier-ignored so it stays
-as published). Also copy it byte-for-byte to `e2e/fixtures/agent-ai.umd.js` (journey 89 serves that copy; `scripts/agent-ai-vendor-copy.test.ts` fails when they differ). Vendored: `@iblai/agent-ai` 2.13.3.
+Vendor from a **published release**, not a local build:
+
+```bash
+npm pack @iblai/agent-ai@<version>     # then: tar xzf, package/dist/index.umd.js
+```
+
+Copy it over `public/vendor/agent-ai.umd.js` (the directory is prettier-ignored
+so it stays as published). A local `packages/agent-ai` build is how the panel
+came to run an unreleased branch bundle for two weeks — it had behaviour no
+release had, so the next person to vendor from npm would have broken the panel
+(iblai-web-frontend#2257).
+
+Then update `VENDORED_VERSION` and `VENDORED_SHA256` in
+`scripts/agent-ai-vendor-copy.test.ts`, which pins the bytes to that release. Also copy it byte-for-byte to `e2e/fixtures/agent-ai.umd.js` (journey 89 serves that copy; `scripts/agent-ai-vendor-copy.test.ts` fails when they differ). Vendored: `@iblai/agent-ai` 2.15.1.
