@@ -782,9 +782,6 @@ export default function Providers({ children }: { children: React.ReactNode }) {
               useCurrentDomain = true,
             ) => {
               console.log('[TenantProvider] handling tenant switching');
-              // The panel's agent is bound per organization, so a switch would
-              // land on one that organization never chose for it.
-              if (inExtensionPanel) return;
               if (!showingSharedChat)
                 await handleTenantSwitch(
                   tenant,

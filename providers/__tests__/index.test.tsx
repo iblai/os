@@ -983,18 +983,6 @@ describe('Providers', () => {
       );
     });
 
-    it('does not switch organizations in the side panel', async () => {
-      mockInExtensionPanel = true;
-      renderProviders();
-
-      const handleSwitchFn =
-        capturedTenantProviderProps.handleTenantSwitch as Function;
-      await handleSwitchFn('new-tenant', true, true);
-
-      expect(mockHandleTenantSwitch).not.toHaveBeenCalled();
-      mockInExtensionPanel = false;
-    });
-
     it('handleTenantSwitch uses mentorUrl when useCurrentDomain is false', async () => {
       renderProviders();
       const handleSwitchFn =

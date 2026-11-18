@@ -90,11 +90,8 @@ function launcherFrame(page: Page): FrameLocator {
   return page.frameLocator('agent-ai iframe');
 }
 
-async function openPanelChat(
-  page: Page,
-  { userProfile = false } = {},
-): Promise<FrameLocator> {
-  await openLauncher(page, { cowork: true, userProfile });
+async function openPanelChat(page: Page): Promise<FrameLocator> {
+  await openLauncher(page, { cowork: true });
   const frame = launcherFrame(page);
   await expect(frame.locator('#chat-input-textarea')).toBeVisible({
     timeout: 60_000,
@@ -231,23 +228,5 @@ test.describe('Journey 93: Cowork in the extension panel', () => {
     await emit(page, { type: 'event', event: { type: 'text', text: REPLY } });
     await emit(page, { type: 'done', text: REPLY });
     await expect(send).toBeVisible({ timeout: 15_000 });
-  });
-
-  // cw-04: the panel's agent is bound to the organization in its metadata, so
-  // there is nothing to switch to and the profile menu offers no trip to the
-  // organization chooser. Which agent it lands on is unit-tested
-  // (`hooks/__tests__/use-chrome-extension-agent.test.ts`): the harness pins a
-  // mentor on the iframe URL, so no agent resolution runs here.
-  test('the panel offers no way to change organization', async ({ page }) => {
-    const frame = await openPanelChat(page, { userProfile: true });
-
-    await frame.getByRole('button', { name: 'More options' }).click();
-
-    // The menu itself is the proof it opened: an absent entry proves nothing
-    // when nothing rendered. Not Log Out — an embed hides that one anyway.
-    await expect(frame.getByRole('menu')).toBeVisible();
-    await expect(
-      frame.getByRole('menuitem', { name: 'Organizations' }),
-    ).toHaveCount(0);
   });
 });
