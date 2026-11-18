@@ -14,7 +14,8 @@ const E2E_COPY = 'e2e/fixtures/agent-ai.umd.js';
  * updating both, deliberately:
  *
  *   npm pack @iblai/agent-ai@<version>
- *   shasum -a 256 <dist/index.umd.js>
+ *   tar xzf iblai-agent-ai-<version>.tgz
+ *   shasum -a 256 package/dist/index.umd.js
  */
 const VENDORED_VERSION = '2.15.1';
 const VENDORED_SHA256 =

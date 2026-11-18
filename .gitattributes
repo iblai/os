@@ -10,9 +10,9 @@ e2e/fixtures/agent-ai.umd.js -text
 # --renormalize`: with `-text` the clean filter converts nothing, so that
 # stages the CRLF bytes as a new blob and changes the vendored bundle for
 # everyone while the working tree — which the pin reads — stays wrong. Restore
-# the bytes instead:
+# the bytes from the commit instead:
 #
-#   git rm --cached extensions/chrome/public/vendor/agent-ai.umd.js e2e/fixtures/agent-ai.umd.js
-#   git checkout -- extensions/chrome/public/vendor/agent-ai.umd.js e2e/fixtures/agent-ai.umd.js
+#   git checkout HEAD -- extensions/chrome/public/vendor/agent-ai.umd.js e2e/fixtures/agent-ai.umd.js
 #
-# or simply re-clone.
+# `HEAD --` matters: a plain `git checkout --` restores from the index, which
+# in a CRLF clone holds the same wrong bytes. Re-cloning works too.
