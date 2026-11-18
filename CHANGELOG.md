@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.202.1](https://github.com/iblai/os/compare/v0.202.0...v0.202.1) (2026-11-18)
+
+### Chores
+
+* iblai-js bumped to 2.82.0 ([6e4ffa2](https://github.com/iblai/os/commit/6e4ffa23a7a710fcda5c3d5b2e61de2ea38392da))
+
 ## [0.202.0](https://github.com/iblai/os/compare/v0.201.1...v0.202.0) (2026-11-18)
 
 ### Features
