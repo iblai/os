@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.201.1](https://github.com/iblai/os/compare/v0.201.0...v0.201.1) (2026-11-18)
+
+### Bug Fixes
+
+* **ext:** record the vendored version, and guard what has actually broken ([5b61857](https://github.com/iblai/os/commit/5b61857de06369bcf86ea50bfd0be216ab9a1b4a)), closes [iblai-platform#2680](https://github.com/iblai/iblai-platform/issues/2680)
+
+### Chores
+
+* **ext:** vendor agent-ai 2.15.1, built from main at last ([e683121](https://github.com/iblai/os/commit/e68312117f617de481420943e46e1e6cf5a6477e)), closes [iblai-web-frontend#2257](https://github.com/iblai/iblai-web-frontend/issues/2257)
+
+### Tests
+
+* **ext:** pin what the panel actually breaks on, and vendor from a release ([96a5b94](https://github.com/iblai/os/commit/96a5b94e7beb10902dc3726b76d555fd10e429c2)), closes [#ibl-chat-widget-container](https://github.com/iblai/os/issues/ibl-chat-widget-container)
+* **ext:** tie the vendored bundle to a release, and to the behaviour ([d4ec10e](https://github.com/iblai/os/commit/d4ec10ee210c12c0daab48ce28c5c4167b1164f2))
+
 ## [0.201.0](https://github.com/iblai/os/compare/v0.200.1...v0.201.0) (2026-11-18)
 
 ### Features
