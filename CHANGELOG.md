@@ -1,5 +1,7 @@
 # Changelog
 
+## [0.203.1](https://github.com/iblai/os/compare/v0.203.0...v0.203.1) (2026-11-18)
+
 ## [0.203.0](https://github.com/iblai/os/compare/v0.202.2...v0.203.0) (2026-11-18)
 
 ### Features
