@@ -34,6 +34,19 @@ export const SECOND_TENANT_MENTOR_URL =
 export const NO_ACCESS_TENANT_MENTOR_URL =
   process.env.NO_ACCESS_TENANT_MENTOR_URL || '';
 
+// Full mentor URL for a tenant the primary `PLAYWRIGHT_USERNAME` account does
+// NOT belong to but CAN self-join (self-linking enabled) — the mirror of
+// NO_ACCESS_TENANT_MENTOR_URL above. Used by Journey 32's auto-join invariant.
+//
+// ONE-SHOT BY NATURE: the first passing run joins the account to the tenant,
+// and there is no API to undo a user<->platform link. The test detects that and
+// skips with an explanation rather than silently degrading into a duplicate of
+// the SECOND_TENANT_MENTOR_URL case (a member short-circuits the join path, so
+// a re-run would assert nothing about joining). To exercise it again, point
+// this at a tenant the account has not joined yet.
+export const JOIN_TENANT_MENTOR_URL =
+  process.env.JOIN_TENANT_MENTOR_URL || '';
+
 // ── Credentials ──────────────────────────────────────────────────────────────
 
 export const PLAYWRIGHT_USERNAME = process.env.PLAYWRIGHT_USERNAME || '';
