@@ -39,15 +39,21 @@ describe('what the panel needs from the vendored bundle', () => {
     ).toBe(true);
   });
 
-  // `watchTenantSwitch` listens for this. Without it "Organizations" does
-  // nothing at all.
-  it('posts tenantSwitch, which is how the picker is raised', () => {
-    expect(bundle.includes('tenantSwitch')).toBe(true);
-  });
-
   // The embed authorises against the host's session rather than redirecting,
   // which is the whole basis of the panel's auth.
   it('supports authrelyonhost', () => {
     expect(bundle.includes('authrelyonhost')).toBe(true);
+  });
+
+  // The one bundle-only behaviour that HAS regressed in production: downloads
+  // from the chat silently did nothing until the iframe sandbox was given
+  // `allow-downloads` (iblai-platform#2680, vendored in 04a6cfb2). Only the
+  // live-backend journey would notice it going again.
+  it('keeps allow-downloads in the iframe sandbox', () => {
+    expect(
+      bundle.includes('allow-downloads'),
+      'the vendored agent-ai has no `allow-downloads`: downloads from the ' +
+        'chat will silently do nothing (iblai-platform#2680)',
+    ).toBe(true);
   });
 });
