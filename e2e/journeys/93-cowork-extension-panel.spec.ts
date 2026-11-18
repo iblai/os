@@ -243,9 +243,9 @@ test.describe('Journey 93: Cowork in the extension panel', () => {
 
     await frame.getByRole('button', { name: 'More options' }).click();
 
-    await expect(
-      frame.getByRole('menuitem', { name: 'Log Out' }),
-    ).toBeVisible();
+    // The menu itself is the proof it opened: an absent entry proves nothing
+    // when nothing rendered. Not Log Out — an embed hides that one anyway.
+    await expect(frame.getByRole('menu')).toBeVisible();
     await expect(
       frame.getByRole('menuitem', { name: 'Organizations' }),
     ).toHaveCount(0);
