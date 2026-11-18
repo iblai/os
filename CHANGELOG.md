@@ -1,5 +1,37 @@
 # Changelog
 
+## [0.203.0](https://github.com/iblai/os/compare/v0.202.2...v0.203.0) (2026-11-18)
+
+### Features
+
+* **os:** fit Code and Cowork to the models on this computer ([bc1a7db](https://github.com/iblai/os/commit/bc1a7db5dfb1d8f74a3a3a74b06f9ef6247a7c57))
+* **os:** give the Code agent the screen when Cowork is on, and stream the local model for Cowork ([fd71a48](https://github.com/iblai/os/commit/fd71a48a78561ac7cbcae75c5b2941ed50beb13e)), closes [iblai/os#594](https://github.com/iblai/os/issues/594)
+
+### Bug Fixes
+
+* **ext:** type the extraparams attribute the panel passes to agent-ai ([d912421](https://github.com/iblai/os/commit/d9124213b0e07e40a41acbfcb01ba0a057cf8b40))
+* **os:** adding fix for the cowork permissions ([d4d488d](https://github.com/iblai/os/commit/d4d488d95adff7c467e01e54bd69abdcc13ab624))
+* **os:** bound a pending Cowork setup to ten minutes from the user's last step ([992589b](https://github.com/iblai/os/commit/992589bcafbcc046f9648b12e6f7231f7b3cb549)), closes [iblai/iblai-web-frontend#2170](https://github.com/iblai/iblai-web-frontend/issues/2170)
+* **os:** fixes for the cowork permissions ([459a175](https://github.com/iblai/os/commit/459a175dcc83f33571e99286365f284f32aab7df))
+* **os:** hide the Code pill in the phone apps for now ([8a04cb3](https://github.com/iblai/os/commit/8a04cb30aed2e3d9bf3a2d187038ae9bfaf8b9ce))
+* **os:** keep Code answering with Cowork on, drop the "Cowork answers instead" toasts ([fe3baeb](https://github.com/iblai/os/commit/fe3baeb64a3373293c004b8d70182548b7bada00)), closes [iblai/iblai-web-frontend#2170](https://github.com/iblai/iblai-web-frontend/issues/2170) [iblai/iblai-web-frontend#2165](https://github.com/iblai/iblai-web-frontend/issues/2165)
+* **os:** show a sign-in page in the iPhone app the way a browser does ([a65b8a3](https://github.com/iblai/os/commit/a65b8a30fc7cfabbf60485a63f8c58ebd8c3aec0))
+
+### Chores
+
+* **os:** move to @iblai/iblai-js 2.81.0 ([dcbdbb5](https://github.com/iblai/os/commit/dcbdbb5fe08f45ba8547bb7858d6249cf33ae88a))
+* **tauri:** release app-v0.95.36 ([5da0392](https://github.com/iblai/os/commit/5da0392b8eff1ec83e63cd3b434a36a46aecfcd5))
+
+### Documentation
+
+* **e2e-tauri:** cowork-05 names the ten-minute resume window and its gates ([77cff76](https://github.com/iblai/os/commit/77cff76821ea5ee31dab6a5986fb42c3ca7f67a7))
+* **e2e-tauri:** ledger checkpoints for on-device models and the phone sign-in page ([febc9e2](https://github.com/iblai/os/commit/febc9e24f212836b7fbb571881ae76ce41a6e0f7))
+* **os:** an on-device model gets eleven screen tools, not ten ([90b24f0](https://github.com/iblai/os/commit/90b24f04ed4a12279e0f170ea85dec0301326076))
+
+### Tests
+
+* **os:** cover isTauriPhone outside the app, per platform, and without the OS plugin ([e020b65](https://github.com/iblai/os/commit/e020b65ba7b2e464071ba8155c40494c734b83bc))
+
 ## [0.202.2](https://github.com/iblai/os/compare/v0.202.1...v0.202.2) (2026-11-18)
 
 ### Bug Fixes
