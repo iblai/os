@@ -6,5 +6,13 @@ extensions/chrome/public/vendor/agent-ai.umd.js -text
 e2e/fixtures/agent-ai.umd.js -text
 
 # `-text` governs fresh checkouts. A clone made before this line keeps CRLF in
-# the working tree and will still fail the sha pin: run
-# `git add --renormalize .` (or re-clone) once.
+# its working tree and will still fail the sha pin. Do NOT `git add
+# --renormalize`: with `-text` the clean filter converts nothing, so that
+# stages the CRLF bytes as a new blob and changes the vendored bundle for
+# everyone while the working tree — which the pin reads — stays wrong. Restore
+# the bytes instead:
+#
+#   git rm --cached extensions/chrome/public/vendor/agent-ai.umd.js e2e/fixtures/agent-ai.umd.js
+#   git checkout -- extensions/chrome/public/vendor/agent-ai.umd.js e2e/fixtures/agent-ai.umd.js
+#
+# or simply re-clone.

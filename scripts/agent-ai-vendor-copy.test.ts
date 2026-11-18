@@ -13,7 +13,7 @@ const E2E_COPY = 'e2e/fixtures/agent-ai.umd.js';
  * to run a branch build for two weeks with nothing noticing. Re-vendoring means
  * updating both, deliberately:
  *
- *   npm pack @iblai/agent-ai@<version>     # or: pnpm --filter @iblai/agent-ai build
+ *   npm pack @iblai/agent-ai@<version>
  *   shasum -a 256 <dist/index.umd.js>
  */
 const VENDORED_VERSION = '2.15.1';
@@ -74,7 +74,12 @@ describe('what the panel needs from the vendored bundle', () => {
   // load-bearing, and a guard that reads stronger than it is has already been
   // removed twice from this file.
   it('still declares authrelyonhost', () => {
-    expect(bundle.includes('authrelyonhost')).toBe(true);
+    expect(
+      bundle.includes('authrelyonhost'),
+      'the vendored agent-ai no longer declares `authrelyonhost`: the embed ' +
+        'would redirect for its own auth instead of reading the session the ' +
+        'panel holds. Check the release this was vendored from.',
+    ).toBe(true);
   });
 
   // `mentor-frame.ts` reaches into the bundle's shadow DOM by these two ids.
