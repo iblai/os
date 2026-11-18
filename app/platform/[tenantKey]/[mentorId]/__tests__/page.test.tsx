@@ -47,6 +47,8 @@ vi.mock('@/hooks/use-chat-mode', () => ({
 }));
 
 vi.mock('@iblai/iblai-js/data-layer', () => ({
+  // The chat page now renders the recording review above the chat.
+  useCreateAgentSkillMutation: () => [vi.fn(), { isLoading: false }],
   useGetMentorPublicSettingsQuery: vi.fn(() => ({ data: null })),
   useLazyGetShareableLinkPublicQuery: vi.fn(() => [vi.fn(), { data: null }]),
 }));
