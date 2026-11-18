@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.202.0](https://github.com/iblai/os/compare/v0.201.1...v0.202.0) (2026-11-18)
+
+### Features
+
+* **panel:** create the browsing agent on ibl.ai Pro ([a415e4e](https://github.com/iblai/os/commit/a415e4ea500249fb3bbb3bdbe872f8523b1470e9))
+* **panel:** let the organization change, and follow it to its agent ([b955deb](https://github.com/iblai/os/commit/b955deb3ec286f00186413900547e328ede306db)), closes [#678](https://github.com/iblai/os/issues/678)
+* **panel:** open the agent the organization chose for the browser ([11b58e2](https://github.com/iblai/os/commit/11b58e2306855eb35dfbed925b6a6fc4430225ab))
+* **panel:** tell a member the panel needs setting up, instead of hiding it ([e2c6dd4](https://github.com/iblai/os/commit/e2c6dd49a8209648f6f0ddd2ad467ce673f8ce74))
+
+### Bug Fixes
+
+* **panel:** name the client, survive a deleted agent, and heed the review ([5227510](https://github.com/iblai/os/commit/5227510dff23a5eef335f813c5767f1421b2c374))
+
+### Tests
+
+* **e2e:** cover the panel offering no organization switch ([f449926](https://github.com/iblai/os/commit/f449926b784aa2279e2a5c8f68fc7a3c7d6e989a))
+* **e2e:** prove the panel's profile menu opened, not that Log Out is in it ([4f734ad](https://github.com/iblai/os/commit/4f734ade05989d69a997f22d87d0f2d12e4cc24d))
+
 ## [0.201.1](https://github.com/iblai/os/compare/v0.201.0...v0.201.1) (2026-11-18)
 
 ### Bug Fixes
