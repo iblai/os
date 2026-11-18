@@ -14,5 +14,7 @@ e2e/fixtures/agent-ai.umd.js -text
 #
 #   git checkout HEAD -- extensions/chrome/public/vendor/agent-ai.umd.js e2e/fixtures/agent-ai.umd.js
 #
-# `HEAD --` matters: a plain `git checkout --` restores from the index, which
-# in a CRLF clone holds the same wrong bytes. Re-cloning works too.
+# `HEAD --` is the form that works in both states. A plain `git checkout --`
+# restores from the index, which is fine while the index is clean — but once
+# anything has staged those files (a stray `git add -A`, say) it holds the CRLF
+# bytes and restores them again. Re-cloning works too.
