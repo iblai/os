@@ -4,3 +4,7 @@
 # with a message blaming the vendorer.
 extensions/chrome/public/vendor/agent-ai.umd.js -text
 e2e/fixtures/agent-ai.umd.js -text
+
+# `-text` governs fresh checkouts. A clone made before this line keeps CRLF in
+# the working tree and will still fail the sha pin: run
+# `git add --renormalize .` (or re-clone) once.
