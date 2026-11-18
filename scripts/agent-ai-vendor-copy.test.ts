@@ -65,9 +65,33 @@ describe('what the panel needs from the vendored bundle', () => {
   });
 
   // The embed authorises against the host's session rather than redirecting,
-  // which is the whole basis of the panel's auth.
-  it('supports authrelyonhost', () => {
+  // which is the whole basis of the panel's auth. `authrelyonhost` alone is
+  // just the attribute accessor a minifier emits for any attribute, so pin the
+  // relay it gates too.
+  it('supports authrelyonhost, and the relay behind it', () => {
     expect(bundle.includes('authrelyonhost')).toBe(true);
+    expect(
+      bundle.includes('relayauthmessage'),
+      'the vendored agent-ai declares `authrelyonhost` but has no auth relay: ' +
+        'the panel hands it a session it would ignore',
+    ).toBe(true);
+  });
+
+  // `mentor-frame.ts` reaches into the bundle's shadow DOM by these ids —
+  // `mentorIframe()` and the spinner removal. Rename either upstream and
+  // `installSession()` returns false forever, silently: the chat never routes
+  // and nothing here would have said why.
+  it('keeps the shadow-DOM ids the panel reaches for', () => {
+    expect(
+      bundle.includes('ibl-chat-widget-container'),
+      'the vendored agent-ai renamed its chat container: `mentorIframe()` ' +
+        'finds nothing and the panel can never install a session',
+    ).toBe(true);
+    expect(
+      bundle.includes('refresh-instruction'),
+      'the vendored agent-ai renamed its refresh element: the panel cannot ' +
+        'remove the widget spinner that sits over the chat',
+    ).toBe(true);
   });
 
   // The one bundle-only behaviour that HAS regressed in production: downloads

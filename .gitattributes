@@ -1,0 +1,6 @@
+# The vendored agent-ai bundle and its e2e copy are compared byte-for-byte and
+# pinned by sha256 (scripts/agent-ai-vendor-copy.test.ts). Line-ending
+# conversion on a Windows checkout would change those bytes and fail the pin
+# with a message blaming the vendorer.
+extensions/chrome/public/vendor/agent-ai.umd.js -text
+e2e/fixtures/agent-ai.umd.js -text
