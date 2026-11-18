@@ -1,8 +1,24 @@
+import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 const VENDORED = 'extensions/chrome/public/vendor/agent-ai.umd.js';
 const E2E_COPY = 'e2e/fixtures/agent-ai.umd.js';
+
+/**
+ * Which release the committed bytes are, and their hash.
+ *
+ * The bundle is minified and carries no version of its own, so without this the
+ * only record is prose in the README — which is exactly how the extension came
+ * to run a branch build for two weeks with nothing noticing. Re-vendoring means
+ * updating both, deliberately:
+ *
+ *   npm pack @iblai/agent-ai@<version>     # or: pnpm --filter @iblai/agent-ai build
+ *   shasum -a 256 <dist/index.umd.js>
+ */
+const VENDORED_VERSION = '2.15.1';
+const VENDORED_SHA256 =
+  '2392e163366a70c884a62ade42d028e96d8bc712d3fd034039980a7575536382';
 
 describe('e2e copy of the vendored agent-ai launcher', () => {
   it('is byte-identical to the extension vendor file', () => {
@@ -31,11 +47,20 @@ describe('what the panel needs from the vendored bundle', () => {
   // `mentor-chat.tsx` sets this attribute. Without it the embed opens its own
   // chooser window as well as handing the request to the panel, and navigates
   // the iframe out from under the chat.
+  // Both halves: the attribute a minifier emits for any accessor, and the
+  // branch that actually defers. A bundle can declare the attribute and still
+  // have lost the behaviour, which would leave the panel with two choosers and
+  // its iframe navigated away.
   it('honours hostownschooser, so the panel owns the chooser', () => {
     expect(
       bundle.includes('hostownschooser'),
       'the vendored agent-ai has no `hostownschooser`: it predates ' +
         'iblai-web-frontend#2257, and the panel would get the embed’s chooser too',
+    ).toBe(true);
+    expect(
+      bundle.includes('defer-to-host'),
+      'the vendored agent-ai declares `hostownschooser` but has no ' +
+        '`defer-to-host` branch: the embed would open its own chooser anyway',
     ).toBe(true);
   });
 
@@ -55,5 +80,19 @@ describe('what the panel needs from the vendored bundle', () => {
       'the vendored agent-ai has no `allow-downloads`: downloads from the ' +
         'chat will silently do nothing (iblai-platform#2680)',
     ).toBe(true);
+  });
+
+  // Ties the bytes to a release. The README's version line is prose and cannot
+  // fail; this does, and names what to do about it.
+  it('is the release it says it is', () => {
+    const sha = createHash('sha256')
+      .update(readFileSync(VENDORED))
+      .digest('hex');
+    expect(
+      sha,
+      `the vendored bundle is not @iblai/agent-ai@${VENDORED_VERSION}. ` +
+        'If you re-vendored, update VENDORED_VERSION and VENDORED_SHA256 ' +
+        'here and the version line in extensions/chrome/README.md.',
+    ).toBe(VENDORED_SHA256);
   });
 });
