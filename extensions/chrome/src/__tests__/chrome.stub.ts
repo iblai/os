@@ -60,7 +60,23 @@ export function installChromeStub() {
   const stub = {
     identity: {
       getRedirectURL: vi.fn(() => 'https://abc.chromiumapp.org/'),
-      launchWebAuthFlow: vi.fn(async () => sessionRedirect(SESSION)),
+      // Answers for the organization it was asked for, as the auth app does: a
+      // switch to `beta` comes back with a `beta` session. Returning a fixed
+      // tenant would let a missing "is this the org I asked for?" check pass.
+      launchWebAuthFlow: vi.fn(async (options?: { url?: string }) => {
+        let tenant: string | null = null;
+        try {
+          tenant = new URL(options?.url ?? '').searchParams.get('tenant');
+        } catch {
+          tenant = null;
+        }
+        if (!tenant) return sessionRedirect(SESSION);
+        return sessionRedirect({
+          ...SESSION,
+          tenant,
+          current_tenant: JSON.stringify({ key: tenant, name: tenant }),
+        });
+      }),
     },
     tabs: {
       query: vi.fn(async () => [

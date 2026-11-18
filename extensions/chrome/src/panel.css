@@ -29,6 +29,11 @@ body {
   flex-direction: column;
 }
 
+/* The organization picker is positioned against the panel, not the viewport. */
+.panel {
+  position: relative;
+}
+
 button {
   font: inherit;
   border-radius: 6px;
@@ -70,4 +75,268 @@ agent-ai {
 /* Sign-in failures. */
 .row-error {
   color: var(--danger);
+}
+
+/* ---- Organization picker -------------------------------------------------
+   The same screen as the auth app's chooser (apps/auth/app/(auth)/me), in
+   plain CSS: there is no Tailwind here, so its palette is written out —
+   #F5F8FF card on a rgba(115,185,255,.3) hairline with the blue glow,
+   #37352B text, #0078FF for the default and #0058cc for the current one. */
+.orgs {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 12px;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+.orgs-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.orgs-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.orgs-title {
+  font-size: 18px;
+  font-weight: 500;
+  color: #37352b;
+}
+
+.orgs-subtitle {
+  font-size: 12px;
+  color: #4b5563;
+}
+
+.orgs-close {
+  flex: none;
+  padding: 0 6px;
+  font-size: 18px;
+  line-height: 1;
+  color: var(--muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.orgs-card {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px 12px;
+  background: #f5f8ff;
+  border: 1px solid rgba(115, 185, 255, 0.3);
+  border-radius: 11px;
+  box-shadow: 0 2px 20px 5px rgba(115, 185, 255, 0.23);
+}
+
+.orgs-count {
+  align-self: flex-end;
+  font-size: 11px;
+  color: #6b7280;
+}
+
+.orgs-error {
+  margin: 0;
+  padding: 0 2px;
+  font-size: 11px;
+  color: #dc2626;
+}
+
+.orgs-retry {
+  align-self: flex-start;
+  font-size: 12px;
+}
+
+/* The mark stands in for the auth app's spinner, which this panel does not
+   have — and it is what the panel already shows while signing in. */
+.orgs-waiting {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  align-items: center;
+  justify-content: center;
+}
+
+.orgs-waiting .mark {
+  width: 120px;
+}
+
+.orgs-list {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.orgs-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(115, 185, 255, 0.15);
+  border-radius: 8px;
+}
+
+.orgs-row:hover {
+  background: rgba(255, 255, 255, 0.85);
+}
+
+.orgs-row.current {
+  background: #fff;
+  border-color: rgba(0, 120, 255, 0.3);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.orgs-main {
+  min-width: 0;
+  flex: 1;
+}
+
+.orgs-nameline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.orgs-name {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: #37352b;
+  overflow-wrap: anywhere;
+  text-align: left;
+}
+
+.orgs-name.as-button {
+  padding: 2px 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.orgs-name.as-button:hover {
+  color: #0058cc;
+}
+
+/* The platform key, copyable — as in the chooser, where it sits under the
+   name in a monospace face. */
+.orgs-key {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 2px;
+  padding: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  color: #6b7280;
+  background: none;
+  border: none;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+  text-align: left;
+}
+
+.orgs-copied {
+  flex: none;
+  color: #9ca3af;
+}
+
+.orgs-key:hover .orgs-copied {
+  color: #6b7280;
+}
+
+.orgs-actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+}
+
+.orgs-badge {
+  flex: none;
+  padding: 0 5px;
+  font-size: 10px;
+  line-height: 16px;
+  border: 1px solid;
+  border-radius: 4px;
+}
+
+.orgs-badge.current {
+  color: #0058cc;
+  background: rgba(0, 88, 204, 0.05);
+  border-color: rgba(0, 88, 204, 0.4);
+}
+
+.orgs-badge.default {
+  color: #0078ff;
+  background: rgba(0, 120, 255, 0.05);
+  border-color: rgba(0, 120, 255, 0.4);
+}
+
+.orgs-badge.admin {
+  color: #d97706;
+  background: #fffbeb;
+  border-color: #fcd34d;
+}
+
+.orgs-setdefault {
+  flex: none;
+  padding: 0;
+  font-size: 11px;
+  color: #4b5563;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.orgs-setdefault:hover:not(:disabled) {
+  color: #0078ff;
+}
+
+.orgs-setdefault:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.orgs-search {
+  padding: 7px 9px;
+  font: inherit;
+  font-size: 12px;
+  color: #37352b;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(115, 185, 255, 0.3);
+  border-radius: 8px;
+}
+
+.orgs-search:focus {
+  outline: none;
+  border-color: rgba(0, 120, 255, 0.5);
+}
+
+.orgs-note {
+  padding: 12px;
+  font-size: 12px;
+  color: #6b7280;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(115, 185, 255, 0.15);
+  border-radius: 8px;
 }

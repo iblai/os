@@ -150,5 +150,111 @@
   },
   "errorModelNoKey": {
     "message": "该组织可用的模型都没有配置密钥。请让管理该组织的人添加一个。"
+  },
+  "orgsTitle": {
+    "message": "组织"
+  },
+  "orgsLoading": {
+    "message": "正在加载你的组织…"
+  },
+  "orgsEmpty": {
+    "message": "未找到组织。"
+  },
+  "orgsCurrent": {
+    "message": "当前"
+  },
+  "orgsMakeDefault": {
+    "message": "默认打开此组织"
+  },
+  "orgsFailed": {
+    "message": "无法加载组织。"
+  },
+  "defaultOrgFailed": {
+    "message": "无法设置默认组织。请重试。"
+  },
+  "orgsClose": {
+    "message": "关闭"
+  },
+  "orgsDefault": {
+    "message": "默认"
+  },
+  "orgsSignedOut": {
+    "message": "你的会话已结束。请关闭并重新打开面板以重新登录。"
+  },
+  "orgsSwitching": {
+    "message": "正在切换组织…"
+  },
+  "orgsSwitchFailed": {
+    "message": "未能完成。请选择一个组织重试。"
+  },
+  "orgsLandedElsewhere": {
+    "message": "你现在位于 $ORG$。请重新选择以尝试你想要的组织。",
+    "placeholders": {
+      "org": {
+        "content": "$1"
+      }
+    }
+  },
+  "orgsRetry": {
+    "message": "重试"
+  },
+  "orgsSubtitle": {
+    "message": "选择你要登录的组织"
+  },
+  "orgsCountOne": {
+    "message": "1 个组织"
+  },
+  "orgsCountMany": {
+    "message": "$COUNT$ 个组织",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "orgsSetDefault": {
+    "message": "设为默认"
+  },
+  "orgsSettingDefault": {
+    "message": "正在设置…"
+  },
+  "orgsAdmin": {
+    "message": "管理员"
+  },
+  "orgsCopyKey": {
+    "message": "复制平台密钥"
+  },
+  "orgsSignInTo": {
+    "message": "登录到 $ORG$",
+    "placeholders": {
+      "org": {
+        "content": "$1"
+      }
+    }
+  },
+  "orgsSetDefaultFor": {
+    "message": "将 $ORG$ 设为默认组织",
+    "placeholders": {
+      "org": {
+        "content": "$1"
+      }
+    }
+  },
+  "orgsSearch": {
+    "message": "搜索组织"
+  },
+  "orgsSearchPlaceholder": {
+    "message": "搜索组织…"
+  },
+  "orgsNoMatch": {
+    "message": "没有符合搜索条件的组织。"
+  },
+  "orgsCopyKeyFor": {
+    "message": "复制平台密钥 $KEY$",
+    "placeholders": {
+      "key": {
+        "content": "$1"
+      }
+    }
   }
 }
