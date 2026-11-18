@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.202.2](https://github.com/iblai/os/compare/v0.202.1...v0.202.2) (2026-11-18)
+
+### Bug Fixes
+
+* **ext:** correct the recovery advice, and actually remove the local-build line ([3ee59ed](https://github.com/iblai/os/commit/3ee59eda3869bd4c57fc0aee7f4d9f0f8f2877b1))
+* **ext:** document a recovery recipe that was actually run ([4ba8fa8](https://github.com/iblai/os/commit/4ba8fa804cff67aaa184b848a16c267520ac7840))
+
+### Documentation
+
+* **ext:** correct why the recovery recipe needs HEAD ([1cb738c](https://github.com/iblai/os/commit/1cb738c396b7b5aeff632565fa6fdee417e509ec))
+
 ## [0.202.1](https://github.com/iblai/os/compare/v0.202.0...v0.202.1) (2026-11-18)
 
 ### Chores
