@@ -66,6 +66,10 @@ RUN pnpm run build
 FROM node:20-alpine AS runner
 WORKDIR /app
 
+# node:20-alpine stopped being rebuilt when Node 20 reached end of life, so its
+# Alpine packages never get security fixes on their own. Upgrade them here.
+RUN apk upgrade --no-cache
+
 # Install Node 25.3.0 (download official musl binary for Alpine)
 RUN apk add --no-cache libstdc++ \
     && wget -qO- https://unofficial-builds.nodejs.org/download/release/v25.3.0/node-v25.3.0-linux-x64-musl.tar.gz | tar xz -C /usr/local --strip-components=1 \
