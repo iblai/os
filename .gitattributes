@@ -4,3 +4,17 @@
 # with a message blaming the vendorer.
 extensions/chrome/public/vendor/agent-ai.umd.js -text
 e2e/fixtures/agent-ai.umd.js -text
+
+# `-text` governs fresh checkouts. A clone made before this line keeps CRLF in
+# its working tree and will still fail the sha pin. Do NOT `git add
+# --renormalize`: with `-text` the clean filter converts nothing, so that
+# stages the CRLF bytes as a new blob and changes the vendored bundle for
+# everyone while the working tree — which the pin reads — stays wrong. Restore
+# the bytes from the commit instead:
+#
+#   git checkout HEAD -- extensions/chrome/public/vendor/agent-ai.umd.js e2e/fixtures/agent-ai.umd.js
+#
+# `HEAD --` is the form that works in both states. A plain `git checkout --`
+# restores from the index, which is fine while the index is clean — but once
+# anything has staged those files (a stray `git add -A`, say) it holds the CRLF
+# bytes and restores them again. Re-cloning works too.
