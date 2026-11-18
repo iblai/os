@@ -4,7 +4,7 @@
 
 # ibl.ai/os
 
-**Open Source AI Operating System.**
+**Open Source Agentic Operating System.**
 
 Build, deploy, and manage intelligent conversational agents — from prototype to production, in minutes. One codebase. Every platform. Your code, your data, any LLM.
 
