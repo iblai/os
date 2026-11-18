@@ -79,7 +79,7 @@ export class SafetyTab {
       name: `Edit ${kind} Prompt`,
       exact: true,
     });
-    const box = editor.getByRole('textbox').first().locator('div');
+    const box = editor.getByRole('textbox').first();
     await expect(box).toBeVisible({ timeout: 10_000 });
     await box.clear();
     await box.fill(text);
