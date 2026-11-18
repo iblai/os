@@ -349,6 +349,8 @@ function createTestStore(options: StoreOptions = {}) {
     },
     subscriptionStatus: { creditExhausted: false },
     error402Detected: '',
+    hostHandlesCreditExhaustion: false,
+    creditExhaustion: null,
   };
   const appleRestriction: AppleRestrictionState = { openAppleRestrictionModal };
 

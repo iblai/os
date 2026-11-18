@@ -30,9 +30,9 @@ describe('tokenRefreshUrl', () => {
     expect(url.searchParams.get('tenant')).toBe('acme');
   });
 
-  // The edX JWT stays in this app. The auth app authorises the mint with its
-  // own first-party session (`credentials: 'include'`), so forwarding ours
-  // would put the JWT in a URL for nothing.
+  // The edX JWT stays in this app. The auth app already has what it needs to
+  // authorise the mint — its own stored JWT, and the session its calls carry —
+  // so forwarding ours would put a credential in a URL for nothing.
   it('never forwards the edX JWT, even when one is stored', () => {
     localStorage.setItem('edx_jwt_token', 'jwt-123');
 

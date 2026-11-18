@@ -57,6 +57,57 @@ export function resolveTourTarget(target: StepTarget): HTMLElement | null {
   return target.current;
 }
 
+/** Frames the targets must hold still before the move watch goes idle again. */
+export const TARGET_SETTLE_FRAMES = 10;
+
+const boxKey = (target: StepTarget): string => {
+  const box = resolveTourTarget(target)?.getBoundingClientRect();
+  return box ? `${box.top},${box.left},${box.width},${box.height}` : '';
+};
+
+/**
+ * Calls `onMove` when content mounting around a target moves it, e.g. the
+ * conversation starters loading under the chat input push it up. Joyride
+ * re-measures its spotlight only on scroll, window resize or a size change of
+ * the target itself, so a target that is merely pushed aside leaves the cutout
+ * behind while the tooltip follows it. After a DOM change the boxes are
+ * checked every frame until they settle, so a move that animates in is
+ * followed to its end.
+ */
+export function watchTourTargetMoves(
+  targets: StepTarget[],
+  onMove: () => void,
+): () => void {
+  const snapshot = () => targets.map(boxKey).join('|');
+  let last = snapshot();
+  let frame = 0;
+  let stillFrames = 0;
+
+  const check = () => {
+    const next = snapshot();
+    if (next !== last) {
+      last = next;
+      stillFrames = 0;
+      onMove();
+    } else {
+      stillFrames += 1;
+    }
+    frame =
+      stillFrames < TARGET_SETTLE_FRAMES ? requestAnimationFrame(check) : 0;
+  };
+
+  const observer = new MutationObserver(() => {
+    stillFrames = 0;
+    if (!frame) frame = requestAnimationFrame(check);
+  });
+  observer.observe(document.body, { childList: true, subtree: true });
+
+  return () => {
+    observer.disconnect();
+    cancelAnimationFrame(frame);
+  };
+}
+
 /**
  * Whether a step target is mounted and has a visible box. A wrapper whose
  * SDK child rendered nothing still lays out at 0×0, so a box without area

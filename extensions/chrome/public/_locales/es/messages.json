@@ -105,5 +105,156 @@
   },
   "errorRealClicksOff": {
     "message": "Los clics reales se detuvieron desde la barra de la pestaña o por las herramientas de desarrollo, así que la ejecución terminó. Inténtalo de nuevo."
+  },
+  "signingIn": {
+    "message": "Iniciando sesión…"
+  },
+  "hudLabel": {
+    "message": "ibl.ai está trabajando en esta página"
+  },
+  "hudWorking": {
+    "message": "Trabajando en esta página"
+  },
+  "hudStop": {
+    "message": "Detener"
+  },
+  "hudStopping": {
+    "message": "Deteniendo…"
+  },
+  "hudClick": {
+    "message": "Haciendo clic en"
+  },
+  "hudDoubleClick": {
+    "message": "Haciendo doble clic en"
+  },
+  "hudType": {
+    "message": "Escribiendo en"
+  },
+  "hudSelect": {
+    "message": "Eligiendo en"
+  },
+  "hudScroll": {
+    "message": "Desplazando"
+  },
+  "hudNavigate": {
+    "message": "Abriendo"
+  },
+  "hudBack": {
+    "message": "Volviendo atrás"
+  },
+  "hudReadPage": {
+    "message": "Leyendo esta página"
+  },
+  "hudWait": {
+    "message": "Esperando"
+  },
+  "errorModelNoKey": {
+    "message": "Ninguno de los modelos que esta organización puede usar tiene una clave configurada. Pide a quien gestiona la organización que añada una."
+  },
+  "orgsTitle": {
+    "message": "Organizaciones"
+  },
+  "orgsLoading": {
+    "message": "Cargando tus organizaciones…"
+  },
+  "orgsEmpty": {
+    "message": "No se encontraron organizaciones."
+  },
+  "orgsCurrent": {
+    "message": "Actual"
+  },
+  "orgsMakeDefault": {
+    "message": "Abrir esta de forma predeterminada"
+  },
+  "orgsFailed": {
+    "message": "No se pudieron cargar las organizaciones."
+  },
+  "defaultOrgFailed": {
+    "message": "No se pudo establecer la organización predeterminada. Inténtalo de nuevo."
+  },
+  "orgsClose": {
+    "message": "Cerrar"
+  },
+  "orgsDefault": {
+    "message": "Predeterminada"
+  },
+  "orgsSignedOut": {
+    "message": "Tu sesión ha terminado. Cierra y vuelve a abrir el panel para iniciar sesión de nuevo."
+  },
+  "orgsSwitching": {
+    "message": "Cambiando de organización…"
+  },
+  "orgsSwitchFailed": {
+    "message": "No se completó. Elige una organización para volver a intentarlo."
+  },
+  "orgsLandedElsewhere": {
+    "message": "Ahora estás en $ORG$. Vuelve a elegir para intentar la que querías.",
+    "placeholders": {
+      "org": {
+        "content": "$1"
+      }
+    }
+  },
+  "orgsRetry": {
+    "message": "Intentar de nuevo"
+  },
+  "orgsSubtitle": {
+    "message": "Selecciona la organización en la que quieres iniciar sesión"
+  },
+  "orgsCountOne": {
+    "message": "1 org"
+  },
+  "orgsCountMany": {
+    "message": "$COUNT$ orgs",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "orgsSetDefault": {
+    "message": "Establecer predeterminada"
+  },
+  "orgsSettingDefault": {
+    "message": "Estableciendo…"
+  },
+  "orgsAdmin": {
+    "message": "Admin"
+  },
+  "orgsCopyKey": {
+    "message": "Copiar clave de plataforma"
+  },
+  "orgsSignInTo": {
+    "message": "Iniciar sesión en $ORG$",
+    "placeholders": {
+      "org": {
+        "content": "$1"
+      }
+    }
+  },
+  "orgsSetDefaultFor": {
+    "message": "Establecer $ORG$ como organización predeterminada",
+    "placeholders": {
+      "org": {
+        "content": "$1"
+      }
+    }
+  },
+  "orgsSearch": {
+    "message": "Buscar organizaciones"
+  },
+  "orgsSearchPlaceholder": {
+    "message": "Buscar organizaciones…"
+  },
+  "orgsNoMatch": {
+    "message": "Ninguna organización coincide con tu búsqueda."
+  },
+  "orgsCopyKeyFor": {
+    "message": "Copiar la clave de plataforma $KEY$",
+    "placeholders": {
+      "key": {
+        "content": "$1"
+      }
+    }
   }
 }

@@ -72,6 +72,13 @@ test.describe.serial('Journey 84: In-chat model picker', () => {
     const { tenantKey, mentorId } = await getPlatformContext(page);
     mentorUrl = `${MENTOR_NEXTJS_HOST}/platform/${tenantKey}/${mentorId}`;
 
+    // New agents are Admins Only (iblai-platform#2853); the student tests open
+    // this agent, so open it to members first.
+    await editMentorPage.open('Settings');
+    await editMentorPage.settings.setVisibility('Users');
+    await editMentorPage.settings.saveConfirmingAdminVisibility();
+    await editMentorPage.close();
+
     await editMentorPage.open('LLM');
     await waitForPageReady(page);
     await editMentorPage.llm.selectProviderAndModel('ibl.ai', AGENT_MODEL);

@@ -2,7 +2,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   actOnPage,
   extractPageContent,
+  mountHud,
+  OVERLAY_ATTR,
+  removeHud,
   scrollPage,
+  setHudHidden,
   snapshotPage,
   waitForQuiet,
 } from '../page-scripts';
@@ -61,6 +65,9 @@ describe('injected functions stay self-contained', () => {
     ['actOnPage', actOnPage],
     ['scrollPage', scrollPage],
     ['waitForQuiet', waitForQuiet],
+    ['mountHud', mountHud],
+    ['setHudHidden', setHudHidden],
+    ['removeHud', removeHud],
   ])('%s re-evaluates in an empty scope', (_name, fn) => {
     const source = fn.toString();
     // Istanbul rewrites bodies with module-level counters under --coverage; the
@@ -1011,5 +1018,150 @@ describe('the focused element as number 0', () => {
     } finally {
       delete (document as { activeElement?: unknown }).activeElement;
     }
+  });
+});
+
+describe('the overlay is not part of the page', () => {
+  const OPTIONS = {
+    color: '#2467eb',
+    status: 'Clicking [1] button "Continue"',
+    stop: 'Stop',
+    stopping: 'Stopping…',
+    label: 'ibl.ai is working on this page',
+    watchdogMs: 15000,
+  };
+  const host = () => document.querySelector(`[${OVERLAY_ATTR}]`);
+
+  afterEach(() => {
+    removeHud();
+    vi.useRealTimers();
+  });
+
+  it('carries the attribute the hit tests and the reader key off', () => {
+    // The injected functions cannot import, so each repeats the attribute as a
+    // literal. If one is edited and the others are not, the overlay becomes
+    // visible to the model — which is the whole thing this prevents.
+    for (const fn of [mountHud, removeHud]) {
+      expect(fn.toString()).toContain(OVERLAY_ATTR);
+    }
+    for (const fn of [snapshotPage, actOnPage]) {
+      expect(fn.toString()).toContain(OVERLAY_ATTR);
+    }
+  });
+
+  it('keeps its shadow root closed, so the reader cannot walk into it', () => {
+    mountHud(OPTIONS);
+    const element = host();
+    expect(element).not.toBeNull();
+    expect((element as HTMLElement).shadowRoot).toBeNull();
+  });
+
+  it('hangs off <html>, never off <body>', () => {
+    mountHud(OPTIONS);
+    expect(host()?.parentElement).toBe(document.documentElement);
+  });
+
+  it('is in no snapshot: not an element, and not a word of the text', () => {
+    const before = snapshotPage(50, 2000);
+    mountHud(OPTIONS);
+    const after = snapshotPage(50, 2000);
+    expect(after.items).toEqual(before.items);
+    expect(after.excerpt).toBe(before.excerpt);
+    expect(after.excerpt).not.toContain('Stop');
+    expect(JSON.stringify(after.items)).not.toContain('Stop');
+  });
+
+  // The closed shadow root already keeps the reader out, so this holds the
+  // belt to the braces: anything marked as ours is skipped on its own merits,
+  // and a later change to how the overlay is built cannot quietly expose it.
+  it('skips anything marked as ours, shadow root or not', () => {
+    const planted = document.createElement('div');
+    planted.setAttribute(OVERLAY_ATTR, '');
+    planted.innerHTML = '<button>Stop</button><h2>Working on this page</h2>';
+    document.documentElement.appendChild(planted);
+    try {
+      const snapshot = snapshotPage(50, 2000);
+      expect(JSON.stringify(snapshot.items)).not.toContain('Stop');
+      expect(JSON.stringify(snapshot.items)).not.toContain(
+        'Working on this page',
+      );
+    } finally {
+      planted.remove();
+    }
+  });
+
+  it('does not make the element under it read as covered', () => {
+    mountHud(OPTIONS);
+    const button = document.querySelector('button[type="submit"]')!;
+    // What the overlay does to a hit test: it is what is at the point.
+    const overlay = host() as HTMLElement;
+    document.elementFromPoint = () => overlay;
+    document.elementsFromPoint = () => [overlay, button];
+    snapshotPage(50, 100);
+    const located = actOnPage(
+      [...(agentMap() ?? new Map())].find(([, el]) => el === button)![0],
+      'locate',
+      '',
+      false,
+    );
+    expect(located.ok).toBe(true);
+    expect(located.covered).toBeFalsy();
+  });
+
+  it('takes itself off the page when the beats stop', () => {
+    vi.useFakeTimers();
+    mountHud({ ...OPTIONS, watchdogMs: 5000 });
+    expect(host()).not.toBeNull();
+    vi.advanceTimersByTime(4000);
+    expect(host()).not.toBeNull();
+    // A worker killed mid-run cannot reach back into the page; nothing else
+    // would ever clear this.
+    vi.advanceTimersByTime(3000);
+    expect(host()).toBeNull();
+  });
+
+  it('a beat keeps it alive and brings its words up to date', () => {
+    vi.useFakeTimers();
+    mountHud({ ...OPTIONS, watchdogMs: 5000 });
+    vi.advanceTimersByTime(4000);
+    mountHud({ ...OPTIONS, watchdogMs: 5000, status: 'Reading this page' });
+    vi.advanceTimersByTime(4000);
+    expect(host()).not.toBeNull();
+  });
+
+  it('mounts once, however many times it is asked to', () => {
+    mountHud(OPTIONS);
+    mountHud(OPTIONS);
+    mountHud(OPTIONS);
+    expect(document.querySelectorAll(`[${OVERLAY_ATTR}]`)).toHaveLength(1);
+  });
+
+  it('steps aside only for a point it is actually over', async () => {
+    mountHud(OPTIONS);
+    // jsdom lays nothing out: every box is zero-sized at the origin, so the
+    // origin is "over the bar" and anywhere else is not.
+    await expect(
+      setHudHidden({ hidden: true, point: { x: 50, y: 50 } }),
+    ).resolves.toBe(false);
+    await expect(
+      setHudHidden({ hidden: true, point: { x: 0, y: 0 } }),
+    ).resolves.toBe(true);
+    expect((host() as HTMLElement).style.display).toBe('none');
+    await setHudHidden({ hidden: false });
+    expect((host() as HTMLElement).style.display).toBe('');
+  });
+
+  it('hides outright when no point is named — what a capture needs', async () => {
+    mountHud(OPTIONS);
+    await expect(setHudHidden({ hidden: true })).resolves.toBe(true);
+    expect((host() as HTMLElement).style.display).toBe('none');
+  });
+
+  it('removes a host an earlier run left behind', () => {
+    const stray = document.createElement('div');
+    stray.setAttribute(OVERLAY_ATTR, '');
+    document.documentElement.appendChild(stray);
+    removeHud();
+    expect(host()).toBeNull();
   });
 });

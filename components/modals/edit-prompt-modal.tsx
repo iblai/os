@@ -74,6 +74,8 @@ type Props = {
   selectedPrompt: SelectedPrompt;
   handleSave: (selectedPrompt: SelectedPrompt, values: EditFormValues) => void;
   isEditing: boolean;
+  /** Tenant to list categories for, for routes without a tenant param. */
+  tenantKey?: string;
 };
 
 export function EditPromptModal({
@@ -82,9 +84,11 @@ export function EditPromptModal({
   selectedPrompt,
   handleSave,
   isEditing,
+  tenantKey: tenantKeyOverride,
 }: Props) {
   const t = useTranslations('modalsEditPromptModal');
-  const { tenantKey } = useParams<TenantKeyMentorIdParams>();
+  const params = useParams<TenantKeyMentorIdParams>();
+  const tenantKey = tenantKeyOverride || params.tenantKey;
   const username = useUsername();
 
   const { executeWithTrialCheck, isModalOpen, FreeTrialDialog, closeModal } =

@@ -307,4 +307,42 @@ test.describe('Journey 2: First-Time User Chat & Navigation', () => {
 
     page.off('request', captureSessionPost);
   });
+
+  // NAV-10: the latest-features banner (iblai-platform#2853) points at
+  // https://ibl.ai/updates unless a deployment overrides the link.
+  // The banner is off by default and `/env.js` is the deployment's switch for
+  // it, so the test serves its own `/env.js` with the banner on and the link
+  // unset; that pins the code fallback regardless of what the server sets.
+  // The banner only renders on the deployment's main tenant, so the served
+  // env also declares the signed-in tenant as the main one.
+  test('newly registered user goes to the welcome chat and the latest features banner links to ibl.ai/updates in a new tab', async ({
+    nonadminPage,
+  }) => {
+    const { tenantKey } = await getPlatformContext(nonadminPage);
+    await nonadminPage.route('**/env.js', async (route) => {
+      const response = await route.fetch();
+      const original = await response.text();
+      await route.fulfill({
+        response,
+        body: `${original}
+window.__ENV__ = Object.assign({}, window.__ENV__, {
+  NEXT_PUBLIC_SHOW_APP_BANNER: 'true',
+  NEXT_PUBLIC_APP_BANNER_LINK: '',
+  NEXT_PUBLIC_MAIN_TENANT_KEY: ${JSON.stringify(tenantKey)},
+});`,
+      });
+    });
+    await nonadminPage.reload({ waitUntil: 'domcontentloaded' });
+
+    const bannerLink = nonadminPage.locator('a[href="https://ibl.ai/updates"]');
+    await expect(bannerLink).toBeVisible({ timeout: 30_000 });
+    await expect(bannerLink).toHaveAttribute('target', '_blank');
+
+    const [updates] = await Promise.all([
+      nonadminPage.context().waitForEvent('page', { timeout: 20_000 }),
+      bannerLink.click(),
+    ]);
+    expect(updates.url()).toContain('ibl.ai');
+    await updates.close();
+  });
 });

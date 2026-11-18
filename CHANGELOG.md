@@ -1,5 +1,167 @@
 # Changelog
 
+## [0.201.0](https://github.com/iblai/os/compare/v0.200.1...v0.201.0) (2026-11-18)
+
+### Features
+
+* **create-agent:** open the create agent wizard ([49f7cfc](https://github.com/iblai/os/commit/49f7cfc66845cc8e5b90f591cfde0d5b5a8d7942))
+
+### Bug Fixes
+
+* **config:** point the latest-features banner at ibl.ai/updates ([bf54925](https://github.com/iblai/os/commit/bf54925c11178ecfee39c2eb2c5f74e95e659330))
+
+### Refactors
+
+* **edit-mentor:** let the agent tabs take an explicit agent id ([534126b](https://github.com/iblai/os/commit/534126bf7cc4eaf83d2a9b5925e8a51fda42b72d))
+
+### Chores
+
+* **deps:** take @iblai/iblai-js 2.78.0 ([e1c63c3](https://github.com/iblai/os/commit/e1c63c3e49ad1d875f7133003ec335f07bc3dbbb)), closes [iblai-web-frontend#2243](https://github.com/iblai/iblai-web-frontend/issues/2243)
+* **deps:** take @iblai/iblai-js 2.79.0 ([37caf31](https://github.com/iblai/os/commit/37caf318869dbef87ca6ad232dff1d81ebd36554))
+
+### Documentation
+
+* **e2e:** update coverage ([2846e07](https://github.com/iblai/os/commit/2846e077f750fe31803de0d24821c3ca37a97761))
+
+### Tests
+
+* **e2e:** cover the banner link and the tenant row cursor ([c380ec4](https://github.com/iblai/os/commit/c380ec491336a06c0955b27ce6b8e09b23495313))
+* **e2e:** drive agent creation through the wizard ([cd41e94](https://github.com/iblai/os/commit/cd41e94947363d845c62668f848eff73a8363911))
+* **e2e:** follow the wizard's skills step and admins-only default ([1cb56cb](https://github.com/iblai/os/commit/1cb56cb05101de07005e6834fb1ba57a1dac5d79))
+* **e2e:** target fields exactly after the SDK's new info buttons ([93a3af8](https://github.com/iblai/os/commit/93a3af856da0b9bc30afe971865973ded2a44f22))
+* **e2e:** target the rich text editor's single textbox ([0e44e15](https://github.com/iblai/os/commit/0e44e1500ba5396a7e4b3788ec142db5136c93fd))
+
+## [0.200.1](https://github.com/iblai/os/compare/v0.200.0...v0.200.1) (2026-11-18)
+
+### Chores
+
+* **ci:** add cargo-deny supply-chain gate for the Rust app (F4) ([b108423](https://github.com/iblai/os/commit/b108423677723d9683723c218c4e8869e49f91d2))
+* **tauri:** release app-v0.95.35 ([09cd312](https://github.com/iblai/os/commit/09cd31212fc52a17d81e9fbad9079df150122492))
+
+## [0.200.0](https://github.com/iblai/os/compare/v0.199.2...v0.200.0) (2026-11-18)
+
+### Features
+
+* **ext:** make the picker the auth app's chooser, with search ([2f706fb](https://github.com/iblai/os/commit/2f706fb6f45128202125bc3217daf5c07778d077)), closes [#F5F8FF](https://github.com/iblai/os/issues/F5F8FF)
+* **ext:** pick the organization in the panel, not in a browser tab ([16ebc0c](https://github.com/iblai/os/commit/16ebc0cbf7b4222302057c6e36cea4c110593059))
+
+### Bug Fixes
+
+* **ext:** a failed page is a failure, and prove the copy timer ([6325632](https://github.com/iblai/os/commit/632563200c44b981f7734f71ddf27f57c17911ae))
+* **ext:** a switch only counts when the chat actually moved there ([e7fbdbf](https://github.com/iblai/os/commit/e7fbdbf0a22f2dc20b2ddc36f5f7d0ca5ea00848))
+* **ext:** a switch that did not land must not read as one that did ([f6bc6cb](https://github.com/iblai/os/commit/f6bc6cb8a8246f337416eb4777a26175b5b2414d))
+* **ext:** focus the dialog, and name the organization it landed in ([e059d96](https://github.com/iblai/os/commit/e059d967692ef93226ea070341f1e5aa3ec6fdb8))
+* **ext:** install the session before judging it, and tell empty from unreadable ([b05eeec](https://github.com/iblai/os/commit/b05eeec64505cbc6bb45948d9a0c8ce05e01e88d))
+* **ext:** let "Setting…" be seen, and let the key speak for itself ([5b05da1](https://github.com/iblai/os/commit/5b05da191284019ec1506294cd706613d0a5d00a))
+* **ext:** make the default control visible, and keep the keyboard in the dialog ([8b2d9ee](https://github.com/iblai/os/commit/8b2d9ee0550cecd7146130662d963dc6a96e1eb8)), closes [#e5e7eb](https://github.com/iblai/os/issues/e5e7eb)
+* **ext:** say where a switch actually landed ([2f3c33f](https://github.com/iblai/os/commit/2f3c33fd12803ea6df293439a3c28505c66ab41c))
+* **ext:** take the picker's review findings ([2732bdd](https://github.com/iblai/os/commit/2732bdd0b4f49757e1519e0634cd9aaa885cd6f5))
+
+### Tests
+
+* **ext:** cover the focus trap's own branches ([7b62f92](https://github.com/iblai/os/commit/7b62f92f65c716ff3614668e51eb08b228db14ca))
+
+## [0.199.2](https://github.com/iblai/os/compare/v0.199.1...v0.199.2) (2026-11-17)
+
+### Chores
+
+* **deps:** bump @iblai/iblai-js to 2.77.0 for the reworked evals screens ([5fad8da](https://github.com/iblai/os/commit/5fad8dae9d6e75a21aed600cd1e77c9b8e736933)), closes [iblai/iblai-web-frontend#2250](https://github.com/iblai/iblai-web-frontend/issues/2250)
+* **security:** ignore the unpatched picomatch advisory in pnpm audit ([bca734f](https://github.com/iblai/os/commit/bca734f8ca9419ea1125b13e093e9376ff74ffc0))
+
+### Tests
+
+* **e2e:** follow the reworked evals tab and benchmarks screens in journey 63 ([95279f7](https://github.com/iblai/os/commit/95279f7fa386acff13ac314af9157bf33e7e49d2))
+* **e2e:** type into the prompt editor's textbox directly ([de060e1](https://github.com/iblai/os/commit/de060e179fdba500b517571fb548f7cec8fce89b))
+* **e2e:** wait for both connector list refetches in mcp-05 ([1ee2fa4](https://github.com/iblai/os/commit/1ee2fa414eb07bc3e8886cb38f52155a992ea43f))
+
+## [0.199.1](https://github.com/iblai/os/compare/v0.199.0...v0.199.1) (2026-11-17)
+
+### Bug Fixes
+
+* **product-tour:** keep the spotlight on its target when content loads around it ([5b5d633](https://github.com/iblai/os/commit/5b5d6331e9c5e3a72ce9e631945df815552a0f96))
+
+## [0.199.0](https://github.com/iblai/os/compare/v0.198.7...v0.199.0) (2026-11-17)
+
+### Features
+
+* sidebar footer > playwright test update ([8798991](https://github.com/iblai/os/commit/87989910e95812123503bddc0d486ba54e368616))
+* sidebar footer > playwright test update ([88435de](https://github.com/iblai/os/commit/88435dec6eef70d1197b2423c7131f116576c6d4))
+* sidebar footer opens the full organization Account dialog, side tabs included ([2ce184c](https://github.com/iblai/os/commit/2ce184cdbe9925c8607f4580bf433e144d4e1f67))
+
+## [0.198.7](https://github.com/iblai/os/compare/v0.198.6...v0.198.7) (2026-11-16)
+
+### Tests
+
+* **tauri:** point the on-device model journey at files that still exist ([7202bfe](https://github.com/iblai/os/commit/7202bfe6342f6b654b289f68acd580957c7892c2))
+
+## [0.198.6](https://github.com/iblai/os/compare/v0.198.5...v0.198.6) (2026-11-16)
+
+### Bug Fixes
+
+* **ext:** move to another model when the organization has no key for one ([99bfc91](https://github.com/iblai/os/commit/99bfc91f52500591c991e469083654466546a834))
+* **ext:** say why the tab marker never appeared, instead of nothing ([87019fe](https://github.com/iblai/os/commit/87019febefb2a303bc6be0fbab7d1aa174b12986))
+
+## [0.198.5](https://github.com/iblai/os/compare/v0.198.4...v0.198.5) (2026-11-16)
+
+### Chores
+
+* **security:** clear the last six advisories, including the critical zip ([44b7e58](https://github.com/iblai/os/commit/44b7e584d9ba564ca3d10cbd7a60407ecfc77325)), closes [dependabot/#495](https://github.com/dependabot/os/issues/495)
+* **tauri:** release app-v0.95.34 ([97d2388](https://github.com/iblai/os/commit/97d2388a3d79d161fc5240b0e387c64576d6fd89))
+
+## [0.198.4](https://github.com/iblai/os/compare/v0.198.3...v0.198.4) (2026-11-16)
+
+### Chores
+
+* take the SDK that stops writing the profile to edX ([f2cec69](https://github.com/iblai/os/commit/f2cec696aa99fa10e8bdd69c482edc5fbe4b6562)), closes [iblai-web-frontend#2246](https://github.com/iblai/iblai-web-frontend/issues/2246)
+
+## [0.198.3](https://github.com/iblai/os/compare/v0.198.2...v0.198.3) (2026-11-16)
+
+### Bug Fixes
+
+* **ext:** take back the tab marker a run that never ended left behind ([8798087](https://github.com/iblai/os/commit/8798087b6eee52661d43e6bf023a7ca908212401))
+
+## [0.198.2](https://github.com/iblai/os/compare/v0.198.1...v0.198.2) (2026-11-16)
+
+### Chores
+
+* **security:** clear five of the fourteen open advisories ([4fb6f0b](https://github.com/iblai/os/commit/4fb6f0b2630a4e10e909bc221ee258417a7c0549))
+* **tauri:** release app-v0.95.33 ([0bf818b](https://github.com/iblai/os/commit/0bf818b41a31f7b8ab1b73428d394cce1b9e64a3))
+
+## [0.198.1](https://github.com/iblai/os/compare/v0.198.0...v0.198.1) (2026-11-16)
+
+### Documentation
+
+* say correctly why the auth app does not need our edX JWT ([e874dd9](https://github.com/iblai/os/commit/e874dd93676071423242a165e13b98fc721ccd00))
+
+## [0.198.0](https://github.com/iblai/os/compare/v0.197.2...v0.198.0) (2026-11-16)
+
+### Features
+
+* send the edX calls through DM's proxy instead of the LMS ([61346f8](https://github.com/iblai/os/commit/61346f895ec939c488e4d9df62e0918d4f7778c4))
+
+### Bug Fixes
+
+* **safety:** ask for a real user in the flagged-prompts path ([39740f7](https://github.com/iblai/os/commit/39740f70cf721c7ba3f8d756ffba0c79e9848d80))
+
+## [0.197.2](https://github.com/iblai/os/compare/v0.197.1...v0.197.2) (2026-11-16)
+
+### Bug Fixes
+
+* **extension:** stop forwarding the edX JWT on a tenant switch ([2e0db85](https://github.com/iblai/os/commit/2e0db8514ceb06af946e71ed92b1a9502e70a005)), closes [iblai-web-frontend#2236](https://github.com/iblai/iblai-web-frontend/issues/2236) [#2236](https://github.com/iblai/os/issues/2236)
+* **ext:** keep the chooser's bootstrap token, drop only the panel's own ([5c01b62](https://github.com/iblai/os/commit/5c01b6282bf760e4954927806ba7a955be7f546e))
+
+## [0.197.1](https://github.com/iblai/os/compare/v0.197.0...v0.197.1) (2026-11-16)
+
+### Tests
+
+* stop the canvas markdown test timing out by taking the cost off its clock ([3407c67](https://github.com/iblai/os/commit/3407c672eb7c619f32fe27c098d9c2ff0b8bd0ac))
+
+## [0.197.0](https://github.com/iblai/os/compare/v0.196.0...v0.197.0) (2026-11-15)
+
+### Features
+
+* **ext:** say on the tab itself which page a run is driving, and group it ([8ffe759](https://github.com/iblai/os/commit/8ffe7591707db9f9895f65fdb39da045ff26a23f))
+
 ## [0.196.0](https://github.com/iblai/os/compare/v0.195.1...v0.196.0) (2026-11-13)
 
 ### Features

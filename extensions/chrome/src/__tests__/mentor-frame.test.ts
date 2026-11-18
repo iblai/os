@@ -9,6 +9,7 @@ import {
   startContextFeed,
   watchAndInstallSession,
   watchAuthExpired,
+  switchToOrganization,
   watchTenantSwitch,
 } from '../mentor-frame';
 import {
@@ -137,11 +138,15 @@ describe('watchTenantSwitch', () => {
   // iframe cannot go there — navigating it would tear the mentor out of the
   // panel — so the chooser opens in a tab and the pick resumes the normal
   // switch.
-  it('opens the chooser in a tab and switches to whatever the user picks there', async () => {
-    const { host, iframe } = makeHost(
+  // The panel lists organizations itself now. It never opens the auth app's
+  // chooser in a tab: that tab cannot read a side panel's session, so it only
+  // ever worked because a credential rode along in its address.
+  it('asks the panel to choose rather than opening a tab', async () => {
+    const { host } = makeHost(
       'https://os.ibl.ai/platform/acme/bot?embed=true&mode=anonymous',
     );
-    const stop = watchTenantSwitch(host);
+    const onChoose = vi.fn();
+    const stop = watchTenantSwitch(host, onChoose);
 
     window.dispatchEvent(
       new MessageEvent('message', {
@@ -152,59 +157,107 @@ describe('watchTenantSwitch', () => {
       }),
     );
 
-    await vi.waitFor(() =>
-      expect(chromeStub.stub.tabs.create).toHaveBeenCalled(),
-    );
-    const [{ url }] = chromeStub.stub.tabs.create.mock.calls[0] as unknown as [
-      { url: string },
-    ];
-    expect(url).toContain('action=switch-tenant');
-
-    // The chooser answers by sending its tab to /login/complete?tenant=…
-    for (const listener of [...chromeStub.updated])
-      listener(
-        99,
-        {},
-        { id: 99, url: 'https://login.iblai.app/login/complete?tenant=beta' },
-      );
-
-    // That tab is closed rather than left to open the full web app, and the
-    // panel mints its own session for the chosen organization.
-    await vi.waitFor(() =>
-      expect(chromeStub.stub.tabs.remove).toHaveBeenCalledWith(99),
-    );
-    await vi.waitFor(() =>
-      expect(chromeStub.stub.identity.launchWebAuthFlow).toHaveBeenCalled(),
-    );
-    const [{ url: authUrl }] = chromeStub.stub.identity.launchWebAuthFlow.mock
-      .calls[0] as unknown as [{ url: string }];
-    expect(authUrl).toContain('tenant=beta');
-    await vi.waitFor(() => expect(iframe.src).toContain('/sso-login-complete'));
+    await vi.waitFor(() => expect(onChoose).toHaveBeenCalledTimes(1));
+    expect(chromeStub.stub.tabs.create).not.toHaveBeenCalled();
+    expect(chromeStub.stub.identity.launchWebAuthFlow).not.toHaveBeenCalled();
     stop();
   });
 
-  // Closing the tab without choosing is not a switch: nothing was minted and
-  // the panel keeps the session it had.
-  it('does nothing when the chooser tab is closed without a pick', async () => {
+  // `chooserUrl` is the app offering to host the chooser, and its value is
+  // ignored now. Requiring it would mean the SDK dropping that field silently
+  // kills organization switching here, so a tenant-less switch is enough.
+  // `withAuthFlow` logs and swallows, so "it ran" and "it worked" are not the
+  // same answer. A cancelled sign-in must not read as a completed switch.
+  it('reports a failed switch rather than claiming it worked', async () => {
+    const { host } = makeHost(
+      'https://os.ibl.ai/platform/acme/bot?embed=true&mode=anonymous',
+    );
+    chromeStub.stub.identity.launchWebAuthFlow.mockRejectedValueOnce(
+      new Error('the user closed the window'),
+    );
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    await expect(switchToOrganization(host, 'beta')).resolves.toEqual({
+      kind: 'failed',
+    });
+
+    warn.mockRestore();
+  });
+
+  // The auth app falls back to an interactive sign-in when the mint 401s, and
+  // that returns the user's DEFAULT organization. Landing somewhere the person
+  // did not pick is not a completed switch.
+  it('reports a switch that landed in the wrong organization', async () => {
+    const { host } = makeHost(
+      'https://os.ibl.ai/platform/acme/bot?embed=true&mode=anonymous',
+    );
+    chromeStub.stub.identity.launchWebAuthFlow.mockResolvedValueOnce(
+      sessionRedirect({ ...SESSION, tenant: 'somewhere-else' }),
+    );
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    // Installed, so the panel is consistent with the session it was given, and
+    // reported so the person is told where they actually are.
+    await expect(switchToOrganization(host, 'beta')).resolves.toEqual({
+      kind: 'elsewhere',
+      landed: 'somewhere-else',
+    });
+
+    warn.mockRestore();
+  });
+
+  // `installSession` is what actually re-routes the chat; it answers false when
+  // the iframe is not there to re-route. The old session is already cleared by
+  // then, so claiming success would strand the panel with a closed picker.
+  it('reports a switch whose chat could not be moved', async () => {
+    const host = document.createElement('agent-ai');
+    host.setAttribute('mentorurl', 'https://os.ibl.ai/');
+    host.attachShadow({ mode: 'open' });
+    document.body.append(host);
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    await expect(switchToOrganization(host, 'beta')).resolves.toEqual({
+      kind: 'failed',
+    });
+
+    warn.mockRestore();
+    host.remove();
+  });
+
+  it('reports a completed switch', async () => {
+    const { host } = makeHost(
+      'https://os.ibl.ai/platform/acme/bot?embed=true&mode=anonymous',
+    );
+    await expect(switchToOrganization(host, 'beta')).resolves.toEqual({
+      kind: 'switched',
+    });
+  });
+
+  it('chooses on a tenant-less switch even without a chooser address', async () => {
     const { host } = makeHost('https://os.ibl.ai/platform/acme/bot?embed=true');
-    const stop = watchTenantSwitch(host);
+    const onChoose = vi.fn();
+    const stop = watchTenantSwitch(host, onChoose);
 
     window.dispatchEvent(
-      new MessageEvent('message', {
-        data: {
-          tenantSwitch: true,
-          chooserUrl: 'https://login.iblai.app/me?action=switch-tenant&popup=1',
-        },
-      }),
-    );
-    await vi.waitFor(() =>
-      expect(chromeStub.stub.tabs.create).toHaveBeenCalled(),
+      new MessageEvent('message', { data: { tenantSwitch: true } }),
     );
 
-    for (const listener of [...chromeStub.removed]) listener(99);
+    await vi.waitFor(() => expect(onChoose).toHaveBeenCalledTimes(1));
+    expect(chromeStub.stub.identity.launchWebAuthFlow).not.toHaveBeenCalled();
+    stop();
+  });
+
+  it('ignores a message that is not a tenant switch at all', async () => {
+    const { host } = makeHost('https://os.ibl.ai/platform/acme/bot?embed=true');
+    const onChoose = vi.fn();
+    const stop = watchTenantSwitch(host, onChoose);
+
+    window.dispatchEvent(
+      new MessageEvent('message', { data: { somethingElse: true } }),
+    );
 
     await new Promise((resolve) => setTimeout(resolve, 20));
-    expect(chromeStub.stub.identity.launchWebAuthFlow).not.toHaveBeenCalled();
+    expect(onChoose).not.toHaveBeenCalled();
     stop();
   });
 
@@ -221,7 +274,7 @@ describe('watchTenantSwitch', () => {
           'src',
           'https://os.ibl.ai/sso-login-complete?data=x&redirect-path=%2F&tenant=old',
         );
-        return sessionRedirect(SESSION);
+        return sessionRedirect({ ...SESSION, tenant: 'beta' });
       },
     );
     const stop = watchTenantSwitch(host);

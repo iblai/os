@@ -1,5 +1,6 @@
 import { jsonSchema, tool, type ToolSet } from 'ai';
 import { drawBadges } from './badges';
+import type { Hud } from './hud';
 import {
   actOnPage,
   scrollPage,
@@ -46,6 +47,8 @@ export interface BrowserToolsContext {
   real?: RealInput;
   /** Aborted once the run is over: a read waiting to try again gives up. */
   signal?: AbortSignal;
+  /** The overlay on the tab itself; absent leaves every action unannounced. */
+  hud?: Hud;
 }
 
 /** The latest capture, with its pixels per CSS px, or why there is none this step. */
@@ -211,6 +214,13 @@ function injectAll<Args extends unknown[], Result>(
 }
 
 export function createBrowserTools(ctx: BrowserToolsContext): BrowserTools {
+  const hud = ctx.hud;
+  // A real click lands on whatever is at the point, so the overlay's own bar
+  // steps aside for the one that would land on it — and only for that one.
+  const dodge = <T>(
+    point: { x: number; y: number },
+    fn: () => Promise<T>,
+  ): Promise<T> => (hud ? hud.dodge(point, fn) : fn());
   let last: Snapshot | null = null;
   let targets = new Map<number, FrameRef>();
   let queue: Promise<unknown> = Promise.resolve();
@@ -257,9 +267,11 @@ export function createBrowserTools(ctx: BrowserToolsContext): BrowserTools {
       return;
     }
     try {
-      const shot = await chrome.tabs.captureVisibleTab(tab.windowId, {
-        format: 'png',
-      });
+      // Out of the way first: a picture with our own bar in it would have the
+      // model reading, and pointing at, the extension's controls.
+      const grab = () =>
+        chrome.tabs.captureVisibleTab(tab.windowId, { format: 'png' });
+      const shot = await (hud ? hud.away(grab) : grab());
       const marks = last.items.flatMap((item) =>
         item.rect ? [{ n: item.n, x: item.rect.x, y: item.rect.y }] : [],
       );
@@ -351,6 +363,13 @@ export function createBrowserTools(ctx: BrowserToolsContext): BrowserTools {
     serial(async () => {
       try {
         assertAllowed(await currentUrl());
+        // Before the confirmation, not after: while the panel asks, the ring
+        // on the page shows which element it is asking about.
+        hud?.say(
+          p.tool,
+          p.target,
+          p.element === undefined ? null : (item(p.element)?.rect ?? null),
+        );
         const ask =
           typeof p.confirmText === 'function'
             ? await p.confirmText()
@@ -380,6 +399,8 @@ export function createBrowserTools(ctx: BrowserToolsContext): BrowserTools {
         return `${p.outcome}${result.note ? ` ${result.note}` : ''}\n\n${page.text}`;
       } catch (err) {
         return fail(p.tool, p.target, err);
+      } finally {
+        hud?.thinking();
       }
     });
 
@@ -425,7 +446,11 @@ export function createBrowserTools(ctx: BrowserToolsContext): BrowserTools {
             );
             if (!found.ok) return found;
             if (found.top && !found.covered) {
-              await ctx.real.click(found.x ?? 0, found.y ?? 0, twice ? 2 : 1);
+              const input = ctx.real;
+              const point = { x: found.x ?? 0, y: found.y ?? 0 };
+              await dodge(point, () =>
+                input.click(point.x, point.y, twice ? 2 : 1),
+              );
               return { ok: true };
             }
             const result = await scripted();
@@ -586,6 +611,7 @@ export function createBrowserTools(ctx: BrowserToolsContext): BrowserTools {
         return serial(async () => {
           try {
             assertAllowed(target);
+            hud?.say('navigate', target);
             await chrome.tabs.update(ctx.tabId, { url: target });
             await settle(ctx.tabId);
             assertAllowed(await currentUrl());
@@ -594,6 +620,8 @@ export function createBrowserTools(ctx: BrowserToolsContext): BrowserTools {
             return `Opened ${target}.\n\n${page.text}`;
           } catch (err) {
             return fail('navigate', target, err);
+          } finally {
+            hud?.thinking();
           }
         });
       },
@@ -619,11 +647,14 @@ export function createBrowserTools(ctx: BrowserToolsContext): BrowserTools {
         serial(async () => {
           try {
             assertAllowed(await currentUrl());
+            hud?.say('read_page', '');
             const page = await snapshot(READ_PAGE_CHARS);
             ctx.log({ tool: 'read_page', target: '', ok: true });
             return page.text;
           } catch (err) {
             return fail('read_page', '', err);
+          } finally {
+            hud?.thinking();
           }
         }),
     }),
@@ -641,6 +672,7 @@ export function createBrowserTools(ctx: BrowserToolsContext): BrowserTools {
         const delay = Math.min(Math.max(Number(ms) || 0, 0), MAX_WAIT_MS);
         return serial(async () => {
           try {
+            hud?.say('wait', `${delay} ms`);
             await sleep(delay);
             assertAllowed(await currentUrl());
             const page = await snapshot();
@@ -648,6 +680,8 @@ export function createBrowserTools(ctx: BrowserToolsContext): BrowserTools {
             return `Waited ${delay} ms.\n\n${page.text}`;
           } catch (err) {
             return fail('wait', `${delay} ms`, err);
+          } finally {
+            hud?.thinking();
           }
         });
       },
@@ -732,7 +766,9 @@ export function createBrowserTools(ctx: BrowserToolsContext): BrowserTools {
               : undefined;
           },
           step: async () => {
-            await real.click(point.x, point.y, twice ? 2 : 1);
+            await dodge(point, () =>
+              real.click(point.x, point.y, twice ? 2 : 1),
+            );
             return { ok: true };
           },
           signal: abortSignal,
@@ -783,7 +819,7 @@ export function createBrowserTools(ctx: BrowserToolsContext): BrowserTools {
           // it, behind the secret-field refusal, and the text follows through
           // the protocol, which reaches a cross-origin frame too.
           step: async () => {
-            await real.click(point.x, point.y);
+            await dodge(point, () => real.click(point.x, point.y));
             const answers = (
               await again(() =>
                 injectAll(ctx.tabId, actOnPage, [

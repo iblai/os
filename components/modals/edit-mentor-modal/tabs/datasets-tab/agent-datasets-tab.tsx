@@ -37,6 +37,8 @@ const parsePageParam = (value: string | null): number => {
 interface AgentDatasetsTabWrapperProps {
   /** Mentor whose datasets are listed; defaults to the active/route mentor. */
   mentorId?: string;
+  /** Tenant of `mentorId`, for routes without a tenant param. */
+  tenantKey?: string;
   /** Picker mode: called when a dataset row is clicked. */
   onSelect?: (dataset: Dataset) => void;
   /** Picker mode: highlights the row with this id. */
@@ -65,16 +67,18 @@ interface AgentDatasetsTabWrapperProps {
  */
 export function AgentDatasetsTabWrapper({
   mentorId: mentorIdOverride,
+  tenantKey: tenantKeyOverride,
   onSelect,
   selectedDatasetId,
   syncToUrl = true,
 }: AgentDatasetsTabWrapperProps = {}) {
-  const { tenantKey, mentorId } = useParams<TenantKeyMentorIdParams>();
+  const params = useParams<TenantKeyMentorIdParams>();
+  const tenantKey = tenantKeyOverride || params.tenantKey;
   const username = useUsername();
   const { getMentorId, navigateWithSearchParams } = useNavigate();
   // An explicit `mentorId` (picker mode) wins; otherwise the active modal
   // mentor via `getMentorId()`, falling back to the route param.
-  const activeMentorId = mentorIdOverride || getMentorId() || mentorId;
+  const activeMentorId = mentorIdOverride || getMentorId() || params.mentorId;
   const rbacPermissions = useAppSelector(selectRbacPermissions);
   const { executeWithTrialCheck } = useShowFreeTrialDialog();
 

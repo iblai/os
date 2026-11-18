@@ -3,7 +3,6 @@
 import { ReactNode, useEffect, useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useParams } from 'next/navigation';
-import { useGetRbacPermissionsMutation } from '@iblai/iblai-js/data-layer';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Dialog,
@@ -54,8 +53,7 @@ import {
 } from '@/hooks/use-mentor-segments';
 import { cn } from '@/lib/utils';
 import { Spinner } from '@/components/spinner';
-import { useAppDispatch } from '@/lib/hooks';
-import { updateRbacPermissions } from '@/features/rbac/rbac-slice';
+import { useHydrateMentorRbac } from '@/hooks/use-hydrate-mentor-rbac';
 import { TenantKeyMentorIdParams } from '@/lib/types';
 
 type Props = {
@@ -114,71 +112,22 @@ export function EditMentorModal({ isOpen, onClose }: Props) {
   const activeTab = getEditMentorTab() || MODALS.EDIT_MENTOR.tabs.settings;
 
   // When the modal is opened for a mentor other than the one the page was
-  // booted with (e.g. via "My Agents" in the sidebar), the global RBAC
-  // permissions cache only contains the page mentor's entries. Without a
-  // refetch, the segment filter strips every tab that has an `rbacResource`
-  // and the user is left looking at a sidebar with just "Privacy" — reads
-  // as a bug, not a permission boundary. Mirror what MentorProvider does on
-  // page load (`loadMentorsPermissions`) but scoped to this mentor's
-  // resources so the filter has data to work with.
+  // booted with (e.g. via "My Agents" in the sidebar), the RBAC cache lacks
+  // its entries and the segment filter would leave just "Privacy".
   const { tenantKey } = useParams<TenantKeyMentorIdParams>();
-  const dispatch = useAppDispatch();
-  const [getRbacPermissions] = useGetRbacPermissionsMutation();
   // @ts-ignore mentor_id lives on the public settings shape but isn't typed
   const mentorDbId = mentorSettings?.mentor_id as number | undefined;
-  const [rbacFetchedForMentor, setRbacFetchedForMentor] = useState<
-    number | null
-  >(null);
-
-  useEffect(() => {
-    if (!isOpen) return;
-    if (!mentorDbId || !tenantKey) return;
-    if (rbacFetchedForMentor === mentorDbId) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const permissions = await getRbacPermissions({
-          requestBody: {
-            platform_key: tenantKey,
-            resources: [
-              `/mentors/${mentorDbId}/`,
-              `/mentors/${mentorDbId}/llms/`,
-              `/mentors/${mentorDbId}/mcpservers/`,
-              `/mentors/${mentorDbId}/memory/`,
-              `/mentors/${mentorDbId}/documents/`,
-              `/mentors/${mentorDbId}/tools/`,
-              `/mentors/${mentorDbId}/prompts/`,
-            ],
-          },
-        }).unwrap();
-        if (cancelled) return;
-        dispatch(updateRbacPermissions({ ...permissions }));
-      } catch {
-        // Match MentorProvider — on failure we leave the existing
-        // permissions in place and let the filter decide; better than
-        // crashing the modal.
-      } finally {
-        if (!cancelled) setRbacFetchedForMentor(mentorDbId);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    isOpen,
+  const isRbacHydrated = useHydrateMentorRbac({
+    enabled: isOpen,
     mentorDbId,
     tenantKey,
-    rbacFetchedForMentor,
-    getRbacPermissions,
-    dispatch,
-  ]);
+  });
 
   // Render the spinner until both mentor settings AND its RBAC have been
   // hydrated. Either alone is not enough: with settings but no RBAC, the
   // filter under-counts; with RBAC but no settings, every resource path
   // it would check is undefined.
-  const isLoading =
-    isSettingsLoading || (!!mentorDbId && rbacFetchedForMentor !== mentorDbId);
+  const isLoading = isSettingsLoading || (!!mentorDbId && !isRbacHydrated);
 
   // Bucket the visible segments by their nav category. Segments without a
   // category (e.g. hidden tabs) are silently dropped here — the sidebar

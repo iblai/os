@@ -259,6 +259,11 @@ export default function Providers({ children }: { children: React.ReactNode }) {
         window.location.href = tokenRefreshUrl();
         return Promise.resolve(false);
       },
+      // Send the LMS and Studio calls through DM's edX proxy instead of
+      // straight to the LMS. The proxy authorises them with the DM token and
+      // takes the tenant and user from `iblai-org` / `iblai-user`, which the
+      // data layer only sends from 2.74.3 — hence the pin bump with this.
+      { edxProxy: true },
     );
     setReady(true);
   };

@@ -218,9 +218,13 @@ vi.mock('@/components/modals/edit-prompt-modal', () => ({
 }));
 
 vi.mock('../../add-prompt-modal', () => ({
-  AddPromptModal: ({ isOpen, onClose }: any) =>
+  AddPromptModal: ({ isOpen, onClose, mentorId, tenantKey }: any) =>
     isOpen ? (
-      <div data-testid="add-prompt-modal">
+      <div
+        data-testid="add-prompt-modal"
+        data-mentor-id={mentorId}
+        data-tenant-key={tenantKey}
+      >
         <button onClick={onClose} data-testid="close-add-prompt-modal">
           Close
         </button>
@@ -1749,6 +1753,36 @@ describe('PromptsTab', () => {
 
       expect(mockGetMentorSettingsQuery).toHaveBeenCalledWith(
         { mentor: 'test-mentor', org: 'test-tenant', userId: 'testuser' },
+        expect.objectContaining({ skip: false }),
+      );
+    });
+
+    it('lets a passed agent and tenant win over the modal stack and route', () => {
+      mockGetMentorId.mockReturnValue('custom-mentor-id');
+      mockShowAddPromptModal.mockReturnValue(true);
+
+      render(<PromptsTab mentorId="new-agent" tenantKey="other-tenant" />);
+
+      expect(mockGetMentorSettingsQuery).toHaveBeenCalledWith(
+        { mentor: 'new-agent', org: 'other-tenant', userId: 'testuser' },
+        expect.objectContaining({ skip: false }),
+      );
+      expect(mockGetPromptsSearchQuery).toHaveBeenCalledWith(
+        expect.objectContaining({ mentor: 'new-agent', org: 'other-tenant' }),
+        expect.objectContaining({ skip: false }),
+      );
+      const addPrompt = screen.getByTestId('add-prompt-modal');
+      expect(addPrompt).toHaveAttribute('data-mentor-id', 'new-agent');
+      expect(addPrompt).toHaveAttribute('data-tenant-key', 'other-tenant');
+    });
+
+    it('lists the suggested prompts of the modal-stack agent', () => {
+      mockGetMentorId.mockReturnValue('custom-mentor-id');
+
+      render(<PromptsTab />);
+
+      expect(mockGetPromptsSearchQuery).toHaveBeenCalledWith(
+        expect.objectContaining({ mentor: 'custom-mentor-id' }),
         expect.objectContaining({ skip: false }),
       );
     });

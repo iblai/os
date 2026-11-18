@@ -105,5 +105,156 @@
   },
   "errorRealClicksOff": {
     "message": "Real clicks were stopped from the bar on the tab or by the developer tools, so the run ended. Try again."
+  },
+  "signingIn": {
+    "message": "Signing you in…"
+  },
+  "hudLabel": {
+    "message": "ibl.ai is working on this page"
+  },
+  "hudWorking": {
+    "message": "Working on this page"
+  },
+  "hudStop": {
+    "message": "Stop"
+  },
+  "hudStopping": {
+    "message": "Stopping…"
+  },
+  "hudClick": {
+    "message": "Clicking"
+  },
+  "hudDoubleClick": {
+    "message": "Double-clicking"
+  },
+  "hudType": {
+    "message": "Typing into"
+  },
+  "hudSelect": {
+    "message": "Choosing in"
+  },
+  "hudScroll": {
+    "message": "Scrolling"
+  },
+  "hudNavigate": {
+    "message": "Opening"
+  },
+  "hudBack": {
+    "message": "Going back"
+  },
+  "hudReadPage": {
+    "message": "Reading this page"
+  },
+  "hudWait": {
+    "message": "Waiting"
+  },
+  "errorModelNoKey": {
+    "message": "None of the models this organization can use are set up with a key. Ask whoever manages the organization to add one."
+  },
+  "orgsTitle": {
+    "message": "Organizations"
+  },
+  "orgsLoading": {
+    "message": "Loading your organizations…"
+  },
+  "orgsEmpty": {
+    "message": "No organizations found."
+  },
+  "orgsCurrent": {
+    "message": "Current"
+  },
+  "orgsMakeDefault": {
+    "message": "Open in this one by default"
+  },
+  "orgsFailed": {
+    "message": "Failed to load organizations."
+  },
+  "defaultOrgFailed": {
+    "message": "Could not set the default organization. Please try again."
+  },
+  "orgsClose": {
+    "message": "Close"
+  },
+  "orgsDefault": {
+    "message": "Default"
+  },
+  "orgsSignedOut": {
+    "message": "Your session has ended. Close and reopen the panel to sign in again."
+  },
+  "orgsSwitching": {
+    "message": "Switching organization…"
+  },
+  "orgsSwitchFailed": {
+    "message": "That did not go through. Pick an organization to try again."
+  },
+  "orgsLandedElsewhere": {
+    "message": "You are now in $ORG$ instead. Pick again to try the one you wanted.",
+    "placeholders": {
+      "org": {
+        "content": "$1"
+      }
+    }
+  },
+  "orgsRetry": {
+    "message": "Try again"
+  },
+  "orgsSubtitle": {
+    "message": "Select the organization you want to sign in to"
+  },
+  "orgsCountOne": {
+    "message": "1 org"
+  },
+  "orgsCountMany": {
+    "message": "$COUNT$ orgs",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "orgsSetDefault": {
+    "message": "Set default"
+  },
+  "orgsSettingDefault": {
+    "message": "Setting…"
+  },
+  "orgsAdmin": {
+    "message": "Admin"
+  },
+  "orgsCopyKey": {
+    "message": "Copy platform key"
+  },
+  "orgsSignInTo": {
+    "message": "Sign in to $ORG$",
+    "placeholders": {
+      "org": {
+        "content": "$1"
+      }
+    }
+  },
+  "orgsSetDefaultFor": {
+    "message": "Set $ORG$ as default organization",
+    "placeholders": {
+      "org": {
+        "content": "$1"
+      }
+    }
+  },
+  "orgsSearch": {
+    "message": "Search organizations"
+  },
+  "orgsSearchPlaceholder": {
+    "message": "Search organizations…"
+  },
+  "orgsNoMatch": {
+    "message": "No organizations match your search."
+  },
+  "orgsCopyKeyFor": {
+    "message": "Copy platform key $KEY$",
+    "placeholders": {
+      "key": {
+        "content": "$1"
+      }
+    }
   }
 }

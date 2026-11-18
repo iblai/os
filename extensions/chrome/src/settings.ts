@@ -37,9 +37,19 @@ export interface Settings {
    * means the next change to that list invalidates old caches by itself.
    */
   preference: string;
+  /**
+   * Models this organization turned out not to be able to call — a provider
+   * with no key behind it. Remembered so one failure costs one run rather
+   * than every run, and so the next pick skips what has already failed.
+   */
+  unusable: string[];
 }
 
-export const DEFAULT_SETTINGS: Settings = { model: '', preference: '' };
+export const DEFAULT_SETTINGS: Settings = {
+  model: '',
+  preference: '',
+  unusable: [],
+};
 
 const STORAGE_KEY = 'browse';
 

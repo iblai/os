@@ -244,6 +244,29 @@ describe('EditPromptModal', () => {
       expect(screen.getByText('Edit Custom Prompt')).toBeInTheDocument();
     });
 
+    it('lists the categories of a passed tenant over the route tenant', async () => {
+      const { useGetPromptCategoriesQuery } = await import(
+        '@iblai/iblai-js/data-layer'
+      );
+      render(
+        <Provider store={createTestStore()}>
+          <EditPromptModal
+            isOpen={true}
+            onClose={mockOnClose}
+            selectedPrompt={nonSystemPromptData}
+            handleSave={mockHandleSave}
+            isEditing={false}
+            tenantKey="other-tenant"
+          />
+        </Provider>,
+      );
+
+      expect(useGetPromptCategoriesQuery).toHaveBeenLastCalledWith(
+        expect.objectContaining({ org: 'other-tenant' }),
+        expect.anything(),
+      );
+    });
+
     it('renders category field for non-system prompt', () => {
       const store = createTestStore();
 
