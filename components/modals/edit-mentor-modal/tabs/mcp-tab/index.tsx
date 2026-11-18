@@ -17,6 +17,10 @@ import { TenantKeyMentorIdParams } from '@/lib/types';
 
 interface McpTabProps {
   onSelect?: (server: MCPServer) => void;
+  /** Edits this agent instead of the modal-stack or route agent. */
+  mentorId?: string;
+  /** Tenant of `mentorId`, for routes without a tenant param. */
+  tenantKey?: string;
 }
 
 /**
@@ -25,13 +29,18 @@ interface McpTabProps {
  * the SDK's own i18n catalog, so no labels are passed. `rbacPermissions` comes
  * from the Redux RBAC slice, the same source `@/hoc/withPermissions` reads.
  */
-export function McpTab({ onSelect }: McpTabProps = {}) {
-  const { tenantKey, mentorId } = useParams<TenantKeyMentorIdParams>();
+export function McpTab({
+  onSelect,
+  mentorId: mentorIdOverride,
+  tenantKey: tenantKeyOverride,
+}: McpTabProps = {}) {
+  const params = useParams<TenantKeyMentorIdParams>();
+  const tenantKey = tenantKeyOverride || params.tenantKey;
   const { getMentorId } = useNavigate();
   const username = useUsername();
   const rbacPermissions = useAppSelector(selectRbacPermissions);
   const { executeWithTrialCheck } = useShowFreeTrialDialog();
-  const activeMentorId = getMentorId() || mentorId;
+  const activeMentorId = mentorIdOverride || getMentorId() || params.mentorId;
 
   if (!tenantKey || !activeMentorId || !username) return null;
 

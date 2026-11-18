@@ -1,5 +1,116 @@
 # Changelog
 
+## [0.202.2](https://github.com/iblai/os/compare/v0.202.1...v0.202.2) (2026-11-18)
+
+### Bug Fixes
+
+* **ext:** correct the recovery advice, and actually remove the local-build line ([3ee59ed](https://github.com/iblai/os/commit/3ee59eda3869bd4c57fc0aee7f4d9f0f8f2877b1))
+* **ext:** document a recovery recipe that was actually run ([4ba8fa8](https://github.com/iblai/os/commit/4ba8fa804cff67aaa184b848a16c267520ac7840))
+
+### Documentation
+
+* **ext:** correct why the recovery recipe needs HEAD ([1cb738c](https://github.com/iblai/os/commit/1cb738c396b7b5aeff632565fa6fdee417e509ec))
+
+## [0.202.1](https://github.com/iblai/os/compare/v0.202.0...v0.202.1) (2026-11-18)
+
+### Chores
+
+* iblai-js bumped to 2.82.0 ([6e4ffa2](https://github.com/iblai/os/commit/6e4ffa23a7a710fcda5c3d5b2e61de2ea38392da))
+
+## [0.202.0](https://github.com/iblai/os/compare/v0.201.1...v0.202.0) (2026-11-18)
+
+### Features
+
+* **panel:** create the browsing agent on ibl.ai Pro ([a415e4e](https://github.com/iblai/os/commit/a415e4ea500249fb3bbb3bdbe872f8523b1470e9))
+* **panel:** let the organization change, and follow it to its agent ([b955deb](https://github.com/iblai/os/commit/b955deb3ec286f00186413900547e328ede306db)), closes [#678](https://github.com/iblai/os/issues/678)
+* **panel:** open the agent the organization chose for the browser ([11b58e2](https://github.com/iblai/os/commit/11b58e2306855eb35dfbed925b6a6fc4430225ab))
+* **panel:** tell a member the panel needs setting up, instead of hiding it ([e2c6dd4](https://github.com/iblai/os/commit/e2c6dd49a8209648f6f0ddd2ad467ce673f8ce74))
+
+### Bug Fixes
+
+* **panel:** name the client, survive a deleted agent, and heed the review ([5227510](https://github.com/iblai/os/commit/5227510dff23a5eef335f813c5767f1421b2c374))
+
+### Tests
+
+* **e2e:** cover the panel offering no organization switch ([f449926](https://github.com/iblai/os/commit/f449926b784aa2279e2a5c8f68fc7a3c7d6e989a))
+* **e2e:** prove the panel's profile menu opened, not that Log Out is in it ([4f734ad](https://github.com/iblai/os/commit/4f734ade05989d69a997f22d87d0f2d12e4cc24d))
+
+## [0.201.1](https://github.com/iblai/os/compare/v0.201.0...v0.201.1) (2026-11-18)
+
+### Bug Fixes
+
+* **ext:** record the vendored version, and guard what has actually broken ([5b61857](https://github.com/iblai/os/commit/5b61857de06369bcf86ea50bfd0be216ab9a1b4a)), closes [iblai-platform#2680](https://github.com/iblai/iblai-platform/issues/2680)
+
+### Chores
+
+* **ext:** vendor agent-ai 2.15.1, built from main at last ([e683121](https://github.com/iblai/os/commit/e68312117f617de481420943e46e1e6cf5a6477e)), closes [iblai-web-frontend#2257](https://github.com/iblai/iblai-web-frontend/issues/2257)
+
+### Tests
+
+* **ext:** pin what the panel actually breaks on, and vendor from a release ([96a5b94](https://github.com/iblai/os/commit/96a5b94e7beb10902dc3726b76d555fd10e429c2)), closes [#ibl-chat-widget-container](https://github.com/iblai/os/issues/ibl-chat-widget-container)
+* **ext:** tie the vendored bundle to a release, and to the behaviour ([d4ec10e](https://github.com/iblai/os/commit/d4ec10ee210c12c0daab48ce28c5c4167b1164f2))
+
+## [0.201.0](https://github.com/iblai/os/compare/v0.200.1...v0.201.0) (2026-11-18)
+
+### Features
+
+* **create-agent:** open the create agent wizard ([49f7cfc](https://github.com/iblai/os/commit/49f7cfc66845cc8e5b90f591cfde0d5b5a8d7942))
+
+### Bug Fixes
+
+* **config:** point the latest-features banner at ibl.ai/updates ([bf54925](https://github.com/iblai/os/commit/bf54925c11178ecfee39c2eb2c5f74e95e659330))
+
+### Refactors
+
+* **edit-mentor:** let the agent tabs take an explicit agent id ([534126b](https://github.com/iblai/os/commit/534126bf7cc4eaf83d2a9b5925e8a51fda42b72d))
+
+### Chores
+
+* **deps:** take @iblai/iblai-js 2.78.0 ([e1c63c3](https://github.com/iblai/os/commit/e1c63c3e49ad1d875f7133003ec335f07bc3dbbb)), closes [iblai-web-frontend#2243](https://github.com/iblai/iblai-web-frontend/issues/2243)
+* **deps:** take @iblai/iblai-js 2.79.0 ([37caf31](https://github.com/iblai/os/commit/37caf318869dbef87ca6ad232dff1d81ebd36554))
+
+### Documentation
+
+* **e2e:** update coverage ([2846e07](https://github.com/iblai/os/commit/2846e077f750fe31803de0d24821c3ca37a97761))
+
+### Tests
+
+* **e2e:** cover the banner link and the tenant row cursor ([c380ec4](https://github.com/iblai/os/commit/c380ec491336a06c0955b27ce6b8e09b23495313))
+* **e2e:** drive agent creation through the wizard ([cd41e94](https://github.com/iblai/os/commit/cd41e94947363d845c62668f848eff73a8363911))
+* **e2e:** follow the wizard's skills step and admins-only default ([1cb56cb](https://github.com/iblai/os/commit/1cb56cb05101de07005e6834fb1ba57a1dac5d79))
+* **e2e:** target fields exactly after the SDK's new info buttons ([93a3af8](https://github.com/iblai/os/commit/93a3af856da0b9bc30afe971865973ded2a44f22))
+* **e2e:** target the rich text editor's single textbox ([0e44e15](https://github.com/iblai/os/commit/0e44e1500ba5396a7e4b3788ec142db5136c93fd))
+
+## [0.200.1](https://github.com/iblai/os/compare/v0.200.0...v0.200.1) (2026-11-18)
+
+### Chores
+
+* **ci:** add cargo-deny supply-chain gate for the Rust app (F4) ([b108423](https://github.com/iblai/os/commit/b108423677723d9683723c218c4e8869e49f91d2))
+* **tauri:** release app-v0.95.35 ([09cd312](https://github.com/iblai/os/commit/09cd31212fc52a17d81e9fbad9079df150122492))
+
+## [0.200.0](https://github.com/iblai/os/compare/v0.199.2...v0.200.0) (2026-11-18)
+
+### Features
+
+* **ext:** make the picker the auth app's chooser, with search ([2f706fb](https://github.com/iblai/os/commit/2f706fb6f45128202125bc3217daf5c07778d077)), closes [#F5F8FF](https://github.com/iblai/os/issues/F5F8FF)
+* **ext:** pick the organization in the panel, not in a browser tab ([16ebc0c](https://github.com/iblai/os/commit/16ebc0cbf7b4222302057c6e36cea4c110593059))
+
+### Bug Fixes
+
+* **ext:** a failed page is a failure, and prove the copy timer ([6325632](https://github.com/iblai/os/commit/632563200c44b981f7734f71ddf27f57c17911ae))
+* **ext:** a switch only counts when the chat actually moved there ([e7fbdbf](https://github.com/iblai/os/commit/e7fbdbf0a22f2dc20b2ddc36f5f7d0ca5ea00848))
+* **ext:** a switch that did not land must not read as one that did ([f6bc6cb](https://github.com/iblai/os/commit/f6bc6cb8a8246f337416eb4777a26175b5b2414d))
+* **ext:** focus the dialog, and name the organization it landed in ([e059d96](https://github.com/iblai/os/commit/e059d967692ef93226ea070341f1e5aa3ec6fdb8))
+* **ext:** install the session before judging it, and tell empty from unreadable ([b05eeec](https://github.com/iblai/os/commit/b05eeec64505cbc6bb45948d9a0c8ce05e01e88d))
+* **ext:** let "Setting…" be seen, and let the key speak for itself ([5b05da1](https://github.com/iblai/os/commit/5b05da191284019ec1506294cd706613d0a5d00a))
+* **ext:** make the default control visible, and keep the keyboard in the dialog ([8b2d9ee](https://github.com/iblai/os/commit/8b2d9ee0550cecd7146130662d963dc6a96e1eb8)), closes [#e5e7eb](https://github.com/iblai/os/issues/e5e7eb)
+* **ext:** say where a switch actually landed ([2f3c33f](https://github.com/iblai/os/commit/2f3c33fd12803ea6df293439a3c28505c66ab41c))
+* **ext:** take the picker's review findings ([2732bdd](https://github.com/iblai/os/commit/2732bdd0b4f49757e1519e0634cd9aaa885cd6f5))
+
+### Tests
+
+* **ext:** cover the focus trap's own branches ([7b62f92](https://github.com/iblai/os/commit/7b62f92f65c716ff3614668e51eb08b228db14ca))
+
 ## [0.199.2](https://github.com/iblai/os/compare/v0.199.1...v0.199.2) (2026-11-17)
 
 ### Chores

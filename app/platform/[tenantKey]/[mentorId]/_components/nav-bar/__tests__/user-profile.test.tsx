@@ -40,6 +40,9 @@ const {
   mockFetchTenantMetadata: vi.fn(),
   mockOnAccountDeleted: vi.fn(),
 }));
+vi.mock('@/hooks/use-in-chrome-extension', () => ({
+  useInChromeExtension: () => false,
+}));
 
 // Mock next/navigation
 vi.mock('next/navigation', () => ({

@@ -504,12 +504,19 @@ function currentProject(): string {
 
 // ── Registration ──────────────────────────────────────────────────────────────
 
-/** Registers the mentor the page is currently on (`/platform/<tenant>/<mentorId>`). */
+/**
+ * Registers the mentor the page is currently on (`/platform/<tenant>/<mentorId>`),
+ * or `mentorId` when the agent was created without the page navigating to it
+ * (the Create Agent wizard stays on the page agent).
+ */
 export async function registerMentor(
   page: Page,
   name = '',
+  explicitMentorId?: string,
 ): Promise<TrackedMentor> {
-  const { platformKey, mentorId } = parsePlatformUrl(page.url());
+  const parsed = parsePlatformUrl(page.url());
+  const platformKey = parsed.platformKey;
+  const mentorId = explicitMentorId ?? parsed.mentorId;
   const auth = await readPageAuth(page);
   const entry: TrackedMentor = {
     kind: 'mentor',

@@ -20,6 +20,10 @@ import { useLlmProviderModalLabels } from './llm-provider-modal-labels';
 
 type Props = {
   showConfigurationHeader?: boolean;
+  /** Edits this agent instead of the modal-stack or route agent. */
+  mentorId?: string;
+  /** Tenant of `mentorId`, for routes without a tenant param. */
+  tenantKey?: string;
 };
 
 /**
@@ -34,11 +38,16 @@ type Props = {
  * row's `display_name`/`logo` straight from the API, so nothing is passed for
  * them here.
  */
-export function LLMTab({ showConfigurationHeader = true }: Props) {
+export function LLMTab({
+  showConfigurationHeader = true,
+  mentorId: mentorIdOverride,
+  tenantKey: tenantKeyOverride,
+}: Props) {
   const t = useTranslations('tabsLlmTab');
   const providerModal = useLlmProviderModalLabels();
 
-  const { tenantKey, mentorId } = useParams<TenantKeyMentorIdParams>();
+  const params = useParams<TenantKeyMentorIdParams>();
+  const tenantKey = tenantKeyOverride || params.tenantKey;
   const { getMentorId } = useNavigate();
   const username = useUsername();
   const rbacPermissions = useAppSelector(selectRbacPermissions);
@@ -53,7 +62,7 @@ export function LLMTab({ showConfigurationHeader = true }: Props) {
   // The nav-bar's "LLM Providers" dialog can target a mentor other than the
   // one in the route (the modal-stack mentor id), exactly as the OS monolith
   // did. Same precedence: modal mentor wins, route param is the fallback.
-  const activeMentorId = getMentorId() || mentorId;
+  const activeMentorId = mentorIdOverride || getMentorId() || params.mentorId;
 
   // AgentSettingsProvider requires all three identity values; render nothing
   // until they resolve (mirrors the guard used by the other SDK-wired tabs).

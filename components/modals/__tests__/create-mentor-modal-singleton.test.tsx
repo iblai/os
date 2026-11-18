@@ -134,6 +134,16 @@ vi.mock('@/hooks/use-tenants', () => ({
   useTenantKey: () => ({ tenant: 'tenant123' }),
 }));
 
+// The real wizard pulls in every Edit Agent tab; this suite only counts the
+// Create Agent dialogs on screen.
+vi.mock('../create-agent-wizard-dialog', () => ({
+  CreateAgentWizardDialog: () => (
+    <div role="dialog">
+      <h2 className="ibl-dialog-title">Create Agent</h2>
+    </div>
+  ),
+}));
+
 // Mock EditMentorModal to avoid complex dependencies
 vi.mock('../edit-mentor-modal', () => ({
   EditMentorModal: ({

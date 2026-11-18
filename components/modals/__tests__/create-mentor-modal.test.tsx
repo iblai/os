@@ -2,11 +2,7 @@ import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, cleanup, fireEvent } from '@testing-library/react';
 
-import {
-  DEFAULT_PROMPTS,
-  MENTOR_VISIBILITY,
-  MODEL_AGENTS,
-} from '@/lib/constants';
+import { DEFAULT_PROMPTS, MODEL_AGENTS } from '@/lib/constants';
 
 // vi.mock factories are hoisted above the imports, so the state they read
 // has to be hoisted with them.
@@ -14,7 +10,7 @@ const { navigateToMentor, toast, captured, freeTrial, route } = vi.hoisted(
   () => ({
     navigateToMentor: vi.fn(),
     toast: { success: vi.fn(), error: vi.fn() },
-    captured: { props: null as Record<string, any> | null },
+    captured: { wizard: null as Record<string, any> | null },
     freeTrial: { blocks: false, isModalOpen: false, closeModal: vi.fn() },
     route: { pathname: '/platform/test-tenant/test-mentor' },
   }),
@@ -64,25 +60,14 @@ vi.mock('@/lib/config', () => ({
   },
 }));
 
-vi.mock('@iblai/iblai-js/web-containers', () => ({
-  CreateAgentModal: (props: Record<string, any>) => {
-    captured.props = props;
-    if (!props.isOpen) return null;
-    return (
-      <div role="dialog" aria-label="Create Agent">
-        <button onClick={() => props.onClose()}>sdk close</button>
-      </div>
-    );
+vi.mock('../create-agent-wizard-dialog', () => ({
+  CreateAgentWizardDialog: (props: Record<string, any>) => {
+    captured.wizard = props;
+    return <div role="dialog" aria-label="Create Agent wizard" />;
   },
 }));
 
 import { CreateMentorModal } from '../create-mentor-modal';
-
-/** What the SDK modal does after a successful create: onCreated, then onClose. */
-async function sdkCreates(mentor: Record<string, unknown>) {
-  await captured.props!.onCreated(mentor);
-  captured.props!.onClose();
-}
 
 describe('CreateMentorModal', () => {
   const onClose = vi.fn();
@@ -90,7 +75,7 @@ describe('CreateMentorModal', () => {
   beforeEach(() => {
     cleanup();
     vi.clearAllMocks();
-    captured.props = null;
+    captured.wizard = null;
     freeTrial.blocks = false;
     freeTrial.isModalOpen = false;
     route.pathname = '/platform/test-tenant/test-mentor';
@@ -100,17 +85,22 @@ describe('CreateMentorModal', () => {
     cleanup();
   });
 
-  it("hands the SDK form this app's identity, options and prompt defaults", () => {
-    render(<CreateMentorModal isOpen onClose={onClose} />);
+  async function openWizard(
+    props: Partial<React.ComponentProps<typeof CreateMentorModal>> = {},
+  ) {
+    render(<CreateMentorModal isOpen onClose={onClose} {...props} />);
+    await screen.findByRole('dialog', { name: 'Create Agent wizard' });
+    return captured.wizard!;
+  }
 
-    expect(screen.getByRole('dialog', { name: 'Create Agent' })).toBeTruthy();
-    expect(captured.props).toMatchObject({
-      isOpen: true,
+  it("hands the wizard this app's identity, options and prompt defaults", async () => {
+    const wizard = await openWizard();
+
+    expect(wizard).toMatchObject({
       org: 'test-tenant',
       username: 'test-user',
       showBaseModel: true,
       modelOptions: MODEL_AGENTS,
-      visibilityOptions: MENTOR_VISIBILITY,
       defaultPrompts: {
         system: DEFAULT_PROMPTS.DEFAULT_SYSTEM_PROMPT,
         proactive: DEFAULT_PROMPTS.DEFAULT_PROACTIVE_PROMPT,
@@ -118,93 +108,104 @@ describe('CreateMentorModal', () => {
         moderation: DEFAULT_PROMPTS.DEFAULT_MODERATION_PROMPT,
       },
     });
-    expect(captured.props!.initialValues).toBeUndefined();
+    expect(wizard.initialValues).toBeUndefined();
+    expect(wizard).not.toHaveProperty('visibilityOptions');
   });
 
-  it('forwards prefilled values and the closed state', () => {
+  it('forwards prefilled values', async () => {
     const initialValues = { name: 'Prefilled', description: 'From the host' };
-    render(
-      <CreateMentorModal
-        isOpen={false}
-        onClose={onClose}
-        initialValues={initialValues}
-      />,
-    );
+    const wizard = await openWizard({ initialValues });
+
+    expect(wizard.initialValues).toBe(initialValues);
+  });
+
+  it('mounts nothing while closed', () => {
+    render(<CreateMentorModal isOpen={false} onClose={onClose} />);
 
     expect(screen.queryByRole('dialog')).toBeNull();
-    expect(captured.props).toMatchObject({ isOpen: false, initialValues });
+    expect(captured.wizard).toBeNull();
   });
 
-  it('passes a close through when nothing was created', () => {
-    render(<CreateMentorModal isOpen onClose={onClose} />);
+  it('lets the create through when the trial gate allows the action', async () => {
+    const wizard = await openWizard();
 
-    fireEvent.click(screen.getByRole('button', { name: 'sdk close' }));
-
-    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(wizard.onBeforeCreate()).toBe(true);
   });
 
-  it('lets the create through when the trial gate allows the action', () => {
-    render(<CreateMentorModal isOpen onClose={onClose} />);
-
-    expect(captured.props!.onBeforeCreate()).toBe(true);
-  });
-
-  it('blocks the create when the trial gate takes over', () => {
+  it('blocks the create when the trial gate takes over', async () => {
     freeTrial.blocks = true;
-    render(<CreateMentorModal isOpen onClose={onClose} />);
+    const wizard = await openWizard();
 
-    expect(captured.props!.onBeforeCreate()).toBe(false);
+    expect(wizard.onBeforeCreate()).toBe(false);
   });
 
-  it('toasts, opens the new agent and swallows the close the SDK fires next', async () => {
-    render(<CreateMentorModal isOpen onClose={onClose} />);
+  it('toasts on create and stays on the page for the next steps', async () => {
+    const wizard = await openWizard();
 
-    await sdkCreates({ unique_id: 'new-agent' });
+    wizard.onCreated('new-agent');
 
     expect(toast.success).toHaveBeenCalledWith('Agent created successfully');
+    expect(navigateToMentor).not.toHaveBeenCalled();
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('just closes when closed before the agent exists', async () => {
+    const wizard = await openWizard();
+
+    wizard.onClose(null);
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(navigateToMentor).not.toHaveBeenCalled();
+  });
+
+  it("opens the new agent's chat when closed after it was created", async () => {
+    const wizard = await openWizard();
+
+    wizard.onClose('new-agent');
+
     expect(navigateToMentor).toHaveBeenCalledWith(
       'new-agent',
       undefined,
       undefined,
     );
     expect(onClose).not.toHaveBeenCalled();
+  });
 
-    // The guard covers one close only; a later close is a real one.
-    fireEvent.click(screen.getByRole('button', { name: 'sdk close' }));
-    expect(onClose).toHaveBeenCalledTimes(1);
+  it("opens the new agent's chat on Finish and ignores the close after it", async () => {
+    const wizard = await openWizard();
+
+    wizard.onFinish('new-agent');
+    wizard.onClose('new-agent');
+
+    expect(navigateToMentor).toHaveBeenCalledTimes(1);
+    expect(navigateToMentor).toHaveBeenCalledWith(
+      'new-agent',
+      undefined,
+      undefined,
+    );
+    expect(onClose).not.toHaveBeenCalled();
   });
 
   it('opens the new agent under the tenant from the /create-mentor page', async () => {
     route.pathname = '/create-mentor';
-    render(<CreateMentorModal isOpen onClose={onClose} />);
+    const wizard = await openWizard();
 
-    await sdkCreates({ unique_id: 'new-agent' });
+    wizard.onFinish('new-agent');
 
     expect(navigateToMentor).toHaveBeenCalledWith(
       'new-agent',
       undefined,
       'test-tenant',
     );
-    expect(onClose).not.toHaveBeenCalled();
   });
 
-  it('only toasts and closes when the created agent has no id', async () => {
-    render(<CreateMentorModal isOpen onClose={onClose} />);
-
-    await sdkCreates({});
-
-    expect(toast.success).toHaveBeenCalledWith('Agent created successfully');
-    expect(navigateToMentor).not.toHaveBeenCalled();
-    expect(onClose).toHaveBeenCalledTimes(1);
-  });
-
-  it('toasts the backend message on a failed create and logs it', () => {
+  it('toasts the backend message on a failed create and logs it', async () => {
     const consoleError = vi
       .spyOn(console, 'error')
       .mockImplementation(() => {});
-    render(<CreateMentorModal isOpen onClose={onClose} />);
+    const wizard = await openWizard();
 
-    captured.props!.onError({ error: { error: 'Name already taken' } });
+    wizard.onError({ error: { error: 'Name already taken' } });
 
     expect(toast.error).toHaveBeenCalledWith('Name already taken');
     expect(consoleError).toHaveBeenCalledWith(
@@ -216,14 +217,14 @@ describe('CreateMentorModal', () => {
     consoleError.mockRestore();
   });
 
-  it('falls back to a generic message when the error carries none', () => {
+  it('falls back to a generic message when the error carries none', async () => {
     const consoleError = vi
       .spyOn(console, 'error')
       .mockImplementation(() => {});
-    render(<CreateMentorModal isOpen onClose={onClose} />);
+    const wizard = await openWizard();
 
-    captured.props!.onError(new Error('boom'));
-    captured.props!.onError(null);
+    wizard.onError(new Error('boom'));
+    wizard.onError(null);
 
     expect(toast.error).toHaveBeenNthCalledWith(1, 'Failed to create agent');
     expect(toast.error).toHaveBeenNthCalledWith(2, 'Failed to create agent');

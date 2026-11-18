@@ -89,8 +89,7 @@ export class PromptsTab {
   async setSystemPrompt(content: string): Promise<void> {
     const textarea = this.page
       .getByRole('dialog', { name: 'Edit System Prompt', exact: true })
-      .getByRole('textbox')
-      .first();
+      .getByRole('textbox', { name: 'Text editor', exact: true });
     await expect(textarea).toBeVisible({ timeout: 10_000 });
     await textarea.clear();
     await textarea.fill(content);
@@ -200,7 +199,10 @@ export class PromptsTab {
     }
 
     // Fill in the prompt text via the rich text editor
-    const editor = addDialog.getByRole('textbox').first();
+    const editor = addDialog.getByRole('textbox', {
+      name: 'Text editor',
+      exact: true,
+    });
     await expect(editor).toBeVisible({ timeout: 5_000 });
     await editor.fill(promptText);
 
@@ -243,7 +245,10 @@ export class PromptsTab {
     });
     await expect(editDialog).toBeVisible({ timeout: 10_000 });
 
-    const editor = editDialog.getByRole('textbox').first();
+    const editor = editDialog.getByRole('textbox', {
+      name: 'Text editor',
+      exact: true,
+    });
     await expect(editor).toBeVisible({ timeout: 5_000 });
     await editor.clear();
     await editor.fill(newPromptText);
@@ -366,11 +371,8 @@ export class PromptsTab {
    * Opens the Edit modal for an agent config field identified by `label`,
    * replaces the editor content with `newValue`, and clicks Save.
    *
-   * The editor is a RichTextEditor (TipTap/ProseMirror). The OUTER
-   * `<div role="textbox">` wrapper is NOT contenteditable — Playwright's
-   * `fill()` rejects it. The actual editable element is the inner
-   * `[contenteditable="true"]` div, which ProseMirror's input plugins
-   * listen to. Drive it via real keyboard events.
+   * The editor is a RichTextEditor (TipTap/ProseMirror); ProseMirror's input
+   * plugins listen for real keyboard events, so drive it with those.
    *
    * Returns the original editor text so callers can restore it.
    */
@@ -384,9 +386,10 @@ export class PromptsTab {
     const editDialog = this.agentConfigEditDialog(label);
     await expect(editDialog).toBeVisible();
 
-    // Target the ProseMirror contenteditable directly — the role="textbox"
-    // wrapper around it is not editable.
-    const editor = editDialog.locator('[contenteditable="true"]').last();
+    const editor = editDialog.getByRole('textbox', {
+      name: 'Text editor',
+      exact: true,
+    });
     await expect(editor).toBeVisible();
 
     const original = (await editor.textContent()) ?? '';

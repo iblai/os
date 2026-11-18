@@ -101,6 +101,8 @@ import {
 } from '@/hooks/use-tauri-offline';
 import { isTauriApp } from '@/types/tauri';
 import { hideInitialLoader } from '@/lib/initial-loader';
+import { useChromeExtensionAgent } from '@/hooks/use-chrome-extension-agent';
+import { useInChromeExtension } from '@/hooks/use-in-chrome-extension';
 import { useOpencodeLearner } from '@/hooks/use-opencode-learner';
 import { useOpencodeAuthRequired } from '@/hooks/use-opencode-auth-required';
 
@@ -269,6 +271,8 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   };
 
   const embed = useEmbedMode();
+  const inExtensionPanel = useInChromeExtension();
+  const panelAgent = useChromeExtensionAgent();
 
   useEffect(() => {
     if (typeof window.__ENV__ !== 'undefined') {
@@ -430,6 +434,62 @@ export default function Providers({ children }: { children: React.ReactNode }) {
 
   function redirectToMentor(tenantKey: string, mentorId: string) {
     router.push(`/platform/${tenantKey}/${mentorId}${embedContextQuery()}`);
+  }
+
+  // In the side panel the organization's own agent wins and `mId` is the
+  // fallback. Nothing on the way to first render awaits this.
+  function redirectToPanelMentor(tKey: string, mId: string) {
+    const bound = panelAgent.peek();
+    if (bound) return redirectToMentor(tKey, bound);
+    void panelAgent
+      .resolve(tKey)
+      .catch(() => ({ status: 'unavailable' }) as const)
+      .then((resolution) => {
+        if (resolution.status === 'ready')
+          return redirectToMentor(tKey, resolution.mentorId);
+        if (resolution.status === 'needs-setup') return redirectToPanelSetup();
+        // Something we could not see past — a transient failure must not read
+        // as "your organization has not set this up".
+        redirectToMentor(tKey, mId);
+      });
+  }
+
+  // Nobody here can set the panel up, so the only useful thing is telling them
+  // who can. The home button is already hidden in an embed, leaving Contact
+  // Support, which mails the organization's own address.
+  function redirectToPanelSetup() {
+    router.push(
+      appendEmbedContext(
+        `/error/403?errorType=${customErrorMessages.browserAgentNotSetUp.key}`,
+      ),
+    );
+  }
+
+  /**
+   * The panel's agent was deleted. Its id is still in the organization's
+   * metadata, so without this every member gets the 404 page on every open,
+   * with no switcher and no picker to leave by.
+   *
+   * Forgetting it first is what stops the loop: the next resolve would
+   * otherwise read the same dead id straight back out of metadata.
+   */
+  async function rebindPanelMentor(): Promise<boolean> {
+    const tKey = tenantKeyParams || tenantKey;
+    if (!tKey || !mentorId) return false;
+    panelAgent.forget(mentorId);
+    const resolution = await panelAgent
+      .resolve(tKey)
+      .catch(() => ({ status: 'unavailable' }) as const);
+    if (resolution.status === 'ready' && resolution.mentorId !== mentorId) {
+      redirectToMentor(tKey, resolution.mentorId);
+      return true;
+    }
+    if (resolution.status === 'needs-setup') {
+      redirectToPanelSetup();
+      return true;
+    }
+    router.push(appendEmbedContext('/'));
+    return true;
   }
 
   function onLoadMentorsPermissions(
@@ -824,6 +884,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
                   /* istanbul ignore next -- @preserve Tauri offline guard unreachable: component returns early at L223 */
                   if (isTauriOffline) return;
                   if (skipMentorCheck) return;
+                  if (inExtensionPanel) return redirectToPanelMentor(tKey, mId);
                   redirectToMentor(tKey, mId);
                 }}
                 onLoadMentorsPermissions={onLoadMentorsPermissions}
@@ -853,6 +914,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
                     return;
                   }
                   if (skipMentorCheck) return;
+                  if (inExtensionPanel && (await rebindPanelMentor())) return;
                   await handleMentorNotFound();
                 }}
                 onComplete={() => {

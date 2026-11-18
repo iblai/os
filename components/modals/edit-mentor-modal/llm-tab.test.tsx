@@ -212,6 +212,25 @@ describe('LLMTab', () => {
       expect(tabProps().mentorId).toBe('nav-mentor');
     });
 
+    it('lets a passed agent and tenant win over the modal stack and route', () => {
+      mockGetMentorId.mockReturnValue('nav-mentor');
+      render(<LLMTab mentorId="new-agent" tenantKey="other-tenant" />);
+      expect(providerValue()).toMatchObject({
+        mentorId: 'new-agent',
+        tenantKey: 'other-tenant',
+      });
+      expect(tabProps().mentorId).toBe('new-agent');
+    });
+
+    it('renders for a passed tenant on a route without one', () => {
+      mockUseParams.mockReturnValue({});
+      render(<LLMTab mentorId="new-agent" tenantKey="acme" />);
+      expect(providerValue()).toMatchObject({
+        mentorId: 'new-agent',
+        tenantKey: 'acme',
+      });
+    });
+
     it('falls back to params.mentorId when getMentorId() is empty', () => {
       mockGetMentorId.mockReturnValue(null);
       render(<LLMTab />);

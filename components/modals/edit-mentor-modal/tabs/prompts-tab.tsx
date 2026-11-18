@@ -45,7 +45,17 @@ import Markdown from '@/components/markdown';
 
 const SUGGESTED_PROMPTS_PAGE_SIZE = 6;
 
-export function PromptsTab() {
+interface PromptsTabProps {
+  /** Edits this agent instead of the modal-stack or route agent. */
+  mentorId?: string;
+  /** Tenant of `mentorId`, for routes without a tenant param. */
+  tenantKey?: string;
+}
+
+export function PromptsTab({
+  mentorId: mentorIdOverride,
+  tenantKey: tenantKeyOverride,
+}: PromptsTabProps = {}) {
   const t = useTranslations('tabsPromptsTab');
   const {
     showAddPromptModal,
@@ -53,13 +63,14 @@ export function PromptsTab() {
     openAddPromptModal,
     closeEditMentorModal,
   } = useNavigate();
-  const { tenantKey, mentorId } = useParams<TenantKeyMentorIdParams>();
+  const params = useParams<TenantKeyMentorIdParams>();
+  const tenantKey = tenantKeyOverride || params.tenantKey;
   const username = useUsername();
   const { getMentorId } = useNavigate();
   const { executeWithTrialCheck, FreeTrialDialog, closeModal, isModalOpen } =
     useShowFreeTrialDialog();
   const dispatch = useAppDispatch();
-  const activeMentorId = getMentorId() || mentorId;
+  const activeMentorId = mentorIdOverride || getMentorId() || params.mentorId;
 
   const [selectedPrompt, setSelectedPrompt] =
     React.useState<SelectedPrompt | null>(null);
@@ -102,11 +113,11 @@ export function PromptsTab() {
       category: '',
       limit: SUGGESTED_PROMPTS_PAGE_SIZE,
       offset,
-      mentor: mentorId,
+      mentor: activeMentorId,
       orderDirection: 'asc',
     },
     {
-      skip: !tenantKey || !username || !mentorId,
+      skip: !tenantKey || !username || !activeMentorId,
     },
   );
   const {
@@ -790,6 +801,7 @@ export function PromptsTab() {
               handleSave={editPrompt}
               selectedPrompt={selectedPrompt}
               isEditing={isEditing}
+              tenantKey={tenantKey}
             />
           )}
 
@@ -797,6 +809,8 @@ export function PromptsTab() {
             <AddPromptModal
               isOpen={showAddPromptModal}
               onClose={closeAddPromptModal}
+              mentorId={activeMentorId}
+              tenantKey={tenantKey}
             />
           )}
 
