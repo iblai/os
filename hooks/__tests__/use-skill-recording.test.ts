@@ -9,9 +9,13 @@ import {
 
 let posted: unknown[] = [];
 
-const fromPanel = (data: unknown) =>
+/** The panel relays worker frames inside its one envelope. */
+const fromPanel = (payload: unknown) =>
   window.dispatchEvent(
-    new MessageEvent('message', { data, source: window.parent }),
+    new MessageEvent('message', {
+      data: { type: 'MENTOR:BROWSE_EVENT', payload },
+      source: window.parent,
+    }),
   );
 
 beforeEach(() => {
@@ -99,7 +103,10 @@ describe('what it ignores', () => {
 
     window.dispatchEvent(
       new MessageEvent('message', {
-        data: { type: 'recorded', steps: [{}] },
+        data: {
+          type: 'MENTOR:BROWSE_EVENT',
+          payload: { type: 'recorded', steps: [{}] },
+        },
         source: {} as Window,
       }),
     );

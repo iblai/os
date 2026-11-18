@@ -6,7 +6,8 @@ import type { RecordedStep } from '@/lib/recorded-skill';
 
 export const RECORD_START = 'MENTOR:RECORD_START';
 export const RECORD_STOP = 'MENTOR:RECORD_STOP';
-export const RECORD_EVENT = 'MENTOR:RECORD_EVENT';
+/** The panel relays every worker frame under one envelope. */
+export const BROWSE_EVENT = 'MENTOR:BROWSE_EVENT';
 
 /** Mirror of the recorder frames in `extensions/chrome/src/browse-protocol.ts`. */
 type Frame =
@@ -43,7 +44,9 @@ export function useSkillRecording(): SkillRecording {
   useEffect(() => {
     const onMessage = (event: MessageEvent) => {
       if (event.source !== window.parent) return;
-      const frame = event.data as (Frame & { type?: string }) | null;
+      const envelope = event.data as { type?: string; payload?: Frame } | null;
+      if (envelope?.type !== BROWSE_EVENT) return;
+      const frame = envelope.payload;
       if (!frame?.type) return;
       if (frame.type === 'recording') {
         recording.current = true;

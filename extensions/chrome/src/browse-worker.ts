@@ -13,7 +13,15 @@ import {
   type Credentials,
 } from './agent';
 import { startHud, type Hud } from './hud';
-import { HUD_STOP } from './page-scripts';
+import {
+  HUD_STOP,
+  RECORDER_STEP,
+  unwatchPage,
+  watchPage,
+  type RecordedEvent,
+} from './page-scripts';
+import { Recording } from './recorder';
+import { SECRET_FIELDS } from './secret-fields';
 import { attach, detach, onDetach, realInput } from './real-input';
 import { t as translate, userLanguage } from './i18n';
 import { userTurn } from './prompt';
@@ -305,6 +313,91 @@ export function handleBrowsePort(port: chrome.runtime.Port): void {
     }
   };
 
+  /**
+   * Recording is not a run: nothing drives the page, so there is no debugger,
+   * no model and no abort — only a watcher in every frame and a tally of what
+   * the person did.
+   */
+  let recording: Recording | null = null;
+  let recordedTab: number | null = null;
+  let stopWatchingNavigation: (() => void) | undefined;
+
+  const watch = async (tabId: number) => {
+    try {
+      await chrome.scripting.executeScript({
+        target: { tabId, allFrames: true },
+        func: watchPage,
+        args: [SECRET_FIELDS],
+      });
+    } catch {
+      // A frame that cannot be injected into is one the recording misses;
+      // the others still report.
+    }
+  };
+
+  const onRecorderStep = (
+    message: unknown,
+    sender: chrome.runtime.MessageSender,
+  ): void => {
+    const frame = message as { type?: string; step?: RecordedEvent } | null;
+    if (frame?.type !== RECORDER_STEP || !frame.step) return;
+    if (sender.id !== chrome.runtime.id) return;
+    if (!recording || sender.tab?.id !== recordedTab) return;
+    recording.add(frame.step, Date.now());
+    send({ type: 'recording', steps: recording.steps().length });
+  };
+
+  const startRecording = async (tabId: number) => {
+    const tab = await chrome.tabs.get(tabId).catch(() => null);
+    if (!tab || !injectable(tab.url)) {
+      send({
+        type: 'error',
+        message: blockedByBrowser(tab?.url)
+          ? translate('noScriptablePage')
+          : translate('noActiveTab', tab?.url ?? ''),
+      });
+      return;
+    }
+    recording = new Recording();
+    recordedTab = tabId;
+    chrome.runtime.onMessage.addListener(onRecorderStep);
+    await watch(tabId);
+    // An injected watcher dies with the page, so every navigation of the
+    // recorded tab gets a new one — without this everything after the first
+    // page is lost, silently.
+    const onUpdated = (
+      updatedTabId: number,
+      change: { url?: string; status?: string },
+    ) => {
+      if (updatedTabId !== recordedTab || !recording) return;
+      if (change.url) recording.navigated(change.url, Date.now(), tab.title);
+      if (change.status === 'complete') void watch(updatedTabId);
+    };
+    chrome.tabs.onUpdated.addListener(onUpdated);
+    stopWatchingNavigation = () =>
+      chrome.tabs.onUpdated.removeListener(onUpdated);
+    send({ type: 'recording', steps: 0 });
+  };
+
+  const stopRecording = async () => {
+    if (!recording) return;
+    const steps = recording.steps();
+    recording = null;
+    stopWatchingNavigation?.();
+    stopWatchingNavigation = undefined;
+    chrome.runtime.onMessage.removeListener(onRecorderStep);
+    if (recordedTab !== null) {
+      await chrome.scripting
+        .executeScript({
+          target: { tabId: recordedTab, allFrames: true },
+          func: unwatchPage,
+        })
+        .catch(() => undefined);
+    }
+    recordedTab = null;
+    send({ type: 'recorded', steps });
+  };
+
   port.onMessage.addListener((inbound: InboundMessage) => {
     switch (inbound.type) {
       case 'run':
@@ -316,6 +409,12 @@ export function handleBrowsePort(port: chrome.runtime.Port): void {
       case 'confirm':
         pending.get(inbound.id)?.(inbound.ok);
         break;
+      case 'record:start':
+        void startRecording(inbound.tabId);
+        break;
+      case 'record:stop':
+        void stopRecording();
+        break;
     }
   });
 
@@ -323,6 +422,8 @@ export function handleBrowsePort(port: chrome.runtime.Port): void {
   // worker be torn down; leaving the abort out would strand the loop.
   port.onDisconnect.addListener(() => {
     chrome.runtime.onMessage.removeListener(onStopFromPage);
+    chrome.runtime.onMessage.removeListener(onRecorderStep);
+    stopWatchingNavigation?.();
     controller?.abort();
     for (const settle of [...pending.values()]) settle(false);
   });
