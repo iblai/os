@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.204.0](https://github.com/iblai/os/compare/v0.203.2...v0.204.0) (2026-11-19)
+
+### Features
+
+* **recorder:** capture what a person does, and shape it into a skill ([6aa8193](https://github.com/iblai/os/commit/6aa81932bca58068f78f14873c898c7e9b7b30ad))
+* **recorder:** record what happens on the tab, through the panel's bridge ([ef05c5f](https://github.com/iblai/os/commit/ef05c5f010928b29a4e38171fab16ca81605b837))
+* **recorder:** review a recording, then save it as the agent's skill ([b5bc8b6](https://github.com/iblai/os/commit/b5bc8b64f88165a20c989b337916fc5aa4e4bfce))
+* **recorder:** start and stop a recording from the Cowork popover ([4f0fa03](https://github.com/iblai/os/commit/4f0fa03eef8e70eb4f21e8746f09bd7403172ea2))
+
+### Documentation
+
+* **e2e:** say where the recorder is tested, and why not here ([59167f7](https://github.com/iblai/os/commit/59167f72127421e4d3d29ffe4867446ce60a7e55))
+
 ## [0.203.2](https://github.com/iblai/os/compare/v0.203.1...v0.203.2) (2026-11-18)
 
 ## [0.203.1](https://github.com/iblai/os/compare/v0.203.0...v0.203.1) (2026-11-18)
