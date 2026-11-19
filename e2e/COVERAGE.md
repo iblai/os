@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-11-17 | 1169 checkpoints (1088 covered, 46 pending/fixme, 17 not-reproducible in default env, 18 deprecated) | 112 journeys (111 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-11-18 | 1182 checkpoints (1101 covered, 46 pending/fixme, 17 not-reproducible in default env, 18 deprecated) | 114 journeys (113 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -2600,6 +2600,37 @@ Issue iblai-platform#2855. After an answer the chat lists its sources under "Ret
 - [x] rdp-01: A dataset file on an `*.s3.amazonaws.com` URL opens in the preview dialog's frame, the frame shows the file's text, and no `frame-src` `securitypolicyviolation` fires
 - [x] rdp-02: A web-page source's row shows an Open Page link (`href` = the page plus a text fragment, `target=_blank`, `rel` with noopener and noreferrer) and no preview toggle
 - [x] rdp-03: A YouTube source's preview shows an iframe on `youtube-nocookie.com/embed/<id>` with `referrerpolicy=strict-origin-when-cross-origin` and no Open Page link
+
+---
+
+## Journey 103: Flagged Prompts for All Users (8 checkpoints) — `journeys/103-flagged-prompts-all-users.spec.ts`
+
+**Source files:** `components/modals/edit-mentor-modal/tabs/safety-tab.tsx`, `components/modals/edit-mentor-modal/tabs/safety-tab/flagged-prompts/*`
+
+Issue iblai-platform#2885. Safety › View Flagged Prompts used to send `username=<admin>` as an exact filter, used `users/undefined/` in its path and never read `safety-logs`, so an admin only saw their own Moderation blocks. The Type select now has exactly Moderation (default) and Safety, one list at a time with plain server paging. The Moderation checkpoints use REAL blocks on iblai.org: the admin creates an agent (pinned to the cheap ibl.ai model) with a codeword Moderation prompt, then a second user and a guest chat with prompts that trip them, and the admin finds them in the dialog. iblai.org never writes Safety logs, so the Safety rows (fp-04, fp-06, fp-07) are `page.route` stubs of `GET safety-logs/`. Serial: one agent is shared by every test.
+
+- [x] fp-01: Issue #2885: admin creates an agent, sets Who Can View to all members and guest chat on, then writes a codeword Moderation prompt and turns Moderation and Safety on
+- [x] fp-02: Issue #2885: a second user and a guest (no sign-in) each send a codeword prompt on the admin's agent and get the blocked reply (real Moderation blocks)
+- [x] fp-03: Issue #2885: View Flagged Prompts opens on Moderation and lists the other user's row and the guest's row ("Unknown User") from moderation-logs only (`page=1&page_size=5`); the Type select offers exactly Moderation and Safety; no request carries `username=` or `users/undefined`
+- [x] fp-04: Issue #2885: (Safety list stubbed) switching Type to Safety requests only safety-logs and shows only the Safety row, changing the type clears the open detail, and switching back to Moderation shows only Moderation rows
+- [x] fp-05: Issue #2885: after closing the dialog and a new block by another user, reopening it shows the new row with no wait (refetch on every open)
+- [x] fp-06: Issue #2885: deleting a Safety row sends `DELETE .../safety-logs/<id>/` and the row disappears
+- [x] fp-07: Issue #2885 (Safety list stubbed): paging within one type shows 5 rows then the rest, and page 2 requests `page=2&page_size=5` from that list only
+- [x] fp-08: Issue #2885: deleting a real Moderation row sends `DELETE .../moderation-logs/<id>/` and the row disappears
+
+---
+
+## Journey 104: Blocked Message Shows Saved Response (5 checkpoints) — `journeys/104-blocked-message-shows-saved-response.spec.ts`
+
+**Source files:** `components/modals/edit-mentor-modal/tabs/safety-tab.tsx`, `components/modals/edit-prompt-modal.tsx`
+
+Issue iblai-platform#2883. When moderation or safety blocks a prompt the server sends one websocket frame (`error` = the agent's saved response, `kind` `innappropriate_prompt`, `target_system`, `reason`) and closes the socket; the chat must show the saved text as a normal agent reply, never a toast, never `reason`. The responses are saved through the real Safety tab on a throwaway agent (tracked with `MentorTracker`); only the chat websocket is mocked (`page.routeWebSocket`, counting connections). Needs the SDK `@iblai/web-utils` fix.
+
+- [x] sfr-01: Admin saves a Moderation Response and a Safety Response on a new agent and the Safety tab shows both
+- [x] sfr-02: A moderation block frame shows the saved Moderation Response as the agent reply, no toast, no reason text
+- [x] sfr-03: A safety block frame (list-wrapped error) shows the saved Safety Response as the agent reply, no toast, no reason text
+- [x] sfr-04: After a block the next message goes out on a new socket and is answered normally
+- [x] sfr-05: A block arriving mid-stream replaces the partial answer with the saved response
 
 ---
 

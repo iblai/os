@@ -172,10 +172,11 @@ describe('FlaggedPromptMobileDetail', () => {
     expect(screen.getByTestId('delete-modal')).toBeInTheDocument();
   });
 
-  it('passes correct logId to delete modal', () => {
+  it('passes the row id and type to delete modal', () => {
     render(<FlaggedPromptMobileDetail {...defaultProps} />);
     fireEvent.click(screen.getByText('Delete'));
     expect(capturedDeleteModalProps.logId).toBe('prompt-1');
+    expect(capturedDeleteModalProps.logType).toBe('Safety');
   });
 
   it('closes delete modal when cancel is triggered', () => {

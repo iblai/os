@@ -1329,7 +1329,17 @@ test.describe('Journey 50: Chat Privacy', () => {
 
       const chatPrivacy = new ChatPrivacyPage(nonadminPage);
 
+      // New Chat's POST /sessions/ can take seconds on stg. If the toggle
+      // creates its private session meanwhile, the late New Chat response
+      // replaces it: the toggle drops to off and the message gets no reply.
+      const newChatSession = nonadminPage.waitForResponse(
+        (res) =>
+          res.request().method() === 'POST' &&
+          /\/sessions\/$/.test(res.url().split('?')[0]),
+        { timeout: 60_000 },
+      );
       await nonadminChatPage.startNewChat();
+      await newChatSession;
       await waitForPageReady(nonadminPage);
 
       const toggle = chatPrivacy.headerToggle();
