@@ -34,6 +34,7 @@ import { useAccessingPublicRoute } from '@/hooks/use-anonymous-mentor';
 import { useBrowseRun } from '@/hooks/use-browse-run';
 import { useEmbedMode } from '@/hooks/use-embed-mode';
 import { useInExtensionPanel } from '@/hooks/use-in-extension-panel';
+import { useSkillRecordingContext } from '@/providers/skill-recording-provider';
 import { useCodeShownHere } from '@/hooks/use-code-shown-here';
 import { useMentorSettings } from '@/hooks/use-mentors/use-mentor-settings';
 import { useOpencodeSkillSync } from '@/hooks/use-opencode-skill-sync';
@@ -237,6 +238,7 @@ export function SdkChat({
   const { status: swStatus } = useServiceWorker();
   const inExtensionPanel = useInExtensionPanel();
   const browse = useBrowseRun();
+  const recording = useSkillRecordingContext();
 
   // Code mode (Tauri only): the pill, the skill sync it reports on, and the
   // approval mode its controls and the permission cards change.
@@ -306,6 +308,17 @@ export function SdkChat({
       isRunning: browse.isRunning,
       run: browse.run,
       stop: browse.stop,
+      // Only the panel can watch a page, so the row is offered only where
+      // there is a worker behind it.
+      recording:
+        inExtensionPanel && recording
+          ? {
+              isRecording: recording.isRecording,
+              count: recording.count,
+              start: recording.start,
+              stop: recording.stop,
+            }
+          : undefined,
     },
     suppressChatErrorToast: wasRecent402,
     onSwitchToAutomatic: inTauri
