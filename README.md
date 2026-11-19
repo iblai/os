@@ -29,7 +29,6 @@ Build, deploy, and manage intelligent conversational agents — from prototype t
 <a href="https://chromewebstore.google.com/detail/gppjhejgkdljdhnmlfghfbalfhgaepfd"><img src="https://img.shields.io/badge/Add_to_Chrome-4285F4?style=for-the-badge&logo=googlechrome&logoColor=white" alt="Add to Chrome" height="42"></a>
 &nbsp;
 
-
 <sub>Windows ARM64 · older builds · Linux → [all downloads](docs/DOWNLOADS.md)</sub>
 
 </div>

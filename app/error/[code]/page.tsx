@@ -8,6 +8,7 @@ import { hideInitialLoader } from '@/lib/initial-loader';
 import { useTenantObjectMetadata } from '@/hooks/use-tenant-object-metadata';
 
 import { ClientErrorPage } from '@iblai/iblai-js/web-containers/next';
+import { BrowserAgentNotSetUp } from '@/components/errors/browser-agent-not-set-up';
 
 export default function ErrorPage() {
   const params = useParams();
@@ -37,6 +38,11 @@ export default function ErrorPage() {
       );
     }
   }, [errorType]);
+
+  // This one is not a generic error: it names the organization and offers the
+  // way out, which the shared page has no room for.
+  if (errorType === customErrorMessages.browserAgentNotSetUp.key)
+    return <BrowserAgentNotSetUp />;
 
   return (
     <ClientErrorPage
