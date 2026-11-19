@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.204.1](https://github.com/iblai/os/compare/v0.204.0...v0.204.1) (2026-11-19)
+
+### Bug Fixes
+
+* **panel:** name the organization that is not set up, and offer the way out ([fe2f892](https://github.com/iblai/os/commit/fe2f89242a28078fbe78845214a2f99b41ae638b))
+
+### Chores
+
+* **ext:** ship the skill recorder as 1.1.19 ([77c0b71](https://github.com/iblai/os/commit/77c0b71074009aa96f62cc1bc014ade479ab9624)), closes [#685](https://github.com/iblai/os/issues/685)
+
 ## [0.204.0](https://github.com/iblai/os/compare/v0.203.2...v0.204.0) (2026-11-19)
 
 ### Features
