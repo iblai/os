@@ -7,6 +7,7 @@ import { Trash2 } from 'lucide-react';
 import { useCreateAgentSkillMutation } from '@iblai/iblai-js/data-layer';
 
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { useSkillRecordingContext } from '@/providers/skill-recording-provider';
 import { buildRecordedSkill, type RecordedStep } from '@/lib/recorded-skill';
@@ -95,7 +96,7 @@ export function SkillReview() {
       className="absolute inset-0 z-20 flex min-h-0 flex-col overflow-hidden bg-white"
     >
       <div className="flex-none border-b border-gray-200 p-4">
-        <h2 className="text-base font-medium text-gray-900">Name this skill</h2>
+        <h2 className="text-base font-medium text-gray-900">Name This Skill</h2>
         <p className="mt-0.5 text-xs text-gray-500">
           The agent follows these steps when you ask for this again.
         </p>
@@ -138,14 +139,13 @@ export function SkillReview() {
                 <span title={step.url}>{what}</span>
                 {step.value ? (
                   <label className="mt-1.5 flex items-start gap-1.5 text-[11px] text-gray-500">
-                    <input
-                      type="checkbox"
-                      className="mt-0.5 flex-none"
+                    <Checkbox
+                      className="mt-0.5 h-3.5 w-3.5 flex-none"
                       checked={keptValues.has(index)}
-                      onChange={(event) =>
+                      onCheckedChange={(checked) =>
                         setKeptValues((values) => {
                           const next = new Set(values);
-                          if (event.target.checked) next.add(index);
+                          if (checked) next.add(index);
                           else next.delete(index);
                           return next;
                         })
@@ -157,14 +157,15 @@ export function SkillReview() {
                   </label>
                 ) : null}
               </span>
-              <button
-                type="button"
+              <Button
+                variant="ghost"
+                size="sm"
                 aria-label={`Remove step ${index + 1}`}
                 onClick={() => setDropped((drops) => new Set(drops).add(index))}
-                className="mt-0.5 flex-none text-gray-400 hover:text-gray-700"
+                className="h-7 w-7 flex-none p-0 text-gray-400 hover:text-red-700"
               >
                 <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
-              </button>
+              </Button>
             </li>
           );
         })}
