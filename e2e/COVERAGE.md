@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-11-17 | 1169 checkpoints (1088 covered, 46 pending/fixme, 17 not-reproducible in default env, 18 deprecated) | 112 journeys (111 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-11-19 | 1177 checkpoints (1096 covered, 46 pending/fixme, 17 not-reproducible in default env, 18 deprecated) | 113 journeys (112 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -2616,3 +2616,20 @@ Issue iblai-platform#2853. Create Agent is a wizard (the only create flow); Fini
 - [x] caw-05: Skip on every step, including the last, opens the new agent's chat
 - [x] caw-06: No Back on step 2, Back from step 3 on, and Back returns to the previous step
 - [x] caw-07: The Skills step (between Prompts and Datasets) shows the agent and available skills tabs and the last step says Finish; the step count follows the tabs the admin may use
+
+## Journey 103: Welcome Greeting Fit (8 checkpoints) — `journeys/103-welcome-greeting-fit.spec.ts`
+
+**Source files:** `app/platform/[tenantKey]/[mentorId]/mentor-page-content.tsx`
+
+Issue iblai-platform#2884. SDK `WelcomeMessage` (test ids `welcome-message-box`, `welcome-message-toggle`) shows the whole greeting when the welcome screen fits, else cuts it to as many lines as fit (min 3, never hiding exactly one; `data-lines` while cut) plus Show More. The greeting is mocked via the agent settings GET (`greeting_method: proactive_response`) on the default agent.
+
+- [x] wgf-01: a long greeting shows whole with no Show More button and no data-lines when the welcome screen fits (1440x900); composer in viewport
+- [x] wgf-02: on a short screen (1440x560) the greeting is cut to at least 3 lines (data-lines) with a blue Show More button (aria-expanded=false, aria-controls = the box id); composer and button stay on screen
+- [x] wgf-03: the cut never hides exactly one line across screen heights 860 down to 540
+- [x] wgf-04: resizing the window re-fits the greeting: 1440x900 to 1440x560 shows the button, back to 900 removes it
+- [x] wgf-05: Show More opens the greeting taller (at most 40vh), scrolling inside its own box without moving the page, text centred (computed text-align center); Show Less returns to the same cut scrolled to the top
+- [x] wgf-06: after opening the greeting and starting a new chat, the greeting is cut again (Show More, aria-expanded=false)
+- [x] wgf-07: a short greeting shows in full with no Show More button on a short screen
+- [x] wgf-08: the agent name (welcome-heading) stays on screen at a short desktop height, cut or open
+
+---
