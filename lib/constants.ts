@@ -1,5 +1,21 @@
 import { config } from './config';
 
+// A same-origin frame of the app (the Assistant panel, the Embed tab's
+// preview) shares the page's localStorage. Its own key keeps a New Chat in one
+// from switching the other's conversation through the `storage` event. Must
+// match the SDK's LOCAL_STORAGE_KEYS.SESSION_ID (web-utils), which the SDK chat uses.
+function sessionIdStorageKey(): string {
+  if (typeof window === 'undefined' || window.parent === window)
+    return 'session_id';
+  try {
+    return window.parent.location.origin === window.location.origin
+      ? 'session_id:framed'
+      : 'session_id';
+  } catch {
+    return 'session_id';
+  }
+}
+
 // Local storage keys
 export const LOCAL_STORAGE_KEYS = {
   VISITING_TENANT: 'visiting_tenant',
@@ -16,7 +32,7 @@ export const LOCAL_STORAGE_KEYS = {
   USER_METADATA: 'user_metadata',
   DEFAULT_TENANT: 'tenant',
   USER_TENANTS: 'tenants',
-  SESSION_ID: 'session_id',
+  SESSION_ID: sessionIdStorageKey(),
   MODEL_DOWNLOAD_STATE: 'model_download_state',
   MODEL_DOWNLOAD_PROMPT_DISMISSED: 'model_download_prompt_dismissed',
 };

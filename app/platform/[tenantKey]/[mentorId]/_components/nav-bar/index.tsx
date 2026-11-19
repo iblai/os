@@ -35,6 +35,7 @@ import {
 import {
   ChatPrivacyToggle,
   CreditBalance,
+  MasterAgent,
   NotificationDropdown,
 } from '@iblai/iblai-js/web-containers';
 import { UserProfileModal } from '@iblai/iblai-js/web-containers/next';
@@ -807,16 +808,6 @@ export function NavBar() {
             </div>
           )}
           <div className="flex items-center gap-2">
-            {isOnChatPage && visibleToLoggedInUsersOnly && tenantKey && (
-              <div data-tour={TOUR_TARGET.privacyMode} className="flex">
-                <ChatPrivacyToggle
-                  org={tenantKey}
-                  userId={username ?? ''}
-                  mentor={mentorId}
-                  className="inline-flex max-md:[&>span]:hidden"
-                />
-              </div>
-            )}
             {creditBalanceComponentIsDisplayed && (
               <CreditBalance
                 tenant={tenantKey}
@@ -827,6 +818,17 @@ export function NavBar() {
                 username={getUserName()}
               />
             )}
+            {isOnChatPage && visibleToLoggedInUsersOnly && tenantKey && (
+              <div data-tour={TOUR_TARGET.privacyMode} className="flex">
+                <ChatPrivacyToggle
+                  org={tenantKey}
+                  userId={username ?? ''}
+                  mentor={mentorId}
+                  className="inline-flex max-md:[&>span]:hidden"
+                />
+              </div>
+            )}
+            {!embedMode && isLoggedIn() && <MasterAgent />}
             {!embedMode && visibleToLoggedInUsersOnly && (
               <NotificationDropdown
                 org={tenantKey}

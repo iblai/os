@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { afterEach, describe, it, expect, vi } from 'vitest';
 import {
   LOCAL_STORAGE_KEYS,
   QUERY_PARAMS,
@@ -253,5 +253,47 @@ describe('mentor constants', () => {
         'chat-welcome-button',
       );
     });
+  });
+});
+
+describe('LOCAL_STORAGE_KEYS.SESSION_ID in a frame', () => {
+  const originalParent = window.parent;
+
+  afterEach(() => {
+    Object.defineProperty(window, 'parent', {
+      value: originalParent,
+      configurable: true,
+    });
+    vi.resetModules();
+  });
+
+  async function sessionIdKeyUnder(parent: unknown) {
+    Object.defineProperty(window, 'parent', {
+      value: parent,
+      configurable: true,
+    });
+    vi.resetModules();
+    return (await import('../constants')).LOCAL_STORAGE_KEYS.SESSION_ID;
+  }
+
+  it('uses its own key inside a same-origin frame of the app', async () => {
+    expect(
+      await sessionIdKeyUnder({ location: { origin: window.location.origin } }),
+    ).toBe('session_id:framed');
+  });
+
+  it('keeps the shared key under a parent on another origin', async () => {
+    expect(
+      await sessionIdKeyUnder({
+        location: { origin: 'https://elsewhere.example.com' },
+      }),
+    ).toBe('session_id');
+    expect(
+      await sessionIdKeyUnder({
+        get location(): Location {
+          throw new DOMException('Blocked a frame', 'SecurityError');
+        },
+      }),
+    ).toBe('session_id');
   });
 });
