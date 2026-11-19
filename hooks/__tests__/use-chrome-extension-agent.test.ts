@@ -290,3 +290,46 @@ describe('the agent it creates', () => {
     });
   });
 });
+
+describe('a platform that says no', () => {
+  const refuses = (status: number, detail?: string) => ({
+    unwrap: () =>
+      Promise.reject({ status, data: detail ? { detail } : undefined }),
+  });
+
+  it('says so rather than quietly using another agent', async () => {
+    createMentor.mockReturnValue(refuses(403, 'Not allowed to create agents'));
+
+    await expect(resolve()('acme')).resolves.toEqual({
+      status: 'refused',
+      reason: 'Not allowed to create agents',
+    });
+  });
+
+  it.each([400, 402, 409, 422])('treats %s as a refusal', async (status) => {
+    createMentor.mockReturnValue(refuses(status));
+
+    await expect(resolve()('acme')).resolves.toMatchObject({
+      status: 'refused',
+    });
+  });
+
+  it.each([500, 502, 503])(
+    'treats %s as a hiccup, not a refusal',
+    async (status) => {
+      createMentor.mockReturnValue(refuses(status));
+
+      // Trying again later may work, and telling a whole organization it cannot
+      // have this because of one bad minute would be wrong.
+      await expect(resolve()('acme')).resolves.toEqual({
+        status: 'unavailable',
+      });
+    },
+  );
+
+  it('treats a failure with no status as a hiccup', async () => {
+    createMentor.mockReturnValue(rejects(new Error('network')));
+
+    await expect(resolve()('acme')).resolves.toEqual({ status: 'unavailable' });
+  });
+});
