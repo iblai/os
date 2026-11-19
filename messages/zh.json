@@ -2072,5 +2072,7 @@
     "agentsContent": "在“智能体”菜单中浏览可用的智能体，或创建和管理你自己的智能体。",
     "accountTitle": "管理你的组织",
     "accountContent": "使用侧边栏底部的工具邀请成员、管理用户和群组、添加机密以及更改高级设置。"
-  }
+  },
+  "recordSkillStart": "录制技能",
+  "recordSkillStop": "停止录制（{count}）"
 }

@@ -43,9 +43,11 @@ import {
   Monitor,
   Sparkles,
   Loader2,
+  Circle,
 } from 'lucide-react';
 import type { EffectiveAgentSkill } from '@iblai/iblai-js/data-layer';
 import { toast } from 'sonner';
+import { useSkillRecordingContext } from '@/providers/skill-recording-provider';
 import { DeepSearchIcon, CanvasIcon } from '@/components/icons/svg-icons';
 import {
   coworkConsentGiven,
@@ -281,6 +283,7 @@ export const InsideButtons = ({
   // The panel behind the pill in the extension, holding the on/off switch and
   // Approvals — the same shape as Code's popover, because it is the same choice.
   const [coworkPanelOpen, setCoworkPanelOpen] = useState(false);
+  const recording = useSkillRecordingContext();
   const [approvals, setApprovals] = useState<CoworkApprovals>('auto');
   // After mount, never during render: the pref is read from localStorage, and a
   // render-time read would mismatch the prerendered HTML during hydration.
@@ -1122,6 +1125,33 @@ export const InsideButtons = ({
                       ? t('coworkApprovalsAutoHint')
                       : t('coworkApprovalsManualHint')}
                   </p>
+                  {recording && (
+                    <button
+                      type="button"
+                      data-testid="record-skill-row"
+                      onClick={() => {
+                        if (recording.isRecording) {
+                          recording.stop();
+                        } else {
+                          recording.start();
+                          setCoworkPanelOpen(false);
+                        }
+                      }}
+                      className="mt-3 flex w-full items-center gap-2 border-t border-gray-200 pt-3 text-left text-xs font-medium text-gray-600 hover:text-gray-900"
+                    >
+                      <Circle
+                        className={`h-3 w-3 ${
+                          recording.isRecording
+                            ? 'fill-red-500 text-red-500'
+                            : 'text-gray-500'
+                        }`}
+                        aria-hidden="true"
+                      />
+                      {recording.isRecording
+                        ? t('recordSkillStop', { count: recording.count })
+                        : t('recordSkillStart')}
+                    </button>
+                  )}
                 </PopoverContent>
               </Popover>
             </div>

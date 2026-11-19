@@ -14,6 +14,7 @@ import { useParams } from 'next/navigation';
 import { useEffect } from 'react';
 import { MessageBridgeProvider } from './message-bridge-provider';
 import { AgentSettingsLauncher } from './agent-settings-launcher';
+import { SkillRecordingProvider } from './skill-recording-provider';
 
 export default function AppProvider({
   children,
@@ -69,7 +70,9 @@ export default function AppProvider({
 
   return (
     <MessageBridgeProvider>
-      <AgentSettingsLauncher>{children}</AgentSettingsLauncher>
+      <SkillRecordingProvider>
+        <AgentSettingsLauncher>{children}</AgentSettingsLauncher>
+      </SkillRecordingProvider>
     </MessageBridgeProvider>
   );
 }

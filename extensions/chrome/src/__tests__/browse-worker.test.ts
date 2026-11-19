@@ -782,3 +782,94 @@ describe('a model the organization has no key for', () => {
     expect(stored.browse).toMatchObject({ model: 'together/llama-4' });
   });
 });
+
+describe('recording what a person does', () => {
+  const step = (over: Record<string, unknown> = {}) => ({
+    kind: 'click',
+    role: 'button',
+    name: 'Export',
+    secret: false,
+    url: 'https://app.acme.com/',
+    ...over,
+  });
+
+  /** What the injected watcher sends, as Chrome delivers it to the worker. */
+  const fromPage = (tabId: number, body: Record<string, unknown>) => {
+    for (const listener of [...chromeStub.messaged])
+      listener(body, { id: 'ibl-extension', tab: { id: tabId } }, () => {});
+  };
+
+  const sent = (port: ReturnType<typeof fakePort>, type: string) =>
+    port.sent.filter((m) => (m as { type: string }).type === type);
+
+  it('watches every frame of the tab it was asked for', async () => {
+    const port = openPort();
+    port.emit({ type: 'record:start', tabId: 7 });
+
+    await vi.waitFor(() =>
+      expect(
+        chromeStub.stub.scripting.executeScript.mock.calls.some(
+          ([call]) =>
+            (call as { func?: { name?: string } }).func?.name === 'watchPage' &&
+            (call as { target?: { allFrames?: boolean } }).target?.allFrames,
+        ),
+      ).toBe(true),
+    );
+  });
+
+  it('counts the steps it catches, and hands them over on stop', async () => {
+    const port = openPort();
+    port.emit({ type: 'record:start', tabId: 7 });
+    await vi.waitFor(() => expect(sent(port, 'recording')).not.toHaveLength(0));
+
+    fromPage(7, { type: 'MENTOR:RECORDER_STEP', step: step() });
+    await vi.waitFor(() =>
+      expect((sent(port, 'recording').at(-1) as { steps: number }).steps).toBe(
+        1,
+      ),
+    );
+
+    port.emit({ type: 'record:stop' });
+    await vi.waitFor(() => expect(sent(port, 'recorded')).toHaveLength(1));
+    expect(
+      (sent(port, 'recorded')[0] as { steps: unknown[] }).steps,
+    ).toHaveLength(1);
+  });
+
+  it('ignores a page that is not the one being recorded', async () => {
+    const port = openPort();
+    port.emit({ type: 'record:start', tabId: 7 });
+    await vi.waitFor(() => expect(sent(port, 'recording')).not.toHaveLength(0));
+
+    fromPage(99, { type: 'MENTOR:RECORDER_STEP', step: step() });
+    port.emit({ type: 'record:stop' });
+
+    // Another tab's watcher must not write into this recording.
+    await vi.waitFor(() => expect(sent(port, 'recorded')).toHaveLength(1));
+    expect(
+      (sent(port, 'recorded')[0] as { steps: unknown[] }).steps,
+    ).toHaveLength(0);
+  });
+
+  it('refuses a page it cannot watch, rather than recording nothing', async () => {
+    chromeStub.stub.tabs.get.mockResolvedValue({
+      id: 7,
+      url: 'chrome://extensions',
+      status: 'complete',
+      windowId: 1,
+    });
+    const port = openPort();
+    port.emit({ type: 'record:start', tabId: 7 });
+
+    await vi.waitFor(() => expect(sent(port, 'error')).toHaveLength(1));
+    expect(sent(port, 'recording')).toHaveLength(0);
+  });
+
+  it('says nothing when stop arrives with no recording', async () => {
+    const port = openPort();
+    port.emit({ type: 'record:stop' });
+
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(sent(port, 'recorded')).toHaveLength(0);
+  });
+});
