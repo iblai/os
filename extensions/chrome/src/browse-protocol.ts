@@ -2,6 +2,7 @@
 // that importing the message types does not pull in either side's module-level
 // side effects (the worker registers listeners as soon as it is evaluated).
 import type { Credentials, AgentEvent } from './agent';
+import type { RecordedStep } from './recorder';
 
 /** The port name the panel connects on; anything else is ignored. */
 export const BROWSE_PORT = 'browse';
@@ -16,6 +17,8 @@ export type InboundMessage =
       auto: boolean;
     }
   | { type: 'stop' }
+  | { type: 'record:start'; tabId: number }
+  | { type: 'record:stop' }
   | { type: 'confirm'; id: number; ok: boolean };
 
 export type OutboundMessage =
@@ -25,4 +28,7 @@ export type OutboundMessage =
   | { type: 'log'; text: string; ok: boolean }
   | { type: 'confirm'; id: number; description: string }
   | { type: 'done'; text: string; note?: string }
-  | { type: 'error'; message: string };
+  | { type: 'error'; message: string }
+  /** How much the recording holds so far, for the panel's own row. */
+  | { type: 'recording'; steps: number }
+  | { type: 'recorded'; steps: RecordedStep[] };

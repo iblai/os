@@ -12,6 +12,8 @@ export const EVENT = 'MENTOR:BROWSE_EVENT';
 
 type FromApp =
   | { type: 'MENTOR:BROWSE_HELLO' }
+  | { type: 'MENTOR:RECORD_START' }
+  | { type: 'MENTOR:RECORD_STOP' }
   | { type: 'MENTOR:BROWSE_RUN'; goal: string; auto?: unknown }
   | { type: 'MENTOR:BROWSE_STOP' }
   | { type: 'MENTOR:BROWSE_CONFIRM'; id: number; ok: boolean };
@@ -21,6 +23,8 @@ const HANDLED = new Set<string>([
   'MENTOR:BROWSE_RUN',
   'MENTOR:BROWSE_STOP',
   'MENTOR:BROWSE_CONFIRM',
+  'MENTOR:RECORD_START',
+  'MENTOR:RECORD_STOP',
 ]);
 
 function originOf(host: Element): string | null {
@@ -98,6 +102,15 @@ export function startBrowseBridge(host: Element): () => void {
     toApp({ type: 'ack' });
   };
 
+  const startRecording = async () => {
+    const tab = await activeTab();
+    if (!tab?.id) {
+      toApp({ type: 'error', message: t('noActiveTab', tab?.url ?? '') });
+      return;
+    }
+    connect().postMessage({ type: 'record:start', tabId: tab.id });
+  };
+
   const onMessage = (event: MessageEvent) => {
     const data = event.data as FromApp | null;
     if (!data || typeof data.type !== 'string' || !HANDLED.has(data.type))
@@ -123,6 +136,12 @@ export function startBrowseBridge(host: Element): () => void {
         break;
       case 'MENTOR:BROWSE_CONFIRM':
         port?.postMessage({ type: 'confirm', id: data.id, ok: data.ok });
+        break;
+      case 'MENTOR:RECORD_START':
+        void startRecording();
+        break;
+      case 'MENTOR:RECORD_STOP':
+        port?.postMessage({ type: 'record:stop' });
         break;
     }
   };

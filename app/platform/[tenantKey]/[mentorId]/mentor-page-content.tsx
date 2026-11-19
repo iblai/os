@@ -11,6 +11,7 @@ import { DocumentSidebar } from '@iblai/iblai-js/web-containers';
 
 import './page.css';
 import { SdkChat } from '@/components/chat/sdk-chat';
+import { SkillReview } from '@/components/chat/skill-review';
 import { useAppDispatch, useAppSelector } from '@/lib/hooks';
 import { useIsPreviewMode } from '@/hooks/use-is-preview-mode';
 import { useChatMode } from '@/hooks/use-chat-mode';
@@ -166,7 +167,8 @@ export default function MentorPageContent() {
   return (
     <ErrorBoundary>
       <div className="flex min-h-0 flex-1">
-        <div className="flex min-h-0 w-full flex-1 flex-col px-1 md:px-4">
+        <div className="relative flex min-h-0 w-full flex-1 flex-col px-1 md:px-4">
+          <SkillReview />
           <SdkChat isPreviewMode={isPreviewMode} mode={chatMode} />
         </div>
         {!isMobile && <DocumentSidebar sessionId={sessionId} />}

@@ -1,5 +1,40 @@
 # Changelog
 
+## [0.205.0](https://github.com/iblai/os/compare/v0.204.2...v0.205.0) (2026-11-19)
+
+### Features
+
+* **panel:** offer Record a skill in the Cowork panel people actually see ([34188e3](https://github.com/iblai/os/commit/34188e331165aa0a1ececf274597768d985babbd)), closes [iblai/ibl-frontend#2265](https://github.com/iblai/ibl-frontend/issues/2265)
+
+## [0.204.2](https://github.com/iblai/os/compare/v0.204.1...v0.204.2) (2026-11-19)
+
+### Chores
+
+* **deps:** take @iblai/iblai-js 2.82.1 for the redirect-crumb fix ([4a54b5f](https://github.com/iblai/os/commit/4a54b5f396146bffe685f04cdb7596082ea45470))
+
+## [0.204.1](https://github.com/iblai/os/compare/v0.204.0...v0.204.1) (2026-11-19)
+
+### Bug Fixes
+
+* **panel:** name the organization that is not set up, and offer the way out ([fe2f892](https://github.com/iblai/os/commit/fe2f89242a28078fbe78845214a2f99b41ae638b))
+
+### Chores
+
+* **ext:** ship the skill recorder as 1.1.19 ([77c0b71](https://github.com/iblai/os/commit/77c0b71074009aa96f62cc1bc014ade479ab9624)), closes [#685](https://github.com/iblai/os/issues/685)
+
+## [0.204.0](https://github.com/iblai/os/compare/v0.203.2...v0.204.0) (2026-11-19)
+
+### Features
+
+* **recorder:** capture what a person does, and shape it into a skill ([6aa8193](https://github.com/iblai/os/commit/6aa81932bca58068f78f14873c898c7e9b7b30ad))
+* **recorder:** record what happens on the tab, through the panel's bridge ([ef05c5f](https://github.com/iblai/os/commit/ef05c5f010928b29a4e38171fab16ca81605b837))
+* **recorder:** review a recording, then save it as the agent's skill ([b5bc8b6](https://github.com/iblai/os/commit/b5bc8b64f88165a20c989b337916fc5aa4e4bfce))
+* **recorder:** start and stop a recording from the Cowork popover ([4f0fa03](https://github.com/iblai/os/commit/4f0fa03eef8e70eb4f21e8746f09bd7403172ea2))
+
+### Documentation
+
+* **e2e:** say where the recorder is tested, and why not here ([59167f7](https://github.com/iblai/os/commit/59167f72127421e4d3d29ffe4867446ce60a7e55))
+
 ## [0.203.2](https://github.com/iblai/os/compare/v0.203.1...v0.203.2) (2026-11-18)
 
 ## [0.203.1](https://github.com/iblai/os/compare/v0.203.0...v0.203.1) (2026-11-18)
