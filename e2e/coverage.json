@@ -2,14 +2,14 @@
   "version": 2,
   "lastUpdated": "2026-11-17",
   "summary": {
-    "totalCheckpoints": 1169,
-    "coveredCheckpoints": 1088,
+    "totalCheckpoints": 1177,
+    "coveredCheckpoints": 1096,
     "deprecatedCheckpoints": 18,
     "notReproducibleCheckpoints": 17,
     "pendingCheckpoints": 46,
     "percent": 100,
-    "totalJourneys": 112,
-    "activeJourneys": 111
+    "totalJourneys": 113,
+    "activeJourneys": 112
   },
   "journeys": [
     {
@@ -7296,6 +7296,56 @@
         {
           "id": "rdp-03",
           "description": "Issue #2855: a YouTube source's preview shows an iframe on youtube-nocookie.com/embed/<id> with referrerpolicy strict-origin-when-cross-origin and no Open Page link",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "welcome-greeting-fit",
+      "name": "Welcome Greeting Fit",
+      "spec": "103-welcome-greeting-fit.spec.ts",
+      "sourceFiles": [
+        "app/platform/[tenantKey]/[mentorId]/mentor-page-content.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "wgf-01",
+          "description": "Issue #2884: a long greeting shows whole with no Show More button and no data-lines when the welcome screen fits (1440x900); composer in viewport",
+          "status": "covered"
+        },
+        {
+          "id": "wgf-02",
+          "description": "Issue #2884: on a short screen (1440x560) the greeting is cut to at least 3 lines (data-lines) with a blue Show More button (aria-expanded=false, aria-controls = the box id); composer and button stay on screen",
+          "status": "covered"
+        },
+        {
+          "id": "wgf-03",
+          "description": "Issue #2884: the cut never hides exactly one line across screen heights 860 down to 540",
+          "status": "covered"
+        },
+        {
+          "id": "wgf-04",
+          "description": "Issue #2884: resizing the window re-fits the greeting: 1440x900 to 1440x560 shows the button, back to 900 removes it",
+          "status": "covered"
+        },
+        {
+          "id": "wgf-05",
+          "description": "Issue #2884: Show More opens the greeting taller (at most 40vh), scrolling inside its own box without moving the page, text centred (computed text-align center); Show Less returns to the same cut scrolled to the top",
+          "status": "covered"
+        },
+        {
+          "id": "wgf-06",
+          "description": "Issue #2884: after opening the greeting and starting a new chat, the greeting is cut again (Show More, aria-expanded=false)",
+          "status": "covered"
+        },
+        {
+          "id": "wgf-07",
+          "description": "Issue #2884: a short greeting shows in full with no Show More button on a short screen",
+          "status": "covered"
+        },
+        {
+          "id": "wgf-08",
+          "description": "Issue #2884: the agent name (welcome-heading) stays on screen at a short desktop height, cut or open",
           "status": "covered"
         }
       ]
