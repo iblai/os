@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.204.2](https://github.com/iblai/os/compare/v0.204.1...v0.204.2) (2026-11-19)
+
+### Chores
+
+* **deps:** take @iblai/iblai-js 2.82.1 for the redirect-crumb fix ([4a54b5f](https://github.com/iblai/os/commit/4a54b5f396146bffe685f04cdb7596082ea45470))
+
 ## [0.204.1](https://github.com/iblai/os/compare/v0.204.0...v0.204.1) (2026-11-19)
 
 ### Bug Fixes
