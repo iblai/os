@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.205.0](https://github.com/iblai/os/compare/v0.204.2...v0.205.0) (2026-11-19)
+
+### Features
+
+* **panel:** offer Record a skill in the Cowork panel people actually see ([34188e3](https://github.com/iblai/os/commit/34188e331165aa0a1ececf274597768d985babbd)), closes [iblai/ibl-frontend#2265](https://github.com/iblai/ibl-frontend/issues/2265)
+
 ## [0.204.2](https://github.com/iblai/os/compare/v0.204.1...v0.204.2) (2026-11-19)
 
 ### Chores
