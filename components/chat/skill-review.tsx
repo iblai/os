@@ -96,7 +96,7 @@ export function SkillReview() {
       className="absolute inset-0 z-20 flex min-h-0 flex-col overflow-hidden bg-white"
     >
       <div className="flex-none border-b border-gray-200 p-4">
-        <h2 className="text-base font-medium text-gray-900">Name This Skill</h2>
+        <h2 className="ibl-dialog-title">Name This Skill</h2>
         <p className="mt-0.5 text-xs text-gray-500">
           The agent follows these steps when you ask for this again.
         </p>
@@ -177,6 +177,7 @@ export function SkillReview() {
         </Button>
         <Button
           onClick={save}
+          className="ibl-button-primary"
           disabled={!name.trim() || steps.length === 0 || isLoading}
         >
           Save Skill
