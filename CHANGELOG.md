@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.205.2](https://github.com/iblai/os/compare/v0.205.1...v0.205.2) (2026-11-20)
+
+### Bug Fixes
+
+* **deps:** bump @iblai/iblai-js to 2.84.1 for even Capabilities spacing ([bf8ec8c](https://github.com/iblai/os/commit/bf8ec8c749c54f663be2a2504933f846dda94da5)), closes [iblai/iblai-web-frontend#2267](https://github.com/iblai/iblai-web-frontend/issues/2267)
+
+### Chores
+
+* **claude:** add ui-review skill for measured before/after UI previews ([b4f8e32](https://github.com/iblai/os/commit/b4f8e3229036d5de2cb1d6ce0748bef0e58e6afb))
+
 ## [0.205.1](https://github.com/iblai/os/compare/v0.205.0...v0.205.1) (2026-11-19)
 
 ### Bug Fixes
