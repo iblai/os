@@ -2456,7 +2456,7 @@ Tenant admins choose which models users may use ([iblai-platform#2675](https://g
 
 ---
 
-## Journey 93: Cowork in the Extension Panel (3 checkpoints) — `journeys/93-cowork-extension-panel.spec.ts`
+## Journey 93: Cowork in the Extension Panel (4 checkpoints) — `journeys/93-cowork-extension-panel.spec.ts`
 
 **Source files:** `hooks/use-in-extension-panel.ts`, `lib/embed-context.ts`, `hooks/use-browse-run.ts`, `lib/cowork-approvals.ts`, `components/chat/sdk-chat.tsx`, `messages/en.json`, `e2e/utils/embed-harness-client.ts`, `e2e/utils/embed-harness-server.mjs`
 
@@ -2465,6 +2465,7 @@ The app half of the Chrome extension's Cowork mode, without loading the extensio
 - [x] cw-01: Declared the panel by `enable-cowork=true` on its iframe URL, the app shows the Cowork pill pressed; its popover holds the switch on, the disclosure note mentioning the picture of the tab, and Approvals = Automatic; it sends no `MENTOR:BROWSE_HELLO`
 - [x] cw-02: A goal becomes a `MENTOR:BROWSE_RUN` frame carrying `auto: true`; scripted worker frames (ack, three log rows — the page read, a typed field, a failed click — the reply, done with the time-limit note) render as one assistant turn whose "Used 3 tools" row expands to the rows numbered and named after their actions, whose body ends with the reply then the note, and after which Send is back
 - [x] cw-03: The mentor WebSocket closing mid-run (proxied to the real server and closed with the DM's idle code 4000) leaves the turn in flight — Stop stays and Send stays hidden — until the worker's done, after which Send is back
+- [x] cw-04: An organization the browsing assistant cannot run in at all — the pinned model has no credential there — gets its own screen rather than the one that says somebody who manages the organization can set it up: that reader IS the administrator, and only ibl.ai can enable it. The screen names the organization, never mentions asking a manager or reopening the panel, and still offers Change Organization as the way out.
 
 ---
 

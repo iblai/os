@@ -6883,6 +6883,10 @@
           "id": "cw-03",
           "description": "The mentor WebSocket closing mid-run (proxied to the real server and closed with the DM's idle code 4000) leaves the turn in flight — Stop stays and Send stays hidden — until the worker's done, after which Send is back",
           "status": "covered"
+        },
+        {
+          "id": "cw-04",
+          "description": "An organization the browsing assistant cannot run in at all — the pinned model has no credential there — gets its own screen rather than the one that says somebody who manages the organization can set it up: that reader IS the administrator, and only ibl.ai can enable it. The screen names the organization, never mentions asking a manager or reopening the panel, and still offers Change Organization as the way out."
         }
       ]
     },

@@ -5,6 +5,15 @@
 
 export const PURPOSE_AGENTS_KEY = 'purpose_agents';
 
+/**
+ * Purposes this organization cannot serve at all, recorded beside the agents.
+ *
+ * Only an administrator ever finds this out — everyone else is stopped before
+ * the create that reveals it — so without writing it down, their colleagues
+ * are told a manager can fix it by opening the panel, which is untrue.
+ */
+export const PURPOSE_UNSUPPORTED_KEY = 'unsupported';
+
 export const AGENT_PURPOSES = {
   CHROME_EXTENSION: 'chrome_extension',
 } as const;
@@ -61,11 +70,45 @@ export function withPurposeAgent(
   purpose: AgentPurpose,
   mentorId: string,
 ): TenantMetadataBlob {
+  const agents = { ...(asRecord(metadata?.[PURPOSE_AGENTS_KEY]) ?? {}) };
+  const unsupported = { ...(asRecord(agents[PURPOSE_UNSUPPORTED_KEY]) ?? {}) };
+  // An agent exists now, so a verdict recorded earlier is stale. The key is
+  // dropped entirely rather than left empty on every organization.
+  delete unsupported[purpose];
+  if (Object.keys(unsupported).length) {
+    agents[PURPOSE_UNSUPPORTED_KEY] = unsupported;
+  } else {
+    delete agents[PURPOSE_UNSUPPORTED_KEY];
+  }
+  return {
+    ...(metadata ?? {}),
+    [PURPOSE_AGENTS_KEY]: { ...agents, [purpose]: mentorId },
+  };
+}
+
+/** True only where an administrator has already found this purpose refused. */
+export function readPurposeUnsupported(
+  metadata: TenantMetadataBlob | undefined | null,
+  purpose: AgentPurpose,
+): boolean {
+  const agents = asRecord(metadata?.[PURPOSE_AGENTS_KEY]);
+  return asRecord(agents?.[PURPOSE_UNSUPPORTED_KEY])?.[purpose] === true;
+}
+
+/** A merged copy recording that this purpose cannot run here. See above. */
+export function withPurposeUnsupported(
+  metadata: TenantMetadataBlob | undefined | null,
+  purpose: AgentPurpose,
+): TenantMetadataBlob {
+  const agents = asRecord(metadata?.[PURPOSE_AGENTS_KEY]) ?? {};
   return {
     ...(metadata ?? {}),
     [PURPOSE_AGENTS_KEY]: {
-      ...(asRecord(metadata?.[PURPOSE_AGENTS_KEY]) ?? {}),
-      [purpose]: mentorId,
+      ...agents,
+      [PURPOSE_UNSUPPORTED_KEY]: {
+        ...(asRecord(agents[PURPOSE_UNSUPPORTED_KEY]) ?? {}),
+        [purpose]: true,
+      },
     },
   };
 }
