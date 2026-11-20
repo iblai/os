@@ -16,6 +16,7 @@ English UI labels use **Title Case**; running text uses **sentence case**. Mixin
 Rules:
 
 - Capitalize every word except articles, short conjunctions and short prepositions (`a`, `an`, `the`, `and`, `or`, `but`, `for`, `of`, `to`, `in`, `on`, `at`, `by`, `with`) — those stay lowercase unless they are the first or last word: `Terms of Service`, `Sign In with Google`, `What's New`.
+- Demonstratives (`this`, `that`, `these`, `those`) also stay lowercase unless they are the first word: `Name this Skill`, `Only this Agent`, `Delete this Agent`. Standard Title Case capitalizes them; this product does not.
 - Keep acronyms and brand names as written: `LLM Provider`, `AI Policy`, `ibl.ai`, `OpenAI`.
 - ICU placeholders keep their own casing; capitalize the words around them: `{category} Agents`, `{provider} Agents`.
 
