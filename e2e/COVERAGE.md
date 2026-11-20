@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-11-18 | 1182 checkpoints (1101 covered, 46 pending/fixme, 17 not-reproducible in default env, 18 deprecated) | 114 journeys (113 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-11-20 | 1190 checkpoints (1109 covered, 46 pending/fixme, 17 not-reproducible in default env, 18 deprecated) | 115 journeys (114 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -2647,3 +2647,20 @@ Issue iblai-platform#2853. Create Agent is a wizard (the only create flow); Fini
 - [x] caw-05: Skip on every step, including the last, opens the new agent's chat
 - [x] caw-06: No Back on step 2, Back from step 3 on, and Back returns to the previous step
 - [x] caw-07: The Skills step (between Prompts and Datasets) shows the agent and available skills tabs and the last step says Finish; the step count follows the tabs the admin may use
+
+## Journey 106: Assistant (8 checkpoints) — `journeys/106-master-agent.spec.ts`
+
+**Source files:** `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`, `lib/constants.ts`
+
+A Bot button in the header (`Assistant`) opens the organization's main agent (its Default Agent, else the user's starred agent, else their most recently used one) in a column docked beside the page content, flush to the window's right edge under the nav bar; its left edge is a resize handle (width remembered in `ibl-master-agent-width`). The panel holds the existing `<agent-ai>` embed, pointed at this app's own embed route. Inside the embed, Full screen turns the panel into a centered popup over a dimmed page and Close chat hides it. The component ships in the SDK (`@iblai/iblai-js` 2.85.0). The Assistant is a frame on the app's own origin and shares the page's localStorage, so its chat saves its session under `session_id:framed`; ma-07 and ma-08 chat for real and pin that an agent embedded on another website (a different-origin parent) keeps `session_id` and that the panel never changes the page's saved conversation. ma-01..06 create nothing; ma-07 and ma-08 each create an agent pinned to ibl.ai Fast (the test account's starred agent can take minutes to start), reaped by the run's sweeper.
+
+- [x] ma-01: The header shows an Assistant button (`aria-expanded` false)
+- [x] ma-02: Tapping it opens the side panel, docked beside the page content (next sibling of main, flush right, under the nav bar, main ending where the panel starts), with the embed on `/platform/<tenant>/...` (`embed`, `show-close-button` and `allow-fullscreen` true); the embed's Full screen and Close chat buttons load
+- [x] ma-03: Full screen turns the panel into a popup with the dimmed backdrop; Exit full screen returns to the side view and removes the backdrop
+- [x] ma-04: Close chat hides the panel; tapping the header button shows it again in the side view with the embed frame present
+- [x] ma-05: Tapping the header button while the panel is open hides it (`aria-expanded` false)
+- [x] ma-06: Dragging the Resize Assistant separator 120px left widens the docked panel and narrows the page content by about 120px; the width is kept after closing and reopening
+- [x] ma-07: On a new agent embedded on another website (the harness's `<agent-ai>` page, a different origin), a message gets a real reply; the chat is saved under `session_id` (no `session_id:framed`) and the conversation comes back after a reload
+- [x] ma-08: With a new agent as the Default Agent, the page and the Assistant each get a real reply; the page keeps `session_id` and the Assistant `session_id:framed` after New chat, neither shows the other's message, and both conversations come back after a reload
+
+---

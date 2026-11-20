@@ -7,6 +7,7 @@ import { HotKeysWrapper } from '../[tenantKey]/[mentorId]/_components/hot-keys-w
 import { AppSidebar } from '../[tenantKey]/[mentorId]/_components/app-sidebar';
 import { NavBar } from '../[tenantKey]/[mentorId]/_components/nav-bar';
 import { AccessibilityProvider } from '@iblai/iblai-js/web-containers/next';
+import { MasterAgentPanel } from '@iblai/iblai-js/web-containers';
 import { AccessibilityFab } from '../[tenantKey]/[mentorId]/_components/accessibility-fab';
 import { useMentorSettings } from '@/hooks/use-mentors/use-mentor-settings';
 import { useParams, useSearchParams } from 'next/navigation';
@@ -74,13 +75,17 @@ export default function AppLayout({ children, defaultOpen }: AppLayoutProps) {
         <SidebarInset asChild className="flex h-dvh flex-col overflow-hidden">
           <div>
             <NavBar />
-            {/* overflow-hidden! must beat the mobile apps' injected unlayered `main { overflow: auto }`. */}
-            <main
-              id="main-content-container"
-              className="flex min-h-0 flex-1 flex-col overflow-hidden!"
-            >
-              {children}
-            </main>
+            <div className="flex min-h-0 flex-1">
+              {/* overflow-hidden! must beat the mobile apps' injected unlayered `main { overflow: auto }`. */}
+              <main
+                id="main-content-container"
+                className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden!"
+              >
+                {children}
+              </main>
+              {/* Flush under the nav bar, whose bottom margin spaces the page. */}
+              <MasterAgentPanel className="md:-mt-4" />
+            </div>
             <ModalContainer />
             <AccessibilityProvider>
               <AccessibilityFab />

@@ -105,6 +105,12 @@ vi.mock('@iblai/iblai-js/web-containers/next', () => ({
   ),
 }));
 
+vi.mock('@iblai/iblai-js/web-containers', () => ({
+  MasterAgentPanel: ({ className }: { className?: string }) => (
+    <aside data-testid="master-agent-panel" className={className} />
+  ),
+}));
+
 vi.mock(
   '@/app/platform/[tenantKey]/[mentorId]/_components/accessibility-fab',
   () => ({
@@ -451,6 +457,22 @@ describe('AppLayout', () => {
         </AppLayout>,
       );
       expect(screen.queryByTestId('product-tour')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Assistant', () => {
+    it('docks the panel beside the page content, flush under the nav bar', () => {
+      render(
+        <AppLayout>
+          <div data-testid="children">Children</div>
+        </AppLayout>,
+      );
+
+      const main = screen.getByRole('main');
+      const panel = screen.getByTestId('master-agent-panel');
+      expect(main.nextElementSibling).toBe(panel);
+      expect(main).toHaveClass('min-w-0', 'flex-1');
+      expect(panel).toHaveClass('md:-mt-4');
     });
   });
 });

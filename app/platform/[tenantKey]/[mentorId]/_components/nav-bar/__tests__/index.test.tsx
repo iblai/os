@@ -451,6 +451,7 @@ vi.mock('@/components/modals/auth-modal', () => ({
 }));
 
 let lastCreditBalanceProps: any = null;
+let lastMasterAgentProps: any = null;
 // On-device selection, driven per-test; default OFF so existing tests see the
 // pre-badge nav-bar. One catalog model lets the badge resolve a display name.
 let mockLocalEnabled = false;
@@ -533,6 +534,10 @@ vi.mock('@iblai/iblai-js/web-containers', () => ({
   NotificationDropdown: () => (
     <div data-testid="notification-dropdown">Notifications</div>
   ),
+  MasterAgent: (props: any) => {
+    lastMasterAgentProps = props;
+    return <div data-testid="master-agent" />;
+  },
   CreditBalance: (props: any) => {
     lastCreditBalanceProps = props;
     return <div data-testid="credit-balance">CreditBalance</div>;
@@ -697,6 +702,7 @@ describe('NavBar', () => {
     };
     mockAllTenants = [{ key: 'test-tenant' }];
     lastCreditBalanceProps = null;
+    lastMasterAgentProps = null;
     mockLocalEnabled = false;
     mockLocalModelId = null;
     emitMock.mockClear();
@@ -764,6 +770,19 @@ describe('NavBar', () => {
       );
 
       expect(screen.getByTestId('notification-dropdown')).toBeInTheDocument();
+    });
+
+    it('renders the Assistant button when logged in', () => {
+      const store = createTestStore();
+
+      render(
+        <Provider store={store}>
+          <NavBar />
+        </Provider>,
+      );
+
+      expect(screen.getByTestId('master-agent')).toBeInTheDocument();
+      expect(lastMasterAgentProps).toEqual({});
     });
 
     it('renders learner/instructor mode switch for admin users', () => {
@@ -2291,6 +2310,30 @@ describe('NavBar - Menu Filtering Logic (filterMentorSegments)', () => {
       renderNav();
 
       expect(screen.getByTestId('credit-balance')).toBeInTheDocument();
+    });
+
+    it('orders the header as wallet, Incognito, Assistant, then notifications', () => {
+      mockCurrentTenant = {
+        key: 'paying-tenant',
+        is_admin: true,
+        show_paywall: true,
+      };
+      mockIsAdmin = true;
+
+      renderNav();
+
+      const inOrder = [
+        'credit-balance',
+        'chat-privacy-toggle',
+        'master-agent',
+        'notification-dropdown',
+      ].map((id) => screen.getByTestId(id));
+      for (let i = 1; i < inOrder.length; i++) {
+        expect(
+          inOrder[i - 1].compareDocumentPosition(inOrder[i]) &
+            Node.DOCUMENT_POSITION_FOLLOWING,
+        ).toBeTruthy();
+      }
     });
 
     it('does NOT render CreditBalance when tenant.show_paywall is false', () => {
