@@ -98,6 +98,12 @@ Every screen is for someone who has never configured software. Apply these rules
 
 When a reviewer says a screen is confusing, remove controls and words before adding explanations.
 
+## UI changes: uniform spacing, shown before and after
+
+Every change to something a person sees ends with a measured visual review, unasked: render the screen at desktop (1440×900), tablet (834×1194) and mobile (390×844), overlay each row's height and the px gap to the next row, and show the before/after contact sheets. Spacing must be uniform — the same gap between rows of the same kind, and a clear step up from heading → row → group → section (e.g. rows 16px, groups 24px). A gap that differs from its siblings without a nameable reason means the change is not done. This came from the Capabilities tab (iblai/iblai-platform#2942), where Surface rows sat 16px apart and Global rows 12px.
+
+See `.claude/skills/ui-review.md` for how to run it (`.claude/skills/ui-review-kit.cjs`).
+
 ## Code mode: ibl.ai instruction layers
 
 Three OS-owned layers steer the Code agent (opencode, or Codex / Claude Code — see the paragraph after the list); each has guard tests pinning its load-bearing lines — update the pins in the same change as any text edit.
