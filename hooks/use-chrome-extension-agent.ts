@@ -37,7 +37,32 @@ type PlatformMetadataEnvelope = {
 export type PanelAgentResolution =
   | { status: 'ready'; mentorId: string }
   | { status: 'needs-setup' }
+  | { status: 'refused'; reason?: string }
   | { status: 'unavailable' };
+
+/**
+ * A refusal is the platform saying no on purpose — the organization may not
+ * create agents, the template is not one skills can attach to, a limit is
+ * reached. Falling back would hide a misconfiguration an admin could fix, and
+ * they would never learn why the panel keeps opening something else.
+ *
+ * Anything else — a 500, a dropped connection — is a hiccup that may pass on
+ * its own, so the run falls back and tries again next time.
+ */
+type CreateOutcome =
+  | { kind: 'made'; mentorId: string }
+  | { kind: 'refused'; reason?: string }
+  | { kind: 'failed' };
+
+function refusal(error: unknown): { refused: boolean; reason?: string } {
+  const status = (error as { status?: unknown } | null)?.status;
+  const code = typeof status === 'number' ? status : undefined;
+  if (code === undefined || code < 400 || code >= 500)
+    return { refused: false };
+  const data = (error as { data?: { detail?: string; error?: string } } | null)
+    ?.data;
+  return { refused: true, reason: data?.detail || data?.error };
+}
 
 export interface PanelAgent {
   /**
@@ -107,9 +132,14 @@ export function useChromeExtensionAgent(): PanelAgent {
 
         if (!isAdmin || !username) return { status: 'needs-setup' };
 
-        const mentorId =
-          (await findBrowsingAssistant(tenantKey)) ?? (await create(tenantKey));
-        if (!mentorId) return { status: 'unavailable' };
+        const adopted = await findBrowsingAssistant(tenantKey);
+        const made: CreateOutcome = adopted
+          ? { kind: 'made', mentorId: adopted }
+          : await create(tenantKey);
+        if (made.kind === 'refused')
+          return { status: 'refused', reason: made.reason };
+        if (made.kind === 'failed') return { status: 'unavailable' };
+        const mentorId = made.mentorId;
 
         try {
           await updateTenantMetadata([
@@ -153,7 +183,7 @@ export function useChromeExtensionAgent(): PanelAgent {
         }
       }
 
-      async function create(org: string) {
+      async function create(org: string): Promise<CreateOutcome> {
         try {
           const created = await createMentor({
             org,
@@ -169,13 +199,17 @@ export function useChromeExtensionAgent(): PanelAgent {
               mentor_visibility: MENTOR_VISIBILITY_VALUES.STUDENTS,
             },
           } as never).unwrap();
-          return (created as { unique_id?: string })?.unique_id ?? null;
+          const id = (created as { unique_id?: string })?.unique_id;
+          return id ? { kind: 'made', mentorId: id } : { kind: 'failed' };
         } catch (error) {
+          const said = refusal(error);
           console.error(
             '[purpose-agents] could not create the browsing agent',
             error,
           );
-          return null;
+          return said.refused
+            ? { kind: 'refused', reason: said.reason }
+            : { kind: 'failed' };
         }
       }
     },
