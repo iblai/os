@@ -1,8 +1,19 @@
 import { useEffect, useRef, useState } from 'react';
-import { ensureSignedIn, isAuthed } from './auth';
+import { clearSession, ensureSignedIn, isAuthed, username } from './auth';
 import { t } from './i18n';
 import { MentorChat } from './mentor-chat';
 import { BrandMark } from './brand-mark';
+
+/**
+ * How long the sign-in window gets before the panel offers the button too.
+ *
+ * `launchWebAuthFlow` settles only when that window does, so a window that
+ * opened behind the browser — or never opened — left the panel animating with
+ * nothing to press, for as long as the panel stayed open. A wait is not a
+ * conclusion: the flow is still running when this fires, and the button is
+ * offered beside it rather than instead of it.
+ */
+const OFFER_BUTTON_AFTER_MS = 8000;
 
 /**
  * The whole panel: the mentor chat, and nothing above it. Browsing is not a
@@ -17,31 +28,51 @@ export function App() {
     isAuthed() ? true : null,
   );
   const [authError, setAuthError] = useState<string | null>(null);
+  const [waited, setWaited] = useState(false);
 
-  // One sign-in at a time: two flows racing means whichever finishes last
-  // writes the session, so a slow first attempt can land on top of the one
-  // that actually succeeded.
-  //
-  // What stops it from the UI is `setAuthed(null)` below — the pending screen
-  // replaces the button, so there is nothing left to click. This ref covers
-  // the rest: anything calling `signIn` without going through that button.
-  const signingIn = useRef(false);
+  // Every attempt carries a number and only the newest may write the UI. Two
+  // flows can overlap now that a stuck one no longer blocks the button, and
+  // the one the user gave up on still settles later — closing its window
+  // rejects it — which must not land on top of the sign-in that worked.
+  const attempt = useRef(0);
+
+  // The next sign-in must offer a different account. Set by signing out, and
+  // spent on the sign-in that follows.
+  const fresh = useRef(false);
 
   const signIn = async () => {
-    if (signingIn.current) return;
-    signingIn.current = true;
+    const mine = ++attempt.current;
     setAuthError(null);
-    // Back to "working" for a retry too, not just the first attempt.
+    setWaited(false);
     setAuthed(null);
+    const offer = setTimeout(() => {
+      if (attempt.current === mine) setWaited(true);
+    }, OFFER_BUTTON_AFTER_MS);
     try {
-      setAuthed(await ensureSignedIn());
+      const ok = await ensureSignedIn(fresh.current);
+      fresh.current = false;
+      if (attempt.current === mine) setAuthed(ok);
     } catch (err) {
       console.error('[ibl.ai panel] sign-in failed:', err);
-      setAuthError(t('signInFailed'));
-      setAuthed(false);
+      if (attempt.current === mine) {
+        setAuthError(t('signInFailed'));
+        setAuthed(false);
+      }
     } finally {
-      signingIn.current = false;
+      clearTimeout(offer);
+      if (attempt.current === mine) setWaited(false);
     }
+  };
+
+  const signOut = () => {
+    clearSession();
+    // Abandon any flow still running, so its late result cannot sign the
+    // person back in after they asked to leave.
+    attempt.current += 1;
+    fresh.current = true;
+    setAuthError(null);
+    setWaited(false);
+    setAuthed(false);
   };
 
   useEffect(() => {
@@ -51,9 +82,8 @@ export function App() {
 
   // Pending: say so rather than painting nothing. The sign-in can take as long
   // as the user needs in the auth window, and a blank panel for all of it
-  // gives them nothing to read. Closing that window rejects the flow, which
-  // lands on the button below.
-  if (authed === null) {
+  // gives them nothing to read.
+  if (authed === null && !waited) {
     return (
       <div className="panel">
         <BrandMark label={t('signingIn')} />
@@ -61,22 +91,26 @@ export function App() {
     );
   }
 
+  if (authed) {
+    return (
+      <div className="panel">
+        <MentorChat onSignOut={signOut} who={username()} />
+      </div>
+    );
+  }
+
   return (
     <div className="panel">
-      {authed ? (
-        <MentorChat />
-      ) : (
-        <div className="signin">
-          {authError && <div className="row-error">{authError}</div>}
-          <button
-            type="button"
-            className="primary"
-            onClick={() => void signIn()}
-          >
-            {t('signIn')}
-          </button>
-        </div>
-      )}
+      <div className="signin">
+        {authError ? (
+          <div className="row-error">{authError}</div>
+        ) : (
+          <p className="row-note">{t('signInWindow')}</p>
+        )}
+        <button type="button" className="primary" onClick={() => void signIn()}>
+          {t('signIn')}
+        </button>
+      </div>
     </div>
   );
 }
