@@ -5,6 +5,10 @@ updates:
     schedule:
       interval: 'weekly'
     open-pull-requests-limit: 5
+    # Hold new releases for a week before opening a bump — the supply-chain
+    # cooldown that .npmrc's minimumReleaseAge cannot yet enforce on this pnpm.
+    cooldown:
+      default-days: 7
     groups:
       npm-minor-and-patch:
         update-types:
@@ -18,6 +22,8 @@ updates:
     schedule:
       interval: 'monthly'
     open-pull-requests-limit: 3
+    cooldown:
+      default-days: 7
     groups:
       docker-all:
         patterns:
@@ -27,6 +33,8 @@ updates:
     schedule:
       interval: 'monthly'
     open-pull-requests-limit: 3
+    cooldown:
+      default-days: 7
     groups:
       actions-all:
         patterns:

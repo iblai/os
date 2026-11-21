@@ -1,0 +1,99 @@
+name: Workflow Security
+
+# Static analysis of our own GitHub Actions, plus a guard on the supply-chain
+# cooldown config. Two jobs:
+#
+#   scan  — zizmor (security lints: unpinned refs, template injection,
+#           over-broad permissions) and actionlint (syntax + shellcheck).
+#           ADVISORY for now: annotations + job summary, never blocks, while the
+#           existing backlog of unpinned refs is worked down. Drop the
+#           `continue-on-error` lines to turn it into a required gate.
+#
+#   supply-chain-config — BLOCKING. Fails if the dependency cooldown is removed,
+#           so a future edit cannot silently undo .npmrc + dependabot.yml.
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/**'
+      - '.github/actions/**'
+      - '.npmrc'
+      - '.github/dependabot.yml'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/**'
+      - '.github/actions/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: zizmor (advisory)
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          pipx install zizmor==1.32.0
+          zizmor --persona=regular .github/workflows | tee zizmor.txt
+          {
+            echo '## zizmor'
+            echo ''
+            echo '```'
+            cat zizmor.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: actionlint (advisory)
+        continue-on-error: true
+        env:
+          ACTIONLINT_VERSION: 1.7.12
+        run: |
+          set -euo pipefail
+          work="$(mktemp -d)"
+          base="https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}"
+          curl -fsSL -o "$work/actionlint.tgz" "$base/actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
+          curl -fsSL -o "$work/sums.txt" "$base/actionlint_${ACTIONLINT_VERSION}_checksums.txt"
+          ( cd "$work" \
+            && grep " actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz$" sums.txt \
+               | sha256sum -c - )
+          tar -xzf "$work/actionlint.tgz" -C "$work" actionlint
+          sudo mv "$work/actionlint" /usr/local/bin/actionlint
+          actionlint -color | tee actionlint.txt || true
+          {
+            echo '## actionlint'
+            echo ''
+            echo '```'
+            cat actionlint.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  supply-chain-config:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Assert the dependency cooldown is configured
+        run: |
+          set -euo pipefail
+          fail=0
+          if ! grep -q '^minimumReleaseAge=7' .npmrc; then
+            echo "::error file=.npmrc::expected 'minimumReleaseAge=7' (supply-chain cooldown)"
+            fail=1
+          fi
+          if ! grep -q 'cooldown:' .github/dependabot.yml; then
+            echo "::error file=.github/dependabot.yml::expected a 'cooldown:' block — the active cooldown while pnpm < 10.16 ignores minimumReleaseAge"
+            fail=1
+          fi
+          if [ "$fail" = 0 ]; then
+            echo "Supply-chain cooldown is configured."
+          fi
+          exit "$fail"
