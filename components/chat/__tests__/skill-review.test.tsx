@@ -166,3 +166,20 @@ describe('reviewing a recording', () => {
     expect(createSkill).not.toHaveBeenCalled();
   });
 });
+
+describe('a step that moves between tabs', () => {
+  it('reads as a move, not a click', () => {
+    recording = panel({
+      steps: [
+        {
+          tool: 'switch-tab',
+          target: { role: 'tab', name: 'Sheets' },
+          url: 'https://sheets.com/',
+        },
+      ],
+    });
+    render(<SkillReview />);
+
+    expect(screen.getByText(/Switch to Sheets/)).toBeInTheDocument();
+  });
+});

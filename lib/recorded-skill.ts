@@ -5,7 +5,7 @@
  */
 
 export interface RecordedStep {
-  tool: 'click' | 'type' | 'select' | 'navigate';
+  tool: 'click' | 'type' | 'select' | 'navigate' | 'switch-tab';
   target: { role: string; name: string };
   value?: string;
   url: string;
@@ -41,6 +41,10 @@ function line(step: RecordedStep): string {
     ? `the ${step.target.role} "${step.target.name}"`
     : `the ${step.target.role}`;
   switch (step.tool) {
+    case 'switch-tab':
+      return step.target.name
+        ? `Switch to the tab showing ${step.target.name}`
+        : 'Switch to the other tab';
     case 'navigate':
       return `Go to ${step.url}`;
     case 'type':

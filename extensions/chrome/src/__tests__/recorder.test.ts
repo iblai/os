@@ -193,3 +193,72 @@ describe('how a step reads', () => {
     ).toBe('Type "acme corp" into the textbox "Search"');
   });
 });
+
+describe('a workflow that moves between tabs', () => {
+  const tab = (id: number, title: string, url = `https://${title}.com/`) => ({
+    id,
+    title,
+    url,
+  });
+
+  it('follows the person, and says so in the steps', () => {
+    const run = new Recording();
+    run.switchedTo(tab(1, 'reports'), 0);
+    run.add(event({ role: 'button', name: 'Export' }), 10);
+    run.switchedTo(tab(2, 'sheets'), 20);
+    run.add(event({ role: 'button', name: 'Paste' }), 30);
+
+    expect(run.steps().map((s) => s.tool)).toEqual([
+      'click',
+      'switch-tab',
+      'click',
+    ]);
+    expect(run.steps()[1].target.name).toBe('sheets');
+  });
+
+  it('does not open with a switch nobody made', () => {
+    const run = new Recording();
+    run.switchedTo(tab(1, 'reports'), 0);
+    run.add(event({ role: 'button', name: 'Export' }), 10);
+
+    // The first tab is where they already were.
+    expect(run.steps().map((s) => s.tool)).toEqual(['click']);
+  });
+
+  it('ignores a tab they looked at and left without doing anything', () => {
+    const run = new Recording();
+    run.switchedTo(tab(1, 'reports'), 0);
+    run.add(event({ role: 'button', name: 'Export' }), 10);
+    run.switchedTo(tab(2, 'sheets'), 20);
+    run.switchedTo(tab(1, 'reports'), 30);
+    run.add(event({ role: 'button', name: 'Download' }), 40);
+
+    // Two switches are recorded because they happened; what matters is that
+    // nothing invented a step on the tab nothing was done in.
+    const tools = run.steps().map((s) => s.tool);
+    expect(tools.filter((x) => x === 'click')).toHaveLength(2);
+  });
+
+  it('closes what was being typed before the person leaves the tab', () => {
+    const run = new Recording();
+    run.switchedTo(tab(1, 'reports'), 0);
+    run.add(
+      event({ kind: 'input', role: 'textbox', name: 'Search', value: 'acme' }),
+      10,
+    );
+    run.switchedTo(tab(2, 'sheets'), 20);
+
+    // Otherwise the half-typed field lands after the switch, in the wrong tab.
+    expect(run.steps().map((s) => s.tool)).toEqual(['type', 'switch-tab']);
+  });
+
+  it('reads as something a person could follow', () => {
+    expect(
+      describeStep({
+        tool: 'switch-tab',
+        target: { role: 'tab', name: 'Sheets' },
+        url: 'https://sheets.com/',
+      }),
+    ).toBe('Switch to the tab showing Sheets');
+  });
+});

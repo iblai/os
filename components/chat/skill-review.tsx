@@ -16,6 +16,8 @@ function describe(step: RecordedStep): string {
   const control = step.target.name
     ? `${step.target.role} "${step.target.name}"`
     : step.target.role;
+  if (step.tool === 'switch-tab')
+    return `Switch to ${step.target.name || 'the other tab'}`;
   if (step.tool === 'navigate') return `Go to ${step.url}`;
   if (step.tool === 'type') return `Type into the ${control}`;
   if (step.tool === 'select') return `Choose in the ${control}`;
