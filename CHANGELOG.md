@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.206.0](https://github.com/iblai/os/compare/v0.205.3...v0.206.0) (2026-11-22)
+
+### Features
+
+* **ext:** sign out of the panel, and offer the button when sign-in stalls ([fc4bcb1](https://github.com/iblai/os/commit/fc4bcb1fb25033ad8e786665976b406a6fe68486))
+
+### Bug Fixes
+
+* **ext:** stop an abandoned sign-in from undoing the sign-out ([d097b51](https://github.com/iblai/os/commit/d097b51d3ea5672e498be4bda7f4b02053cca773)), closes [#698](https://github.com/iblai/os/issues/698)
+
+### Tests
+
+* **ext:** cover the two sign-in failures that are not this attempt's news ([eef9c45](https://github.com/iblai/os/commit/eef9c45f37de6ec57c4a76b067f2c4481851ac2d))
+
 ## [0.205.3](https://github.com/iblai/os/compare/v0.205.2...v0.205.3) (2026-11-22)
 
 ### Bug Fixes
