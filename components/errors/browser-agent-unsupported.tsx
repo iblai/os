@@ -11,10 +11,12 @@ import { config } from '@/lib/config';
  * Shown in the side panel when the organization cannot run a browsing agent at
  * all — the model it is pinned to has no credential there.
  *
- * Only an administrator reaches this: everyone else is stopped before the
- * agent is ever created. So it never says to ask whoever manages the
- * organization, which is the reader, and it does not read as something they
- * forgot to do — nothing they can do in the panel will fix it.
+ * An administrator meets it first — they are the only one who reaches the
+ * create that reveals it — and everyone else meets it afterwards, from the
+ * recorded verdict. So it never says to ask whoever manages the organization:
+ * for the first reader that is themselves, and for the rest it is someone who
+ * cannot help either. Nothing anyone can do in the panel will fix it, which is
+ * why the way out is us, and not their own support desk.
  */
 export function BrowserAgentUnsupported() {
   const { currentTenant } = useCurrentTenant();

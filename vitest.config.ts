@@ -123,6 +123,7 @@ export default defineConfig({
         'contexts/**/*.{ts,tsx}',
         'actions/**/*.{ts,tsx}',
         'app/share/**/*.{ts,tsx}',
+        'app/error/**/*.{ts,tsx}',
         'extensions/chrome/src/**/*.{ts,tsx}',
       ],
       exclude: [

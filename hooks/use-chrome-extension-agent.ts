@@ -140,6 +140,10 @@ export function useChromeExtensionAgent(): PanelAgent {
             : { status: 'needs-setup' };
         }
 
+        // An administrator is deliberately NOT stopped by that verdict: their
+        // open is the only thing that re-tests it, so once we enable the model
+        // the next admin open clears the record and their colleagues get the
+        // agent. The cost is one failing create per admin open until then.
         let mentorId = await findBrowsingAssistant(tenantKey);
         if (!mentorId) {
           const made = await create(tenantKey);
@@ -180,9 +184,12 @@ export function useChromeExtensionAgent(): PanelAgent {
       // every load.
       async function findBrowsingAssistant(org: string) {
         try {
-          // No `query`: this endpoint answers 500 to it (no other caller of
-          // this slice sends one), and the exact-name match below is what
-          // actually decides. Narrowing was only ever an optimisation.
+          // No `query`: this search endpoint answers 500 to it (the slice's
+          // only other caller sends `order_by` / `featured` / `limit`, never
+          // one), and the exact-name match below is what actually decides.
+          // The bound this leaves: an organization with more than
+          // SEARCH_LIMIT agents whose recording also failed can create one
+          // duplicate, since the name may sit outside the page we read.
           const found = await getMentors({
             tenantKey: org,
             username: username as string,
