@@ -149,10 +149,10 @@ export default defineConfig({
         '**/__mocks__/**',
         '**/test-utils/**',
 
-        // Next.js app router (tested via E2E, except share pages which have unit tests)
+        // Next.js app router (tested via E2E, except the share and error pages,
+        // which have unit tests)
         'app/api/**',
         'app/create-mentor/**',
-        'app/error/**',
         'app/google-oauth-callback/**',
         'app/mobile/**',
         'app/mobile-sso-login/**',
