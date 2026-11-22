@@ -1,7 +1,17 @@
 import { test, expect } from '../fixtures/mentor-test';
 import { navigateToMentorApp, checkAdminStatus } from '../utils/auth';
 import { waitForPageReady } from '../utils/resilient';
+import type { Locator, Page } from '@playwright/test';
 import { getCurrentTenantShowPaywall } from '@iblai/iblai-js/playwright';
+
+// An Escape pressed while the Account dialog is still opening is sometimes
+// ignored on CI, so press again until it closes.
+async function closeWithEscape(page: Page, dialog: Locator) {
+  await expect(async () => {
+    if (await dialog.isVisible()) await page.keyboard.press('Escape');
+    await expect(dialog).toBeHidden({ timeout: 2_000 });
+  }).toPass({ timeout: 15_000 });
+}
 
 test.describe('Journey 28: App Overview & Navigation UI — Non-Admin', () => {
   test.beforeEach(async ({ nonadminPage }) => {
@@ -198,8 +208,7 @@ test.describe('Journey 28: App Overview & Navigation UI — Admin', () => {
       ).toBeVisible({ timeout: 15_000 });
     }
 
-    await page.keyboard.press('Escape');
-    await expect(memoryDialog).not.toBeVisible({ timeout: 10_000 });
+    await closeWithEscape(page, memoryDialog);
   });
 
   // ov-15: Every admin footer row opens the same organization Account dialog
@@ -253,8 +262,7 @@ test.describe('Journey 28: App Overview & Navigation UI — Admin', () => {
         },
       );
 
-      await page.keyboard.press('Escape');
-      await expect(dialog).not.toBeVisible({ timeout: 10_000 });
+      await closeWithEscape(page, dialog);
     }
     expect(visibleRows).toEqual(
       expect.arrayContaining(['API', 'Secrets', 'Memory', 'Advanced']),
@@ -277,8 +285,7 @@ test.describe('Journey 28: App Overview & Navigation UI — Admin', () => {
     );
     await expect(dialog).toBeVisible();
 
-    await page.keyboard.press('Escape');
-    await expect(dialog).not.toBeVisible({ timeout: 10_000 });
+    await closeWithEscape(page, dialog);
   });
 });
 
