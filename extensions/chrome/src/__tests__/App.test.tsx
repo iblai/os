@@ -188,4 +188,87 @@ describe('App', () => {
     expect(chromeStub.stub.identity.launchWebAuthFlow).toHaveBeenCalledTimes(2);
     error.mockRestore();
   });
+
+  // The counter kept a stale flow out of the UI but not out of storage: the
+  // session was written inside the flow, so a window the person walked away
+  // from signed them back into the account they had just left — the panel
+  // signed out, localStorage signed in, and the next open auto-signing in.
+  it('drops the session from a flow abandoned by signing out', async () => {
+    vi.useFakeTimers();
+    let abandoned!: (url: string) => void;
+    chromeStub.stub.identity.launchWebAuthFlow.mockImplementationOnce(
+      () => new Promise<string>((resolve) => (abandoned = resolve)),
+    );
+
+    render(<App />);
+    await act(async () => {
+      vi.advanceTimersByTime(8000);
+    });
+
+    // A second flow finishes and signs the person in, leaving the first one
+    // still open behind it.
+    fireEvent.click(screen.getByRole('button', { name: t('signIn') }));
+    await act(async () => {});
+    expect(screen.getByTestId('mentor-chat')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: t('signOut') }));
+    expect(localStorage.getItem('axd_token')).toBeNull();
+
+    // The window they gave up on finally comes back, with a whole session.
+    await act(async () => {
+      abandoned(sessionRedirect(SESSION));
+    });
+
+    expect(localStorage.getItem('axd_token')).toBeNull();
+    expect(
+      screen.getByRole('button', { name: t('signIn') }),
+    ).toBeInTheDocument();
+  });
+
+  // The request for a different account was spent by whichever flow settled
+  // next, stale or not — so the click after a sign-out went back to the auth
+  // app's own session and returned the same account with no window at all.
+  it('still asks for a different account after an abandoned flow settles', async () => {
+    vi.useFakeTimers();
+    let abandoned!: (url: string) => void;
+    chromeStub.stub.identity.launchWebAuthFlow.mockImplementationOnce(
+      () => new Promise<string>((resolve) => (abandoned = resolve)),
+    );
+
+    render(<App />);
+    await act(async () => {
+      vi.advanceTimersByTime(8000);
+    });
+    fireEvent.click(screen.getByRole('button', { name: t('signIn') }));
+    await act(async () => {});
+    fireEvent.click(screen.getByRole('button', { name: t('signOut') }));
+    await act(async () => {
+      abandoned(sessionRedirect(SESSION));
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: t('signIn') }));
+    await act(async () => {});
+
+    const url =
+      chromeStub.stub.identity.launchWebAuthFlow.mock.calls.at(-1)?.[0]?.url ??
+      '';
+    expect(url).toContain('logout=1');
+  });
+
+  // Signing out reused the pending screen, which explains a window that has
+  // opened — so leaving the account answered with a note about a window
+  // nobody had opened and nothing running.
+  it('explains no window when nothing is running', async () => {
+    localStorage.setItem('axd_token', 'x');
+    render(<App />);
+    await act(async () => {});
+
+    fireEvent.click(screen.getByRole('button', { name: t('signOut') }));
+
+    expect(
+      screen.getByRole('button', { name: t('signIn') }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(t('signInWindow'))).toBeNull();
+    expect(screen.queryByText(t('signInFailed'))).toBeNull();
+  });
 });

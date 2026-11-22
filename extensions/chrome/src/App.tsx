@@ -29,6 +29,10 @@ export function App() {
   );
   const [authError, setAuthError] = useState<string | null>(null);
   const [waited, setWaited] = useState(false);
+  // Whether a sign-in window is actually open. Signing out used to leave the
+  // panel on the pending screen's wording, answering a button nobody pressed
+  // with a note about a window nobody opened.
+  const [pending, setPending] = useState(false);
 
   // Every attempt carries a number and only the newest may write the UI. Two
   // flows can overlap now that a stuck one no longer blocks the button, and
@@ -37,41 +41,63 @@ export function App() {
   const attempt = useRef(0);
 
   // The next sign-in must offer a different account. Set by signing out, and
-  // spent on the sign-in that follows.
+  // spent on the sign-in that succeeds.
   const fresh = useRef(false);
 
   const signIn = async () => {
     const mine = ++attempt.current;
+    const current = () => attempt.current === mine;
     setAuthError(null);
     setWaited(false);
+    setPending(true);
     setAuthed(null);
     const offer = setTimeout(() => {
-      if (attempt.current === mine) setWaited(true);
+      if (current()) setWaited(true);
     }, OFFER_BUTTON_AFTER_MS);
     try {
-      const ok = await ensureSignedIn(fresh.current);
-      fresh.current = false;
-      if (attempt.current === mine) setAuthed(ok);
+      // `current` travels into the flow because the session is written there,
+      // not here: an abandoned attempt must not store the account it fetched.
+      const ok = await ensureSignedIn(fresh.current, current);
+      if (!current()) return;
+      // The stored session has the last word, not this attempt's own answer —
+      // an earlier flow may be the one that landed it.
+      const signedIn = ok || isAuthed();
+      // Spent only on a sign-in that worked. Clearing it either way would let
+      // an abandoned flow spend the sign-out's request for a different
+      // account, and the next click would quietly resume the old one.
+      if (signedIn) fresh.current = false;
+      setAuthed(signedIn);
     } catch (err) {
       console.error('[ibl.ai panel] sign-in failed:', err);
-      if (attempt.current === mine) {
-        setAuthError(t('signInFailed'));
-        setAuthed(false);
+      if (!current()) return;
+      // Closing the second window must not report a failure for the sign-in
+      // the first one completed.
+      if (isAuthed()) {
+        fresh.current = false;
+        setAuthed(true);
+        return;
       }
+      setAuthError(t('signInFailed'));
+      setAuthed(false);
     } finally {
       clearTimeout(offer);
-      if (attempt.current === mine) setWaited(false);
+      if (current()) {
+        setPending(false);
+        setWaited(false);
+      }
     }
   };
 
   const signOut = () => {
     clearSession();
     // Abandon any flow still running, so its late result cannot sign the
-    // person back in after they asked to leave.
+    // person back in after they asked to leave: the number it carries is now
+    // stale, and the session it would have written is dropped unread.
     attempt.current += 1;
     fresh.current = true;
     setAuthError(null);
     setWaited(false);
+    setPending(false);
     setAuthed(false);
   };
 
@@ -104,9 +130,9 @@ export function App() {
       <div className="signin">
         {authError ? (
           <div className="row-error">{authError}</div>
-        ) : (
+        ) : pending ? (
           <p className="row-note">{t('signInWindow')}</p>
-        )}
+        ) : null}
         <button type="button" className="primary" onClick={() => void signIn()}>
           {t('signIn')}
         </button>
