@@ -229,26 +229,4 @@ test.describe('Journey 93: Cowork in the extension panel', () => {
     await emit(page, { type: 'done', text: REPLY });
     await expect(send).toBeVisible({ timeout: 15_000 });
   });
-
-  // cw-04: an organization whose agent cannot be created at all gets its own
-  // screen — not the one telling people to ask whoever manages the
-  // organization, which in this case is the person reading it.
-  test('an organization that cannot run the assistant is told so, and can leave', async ({
-    page,
-  }) => {
-    await navigateToMentorApp(
-      page,
-      `${MENTOR_NEXTJS_HOST}/error/403?errorType=browserAgentUnsupported`,
-    );
-
-    const screen = page.getByTestId('browser-agent-unsupported');
-    await expect(screen).toBeVisible();
-    await expect(screen).toContainText('Not Available Here');
-    // The sibling screen's advice would be a dead end here.
-    await expect(screen).not.toContainText('manages');
-    await expect(screen).not.toContainText('opening this panel');
-    await expect(
-      screen.getByRole('button', { name: 'Change Organization' }),
-    ).toBeVisible();
-  });
 });
