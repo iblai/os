@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.205.3](https://github.com/iblai/os/compare/v0.205.2...v0.205.3) (2026-11-22)
+
+### Bug Fixes
+
+* **panel:** give the review the app's own title and primary button ([989497f](https://github.com/iblai/os/commit/989497f0ba656a2b377c91889146b809a1e4194b))
+* **panel:** keep a recorded step inside the panel, and ask nothing of an empty value ([12f4da0](https://github.com/iblai/os/commit/12f4da044d7e8970b15432194c68ffcbfdbdd4b7))
+* **panel:** use the app's own checkbox, bin and heading casing in the review ([fefd417](https://github.com/iblai/os/commit/fefd4179170aa1ba61b08a93ae8d96d78e3950c3))
+
 ## [0.205.2](https://github.com/iblai/os/compare/v0.205.1...v0.205.2) (2026-11-20)
 
 ### Bug Fixes
