@@ -91,6 +91,12 @@
   "signInFailed": {
     "message": "La connexion a échoué. Réessayez."
   },
+  "signInWindow": {
+    "message": "Une fenêtre de connexion devrait s’être ouverte. Si vous ne la voyez pas, relancez-la."
+  },
+  "signOut": {
+    "message": "Se déconnecter"
+  },
   "timeLimit": {
     "message": "Je me suis arrêté ici : c’est le temps maximal pendant lequel je travaille d’un coup. Envoyez « continuer » et je reprendrai là où j’en étais, tant que ce panneau reste ouvert."
   },

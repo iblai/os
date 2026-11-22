@@ -91,6 +91,12 @@
   "signInFailed": {
     "message": "登录失败，请重试。"
   },
+  "signInWindow": {
+    "message": "登录窗口应该已经打开。如果看不到，请重新打开。"
+  },
+  "signOut": {
+    "message": "退出登录"
+  },
   "timeLimit": {
     "message": "我在这里停下了：这是我一次能连续工作的最长时间。发送“继续”，只要此面板保持打开，我就会从停下的地方接着做。"
   },
