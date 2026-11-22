@@ -271,4 +271,55 @@ describe('App', () => {
     expect(screen.queryByText(t('signInWindow'))).toBeNull();
     expect(screen.queryByText(t('signInFailed'))).toBeNull();
   });
+
+  // The flow the person gave up on rejects when its window is finally closed,
+  // long after they signed out. That answer belongs to nobody: reporting it
+  // would put a failure on a screen they had already moved on from.
+  it('ignores an abandoned flow that fails after a sign-out', async () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.useFakeTimers();
+    let abandon!: (reason: Error) => void;
+    chromeStub.stub.identity.launchWebAuthFlow.mockImplementationOnce(
+      () => new Promise<string>((_, reject) => (abandon = reject)),
+    );
+
+    render(<App />);
+    await act(async () => {
+      vi.advanceTimersByTime(8000);
+    });
+    fireEvent.click(screen.getByRole('button', { name: t('signIn') }));
+    await act(async () => {});
+    fireEvent.click(screen.getByRole('button', { name: t('signOut') }));
+
+    await act(async () => {
+      abandon(new Error('window closed'));
+    });
+
+    expect(
+      screen.getByRole('button', { name: t('signIn') }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(t('signInFailed'))).toBeNull();
+    error.mockRestore();
+  });
+
+  // A tenant switch mints its own session through `signIn(tenant)` in
+  // mentor-frame, so this window closing is not the whole story: the panel is
+  // signed in, and saying the sign-in failed would be wrong.
+  it('reports no failure when a session arrived from elsewhere', async () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    chromeStub.stub.identity.launchWebAuthFlow.mockImplementationOnce(
+      async () => {
+        localStorage.setItem('axd_token', 'axd');
+        localStorage.setItem('axd_token_expires', '2099-01-01T00:00:00Z');
+        throw new Error('window closed');
+      },
+    );
+
+    render(<App />);
+    await act(async () => {});
+
+    expect(screen.getByTestId('mentor-chat')).toBeInTheDocument();
+    expect(screen.queryByText(t('signInFailed'))).toBeNull();
+    error.mockRestore();
+  });
 });
