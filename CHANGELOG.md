@@ -1,5 +1,48 @@
 # Changelog
 
+## [0.205.3](https://github.com/iblai/os/compare/v0.205.2...v0.205.3) (2026-11-22)
+
+### Bug Fixes
+
+* **panel:** give the review the app's own title and primary button ([989497f](https://github.com/iblai/os/commit/989497f0ba656a2b377c91889146b809a1e4194b))
+* **panel:** keep a recorded step inside the panel, and ask nothing of an empty value ([12f4da0](https://github.com/iblai/os/commit/12f4da044d7e8970b15432194c68ffcbfdbdd4b7))
+* **panel:** use the app's own checkbox, bin and heading casing in the review ([fefd417](https://github.com/iblai/os/commit/fefd4179170aa1ba61b08a93ae8d96d78e3950c3))
+
+## [0.205.2](https://github.com/iblai/os/compare/v0.205.1...v0.205.2) (2026-11-20)
+
+### Bug Fixes
+
+* **deps:** bump @iblai/iblai-js to 2.84.1 for even Capabilities spacing ([bf8ec8c](https://github.com/iblai/os/commit/bf8ec8c749c54f663be2a2504933f846dda94da5)), closes [iblai/iblai-web-frontend#2267](https://github.com/iblai/iblai-web-frontend/issues/2267)
+
+### Chores
+
+* **claude:** add ui-review skill for measured before/after UI previews ([b4f8e32](https://github.com/iblai/os/commit/b4f8e3229036d5de2cb1d6ce0748bef0e58e6afb))
+
+## [0.205.1](https://github.com/iblai/os/compare/v0.205.0...v0.205.1) (2026-11-19)
+
+### Bug Fixes
+
+* **safety:** delete Safety rows through safety-logs ([2f9ca9a](https://github.com/iblai/os/commit/2f9ca9a364ca4d1a1511a71ab737b4104ed37fad))
+* **safety:** list every user's flagged prompts and Safety blocks ([a206d02](https://github.com/iblai/os/commit/a206d0261de3dc7cf3f0fbd78dc66bbdfaa1f9e5))
+
+### Chores
+
+* **deps:** bump @iblai/iblai-js to 2.74.0 ([071fc85](https://github.com/iblai/os/commit/071fc859a1c0007cec462a82ae5be5e38ee84baa))
+
+### Documentation
+
+* **e2e:** add journey 103 to coverage ([6affe10](https://github.com/iblai/os/commit/6affe109d178f0429be75d7bade0e0f66273672a))
+* **e2e:** add journey 104 to the coverage map ([5692519](https://github.com/iblai/os/commit/5692519748a3e0d63ce141093bb7591877429656))
+
+### Tests
+
+* **e2e:** add saved-response helpers to the Safety tab page object ([fdff482](https://github.com/iblai/os/commit/fdff482ced8f300a1dc0658bc6fcadb2e0e87426))
+* **e2e:** blocked messages show the saved response (journey 104) ([f93b258](https://github.com/iblai/os/commit/f93b2580d810d62461151659a1e7482a1b0b666f))
+* **e2e:** drop the stale bindReopen call from the Edit Agent page object ([061261e](https://github.com/iblai/os/commit/061261eabfc7ef763def5ae47da7a4a2bbc747df))
+* **e2e:** fix the moderation prompt locator and the cp-chat-02 session race ([9549b76](https://github.com/iblai/os/commit/9549b76dca142bdd0cc39463152a1e8d2ce15cd6))
+* **e2e:** journey 103 flagged prompts from every user ([e8868aa](https://github.com/iblai/os/commit/e8868aa910f133c279325bb61326722400c94cc7))
+* **safety:** cover flagged prompts requests, filter and delete routing ([9d60c6c](https://github.com/iblai/os/commit/9d60c6c9951736c255f9ddb814d438ba50aaa2d0))
+
 ## [0.205.0](https://github.com/iblai/os/compare/v0.204.2...v0.205.0) (2026-11-19)
 
 ### Features

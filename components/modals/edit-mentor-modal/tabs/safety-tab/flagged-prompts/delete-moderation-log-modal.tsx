@@ -12,15 +12,20 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useUsername } from '@/hooks/use-user';
 import { TenantKeyMentorIdParams } from '@/lib/types';
-import { useDeleteModerationLogMutation } from '@iblai/iblai-js/data-layer';
+import {
+  useDeleteModerationLogMutation,
+  useDeleteSafetyLogMutation,
+} from '@iblai/iblai-js/data-layer';
 import { useTranslations } from 'next-intl';
 import { useParams } from 'next/navigation';
 import { toast } from 'sonner';
+import { FlaggedPrompt } from './types';
 
 interface DeleteModerationLogModalProps {
   isOpen: boolean;
   onClose: () => void;
   logId: string;
+  logType: FlaggedPrompt['type'];
   onDeleteSuccess?: () => void;
 }
 
@@ -28,16 +33,22 @@ export function DeleteModerationLogModal({
   isOpen,
   onClose,
   logId,
+  logType,
   onDeleteSuccess,
 }: DeleteModerationLogModalProps) {
   const t = useTranslations('flaggedPromptsDeleteModerationLogModal');
-  const [deleteModerationLog, { isLoading }] = useDeleteModerationLogMutation();
+  const [deleteModerationLog, moderationDeletion] =
+    useDeleteModerationLogMutation();
+  const [deleteSafetyLog, safetyDeletion] = useDeleteSafetyLogMutation();
+  const deleteLog =
+    logType === 'Safety' ? deleteSafetyLog : deleteModerationLog;
+  const isLoading = moderationDeletion.isLoading || safetyDeletion.isLoading;
   const { tenantKey } = useParams<TenantKeyMentorIdParams>();
   const username = useUsername();
 
   const handleDelete = async () => {
     try {
-      await deleteModerationLog({
+      await deleteLog({
         // @ts-ignore - passing string expected number
         id: logId,
         org: tenantKey,
