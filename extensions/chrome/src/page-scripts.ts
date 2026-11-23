@@ -765,6 +765,15 @@ export interface HudOptions {
   watchdogMs: number;
   /** The element about to be acted on, in the tab's viewport (CSS px). */
   target?: { x: number; y: number; w: number; h: number } | null;
+  /**
+   * Counts presses, rather than flagging one.
+   *
+   * The overlay is re-painted on a heartbeat with whatever state the worker
+   * holds, so a boolean left standing would replay the click every beat for as
+   * long as the pointer rested on that element. The page animates only when
+   * this number changes.
+   */
+  pressId?: number;
 }
 
 interface HudState {
@@ -773,6 +782,11 @@ interface HudState {
   say: HTMLElement;
   stop: HTMLButtonElement;
   spot: HTMLElement;
+  /** The pointer that travels to each target, and its last resting place. */
+  arrow: HTMLElement;
+  at: { x: number; y: number } | null;
+  /** The last press this overlay has already shown. */
+  pressed: number;
   beat: number;
   timer: number;
 }
@@ -809,7 +823,7 @@ export function mountHud(options: HudOptions): void {
     const style = document.createElement('style');
     style.textContent = `
 :host { all: initial; --c: ${options.color}; --rgb: ${rgb(options.color)}; }
-.ring, .bar, .spot { position: fixed; z-index: 2147483647; pointer-events: none; }
+.ring, .bar, .spot, .arrow { position: fixed; z-index: 2147483647; pointer-events: none; }
 .ring { inset: 0; border: 3px solid var(--c); border-radius: 12px;
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .5), inset 0 0 26px rgba(var(--rgb), .17);
   animation: iblBreathe 3.2s ease-in-out infinite; }
@@ -829,16 +843,44 @@ export function mountHud(options: HudOptions): void {
 .stop:disabled { opacity: .55; cursor: default; }
 .spot { border: 2px solid var(--c); border-radius: 6px;
   box-shadow: 0 0 0 4px rgba(var(--rgb), .2); transition: all .12s ease-out; }
+/* The pointer. Travelling is the whole point of it: a ring that simply moves
+   says a box lit up, while something crossing the page says someone is doing
+   this. Positioned with left/top rather than a transform so it reads in the
+   same viewport coordinates the worker already sends for the target.
+   (No backticks in here: this stylesheet is a template literal.) */
+.arrow { left: 0; top: 0; width: 22px; height: 22px; margin: -2px 0 0 -2px;
+  transition: left .34s cubic-bezier(.22, .61, .36, 1),
+    top .34s cubic-bezier(.22, .61, .36, 1); }
+.arrow svg { display: block; width: 100%; height: 100%;
+  filter: drop-shadow(0 2px 4px rgba(17, 24, 39, .35)); }
+/* The press. Scaled from the pointer's own tip, so it reads as that pointer
+   clicking rather than a mark appearing beside it. */
+.arrow::after { content: ''; position: absolute; left: 1px; top: 1px;
+  width: 16px; height: 16px; margin: -8px 0 0 -8px; border-radius: 50%;
+  border: 2px solid var(--c); opacity: 0; transform: scale(.3); }
+.arrow.tap::after { animation: iblTap .45s ease-out; }
+@keyframes iblTap { 0% { opacity: .9; transform: scale(.3); }
+  100% { opacity: 0; transform: scale(2.6); } }
 .off { display: none !important; }
 @keyframes iblPulse { 0%, 100% { opacity: 1; transform: scale(1); }
   50% { opacity: .35; transform: scale(.75); } }
 @keyframes iblBreathe { 0%, 100% { opacity: 1; } 50% { opacity: .7; } }
 @media (prefers-reduced-motion: reduce) {
-  .dot, .ring { animation: none; } .spot { transition: none; } }`;
+  .dot, .ring { animation: none; } .spot, .arrow { transition: none; }
+  .arrow.tap::after { animation: none; } }`;
     const ring = document.createElement('div');
     ring.className = 'ring';
     const spot = document.createElement('div');
     spot.className = 'spot off';
+    const arrow = document.createElement('div');
+    arrow.className = 'arrow off';
+    // Inline so the overlay stays one injected function with no fetch: the
+    // page's CSP governs what we can load, and an overlay that sometimes has
+    // no pointer is worse than one that always does.
+    arrow.innerHTML =
+      '<svg viewBox="0 0 24 24" aria-hidden="true">' +
+      '<path d="M5 2.5 19 12l-6.4 1.3L9.8 19.5Z" fill="var(--c)" ' +
+      'stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/></svg>';
     const bar = document.createElement('div');
     bar.className = 'bar';
     bar.setAttribute('role', 'status');
@@ -862,8 +904,23 @@ export function mountHud(options: HudOptions): void {
       }
     });
     bar.append(dot, say, stop);
-    shadow.append(style, ring, spot, bar);
-    hud = { host, bar, say, stop, spot, beat: Date.now(), timer: 0 };
+    shadow.append(style, ring, spot, arrow, bar);
+    hud = {
+      host,
+      bar,
+      say,
+      stop,
+      spot,
+      arrow,
+      at: null,
+      // Zero, not the incoming id: seeding from it would swallow the very
+      // first click of a run, which is the one most worth showing. A fresh
+      // overlay after a navigation replays the last press once, which is the
+      // right reading — that page has not shown it yet.
+      pressed: 0,
+      beat: Date.now(),
+      timer: 0,
+    };
     // Nothing else can take the overlay down — a worker killed mid-run cannot
     // reach back into the page — so it has to be able to take itself down.
     hud.timer = setInterval(() => {
@@ -891,8 +948,39 @@ export function mountHud(options: HudOptions): void {
     hud.spot.style.width = `${target.w}px`;
     hud.spot.style.height = `${target.h}px`;
     hud.spot.classList.remove('off');
+
+    const to = {
+      x: Math.round(target.x + target.w / 2),
+      y: Math.round(target.y + target.h / 2),
+    };
+    const moved = !hud.at || hud.at.x !== to.x || hud.at.y !== to.y;
+    if (moved) {
+      // First sight of a target: start at it rather than flying in from the
+      // page's corner, which looks like a bug on the first action of a run.
+      if (!hud.at) hud.arrow.style.transition = 'none';
+      hud.arrow.style.left = `${to.x}px`;
+      hud.arrow.style.top = `${to.y}px`;
+      if (!hud.at) {
+        // Read back so the suppressed transition applies before it is restored.
+        void hud.arrow.offsetWidth;
+        hud.arrow.style.transition = '';
+      }
+      hud.at = to;
+    }
+    hud.arrow.classList.remove('off');
+    const press = options.pressId ?? 0;
+    if (press !== hud.pressed) {
+      hud.pressed = press;
+      // Restart the animation rather than just setting the class: a second
+      // press in the same place would otherwise show nothing at all.
+      hud.arrow.classList.remove('tap');
+      void hud.arrow.offsetWidth;
+      hud.arrow.classList.add('tap');
+    }
   } else {
     hud.spot.classList.add('off');
+    hud.arrow.classList.add('off');
+    hud.at = null;
   }
 }
 

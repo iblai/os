@@ -198,7 +198,7 @@ export function handleBrowsePort(port: chrome.runtime.Port): void {
       // between the two the user can see on the page itself which tab is
       // being driven, what it is doing, and how to end it.
       drivenTab = tabId;
-      hud = startHud(tabId);
+      hud = startHud(tabId, goal);
       /**
        * Models this run has found it cannot call. A list that advertises a
        * provider with no key behind it is the ordinary shape of a

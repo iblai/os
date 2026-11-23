@@ -1129,6 +1129,97 @@ describe('the overlay is not part of the page', () => {
     expect(host()).not.toBeNull();
   });
 
+  describe('the pointer', () => {
+    // The overlay's root is closed, deliberately — the page it sits on has no
+    // business reaching into it. Catch the root as it is made instead of
+    // opening it up for the test.
+    let roots: ShadowRoot[] = [];
+    const attach = Element.prototype.attachShadow;
+
+    beforeEach(() => {
+      roots = [];
+      vi.spyOn(Element.prototype, 'attachShadow').mockImplementation(function (
+        this: Element,
+        init: ShadowRootInit,
+      ) {
+        const root = attach.call(this, init);
+        roots.push(root);
+        return root;
+      });
+    });
+
+    afterEach(() => {
+      vi.mocked(Element.prototype.attachShadow).mockRestore();
+    });
+
+    const arrow = () => {
+      const found = roots
+        .map((root) => root.querySelector<HTMLElement>('.arrow'))
+        .find(Boolean);
+      if (!found) throw new Error('the overlay has no pointer');
+      return found;
+    };
+    const target = { x: 100, y: 200, w: 40, h: 20 };
+
+    it('is not on the page until there is something to point at', () => {
+      mountHud(OPTIONS);
+      expect(arrow().classList.contains('off')).toBe(true);
+    });
+
+    it('sits at the middle of the element being acted on', () => {
+      mountHud({ ...OPTIONS, target });
+      expect(arrow().classList.contains('off')).toBe(false);
+      expect(arrow().style.left).toBe('120px');
+      expect(arrow().style.top).toBe('210px');
+    });
+
+    // The first target is jumped to rather than flown to from 0,0, which looks
+    // like a bug. The suppression is put back within the same call — only its
+    // restoration is observable here, and that is the part worth pinning: left
+    // off, nothing would ever travel again.
+    it('leaves travel enabled after arriving at the first target', () => {
+      mountHud({ ...OPTIONS, target });
+      expect(arrow().style.transition).toBe('');
+      mountHud({ ...OPTIONS, target: { ...target, x: 300 } });
+      expect(arrow().style.left).toBe('320px');
+      expect(arrow().style.transition).toBe('');
+    });
+
+    it('leaves the page when there is nothing to point at', () => {
+      mountHud({ ...OPTIONS, target });
+      mountHud(OPTIONS);
+      expect(arrow().classList.contains('off')).toBe(true);
+    });
+
+    it('shows a press where it lands', () => {
+      mountHud({ ...OPTIONS, target, pressId: 1 });
+      expect(arrow().classList.contains('tap')).toBe(true);
+    });
+
+    // The overlay is re-painted on a heartbeat with the state the worker
+    // holds. A flag left standing would replay the click every beat for as
+    // long as the pointer rested there, which is why this is a count.
+    it('does not replay the press on every beat', () => {
+      mountHud({ ...OPTIONS, target, pressId: 1 });
+      arrow().classList.remove('tap');
+      mountHud({ ...OPTIONS, target, pressId: 1 });
+      expect(arrow().classList.contains('tap')).toBe(false);
+    });
+
+    it('shows a second press in the same place', () => {
+      mountHud({ ...OPTIONS, target, pressId: 1 });
+      arrow().classList.remove('tap');
+      mountHud({ ...OPTIONS, target, pressId: 2 });
+      expect(arrow().classList.contains('tap')).toBe(true);
+    });
+
+    it('points without pressing for an action that does not press', () => {
+      mountHud({ ...OPTIONS, target });
+      expect(arrow().classList.contains('off')).toBe(false);
+      expect(arrow().classList.contains('tap')).toBe(false);
+    });
+  });
+
   it('mounts once, however many times it is asked to', () => {
     mountHud(OPTIONS);
     mountHud(OPTIONS);
