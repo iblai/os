@@ -911,7 +911,6 @@ describe('EditPromptModal', () => {
       { name: 'system_prompt', isSystem: true },
       { name: 'proactive_prompt', isSystem: true },
       { name: 'guided_prompt_instructions', isSystem: true },
-      { name: 'study_mode_prompt', isSystem: true },
       { name: 'moderation_response', isSystem: true },
       { name: 'safety_response', isSystem: true },
       { name: 'moderation_system_prompt', isSystem: true },

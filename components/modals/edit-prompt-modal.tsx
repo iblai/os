@@ -33,7 +33,6 @@ export type SystemPrompt =
   | 'system_prompt'
   | 'proactive_prompt'
   | 'guided_prompt_instructions'
-  | 'study_mode_prompt'
   | 'prompt';
 
 export type SafetyPrompt =
