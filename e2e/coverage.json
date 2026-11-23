@@ -1,9 +1,9 @@
 {
   "version": 2,
-  "lastUpdated": "2026-11-20",
+  "lastUpdated": "2026-11-23",
   "summary": {
-    "totalCheckpoints": 1190,
-    "coveredCheckpoints": 1109,
+    "totalCheckpoints": 1194,
+    "coveredCheckpoints": 1113,
     "deprecatedCheckpoints": 18,
     "notReproducibleCheckpoints": 17,
     "pendingCheckpoints": 46,
@@ -6509,6 +6509,26 @@
         {
           "id": "sess-06",
           "description": "A start-chat failure with no readable message (400 {}) toasts the fallback \"We couldn't start a new chat. Please try again.\" (iblai-platform#2712)",
+          "status": "covered"
+        },
+        {
+          "id": "sess-07",
+          "description": "Embed (?embed=true): a WS 403 {error: \"Invalid session\"} frame mints exactly one new session, resends the same message once on the new session id, renders the reply, shows no toast, leaves one user bubble, and stores the new id in session_id (iblai-platform#2918)",
+          "status": "covered"
+        },
+        {
+          "id": "sess-08",
+          "description": "After the 403 recovery a second message goes out on the new session with no further POST .../sessions/ (iblai-platform#2918)",
+          "status": "covered"
+        },
+        {
+          "id": "sess-09",
+          "description": "Loop guard: when the resent message also gets 403 \"Invalid session\" there is no second mint and no second resend (2 sends total) and the error toast shows once (iblai-platform#2918)",
+          "status": "covered"
+        },
+        {
+          "id": "sess-10",
+          "description": "Regular (non-embed) app: the same 403 \"Invalid session\" self-heal and single resend as sess-07 (iblai-platform#2918)",
           "status": "covered"
         }
       ]
