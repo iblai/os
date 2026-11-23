@@ -31,7 +31,7 @@ export function AccessibilityFab() {
   return (
     <SdkAccessibilityFab
       defaultPositionClassName={cn(
-        'fixed right-4 z-50 mb-10 flex flex-col gap-3',
+        'fixed right-4 z-50 mb-10 flex flex-col gap-3 md:right-[calc(1rem+var(--master-agent-inset,0px))]',
         {
           // Phones pin the new-chat composer (plus the disclaimer and the
           // suggested prompts above it) to the bottom, so the button sits
