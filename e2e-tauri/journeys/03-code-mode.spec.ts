@@ -832,6 +832,29 @@ describe('Journey 3: Code Mode (opencode)', () => {
          (remote_code_client.rs) */
     });
 
+    it.skip('code-56: Code + Cowork on macOS, on every agent — the turn’s session/new and session/load carry the cowork screen tools as the proxy to the app’s own driver daemon, the step list shows a connector step, Ask Me raises a card for the first screen action, Automatic lands it without one, Stop ends the action, a Cowork flip respawns the session, and switching Cowork off ends the daemon', () => {
+      /* pending — needs the Accessibility and Screen Recording grants on
+         macOS (and a Codex / Claude Code sign-in for those agents); covered
+         meanwhile by the Rust the_screen_tools_reach_session_new_and_session_load,
+         the_screen_tools_ride_the_launch_only_with_cowork_on,
+         a_live_session_is_reused_only_for_the_same_model_and_cowork_setting and
+         closing_cowork_sessions_spares_plain_code_and_the_newcomer, and the
+         SDK's "tells the desktop whether Cowork is on" (opencode-client.test.ts) */
+    });
+
+    it.skip('code-57: Local Models + Cowork — with Code off, the turn runs the Cowork loop on the on-device model through local_llm_openai_stream, and Stop ends the stream on the desktop', () => {
+      /* pending — needs the grants and a tool-capable on-device model;
+         covered meanwhile by the Rust local_llm_openai tests and the SDK's
+         "runs a Local Models turn through the Cowork loop when Cowork is on"
+         (use-chat-v2.test.ts) */
+    });
+
+    it.skip('code-58: Code + Cowork on Linux — on an X11, Sway or GNOME-with-helper session the driver runs as the app’s own child outside the agent’s sandbox, the sandboxed agent’s proxy reaches it, typing lands, and switching Cowork off ends the daemon', () => {
+      /* pending — needs a supported Linux session with the driver installed
+         (the Linux e2e run itself is blocked by the dead tauri-driver shim);
+         covered meanwhile by the same Rust tests as code-56 */
+    });
+
     it.skip('code-49: the Code popover stays inside the window and scrolls below a pinned Code switch', () => {
       /* pending — needs an authenticated UI session (like code-24); covered
          meanwhile by the coding-mode-button Vitest "keeps the Code switch in

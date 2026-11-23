@@ -1,4 +1,9 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
+import {
+  setInvokeMock,
+  clearInvokeMock,
+} from '../../__tests__/mocks/tauri-core.mock';
 import { renderHook, waitFor, act } from '@testing-library/react';
 import { useOpencodeSkillSync } from '../use-opencode-skill-sync';
 
@@ -19,9 +24,12 @@ const { invoke, tauriFlag, api } = vi.hoisted(() => ({
   },
 }));
 
-vi.mock('@tauri-apps/api/core', () => ({
-  invoke: (...args: unknown[]) => invoke(...args),
-}));
+// No `vi.mock('@tauri-apps/api/core', …)` here, unlike its neighbours: the
+// hook imports the bridge lazily on EVERY command, and under vitest 4 a later
+// one of those imports gets the alias mock instead of the factory — the
+// payload write then landed on a module that throws, so a healthy sync
+// reported itself as failed. `setInvokeMock` reaches the bridge whichever one
+// an import resolves to; see the mock's own doc comment.
 vi.mock('@/types/tauri', () => ({
   isTauriApp: () => tauriFlag.current,
   isTauriMobile: async () => false,
@@ -84,6 +92,7 @@ describe('useOpencodeSkillSync', () => {
     localStorage.clear();
     tauriFlag.current = true;
     localStorage.setItem('ibl_coding_mode_enabled', 'true');
+    setInvokeMock((cmd, args) => invoke(cmd, args));
     api.assignments.mockResolvedValue([assignment('skill-uuid-1')]);
     api.catalog.mockResolvedValue([catalogSkill('skill-uuid-1')]);
     api.resources.mockResolvedValue({ count: 0, results: [] });
@@ -92,6 +101,10 @@ describe('useOpencodeSkillSync', () => {
       if (cmd === 'set_opencode_skills') return '/staging/dir';
       return undefined;
     });
+  });
+
+  afterEach(() => {
+    clearInvokeMock();
   });
 
   it('stays idle (and silent) while Code is off', async () => {

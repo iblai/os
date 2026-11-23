@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-10-28 | 1035 checkpoints (988 covered, 13 pending/fixme, 17 not-reproducible in default env, 17 deprecated) | 104 journeys (103 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-11-18 | 1182 checkpoints (1101 covered, 46 pending/fixme, 17 not-reproducible in default env, 18 deprecated) | 114 journeys (113 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -29,7 +29,7 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 2: First-Time User Chat & Navigation (9 checkpoints) — `journeys/02-first-time-user-chat-and-navigation.spec.ts`
+## Journey 2: First-Time User Chat & Navigation (10 checkpoints) — `journeys/02-first-time-user-chat-and-navigation.spec.ts`
 
 **Source files:** `app/platform/[tenantKey]/[mentorId]/page.tsx`, `components/chat/sdk-chat.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`
 
@@ -45,15 +45,24 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 3: New User UI & Profile Dropdown (5 checkpoints) — `journeys/03-new-user-ui-and-profile-dropdown.spec.ts`
+## Journey 3: New User UI & Profile Dropdown (6 checkpoints) — `journeys/03-new-user-ui-and-profile-dropdown.spec.ts`
 
 **Source files:** `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/user-profile.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`, `components/modals/settings-modal.tsx`
 
 - [x] Mentor dropdown shows "New chat" item; non-admin sees at most 2 items
 - [x] "My Mentors" button is NOT present in the header (removed in feat-1431); mentor dropdown still shows New Chat item
-- [x] Fresh signup (unauthenticated context, real `/account/create` registration) lands on the main tenant and the profile dropdown shows exactly 3 items: Profile, Help, Log out
+- [x] Fresh signup (unauthenticated context, real `/account/create` registration) lands on the main tenant and the profile dropdown shows exactly 4 items: Profile, Organizations, Help, Log out
 - [x] Sidebar admin-only buttons (e.g. New Project) show upgrade/auth dialog for non-admins when visible
-- [x] Non-admin in the main OR an advertising tenant sees full admin sidebar (New Agent, Workflows, Analytics, Invites, Management, Integrations, Monetization, Memory, Advanced) and clicking any trial-gated entry opens the upgrade/pricing dialog; gracefully skips when paywall is off
+- [x] Non-admin in the main OR an advertising tenant sees full admin sidebar (New Agent, Workflows, Analytics, Invites, Management, Secrets, API, Monetization, Memory, Advanced) and clicking any trial-gated entry opens the upgrade/pricing dialog; gracefully skips when paywall is off
+- [x] Profile dropdown shows the current organization as a label with no in-place picker, and its "Organizations" entry opens the auth app chooser in its own tab (`/me?action=switch-tenant&popup=1` with a return address), leaving this tab untouched; closing that tab means no switch. Skips when the account belongs to a single organization
+
+---
+
+## Journey 3b: Profile Menu Tenant Row Cursor (1 checkpoint) — `journeys/03b-profile-menu-tenant-row-cursor.spec.ts`
+
+**Source files:** `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/user-profile.tsx`
+
+- [x] CUR-01: Admin opens the profile menu and the organization row (the menu item that opens organization settings) shows `cursor: pointer` over the row, its padding, its icon and its name (iblai-platform#2853; passes once the pinned `@iblai/iblai-js` contains the SDK fix)
 
 ---
 
@@ -76,7 +85,7 @@ When adding a new page or modifying an existing user flow:
 - [x] Profile modal has proper ARIA attributes (tablist, tabpanel, aria-selected, aria-controls)
 - [x] User avatar with initials and Admin badge (for admins) are visible
 - [x] History tab on the user's own profile loads (rows or the "No conversations found" empty state) and never shows the 403 permission notice
-- [x] Tenant admin opens another user's profile via sidebar Management → Users → "View profile for …": preview mode (no Security tab) still offers the History tab, which loads that user's history instead of the permission notice (skips without PLAYWRIGHT_NONADMIN_USERNAME or the RBAC-gated Management entry)
+- [x] Tenant admin opens another user's profile via the sidebar Management row (the organization Account dialog, "Organization settings", with Management current in its rail) → Users → "View profile for …": preview mode (no Security tab) still offers the History tab, which loads that user's history instead of the permission notice (skips without PLAYWRIGHT_NONADMIN_USERNAME or the RBAC-gated Management entry)
 - [x] History tab on the user's own profile: every conversation row on the first page shows its title and first-AI-reply preview as plain text (LaTeX converted to readable text, markdown stripped), with no raw `\(`, `\)`, `\[`, `\]`, `\text{`, `\textbf{` or `**`
 
 ---
@@ -368,7 +377,7 @@ The **download-chat** checkpoints (sh-07 … sh-10, issue #2464) cover the "Down
 
 ## Journey 20: Dataset Management (30 checkpoints) — `journeys/20-dataset-management.spec.ts`
 
-**Source files:** `components/modals/edit-mentor-modal/tabs/datasets-tab/agent-datasets-tab.tsx`, `app/platform/[tenantKey]/workflows/[mentorId]/[id]/page.tsx`, `hooks/user-navigate.ts`, `lib/constants.ts`, `lib/config.ts`, `lib/utils.ts`. The Datasets tab and its Add Resources / Train-or-Delete / Retrain Schedule modals now come from the `@iblai/iblai-js` SDK (`@iblai/web-containers`, linked locally via yalc); `agent-datasets-tab.tsx` is the OS host wrapper around the SDK's `AgentDatasetsTab`. The workflow builder's File Search node renders the same SDK `AgentDatasetsTab` in picker mode inside the SDK `WorkflowEditor`; the OS workflow page only hands it the disabled resource types and max upload size (see Journey 34).
+**Source files:** `components/modals/edit-mentor-modal/tabs/datasets-tab/agent-datasets-tab.tsx`, `app/platform/[tenantKey]/workflows/[mentorId]/[id]/page.tsx`, `hooks/user-navigate.ts`, `lib/constants.ts`, `lib/config.ts`, `lib/utils.ts`. The Datasets tab and its Add Resources / Train-or-Delete / Retrain Schedule modals now come from the `@iblai/iblai-js` SDK (`@iblai/web-containers`, linked locally via yalc); `agent-datasets-tab.tsx` is the OS host wrapper around the SDK's `AgentDatasetsTab`. The workflow builder's File Search node renders the same SDK `AgentDatasetsTab` in picker mode inside the SDK `WorkflowEditor`; the OS workflow page only hands it the disabled resource types and max upload size. That picker has no e2e coverage while File Search is a planned step the builder hides (Journey 34's wf-16 was deprecated in iblai/iblai-platform#2827).
 
 - [x] Datasets tab header and description display correctly (TC01)
 - [x] Search input is visible and filters the dataset list (TC02–TC03)
@@ -408,38 +417,45 @@ The **download-chat** checkpoints (sh-07 … sh-10, issue #2464) cover the "Down
 
 ---
 
-## Journey 21: Billing & Subscription (18 checkpoints) — `journeys/21-billing-and-subscription.spec.ts`
+## Journey 21: Billing & Subscription (25 checkpoints) — `journeys/21-billing-and-subscription.spec.ts`
 
-**Source files:** `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/user-profile.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/subscription-wrapper/index.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/subscription-wrapper/mentor-e-commerce-wrapper.tsx`
+**Source files:** `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/user-profile.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/subscription-wrapper/index.tsx`, `components/modals/modal-container.tsx`, `providers/index.tsx`, `lib/config.ts`
 
-Driven by the shared paywall helpers in `@iblai/iblai-js/playwright`. All tests skip gracefully when `current_tenant.show_paywall=false`.
+Billing is credits-only (SDK `@iblai/iblai-js` ≥ 2.73.0). An account is on the free trial (main tenant, badge "Trial", one "Upgrade" action that opens the "Choose Your Plan" picker) or on a plan (badge names it: Free / Pro / Max / Ultra; "Add Credits" always, "Manage Usage" + inline Auto Recharge with a card on file, "Change Plan" beside the badge once the backend names the plan — it opens the same picker in change mode, "Change Your Plan", with the current plan marked and "Upgrade to" / "Downgrade to" the others plus an "Add One-Time Credits" shortcut). Driven by the shared paywall helpers in `@iblai/iblai-js/playwright` plus `e2e/utils/plan-picker.ts` (both picker modes). The admin account's state depends on the environment, so each test reads it from the UI and asserts what that state must show; nothing charges a card or changes a plan. All tests skip gracefully when `current_tenant.show_paywall=false`.
 
 **A. CreditBalance dropdown (nav-bar)**
 
 - [x] CreditBalance trigger visibility matches `current_tenant.show_paywall`
 - [x] CreditBalance trigger exposes accessible aria-label with credits info _(paywall-gated)_
-- [x] Dropdown shows the plan badge (Free / Trial / Premium) _(paywall-gated)_
-- [x] Dropdown footer matches the active plan via `expectCreditBalanceForCurrentPlan` (Upgrade Plan / Manage Usage + Add Credits / Manage Billing) _(paywall-gated)_
-- [x] Premium + payment method shows Manage Usage, Add Credits, and the inline Auto Recharge section _(paywall-gated; skips on Free/Trial or no payment method)_
+- [x] Dropdown shows the plan badge (Trial, Free or the plan name) _(paywall-gated)_
+- [x] Dropdown footer matches the billing state via `expectCreditBalanceForCurrentPlan` (Upgrade on the trial; Add Credits on a plan, plus Manage Usage with a card) _(paywall-gated)_
+- [x] On a plan with a card: Manage Usage, Add Credits, the inline Auto Recharge section and its Enabled/Disabled pill _(paywall-gated; skips on the trial or without a card)_
 - [x] Dropdown shows the Remaining credits row with a numeric value _(paywall-gated)_
-- [x] Manage Usage opens the Auto Recharge modal _(payment-gated)_
-- [x] Add Credits opens the Add Credits modal _(payment-gated)_
+- [x] Manage Usage opens the Manage Usage (auto recharge) dialog _(card-gated)_
+- [x] Add Credits opens the Add Credits dialog _(on a plan, with or without a card)_
 - [x] Escape closes the dropdown
+- [x] The Billing row offers Change Plan beside the badge on a known plan, and Upgrade (no Change Plan / Add Credits / Manage Usage) on the trial
+- [x] Change Plan opens "Change Your Plan" (current plan marked with a disabled "Current Plan" button, "Upgrade to" / "Downgrade to" the others, Add One-Time Credits box, "contact our team" link); Upgrade opens "Choose Your Plan" ("Choose <name>" each, Pro "Most Popular"); Close closes it
+- [x] Add One-Time Credits in the change-plan picker closes it and opens the Add Credits dialog
+- [x] The Add Credits dialog offers $20 / $50 / $100, Other amount reveals "Amount (USD)", the submit reads "Add Credits" (card) or "Continue" (no card), and an empty amount is refused with "Please choose an amount"
 
 **B. Billing tab (User Profile dialog)**
 
-- [x] Billing tab opens via `?profileTab=billing` and the Plan section mounts _(paywall-gated)_
-- [x] Plan / Credits / Auto Recharge sections match the active plan via `expectBillingTabForCurrentPlan` _(paywall-gated)_
-- [x] Auto Recharge section is hidden on Free plan and shown on non-Free + payment method _(paywall-gated)_
-- [x] Manage Usage opens Auto Recharge modal with toggle, threshold, amount, Cancel, Save Settings _(payment-gated)_
-- [x] Auto Recharge toggle inverts on click and restores on a second click _(payment-gated)_
-- [x] Auto Recharge threshold and amount inputs accept values _(payment-gated)_
-- [x] Add Credits button opens the Add Credits modal _(non-Free + payment method)_
+- [x] Billing tab opens via `?profileTab=billing` and the Credits card mounts _(paywall-gated)_
+- [x] Credits / Auto Recharge cards match the billing state via `expectBillingTabForCurrentPlan` _(paywall-gated)_
+- [x] Auto Recharge card is hidden on the trial and shown on a plan with a card on file _(paywall-gated)_
+- [x] Manage Usage opens the Manage Usage dialog with toggle, threshold, amount, Cancel, Save Settings _(card-gated)_
+- [x] Auto Recharge toggle inverts on click and restores on a second click _(card-gated)_
+- [x] Auto Recharge threshold and amount inputs accept values _(card-gated)_
+- [x] Add Credits button opens the Add Credits dialog _(on a plan, with or without a card)_
 - [x] Plan label is consistent between the CreditBalance dropdown and the Billing tab _(paywall-gated)_
+- [x] Credits card actions and sentence match the state: Upgrade + "You're on a free trial…" on the trial; Change Plan (when the plan is known) + Add Credits + "You're on the <plan> plan. Add credits whenever you need more." on a plan
+- [x] Change Plan / Upgrade opens the plan picker in the matching mode (change / choose); Close returns to the tab
 
-**C. Non-admin pricing**
+**C. Non-admin**
 
-- [x] Non-admin without subscription sees Stripe pricing modal when creating a mentor _(skips when paywall is off)_
+- [x] A gated action never opens the admin billing path: New Agent runs, opens the "Choose Your Plan" picker (a free-trial user) or the "Your organization has run out of credits" dialog with Contact Now; never the Add Credits dialog or `?profileTab=billing`
+- [x] A non-admin who is not on the free trial has no credit balance trigger in the nav bar
 
 ---
 
@@ -547,7 +563,7 @@ The "Remember past conversations" (`enable_memory_component`) master toggle move
 
 ---
 
-## Journey 28: App Overview & Navigation UI (14 checkpoints) — `journeys/28-app-overview-and-navigation-ui.spec.ts`
+## Journey 28: App Overview & Navigation UI (15 checkpoints) — `journeys/28-app-overview-and-navigation-ui.spec.ts`
 
 **Source files:** `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`, `components/modals/llm-provider-selection-modal.tsx`
 
@@ -564,7 +580,8 @@ The "Remember past conversations" (`enable_memory_component`) master toggle move
 - [x] Admin: nav does not overflow on mobile (Pixel 5); with credit balance visible the LLM name span shrinks to ≤100 px _(navbar overflow fix: ov-11)_
 - [x] Admin: nav does not overflow on mobile when credit balance is hidden; LLM name span stays ≤150 px _(navbar overflow fix: ov-12)_
 - [x] Admin opens the navbar LLM selector modal (`navbarPage.openLlmProviderModal`, dialog name "LLM Providers") and the "LLM Configuration" heading/description are absent — proves the OS wrapper's `showConfigurationHeader={false}` prop reaches the SDK `AgentLLMTab` component _(ov-13)_
-- [x] Admin sidebar footer mirrors the SDK tenant-settings (`Account`) rail: a "Memory" entry sits next to Integrations/Advanced (admin-only — no dedicated RBAC permission, so a non-admin never gets it via RBAC alone; hidden when an admin flips to learner mode) and clicking it opens the Account dialog titled "Memory" ("Manage user global memories and agent memories.") hosting the SDK `MemoryAdminTab` — Global / Agent sub-tabs (or the memsearch-disabled notice); the Agent sub-tab renders the agents section and Escape closes the dialog _(ov-14)_
+- [x] Admin sidebar footer mirrors the SDK tenant-settings (`Account`) rail: a "Memory" entry sits with Secrets, API and Advanced (admin-only — no dedicated RBAC permission, so a non-admin never gets it via RBAC alone; hidden when an admin flips to learner mode) and clicking it opens the SDK's whole organization Account dialog ("Organization settings", the `PlatformAccountSheet` the LMS sidebar opens) landed on its Memory tab — the Memory heading ("Manage user global memories and agent memories.") above the SDK `MemoryAdminTab` (Global / Agent sub-tabs, or the memsearch-disabled notice; the Agent sub-tab renders the agents section) with the tab rail beside it, Memory marked current and Management, API, Secrets and Advanced one click away; Escape closes the dialog _(ov-14)_
+- [x] Each admin footer row the admin sees (Management and Monetization when allowed; API, Secrets, Memory and Advanced always) opens the same organization Account dialog ("Organization settings", the SDK `PlatformAccountSheet`) with that tab's heading shown and its rail entry marked current; every footer tab is also in the rail, and clicking Secrets in the rail from Advanced switches the page and the current entry without closing the dialog; Escape closes it _(ov-15)_
 
 ---
 
@@ -664,9 +681,9 @@ The "Remember past conversations" (`enable_memory_component`) master toggle move
 
 ---
 
-## Journey 34: Workflows (34 checkpoints) — `journeys/34-workflows.spec.ts`
+## Journey 34: Workflows (67 checkpoints; 1 deprecated, 30 pending) — `journeys/34-workflows.spec.ts`
 
-**Source files:** `app/platform/[tenantKey]/workflows/[mentorId]/page.tsx`, `app/platform/[tenantKey]/workflows/[mentorId]/[id]/page.tsx`. The workflow builder itself — `WorkflowsList`, `WorkflowEditor`, `WorkflowCanvas`, `NodeConfigPanel`, `WorkflowPreviewChat` and the definition helpers — lives in the SDK at `packages/web-containers/src/components/workflows/` and is imported from `@iblai/iblai-js/web-containers/next`; the two OS pages are thin route wrappers that pass the route ids, user identity, socket URL, RBAC / free-trial gate and dataset upload config, and turn its callbacks into navigation (back, the list after a delete, the edit-agent modal for an Agent step).
+**Source files:** `app/platform/[tenantKey]/workflows/[mentorId]/page.tsx`, `app/platform/[tenantKey]/workflows/[mentorId]/[id]/page.tsx`. The workflow builder itself — `WorkflowsList`, `WorkflowEditor`, `WorkflowCanvas`, `NodeConfigPanel`, `ClassifierPanel`, `WorkflowPreviewChat` and the definition helpers — lives in the SDK at `packages/web-containers/src/components/workflows/` and is imported from `@iblai/iblai-js/web-containers/next`; the two OS pages are thin route wrappers that pass the route ids, user identity, socket URL, RBAC / free-trial gate and dataset upload config, and turn its callbacks into navigation (back, the list after a delete, the edit-agent modal for an Agent step).
 
 - [x] Workflows page displays heading, description, and Create Workflow button
 - [x] Search input is visible on the workflows list page
@@ -679,11 +696,11 @@ The "Remember past conversations" (`enable_memory_component`) master toggle move
 - [x] Workflow name can be renamed inline via the pencil button
 - [x] Workflow can be saved without errors
 - [x] Default nodes (Start and Agent) are visible with an edge connecting them
-- [x] More options menu shows Activate and Delete items
+- [x] The editor header offers Activate / Deactivate and Delete: as buttons while the header has room, otherwise in More workflow options
 - [x] Preview mode can be entered and exited; Close preview, New Chat, and Publish are visible
 - [x] Canvas and chat panel are visible in preview mode
-- [x] Workflow can be published; active workflow can be deactivated back to Draft
-- [x] File Search node's dataset picker dialog (the SDK Datasets tab in picker mode, page/search kept in its own state): opening/searching/paging never touch the `datasetsPage`/`datasetsSearch` URL params; picking a row closes the dialog and shows the dataset name with a Change button; reopening highlights the previously selected row (self-seeded mentor)
+- [x] Publishing: a workflow with an End step after its Agent is published (200, with a `published_at`), Workflow published shows and the status is Active; without an End step the backend refuses it (400, an error about the missing End step, in either backend wording); a published workflow can be deactivated back to Draft
+- [x] ~~File Search node's dataset picker dialog (the SDK Datasets tab in picker mode, page/search kept in its own state): opening/searching/paging never touch the `datasetsPage`/`datasetsSearch` URL params; picking a row closes the dialog and shows the dataset name with a Change button; reopening highlights the previously selected row (self-seeded mentor)~~ _(deprecated in iblai/iblai-platform#2827 — File Search can't run in a workflow yet, so the step list no longer offers it)_
 - [x] Hovering a step and clicking its trash button removes it from the canvas and the saved workflow
 - [x] Step panel header Delete button removes the step and closes the panel
 - [x] The Agent step's trash button removes it and its connection
@@ -692,16 +709,49 @@ The "Remember past conversations" (`enable_memory_component`) master toggle move
 - [x] Start step: Number and Boolean state variables are listed and saved with typed defaults
 - [x] Start step: Remove {name} asks to confirm in the Delete Variable dialog (Cancel keeps it, Delete removes it); an invalid or taken name keeps Save disabled
 - [x] Set State: To Variable lists Start variables (never Variable 1); New creates and selects a variable
-- [x] Set State saves data.assignments and passes backend validation
-- [x] Transform saves data.expressions and passes backend validation
-- [x] While: an invalid Max Iterations (0) shows the whole-number error; a valid Condition and Max Iterations are saved and pass backend validation
+- [x] Set State saves data.assignments and the validate response has no message about the step's own settings (none tied to the step — by `error_details`/`warning_details` on backend #3218, by ` at nodes[<index>]` before it — however worded; messages about its connections are expected)
+- [x] Transform saves data.expressions and the validate response has no message about the step's own settings (none tied to the step — by `error_details`/`warning_details` on backend #3218, by ` at nodes[<index>]` before it; messages about its connections are expected)
+- [x] While: an invalid Max Iterations (0) shows the whole-number error; a valid Condition and Max Iterations are saved, and the validate response has no message about the step's own settings (none tied to the step — by `error_details`/`warning_details` on backend #3218, by ` at nodes[<index>]` before it; messages about its connections are expected)
 - [x] While Loop and Done handles save edges with sourceHandle continue and done
-- [x] If / Else saves data.conditions[0].expression
+- [x] If / Else saves data.conditions[0].expression, and the validate response has no message about the step's own settings (none tied to the step — by `error_details`/`warning_details` on backend #3218, by ` at nodes[<index>]` before it; messages about its connections are expected)
 - [x] If / Else condition-0 and else handles save edges
 - [x] Legacy field names (including a two-way If / Else) open marked Unsaved with no auto-save; Save stores the new names and condition-0/else edges and clears Unsaved
 - [x] If / Else: rewiring the If output to a second step leaves a single connection from that output
 - [x] Start variable in use by a Set State step: Remove opens Variable In Use listing the step; Cancel keeps the variable
-- [x] Adding a Note: the backend warns it is not connected, but the validation banner never shows that warning (other warnings stay)
+- [x] Adding a Note: the validation banner never shows a line about the Note, whether the backend warns that it is not connected (#3163) or leaves Notes out (#3218), and the missing End step message (either backend wording) stays; the banner the editor shows on open is collapsed first, so the End message coming back proves the post-save validation is on screen
+- [ ] Once the backend's node types are on screen, the step list offers Classifier and leaves out every node type the backend marks planned (today File Search, Guardrails, MCP and User Approval) _(pending: in `@iblai/iblai-js` 2.71.0, which the app now uses; flip to covered once journey 34 runs green)_
+- [ ] Classifier: a new one is saved with `answer_type` `choice`, model `iblai` and categories `category_1`/`category_2`; renaming Category 1 to Billing saves its id as `billing`; connecting its Fallback to an End saves an edge with sourceHandle `fallback` _(pending: in `@iblai/iblai-js` 2.71.0, which the app now uses; flip to covered once journey 34 runs green)_
+- [ ] Agent step added from the step list is saved with no `mentor_id` and shows no Agent Settings button (it has no agent yet); clicking its card opens its panel like any other step, with an empty Instructions box, and its Output Variable is saved as `output_variable`; the banner says An Agent step has no agent selected. instead of the backend's mentor wording _(pending: in `@iblai/iblai-js` 2.71.0, which the app now uses; flip to covered once journey 34 runs green)_
+- [ ] If / Else: a new one is saved right away with one empty condition (`conditions [{caseName: '', expression: ''}]`) _(pending: in `@iblai/iblai-js` 2.71.0, which the app now uses; flip to covered once journey 34 runs green)_
+- [ ] While: Loop and Done show Not connected until each is connected _(pending: in `@iblai/iblai-js` 2.71.0, which the app now uses; flip to covered once journey 34 runs green)_
+- [ ] Classifier Try (`classifier-test` mocked): the instructions are saved (by Try or the auto-save) before the answer shows; Try sends the step and the Sample Message, and shows the answer (Billing (0.90)) _(pending: in `@iblai/iblai-js` 2.71.0, which the app now uses; flip to covered once journey 34 runs green)_
+- [ ] Preview: the Preview chat input is usable for the signed-in editor (never "You don't have permission to chat"), the whole message box stays on screen below the app's top bar even when the chat is taller than the page (checked in a 360px-tall window), and a message sent from it goes out on the socket with `preview: true` _(pending: in `@iblai/iblai-js` 2.71.0, which the app now uses; flip to covered once journey 34 runs green)_
+- [ ] Unpublished changes shows beside the status only while a published copy exists: with the workflow GET mocked to `published_at` set and `has_unpublished_changes` true it shows; after a save refetches it with `published_at` null it is gone _(pending: in `@iblai/iblai-js` 2.71.0, which the app now uses; flip to covered once journey 34 runs green)_
+- [ ] A step with a result (here a Transform) has a Copy button just before Delete, on its card and in its settings header (Copy, Delete, Close, checked by position); both copy `{{steps.<id>}}`, the form an Agent's Instructions take, and the card's button copies without opening the step (Chromium only: the other browsers don't let a test read the clipboard) _(pending: in `@iblai/iblai-js` 2.71.0, which the app now uses; flip to covered once journey 34 runs green)_
+- [ ] Cmd+S (Ctrl+S off a Mac) while typing in a step's field saves the workflow (the PATCH carries the new Key and the Workflow saved toast shows) and the keydown is default-prevented, so the browser's Save Page dialog never opens _(pending: in `@iblai/iblai-js` 2.71.0, which the app now uses; flip to covered once journey 34 runs green)_
+- [ ] At 1600px every editor header action (Delete, Deactivate, Preview, Save, Publish) is a 36px button with no More workflow options menu; at 900px Delete has moved into that menu and Publish is still a button (they move in that order: Delete, Activate / Deactivate, Preview, Save, Publish) _(pending: in `@iblai/iblai-js` 2.71.0, which the app now uses; flip to covered once journey 34 runs green)_
+- [ ] Phone (393x852, touch; the phone checkpoints skip Firefox, which has no isMobile; the two that drag through CDP and the tap check run in Chromium only): a workflow created at phone size opens with its default steps fitted into view (the whole Start and Agent steps on screen); the step list is in the page but hidden beside the canvas, and the canvas's Add Step button opens a sheet (dialog named Add Step) listing the steps; tapping Transform there closes the sheet and the new step lands fully on screen _(pending: in `@iblai/iblai-js` 2.71.0, which the app now uses; flip to covered once journey 34 runs green)_
+- [ ] Phone: a one-finger drag on bare canvas pans it (the step layer's transform changes) and a two-finger pinch outwards raises the zoom percentage in the canvas toolbar (touch sent through CDP `Input.dispatchTouchEvent`, since Playwright's touchscreen only taps, so Chromium only) _(pending: in `@iblai/iblai-js` 2.71.0, which the app now uses; flip to covered once journey 34 runs green)_
+- [ ] Phone: every canvas toolbar button (Pan, Select, Undo, Redo, Zoom Out, Zoom In) is fully on screen, and tapping the Start step opens its settings panel fully inside the 393px screen _(pending: in `@iblai/iblai-js` 2.71.0, which the app now uses; flip to covered once journey 34 runs green)_
+- [ ] Phone: pressing a While step's Done connection dot and dragging one finger onto the Agent step connects them (the auto-save carries an edge to `mentor-1` with sourceHandle `done`) and Done's Not connected note goes away (the drag goes through CDP, so Chromium only) _(pending: in `@iblai/iblai-js` 2.71.0, which the app now uses; flip to covered once journey 34 runs green)_
+- [ ] Phone Preview: the canvas is hidden and the chat takes the whole width; its message box is editable, fully on screen and as wide as the screen apart from the chat's padding _(pending: in `@iblai/iblai-js` 2.71.0, which the app now uses; flip to covered once journey 34 runs green)_
+- [ ] Phone: tapping the middle of the Start-to-Agent connection selects it (Delete Connection shows where the finger is) without deleting it, and tapping the top-right corner of the unselected Agent step on the outer part of the spot where its Delete button shows once the press selects the step (past the card, since a tap inside it goes to the Agent Settings button nearby), deletes neither the step nor the connection _(pending: in `@iblai/iblai-js` 2.71.0, which the app now uses; flip to covered once journey 34 runs green)_
+- [ ] Cmd+Z (Ctrl+Z off a Mac) right after adding a Transform removes it (the auto-save no longer has it), Cmd+Shift+Z (Ctrl+Shift+Z) brings it back, and Delete after clicking the step, with its panel open, removes it _(pending: in `@iblai/iblai-js` 2.71.0, which the app now uses; flip to covered once journey 34 runs green)_
+- [ ] Clicking the default Agent step opens its step settings panel (Instructions), like any other step; its gear, named Agent Settings, opens that agent's Edit Agent dialog and no step panel _(pending: in `@iblai/iblai-js` 2.71.0, which the app now uses; flip to covered once journey 34 runs green)_
+- [ ] The validation banner a new workflow shows on open has a header named Warnings and Errors followed by its counts (e.g. 1 error, 1 warning), matching the listed lines; the header carries no alert icon, and every listed line has its own error or warning icon; the backend's runtime check of each Agent step shows as The agent in each Agent step is checked when the workflow runs. _(pending: in `@iblai/iblai-js` 2.71.0, which the app now uses; flip to covered once journey 34 runs green)_
+- [ ] Insert Variable or Step: the icon button on a Transform's Value opens a searchable picker; choosing the Start variable `counter` inserts `variables['counter']` at the caret (in front of the typed ` + 1`), returns focus to the field with the caret right after it, and the auto-save carries the expression; on the Agent step's Instructions the same picker inserts `{{variables.counter}}` at the caret and the auto-save carries it _(pending: in `@iblai/iblai-js` 2.71.0, which the app now uses; flip to covered once journey 34 runs green)_
+- [ ] Copy and paste steps: with a Transform selected, Cmd+C then Cmd+V (Ctrl off a Mac) adds a copy with a new id that the next auto-save carries, and Cmd+Z (Ctrl+Z) removes the copy again _(pending: in `@iblai/iblai-js` 2.71.0, which the app now uses; flip to covered once journey 34 runs green)_
+- [ ] Wheel over bare canvas: a plain wheel pans it (the step layer's transform changes, the zoom percentage does not), and the wheel with Cmd (Ctrl off a Mac) held, as a trackpad pinch arrives, raises the zoom percentage _(pending: in `@iblai/iblai-js` 2.71.0, which the app now uses; flip to covered once journey 34 runs green)_
+- [ ] Canvas toolbar tooltips show the keyboard shortcut in brackets: hovering Undo (once there is a change) shows Undo (⌘Z) on a Mac and Undo (Ctrl+Z) elsewhere (the test decides Mac with the editor's own check of the browser's reported platform, so WebKit, whose Desktop Safari user agent claims a Mac, expects ⌘Z); its accessible name stays Undo and it carries `aria-keyshortcuts` _(pending: in `@iblai/iblai-js` 2.71.0, which the app now uses; flip to covered once journey 34 runs green)_
+- [ ] Validation lines link to their step: after an unconnected Transform is added and saved, the banner line marked with that step's id (`data-step-id`, so a backend rewording of the message changes nothing) shows the tooltip Show Transform on hover, and clicking it opens that step's settings panel (Delete Transform) with the step on screen _(pending: fails until the app moves to the `@iblai/iblai-js` release with iblai/iblai-web-frontend#2241, which marks each banner line with `data-step-id` and links it by the `error_details`/`warning_details` `node_id`; 2.71.0 to 2.73.0 link a line only by an ` at nodes[i]` ending or a quoted step id, both gone since backend #3218; flip to covered once it passes)_
+- [ ] Undo in a text field is the field's own: in the Agent Instructions (resizable up and down) Cmd+Z or Ctrl+Z takes back a run of typing in one step and Cmd/Ctrl+Shift+Z brings it back, an insert from Insert Variable or Step is taken back in one step, and the keys never reach the canvas: a Transform added before stays, even after Cmd+Z in the still-empty field _(pending: in `@iblai/iblai-js` 2.71.0, which the app now uses; flip to covered once journey 34 runs green)_
+- [ ] Add buttons sit with their rows: in the settings of a Transform, a Set State and an If / Else the Add button comes right under the rows it adds to, above the expression hint and the Step IDs list _(pending: in `@iblai/iblai-js` 2.71.0, which the app now uses; flip to covered once journey 34 runs green)_
+- [ ] A refused publish lists what to fix: publishing a new workflow (no End step) gets a 400, the toast Workflow has validation issues (never Failed to publish workflow) and the banner, collapsed beforehand, opens again with the line about the missing End step _(pending: in `@iblai/iblai-js` 2.71.0, which the app now uses; flip to covered once journey 34 runs green)_
+- [ ] Choosing an agent: an Agent step's Select opens the Select Agent dialog, where searching for the last word of the workflow's name returns the workflow's own agent (named after the workflow) from the backend, yet the dialog lists no agents; picking the first agent closes the dialog, the auto-save carries its `mentor_id` and the card gets its Agent Settings gear _(pending: in `@iblai/iblai-js` 2.71.0, which the app now uses; flip to covered once journey 34 runs green)_
+- [ ] Classifier answer types and chat history: choosing Answer Type Yes or No saves `answer_type` `noul` and shows true, false and fallback outputs (no category ones); under Advanced, turning on Include Chat History saves `include_history.enabled` true, and the switch shows on in the admin Users blue (Tailwind blue-500) _(pending: in `@iblai/iblai-js` 2.71.0, which the app now uses; flip to covered once journey 34 runs green)_
+- [x] Running a workflow in Preview: built in the editor as Start → If / Else (condition `'refund' in input`) → a Transform on each branch setting `output` to `'Refund path'` or `'General path'` → End, with the Agent step deleted, the saved workflow has no validation errors; in Preview, "I want a refund" gets exactly Refund path and then "hello" gets exactly General path (no model involved: End replies with the Transform's output)
+- [x] Running an Agent step in Preview: in a workflow of a freshly created agent (its virtual machine turned off, so it answers without starting one), the default Agent step keeps that agent's `mentor_id` and, connected to an End, saves with no validation errors; a message sent in Preview gets the agent's own reply, neither empty nor the workflow's "went wrong" apology
+- [x] A published workflow answers its own agent's chat: the If / Else workflow above publishes (200, returning the `entry_mentor_id` of the agent created with the workflow), and in a second tab that agent's normal chat answers "I want a refund" with exactly Refund path
 
 ---
 
@@ -867,24 +917,32 @@ The Sandbox tab used to wrap the SDK's `SandboxConfig` component in an app-level
 
 ---
 
-## Journey 45: Mentor Privacy Tab (8 checkpoints) — `journeys/45-mentor-privacy-tab.spec.ts`
+## Journey 45: Mentor Privacy Tab (16 checkpoints) — `journeys/45-mentor-privacy-tab.spec.ts`
 
 **Source files:** `components/modals/edit-mentor-modal/tabs/privacy-tab.tsx`, `components/modals/edit-mentor-modal/tabs/index.ts`, `components/modals/edit-mentor-modal/index.tsx`, `hooks/use-mentor-segments.ts`, `lib/constants.ts`
 
-The Privacy tab is a thin wrapper around the SDK's `AgentPrivacyTab` (`@iblai/iblai-js/web-containers/next`). The wrapper forwards `tenantKey` / `mentorId` / `username` from URL params + the navigate hook so the SDK's `useGetMentorSettingsQuery` and `useEditMentorJsonMutation` resolve correctly. The `enable_privacy_router` master toggle moved off Settings → Capabilities into an in-tab `CapabilityGate` (`data-testid="privacy-capability-toggle"`, feat/2040), and the Privacy tab is now always mounted — `hooks/use-mentor-segments.ts` no longer gates the segment. Unlike the app-owned capability tabs, `AgentPrivacyTab` is NOT optimistic — the toggle only flips after the `editMentorJson` + refetch round trip lands. The "When PII is detected" dropdown now lists **Allow** first (`PRIVACY_ACTIONS = ['allow','redact','mask','block']`), then Redact, Mask, Block.
+The Privacy tab is a thin wrapper around the SDK's `AgentPrivacyTab` (`@iblai/iblai-js/web-containers/next`), which forwards `rbacPermissions` so the Privacy Log button is RBAC-gated. Filtering is two accordion cards (`privacy-{pii,phi}-card`), each with its own switch (`privacy-filter-{pii,phi}-toggle`), one open at a time; there is no master toggle or PII sub-tab any more. Saves are not optimistic (PUT `/mentors/<id>/settings/` + refetch). Tests that change settings create their own agent (deterministic all-off start) and delete it in `finally`; the Privacy Log test only reads and mocks `**/privacy-flags/**`.
 
-- [x] PR-01: Privacy tab label is visible in the Edit Mentor modal sidebar (always mounted)
+- [x] PR-01: Privacy tab label is visible in the Edit Agent modal sidebar
 - [x] PR-02: Privacy tab heading and description render correctly
-- [x] PR-03: Privacy tab stays mounted regardless of `enable_privacy_router`; `capability-gate-content`'s `data-enabled` tracks the in-tab "PII filtering" toggle
-- [x] PR-04: The CapabilityGate off-state hint is shown only while the router is off
-- [x] PR-05: Enabling the router keeps the action, entity chips and output-filter fields present and interactive
-- [x] PR-05b: The "When PII is detected" action dropdown lists Allow, Redact, Mask, Block in that order
-- [x] PR-06: Block Message textarea is editable only while the action is Block (tolerates conditional-render or render-and-disable SDK shapes)
-- [x] PR-07: Clicking an entity chip flips its aria-checked state and persists when toggled twice
+- [x] PR-03: Removed `privacy-capability-toggle` / `privacy-sub-tab-pii` no longer exist; no unneeded sub-tab strip
+- [x] PR-04: New agent shows both cards off (aria-checked, title, accessible names, "Off." summary); an open off card shows only its off hint
+- [x] PR-05: Turning PII on saves, opens its card, leaves PHI off; summary starts "On."
+- [x] PR-06: PII action dropdown lists Allow, Redact, Mask, Block in order
+- [x] PR-07: Block Message shown/editable only while action is Block
+- [x] PR-08: PII entity chips flip; "none selected = all" hint and "N kind selected" summary track them
+- [x] PR-09: PII settings persist across modal close/reopen; last kind off returns to "Off."
+- [x] PR-10: PHI shows 12 entity chips, "all 12 kinds" by default, "2 kinds selected" + Block after configuring
+- [x] PR-11: One card open at a time (PII on opens PII/closes PHI; chevron swaps back)
+- [x] PR-12: "Also Filter AI Responses" switch named exactly that, toggles on/off
+- [x] PR-13: Turning one kind off leaves the other on; the last off switches filtering off
+- [x] PR-14: Admin sees the Privacy Log row/button; opens the audit-log modal with (mocked) rows
+- [x] PR-15: Privacy Log rail filter narrows the list
+- [x] PR-16: Privacy Log row action opens the flag detail
 
 ---
 
-## Journey 49: Mentor Tasks Tab (8 checkpoints) — `journeys/49-mentor-tasks-tab.spec.ts`
+## Journey 49: Mentor Tasks Tab (9 checkpoints) — `journeys/49-mentor-tasks-tab.spec.ts`
 
 **Source files:** `components/modals/edit-mentor-modal/tabs/tasks-tab.tsx`, `components/modals/edit-mentor-modal/tabs/index.ts`, `components/modals/edit-mentor-modal/index.tsx`, `hooks/use-mentor-segments.ts`, `lib/constants.ts`
 
@@ -900,32 +958,65 @@ The spec drives the tab through the semantic Tasks helpers from `@iblai/iblai-js
 - [x] TA-06: Admin schedules a new daily periodic task and it appears in the task list
 - [x] TA-07: Searching the task list — a matching query keeps the task visible, and clearing the search leaves it visible
 - [x] TA-08: Admin deletes a task and its row is removed from the list
+- [x] TA-09: Phone view (375x812, touch): the Edit Agent dialog fills the viewport, the header info button opens and closes the About This Tab sheet, a task shows as a card, tapping it opens the full-screen Task Logs screen and Back returns, the Select Date icon opens the calendar sheet and the backdrop closes it, delete works from the Task Logs screen, and the page never scrolls sideways
 
 ---
 
-## Journey 63: Mentor Evaluation Tab (17 checkpoints) — `journeys/63-mentor-evaluation-tab.spec.ts`
+## Journey 63: Mentor Evaluation Tab (24 checkpoints) — `journeys/63-mentor-evaluation-tab.spec.ts`
 
 **Source files:** `components/modals/edit-mentor-modal/tabs/evaluation-tab/index.tsx`, `hooks/use-mentor-segments.ts`
 
-Wraps the packaged `AgentEvaluationTab` from `@iblai/iblai-js/web-containers/next` with `AgentSettingsProvider`, `getLLMProviderDetails`, and `IblPagination`. All interactions go through the dedicated eval-tab Playwright helpers exported from `@iblai/iblai-js/playwright` (via the `EvaluationTab` page object — mirrors the `VoiceTab`/`TasksTab` thin-delegation pattern from journeys 47/49). Eval datasets ("benchmarks") are tenant-scoped, so the whole file runs serially against one dedicated mentor (created once in `beforeAll`, mirroring journey 14) and one throwaway benchmark created by EVAL-03. Checkpoints that depend on a run reaching `COMPLETED` (EVAL-11/EVAL-12) read the run's live status and skip gracefully instead of assuming either outcome — the real api.iblai.org backend's completion timing is not deterministic, and no test in this journey asserts that a run completes.
+Wraps the packaged `AgentEvaluationTab` from `@iblai/iblai-js/web-containers/next` with `AgentSettingsProvider`, `getLLMProviderDetails`, and `IblPagination`. All interactions go through the dedicated eval-tab Playwright helpers exported from `@iblai/iblai-js/playwright` (via the `EvaluationTab` page object — mirrors the `VoiceTab`/`TasksTab` thin-delegation pattern from journeys 47/49). Eval datasets ("benchmarks") are tenant-scoped, so the whole file runs serially against one dedicated mentor (created once in `beforeAll`, mirroring journey 14) and two throwaway benchmarks, both created in the two-step New Benchmark dialog (Details, Next, Q&A, Create): the shared one, which EVAL-03 creates together with its first Q&A pair and every later checkpoint reuses, and a second one that EVAL-19 creates with a name alone, since Q&A is optional there. EVAL-21 walks the dialog's steps and cancels, and EVAL-23 is refused on a name that is taken, so neither creates one. A benchmark with no Q&A cannot be evaluated; EVAL-19, EVAL-20 and EVAL-22 walk that state on the second benchmark (created empty, given Q&A from the tab, emptied again), so the shared one keeps its Q&A. Names are unique per run and per worker (clock, parallel index and a random part), because a name that is taken is now refused.
+
+What a run leaves behind: benchmarks cannot be deleted or renamed, so both stay in the organization, which is why there are only two. The primary evaluation run is deleted by EVAL-13 and by nothing else, so it stays when a checkpoint between EVAL-08 and EVAL-13 fails. The dedicated mentor is left to the mentor sweeper (globalTeardown, once it is 30 minutes old). The Manage Benchmarks list shows 10 benchmarks per page, newest first, and its search box filters only the page showing, so every lookup in it relies on the benchmark still being among the organization's 10 newest; EVAL-14 sits right after EVAL-04 for that reason.
+
+A run completes on the real api.iblai.org backend in its own time. EVAL-11 asks with Check Status for up to 3 minutes and then skips with the outcome as the reason; EVAL-12 skips unless the run has completed by then. No test in this journey fails because a run did not complete.
+
+The journey needs `@iblai/iblai-js` 2.77.0 or later: the page object imports helpers and labels that release added.
 
 - [x] EVAL-01: Evals tab heading, description, and the info box (`data-testid=evaluation-info-box`) all render when the modal is opened on the Evals tab
-- [x] EVAL-02: Benchmark combobox and both toolbar actions (New Evaluation, Manage benchmarks) render; New Evaluation's disabled/enabled state correctly reflects whether a benchmark is auto-selected
-- [x] EVAL-03: Admin creates a new benchmark via Manage benchmarks and selects it back on the Evals tab toolbar
-- [x] EVAL-04: Admin adds a Q&A pair to a benchmark via Manage benchmarks → View items → Add Q&A (Manual sub-tab)
-- [x] EVAL-05: With a fresh (zero-run) benchmark selected, the runs table renders all five canonical headers (Evaluation, Status, Initiated by, Created, Actions) and the benchmark-specific empty state
+- [x] EVAL-02: Benchmark combobox and both toolbar actions (New Evaluation, Manage Benchmarks) render; New Evaluation is on exactly when the auto-selected benchmark can be evaluated — off with the New Benchmark empty state when the organization has no benchmarks, off with the Add Q&A prompt when the selected benchmark has no Q&A, on otherwise
+- [x] EVAL-03: Admin creates a benchmark together with its first Q&A pair in the New Benchmark dialog (Manage Benchmarks → New Benchmark: Name and Description on the Details step, Next, a Manual row on the Q&A step, Create), the toast says it was created with 1 Q&A pair, it is listed, and the Evals tab selects it by itself with New Evaluation on; a backend that cannot create the benchmark fails the checkpoint
+- [x] EVAL-04: The benchmark's Q&A dialog (Manage Benchmarks → View Q&A) lists the pair saved at creation with its answer, under the QUESTION / ANSWER / ACTIONS headers and the count "1 Q&A pair", and admin adds another pair there via Add Q&A (Manual sub-tab) which is listed next to the first and raises the count to "2 Q&A pairs"
+- [x] EVAL-05: With a fresh (zero-run) benchmark selected, the tab shows only the benchmark-specific empty state, with no runs table or headers
 - [x] EVAL-06: New Evaluation dialog shows the benchmark readback and name input, and Cancel dismisses it without creating a run
 - [x] EVAL-07: New Evaluation dialog can be dismissed via Escape without creating a run
-- [x] EVAL-08: Admin starts a new evaluation and it appears in the runs table with a valid status badge
-- [x] EVAL-09: A run's actions menu reflects its live status — Check status/Delete always enabled; View results/New review/Export CSV enabled once completed, otherwise disabled with the `notReadyHint` tooltip
-- [x] EVAL-10: Check status triggers a fresh fetch and surfaces an outcome toast (pending, completed, or failed)
-- [x] EVAL-11: Once a run has completed, admin can open View results and Export CSV _(opportunistic — skips gracefully while the run has not completed yet)_
-- [x] EVAL-12: Once a run has completed, the New review (LLM-judge) dialog keeps Evaluate disabled until criteria and score name are filled _(opportunistic — skips gracefully while the run has not completed yet)_
-- [x] EVAL-13: Admin can cancel a delete confirmation (row stays) and then delete a run for real (row is removed)
-- [x] EVAL-14: Manage benchmarks lists the created benchmark, and searching for its name filters down to it
+- [x] EVAL-08: Admin starts a new evaluation, the toast names it ("Evaluation started: <name>"), and it appears in the runs table, under all five column headers (EVALUATION, STATUS, INITIATED BY, CREATED, ACTIONS), with a valid status
+- [x] EVAL-09: A run's actions menu, with its items matched by their exact Title Case names (View Results, New Review, Check Status, Export CSV, Delete), reflects its live status — Check Status/Delete always enabled; View Results/New Review/Export CSV enabled once completed, otherwise disabled with the reason as their accessible description (`failedHint` for a failed run, `notReadyHint` for one still queued or running)
+- [x] EVAL-10: Check Status triggers a fresh fetch and surfaces an outcome toast (pending, completed, or failed)
+- [x] EVAL-11: Once a run has completed, admin can open View Results, close it with its Close button, and Export CSV _(asks with Check Status for up to 3 minutes for the run to complete; skips, naming the outcome, when it is still running by then or has failed)_
+- [x] EVAL-12: Once a run has completed, the New Review (LLM-judge) dialog, titled New Review, keeps Start Review disabled until criteria, score name and an LLM are provided _(skips when the run has not completed after the wait in EVAL-11)_
+- [x] EVAL-13: Admin can cancel a delete confirmation, which asks about the run by name (row stays), and then delete a run for real (row is removed)
+- [x] EVAL-14: Manage Benchmarks, titled Manage Benchmarks, lists the created benchmark, and searching for its name filters down to it
 - [x] EVAL-15: Evals tab has no axe-core accessibility violations on visible dialogs
 - [x] EVAL-16: Admin can leave the Evals tab and return without errors (wrapper re-mounts cleanly)
-- [x] EVAL-17: Non-admin does not see the Evals tab in the Edit Mentor modal (ADMIN-only segment in `use-mentor-segments.ts`)
+- [x] EVAL-17: Non-admin does not see Evals in the agent dropdown, which lists every Edit Agent tab they may open, nor, when the dropdown offers them Settings, in the Edit Agent dialog (ADMIN-only segment in `use-mentor-segments.ts`)
+- [x] EVAL-18: Phone view (375x812, touch): the Edit Agent dialog fills the viewport, the info sheet opens and closes, a run shows as a card, tapping it opens the action sheet (Status plus View Results, New Review, Check Status, Export CSV, Delete, with the reason written under each of the three options that are off until the run completes) that the backdrop closes, the benchmark picker opens as a sheet titled Select a Benchmark listing the benchmark and closes, and the page never scrolls sideways
+- [x] EVAL-19: Q&A is optional in the New Benchmark dialog, but a benchmark with none cannot be evaluated: admin creates a second benchmark with a name alone (Details, Next, Create on a blank Q&A step), the toast says to add Q&A before running an evaluation, the Evals tab selects it and says why with one Add Q&A button, and New Evaluation is disabled with the same sentence as its hover text
+- [x] EVAL-20: Add Q&A on the Evals tab opens the Add Q&A dialog for the selected benchmark (the one created without Q&A); saving a pair there removes the no-Q&A prompt, turns New Evaluation on and brings back the benchmark's regular empty state
+- [x] EVAL-21: The New Benchmark dialog is two steps with Details and Q&A tabs: on Details the Q&A tab and Next are disabled until Name has text, and Next refuses a name with a slash under Name and stays on Details; Next moves to the Q&A step with the cursor in the first Question, where a note on screen says Q&A can be added later and that an evaluation needs at least one question, and Create is enabled without any Q&A; on the CSV Upload tab a file whose first row has no "input" column is refused under CSV File and Create is disabled; the Details tab goes back with the name kept; Cancel closes the dialog and no benchmark is created
+- [x] EVAL-22: Deleting a benchmark's only Q&A pair in Manage Benchmarks → View Q&A (the dialog then loses its "1 Q&A pair" count, says the benchmark has no Q&A yet and offers Add Q&A) puts it back in the no-Q&A state: the Evals tab offers Add Q&A again and New Evaluation is disabled
+- [x] EVAL-23: The New Benchmark dialog refuses a name another benchmark already has: with the existing benchmark's name and a question typed on the Q&A step, Create goes back to Details with "A benchmark with this name already exists. Enter a different name." under Name, Name marked invalid and holding the cursor; after Cancel the existing benchmark's Q&A does not contain the typed question
+- [x] EVAL-24: Phone view (375x812, touch) of the benchmark surfaces: with a benchmark without Q&A selected the tab says why with an Add Q&A button and New Evaluation is disabled; a benchmark's Q&A dialog (Manage Benchmarks → View Q&A) shows each answer under its question with the ANSWER column hidden; and the page never scrolls sideways
+
+---
+
+## Journey 65: Mentor Human Support Tab (10 checkpoints) — `journeys/65-mentor-human-support-tab.spec.ts`
+
+**Source files:** `components/modals/edit-mentor-modal/tabs/human-support-tab.tsx`, `components/modals/edit-mentor-modal/tabs/index.ts`, `components/modals/edit-mentor-modal/index.tsx`, `hooks/use-mentor-segments.ts`
+
+The Support tab (Activity category) wraps the SDK's `AgentHumanSupportTab`: an admin-only support-ticket inbox with a user and status filter, a ticket list, and a ticket detail with a status select and reply composer. Tickets are filed by the agent during chat through its support tool, so the lifecycle checkpoints chat with a dedicated agent per test (created fresh, deleted by the residue teardown). This file shares the number 65 with Journey 65: Analytics Navbar Parity above. Checkpoints support-03..support-09 sit in one chat-driven lifecycle test and skip when the tenant has no human-support tool.
+
+- [x] support-01: Admin opens the Support tab and the ticket surface renders (heading, description, and either the ticket list or the empty state)
+- [x] support-02: Admin round-trips the status filter (Open, In Progress, Closed, All) and the surface keeps rendering a valid state after every change
+- [x] support-03: The Support availability toggle is turned on and the setting persists across a reload (skips when the tenant tool catalog has no human-support tool)
+- [x] support-04: Admin asks the agent in chat to open a ticket and it appears in the Support list as Open
+- [x] support-05: Admin opens the ticket and its agent-authored description renders
+- [x] support-06: Admin replies from the ticket detail and the reply appears in the conversation
+- [x] support-07: Admin moves the ticket to In Progress and the list status updates
+- [x] support-08: Admin closes the ticket, the closed notice replaces the composer and the list status reflects Closed
+- [x] support-09: Phone view (375x812, touch) of a ticket: it shows as a card, tapping it opens the full-screen Support Ticket screen with the reply composer, Back returns to the list, the status filter sheet hides it under Closed and brings it back under All Statuses, and the page never scrolls sideways
+- [x] support-10: Phone view (375x812, touch) of an agent with no tickets: the Edit Agent dialog fills the viewport, the info sheet opens and closes, the Available to Users row shows, the status filter sheet lists its options, closes on the backdrop and applies a picked option, and the page never scrolls sideways
 
 ---
 
@@ -973,7 +1064,7 @@ Also covers the prompt sanitization added in [iblai-platform#2164](https://githu
 
 ---
 
-## Journey 46: Chat Upload — Camera Option & Image Display (7 checkpoints) — `journeys/46-chat-upload-camera-and-image-display.spec.ts`
+## Journey 46: Chat Upload — Camera Option & Image Display (10 checkpoints) — `journeys/46-chat-upload-camera-and-image-display.spec.ts`
 
 **Source files:** `components/chat-input-form/upload-menu.tsx`, `components/chat-input-form/camera-capture-dialog.tsx`, `components/chat-input-form.tsx`, `components/chat/chat-messages/image-message.tsx`, `components/chat/chat-messages/user-message-bubble.tsx`, `features/image-previews/image-previews-slice.ts`, `hooks/use-show-attachment.ts`, `hooks/use-is-mobile-os.ts`
 
@@ -988,6 +1079,11 @@ Covers the two user-facing features added in [iblai-platform#1902](https://githu
 - [x] CAM-05: Drag-dropping a PNG onto the chat area places the file in the pending attachments list by filename
 - [x] CAM-06: Sending a message with an image attachment renders the image as `<img class="cursor-pointer ...">` in the sent message bubble (not a FileCard icon); local object-URL preview from `image-previews-slice` is used
 - [x] CAM-07: Clicking the `<img>` in the sent bubble triggers `onPreviewImage` without crashing the page
+- [x] CAM-08: ([#2886](https://github.com/iblai/iblai-platform/issues/2886)) Attachments off: no Upload File item, no drop overlay on dragenter/dragover, drop attaches no chip and sends no `upload-url` request
+- [x] CAM-09: (#2886) Attachments off: pasting a file or over-limit text attaches no chip and sends no `upload-url` request
+- [x] CAM-10: (#2886) Control: attachments on: drop overlay shows, drop yields a chip and exactly one `upload-url` POST
+
+CAM-08/09 fail on pre-fix code: the drop/paste handlers were gated only on `features.fileUpload`, so the overlay, chip and upload request still appeared with the setting off. Embed (`embed_show_attachment`) is not covered here (needs an embed iframe on an embed-enabled agent).
 
 ---
 
@@ -1140,16 +1236,17 @@ Covers the `handlePaste` → `extractFilesFromClipboard` → `processFiles` path
 
 ---
 
-## Journey 55: Free Credits Checkout Onboarding (4 checkpoints) — `journeys/55-free-credits-checkout-onboarding.spec.ts`
+## Journey 55: Free Credits Checkout Onboarding (5 checkpoints) — `journeys/55-free-credits-checkout-onboarding.spec.ts`
 
 **Source files:** `app/sso-login-complete/page.tsx`, `app/platform/[tenantKey]/[mentorId]/page.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`
 
-End-to-end onboarding of a brand-new user via the `ECOMMERCE_CHECKOUT_URL` "free credits" Stripe checkout. The endpoint 302-redirects to a Stripe-hosted page exposing a single email field (`input#email`) and a Subscribe button (`[data-testid="hosted-payment-submit-button"]` — a $0 subscription, no card required). Submitting `test+<timestamp>@ibleducation.com` provisions a new account and runs the auth SSO redirect chain (`auth.iblai.org/login` → `/login/complete` → `sso-login-complete` → platform), landing authenticated on the mentor SPA. The base URL is dictated by the checkout session's redirect target (production `mentorai.iblai.org`), independent of `MENTOR_NEXTJS_HOST`, so the test follows the redirect rather than re-invoking `navigateToMentorApp`'s fresh `goto`, and asserts the URL _shape_ (each run is assigned a fresh tenant/mentor). The final step clicks "Upgrade Plan" in the credit dropdown, which creates a Stripe checkout session and redirects the same tab to a Stripe-hosted payment page (`store.ibl.ai`) requiring credit-card input — the test stops there without entering a card. Runs in a clean, unauthenticated context. Skips when `ECOMMERCE_CHECKOUT_URL` is unset. Credit-balance assertions reuse the `@iblai/iblai-js/playwright` helpers (`creditBalanceTrigger`, `openCreditBalanceDropdown`, `creditBalancePlanBadge`, `getCreditBalanceRemaining`).
+End-to-end onboarding of a brand-new user via the `ECOMMERCE_CHECKOUT_URL` "free credits" Stripe checkout. The endpoint 302-redirects to a Stripe-hosted page exposing a single email field (`input#email`) and a Subscribe button (`[data-testid="hosted-payment-submit-button"]` — a $0 subscription, no card required). Submitting `test+<timestamp>@ibleducation.com` provisions a new account and runs the auth SSO redirect chain (`auth.iblai.org/login` → `/login/complete` → `sso-login-complete` → platform), landing authenticated on the mentor SPA. The base URL is dictated by the checkout session's redirect target (production `mentorai.iblai.org`), independent of `MENTOR_NEXTJS_HOST`, so the test follows the redirect rather than re-invoking `navigateToMentorApp`'s fresh `goto`, and asserts the URL _shape_ (each run is assigned a fresh tenant/mentor). The new workspace is on the Free plan with no card on file: the credit dropdown shows a "Free" badge, one "Add Credits" button and a "Change Plan" link. Change Plan opens the "Change Your Plan" picker (Free marked "Current Plan", Pro / Max / Ultra as "Upgrade to …", Add One-Time Credits box); "Upgrade to Pro" has no card to charge, so it leaves the same tab for a Stripe-hosted checkout (`store.ibl.ai`) requiring credit-card input — the test stops there without entering a card. Runs in a clean, unauthenticated context. Skips when `ECOMMERCE_CHECKOUT_URL` is unset. Uses the `@iblai/iblai-js/playwright` credit helpers and `e2e/utils/plan-picker.ts`.
 
 - [x] fcc-01: `ECOMMERCE_CHECKOUT_URL` redirects to the Stripe-hosted checkout page exposing the email field and Subscribe submit button
 - [x] fcc-02: Submitting the email completes checkout and lands authenticated on the mentor SPA at `<base-url>/platform/<platform-key>/<mentor-id>`
-- [x] fcc-03: The credit-balance dropdown shows a positive remaining credit balance and a "Free" plan pill
-- [x] fcc-04: Clicking "Upgrade Plan" in the credit dropdown redirects to a Stripe-hosted checkout page (`store.ibl.ai`) requiring credit-card input (secure Stripe Elements card iframe + pay button)
+- [x] fcc-03: The credit-balance dropdown shows a positive remaining credit balance, a "Free" plan pill and Add Credits alone (no Upgrade, Manage Usage or Auto Recharge: no card on file yet)
+- [x] fcc-04: The dropdown's Billing row offers Change Plan; it opens "Change Your Plan" with Free marked Current Plan, Pro / Max / Ultra as upgrades and the Add One-Time Credits box
+- [x] fcc-05: "Upgrade to Pro" with no card on file leaves for a Stripe-hosted checkout page (`store.ibl.ai`) requiring credit-card input (secure Stripe Elements card iframe + pay button)
 
 ---
 
@@ -1193,24 +1290,29 @@ Regression guard for issue #2067 (LAIA-684): selecting a chat from the sidebar h
 
 ---
 
-## Journey 59: Ecommerce Credits & Upgrade (12 checkpoints) — `journeys/59-ecommerce-credits-and-upgrade.spec.ts`
+## Journey 59: Ecommerce Credits & Upgrade (17 checkpoints) — `journeys/59-ecommerce-credits-and-upgrade.spec.ts`
 
-**Source files:** `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`, `components/modals/modal-container.tsx`, `hooks/subscription/use-402-error-check.ts`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/user-profile.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`
+**Source files:** `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`, `components/modals/modal-container.tsx`, `providers/index.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/user-profile.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/subscription-wrapper/index.tsx`
 
-Full-lifecycle regression guard for the ecommerce credits/upgrade flow, run as a single serial test with `test.step()` per flow (state — platform id, mentor id, credit balance — carries across the whole run). A brand-new account signs up via the auth service's `/account/create` form and lands on the "main" tenant with a Free-plan trial balance. The credit balance dropdown (`@iblai/iblai-js/playwright` helpers), the profile dropdown (exactly Profile/Help/Log Out), the collapsed sidebar's visible top-level items, and every gated sidebar entry point (`components/modals/modal-container.tsx` renders the shared `UpgradePackageModal` from `@iblai/web-containers`, titled "Subscribe to unlock full features" with an "Upgrade for free" CTA) are all verified. The DM service's admin credit-cleanup endpoint (`${DM_URL}/api/service/credits/cleanup/`, authenticated with the `dm_token` written to localStorage) deterministically drains the balance to 0 rather than waiting on organic credit burn — this is what makes the "zero credits" checkpoints reproducible. Before each cleanup, the test holds three long agent conversations and asserts every turn deducts credits: the credit dropdown renders `parseInt(available_credits)`, which hides sub-credit charges, so the check reads the exact `available_credits` from the `GET <DM>/api/billing/account/` refetch fired on each dropdown open (polling, since charges land after the reply streams) and confirms the dropdown shows the same balance. On the "main" tenant, zero credits blocks chat submission and shows the same subscribe dialog; clicking "Upgrade for free" redirects to a zero-cost Stripe-hosted checkout (`hosted-payment-submit-button`) whose SSO redirect chain lands back on the app under a REAL (non-"main") platform id with a fresh Free-plan balance. From there, the profile dropdown's "Account" item opens the "User Profile" dialog (`@iblai/web-containers`' `UserProfileDropdown`/account modal), whose Billing tab (`?profileTab=billing`, `hooks/subscription/use-402-error-check.ts` also drives this URL injection on 402 for admins) shows the Plan/Credits sections via the SDK's `billing-plan-section`/`billing-credits-section` test ids. A second credit-cleanup + reload triggers the admin-only 402 path, which auto-opens the Billing tab directly (no subscribe dialog on non-"main" tenants) showing 0 credits. The Billing tab's real "Upgrade" button (`clickBillingUpgrade`) redirects to a real Stripe test-mode checkout; the test fills the `4242 4242 4242 4242` test card with a Uruguay billing country (removes the postal-code field) and submits, landing back on the same platform/mentor URL with the account modal auto-opening on a restored Premium-plan balance, after which chat continues to work. All Stripe-page assertions are written locale-proof (the hosted checkout renders in the browser locale — validated in French) using stable `data-testid`s, element ids, and currency/credit regexes rather than button text. Runs in a clean, unauthenticated context (`browser.newContext()`, no storageState). Skips when `DM_URL` or `ECOMMERCE_CREDIT_CLEANUP_TOKEN` are unset.
+Full-lifecycle regression guard for the credits-only ecommerce flow, run as a single serial test with `test.step()` per flow (state — platform id, mentor id, app origin, credit balances — carries across the whole run). A brand-new account signs up via the auth service's `/account/create` form and lands on the "main" tenant as a free-trial user: the credit dropdown (`@iblai/iblai-js/playwright` helpers) shows a "Trial" badge and "Upgrade" as its one action, the profile dropdown shows exactly Profile/Help/Log Out, the collapsed sidebar's top-level items are visible, and every gated sidebar entry point opens the shared `UpgradePackageModal` plan picker ("Choose Your Plan": Free / Pro / Max / Ultra cards with "Choose <name>", Pro marked "Most Popular"; `e2e/utils/plan-picker.ts` verifies it in full on the first entry; `components/modals/modal-container.tsx` renders it from the SDK's `subscription` slice). The DM service's admin credit-cleanup endpoint (`${DM_URL}/api/service/credits/cleanup/`, authenticated with the `dm_token` written to localStorage) deterministically drains the balance to 0 rather than waiting on organic credit burn — this is what makes the "zero credits" checkpoints reproducible. Before each cleanup, the test holds three long agent conversations and asserts every turn deducts credits: the credit dropdown renders `parseInt(available_credits)`, which hides sub-credit charges, so the check reads the exact `available_credits` from the `GET <DM>/api/billing/account/` refetch fired on each dropdown open (polling, since charges land after the reply streams) and confirms the dropdown shows the same balance. On the "main" tenant, zero credits blocks chat submission with the trial 402 toast ("You've run out of your free trial credits. Pick a plan to continue.") and the same picker; "Choose Free" redirects to a zero-cost Stripe-hosted checkout (`hosted-payment-submit-button`) whose SSO redirect chain lands back on the app under a REAL (non-"main") platform id on the Free plan (badge "Free", Add Credits alone, Change Plan offered). From there, the profile dropdown's "Account" item opens the "User Profile" dialog, whose Billing tab (`?profileTab=billing`) shows the Free plan sentence, Change Plan + Add Credits and no Auto Recharge card (`billing-credits-section` / `billing-auto-recharge-section` test ids). A second credit-cleanup + reload triggers the admin 402 path (toast "You've run out of credits. Add credits to continue.") which auto-opens the Billing tab directly showing 0 credits. With no card on file, Add Credits → "Continue" redirects to the Stripe customer portal (payment-method flow; saving the card there is not automated, so the journey returns to the workspace). The card arrives through a plan change instead: Change Plan opens "Change Your Plan" (Free marked "Current Plan"), "Upgrade to Pro" leaves for a real Stripe test-mode checkout, the test fills the `4242 4242 4242 4242` test card with a Uruguay billing country (removes the postal-code field) and submits, and the SSO chain lands back on the same platform on the Pro plan with the card on file (Manage Usage + Add Credits + Auto Recharge) and Pro credits. From Pro, "Upgrade to Max" is applied in place (toast "You're now on the Max plan.", badge Max) and the Max allowance lands once the upgrade invoice is paid against the saved card (iblai-dm-pro#3206 grants it on `invoice.paid` / the subscription webhook); Add Credits with a card on file charges $1 at once ("Credits added successfully") and raises the balance; "Downgrade to Pro" is scheduled for the end of the period ("Your current plan ends…") while the badge stays Max; and chat keeps working. All Stripe-page assertions are written locale-proof (the hosted checkout renders in the browser locale — validated in French) using stable `data-testid`s, element ids, and currency/credit regexes rather than button text. Runs in a clean, unauthenticated context (`browser.newContext()`, no storageState). Skips when `DM_URL` or `ECOMMERCE_CREDIT_CLEANUP_TOKEN` are unset, or `ECOMMERCE_E2E` is not `1`.
 
 - [x] ecu-01: New user signs up via `/account/create` and lands authenticated on `<base-url>/platform/main/<mentor-id>` with the mentor dropdown ready
-- [x] ecu-02: Credit balance dropdown shows a Free plan badge, a positive remaining balance, and an Upgrade Plan button on the main tenant
+- [x] ecu-02: Credit balance dropdown on the main tenant shows a "Trial" badge, a positive remaining balance and Upgrade as the one action (no Add Credits, Manage Usage or Change Plan)
 - [x] ecu-03: Profile dropdown shows exactly Profile / Help / Log Out on a brand-new free-trial account
-- [x] ecu-04: Every gated sidebar entry (Agents > New Agent/My Agents, Workflows > My Workflows, Projects > My Projects, Analytics > Overview, Invites, Management, Integrations, Monetization, Memory, Advanced) opens the shared "Subscribe to unlock full features" dialog with an "Upgrade for free" CTA
-- [x] ecu-05: Zero credits (via the DM service credit-cleanup admin endpoint) blocks chat submission on the main tenant and surfaces the same subscribe dialog instead of an AI response
-- [x] ecu-06: Clicking "Upgrade for free" redirects to a zero-cost Stripe-hosted checkout; submitting it completes the SSO redirect chain onto a real (non-"main") platform id with a fresh Free-plan credit balance and working chat
-- [x] ecu-07: The profile dropdown's Account item opens the User Profile dialog; its Billing tab (`?profileTab=billing`) shows the Free plan, Current badge, Upgrade button, and a positive credit balance
-- [x] ecu-08: Zero credits on the upgraded (non-"main") tenant auto-opens the User Profile dialog on the Billing tab (admin 402 handling injects `?profileTab=billing`) showing 0 credits, instead of the subscribe dialog used on the main tenant
-- [x] ecu-09: The Billing tab's Upgrade button redirects to a real Stripe test-mode checkout; filling the 4242 test card, expiry, CVC, name, and Uruguay billing country completes payment
-- [x] ecu-10: Post-payment, the account modal auto-opens on the Billing tab showing the Premium plan and a Manage Billing button with a restored credit balance; chat continues to work with the new balance
-- [x] ecu-11: Before the first credit exhaustion (main tenant), three long agent conversations each deduct credits: after every reply the exact `available_credits` from the credit dropdown's `/api/billing/account/` refetch drops below its pre-turn value, and the dropdown renders that balance
-- [x] ecu-12: Before the second credit exhaustion (upgraded non-"main" tenant), three long agent conversations each deduct credits, asserted the same way per turn
+- [x] ecu-04: Every gated sidebar entry (Agents > New Agent/My Agents, Workflows > My Workflows, Projects > New Project, Analytics > Overview, Invites, Management, Secrets, API, Monetization, Memory, Advanced) opens the "Choose Your Plan" picker; the first is verified in full (Free / Pro / Max / Ultra cards with "Choose <name>", Pro "Most Popular", no current-plan card)
+- [x] ecu-05: Zero credits (via the DM service credit-cleanup admin endpoint) blocks chat submission on the main tenant: the trial 402 toast and the same plan picker appear instead of an AI response
+- [x] ecu-06: "Choose Free" redirects to a zero-cost Stripe-hosted checkout; submitting it completes the SSO redirect chain onto a real (non-"main") platform id with a "Free" badge, a fresh balance, Add Credits alone (no card) plus Change Plan, and working chat
+- [x] ecu-07: The profile dropdown's Account item opens the User Profile dialog; its Billing tab (`?profileTab=billing`) shows the Free plan sentence, Change Plan + Add Credits, no Auto Recharge card, and a positive credit balance
+- [x] ecu-08: Zero credits on the upgraded (non-"main") tenant shows the admin 402 toast and auto-opens the User Profile dialog on the Billing tab showing 0 credits, instead of the plan picker used on the main tenant
+- [x] ecu-09: Add Credits with no card on file: the dialog's "Continue" (not "Add Credits") redirects to the Stripe customer portal payment-method flow; the journey returns to the workspace still without a card
+- [x] ecu-10: Change Plan opens "Change Your Plan" with Free marked Current Plan and Pro as an upgrade; with no card on file "Upgrade to Pro" leaves for a real Stripe test-mode checkout, and the 4242 test card, expiry, CVC, name and Uruguay billing country complete payment
+- [x] ecu-11: Post-payment the SSO chain lands back on the same platform: the badge names the Pro plan, Manage Usage + Add Credits + Change Plan and the Auto Recharge section show (card on file), and the Pro credits are positive
+- [x] ecu-12: "Upgrade to Max" is applied in place (no checkout): toast "You're now on the Max plan.", badge Max, and the balance rises once the upgrade invoice is paid against the saved card (iblai-dm-pro#3206)
+- [x] ecu-13: Add Credits with a card on file: "Other amount" $1 and "Add Credits" charge at once, "Credits added successfully" shows, and the balance rises
+- [x] ecu-14: "Downgrade to Pro" is scheduled for the end of the period ("Your current plan ends…") and the badge stays Max
+- [x] ecu-15: Chat works with the paid balance
+- [x] ecu-16: Before the first credit exhaustion (main tenant), three long agent conversations each deduct credits: after every reply the exact `available_credits` from the credit dropdown's `/api/billing/account/` refetch drops below its pre-turn value, and the dropdown renders that balance
+- [x] ecu-17: Before the second credit exhaustion (upgraded non-"main" tenant), three long agent conversations each deduct credits, asserted the same way per turn
 
 ---
 
@@ -1548,17 +1650,20 @@ tool calls actually mounts `AgentTodoList`.
 - [x] atl-10: The task list survives a page reload, recovered from chat history
 - [x] atl-11: First fixture-backed validation of the LangChain-shape and OpenAI-shape `write_todos` history parsing, plus a malformed entry dropped without throwing
 
-## Journey 69: LLM Spend Limits (Billing) — Agent & Tenant Settings (16 checkpoints) — `journeys/69-spend-limits.spec.ts`
+## Journey 69: LLM Spend Limits (Billing) — Agent & Tenant Settings (21 checkpoints) — `journeys/69-spend-limits.spec.ts`
 
 **Source files:** `components/modals/edit-mentor-modal/tabs/spend-caps-tab.tsx`, `components/modals/edit-mentor-modal/index.tsx`, `hooks/use-mentor-segments.ts`, `lib/constants.ts`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/user-profile.tsx`
 
-Covers BOTH surfaces the SDK's spend-limits UI touches, as two
+Covers BOTH surfaces the SDK's spend-limits UI touches, as three
 clearly-separated `test.describe` blocks in one file: **Agent settings**
 (the Edit Mentor "Billing" tab) and **Tenant settings** (the tenant Billing
-tab's "Spend Limits" + "Agent Limits" tabs). The whole file runs `serial` —
-the simplest safe arrangement given the tenant block's tenant-wide mutation
-(see its isolation note below); the agent block's tests are independent of
-each other and of the tenant block either way.
+tab's "Spend Limits" + "Agent Limits" tabs, and its "User Limits" tab as a
+block of its own). The file is configured `mode: 'default'`, which under the
+suite's `fullyParallel` means each `describe` block's tests run in
+declaration order in one worker (a failure skips nothing), while the three
+blocks may run in parallel with each other — safe because no block reads
+state another block writes (see the isolation notes below), and every test
+creates and removes its own state.
 
 **REWRITE (feat/2286):** the prior version of the agent block targeted a
 three-sub-tab UI (This agent / Per user / Workspace) via hand-rolled
@@ -1669,13 +1774,65 @@ longer relies on that timing: it searches broadly and samples up to 5
 already-indexed candidates rather than waiting on its own freshly-created
 mentor (see the checkpoint description below for why).
 
-- [x] twl-01: The tenant settings Billing tab exposes a "Billing sections" tablist with Plan & Credits (default), Spend Limits, and Agent Limits, and each tab switches to its section
+- [x] twl-01: The tenant settings Billing tab exposes a "Billing sections" tablist with Plan & Credits (default), Spend Limits, Agent Limits, and User Limits, and each tab switches to its section (User Limits renders both of its cards)
 - [x] twl-02: Admin configures the workspace-wide (tenant) spend limit with alert-only enforcement via `setWorkspaceSpendLimit`, the presence-level usage stats render, the values persist after reopening the tab, and the limit is removed again in the test's own `finally`-block cleanup so no other journey sharing this tenant inherits it
 - [x] tal-02: Admin edits the agent spend limit — created via the Edit Agent dialog's Billing tab (no search-index dependency) — through the Agent Limits row's manage popup stacked on the tenant settings dialog (`setAgentSpendLimitFromTenantBilling`), and the row reflects the updated limit
 - [x] tal-03: Admin flips the agent's Status toggle directly in the Agent Limits table row (saves immediately) off and back on
 - [x] tal-04: Admin adds a per-user spend limit through the Agent Limits manage popup's nested "Per User" sub-tab / user-cap modal (`addUserSpendLimitFromTenantBilling`); reopening the popup confirms the user's row persisted server-side
 - [x] tal-05: Admin deletes the agent spend limit through the manage popup's confirm dialog (local `deleteAgentCapAndAwaitResponse` helper, network-response-gated — see the isolation note above); the tenant-wide unfiltered list only holds configured caps, so the row disappears entirely
 - [x] tal-01: Admin filters Agent Limits to an ALREADY-INDEXED mentor (broad query "E2E Mentor" against the search-index-backed autocomplete, sampling up to 5 results for the first capless one) — the ONE checkpoint that depends on that index, which lags mentor creation by DAYS on this backend (a known product limitation, not a test bug, reported upstream separately — a freshly-created mentor is never searchable in time, so this borrows a mentor from a past run instead of retrying its own) — sees the "Set Spend Limit" empty state, creates that mentor's spend limit (alert-only) from the popup, the row lists it, and the cap is removed again in an unconditional `finally` block so the borrowed (shared-tenant) mentor is left exactly as found; if every sampled candidate already has a cap, verifies the filter → row-visible path on the first one instead (annotated, never a failure)
+
+### Tenant settings (User Limits)
+
+Covers the 4th tab of that same "Billing sections" tablist — **User
+Limits** — two cards in this order:
+
+- **User Limits** — every USER-scoped spend cap in the workspace (one
+  user's spend across ALL agents, backend `spend-caps/users/`),
+  `UserLimitsSection` inside `BillingTab`: the Agent Limits layout with an
+  email-only user autocomplete filter (also the only entry point for a user
+  who has none yet — the filtered empty state's "Set Spend Limit" button
+  opens the SAME `user-cap-modal` the per-agent flow uses, straight on the
+  form with the filtered user pre-picked), a direct Status switch per row,
+  and edit/delete icons beside it.
+- **Default for New Users** — the spend limit each member gets when they
+  JOIN (backend `spend-caps/users/default/`, a config TEMPLATE, not a cap:
+  GET never 404s, `enabled: false` is "off", PUT is a full replace, applies
+  to future joins only — never to existing members), `NewUserDefaultSection`
+  inside `BillingTab`: a `CapabilityGate` switch whose fields are inert
+  while off, the same fields as a cap, Save — no usage strip, no Delete.
+
+Every interaction goes through the SDK's `*TenantUserSpendLimit` /
+`*NewUserSpendLimitDefault` helpers in `@iblai/iblai-js/playwright`.
+
+**Isolation:** no mentor at all — user-tier caps are keyed by USERNAME, not
+by agent, so every checkpoint acts on the acting admin's own account
+(`getCurrentAdminIdentity`, the same identity source the agent block's
+per-user checkpoints use: always a real member of the tenant, which the
+user-tier PUT requires). Both cards hold TENANT-WIDE state — a user cap
+applies to that user across every agent, and the new-user default attaches
+a cap to EVERY future signup in this tenant — so every mutation is
+`enforcement: 'alert_only'` (never `'block'`) and every test removes what it
+created in an unconditional `finally` (the local `removeTenantUserCapIfPresent`
+→ `deleteTenantUserSpendLimit`, or the default switched back OFF), the same
+contract as `twl-02`. The three row checkpoints also start by calling
+`removeTenantUserCapIfPresent` so a cap left over by a crashed earlier run can
+never hide the "Set Spend Limit" empty state they create from. Like
+`twl-02`'s singleton workspace cap, this identity-keyed state is shared
+across browser projects running the same admin in parallel — per-browser
+admin credentials (`PLAYWRIGHT_USERNAME_<BROWSER>`) keep the rows apart.
+
+No non-admin checkpoint here: neither this block nor journey 21 has an
+established non-admin pattern for the tenant Billing surface (journey 21-C's
+non-admin test covers the Stripe pricing modal on mentor creation, not the
+Billing tab), and `sc-09` already pins the admin-only gate at the Edit Mentor
+level.
+
+- [x] tul-01: The tenant Billing "User Limits" tab (4th tab of the "Billing sections" tablist, active once switched to) shows both cards: the user caps table (email-only user autocomplete filter, User | Limit | Spent | Remaining | Status columns) and the "Default for New Users" card with its visible future-joins note ("Only people who join after this is turned on get it. To limit someone already here, set their limit above."), its switch and its Save button
+- [x] tul-02: Admin creates a tenant-level (all-agents) user spend limit for the acting admin's own account via the filter → "Set Spend Limit" empty state → user-cap modal opened straight on the form with the filtered user pre-picked (`addTenantUserSpendLimit`, ALWAYS alert-only), the row lists it with the formatted limit ("$7.00 / Month") and its Status on, the row persists after switching tabs away (Plan & Credits) and back, and the cap is removed again in an unconditional `finally` block so the shared tenant is left capless; a cap left over by a crashed earlier run is removed up front so the empty state is always reachable
+- [x] tul-03: Admin edits an existing tenant-level user limit (created in the test's own setup) through the row's edit icon → the same user-cap modal in edit mode (`editTenantUserSpendLimit`) and the row reflects the new limit ("$12.00 / Week"); removed again in `finally`
+- [x] tul-04: Admin flips a tenant-level user limit's Status switch directly in the User Limits row (saves immediately, "Spend limit saved" toast) off and back on (`setUserLimitsRowEnabled`, idempotent); created in the test's own setup and removed again in `finally`
+- [x] tul-05: Admin turns on the "Default for New Users" template with an alert-only amount (`setNewUserSpendLimitDefault` — enabled first, since the `CapabilityGate` keeps the fields inert while off; gated on the "Default for new users saved" toast), the switch, amount and enforcement persist after switching tabs away and back (`expectNewUserSpendLimitDefault` — the amount rehydrates as `String(Number(max_cost_usd))`), and the default is switched back OFF in an unconditional `finally` block because a tenant default left on would attach a cap to every future test signup in this tenant
 
 ---
 
@@ -1846,7 +2003,7 @@ sequence from the reporter's real trace.
 
 ## Journey 74: Dataset Cloud Pickers (3 checkpoints) — `journeys/74-dataset-cloud-pickers.spec.ts`
 
-**Source files:** `app/platform/[tenantKey]/workflows/[mentorId]/[id]/page.tsx`, `components/modals/edit-mentor-modal/tabs/datasets-tab/agent-datasets-tab.tsx` — the cloud-picker hooks and Add Resources modal now live in the `@iblai/iblai-js` SDK (`@iblai/web-containers`, linked locally via yalc), not in OS source; the workflow builder's File Search picker (SDK `WorkflowEditor`) reaches the same modal with the upload config the workflow page passes.
+**Source files:** `app/platform/[tenantKey]/workflows/[mentorId]/[id]/page.tsx`, `components/modals/edit-mentor-modal/tabs/datasets-tab/agent-datasets-tab.tsx` — the cloud-picker hooks and Add Resources modal now live in the `@iblai/iblai-js` SDK (`@iblai/web-containers`, linked locally via yalc), not in OS source; the workflow builder's File Search picker (SDK `WorkflowEditor`) reaches the same modal with the upload config the workflow page passes, though no journey reaches it while File Search is a planned step the builder hides.
 
 Verifies the Google Drive, Microsoft OneDrive, and Dropbox buttons in the Add Resources modal. Each test creates a fresh mentor (matching journey 36 / 75 pattern), opens the Datasets tab → Add Resources modal, and asserts the behaviour the **tenant's own configuration** selects.
 
@@ -2000,9 +2157,9 @@ Covers issue #2586's embed surface redesign: a new OS header (`EmbedNavBar` — 
 - [x] emb-hdr-04 (regression, issue #2586): The embed's suggested prompts are at most four full-width rows stacked above the composer, each matching the composer's left/right edges, with no horizontal overflow at 320px and still shown while typing
 - [x] emb-lti-04 (regression, issue #2586): In a 300px LTI frame the composer placeholder stays on one line and ellipsizes instead of wrapping into a clipped second line; typed text still wraps
 - [x] emb-prof-01: The embed header shows the user's profile avatar ("More options") only when the host sets `show-user-profile=true`; without it there is no avatar
-- [x] emb-prof-02: The embed profile menu offers Profile, the tenant switcher and Help, and leaves out Log Out and the Admin/User mode switch (the host owns auth)
+- [x] emb-prof-02: The embed profile menu offers Profile, the current organization as a label, Organizations and Help, and leaves out the in-place picker, Log Out and the Admin/User mode switch (the host owns auth)
 - [x] emb-prof-03: Profile in the embed profile menu opens the User Profile dialog inside the frame on the Basic tab, and Cancel closes it without saving
-- [x] emb-prof-04: Picking another tenant in the embed profile menu posts `{ tenantSwitch: true, tenant }` to the host page and leaves the frame on the chat instead of redirecting it to the auth app
+- [x] emb-prof-04: The embed hands the organization chooser to the host — `{ tenantSwitch: true, chooserUrl }`, with no tenant since nobody has picked one — instead of redirecting the frame, which stays on the chat
 - [x] emb-prof-05 (issue #2758): With `show-user-profile=true` the header order is New chat, ? menu, full screen, profile avatar, Close — profile directly before Close
 - [x] emb-prof-06 (issue #2758): With Close hidden the profile avatar is the right-most header control
 
@@ -2087,7 +2244,7 @@ iblai/iblai-platform#2633: with the agent's `enable_in_chat_llm_change` on, a us
 
 ---
 
-## Journey 85: Stale Session Id Self-Heal (6 checkpoints) — `journeys/85-stale-session-id-self-heal.spec.ts`
+## Journey 85: Stale Session Id Self-Heal (10 checkpoints) — `journeys/85-stale-session-id-self-heal.spec.ts`
 
 **Source files:** `components/chat/sdk-chat.tsx`, `lib/utils.ts`, `hooks/user-navigate.ts`, `lib/logger.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/chats/use-recent-chats.ts`, `app/share/chat/[sessionId]/share-chat-redirect-content.tsx`, `e2e/page-objects/chat.page.ts` (the self-heal lives in the SDK Chat and `@iblai/web-utils` / `@iblai/data-layer`)
 
@@ -2099,6 +2256,10 @@ Regression guard for [iblai-platform#2536](https://github.com/iblai/iblai-platfo
 - [x] sess-04: In embed mode (`?embed=true`) a dead session id self-heals with no manual New chat, fetching the dead id exactly 4 times, all before the mint
 - [x] sess-05: A 403 `{error: "You do not have permission to chat with this agent."}` on the create-session POST (iblai-platform#2712) toasts exactly that sentence, with no raw JSON, `status`, `[object Object]` or "Failed to start new chat"; the logout redirect is held pending so the toast stays
 - [x] sess-06: A start-chat failure with no readable message (400 `{}`) toasts the fallback "We couldn't start a new chat. Please try again."
+- [x] sess-07: Embed (`?embed=true`): a WS 403 `{error: "Invalid session"}` frame (iblai-platform#2918: a stored login expired, the anonymous user reused the owned session id) mints exactly one new session, resends the same message once on the new session id, renders the reply, shows no toast, leaves one user bubble, and stores the new id in `session_id`; the chat socket is mocked
+- [x] sess-08: After that recovery a second message goes out on the new session with no further POST .../sessions/
+- [x] sess-09: Loop guard: when the resent message also gets 403 "Invalid session" there is no second mint and no second resend (two sends total) and the error toast shows once
+- [x] sess-10: Regular (non-embed) app: the same 403 "Invalid session" self-heal and single resend as sess-07
 
 ---
 
@@ -2140,43 +2301,49 @@ The Tools tab was just moved onto the SDK: OS's `ToolsTab` wrapper now returns `
 
 ---
 
-## Journey 78: Mentor API Tab (9 checkpoints) — `journeys/78-mentor-api-tab.spec.ts`
+## Journey 78: Mentor API Tab (10 checkpoints) — `journeys/78-mentor-api-tab.spec.ts`
 
 **Source files:** `components/modals/edit-mentor-modal/tabs/api-tab.tsx`
 
 The API tab is rendered by the SDK's `AgentApiTab` (`@iblai/iblai-js/web-containers/next`) via OS's thin wrapper, passing no `labels` override — all copy (header, `data-testid="api-info-box"` info box + disclaimers, table columns, Create/Delete/reveal dialogs) comes straight from the SDK's i18n catalog. Top priority for this journey: the expiration date picker (calendar) had a real, user-visible bug where opening the popover and clicking a day fell through to the Create dialog's own overlay and closed the whole dialog instead of picking the date — fixed in the SDK's `ui/popover.tsx` via `pointer-events-auto`. `ApiTab.pickAnyEnabledDay()` asserts the Create dialog is still open immediately after the click, so a regression here fails loudly. API keys are TENANT-scoped (`platform_key`), not agent-scoped — deleting the disposable mentor each test creates never removes them, so every test explicitly tracks and deletes the exact key name(s) it creates (UI or API-seeded via `ApiTab.uniqueName()`, prefix `e2e-apikey-`), and a worker-scoped fixture (`apiKeyResidueReaped`, `utils/api-key-residue.ts`) reaps any stale residue older than 2h — mirrors `lti-residue.ts`'s tenant-scoped pattern. The tenant already carries real, foreign API keys (a few real ones plus ~20 manually created `pagination-test-*` keys); nothing here ever touches a key it didn't create itself. Because every test mutates the same tenant-wide key list, the file runs serially in one worker (mirrors Journeys 47/66/77), and every test still creates its own fresh, disposable mentor via `createMentorPage.openAndCreate()` (auto-tracked + auto-pinned to the cheap ibl.ai model — no manual `MentorTracker` needed) to keep the isolation story uniform with the rest of the Edit Agent modal journeys, even though the keys under test aren't mentor-scoped.
 
-- [x] api-01: Admin opens the API tab and sees the header, description, info box (with disclaimer text), and Create New button
-- [x] api-02 _(calendar regression guard — top priority)_: Admin opens Create, opens the expiration date calendar, navigates to the next month, and picks a day — the Create dialog stays open and the trigger shows the picked PPP date; submitting shows the success toast + reveal dialog, and the new row's EXPIRES cell shows that exact date
-- [x] api-03: Creating an API key without picking an expiration date leaves its EXPIRES cell showing "N/A"
-- [x] api-04: Create dialog validates the API key name (required / letters-numbers-hyphens-underscores only) and keeps Submit disabled until the name is valid
+- [x] api-01: Admin opens the API tab and sees the header, description, info box (with disclaimer text), and Add API Key button
+- [x] api-02 _(calendar regression guard — top priority)_: Admin opens Create, opens the expiration date calendar, navigates to the next month, and picks a day — the Create dialog stays open and the trigger shows the picked PPP date; submitting shows the success toast + reveal dialog, and the new row's Expires cell shows that exact date
+- [x] api-03: Creating an API key without picking an expiration date leaves its Expires cell showing "N/A"
+- [x] api-04: Create dialog validates the API key name (required / letters-numbers-hyphens-underscores only) and keeps Add API Key disabled until the name is valid
 - [x] api-05: The reveal ("API Key") dialog's copy button flips its accessible name from "Copy API key" to "Copied" once clicked
 - [x] api-06: Pagination appears once more than 10 keys exist (bulk-seeded via the API), page 2's rows differ from page 1's, and creating a key through the UI returns the view to page 1
 - [x] api-07 _(mocked dataset)_: Deleting the only remaining row on a paginated page (page > 1) steps the view back a page and the pagination control disappears once everything fits on one page — exercised against a mocked (`page.route`) dataset, since the real tenant's true last page is always foreign, protected data (verified live: the backend ignores any client-supplied `created` timestamp and always server-stamps "now", so a test-created key can never sort to the tail without deleting real data)
 - [x] api-08: Admin deletes an API key via the UI — the confirmation dialog names the key by name, and confirming removes its row
 - [x] api-09: Non-admin does not see the API tab in the Edit Mentor modal
+- [x] api-10: Admin opens API from the organization settings rail's Integrations group — the banner says an ibl.ai API key lets their own behind-the-scenes systems connect without signing in each time, Add API Key makes a key, its row shows "Never" under Expires, and the delete dialog says what stops working before removing the row
 
 ---
 
-## Journey 79: Virtual Machine Network Policies & Secrets (13 checkpoints) — `journeys/79-virtual-machine-network-and-secrets.spec.ts`
+## Journey 79: Virtual Machine Network Policies & Secrets (18 checkpoints) — `journeys/79-virtual-machine-network-and-secrets.spec.ts`
 
 **Source files:** `components/modals/edit-mentor-modal/tabs/sandbox-tab.tsx`
 
-An agent with Virtual Machine Shell turned on runs code in an isolated Linux VM with no network access by default. This journey covers the UI that lets an org admin decide what that VM can reach and which credentials it can use. Both surfaces are SDK-owned and reached through existing app entry points: the SDK `Account` rail of the User Profile dialog (More options → platform name, the route journey 38 takes to Advanced) lists an admin-only "Virtual Machine" entry hosting the SDK `VirtualMachineAdminTab` (Network Policies / Secrets tables with their dialogs and the keyboard-driven `host:port` chip input) and, inside Edit Agent → Sandbox while the Virtual Machine Shell kind is active, the SDK `VirtualMachineNetworkSection` (egress-profile radio group, policy picker, secrets multi-select, billing notice) which mirrors every backend rule before saving. Policies and secrets are org-level records that the run-level residue teardown does not reap, so every record the file creates carries a per-run stamp and is deleted again through the API in `afterEach` (`e2e/utils/virtual-machine-api.ts`); the agent-side flows use a dedicated mentor and the file runs serially.
+An agent with Virtual Machine Shell turned on runs code in an isolated Linux VM. This journey covers the UI that lets an org admin decide what that VM can reach and which credentials it can use. Both surfaces are SDK-owned and reached through existing app entry points: the SDK `Account` rail of the User Profile dialog (More options → platform name, the route journey 38 takes to Advanced) lists an admin-only "Network" entry in its Integrations group, hosting the SDK `VirtualMachineAdminTab` (the policies table with its dialogs and the keyboard-driven chip input), the sidebar's Secrets footer row opens the SDK `SecretsTab` (one sub-tab per kind of key — LLMs, Services, Environment Variables — each with its own sentence, Add button and table, where Add LLM and Add Service start on a type-to-search box) and, inside Edit Agent → Sandbox while the Virtual Machine Shell kind is active, the SDK `VirtualMachineNetworkSection` (egress-profile radio group, policy picker, Environment Variables group, billing notice) which mirrors every backend rule before saving. Policies and secrets are org-level records that the run-level residue teardown does not reap, so every record the file creates carries a per-run stamp and is deleted again through the API in `afterEach` (`e2e/utils/virtual-machine-api.ts`); the agent-side flows use a dedicated mentor, and every test is self-contained, so the file is not serial.
 
-- [x] vmn-01: Admin reaches the tenant Virtual Machine settings through the User Profile dialog (More options → platform name → the SDK Account rail's admin-only "Virtual Machine" entry), which hosts the SDK tab's info box and the Network Policies / Secrets sub-tabs, each with its table and New button
-- [x] vmn-02: Admin creates a network policy through the SDK dialog — hosts are entered with the keyboard-driven chip input (Enter commits, Backspace removes the last chip, every chip has a labelled Remove button) and the client-side `host:port` check refuses a scheme/path entry and a reserved host inline via the `aria-live` line; saving shows "Network policy created" and the row lists the host
-- [x] vmn-03: Admin edits the policy — adding a host and removing the original shows the removed-hosts warning; saving shows "Network policy updated" and the row reflects the replaced host list
-- [x] vmn-04: Admin creates a VM secret from a pasted value — an IP literal is refused inline, the source is a choice between "Enter a Value" and an integration credential, the value box is a password field, short and masked-looking values are rejected before any request; the row shows the "Stored Value" source and never the value
-- [x] vmn-05: On edit the env var is read-only and the value box is blank with the "Leave blank to keep the current value" hint; the credential source offers the org's credentials (or the no-credentials notice) without showing a masked value; deleting confirms every agent using the secret loses it and removes the row
-- [x] vmn-06: Admin deletes a network policy they just created (bound to no agent) — the row is found on whichever page of the org-wide table it landed, the confirmation names the policy, Cancel keeps it, and confirming shows "Network policy deleted" and leaves no page listing it
-- [x] vmn-07: With the Virtual Machine Shell kind selected, the Sandbox tab renders the Network Access section with the billing notice ($1 per 10 minutes by default) and a labelled "Egress Profile" radio group of the four options; a fresh agent defaults to No Network with neither picker shown and Save disabled
-- [x] vmn-08: The secrets multi-select renders only under Public or Custom and the policy picker only under Custom
-- [x] vmn-09: Custom requires a policy — required message, Save disabled until one is chosen, the "Create Policy" shortcut opens the SDK policy dialog in place, and picking a policy lists the hosts it allows
-- [x] vmn-10: Binding a secret whose host the policy lacks lists the gap, keeps Save disabled, and "Add Hosts to {policy} and Save" patches the policy and saves the settings in one go
-- [x] vmn-11: The saved configuration (Custom, the policy, the bound secret) persists across closing and reopening the Edit Agent dialog
-- [x] vmn-12: Narrowing to No Network with a secret bound opens the "Unbind Secrets?" confirmation; confirming saves with the secrets unbound
-- [x] vmn-13: A non-admin never reaches the tenant Virtual Machine settings — the platform entry is missing from More options, does nothing when clicked, or the tenant settings dialog it opens lists no Virtual Machine section (the SDK Account rail filters it on `isAdmin`)
+- [x] vmn-01: Admin reaches Network through the User Profile dialog (More options → platform name → the admin-only "Network" entry in the SDK Account rail's Integrations group), which holds the info box and the policies table with its Add Network button and no sub-tabs; the group lists API, Secrets and Network Policies in that order and there is no Security group; the sidebar's Secrets footer row opens the Secrets page on its LLMs, Services and Environment Variables tabs, the last with Add Environment Variable
+- [x] vmn-02: Admin adds a network policy through the SDK dialog, whose title and save button read Add Network — hosts are entered with the keyboard-driven chip input (Enter commits, Backspace removes the last chip, every chip has a labelled Remove button, a pasted URL becomes its host) and the client-side check refuses a malformed entry and a reserved host inline via the `aria-live` line; saving shows "Network added" and the row lists the host without the standard port
+- [x] vmn-03: Admin edits the policy — adding a host and removing the original shows the removed-hosts warning; saving shows "Network updated" and the row reflects the replaced host list
+- [x] vmn-04: Admin adds an environment variable on the Secrets page's Environment Variables tab — Add Environment Variable opens straight on its form, with no search box, and asks Name, Key (password box, "Paste the key"), Allowed Hosts (an IP literal refused inline) and a Variable Name worked out from the name; the hidden copy of a key is refused before any request; saving shows "{name} added. Choose it on an agent's Sandbox tab to let that agent use it." and the row shows the name, the Variable Name and the Allowed Hosts, never the key
+- [x] vmn-05: Edit Environment Variable has the Variable Name locked, the Allowed Hosts listed and the Key box blank with the "Leave blank to keep the current key" hint, showing no masked value; Delete Environment Variable confirms every agent using it loses it, shows "Environment variable deleted" and removes the row
+- [x] vmn-06: Admin deletes a network policy they just created (bound to no agent) — the row is found on whichever page of the org-wide table it landed, the confirmation names the policy, Cancel keeps it, and confirming shows "Network deleted" and leaves no page listing it
+- [x] vmn-07: With the Virtual Machine Shell kind selected, the Sandbox tab renders the Network Access section with the billing notice ($1 per 10 minutes by default) and a labelled "Egress Profile" radio group of the four options; an agent set to No Network through the API shows it selected, with the policy picker hidden and Save disabled
+- [x] vmn-08: The Environment Variables group renders under all four profiles with its Add Environment Variable button: under No Network and Package Registries its boxes are disabled with a line saying they need network access, under Public they can be ticked; adding one under No Network opens straight on its form, shows "Environment variable added" and leaves it unticked; the policy picker renders only under Custom
+- [x] vmn-09: Custom requires a policy — required message, Save disabled until one is chosen, the "Add Network" shortcut opens the SDK policy dialog in place, and picking a policy lists the hosts it allows
+- [x] vmn-10: Ticking an environment variable whose host the policy lacks lists the gap ("{name} is sent to {host}, which {policy} doesn't allow."), keeps Save disabled, and "Add Hosts to {policy} and Save" patches the policy and saves the settings in one go
+- [x] vmn-11: The saved configuration (Custom, the policy, the ticked environment variable) persists across closing and reopening the Edit Agent dialog
+- [x] vmn-12: Narrowing to No Network with an environment variable ticked opens the "Remove Environment Variables?" confirmation naming how many; confirming saves with them removed
+- [x] vmn-13: A non-admin never reaches Network Policies — the platform entry is missing from More options, does nothing when clicked, or the tenant settings dialog it opens lists no Network Policies entry (the SDK Account rail filters it on `isAdmin`)
+- [x] vmn-14 _(mocked dataset)_: Admin adds a Stripe key with Add Service on the Services tab: typing the name and clicking the suggestion shows the sentence saying agents can use it once it is chosen on their Sandbox tab, Key alone does not save ("Enter the Publishable Key."), and with both typed both go out; the table (Name, Key, Actions) gets a row with the masked prefix under Key; on an agent's Sandbox tab its box is disabled under No Network and, under Public, ticking it opens "Let Agents Use Stripe" with api.stripe.com filled in; saving makes its row open "Edit Service" with STRIPE_KEY and api.stripe.com, and the same key is listed on Environment Variables, where it opens "Edit Environment Variable"
+- [x] vmn-15 _(mocked dataset)_: AI providers' keys are rows on the LLMs tab: Azure OpenAI shows its model count and a named chevron opening per-model rows whose masked keys line up under Key; Add LLM, then typing OpenAI and clicking the suggestion, says agents answer with the key, asks one Key box and no hosts, refuses the hidden copy of a key, and saving shows "OpenAI added." and a row with the masked key, which its bin deletes through Delete LLM
+- [x] vmn-16 _(mocked dataset)_: The Secrets page has LLMs, Services and Environment Variables tabs, each with its own sentence, Add button (Add LLM, Add Service, Add Environment Variable) and table: LLMs and Services have the columns Name, Key and Actions, Environment Variables has Name, Variable Name, Allowed Hosts and Actions; Add Service's box is labelled Service and reads "Type a name, like Stripe", a name that matches nothing shows "Not listed? Add its key on the Environment Variables tab.", and a clicked suggestion becomes a row with Change, which brings the box back
+- [x] vmn-17 _(mocked dataset)_: When the list of LLM keys answers an error, Add LLM shows "Some choices could not be loaded, so yours may be missing." with Try Again and no Name or Key box, and an LLM reads "Not loaded" and cannot be picked; Try Again reads the lists again, the sentence goes and OpenAI can be picked
+- [x] vmn-18 _(mocked dataset)_: With no keys at all, each tab shows its own sentence ("No LLM keys found", "No services found", "No environment variables found") as one row inside its table, spanning its columns under their headings
 
 ---
 
@@ -2210,16 +2377,17 @@ Regression: the camera dialog opened from the "+" menu item left `<body style="p
 
 ---
 
-## Journey 88: Create Agent Category Wheel Scroll (4 checkpoints) — `journeys/88-create-agent-category-wheel-scroll.spec.ts`
+## Journey 88: Create Agent Category Wheel Scroll (5 checkpoints) — `journeys/88-create-agent-category-wheel-scroll.spec.ts`
 
-**Source files:** `components/modals/create-mentor-form.tsx`, `components/modals/edit-mentor-modal-dialog.tsx`
+**Source files:** `components/modals/create-mentor-modal.tsx`
 
-Regression: the Category popover is portaled outside the Create Agent dialog, whose scroll lock swallowed wheel events. Page object: `page-objects/create-mentor.page.ts` (`categoryList`). Also covers the front-end-only Save button on the Create Agent prompt popups (issue #2758; `goToPromptsTab`, `openPromptPopupAndType`, `promptContent`).
+Regression: the Category popover is portaled outside the Create Agent dialog, whose scroll lock swallowed wheel events. Page object: `page-objects/create-mentor.page.ts` (`categoryList`). Also covers the Save button on the prompt popups of the wizard's Prompts step (issue #2758; `openPromptPopupAndType`, `promptContent` on the wizard page object).
 
-- [x] promptsave-01 (issue #2758): The System Prompt popup's Save closes it, the form shows the typed text and no non-GET request is sent
-- [x] promptsave-02 (issue #2758): Save in the Proactive and Guided popups closes them and keeps each text
-- [x] promptsave-03 (issue #2758): Escape in the System Prompt popup still closes it and keeps the text
+- [x] promptsave-01 (issue #2758): The System Prompt popup's Save then Close leaves the wizard step showing the typed text
+- [x] promptsave-02 (issue #2758): Save in the Proactive popup keeps the text in the step
+- [x] promptsave-03 (issue #2758): Escape in the System Prompt popup closes it and keeps the wizard open
 - [x] catscroll-01: Admin opens Create Agent, opens the Category picker and wheels the list: scrollTop increases and a lower category can be selected
+- [x] catscroll-02: Admin types a category name in the Category picker: the list narrows to matching categories at the same height, clearing the search brings back every category, and picking one closes the list and fills the field
 
 ---
 
@@ -2292,14 +2460,15 @@ Tenant admins choose which models users may use ([iblai-platform#2675](https://g
 
 ---
 
-## Journey 93: Cowork in the Extension Panel (2 checkpoints) — `journeys/93-cowork-extension-panel.spec.ts`
+## Journey 93: Cowork in the Extension Panel (3 checkpoints) — `journeys/93-cowork-extension-panel.spec.ts`
 
 **Source files:** `hooks/use-in-extension-panel.ts`, `lib/embed-context.ts`, `hooks/use-browse-run.ts`, `lib/cowork-approvals.ts`, `components/chat/sdk-chat.tsx`, `messages/en.json`, `e2e/utils/embed-harness-client.ts`, `e2e/utils/embed-harness-server.mjs`
 
-The app half of the Chrome extension's Cowork mode, without loading the extension: the panel declares itself with `enable-cowork=true` on the app's iframe URL (`<agent-ai enablecowork>`) and everything else goes over `postMessage`, so the harness's second-origin `/agent-ai` page (journey 89's) stands in for it — opened with that attribute, with an init script that records each `MENTOR:BROWSE_RUN` and posts worker frames back into the iframe the way `extensions/chrome/src/browse-bridge.ts` does; an extension older than the flag still gets the `MENTOR:BROWSE_HELLO`/`MENTOR:BROWSE_READY` handshake. The agent's Show reasoning setting is patched on, since the action list renders only then. Chrome-only. The service worker's own behaviour — the snapshot (focusable elements, on-screen ones first under the cap, masked secret fields, text that leaves out what a modal covers), the picture with numbered badges and the clicks and typing at a point of it, real clicks and double clicks through `chrome.debugger`, narration and refused calls as rows, the retries of a failed page read, model call or malformed tool call, the time limit's wording — is unit-tested under `extensions/chrome/src/__tests__` and is not reproducible here.
+The app half of the Chrome extension's Cowork mode, without loading the extension: the panel declares itself with `enable-cowork=true` on the app's iframe URL (`<agent-ai enablecowork>`) and everything else goes over `postMessage`, so the harness's second-origin `/agent-ai` page (journey 89's) stands in for it — opened with that attribute, with an init script that records each `MENTOR:BROWSE_RUN` and posts worker frames back into the iframe the way `extensions/chrome/src/browse-bridge.ts` does; an extension older than the flag still gets the `MENTOR:BROWSE_HELLO`/`MENTOR:BROWSE_READY` handshake. The agent's Show reasoning setting is patched on, since the action list renders only then. Chrome-only. The service worker's own behaviour — the snapshot (focusable elements, on-screen ones first under the cap, masked secret fields, text that leaves out what a modal covers), the picture with numbered badges and the clicks and typing at a point of it, real clicks and double clicks through `chrome.debugger`, refused calls as rows, the agent's silence until its answer, several actions in one step, the retries of a failed page read, model call or malformed tool call, the time limit's wording, and the overlay it puts on the driven tab (the brand ring, the bar naming each action with a Stop in it, the ring on the element about to be touched, its closed shadow root and the watchdog that clears it if the worker dies, the tab-strip group, and the sweep that takes that group back when a worker was killed mid-run) — is unit-tested under `extensions/chrome/src/__tests__` and is not reproducible here: the harness loads no extension, so nothing on the `chrome.*` side of the panel exists in it. The skill recorder is the same story from both ends — the watcher, the coalescing rules and the worker's recording path are unit-tested there, and the review screen that opens on Stop (`components/chat/skill-review.tsx`) is unit-tested in the app, because the harness has no way to put the app into "a recording is waiting" without the worker that produces one. The panel's two dead-end screens — the organization nobody has set up (`components/errors/browser-agent-not-set-up.tsx`) and the one that cannot run the assistant at all (`components/errors/browser-agent-unsupported.tsx`) — are unit-tested in the app for the same kind of reason: a browser cannot simply be sent to `/error/403?errorType=…` and left there. `skipMentorCheck` in `providers/index.tsx` covers the workflow, projects and tenant-analytics routes only, so a signed-in visit to an error route is redirected on to a mentor — the `/error/403 → / → platform URL` bounce journeys 59 and 64 already work around. In the product nobody arrives that way: the panel reaches those screens from a refused create, a state that needs the platform to answer a create with its refusal, which the harness cannot make it do.
 
 - [x] cw-01: Declared the panel by `enable-cowork=true` on its iframe URL, the app shows the Cowork pill pressed; its popover holds the switch on, the disclosure note mentioning the picture of the tab, and Approvals = Automatic; it sends no `MENTOR:BROWSE_HELLO`
-- [x] cw-02: A goal becomes a `MENTOR:BROWSE_RUN` frame carrying `auto: true`; scripted worker frames (ack, three log lines — an action, the agent's narration, a failed call — the reply, done with the time-limit note) render as one assistant turn whose "Used 1 tool" row expands to each line's text, whose body ends with the reply then the note, and after which Send is back
+- [x] cw-02: A goal becomes a `MENTOR:BROWSE_RUN` frame carrying `auto: true`; scripted worker frames (ack, three log rows — the page read, a typed field, a failed click — the reply, done with the time-limit note) render as one assistant turn whose "Used 3 tools" row expands to the rows numbered and named after their actions, whose body ends with the reply then the note, and after which Send is back
+- [x] cw-03: The mentor WebSocket closing mid-run (proxied to the real server and closed with the DM's idle code 4000) leaves the turn in flight — Stop stays and Send stays hidden — until the worker's done, after which Send is back
 
 ---
 
@@ -2324,12 +2493,12 @@ The app half of the Chrome extension's Cowork mode, without loading the extensio
 
 **Source files:** `components/modals/edit-mentor-modal/settings-tab.tsx`, `messages/en.json`
 
-Issue #2731. Settings → Discovery → "Who Can View?": an admin-only note shows while Administrators is picked, and saving a change from Users/Anyone to Administrators asks "Limit this agent to administrators?" first. One throwaway agent (auto-deleted) is walked through the states by the serial checkpoints. The existing specs that pick Administrators then save (journeys 13 and 64) confirm the prompt through `saveConfirmingAdminVisibility()`.
+Issue #2731. Settings → Discovery → "Who Can Use This Agent?": the help line says only admins can use it while Admins Only is picked, and saving a change from All Members to Admins Only asks "Limit this agent to administrators?" first. One throwaway agent (auto-deleted) is walked through the states by the serial checkpoints. The existing specs that pick Admins Only then save (journeys 13 and 64) confirm the prompt through `saveConfirmingAdminVisibility()`.
 
-- [x] avs-01: Picking Administrators on a Users agent shows the admin-only note, and Save opens the "Limit this agent to administrators?" confirmation instead of saving
-- [x] avs-02: Cancel on the confirmation closes it, sends no visibility save, keeps Administrators in the form, and the server still holds Users
-- [x] avs-03: "Limit to Administrators" saves mentor_visibility=viewable_by_tenant_admins with the success toast; reopening shows Administrators with the note already visible
-- [x] avs-04: Switching away from Administrators hides the note and saves without a prompt, and Users to Anyone also saves without a prompt
+- [x] avs-01: Picking Admins Only on an All Members agent shows the "only admins" help line, and Save opens the "Limit this agent to administrators?" confirmation instead of saving
+- [x] avs-02: Cancel on the confirmation closes it, sends no visibility save, keeps Admins Only in the form, and the server still holds All Members
+- [x] avs-03: "Limit to Administrators" saves mentor_visibility=viewable_by_tenant_admins with the success toast; reopening shows Admins Only
+- [x] avs-04: Switching away from Admins Only saves without a prompt, and All Members to the public catalog also saves without a prompt
 
 ---
 
@@ -2358,3 +2527,127 @@ Issue iblai-platform#2743. A `?token=<share token>` link now rides in the chat f
 - [x] slf-01: Signed-in user on the share-link URL: frame shareable_link_token equals the URL token, token is the user's axd token, token_type is not "link"
 - [x] slf-02: Anonymous visitor on the share-link URL: shareable_link_token set, token empty, no token_type "link", mocked reply renders
 - [x] slf-03: Signed-in user without ?token: no shareable_link_token key, token is the axd token, mocked reply renders
+
+---
+
+## Journey 98: Chat MCP Servers (17 checkpoints, 2 pending) — `journeys/98-chat-mcp-servers.spec.ts`
+
+**Source files:** `components/chat/sdk-chat.tsx`, `components/chat-input-form/use-overflow-fit.ts`, `app/google-oauth-callback/page.tsx`
+
+Issue iblai-platform#2625, with the per-chat switch from #2725. The composer's "+" menu gains an MCP row after Memory with a count of the servers on for this chat; the row exists only while the agent uses at least one server, so an agent with none has no row at all. On desktop the row opens the MCP panel beside the menu, on phones as a page of the "+" bottom sheet. The panel lists only the servers the agent uses and gives each one switch, its on/off for this chat (the user's session preference; a server the organization requires shows a locked one). A per-user OAuth server the person has not signed in to shows its switch off, and turning it on opens the sign-in window, the first time after explaining whose account the sign-in becomes. Every admin test runs on its own fresh agent, creates a server and attaches it through the API (`ChatMcpMenuPage.createServer` / `attachServers`), and the `mcp` fixture deletes every server it created. The non-admin tests mock the server list and the agent's attachments, since a non-admin can neither create nor attach a server and a real sign-in cannot be completed here. The phone layout is the SDK's `max-width: 767px` media query, exercised with `page.setViewportSize`. chat-mcp-04 and chat-mcp-17 stay pending until the stg1 rerun after PR os#616 is green.
+
+- [x] chat-mcp-01: Admin, on a fresh agent with one server created and attached by API, opens the composer's "+" menu and sees the MCP row (data-testid chat-mcp-button, accessible name exactly "MCP 1 on" with its badge, last after Memory, no trailing chevron like Memory); choosing it opens the MCP panel beside the menu (heading "MCP", the sentence "Switches here apply to this chat only, from your next message.", a Close icon button), and Close closes the panel and hands focus back to "+"
+- [x] chat-mcp-02: Admin, on a fresh agent that uses no server, reloads behind the agent-settings and server-list answers, opens the "+" menu and finds no MCP row among its items (`expectRowAbsent`: the row is offered only while the agent has a connector on); after a server is created and attached by API and the app reloads, the row is there, last, named "MCP 1 on"
+- [x] chat-mcp-03: Admin, on a fresh agent with two servers created by API and only one attached through the agent settings API (mcp_servers plus the mcp tool, as the MCP tab's switch sends): after a reload the panel lists exactly the attached server (mcp-server-row-{id}, its name, its switch for this chat on) and the unattached one is absent
+- [ ] chat-mcp-04: The "+" menu's MCP row carries a count badge (composer-count-badge) of the servers on for this chat: "1" with one attached server on, gone (the row itself stays) once the admin switches it off for this chat from the panel, "1" again once it is switched back on _(pending: fixed after the stg1 run of 2026-10-31 in PR os#616; flip to covered once the rerun is green)_
+- [x] chat-mcp-05: Admin switches an attached server off and back on for this chat from the panel; each switch saves the user's session preference (PUT mcp-servers/{id}/session-preference/ naming the open conversation) and its state survives a page reload and reopening the panel; switched off again, a new chat (New Chat) counts the server as on: its "+" row shows the badge "1" and the panel lists it
+- [x] chat-mcp-06: A server created with user_can_disable false and attached to a fresh agent shows a lock (mcp-server-required-{id}) beside a disabled switch that stays checked, named "{name} is required by your organization"
+- [x] chat-mcp-07: Non-admin, with no grant beyond chatting and the agent's use of one server mocked (server list and settings GET patched, with the attachments flagged readable, since a non-admin can neither create nor attach one), sees the MCP row in the "+" menu and opens the panel: the sentence, Close and that server's row, then Close
+- [x] chat-mcp-08: Admin, on a fresh agent with one attached server: on desktop the MCP panel beside the "+" menu fits inside the viewport and is 448px (28rem) wide; on a phone viewport the "+" menu is a bottom sheet whose MCP row opens the same panel as a page of the sheet, with the heading and the sentence, which fits inside the viewport at 375x667 and 320x568, and whose Close returns to the sheet
+- [x] chat-mcp-09: Keyboard only, on a fresh agent with one attached server: Enter on the composer's "+" opens its menu, End then Enter on the MCP row (the last one) closes the menu and moves focus onto the MCP panel, Tab reaches its Close button, and Escape closes the panel and puts focus back on "+"
+- [x] chat-mcp-10: Non-admin, with the server list mocked to one per-user (auth_scope "user") OAuth server the agent uses (settings GET patched) and no connection or connected service: the "+" row is named exactly "MCP" with no badge (a server waiting for a sign-in is not counted); its switch shows off and enabled, named "{name} off: turn on to sign in"; turning it on the first time opens the "Sign in to {name}" explainer saying their own account will be used and "If no window opens, allow pop-ups for this site and try again.", and Continue opens a popup at the sign-in URL the connected-services start endpoint returned (mocked) while the switch shows on and locked; Escape and Close leave the panel open while that window is up; closing the window without signing in gives the switch back, off and enabled, within 30s; turning it on again opens the sign-in at once, with no explainer
+- [x] chat-mcp-11: Non-admin, with the server list and connections mocked to one per-user OAuth server they have signed in to (connected services mocked empty): the "+" row's badge reads "1", and the server's switch is on for this chat and enabled, named "{name} on for this chat", with no sign-in prompt
+- [x] chat-mcp-12: Non-admin, with the connected-services start endpoint mocked to answer 400 (no sign-in app for the organization): turning the server's switch on and pressing the explainer's Continue shows the notice "{name} isn't set up for sign-in yet. Ask your administrator." and the switch is back off and enabled
+- [x] chat-mcp-13: On a fresh agent with one attached server (served as a settings row too, since the MCP row needs the attachment to resolve without the list): when the MCP-server list request fails the panel shows the alert "Failed to load connectors" with a Retry button; once the API recovers, Retry loads the list with that server's row and the alert goes away
+- [x] chat-mcp-14: Non-admin opens the OAuth callback page with the connected-services callback mocked to answer 404 "Invalid state" (a used or unknown sign-in): the tab shows the alert "This sign-in link has expired or was already used. Close this tab and try again." and "You can close this tab.", not the raw "Invalid state" (that the tab no longer closes itself is unit-tested in app/google-oauth-callback/**tests**/page.test.tsx)
+- [x] chat-mcp-15: Non-admin, with a per-user OAuth server mocked with no sign-in yet, turns its switch on: the sign-in window (the provider page answers with a redirect to the app's /google-oauth-callback/ page, whose callback request is mocked as a finished sign-in) posts back to the chat, the app stores the connection (POST mcp-server-connections/, mocked 201, after which the connections list and connected services carry it), the window closes itself, the toast "{name} connected successfully" shows, the switch is on for this chat, enabled and named "{name} on for this chat", and the "+" row's badge reads "1"
+- [x] chat-mcp-16: Non-admin, with the server list mocked to an OAuth server whose auth_scope is "mentor" (a shared agent account) and no connection: its switch shows the plain per-chat state, on and enabled, named "{name} on for this chat", and no sign-in explainer is offered (shared sign-ins are made in agent settings)
+- [ ] chat-mcp-17: Student (non-admin), with the server list, connections and connected services mocked to one signed-in per-user OAuth server the agent uses, and that mocked server's session-preference PUT answered as the backend would: switches it off for this chat (the save names the open conversation), closes the panel and sends a message, which goes out in that same conversation (its request carries the session id), shows as the user's message and gets the agent's reply (or its User Agreement); the "+" row then has no badge, and switching the server back on for this chat brings the badge "1" back _(pending: fixed after the stg1 run of 2026-10-31 in PR os#616; flip to covered once the rerun is green)_
+
+---
+
+## Journey 99: Discovery Audience and Public Catalog (4 checkpoints) — `journeys/99-discovery-audience-and-catalog.spec.ts`
+
+**Source files:** `components/modals/edit-mentor-modal/settings-tab.tsx`, `messages/en.json`
+
+Issue #2788. Settings → Discovery: "Who Can Use This Agent?" (All Members / Admins Only), "List in Public Catalog" and "Allow Chat Without Signing In" map onto `mentor_visibility` and `allow_anonymous`. One throwaway agent (auto-deleted) is shared by the serial checkpoints.
+
+- [x] dac-01: All six audience / List in Public Catalog / Allow Chat Without Signing In combinations save the mapped mentor_visibility and allow_anonymous, show the matching summary, and a reload restores the controls and summary
+- [x] dac-02: Admins Only disables and clears List in Public Catalog; switching back to All Members lands with the catalog off
+- [x] dac-03: Narrowing a publicly listed agent to Admins Only opens the "Limit this agent to administrators?" confirmation, and Cancel saves nothing
+- [x] dac-04: The Discovery sub-tab never shows the tenant name or key
+
+---
+
+## Journey 100: Sidebar Logo Refresh After Upload (4 checkpoints) — `journeys/100-org-logo-refresh.spec.ts`
+
+**Source files:** `components/logo.tsx`
+
+Issue #2809. After a successful light logo upload the SDK stores `tenant_logo_version:<tenant>` in localStorage and the sidebar logo appends `?v=<version>` to `/api/core/orgs/<tenant>/logo/`, so it refreshes without a reload. The upload POST and the logo image are mocked (no tenant is changed); next/image's `/_next/image?url=` wrapper is decoded before asserting.
+
+- [x] logo-01: With no stored logo version the sidebar logo requests the bare /api/core/orgs/<tenant>/logo/ URL with no ?v=
+- [x] logo-02: A successful light logo upload (POST mocked) adds ?v=<stored version> to the sidebar logo URL with no reload, a second already-open tab updates too, and the version survives a reload
+- [x] logo-03: A failed light logo upload leaves the sidebar logo on the bare URL and stores no version
+- [x] logo-04: A dark logo upload leaves the sidebar logo on the bare URL and stores no version
+
+---
+
+## Journey 101: Create Agent Field Permissions (4 checkpoints) — `journeys/101-create-agent-field-permissions.spec.ts`
+
+**Source files:** `components/modals/create-mentor-modal.tsx`
+
+Issue iblai-platform#2766. Opening Create Agent asks the DM backend which fields of the form the caller may write (`GET <DM base>/v1/agents/settings/field-permissions`, header `iblai-org` = tenant key, answer `{ "<field>": { "write": boolean } }`). A field answered `write: false` is not rendered and not sent, a hidden field no longer counts toward the Next / Save gating, and a form with no writable prompt drops the Prompts tab and saves from the Settings tab. While the answer is unknown (403, 404, network error) every field is writable. The agent name is always shown and sent. cafp-01 runs against the real backend; cafp-02..04 mock only the field-permissions answer (the real one grants an admin everything) with `page.route`, registered before the dialog opens and removed in a `finally`, and every mocked absence is checked only after the name input is enabled, i.e. once the permissions settled. cafp-02 and cafp-03 each create one throwaway agent (registered by the page object for the run-level residue teardown, tracked with `MentorTracker`); they are not pinned to the default LLM since nothing chats with them. The create request is read through `CreateMentorPage.createRequestFields` (multipart part names).
+
+- [x] cafp-01: Real backend: opening Create Agent issues the field-permissions GET at the DM root (not under /api/ai-mentor/) with `iblai-org` equal to the tenant key; the answer is 200 with a `{write: boolean}` entry per field; with the admin's default roles wizard step 1 shows the name, description and category and no Visibility field (a new agent is Admins Only, iblai-platform#2853)
+- [x] cafp-02: Answer mocked with `mentor_visibility` write:false: step 1 shows name, description and category and no Visibility field; Next creates the agent and the `mentor-with-settings` POST has name and template parts but no `mentor_visibility` part
+- [x] cafp-03: Answer mocked with `system_prompt`, `proactive_prompt` and `guided_prompt_instructions` write:false: step 1 still shows its fields, Next creates the agent and the POST has none of the three prompt parts
+- [x] cafp-04: Answer mocked as 404 (older backend): the wizard fails open and shows every step 1 field and Next
+
+---
+
+## Journey 102: Retrieved Documents Preview (3 checkpoints) — `journeys/102-retrieved-documents-preview.spec.ts`
+
+**Source files:** `middleware.ts`
+
+Issue iblai-platform#2855. After an answer the chat lists its sources under "Retrieved Documents". The sources come from `GET **/clean-vector-results/**`, which the backend may answer empty for a throwaway agent, so every test creates its own agent and mocks that one request with `page.route` (`ChatPage.mockRetrievedDocuments`). A dataset file's DM media link 302s to an S3 presigned URL and CSP checks every redirect hop, so the OS `frame-src` must allow `https://*.s3.amazonaws.com`. The browser applies CSP before the request leaves, so rdp-01 frames a bucket URL whose response is stubbed (a real upload would wait on the backend's training queue); run it against a build with CSP enforced. It fails on the pre-fix `middleware.ts`. rdp-02 and rdp-03 check the SDK preview rules without depending on the external sites.
+
+- [x] rdp-01: A dataset file on an `*.s3.amazonaws.com` URL opens in the preview dialog's frame, the frame shows the file's text, and no `frame-src` `securitypolicyviolation` fires
+- [x] rdp-02: A web-page source's row shows an Open Page link (`href` = the page plus a text fragment, `target=_blank`, `rel` with noopener and noreferrer) and no preview toggle
+- [x] rdp-03: A YouTube source's preview shows an iframe on `youtube-nocookie.com/embed/<id>` with `referrerpolicy=strict-origin-when-cross-origin` and no Open Page link
+
+---
+
+## Journey 103: Flagged Prompts for All Users (8 checkpoints) — `journeys/103-flagged-prompts-all-users.spec.ts`
+
+**Source files:** `components/modals/edit-mentor-modal/tabs/safety-tab.tsx`, `components/modals/edit-mentor-modal/tabs/safety-tab/flagged-prompts/*`
+
+Issue iblai-platform#2885. Safety › View Flagged Prompts used to send `username=<admin>` as an exact filter, used `users/undefined/` in its path and never read `safety-logs`, so an admin only saw their own Moderation blocks. The Type select now has exactly Moderation (default) and Safety, one list at a time with plain server paging. The Moderation checkpoints use REAL blocks on iblai.org: the admin creates an agent (pinned to the cheap ibl.ai model) with a codeword Moderation prompt, then a second user and a guest chat with prompts that trip them, and the admin finds them in the dialog. iblai.org never writes Safety logs, so the Safety rows (fp-04, fp-06, fp-07) are `page.route` stubs of `GET safety-logs/`. Serial: one agent is shared by every test.
+
+- [x] fp-01: Issue #2885: admin creates an agent, sets Who Can View to all members and guest chat on, then writes a codeword Moderation prompt and turns Moderation and Safety on
+- [x] fp-02: Issue #2885: a second user and a guest (no sign-in) each send a codeword prompt on the admin's agent and get the blocked reply (real Moderation blocks)
+- [x] fp-03: Issue #2885: View Flagged Prompts opens on Moderation and lists the other user's row and the guest's row ("Unknown User") from moderation-logs only (`page=1&page_size=5`); the Type select offers exactly Moderation and Safety; no request carries `username=` or `users/undefined`
+- [x] fp-04: Issue #2885: (Safety list stubbed) switching Type to Safety requests only safety-logs and shows only the Safety row, changing the type clears the open detail, and switching back to Moderation shows only Moderation rows
+- [x] fp-05: Issue #2885: after closing the dialog and a new block by another user, reopening it shows the new row with no wait (refetch on every open)
+- [x] fp-06: Issue #2885: deleting a Safety row sends `DELETE .../safety-logs/<id>/` and the row disappears
+- [x] fp-07: Issue #2885 (Safety list stubbed): paging within one type shows 5 rows then the rest, and page 2 requests `page=2&page_size=5` from that list only
+- [x] fp-08: Issue #2885: deleting a real Moderation row sends `DELETE .../moderation-logs/<id>/` and the row disappears
+
+---
+
+## Journey 104: Blocked Message Shows Saved Response (5 checkpoints) — `journeys/104-blocked-message-shows-saved-response.spec.ts`
+
+**Source files:** `components/modals/edit-mentor-modal/tabs/safety-tab.tsx`, `components/modals/edit-prompt-modal.tsx`
+
+Issue iblai-platform#2883. When moderation or safety blocks a prompt the server sends one websocket frame (`error` = the agent's saved response, `kind` `innappropriate_prompt`, `target_system`, `reason`) and closes the socket; the chat must show the saved text as a normal agent reply, never a toast, never `reason`. The responses are saved through the real Safety tab on a throwaway agent (tracked with `MentorTracker`); only the chat websocket is mocked (`page.routeWebSocket`, counting connections). Needs the SDK `@iblai/web-utils` fix.
+
+- [x] sfr-01: Admin saves a Moderation Response and a Safety Response on a new agent and the Safety tab shows both
+- [x] sfr-02: A moderation block frame shows the saved Moderation Response as the agent reply, no toast, no reason text
+- [x] sfr-03: A safety block frame (list-wrapped error) shows the saved Safety Response as the agent reply, no toast, no reason text
+- [x] sfr-04: After a block the next message goes out on a new socket and is answered normally
+- [x] sfr-05: A block arriving mid-stream replaces the partial answer with the saved response
+
+---
+
+## Journey 105: Create Agent Wizard (7 checkpoints) — `journeys/105-create-agent-wizard.spec.ts`
+
+**Source files:** `components/modals/create-agent-wizard-dialog.tsx`, `components/modals/create-mentor-modal.tsx`
+
+Issue iblai-platform#2853. Create Agent is a wizard (the only create flow); Finish opens the new agent, there is no summary screen. Page objects: `page-objects/create-agent-wizard.page.ts` and `page-objects/create-mentor.page.ts`, whose `createWithName` / `openAndCreate` fill step 1, click Next and close the wizard so the new agent's chat is open. Agents are registered for the run-level residue teardown by id (`registerMentor(page, name, mentorId)`) and tracked for `afterAll`.
+
+- [x] caw-01: Wizard happy path: Next gating, create stays on the page agent, skip LLM, save a prompt, skip Skills, Datasets and MCP, Finish opens the new agent whose Prompts tab holds the saved prompt
+- [x] caw-02: A wizard-created agent is Admins Only with the public catalog, guest chat and featured switches off (Edit Agent > Settings > Discovery)
+- [x] caw-03: Regression: the wizard's tabs edit the NEW agent (prompt saved there), not the agent the page is on
+- [x] caw-04: Close on step 1 creates nothing and does not navigate; close after step 1 opens the new agent's chat
+- [x] caw-05: Skip on every step, including the last, opens the new agent's chat
+- [x] caw-06: No Back on step 2, Back from step 3 on, and Back returns to the previous step
+- [x] caw-07: The Skills step (between Prompts and Datasets) shows the agent and available skills tabs and the last step says Finish; the step count follows the tabs the admin may use

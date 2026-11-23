@@ -8,6 +8,7 @@
  *   shell-02  The WebView renders a <body>
  *   shell-03  The WebView loads a document with a non-empty URL
  *   shell-04  The document exposes a non-empty title
+ *   shell-05  (pending) Phone apps show another site's page as a browser does
  *
  * Drives the built desktop binary through tauri-driver (see ../wdio.conf.ts) — a
  * layer the Playwright suite (e2e/) and the Vitest unit tests don't cover. Kept
@@ -44,5 +45,11 @@ describe('Journey 1: App Launch & Desktop Shell', () => {
     console.log('[e2e] title:', title);
     expect(typeof title).toBe('string');
     expect(title.length).toBeGreaterThan(0);
+  });
+
+  it.skip('shell-05: in the phone apps another site’s page (sign-in) is shown as a browser shows it, and the app’s own pages keep the fixed layout', () => {
+    /* pending — needs the iPhone or Android app, which tauri-driver cannot
+       drive; covered meanwhile by lib/__tests__/mobile-safe-area-script.test.ts
+       and the Rust mobile_layout_is_applied_only_on_the_apps_own_pages */
   });
 });

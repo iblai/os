@@ -47,6 +47,8 @@ vi.mock('@/hooks/use-chat-mode', () => ({
 }));
 
 vi.mock('@iblai/iblai-js/data-layer', () => ({
+  // The chat page now renders the recording review above the chat.
+  useCreateAgentSkillMutation: () => [vi.fn(), { isLoading: false }],
   useGetMentorPublicSettingsQuery: vi.fn(() => ({ data: null })),
   useLazyGetShareableLinkPublicQuery: vi.fn(() => [vi.fn(), { data: null }]),
 }));
@@ -66,7 +68,8 @@ vi.mock('@/lib/utils', () => ({
   isLoggedIn: () => true,
 }));
 
-vi.mock('@/lib/constants', () => ({
+vi.mock('@/lib/constants', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/constants')>()),
   ANONYMOUS_USERNAME: 'anonymous',
 }));
 

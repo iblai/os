@@ -90,6 +90,7 @@ import { waitForPageReady } from '../utils/resilient';
 import { dragAndDropFiles } from '../utils/drag-drop';
 import { ChatPrivacyPage } from '../page-objects/chat-privacy.page';
 import { CreateMentorPage } from '../page-objects/create-mentor.page';
+import { EditMentorPage } from '../page-objects/edit-mentor/edit-mentor.page';
 import { generateMentorName } from '../fixtures/test-data';
 import { clickChatPrivacyToggle } from '@iblai/iblai-js/playwright';
 
@@ -181,6 +182,14 @@ test.describe('Journey 50: Chat Privacy', () => {
       await createMentorPage.openAndCreate(generateMentorName());
       await waitForPageReady(page);
       mentorUrl = page.url();
+
+      // New agents are Admins Only (iblai-platform#2853); the non-admin
+      // tests below open this agent, so open it to members first.
+      const editMentorPage = new EditMentorPage(page);
+      await editMentorPage.open('Settings');
+      await editMentorPage.settings.setVisibility('Users');
+      await editMentorPage.settings.saveConfirmingAdminVisibility();
+      await editMentorPage.close();
 
       const chatPrivacy = new ChatPrivacyPage(page);
       originalTenantGateState = await chatPrivacy
@@ -1320,7 +1329,17 @@ test.describe('Journey 50: Chat Privacy', () => {
 
       const chatPrivacy = new ChatPrivacyPage(nonadminPage);
 
+      // New Chat's POST /sessions/ can take seconds on stg. If the toggle
+      // creates its private session meanwhile, the late New Chat response
+      // replaces it: the toggle drops to off and the message gets no reply.
+      const newChatSession = nonadminPage.waitForResponse(
+        (res) =>
+          res.request().method() === 'POST' &&
+          /\/sessions\/$/.test(res.url().split('?')[0]),
+        { timeout: 60_000 },
+      );
       await nonadminChatPage.startNewChat();
+      await newChatSession;
       await waitForPageReady(nonadminPage);
 
       const toggle = chatPrivacy.headerToggle();

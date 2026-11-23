@@ -347,9 +347,48 @@ vi.mock('@/components/projects/delete-project-modal', () => ({
     ) : null,
 }));
 
-// The SDK export dialog is covered in the SDK; here we check what it is opened with.
+// The SDK export dialog and the organization Account sheet are covered in
+// the SDK; here we check what each is opened with.
 vi.mock('@iblai/iblai-js/web-containers/next', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
+  PlatformAccountSheet: (props: {
+    tab: string | null;
+    onClose: () => void;
+    tenantKey: string;
+    username: string;
+    email: string;
+    onInviteClick: () => void;
+    mainPlatformKey: string;
+    authUrl: string;
+    currentSpa: string;
+    platformBaseDomain: string;
+    enableRbac?: boolean;
+    rbacPermissions?: object;
+    tenants?: unknown[];
+    isAdmin?: boolean;
+    helpUrl?: string;
+  }) =>
+    props.tab ? (
+      <div
+        role="dialog"
+        aria-label="Organization settings"
+        data-testid="platform-account-sheet"
+        data-tab={props.tab}
+        data-tenant-key={props.tenantKey}
+        data-username={props.username}
+        data-email={props.email}
+        data-main-platform-key={props.mainPlatformKey}
+        data-auth-url={props.authUrl}
+        data-current-spa={props.currentSpa}
+        data-platform-base-domain={props.platformBaseDomain}
+        data-enable-rbac={String(props.enableRbac)}
+        data-is-admin={String(props.isAdmin)}
+        data-help-url={props.helpUrl}
+      >
+        <button onClick={props.onClose}>Close Account</button>
+        <button onClick={props.onInviteClick}>Invite From Account</button>
+      </div>
+    ) : null,
   ChatDownloadDialog: (props: {
     open: boolean;
     onOpenChange: (open: boolean) => void;
@@ -501,6 +540,14 @@ const ALL_ANALYTICS_TABS = [
 const mockGetVisibleAnalyticsTabs = vi.hoisted(() => vi.fn());
 
 vi.mock('@iblai/iblai-js/web-utils', () => ({
+  useShowFreeTrialDialog: () => ({
+    executeWithTrialCheck: executeWithTrialCheckMock,
+    FreeTrialDialog: FreeTrialDialogStub,
+    closeModal: closeFreeTrialModalMock,
+    isModalOpen: mockFreeTrialModalOpen,
+    isNewlyUserOnPreFreeOrAdvertisingMode: () =>
+      mockIsNewlyUserOnPreFreeOrAdvertisingMode,
+  }),
   getVisibleAnalyticsTabs: mockGetVisibleAnalyticsTabs,
   chatActions: {
     setShouldStartNewChat: (...a: unknown[]) => ({
@@ -544,37 +591,6 @@ vi.mock('@/hooks/use-tenant-object-metadata', () => ({
   useTenantObjectMetadata: () => mockTenantMetadata,
 }));
 
-vi.mock('@iblai/iblai-js/web-containers', () => ({
-  Admin: ({ initialTab }: { initialTab?: string }) => (
-    <div data-testid="sdk-admin-tab" data-initial-tab={initialTab}>
-      Admin SDK Tab
-    </div>
-  ),
-  IntegrationsTab: () => (
-    <div data-testid="sdk-integrations-tab">Integrations SDK Tab</div>
-  ),
-  BillingTab: () => <div data-testid="sdk-billing-tab">Billing SDK Tab</div>,
-  MonetizationTab: () => (
-    <div data-testid="sdk-monetization-tab">Monetization SDK Tab</div>
-  ),
-  MemoryAdminTab: ({
-    tenantKey,
-    username,
-  }: {
-    tenantKey: string;
-    username: string;
-  }) => (
-    <div
-      data-testid="sdk-memory-admin-tab"
-      data-tenant-key={tenantKey}
-      data-username={username}
-    >
-      Memory Admin SDK Tab
-    </div>
-  ),
-  AdvancedTab: () => <div data-testid="sdk-advanced-tab">Advanced SDK Tab</div>,
-}));
-
 vi.mock('@/hooks/user-navigate', () => ({
   useNavigate: () => ({
     openCreateMentorModal: openCreateMentorModalMock,
@@ -591,8 +607,11 @@ vi.mock('@/hooks/user-navigate', () => ({
 vi.mock('@/hooks/use-user', () => ({
   useUsername: () => mockUsername,
   useIsAdmin: () => mockIsAdmin,
-  useCurrentTenant: () => ({ currentTenant: mockCurrentTenant }),
-  useUserTenants: () => ({ userTenants: [] }),
+  useCurrentTenant: () => ({
+    currentTenant: mockCurrentTenant,
+    saveCurrentTenant: vi.fn(),
+  }),
+  useUserTenants: () => ({ userTenants: [], saveUserTenants: vi.fn() }),
   useUserIsStudent: () => mockUserIsStudent,
 }));
 
@@ -637,17 +656,6 @@ vi.mock('@/hooks/use-embed-mode', () => ({
   useEmbedMode: () => mockEmbedMode,
 }));
 
-vi.mock('@/hooks/user-user-actions', () => ({
-  useShowFreeTrialDialog: () => ({
-    executeWithTrialCheck: executeWithTrialCheckMock,
-    FreeTrialDialog: FreeTrialDialogStub,
-    closeModal: closeFreeTrialModalMock,
-    isModalOpen: mockFreeTrialModalOpen,
-    isNewlyUserOnPreFreeOrAdvertisingMode: () =>
-      mockIsNewlyUserOnPreFreeOrAdvertisingMode,
-  }),
-}));
-
 vi.mock('@/lib/utils', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/utils')>();
   return {
@@ -685,6 +693,9 @@ vi.mock('@/lib/config', () => ({
     platformBaseDomain: () => 'example.com',
     hideAnalytics: () => 'false',
     enableRBAC: () => mockEnableRBAC,
+    enableGradebookTab: () => false,
+    defaultSupportPhoneNumber: () => '(571) 293-0242',
+    enableSupportPhone: () => false,
     stripeEnabled: () => 'true',
     mentorTrainingMaximumFileSize: () => '60',
   },
@@ -1963,10 +1974,13 @@ describe('AppSidebar — Footer actions', () => {
     expect(navigateToNotificationsMock).toHaveBeenCalled();
   });
 
-  it('clicking Advanced opens the account dialog on the advanced tab', async () => {
+  it('clicking Advanced opens the SDK account sheet on the advanced tab', async () => {
     renderSidebar();
     fireEvent.click(screen.getAllByRole('button', { name: 'Advanced' })[0]);
-    expect(await screen.findByTestId('sdk-advanced-tab')).toBeInTheDocument();
+    expect(await screen.findByTestId('platform-account-sheet')).toHaveAttribute(
+      'data-tab',
+      'advanced',
+    );
   });
 
   it('hides Invites for non-admin users (gated by isLiveAdmin)', () => {
@@ -1991,7 +2005,7 @@ describe('AppSidebar — Footer actions', () => {
       screen.getAllByRole('button', { name: 'Management' }).length,
     ).toBeGreaterThan(0);
     // …but the items they DON'T hold a permission for stay hidden, and
-    // Integrations/Memory/Advanced (no dedicated permission) remain admin-only.
+    // Secrets/API/Memory/Advanced (no dedicated permission) remain admin-only.
     expect(
       screen.queryByRole('button', { name: 'Invites' }),
     ).not.toBeInTheDocument();
@@ -1999,7 +2013,10 @@ describe('AppSidebar — Footer actions', () => {
       screen.queryByRole('button', { name: 'Monetization' }),
     ).not.toBeInTheDocument();
     expect(
-      screen.queryByRole('button', { name: 'Integrations' }),
+      screen.queryByRole('button', { name: 'Secrets' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'API' }),
     ).not.toBeInTheDocument();
     expect(
       within(screen.getByTestId('sidebar-footer')).queryByRole('button', {
@@ -2276,12 +2293,13 @@ describe('AppSidebar — non-admin trial-gated full admin menu (main OR advertis
     ).toBeGreaterThan(0);
   });
 
-  it('reveals the full footer admin cluster (Management / Integrations / Monetization / Memory / Advanced)', () => {
+  it('reveals the full footer admin cluster (Management / Secrets / API / Monetization / Memory / Advanced)', () => {
     setupMainTenantNonAdmin();
     renderSidebar();
     [
       'Management',
-      'Integrations',
+      'API',
+      'Secrets',
       'Monetization',
       'Memory',
       'Advanced',
@@ -2335,7 +2353,8 @@ describe('AppSidebar — non-admin trial-gated full admin menu (main OR advertis
     ).toBeGreaterThan(0);
     [
       'Management',
-      'Integrations',
+      'API',
+      'Secrets',
       'Monetization',
       'Memory',
       'Advanced',
@@ -2378,7 +2397,8 @@ describe('AppSidebar — anonymous (not-logged-in) user sees the full menu, clic
     ).toBeGreaterThan(0);
     [
       'Management',
-      'Integrations',
+      'API',
+      'Secrets',
       'Monetization',
       'Memory',
       'Advanced',
@@ -2530,27 +2550,50 @@ describe('AppSidebar — Rail-collapsed mode', () => {
 });
 
 // =============================================================================
-// AccountSheet — exercise each footer-driven tab (management, integrations,
-// monetization, billing). The Advanced tab is covered above; this block
-// covers the remaining branches in the switch.
+// Account sheet — every footer row opens the SDK's organization Account
+// dialog (`PlatformAccountSheet`, tab rail included) on its own tab, the way
+// the LMS sidebar does, instead of a one-tab dialog of this app's own. The
+// Advanced tab is covered above; this block covers the remaining rows and the
+// host config the sheet is given.
 // =============================================================================
 
-describe('AppSidebar — AccountSheet tabs', () => {
-  it('clicking Management opens the Admin SDK tab', async () => {
+describe('AppSidebar — account sheet tabs', () => {
+  it('clicking Management opens the sheet on the management tab', async () => {
     renderSidebar();
     fireEvent.click(screen.getAllByRole('button', { name: 'Management' })[0]);
-    expect(await screen.findByTestId('sdk-admin-tab')).toBeInTheDocument();
+    expect(await screen.findByTestId('platform-account-sheet')).toHaveAttribute(
+      'data-tab',
+      'management',
+    );
   });
 
-  it('clicking Integrations opens the IntegrationsTab', async () => {
+  it('clicking Secrets opens the sheet on the secrets tab with the tenant, user and email', async () => {
     renderSidebar();
-    fireEvent.click(screen.getAllByRole('button', { name: 'Integrations' })[0]);
-    expect(
-      await screen.findByTestId('sdk-integrations-tab'),
-    ).toBeInTheDocument();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Secrets' })[0]);
+    const sheet = await screen.findByRole('dialog', {
+      name: 'Organization settings',
+    });
+    expect(sheet).toHaveAttribute('data-tab', 'secrets');
+    expect(sheet).toHaveAttribute('data-tenant-key', 'tenant-a');
+    expect(sheet).toHaveAttribute('data-username', 'admin-user');
+    expect(sheet).toHaveAttribute('data-email', 'admin@example.com');
   });
 
-  it('admin sees Memory between Monetization/Integrations and Advanced, matching the SDK Account rail order', () => {
+  it('clicking API opens the sheet on the api tab with the host config the embedded tabs need', async () => {
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'API' })[0]);
+    const sheet = await screen.findByTestId('platform-account-sheet');
+    expect(sheet).toHaveAttribute('data-tab', 'api');
+    expect(sheet).toHaveAttribute('data-help-url', 'https://help.example.com');
+    expect(sheet).toHaveAttribute('data-main-platform-key', 'main');
+    expect(sheet).toHaveAttribute('data-auth-url', 'https://auth.example.com');
+    expect(sheet).toHaveAttribute('data-current-spa', 'mentor');
+    expect(sheet).toHaveAttribute('data-platform-base-domain', 'example.com');
+    expect(sheet).toHaveAttribute('data-enable-rbac', 'false');
+    expect(sheet).toHaveAttribute('data-is-admin', 'true');
+  });
+
+  it('admin footer lists Management, API, Secrets, Monetization, Memory and Advanced in that order', () => {
     mockCurrentTenant = {
       key: 'tenant-a',
       is_admin: true,
@@ -2559,45 +2602,39 @@ describe('AppSidebar — AccountSheet tabs', () => {
     };
     renderSidebar();
     const footer = within(screen.getByTestId('sidebar-footer'));
-    const labels = [
+    const rows = [
       'Management',
-      'Integrations',
+      'API',
+      'Secrets',
       'Monetization',
       'Memory',
       'Advanced',
     ].map((name) => footer.getByRole('button', { name }));
-    // Every entry is rendered, and Memory sits right before Advanced.
-    const order = labels.map((el) =>
-      el.compareDocumentPosition(labels[labels.length - 1]),
-    );
-    order.slice(0, -1).forEach((pos) => {
-      expect(pos & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    rows.slice(1).forEach((row, index) => {
+      expect(
+        rows[index].compareDocumentPosition(row) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
     });
     expect(
-      labels[3].compareDocumentPosition(labels[2]) &
-        Node.DOCUMENT_POSITION_PRECEDING,
-    ).toBeTruthy();
+      footer.queryByRole('button', { name: 'Integrations' }),
+    ).not.toBeInTheDocument();
   });
 
-  it('clicking Memory opens the SDK MemoryAdminTab in the account dialog with the tenant and username', async () => {
+  it('clicking Memory opens the sheet on the memory tab', async () => {
     renderSidebar();
     fireEvent.click(
       within(screen.getByTestId('sidebar-footer')).getByRole('button', {
         name: 'Memory',
       }),
     );
-    const tab = await screen.findByTestId('sdk-memory-admin-tab');
-    expect(tab).toBeInTheDocument();
-    expect(tab).toHaveAttribute('data-tenant-key', 'tenant-a');
-    expect(tab).toHaveAttribute('data-username', 'admin-user');
-    // Dialog chrome carries the same title/description the SDK rail shows.
-    expect(screen.getByRole('dialog', { name: 'Memory' })).toBeInTheDocument();
-    expect(
-      screen.getByText('Manage user global memories and agent memories.'),
-    ).toBeInTheDocument();
+    const sheet = await screen.findByTestId('platform-account-sheet');
+    expect(sheet).toHaveAttribute('data-tab', 'memory');
+    expect(sheet).toHaveAttribute('data-tenant-key', 'tenant-a');
+    expect(sheet).toHaveAttribute('data-username', 'admin-user');
   });
 
-  it('clicking Monetization opens the MonetizationTab (when tenant has it enabled)', async () => {
+  it('clicking Monetization opens the sheet on the monetization tab (when tenant has it enabled)', async () => {
     mockCurrentTenant = {
       is_admin: true,
       is_advertising: false,
@@ -2606,13 +2643,15 @@ describe('AppSidebar — AccountSheet tabs', () => {
     };
     renderSidebar();
     fireEvent.click(screen.getAllByRole('button', { name: 'Monetization' })[0]);
-    expect(
-      await screen.findByTestId('sdk-monetization-tab'),
-    ).toBeInTheDocument();
+    expect(await screen.findByTestId('platform-account-sheet')).toHaveAttribute(
+      'data-tab',
+      'monetization',
+    );
   });
 
   it('hides Monetization when tenant has not enabled it', () => {
     mockCurrentTenant = {
+      key: 'tenant-a',
       is_admin: true,
       is_advertising: false,
       enable_monetization: false,
@@ -2623,15 +2662,24 @@ describe('AppSidebar — AccountSheet tabs', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('the AccountSheet closes when its dialog onOpenChange fires false', async () => {
+  it('the sheet closes when it asks to, and its Invite opens the invite dialog without closing it', async () => {
     renderSidebar();
     fireEvent.click(screen.getAllByRole('button', { name: 'Advanced' })[0]);
-    const tab = await screen.findByTestId('sdk-advanced-tab');
-    expect(tab).toBeInTheDocument();
-    // Esc closes Radix dialogs in jsdom.
-    fireEvent.keyDown(tab, { key: 'Escape' });
+    const sheet = await screen.findByTestId('platform-account-sheet');
+
+    fireEvent.click(
+      within(sheet).getByRole('button', { name: 'Invite From Account' }),
+    );
+    expect(openInviteUserModalMock).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId('platform-account-sheet')).toBeInTheDocument();
+
+    fireEvent.click(
+      within(sheet).getByRole('button', { name: 'Close Account' }),
+    );
     await waitFor(() => {
-      expect(screen.queryByTestId('sdk-advanced-tab')).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId('platform-account-sheet'),
+      ).not.toBeInTheDocument();
     });
   });
 });

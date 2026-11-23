@@ -113,7 +113,10 @@ export function FlaggedPromptsModal({
                 searchQuery={searchQuery}
                 onSearchChange={setSearchQuery}
                 filterType={filterType}
-                onFilterTypeChange={setFilterType}
+                onFilterTypeChange={(type) => {
+                  setFilterType(type);
+                  setSelectedPrompt(null);
+                }}
                 dateRange={dateRange}
                 onDateRangeChange={setDateRange}
               />

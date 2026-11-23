@@ -19,8 +19,20 @@ const SESSION_KEYS = [
   'consented_to_data_collection',
 ];
 
+/**
+ * True when a stored session can still authenticate the panel.
+ *
+ * Presence is not enough. An expired `axd_token` is still a string in
+ * localStorage, and treating it as a session is what stranded the panel: we
+ * installed dead tokens into the mentor iframe, it 401'd, posted `authExpired`,
+ * and nothing here ever minted a replacement.
+ *
+ * A session with no recorded expiry counts as valid — those predate the field,
+ * and forcing a sign-in on them would be worse than the occasional stale one.
+ */
 export function isAuthed(): boolean {
-  return Boolean(localStorage.getItem('axd_token'));
+  if (!localStorage.getItem('axd_token')) return false;
+  return !isSessionExpired();
 }
 
 // Extract ibl's session payload (a JSON `data` param — the same shape the web
@@ -34,56 +46,101 @@ export function storeSessionFromRedirect(responseUrl: string): void {
     throw new Error(`no "data" param in auth redirect: ${responseUrl}`);
   }
   const session = JSON.parse(data) as Record<string, unknown>;
+  // Drop the previous session first. A payload carries only the keys it has,
+  // so writing over the old one can leave another session's leftovers behind —
+  // and an orphaned `axd_token_expires` would make the session we just minted
+  // read as already expired, locking the panel out for good.
+  for (const key of SESSION_KEYS) localStorage.removeItem(key);
   Object.entries(session).forEach(([key, value]) =>
     localStorage.setItem(key, String(value)),
   );
 }
 
 // Build the auth SPA URL for the interactive first sign-in.
-function loginUrl(redirectUri: string): string {
-  return `${AUTH_URL}/login?redirect-to=${encodeURIComponent(redirectUri)}`;
+//
+// `fresh` is what makes signing out mean anything. Clearing our own storage
+// leaves the auth app holding its session, so the next flow returns the SAME
+// account without ever showing a form — indistinguishable from the sign-out
+// having failed. These are the two params the web app sends for the same
+// reason (`providers/index.tsx`).
+function loginUrl(redirectUri: string, fresh: boolean): string {
+  const params = new URLSearchParams({ 'redirect-to': redirectUri });
+  if (fresh) {
+    params.set('enforce_logout', '1');
+    params.set('logout', '1');
+  }
+  return `${AUTH_URL}/login?${params.toString()}`;
 }
 
 // Build the auth SPA URL for a tenant SWITCH. This mirrors the web tenant switch
 // (SDK `handleTenantSwitch`), which hits `/login/complete` — NOT `/login` — with
-// the target `tenant`, a `redirect-to`, and the preserved edX JWT as `token`.
+// the target `tenant` and a `redirect-to`.
 // The distinction matters: `/login` is the interactive login page, and with an
 // existing auth session it just returns the CURRENT tenant, ignoring `?tenant=`
 // (which is why switching used to land back on the same tenant). `/login/complete`
-// is the token-exchange endpoint that USES the JWT to mint the requested tenant's
-// tokens and returns them in the redirect `data`.
+// is the token-exchange endpoint that mints the requested tenant's tokens and
+// returns them in the redirect `data`.
+//
+// We no longer forward our own edX JWT as `token`. The auth app keeps its own
+// copy in its own storage and authorises the mint with that, so ours duplicated
+// what the other end already had — and it is to stop handing that JWT to apps
+// at all, which would leave us nothing to forward.
+//
+// What makes that safe is that this URL and the one `loginUrl` builds share an
+// origin (`AUTH_URL`): the JWT the auth app writes when we sign in is in the
+// storage it reads when we come back to switch. localStorage is origin-scoped,
+// so that identity is the whole argument.
+//
+// Where that storage does not carry over between `launchWebAuthFlow` windows,
+// the auth app's first call 401s and it sends the user through a sign-in
+// carrying this same `redirect-to` — the flow still ends at our redirect URI
+// with a session, at the cost of one sign-in rather than a failed switch.
 function switchTenantUrl(redirectUri: string, tenant: string): string {
   const params = new URLSearchParams({
     tenant,
     'redirect-to': redirectUri,
   });
-  // The edX JWT is tenant-independent and is what authorises minting the new
-  // tenant's tokens without a fresh interactive login.
-  const jwt = localStorage.getItem('edx_jwt_token');
-  if (jwt) params.set('token', jwt);
   return `${AUTH_URL}/login/complete?${params.toString()}`;
 }
 
 // `tenant` switches the session to a different platform (see switchTenantUrl).
 // Omitted on first sign-in, where the interactive login picks the user's default.
-export async function signIn(tenant?: string): Promise<void> {
+export async function signIn(
+  tenant?: string,
+  fresh = false,
+  wanted?: () => boolean,
+): Promise<void> {
   // Chrome intercepts navigations to this URL and hands the full URL back to us.
   const redirectUri = chrome.identity.getRedirectURL(); // https://<id>.chromiumapp.org/
   const authUrl = tenant
     ? switchTenantUrl(redirectUri, tenant)
-    : loginUrl(redirectUri);
+    : loginUrl(redirectUri, fresh);
   const responseUrl = await chrome.identity.launchWebAuthFlow({
     url: authUrl,
     interactive: true,
   });
   if (!responseUrl) throw new Error('auth flow returned no redirect URL');
+  // A flow the person walked away from still settles — minutes later, with a
+  // whole session in hand. The caller's own staleness check cannot stop that,
+  // because the write happens HERE: storing it would sign them back into the
+  // account they just left, so an abandoned payload is dropped unread.
+  if (wanted && !wanted()) return;
   storeSessionFromRedirect(responseUrl);
 }
 
-/** True when a session exists afterwards; a failed flow throws. */
-export async function ensureSignedIn(): Promise<boolean> {
-  if (isAuthed()) return true;
-  await signIn();
+/**
+ * True when a session exists afterwards; a failed flow throws.
+ *
+ * `fresh` asks for a different account rather than whichever one the auth app
+ * still has — what the sign-in after a sign-out needs. `wanted` is asked again
+ * once the window comes back, and a no drops the session (see `signIn`).
+ */
+export async function ensureSignedIn(
+  fresh = false,
+  wanted?: () => boolean,
+): Promise<boolean> {
+  if (!fresh && isAuthed()) return true;
+  await signIn(undefined, fresh, wanted);
   return isAuthed();
 }
 
@@ -139,12 +196,41 @@ export function username(): string | null {
   }
 }
 
-/** True only when `dm_token_expires` parses as a date that has passed. */
-export function tokenExpired(now = Date.now()): boolean {
-  const raw = localStorage.getItem('dm_token_expires');
+/**
+ * True only when `key` holds a date that has already passed.
+ *
+ * An absent or unparseable stamp reads as NOT expired: sessions stored before
+ * we recorded one are common, and forcing those people to sign in again would
+ * be a worse bug than occasionally trusting a stale token.
+ */
+function stampPassed(key: string, now: number, skewMs = 0): boolean {
+  const raw = localStorage.getItem(key);
   if (!raw) return false;
   const expires = Date.parse(raw);
-  return Number.isFinite(expires) && expires <= now;
+  return Number.isFinite(expires) && expires <= now + skewMs;
+}
+
+/** True only when `dm_token_expires` parses as a date that has passed. */
+export function tokenExpired(now = Date.now()): boolean {
+  return stampPassed('dm_token_expires', now);
+}
+
+/**
+ * How soon before the stamped expiry a session stops being worth installing.
+ *
+ * `signIn` takes seconds, so a token with one second left dies during the
+ * round-trip and lands the iframe straight back in recovery.
+ */
+const EXPIRY_SKEW_MS = 30_000;
+
+/**
+ * True when the session `<agent-ai>` forwards has expired (or is about to).
+ *
+ * This is the token the mentor iframe actually authenticates with, so it — not
+ * `dm_token_expires` — decides whether the panel still has a usable session.
+ */
+export function isSessionExpired(now = Date.now()): boolean {
+  return stampPassed('axd_token_expires', now, EXPIRY_SKEW_MS);
 }
 
 /**

@@ -4,7 +4,7 @@
 
 # ibl.ai/os
 
-**The open-source AI agent platform.**
+**Open Source Agentic Operating System.**
 
 Build, deploy, and manage intelligent conversational agents — from prototype to production, in minutes. One codebase. Every platform. Your code, your data, any LLM.
 
@@ -14,41 +14,22 @@ Build, deploy, and manage intelligent conversational agents — from prototype t
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
 [![SOC 2 Type II](https://img.shields.io/badge/SOC_2-Type_II-blue)](https://ibl.ai)
 
-<br>
-
-### ⬇️ Get ibl.ai/os
+[Why ibl.ai/os](#why-iblaios) · [Every platform](#every-platform-one-codebase) · [Features](#features) · [Case studies](#case-studies) · [Screenshots](#screenshots) · [Quick Start](#quick-start) · [Deployment](#deployment)
 
 <a href="https://os.ibl.ai"><img src="https://img.shields.io/badge/Use_it_on_the_Web-2563eb?style=for-the-badge&logo=googlechrome&logoColor=white" alt="Use it on the Web" height="42"></a>
 &nbsp;
-<a href="https://chromewebstore.google.com/detail/gppjhejgkdljdhnmlfghfbalfhgaepfd"><img src="https://img.shields.io/badge/Add_to_Chrome-4285F4?style=for-the-badge&logo=googlechrome&logoColor=white" alt="Add to Chrome" height="42"></a>
+<a href="https://github.com/iblai/os/releases/download/app-v0.95.36/ibl.ai_0.95.36_universal.dmg"><img src="https://img.shields.io/badge/Download_for_macOS-000000?style=for-the-badge&logo=apple&logoColor=white" alt="Download for macOS" height="42"></a>
 &nbsp;
-<a href="https://github.com/iblai/os/releases/download/app-v0.95.30/ibl.ai_0.95.30_universal.dmg"><img src="https://img.shields.io/badge/Download_for_macOS-000000?style=for-the-badge&logo=apple&logoColor=white" alt="Download for macOS" height="42"></a>
-&nbsp;
-<a href="https://github.com/iblai/os/releases/download/app-v0.95.30/ibl.ai_0.95.30_x64-setup.exe"><img src="https://img.shields.io/badge/Download_for_Windows-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Download for Windows" height="42"></a>
+<a href="https://github.com/iblai/os/releases/download/app-v0.95.36/ibl.ai_0.95.36_x64-setup.exe"><img src="https://img.shields.io/badge/Download_for_Windows-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Download for Windows" height="42"></a>
 
 <a href="https://apps.apple.com/us/app/ibl-ai/id6504929071"><img src="https://img.shields.io/badge/Download_for_iOS-000000?style=for-the-badge&logo=apple&logoColor=white" alt="Download for iOS" height="42"></a>
 &nbsp;
 <a href="https://play.google.com/store/apps/details?id=ai.ibl.mentorai"><img src="https://img.shields.io/badge/Download_for_Android-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Download for Android" height="42"></a>
+&nbsp;
+<a href="https://chromewebstore.google.com/detail/gppjhejgkdljdhnmlfghfbalfhgaepfd"><img src="https://img.shields.io/badge/Add_to_Chrome-4285F4?style=for-the-badge&logo=googlechrome&logoColor=white" alt="Add to Chrome" height="42"></a>
+&nbsp;
 
 <sub>Windows ARM64 · older builds · Linux → [all downloads](docs/DOWNLOADS.md)</sub>
-
-<br>
-
-[![Watch the demo](https://img.youtube.com/vi/5LOAZyTbRQs/maxresdefault.jpg)](https://www.youtube.com/playlist?list=PLW0-4yErlU3XQr0UP6cCGwy24LMf7I5vR)
-
-**▶︎ [Watch the demo](https://www.youtube.com/playlist?list=PLW0-4yErlU3XQr0UP6cCGwy24LMf7I5vR)** &nbsp;·&nbsp; _by Miguel Amigot, CTO at ibl.ai_
-
-<br>
-
-[Why ibl.ai/os](#why-iblaios) · [Every platform](#every-platform-one-codebase) · [Features](#features) · [Case studies](#case-studies) · [Screenshots](#screenshots) · [Quick Start](#quick-start) · [Deployment](#deployment)
-
-</div>
-
----
-
-<div align="center">
-
-**SOC 2 Type II** &nbsp;·&nbsp; Universities, enterprises, and governments run on ibl.ai — [read the case studies →](https://ibl.ai/case-studies)
 
 </div>
 

@@ -1,5 +1,6 @@
 'use client';
 
+import { useShowFreeTrialDialog } from '@iblai/iblai-js/web-utils';
 import React from 'react';
 import { useParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
@@ -32,7 +33,6 @@ import { RichTextEditor } from '@iblai/iblai-js/web-containers';
 import { TenantKeyMentorIdParams } from '@/lib/types';
 import { toast } from 'sonner';
 import { Label } from '@radix-ui/react-label';
-import { useShowFreeTrialDialog } from '@/hooks/user-user-actions';
 import { useNavigate } from '@/hooks/user-navigate';
 
 interface AddPromptForm {
@@ -50,16 +50,25 @@ const defaultValues: AddPromptForm = {
 interface AddPromptModalProps {
   isOpen: boolean;
   onClose: () => void;
+  /** Adds the prompt to this agent instead of the modal-stack or route agent. */
+  mentorId?: string;
+  /** Tenant of `mentorId`, for routes without a tenant param. */
+  tenantKey?: string;
 }
 
-export function AddPromptModal({ isOpen, onClose }: AddPromptModalProps) {
+export function AddPromptModal({
+  isOpen,
+  onClose,
+  mentorId: mentorIdOverride,
+  tenantKey: tenantKeyOverride,
+}: AddPromptModalProps) {
   const t = useTranslations('modalsAddPromptModal');
   const username = useUsername();
   const { getMentorId } = useNavigate();
-  const { tenantKey, mentorId: mentorIdParam } =
-    useParams<TenantKeyMentorIdParams>();
+  const params = useParams<TenantKeyMentorIdParams>();
+  const tenantKey = tenantKeyOverride || params.tenantKey;
 
-  const mentorId = getMentorId() ?? mentorIdParam;
+  const mentorId = mentorIdOverride || (getMentorId() ?? params.mentorId);
 
   const { executeWithTrialCheck, isModalOpen, FreeTrialDialog, closeModal } =
     useShowFreeTrialDialog();

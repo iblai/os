@@ -1,7 +1,17 @@
 import { test, expect } from '../fixtures/mentor-test';
 import { navigateToMentorApp, checkAdminStatus } from '../utils/auth';
 import { waitForPageReady } from '../utils/resilient';
+import type { Locator, Page } from '@playwright/test';
 import { getCurrentTenantShowPaywall } from '@iblai/iblai-js/playwright';
+
+// An Escape pressed while the Account dialog is still opening is sometimes
+// ignored on CI, so press again until it closes.
+async function closeWithEscape(page: Page, dialog: Locator) {
+  await expect(async () => {
+    if (await dialog.isVisible()) await page.keyboard.press('Escape');
+    await expect(dialog).toBeHidden({ timeout: 2_000 });
+  }).toPass({ timeout: 15_000 });
+}
 
 test.describe('Journey 28: App Overview & Navigation UI — Non-Admin', () => {
   test.beforeEach(async ({ nonadminPage }) => {
@@ -122,30 +132,59 @@ test.describe('Journey 28: App Overview & Navigation UI — Admin', () => {
 
   // ov-14: The sidebar footer mirrors the SDK tenant-settings (`Account`)
   // rail, which lists Memory between Monetization and Advanced and gates it
-  // on `isAdmin` (no dedicated RBAC permission — same as Integrations /
-  // Advanced). Clicking it opens the Account dialog titled "Memory" hosting
-  // the SDK `MemoryAdminTab` with its Global / Agent sub-tabs.
-  test('admin sees the Memory footer entry next to Integrations/Advanced and it opens the tenant Memory tab (Global / Agent)', async ({
+  // on `isAdmin` (no dedicated RBAC permission — same as Secrets and
+  // Advanced). Clicking it opens the SDK's whole organization Account dialog
+  // ("Organization settings"), its tab rail included, landed on Memory — the
+  // SDK `MemoryAdminTab` with its Global / Agent sub-tabs — so every other
+  // tab the admin may see is one click away, as on the LMS sidebar.
+  test('admin sees the Memory footer entry alongside Secrets, API and Advanced and it opens the organization Account dialog on its Memory tab, rail included', async ({
     page,
     sidebarPage,
   }) => {
     const isAdmin = await checkAdminStatus(page);
     test.skip(!isAdmin, 'Memory footer entry requires admin access');
 
-    // Same admin-only cluster the SDK rail shows: all three are present.
-    await expect(sidebarPage.integrationsButton).toBeVisible({
+    // Same admin-only cluster the SDK rail shows: all four are present.
+    await expect(sidebarPage.secretsButton).toBeVisible({
       timeout: 15_000,
     });
+    await expect(sidebarPage.apiButton).toBeVisible({ timeout: 10_000 });
     await expect(sidebarPage.memoryButton).toBeVisible({ timeout: 10_000 });
     await expect(sidebarPage.settingsButton).toBeVisible({ timeout: 10_000 });
 
     await sidebarPage.memoryButton.click();
 
-    const memoryDialog = page.getByRole('dialog', { name: 'Memory' });
+    const memoryDialog = page.getByRole('dialog', {
+      name: 'Organization settings',
+      exact: true,
+    });
     await expect(memoryDialog).toBeVisible({ timeout: 15_000 });
     await expect(
-      memoryDialog.getByText('Manage user global memories and agent memories.'),
+      memoryDialog.getByRole('heading', { name: 'Memory', exact: true }),
+    ).toBeVisible({ timeout: 10_000 });
+    // The SDK renders the title and description twice (a wide-screen header
+    // and a narrow-screen one, each hidden by CSS on the other size), so match
+    // by role, which skips the hidden copy.
+    await expect(
+      memoryDialog
+        .getByRole('paragraph')
+        .filter({ hasText: 'Manage user global memories and agent memories.' }),
     ).toBeVisible({ timeout: 5_000 });
+
+    // The whole Account rail rides along: Memory is the current entry and the
+    // other admin tabs sit beside it, so this is not a one-tab dialog.
+    const rail = memoryDialog.getByRole('navigation', {
+      name: 'Organization settings',
+      exact: true,
+    });
+    await expect(
+      rail.getByRole('button', { name: 'Memory', exact: true }),
+    ).toHaveAttribute('aria-current', 'page', { timeout: 10_000 });
+    for (const entry of ['Management', 'API', 'Secrets', 'Advanced']) {
+      await expect(
+        rail.getByRole('button', { name: entry, exact: true }),
+      ).toBeVisible({ timeout: 5_000 });
+    }
 
     // The SDK MemoryAdminTab renders its Global / Agent sub-tabs once the
     // tenant's memsearch status resolves; if memsearch is off for this
@@ -169,8 +208,84 @@ test.describe('Journey 28: App Overview & Navigation UI — Admin', () => {
       ).toBeVisible({ timeout: 15_000 });
     }
 
-    await page.keyboard.press('Escape');
-    await expect(memoryDialog).not.toBeVisible({ timeout: 10_000 });
+    await closeWithEscape(page, memoryDialog);
+  });
+
+  // ov-15: Every admin footer row opens the same organization Account dialog
+  // (the SDK `PlatformAccountSheet`, as on the LMS sidebar) landed on its own
+  // tab, and the rail moves between tabs without closing it.
+  test('admin opens each footer row and lands on its tab in the organization Account dialog, then moves to another tab from the rail without closing it', async ({
+    page,
+    sidebarPage,
+  }) => {
+    const isAdmin = await checkAdminStatus(page);
+    test.skip(!isAdmin, 'Footer account rows require admin access');
+
+    await expect(sidebarPage.secretsButton).toBeVisible({ timeout: 15_000 });
+
+    const dialog = page.getByRole('dialog', {
+      name: 'Organization settings',
+      exact: true,
+    });
+    const rail = dialog.getByRole('navigation', {
+      name: 'Organization settings',
+      exact: true,
+    });
+    const railEntry = (name: string) =>
+      rail.getByRole('button', { name, exact: true });
+    const pageHeading = (name: string) =>
+      dialog.getByRole('heading', { name, exact: true });
+
+    // Management and Monetization depend on the tenant's permissions and
+    // settings; the others are always there for an admin.
+    const rows = [
+      { name: 'Management', button: sidebarPage.managementButton },
+      { name: 'API', button: sidebarPage.apiButton },
+      { name: 'Secrets', button: sidebarPage.secretsButton },
+      { name: 'Monetization', button: sidebarPage.monetizationButton },
+      { name: 'Memory', button: sidebarPage.memoryButton },
+      { name: 'Advanced', button: sidebarPage.settingsButton },
+    ];
+    const visibleRows: string[] = [];
+    for (const row of rows) {
+      if (!(await row.button.isVisible().catch(() => false))) continue;
+      visibleRows.push(row.name);
+
+      await row.button.click();
+      await expect(dialog).toBeVisible({ timeout: 15_000 });
+      await expect(pageHeading(row.name)).toBeVisible({ timeout: 10_000 });
+      await expect(railEntry(row.name)).toHaveAttribute(
+        'aria-current',
+        'page',
+        {
+          timeout: 10_000,
+        },
+      );
+
+      await closeWithEscape(page, dialog);
+    }
+    expect(visibleRows).toEqual(
+      expect.arrayContaining(['API', 'Secrets', 'Memory', 'Advanced']),
+    );
+
+    // Every tab the footer offers is also in the rail, so moving between them
+    // never needs the footer again.
+    await sidebarPage.settingsButton.click();
+    await expect(pageHeading('Advanced')).toBeVisible({ timeout: 15_000 });
+    for (const name of visibleRows) {
+      await expect(railEntry(name)).toBeVisible({ timeout: 5_000 });
+    }
+
+    await railEntry('Secrets').click();
+    await expect(pageHeading('Secrets')).toBeVisible({ timeout: 10_000 });
+    await expect(railEntry('Secrets')).toHaveAttribute('aria-current', 'page');
+    await expect(railEntry('Advanced')).not.toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+    await expect(dialog).toBeVisible();
+
+    await closeWithEscape(page, dialog);
   });
 });
 

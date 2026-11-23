@@ -24,6 +24,7 @@ import { HumanSupportTab } from './human-support.tab';
 import { LtiTab } from './lti.tab';
 import { GraderTab } from './grader.tab';
 import { ApiTab } from './api-tab';
+import { SafetyTab } from './safety.tab';
 
 /**
  * Which sidebar category each segment lives in. Mirrors the `navCategory`
@@ -100,6 +101,7 @@ export class EditMentorPage {
   readonly skills: SkillsTab;
   readonly grader: GraderTab;
   readonly api: ApiTab;
+  readonly safety: SafetyTab;
   readonly copyMentorDialog: CopyMentorPage;
 
   constructor(page: Page) {
@@ -131,6 +133,7 @@ export class EditMentorPage {
     this.skills = new SkillsTab(page, this.dialog);
     this.grader = new GraderTab(page, this.dialog);
     this.api = new ApiTab(page, this.dialog);
+    this.safety = new SafetyTab(page, this.dialog);
     this.copyMentorDialog = new CopyMentorPage(page);
 
     // The modal only mounts the active category's segments, so the Settings
@@ -151,8 +154,6 @@ export class EditMentorPage {
     // Human Support has the identical problem — it also lives in the Activity
     // category and its SDK helper `switchToSupportTab` is category-blind.
     this.humanSupport.bindTabNav(this.navigateToTab.bind(this));
-
-    this.privacy.bindReopen(() => this.open('Privacy'));
   }
 
   /**
@@ -676,7 +677,15 @@ export class EditMentorPage {
     const stillOpen = await this.dialog.count().catch(() => 0);
     if (stillOpen === 0) return;
 
-    await expect(this.closeButton).toBeVisible({ timeout: 5_000 });
+    // The dialog can also finish closing on its own between the re-check above
+    // and the Close button resolving; that is the end state close() wants.
+    try {
+      await this.closeButton.waitFor({ state: 'visible', timeout: 5_000 });
+    } catch (error) {
+      if ((await this.dialog.count().catch(() => 0)) !== 0) throw error;
+      await this.restoreAppChrome();
+      return;
+    }
     // The Edit Agent dialog's top-right Close (X) can be occluded at its exact
     // pixel by a stacked, aria-hidden sibling "Edit Agent" dialog. In the My
     // Agents flow the global `showEditMentorModal` flag drives TWO mounted
@@ -698,7 +707,13 @@ export class EditMentorPage {
     // `closeButton` is the single mounted, attached Edit Agent Close before we
     // dispatch. On the non-stacked open() path (one dialog, no occlusion) this
     // behaves identically to a normal click.
-    await this.closeButton.dispatchEvent('click');
+    try {
+      await this.closeButton.dispatchEvent('click', undefined, {
+        timeout: 5_000,
+      });
+    } catch (error) {
+      if ((await this.dialog.count().catch(() => 0)) !== 0) throw error;
+    }
     await expect(this.dialog).not.toBeVisible({ timeout: 10_000 });
 
     // The SDK dialog frequently leaves the app shell `aria-hidden="true"`

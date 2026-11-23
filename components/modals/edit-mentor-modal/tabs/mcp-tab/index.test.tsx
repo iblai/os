@@ -25,11 +25,16 @@ vi.mock('@/hooks/use-user', () => ({
   useUsername: () => mockUseUsername(),
 }));
 
-vi.mock('@/hooks/user-user-actions', () => ({
-  useShowFreeTrialDialog: () => ({
-    executeWithTrialCheck: mockExecuteWithTrialCheck,
-  }),
-}));
+vi.mock('@iblai/iblai-js/web-utils', async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import('@iblai/iblai-js/web-utils')>();
+  return {
+    ...actual,
+    useShowFreeTrialDialog: () => ({
+      executeWithTrialCheck: mockExecuteWithTrialCheck,
+    }),
+  };
+});
 
 vi.mock('@/lib/config', () => ({
   config: { enableRBAC: () => mockEnableRBAC() },
@@ -96,6 +101,16 @@ describe('McpTab', () => {
     mockGetMentorId.mockReturnValue('nav-mentor');
     render(<McpTab />);
     expect(providerValue()).toMatchObject({ mentorId: 'nav-mentor' });
+  });
+
+  it('lets a passed agent and tenant win over the modal stack and route', () => {
+    mockGetMentorId.mockReturnValue('nav-mentor');
+    mockUseParams.mockReturnValue({});
+    render(<McpTab mentorId="new-agent" tenantKey="other-tenant" />);
+    expect(providerValue()).toMatchObject({
+      mentorId: 'new-agent',
+      tenantKey: 'other-tenant',
+    });
   });
 
   it('forwards onSelect so the workflow node picker can pick a server', () => {

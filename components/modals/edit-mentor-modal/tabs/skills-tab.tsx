@@ -14,14 +14,25 @@ import { config } from '@/lib/config';
 import { useAppSelector } from '@/lib/hooks';
 import { TenantKeyMentorIdParams } from '@/lib/types';
 
-export function SkillsTab() {
+interface SkillsTabProps {
+  /** Edits this agent instead of the modal-stack or route agent. */
+  mentorId?: string;
+  /** Tenant of `mentorId`, for routes without a tenant param. */
+  tenantKey?: string;
+}
+
+export function SkillsTab({
+  mentorId: mentorIdOverride,
+  tenantKey: tenantKeyOverride,
+}: SkillsTabProps = {}) {
   const t = useTranslations('tabsSkillsTab');
-  const { tenantKey, mentorId } = useParams<TenantKeyMentorIdParams>();
+  const params = useParams<TenantKeyMentorIdParams>();
+  const tenantKey = tenantKeyOverride || params.tenantKey;
   const { getMentorId } = useNavigate();
   const username = useUsername();
   const rbacPermissions = useAppSelector(selectRbacPermissions);
 
-  const activeMentorId = getMentorId() || mentorId;
+  const activeMentorId = mentorIdOverride || getMentorId() || params.mentorId;
 
   if (!tenantKey || !activeMentorId || !username) return null;
 

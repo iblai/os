@@ -34,6 +34,7 @@ const mockRbacPermissions = vi.fn();
 const mockIsUserTypeAllowed = vi.fn();
 const mockUserType = vi.fn();
 const mockCheckRbacPermission = vi.fn();
+const mockSettingsQuery = vi.fn();
 
 vi.mock('next/navigation', () => ({
   useParams: () => ({
@@ -43,7 +44,8 @@ vi.mock('next/navigation', () => ({
 }));
 
 vi.mock('@iblai/iblai-js/data-layer', () => ({
-  useGetMentorSettingsQuery: () => ({
+  useGetMentorSettingsQuery: (...args: unknown[]) => ({
+    ...mockSettingsQuery(...args),
     data: mockMentorSettings(),
     isSuccess: mockMentorSettings() !== undefined,
   }),
@@ -701,6 +703,37 @@ describe('useMentorSegments', () => {
         useMentorSegments({ preferModalMentorId: true }),
       );
       expect(result.current.filteredSegments.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('mentorId and tenantKey options', () => {
+    it('resolves a passed agent and tenant over the modal stack and route', () => {
+      mockGetMentorId.mockReturnValue('mentor-from-modal-stack');
+      mockMentorIdParam.mockReturnValue('mentor-from-url');
+
+      renderHook(() =>
+        useMentorSegments({
+          preferModalMentorId: true,
+          mentorId: 'new-agent',
+          tenantKey: 'other-tenant',
+        }),
+      );
+
+      expect(mockSettingsQuery).toHaveBeenLastCalledWith(
+        expect.objectContaining({ mentor: 'new-agent', org: 'other-tenant' }),
+        { skip: false },
+      );
+    });
+
+    it('waits, rather than reading the route agent, while the passed agent is null', () => {
+      mockMentorIdParam.mockReturnValue('mentor-from-url');
+
+      renderHook(() => useMentorSegments({ mentorId: null }));
+
+      expect(mockSettingsQuery).toHaveBeenLastCalledWith(
+        expect.objectContaining({ mentor: '' }),
+        { skip: true },
+      );
     });
   });
 

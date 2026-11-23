@@ -4,7 +4,7 @@ import { CameraCaptureDialog } from '../camera-capture-dialog';
 
 // --- Shared mocks -----------------------------------------------------------
 
-let trackStop: ReturnType<typeof vi.fn>;
+let trackStop: ReturnType<typeof vi.fn<() => void>>;
 let fakeStream: { getTracks: () => Array<{ stop: () => void }> };
 let getUserMediaMock: ReturnType<typeof vi.fn>;
 let toBlobBlob: Blob | null;
@@ -22,7 +22,7 @@ const setupMediaDevices = (impl?: unknown) => {
 };
 
 beforeEach(() => {
-  trackStop = vi.fn();
+  trackStop = vi.fn<() => void>();
   fakeStream = {
     getTracks: () => [{ stop: trackStop }],
   };

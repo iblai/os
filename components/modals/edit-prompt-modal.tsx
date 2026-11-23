@@ -1,5 +1,6 @@
 'use client';
 
+import { useShowFreeTrialDialog } from '@iblai/iblai-js/web-utils';
 import * as React from 'react';
 import { useTranslations } from 'next-intl';
 import { z } from 'zod';
@@ -26,7 +27,6 @@ import { useParams } from 'next/navigation';
 import { TenantKeyMentorIdParams } from '@/lib/types';
 import { useUsername } from '@/hooks/use-user';
 import { useForm } from '@tanstack/react-form';
-import { useShowFreeTrialDialog } from '@/hooks/user-user-actions';
 import { Label } from '../ui/label';
 
 export type SystemPrompt =
@@ -74,6 +74,8 @@ type Props = {
   selectedPrompt: SelectedPrompt;
   handleSave: (selectedPrompt: SelectedPrompt, values: EditFormValues) => void;
   isEditing: boolean;
+  /** Tenant to list categories for, for routes without a tenant param. */
+  tenantKey?: string;
 };
 
 export function EditPromptModal({
@@ -82,9 +84,11 @@ export function EditPromptModal({
   selectedPrompt,
   handleSave,
   isEditing,
+  tenantKey: tenantKeyOverride,
 }: Props) {
   const t = useTranslations('modalsEditPromptModal');
-  const { tenantKey } = useParams<TenantKeyMentorIdParams>();
+  const params = useParams<TenantKeyMentorIdParams>();
+  const tenantKey = tenantKeyOverride || params.tenantKey;
   const username = useUsername();
 
   const { executeWithTrialCheck, isModalOpen, FreeTrialDialog, closeModal } =

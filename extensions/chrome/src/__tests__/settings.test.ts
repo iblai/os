@@ -20,7 +20,11 @@ beforeEach(() => {
 
 describe('settings storage', () => {
   it('holds the cached model and what it was picked under, both empty', async () => {
-    expect(DEFAULT_SETTINGS).toEqual({ model: '', preference: '' });
+    expect(DEFAULT_SETTINGS).toEqual({
+      model: '',
+      preference: '',
+      unusable: [],
+    });
     await expect(loadSettings()).resolves.toEqual(DEFAULT_SETTINGS);
   });
 
@@ -32,10 +36,12 @@ describe('settings storage', () => {
     expect(saved).toEqual({
       model: 'openai/gpt-5',
       preference: 'iblai/iblai-pro',
+      unusable: [],
     });
     await expect(loadSettings()).resolves.toEqual({
       model: 'openai/gpt-5',
       preference: 'iblai/iblai-pro',
+      unusable: [],
     });
     expect(chromeStub.stub.storage.local.set).toHaveBeenCalledTimes(1);
   });
@@ -49,6 +55,7 @@ describe('settings storage', () => {
     await expect(loadSettings()).resolves.toEqual({
       model: 'openai/gpt-5',
       preference: '',
+      unusable: [],
     });
   });
 });

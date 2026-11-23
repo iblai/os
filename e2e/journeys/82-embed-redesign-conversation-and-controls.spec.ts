@@ -12,6 +12,8 @@ import { EditMentorPage } from '../page-objects/edit-mentor/edit-mentor.page';
 import { ChatPage } from '../page-objects/chat.page';
 import { parsePlatformUrl } from '../utils/navigation';
 import {
+  HOST_WIDGET_SELECTOR,
+  iblDataParam,
   postRealSnippetUrl,
   rewriteSnippetOrigin,
 } from '../utils/embed-harness-client';
@@ -128,7 +130,17 @@ async function gotoRealSnippetPage(
     EMBED_HARNESS_URL,
     rewritten,
   );
-  await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30_000 });
+  // Hand the snippet the session on the URL, the way a return from auth
+  // does. This agent requires signing in, and without credentials the embed
+  // sends the WHOLE host page to auth and back — the page that returns is a
+  // fresh load, so the panel this test opened is gone and the chat it was
+  // waiting for never mounts. Read before navigating, while the app's own
+  // origin is still the one in the browser.
+  const iblData = await iblDataParam(page);
+  await page.goto(`${url}&ibl-data=${iblData}`, {
+    waitUntil: 'domcontentloaded',
+    timeout: 30_000,
+  });
   return { originalOrigin };
 }
 
@@ -166,6 +178,18 @@ test.describe('Journey 82: Embed Mode Redesign — Conversation & Controls', () 
     // (see its doc comment) — reading the tab's first `<pre>` beforehand can
     // match an unrelated block (e.g. this shared mentor's SSO redirect-token
     // URL) instead of the actual snippet.
+    // Point the embed at the harness before minting: an agent that requires
+    // signing in sends the WHOLE host page through auth, and the round trip
+    // comes back to the website this embed's token was registered for.
+    // Registered elsewhere it lands on a page that does not serve the snippet
+    // and the chat never mounts — which is what the host page sitting on
+    // `example.com/real-snippet?…&ibl-data=…` meant. The harness IS this
+    // embed's customer site, so it is what the token should name.
+    //
+    // Set here rather than passed to `createAndGetEmbedCode`: that only fills
+    // the field when it is EMPTY, and this shared agent carries whatever a
+    // previous run saved.
+    await editMentorPage.embed.fillWebsiteUrl(EMBED_HARNESS_URL);
     const snippet = await editMentorPage.embed.createAndGetEmbedCode();
     expect(snippet.length).toBeGreaterThan(0);
     expect(snippet).toContain('ibl-chat-bubble');
@@ -188,7 +212,18 @@ test.describe('Journey 82: Embed Mode Redesign — Conversation & Controls', () 
 
     // Open: the widget container + its iframe (the chat) become visible.
     await bubble.click();
-    const widget = page.locator('#ibl-chat-widget-container');
+    // Opening the panel is what makes the embed ask for a signed-in user, and
+    // an agent that requires one sends the WHOLE host page through auth and
+    // back. The page that returns is a fresh load with the panel closed, so
+    // open it again — a reader signing in sees exactly the same thing. When
+    // no round trip happens this waits on the URL already loaded and the
+    // launcher is already expanded, so both steps fall through.
+    await page.waitForURL(/\/real-snippet/, { timeout: 60_000 });
+    await expect(bubble).toBeVisible({ timeout: 15_000 });
+    if ((await bubble.getAttribute('aria-expanded')) !== 'true') {
+      await bubble.click();
+    }
+    const widget = page.locator(HOST_WIDGET_SELECTOR);
     await expect(widget).toBeVisible({ timeout: 15_000 });
     await expect(bubble).toHaveAttribute('aria-expanded', 'true');
 
@@ -196,13 +231,11 @@ test.describe('Journey 82: Embed Mode Redesign — Conversation & Controls', () 
     // build-time origin baked into the snippet (see `rewriteSnippetOrigin`'s
     // doc comment — confirmed via a debug run to be `http://localhost:3000`,
     // an unrelated app, which `net::ERR_CONNECTION_REFUSED`s).
-    const iframeSrc = await page
-      .locator('#ibl-chat-widget-container iframe')
-      .getAttribute('src');
+    const iframeSrc = await widget.locator('iframe').getAttribute('src');
     expect(iframeSrc).not.toBeNull();
     expect(iframeSrc!.startsWith(MENTOR_NEXTJS_HOST)).toBe(true);
 
-    const panelFrame = page.frameLocator('#ibl-chat-widget-container iframe');
+    const panelFrame = widget.frameLocator('iframe');
     await expect(panelFrame.locator('#chat-input-textarea')).toBeVisible({
       timeout: 30_000,
     });

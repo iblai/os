@@ -202,6 +202,42 @@ describe('CSP middleware', () => {
     expect(frameSrc).toContain('blob:');
   });
 
+  describe('frame-src for document previews (iblai-platform#2855)', () => {
+    const directives = () =>
+      (cspOf(middleware(req())) ?? '').split(';').map((d) => d.trim());
+    const directive = (name: string) =>
+      directives().find((d) => d.startsWith(`${name} `)) ?? '';
+
+    it('allows S3 in frame-src, since the DM media link 302s to the bucket', () => {
+      expect(directive('frame-src').split(' ')).toContain(
+        'https://*.s3.amazonaws.com',
+      );
+    });
+
+    it('adds CSP_FRAME_HOSTS to frame-src only', () => {
+      vi.stubEnv(
+        'CSP_FRAME_HOSTS',
+        ' https://b1.s3.ap-southeast-2.amazonaws.com, https://docs.example.edu ',
+      );
+      const frameSrc = directive('frame-src').split(' ');
+      expect(frameSrc).toContain('https://b1.s3.ap-southeast-2.amazonaws.com');
+      expect(frameSrc).toContain('https://docs.example.edu');
+      const others = directives().filter((d) => !d.startsWith('frame-src '));
+      expect(others.join(';')).not.toContain('docs.example.edu');
+      expect(others.join(';')).not.toContain('ap-southeast-2');
+    });
+
+    it.each([undefined, '', '   '])(
+      'adds nothing to frame-src when CSP_FRAME_HOSTS is %j',
+      (value) => {
+        const baseline = directive('frame-src');
+        if (value !== undefined) vi.stubEnv('CSP_FRAME_HOSTS', value);
+        expect(directive('frame-src')).toBe(baseline);
+        expect(directive('frame-src')).not.toMatch(/\s\s|\s$/);
+      },
+    );
+  });
+
   it('does not duplicate an ibl-domain API base (already wildcarded)', () => {
     vi.stubEnv('NEXT_PUBLIC_API_BASE_URL', 'https://api.iblai.app');
     const csp = cspOf(middleware(req())) ?? '';

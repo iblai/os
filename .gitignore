@@ -18,6 +18,9 @@ test-results/
 e2e/playwright-report/
 playwright/.auth/
 
+# Seed test the Playwright MCP server writes at runtime (see e2e/mcp.config.ts)
+e2e/.mcp-scratch/
+
 # environment & secrets
 .env
 .env.*

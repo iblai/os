@@ -11,6 +11,7 @@ import { DocumentSidebar } from '@iblai/iblai-js/web-containers';
 
 import './page.css';
 import { SdkChat } from '@/components/chat/sdk-chat';
+import { SkillReview } from '@/components/chat/skill-review';
 import { useAppDispatch, useAppSelector } from '@/lib/hooks';
 import { useIsPreviewMode } from '@/hooks/use-is-preview-mode';
 import { useChatMode } from '@/hooks/use-chat-mode';
@@ -22,6 +23,7 @@ import { useParams, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import { config } from '@/lib/config';
 import { TenantKeyMentorIdParams } from '@/lib/types';
+import { useOpenSessionFromUrl } from '@/hooks/use-open-session';
 import { MentorVisibilityEnum } from '@iblai/iblai-api';
 import { isLoggedIn } from '@/lib/utils';
 import { useUsername, useUserTenants } from '@/hooks/use-user';
@@ -63,6 +65,14 @@ export default function MentorPageContent() {
   const { mentorId, tenantKey } = useParams<TenantKeyMentorIdParams>();
 
   const metadata = useTenantObjectMetadata(tenantKey);
+
+  // A host embedding this agent can name a conversation to open rather than
+  // starting a fresh one — agent-ai forwards `session` through extraparams.
+  useOpenSessionFromUrl({
+    sessionId: searchParams.get('session'),
+    tenantKey,
+    mentorId,
+  });
 
   // Skip mentor public settings API call in offline mode
   const { data: mentorPublicSettings } = useGetMentorPublicSettingsQuery(
@@ -157,7 +167,8 @@ export default function MentorPageContent() {
   return (
     <ErrorBoundary>
       <div className="flex min-h-0 flex-1">
-        <div className="flex min-h-0 w-full flex-1 flex-col px-1 md:px-4">
+        <div className="relative flex min-h-0 w-full flex-1 flex-col px-1 md:px-4">
+          <SkillReview />
           <SdkChat isPreviewMode={isPreviewMode} mode={chatMode} />
         </div>
         {!isMobile && <DocumentSidebar sessionId={sessionId} />}

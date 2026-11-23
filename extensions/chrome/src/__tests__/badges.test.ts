@@ -23,9 +23,14 @@ function stubCanvas(width = 2048, height = 1536) {
       arrayBuffer: async () => new Uint8Array([1, 2, 3]).buffer,
     })),
   };
+  // `function`, not an arrow: the worker calls `new OffscreenCanvas(...)`,
+  // and vitest 4 no longer wraps a mock's implementation in a constructible
+  // function of its own.
   vi.stubGlobal(
     'OffscreenCanvas',
-    vi.fn(() => canvas),
+    vi.fn(function () {
+      return canvas;
+    }),
   );
   vi.stubGlobal(
     'createImageBitmap',

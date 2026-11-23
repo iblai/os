@@ -42,11 +42,16 @@ vi.mock('@/hooks/use-user', () => ({
   useUserIsStudent: () => mockUseUserIsStudent(),
 }));
 
-vi.mock('@/hooks/user-user-actions', () => ({
-  useShowFreeTrialDialog: () => ({
-    executeWithTrialCheck: mockExecuteWithTrialCheck,
-  }),
-}));
+vi.mock('@iblai/iblai-js/web-utils', async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import('@iblai/iblai-js/web-utils')>();
+  return {
+    ...actual,
+    useShowFreeTrialDialog: () => ({
+      executeWithTrialCheck: mockExecuteWithTrialCheck,
+    }),
+  };
+});
 
 vi.mock('@/lib/config', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/config')>();
@@ -205,6 +210,25 @@ describe('LLMTab', () => {
       render(<LLMTab />);
       expect(providerValue().mentorId).toBe('nav-mentor');
       expect(tabProps().mentorId).toBe('nav-mentor');
+    });
+
+    it('lets a passed agent and tenant win over the modal stack and route', () => {
+      mockGetMentorId.mockReturnValue('nav-mentor');
+      render(<LLMTab mentorId="new-agent" tenantKey="other-tenant" />);
+      expect(providerValue()).toMatchObject({
+        mentorId: 'new-agent',
+        tenantKey: 'other-tenant',
+      });
+      expect(tabProps().mentorId).toBe('new-agent');
+    });
+
+    it('renders for a passed tenant on a route without one', () => {
+      mockUseParams.mockReturnValue({});
+      render(<LLMTab mentorId="new-agent" tenantKey="acme" />);
+      expect(providerValue()).toMatchObject({
+        mentorId: 'new-agent',
+        tenantKey: 'acme',
+      });
     });
 
     it('falls back to params.mentorId when getMentorId() is empty', () => {

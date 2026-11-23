@@ -25,6 +25,14 @@ let mockRouter = { push: mockPush, replace: mockReplace };
 
 // AppProvider mounts the agent-settings launcher, which reads navigation and
 // user hooks this suite does not set up; it has its own tests.
+// The real module pulls the whole remark/rehype/KaTeX pipeline. `AppProvider`
+// imports it fire-and-forget in an effect (deliberately — the startup path
+// must not await it), so under load that import is still resolving when this
+// file's last test ends, and vitest tears the environment down underneath it:
+// "Cannot load … after the environment was torn down". Registration itself is
+// covered by lib/__tests__/canvas-markdown-engine.test.ts.
+vi.mock('@/lib/canvas-markdown-engine', () => ({}));
+
 vi.mock('../agent-settings-launcher', () => ({
   AgentSettingsLauncher: ({ children }: { children: React.ReactNode }) => (
     <>{children}</>
@@ -132,15 +140,6 @@ vi.mock('@/hooks/use-is-preview-mode', () => ({
   useIsPreviewMode: () => mockIsPreviewMode,
 }));
 
-vi.mock('@/hooks/subscription/use-402-error-check', () => ({
-  use402ErrorCheck: () => ({ handle402Error: mockHandle402Error }),
-}));
-
-vi.mock('@/hooks/subscription/constants', () => ({
-  SUBSCRIPTION_CREDIT_LIMIT_ERROR_MESSAGE:
-    'You do not have enough credits to proceed.',
-}));
-
 // ── lib mocks ───────────────────────────────────────────────────────────────
 
 const mockSendMessageToParentWebsite = vi.fn();
@@ -181,13 +180,16 @@ vi.mock('@/lib/config', () => ({
     iblPlatform: () => 'mentor',
     environment: () => 'test',
     stripeEnabled: () => false,
+    supportEmail: () => 'support@test',
     enableRBAC: () => false,
+    planFeatures: () => ({ free: [], premium: [], max: [], ultra: [] }),
   },
 }));
 
 vi.mock('@/lib/error', () => ({
   customErrorMessages: {
     mentorNotFound: { key: 'mentorNotFound' },
+    browserAgentNotSetUp: { key: 'browserAgentNotSetUp' },
   },
 }));
 
@@ -297,6 +299,14 @@ let mentorProviderCallbacksToInvoke: Array<{ name: string; args?: unknown[] }> =
   [];
 
 vi.mock('@iblai/iblai-js/web-utils', () => ({
+  SubscriptionConfigProvider: ({ children }: { children: React.ReactNode }) => (
+    <>{children}</>
+  ),
+  use402ErrorCheck: () => ({ handle402Error: mockHandle402Error }),
+  // Desktop-only listener; a no-op in the browser.
+  useOpencode402: vi.fn(),
+  SUBSCRIPTION_CREDIT_LIMIT_ERROR_MESSAGE:
+    'You do not have enough credits to proceed.',
   useTenantSwitchSync: vi.fn(),
   refreshTenantSwitchLock: vi.fn(),
   isTenantSwitchInProgress: vi.fn(() => false),
@@ -390,6 +400,26 @@ vi.mock('@iblai/iblai-js/web-utils', () => ({
 vi.mock('@/features/utils', () => ({
   getUserId: () => 'user-id',
   getUserName: () => 'user-name',
+  // The panel's agent lookup pulls the mentors api-slice into this graph.
+  iblFetchBaseQuery: vi.fn(),
+}));
+
+const mockResolvePanelAgent = vi.fn<(tenantKey: string) => Promise<unknown>>(
+  async () => ({ status: 'unavailable' }),
+);
+const mockPeekPanelAgent = vi.fn<() => string | null>(() => null);
+const mockForgetPanelAgent = vi.fn<(mentorId: string) => void>();
+vi.mock('@/hooks/use-chrome-extension-agent', () => ({
+  useChromeExtensionAgent: () => ({
+    peek: mockPeekPanelAgent,
+    resolve: mockResolvePanelAgent,
+    forget: mockForgetPanelAgent,
+  }),
+}));
+
+let mockInExtensionPanel = false;
+vi.mock('@/hooks/use-in-chrome-extension', () => ({
+  useInChromeExtension: () => mockInExtensionPanel,
 }));
 
 vi.mock('@/components/spinner', () => ({
@@ -400,7 +430,7 @@ vi.mock('@/components/sentry-init', () => ({
   SentryInit: () => null,
 }));
 
-// Side-effect-only component (syncs language pref via useGetUserMetadataQuery);
+// Side-effect-only component (syncs language pref from the stored user metadata);
 // stub it out so the suite needn't wire up a real RTK store.
 vi.mock('@/components/language-preference-sync', () => ({
   LanguagePreferenceSync: () => null,
@@ -522,9 +552,11 @@ describe('Providers', () => {
           402: expect.any(Function),
         }),
         undefined,
-        // Standalone (not iframed): no refreshAuthToken, so the data layer uses
-        // its own edX-session mint.
-        undefined,
+        // Always ours, standalone included: left undefined the data layer
+        // would mint from the edX session, and this app calls no edX LMS.
+        expect.any(Function),
+        // And every LMS/Studio call goes through DM's edX proxy.
+        { edxProxy: true },
       );
     });
 
@@ -533,6 +565,36 @@ describe('Providers', () => {
       renderProviders();
       const call = mockInitializeDataLayer.mock.calls.at(-1)!;
       expect(call[6]).toEqual(expect.any(Function));
+    });
+
+    // Standalone it goes to the auth app, which re-mints and returns the user
+    // here — rather than this app minting from the edX session itself.
+    it('sends a standalone 401 to the auth app instead of minting', async () => {
+      mockIsInIframe.mockReturnValue(false);
+      // jsdom refuses real navigation, so watch the assignment instead — and
+      // put the real location back, or the tests after this one lose their
+      // search params.
+      const realLocation = window.location;
+      Object.defineProperty(window, 'location', {
+        value: { ...realLocation, href: 'https://os.ibl.ai/chat' },
+        writable: true,
+        configurable: true,
+      });
+      renderProviders();
+      const refreshAuthToken = mockInitializeDataLayer.mock.calls.at(-1)![6] as
+        | (() => Promise<boolean>)
+        | undefined;
+
+      try {
+        await expect(refreshAuthToken!()).resolves.toBe(false);
+        expect(window.location.href).toContain('/login/complete');
+      } finally {
+        Object.defineProperty(window, 'location', {
+          value: realLocation,
+          writable: true,
+          configurable: true,
+        });
+      }
     });
 
     it('creates a script element when __ENV__ is not defined', () => {
@@ -1018,6 +1080,54 @@ describe('Providers', () => {
       expect(mockPush).toHaveBeenCalledWith('/platform/t1/m1');
     });
 
+    it('in the side panel, opens the agent the organization chose', async () => {
+      mockInExtensionPanel = true;
+      mockResolvePanelAgent.mockResolvedValue({
+        status: 'ready',
+        mentorId: 'panel-agent',
+      });
+      renderProviders();
+
+      const fn = capturedMentorProviderProps.redirectToMentor as Function;
+      fn('t1', 'm1');
+      await vi.waitFor(() =>
+        expect(mockPush).toHaveBeenCalledWith('/platform/t1/panel-agent'),
+      );
+
+      mockInExtensionPanel = false;
+    });
+
+    it('in the side panel, redirects at once when the organization is known', () => {
+      mockInExtensionPanel = true;
+      mockPeekPanelAgent.mockReturnValue('panel-agent');
+      renderProviders();
+
+      const fn = capturedMentorProviderProps.redirectToMentor as Function;
+      fn('t1', 'm1');
+
+      // A settled organization must not wait on anything: the id is already in
+      // the metadata the app holds.
+      expect(mockPush).toHaveBeenCalledWith('/platform/t1/panel-agent');
+      expect(mockResolvePanelAgent).not.toHaveBeenCalled();
+
+      mockPeekPanelAgent.mockReturnValue(null);
+      mockInExtensionPanel = false;
+    });
+
+    it('in the side panel, falls back to the resolved agent when none is bound', async () => {
+      mockInExtensionPanel = true;
+      mockResolvePanelAgent.mockResolvedValue({ status: 'unavailable' });
+      renderProviders();
+
+      const fn = capturedMentorProviderProps.redirectToMentor as Function;
+      fn('t1', 'm1');
+      await vi.waitFor(() =>
+        expect(mockPush).toHaveBeenCalledWith('/platform/t1/m1'),
+      );
+
+      mockInExtensionPanel = false;
+    });
+
     it('redirectToAuthSpa calls the real function', () => {
       renderProviders();
       const fn = capturedMentorProviderProps.redirectToAuthSpa as Function;
@@ -1074,6 +1184,77 @@ describe('Providers', () => {
       expect(mockDispatch).not.toHaveBeenCalledWith({
         type: 'rbac/markMentorLoaded',
       });
+    });
+
+    // Workflow pages skip the mentor check, so MentorProvider loads no mentor's
+    // permissions there; a reset left the Preview chat's input disabled with
+    // "You don't have permission to chat" for the editor.
+    it('on a workflow page, marks mentor permissions loaded for a signed-in user', () => {
+      mockUsername = 'testuser';
+      mockPathname = '/platform/test-tenant/workflows/entry-agent/workflow-1';
+      renderProviders();
+      expect(mockDispatch).toHaveBeenCalledWith({
+        type: 'rbac/markMentorLoaded',
+      });
+      expect(mockDispatch).not.toHaveBeenCalledWith({
+        type: 'rbac/resetMentorLoaded',
+      });
+    });
+
+    it('in the side panel, sends someone who cannot set it up to the setup page', async () => {
+      mockInExtensionPanel = true;
+      mockResolvePanelAgent.mockResolvedValue({ status: 'needs-setup' });
+      renderProviders();
+
+      const fn = capturedMentorProviderProps.redirectToMentor as Function;
+      fn('t1', 'm1');
+
+      await vi.waitFor(() =>
+        expect(mockPush).toHaveBeenCalledWith(
+          '/error/403?errorType=browserAgentNotSetUp',
+        ),
+      );
+      // The fallback agent would hide the fact that the panel is not set up.
+      expect(mockPush).not.toHaveBeenCalledWith('/platform/t1/m1');
+
+      mockInExtensionPanel = false;
+    });
+
+    it('in the side panel, a deleted agent is replaced rather than 404ing', async () => {
+      mockInExtensionPanel = true;
+      mockResolvePanelAgent.mockResolvedValue({
+        status: 'ready',
+        mentorId: 'fresh-agent',
+      });
+      renderProviders();
+
+      const fn = capturedMentorProviderProps.handleMentorNotFound as Function;
+      await fn();
+
+      expect(mockForgetPanelAgent).toHaveBeenCalledWith('mentor456');
+      expect(mockPush).toHaveBeenCalledWith('/platform/tenant123/fresh-agent');
+      expect(mockPush).not.toHaveBeenCalledWith(
+        '/error/404?errorType=mentorNotFound',
+      );
+
+      mockInExtensionPanel = false;
+    });
+
+    it('in the side panel, falls back to the app when nothing can be bound', async () => {
+      mockInExtensionPanel = true;
+      mockResolvePanelAgent.mockResolvedValue({ status: 'unavailable' });
+      renderProviders();
+
+      const fn = capturedMentorProviderProps.handleMentorNotFound as Function;
+      await fn();
+
+      // A member who may not create one still gets a working panel.
+      expect(mockPush).toHaveBeenCalledWith('/');
+      expect(mockPush).not.toHaveBeenCalledWith(
+        '/error/404?errorType=mentorNotFound',
+      );
+
+      mockInExtensionPanel = false;
     });
 
     it('handleMentorNotFound navigates to error page', async () => {

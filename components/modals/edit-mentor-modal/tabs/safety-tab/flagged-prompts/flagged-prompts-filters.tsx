@@ -81,10 +81,9 @@ export function FlaggedPromptsFilters({
           <div className="hidden gap-3 lg:flex">
             <Select value={filterType} onValueChange={onFilterTypeChange}>
               <SelectTrigger className="w-40">
-                <SelectValue placeholder={t('allTypes')} />
+                <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">{t('allTypes')}</SelectItem>
                 <SelectItem value="moderation">{t('moderation')}</SelectItem>
                 <SelectItem value="safety">{t('safety')}</SelectItem>
               </SelectContent>
@@ -107,10 +106,9 @@ export function FlaggedPromptsFilters({
         <div className="flex gap-3 lg:hidden">
           <Select value={filterType} onValueChange={onFilterTypeChange}>
             <SelectTrigger className="flex-1">
-              <SelectValue placeholder={t('allTypes')} />
+              <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">{t('allTypes')}</SelectItem>
               <SelectItem value="moderation">{t('moderation')}</SelectItem>
               <SelectItem value="safety">{t('safety')}</SelectItem>
             </SelectContent>

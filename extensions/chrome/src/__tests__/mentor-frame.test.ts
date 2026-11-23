@@ -8,6 +8,8 @@ import {
   removeWidgetSpinner,
   startContextFeed,
   watchAndInstallSession,
+  watchAuthExpired,
+  switchToOrganization,
   watchTenantSwitch,
 } from '../mentor-frame';
 import {
@@ -29,6 +31,11 @@ function makeHost(src = 'https://os.ibl.ai/chat?embed=true&mode=anonymous') {
   const spinner = document.createElement('div');
   spinner.id = 'loading-spinner';
   container.append(spinner);
+  // The widget's "Your session has expired" notice, shown by its own
+  // showRefreshInstruction() — which also hides the iframe and never undoes it.
+  const notice = document.createElement('div');
+  notice.id = 'refresh-instruction';
+  shadow.append(notice);
   const iframe = document.createElement('iframe');
   iframe.setAttribute('src', src);
   // jsdom gives an iframe inside a shadow root no browsing context.
@@ -127,6 +134,133 @@ describe('watchTenantSwitch', () => {
     stop();
   });
 
+  // A message with no tenant but an address means "let me choose". The panel's
+  // iframe cannot go there — navigating it would tear the mentor out of the
+  // panel — so the chooser opens in a tab and the pick resumes the normal
+  // switch.
+  // The panel lists organizations itself now. It never opens the auth app's
+  // chooser in a tab: that tab cannot read a side panel's session, so it only
+  // ever worked because a credential rode along in its address.
+  it('asks the panel to choose rather than opening a tab', async () => {
+    const { host } = makeHost(
+      'https://os.ibl.ai/platform/acme/bot?embed=true&mode=anonymous',
+    );
+    const onChoose = vi.fn();
+    const stop = watchTenantSwitch(host, onChoose);
+
+    window.dispatchEvent(
+      new MessageEvent('message', {
+        data: {
+          tenantSwitch: true,
+          chooserUrl: 'https://login.iblai.app/me?action=switch-tenant&popup=1',
+        },
+      }),
+    );
+
+    await vi.waitFor(() => expect(onChoose).toHaveBeenCalledTimes(1));
+    expect(chromeStub.stub.tabs.create).not.toHaveBeenCalled();
+    expect(chromeStub.stub.identity.launchWebAuthFlow).not.toHaveBeenCalled();
+    stop();
+  });
+
+  // `chooserUrl` is the app offering to host the chooser, and its value is
+  // ignored now. Requiring it would mean the SDK dropping that field silently
+  // kills organization switching here, so a tenant-less switch is enough.
+  // `withAuthFlow` logs and swallows, so "it ran" and "it worked" are not the
+  // same answer. A cancelled sign-in must not read as a completed switch.
+  it('reports a failed switch rather than claiming it worked', async () => {
+    const { host } = makeHost(
+      'https://os.ibl.ai/platform/acme/bot?embed=true&mode=anonymous',
+    );
+    chromeStub.stub.identity.launchWebAuthFlow.mockRejectedValueOnce(
+      new Error('the user closed the window'),
+    );
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    await expect(switchToOrganization(host, 'beta')).resolves.toEqual({
+      kind: 'failed',
+    });
+
+    warn.mockRestore();
+  });
+
+  // The auth app falls back to an interactive sign-in when the mint 401s, and
+  // that returns the user's DEFAULT organization. Landing somewhere the person
+  // did not pick is not a completed switch.
+  it('reports a switch that landed in the wrong organization', async () => {
+    const { host } = makeHost(
+      'https://os.ibl.ai/platform/acme/bot?embed=true&mode=anonymous',
+    );
+    chromeStub.stub.identity.launchWebAuthFlow.mockResolvedValueOnce(
+      sessionRedirect({ ...SESSION, tenant: 'somewhere-else' }),
+    );
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    // Installed, so the panel is consistent with the session it was given, and
+    // reported so the person is told where they actually are.
+    await expect(switchToOrganization(host, 'beta')).resolves.toEqual({
+      kind: 'elsewhere',
+      landed: 'somewhere-else',
+    });
+
+    warn.mockRestore();
+  });
+
+  // `installSession` is what actually re-routes the chat; it answers false when
+  // the iframe is not there to re-route. The old session is already cleared by
+  // then, so claiming success would strand the panel with a closed picker.
+  it('reports a switch whose chat could not be moved', async () => {
+    const host = document.createElement('agent-ai');
+    host.setAttribute('mentorurl', 'https://os.ibl.ai/');
+    host.attachShadow({ mode: 'open' });
+    document.body.append(host);
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    await expect(switchToOrganization(host, 'beta')).resolves.toEqual({
+      kind: 'failed',
+    });
+
+    warn.mockRestore();
+    host.remove();
+  });
+
+  it('reports a completed switch', async () => {
+    const { host } = makeHost(
+      'https://os.ibl.ai/platform/acme/bot?embed=true&mode=anonymous',
+    );
+    await expect(switchToOrganization(host, 'beta')).resolves.toEqual({
+      kind: 'switched',
+    });
+  });
+
+  it('chooses on a tenant-less switch even without a chooser address', async () => {
+    const { host } = makeHost('https://os.ibl.ai/platform/acme/bot?embed=true');
+    const onChoose = vi.fn();
+    const stop = watchTenantSwitch(host, onChoose);
+
+    window.dispatchEvent(
+      new MessageEvent('message', { data: { tenantSwitch: true } }),
+    );
+
+    await vi.waitFor(() => expect(onChoose).toHaveBeenCalledTimes(1));
+    expect(chromeStub.stub.identity.launchWebAuthFlow).not.toHaveBeenCalled();
+    stop();
+  });
+
+  it('ignores a message that is not a tenant switch at all', async () => {
+    const { host } = makeHost('https://os.ibl.ai/platform/acme/bot?embed=true');
+    const onChoose = vi.fn();
+    const stop = watchTenantSwitch(host, onChoose);
+
+    window.dispatchEvent(
+      new MessageEvent('message', { data: { somethingElse: true } }),
+    );
+
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(onChoose).not.toHaveBeenCalled();
+    stop();
+  });
+
   it('captures the return path BEFORE auth, so a mid-flight navigation cannot degrade it to bare /', async () => {
     const { host, iframe } = makeHost(
       'https://os.ibl.ai/platform/acme/bot?embed=true&mode=anonymous',
@@ -140,7 +274,7 @@ describe('watchTenantSwitch', () => {
           'src',
           'https://os.ibl.ai/sso-login-complete?data=x&redirect-path=%2F&tenant=old',
         );
-        return sessionRedirect(SESSION);
+        return sessionRedirect({ ...SESSION, tenant: 'beta' });
       },
     );
     const stop = watchTenantSwitch(host);
@@ -219,6 +353,229 @@ describe('watchTenantSwitch', () => {
     expect(chromeStub.stub.identity.launchWebAuthFlow).not.toHaveBeenCalled();
     expect(iframe.src).toBe(before);
     stop();
+  });
+});
+
+// The embed posts `authExpired` instead of navigating itself to the auth SPA:
+// inside the panel's partitioned iframe that navigation would tear the mentor
+// out of the panel. The host has to answer, and when the host session is dead
+// too the only answer left is a fresh interactive sign-in.
+// agent-ai hides the iframe behind "Please refresh the page" when its own
+// re-mint fails, and has no counterpart that puts it back. Without undoing it,
+// a successful recovery happens behind a hidden iframe and looks like nothing.
+describe('installSession clearing the widget refresh notice', () => {
+  it('unhides the iframe and clears the notice', () => {
+    const { host, iframe } = makeHost();
+    const notice = host.shadowRoot?.querySelector(
+      '#refresh-instruction',
+    ) as HTMLElement;
+    notice.innerHTML = '<p>Your session has expired.</p>';
+    notice.style.display = 'block';
+    iframe.style.display = 'none';
+
+    expect(installSession(host)).toBe(true);
+
+    expect(iframe.style.display).toBe('');
+    expect(notice.style.display).toBe('none');
+    expect(notice.innerHTML).toBe('');
+  });
+});
+
+describe('watchAuthExpired', () => {
+  const EXPIRED = '2026-11-03T18:13:55.050Z';
+
+  it('re-authenticates and re-installs when the host session has expired too', async () => {
+    const { host, iframe } = makeHost(
+      'https://os.ibl.ai/platform/acme/bot?embed=true&mode=anonymous',
+    );
+    localStorage.setItem('axd_token_expires', EXPIRED);
+    const stop = watchAuthExpired(host);
+
+    window.dispatchEvent(
+      new MessageEvent('message', { data: { authExpired: true } }),
+    );
+
+    await vi.waitFor(() =>
+      expect(chromeStub.stub.identity.launchWebAuthFlow).toHaveBeenCalled(),
+    );
+    await vi.waitFor(() => expect(iframe.src).toContain('/sso-login-complete'));
+    // The embed params survive the round-trip, so the app reopens the chat it
+    // was in rather than a bare root.
+    expect(new URL(iframe.src).searchParams.get('redirect-path')).toBe(
+      '/?embed=true&mode=anonymous',
+    );
+    stop();
+  });
+
+  // agent-ai re-mints from the stored edX JWT whenever the host session is
+  // still good. Popping an auth window over a refresh that was about to
+  // succeed is worse than waiting for it.
+  it('stands aside while the host session is still valid', async () => {
+    const { host } = makeHost();
+    const stop = watchAuthExpired(host);
+
+    window.dispatchEvent(
+      new MessageEvent('message', { data: { authExpired: true } }),
+    );
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(chromeStub.stub.identity.launchWebAuthFlow).not.toHaveBeenCalled();
+    stop();
+  });
+
+  it('signs in once for a burst of authExpired messages', async () => {
+    const { host } = makeHost();
+    localStorage.setItem('axd_token_expires', EXPIRED);
+    const stop = watchAuthExpired(host);
+
+    for (let i = 0; i < 3; i++) {
+      window.dispatchEvent(
+        new MessageEvent('message', { data: { authExpired: true } }),
+      );
+    }
+
+    await vi.waitFor(() =>
+      expect(chromeStub.stub.identity.launchWebAuthFlow).toHaveBeenCalled(),
+    );
+    expect(chromeStub.stub.identity.launchWebAuthFlow).toHaveBeenCalledTimes(1);
+    stop();
+  });
+
+  // A failed sign-in must not wedge the guard: the person can close the auth
+  // window by accident, and the next message has to be able to try again.
+  it('recovers from a failed sign-in and will retry', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const { host } = makeHost();
+    localStorage.setItem('axd_token_expires', EXPIRED);
+    chromeStub.stub.identity.launchWebAuthFlow.mockResolvedValueOnce(
+      undefined as never,
+    );
+    const stop = watchAuthExpired(host);
+
+    window.dispatchEvent(
+      new MessageEvent('message', { data: { authExpired: true } }),
+    );
+    await vi.waitFor(() => expect(warn).toHaveBeenCalled());
+    expect(warn.mock.calls[0]?.[0]).toContain('session recovery failed');
+
+    window.dispatchEvent(
+      new MessageEvent('message', { data: { authExpired: true } }),
+    );
+    await vi.waitFor(() =>
+      expect(chromeStub.stub.identity.launchWebAuthFlow).toHaveBeenCalledTimes(
+        2,
+      ),
+    );
+    stop();
+    warn.mockRestore();
+  });
+
+  // A full expiry leaves no JWT to mint with, so recovery goes through the
+  // interactive /login — which returns the user's DEFAULT organization. Someone
+  // who had switched would silently land somewhere else.
+  it('returns to the organization the panel was on', async () => {
+    const { host } = makeHost();
+    localStorage.setItem('tenant', 'beta');
+    localStorage.setItem('axd_token_expires', EXPIRED);
+    const stop = watchAuthExpired(host);
+
+    window.dispatchEvent(
+      new MessageEvent('message', { data: { authExpired: true } }),
+    );
+    await vi.waitFor(() =>
+      expect(chromeStub.stub.identity.launchWebAuthFlow).toHaveBeenCalledTimes(
+        2,
+      ),
+    );
+    const [, second] = chromeStub.stub.identity.launchWebAuthFlow.mock
+      .calls as unknown as [{ url: string }][];
+    // First hop is the interactive login; the session it mints authorises the
+    // second, non-interactive hop back to the chosen organization.
+    expect(second[0].url).toContain('/login/complete?tenant=beta');
+    stop();
+  });
+
+  it('does not re-sign-in when login already returns the right organization', async () => {
+    const { host } = makeHost();
+    localStorage.setItem('tenant', SESSION.tenant);
+    localStorage.setItem('axd_token_expires', EXPIRED);
+    const stop = watchAuthExpired(host);
+
+    window.dispatchEvent(
+      new MessageEvent('message', { data: { authExpired: true } }),
+    );
+    await vi.waitFor(() =>
+      expect(chromeStub.stub.identity.launchWebAuthFlow).toHaveBeenCalled(),
+    );
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(chromeStub.stub.identity.launchWebAuthFlow).toHaveBeenCalledTimes(1);
+    stop();
+  });
+
+  // Our own stamp can be absent, unparseable, behind a slow clock, or describe
+  // a token the server has revoked. The embed's 401 is first-hand evidence, so
+  // a second report means agent-ai's refresh did not work and we stop deferring.
+  it('stops standing aside when a valid-looking session keeps failing', async () => {
+    const { host } = makeHost();
+    const stop = watchAuthExpired(host);
+
+    window.dispatchEvent(
+      new MessageEvent('message', { data: { authExpired: true } }),
+    );
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(chromeStub.stub.identity.launchWebAuthFlow).not.toHaveBeenCalled();
+
+    window.dispatchEvent(
+      new MessageEvent('message', { data: { authExpired: true } }),
+    );
+    await vi.waitFor(() =>
+      expect(chromeStub.stub.identity.launchWebAuthFlow).toHaveBeenCalled(),
+    );
+    stop();
+  });
+
+  // Both messages come from the same dead session. Two auth flows at once let
+  // the slower one overwrite the session the faster one installed.
+  it('runs one auth flow when a tenant switch and an expiry arrive together', async () => {
+    const { host } = makeHost();
+    localStorage.setItem('axd_token_expires', EXPIRED);
+    const stopSwitch = watchTenantSwitch(host);
+    const stopExpired = watchAuthExpired(host);
+
+    window.dispatchEvent(
+      new MessageEvent('message', {
+        data: { tenantSwitch: true, tenant: 'beta' },
+      }),
+    );
+    window.dispatchEvent(
+      new MessageEvent('message', { data: { authExpired: true } }),
+    );
+
+    await vi.waitFor(() =>
+      expect(chromeStub.stub.identity.launchWebAuthFlow).toHaveBeenCalled(),
+    );
+    expect(chromeStub.stub.identity.launchWebAuthFlow).toHaveBeenCalledTimes(1);
+    stopSwitch();
+    stopExpired();
+  });
+
+  it('ignores unrelated messages, and stops listening once detached', async () => {
+    const { host } = makeHost();
+    localStorage.setItem('axd_token_expires', EXPIRED);
+    const stop = watchAuthExpired(host);
+
+    window.dispatchEvent(
+      new MessageEvent('message', { data: { somethingElse: true } }),
+    );
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(chromeStub.stub.identity.launchWebAuthFlow).not.toHaveBeenCalled();
+
+    stop();
+    window.dispatchEvent(
+      new MessageEvent('message', { data: { authExpired: true } }),
+    );
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(chromeStub.stub.identity.launchWebAuthFlow).not.toHaveBeenCalled();
   });
 });
 

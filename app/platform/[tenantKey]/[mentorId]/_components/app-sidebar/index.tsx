@@ -15,6 +15,7 @@ import {
   Brain,
   ChevronDown,
   ChevronRight,
+  CodeXml,
   Coins,
   KeyRound,
   LineChart,
@@ -50,15 +51,13 @@ import {
   getVisibleAnalyticsTabs,
   selectSessionId,
   type AnalyticsTab,
+  type Tenant,
+  useShowFreeTrialDialog,
 } from '@iblai/iblai-js/web-utils';
 import {
-  Admin,
-  IntegrationsTab,
-  BillingTab,
-  MonetizationTab,
-  MemoryAdminTab,
-  AdvancedTab,
-} from '@iblai/iblai-js/web-containers';
+  PlatformAccountSheet,
+  type PlatformAccountTab,
+} from '@iblai/iblai-js/web-containers/next';
 
 import { useNavigate } from '@/hooks/user-navigate';
 import {
@@ -66,28 +65,24 @@ import {
   useIsAdmin,
   useCurrentTenant,
   useUserIsStudent,
+  useUserTenants,
 } from '@/hooks/use-user';
 import { useUserType } from '@/hooks/use-user-type';
 import { useAppSelector } from '@/lib/hooks';
-import { selectRbacPermissions } from '@/features/rbac/rbac-slice';
+import {
+  selectRbacPermissions,
+  updateRbacPermissions,
+} from '@/features/rbac/rbac-slice';
 import { checkRbacPermission } from '@/hoc/withPermissions';
 import { useEmbedMode } from '@/hooks/use-embed-mode';
 import { useAllowMentorSelection } from '@/hooks/use-allow-mentor-selection';
 import { useHelpCenter } from '@/hooks/use-help-center';
-import { useShowFreeTrialDialog } from '@/hooks/user-user-actions';
 import { cn, isLoggedIn, redirectToLogin } from '@/lib/utils';
 import { isTauriApp } from '@/types/tauri';
 import { config } from '@/lib/config';
 import { ANONYMOUS_USERNAME, UserType } from '@/lib/constants';
 import { TenantKeyMentorIdParams, ProjectPageParams } from '@/lib/types';
 import { getUserEmail } from '@/features/utils';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import eventBus, { RemoteEvents } from '@/lib/eventBus';
 import Logo from '@/components/logo';
 import {
@@ -455,15 +450,6 @@ type SidebarOpenSection =
   | 'agents'
   | 'analytics';
 
-type AccountTab =
-  | 'organization'
-  | 'management'
-  | 'integrations'
-  | 'monetization'
-  | 'memory'
-  | 'advanced'
-  | 'billing';
-
 export function AppSidebar() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -482,7 +468,8 @@ export function AppSidebar() {
   // gate on `!userIsStudent` (i.e. "admin and currently in admin mode").
   const userIsStudent = useUserIsStudent();
   const isLiveAdmin = isAdmin && !userIsStudent;
-  const { currentTenant } = useCurrentTenant();
+  const { currentTenant, saveCurrentTenant } = useCurrentTenant();
+  const { userTenants, saveUserTenants } = useUserTenants();
   const { documentationUrl, showHelp } = useHelpCenter(tenantKey);
   const rbacPermissions = useAppSelector(selectRbacPermissions);
   const userEmail = getUserEmail();
@@ -506,7 +493,7 @@ export function AppSidebar() {
   const hideSidebar = hideSidebarRaw === '1' || hideSidebarRaw === 'true';
 
   const [accountDialogTab, setAccountDialogTab] =
-    React.useState<AccountTab | null>(null);
+    React.useState<PlatformAccountTab | null>(null);
 
   const {
     openCreateMentorModal,
@@ -519,13 +506,8 @@ export function AppSidebar() {
     navigateToNotifications,
   } = useNavigate();
 
-  const {
-    executeWithTrialCheck,
-    FreeTrialDialog,
-    closeModal,
-    isModalOpen,
-    isNewlyUserOnPreFreeOrAdvertisingMode,
-  } = useShowFreeTrialDialog();
+  const { executeWithTrialCheck, isNewlyUserOnPreFreeOrAdvertisingMode } =
+    useShowFreeTrialDialog();
 
   // A non-admin user in the MAIN tenant OR an ADVERTISING tenant should
   // see the FULL admin sidebar — agents, workflows, analytics, and every
@@ -1021,7 +1003,12 @@ export function AppSidebar() {
       }
       actions.push({
         id: 'footer-api',
-        label: t('integrations'),
+        label: t('api'),
+        icon: CodeXml,
+      });
+      actions.push({
+        id: 'footer-secrets',
+        label: t('secrets'),
         icon: KeyRound,
       });
       if (canMonetize) {
@@ -1032,7 +1019,7 @@ export function AppSidebar() {
         });
       }
       // Memory mirrors the SDK `Account` rail exactly: it sits between
-      // Monetization and Advanced and, like Integrations/Advanced, has no
+      // Monetization and Advanced and, like Secrets/Advanced, has no
       // dedicated RBAC permission — the rail filters it on `isAdmin`, so
       // here it follows the live-admin gate (and the trial/anonymous
       // cluster below). Non-admins never get it via RBAC alone.
@@ -1059,7 +1046,12 @@ export function AppSidebar() {
       actions.push({ id: 'footer-users', label: t('management'), icon: Users });
       actions.push({
         id: 'footer-api',
-        label: t('integrations'),
+        label: t('api'),
+        icon: CodeXml,
+      });
+      actions.push({
+        id: 'footer-secrets',
+        label: t('secrets'),
         icon: KeyRound,
       });
       actions.push({
@@ -1083,7 +1075,7 @@ export function AppSidebar() {
       // Analytics permission gate. We MUST guard on `config.enableRBAC()`
       // because `checkRbacPermission` returns true when RBAC is off, which
       // would otherwise expose these to every non-admin. `!isAdmin` keeps an
-      // admin-in-learner-mode excluded. Integrations, Memory and Advanced
+      // admin-in-learner-mode excluded. Secrets, Memory and Advanced
       // have no dedicated RBAC permission (the SDK `Account` rail filters
       // them on `isAdmin`), so they stay admin/trial/anonymous-only.
       if (hasInviteUserPermission) {
@@ -1118,7 +1110,7 @@ export function AppSidebar() {
   ]);
 
   const openAccountTab = React.useCallback(
-    (tab: AccountTab) => {
+    (tab: PlatformAccountTab) => {
       const result = runAdminAction(() => {
         setAccountDialogTab(tab);
       });
@@ -1141,8 +1133,11 @@ export function AppSidebar() {
         case 'footer-users':
           openAccountTab('management');
           return;
+        case 'footer-secrets':
+          openAccountTab('secrets');
+          return;
         case 'footer-api':
-          openAccountTab('integrations');
+          openAccountTab('api');
           return;
         case 'footer-monetization':
           openAccountTab('monetization');
@@ -1579,7 +1574,10 @@ export function AppSidebar() {
         </aside>
       </Sidebar>
 
-      <AccountSheet
+      {/* The SDK's organization Account dialog, tab rail included, so a
+          footer row lands on its tab and every other tab stays one click
+          away — the same dialog the LMS sidebar opens. */}
+      <PlatformAccountSheet
         tab={accountDialogTab}
         onClose={() => setAccountDialogTab(null)}
         tenantKey={tenantKey}
@@ -1593,11 +1591,28 @@ export function AppSidebar() {
           // before another opens.
           openInviteUserModal();
         }}
+        mainPlatformKey={config.mainTenantKey()}
+        authUrl={config.authUrl()}
+        currentSpa={config.iblPlatform() || 'mentor'}
+        platformBaseDomain={config.platformBaseDomain()}
+        showGradebookTab={config.enableGradebookTab()}
+        enableRbac={config.enableRBAC()}
+        rbacPermissions={rbacPermissions}
+        tenants={userTenants}
+        isAdmin={isAdmin}
+        onTenantUpdate={(tenant: Tenant) => {
+          saveCurrentTenant(tenant);
+          saveUserTenants(
+            userTenants.map((t) => (t.key === tenant.key ? tenant : t)),
+          );
+        }}
+        onLoadGroupPermissions={(permissions) =>
+          dispatch(updateRbacPermissions(permissions ?? {}))
+        }
+        defaultSupportPhone={config.defaultSupportPhoneNumber()}
+        enableSupportPhone={config.enableSupportPhone()}
+        helpUrl={config.helpCenterUrl() || undefined}
       />
-
-      {isModalOpen && FreeTrialDialog && (
-        <FreeTrialDialog onClose={closeModal} isOpen={isModalOpen} />
-      )}
 
       {showSearchChats && (
         <ChatSearchDialog
@@ -1610,133 +1625,5 @@ export function AppSidebar() {
         />
       )}
     </SidebarNavCallbackContext.Provider>
-  );
-}
-
-/**
- * Renders one of the SDK's organization-level tab components in its
- * own dialog — `Admin` (Users), `IntegrationsTab` (API), `BillingTab`,
- * `MonetizationTab`, `MemoryAdminTab` (user global + agent memories),
- * `AdvancedTab` (Settings). Each footer action opens
- * this dialog with a different `tab`; the body switches the SDK
- * component, so there's no shared tab rail and nothing to hide.
- *
- * `organization` doesn't have a sidebar footer entry today, but it's
- * defined for completeness so adding "Organization" later is a one-line
- * change.
- */
-function AccountSheet({
-  tab,
-  onClose,
-  tenantKey,
-  username,
-  email,
-  onInviteClick,
-}: {
-  tab: AccountTab | null;
-  onClose: () => void;
-  tenantKey: string;
-  username: string;
-  email: string;
-  onInviteClick: () => void;
-}) {
-  const t = useTranslations('appSidebarIndex');
-  const open = tab !== null;
-
-  const accountTabTitles: Record<AccountTab, string> = {
-    organization: t('accountTabOrganization'),
-    management: t('management'),
-    integrations: t('integrations'),
-    monetization: t('monetization'),
-    memory: t('memory'),
-    advanced: t('advanced'),
-    billing: t('accountTabBilling'),
-  };
-
-  const accountTabDescriptions: Record<AccountTab, string> = {
-    organization: t('accountDescOrganization'),
-    management: t('accountDescManagement'),
-    integrations: t('accountDescIntegrations'),
-    monetization: t('accountDescMonetization'),
-    memory: t('accountDescMemory'),
-    advanced: t('accountDescAdvanced'),
-    billing: t('accountDescBilling'),
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      {/*
-        Dimensions: width matches the SDK's `InviteUserDialog`
-        (`sm:max-w-7xl w-[95vw]`). Height is PINNED to `h-[90vh]`
-        (was `max-h-[90vh]`) so the dialog stays the same size as
-        the user navigates between sub-tabs inside Management
-        (Users → Groups → Roles → Policies) and Integrations. With
-        `max-h`, an empty/short sub-tab made the dialog collapse to
-        fit, then expand back when content loaded — felt jumpy.
-        Pinning the outer height + keeping the inner scroll area
-        (`flex-1 overflow-y-auto`) means the chrome is stable and
-        all the variation happens inside the scroll region.
-      */}
-      <DialogContent className="mx-auto my-auto flex h-[90vh] w-[95vw] max-w-none flex-col justify-between gap-0 rounded-lg p-0 sm:max-w-7xl">
-        <DialogHeader className="flex-shrink-0 border-b border-gray-200 p-4 pt-[30px]">
-          <DialogTitle className="text-lg font-medium text-gray-900 dark:text-gray-100">
-            {tab ? accountTabTitles[tab] : ''}
-          </DialogTitle>
-          <DialogDescription className="text-sm leading-relaxed text-gray-600">
-            {tab ? accountTabDescriptions[tab] : ''}
-          </DialogDescription>
-        </DialogHeader>
-        <div className="min-h-0 flex-1 overflow-y-auto p-6">
-          {tab === 'management' && (
-            <Admin
-              tenant={tenantKey}
-              onInviteClick={onInviteClick}
-              // RBAC is off for this entry point — admin users see every
-              // sub-tab. Tenant-level access is already gated by the
-              // sidebar (only admins reach the footer actions).
-              hasUserTabPermission
-              hasGroupsTabPermission
-              hasRolesTabPermission
-              hasPoliciesTabPermission
-              hasTeamsTabPermission
-              hasAlertsTabPermission
-              hasInviteUserPermission
-              hasCreateTeamPermission
-              enableRbac={false}
-              rbacPermissions={{}}
-            />
-          )}
-          {tab === 'integrations' && (
-            <IntegrationsTab tenantKey={tenantKey} username={username} />
-          )}
-          {tab === 'billing' && (
-            <BillingTab
-              tenant={tenantKey}
-              username={username}
-              mainPlatformKey={config.mainTenantKey()}
-              currentUserEmail={email}
-            />
-          )}
-          {tab === 'monetization' && (
-            <MonetizationTab
-              platformKey={tenantKey}
-              authURL={config.authUrl()}
-            />
-          )}
-          {tab === 'memory' && (
-            <MemoryAdminTab tenantKey={tenantKey} username={username} />
-          )}
-          {tab === 'advanced' && (
-            <AdvancedTab
-              platformKey={tenantKey}
-              username={username}
-              currentSPA={config.iblPlatform() || 'mentor'}
-              authURL={config.authUrl()}
-              currentPlatformBaseDomain={config.platformBaseDomain()}
-            />
-          )}
-        </div>
-      </DialogContent>
-    </Dialog>
   );
 }

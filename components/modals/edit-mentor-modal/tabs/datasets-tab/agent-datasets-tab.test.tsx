@@ -35,11 +35,16 @@ vi.mock('@/hooks/user-navigate', () => ({
   }),
 }));
 
-vi.mock('@/hooks/user-user-actions', () => ({
-  useShowFreeTrialDialog: () => ({
-    executeWithTrialCheck: mockExecuteWithTrialCheck,
-  }),
-}));
+vi.mock('@iblai/iblai-js/web-utils', async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import('@iblai/iblai-js/web-utils')>();
+  return {
+    ...actual,
+    useShowFreeTrialDialog: () => ({
+      executeWithTrialCheck: mockExecuteWithTrialCheck,
+    }),
+  };
+});
 
 vi.mock('@/lib/hooks', () => ({
   useAppSelector: () => ['perm'],
@@ -252,6 +257,21 @@ describe('AgentDatasetsTabWrapper', () => {
       );
 
       expect(lastProviderProps().mentorId).toBe('picked-mentor');
+    });
+
+    it('uses the explicit tenantKey over the route tenant', () => {
+      render(
+        <AgentDatasetsTabWrapper
+          syncToUrl={false}
+          mentorId="new-agent"
+          tenantKey="other-tenant"
+        />,
+      );
+
+      expect(lastProviderProps()).toMatchObject({
+        mentorId: 'new-agent',
+        tenantKey: 'other-tenant',
+      });
     });
   });
 });

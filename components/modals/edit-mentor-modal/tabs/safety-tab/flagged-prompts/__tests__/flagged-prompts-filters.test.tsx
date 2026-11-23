@@ -14,7 +14,7 @@ function renderFilters(
   const props = {
     searchQuery: '',
     onSearchChange: vi.fn(),
-    filterType: 'all',
+    filterType: 'moderation',
     onFilterTypeChange: vi.fn(),
     dateRange: undefined as DateRange | undefined,
     onDateRangeChange: vi.fn(),
@@ -61,12 +61,12 @@ describe('FlaggedPromptsFilters', () => {
     expect(screen.getByText('Jan 15 - Jan 20')).toBeInTheDocument();
   });
 
-  it('renders the type filter triggers with the "All Types" placeholder', () => {
+  it('shows the selected type on both type filter triggers', () => {
     renderFilters();
-    // Radix only renders the selected value/placeholder until the menu opens.
-    // Both the desktop and mobile selects show the "All Types" placeholder.
-    expect(screen.getAllByText('All Types').length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByRole('combobox').length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByRole('combobox')).toHaveLength(2);
+    for (const trigger of screen.getAllByRole('combobox')) {
+      expect(trigger).toHaveTextContent('Moderation');
+    }
   });
 
   it('renders the type options once a select is opened', async () => {
@@ -82,6 +82,7 @@ describe('FlaggedPromptsFilters', () => {
     expect(
       await screen.findByRole('option', { name: 'Safety' }),
     ).toBeInTheDocument();
+    expect(screen.getAllByRole('option')).toHaveLength(2);
   });
 
   it('calls onFilterTypeChange when a type option is selected', async () => {
@@ -92,12 +93,12 @@ describe('FlaggedPromptsFilters', () => {
     const triggers = screen.getAllByRole('combobox');
     await user.click(triggers[0]);
 
-    const moderationOption = await screen.findByRole('option', {
-      name: 'Moderation',
+    const safetyOption = await screen.findByRole('option', {
+      name: 'Safety',
     });
-    await user.click(moderationOption);
+    await user.click(safetyOption);
 
-    expect(props.onFilterTypeChange).toHaveBeenCalledWith('moderation');
+    expect(props.onFilterTypeChange).toHaveBeenCalledWith('safety');
   });
 
   it('opens the calendar popover and forwards date selection to onDateRangeChange', async () => {

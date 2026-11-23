@@ -24,6 +24,7 @@ import { Switch } from '@/components/ui/switch';
 import { useMentorSettings } from '@/hooks/use-mentors/use-mentor-settings';
 import { isTauriOfflineMode } from '@/hooks/use-tauri-offline';
 import { config } from '@/lib/config';
+import { coworkEnabled } from '@/lib/cowork-approvals';
 import {
   LOCAL_LLM_ENABLED_KEY,
   LOCAL_LLM_MODEL_KEY,
@@ -183,6 +184,11 @@ export function CodingModeButton({
   // Linux: name of the app that actually opens folders (the inode/directory
   // default, probed by the backend); null → generic "Open Folder" label.
   const [fileManager, setFileManager] = useState<string | null>(null);
+  // Cowork's pill writes its key without an event, so read it as the popover opens.
+  const [coworkOn, setCoworkOn] = useState(false);
+  useEffect(() => {
+    if (isOpen) setCoworkOn(coworkEnabled());
+  }, [isOpen]);
   const permissionMode = useApprovalMode();
   // Tauri mobile: Code runs against a paired desktop's opencode server. The
   // pairing state gates everything; the SDK reads the mirrored localStorage
@@ -1381,6 +1387,9 @@ export function CodingModeButton({
               {permissionMode === 'auto'
                 ? t('permissionModeAutoHint')
                 : t('permissionModeManualHint')}
+              {permissionMode === 'auto' && coworkOn && (
+                <> {t('permissionModeAutoCoworkHint')}</>
+              )}
             </p>
 
             {/* Agent: the same quiet segmented control as Approvals, and only

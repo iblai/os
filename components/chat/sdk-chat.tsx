@@ -15,7 +15,12 @@ import {
   type ChatConfig,
   type ChatLabels,
 } from '@iblai/iblai-js/web-containers/next';
-import { selectSessionId } from '@iblai/iblai-js/web-utils';
+import {
+  selectSessionId,
+  wasRecent402,
+  use402ErrorCheck,
+  useShowFreeTrialDialog,
+} from '@iblai/iblai-js/web-utils';
 
 import {
   CodeApprovalsButton,
@@ -29,10 +34,10 @@ import { useAccessingPublicRoute } from '@/hooks/use-anonymous-mentor';
 import { useBrowseRun } from '@/hooks/use-browse-run';
 import { useEmbedMode } from '@/hooks/use-embed-mode';
 import { useInExtensionPanel } from '@/hooks/use-in-extension-panel';
+import { useSkillRecordingContext } from '@/providers/skill-recording-provider';
+import { useCodeShownHere } from '@/hooks/use-code-shown-here';
 import { useMentorSettings } from '@/hooks/use-mentors/use-mentor-settings';
-import { wasRecent402 } from '@/hooks/use-opencode-402';
 import { useOpencodeSkillSync } from '@/hooks/use-opencode-skill-sync';
-import { use402ErrorCheck } from '@/hooks/subscription/use-402-error-check';
 import { useAxdToken } from '@/hooks/use-tokens';
 import {
   useUsername,
@@ -41,7 +46,6 @@ import {
   useVisitingTenant,
 } from '@/hooks/use-user';
 import { useNavigate } from '@/hooks/user-navigate';
-import { useShowFreeTrialDialog } from '@/hooks/user-user-actions';
 import { config as appConfig } from '@/lib/config';
 import { isAppInBackground, playAttentionChime } from '@/lib/attention-chime';
 import eventBus from '@/lib/eventBus';
@@ -234,10 +238,12 @@ export function SdkChat({
   const { status: swStatus } = useServiceWorker();
   const inExtensionPanel = useInExtensionPanel();
   const browse = useBrowseRun();
+  const recording = useSkillRecordingContext();
 
   // Code mode (Tauri only): the pill, the skill sync it reports on, and the
   // approval mode its controls and the permission cards change.
   const inTauri = useInTauri();
+  const codeShown = useCodeShownHere(inTauri);
   usePermissionChime(inTauri);
   const sessionId = useAppSelector(selectSessionId);
   const { data: mentorSettings } = useMentorSettings();
@@ -302,6 +308,17 @@ export function SdkChat({
       isRunning: browse.isRunning,
       run: browse.run,
       stop: browse.stop,
+      // Only the panel can watch a page, so the row is offered only where
+      // there is a worker behind it.
+      recording:
+        inExtensionPanel && recording
+          ? {
+              isRecording: recording.isRecording,
+              count: recording.count,
+              start: recording.start,
+              stop: recording.stop,
+            }
+          : undefined,
     },
     suppressChatErrorToast: wasRecent402,
     onSwitchToAutomatic: inTauri
@@ -351,7 +368,7 @@ export function SdkChat({
       showConversationStarters
       showExploreMentors
       slots={{
-        composerExtraControls: inTauri ? (
+        composerExtraControls: codeShown ? (
           <CodingModeButton
             sessionId={sessionId}
             skillSync={skillSync}
@@ -364,7 +381,7 @@ export function SdkChat({
         // Passed only while a pill offers it, because the SDK's action row
         // spaces its buttons with a gap that even an empty slot would take.
         composerActionControls:
-          inTauri && approvalsOffered ? (
+          codeShown && approvalsOffered ? (
             <CodeApprovalsButton
               mode={approvalMode}
               onChange={(mode) => void chooseMode(mode)}

@@ -19,6 +19,7 @@ import {
   switchToTasksTab,
   type TaskRepeat,
 } from '@iblai/iblai-js/playwright';
+import { ActivityPhoneView } from './activity-phone';
 
 export type { TaskRepeat };
 
@@ -45,6 +46,7 @@ export type { TaskRepeat };
 export class TasksTab {
   readonly page: Page;
   readonly dialog: Locator;
+  readonly phone: ActivityPhoneView;
 
   /** Default labels shipped with the SDK — handy when a test wants to assert
    * the exact heading/description text rather than going through a helper. */
@@ -67,6 +69,7 @@ export class TasksTab {
   constructor(page: Page, dialog: Locator) {
     this.page = page;
     this.dialog = dialog;
+    this.phone = new ActivityPhoneView(page, dialog);
   }
 
   // ---------------------------------------------------------------------------
@@ -227,33 +230,60 @@ export class TasksTab {
     const dialog = this.page.getByRole('dialog', {
       name: TASKS_LABELS.scheduleDialog.dialogName,
     });
-    // The dialog's desktop calendar is a hand-rolled 42-cell grid of plain
-    // buttons whose accessible name is just the day number; past days are
-    // `disabled`. For a next-day target the first enabled exact match is
-    // always the target: any earlier cell with the same number belongs to a
-    // past month (disabled), and when today is the month's last day the
-    // target "1" is the next month's spillover cell, which the grid always
-    // shows.
     await dialog
-      .getByRole('button', {
-        name: String(target.getDate()),
-        exact: true,
-        disabled: false,
-      })
-      .first()
-      .click();
-    // The form panel's heading echoes the selected date ("July 4, 2026") —
-    // assert the click landed on the right day before filling the form.
-    await expect(
-      dialog.getByRole('heading', {
-        name: target.toLocaleDateString('en-US', {
-          month: 'long',
-          day: 'numeric',
-          year: 'numeric',
+      .getByLabel(TASKS_LABELS.scheduleDialog.taskName)
+      .waitFor({ state: 'visible' });
+    // On a phone the dialog has no inline calendar: a collapsed "Date"
+    // button opens a day-picker popover whose day buttons are named like
+    // "Saturday, November 14th, 2026".
+    const phoneDate = dialog.getByRole('button', {
+      name: 'Date',
+      exact: true,
+    });
+    if ((await phoneDate.count()) > 0) {
+      await phoneDate.click();
+      const month = target.toLocaleDateString('en-US', { month: 'long' });
+      // The popover is portaled outside the dialog.
+      await this.page
+        .getByRole('button', {
+          name: new RegExp(
+            `, ${month} ${target.getDate()}(st|nd|rd|th), ${target.getFullYear()}$`,
+          ),
+        })
+        .click();
+      await expect(phoneDate).toContainText(
+        new RegExp(`^${month} ${target.getDate()}(st|nd|rd|th), `),
+        { timeout: 5_000 },
+      );
+    } else {
+      // The desktop calendar is a hand-rolled 42-cell grid of plain
+      // buttons whose accessible name is just the day number; past days are
+      // `disabled`. For a next-day target the first enabled exact match is
+      // always the target: any earlier cell with the same number belongs to
+      // a past month (disabled), and when today is the month's last day the
+      // target "1" is the next month's spillover cell, which the grid always
+      // shows.
+      await dialog
+        .getByRole('button', {
+          name: String(target.getDate()),
+          exact: true,
+          disabled: false,
+        })
+        .first()
+        .click();
+      // The form panel's heading echoes the selected date ("July 4, 2026") —
+      // assert the click landed on the right day before filling the form.
+      await expect(
+        dialog.getByRole('heading', {
+          name: target.toLocaleDateString('en-US', {
+            month: 'long',
+            day: 'numeric',
+            year: 'numeric',
+          }),
+          exact: true,
         }),
-        exact: true,
-      }),
-    ).toBeVisible({ timeout: 5_000 });
+      ).toBeVisible({ timeout: 5_000 });
+    }
     await dialog
       .getByLabel(TASKS_LABELS.scheduleDialog.taskName)
       .fill(task.name);
@@ -343,6 +373,50 @@ export class TasksTab {
 
   expectFailedTasks(n: number): Promise<void> {
     return expectFailedTasks(this.dialog, n);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Phone view (< 768px): task cards, Task Logs screen, date sheet
+  // ---------------------------------------------------------------------------
+
+  /** A task card, matched by (a substring of) the task name. */
+  phoneTaskCard(name: string): Locator {
+    return this.dialog.getByRole('button', { name: new RegExp(name) });
+  }
+
+  /** Tap a card; the full-screen Task Logs screen opens over the dialog. */
+  async openPhoneTaskLogs(name: string): Promise<void> {
+    await this.phoneTaskCard(name).click();
+    await expect(this.phone.screenTitle(TASKS_LABELS.logs.title)).toBeVisible({
+      timeout: 10_000,
+    });
+  }
+
+  /** Delete the task whose Task Logs screen is open (trash in its header). */
+  async deletePhoneTask(): Promise<void> {
+    await this.phone
+      .screen()
+      .getByRole('button', { name: TASKS_LABELS.list.deleteTask, exact: true })
+      .click();
+    const dialog = this.page.locator(
+      `[role="dialog"][aria-label="${TASKS_LABELS.deleteDialog.dialogName}"]`,
+    );
+    await dialog
+      .getByRole('button', { name: TASKS_LABELS.deleteDialog.delete })
+      .click();
+    await expect(dialog).toBeHidden({ timeout: 10_000 });
+  }
+
+  /** The date filter is an icon button named "Select Date" (or the chosen date). */
+  phoneDateButton(): Locator {
+    return this.dialog.getByRole('button', {
+      name: TASKS_LABELS.toolbar.selectDate,
+      exact: true,
+    });
+  }
+
+  phoneDateSheet(): Locator {
+    return this.phone.sheet(TASKS_LABELS.toolbar.selectDate);
   }
 
   // ---------------------------------------------------------------------------

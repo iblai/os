@@ -1,5 +1,6 @@
 'use client';
 
+import { useShowFreeTrialDialog } from '@iblai/iblai-js/web-utils';
 import { useParams, useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import {
@@ -11,8 +12,7 @@ import {
 import { chatPrivacyApiSlice } from '@iblai/iblai-js/data-layer';
 
 import { useNavigate } from '@/hooks/user-navigate';
-import { useUsername } from '@/hooks/use-user';
-import { useShowFreeTrialDialog } from '@/hooks/user-user-actions';
+import { useUsername, useUserTenants } from '@/hooks/use-user';
 import { config } from '@/lib/config';
 import {
   MENTOR_VISIBILITY,
@@ -21,9 +21,7 @@ import {
 } from '@/lib/constants';
 import { selectRbacPermissions } from '@/features/rbac/rbac-slice';
 import { useAppDispatch, useAppSelector } from '@/lib/hooks';
-import { useGetUserTenantsQuery } from '@/features/tenants/api-slice';
 import { TenantKeyMentorIdParams } from '@/lib/types';
-import { handleTenantSwitch } from '@/lib/utils';
 import { urlRoutes } from '@/url-routes';
 
 /**
@@ -49,6 +47,7 @@ export function SettingsTab() {
   const tDelete = useTranslations('settingsTabDeleteMentorModal');
   const tAdminVisibility = useTranslations('settingsTabAdminVisibilityConfirm');
   const tFileTypes = useTranslations('tabsSettingsTab.allowedFileTypes');
+  const tDiscovery = useTranslations('tabsSettingsTab.discoveryAccess');
 
   const { tenantKey, mentorId } = useParams<TenantKeyMentorIdParams>();
   const { getMentorId, closeEditMentorModal, navigateToMentor } = useNavigate();
@@ -57,8 +56,15 @@ export function SettingsTab() {
   const dispatch = useAppDispatch();
   const rbacPermissions = useAppSelector(selectRbacPermissions);
   const { executeWithTrialCheck } = useShowFreeTrialDialog();
-  const { data: tenants, isLoading: isLoadingTenants } =
-    useGetUserTenantsQuery();
+  // Read from the cached list rather than asking the LMS. The SDK uses this
+  // for exactly one thing — whether the user administers the organization
+  // they are already in — and the destination list it used to populate moved
+  // to the auth app. A full organization fetch from the edX LMS on every
+  // Settings-tab open, to answer one boolean, is not worth the round trip.
+  // The cache is written at login and tenant switch, and every other admin
+  // check in the app (useIsAdmin, the subscription hooks, the free-trial
+  // gate) already reads it.
+  const { userTenants: tenants } = useUserTenants();
 
   const activeMentorId = getMentorId() ?? mentorId;
 
@@ -262,6 +268,26 @@ export function SettingsTab() {
       clearAll: tFileTypes('clearAll'),
       done: tFileTypes('done'),
     },
+    discoveryAccess: {
+      audienceLabel: tDiscovery('audienceLabel'),
+      audienceTooltipAriaLabel: tDiscovery('audienceTooltipAriaLabel'),
+      allMembers: tDiscovery('allMembers'),
+      adminsOnly: tDiscovery('adminsOnly'),
+      allMembersHelp: tDiscovery('allMembersHelp'),
+      adminsOnlyHelp: tDiscovery('adminsOnlyHelp'),
+      publicCatalogLabel: tDiscovery('publicCatalogLabel'),
+      publicCatalogDescription: tDiscovery('publicCatalogDescription'),
+      publicCatalogTooltipAriaLabel: tDiscovery(
+        'publicCatalogTooltipAriaLabel',
+      ),
+      guestChatLabel: tDiscovery('guestChatLabel'),
+      guestChatDescription: tDiscovery('guestChatDescription'),
+      guestChatTooltipAriaLabel: tDiscovery('guestChatTooltipAriaLabel'),
+      summaryAdminsGuest: tDiscovery('summaryAdminsGuest'),
+      summaryMembersGuest: tDiscovery('summaryMembersGuest'),
+      summaryPublicCatalog: tDiscovery('summaryPublicCatalog'),
+      summaryPublicCatalogGuest: tDiscovery('summaryPublicCatalogGuest'),
+    },
     deleteModal: {
       title: tDelete('title'),
       description: tDelete('description'),
@@ -285,13 +311,13 @@ export function SettingsTab() {
       // Prefix only — the SDK joins it to the source name with its own space.
       defaultNamePrefix: tCopy('defaultCopyNamePrefix'),
       fallbackName: tCopy('defaultAgentName'),
-      destinationLabel: tCopy('destinationLabel'),
-      destinationPlaceholder: tCopy('selectTenantPlaceholder'),
-      destinationLoadingPlaceholder: tCopy('loadingTenants'),
+      copyHereLabel: tCopy('copyHereLabel'),
+      copyElsewhereHint: tCopy('copyElsewhereHint'),
       includeTrainingDataLabel: tCopy('includeTrainingDataLabel'),
       cancel: tCopy('cancelButton'),
       confirm: tCopy('copyButton'),
       confirming: tCopy('copyingButton'),
+      continueLabel: tCopy('continueButton'),
       successToast: tCopy('successCopied'),
       errorToast: tCopy('errorCopyFailed'),
       missingContextToast: tCopy('errorMissingContext'),
@@ -317,18 +343,14 @@ export function SettingsTab() {
     }
   };
 
-  // Post-copy: mirror the monolith's CopyMentorModal navigation. Same-tenant
-  // copies push straight to the new mentor with the Edit-Mentor modal
-  // pre-opened; cross-tenant copies switch tenants first, carrying the same
-  // modal-stack param through the full-page redirect.
+  // Post-copy: push straight to the new agent with the Edit-Agent modal
+  // pre-opened. Only same-organization copies arrive here — a copy into any
+  // other organization is made by the auth app, which lands the user on the
+  // result itself rather than handing it back.
   const handleSuccessfulCopy = ({
     forkedMentorId,
-    destinationTenantKey,
-    isCrossTenantCopy,
   }: {
     forkedMentorId: string;
-    destinationTenantKey: string;
-    isCrossTenantCopy: boolean;
   }) => {
     const modalStack = [
       {
@@ -337,18 +359,7 @@ export function SettingsTab() {
       },
     ];
 
-    if (isCrossTenantCopy) {
-      const mentorPath = `/platform/${destinationTenantKey}/${forkedMentorId}?modal=${encodeURIComponent(
-        JSON.stringify(modalStack),
-      )}`;
-      void handleTenantSwitch(
-        destinationTenantKey,
-        false,
-        `${window.location.origin}${mentorPath}`,
-      );
-    } else {
-      navigateToMentor(forkedMentorId, `modal=${JSON.stringify(modalStack)}`);
-    }
+    navigateToMentor(forkedMentorId, `modal=${JSON.stringify(modalStack)}`);
   };
 
   return (
@@ -367,7 +378,9 @@ export function SettingsTab() {
     >
       <AgentSettingsTab
         tenants={copyTenants}
-        isLoadingTenants={isLoadingTenants}
+        // Copying into any other organization happens on the auth app, which
+        // is the only place that can mint that organization's tokens.
+        authUrl={config.authUrl()}
         onSuccessfulSave={handleSuccessfulSave}
         onSuccessfulDelete={handleSuccessfulDelete}
         onSuccessfulCopy={handleSuccessfulCopy}

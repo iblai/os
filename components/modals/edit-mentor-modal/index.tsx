@@ -3,7 +3,6 @@
 import { ReactNode, useEffect, useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useParams } from 'next/navigation';
-import { useGetRbacPermissionsMutation } from '@iblai/iblai-js/data-layer';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Dialog,
@@ -54,8 +53,7 @@ import {
 } from '@/hooks/use-mentor-segments';
 import { cn } from '@/lib/utils';
 import { Spinner } from '@/components/spinner';
-import { useAppDispatch } from '@/lib/hooks';
-import { updateRbacPermissions } from '@/features/rbac/rbac-slice';
+import { useHydrateMentorRbac } from '@/hooks/use-hydrate-mentor-rbac';
 import { TenantKeyMentorIdParams } from '@/lib/types';
 
 type Props = {
@@ -114,71 +112,22 @@ export function EditMentorModal({ isOpen, onClose }: Props) {
   const activeTab = getEditMentorTab() || MODALS.EDIT_MENTOR.tabs.settings;
 
   // When the modal is opened for a mentor other than the one the page was
-  // booted with (e.g. via "My Agents" in the sidebar), the global RBAC
-  // permissions cache only contains the page mentor's entries. Without a
-  // refetch, the segment filter strips every tab that has an `rbacResource`
-  // and the user is left looking at a sidebar with just "Privacy" — reads
-  // as a bug, not a permission boundary. Mirror what MentorProvider does on
-  // page load (`loadMentorsPermissions`) but scoped to this mentor's
-  // resources so the filter has data to work with.
+  // booted with (e.g. via "My Agents" in the sidebar), the RBAC cache lacks
+  // its entries and the segment filter would leave just "Privacy".
   const { tenantKey } = useParams<TenantKeyMentorIdParams>();
-  const dispatch = useAppDispatch();
-  const [getRbacPermissions] = useGetRbacPermissionsMutation();
   // @ts-ignore mentor_id lives on the public settings shape but isn't typed
   const mentorDbId = mentorSettings?.mentor_id as number | undefined;
-  const [rbacFetchedForMentor, setRbacFetchedForMentor] = useState<
-    number | null
-  >(null);
-
-  useEffect(() => {
-    if (!isOpen) return;
-    if (!mentorDbId || !tenantKey) return;
-    if (rbacFetchedForMentor === mentorDbId) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const permissions = await getRbacPermissions({
-          requestBody: {
-            platform_key: tenantKey,
-            resources: [
-              `/mentors/${mentorDbId}/`,
-              `/mentors/${mentorDbId}/llms/`,
-              `/mentors/${mentorDbId}/mcpservers/`,
-              `/mentors/${mentorDbId}/memory/`,
-              `/mentors/${mentorDbId}/documents/`,
-              `/mentors/${mentorDbId}/tools/`,
-              `/mentors/${mentorDbId}/prompts/`,
-            ],
-          },
-        }).unwrap();
-        if (cancelled) return;
-        dispatch(updateRbacPermissions({ ...permissions }));
-      } catch {
-        // Match MentorProvider — on failure we leave the existing
-        // permissions in place and let the filter decide; better than
-        // crashing the modal.
-      } finally {
-        if (!cancelled) setRbacFetchedForMentor(mentorDbId);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    isOpen,
+  const isRbacHydrated = useHydrateMentorRbac({
+    enabled: isOpen,
     mentorDbId,
     tenantKey,
-    rbacFetchedForMentor,
-    getRbacPermissions,
-    dispatch,
-  ]);
+  });
 
   // Render the spinner until both mentor settings AND its RBAC have been
   // hydrated. Either alone is not enough: with settings but no RBAC, the
   // filter under-counts; with RBAC but no settings, every resource path
   // it would check is undefined.
-  const isLoading =
-    isSettingsLoading || (!!mentorDbId && rbacFetchedForMentor !== mentorDbId);
+  const isLoading = isSettingsLoading || (!!mentorDbId && !isRbacHydrated);
 
   // Bucket the visible segments by their nav category. Segments without a
   // category (e.g. hidden tabs) are silently dropped here — the sidebar
@@ -290,14 +239,7 @@ export function EditMentorModal({ isOpen, onClose }: Props) {
       }}
     >
       {isOpen && (
-        <DialogContent
-          className={`mx-auto w-[85vw] max-w-[90rem] gap-0 overflow-hidden p-0 md:w-full`}
-          style={{
-            height: '85vh',
-            display: 'flex',
-            flexDirection: 'column',
-          }}
-        >
+        <DialogContent className="mx-auto flex h-dvh w-screen max-w-none flex-col gap-0 overflow-hidden rounded-none p-0 md:h-[85vh] md:w-full md:max-w-[90rem] md:rounded-lg">
           <DialogDescription className="sr-only">
             {t('dialogDescription')}
           </DialogDescription>
@@ -326,10 +268,12 @@ export function EditMentorModal({ isOpen, onClose }: Props) {
               >
                 {/* Mobile Header */}
                 <div className="lg:hidden">
-                  <DialogHeader className="border-b border-gray-200 px-3 py-4">
-                    <DialogTitle className="text-lg font-semibold text-gray-900">
+                  <DialogHeader className="flex h-[52px] flex-row items-center justify-between space-y-0 border-b border-gray-200 pr-12 pl-4 md:h-auto md:px-3 md:py-4">
+                    <DialogTitle className="text-base font-semibold text-gray-900 md:text-lg">
                       {t('editAgentTitle')}
                     </DialogTitle>
+                    {/* An Activity tab puts its info button here on a phone. */}
+                    <div data-activity-info-slot />
                   </DialogHeader>
                 </div>
                 {/* Desktop Sidebar - category tab strip + filtered segment list */}
@@ -465,7 +409,7 @@ export function EditMentorModal({ isOpen, onClose }: Props) {
                     </div>
                   )}
                   <TabsList
-                    className="h-auto w-full justify-start gap-1 overflow-x-auto rounded-none bg-white px-3 py-2"
+                    className="h-auto w-full justify-start gap-5 overflow-x-auto rounded-none bg-white px-4 py-0 md:gap-1 md:px-3 md:py-2"
                     aria-label={t('agentSettingsTabs')}
                   >
                     {visibleSidebarItems.map((tab) => (
@@ -473,13 +417,13 @@ export function EditMentorModal({ isOpen, onClose }: Props) {
                         key={tab.value}
                         value={tab.value}
                         className={cn(
-                          'flex items-center gap-2 px-2 text-xs whitespace-nowrap data-[state=active]:bg-blue-50 data-[state=active]:text-blue-600 sm:px-3 sm:text-sm',
+                          'flex items-center gap-2 text-sm whitespace-nowrap data-[state=active]:text-blue-600 max-md:h-11 max-md:!rounded-none max-md:border-b-2 max-md:border-transparent max-md:px-0 max-md:shadow-none max-md:data-[state=active]:border-blue-600 max-md:data-[state=active]:bg-transparent max-md:data-[state=active]:shadow-none md:px-3 md:data-[state=active]:bg-blue-50',
                         )}
                         id={`tab-${tab.value}`}
                         aria-controls={`panel-${tab.value}`}
                       >
                         <tab.icon
-                          className="h-3 w-3 sm:h-4 sm:w-4"
+                          className="h-4 w-4 max-md:hidden"
                           aria-hidden="true"
                         />
                         <span>{tHeader(tab.labelKey)}</span>

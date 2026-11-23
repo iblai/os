@@ -8,15 +8,11 @@ import { SERVICES } from '../../constants';
 
 describe('tenants/constants', () => {
   describe('TENANTS_ENDPOINTS', () => {
-    it('should have GET_USER_TENANTS endpoint configuration', () => {
-      expect(TENANTS_ENDPOINTS.GET_USER_TENANTS).toBeDefined();
-      expect(TENANTS_ENDPOINTS.GET_USER_TENANTS.service).toBe(SERVICES.LMS);
-    });
-
-    it('should generate correct path for GET_USER_TENANTS', () => {
-      const path = TENANTS_ENDPOINTS.GET_USER_TENANTS.path();
-
-      expect(path).toBe('/api/ibl/users/manage/platform/');
+    // The tenants list comes from DM now (the SDK's TenantProvider reads
+    // `/api/core/users/platforms/`). Nothing here may reach the edX LMS.
+    it('declares no endpoint on the edX LMS', () => {
+      const services = Object.values(TENANTS_ENDPOINTS).map((e) => e.service);
+      expect(services).not.toContain(SERVICES.LMS);
     });
 
     it('should have GET_PLATFORM_METADATA endpoint configuration', () => {
@@ -35,12 +31,6 @@ describe('tenants/constants', () => {
   });
 
   describe('TENANTS_QUERY_KEYS', () => {
-    it('should return correct query key for GET_USER_TENANTS', () => {
-      const queryKey = TENANTS_QUERY_KEYS.GET_USER_TENANTS();
-
-      expect(queryKey).toBe('USER_TENANTS');
-    });
-
     it('should return correct query key for GET_PLATFORM_METADATA', () => {
       const queryKey = TENANTS_QUERY_KEYS.GET_PLATFORM_METADATA();
 

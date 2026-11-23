@@ -2626,9 +2626,12 @@ describe('EmbedTab Component', () => {
         onload: null as ((event: any) => void) | null,
         result: 'data:image/png;base64,dGVzdA==',
       };
-      vi.spyOn(global, 'FileReader').mockImplementation(
-        () => mockReader as any,
-      );
+      // `function`, not an arrow: this is called with `new FileReader()`, and
+      // vitest 4 no longer wraps a mock's implementation in a constructible
+      // function of its own.
+      vi.spyOn(global, 'FileReader').mockImplementation(function () {
+        return mockReader as any;
+      });
 
       fireEvent.change(fileInput!, { target: { files: [file] } });
 

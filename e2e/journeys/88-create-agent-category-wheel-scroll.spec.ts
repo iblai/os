@@ -56,67 +56,95 @@ test.describe('Journey 88: Create Agent category wheel scroll', () => {
     await last.click();
     await expect(createMentorPage.categoryCombobox).toContainText(name);
   });
+
+  test('admin searches the Create Agent category list by name, clears the search and picks a category, which closes the list', async ({
+    createMentorPage,
+  }) => {
+    const list = createMentorPage.categoryList;
+    const options = list.getByRole('option');
+    const search = createMentorPage.categorySearchInput;
+
+    const total = await options.count();
+    const height = await list.evaluate((el) => el.clientHeight);
+    const name = (await options.last().innerText()).trim();
+    const match = list.getByRole('option', { name, exact: true });
+
+    await search.fill(name);
+    await expect(match).toBeVisible();
+    await expect.poll(() => options.count()).toBeLessThan(total);
+    expect(await list.evaluate((el) => el.clientHeight)).toBe(height);
+
+    await search.fill('');
+    await expect(options).toHaveCount(total);
+    expect(await list.evaluate((el) => el.clientHeight)).toBe(height);
+
+    await search.fill(name);
+    await match.click();
+    await expect(search).toBeHidden();
+    await expect(createMentorPage.categoryCombobox).toContainText(name);
+  });
 });
 
 /**
- * Create Agent prompt popup Save (issue #2758): the System / Proactive /
- * Guided prompt popup got a front-end-only Save button. Text is kept per
- * keystroke, so Save only closes the popup; nothing is sent to the backend and
- * no agent is created (the form is abandoned at the end of each test).
+ * Create Agent prompt popup Save (issue #2758, now in the wizard's Prompts
+ * step, iblai-platform#2853): the System / Proactive prompt popup has a Save
+ * button that saves it and the step shows the saved text.
  */
 
 test.describe('Journey 88: Create Agent prompt popup Save', () => {
-  test.beforeEach(async ({ page, createMentorPage }) => {
+  test.beforeEach(async ({ page, createAgentWizardPage: wizard }) => {
     await navigateToMentorApp(page);
     await waitForPageReady(page);
-    await createMentorPage.open();
-    await createMentorPage.goToPromptsTab(`E2E Prompt Save ${Date.now()}`);
+    await wizard.open();
+    await wizard.createAgent(`E2E Prompt Save ${Date.now()}`);
+    await wizard.goToPromptsStep();
   });
 
-  test('admin edits the System Prompt in Create Agent, clicks Save and the popup closes with the text in the form and no request sent', async ({
-    page,
-    createMentorPage,
+  test('admin edits the System Prompt in Create Agent, clicks Save and Close and the step shows the saved text', async ({
+    createAgentWizardPage: wizard,
   }) => {
     const text = `System text ${Date.now()}`;
-    const popup = await createMentorPage.openPromptPopupAndType('system', text);
+    const popup = await wizard.openPromptPopupAndType('system', text);
     const save = popup.getByRole('button', { name: 'Save', exact: true });
     await expect(save).toBeVisible();
-
-    const requests: string[] = [];
-    const onRequest = (r: import('@playwright/test').Request) => {
-      if (r.method() !== 'GET') requests.push(`${r.method()} ${r.url()}`);
-    };
-    page.on('request', onRequest);
     await save.click();
-    await expect(popup).toBeHidden({ timeout: 10_000 });
-    await page.waitForTimeout(500);
-    page.off('request', onRequest);
-
-    expect(requests).toEqual([]);
-    await expect(createMentorPage.promptContent('system')).toHaveText(text);
-    await expect(createMentorPage.dialog).toBeVisible();
+    await popup
+      .getByRole('button', { name: 'Close', exact: true })
+      .first()
+      .click();
+    await expect(popup).toBeHidden({ timeout: 15_000 });
+    await expect(wizard.promptContent('system')).toHaveText(text, {
+      timeout: 15_000,
+    });
+    await expect(wizard.dialog).toBeVisible();
   });
 
-  for (const kind of ['proactive', 'guided'] as const) {
-    test(`admin edits the ${kind} prompt in Create Agent and Save closes the popup keeping the text`, async ({
-      createMentorPage,
-    }) => {
-      const text = `${kind} text ${Date.now()}`;
-      const popup = await createMentorPage.openPromptPopupAndType(kind, text);
-      await popup.getByRole('button', { name: 'Save', exact: true }).click();
-      await expect(popup).toBeHidden({ timeout: 10_000 });
-      await expect(createMentorPage.promptContent(kind)).toHaveText(text);
-    });
-  }
-
-  test('admin presses Escape in the System Prompt popup and the typed text is still kept', async ({
-    page,
-    createMentorPage,
+  test('admin edits the proactive prompt in Create Agent and Save keeps the text in the step', async ({
+    createAgentWizardPage: wizard,
   }) => {
-    const text = `Escape text ${Date.now()}`;
-    const popup = await createMentorPage.openPromptPopupAndType('system', text);
+    const text = `proactive text ${Date.now()}`;
+    const popup = await wizard.openPromptPopupAndType('proactive', text);
+    await popup.getByRole('button', { name: 'Save', exact: true }).click();
+    await popup
+      .getByRole('button', { name: 'Close', exact: true })
+      .first()
+      .click();
+    await expect(popup).toBeHidden({ timeout: 15_000 });
+    await expect(wizard.promptContent('proactive')).toHaveText(text, {
+      timeout: 15_000,
+    });
+  });
+
+  test('admin presses Escape in the System Prompt popup and the popup closes', async ({
+    page,
+    createAgentWizardPage: wizard,
+  }) => {
+    const popup = await wizard.openPromptPopupAndType(
+      'system',
+      `Escape text ${Date.now()}`,
+    );
     await page.keyboard.press('Escape');
     await expect(popup).toBeHidden({ timeout: 10_000 });
-    await expect(createMentorPage.promptContent('system')).toHaveText(text);
+    await expect(wizard.dialog).toBeVisible();
   });
 });

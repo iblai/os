@@ -14,6 +14,23 @@ export default defineConfig({
         ).pathname,
       },
       {
+        // Regexes, and the styles path first: a bare string `find` is a PREFIX
+        // match, so 'react-syntax-highlighter' would swallow the styles import
+        // too and hand it the component mock.
+        find: /^react-syntax-highlighter\/dist\/esm\/styles\/prism$/,
+        replacement: new URL(
+          './__tests__/mocks/prism-styles.mock.ts',
+          import.meta.url,
+        ).pathname,
+      },
+      {
+        find: /^react-syntax-highlighter$/,
+        replacement: new URL(
+          './__tests__/mocks/react-syntax-highlighter.mock.tsx',
+          import.meta.url,
+        ).pathname,
+      },
+      {
         find: '@tauri-apps/api/event',
         replacement: new URL(
           './__tests__/mocks/tauri-event.mock.ts',
@@ -106,6 +123,7 @@ export default defineConfig({
         'contexts/**/*.{ts,tsx}',
         'actions/**/*.{ts,tsx}',
         'app/share/**/*.{ts,tsx}',
+        'app/error/**/*.{ts,tsx}',
         'extensions/chrome/src/**/*.{ts,tsx}',
       ],
       exclude: [
@@ -132,10 +150,10 @@ export default defineConfig({
         '**/__mocks__/**',
         '**/test-utils/**',
 
-        // Next.js app router (tested via E2E, except share pages which have unit tests)
+        // Next.js app router (tested via E2E, except the share and error pages,
+        // which have unit tests)
         'app/api/**',
         'app/create-mentor/**',
-        'app/error/**',
         'app/google-oauth-callback/**',
         'app/mobile/**',
         'app/mobile-sso-login/**',

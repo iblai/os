@@ -11,6 +11,7 @@ import { ProjectPage } from '../page-objects/project.page';
 import { NotificationsPage } from '../page-objects/notifications.page';
 import { BillingPage } from '../page-objects/billing.page';
 import { CreateMentorPage } from '../page-objects/create-mentor.page';
+import { CreateAgentWizardPage } from '../page-objects/create-agent-wizard.page';
 import { ChatSearchDialogPage } from '../page-objects/chat-search-dialog.pom';
 import { generateProjectName } from './test-data';
 import {
@@ -62,6 +63,7 @@ export const test = base.extend<
     explorePage: ExplorePage;
     editMentorPage: EditMentorPage;
     createMentorPage: CreateMentorPage;
+    createAgentWizardPage: CreateAgentWizardPage;
     chatSearchDialogPage: ChatSearchDialogPage;
     analyticsPage: AnalyticsPage;
     profilePage: ProfilePage;
@@ -149,6 +151,9 @@ export const test = base.extend<
   },
   createMentorPage: async ({ page }, use) => {
     await use(new CreateMentorPage(page));
+  },
+  createAgentWizardPage: async ({ page }, use) => {
+    await use(new CreateAgentWizardPage(page));
   },
   chatSearchDialogPage: async ({ page }, use) => {
     await use(new ChatSearchDialogPage(page));

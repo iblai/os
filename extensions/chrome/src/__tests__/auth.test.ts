@@ -4,6 +4,7 @@ import {
   dmToken,
   ensureSignedIn,
   isAuthed,
+  isSessionExpired,
   org,
   sessionData,
   signIn,
@@ -62,25 +63,35 @@ describe('signIn / ensureSignedIn', () => {
     expect(dmToken()).toBe('dm');
   });
 
-  it('switches tenants via /login/complete with the target tenant and edX JWT', async () => {
-    // The switch mirrors the web tenant switch: the edX JWT authorises minting
-    // the new tenant's tokens through the token-exchange endpoint.
-    localStorage.setItem('edx_jwt_token', 'jwt123');
-    await signIn('beta');
-    const [{ url }] = chromeStub.stub.identity.launchWebAuthFlow.mock
-      .calls[0] as unknown as [{ url: string }];
-    expect(url).toBe(
-      'https://login.iblai.app/login/complete?tenant=beta&redirect-to=https%3A%2F%2Fabc.chromiumapp.org%2F&token=jwt123',
-    );
-    expect(isAuthed()).toBe(true);
-  });
-
-  it('omits the token param on switch when no edX JWT is stored', async () => {
+  it('switches tenants via /login/complete with the target tenant', async () => {
+    // The token-exchange endpoint mints the new tenant's tokens, authorised by
+    // the JWT the auth app holds in its own storage, not by anything we send.
     await signIn('beta');
     const [{ url }] = chromeStub.stub.identity.launchWebAuthFlow.mock
       .calls[0] as unknown as [{ url: string }];
     expect(url).toBe(
       'https://login.iblai.app/login/complete?tenant=beta&redirect-to=https%3A%2F%2Fabc.chromiumapp.org%2F',
+    );
+    expect(isAuthed()).toBe(true);
+  });
+
+  // Our copy duplicates one the auth app already has, and it is to stop giving
+  // apps that JWT at all — so a stored one must not leak into the URL.
+  it('never forwards the edX JWT, even when one is stored', async () => {
+    localStorage.setItem('edx_jwt_token', 'jwt123');
+    await signIn('beta');
+    const [{ url }] = chromeStub.stub.identity.launchWebAuthFlow.mock
+      .calls[0] as unknown as [{ url: string }];
+    expect(new URL(url).searchParams.has('token')).toBe(false);
+    expect(url).not.toContain('jwt123');
+  });
+
+  it('keeps the interactive first sign-in unchanged', async () => {
+    await signIn();
+    const [{ url }] = chromeStub.stub.identity.launchWebAuthFlow.mock
+      .calls[0] as unknown as [{ url: string }];
+    expect(url).toBe(
+      'https://login.iblai.app/login?redirect-to=https%3A%2F%2Fabc.chromiumapp.org%2F',
     );
   });
 
@@ -95,6 +106,71 @@ describe('signIn / ensureSignedIn', () => {
       undefined as never,
     );
     await expect(signIn()).rejects.toThrow(/no redirect URL/);
+  });
+});
+
+describe('an expired session', () => {
+  // The regression: the panel held tokens that had expired two days earlier.
+  // `isAuthed` only checked that `axd_token` was a string, so the panel called
+  // itself signed in, installed the dead session into the mentor iframe, and
+  // sat there while the embed 401'd and asked for auth nobody minted.
+  it('does not count as signed in', () => {
+    localStorage.setItem('axd_token', 'axd');
+    localStorage.setItem('axd_token_expires', '2026-11-03T18:13:55.050Z');
+    expect(isSessionExpired()).toBe(true);
+    expect(isAuthed()).toBe(false);
+  });
+
+  it('is re-minted by ensureSignedIn instead of being trusted', async () => {
+    localStorage.setItem('axd_token', 'stale');
+    localStorage.setItem('axd_token_expires', '2026-11-03T18:13:55.050Z');
+
+    await expect(ensureSignedIn()).resolves.toBe(true);
+
+    expect(chromeStub.stub.identity.launchWebAuthFlow).toHaveBeenCalledTimes(1);
+    expect(localStorage.getItem('axd_token')).toBe(SESSION.axd_token);
+  });
+
+  // Payloads carry only the keys they have. Writing over the old session left
+  // an orphaned `axd_token_expires` behind, so the session we had just minted
+  // read as already expired and the panel could never get back in.
+  it('does not inherit the old expiry when the new payload has none', async () => {
+    localStorage.setItem('axd_token', 'stale');
+    localStorage.setItem('axd_token_expires', '2026-11-03T18:13:55.050Z');
+
+    const { axd_token_expires: _dropped, ...withoutStamp } = SESSION;
+    chromeStub.stub.identity.launchWebAuthFlow.mockResolvedValueOnce(
+      sessionRedirect(withoutStamp) as never,
+    );
+    await signIn();
+
+    expect(localStorage.getItem('axd_token_expires')).toBeNull();
+    expect(isSessionExpired()).toBe(false);
+    expect(isAuthed()).toBe(true);
+  });
+
+  it('counts a token expiring within the round-trip as already gone', () => {
+    localStorage.setItem('axd_token', 'axd');
+    const inTenSeconds = new Date(Date.now() + 10_000).toISOString();
+    localStorage.setItem('axd_token_expires', inTenSeconds);
+    expect(isSessionExpired()).toBe(true);
+  });
+
+  it('leaves a session with plenty of time alone', () => {
+    localStorage.setItem('axd_token', 'axd');
+    localStorage.setItem('axd_token_expires', SESSION.axd_token_expires);
+    expect(isSessionExpired()).toBe(false);
+    expect(isAuthed()).toBe(true);
+  });
+
+  it.each([
+    ['no expiry recorded', null],
+    ['an unparseable expiry', 'soon'],
+  ])('trusts a session with %s', (_label, stamp) => {
+    localStorage.setItem('axd_token', 'axd');
+    if (stamp) localStorage.setItem('axd_token_expires', stamp);
+    expect(isSessionExpired()).toBe(false);
+    expect(isAuthed()).toBe(true);
   });
 });
 

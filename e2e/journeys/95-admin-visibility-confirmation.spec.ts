@@ -1,13 +1,14 @@
 /**
  * Journey 95 — Limiting an agent to administrators asks first (issue #2731)
  *
- * Edit Agent → Settings → Discovery → "Who Can View?":
- *  - while the dropdown says Administrators, the note
- *    (`admin-only-visibility-note`) warns that everyone else loses access;
- *  - saving a change from Users/Anyone to Administrators opens an alertdialog
+ * Edit Agent → Settings → Discovery → "Who Can Use This Agent?":
+ *  - while the dropdown says Admins Only, the help line
+ *    (`discovery-audience-help`) says only admins can find and chat with it;
+ *  - saving a change from All Members (catalog on or off) to Admins Only
+ *    opens an alertdialog
  *    ("Limit this agent to administrators?") instead of saving at once.
  *    Cancel saves nothing; "Limit to Administrators" saves as usual;
- *  - no prompt when the agent is already Administrators or goes the other way.
+ *  - no prompt when the agent is already Admins Only or goes the other way.
  *
  * One throwaway agent (auto-tracked and deleted by `createWithName`) is shared
  * by the serial checkpoints, which walk its visibility through the states.
@@ -36,7 +37,7 @@ test.describe.serial('Journey 95: Admin visibility confirmation', () => {
 
   let mentorUrl = '';
 
-  test('avs-01: picking Administrators shows the note, and Save on a Users/Anyone agent opens the confirmation', async ({
+  test('avs-01: picking Admins Only shows the help line, and Save on an All Members agent opens the confirmation', async ({
     page,
     editMentorPage,
     createMentorPage,
@@ -56,12 +57,13 @@ test.describe.serial('Journey 95: Admin visibility confirmation', () => {
     // Start from a saved Users value so narrowing to Administrators is a change.
     await settings.setVisibility('Users');
     await settings.saveConfirmingAdminVisibility();
-    await expect(settings.adminOnlyVisibilityNote).toBeHidden();
+    await expect(settings.audienceHelp).toContainText(
+      /every member can find and chat with it/i,
+    );
 
     await settings.setVisibility('Administrators');
-    await expect(settings.adminOnlyVisibilityNote).toBeVisible();
-    await expect(settings.adminOnlyVisibilityNote).toContainText(
-      /only administrators can see and chat with this agent/i,
+    await expect(settings.audienceHelp).toContainText(
+      /only admins, the creator, and people given access/i,
     );
 
     await settings.saveButton.click();
@@ -75,7 +77,7 @@ test.describe.serial('Journey 95: Admin visibility confirmation', () => {
     await editMentorPage.close();
   });
 
-  test('avs-02: Cancel saves nothing and keeps Administrators in the form', async ({
+  test('avs-02: Cancel saves nothing and keeps Admins Only in the form', async ({
     page,
     editMentorPage,
   }) => {
@@ -96,22 +98,21 @@ test.describe.serial('Journey 95: Admin visibility confirmation', () => {
 
     await settings.saveButton.click();
     await settings.cancelAdminVisibility();
-    await expect(settings.visibilityCombobox).toContainText(/Administrators/i);
-    await expect(settings.adminOnlyVisibilityNote).toBeVisible();
+    await expect(settings.visibilityCombobox).toContainText(/Admins Only/i);
     page.off('request', onRequest);
     expect(saves, 'Cancel must not send a visibility save').toHaveLength(0);
 
-    // Server still has Users.
+    // Server still has All Members.
     await editMentorPage.close();
     await navigateToMentorApp(page, mentorUrl);
     await editMentorPage.open('Settings');
     await waitForPageReady(page);
     await settings.selectSubTab('Discovery');
-    await expect(settings.visibilityCombobox).toContainText(/Users/i);
+    await expect(settings.visibilityCombobox).toContainText(/All Members/i);
     await editMentorPage.close();
   });
 
-  test('avs-03: "Limit to Administrators" saves viewable_by_tenant_admins, and the note shows when reopened', async ({
+  test('avs-03: "Limit to Administrators" saves viewable_by_tenant_admins, and Admins Only is shown when reopened', async ({
     page,
     editMentorPage,
   }) => {
@@ -140,12 +141,12 @@ test.describe.serial('Journey 95: Admin visibility confirmation', () => {
     await editMentorPage.open('Settings');
     await waitForPageReady(page);
     await settings.selectSubTab('Discovery');
-    await expect(settings.visibilityCombobox).toContainText(/Administrators/i);
-    await expect(settings.adminOnlyVisibilityNote).toBeVisible();
+    await expect(settings.visibilityCombobox).toContainText(/Admins Only/i);
+    await expect(settings.audienceHelp).toContainText(/only admins/i);
     await editMentorPage.close();
   });
 
-  test('avs-04: switching away from Administrators hides the note and saves without a prompt, and Users to Anyone saves without a prompt', async ({
+  test('avs-04: switching away from Admins Only saves without a prompt, and Users to Anyone saves without a prompt', async ({
     page,
     editMentorPage,
   }) => {
@@ -157,17 +158,17 @@ test.describe.serial('Journey 95: Admin visibility confirmation', () => {
     await editMentorPage.open('Settings');
     await waitForPageReady(page);
     await settings.selectSubTab('Discovery');
-    await expect(settings.adminOnlyVisibilityNote).toBeVisible();
+    await expect(settings.audienceHelp).toContainText(/only admins/i);
 
     await settings.setVisibility('Users');
-    await expect(settings.adminOnlyVisibilityNote).toBeHidden();
+    await expect(settings.audienceHelp).toContainText(/every member/i);
     await settings.saveButton.click();
     await expect(
       page.getByText(/agent updated successfully/i).first(),
     ).toBeVisible({ timeout: 30_000 });
     await expect(settings.adminVisibilityConfirm).toBeHidden();
 
-    // Users -> Anyone is not a narrowing either.
+    // All Members -> public catalog is not a narrowing either.
     await settings.setVisibility('Anyone');
     await settings.saveButton.click();
     await expect(settings.adminVisibilityConfirm).toBeHidden();

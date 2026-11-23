@@ -18,7 +18,7 @@
 
 #![cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, AtomicI64, AtomicUsize, Ordering};
 use std::sync::{Arc, OnceLock};
@@ -455,12 +455,18 @@ struct TurnState {
     /// section rather than the reply. Kept so a turn that ends on a tool call
     /// with no trailing text still shows the model's only words.
     last_narration: String,
+    /// The thoughts since the last tool call started: what a turn that ends
+    /// without reply text shows instead (`empty_reply_fallback`).
+    closing_thought: String,
     /// Thought deltas batched like `pending_delta`.
     pending_reasoning: String,
     /// `None` = no thoughts flushed yet this turn, so the first batch goes out at once.
     last_reasoning_emit: Option<Instant>,
     /// Per tool call, the visible fields last forwarded — the gate in `admit_tool_update`.
     tool_shapes: HashMap<String, serde_json::Map<String, Value>>,
+    /// How many tool calls the turn had when it was last told to make the call
+    /// it wrote as text: the same reply with no call since is its answer.
+    asked_to_call_after: Option<usize>,
 }
 
 impl TurnState {
@@ -471,9 +477,11 @@ impl TurnState {
             pending_delta: String::new(),
             last_emit: Instant::now(),
             last_narration: String::new(),
+            closing_thought: String::new(),
             pending_reasoning: String::new(),
             last_reasoning_emit: None,
             tool_shapes: HashMap::new(),
+            asked_to_call_after: None,
         }
     }
 
@@ -569,6 +577,7 @@ impl TurnState {
     /// Batch thought deltas as `pending_delta` batches reply text: the first flushes
     /// at once, the rest at most once per `TOKEN_EMIT_WINDOW`.
     fn push_reasoning(&mut self, delta: &str, now: Instant) -> Option<String> {
+        self.closing_thought.push_str(delta);
         self.pending_reasoning.push_str(delta);
         let due = self
             .last_reasoning_emit
@@ -606,6 +615,7 @@ impl TurnState {
     /// A tool call or a permission card is about to show: pre-tool text moves into
     /// the thoughts, and `true` says the reply bubble must be emptied.
     fn narration_to_reasoning(&mut self) -> bool {
+        self.closing_thought.clear();
         match self.take_narration() {
             Some(text) => {
                 self.pending_reasoning.push_str(&text);
@@ -624,6 +634,41 @@ impl TurnState {
         } else {
             &self.full_content
         }
+    }
+
+    /// A model that thinks before it answers can end a turn with the answer
+    /// still in its thoughts and no reply text at all (seen with on-device
+    /// reasoning models). A finished turn with nothing to show takes those
+    /// closing thoughts as its reply, or failing that the words it wrote
+    /// before its last tool call; a turn that spent its whole reply budget
+    /// thinking says so. Returned for the token event that fills the bubble.
+    fn empty_reply_fallback(&mut self, stop_reason: Option<&str>) -> Option<String> {
+        if !self.full_content.trim().is_empty() {
+            return None;
+        }
+        let reply = match stop_reason {
+            Some("end_turn") => {
+                let closing = self.closing_thought.trim();
+                let notes = self.last_narration.trim();
+                if !closing.is_empty() {
+                    closing
+                } else if announces_next_step(notes) {
+                    // "Let me find Chrome." is no answer to show.
+                    ""
+                } else {
+                    notes
+                }
+            }
+            // The thoughts of a turn cut at its limit are 8,000 tokens of
+            // working out, not an answer.
+            Some("max_tokens") => OUT_OF_ROOM_REPLY,
+            _ => "",
+        };
+        if reply.is_empty() {
+            return None;
+        }
+        self.full_content = reply.to_string();
+        Some(self.full_content.clone())
     }
 
     /// A turn is streaming — updates arriving with no generation in flight
@@ -646,6 +691,9 @@ struct Session {
     /// Which agent this process runs: opencode, Codex or Claude Code. Fixed at
     /// spawn — switching agents changes `requested_model`, which respawns.
     backend: Backend,
+    /// Spawned with the screen tools (Cowork on). Fixed at spawn — a flip
+    /// respawns, like a model switch.
+    cowork: bool,
     /// Throwaway key this session uses against the loopback model proxy (cloud only).
     /// The real DM token lives in the proxy, keyed by this.
     proxy_secret: Option<String>,
@@ -2365,12 +2413,12 @@ pub async fn set_opencode_skills(
 /// picks up on every model call.
 fn apply_skills_config(
     root: &mut serde_json::Map<String, Value>,
-    vibe_dir: &Path,
+    vibe_dir: Option<&Path>,
     mentor_dir: Option<&Path>,
 ) {
     let mut paths: Vec<String> = Vec::new();
-    if vibe_dir.is_dir() {
-        paths.push(vibe_dir.to_string_lossy().to_string());
+    if let Some(dir) = vibe_dir.filter(|dir| dir.is_dir()) {
+        paths.push(dir.to_string_lossy().to_string());
     }
     if let Some(dir) = mentor_dir {
         if dir.is_dir() {
@@ -3158,6 +3206,406 @@ fn flush_turn(emit: Emit<'_>, ts: &mut TurnState, now: Instant) {
     }
 }
 
+/// How many times one on-device turn is told to carry on after stopping early.
+const LOCAL_CARRY_ON_LIMIT: usize = 3;
+
+/// Opens every carry-on prompt. They go in the user's role, and a model must
+/// never read one as the user's approval: no detection of "waiting for the
+/// user" is complete, so the prompt itself has to leave that choice open.
+macro_rules! automatic_note {
+    ($text:literal) => {
+        concat!(
+            "Automatic note, not from the user. It approves nothing. ",
+            $text
+        )
+    };
+}
+
+const LOCAL_CARRY_ON: &str = automatic_note!("You said what you would do next but did not do it. If that step needs the user's approval or an answer from them, ask them in one short message and stop. Otherwise call the tool for that step now, or give the final answer if the task is finished.");
+
+/// Whether the last sentence (lowercase words, apostrophes kept) waits on the
+/// user: a phrase that asks for an answer, a choice or a signal only they can
+/// give ("I'll leave it to you."), or an approval word in a sentence about the
+/// user ("once you confirm", where "Let me confirm the page loaded" is a step
+/// of the model's own). The SDK keeps the same lists (`WAITS_ON_THE_USER`,
+/// `APPROVAL_WORDS` in `remote-ai-client.ts`).
+fn waits_on_the_user(words: &str) -> bool {
+    // "you're" and "the user's" read as "you re" and "the user s", the way the
+    // SDK's word boundaries see them.
+    let words = words.replace('\'', " ");
+    let words: Vec<&str> = words.split_whitespace().collect();
+    let padded = format!(" {} ", words.join(" "));
+    let has = |phrase: &str| padded.contains(&format!(" {phrase} "));
+    const PHRASES: &[&str] = &[
+        "know",
+        "tell me",
+        "hear back",
+        "hear from",
+        "stand by",
+        "standing by",
+        "on standby",
+        "hold off",
+        "stop here",
+        "pause here",
+        "be here",
+        "happy to",
+        "glad to",
+        "up to you",
+        "say the word",
+        "green light",
+        "your go ahead",
+        "the go ahead",
+    ];
+    const WHEN: &[&str] = &[
+        "if",
+        "when",
+        "whenever",
+        "once",
+        "after",
+        "until",
+        "unless",
+        "before",
+        "as soon as",
+        "provided",
+        "should",
+    ];
+    const WHEN_WHAT: &[&str] = &[
+        "you",
+        "the user",
+        "instructed",
+        "told",
+        "given",
+        "requested",
+    ];
+    const CHOICES: &[&str] = &["decide", "choose", "pick", "prefer", "select"];
+    const YOURS: &[&str] = &[
+        "choice", "decision", "input", "say so", "ok", "okay", "signal", "nod",
+    ];
+    const APPROVAL: &[&str] = &[
+        "confirm",
+        "approv",
+        "permission",
+        "consent",
+        "authoris",
+        "authoriz",
+        "ask",
+    ];
+    let hands_it_over = words.iter().enumerate().any(|(i, word)| {
+        matches!(*word, "defer" | "leave" | "hand")
+            && (i + 1..=i + 4).any(|to| {
+                words.get(to) == Some(&"to")
+                    && (words.get(to + 1) == Some(&"you")
+                        || (words.get(to + 1) == Some(&"the")
+                            && words.get(to + 2) == Some(&"user")))
+            })
+    });
+    let waits = PHRASES.iter().any(|p| has(p))
+        || words
+            .iter()
+            .any(|w| w.starts_with("wait") || w.starts_with("await"))
+        || WHEN
+            .iter()
+            .any(|w| WHEN_WHAT.iter().any(|what| has(&format!("{w} {what}"))))
+        || ["need", "want", "would like"]
+            .iter()
+            .any(|w| has(&format!("{w} you")) || has(&format!("{w} the user")))
+        || has("from you")
+        || (has("from the user") && !has("from the user s"))
+        || ["you", "the user", "them"].iter().any(|who| {
+            CHOICES
+                .iter()
+                .any(|v| has(&format!("{who} {v}")) || has(&format!("{who} to {v}")))
+        })
+        || hands_it_over
+        || ["pending", "upon"]
+            .iter()
+            .any(|w| has(&format!("{w} your")) || has(&format!("{w} the user s")))
+        || YOURS
+            .iter()
+            .any(|t| has(&format!("your {t}")) || has(&format!("the user s {t}")));
+    let about_the_user = has("you") || has("your") || has("the user");
+    waits
+        || (about_the_user
+            && words
+                .iter()
+                .any(|w| APPROVAL.iter().any(|a| w.starts_with(a))))
+}
+
+/// The last sentence, cut where the SDK cuts it: after a `.`, `!`, `:` or `…`
+/// followed by whitespace, so "Let me read package.json." stays one sentence.
+fn last_sentence(text: &str) -> &str {
+    let mut start = 0;
+    let mut after_end_mark = false;
+    for (i, c) in text.char_indices() {
+        if c.is_whitespace() && after_end_mark {
+            start = i;
+        }
+        after_end_mark = matches!(c, '.' | '!' | ':' | '…');
+    }
+    text[start..].trim()
+}
+
+/// Whether a reply ends by announcing a step instead of taking it ("Let me
+/// read the file first."). Small models often write that and end the turn
+/// with no tool call, so the user is told the work is under way and nothing
+/// more happens. The SDK applies the same rule to Cowork on its own
+/// (`announcesNextStep` in `remote-ai-client.ts`).
+///
+/// Only the start of the last sentence counts, quoted text is left out, and a
+/// reply with a question or a last sentence that waits on the user never
+/// counts. The carry-on prompt leaves approval to the user as well, since no
+/// word list catches every way of asking.
+fn announces_next_step(reply: &str) -> bool {
+    let reply = reply.trim();
+    if reply.is_empty() || reply.contains('?') {
+        return false;
+    }
+    let mut unquoted = String::with_capacity(reply.len());
+    let mut in_quote = false;
+    for c in reply.chars() {
+        match c {
+            '"' => in_quote = !in_quote,
+            '“' => in_quote = true,
+            '”' => in_quote = false,
+            _ if !in_quote => unquoted.push(c),
+            _ => {}
+        }
+    }
+    let last = last_sentence(unquoted.trim())
+        .to_lowercase()
+        .replace('’', "'");
+    // Punctuation, list markers and bold markup are not part of the words.
+    let words: String = last
+        .chars()
+        .map(|c| {
+            if c.is_alphanumeric() || c == '\'' {
+                c
+            } else {
+                ' '
+            }
+        })
+        .collect();
+    let words = words.split_whitespace().collect::<Vec<_>>().join(" ");
+    if waits_on_the_user(&words) {
+        return false;
+    }
+    // A short opener ("Okay,", "First,", "Now") may come before the step.
+    let step = [
+        "okay ",
+        "ok ",
+        "alright ",
+        "all right ",
+        "first ",
+        "now ",
+        "next ",
+    ]
+    .iter()
+    .find_map(|opener| words.strip_prefix(opener))
+    .unwrap_or(&words);
+    let padded = format!(" {step} ");
+    [
+        " let me ",
+        " let's ",
+        " i'll ",
+        " i will ",
+        " i need to ",
+        " i am going to ",
+        " i'm going to ",
+        " proceeding to ",
+    ]
+    .iter()
+    .any(|phrase| padded.starts_with(phrase))
+}
+
+/// The arguments each tool an on-device Code session can call takes: the
+/// agent's own file and shell tools, and the screen tools in the form the
+/// relay offers them (`cua_driver_mcp::LOCAL_TOOLS`).
+const LOCAL_TOOL_ARGUMENTS: &[&[&str]] = &[
+    &["filePath", "content"],
+    &["filePath", "oldString", "newString", "replaceAll"],
+    &["filePath", "offset", "limit"],
+    &["command", "description", "timeout", "workdir"],
+    &["pattern", "path"],
+    &["pattern", "path", "include"],
+    &["url", "format", "timeout"],
+    &["name"],
+    &["on_screen_only", "pid"],
+    &["max_depth", "max_elements", "pid", "query", "window_id"],
+    &[
+        "additional_arguments",
+        "bundle_id",
+        "creates_new_application_instance",
+        "name",
+        "urls",
+        "webkit_inspector_port",
+    ],
+    &[
+        "action",
+        "button",
+        "count",
+        "element_index",
+        "element_token",
+        "modifier",
+        "pid",
+        "snapshot_id",
+        "window_id",
+        "x",
+        "y",
+    ],
+    &[
+        "delay_ms",
+        "element_index",
+        "element_token",
+        "pid",
+        "snapshot_id",
+        "text",
+        "window_id",
+        "x",
+        "y",
+    ],
+    &[
+        "element_index",
+        "element_token",
+        "key",
+        "modifiers",
+        "pid",
+        "snapshot_id",
+        "window_id",
+        "x",
+        "y",
+    ],
+    &["keys", "pid", "window_id", "x", "y"],
+    &[
+        "element_index",
+        "element_token",
+        "pid",
+        "snapshot_id",
+        "value",
+        "window_id",
+    ],
+    &[
+        "amount",
+        "by",
+        "direction",
+        "element_index",
+        "element_token",
+        "pid",
+        "snapshot_id",
+        "window_id",
+        "x",
+        "y",
+    ],
+    &["action", "css_selector", "pid", "window_id"],
+];
+
+/// Whether a reply is a tool call's arguments written as text
+/// (`{"on_screen_only":true}`): a small model sometimes writes the call into
+/// its answer instead of making it, and the user is shown the raw arguments.
+/// Only an object whose every key is an argument of one tool counts, and the
+/// turn asks about it once: written again, it is the answer.
+fn wrote_tool_arguments(reply: &str) -> bool {
+    let reply = reply.trim();
+    if !reply.starts_with('{') || !reply.ends_with('}') {
+        return false;
+    }
+    let Ok(object) = serde_json::from_str::<serde_json::Map<String, Value>>(reply) else {
+        return false;
+    };
+    !object.is_empty()
+        && LOCAL_TOOL_ARGUMENTS
+            .iter()
+            .any(|names| object.keys().all(|key| names.contains(&key.as_str())))
+}
+
+const LOCAL_ANSWER_NOW: &str = automatic_note!(
+    "You ended without an answer. Give the user the final answer now, from the tool results above."
+);
+
+const LOCAL_MAKE_THE_CALL: &str = automatic_note!("Your reply was only a tool call's arguments. If you meant to call that tool, call it now, unless it needs the user's approval: then ask them and stop. If those arguments were your answer, write them again.");
+
+/// The prompt that sends an on-device turn on when its reply only announced
+/// the next step or held a tool call written as text, after clearing that
+/// reply from the bubble; `None` when the reply is an answer.
+async fn carry_on_prompt(emit: Emit<'_>, session: &Session) -> Option<&'static str> {
+    next_carry_on(emit, &mut *session.turn.lock().await)
+}
+
+fn next_carry_on(emit: Emit<'_>, ts: &mut TurnState) -> Option<&'static str> {
+    // Each carry-on is a new prompt, and the agent's own step limit starts
+    // over with it: the turn's tool calls so far keep the limit for the turn.
+    if ts.tool_shapes.len() >= LOCAL_STEP_LIMIT as usize {
+        return None;
+    }
+    let asked_already = ts.asked_to_call_after == Some(ts.tool_shapes.len());
+    if !asked_already && wrote_tool_arguments(&ts.full_content) {
+        ts.asked_to_call_after = Some(ts.tool_shapes.len());
+        ts.full_content.clear();
+        ts.pending_delta.clear();
+        // Or the next round, if it ends empty, is judged on these thoughts.
+        ts.closing_thought.clear();
+        emit(
+            "ollama:token",
+            json!({ "generation_id": ts.generation_id, "token": "", "full_content": "" }),
+        );
+        return Some(LOCAL_MAKE_THE_CALL);
+    }
+    if ts.full_content.trim().is_empty() {
+        // A model that thinks first often leaves the announcement in its
+        // thoughts and writes no reply at all.
+        if announces_next_step(&ts.closing_thought) {
+            ts.closing_thought.clear();
+            return Some(LOCAL_CARRY_ON);
+        }
+        // Tools ran, then the last step said nothing at all: no answer and no
+        // thoughts to show in its place. Notes from before the tool calls are
+        // no answer either.
+        let said_nothing = !ts.tool_shapes.is_empty() && ts.closing_thought.trim().is_empty();
+        return said_nothing.then_some(LOCAL_ANSWER_NOW);
+    }
+    if !announces_next_step(&ts.full_content) || !ts.narration_to_reasoning() {
+        return None;
+    }
+    if let Some(delta) = ts.take_reasoning(Instant::now()) {
+        emit(
+            "opencode:reasoning",
+            json!({ "generation_id": ts.generation_id, "delta": delta }),
+        );
+    }
+    emit(
+        "ollama:token",
+        json!({ "generation_id": ts.generation_id, "token": "", "full_content": "" }),
+    );
+    Some(LOCAL_CARRY_ON)
+}
+
+const OUT_OF_ROOM_REPLY: &str =
+    "The model ran out of room before it could answer. Try a shorter request.";
+
+/// Fill an on-device turn's empty reply bubble (`TurnState::empty_reply_fallback`).
+/// The SDK renders the reply from token events only; the text on
+/// `ollama:done` never reaches the bubble. On-device only: a cloud model's or
+/// a subscription agent's thoughts are never shown as its answer.
+fn show_closing_thought(
+    emit: Emit<'_>,
+    ts: &mut TurnState,
+    stop_reason: Option<&str>,
+    local: bool,
+) {
+    if !local {
+        return;
+    }
+    if let Some(reply) = ts.empty_reply_fallback(stop_reason) {
+        emit(
+            "ollama:token",
+            json!({
+                "generation_id": ts.generation_id,
+                "token": reply,
+                "full_content": reply,
+            }),
+        );
+    }
+}
+
 /// A failed turn's one signal is `ollama:error`: the invoke resolves after it, or the
 /// SDK's `catch` toasts the same failure a second time.
 fn fail_turn(emit: Emit<'_>, generation_id: &str, error: String) -> Result<(), String> {
@@ -3407,6 +3855,19 @@ pub(crate) struct ModelSpec {
     pub(crate) model: String,
     /// On-device runtimes need an explicit baseURL and no ibl.ai auth.
     pub(crate) local: bool,
+    /// How an on-device session is cut down to the model's window; `None` for
+    /// cloud models and until the spawn has sized the model.
+    pub(crate) fit: Option<LocalFit>,
+}
+
+/// An on-device session's budget: the model copy Ollama loads with a known
+/// context window, and whether the screen tools share that window.
+pub(crate) struct LocalFit {
+    /// The name Ollama knows the sized model by (`model_manager::sized_local_model`).
+    pub(crate) model: String,
+    /// Its context window, which the agent prunes its history against.
+    pub(crate) context: u32,
+    pub(crate) cowork: bool,
 }
 
 fn parse_model_spec(model: &str) -> ModelSpec {
@@ -3415,18 +3876,21 @@ fn parse_model_spec(model: &str) -> ModelSpec {
             provider: "ollama",
             model: rest.to_string(),
             local: true,
+            fit: None,
         }
     } else if let Some(rest) = model.strip_prefix("foundry/") {
         ModelSpec {
             provider: "foundry",
             model: rest.to_string(),
             local: true,
+            fit: None,
         }
     } else {
         ModelSpec {
             provider: "iblai",
             model: model.to_string(),
             local: false,
+            fit: None,
         }
     }
 }
@@ -3481,6 +3945,138 @@ fn enforce_permission_policy(root: &mut serde_json::Map<String, Value>) {
     }
 }
 
+/// Built-in tools an on-device session goes without: each is thousands of
+/// characters of definition the local window has no room for, and small models
+/// misuse both (side tasks they never finish, a task list instead of the work).
+const LOCAL_DENIED_TOOLS: &[&str] = &["task", "todowrite"];
+
+/// Leave the tools above, and every screen tool outside
+/// `cua_driver_mcp::LOCAL_TOOLS`, out of an on-device session's requests. A denied tool
+/// is never offered to the model, the way `question` is. opencode takes the
+/// LAST rule that matches, and this map is written in key order, so the
+/// `cowork_*` deny sorts ahead of the named tools that override it (pinned by
+/// `an_on_device_session_keeps_only_the_core_tools`).
+fn trim_local_tools(root: &mut serde_json::Map<String, Value>, cowork: bool) {
+    let Some(rules) = root.get_mut("permission").and_then(|p| p.as_object_mut()) else {
+        return;
+    };
+    for tool in LOCAL_DENIED_TOOLS {
+        rules.insert(tool.to_string(), json!("deny"));
+    }
+    if cowork {
+        rules.insert(format!("{COWORK_MCP_NAME}_*"), json!("deny"));
+        for tool in crate::cua_driver_mcp::LOCAL_TOOLS {
+            rules.insert(format!("{COWORK_MCP_NAME}_{tool}"), json!("ask"));
+        }
+    }
+}
+
+/// opencode names each new session with a model call of its own, sent alongside
+/// the first reply. A local runtime serves one request at a time, so the reply
+/// waits behind it, for minutes on a model that thinks before it answers.
+/// Nothing shows that name, so an on-device session goes without; a session
+/// back on a cloud model gets it again.
+fn set_session_naming(root: &mut serde_json::Map<String, Value>, on: bool) {
+    let Some(agents) = root
+        .entry("agent")
+        .or_insert_with(|| json!({}))
+        .as_object_mut()
+    else {
+        return;
+    };
+    if on {
+        agents.remove("title");
+    } else {
+        agents.insert("title".to_string(), json!({ "disable": true }));
+    }
+}
+
+const LOCAL_REQUEST_TIMEOUT_MS: u64 = 30 * 60 * 1000;
+
+/// The most of one tool result an on-device session keeps. opencode's own
+/// limit is 51,200 bytes, about 12,800 tokens: one large result would take
+/// the whole window. A session back on a cloud model gets the default again.
+fn set_tool_output_limit(root: &mut serde_json::Map<String, Value>, local: bool) {
+    if local {
+        root.insert(
+            "tool_output".to_string(),
+            json!({ "max_bytes": 16_000, "max_lines": 400 }),
+        );
+    } else {
+        root.remove("tool_output");
+    }
+}
+
+/// The vibe skills an on-device session keeps: the ones its guidance names
+/// (the template, deploying, the paywall). The guidance orders the agent to
+/// load them and not to improvise, so a session with none of them reports it
+/// cannot do the task; the whole catalog is 160-odd skills, about 26,000
+/// tokens. Each named skill's own folder is added to the skills paths.
+fn add_named_skills(root: &mut serde_json::Map<String, Value>, vibe_dir: &Path, guidance: &str) {
+    let named: HashSet<&str> = guidance
+        .split(|c: char| !(c.is_ascii_alphanumeric() || c == '-'))
+        .filter(|word| word.starts_with("iblai-") && !word.ends_with('-'))
+        .collect();
+    if named.is_empty() {
+        return;
+    }
+    let mut found: Vec<Value> = Vec::new();
+    for family in sorted_dirs(vibe_dir) {
+        let skills = if family.join("SKILL.md").is_file() {
+            vec![family]
+        } else {
+            sorted_dirs(&family)
+        };
+        for skill in skills {
+            let is_named = skill
+                .file_name()
+                .and_then(|name| name.to_str())
+                .is_some_and(|name| named.contains(name));
+            if is_named && skill.join("SKILL.md").is_file() {
+                found.push(json!(skill.to_string_lossy()));
+            }
+        }
+    }
+    if found.is_empty() {
+        return;
+    }
+    let paths = root
+        .entry("skills")
+        .or_insert_with(|| json!({}))
+        .as_object_mut()
+        .map(|skills| skills.entry("paths").or_insert_with(|| json!([])));
+    if let Some(Value::Array(paths)) = paths {
+        // Ahead of the agent's own skills, which win a name clash by coming last.
+        found.append(paths);
+        *paths = found;
+    }
+}
+
+/// The most model steps an on-device Code turn takes before the agent makes it
+/// answer in text. A small model can go on listing windows long after it has
+/// what it needs; building an app takes many steps, so the limit is generous.
+/// A session back on a cloud model has none.
+const LOCAL_STEP_LIMIT: u32 = 40;
+
+fn set_step_limit(root: &mut serde_json::Map<String, Value>, local: bool) {
+    let Some(build) = root
+        .get_mut("agent")
+        .and_then(|agents| agents.get_mut("build"))
+        .and_then(Value::as_object_mut)
+    else {
+        return;
+    };
+    if local {
+        build.insert("steps".to_string(), json!(LOCAL_STEP_LIMIT));
+    } else {
+        build.remove("steps");
+    }
+}
+
+/// What a local model may write in one reply; the rest of its window is the
+/// prompt. opencode otherwise asks for 32,000 tokens and keeps that much free.
+const LOCAL_OUTPUT_TOKENS: u32 = 8_192;
+
 /// The `build` agent's ONE-LINE suppressor stub. Its only job is to exist:
 /// opencode resolves `agent.prompt ? [agent.prompt] : SystemPrompt.provider`
 /// (`llm/request.ts`), so a non-empty prompt SUPPRESSES the built-in per-model
@@ -3497,16 +4093,32 @@ const OPENCODE_BUILD_PROMPT: &str = include_str!("opencode_build_prompt.txt");
 /// every spawn like [`enforce_permission_policy`] — persisted per-session
 /// configs self-heal to the current stub; any other keys on the entry are
 /// left alone.
-fn enforce_build_prompt(root: &mut serde_json::Map<String, Value>) {
+///
+/// `local_guidance` is an on-device session's guidance, which follows the stub
+/// here instead of living in AGENTS.md. opencode prints the AGENTS.md path,
+/// which holds the chat's id, ahead of that file's text, and a local runtime
+/// reuses a prompt only up to its first changed token: with the guidance in
+/// the file every new chat read all 6,000 tokens of it again (over a minute
+/// before the first step); here it sits ahead of anything chat-specific and is
+/// read once. The authored text is the same single source either way.
+fn enforce_build_prompt(root: &mut serde_json::Map<String, Value>, local_guidance: Option<&str>) {
     root.insert("default_agent".to_string(), json!("build"));
+    let prompt = match local_guidance {
+        Some(guidance) => format!("{OPENCODE_BUILD_PROMPT}\n\n{guidance}"),
+        None => OPENCODE_BUILD_PROMPT.to_string(),
+    };
     let agents = root.entry("agent").or_insert_with(|| json!({}));
     if let Some(obj) = agents.as_object_mut() {
         let build = obj.entry("build").or_insert_with(|| json!({}));
         if let Some(b) = build.as_object_mut() {
-            b.insert("prompt".to_string(), json!(OPENCODE_BUILD_PROMPT));
+            b.insert("prompt".to_string(), json!(prompt));
         }
     }
 }
+
+/// What an on-device session's AGENTS.md holds once its guidance has moved
+/// into the build prompt. The file still exists: opencode reads it every call.
+const LOCAL_GUIDANCE_POINTER: &str = "Follow the instructions at the top of this prompt.\n";
 
 /// Point opencode at a model by patching its config: set the top-level `model`, keep
 /// `enabled_providers` to just the active provider, and reset that provider's `models`
@@ -3564,9 +4176,10 @@ fn apply_opencode_model_at(
     let root = cfg
         .as_object_mut()
         .ok_or("opencode config is not a JSON object")?;
+    let model_id = spec.fit.as_ref().map_or(spec.model.as_str(), |f| &f.model);
     root.insert(
         "model".to_string(),
-        json!(format!("{}/{}", spec.provider, spec.model)),
+        json!(format!("{}/{model_id}", spec.provider)),
     );
     // Only the active provider is enabled, so opencode never tries to resolve
     // credentials for one we're not using this session.
@@ -3574,14 +4187,32 @@ fn apply_opencode_model_at(
     // The security boundary — see `enforce_permission_policy`. Re-applied here because
     // this runs on every spawn, immediately before the process starts.
     enforce_permission_policy(root);
+    if spec.local {
+        trim_local_tools(root, spec.fit.as_ref().is_some_and(|f| f.cowork));
+    }
     // The one-line suppressor stub — see `enforce_build_prompt`.
-    enforce_build_prompt(root);
+    let (top_guidance, file_guidance) = if spec.local {
+        (guidance, guidance.map(|_| LOCAL_GUIDANCE_POINTER))
+    } else {
+        (None, guidance)
+    };
+    enforce_build_prompt(root, top_guidance);
+    set_step_limit(root, spec.local);
+    set_session_naming(root, !spec.local);
     // Skills the agent discovers at startup — see `apply_skills_config`.
     let mentor_dir = mentor.map(mentor_skills_dir);
-    apply_skills_config(root, &vibe_skills_dir(), mentor_dir.as_deref());
+    // The vibe catalog lists 160-odd skills, about 26,000 tokens before the
+    // first message: more than most on-device windows hold. An on-device
+    // session keeps the agent's own skills and the few its guidance names.
+    let vibe_dir = (!spec.local).then(vibe_skills_dir);
+    apply_skills_config(root, vibe_dir.as_deref(), mentor_dir.as_deref());
+    if spec.local {
+        add_named_skills(root, &vibe_skills_dir(), guidance.unwrap_or_default());
+    }
+    set_tool_output_limit(root, spec.local);
     // The ibl.ai guidance, as the per-session AGENTS.md opencode reads on
     // every model call — see `write_iblai_guidance`.
-    write_iblai_guidance(home, guidance)?;
+    write_iblai_guidance(home, file_guidance)?;
 
     let providers = root
         .entry("provider")
@@ -3596,17 +4227,33 @@ fn apply_opencode_model_at(
 
     // Reset to JUST the active model each spawn (no accumulation across sessions).
     let mut models = serde_json::Map::new();
-    models.insert(spec.model.clone(), json!({ "name": spec.model }));
+    let mut model = json!({ "name": spec.model });
+    // A model left on Ollama's small default has no room to reserve from.
+    if let Some(fit) = spec
+        .fit
+        .as_ref()
+        .filter(|f| f.context >= 2 * LOCAL_OUTPUT_TOKENS)
+    {
+        model["limit"] = json!({ "context": fit.context, "output": LOCAL_OUTPUT_TOKENS });
+    }
+    models.insert(model_id.to_string(), model);
     entry.insert("models".to_string(), Value::Object(models));
 
     entry.insert("npm".to_string(), json!("@ai-sdk/openai-compatible"));
     entry.insert("name".to_string(), json!(display_name));
     // On-device runtimes are unauthenticated and the key is a placeholder that just
     // satisfies @ai-sdk/openai-compatible; cloud gets the throwaway proxy secret.
-    entry.insert(
-        "options".to_string(),
-        json!({ "baseURL": base_url, "apiKey": api_key }),
-    );
+    let mut options = json!({ "baseURL": base_url, "apiKey": api_key });
+    if spec.local {
+        // opencode gives a request five minutes, then drops it and starts
+        // over. A local model can need longer than that just to read a first
+        // prompt, so the turn failed once and paid for the read twice.
+        options["timeout"] = json!(LOCAL_REQUEST_TIMEOUT_MS);
+        // A second limit of the same five minutes, on the wait for the first
+        // byte: loading a large model into memory alone can take that long.
+        options["headerTimeout"] = json!(LOCAL_REQUEST_TIMEOUT_MS);
+    }
+    entry.insert("options".to_string(), options);
 
     let out = serde_json::to_string_pretty(&cfg).map_err(|e| e.to_string())?;
     write_config_file(home, &rel, out.as_bytes())
@@ -3732,7 +4379,7 @@ async fn probe_in(
     skills: &Path,
     cfg: &Path,
 ) -> Result<Value, String> {
-    let launch = agent_launch(backend, ws, skills, cfg, "", false);
+    let launch = agent_launch(backend, ws, skills, cfg, "", false, None);
     let mut cmd = sandboxed_command(key, ws, backend)?;
     wire_agent_command(&mut cmd, &launch, ws, backend);
     let mut child = cmd
@@ -3760,6 +4407,7 @@ async fn probe_in(
         acp_session_id: String::new(),
         requested_model: None,
         backend,
+        cowork: false,
         proxy_secret: None,
         turn: Arc::new(Mutex::new(TurnState::new())),
         last_used: Mutex::new(Instant::now()),
@@ -3776,6 +4424,137 @@ async fn probe_in(
             crate::code_agent_installer::display_name(backend)
         )
     })
+}
+
+/// The screen driver as an ACP MCP server, for a Code chat with Cowork on: the
+/// agent spawns the driver's stdio proxy (`cua_driver_mcp::proxy_argv`) to the
+/// app's own daemon, so the tools ride the agent's permission policy while the
+/// driver keeps the app's grants. `args` and `env` are always present — the
+/// adapters spread the one and map the other.
+/// The screen tools' MCP server name; the agent sees each tool as `cowork_<tool>`.
+const COWORK_MCP_NAME: &str = "cowork";
+
+fn cowork_mcp_server(driver: &Path, socket: &Path) -> Value {
+    json!({
+        "name": COWORK_MCP_NAME,
+        "command": driver.to_string_lossy(),
+        "args": crate::cua_driver_mcp::proxy_argv(socket),
+        "env": [],
+    })
+}
+
+/// What Cowork adds to a Code session's guidance: the screen rules the webview's
+/// Cowork prompt carries (`remote-ai-client.ts`), plus the one difference on
+/// this path — no screenshot reaches a Code agent, so the element list is the
+/// whole picture.
+const COWORK_GUIDANCE: &str = "\
+## Screen tools (Cowork)
+You can control the user's computer through the `cowork` tools to complete tasks on their behalf.
+Work by discovery, never by guesswork: use list_apps to find the app and its pid, then list_windows with that pid to get its window_id (launch_app with the bundle id also lists them, and opens an app that is not running). Then call get_window_state for that pid and window_id to read its elements before you act on it.
+Screenshots are not available here: the element list is the whole picture.
+To click, type into or set an element, pass its element_index (the number in [brackets] in the element list) together with the snapshot_id printed at the end of the same get_window_state reply. The driver refuses an element_index without its snapshot_id.
+A snapshot_id belongs to the reply that printed it, and the next get_window_state on that window replaces it: take a snapshot right before you act, and a fresh one before each further action on that window.
+If a call comes back saying the snapshot is stale, do not retry it: take a new snapshot, find the element again, and use the new numbers.
+Keep each snapshot small: pass `query` to get_window_state to project the tree to the rows you care about, and `max_elements` on large or web-based windows.
+In the reply, say what you did on the screen in everyday words.
+";
+
+/// The guidance a session is spawned with: the ibl.ai guidance, plus the screen
+/// rules when Cowork is on.
+fn with_cowork_guidance(guidance: String, cowork: bool) -> String {
+    if cowork {
+        format!("{guidance}\n\n{COWORK_GUIDANCE}")
+    } else {
+        guidance
+    }
+}
+
+/// What an on-device session adds to its guidance. Small models narrate work
+/// instead of doing it, report success no tool call produced, or give up
+/// without trying; each line answers one of those.
+const LOCAL_MODEL_GUIDANCE: &str = "\
+## Working on this computer's own model
+Do the work with tool calls, one step at a time. Never write that you are about to do something or that you are working on it: call the tool instead.
+Never say something was done unless a tool call in this turn did it and its result shows it worked. If you have not called the tool yet, call it now.
+Never say you cannot do something before you have tried the tool for it. When a tool returns an error, read the error and make a different call; report a failure only after that, and say which step failed.
+Use only the tools you were given, with exactly the argument names in their definitions.
+";
+
+/// The driver's own instructions, which the agent passes on unchanged, open
+/// with tools an on-device session does not carry (`cua_driver_mcp::LOCAL_TOOLS`).
+const LOCAL_COWORK_GUIDANCE: &str = "\
+The screen tools' sessions and checks are handled for you: there is no start_session, end_session or verify_state to call. Start with list_apps, then list_windows or launch_app, then get_window_state.
+To read a web page that is open in a browser (an inbox, an article, search results), call page with action get_text, the browser's pid and the window_id of its window: the one that has a title. get_window_state on a browser shows its buttons and menus, not the page.
+To open a web address, call launch_app with the browser's bundle_id and urls set to a list holding the address, then list_windows again and read the page.
+";
+
+/// The guidance an on-device session is spawned with: the rest, plus the
+/// rules a small model needs spelled out.
+fn with_local_guidance(guidance: String, local: bool, cowork: bool) -> String {
+    match (local, cowork) {
+        (false, _) => guidance,
+        (true, false) => format!("{guidance}\n\n{LOCAL_MODEL_GUIDANCE}"),
+        (true, true) => format!("{guidance}\n\n{LOCAL_MODEL_GUIDANCE}{LOCAL_COWORK_GUIDANCE}"),
+    }
+}
+
+/// Why a Code turn with Cowork on can't run here, decided before anything is
+/// spawned; `Ok` is the driver whose proxy the agent runs. Every agent and both
+/// desktop platforms qualify: the driver is the app's own daemon, outside the
+/// agent's sandbox, and opencode, Codex and Claude Code each ask before a
+/// screen tool runs.
+fn cowork_preflight() -> Result<PathBuf, String> {
+    if cfg!(target_os = "windows") {
+        return Err("Cowork inside Code isn't available on Windows.".to_string());
+    }
+    cowork_preflight_with(
+        &crate::cua_driver_mcp::session_support(&crate::cua_driver_mcp::current_session_env()),
+        crate::cua_driver_mcp::resolved_driver_path(),
+    )
+}
+
+/// The decision itself, with the environment read by the caller.
+fn cowork_preflight_with(
+    support: &crate::cua_driver_mcp::DriverSupport,
+    driver: Option<PathBuf>,
+) -> Result<PathBuf, String> {
+    if !support.supported {
+        return Err("Cowork isn't supported on this desktop session.".to_string());
+    }
+    driver.ok_or_else(|| {
+        "Cowork isn't set up on this computer yet — turn Cowork on from the chat to install it."
+            .to_string()
+    })
+}
+
+/// A live session serves the next turn only when it was spawned for the same
+/// model and the same Cowork setting; either change is a respawn, and the
+/// conversation survives it through `session/load`. A Cowork session whose
+/// driver is gone respawns too: its agent holds a socket nothing listens on,
+/// and only a spawn starts the driver again.
+fn reusable(s: &Session, model: Option<&str>, cowork: bool, driver_alive: bool) -> bool {
+    s.requested_model.as_deref() == model && s.cowork == cowork && (!s.cowork || driver_alive)
+}
+
+/// The chats whose session was spawned with the screen tools, minus `except`.
+fn cowork_session_ids<'a>(
+    sessions: impl Iterator<Item = (&'a String, &'a Arc<Session>)>,
+    except: Option<&str>,
+) -> Vec<String> {
+    sessions
+        .filter(|(id, s)| s.cowork && except != Some(id.as_str()))
+        .map(|(id, _)| id.clone())
+        .collect()
+}
+
+/// Close every session spawned with the screen tools except `except`. The
+/// driver owns the screen, so a new Cowork session — or the webview's own
+/// driver — must not run beside an older one's.
+pub(crate) async fn close_cowork_sessions(except: Option<&str>) {
+    let ids = cowork_session_ids(registry().lock().await.iter(), except);
+    for id in ids {
+        close_session(&id).await;
+    }
 }
 
 /// The `session/new` params per backend. Codex and Claude get the per-spawn
@@ -3808,8 +4587,14 @@ fn agent_launch(
     config_home: &Path,
     guidance: &str,
     auto: bool,
+    // The screen driver and its daemon's socket for a Cowork session, as the
+    // one MCP server every backend receives in `session/new` (and `session/load`).
+    cowork_driver: Option<(&Path, &Path)>,
 ) -> AgentLaunch {
-    let session = session_params(backend, workspace, skills_root, guidance);
+    let mut session = session_params(backend, workspace, skills_root, guidance);
+    if let Some((driver, socket)) = cowork_driver {
+        session["mcpServers"] = json!([cowork_mcp_server(driver, socket)]);
+    }
     let node_launch = |env: Vec<(&'static str, String)>| AgentLaunch {
         program: crate::code_agent_installer::node_bin(),
         args: vec![crate::code_agent_installer::adapter_entry(backend)
@@ -4021,6 +4806,7 @@ async fn spawn_session(
     mentor: Option<String>,
     generation_id: &str,
     resume: Option<String>,
+    cowork: bool,
 ) -> Result<Arc<Session>, String> {
     ensure_workspace(workspace)?;
 
@@ -4054,7 +4840,7 @@ async fn spawn_session(
         Some(m) if !m.is_empty() => m.to_string(),
         _ => return Err("no model selected for Code".to_string()),
     };
-    let spec = parse_model_spec(&chosen_model);
+    let mut spec = parse_model_spec(&chosen_model);
     let backend = Backend::of(&chosen_model);
 
     // The subscription agents are refused up front rather than mid-handshake:
@@ -4075,6 +4861,24 @@ async fn spawn_session(
     // `agent_launch`), each with its own wording where opencode's doesn't fit.
     let guidance = crate::opencode_proxy::guidance_for(backend, tenant).await?;
 
+    // Cowork on: the screen driver rides the session as an MCP server and the
+    // screen rules ride the guidance. One driver owns the screen, so any other
+    // Cowork session and the webview's own driver go first.
+    let cowork_driver = if cowork {
+        let driver = cowork_preflight()?;
+        close_cowork_sessions(Some(session_id)).await;
+        crate::cua_driver_mcp::stop_driver();
+        let daemon =
+            crate::cua_driver_mcp::ensure_driver_daemon(&driver, &app.config().identifier)?;
+        Some((
+            driver,
+            crate::cua_driver_mcp::agent_socket(&daemon, spec.local),
+        ))
+    } else {
+        None
+    };
+    let guidance = with_local_guidance(with_cowork_guidance(guidance, cowork), spec.local, cowork);
+
     // opencode's model provider: on-device runtimes talk straight to their own
     // local endpoint; cloud goes through the loopback proxy, which holds the
     // real DM token — the agent only ever sees a throwaway per-session key, so
@@ -4083,6 +4887,19 @@ async fn spawn_session(
     let proxy_secret = if backend == Backend::Opencode {
         let (base_url, api_key, display_name, proxy_secret) = if spec.local {
             let url = resolve_local_base_url(&spec).await?;
+            if spec.provider == "ollama" {
+                let sized = crate::model_manager::sized_local_model(&spec.model).await;
+                if let Some(why) =
+                    sized.too_small_for(crate::model_manager::LOCAL_CODE_MIN_CONTEXT_TOKENS)
+                {
+                    return Err(why);
+                }
+                spec.fit = Some(LocalFit {
+                    model: sized.name,
+                    context: sized.context,
+                    cowork,
+                });
+            }
             let name = if spec.provider == "ollama" {
                 "Ollama (on-device)"
             } else {
@@ -4154,6 +4971,9 @@ async fn spawn_session(
         &config_home(session_id),
         &guidance,
         auto,
+        cowork_driver
+            .as_ref()
+            .map(|(driver, socket)| (driver.as_path(), socket.as_path())),
     );
     let mut cmd = sandboxed_command(session_id, workspace, backend)?;
     wire_agent_command(&mut cmd, &launch, workspace, backend);
@@ -4225,6 +5045,7 @@ async fn spawn_session(
         acp_session_id: String::new(),
         requested_model: model,
         backend,
+        cowork,
         proxy_secret,
         turn,
         last_used: Mutex::new(Instant::now()),
@@ -4434,12 +5255,14 @@ async fn get_or_spawn(
     mentor: Option<String>,
     generation_id: &str,
     resume: Option<String>,
+    cowork: bool,
 ) -> Result<Arc<Session>, String> {
     let live = { registry().lock().await.get(session_id).cloned() };
     if let Some(s) = live {
         // A dead child can sit here for a beat before its reader's EOF cleanup
         // lands — never hand it out; fall through to the respawn below.
-        if !child_exited(&s).await && s.requested_model.as_deref() == model.as_deref() {
+        let driver_alive = crate::cua_driver_mcp::driver_daemon_alive();
+        if !child_exited(&s).await && reusable(&s, model.as_deref(), cowork, driver_alive) {
             *s.last_used.lock().await = Instant::now();
             if let Some(secret) = &s.proxy_secret {
                 crate::opencode_proxy::set_token(secret, token).await;
@@ -4447,7 +5270,7 @@ async fn get_or_spawn(
             return Ok(s);
         }
     }
-    // Missing, dead, or the model switched → (re)spawn.
+    // Missing, dead, the model switched, Cowork flipped or its driver died → (re)spawn.
     close_session(session_id).await;
     evict_for_new_session(session_id).await;
     start_reaper();
@@ -4462,6 +5285,7 @@ async fn get_or_spawn(
         mentor,
         generation_id,
         resume,
+        cowork,
     )
     .await?;
     registry()
@@ -4679,6 +5503,9 @@ pub async fn opencode_chat_stream(
     // turn's workspace (and reap its process) so the chat keeps ONE folder.
     // Absent with an older SDK: no migration.
     new_chat_key: Option<String>,
+    // Cowork is on in the chat: the agent gets the screen tools. Absent with
+    // an older SDK: plain Code.
+    cowork: Option<bool>,
 ) -> Result<(), String> {
     let res = chat_stream(
         app.clone(),
@@ -4692,6 +5519,7 @@ pub async fn opencode_chat_stream(
         workspace,
         mentor,
         new_chat_key,
+        cowork.unwrap_or(false),
     )
     .await;
     // The SDK drops its listeners the moment `invoke` resolves: every emit of the
@@ -4713,6 +5541,7 @@ async fn chat_stream(
     workspace: Option<String>,
     mentor: Option<String>,
     new_chat_key: Option<String>,
+    cowork: bool,
 ) -> Result<(), String> {
     // Belt for the UI gate: on Linux the pill is disabled while bwrap is missing,
     // but a stale flag or an older frontend could still send.
@@ -4736,11 +5565,11 @@ async fn chat_stream(
     // the models.dev registry into ~/.cache/opencode/models.json, and the runtime loads
     // the model into memory. Both are one-off, but the chat would otherwise just hang
     // with no explanation — emit the hint BEFORE spawning so it lands immediately.
-    if model
+    let local_turn = model
         .as_deref()
         .map(|m| parse_model_spec(m).local)
-        .unwrap_or(false)
-    {
+        .unwrap_or(false);
+    if local_turn {
         crate::emit_on_main(
             &app,
             "opencode:reasoning",
@@ -4763,7 +5592,7 @@ async fn chat_stream(
     let mut resume: Option<String> = resume_for(&session_id).await;
     let mut turn_guard = None;
     let mut attempt = 1;
-    let (session, res) = loop {
+    let (session, mut res) = loop {
         let session = match get_or_spawn(
             &app,
             &session_id,
@@ -4775,6 +5604,7 @@ async fn chat_stream(
             mentor.clone(),
             &generation_id,
             resume.take(),
+            cowork,
         )
         .await
         {
@@ -4840,6 +5670,31 @@ async fn chat_stream(
     // Busy until the done/error is queued; it drops before the wrapper's flush.
     let _turn_guard = turn_guard;
 
+    // An on-device model that ended its turn on "Let me do X" is told to do it.
+    if local_turn {
+        for _ in 0..LOCAL_CARRY_ON_LIMIT {
+            let finished = res
+                .as_ref()
+                .is_ok_and(|r| r.get("stopReason").and_then(Value::as_str) == Some("end_turn"));
+            if !finished {
+                break;
+            }
+            let Some(prompt) = carry_on_prompt(&mut emit_via(&app), &session).await else {
+                break;
+            };
+            res = session
+                .request(
+                    "session/prompt",
+                    json!({
+                        "sessionId": session.acp_session_id,
+                        "prompt": [ { "type": "text", "text": prompt } ]
+                    }),
+                )
+                .await;
+        }
+        crate::model_manager::keep_sized_models_loaded();
+    }
+
     match res {
         Ok(result) => {
             let done = {
@@ -4847,6 +5702,8 @@ async fn chat_stream(
                 // The last <TOKEN_EMIT_WINDOW of thoughts and tokens lived only in the
                 // buffers and never shipped: flush them, then signal done.
                 flush_turn(&mut emit_via(&app), &mut ts, Instant::now());
+                let stop_reason = result.get("stopReason").and_then(Value::as_str);
+                show_closing_thought(&mut emit_via(&app), &mut ts, stop_reason, local_turn);
                 json!({
                     "generation_id": generation_id,
                     "full_content": ts.final_reply(),
@@ -5038,7 +5895,7 @@ mod tests {
         )
         .unwrap();
 
-        enforce_build_prompt(&mut cfg);
+        enforce_build_prompt(&mut cfg, None);
 
         assert_eq!(cfg.get("default_agent").unwrap(), &json!("build"));
         let agents = cfg.get("agent").unwrap();
@@ -5055,7 +5912,7 @@ mod tests {
 
         // A config with no `agent` block at all still gets the override.
         let mut bare = serde_json::Map::new();
-        enforce_build_prompt(&mut bare);
+        enforce_build_prompt(&mut bare, None);
         assert_eq!(
             bare["agent"]["build"]["prompt"],
             json!(OPENCODE_BUILD_PROMPT)
@@ -5563,6 +6420,7 @@ mod tests {
                 provider: "iblai",
                 model: "openai/gpt-4o".to_string(),
                 local: false,
+                fit: None,
             };
             apply_opencode_model_at(
                 &self.config_home,
@@ -6024,6 +6882,7 @@ mod tests {
                 Path::new("/tmp/cfg"),
                 "GUIDE",
                 auto,
+                None,
             );
             assert_eq!(
                 codex
@@ -6867,7 +7726,7 @@ mod tests {
         // A persisted config from the retired instructions-based approach.
         cfg.insert("instructions".to_string(), json!(["http://stale"]));
 
-        apply_skills_config(&mut cfg, &vibe, Some(&mentor));
+        apply_skills_config(&mut cfg, Some(&vibe), Some(&mentor));
         assert!(cfg.get("skills").is_none(), "nothing on disk → no key");
         assert!(
             cfg.get("instructions").is_none(),
@@ -6875,7 +7734,7 @@ mod tests {
         );
 
         std::fs::create_dir_all(&vibe).unwrap();
-        apply_skills_config(&mut cfg, &vibe, Some(&mentor));
+        apply_skills_config(&mut cfg, Some(&vibe), Some(&mentor));
         assert_eq!(
             cfg["skills"]["paths"],
             json!([vibe.to_string_lossy()]),
@@ -6883,18 +7742,18 @@ mod tests {
         );
 
         std::fs::create_dir_all(&mentor).unwrap();
-        apply_skills_config(&mut cfg, &vibe, Some(&mentor));
+        apply_skills_config(&mut cfg, Some(&vibe), Some(&mentor));
         assert_eq!(
             cfg["skills"]["paths"],
             json!([vibe.to_string_lossy(), mentor.to_string_lossy()]),
             "mentor last: duplicate names resolve last-wins in opencode"
         );
 
-        apply_skills_config(&mut cfg, &vibe, None);
+        apply_skills_config(&mut cfg, Some(&vibe), None);
         assert_eq!(cfg["skills"]["paths"], json!([vibe.to_string_lossy()]));
 
         std::fs::remove_dir_all(&vibe).unwrap();
-        apply_skills_config(&mut cfg, &vibe, None);
+        apply_skills_config(&mut cfg, Some(&vibe), None);
         assert!(
             cfg.get("skills").is_none(),
             "a leftover key from a previous spawn is removed"
@@ -7028,6 +7887,7 @@ mod tests {
             acp_session_id: "acp-test".to_string(),
             requested_model: Some("m".to_string()),
             backend: Backend::Opencode,
+            cowork: false,
             proxy_secret: None,
             turn: Arc::new(Mutex::new(TurnState::new())),
             last_used: Mutex::new(Instant::now()),
@@ -7321,6 +8181,82 @@ mod tests {
             ts.final_reply(),
             "I'll run the build now.",
             "still the only text if the turn ends here"
+        );
+    }
+
+    /// A reasoning model can finish with its answer in the thought stream and
+    /// no reply text: the finished turn shows that instead of an empty bubble.
+    #[test]
+    fn a_turn_that_ends_with_only_thoughts_shows_the_closing_ones() {
+        let mut ts = TurnState::new();
+        let t0 = Instant::now();
+        ts.push_reasoning("I need to read the file first.", t0);
+        ts.narration_to_reasoning();
+        ts.push_reasoning("The file now holds two lines.\n", t0);
+
+        let mut events: Vec<(&'static str, Value)> = Vec::new();
+        let mut emit = |event, payload| events.push((event, payload));
+        show_closing_thought(&mut emit, &mut ts, Some("cancelled"), true);
+        assert_eq!(ts.final_reply(), "", "a stopped turn shows no half thought");
+        show_closing_thought(&mut emit, &mut ts, Some("end_turn"), false);
+        assert_eq!(
+            ts.final_reply(),
+            "",
+            "a cloud model's thoughts are never its reply"
+        );
+        show_closing_thought(&mut emit, &mut ts, Some("end_turn"), true);
+        assert_eq!(ts.final_reply(), "The file now holds two lines.");
+        show_closing_thought(&mut emit, &mut ts, Some("end_turn"), true);
+        assert_eq!(
+            events.len(),
+            1,
+            "sent once, as the token the bubble renders"
+        );
+        assert_eq!(events[0].0, "ollama:token");
+        assert_eq!(events[0].1["full_content"], "The file now holds two lines.");
+
+        let mut answered = TurnState::new();
+        answered.push_reasoning("Thinking.", t0);
+        answered.full_content.push_str("Done.");
+        assert_eq!(
+            answered.empty_reply_fallback(Some("end_turn")),
+            None,
+            "reply text always wins"
+        );
+
+        let mut blank = TurnState::new();
+        blank.push_reasoning("Six apps are running.", t0);
+        blank.full_content.push('\n');
+        assert_eq!(
+            blank.empty_reply_fallback(Some("end_turn")).as_deref(),
+            Some("Six apps are running."),
+            "a reply of only a line break is no reply"
+        );
+
+        let mut noted = TurnState::new();
+        noted.full_content.push_str("The file has two lines.");
+        noted.narration_to_reasoning();
+        assert_eq!(
+            noted.empty_reply_fallback(Some("end_turn")).as_deref(),
+            Some("The file has two lines."),
+            "with no closing thought, its last words"
+        );
+
+        let mut announced = TurnState::new();
+        announced.full_content.push_str("Let me find Chrome.");
+        announced.narration_to_reasoning();
+        assert_eq!(
+            announced.empty_reply_fallback(Some("end_turn")),
+            None,
+            "an announced step is no answer to show"
+        );
+
+        let mut spent = TurnState::new();
+        spent.push_reasoning("Still working it out", t0);
+        assert_eq!(
+            spent.empty_reply_fallback(Some("max_tokens")).as_deref(),
+            Some(OUT_OF_ROOM_REPLY),
+            "not eight thousand tokens of working out"
         );
     }
 
@@ -7794,14 +8730,14 @@ mod tests {
         let skills = Path::new("/tmp/cfg/agent-skills");
         let cfg = Path::new("/tmp/cfg");
 
-        let oc = agent_launch(Backend::Opencode, ws, skills, cfg, "GUIDE", false);
+        let oc = agent_launch(Backend::Opencode, ws, skills, cfg, "GUIDE", false, None);
         assert_eq!(oc.program, PathBuf::from("opencode"));
         assert_eq!(oc.args, ["acp", "--print-logs", "--log-level", "INFO"]);
         assert_eq!(oc.env, vec![("XDG_CONFIG_HOME", "/tmp/cfg".to_string())]);
         assert_eq!(oc.session, json!({ "cwd": "/tmp/ws", "mcpServers": [] }));
         assert_eq!(session_mode(Backend::Opencode, false), None);
 
-        let codex = agent_launch(Backend::Codex, ws, skills, cfg, "GUIDE", false);
+        let codex = agent_launch(Backend::Codex, ws, skills, cfg, "GUIDE", false, None);
         assert!(codex.program.ends_with("bin/node"), "{:?}", codex.program);
         assert!(
             codex.args[0].ends_with("@agentclientprotocol/codex-acp/dist/index.js"),
@@ -7836,7 +8772,7 @@ mod tests {
             session_mode(Backend::Codex, true),
             Some("agent-full-access")
         );
-        let auto = agent_launch(Backend::Codex, ws, skills, cfg, "GUIDE", true);
+        let auto = agent_launch(Backend::Codex, ws, skills, cfg, "GUIDE", true, None);
         assert_eq!(
             auto.env
                 .iter()
@@ -7846,7 +8782,7 @@ mod tests {
             "agent-full-access"
         );
 
-        let claude = agent_launch(Backend::Claude, ws, skills, cfg, "GUIDE", false);
+        let claude = agent_launch(Backend::Claude, ws, skills, cfg, "GUIDE", false, None);
         assert!(claude.program.ends_with("bin/node"));
         assert!(claude.args[0].ends_with("@agentclientprotocol/claude-agent-acp/dist/index.js"));
         assert!(claude.env.is_empty(), "{:?}", claude.env);
@@ -8558,6 +9494,7 @@ mod tests {
             acp_session_id: String::new(),
             requested_model: Some(format!("{}/default", backend.id())),
             backend,
+            cowork: false,
             proxy_secret: None,
             turn: Arc::new(Mutex::new(TurnState::new())),
             last_used: Mutex::new(Instant::now()),
@@ -8597,6 +9534,519 @@ while IFS= read -r l; do
   printf '{"jsonrpc":"2.0","id":%s,"result":%s}\n' "$id" "$r"
 done
 "#;
+
+    /// `piped_agent` with the screen tools flag, for the session bookkeeping
+    /// the Cowork flip and close rely on.
+    fn stub_session(script: &Path, log: &Path, backend: Backend, cowork: bool) -> Arc<Session> {
+        let mut child = Command::new("sh")
+            .arg(script)
+            .env("LOG", log)
+            .env("FAULT", "")
+            .stdin(std::process::Stdio::piped())
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::null())
+            .kill_on_drop(true)
+            .spawn()
+            .unwrap();
+        let stdin = Arc::new(Mutex::new(child.stdin.take().unwrap()));
+        let pending: Arc<Mutex<HashMap<i64, oneshot::Sender<Value>>>> =
+            Arc::new(Mutex::new(HashMap::new()));
+        route_responses(child.stdout.take().unwrap(), pending.clone());
+        Arc::new(Session {
+            child: Mutex::new(child),
+            stdin,
+            next_id: AtomicI64::new(1),
+            pending,
+            acp_session_id: String::new(),
+            requested_model: Some(format!("{}/default", backend.id())),
+            backend,
+            cowork,
+            proxy_secret: None,
+            turn: Arc::new(Mutex::new(TurnState::new())),
+            last_used: Mutex::new(Instant::now()),
+            active_turns: AtomicUsize::new(0),
+            closing: AtomicBool::new(false),
+            context_fresh: AtomicBool::new(false),
+        })
+    }
+
+    #[test]
+    fn cowork_mcp_server_has_command_args_and_env() {
+        let server = cowork_mcp_server(
+            Path::new("/opt/x/cua-driver"),
+            Path::new("/d/iblai/cua-driver.sock"),
+        );
+        assert_eq!(server["name"], json!("cowork"));
+        assert_eq!(server["command"], json!("/opt/x/cua-driver"));
+        // The proxy, never the runtime: `--direct` would put the driver inside
+        // the agent's sandbox, and the grant belongs to the daemon.
+        assert_eq!(
+            server["args"],
+            json!(["mcp", "--embedded", "--socket", "/d/iblai/cua-driver.sock"])
+        );
+        assert_eq!(server["env"], json!([]));
+    }
+
+    /// Every backend's `session/new` params carry the driver when Cowork is on
+    /// and nothing extra when it is off.
+    #[test]
+    fn the_screen_tools_ride_the_launch_only_with_cowork_on() {
+        let (ws, skills, cfg) = (Path::new("/ws"), Path::new("/skills"), Path::new("/cfg"));
+        for backend in [Backend::Opencode, Backend::Codex, Backend::Claude] {
+            let plain = agent_launch(backend, ws, skills, cfg, "G", false, None);
+            assert_eq!(plain.session["mcpServers"], json!([]), "{}", backend.id());
+            let (driver, socket) = (Path::new("/d/cua-driver"), Path::new("/d/cua-driver.sock"));
+            let with = agent_launch(backend, ws, skills, cfg, "G", false, Some((driver, socket)));
+            assert_eq!(
+                with.session["mcpServers"],
+                json!([cowork_mcp_server(driver, socket)]),
+                "{}",
+                backend.id()
+            );
+        }
+    }
+
+    /// A resumed Cowork chat keeps its screen: the load carries the entry too.
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn the_screen_tools_reach_session_new_and_session_load() {
+        let scratch =
+            std::env::temp_dir().join(format!("opencode-cowork-agent-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&scratch);
+        std::fs::create_dir_all(&scratch).unwrap();
+        let script = scratch.join("agent.sh");
+        std::fs::write(&script, STUB_AGENT).unwrap();
+        let ws = scratch.join("ws");
+        let skills = scratch.join("cfg/agent-skills");
+        let driver = scratch.join("cua-driver");
+        let socket = scratch.join("cua-driver.sock");
+        for (resume, method) in [
+            (None, "session/new"),
+            (Some("prev-session"), "session/load"),
+        ] {
+            let log = scratch.join(format!("{}.log", method.replace('/', "-")));
+            let session = piped_agent(&script, &log, Backend::Opencode);
+            let launch = agent_launch(
+                Backend::Opencode,
+                &ws,
+                &skills,
+                &scratch,
+                "G",
+                false,
+                Some((&driver, &socket)),
+            );
+            handshake(&session, &launch.session, resume, None, None)
+                .await
+                .unwrap();
+            let seen = std::fs::read_to_string(&log).unwrap();
+            let lines: Vec<Value> = seen
+                .lines()
+                .map(|l| serde_json::from_str(l).unwrap())
+                .collect();
+            assert_eq!(lines[1]["method"], json!(method), "{seen}");
+            assert_eq!(
+                lines[1]["params"]["mcpServers"],
+                json!([cowork_mcp_server(&driver, &socket)]),
+                "{seen}"
+            );
+            let _ = session.child.lock().await.start_kill();
+        }
+        let _ = std::fs::remove_dir_all(&scratch);
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn a_live_session_is_reused_only_for_the_same_model_and_cowork_setting() {
+        let scratch =
+            std::env::temp_dir().join(format!("opencode-reusable-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&scratch);
+        std::fs::create_dir_all(&scratch).unwrap();
+        let script = scratch.join("agent.sh");
+        std::fs::write(&script, STUB_AGENT).unwrap();
+        let session = piped_agent(&script, &scratch.join("a.log"), Backend::Opencode);
+        assert!(reusable(&session, Some("opencode/default"), false, false));
+        assert!(
+            !reusable(&session, Some("opencode/default"), true, true),
+            "a Cowork flip respawns"
+        );
+        assert!(
+            !reusable(&session, Some("openai/gpt-5.5"), false, false),
+            "a model switch respawns"
+        );
+        let _ = session.child.lock().await.start_kill();
+        let _ = std::fs::remove_dir_all(&scratch);
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn a_cowork_session_is_reused_only_while_its_driver_is_alive() {
+        let scratch =
+            std::env::temp_dir().join(format!("opencode-driver-gone-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&scratch);
+        std::fs::create_dir_all(&scratch).unwrap();
+        let script = scratch.join("agent.sh");
+        std::fs::write(&script, STUB_AGENT).unwrap();
+        let session = stub_session(&script, &scratch.join("a.log"), Backend::Opencode, true);
+        assert!(reusable(&session, Some("opencode/default"), true, true));
+        assert!(
+            !reusable(&session, Some("opencode/default"), true, false),
+            "a session left on a dead driver respawns"
+        );
+        let _ = session.child.lock().await.start_kill();
+        let _ = std::fs::remove_dir_all(&scratch);
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn closing_cowork_sessions_spares_plain_code_and_the_newcomer() {
+        let scratch =
+            std::env::temp_dir().join(format!("opencode-cowork-close-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&scratch);
+        std::fs::create_dir_all(&scratch).unwrap();
+        let script = scratch.join("agent.sh");
+        std::fs::write(&script, STUB_AGENT).unwrap();
+        let sessions: HashMap<String, Arc<Session>> =
+            [("plain", false), ("screen", true), ("newcomer", true)]
+                .into_iter()
+                .map(|(id, cowork)| {
+                    let log = scratch.join(format!("{id}.log"));
+                    (
+                        id.to_string(),
+                        stub_session(&script, &log, Backend::Opencode, cowork),
+                    )
+                })
+                .collect();
+        let ids = cowork_session_ids(sessions.iter(), Some("newcomer"));
+        assert_eq!(ids, ["screen"]);
+        let mut all = cowork_session_ids(sessions.iter(), None);
+        all.sort();
+        assert_eq!(all, ["newcomer", "screen"]);
+        for s in sessions.values() {
+            let _ = s.child.lock().await.start_kill();
+        }
+        let _ = std::fs::remove_dir_all(&scratch);
+    }
+
+    #[test]
+    fn a_reply_that_only_announces_its_next_step_is_told_apart_from_an_answer() {
+        for reply in [
+            "Chrome is running. Let me first list the windows for Chrome.",
+            "I'll read the file now",
+            "The file exists.\nNow I need to add the second line.",
+            "Next, I will open the settings:",
+            "Let me read package.json.",
+            "Now I need to edit src/app/page.tsx",
+        ] {
+            assert!(announces_next_step(reply), "{reply}");
+        }
+        for reply in [
+            "Six apps are running.",
+            "I created notes.txt with two lines. Let me know if you want more.",
+            "",
+            "The total is 42.",
+            // A question for the user, a quoted email and an offer were each
+            // answered with "Call the tool for that step now".
+            "I found 3 drafts. Should I delete them? I'll wait for your go-ahead.",
+            "He wrote: \"Let's meet on Friday.\"",
+            "I'll be here if you need anything else.",
+            // Requests for approval, an answer or a choice written as
+            // statements, in a reply or in the closing thoughts.
+            "I found 3 drafts. I'll delete them once you confirm.",
+            "I found 3 drafts. I'll need your confirmation before deleting them.",
+            "I found 3 drafts. I need to confirm with you before deleting them.",
+            "There are 3 drafts named Report. I need to know which one to delete.",
+            "The user wants the drafts gone. Deleting is irreversible. I'll ask the user to confirm before deleting them.",
+            "I'll delete them as soon as you say so.",
+            "I'll send it when I have your go-ahead.",
+            "I'll delete them when you're ready.",
+            "I'll delete them when you’re ready.",
+            "I'll send the email once you've reviewed it.",
+            "I'll continue after the user's answer.",
+            "I'll delete them on your say so.",
+            "I'll need your OK first.",
+            "I'll await further instructions.",
+            "I'll stand by.",
+            "I'll leave the decision to you.",
+            "I'll go with whichever you pick.",
+            "I'll need a yes from you before I delete anything.",
+            "I'll keep them for now, pending your review.",
+            "I'll proceed once instructed.",
+            "Now I've deleted the drafts.",
+            "Now I have all three windows.",
+        ] {
+            assert!(!announces_next_step(reply), "{reply}");
+        }
+        // A step that only mentions the user's things is still a step, and so
+        // is one whose approval words are about the model's own work.
+        for reply in [
+            "Let me open your inbox.",
+            "I'll read the user's latest email.",
+            "Let me check which apps are running.",
+            "Let me share the results with you.",
+            "I'll read the email you got from the user's bank.",
+            "Let me confirm the page loaded.",
+            "Let me check the app's permissions.",
+            "I'll click the Approve button.",
+            "I'll go ahead and open Chrome.",
+            "Okay, let me open the inbox.",
+            "First, I'll list the windows.",
+            "- Let me open Safari.",
+            "**Let me check the windows.**",
+        ] {
+            assert!(announces_next_step(reply), "{reply}");
+        }
+    }
+
+    #[test]
+    fn each_guard_on_an_announced_step_has_a_reply_only_it_catches() {
+        // Each turns true when its own guard is removed: the question mark,
+        // the start-of-sentence anchor, the quote stripping, the phrases that
+        // wait on the user, and approval words in a sentence about the user.
+        assert!(!announces_next_step("I'll delete them, okay?"));
+        assert!(!announces_next_step(
+            "Chrome is open and I'll leave it that way."
+        ));
+        assert!(!announces_next_step(
+            "He wrote: \"Running late. I'll call Sam at five\" in his note."
+        ));
+        assert!(!announces_next_step("I need to know which one to delete."));
+        assert!(!announces_next_step(
+            "I'll need your confirmation before deleting them."
+        ));
+    }
+
+    #[test]
+    fn no_carry_on_prompt_approves_a_step_for_the_user() {
+        // They go in the user's role; "Call the tool for that step now" read
+        // as approval to a model that had said it would wait for one.
+        for prompt in [LOCAL_CARRY_ON, LOCAL_MAKE_THE_CALL, LOCAL_ANSWER_NOW] {
+            assert!(
+                prompt.starts_with("Automatic note, not from the user. It approves nothing. "),
+                "{prompt}"
+            );
+        }
+        assert!(
+            LOCAL_CARRY_ON.contains("needs the user's approval or an answer from them, ask them")
+        );
+        assert!(LOCAL_MAKE_THE_CALL.contains("needs the user's approval: then ask them and stop"));
+    }
+
+    #[test]
+    fn a_json_answer_written_again_after_the_question_is_kept() {
+        // `{"pid": 4512}` fits a tool that takes `pid`: it got three "make that
+        // tool call" rounds, each clearing it from the bubble.
+        let mut ts = TurnState::new();
+        let mut emit = |_: &'static str, _: Value| {};
+        ts.full_content = "{\"pid\": 4512}".into();
+        assert_eq!(next_carry_on(&mut emit, &mut ts), Some(LOCAL_MAKE_THE_CALL));
+        assert!(ts.full_content.is_empty());
+
+        ts.full_content = "{\"pid\": 4512}".into();
+        assert_eq!(next_carry_on(&mut emit, &mut ts), None);
+        assert_eq!(ts.full_content, "{\"pid\": 4512}");
+
+        // A real call since the question: arguments written as text again
+        // are asked about again.
+        ts.tool_shapes
+            .insert("call-1".into(), serde_json::Map::new());
+        assert_eq!(next_carry_on(&mut emit, &mut ts), Some(LOCAL_MAKE_THE_CALL));
+    }
+
+    #[test]
+    fn a_tool_call_written_as_the_reply_is_told_apart_from_an_answer() {
+        assert!(wrote_tool_arguments("{\"on_screen_only\":true}"));
+        assert!(wrote_tool_arguments(" {\"pid\": 654, \"window_id\": 3} \n"));
+        assert!(wrote_tool_arguments(
+            "{\"filePath\": \"notes.txt\", \"content\": \"hi\"}"
+        ));
+        assert!(!wrote_tool_arguments("Six apps are running."));
+        assert!(!wrote_tool_arguments("{ not json }"));
+        assert!(!wrote_tool_arguments("[1, 2]"));
+        assert!(!wrote_tool_arguments("{}"));
+        // JSON the user asked for is an answer, not a call.
+        assert!(!wrote_tool_arguments(
+            "{\"windows\": [{\"title\": \"Inbox\"}]}"
+        ));
+        assert!(!wrote_tool_arguments("{\"pid\": 1, \"filePath\": \"x\"}"));
+    }
+
+    #[test]
+    fn local_guidance_is_appended_only_on_device() {
+        assert_eq!(with_local_guidance("G".into(), false, true), "G");
+        let on = with_local_guidance("G".into(), true, false);
+        assert!(!on.contains("start_session"), "{on}");
+        assert!(
+            with_local_guidance("G".into(), true, true).contains("no start_session"),
+            "the driver's own instructions name tools this session lacks"
+        );
+        assert!(
+            on.starts_with("G\n\n## Working on this computer's own model"),
+            "{on}"
+        );
+        for rule in [
+            "call the tool instead",
+            "unless a tool call in this turn did it",
+            "before you have tried the tool for it",
+        ] {
+            assert!(on.contains(rule), "{rule}");
+        }
+    }
+
+    /// An on-device request has to fit a window some thirty times smaller than
+    /// a cloud model's: 54,000 tokens went out before, cut to 2,000 by Ollama.
+    #[test]
+    fn an_on_device_session_is_written_to_fit_the_models_window() {
+        let s = Scratch::new("local-fit");
+        let spec = ModelSpec {
+            provider: "ollama",
+            model: "qwen3:latest".to_string(),
+            local: true,
+            fit: Some(LocalFit {
+                model: "qwen3:latest-ibl-32k".to_string(),
+                context: 32_768,
+                cowork: true,
+            }),
+        };
+        apply_opencode_model_at(
+            s.path(),
+            None,
+            &spec,
+            "http://localhost:11434/v1",
+            "local",
+            "Ollama (on-device)",
+            Some("G"),
+        )
+        .unwrap();
+        let text =
+            std::fs::read_to_string(s.path().join("opencode").join("opencode.json")).unwrap();
+        let cfg: Value = serde_json::from_str(&text).unwrap();
+
+        assert_eq!(cfg["model"], "ollama/qwen3:latest-ibl-32k");
+        let model = &cfg["provider"]["ollama"]["models"]["qwen3:latest-ibl-32k"];
+        assert_eq!(model["name"], "qwen3:latest", "shown under its own name");
+        assert_eq!(
+            model["limit"],
+            json!({ "context": 32_768, "output": 8_192 })
+        );
+        assert_eq!(
+            cfg["agent"]["title"]["disable"], true,
+            "no naming call ahead of the reply"
+        );
+        assert_eq!(cfg["agent"]["build"]["steps"], LOCAL_STEP_LIMIT);
+        assert_eq!(
+            cfg["agent"]["build"]["prompt"],
+            format!("{OPENCODE_BUILD_PROMPT}\n\nG"),
+            "the guidance sits ahead of anything that names the chat"
+        );
+        assert_eq!(
+            std::fs::read_to_string(s.path().join("opencode").join("AGENTS.md")).unwrap(),
+            LOCAL_GUIDANCE_POINTER
+        );
+        assert_eq!(cfg["provider"]["ollama"]["options"]["timeout"], 1_800_000);
+        assert_eq!(
+            cfg["provider"]["ollama"]["options"]["headerTimeout"],
+            1_800_000
+        );
+        assert!(cfg.get("skills").is_none(), "no vibe catalog on device");
+    }
+
+    #[test]
+    fn an_on_device_session_keeps_only_the_core_tools() {
+        let mut cfg = serde_json::Map::new();
+        enforce_permission_policy(&mut cfg);
+        trim_local_tools(&mut cfg, false);
+        assert_eq!(cfg["permission"]["task"], "deny");
+        assert_eq!(cfg["permission"]["todowrite"], "deny");
+        assert!(
+            cfg["permission"].get("cowork_*").is_none(),
+            "no screen rules without Cowork"
+        );
+
+        trim_local_tools(&mut cfg, true);
+        assert_eq!(cfg["permission"]["cowork_*"], "deny");
+        assert_eq!(cfg["permission"]["cowork_click"], "ask");
+        assert!(cfg["permission"].get("cowork_start_recording").is_none());
+        assert!(cfg["permission"].get("cowork_start_session").is_none());
+        // opencode takes the last matching rule: the deny must come first.
+        let written = serde_json::to_string(&cfg).unwrap();
+        let at = |key: &str| written.find(&format!("\"{key}\"")).expect(key);
+        assert!(at("*") < at("cowork_*"), "{written}");
+        for tool in crate::cua_driver_mcp::LOCAL_TOOLS {
+            assert!(
+                at("cowork_*") < at(&format!("cowork_{tool}")),
+                "{tool}: {written}"
+            );
+        }
+    }
+
+    #[test]
+    fn a_cloud_session_keeps_its_tools_its_skills_and_its_session_name() {
+        let mut cfg = serde_json::Map::new();
+        set_session_naming(&mut cfg, false);
+        assert_eq!(cfg["agent"]["title"]["disable"], true);
+        set_session_naming(&mut cfg, true);
+        assert!(cfg["agent"].get("title").is_none(), "back on a cloud model");
+
+        let s = Scratch::new("cloud-fit");
+        let spec = parse_model_spec("openai/gpt-4o");
+        apply_opencode_model_at(
+            s.path(),
+            None,
+            &spec,
+            "http://127.0.0.1:1/v1",
+            "secret",
+            "ibl.ai",
+            Some("G"),
+        )
+        .unwrap();
+        let text =
+            std::fs::read_to_string(s.path().join("opencode").join("opencode.json")).unwrap();
+        let cfg: Value = serde_json::from_str(&text).unwrap();
+        assert_eq!(cfg["permission"], json!({ "*": "ask", "question": "deny" }));
+        assert!(cfg["provider"]["iblai"]["models"]["openai/gpt-4o"]
+            .get("limit")
+            .is_none());
+        assert!(cfg["provider"]["iblai"]["options"].get("timeout").is_none());
+        assert_eq!(cfg["agent"]["build"]["prompt"], OPENCODE_BUILD_PROMPT);
+        assert!(cfg["agent"]["build"].get("steps").is_none());
+        assert_eq!(
+            std::fs::read_to_string(s.path().join("opencode").join("AGENTS.md")).unwrap(),
+            "G"
+        );
+        assert!(cfg["agent"].get("title").is_none());
+    }
+
+    #[test]
+    fn cowork_guidance_is_appended_only_when_on() {
+        assert_eq!(with_cowork_guidance("G".into(), false), "G");
+        let on = with_cowork_guidance("G".into(), true);
+        assert!(on.starts_with("G\n\n## Screen tools"), "{on}");
+        assert!(on.contains("Screenshots are not available here"), "{on}");
+        assert!(on.contains("together with the snapshot_id"), "{on}");
+        assert!(
+            !on.contains("include_screenshot"),
+            "the relay switches it off; the model is not asked to"
+        );
+    }
+
+    #[test]
+    fn cowork_preflight_refuses_only_an_unsupported_session_or_a_missing_driver() {
+        use crate::cua_driver_mcp::DriverSupport;
+        let ok = DriverSupport {
+            supported: true,
+            reason: None,
+        };
+        let driver = PathBuf::from("/opt/x/cua-driver");
+        assert_eq!(cowork_preflight_with(&ok, Some(driver.clone())), Ok(driver));
+        let kde = DriverSupport {
+            supported: false,
+            reason: Some("kde".into()),
+        };
+        let err = cowork_preflight_with(&kde, Some(PathBuf::from("/d"))).unwrap_err();
+        assert!(err.contains("desktop session"), "{err}");
+        let err = cowork_preflight_with(&ok, None).unwrap_err();
+        assert!(err.contains("isn't set up"), "{err}");
+    }
 
     /// The wire contract against a scripted agent: Claude's load/new params
     /// carry the guidance append and the skills view and are followed by the
@@ -8888,6 +10338,7 @@ done
                 &scratch,
                 "# ibl.ai guidance\n",
                 false,
+                None,
             );
             let mut cmd = Command::new(&launch.program);
             cmd.args(&launch.args)
@@ -8925,6 +10376,7 @@ done
                 acp_session_id: String::new(),
                 requested_model: Some(format!("{}/default", backend.id())),
                 backend,
+                cowork: false,
                 proxy_secret: None,
                 turn: Arc::new(Mutex::new(TurnState::new())),
                 last_used: Mutex::new(Instant::now()),

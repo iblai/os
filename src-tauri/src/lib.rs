@@ -10,6 +10,8 @@ mod cua_driver_mcp;
 // the same arrangement as `foundry_manager` below.
 #[allow(dead_code)]
 mod local_llm;
+#[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+mod local_llm_openai;
 // Only the phone asks; desktop builds carry the module unused.
 #[cfg_attr(not(any(target_os = "ios", target_os = "android")), allow(dead_code))]
 mod local_network;
@@ -2676,15 +2678,352 @@ pub fn run() {
                 let initial_url = tauri::WebviewUrl::External(app_url.parse().unwrap());
                 let app_base_url_json = serde_json::to_string(&app_url).unwrap();
 
-                // Safe area handling script for iOS - ensures content doesn't scroll behind notch/home indicator
-                // Also handles Google OAuth by opening in system browser
-                let safe_area_script = r#"
+                let safe_area_script = MOBILE_SAFE_AREA_SCRIPT
+                    .replace("__IBL_APP_BASE_URL__", &app_base_url_json)
+                    .replace(
+                        "__IBL_OTHER_SITES_AS_BROWSER__",
+                        if cfg!(target_os = "ios") { "true" } else { "false" },
+                    );
+                let page_app_url = app_url.to_string();
+
+                // Combine safe area script with online monitoring script
+                let combined_script = format!("{}\n{}", safe_area_script, URL_MONITOR_SCRIPT_ONLINE);
+                let app_handle = app.handle().clone();
+
+                // Use online monitoring script with safe area handling
+                let window = tauri::WebviewWindowBuilder::new(
+                    app,
+                    "main",
+                    initial_url,
+                )
+                .initialization_script(&combined_script)
+                .on_page_load(move |window, payload| {
+                    #[cfg(target_os = "ios")]
+                    if let Some(other) = is_other_site(payload.url(), &page_app_url) {
+                        let finished = matches!(
+                            payload.event(),
+                            tauri::webview::PageLoadEvent::Finished
+                        );
+                        let _ = window.with_webview(move |webview| unsafe {
+                            let webview = webview.inner() as *mut Object;
+                            pin_webview(webview, other);
+                            if other && finished {
+                                match_surround_to_page(webview);
+                            }
+                        });
+                    }
+                    #[cfg(not(target_os = "ios"))]
+                    let _ = (&window, &payload, &page_app_url);
+                })
+                .on_navigation(move |url| {
+                    let url_str = url.as_str();
+                    let log_msg = format!("[ibl.ai] [MOBILE] on_navigation called with URL: {}", url_str);
+                    println!("{}", log_msg);
+
+                    let is_oauth = is_oauth_url(url_str);
+                    let oauth_check_msg = format!("[ibl.ai] [MOBILE] is_oauth_url result: {}", is_oauth);
+                    println!("{}", oauth_check_msg);
+
+                    if is_oauth {
+                        let intercept_msg = format!(
+                            "[ibl.ai] [MOBILE] OAuth navigation intercepted, opening Safari VC: {}",
+                            url_str
+                        );
+                        println!("{}", intercept_msg);
+
+                        if let Err(e) = open_oauth_url(&app_handle, url_str) {
+                            let error_msg = format!("[ibl.ai] [MOBILE] Failed to open external URL: {}", e);
+                            println!("{}", error_msg);
+                            return true;
+                        }
+
+                        println!("[ibl.ai] [MOBILE] Returning false to prevent webview navigation");
+                        return false;
+                    }
+                    // Our own deep-link schemes, navigated INSIDE the webview
+                    // (the SSO flow ends by redirecting to
+                    // iblai-mentor:///sso-login-complete?data=…). iOS hands
+                    // such navigations to the OS, which loops them back via
+                    // the deep-link plugin — but Android's WebView just fails
+                    // with ERR_UNKNOWN_URL_SCHEME, so route them into the
+                    // same handler ourselves and block the navigation.
+                    let scheme = url.scheme();
+                    if scheme == "iblai-mentor" || scheme == "ai.ibl.mentorai" {
+                        println!("[ibl.ai] [MOBILE] In-webview deep link intercepted: {url_str}");
+                        handle_deep_link_url(&app_handle, url_str);
+                        return false;
+                    }
+                    println!("[ibl.ai] [MOBILE] Allowing normal navigation");
+                    true
+                })
+                .build()
+                .expect("Failed to create main window");
+
+                if let Ok(mut pending) = get_pending_deep_link().lock() {
+                    if let Some(pending_url) = pending.take() {
+                        if let Ok(js_url) = serde_json::to_string(&pending_url) {
+                            let _ = window.eval(&format!("window.location.href = {};", js_url));
+                        }
+                    }
+                }
+
+                println!("[ibl.ai] Mobile window created with safe area support");
+            }
+
+            Ok(())
+        });
+
+    // Register the custom URI scheme protocol for offline cache (desktop only)
+    #[cfg(not(any(target_os = "ios", target_os = "android")))]
+    let builder =
+        builder.register_asynchronous_uri_scheme_protocol("mentor", |ctx, request, responder| {
+            // Extract the URL path - format: mentor://fetch/<encoded_url>
+            let uri = request.uri();
+            let path = uri.path();
+
+            // Handle the fetch protocol
+            if path.starts_with("/fetch/") {
+                let encoded_url = &path[7..]; // Skip "/fetch/"
+                let url = match urlencoding::decode(encoded_url) {
+                    Ok(u) => u.to_string(),
+                    Err(_) => {
+                        responder.respond(
+                            http::Response::builder()
+                                .status(http::StatusCode::BAD_REQUEST)
+                                .body(b"Invalid URL encoding".to_vec())
+                                .unwrap(),
+                        );
+                        return;
+                    }
+                };
+
+                // Get app handle for accessing cache (unused but kept for future use)
+                let _app = ctx.app_handle().clone();
+
+                std::thread::spawn(move || {
+                    let rt = tokio::runtime::Runtime::new().unwrap();
+                    rt.block_on(async {
+                        let cache_lock = get_web_cache().read().await;
+                        if let Some(cache) = cache_lock.as_ref() {
+                            match cache.fetch(&url).await {
+                                Ok(response) => {
+                                    let mut builder = http::Response::builder()
+                                        .status(response.status)
+                                        .header("Content-Type", response.content_type);
+
+                                    // Add CORS headers to allow the shell to access
+                                    builder = builder
+                                        .header("Access-Control-Allow-Origin", "*")
+                                        .header("Access-Control-Allow-Methods", "GET, OPTIONS")
+                                        .header("Access-Control-Allow-Headers", "*");
+
+                                    responder.respond(builder.body(response.body).unwrap());
+                                }
+                                Err(e) => {
+                                    responder.respond(
+                                        http::Response::builder()
+                                            .status(http::StatusCode::SERVICE_UNAVAILABLE)
+                                            .header("Content-Type", "application/json")
+                                            .body(
+                                                format!(
+                                                    r#"{{"error": "{}",  "offline": true}}"#,
+                                                    e.replace('"', "\\\"")
+                                                )
+                                                .into_bytes(),
+                                            )
+                                            .unwrap(),
+                                    );
+                                }
+                            }
+                        } else {
+                            responder.respond(
+                                http::Response::builder()
+                                    .status(http::StatusCode::INTERNAL_SERVER_ERROR)
+                                    .body(b"Cache not initialized".to_vec())
+                                    .unwrap(),
+                            );
+                        }
+                    });
+                });
+            } else {
+                responder.respond(
+                    http::Response::builder()
+                        .status(http::StatusCode::NOT_FOUND)
+                        .body(b"Not found".to_vec())
+                        .unwrap(),
+                );
+            }
+        });
+
+    // Desktop platforms get all commands including offline/cache features
+    #[cfg(not(any(target_os = "ios", target_os = "android")))]
+    let builder = builder.invoke_handler(tauri::generate_handler![
+        install_ollama,
+        stop_ollama,
+        warm_up_local_chat,
+        check_ollama_status,
+        get_mcp_config_path,
+        cua_driver_installer::install_cua_driver,
+        cua_driver_installer::check_cua_driver_status,
+        cua_driver_mcp::cua_driver_support,
+        cua_driver_mcp::cua_driver_start,
+        cua_driver_mcp::cua_driver_send,
+        cua_driver_mcp::cua_driver_stop,
+        local_llm_openai::local_llm_openai_stream,
+        local_llm_openai::local_llm_openai_stream_cancel,
+        cua_driver_mcp::open_privacy_settings,
+        cua_driver_mcp::relaunch_app,
+        cua_driver_mcp::request_cowork_permission,
+        cua_driver_mcp::bring_app_to_front,
+        check_disk_space_for_model,
+        get_system_memory,
+        download_phi3_model,
+        download_model,
+        cancel_model_download,
+        check_network_status,
+        set_cache_online_status,
+        clear_web_cache,
+        get_web_cache_stats,
+        get_offline_server_url,
+        is_offline_server_ready,
+        precache_app,
+        save_last_mentor_route,
+        get_last_mentor_route,
+        cache_api_response,
+        get_cached_api_response,
+        save_offline_context,
+        get_offline_context,
+        get_os_type,
+        allow_in_app_purchase,
+        get_locked_tenant,
+        open_external_url,
+        navigate_to,
+        ollama_chat,
+        ollama_chat_stream,
+        log_fe,
+        opencode_acp::opencode_chat_stream,
+        opencode_acp::opencode_stop,
+        opencode_acp::opencode_permission_respond,
+        opencode_acp::opencode_close,
+        opencode_acp::get_opencode_workspace,
+        opencode_acp::set_opencode_workspace,
+        opencode_acp::new_opencode_workspace,
+        opencode_acp::get_opencode_permission_mode,
+        opencode_acp::set_opencode_permission_mode,
+        opencode_acp::seed_opencode_permission_mode,
+        opencode_acp::set_opencode_skills,
+        opencode_acp::begin_opencode_skills_sync,
+        opencode_installer::install_opencode,
+        opencode_installer::ensure_vibe_skills,
+        opencode_installer::check_opencode_status,
+        opencode_acp::check_code_local_model,
+        opencode_acp::set_opencode_learner,
+        opencode_acp::ensure_opencode_platform_key,
+        code_agent_installer::check_code_agent_status,
+        code_agent_installer::install_code_agent,
+        code_agent_models::list_code_agent_models,
+        code_agent_models::set_code_agent_model,
+        save_file::save_chat_file,
+        app_update::check_app_update,
+        app_update::install_app_update,
+        remote_code::remote_code_status,
+        remote_code::remote_code_enable,
+        remote_code::remote_code_disable,
+        remote_code::remote_code_pairing_qr,
+    ]);
+
+    // Mobile platforms get only basic commands (no offline/cache features)
+    #[cfg(any(target_os = "ios", target_os = "android"))]
+    let builder = builder.invoke_handler(tauri::generate_handler![
+        install_ollama,
+        stop_ollama,
+        warm_up_local_chat,
+        check_ollama_status,
+        check_disk_space_for_model,
+        get_system_memory,
+        download_phi3_model,
+        download_model,
+        cancel_model_download,
+        check_network_status,
+        get_os_type,
+        allow_in_app_purchase,
+        get_locked_tenant,
+        open_external_url,
+        navigate_to,
+        ollama_chat,
+        ollama_chat_stream,
+        log_fe,
+        app_update::check_app_update,
+        remote_code_client::remote_code_set_host,
+        remote_code_client::remote_code_get_host,
+        remote_code_client::remote_code_clear_host,
+        remote_code_client::opencode_chat_stream,
+        remote_code_client::opencode_stop,
+        remote_code_client::opencode_close,
+        remote_code_client::opencode_permission_respond,
+        remote_code_client::get_opencode_permission_mode,
+        remote_code_client::set_opencode_permission_mode,
+        remote_code_client::seed_opencode_permission_mode,
+        remote_code_client::get_opencode_workspace,
+        remote_code_client::set_opencode_workspace,
+        remote_code_client::new_opencode_workspace,
+        remote_code_client::remote_code_list_workspaces,
+        local_network::local_network_status,
+        local_network::open_app_settings,
+    ]);
+
+    builder
+        .build(tauri::generate_context!())
+        .expect("error while building tauri app")
+        .run(|_app, _event| {
+            // Same exit hook as main.rs: the phone-access opencode server
+            // must die with the app (an orphan with a dead password poisons
+            // opencode's machine-global coordination for every later one).
+            // Desktop only — `remote_code` is not compiled for mobile.
+            #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+            if let tauri::RunEvent::Exit = _event {
+                remote_code::shutdown_sync();
+                mcp_bridge_manager::shutdown();
+            }
+            // Phone back in the foreground: the OS reclaims a suspended
+            // app's sockets, so a Code turn streaming from the desktop
+            // reconnects and catches up (see remote_code_client).
+            #[cfg(any(target_os = "ios", target_os = "android"))]
+            if let tauri::RunEvent::WindowEvent {
+                event: tauri::WindowEvent::Resumed,
+                ..
+            } = _event
+            {
+                remote_code_client::app_resumed();
+            }
+        });
+}
+
+/// Safe area handling script for iOS - ensures content doesn't scroll behind notch/home indicator
+/// Also handles Google OAuth by opening in system browser
+#[cfg(any(target_os = "ios", target_os = "android", test))]
+const MOBILE_SAFE_AREA_SCRIPT: &str = r#"
 (function() {
     // Only run once
     if (window.__safeAreaSetup) return;
     window.__safeAreaSetup = true;
 
     var appBaseUrl = __IBL_APP_BASE_URL__;
+
+    // The layout below is the app shell's: a fixed, non-scrolling body with the
+    // shell's own containers as the scrollers. Another site's page (the sign-in
+    // site) is an ordinary document, so on iOS it gets none of it and scrolls
+    // only when it is longer than the screen, as in a browser; the native side
+    // pins the webview to the safe area for it (`pin_webview`). Android keeps
+    // the layout everywhere: nothing there pins the webview.
+    var isAppPage = true;
+    if (__IBL_OTHER_SITES_AS_BROWSER__) {
+        try {
+            isAppPage = window.location.origin === new URL(appBaseUrl).origin;
+        } catch (e) {
+            // An unreadable app URL keeps the layout everywhere, as before.
+        }
+    }
 
     console.log('[ibl.ai] Setting up safe area handling...');
 
@@ -2698,6 +3037,7 @@ pub fn run() {
     }
 
     waitForHead(function() {
+        if (!isAppPage) return;
         // Ensure viewport has viewport-fit=cover for safe area support
         var viewport = document.querySelector('meta[name="viewport"]');
         if (viewport) {
@@ -2734,22 +3074,36 @@ pub fn run() {
             padding-right: env(safe-area-inset-right, 0px);
         }
 
+        /* body is position:fixed, so the html padding above cannot move it:
+           the safe-area offset has to be on body's own top/bottom. */
         body {
             /* Ensure body doesn't scroll the entire page */
             position: fixed;
-            top: 0;
+            top: env(safe-area-inset-top, 0px);
             left: 0;
             right: 0;
-            bottom: 0;
+            bottom: env(safe-area-inset-bottom, 0px);
             overflow: hidden;
         }
 
-        /* Main app container should fill the safe area */
+        /* The app shell is h-dvh; pin it to body's inset box or it overflows
+           body and clips the composer. */
+        [data-slot=sidebar-wrapper] {
+            height: 100%;
+            min-height: 0;
+        }
+
+        [data-slot=sidebar-inset] {
+            height: 100%;
+        }
+
+        /* Main app container should fill the safe area. Not <main>: the app
+           shell's <main> must not become a touch scroller, or swiping past the
+           end of a chat scrolls the whole chat card off screen. */
         body > div:first-child,
         #__next,
         #root,
-        [data-radix-portal],
-        main {
+        [data-radix-portal] {
             height: 100%;
             overflow: auto;
             -webkit-overflow-scrolling: touch;
@@ -2776,6 +3130,7 @@ pub fn run() {
     }
 
     waitForBody(function() {
+        if (!isAppPage) return;
         // Prevent overscroll/bounce effect on iOS
         document.body.addEventListener('touchmove', function(e) {
         // Allow scrolling within scrollable elements
@@ -2994,294 +3349,198 @@ pub fn run() {
     console.log('[ibl.ai] Mobile setup complete (safe area + OAuth)');
 })();
 "#;
-                let safe_area_script =
-                    safe_area_script.replace("__IBL_APP_BASE_URL__", &app_base_url_json);
 
-                // Combine safe area script with online monitoring script
-                let combined_script = format!("{}\n{}", safe_area_script, URL_MONITOR_SCRIPT_ONLINE);
-                let app_handle = app.handle().clone();
+/// Whether `url` is a page of another site than the app's own. `None` for a
+/// page that is neither (`about:blank`, a custom scheme): it changes nothing.
+#[cfg(any(target_os = "ios", test))]
+fn is_other_site(url: &tauri::Url, app_url: &str) -> Option<bool> {
+    if !matches!(url.scheme(), "http" | "https") {
+        return None;
+    }
+    let app = tauri::Url::parse(app_url).ok()?;
+    Some(url.origin() != app.origin())
+}
 
-                // Use online monitoring script with safe area handling
-                let window = tauri::WebviewWindowBuilder::new(
-                    app,
-                    "main",
-                    initial_url,
-                )
-                .initialization_script(&combined_script)
-                .on_navigation(move |url| {
-                    let url_str = url.as_str();
-                    let log_msg = format!("[ibl.ai] [MOBILE] on_navigation called with URL: {}", url_str);
-                    println!("{}", log_msg);
+/// Pin the webview to the safe area (`to_safe_area`) or back to the whole view.
+///
+/// A page sized by the screen (`100vh`) measures an embedded WKWebView's whole
+/// view, notch and home bar included, while WebKit lays it out in the area
+/// between them — so a page that fits in a browser scrolls here by the
+/// difference (93pt on an iPhone 15 Pro: 852 against 759). With the webview
+/// itself ending at the safe area the two heights are one. The app's own pages
+/// keep the full-screen webview: their layout never uses `vh`.
+///
+/// Constraints, not a frame: the safe area changes when the phone turns.
+#[cfg(target_os = "ios")]
+#[allow(unexpected_cfgs)]
+unsafe fn pin_webview(webview: *mut Object, to_safe_area: bool) {
+    use std::sync::atomic::{AtomicPtr, Ordering};
+    static FULL: AtomicPtr<Object> = AtomicPtr::new(std::ptr::null_mut());
+    static SAFE: AtomicPtr<Object> = AtomicPtr::new(std::ptr::null_mut());
 
-                    let is_oauth = is_oauth_url(url_str);
-                    let oauth_check_msg = format!("[ibl.ai] [MOBILE] is_oauth_url result: {}", is_oauth);
-                    println!("{}", oauth_check_msg);
+    if webview.is_null() {
+        return;
+    }
+    let parent: *mut Object = msg_send![webview, superview];
+    if parent.is_null() {
+        return;
+    }
+    if FULL.load(Ordering::SeqCst).is_null() {
+        if !to_safe_area {
+            return;
+        }
+        let guide: *mut Object = msg_send![parent, safeAreaLayoutGuide];
+        FULL.store(edge_constraints(webview, parent), Ordering::SeqCst);
+        SAFE.store(edge_constraints(webview, guide), Ordering::SeqCst);
+        let _: () = msg_send![webview, setTranslatesAutoresizingMaskIntoConstraints: objc::runtime::NO];
+    }
+    let (on, off) = if to_safe_area {
+        (&SAFE, &FULL)
+    } else {
+        (&FULL, &SAFE)
+    };
+    let _: () = msg_send![class!(NSLayoutConstraint), deactivateConstraints: off.load(Ordering::SeqCst)];
+    let _: () = msg_send![class!(NSLayoutConstraint), activateConstraints: on.load(Ordering::SeqCst)];
+}
 
-                    if is_oauth {
-                        let intercept_msg = format!(
-                            "[ibl.ai] [MOBILE] OAuth navigation intercepted, opening Safari VC: {}",
-                            url_str
-                        );
-                        println!("{}", intercept_msg);
+/// The four edge constraints tying `view` to `to` (a view or a layout guide),
+/// inactive, in an array kept for the app's lifetime.
+#[cfg(target_os = "ios")]
+#[allow(unexpected_cfgs)]
+unsafe fn edge_constraints(view: *mut Object, to: *mut Object) -> *mut Object {
+    let all: *mut Object = msg_send![class!(NSMutableArray), new];
+    macro_rules! edge {
+        ($anchor:ident) => {{
+            let ours: *mut Object = msg_send![view, $anchor];
+            let theirs: *mut Object = msg_send![to, $anchor];
+            let tie: *mut Object = msg_send![ours, constraintEqualToAnchor: theirs];
+            let _: () = msg_send![all, addObject: tie];
+        }};
+    }
+    edge!(topAnchor);
+    edge!(bottomAnchor);
+    edge!(leadingAnchor);
+    edge!(trailingAnchor);
+    all
+}
 
-                        if let Err(e) = open_oauth_url(&app_handle, url_str) {
-                            let error_msg = format!("[ibl.ai] [MOBILE] Failed to open external URL: {}", e);
-                            println!("{}", error_msg);
-                            return true;
-                        }
+/// Behind a webview pinned to the safe area the parent view shows above and
+/// below it; give it the page's own background so the strips match the page.
+#[cfg(target_os = "ios")]
+#[allow(unexpected_cfgs)]
+unsafe fn match_surround_to_page(webview: *mut Object) {
+    let parent: *mut Object = msg_send![webview, superview];
+    let known: BOOL = msg_send![webview, respondsToSelector: sel!(underPageBackgroundColor)];
+    if parent.is_null() || known != YES {
+        return;
+    }
+    let color: *mut Object = msg_send![webview, underPageBackgroundColor];
+    if !color.is_null() {
+        let _: () = msg_send![parent, setBackgroundColor: color];
+    }
+}
 
-                        println!("[ibl.ai] [MOBILE] Returning false to prevent webview navigation");
-                        return false;
-                    }
-                    // Our own deep-link schemes, navigated INSIDE the webview
-                    // (the SSO flow ends by redirecting to
-                    // iblai-mentor:///sso-login-complete?data=…). iOS hands
-                    // such navigations to the OS, which loops them back via
-                    // the deep-link plugin — but Android's WebView just fails
-                    // with ERR_UNKNOWN_URL_SCHEME, so route them into the
-                    // same handler ourselves and block the navigation.
-                    let scheme = url.scheme();
-                    if scheme == "iblai-mentor" || scheme == "ai.ibl.mentorai" {
-                        println!("[ibl.ai] [MOBILE] In-webview deep link intercepted: {url_str}");
-                        handle_deep_link_url(&app_handle, url_str);
-                        return false;
-                    }
-                    println!("[ibl.ai] [MOBILE] Allowing normal navigation");
-                    true
-                })
-                .build()
-                .expect("Failed to create main window");
+#[cfg(test)]
+mod tests {
+    use super::is_other_site;
+    use super::MOBILE_SAFE_AREA_SCRIPT;
 
-                if let Ok(mut pending) = get_pending_deep_link().lock() {
-                    if let Some(pending_url) = pending.take() {
-                        if let Ok(js_url) = serde_json::to_string(&pending_url) {
-                            let _ = window.eval(&format!("window.location.href = {};", js_url));
-                        }
-                    }
-                }
+    fn css_rule_for<'a>(css: &'a str, declaration: &str) -> &'a str {
+        let decl = css.find(declaration).expect("declaration present");
+        let open = css[..decl].rfind('{').expect("rule has a block");
+        let start = css[..open].rfind('}').map_or(0, |i| i + 1);
+        &css[start..open]
+    }
 
-                println!("[ibl.ai] Mobile window created with safe area support");
-            }
+    #[test]
+    fn mobile_css_does_not_make_the_app_shell_main_a_scroller() {
+        let selectors = css_rule_for(MOBILE_SAFE_AREA_SCRIPT, "-webkit-overflow-scrolling: touch");
+        assert!(
+            selectors.contains("#__next"),
+            "found the scroller rule: {selectors}"
+        );
+        assert!(
+            !selectors.split(',').any(|s| s.trim() == "main"),
+            "`main` must not be in the overflow:auto rule: {selectors}"
+        );
+    }
 
-            Ok(())
-        });
+    #[test]
+    fn mobile_css_offsets_the_fixed_body_by_the_safe_area() {
+        let css: String = MOBILE_SAFE_AREA_SCRIPT
+            .split_whitespace()
+            .collect::<Vec<_>>()
+            .join(" ");
+        for needle in [
+            "top: env(safe-area-inset-top, 0px);",
+            "bottom: env(safe-area-inset-bottom, 0px);",
+            "[data-slot=sidebar-wrapper] { height: 100%; min-height: 0; }",
+            "[data-slot=sidebar-inset] { height: 100%; }",
+            "--sat: env(safe-area-inset-top, 0px);",
+        ] {
+            assert!(css.contains(needle), "missing `{needle}`");
+        }
+        let body = &css[css.find("body { ").expect("body rule")..];
+        let body = &body[..body.find('}').unwrap()];
+        assert!(body.contains("position: fixed;"));
+        assert!(
+            body.contains("top: env(safe-area-inset-top, 0px);"),
+            "{body}"
+        );
+        assert!(
+            body.contains("bottom: env(safe-area-inset-bottom, 0px);"),
+            "{body}"
+        );
+    }
 
-    // Register the custom URI scheme protocol for offline cache (desktop only)
-    #[cfg(not(any(target_os = "ios", target_os = "android")))]
-    let builder =
-        builder.register_asynchronous_uri_scheme_protocol("mentor", |ctx, request, responder| {
-            // Extract the URL path - format: mentor://fetch/<encoded_url>
-            let uri = request.uri();
-            let path = uri.path();
+    #[test]
+    fn only_another_sites_web_page_counts_as_another_site() {
+        let app = "https://os.ibl.ai";
+        let page = |u: &str| is_other_site(&tauri::Url::parse(u).unwrap(), app);
+        assert_eq!(page("https://os.ibl.ai/platform/x"), Some(false));
+        assert_eq!(page("https://login.iblai.app/login?app=mentor"), Some(true));
+        // A lookalike host and another port are other sites too.
+        assert_eq!(page("https://os.ibl.ai.example.com/"), Some(true));
+        assert_eq!(page("https://os.ibl.ai:8443/"), Some(true));
+        // Neither the app's nor a site's: the webview stays as it is.
+        assert_eq!(page("about:blank"), None);
+        assert_eq!(page("iblai-mentor:///sso-login-complete"), None);
+        let dev = |u: &str| is_other_site(&tauri::Url::parse(u).unwrap(), "http://192.168.0.2:3000");
+        assert_eq!(dev("http://192.168.0.2:3000/"), Some(false));
+        assert_eq!(page("https://os.ibl.ai/"), is_other_site(&tauri::Url::parse("https://os.ibl.ai/").unwrap(), "https://os.ibl.ai/"));
+        assert_eq!(is_other_site(&tauri::Url::parse("https://a.example/").unwrap(), "not a url"), None);
+    }
 
-            // Handle the fetch protocol
-            if path.starts_with("/fetch/") {
-                let encoded_url = &path[7..]; // Skip "/fetch/"
-                let url = match urlencoding::decode(encoded_url) {
-                    Ok(u) => u.to_string(),
-                    Err(_) => {
-                        responder.respond(
-                            http::Response::builder()
-                                .status(http::StatusCode::BAD_REQUEST)
-                                .body(b"Invalid URL encoding".to_vec())
-                                .unwrap(),
-                        );
-                        return;
-                    }
-                };
+    #[test]
+    fn mobile_layout_is_applied_only_on_the_apps_own_pages() {
+        // The sign-in site is an ordinary document: under the shell's fixed
+        // body a longer page could not scroll and a fitting one did.
+        let script = MOBILE_SAFE_AREA_SCRIPT;
+        assert_eq!(
+            script.matches("__IBL_OTHER_SITES_AS_BROWSER__").count(),
+            1,
+            "the platform decides whether other sites are left alone"
+        );
+        assert!(
+            script.contains("isAppPage = window.location.origin === new URL(appBaseUrl).origin;"),
+            "the app's own origin decides"
+        );
+        for block in ["waitForHead(function() {", "waitForBody(function() {"] {
+            let body = &script[script.find(block).expect(block) + block.len()..];
+            assert!(
+                body.trim_start().starts_with("if (!isAppPage) return;"),
+                "`{block}` must leave another site's page alone"
+            );
+        }
+    }
 
-                // Get app handle for accessing cache (unused but kept for future use)
-                let _app = ctx.app_handle().clone();
-
-                std::thread::spawn(move || {
-                    let rt = tokio::runtime::Runtime::new().unwrap();
-                    rt.block_on(async {
-                        let cache_lock = get_web_cache().read().await;
-                        if let Some(cache) = cache_lock.as_ref() {
-                            match cache.fetch(&url).await {
-                                Ok(response) => {
-                                    let mut builder = http::Response::builder()
-                                        .status(response.status)
-                                        .header("Content-Type", response.content_type);
-
-                                    // Add CORS headers to allow the shell to access
-                                    builder = builder
-                                        .header("Access-Control-Allow-Origin", "*")
-                                        .header("Access-Control-Allow-Methods", "GET, OPTIONS")
-                                        .header("Access-Control-Allow-Headers", "*");
-
-                                    responder.respond(builder.body(response.body).unwrap());
-                                }
-                                Err(e) => {
-                                    responder.respond(
-                                        http::Response::builder()
-                                            .status(http::StatusCode::SERVICE_UNAVAILABLE)
-                                            .header("Content-Type", "application/json")
-                                            .body(
-                                                format!(
-                                                    r#"{{"error": "{}",  "offline": true}}"#,
-                                                    e.replace('"', "\\\"")
-                                                )
-                                                .into_bytes(),
-                                            )
-                                            .unwrap(),
-                                    );
-                                }
-                            }
-                        } else {
-                            responder.respond(
-                                http::Response::builder()
-                                    .status(http::StatusCode::INTERNAL_SERVER_ERROR)
-                                    .body(b"Cache not initialized".to_vec())
-                                    .unwrap(),
-                            );
-                        }
-                    });
-                });
-            } else {
-                responder.respond(
-                    http::Response::builder()
-                        .status(http::StatusCode::NOT_FOUND)
-                        .body(b"Not found".to_vec())
-                        .unwrap(),
-                );
-            }
-        });
-
-    // Desktop platforms get all commands including offline/cache features
-    #[cfg(not(any(target_os = "ios", target_os = "android")))]
-    let builder = builder.invoke_handler(tauri::generate_handler![
-        install_ollama,
-        stop_ollama,
-        warm_up_local_chat,
-        check_ollama_status,
-        get_mcp_config_path,
-        cua_driver_installer::install_cua_driver,
-        cua_driver_installer::check_cua_driver_status,
-        cua_driver_mcp::cua_driver_support,
-        cua_driver_mcp::cua_driver_start,
-        cua_driver_mcp::cua_driver_send,
-        cua_driver_mcp::cua_driver_stop,
-        check_disk_space_for_model,
-        get_system_memory,
-        download_phi3_model,
-        download_model,
-        cancel_model_download,
-        check_network_status,
-        set_cache_online_status,
-        clear_web_cache,
-        get_web_cache_stats,
-        get_offline_server_url,
-        is_offline_server_ready,
-        precache_app,
-        save_last_mentor_route,
-        get_last_mentor_route,
-        cache_api_response,
-        get_cached_api_response,
-        save_offline_context,
-        get_offline_context,
-        get_os_type,
-        allow_in_app_purchase,
-        get_locked_tenant,
-        open_external_url,
-        navigate_to,
-        ollama_chat,
-        ollama_chat_stream,
-        log_fe,
-        opencode_acp::opencode_chat_stream,
-        opencode_acp::opencode_stop,
-        opencode_acp::opencode_permission_respond,
-        opencode_acp::opencode_close,
-        opencode_acp::get_opencode_workspace,
-        opencode_acp::set_opencode_workspace,
-        opencode_acp::new_opencode_workspace,
-        opencode_acp::get_opencode_permission_mode,
-        opencode_acp::set_opencode_permission_mode,
-        opencode_acp::seed_opencode_permission_mode,
-        opencode_acp::set_opencode_skills,
-        opencode_acp::begin_opencode_skills_sync,
-        opencode_installer::install_opencode,
-        opencode_installer::ensure_vibe_skills,
-        opencode_installer::check_opencode_status,
-        opencode_acp::check_code_local_model,
-        opencode_acp::set_opencode_learner,
-        opencode_acp::ensure_opencode_platform_key,
-        code_agent_installer::check_code_agent_status,
-        code_agent_installer::install_code_agent,
-        code_agent_models::list_code_agent_models,
-        code_agent_models::set_code_agent_model,
-        save_file::save_chat_file,
-        app_update::check_app_update,
-        app_update::install_app_update,
-        remote_code::remote_code_status,
-        remote_code::remote_code_enable,
-        remote_code::remote_code_disable,
-        remote_code::remote_code_pairing_qr,
-    ]);
-
-    // Mobile platforms get only basic commands (no offline/cache features)
-    #[cfg(any(target_os = "ios", target_os = "android"))]
-    let builder = builder.invoke_handler(tauri::generate_handler![
-        install_ollama,
-        stop_ollama,
-        warm_up_local_chat,
-        check_ollama_status,
-        check_disk_space_for_model,
-        get_system_memory,
-        download_phi3_model,
-        download_model,
-        cancel_model_download,
-        check_network_status,
-        get_os_type,
-        allow_in_app_purchase,
-        get_locked_tenant,
-        open_external_url,
-        navigate_to,
-        ollama_chat,
-        ollama_chat_stream,
-        log_fe,
-        app_update::check_app_update,
-        remote_code_client::remote_code_set_host,
-        remote_code_client::remote_code_get_host,
-        remote_code_client::remote_code_clear_host,
-        remote_code_client::opencode_chat_stream,
-        remote_code_client::opencode_stop,
-        remote_code_client::opencode_close,
-        remote_code_client::opencode_permission_respond,
-        remote_code_client::get_opencode_permission_mode,
-        remote_code_client::set_opencode_permission_mode,
-        remote_code_client::seed_opencode_permission_mode,
-        remote_code_client::get_opencode_workspace,
-        remote_code_client::set_opencode_workspace,
-        remote_code_client::new_opencode_workspace,
-        remote_code_client::remote_code_list_workspaces,
-        local_network::local_network_status,
-        local_network::open_app_settings,
-    ]);
-
-    builder
-        .build(tauri::generate_context!())
-        .expect("error while building tauri app")
-        .run(|_app, _event| {
-            // Same exit hook as main.rs: the phone-access opencode server
-            // must die with the app (an orphan with a dead password poisons
-            // opencode's machine-global coordination for every later one).
-            // Desktop only — `remote_code` is not compiled for mobile.
-            #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
-            if let tauri::RunEvent::Exit = _event {
-                remote_code::shutdown_sync();
-                mcp_bridge_manager::shutdown();
-            }
-            // Phone back in the foreground: the OS reclaims a suspended
-            // app's sockets, so a Code turn streaming from the desktop
-            // reconnects and catches up (see remote_code_client).
-            #[cfg(any(target_os = "ios", target_os = "android"))]
-            if let tauri::RunEvent::WindowEvent {
-                event: tauri::WindowEvent::Resumed,
-                ..
-            } = _event
-            {
-                remote_code_client::app_resumed();
-            }
-        });
+    #[test]
+    fn mobile_script_keeps_the_app_base_url_placeholder() {
+        assert_eq!(
+            MOBILE_SAFE_AREA_SCRIPT
+                .matches("__IBL_APP_BASE_URL__")
+                .count(),
+            1
+        );
+    }
 }

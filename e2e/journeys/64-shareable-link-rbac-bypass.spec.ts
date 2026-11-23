@@ -24,8 +24,9 @@ import { logger } from '@iblai/iblai-js/playwright';
  *
  * This journey proves that end-to-end against a LIVE backend using real
  * access restrictions configured through Settings -> Discovery's "Who Can
- * View?" / "Who Can Chat?" selects (moved off the Embed tab entirely by
- * issue #2476 — no `page.route` mocking of RBAC — see the note below on why
+ * Use This Agent?" select and "Allow Chat Without Signing In" switch (moved
+ * off the Embed tab entirely by issue #2476 — no `page.route` mocking of
+ * RBAC — see the note below on why
  * an anonymous-visitor scenario can't be built this way). Each
  * test provisions its OWN fresh mentor rather than sharing one fixture
  * mentor across cases, so a failure or leftover state in one case can never
@@ -48,9 +49,9 @@ import { logger } from '@iblai/iblai-js/playwright';
  * `hasChatPermission` always defaults to `true` — the RBAC gate this fix
  * touches structurally never applies to anonymous users, with or without a
  * token, with or without this fix. This was verified empirically against the
- * live server: an anonymous visitor on a "Who Can View: Administrators, Who
- * Can Chat: Anyone" mentor gets a fully enabled chat textarea with NO token
- * at all. An anonymous-visitor "token bypass" test would therefore pass
+ * live server: an anonymous visitor on an "Admins Only + guest chat on"
+ * mentor gets a fully enabled chat textarea with NO token at all. An
+ * anonymous-visitor "token bypass" test would therefore pass
  * identically on unpatched `main` and prove nothing about issue #2155 —
  * Journey 14 already covers the anonymous/public-access happy path.
  *
@@ -110,7 +111,8 @@ async function provisionMentor(
   // later assertion in this test throws.
   tracker.add(mentorId);
 
-  // "Who Can View?" / "Who Can Chat?" now live solely on Settings ->
+  // "Who Can Use This Agent?" / "Allow Chat Without Signing In" now live
+  // solely on Settings ->
   // Discovery (issue #2476 removed the duplicate Embed-tab controls that
   // used to write the same mentor_visibility/allow_anonymous fields — an
   // Embed-tab save could silently revert a value just set here).
@@ -139,11 +141,12 @@ async function provisionMentor(
   await waitForPageReady(page);
   await editMentorPage.settings.selectSubTab('Discovery');
   await expect(editMentorPage.settings.visibilityCombobox).toContainText(
-    new RegExp(opts.whoCanView, 'i'),
+    /^admin/i.test(opts.whoCanView) ? /Admins Only/i : /All Members/i,
     { timeout: 15_000 },
   );
-  await expect(editMentorPage.settings.chatAccessCombobox).toContainText(
-    new RegExp(opts.whoCanChat, 'i'),
+  await expect(editMentorPage.settings.guestChatSwitch).toHaveAttribute(
+    'aria-checked',
+    String(/^anyone$/i.test(opts.whoCanChat)),
     { timeout: 15_000 },
   );
   await editMentorPage.navigateToTab('Embed');

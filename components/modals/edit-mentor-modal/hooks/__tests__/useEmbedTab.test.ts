@@ -153,7 +153,9 @@ describe('useEmbedTab', () => {
 
     // Setup data layer mocks
     vi.mocked(dataLayer.useCreateRedirectTokenMutation).mockReturnValue([
-      mockCreateRedirectTokenFn,
+      // Cast: the real trigger's argument type is an RTK mutation signature a
+      // mock cannot carry.
+      mockCreateRedirectTokenFn as never,
       { isLoading: false, data: null } as any,
     ]);
     vi.mocked(dataLayer.useEditMentorMutation).mockReturnValue([

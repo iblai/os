@@ -6,6 +6,7 @@
     "moduleResolution": "bundler",
     "types": ["node", "mocha"]
   },
+  "files": [],
   "include": ["**/*.ts"],
   "exclude": ["node_modules"]
 }

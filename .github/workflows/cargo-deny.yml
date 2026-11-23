@@ -1,0 +1,41 @@
+name: Cargo Deny
+
+# Supply-chain checks on the Rust (desktop app) dependency tree — RUSTSEC
+# advisories, crate sources (must resolve from crates.io), bans, and licences.
+# The Rust-side counterpart to the npm Security Audit. Advisory for now
+# (reports, never blocks) while any existing findings are triaged; drop the
+# step's `continue-on-error` to make it a required gate.
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src-tauri/Cargo.toml'
+      - 'src-tauri/Cargo.lock'
+      - 'src-tauri/deny.toml'
+      - '.github/workflows/cargo-deny.yml'
+  schedule:
+    # 03:27 UTC daily, offset from the npm audit at 03:17.
+    - cron: '27 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cargo-deny-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  cargo-deny:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: cargo-deny (advisory)
+        continue-on-error: true
+        uses: EmbarkStudios/cargo-deny-action@70f81531115945ba6eb6b941ec9d39d063438eb9 # v2.1.2
+        with:
+          manifest-path: src-tauri/Cargo.toml
+          command: check advisories bans sources licenses

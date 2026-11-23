@@ -30,6 +30,10 @@ permissions = [
     "allow-cua-driver-start",
     "allow-cua-driver-send",
     "allow-cua-driver-stop",
+    "allow-open-privacy-settings",
+    "allow-relaunch-app",
+    "allow-request-cowork-permission",
+    "allow-bring-app-to-front",
     "allow-opencode-chat-stream",
     "allow-opencode-stop",
     "allow-opencode-permission-respond",
@@ -203,6 +207,30 @@ identifier = "allow-cua-driver-support"
 description = "Enables checking whether Cowork can run on this desktop session"
 [permission.commands]
 allow = ["cua_driver_support"]
+
+[[permission]]
+identifier = "allow-open-privacy-settings"
+description = "Enables opening the macOS Privacy & Security pane a Cowork grant lives in"
+[permission.commands]
+allow = ["open_privacy_settings"]
+
+[[permission]]
+identifier = "allow-relaunch-app"
+description = "Enables relaunching the app so a new Screen Recording grant takes effect"
+[permission.commands]
+allow = ["relaunch_app"]
+
+[[permission]]
+identifier = "allow-request-cowork-permission"
+description = "Enables asking macOS for one of the grants Cowork needs (Accessibility or Screen Recording)"
+[permission.commands]
+allow = ["request_cowork_permission"]
+
+[[permission]]
+identifier = "allow-bring-app-to-front"
+description = "Enables bringing the app back in front once a Cowork grant lands in System Settings"
+[permission.commands]
+allow = ["bring_app_to_front"]
 
 [[permission]]
 identifier = "allow-cua-driver-start"
@@ -413,3 +441,15 @@ identifier = "allow-open-app-settings"
 description = "Enables opening the app's page in the Settings app, where the user re-enables Local Network access (phone)"
 [permission.commands]
 allow = ["open_app_settings"]
+
+[[permission]]
+identifier = "allow-local-llm-openai-stream"
+description = "Streams one chat completion from the on-device model for the webview's Cowork loop"
+[permission.commands]
+allow = ["local_llm_openai_stream"]
+
+[[permission]]
+identifier = "allow-local-llm-openai-stream-cancel"
+description = "Stops an in-flight on-device completion the page started"
+[permission.commands]
+allow = ["local_llm_openai_stream_cancel"]

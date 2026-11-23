@@ -30,6 +30,13 @@ async function createMentorAndEnableTools(
   await waitForPageReady(page);
   await editMentorPage.voice.setCapabilityEnabled(true);
 
+  // New agents are Admins Only (iblai-platform#2853); the non-admin tests open
+  // this agent, so open it to members.
+  await editMentorPage.navigateToTab('Settings');
+  await waitForPageReady(page);
+  await editMentorPage.settings.setVisibility('Users');
+  await editMentorPage.settings.saveConfirmingAdminVisibility();
+
   await editMentorPage.close();
   await waitForPageReady(page);
 

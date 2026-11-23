@@ -11,7 +11,9 @@ e2e-tauri/
 ├── wdio.conf.ts        # WDIO config: builds/launches the app, spawns/kills tauri-driver
 ├── journeys/           # journey specs (mirrors e2e/journeys/); each it() = a checkpoint
 │   ├── 01-app-launch-and-shell.spec.ts
-│   └── 02-on-device-model-management.spec.ts   # IPC pull/cancel/install (live); UI checkpoints pending
+│   ├── 02-on-device-model-management.spec.ts   # IPC pull/cancel/install (live); UI checkpoints pending
+│   ├── 03-code-mode.spec.ts
+│   └── 04-cowork.spec.ts                       # session support + setup-dialog commands (live); macOS dialog pending
 ├── coverage.json       # the checkpoint ledger (mirrors e2e/coverage.json)
 ├── COVERAGE.md         # human-readable coverage (mirrors e2e/COVERAGE.md)
 ├── scripts/check-journey-coverage.mjs   # validates the ledger + no-regress

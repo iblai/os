@@ -2,6 +2,7 @@ import { test, expect } from '../fixtures/mentor-test';
 import { navigateToMentorApp, checkAdminStatus } from '../utils/auth';
 import { waitForPageReady } from '../utils/resilient';
 import { TasksTab } from '../page-objects/edit-mentor/tasks.tab';
+import { PHONE_CONTEXT } from '../page-objects/edit-mentor/activity-phone';
 
 /**
  * Journey 49 — Mentor Tasks Tab.
@@ -184,5 +185,62 @@ test.describe('Journey 49: Mentor Tasks Tab', () => {
     }
 
     await editMentorPage.close();
+  });
+
+  // TA-09: Phone view (< 768px) — cards instead of the table, info sheet,
+  // Task Logs screen and the date sheet.
+  test.describe('phone view', () => {
+    test.use(PHONE_CONTEXT);
+
+    test('on a phone the Tasks tab shows task cards, the info sheet, the Task Logs screen and the date sheet', async ({
+      editMentorPage,
+    }) => {
+      const { tasks } = editMentorPage;
+      const { phone } = tasks;
+      const name = TasksTab.uniqueTaskName('e2e-phone');
+      let created = false;
+
+      try {
+        await phone.expectDialogFillsViewport();
+        await phone.openAndCloseInfoSheet(TasksTab.LABELS.headerTitle);
+
+        await tasks.scheduleTaskAhead({
+          name,
+          prompt: 'Phone view probe task.',
+          repeat: 'daily',
+        });
+        created = true;
+
+        await expect(tasks.phoneTaskCard(name)).toBeVisible({
+          timeout: 15_000,
+        });
+        await phone.expectNoHorizontalScroll();
+
+        await tasks.openPhoneTaskLogs(name);
+        await phone.expectNoHorizontalScroll();
+        await phone.goBack();
+        await expect(tasks.phoneTaskCard(name)).toBeVisible({
+          timeout: 5_000,
+        });
+
+        await tasks.phoneDateButton().click();
+        const dateSheet = tasks.phoneDateSheet();
+        await expect(dateSheet).toBeVisible({ timeout: 5_000 });
+        await expect(dateSheet.getByRole('grid')).toBeVisible();
+        await phone.closeSheetByBackdrop(dateSheet);
+
+        await tasks.openPhoneTaskLogs(name);
+        await tasks.deletePhoneTask();
+        created = false;
+        await tasks.expectTaskNotInList(name);
+      } finally {
+        if (created) {
+          await tasks.openPhoneTaskLogs(name).catch(() => {});
+          await tasks.deletePhoneTask().catch(() => {});
+        }
+      }
+
+      await editMentorPage.close();
+    });
   });
 });

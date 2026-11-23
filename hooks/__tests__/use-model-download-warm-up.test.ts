@@ -17,11 +17,13 @@ vi.mock('@/types/tauri', async () => ({
 async function launch(invoke: ReturnType<typeof vi.fn>) {
   vi.resetModules();
   const tauri = await import('../use-tauri');
+  // Cast once: `useTauri`'s `invoke`/`listen` are generic, and a mock cannot
+  // carry a generic signature.
   vi.mocked(tauri.useTauri).mockReturnValue({
     isAvailable: true,
     invoke,
     listen: vi.fn().mockResolvedValue(vi.fn()),
-  });
+  } as unknown as ReturnType<typeof tauri.useTauri>);
   const storage = await import('../use-local-storage');
   vi.mocked(storage.useLocalStorage).mockImplementation(
     (_key: string, defaultValue: unknown) =>

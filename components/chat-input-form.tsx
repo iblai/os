@@ -8,7 +8,7 @@ import { format } from 'date-fns';
 import { useMediaQuery } from 'react-responsive';
 import { FileText, Loader2 } from 'lucide-react';
 import { useAppSelector, useAppDispatch } from '@/lib/hooks';
-import { removeFile } from '@iblai/iblai-js/web-utils';
+import { removeFile, useShowFreeTrialDialog } from '@iblai/iblai-js/web-utils';
 import { RootState } from '@/store';
 import { Message } from '@iblai/iblai-js/web-utils';
 import { MENTOR_CHAT_DOCUMENTS_EXTENSIONS } from '@iblai/iblai-js/web-utils';
@@ -23,7 +23,6 @@ import dynamic from 'next/dynamic';
 import { useEmbedMode } from '@/hooks/use-embed-mode';
 import { StopStreamingButton } from './chat/stop-streaming-button';
 import { SubmitMessageButton } from './chat/submit-message-button';
-import { useShowFreeTrialDialog } from '@/hooks/user-user-actions';
 import { CSS_CLASS_NAMES } from '@/lib/constants';
 import { ScreenSharingButton } from './chat-input-form/screen-sharing-button';
 import AutoResizeTextarea from './auto-resize-text-area';
@@ -286,6 +285,24 @@ export function ChatInputForm({
     MentorSkillAssignment[]
   >([]);
   const [hasMoreSkills, setHasMoreSkills] = useState(false);
+
+  const notificationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+  // The timer is armed after an awaited upload, so unmounting mid-upload would
+  // otherwise schedule a fresh one that the cleanup below can never see.
+  const isMountedRef = useRef(true);
+
+  useEffect(
+    () => () => {
+      isMountedRef.current = false;
+      if (notificationTimerRef.current) {
+        clearTimeout(notificationTimerRef.current);
+        notificationTimerRef.current = null;
+      }
+    },
+    [],
+  );
 
   // Switching mentors restarts the pagination from the first page.
   useEffect(() => {
@@ -753,8 +770,17 @@ export function ChatInputForm({
     // Upload files (validation happens inside the hook)
     await uploadFiles(files);
 
-    // Hide notification after upload completes
-    setTimeout(() => {
+    if (!isMountedRef.current) return;
+
+    // Hide notification after upload completes. Held in a ref so a second
+    // upload replaces the pending timer rather than racing it, and so unmount
+    // cancels it — it used to fire after teardown and set state on a gone
+    // component.
+    if (notificationTimerRef.current) {
+      clearTimeout(notificationTimerRef.current);
+    }
+    notificationTimerRef.current = setTimeout(() => {
+      notificationTimerRef.current = null;
       setFileAddedNotification(null);
     }, 3000);
   };

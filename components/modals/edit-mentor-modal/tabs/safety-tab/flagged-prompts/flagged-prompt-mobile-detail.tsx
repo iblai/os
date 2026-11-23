@@ -97,6 +97,7 @@ export function FlaggedPromptMobileDetail({
                   isOpen={showDeleteModal}
                   onClose={() => setShowDeleteModal(false)}
                   logId={prompt.id}
+                  logType={prompt.type}
                   onDeleteSuccess={() => {
                     onDeleteSuccess?.();
                     onOpenChange(false);
