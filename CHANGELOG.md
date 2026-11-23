@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.206.2](https://github.com/iblai/os/compare/v0.206.1...v0.206.2) (2026-11-23)
+
+### Bug Fixes
+
+* **panel:** tell an admin when the platform refuses the browsing agent ([e2ad1bf](https://github.com/iblai/os/commit/e2ad1bfd785f614c470ccbf876f9b359ba44c083))
+
 ## [0.206.1](https://github.com/iblai/os/compare/v0.206.0...v0.206.1) (2026-11-23)
 
 ### Bug Fixes
