@@ -287,7 +287,7 @@ export function PromptsTab({
                 permissions={mentorSettings?.permissions?.field}
               >
                 {({ disabled }) => (
-                  <div className="overflow-hidden rounded-lg bg-gray-50">
+                  <div className="overflow-hidden rounded-lg bg-gray-50 md:col-span-2">
                     <div className="flex items-center justify-between border-b border-gray-200 p-[1.12rem]">
                       <div className="flex items-center gap-2">
                         <h3 className="text-sm font-medium text-gray-900">
