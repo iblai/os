@@ -448,6 +448,8 @@ export default function Providers({ children }: { children: React.ReactNode }) {
         if (resolution.status === 'ready')
           return redirectToMentor(tKey, resolution.mentorId);
         if (resolution.status === 'needs-setup') return redirectToPanelSetup();
+        if (resolution.status === 'unsupported')
+          return redirectToPanelUnsupported();
         // Something we could not see past — a transient failure must not read
         // as "your organization has not set this up".
         redirectToMentor(tKey, mId);
@@ -461,6 +463,16 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     router.push(
       appendEmbedContext(
         `/error/403?errorType=${customErrorMessages.browserAgentNotSetUp.key}`,
+      ),
+    );
+  }
+
+  // Not the same dead end: nobody in this organization can set it up, so the
+  // screen must not read as something a colleague forgot to do.
+  function redirectToPanelUnsupported() {
+    router.push(
+      appendEmbedContext(
+        `/error/403?errorType=${customErrorMessages.browserAgentUnsupported.key}`,
       ),
     );
   }
@@ -486,6 +498,10 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     }
     if (resolution.status === 'needs-setup') {
       redirectToPanelSetup();
+      return true;
+    }
+    if (resolution.status === 'unsupported') {
+      redirectToPanelUnsupported();
       return true;
     }
     router.push(appendEmbedContext('/'));

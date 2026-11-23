@@ -1,5 +1,31 @@
 # Changelog
 
+## [0.206.1](https://github.com/iblai/os/compare/v0.206.0...v0.206.1) (2026-11-23)
+
+### Bug Fixes
+
+* **panel:** correct what the unsupported screen claims, and measure the page ([6aea194](https://github.com/iblai/os/commit/6aea194fa992840f948219357e1a168e4bc8ede1)), closes [#699](https://github.com/iblai/os/issues/699)
+* **panel:** tell an organization the browsing assistant cannot run there ([4ae79c4](https://github.com/iblai/os/commit/4ae79c443aa982b0009c3551b9397f09d2500c26))
+
+### Tests
+
+* **e2e:** say where the unsupported screen is tested, and why not here ([8720354](https://github.com/iblai/os/commit/872035458d5ffaca0b05c46f86d1d271d9dcd8e2))
+* **panel:** measure the error page that picks between the panel screens ([d3d9ae0](https://github.com/iblai/os/commit/d3d9ae0da64127fb63d80bc1f162b31e002f089c))
+
+## [0.206.0](https://github.com/iblai/os/compare/v0.205.3...v0.206.0) (2026-11-22)
+
+### Features
+
+* **ext:** sign out of the panel, and offer the button when sign-in stalls ([fc4bcb1](https://github.com/iblai/os/commit/fc4bcb1fb25033ad8e786665976b406a6fe68486))
+
+### Bug Fixes
+
+* **ext:** stop an abandoned sign-in from undoing the sign-out ([d097b51](https://github.com/iblai/os/commit/d097b51d3ea5672e498be4bda7f4b02053cca773)), closes [#698](https://github.com/iblai/os/issues/698)
+
+### Tests
+
+* **ext:** cover the two sign-in failures that are not this attempt's news ([eef9c45](https://github.com/iblai/os/commit/eef9c45f37de6ec57c4a76b067f2c4481851ac2d))
+
 ## [0.205.3](https://github.com/iblai/os/compare/v0.205.2...v0.205.3) (2026-11-22)
 
 ### Bug Fixes
