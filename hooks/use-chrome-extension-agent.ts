@@ -46,17 +46,44 @@ type PlatformMetadataEnvelope = {
 };
 
 /**
- * Two dead ends, and they are not the same: `needs-setup` is an organization
+ * Three dead ends, and they are not the same: `needs-setup` is an organization
  * nobody has bound an agent to, which whoever manages it can fix; `unsupported`
- * is one that cannot run the agent at all, which only we can. `unavailable` is
- * a failure we could not see past — a transient one must not become a dead
- * end, so callers fall back instead.
+ * is one that cannot run the agent at all, which only we can; `refused` is the
+ * platform saying no for a reason an administrator here could act on.
+ * `unavailable` is a failure we could not see past — a transient one must not
+ * become a dead end, so callers fall back instead.
  */
 export type PanelAgentResolution =
   | { status: 'ready'; mentorId: string }
   | { status: 'needs-setup' }
   | { status: 'unsupported' }
+  | { status: 'refused'; reason?: string }
   | { status: 'unavailable' };
+
+/**
+ * A refusal is the platform saying no on purpose — the organization may not
+ * create agents, the template is not one skills can attach to, a limit is
+ * reached. Falling back would hide a misconfiguration an admin could fix, and
+ * they would never learn why the panel keeps opening something else.
+ *
+ * Anything else — a 500, a dropped connection — is a hiccup that may pass on
+ * its own, so the run falls back and tries again next time.
+ */
+type CreateOutcome =
+  | { kind: 'made'; mentorId: string }
+  | { kind: 'unsupported' }
+  | { kind: 'refused'; reason?: string }
+  | { kind: 'failed' };
+
+function refusal(error: unknown): { refused: boolean; reason?: string } {
+  const status = (error as { status?: unknown } | null)?.status;
+  const code = typeof status === 'number' ? status : undefined;
+  if (code === undefined || code < 400 || code >= 500)
+    return { refused: false };
+  const data = (error as { data?: { detail?: string; error?: string } } | null)
+    ?.data;
+  return { refused: true, reason: data?.detail || data?.error };
+}
 
 export interface PanelAgent {
   /**
@@ -151,6 +178,11 @@ export function useChromeExtensionAgent(): PanelAgent {
             await record(current, withPurposeUnsupported(stored, PURPOSE));
             return { status: 'unsupported' };
           }
+          // Not recorded, unlike the one above: a refusal is a configuration
+          // an administrator here can put right, so the next open must ask
+          // the platform again rather than read yesterday's no.
+          if (made.kind === 'refused')
+            return { status: 'refused', reason: made.reason };
           if (made.kind === 'failed') return { status: 'unavailable' };
           mentorId = made.mentorId;
         }
@@ -215,13 +247,7 @@ export function useChromeExtensionAgent(): PanelAgent {
        * for: nothing anyone can do from the panel, so it is reported rather
        * than worked around.
        */
-      async function create(
-        org: string,
-      ): Promise<
-        | { kind: 'created'; mentorId: string }
-        | { kind: 'unsupported' }
-        | { kind: 'failed' }
-      > {
+      async function create(org: string): Promise<CreateOutcome> {
         try {
           const created = await createMentor({
             org,
@@ -237,20 +263,27 @@ export function useChromeExtensionAgent(): PanelAgent {
               mentor_visibility: MENTOR_VISIBILITY_VALUES.STUDENTS,
             },
           } as never).unwrap();
-          const mentorId = (created as { unique_id?: string })?.unique_id;
-          return mentorId ? { kind: 'created', mentorId } : { kind: 'failed' };
+          const id = (created as { unique_id?: string })?.unique_id;
+          return id ? { kind: 'made', mentorId: id } : { kind: 'failed' };
         } catch (error) {
+          // Checked before the general refusal: the missing credential is one
+          // particular 400, and it has a screen of its own that says who can
+          // put it right. Left to `refusal` it would read as something an
+          // administrator here could fix.
           if (missingCredential(error)) {
             console.warn(
               `[purpose-agents] ${org} has no ${BROWSING_ASSISTANT_MODEL.provider} credential, so the browsing agent cannot be created there`,
             );
             return { kind: 'unsupported' };
           }
+          const said = refusal(error);
           console.error(
             '[purpose-agents] could not create the browsing agent',
             error,
           );
-          return { kind: 'failed' };
+          return said.refused
+            ? { kind: 'refused', reason: said.reason }
+            : { kind: 'failed' };
         }
       }
     },

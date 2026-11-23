@@ -5,6 +5,12 @@ export const customErrorMessages = {
     message:
       'The agent you are looking for does not exist. Please contact our support team if you believe this is an error.',
   },
+  browserAgentRefused: {
+    key: 'browserAgentRefused',
+    header: 'Cannot Be Set Up Here',
+    message:
+      'The browser assistant could not be set up for this organization, and trying again will not help. Someone who manages it will need to look at what this organization is allowed to create.',
+  },
   browserAgentNotSetUp: {
     key: 'browserAgentNotSetUp',
     header: 'Not Set Up Yet',

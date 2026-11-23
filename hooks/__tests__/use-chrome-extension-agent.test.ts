@@ -363,3 +363,67 @@ describe('the agent it creates', () => {
     expect(getMentors.mock.calls[0][0].params).not.toHaveProperty('query');
   });
 });
+
+describe('a platform that says no', () => {
+  const refuses = (status: number, detail?: string) => ({
+    unwrap: () =>
+      Promise.reject({ status, data: detail ? { detail } : undefined }),
+  });
+
+  it('says so rather than quietly using another agent', async () => {
+    createMentor.mockReturnValue(refuses(403, 'Not allowed to create agents'));
+
+    await expect(resolve()('acme')).resolves.toEqual({
+      status: 'refused',
+      reason: 'Not allowed to create agents',
+    });
+  });
+
+  it.each([400, 402, 409, 422])('treats %s as a refusal', async (status) => {
+    createMentor.mockReturnValue(refuses(status));
+
+    await expect(resolve()('acme')).resolves.toMatchObject({
+      status: 'refused',
+    });
+  });
+
+  // The missing credential is a 400 too, and it is the one 4xx an
+  // administrator here cannot act on — so it keeps its own answer rather than
+  // being swept into the refusal that tells them to go and fix something.
+  it('calls the missing credential unsupported, not refused', async () => {
+    createMentor.mockReturnValue({
+      unwrap: () =>
+        Promise.reject({
+          status: 400,
+          data: {
+            llm_provider: [
+              'Credential not found for `iblai`. Please add a credential before attempting to use this provider.',
+            ],
+          },
+        }),
+    });
+
+    await expect(resolve()('acme')).resolves.toEqual({
+      status: 'unsupported',
+    });
+  });
+
+  it.each([500, 502, 503])(
+    'treats %s as a hiccup, not a refusal',
+    async (status) => {
+      createMentor.mockReturnValue(refuses(status));
+
+      // Trying again later may work, and telling a whole organization it cannot
+      // have this because of one bad minute would be wrong.
+      await expect(resolve()('acme')).resolves.toEqual({
+        status: 'unavailable',
+      });
+    },
+  );
+
+  it('treats a failure with no status as a hiccup', async () => {
+    createMentor.mockReturnValue(rejects(new Error('network')));
+
+    await expect(resolve()('acme')).resolves.toEqual({ status: 'unavailable' });
+  });
+});
