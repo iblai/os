@@ -2,8 +2,8 @@
   "version": 2,
   "lastUpdated": "2026-11-23",
   "summary": {
-    "totalCheckpoints": 1194,
-    "coveredCheckpoints": 1113,
+    "totalCheckpoints": 1200,
+    "coveredCheckpoints": 1119,
     "deprecatedCheckpoints": 18,
     "notReproducibleCheckpoints": 17,
     "pendingCheckpoints": 46,
@@ -7417,7 +7417,9 @@
       "spec": "106-master-agent.spec.ts",
       "sourceFiles": [
         "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx",
-        "lib/constants.ts"
+        "lib/constants.ts",
+        "app/platform/[tenantKey]/layout.tsx",
+        "app/platform/_components/app-layout.tsx"
       ],
       "checkpoints": [
         {
@@ -7458,6 +7460,36 @@
         {
           "id": "ma-08",
           "description": "With a new agent as the Default Agent, the page and the Assistant each get a real reply; the page keeps session_id and the Assistant session_id:framed after New chat, neither shows the other's message, and both conversations come back after a reload",
+          "status": "covered"
+        },
+        {
+          "id": "ma-09",
+          "description": "From Explore (the organization's and an agent's), the Assistant opens on the Default Agent and a message gets a real reply, without leaving the page",
+          "status": "covered"
+        },
+        {
+          "id": "ma-10",
+          "description": "From every organization Analytics tab (Overview, Users, Topics, Transcripts, Financial, Reports, Audit, Memory), the Assistant opens on the Default Agent and a message gets a real reply, without leaving the page",
+          "status": "covered"
+        },
+        {
+          "id": "ma-11",
+          "description": "From every Analytics tab of an agent (Overview, Users, Topics, Transcripts, Financial, Reports, Audit, Memory), the Assistant opens on the Default Agent and a message gets a real reply, without leaving the page",
+          "status": "covered"
+        },
+        {
+          "id": "ma-12",
+          "description": "From Notifications (the organization's and an agent's), the Assistant opens on the Default Agent and a message gets a real reply, without leaving the page",
+          "status": "covered"
+        },
+        {
+          "id": "ma-13",
+          "description": "From Projects, the Assistant opens on the Default Agent and a message gets a real reply, without leaving the page",
+          "status": "covered"
+        },
+        {
+          "id": "ma-14",
+          "description": "From Workflows, the Assistant opens on the Default Agent and a message gets a real reply, without leaving the page",
           "status": "covered"
         }
       ]

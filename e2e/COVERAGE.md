@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-11-23 | 1194 checkpoints (1113 covered, 46 pending/fixme, 17 not-reproducible in default env, 18 deprecated) | 115 journeys (114 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-11-23 | 1200 checkpoints (1119 covered, 46 pending/fixme, 17 not-reproducible in default env, 18 deprecated) | 115 journeys (114 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -2652,11 +2652,11 @@ Issue iblai-platform#2853. Create Agent is a wizard (the only create flow); Fini
 - [x] caw-06: No Back on step 2, Back from step 3 on, and Back returns to the previous step
 - [x] caw-07: The Skills step (between Prompts and Datasets) shows the agent and available skills tabs and the last step says Finish; the step count follows the tabs the admin may use
 
-## Journey 106: Assistant (8 checkpoints) — `journeys/106-master-agent.spec.ts`
+## Journey 106: Assistant (14 checkpoints) — `journeys/106-master-agent.spec.ts`
 
-**Source files:** `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`, `lib/constants.ts`
+**Source files:** `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`, `lib/constants.ts`, `app/platform/[tenantKey]/layout.tsx`, `app/platform/_components/app-layout.tsx`
 
-A Bot button in the header (`Assistant`) opens the organization's main agent (its Default Agent, else the user's starred agent, else their most recently used one) in a column docked beside the page content, flush to the window's right edge under the nav bar; its left edge is a resize handle (width remembered in `ibl-master-agent-width`). The panel holds the existing `<agent-ai>` embed, pointed at this app's own embed route. Inside the embed, Full screen turns the panel into a centered popup over a dimmed page and Close chat hides it. The component ships in the SDK (`@iblai/iblai-js` 2.85.0). The Assistant is a frame on the app's own origin and shares the page's localStorage, so its chat saves its session under `session_id:framed`; ma-07 and ma-08 chat for real and pin that an agent embedded on another website (a different-origin parent) keeps `session_id` and that the panel never changes the page's saved conversation. ma-01..06 create nothing; ma-07 and ma-08 each create an agent pinned to ibl.ai Fast (the test account's starred agent can take minutes to start), reaped by the run's sweeper.
+A Bot button in the header (`Assistant`) opens the organization's main agent (its Default Agent, else the user's starred agent, else their most recently used one) in a column docked beside the page content, flush to the window's right edge under the nav bar; its left edge is a resize handle (width remembered in `ibl-master-agent-width`). The panel holds the existing `<agent-ai>` embed, pointed at this app's own embed route. Inside the embed, Full screen turns the panel into a centered popup over a dimmed page and Close chat hides it. The component ships in the SDK (`@iblai/iblai-js` 2.85.0). The Assistant is a frame on the app's own origin and shares the page's localStorage, so its chat saves its session under `session_id:framed`; ma-07 and ma-08 chat for real and pin that an agent embedded on another website (a different-origin parent) keeps `session_id` and that the panel never changes the page's saved conversation. ma-01..06 create nothing; ma-07 and ma-08 each create an agent pinned to ibl.ai Fast (the test account's starred agent can take minutes to start), reaped by the run's sweeper. ma-09..14 open the Assistant from every other page that shows the header and get a real reply there, one test per page (22 in all), sharing one ibl.ai Fast agent per worker made the Default Agent; pages that need an existing record (a notification, project or workflow) and the unlinked Job Scout and Profile pages are left out.
 
 - [x] ma-01: The header shows an Assistant button (`aria-expanded` false)
 - [x] ma-02: Tapping it opens the side panel, docked beside the page content (next sibling of main, flush right, under the nav bar, main ending where the panel starts), with the embed on `/platform/<tenant>/...` (`embed`, `show-close-button` and `allow-fullscreen` true); the embed's Full screen and Close chat buttons load
@@ -2666,5 +2666,11 @@ A Bot button in the header (`Assistant`) opens the organization's main agent (it
 - [x] ma-06: Dragging the Resize Assistant separator 120px left widens the docked panel and narrows the page content by about 120px; the width is kept after closing and reopening
 - [x] ma-07: On a new agent embedded on another website (the harness's `<agent-ai>` page, a different origin), a message gets a real reply; the chat is saved under `session_id` (no `session_id:framed`) and the conversation comes back after a reload
 - [x] ma-08: With a new agent as the Default Agent, the page and the Assistant each get a real reply; the page keeps `session_id` and the Assistant `session_id:framed` after New chat, neither shows the other's message, and both conversations come back after a reload
+- [x] ma-09: From Explore (the organization's and an agent's), the Assistant opens on the Default Agent and a message gets a real reply, without leaving the page
+- [x] ma-10: From every organization Analytics tab (Overview, Users, Topics, Transcripts, Financial, Reports, Audit, Memory), the Assistant opens and a message gets a real reply, without leaving the page
+- [x] ma-11: From every Analytics tab of an agent (same eight tabs), the Assistant opens and a message gets a real reply, without leaving the page
+- [x] ma-12: From Notifications (the organization's and an agent's), the Assistant opens and a message gets a real reply, without leaving the page
+- [x] ma-13: From Projects, the Assistant opens and a message gets a real reply, without leaving the page
+- [x] ma-14: From Workflows, the Assistant opens and a message gets a real reply, without leaving the page
 
 ---

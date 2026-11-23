@@ -1,9 +1,16 @@
 import { test, expect } from '../fixtures/mentor-test';
-import type { Frame, FrameLocator, Locator, Page } from '@playwright/test';
+import type {
+  Browser,
+  Frame,
+  FrameLocator,
+  Locator,
+  Page,
+} from '@playwright/test';
 import { navigateToMentorApp, getPlatformContext } from '../utils/auth';
 import { openLauncher } from '../utils/embed-harness-client';
-import { generateMentorName } from '../fixtures/test-data';
+import { generateMentorName, MENTOR_NEXTJS_HOST } from '../fixtures/test-data';
 import { waitForPageReady } from '../utils/resilient';
+import { CreateMentorPage } from '../page-objects/create-mentor.page';
 
 /**
  * Journey 106: Assistant header button
@@ -21,6 +28,12 @@ import { waitForPageReady } from '../utils/resilient';
  * `session_id`, exactly as before. Each conversation must come back after a
  * reload. Both create their own agent (pinned to ibl.ai Fast, reaped by the
  * run's sweeper): the account's starred agent can take minutes to start.
+ *
+ * ma-09..14 open the Assistant from every other page that shows the header
+ * (Explore, both Analytics sections with all their tabs, Notifications,
+ * Projects, Workflows) and get a real reply there. Pages that need an
+ * existing record (a notification, project or workflow) and the unlinked
+ * Job Scout and Profile pages are left out.
  */
 
 const PANEL_TESTID = 'master-agent-panel';
@@ -514,4 +527,110 @@ test.describe('Journey 106: Assistant', () => {
     });
     await expect(userMessage(assistant, pageMessage)).toHaveCount(0);
   });
+});
+
+interface AssistantAgent {
+  tenantKey: string;
+  mentorId: string;
+}
+
+async function createFastAgent(
+  browser: Browser,
+  storageState: string | undefined,
+): Promise<AssistantAgent> {
+  const context = await browser.newContext(
+    storageState ? { storageState } : {},
+  );
+  try {
+    const page = await context.newPage();
+    await navigateToMentorApp(page);
+    await new CreateMentorPage(page).openAndCreate(generateMentorName());
+    return await getPlatformContext(page);
+  } finally {
+    await context.close();
+  }
+}
+
+// One agent per worker instead of one per page: every page test needs an
+// agent that replies quickly, and creating 22 of them would dominate the run.
+const pageTest = test.extend<object, { assistantAgent: AssistantAgent }>({
+  assistantAgent: [
+    async ({ browser }, use, workerInfo) => {
+      await use(
+        await createFastAgent(
+          browser,
+          workerInfo.project.use.storageState as string | undefined,
+        ),
+      );
+    },
+    { scope: 'worker', timeout: 300_000 },
+  ],
+});
+
+const ANALYTICS_TABS = [
+  { tab: '', label: 'Overview' },
+  { tab: '/users', label: 'Users' },
+  { tab: '/topics', label: 'Topics' },
+  { tab: '/transcripts', label: 'Transcripts' },
+  { tab: '/financial', label: 'Financial' },
+  { tab: '/reports', label: 'Reports' },
+  { tab: '/audit', label: 'Audit' },
+  { tab: '/memory', label: 'Memory' },
+];
+
+// ma-09 Explore, ma-10 organization Analytics, ma-11 an agent's Analytics,
+// ma-12 Notifications, ma-13 Projects, ma-14 Workflows.
+const PAGES_WITH_THE_HEADER: Array<{
+  label: string;
+  path: (mentorId: string) => string;
+}> = [
+  { label: 'Explore', path: () => 'explore' },
+  { label: "an agent's Explore", path: (id) => `${id}/explore` },
+  ...ANALYTICS_TABS.map(({ tab, label }) => ({
+    label: `Analytics ${label}`,
+    path: () => `analytics${tab}`,
+  })),
+  ...ANALYTICS_TABS.map(({ tab, label }) => ({
+    label: `an agent's Analytics ${label}`,
+    path: (id: string) => `${id}/analytics${tab}`,
+  })),
+  { label: 'Notifications', path: () => 'notifications' },
+  { label: "an agent's Notifications", path: (id) => `${id}/notifications` },
+  { label: 'Projects', path: () => 'projects' },
+  { label: 'Workflows', path: (id) => `workflows/${id}` },
+];
+
+pageTest.describe('Journey 106: Assistant on every page', () => {
+  for (const target of PAGES_WITH_THE_HEADER) {
+    pageTest(
+      `user chats with the Assistant on ${target.label}`,
+      async ({ page, assistantAgent }) => {
+        pageTest.setTimeout(240_000);
+        const { tenantKey, mentorId } = assistantAgent;
+        const path = `/platform/${tenantKey}/${target.path(mentorId)}`;
+        const cacheKey = `${tenantKey}:${mentorId}`;
+        await useAsDefaultAgent(page, tenantKey, mentorId);
+        const historyLoaded = watchHistoryLoads(page);
+
+        await navigateToMentorApp(
+          page,
+          `${MENTOR_NEXTJS_HOST}${path}`,
+          masterAgentButton(page),
+        );
+        await waitForPageReady(page);
+        await openPanel(page);
+        await expect(page.locator(PANEL_IFRAME)).toHaveAttribute(
+          'src',
+          new RegExp(`/platform/${tenantKey}/${mentorId}\\?`),
+          { timeout: 30_000 },
+        );
+        await historyLoaded(
+          await newlySavedSession(page, FRAMED_SESSION_KEY, cacheKey, null),
+        );
+
+        await chatWithAgent(embedFrame(page), uniqueMessage(target.label));
+        expect(new URL(page.url()).pathname.replace(/\/$/, '')).toBe(path);
+      },
+    );
+  }
 });
