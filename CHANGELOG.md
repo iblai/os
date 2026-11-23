@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.207.1](https://github.com/iblai/os/compare/v0.207.0...v0.207.1) (2026-11-23)
+
+### Documentation
+
+* lowercase demonstratives in UI Title Case ([cb5bb42](https://github.com/iblai/os/commit/cb5bb42dde77925ad51ae9bac60dcf63feaaa19e))
+
 ## [0.207.0](https://github.com/iblai/os/compare/v0.206.3...v0.207.0) (2026-11-23)
 
 ### Features
