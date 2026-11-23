@@ -75,7 +75,7 @@ We moved from "student" to "user" and from "mentor" to "agent". This is a UI rul
 
 ## UI casing: match the screen you are extending
 
-The app has an established capitalization style per surface, and new UI must copy it — check the neighbouring labels before writing copy. Most labels a person clicks or scans (tab and dialog titles, section headings, field/toggle names, buttons, menu items) use Title Case, as in the agent settings tab: "User Models", "Search Providers", "Allow All OpenAI Models", "Save Anyway". Small joining words (a, an, the, of, to, in, on, for, and, or, with) stay lowercase unless first. Full sentences — descriptions, help text, errors, toasts, counts like "3 of 29 allowed" — stay in sentence case. Brand/model names keep their own casing (ibl.ai, GPT-4o mini). Where a surface already does it differently, follow that surface, not this default.
+The app has an established capitalization style per surface, and new UI must copy it — check the neighbouring labels before writing copy. Most labels a person clicks or scans (tab and dialog titles, section headings, field/toggle names, buttons, menu items) use Title Case, as in the agent settings tab: "User Models", "Search Providers", "Allow All OpenAI Models", "Save Anyway". Small joining words (a, an, the, of, to, in, on, for, and, or, with) and demonstratives (this, that, these, those) stay lowercase unless first — "Name this Skill", "Only this Agent". Full sentences — descriptions, help text, errors, toasts, counts like "3 of 29 allowed" — stay in sentence case. Brand/model names keep their own casing (ibl.ai, GPT-4o mini). Where a surface already does it differently, follow that surface, not this default.
 
 ## The user has never coded
 
