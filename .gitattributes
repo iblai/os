@@ -18,3 +18,16 @@ e2e/fixtures/agent-ai.umd.js -text
 # restores from the index, which is fine while the index is clean — but once
 # anything has staged those files (a stray `git add -A`, say) it holds the CRLF
 # bytes and restores them again. Re-cloning works too.
+
+# Shell scripts must reach the working tree with LF endings whatever a clone's
+# `core.autocrlf` says. This repo's hooks run them, and bash does not tolerate
+# the carriage returns: a fresh worktree on a machine with `autocrlf=true`
+# checks out CRLF and every push then dies before a single test runs, with
+#
+#   scripts/fix-yalc.sh: line 2: : command not found
+#   scripts/fix-yalc.sh: line 17: syntax error near unexpected token `in'
+#
+# The committed blobs are already LF; `eol=lf` is what stops the checkout
+# rewriting them.
+*.sh text eol=lf
+.husky/* text eol=lf
