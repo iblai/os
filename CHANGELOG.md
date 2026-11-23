@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.206.1](https://github.com/iblai/os/compare/v0.206.0...v0.206.1) (2026-11-23)
+
+### Bug Fixes
+
+* **panel:** correct what the unsupported screen claims, and measure the page ([6aea194](https://github.com/iblai/os/commit/6aea194fa992840f948219357e1a168e4bc8ede1)), closes [#699](https://github.com/iblai/os/issues/699)
+* **panel:** tell an organization the browsing assistant cannot run there ([4ae79c4](https://github.com/iblai/os/commit/4ae79c443aa982b0009c3551b9397f09d2500c26))
+
+### Tests
+
+* **e2e:** say where the unsupported screen is tested, and why not here ([8720354](https://github.com/iblai/os/commit/872035458d5ffaca0b05c46f86d1d271d9dcd8e2))
+* **panel:** measure the error page that picks between the panel screens ([d3d9ae0](https://github.com/iblai/os/commit/d3d9ae0da64127fb63d80bc1f162b31e002f089c))
+
 ## [0.206.0](https://github.com/iblai/os/compare/v0.205.3...v0.206.0) (2026-11-22)
 
 ### Features
