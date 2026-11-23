@@ -9,6 +9,7 @@ import { useTenantObjectMetadata } from '@/hooks/use-tenant-object-metadata';
 
 import { ClientErrorPage } from '@iblai/iblai-js/web-containers/next';
 import { BrowserAgentNotSetUp } from '@/components/errors/browser-agent-not-set-up';
+import { BrowserAgentUnsupported } from '@/components/errors/browser-agent-unsupported';
 
 export default function ErrorPage() {
   const params = useParams();
@@ -43,6 +44,8 @@ export default function ErrorPage() {
   // way out, which the shared page has no room for.
   if (errorType === customErrorMessages.browserAgentNotSetUp.key)
     return <BrowserAgentNotSetUp />;
+  if (errorType === customErrorMessages.browserAgentUnsupported.key)
+    return <BrowserAgentUnsupported />;
 
   return (
     <ClientErrorPage
