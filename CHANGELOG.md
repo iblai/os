@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.207.0](https://github.com/iblai/os/compare/v0.206.3...v0.207.0) (2026-11-23)
+
+### Features
+
+* **os:** open the Default Agent as the Assistant beside the page ([6139c0d](https://github.com/iblai/os/commit/6139c0d64fe4a4ca92358d71eddbfc0a60b121b8))
+
+### Tests
+
+* **e2e:** chat with the Assistant from every page that shows the header ([e3bd927](https://github.com/iblai/os/commit/e3bd9274ae37d1e8f9b2ce0c13dadd22d9633345))
+
 ## [0.206.3](https://github.com/iblai/os/compare/v0.206.2...v0.206.3) (2026-11-23)
 
 ### Bug Fixes
