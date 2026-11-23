@@ -1,5 +1,35 @@
 # Changelog
 
+## [0.206.3](https://github.com/iblai/os/compare/v0.206.2...v0.206.3) (2026-11-23)
+
+### Bug Fixes
+
+* **deps:** bump @iblai/iblai-js to 2.85.2 to recover from "Invalid session" ([990a851](https://github.com/iblai/os/commit/990a851773599fad98eb4cc117994031b0ea45b5))
+
+### Tests
+
+* **e2e:** cover the "Invalid session" recovery in journey 85 ([7845405](https://github.com/iblai/os/commit/78454051a6d715a45c561f533560da5e3c6f1f65))
+* **e2e:** retry Escape until the Account dialog closes in journey 28 ([9fcc62d](https://github.com/iblai/os/commit/9fcc62de583fdaa46335d81841317ca52dd85e56))
+* **e2e:** wait for the transcript, not the mic label, in voice-to-text ([0ba202a](https://github.com/iblai/os/commit/0ba202a9a5b4fd3648ad6fa17329c0b795c8f7fe))
+
+## [0.206.2](https://github.com/iblai/os/compare/v0.206.1...v0.206.2) (2026-11-23)
+
+### Bug Fixes
+
+* **panel:** tell an admin when the platform refuses the browsing agent ([e2ad1bf](https://github.com/iblai/os/commit/e2ad1bfd785f614c470ccbf876f9b359ba44c083))
+
+## [0.206.1](https://github.com/iblai/os/compare/v0.206.0...v0.206.1) (2026-11-23)
+
+### Bug Fixes
+
+* **panel:** correct what the unsupported screen claims, and measure the page ([6aea194](https://github.com/iblai/os/commit/6aea194fa992840f948219357e1a168e4bc8ede1)), closes [#699](https://github.com/iblai/os/issues/699)
+* **panel:** tell an organization the browsing assistant cannot run there ([4ae79c4](https://github.com/iblai/os/commit/4ae79c443aa982b0009c3551b9397f09d2500c26))
+
+### Tests
+
+* **e2e:** say where the unsupported screen is tested, and why not here ([8720354](https://github.com/iblai/os/commit/872035458d5ffaca0b05c46f86d1d271d9dcd8e2))
+* **panel:** measure the error page that picks between the panel screens ([d3d9ae0](https://github.com/iblai/os/commit/d3d9ae0da64127fb63d80bc1f162b31e002f089c))
+
 ## [0.206.0](https://github.com/iblai/os/compare/v0.205.3...v0.206.0) (2026-11-22)
 
 ### Features

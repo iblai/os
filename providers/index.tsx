@@ -448,6 +448,14 @@ export default function Providers({ children }: { children: React.ReactNode }) {
         if (resolution.status === 'ready')
           return redirectToMentor(tKey, resolution.mentorId);
         if (resolution.status === 'needs-setup') return redirectToPanelSetup();
+        if (resolution.status === 'unsupported')
+          return redirectToPanelUnsupported();
+        // The platform said no on purpose. Falling back would hide a
+        // misconfiguration from the one person who could fix it.
+        if (resolution.status === 'refused')
+          return redirectToPanelSetup(
+            customErrorMessages.browserAgentRefused.key,
+          );
         // Something we could not see past — a transient failure must not read
         // as "your organization has not set this up".
         redirectToMentor(tKey, mId);
@@ -457,10 +465,18 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   // Nobody here can set the panel up, so the only useful thing is telling them
   // who can. The home button is already hidden in an embed, leaving Contact
   // Support, which mails the organization's own address.
-  function redirectToPanelSetup() {
+  function redirectToPanelSetup(
+    errorType: string = customErrorMessages.browserAgentNotSetUp.key,
+  ) {
+    router.push(appendEmbedContext(`/error/403?errorType=${errorType}`));
+  }
+
+  // Not the same dead end: nobody in this organization can set it up, so the
+  // screen must not read as something a colleague forgot to do.
+  function redirectToPanelUnsupported() {
     router.push(
       appendEmbedContext(
-        `/error/403?errorType=${customErrorMessages.browserAgentNotSetUp.key}`,
+        `/error/403?errorType=${customErrorMessages.browserAgentUnsupported.key}`,
       ),
     );
   }
@@ -486,6 +502,14 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     }
     if (resolution.status === 'needs-setup') {
       redirectToPanelSetup();
+      return true;
+    }
+    if (resolution.status === 'unsupported') {
+      redirectToPanelUnsupported();
+      return true;
+    }
+    if (resolution.status === 'refused') {
+      redirectToPanelSetup(customErrorMessages.browserAgentRefused.key);
       return true;
     }
     router.push(appendEmbedContext('/'));

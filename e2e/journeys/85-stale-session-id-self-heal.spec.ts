@@ -258,6 +258,88 @@ async function expectCleanStartChatToast(
   expect(text).not.toContain('Failed to start new chat');
 }
 
+const INVALID_SESSION_FRAME = { error: 'Invalid session', status_code: 403 };
+
+type OutboundFrame = Record<string, unknown>;
+
+/**
+ * Scripted chat socket for the #2918 checkpoints: every outbound client frame
+ * is recorded and answered by `respond`, so the test needs no timing between
+ * "send" and "reply" and can count exactly how many times a prompt was sent.
+ */
+async function mockChatWebSocketScripted(
+  page: Page,
+  respond: (
+    frame: OutboundFrame,
+    reply: (frame: Record<string, unknown>) => void,
+  ) => void,
+): Promise<{ sent: OutboundFrame[] }> {
+  const sent: OutboundFrame[] = [];
+  await page.routeWebSocket('**/ws/langflow/**', (ws) => {
+    ws.onMessage((raw) => {
+      let frame: OutboundFrame;
+      try {
+        frame = JSON.parse(raw.toString());
+      } catch {
+        return;
+      }
+      sent.push(frame);
+      respond(frame, (out) => ws.send(JSON.stringify(out)));
+    });
+  });
+  return { sent };
+}
+
+function replyWith(
+  frame: OutboundFrame,
+  reply: (f: Record<string, unknown>) => void,
+  text: string,
+): void {
+  const sid = frame.session_id;
+  reply({ generation_id: `e2e-gen-${Date.now()}`, session_id: sid });
+  reply({ data: text, session_id: sid });
+  reply({ eos: true, session_id: sid });
+}
+
+/**
+ * Lands on a mounted chat (in-app `?embed=true` when `embed`) whose real
+ * session id is cached, and returns it. That id plays the "stale" session:
+ * the scripted socket rejects it with the 403 "Invalid session" frame.
+ */
+async function openChatWithCachedSession(
+  page: Page,
+  embed: boolean,
+): Promise<{ key: string; initialSessionId: string }> {
+  await navigateToMentorApp(page);
+  const { tenantKey, mentorId } = await getPlatformContext(page);
+  const key = sessionCacheKey(tenantKey, mentorId);
+  if (embed) {
+    await page.goto(embedUrlFor(page.url()), {
+      waitUntil: reloadWaitUntil(page),
+      timeout: 60_000,
+    });
+    expect(page.url()).toContain('embed=true');
+  }
+  await waitForPageReady(page);
+  await expect
+    .poll(async () => (await readSessionIdCache(page))[key], {
+      timeout: 45_000,
+      message: 'expected an initial session id to be cached',
+    })
+    .toBeTruthy();
+  const initialSessionId = (await readSessionIdCache(page))[key];
+  return { key, initialSessionId };
+}
+
+/** Counts `POST .../sessions/` requests made from now on. */
+function countSessionMints(page: Page): { count: () => number } {
+  let n = 0;
+  page.on('request', (req) => {
+    if (isCreateSessionRequest(req.url(), req.method())) n += 1;
+  });
+  return { count: () => n };
+}
+
 test.describe('Journey 85: Stale Session Id Self-Heal', () => {
   test('sess-01: a stale localStorage session id is retried 1 + 3 times, then self-heals, and chat remains usable', async ({
     page,
@@ -544,5 +626,118 @@ test.describe('Journey 85: Stale Session Id Self-Heal', () => {
     await chatPage.startNewChat();
 
     await expectCleanStartChatToast(page, START_CHAT_FALLBACK);
+  });
+
+  for (const surface of [
+    { id: 'sess-07', name: 'embed (?embed=true)', embed: true },
+    { id: 'sess-10', name: 'regular app', embed: false },
+  ]) {
+    test(`${surface.id}: a 403 "Invalid session" frame in the ${surface.name} mints a new session and resends the message once, with no toast (iblai-platform#2918)`, async ({
+      page,
+      chatPage,
+    }) => {
+      const message = `Resend me once ${Date.now()}`;
+      const reply = 'Recovered on the new session.';
+      let staleId = '';
+      const { sent } = await mockChatWebSocketScripted(page, (frame, send) => {
+        if (frame.session_id === staleId) {
+          send(INVALID_SESSION_FRAME);
+        } else {
+          replyWith(frame, send, reply);
+        }
+      });
+      const { key, initialSessionId } = await openChatWithCachedSession(
+        page,
+        surface.embed,
+      );
+      staleId = initialSessionId;
+      const mints = countSessionMints(page);
+
+      await chatPage.sendMessage(message);
+
+      await expect(chatPage.getLastAiMessage()).toContainText(reply, {
+        timeout: 45_000,
+      });
+      const newSessionId = await pollHealedSessionId(
+        page,
+        key,
+        initialSessionId,
+      );
+
+      expect(mints.count()).toBe(1);
+      const sends = sent.filter((f) => f.prompt === message);
+      expect(sends).toHaveLength(2);
+      expect(sends[0].session_id).toBe(initialSessionId);
+      expect(sends[1].session_id).toBe(newSessionId);
+      expect(sends[1].session_id).not.toBe(initialSessionId);
+      expect(await chatPage.getUserBubbleCount(message)).toBe(1);
+      await expect(page.getByText(ERROR_TOAST_TEXT)).toHaveCount(0);
+      expect((await readSessionIdCache(page))[key]).toBe(newSessionId);
+    });
+  }
+
+  test('sess-08: after the resend recovers, the next message goes out on the new session with no further session POST (iblai-platform#2918)', async ({
+    page,
+    chatPage,
+  }) => {
+    let staleId = '';
+    const { sent } = await mockChatWebSocketScripted(page, (frame, send) => {
+      if (frame.session_id === staleId) send(INVALID_SESSION_FRAME);
+      else replyWith(frame, send, `Answer to: ${String(frame.prompt)}`);
+    });
+    const { key, initialSessionId } = await openChatWithCachedSession(
+      page,
+      true,
+    );
+    staleId = initialSessionId;
+    const mints = countSessionMints(page);
+
+    await chatPage.sendMessage('First message after expiry.');
+    await expect(chatPage.getLastAiMessage()).toContainText(
+      'Answer to: First message after expiry.',
+      { timeout: 45_000 },
+    );
+    const newSessionId = await pollHealedSessionId(page, key, initialSessionId);
+    expect(mints.count()).toBe(1);
+
+    await chatPage.sendMessage('Second message.');
+    await expect(chatPage.getLastAiMessage()).toContainText(
+      'Answer to: Second message.',
+      { timeout: 30_000 },
+    );
+
+    const second = sent.filter((f) => f.prompt === 'Second message.');
+    expect(second).toHaveLength(1);
+    expect(second[0].session_id).toBe(newSessionId);
+    expect(mints.count()).toBe(1);
+    await expect(page.getByText(ERROR_TOAST_TEXT)).toHaveCount(0);
+  });
+
+  test('sess-09: loop guard: if the resent message also gets a 403 "Invalid session", there is no second mint or resend and the error toast shows once (iblai-platform#2918)', async ({
+    page,
+    chatPage,
+  }) => {
+    const message = `Always rejected ${Date.now()}`;
+    const { sent } = await mockChatWebSocketScripted(page, (_frame, send) => {
+      send(INVALID_SESSION_FRAME);
+    });
+    await openChatWithCachedSession(page, true);
+    const mints = countSessionMints(page);
+
+    await chatPage.sendMessage(message);
+
+    await expect(page.getByText(ERROR_TOAST_TEXT).first()).toBeVisible({
+      timeout: 45_000,
+    });
+    await expect
+      .poll(() => sent.filter((f) => f.prompt === message).length, {
+        timeout: 30_000,
+      })
+      .toBe(2);
+    // Hold long enough for a (buggy) third send or second mint to show up.
+    await page.waitForTimeout(5_000);
+    expect(sent.filter((f) => f.prompt === message)).toHaveLength(2);
+    expect(mints.count()).toBe(1);
+    await expect(page.getByText(ERROR_TOAST_TEXT)).toHaveCount(1);
   });
 });
