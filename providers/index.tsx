@@ -448,6 +448,8 @@ export default function Providers({ children }: { children: React.ReactNode }) {
         if (resolution.status === 'ready')
           return redirectToMentor(tKey, resolution.mentorId);
         if (resolution.status === 'needs-setup') return redirectToPanelSetup();
+        if (resolution.status === 'unsupported')
+          return redirectToPanelUnsupported();
         // The platform said no on purpose. Falling back would hide a
         // misconfiguration from the one person who could fix it.
         if (resolution.status === 'refused')
@@ -467,6 +469,16 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     errorType: string = customErrorMessages.browserAgentNotSetUp.key,
   ) {
     router.push(appendEmbedContext(`/error/403?errorType=${errorType}`));
+  }
+
+  // Not the same dead end: nobody in this organization can set it up, so the
+  // screen must not read as something a colleague forgot to do.
+  function redirectToPanelUnsupported() {
+    router.push(
+      appendEmbedContext(
+        `/error/403?errorType=${customErrorMessages.browserAgentUnsupported.key}`,
+      ),
+    );
   }
 
   /**
@@ -490,6 +502,10 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     }
     if (resolution.status === 'needs-setup') {
       redirectToPanelSetup();
+      return true;
+    }
+    if (resolution.status === 'unsupported') {
+      redirectToPanelUnsupported();
       return true;
     }
     if (resolution.status === 'refused') {

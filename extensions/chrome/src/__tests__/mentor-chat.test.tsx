@@ -85,7 +85,7 @@ afterEach(cleanup);
 
 describe('MentorChat', () => {
   it('mounts the agent element and wires the frame glue and the browse bridge', () => {
-    const { unmount } = render(<MentorChat />);
+    const { unmount } = render(<MentorChat onSignOut={() => {}} who="jane" />);
     const element = document.querySelector('agent-ai')!;
     expect(element.getAttribute('mentorurl')).toBe(MENTOR_URL);
     expect(element.getAttribute('authurl')).toBe('https://login.iblai.app');
@@ -121,7 +121,7 @@ describe('MentorChat', () => {
   // The app asks for an organization without naming one; the panel answers
   // with its own list rather than sending anyone to a browser tab.
   it('raises the picker when the app asks for an organization', async () => {
-    render(<MentorChat />);
+    render(<MentorChat onSignOut={() => {}} who="jane" />);
     expect(screen.queryByTestId('picker')).toBeNull();
 
     const raise = vi.mocked(watchTenantSwitch).mock.calls[0][1]!;
@@ -133,7 +133,7 @@ describe('MentorChat', () => {
   });
 
   it('switches to the organization that was picked, and closes the picker', async () => {
-    render(<MentorChat />);
+    render(<MentorChat onSignOut={() => {}} who="jane" />);
     const element = document.querySelector('agent-ai')!;
     act(() => vi.mocked(watchTenantSwitch).mock.calls[0][1]!());
     const user = userEvent.setup();
@@ -145,7 +145,7 @@ describe('MentorChat', () => {
   });
 
   it('closes the picker without switching when it is dismissed', async () => {
-    render(<MentorChat />);
+    render(<MentorChat onSignOut={() => {}} who="jane" />);
     act(() => vi.mocked(watchTenantSwitch).mock.calls[0][1]!());
     const user = userEvent.setup();
 
@@ -159,7 +159,7 @@ describe('MentorChat', () => {
   // happening — which is what a session recovery holding the auth guard does.
   it('keeps the list up and says so when a pick cannot start', async () => {
     vi.mocked(switchToOrganization).mockResolvedValue({ kind: 'failed' });
-    render(<MentorChat />);
+    render(<MentorChat onSignOut={() => {}} who="jane" />);
     act(() => vi.mocked(watchTenantSwitch).mock.calls[0][1]!());
     const user = userEvent.setup();
 
@@ -177,7 +177,7 @@ describe('MentorChat', () => {
       kind: 'elsewhere',
       landed: 'acme',
     });
-    render(<MentorChat />);
+    render(<MentorChat onSignOut={() => {}} who="jane" />);
     act(() => vi.mocked(watchTenantSwitch).mock.calls[0][1]!());
     const user = userEvent.setup();
 
@@ -190,7 +190,7 @@ describe('MentorChat', () => {
   // The switch remounts the iframe; unmounting the element to show a list
   // would tear the chat down for a choice the person may well cancel.
   it('keeps the chat mounted while the picker is open', async () => {
-    render(<MentorChat />);
+    render(<MentorChat onSignOut={() => {}} who="jane" />);
     act(() => vi.mocked(watchTenantSwitch).mock.calls[0][1]!());
 
     await screen.findByTestId('picker');

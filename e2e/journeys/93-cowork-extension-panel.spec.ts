@@ -1,7 +1,7 @@
 import { test, expect } from '../fixtures/mentor-test';
 import type { FrameLocator, Page, WebSocketRoute } from '@playwright/test';
 import { navigateToMentorApp } from '../utils/auth';
-import { EMBED_HARNESS_URL } from '../fixtures/test-data';
+import { EMBED_HARNESS_URL, MENTOR_NEXTJS_HOST } from '../fixtures/test-data';
 import { openLauncher } from '../utils/embed-harness-client';
 
 /**

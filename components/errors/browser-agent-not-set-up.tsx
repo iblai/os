@@ -33,7 +33,7 @@ export function BrowserAgentNotSetUp() {
       </div>
       <h1 className="text-xl font-medium text-gray-900">Not Set Up Yet</h1>
       <p className="max-w-md text-sm text-gray-600">
-        The browser assistant has not been set up for{' '}
+        The browsing assistant has not been set up for{' '}
         <strong className="font-semibold text-gray-900">{organization}</strong>,
         so it cannot be used here. Someone who manages that organization can set
         it up by opening this panel once.

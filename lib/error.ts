@@ -15,7 +15,13 @@ export const customErrorMessages = {
     key: 'browserAgentNotSetUp',
     header: 'Not Set Up Yet',
     message:
-      'The browser assistant has not been set up for your organization yet, so it cannot be used here. Someone who manages your organization can set it up by opening this panel once. Contact them to ask.',
+      'The browsing assistant has not been set up for your organization yet, so it cannot be used here. Someone who manages your organization can set it up by opening this panel once. Contact them to ask.',
+  },
+  browserAgentUnsupported: {
+    key: 'browserAgentUnsupported',
+    header: 'Not Available Here',
+    message:
+      'The browsing assistant is not available for your organization yet. The organization needs access to the AI model it runs on, and we can switch that on for you.',
   },
   sessionNotFound: {
     key: 'sessionNotFound',

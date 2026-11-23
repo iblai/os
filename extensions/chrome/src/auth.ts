@@ -57,8 +57,19 @@ export function storeSessionFromRedirect(responseUrl: string): void {
 }
 
 // Build the auth SPA URL for the interactive first sign-in.
-function loginUrl(redirectUri: string): string {
-  return `${AUTH_URL}/login?redirect-to=${encodeURIComponent(redirectUri)}`;
+//
+// `fresh` is what makes signing out mean anything. Clearing our own storage
+// leaves the auth app holding its session, so the next flow returns the SAME
+// account without ever showing a form — indistinguishable from the sign-out
+// having failed. These are the two params the web app sends for the same
+// reason (`providers/index.tsx`).
+function loginUrl(redirectUri: string, fresh: boolean): string {
+  const params = new URLSearchParams({ 'redirect-to': redirectUri });
+  if (fresh) {
+    params.set('enforce_logout', '1');
+    params.set('logout', '1');
+  }
+  return `${AUTH_URL}/login?${params.toString()}`;
 }
 
 // Build the auth SPA URL for a tenant SWITCH. This mirrors the web tenant switch
@@ -94,24 +105,42 @@ function switchTenantUrl(redirectUri: string, tenant: string): string {
 
 // `tenant` switches the session to a different platform (see switchTenantUrl).
 // Omitted on first sign-in, where the interactive login picks the user's default.
-export async function signIn(tenant?: string): Promise<void> {
+export async function signIn(
+  tenant?: string,
+  fresh = false,
+  wanted?: () => boolean,
+): Promise<void> {
   // Chrome intercepts navigations to this URL and hands the full URL back to us.
   const redirectUri = chrome.identity.getRedirectURL(); // https://<id>.chromiumapp.org/
   const authUrl = tenant
     ? switchTenantUrl(redirectUri, tenant)
-    : loginUrl(redirectUri);
+    : loginUrl(redirectUri, fresh);
   const responseUrl = await chrome.identity.launchWebAuthFlow({
     url: authUrl,
     interactive: true,
   });
   if (!responseUrl) throw new Error('auth flow returned no redirect URL');
+  // A flow the person walked away from still settles — minutes later, with a
+  // whole session in hand. The caller's own staleness check cannot stop that,
+  // because the write happens HERE: storing it would sign them back into the
+  // account they just left, so an abandoned payload is dropped unread.
+  if (wanted && !wanted()) return;
   storeSessionFromRedirect(responseUrl);
 }
 
-/** True when a session exists afterwards; a failed flow throws. */
-export async function ensureSignedIn(): Promise<boolean> {
-  if (isAuthed()) return true;
-  await signIn();
+/**
+ * True when a session exists afterwards; a failed flow throws.
+ *
+ * `fresh` asks for a different account rather than whichever one the auth app
+ * still has — what the sign-in after a sign-out needs. `wanted` is asked again
+ * once the window comes back, and a no drops the session (see `signIn`).
+ */
+export async function ensureSignedIn(
+  fresh = false,
+  wanted?: () => boolean,
+): Promise<boolean> {
+  if (!fresh && isAuthed()) return true;
+  await signIn(undefined, fresh, wanted);
   return isAuthed();
 }
 

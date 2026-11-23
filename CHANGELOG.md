@@ -1,5 +1,86 @@
 # Changelog
 
+## [0.206.1](https://github.com/iblai/os/compare/v0.206.0...v0.206.1) (2026-11-23)
+
+### Bug Fixes
+
+* **panel:** correct what the unsupported screen claims, and measure the page ([6aea194](https://github.com/iblai/os/commit/6aea194fa992840f948219357e1a168e4bc8ede1)), closes [#699](https://github.com/iblai/os/issues/699)
+* **panel:** tell an organization the browsing assistant cannot run there ([4ae79c4](https://github.com/iblai/os/commit/4ae79c443aa982b0009c3551b9397f09d2500c26))
+
+### Tests
+
+* **e2e:** say where the unsupported screen is tested, and why not here ([8720354](https://github.com/iblai/os/commit/872035458d5ffaca0b05c46f86d1d271d9dcd8e2))
+* **panel:** measure the error page that picks between the panel screens ([d3d9ae0](https://github.com/iblai/os/commit/d3d9ae0da64127fb63d80bc1f162b31e002f089c))
+
+## [0.206.0](https://github.com/iblai/os/compare/v0.205.3...v0.206.0) (2026-11-22)
+
+### Features
+
+* **ext:** sign out of the panel, and offer the button when sign-in stalls ([fc4bcb1](https://github.com/iblai/os/commit/fc4bcb1fb25033ad8e786665976b406a6fe68486))
+
+### Bug Fixes
+
+* **ext:** stop an abandoned sign-in from undoing the sign-out ([d097b51](https://github.com/iblai/os/commit/d097b51d3ea5672e498be4bda7f4b02053cca773)), closes [#698](https://github.com/iblai/os/issues/698)
+
+### Tests
+
+* **ext:** cover the two sign-in failures that are not this attempt's news ([eef9c45](https://github.com/iblai/os/commit/eef9c45f37de6ec57c4a76b067f2c4481851ac2d))
+
+## [0.205.3](https://github.com/iblai/os/compare/v0.205.2...v0.205.3) (2026-11-22)
+
+### Bug Fixes
+
+* **panel:** give the review the app's own title and primary button ([989497f](https://github.com/iblai/os/commit/989497f0ba656a2b377c91889146b809a1e4194b))
+* **panel:** keep a recorded step inside the panel, and ask nothing of an empty value ([12f4da0](https://github.com/iblai/os/commit/12f4da044d7e8970b15432194c68ffcbfdbdd4b7))
+* **panel:** use the app's own checkbox, bin and heading casing in the review ([fefd417](https://github.com/iblai/os/commit/fefd4179170aa1ba61b08a93ae8d96d78e3950c3))
+
+## [0.205.2](https://github.com/iblai/os/compare/v0.205.1...v0.205.2) (2026-11-20)
+
+### Bug Fixes
+
+* **deps:** bump @iblai/iblai-js to 2.84.1 for even Capabilities spacing ([bf8ec8c](https://github.com/iblai/os/commit/bf8ec8c749c54f663be2a2504933f846dda94da5)), closes [iblai/iblai-web-frontend#2267](https://github.com/iblai/iblai-web-frontend/issues/2267)
+
+### Chores
+
+* **claude:** add ui-review skill for measured before/after UI previews ([b4f8e32](https://github.com/iblai/os/commit/b4f8e3229036d5de2cb1d6ce0748bef0e58e6afb))
+
+## [0.205.1](https://github.com/iblai/os/compare/v0.205.0...v0.205.1) (2026-11-19)
+
+### Bug Fixes
+
+* **safety:** delete Safety rows through safety-logs ([2f9ca9a](https://github.com/iblai/os/commit/2f9ca9a364ca4d1a1511a71ab737b4104ed37fad))
+* **safety:** list every user's flagged prompts and Safety blocks ([a206d02](https://github.com/iblai/os/commit/a206d0261de3dc7cf3f0fbd78dc66bbdfaa1f9e5))
+
+### Chores
+
+* **deps:** bump @iblai/iblai-js to 2.74.0 ([071fc85](https://github.com/iblai/os/commit/071fc859a1c0007cec462a82ae5be5e38ee84baa))
+
+### Documentation
+
+* **e2e:** add journey 103 to coverage ([6affe10](https://github.com/iblai/os/commit/6affe109d178f0429be75d7bade0e0f66273672a))
+* **e2e:** add journey 104 to the coverage map ([5692519](https://github.com/iblai/os/commit/5692519748a3e0d63ce141093bb7591877429656))
+
+### Tests
+
+* **e2e:** add saved-response helpers to the Safety tab page object ([fdff482](https://github.com/iblai/os/commit/fdff482ced8f300a1dc0658bc6fcadb2e0e87426))
+* **e2e:** blocked messages show the saved response (journey 104) ([f93b258](https://github.com/iblai/os/commit/f93b2580d810d62461151659a1e7482a1b0b666f))
+* **e2e:** drop the stale bindReopen call from the Edit Agent page object ([061261e](https://github.com/iblai/os/commit/061261eabfc7ef763def5ae47da7a4a2bbc747df))
+* **e2e:** fix the moderation prompt locator and the cp-chat-02 session race ([9549b76](https://github.com/iblai/os/commit/9549b76dca142bdd0cc39463152a1e8d2ce15cd6))
+* **e2e:** journey 103 flagged prompts from every user ([e8868aa](https://github.com/iblai/os/commit/e8868aa910f133c279325bb61326722400c94cc7))
+* **safety:** cover flagged prompts requests, filter and delete routing ([9d60c6c](https://github.com/iblai/os/commit/9d60c6c9951736c255f9ddb814d438ba50aaa2d0))
+
+## [0.205.0](https://github.com/iblai/os/compare/v0.204.2...v0.205.0) (2026-11-19)
+
+### Features
+
+* **panel:** offer Record a skill in the Cowork panel people actually see ([34188e3](https://github.com/iblai/os/commit/34188e331165aa0a1ececf274597768d985babbd)), closes [iblai/ibl-frontend#2265](https://github.com/iblai/ibl-frontend/issues/2265)
+
+## [0.204.2](https://github.com/iblai/os/compare/v0.204.1...v0.204.2) (2026-11-19)
+
+### Chores
+
+* **deps:** take @iblai/iblai-js 2.82.1 for the redirect-crumb fix ([4a54b5f](https://github.com/iblai/os/commit/4a54b5f396146bffe685f04cdb7596082ea45470))
+
 ## [0.204.1](https://github.com/iblai/os/compare/v0.204.0...v0.204.1) (2026-11-19)
 
 ### Bug Fixes

@@ -1,226 +1,248 @@
-import { act, renderHook } from '@testing-library/react';
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { renderHook, act } from '@testing-library/react';
 
-const mocks = vi.hoisted(() => ({ useGetModerationLogsQuery: vi.fn() }));
+import { useFlaggedPromptsWithPagination } from '../use-flagged-prompts-with-pagination';
+
+const mockUseGetModerationLogsQuery = vi.fn();
+const mockUseGetSafetyLogsQuery = vi.fn();
 
 vi.mock('@iblai/iblai-js/data-layer', () => ({
-  useGetModerationLogsQuery: mocks.useGetModerationLogsQuery,
+  useGetModerationLogsQuery: (...args: unknown[]) =>
+    mockUseGetModerationLogsQuery(...args),
+  useGetSafetyLogsQuery: (...args: unknown[]) =>
+    mockUseGetSafetyLogsQuery(...args),
 }));
 
-// The real one defers by 500ms, which would make every assertion wait.
 vi.mock('use-debounce', () => ({
   useDebounce: (value: unknown) => [value],
 }));
 
-import { useFlaggedPromptsWithPagination } from '../use-flagged-prompts-with-pagination';
+const HOUR = 60 * 60 * 1000;
 
-const PARAMS = { tenantKey: 'acme', username: 'ada', mentorId: 'm-1' };
-
-const log = (over: Record<string, unknown> = {}) => ({
-  id: 7,
-  username: 'bob',
-  target_system: 'Moderation System',
-  prompt: 'the prompt',
-  reason: 'the reason',
-  date_created: new Date().toISOString(),
-  ...over,
+const log = (id: number, hoursAgo: number, username = 'jane') => ({
+  id,
+  username,
+  prompt: `prompt ${id}`,
+  reason: `reason ${id}`,
+  date_created: new Date(Date.now() - hoursAgo * HOUR).toISOString(),
 });
 
-const answerWith = (data: unknown, isLoading = false) => {
-  mocks.useGetModerationLogsQuery.mockReturnValue({ data, isLoading });
-};
-
-const lastQuery = () =>
-  mocks.useGetModerationLogsQuery.mock.calls.at(-1)![0] as Record<
-    string,
-    unknown
-  >;
-
-beforeEach(() => {
-  vi.clearAllMocks();
-  answerWith(undefined);
+const page = (results: ReturnType<typeof log>[], count = results.length) => ({
+  data: { count, next: null, previous: null, results },
+  isLoading: false,
 });
+
+const params = { tenantKey: 'acme', username: 'admin', mentorId: 'm1' };
+
+const lastArgs = (hook: ReturnType<typeof vi.fn>) =>
+  hook.mock.calls.at(-1) as [Record<string, unknown>, Record<string, unknown>];
+
+const rows = (prompts: { id: string; type: string }[]) =>
+  prompts.map((p) => [p.id, p.type]);
 
 describe('useFlaggedPromptsWithPagination', () => {
-  // The endpoint's path is `/orgs/<org>/users/<user_id>/moderation-logs/`.
-  // Without `userId` it requested `/users/undefined/`, so the tab could never
-  // show anything. `username` stays as the query-side filter.
-  it('identifies the user in the path, not only as a filter', () => {
-    renderHook(() => useFlaggedPromptsWithPagination(PARAMS));
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockUseGetModerationLogsQuery.mockReturnValue(page([]));
+    mockUseGetSafetyLogsQuery.mockReturnValue(page([]));
+  });
 
-    expect(lastQuery()).toMatchObject({
-      org: 'acme',
-      userId: 'ada',
-      username: 'ada',
-      mentor: 'm-1',
+  describe('request params', () => {
+    it('lists every user’s logs: sends the admin as userId and no username filter', () => {
+      const { result } = renderHook(() =>
+        useFlaggedPromptsWithPagination(params),
+      );
+      act(() => result.current.setFilterType('safety'));
+
+      for (const hook of [
+        mockUseGetModerationLogsQuery,
+        mockUseGetSafetyLogsQuery,
+      ]) {
+        const [args] = lastArgs(hook);
+        expect(args).not.toHaveProperty('username');
+        expect(args).not.toHaveProperty('targetSystem');
+        expect(args).toMatchObject({
+          org: 'acme',
+          userId: 'admin',
+          mentor: 'm1',
+          ordering: '-date_created',
+        });
+      }
+    });
+
+    it('refetches on every open so a new block shows without waiting', () => {
+      renderHook(() => useFlaggedPromptsWithPagination(params));
+      expect(lastArgs(mockUseGetModerationLogsQuery)[1]).toMatchObject({
+        refetchOnMountOrArgChange: true,
+      });
+      expect(lastArgs(mockUseGetSafetyLogsQuery)[1]).toMatchObject({
+        refetchOnMountOrArgChange: true,
+      });
+    });
+
+    it('forwards search and date range', () => {
+      const { result } = renderHook(() =>
+        useFlaggedPromptsWithPagination(params),
+      );
+      const from = new Date('2026-01-01T00:00:00Z');
+      const to = new Date('2026-01-31T00:00:00Z');
+      act(() => {
+        result.current.setSearchQuery('hello');
+        result.current.setDateRange({ from, to });
+      });
+
+      expect(lastArgs(mockUseGetModerationLogsQuery)[0]).toMatchObject({
+        search: 'hello',
+        startTime: from.toISOString(),
+        endTime: to.toISOString(),
+      });
+    });
+
+    it('omits empty search and dates', () => {
+      renderHook(() => useFlaggedPromptsWithPagination(params));
+      const [args] = lastArgs(mockUseGetModerationLogsQuery);
+      expect(args.search).toBeUndefined();
+      expect(args.startTime).toBeUndefined();
+      expect(args.endTime).toBeUndefined();
     });
   });
 
-  it('asks for the first page and the given page size', () => {
-    renderHook(() =>
-      useFlaggedPromptsWithPagination({ ...PARAMS, itemsPerPage: 3 }),
-    );
+  describe('filter → endpoint', () => {
+    it('defaults to moderation logs only', () => {
+      mockUseGetModerationLogsQuery.mockReturnValue(page([log(1, 1)], 12));
+      mockUseGetSafetyLogsQuery.mockReturnValue(page([log(2, 1)], 3));
+      const { result } = renderHook(() =>
+        useFlaggedPromptsWithPagination(params),
+      );
 
-    expect(lastQuery()).toMatchObject({ page: 1, pageSize: 3 });
-  });
+      expect(result.current.filterType).toBe('moderation');
+      expect(lastArgs(mockUseGetModerationLogsQuery)[1].skip).toBe(false);
+      expect(lastArgs(mockUseGetSafetyLogsQuery)[1].skip).toBe(true);
+      expect(rows(result.current.paginatedPrompts)).toEqual([
+        ['1', 'Moderation'],
+      ]);
+      expect(result.current.totalFlagged).toBe(12);
+    });
 
-  it('sends no search, system or date filters until they are set', () => {
-    renderHook(() => useFlaggedPromptsWithPagination(PARAMS));
+    it('pages moderation logs on the server, 5 at a time', () => {
+      mockUseGetModerationLogsQuery.mockReturnValue(page([log(1, 1)], 12));
+      const { result } = renderHook(() =>
+        useFlaggedPromptsWithPagination(params),
+      );
+      act(() => result.current.handlePageChange(3));
 
-    expect(lastQuery()).toMatchObject({
-      search: undefined,
-      targetSystem: undefined,
-      startTime: undefined,
-      endTime: undefined,
+      expect(lastArgs(mockUseGetModerationLogsQuery)[0]).toMatchObject({
+        page: 3,
+        pageSize: 5,
+      });
+      expect(result.current.totalPages).toBe(3);
+    });
+
+    it('"safety" fetches only safety logs, paged on the server', () => {
+      mockUseGetModerationLogsQuery.mockReturnValue(page([log(1, 1)], 12));
+      mockUseGetSafetyLogsQuery.mockReturnValue(page([log(2, 1)], 3));
+      const { result } = renderHook(() =>
+        useFlaggedPromptsWithPagination(params),
+      );
+      act(() => result.current.setFilterType('safety'));
+
+      const [args, options] = lastArgs(mockUseGetSafetyLogsQuery);
+      expect(options.skip).toBe(false);
+      expect(args).toMatchObject({ page: 1, pageSize: 5 });
+      expect(lastArgs(mockUseGetModerationLogsQuery)[1].skip).toBe(true);
+      expect(rows(result.current.paginatedPrompts)).toEqual([['2', 'Safety']]);
+      expect(result.current.totalFlagged).toBe(3);
+      expect(result.current.totalPages).toBe(1);
+    });
+
+    it('goes back to page 1 when the filter changes', () => {
+      const { result } = renderHook(() =>
+        useFlaggedPromptsWithPagination(params),
+      );
+      act(() => result.current.handlePageChange(3));
+      expect(result.current.currentPage).toBe(3);
+      act(() => result.current.setFilterType('safety'));
+      expect(result.current.currentPage).toBe(1);
+      expect(lastArgs(mockUseGetSafetyLogsQuery)[0]).toMatchObject({
+        page: 1,
+      });
     });
   });
 
-  it('maps the filter choice onto the target system', () => {
-    const { result } = renderHook(() =>
-      useFlaggedPromptsWithPagination(PARAMS),
-    );
+  describe('rows', () => {
+    it('shows a guest (empty username) as Unknown User', () => {
+      mockUseGetModerationLogsQuery.mockReturnValue(page([log(9, 1, '')]));
+      const { result } = renderHook(() =>
+        useFlaggedPromptsWithPagination(params),
+      );
+      expect(result.current.paginatedPrompts[0]).toMatchObject({
+        id: '9',
+        userId: 'unknown',
+        userEmail: 'N/A',
+        userFullName: 'Unknown User',
+        prompt: 'prompt 9',
+        systemResponse: 'reason 9',
+      });
+    });
 
-    act(() => result.current.setFilterType('moderation'));
-    expect(lastQuery().targetSystem).toBe('Moderation System');
+    it('labels how long ago each prompt was flagged', () => {
+      const minute = 60 * 1000;
+      const ago = (ms: number, id: number) => ({
+        ...log(id, 0),
+        date_created: new Date(Date.now() - ms).toISOString(),
+      });
+      mockUseGetModerationLogsQuery.mockReturnValue(
+        page([
+          ago(0, 1),
+          ago(1 * minute, 2),
+          ago(2 * minute, 3),
+          ago(HOUR, 4),
+          ago(2 * HOUR, 5),
+          ago(24 * HOUR, 6),
+          ago(48 * HOUR, 7),
+        ]),
+      );
+      const { result } = renderHook(() =>
+        useFlaggedPromptsWithPagination({ ...params, itemsPerPage: 10 }),
+      );
+      expect(result.current.paginatedPrompts.map((p) => p.timeAgo)).toEqual([
+        'just now',
+        '1 minute ago',
+        '2 minutes ago',
+        '1 hour ago',
+        '2 hours ago',
+        '1 day ago',
+        '2 days ago',
+      ]);
+    });
 
-    act(() => result.current.setFilterType('safety'));
-    expect(lastQuery().targetSystem).toBe('Safety System');
-
-    act(() => result.current.setFilterType('all'));
-    expect(lastQuery().targetSystem).toBeUndefined();
-  });
-
-  it('sends a typed search term', () => {
-    const { result } = renderHook(() =>
-      useFlaggedPromptsWithPagination(PARAMS),
-    );
-
-    act(() => result.current.setSearchQuery('abuse'));
-
-    expect(result.current.searchQuery).toBe('abuse');
-    expect(lastQuery().search).toBe('abuse');
-  });
-
-  it('sends the chosen date range as a start and end time', () => {
-    const { result } = renderHook(() =>
-      useFlaggedPromptsWithPagination(PARAMS),
-    );
-    const from = new Date('2026-01-01T00:00:00.000Z');
-    const to = new Date('2026-02-01T00:00:00.000Z');
-
-    act(() => result.current.setDateRange({ from, to }));
-
-    expect(lastQuery()).toMatchObject({
-      startTime: from.toISOString(),
-      endTime: to.toISOString(),
+    it('is empty while loading', () => {
+      mockUseGetModerationLogsQuery.mockReturnValue({
+        data: undefined,
+        isLoading: true,
+      });
+      const { result } = renderHook(() =>
+        useFlaggedPromptsWithPagination(params),
+      );
+      expect(result.current.paginatedPrompts).toEqual([]);
+      expect(result.current.totalFlagged).toBe(0);
+      expect(result.current.totalPages).toBe(0);
+      expect(result.current.isLoading).toBe(true);
     });
   });
 
-  it('returns to the first page whenever a filter changes', () => {
-    const { result } = renderHook(() =>
-      useFlaggedPromptsWithPagination(PARAMS),
-    );
-
-    act(() => result.current.handlePageChange(3));
-    expect(result.current.currentPage).toBe(3);
-
-    act(() => result.current.setFilterType('safety'));
-    expect(result.current.currentPage).toBe(1);
-  });
-
-  it('has nothing to show before the first answer arrives', () => {
-    const { result } = renderHook(() =>
-      useFlaggedPromptsWithPagination(PARAMS),
-    );
-
-    expect(result.current.paginatedPrompts).toEqual([]);
-    expect(result.current.totalFlagged).toBe(0);
-    expect(result.current.totalPages).toBe(0);
-  });
-
-  it('passes the loading flag straight through', () => {
-    answerWith(undefined, true);
-    const { result } = renderHook(() =>
-      useFlaggedPromptsWithPagination(PARAMS),
-    );
-
-    expect(result.current.isLoading).toBe(true);
-  });
-
-  it('counts the pages from the total and the page size', () => {
-    answerWith({ count: 11, results: [] });
-    const { result } = renderHook(() =>
-      useFlaggedPromptsWithPagination({ ...PARAMS, itemsPerPage: 5 }),
-    );
-
-    expect(result.current.totalFlagged).toBe(11);
-    expect(result.current.totalPages).toBe(3);
-  });
-
-  it('presents a log with its reporter, type and dates', () => {
-    answerWith({ count: 1, results: [log()] });
-    const { result } = renderHook(() =>
-      useFlaggedPromptsWithPagination(PARAMS),
-    );
-
-    const [prompt] = result.current.paginatedPrompts;
-    expect(prompt).toMatchObject({
-      id: '7',
-      userId: 'bob',
-      userEmail: 'bob',
-      userFullName: 'bob',
-      type: 'Moderation',
-      prompt: 'the prompt',
-      systemResponse: 'the reason',
-      timeAgo: 'just now',
+  describe('isLoading', () => {
+    it('follows the shown list only', () => {
+      mockUseGetSafetyLogsQuery.mockReturnValue({
+        data: undefined,
+        isLoading: true,
+      });
+      const { result } = renderHook(() =>
+        useFlaggedPromptsWithPagination(params),
+      );
+      expect(result.current.isLoading).toBe(false);
+      act(() => result.current.setFilterType('safety'));
+      expect(result.current.isLoading).toBe(true);
     });
-    expect(prompt.timestamp).toEqual(prompt.fullDate);
-  });
-
-  it('calls a safety-system log Safety', () => {
-    answerWith({
-      count: 1,
-      results: [log({ target_system: 'Safety System' })],
-    });
-    const { result } = renderHook(() =>
-      useFlaggedPromptsWithPagination(PARAMS),
-    );
-
-    expect(result.current.paginatedPrompts[0].type).toBe('Safety');
-  });
-
-  it('stands in for a log that names no user', () => {
-    answerWith({ count: 1, results: [log({ username: null })] });
-    const { result } = renderHook(() =>
-      useFlaggedPromptsWithPagination(PARAMS),
-    );
-
-    expect(result.current.paginatedPrompts[0]).toMatchObject({
-      userId: 'unknown',
-      userEmail: 'N/A',
-      userFullName: 'Unknown User',
-    });
-  });
-
-  it.each([
-    [2 * 24 * 3600 * 1000, '2 days ago'],
-    [24 * 3600 * 1000, '1 day ago'],
-    [3 * 3600 * 1000, '3 hours ago'],
-    [3600 * 1000, '1 hour ago'],
-    [5 * 60 * 1000, '5 minutes ago'],
-    [60 * 1000, '1 minute ago'],
-    [2000, 'just now'],
-  ])('says how long ago a log was flagged', (ago, expected) => {
-    answerWith({
-      count: 1,
-      results: [
-        log({ date_created: new Date(Date.now() - ago).toISOString() }),
-      ],
-    });
-    const { result } = renderHook(() =>
-      useFlaggedPromptsWithPagination(PARAMS),
-    );
-
-    expect(result.current.paginatedPrompts[0].timeAgo).toBe(expected);
   });
 });

@@ -1,15 +1,15 @@
 {
   "version": 2,
-  "lastUpdated": "2026-11-17",
+  "lastUpdated": "2026-11-18",
   "summary": {
-    "totalCheckpoints": 1169,
-    "coveredCheckpoints": 1088,
+    "totalCheckpoints": 1182,
+    "coveredCheckpoints": 1101,
     "deprecatedCheckpoints": 18,
     "notReproducibleCheckpoints": 17,
     "pendingCheckpoints": 46,
     "percent": 100,
-    "totalJourneys": 112,
-    "activeJourneys": 111
+    "totalJourneys": 114,
+    "activeJourneys": 113
   },
   "journeys": [
     {
@@ -7227,6 +7227,97 @@
         {
           "id": "cafp-04",
           "description": "Issue #2766, answer mocked as 404 (older backend): the wizard fails open and shows every step 1 field and Next",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "flagged-prompts-all-users",
+      "name": "Flagged Prompts for All Users",
+      "spec": "103-flagged-prompts-all-users.spec.ts",
+      "sourceFiles": [
+        "components/modals/edit-mentor-modal/tabs/safety-tab.tsx",
+        "components/modals/edit-mentor-modal/tabs/safety-tab/flagged-prompts/index.tsx",
+        "components/modals/edit-mentor-modal/tabs/safety-tab/flagged-prompts/use-flagged-prompts-with-pagination.ts",
+        "components/modals/edit-mentor-modal/tabs/safety-tab/flagged-prompts/delete-moderation-log-modal.tsx",
+        "components/modals/edit-mentor-modal/tabs/safety-tab/flagged-prompts/flagged-prompt-detail.tsx",
+        "components/modals/edit-mentor-modal/tabs/safety-tab/flagged-prompts/flagged-prompt-mobile-detail.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "fp-01",
+          "description": "Issue #2885: admin creates an agent, sets Who Can View to all members and guest chat on, then writes a codeword Moderation prompt and turns Moderation and Safety on",
+          "status": "covered"
+        },
+        {
+          "id": "fp-02",
+          "description": "Issue #2885: a second user and a guest (no sign-in) each send a codeword prompt on the admin's agent and get the blocked reply (real Moderation blocks)",
+          "status": "covered"
+        },
+        {
+          "id": "fp-03",
+          "description": "Issue #2885: View Flagged Prompts opens on Moderation and lists the other user's row and the guest's row (\"Unknown User\") from moderation-logs only (`page=1&page_size=5`); the Type select offers exactly Moderation and Safety; no request carries `username=` or `users/undefined`",
+          "status": "covered"
+        },
+        {
+          "id": "fp-04",
+          "description": "Issue #2885: (Safety list stubbed) switching Type to Safety requests only safety-logs and shows only the Safety row, changing the type clears the open detail, and switching back to Moderation shows only Moderation rows",
+          "status": "covered"
+        },
+        {
+          "id": "fp-05",
+          "description": "Issue #2885: after closing the dialog and a new block by another user, reopening it shows the new row with no wait (refetch on every open)",
+          "status": "covered"
+        },
+        {
+          "id": "fp-06",
+          "description": "Issue #2885: deleting a Safety row sends `DELETE .../safety-logs/<id>/` and the row disappears",
+          "status": "covered"
+        },
+        {
+          "id": "fp-07",
+          "description": "Issue #2885 (Safety list stubbed): paging within one type shows 5 rows then the rest, and page 2 requests `page=2&page_size=5` from that list only",
+          "status": "covered"
+        },
+        {
+          "id": "fp-08",
+          "description": "Issue #2885: deleting a real Moderation row sends `DELETE .../moderation-logs/<id>/` and the row disappears",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "blocked-message-saved-response",
+      "name": "Blocked Message Shows Saved Response",
+      "spec": "104-blocked-message-shows-saved-response.spec.ts",
+      "sourceFiles": [
+        "components/modals/edit-mentor-modal/tabs/safety-tab.tsx",
+        "components/modals/edit-prompt-modal.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "sfr-01",
+          "description": "Issue #2883: on a new agent the admin saves a Moderation Response and a Safety Response from Edit Agent > Policies > Safety (PUT settings ok) and the tab shows both texts",
+          "status": "covered"
+        },
+        {
+          "id": "sfr-02",
+          "description": "Issue #2883: a moderation block frame (string error, kind innappropriate_prompt, reason set, socket closed) shows the saved Moderation Response as the agent reply, no toast, reason text not on the page",
+          "status": "covered"
+        },
+        {
+          "id": "sfr-03",
+          "description": "Issue #2883: a safety block frame (list-wrapped error) shows the saved Safety Response as the agent reply, no toast, reason text not on the page",
+          "status": "covered"
+        },
+        {
+          "id": "sfr-04",
+          "description": "Issue #2883: after a block the next message is sent on a new socket and answered normally with no toast",
+          "status": "covered"
+        },
+        {
+          "id": "sfr-05",
+          "description": "Issue #2883: a block arriving mid-stream replaces the partial answer with the saved response, no toast",
           "status": "covered"
         }
       ]

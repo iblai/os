@@ -7,19 +7,43 @@ import { Trash2 } from 'lucide-react';
 import { useCreateAgentSkillMutation } from '@iblai/iblai-js/data-layer';
 
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { useSkillRecordingContext } from '@/providers/skill-recording-provider';
 import { buildRecordedSkill, type RecordedStep } from '@/lib/recorded-skill';
 import type { TenantKeyMentorIdParams } from '@/lib/types';
 
-function describe(step: RecordedStep): string {
+/**
+ * An address someone can place at a glance; the full one stays as hover text.
+ * A mail thread's URL is ninety characters of no use in a list of steps.
+ */
+export function shortUrl(url: string): string {
+  try {
+    const { host, pathname, search, hash } = new URL(url);
+    // The hash counts: a mail thread's id lives there, and without it two
+    // different steps render as the same line.
+    const rest = `${pathname === '/' ? '' : pathname}${search}${hash}`;
+    return rest.length > 24 ? `${host}${rest.slice(0, 24)}…` : `${host}${rest}`;
+  } catch {
+    return url;
+  }
+}
+
+/** The verb, then what it acts on, so a scan down the list reads as a procedure. */
+export function stepParts(step: RecordedStep): { verb: string; what: string } {
   const control = step.target.name
-    ? `${step.target.role} "${step.target.name}"`
+    ? `${step.target.role} “${step.target.name}”`
     : step.target.role;
-  if (step.tool === 'navigate') return `Go to ${step.url}`;
-  if (step.tool === 'type') return `Type into the ${control}`;
-  if (step.tool === 'select') return `Choose in the ${control}`;
-  return `Click the ${control}`;
+  switch (step.tool) {
+    case 'navigate':
+      return { verb: 'Go to', what: shortUrl(step.url) };
+    case 'type':
+      return { verb: 'Type into', what: control };
+    case 'select':
+      return { verb: 'Choose in', what: control };
+    default:
+      return { verb: 'Click', what: control };
+  }
 }
 
 /**
@@ -48,6 +72,8 @@ export function SkillReview() {
 
   if (!recording || !captured) return null;
 
+  const remaining = captured.filter((_, index) => !dropped.has(index)).length;
+
   const save = async () => {
     if (!name.trim() || !mentorId || !tenantKey) return;
     try {
@@ -62,72 +88,96 @@ export function SkillReview() {
     }
   };
 
+  let position = 0;
+
   return (
     <div
       data-testid="skill-review"
-      className="absolute inset-0 z-20 flex min-h-0 flex-col gap-3 overflow-y-auto bg-white p-4"
+      className="absolute inset-0 z-20 flex min-h-0 flex-col overflow-hidden bg-white"
     >
-      <div>
-        <h2 className="text-base font-medium text-gray-900">Name this skill</h2>
-        <p className="mt-1 text-xs text-gray-500">
+      <div className="flex-none border-b border-gray-200 p-4">
+        <h2 className="ibl-dialog-title">Name This Skill</h2>
+        <p className="mt-0.5 text-xs text-gray-500">
           The agent follows these steps when you ask for this again.
         </p>
+        <Input
+          value={name}
+          autoFocus
+          placeholder="Weekly sales report"
+          aria-label="Skill name"
+          className="mt-3"
+          onChange={(event) => setName(event.target.value)}
+        />
       </div>
-      <Input
-        value={name}
-        autoFocus
-        placeholder="Weekly sales report"
-        aria-label="Skill name"
-        onChange={(event) => setName(event.target.value)}
-      />
 
-      <ol className="min-h-0 flex-1 space-y-1 overflow-y-auto">
+      <p className="flex-none px-4 pt-3 text-[11px] font-medium tracking-wide text-gray-400 uppercase">
+        {remaining === 1 ? '1 step' : `${remaining} steps`}
+      </p>
+
+      <ol className="min-h-0 flex-1 space-y-1.5 overflow-y-auto px-4 py-2">
+        {remaining === 0 && (
+          <li className="rounded-md border border-dashed border-gray-200 p-4 text-center text-xs text-gray-500">
+            Every step was removed. Discard this and record again.
+          </li>
+        )}
         {captured.map((step, index) => {
           if (dropped.has(index)) return null;
+          const { verb, what } = stepParts(step);
+          position += 1;
           return (
             <li
               key={index}
-              className="flex items-start gap-2 rounded-md border border-gray-200 p-2 text-xs text-gray-700"
+              className="flex items-start gap-2 rounded-lg border border-gray-200 px-3 py-2"
             >
-              <span className="flex-1">
-                {describe(step)}
-                {step.value !== undefined && (
-                  <label className="mt-1 flex items-center gap-1.5 text-[11px] text-gray-500">
-                    <input
-                      type="checkbox"
+              <span className="mt-0.5 flex-none text-[11px] font-medium text-gray-400">
+                {position}
+              </span>
+              {/* `min-w-0` is what lets this wrap instead of pushing the row
+                  wider than the panel — a long address did exactly that. */}
+              <span className="min-w-0 flex-1 text-xs break-words text-gray-700">
+                <span className="text-gray-500">{verb}</span>{' '}
+                <span title={step.url}>{what}</span>
+                {step.value ? (
+                  <label className="mt-1.5 flex items-start gap-1.5 text-[11px] text-gray-500">
+                    <Checkbox
+                      className="mt-0.5 h-3.5 w-3.5 flex-none"
                       checked={keptValues.has(index)}
-                      onChange={(event) =>
-                        setKeptValues((kept) => {
-                          const next = new Set(kept);
-                          if (event.target.checked) next.add(index);
+                      onCheckedChange={(checked) =>
+                        setKeptValues((values) => {
+                          const next = new Set(values);
+                          if (checked) next.add(index);
                           else next.delete(index);
                           return next;
                         })
                       }
                     />
-                    Always use “{step.value}”
+                    <span className="min-w-0 break-words">
+                      Always use “{step.value}”
+                    </span>
                   </label>
-                )}
+                ) : null}
               </span>
-              <button
-                type="button"
+              <Button
+                variant="ghost"
+                size="sm"
                 aria-label={`Remove step ${index + 1}`}
                 onClick={() => setDropped((drops) => new Set(drops).add(index))}
-                className="text-gray-400 hover:text-gray-700"
+                className="h-7 w-7 flex-none p-0 text-gray-400 hover:text-red-700"
               >
                 <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
-              </button>
+              </Button>
             </li>
           );
         })}
       </ol>
 
-      <div className="flex items-center justify-end gap-2">
+      <div className="flex flex-none items-center justify-end gap-2 border-t border-gray-200 p-3">
         <Button variant="ghost" onClick={() => recording.clear()}>
           Discard
         </Button>
         <Button
           onClick={save}
+          className="ibl-button-primary"
           disabled={!name.trim() || steps.length === 0 || isLoading}
         >
           Save Skill

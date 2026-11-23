@@ -165,6 +165,25 @@ describe('an organization that has not', () => {
     });
   });
 
+  // Colleagues never reach the create that reveals it, so without the recorded
+  // verdict they are told a manager can fix it by opening the panel — which is
+  // untrue once the organization simply cannot run it.
+  it('tells everyone else it cannot run here, once that is known', async () => {
+    isAdmin = false;
+    getTenantMetadata.mockReturnValue(
+      unwrap(
+        envelope({
+          [PURPOSE_AGENTS_KEY]: { unsupported: { [CHROME]: true } },
+        }),
+      ),
+    );
+
+    await expect(resolve()('acme')).resolves.toEqual({
+      status: 'unsupported',
+    });
+    expect(createMentor).not.toHaveBeenCalled();
+  });
+
   it('asks someone who may not make one to have it set up', async () => {
     isAdmin = false;
 
@@ -289,6 +308,60 @@ describe('the agent it creates', () => {
       llm_name: 'iblai-pro',
     });
   });
+
+  // kaplan has no `iblai` credential, so the agent cannot be created there at
+  // all. Its own status, because only we can fix it — the setup screen tells
+  // people to ask whoever manages the organization, and that is this reader.
+  it('reports unsupported where the pinned model has no credential', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    createMentor.mockReturnValue(
+      rejects({
+        status: 400,
+        data: { llm_provider: ['Credential not found for `iblai`.'] },
+      }),
+    );
+
+    await expect(resolve()('acme')).resolves.toEqual({
+      status: 'unsupported',
+    });
+
+    expect(createMentor).toHaveBeenCalledTimes(1);
+    // Written down so the colleagues who never reach the create — and so
+    // never find this out — are told the same thing.
+    expect(updateTenantMetadata).toHaveBeenCalledWith([
+      expect.objectContaining({
+        org: 'acme',
+        requestBody: expect.objectContaining({
+          metadata: {
+            [PURPOSE_AGENTS_KEY]: { unsupported: { [CHROME]: true } },
+          },
+        }),
+      }),
+    ]);
+    warn.mockRestore();
+  });
+
+  // Any other failure may well be transient, so the app still chooses an
+  // agent the normal way rather than declaring the organization unsupported.
+  it('leaves the choice to the app when the create fails for another reason', async () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    createMentor.mockReturnValue(rejects({ status: 500, data: {} }));
+
+    await expect(resolve()('acme')).resolves.toEqual({
+      status: 'unavailable',
+    });
+
+    expect(createMentor).toHaveBeenCalledTimes(1);
+    error.mockRestore();
+  });
+
+  // The endpoint answers 500 to a `query` param, so the search that exists to
+  // stop a second agent being made was failing every time.
+  it('searches with no query param, matching the name itself', async () => {
+    await resolve()('acme');
+
+    expect(getMentors.mock.calls[0][0].params).not.toHaveProperty('query');
+  });
 });
 
 describe('a platform that says no', () => {
@@ -311,6 +384,27 @@ describe('a platform that says no', () => {
 
     await expect(resolve()('acme')).resolves.toMatchObject({
       status: 'refused',
+    });
+  });
+
+  // The missing credential is a 400 too, and it is the one 4xx an
+  // administrator here cannot act on — so it keeps its own answer rather than
+  // being swept into the refusal that tells them to go and fix something.
+  it('calls the missing credential unsupported, not refused', async () => {
+    createMentor.mockReturnValue({
+      unwrap: () =>
+        Promise.reject({
+          status: 400,
+          data: {
+            llm_provider: [
+              'Credential not found for `iblai`. Please add a credential before attempting to use this provider.',
+            ],
+          },
+        }),
+    });
+
+    await expect(resolve()('acme')).resolves.toEqual({
+      status: 'unsupported',
     });
   });
 
