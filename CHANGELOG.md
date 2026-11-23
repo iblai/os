@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.206.3](https://github.com/iblai/os/compare/v0.206.2...v0.206.3) (2026-11-23)
+
+### Bug Fixes
+
+* **deps:** bump @iblai/iblai-js to 2.85.2 to recover from "Invalid session" ([990a851](https://github.com/iblai/os/commit/990a851773599fad98eb4cc117994031b0ea45b5))
+
+### Tests
+
+* **e2e:** cover the "Invalid session" recovery in journey 85 ([7845405](https://github.com/iblai/os/commit/78454051a6d715a45c561f533560da5e3c6f1f65))
+* **e2e:** retry Escape until the Account dialog closes in journey 28 ([9fcc62d](https://github.com/iblai/os/commit/9fcc62de583fdaa46335d81841317ca52dd85e56))
+* **e2e:** wait for the transcript, not the mic label, in voice-to-text ([0ba202a](https://github.com/iblai/os/commit/0ba202a9a5b4fd3648ad6fa17329c0b795c8f7fe))
+
 ## [0.206.2](https://github.com/iblai/os/compare/v0.206.1...v0.206.2) (2026-11-23)
 
 ### Bug Fixes
