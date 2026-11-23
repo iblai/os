@@ -97,9 +97,9 @@ export function PromptsTab({
   // sandbox is off or not yet wired to a Claw instance.
   //
   // We additionally detect a fully-wired "claw sandbox" mentor (enable_claw on
-  // AND a Claw instance connected). For these, the System and Study prompts
-  // don't apply — the agent's behavior is driven by the sandbox agent config —
-  // so those two sections are hidden. The data-layer normalises 404 → null.
+  // AND a Claw instance connected). For these, the System prompt doesn't
+  // apply — the agent's behavior is driven by the sandbox agent config — so
+  // that section is hidden. The data-layer normalises 404 → null.
   const { data: clawMentorConfig } = useGetClawMentorConfigQuery(
     { org: tenantKey!, mentorUniqueId: mentorUuid! },
     { skip: !isClawEnabled || !tenantKey || !mentorUuid },
@@ -456,79 +456,6 @@ export function PromptsTab({
               )}
             </WithFormPermissions>
 
-            {/* Study Prompt — hidden for connected claw-sandbox mentors,
-                where behavior is driven by the sandbox agent config instead. */}
-            {!isClawSandboxMentor && (
-              <WithFormPermissions
-                name="study_mode_prompt"
-                // @ts-expect-error - permissions.field property may not exist on mentorSettings type
-                permissions={mentorSettings?.permissions?.field}
-              >
-                {({ disabled }) => (
-                  <div className="overflow-hidden rounded-lg bg-gray-50">
-                    <div className="flex items-center justify-between border-b border-gray-200 p-4">
-                      <div className="flex items-center gap-2">
-                        <h3 className="text-sm font-medium text-gray-900">
-                          {t('studyPromptTitle')}
-                        </h3>
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger
-                              aria-label={t('studyPromptInfoAriaLabel')}
-                            >
-                              <Info className="h-4 w-4 text-gray-400" />
-                            </TooltipTrigger>
-                            <TooltipContent className="ibl-tooltip-content">
-                              <p>{t('studyPromptTooltip')}</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-2 p-4">
-                      <div className="mt-1 flex-shrink-0">📚</div>
-                      <div className="flex h-[180px] flex-1 flex-col">
-                        <div
-                          className="mb-4 flex-grow overflow-y-auto"
-                          tabIndex={0}
-                          role="region"
-                          aria-label={t('studyPromptContentAriaLabel')}
-                        >
-                          <Markdown className="text-sm text-gray-700">
-                            {parsePrompt(
-                              mentorSettings?.study_mode_prompt ?? '',
-                            )}
-                          </Markdown>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex w-full gap-2 px-4 pb-4">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-8 flex-1 py-5"
-                        disabled={disabled}
-                        onClick={() =>
-                          setSelectedPrompt({
-                            label: t('studyPromptLabel'),
-                            isSystem: true,
-                            name: 'study_mode_prompt',
-                            prompt: mentorSettings?.study_mode_prompt ?? '',
-                          })
-                        }
-                      >
-                        <Edit className="mr-2 h-4 w-4" />
-                        {t('editButton')}
-                      </Button>
-                      <CopyButton
-                        text={mentorSettings?.study_mode_prompt ?? ''}
-                      />
-                    </div>
-                  </div>
-                )}
-              </WithFormPermissions>
-            )}
-
             {/* Guided Prompt */}
             <WithFormPermissions
               name="enable_guided_prompts"
@@ -777,8 +704,8 @@ export function PromptsTab({
 
           {/* Agent Configuration only applies to a fully-wired claw-sandbox
            * mentor (enable_claw on AND a Claw instance connected). For those,
-           * behavior is driven by this section instead of the System/Study
-           * prompts; otherwise it isn't shown at all. */}
+           * behavior is driven by this section instead of the System prompt;
+           * otherwise it isn't shown at all. */}
           {isClawSandboxMentor && tenantKey && activeMentorId && (
             <div className="mt-8">
               <div className="mb-4 flex items-center gap-2">
