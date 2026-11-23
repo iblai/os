@@ -56,7 +56,7 @@ describe('an organization that cannot run the agent at all', () => {
     expect(screen.queryByText(/manages/i)).toBeNull();
     expect(screen.queryByText(/opening this panel/i)).toBeNull();
     expect(
-      screen.getByRole('link', { name: 'Ask us to turn it on' }),
+      screen.getByRole('link', { name: 'support@ibl.ai' }),
     ).toHaveAttribute('href', 'mailto:support@ibl.ai');
   });
 
@@ -82,8 +82,21 @@ describe('an organization that cannot run the agent at all', () => {
     render(<BrowserAgentUnsupported />);
 
     expect(
-      screen.getByRole('link', { name: 'Ask us to turn it on' }),
+      screen.getByRole('link', { name: 'support@ibl.ai' }),
     ).toHaveAttribute('href', 'mailto:support@ibl.ai');
+  });
+
+  // In the panel this screen is the whole window, so a `mailto:` followed in
+  // place replaced it with the browser's broken-page icon and stranded the
+  // person there. The address is also spelled out, because a side panel may
+  // open no mail client at all and a dead link would be the only way out.
+  it('opens the mail client away from the panel, and shows the address', () => {
+    render(<BrowserAgentUnsupported />);
+
+    const link = screen.getByRole('link', { name: 'support@ibl.ai' });
+    expect(link).toHaveAttribute('target', '_blank');
+    expect(link).toHaveAttribute('rel', expect.stringContaining('noopener'));
+    expect(screen.getByText(/Ask us to turn it on/)).toBeInTheDocument();
   });
 
   it('says "this organization" when it has no name to use', () => {

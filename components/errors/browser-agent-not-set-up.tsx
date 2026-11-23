@@ -50,12 +50,20 @@ export function BrowserAgentNotSetUp() {
         >
           Change Organization
         </Button>
-        <a
-          href={`mailto:${supportEmail}`}
-          className="text-xs text-gray-500 underline hover:text-gray-700"
-        >
-          Ask someone to set it up
-        </a>
+        {/* Same reason as the sibling screen: in the side panel a `mailto:`
+            followed in place replaces the whole window with the browser's
+            broken-page icon, with no way back. */}
+        <p className="text-xs text-gray-500">
+          Ask someone to set it up:{' '}
+          <a
+            href={`mailto:${supportEmail}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline hover:text-gray-700"
+          >
+            {supportEmail}
+          </a>
+        </p>
       </div>
     </div>
   );

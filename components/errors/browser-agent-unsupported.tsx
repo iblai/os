@@ -53,12 +53,22 @@ export function BrowserAgentUnsupported() {
         >
           Change Organization
         </Button>
-        <a
-          href={`mailto:${supportEmail}`}
-          className="text-xs text-gray-500 underline hover:text-gray-700"
-        >
-          Ask us to turn it on
-        </a>
+        {/* The address is spelled out, and the link opens away from here on
+            purpose. In the side panel this screen IS the whole window: a
+            `mailto:` followed in place replaced it with the browser's broken
+            -page icon and left no way back. Where no mail client opens at
+            all, the address is still there to be read and copied. */}
+        <p className="text-xs text-gray-500">
+          Ask us to turn it on:{' '}
+          <a
+            href={`mailto:${supportEmail}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline hover:text-gray-700"
+          >
+            {supportEmail}
+          </a>
+        </p>
       </div>
     </div>
   );
