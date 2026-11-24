@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.208.0](https://github.com/iblai/os/compare/v0.207.3...v0.208.0) (2026-11-24)
+
+### Features
+
+* **panel:** name a tab switch in the review, not just in the skill ([b708968](https://github.com/iblai/os/commit/b708968389bdef14b2874f31b7cc62ee98fcb0ea))
+* **recorder:** let a recording follow the person across tabs ([184d788](https://github.com/iblai/os/commit/184d788a77e1b4b55656f58b090f559d7bfd0b89))
+
+### Tests
+
+* **recorder:** cover the seven lines the gate found bare ([754686c](https://github.com/iblai/os/commit/754686c896e4d357f9da5055fa00b18e418702a5))
+
 ## [0.207.3](https://github.com/iblai/os/compare/v0.207.2...v0.207.3) (2026-11-24)
 
 ### Bug Fixes
