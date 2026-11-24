@@ -1,14 +1,14 @@
 {
   "version": 2,
-  "lastUpdated": "2026-11-18",
+  "lastUpdated": "2026-11-24",
   "summary": {
-    "totalCheckpoints": 1182,
-    "coveredCheckpoints": 1101,
-    "deprecatedCheckpoints": 18,
-    "notReproducibleCheckpoints": 17,
-    "pendingCheckpoints": 46,
+    "totalCheckpoints": 1202,
+    "coveredCheckpoints": 1093,
+    "deprecatedCheckpoints": 27,
+    "notReproducibleCheckpoints": 16,
+    "pendingCheckpoints": 66,
     "percent": 100,
-    "totalJourneys": 114,
+    "totalJourneys": 115,
     "activeJourneys": 113
   },
   "journeys": [
@@ -394,7 +394,7 @@
         },
         {
           "id": "mgmt-04",
-          "description": "Admin sees the Tools tab render with at least one tool (light smoke check on the shared account mentor; real toggle-on/off + persistence + a11y coverage moved to journey 77's tools-01..05 on disposable per-test mentors, to avoid mutating tool_slugs on a mentor other tests/suites share)",
+          "description": "Admin sees the Agent Capabilities switches in Settings > Capabilities (light smoke check on the shared account mentor; real toggle-on/off + persistence coverage is journey 107 on a disposable agent, to avoid mutating the capability flags of a mentor other tests/suites share)",
           "status": "covered"
         },
         {
@@ -532,18 +532,22 @@
         },
         {
           "id": "uid-06",
-          "description": "Enhanced RAG toggle is visible with correct label and defaults to OFF",
+          "description": "Settings > Capabilities no longer shows the Enhanced Document Retrieval or Smart Document Retrieval rows (they moved to the Datasets and Voice tabs)",
           "status": "covered"
         },
         {
           "id": "uid-07",
           "description": "Enhanced RAG tooltip contains wording about multiple search queries",
-          "status": "covered"
+          "status": "deprecated",
+          "deprecatedIn": "#2838",
+          "deprecatedReason": "The row left Settings; Enhanced Document Retrieval is the Datasets tab card, covered by agc-11 (journey 107)"
         },
         {
           "id": "uid-08",
           "description": "Enhanced RAG toggle persists ON and OFF across save/reopen cycles",
-          "status": "covered"
+          "status": "deprecated",
+          "deprecatedIn": "#2838",
+          "deprecatedReason": "The row left Settings; Enhanced Document Retrieval is the Datasets tab card, covered by agc-11 (journey 107)"
         },
         {
           "id": "uid-09",
@@ -880,7 +884,7 @@
           "description": "Non-anonymous embed with voice call, voice record, and attachment renders",
           "status": "deprecated",
           "deprecatedIn": "#2476",
-          "deprecatedReason": "The Embed tab's Show Attachment / Show Voice Record / Show Voice Call toggles were removed entirely; those capabilities are now owned per-surface by Settings -> Capabilities (see the new 'Surface Capabilities' matrix)."
+          "deprecatedReason": "The Embed tab's Show Attachment / Show Voice Record / Show Voice Call toggles were removed entirely; each is now set per surface elsewhere: File Attachments in Settings -> Capabilities (File Uploads group), voice calls and dictation on the Voice tab."
         },
         {
           "id": "emb-02",
@@ -1833,7 +1837,7 @@
       "checkpoints": [
         {
           "id": "mcp-01",
-          "description": "Admin opens the Edit Agent modal's MCP tab (Integrations) and finds its \"MCP\" heading, the sentence \"Outside services your agent can use in chats. Turn each one on or off for this agent.\", Add Connector, and the connector list: the Featured / Directory sub-tabs (tablist \"Connectors\", mcp-tab-featured / mcp-tab-custom) when the organization features any connector, otherwise the single \"Connectors\" list",
+          "description": "Admin, on a fresh agent, opens the Edit Agent modal's MCP tab (Integrations) and finds its \"MCP\" heading and the sentence \"Outside services your agent can use in chats. Turn each one on or off for this agent.\"; with the MCP header switch turned on (the list is inert while it is off), Add Connector and the connector list: the Featured / Directory sub-tabs (tablist \"Connectors\", mcp-tab-featured / mcp-tab-custom) when the organization features any connector, otherwise the single \"Connectors\" list",
           "status": "covered"
         },
         {
@@ -1843,12 +1847,12 @@
         },
         {
           "id": "mcp-03",
-          "description": "Admin, on a fresh agent, adds a connector through \"Add MCP Connector\" (Connector Name, Connector Server, Connect): the toast \"{name} connector added successfully\" shows, the form closes, and the card shows the connector already on for the agent (\"{name} enabled\"), with the agent's settings listing it in mcp_servers beside the mcp tool",
+          "description": "Admin, on a fresh agent, adds a connector through \"Add MCP Connector\" (Connector Name, Connector Server, Connect): the toast \"{name} connector added successfully\" shows, the form closes, and the card shows the connector already on for the agent (\"{name} enabled\"), with the agent's settings listing it in mcp_servers beside the mcp tool (the MCP header switch is turned on first, since the list is inert while it is off)",
           "status": "covered"
         },
         {
           "id": "mcp-04",
-          "description": "Admin, on a fresh agent whose one connector is off, turns the card switch on (PUT settings carrying the id and the mcp tool, toast \"{name} is on for this agent\", switch named \"{name} enabled\") and off again (toast \"{name} is off for this agent\", \"{name} disabled\"); the agent's settings then hold the connector and the mcp tool after the first, and neither after the second, since it was the last one",
+          "description": "Admin, on a fresh agent whose one connector is off, turns the card switch on (the MCP header switch is turned on first; PUT settings carrying the id, toast \"{name} is on for this agent\", switch named \"{name} enabled\") and off again (toast \"{name} is off for this agent\", \"{name} disabled\"); the agent's settings hold the connector after the first and not after the second; the mcp tool, owned by the MCP header switch (turned on first), stays after the second",
           "status": "covered"
         },
         {
@@ -1974,7 +1978,10 @@
       "id": "user-invitations-and-default-mentor",
       "name": "User Invitations & Default Mentor",
       "spec": "27-user-invitations-and-default-mentor.spec.ts",
-      "sourceFiles": ["components/modals/settings-modal.tsx"],
+      "sourceFiles": [
+        "components/modals/settings-modal.tsx",
+        "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx"
+      ],
       "checkpoints": [
         {
           "id": "inv-01",
@@ -2000,6 +2007,18 @@
           "id": "inv-05",
           "description": "Newly invited user lands on the configured default mentor",
           "status": "covered"
+        },
+        {
+          "id": "inv-06",
+          "description": "Invites in the sidebar opens the settings dialog on its own Invites tab, below Management in the menu: the Organization settings dialog opens with Invites current in its menu, directly below Management, the content shows the Invites heading, the email field and Send Invite with no Invite Users title of its own, and the small Invite Users dialog does not open on top",
+          "status": "pending",
+          "note": "Fails until the app moves to the @iblai/iblai-js release that adds the Invites tab to the Organization settings menu (PlatformAccountSheet tab 'invites'); flip to covered once journey 27 runs green."
+        },
+        {
+          "id": "inv-07",
+          "description": "Organization settings lists Onboarding as its own tab below Invites, and Management has no Onboarding tab: the menu reads Management, Invites, Onboarding in that order, opening Onboarding shows the Onboarding heading and the agent search box, and Management keeps Applications with no Onboarding tab beside it",
+          "status": "pending",
+          "note": "Fails until the app moves to the @iblai/iblai-js release that moves Onboarding out of Management into its own tab of the Organization settings menu (PlatformAccountSheet tab 'onboarding'); flip to covered once journey 27 runs green."
         }
       ]
     },
@@ -2124,8 +2143,9 @@
         },
         {
           "id": "a11y-04",
-          "description": "Invite Users modal meets accessibility guidelines",
-          "status": "covered"
+          "description": "Invites screen meets accessibility guidelines: Invites in the sidebar opens the Organization settings dialog on its own Invites tab, and the dialog (menu, Invites heading, invite form and list) has no violations",
+          "status": "pending",
+          "note": "Fails until the app moves to the @iblai/iblai-js release that adds the Invites tab to the Organization settings menu (PlatformAccountSheet tab 'invites'); flip to covered once journey 29 runs green."
         },
         {
           "id": "a11y-05",
@@ -2159,7 +2179,7 @@
         },
         {
           "id": "a11y-12",
-          "description": "Tools dialog is accessible",
+          "description": "Agent Capabilities (Settings > Capabilities) dialog is accessible",
           "status": "covered"
         },
         {
@@ -3135,7 +3155,7 @@
         },
         {
           "id": "ac-02",
-          "description": "Access control heading and description render correctly",
+          "description": "Access Control heading and description render correctly",
           "status": "covered"
         },
         {
@@ -3150,12 +3170,12 @@
         },
         {
           "id": "ac-05",
-          "description": "Create role access dialog opens with role selector and can be cancelled",
+          "description": "Create Role Access dialog opens with role selector and can be cancelled",
           "status": "covered"
         },
         {
           "id": "ac-06",
-          "description": "Pencil edit button opens Manage <Role> access dialog with RoleAccessPanel",
+          "description": "Pencil edit button opens Manage <Role> Access dialog with RoleAccessPanel",
           "status": "covered"
         },
         {
@@ -3170,7 +3190,7 @@
         },
         {
           "id": "ac-09",
-          "description": "Error state Try again button is present when the error banner renders",
+          "description": "Error state Try Again button is present when the error banner renders",
           "status": "covered"
         },
         {
@@ -3321,7 +3341,7 @@
       "checkpoints": [
         {
           "id": "claw-01",
-          "description": "Admin opens the Sandbox tab and the three sandbox-kind switches (Computing Runtime / Virtual Machine Shell / Claw) are visible — the app-level CapabilityGate around SandboxConfig is gone; the SDK component (@iblai/iblai-js/web-containers) owns kind selection directly",
+          "description": "Admin opens the Sandbox tab and the three sandbox-kind switches (Calculator / Ephemeral Virtual Machine / Permanent Virtual Machine) are visible — the app-level CapabilityGate around SandboxConfig is gone; the SDK component (@iblai/iblai-js/web-containers) owns kind selection directly",
           "status": "covered"
         },
         {
@@ -3331,17 +3351,17 @@
         },
         {
           "id": "claw-03",
-          "description": "Selecting a sandbox kind auto-saves instantly (optimistic local state, no footer Save button); the three kinds are MUTUALLY EXCLUSIVE and AT LEAST ONE IS ALWAYS ACTIVE — \"Only one sandbox type can be enabled at a time\" — so selecting one kind turns off whichever kind was previously active (there is no \"disable\" operation), and selection never affects Sandbox tab visibility (unconditionally mounted for admins)",
+          "description": "Selecting a sandbox kind auto-saves instantly (optimistic local state, no footer Save button); the three kinds are MUTUALLY EXCLUSIVE and AT LEAST ONE IS ALWAYS ACTIVE — \"only one can be on at a time\" — so selecting one kind turns off whichever kind was previously active (there is no \"disable\" operation), and selection never affects Sandbox tab visibility (unconditionally mounted for admins)",
           "status": "covered"
         },
         {
           "id": "claw-04",
-          "description": "Selecting claw turns off whichever kind (computational-runtime or virtual-machine) was previously active in the same PATCH (mutual exclusivity); no kind switch ever gets a persistent disabled state — each is only briefly disabled while its own save is in flight; Integrations opens on Tools and Sandbox follows MCP",
+          "description": "Selecting claw turns off whichever kind (computational-runtime or virtual-machine) was previously active in the same PATCH (mutual exclusivity); no kind switch ever gets a persistent disabled state — each is only briefly disabled while its own save is in flight; Sandbox follows MCP",
           "status": "covered"
         },
         {
           "id": "claw-06",
-          "description": "Sandbox follows Tools and MCP in the Integrations category unconditionally (the sidebar is grouped into Setup / Policies / Integrations / Activity)",
+          "description": "Sandbox follows MCP in the Integrations category unconditionally (the sidebar is grouped into Setup / Policies / Integrations / Activity)",
           "status": "covered"
         },
         {
@@ -3420,7 +3440,7 @@
         },
         {
           "id": "pr-04",
-          "description": "A new agent shows the PII Filtering and PHI Filtering cards both off (aria-checked false, title Off, accessible names, summary \"Off.\"); opening an off card shows only its off hint",
+          "description": "A new agent shows the PII Filtering and PHI Filtering cards both off (aria-checked false, title Off, accessible names, summary saying the details reach the AI as typed); opening an off card shows only its off hint",
           "status": "covered"
         },
         {
@@ -3445,12 +3465,12 @@
         },
         {
           "id": "pr-09",
-          "description": "PII settings persist after closing and reopening the modal; turning the last kind off returns the card to \"Off.\"",
+          "description": "PII settings persist after closing and reopening the modal; turning the last kind off returns the card to its off summary",
           "status": "covered"
         },
         {
           "id": "pr-10",
-          "description": "PHI Filtering shows 12 entity chips, \"all 12 kinds\" when none selected, and a count (\"2 kinds selected\") plus Block action after configuring it",
+          "description": "PHI Filtering shows 12 entity chips, a summary of all health details when none selected, and a count (\"(2 kinds)\") plus the Block sentence after configuring it",
           "status": "covered"
         },
         {
@@ -3577,7 +3597,7 @@
         },
         {
           "id": "vo-03",
-          "description": "Voice and Voice call sub-tab pills are both visible",
+          "description": "The Voice, Calls and Dictation sub-tab pills are all visible",
           "status": "covered"
         },
         {
@@ -3607,23 +3627,59 @@
         },
         {
           "id": "vo-09",
-          "description": "Settings tab surfaces the smart-document-retrieval voice-call toggle (\"Enable screen sharing\" moved off Settings onto the Screen tab's own capability toggle — see journey 48)",
+          "description": "The Voice call sub-tab shows the Smart Document Retrieval switch (it moved off Settings > Capabilities into the call settings)",
           "status": "covered"
         },
         {
           "id": "vo-10",
-          "description": "Flipping the smart-document-retrieval voice-call toggle in Settings and clicking Save persists to the CallConfiguration endpoint and surfaces the success toast",
+          "description": "Flipping the Smart Document Retrieval switch in the Voice call settings and clicking that section's Save surfaces the \"Voice call settings saved\" toast",
           "status": "covered"
         },
         {
           "id": "VO-11",
-          "description": "Voice tab stays visible (always mounted — no longer gated on show_voice_call) and its content grays (capability-gate-content data-enabled=\"false\") when the in-tab \"Enable Voice Calls\" capability toggle is off",
+          "description": "Voice Calls In-App Chat switch turns off and on and saves on click; the call settings (capability-gate-content) grey out (data-enabled=\"false\") only when both the In-App Chat and Embed Widget switches are off",
           "status": "covered"
         },
         {
           "id": "VO-12",
-          "description": "Re-enabling the in-tab \"Enable Voice Calls\" capability toggle ungates the Voice tab's sub-tab content (data-enabled=\"true\")",
+          "description": "Turning either Voice Calls switch (In-App Chat or Embed Widget) back on ungates the call settings (data-enabled=\"true\")",
           "status": "covered"
+        },
+        {
+          "id": "VO-13",
+          "description": "Smart Document Retrieval is absent from Settings > Capabilities and its state persists in the Voice call settings after Save and reopen",
+          "status": "pending",
+          "note": "Needs the @iblai/iblai-js release that moves Smart Document Retrieval into the Voice call settings; flip to covered once journey 47 runs green on it."
+        },
+        {
+          "id": "VO-14",
+          "description": "The Voice sub-tab and the pills stay usable while Voice Calls is off for both surfaces",
+          "status": "pending",
+          "note": "Needs the @iblai/iblai-js release with the per-surface Voice Calls and Dictation switches; flip to covered once journey 47 runs green on it."
+        },
+        {
+          "id": "VO-15",
+          "description": "Dictation In-App Chat switch saves on click and keeps its state after a reload",
+          "status": "pending",
+          "note": "Needs the @iblai/iblai-js release with the per-surface Voice Calls and Dictation switches; flip to covered once journey 47 runs green on it."
+        },
+        {
+          "id": "VO-16",
+          "description": "Voice Calls Embed Widget switch saves on click and keeps its state after a reload, independently of the In-App Chat switch",
+          "status": "pending",
+          "note": "Needs the @iblai/iblai-js release with the per-surface Voice Calls and Dictation switches; flip to covered once journey 47 runs green on it."
+        },
+        {
+          "id": "VO-17",
+          "description": "Settings > Capabilities shows the File Attachments row and no voice rows",
+          "status": "pending",
+          "note": "Needs the @iblai/iblai-js release with the per-surface Voice Calls and Dictation switches; flip to covered once journey 47 runs green on it."
+        },
+        {
+          "id": "VO-18",
+          "description": "Voice tab shows the info box and the Voice, Calls and Dictation pills",
+          "status": "pending",
+          "note": "Needs the @iblai/iblai-js release with the per-surface Voice Calls and Dictation switches; flip to covered once journey 47 runs green on it."
         }
       ]
     },
@@ -4617,7 +4673,7 @@
         },
         {
           "id": "support-03",
-          "description": "The Support availability toggle is turned on and the setting persists across a reload (skips when the tenant tool catalog has no human-support tool)",
+          "description": "The Support availability toggle is turned on and the setting persists across a reload (skips when the switch is not shown, or is locked because the agent's model cannot use Human Support)",
           "status": "covered"
         },
         {
@@ -4652,7 +4708,7 @@
         },
         {
           "id": "support-10",
-          "description": "Phone view (375x812, touch) of an agent with no tickets: the Edit Agent dialog fills the viewport, the info sheet opens and closes, the Available to Users row shows, the status filter sheet lists its options, closes on the backdrop and applies a picked option, and the page never scrolls sideways",
+          "description": "Phone view (375x812, touch) of an agent with no tickets: the Edit Agent dialog fills the viewport, the info sheet opens and closes, the Human Support row shows, the status filter sheet lists its options, closes on the backdrop and applies a picked option, and the page never scrolls sideways",
           "status": "covered"
         }
       ]
@@ -4744,7 +4800,7 @@
         },
         {
           "id": "grd-03",
-          "description": "Gated content exposes the Grading Setup and Rubric sub-tabs — both consistently visible for the e2e admin — and switching between them renders the matching section (grader-setup-section / grader-criteria-section); the Results pill is checked separately in grd-04 since it's RBAC-gated (view_grade_results) and not granted to the e2e admin on the real tenant",
+          "description": "Grading Setup and Rubric sub-tabs stay usable while Grading is off — both consistently visible for the e2e admin — and switching between them renders the matching section (grader-setup-section / grader-criteria-section); the Results pill is checked separately in grd-04 since it's RBAC-gated (view_grade_results) and not granted to the e2e admin on the real tenant",
           "status": "covered"
         },
         {
@@ -4759,17 +4815,17 @@
         },
         {
           "id": "grd-06",
-          "description": "Admin enables the Grading capability toggle and the misconfigured warning settles on \"rubric is empty\" (attaching the tool auto-provisions the grader config, which the SDK refetches after the toggle, so \"not set up yet\" is only a transient flash); gracefully skips if the tenant's tool catalogue has no \"Grading\" tool to attach",
+          "description": "Admin saves the Grading setup and adds a rubric criterion, then enables the Grading capability toggle and sees no misconfigured warning; gracefully skips if the agent's model cannot grade",
           "status": "covered"
         },
         {
           "id": "grd-07",
-          "description": "Admin fills in and saves the Grading setup form (instructions required for Save to enable; a PATCH since the config was auto-provisioned on attach); the \"rubric is empty\" misconfigured warning stays until a criterion exists",
+          "description": "Admin saves the Grading setup form; the Grading switch stays locked with \"Add at least one rubric criterion first, then turn Grading on.\" until a criterion exists",
           "status": "covered"
         },
         {
           "id": "grd-08",
-          "description": "Admin adds a rubric criterion via the Add-criterion modal (name, criteria, points) — it appears in the criteria list, the misconfigured warning clears, and the running total reflects its points",
+          "description": "Admin adds a rubric criterion via the Add-criterion modal (name, criteria, points) — it appears in the criteria list, the running total reflects its points, and the Grading switch can then be turned on with no warning",
           "status": "covered"
         },
         {
@@ -5204,7 +5260,7 @@
       "checkpoints": [
         {
           "id": "vmc-01",
-          "description": "Admin selects the Virtual Machine Shell sandbox kind on a dedicated mentor (mutually exclusive with the other kinds, at least one always active — see Journey 44) enables the composer’s Canvas tool (idempotently — the artifact pipeline is inert without it, and some envs default it off) and asks the agent, over a real live-LLM chat turn, to create and share a plain-text file (hello.txt with a known marker line — chosen over pdf/xlsx so the VM produces it reliably with shell tooling, no libraries to install); the agent's reply carries the file as an artifact and the chat chip (CanvasMessagePreview, data-testid=\"canvas-message-preview\") appears with its Open Canvas action",
+          "description": "Admin selects the Ephemeral Virtual Machine sandbox kind on a dedicated mentor (mutually exclusive with the other kinds, at least one always active — see Journey 44) enables the composer’s Canvas tool (idempotently — the artifact pipeline is inert without it, and some envs default it off) and asks the agent, over a real live-LLM chat turn, to create and share a plain-text file (hello.txt with a known marker line — chosen over pdf/xlsx so the VM produces it reliably with shell tooling, no libraries to install); the agent's reply carries the file as an artifact and the chat chip (CanvasMessagePreview, data-testid=\"canvas-message-preview\") appears with its Open Canvas action",
           "status": "covered"
         },
         {
@@ -5674,41 +5730,58 @@
       "name": "Mentor Tools Tab",
       "spec": "77-mentor-tools-tab.spec.ts",
       "sourceFiles": ["components/modals/edit-mentor-modal/tabs/tools-tab.tsx"],
+      "status": "deprecated",
+      "deprecatedIn": "#2838",
+      "deprecatedReason": "Tools tab removed; each tool is now a capability switch (journey 107). Spec file is a stub.",
       "checkpoints": [
         {
           "id": "tools-01",
           "description": "Admin opens the Tools tab and sees the header, description, and the tools-info-box copy",
-          "status": "covered"
+          "status": "deprecated",
+          "deprecatedIn": "#2838",
+          "deprecatedReason": "Tools tab removed in #2838"
         },
         {
           "id": "tools-02",
           "description": "Admin toggles a tool on (aria-checked + success toast) and it persists across a close + full page reload + reopen; toggling it back off persists the same way; skips gracefully on an empty tenant tool catalogue",
-          "status": "covered"
+          "status": "deprecated",
+          "deprecatedIn": "#2838",
+          "deprecatedReason": "Tools tab removed in #2838"
         },
         {
           "id": "tools-03",
           "description": "A tool's info icon exposes \"More info about {name}\" and its tooltip shows the description on both hover and keyboard focus",
-          "status": "covered"
+          "status": "deprecated",
+          "deprecatedIn": "#2838",
+          "deprecatedReason": "Tools tab removed in #2838; the behaviour lives on in the capability rows, covered by agc-09 (journey 107)"
         },
         {
           "id": "tools-04",
           "description": "A tool switch's accessible name flips between \"{name} disabled\" and \"{name} enabled\" as it is toggled",
-          "status": "covered"
+          "status": "deprecated",
+          "deprecatedIn": "#2838",
+          "deprecatedReason": "Tools tab removed in #2838; the behaviour lives on in the capability rows, covered by agc-09 (journey 107)"
         },
         {
           "id": "tools-05",
           "description": "Non-admin does not see the Tools tab in the Edit Mentor modal (dropdown has no Settings item; falls back to a direct tab-absence check)",
-          "status": "covered"
+          "status": "deprecated",
+          "deprecatedIn": "#2838",
+          "deprecatedReason": "Tools tab removed in #2838"
         },
         {
           "id": "tools-06",
           "description": "Read-only mentor_tools field permission (WithFormPermissions) disables every tool switch; not reproducible in this environment — NEXT_PUBLIC_ENABLE_RBAC is unset (defaults false) and no fixture seeds a permissions.field.mentor_tools write:false response",
-          "status": "not-reproducible"
+          "status": "deprecated",
+          "deprecatedIn": "#2838",
+          "deprecatedReason": "Tools tab removed in #2838"
         },
         {
           "id": "tools-07",
           "description": "Tools tab copy renders correctly in a non-English locale (e.g. es); not reproducible — no journey in this repo has an established, reliable mechanism to switch the live app locale and assert on translated text",
-          "status": "not-reproducible"
+          "status": "deprecated",
+          "deprecatedIn": "#2838",
+          "deprecatedReason": "Tools tab removed in #2838"
         }
       ]
     },
@@ -5810,7 +5883,7 @@
         },
         {
           "id": "vmn-07",
-          "description": "With the Virtual Machine Shell kind selected on a dedicated agent, the Sandbox tab renders the Network Access section: the billing notice ($1 per 10 minutes by default, prorated per second) and a labelled \"Egress Profile\" radio group with the four labelled options (No Network / Package Registries / Public Internet / Custom Allowlist); an agent set to No Network through the API shows it selected, with the policy picker hidden and Save disabled",
+          "description": "With the Ephemeral Virtual Machine kind selected on a dedicated agent, the Sandbox tab renders the Network Access section: the billing notice ($1 per 10 minutes by default, prorated per second) and a labelled \"Egress Profile\" radio group with the four labelled options (No Network / Package Registries / Public Internet / Custom Allowlist); an agent set to No Network through the API shows it selected, with the policy picker hidden and Save disabled",
           "status": "covered"
         },
         {
@@ -6035,7 +6108,7 @@
         },
         {
           "id": "cr-05",
-          "description": "Toggling tools from the \"+\" menu's Tools submenu renders them as chips, with 4+ active tools collapsing the overflow into a \"+N\" button that opens an active list (\"Clear all\" included)",
+          "description": "Toggling tools from the \"+\" menu's Tools submenu renders each as a chip, and one click on a chip turns that tool off",
           "status": "covered"
         },
         {
@@ -6093,6 +6166,11 @@
           "description": "Below 520px the composer's tool pills keep one line: Canvas off shows only its icon (its name kept as the accessible name), Canvas on alone shows its name and its \"Turn off Canvas\" x; from 520px up the name shows on or off",
           "status": "pending",
           "note": "Written as test.fixme and never run: needs an authenticated session (PLAYWRIGHT_USERNAME / PLAYWRIGHT_PASSWORD), which no env it has run in had. The pinned SDK (web-containers 1.48.0) has the tool row it tests; the SDK measures the row rather than the window, so its 390px step still needs checking on the first run. The two-pills-on case needs the desktop app's Code or Cowork pill; covered meanwhile by the SDK's composer-tool-row and chat-input-form 'tool pills on phone widths' Vitest cases and the OS coding-mode-button 'in the SDK composer's tool row' cases"
+        },
+        {
+          "id": "cr-18",
+          "description": "With four or more active tools the composer keeps two chips and collapses the rest into a \"+N\" button that opens the active list (\"Clear all\" included); unit-covered in the SDK's composer-tool-chips.test.tsx; not e2e-reproducible since #2838: the overflow needs four active tools and the agent's capability switches turn on at most three composer tools (Web Search, Code, Image); the Google tools open a sign-in popup instead",
+          "status": "not-reproducible"
         }
       ]
     },
@@ -6315,22 +6393,22 @@
         },
         {
           "id": "wss-02",
-          "description": "The Number of guided prompts control shows only when Guided prompts is picked; Suggested hides it and Off also empties the preview's prompts",
+          "description": "The Number of Guided Prompts control shows only when Guided Prompts is picked; Suggested hides it and Off also empties the preview's prompts",
           "status": "covered"
         },
         {
           "id": "wss-03",
-          "description": "Picking 10 guided prompts shows the first 4 plus View more (6); View more expands to all 10 and Show less folds back to 4",
+          "description": "Picking 10 guided prompts shows the first 4 plus View More (6); View More expands to all 10 and Show Less folds back to 4",
           "status": "covered"
         },
         {
           "id": "wss-04",
-          "description": "The Embed and Mobile previews show the prompts as stacked full-width rows, with the same View more expansion",
+          "description": "The Embed and Mobile previews show the prompts as stacked full-width rows, with the same View More expansion",
           "status": "covered"
         },
         {
           "id": "wss-05",
-          "description": "Picking Personal greeting switches the preview heading to a time-of-day greeting, and Preview as a logged-out visitor shows Hi there",
+          "description": "Picking Personal Greeting switches the preview heading to a time-of-day greeting, and Preview as a Logged-Out Visitor shows Hi there",
           "status": "covered"
         },
         {
@@ -6340,12 +6418,12 @@
         },
         {
           "id": "wss-07",
-          "description": "On a throw-away agent, Save sends welcome_heading_style=personal_greeting, Settings reopens on Personal greeting, and the new-chat heading greets the signed-in user by first name (\"Good morning|afternoon|evening, <First name>\")",
+          "description": "On a throw-away agent, Save sends welcome_heading_style=personal_greeting, Settings reopens on Personal Greeting, and the new-chat heading greets the signed-in user by first name (\"Good morning|afternoon|evening, <First name>\")",
           "status": "covered"
         },
         {
           "id": "wss-08",
-          "description": "The embed view of an agent with Personal greeting shows the same first-name greeting as its new-chat heading",
+          "description": "The embed view of an agent with Personal Greeting shows the same first-name greeting as its new-chat heading",
           "status": "covered"
         },
         {
@@ -6355,32 +6433,32 @@
         },
         {
           "id": "wss-10",
-          "description": "Every Welcome screen control changes the preview: heading Personal greeting then back to the agent name, guided count 1/3/4/5/10 shows min(count,4) chips with a \"View more (count-4)\" button only above 4, Off removes every chip and Guided brings 4 back",
+          "description": "Every Welcome screen control changes the preview: heading Personal Greeting then back to the agent name, guided count 1/3/4/5/10 shows min(count,4) chips with a \"View More (count-4)\" button only above 4, Off removes every chip and Guided brings 4 back",
           "status": "covered"
         },
         {
           "id": "wss-11",
-          "description": "On a throw-away agent, Save sends guided_prompts_count=3 with Agent name + Guided prompts; after a reload the three controls still show them and the preview has 3 chips (needs the #2626 SDK rebuild)",
+          "description": "On a throw-away agent, Save sends guided_prompts_count=3 with Agent Name + Guided Prompts; after a reload the three controls still show them and the preview has 3 chips (needs the #2626 SDK rebuild)",
           "status": "covered"
         },
         {
           "id": "wss-12",
-          "description": "With Agent name + 3 guided prompts saved, both the admin's and a student's new chat show the agent name (no greeting) and at most 3 prompt chips (needs the #2626 SDK rebuild)",
+          "description": "With Agent Name + 3 guided prompts saved, both the admin's and a student's new chat show the agent name (no greeting) and at most 3 prompt chips (needs the #2626 SDK rebuild)",
           "status": "covered"
         },
         {
           "id": "wss-13",
-          "description": "Admin saves Personal greeting + Off: both persist after a reload, then the new chat greets by first name, shows no prompt chips and fires no guided-prompts request (needs the #2626 SDK rebuild)",
+          "description": "Admin saves Personal Greeting + Off: both persist after a reload, then the new chat greets by first name, shows no prompt chips and fires no guided-prompts request (needs the #2626 SDK rebuild)",
           "status": "covered"
         },
         {
           "id": "wss-14",
-          "description": "A student opening the same agent sees the admin's Personal greeting with the student's own first name and no prompt chips (needs the #2626 SDK rebuild)",
+          "description": "A student opening the same agent sees the admin's Personal Greeting with the student's own first name and no prompt chips (needs the #2626 SDK rebuild)",
           "status": "covered"
         },
         {
           "id": "wss-15",
-          "description": "Admin saves Suggested prompts (yours) with Agent name: both persist after a reload and the guided-prompt count select is hidden (needs the #2626 SDK rebuild)",
+          "description": "Admin saves Suggested Prompts (Yours) with Agent Name: both persist after a reload and the guided-prompt count select is hidden (needs the #2626 SDK rebuild)",
           "status": "covered"
         }
       ]
@@ -6953,7 +7031,7 @@
       "checkpoints": [
         {
           "id": "avs-01",
-          "description": "Picking Admins Only on an All Members agent shows the \"only admins\" help line, and Save opens the \"Limit this agent to administrators?\" confirmation instead of saving",
+          "description": "Picking Admins Only on an All Members agent shows the \"only admins\" help line, and Save opens the \"Limit this Agent to Administrators?\" confirmation instead of saving",
           "status": "covered"
         },
         {
@@ -7165,7 +7243,7 @@
         },
         {
           "id": "dac-03",
-          "description": "Narrowing a publicly listed agent to Admins Only opens the \"Limit this agent to administrators?\" confirmation, and Cancel saves nothing",
+          "description": "Narrowing a publicly listed agent to Admins Only opens the \"Limit this Agent to Administrators?\" confirmation, and Cancel saves nothing",
           "status": "covered"
         },
         {
@@ -7338,7 +7416,7 @@
         },
         {
           "id": "caw-02",
-          "description": "Issue #2853: an agent created by the wizard is Admins Only: Edit Agent > Settings > Discovery shows Admins Only and the List in Public Catalog, Allow Chat Without Signing In and Highlight In Featured Listings switches are off",
+          "description": "Issue #2853: an agent created by the wizard is Admins Only: Edit Agent > Settings > Discovery shows Admins Only and the List in Public Catalog, Allow Chat Without Signing In and Highlight in Featured Listings switches are off",
           "status": "covered"
         },
         {
@@ -7388,6 +7466,88 @@
           "id": "rdp-03",
           "description": "Issue #2855: a YouTube source's preview shows an iframe on youtube-nocookie.com/embed/<id> with referrerpolicy strict-origin-when-cross-origin and no Open Page link",
           "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "agent-capabilities",
+      "name": "Agent Capabilities",
+      "spec": "107-agent-capabilities.spec.ts",
+      "sourceFiles": [
+        "components/modals/edit-mentor-modal/index.tsx",
+        "components/modals/edit-mentor-modal/tabs/datasets-tab/agent-datasets-tab.tsx",
+        "components/modals/edit-mentor-modal/tabs/grader-tab.tsx",
+        "components/modals/edit-mentor-modal/tabs/human-support-tab.tsx",
+        "components/modals/edit-mentor-modal/tabs/mcp-tab/index.tsx",
+        "components/modals/edit-mentor-modal/tabs/screenshare-tab.tsx",
+        "hooks/use-mentor-segments.ts"
+      ],
+      "checkpoints": [
+        {
+          "id": "agc-01",
+          "description": "Issue #2838: a new agent's Edit Agent dialog has no Tools tab, in Setup or in Integrations",
+          "status": "pending",
+          "note": "Needs the @iblai/iblai-js release with the capability switches; flip to covered once journey 107 runs green on it."
+        },
+        {
+          "id": "agc-02",
+          "description": "Issue #2838: Settings > Capabilities opens on an Agent Capabilities block that is one flat list of five switches (Web Search, Image Generation, Video Generation, Code Interpreter, Plan, in that order) with no group headings and no Enhanced Document Retrieval",
+          "status": "pending",
+          "note": "Needs the @iblai/iblai-js release with the capability switches; flip to covered once journey 107 runs green on it."
+        },
+        {
+          "id": "agc-03",
+          "description": "Issue #2838: turning Web Search on saves capability_web_search true in the settings PUT with a Web Search turned on toast; the state survives a reload; turning it off saves false and also survives a reload",
+          "status": "pending",
+          "note": "Needs the @iblai/iblai-js release with the capability switches; flip to covered once journey 107 runs green on it."
+        },
+        {
+          "id": "agc-04",
+          "description": "Issue #2838: Plan turns on and off from the same block, each saving capability_subagents",
+          "status": "pending",
+          "note": "Needs the @iblai/iblai-js release with the capability switches; flip to covered once journey 107 runs green on it."
+        },
+        {
+          "id": "agc-05",
+          "description": "Issue #2838: the Grader tab's Lesson Completion row saves capability_lesson_completion while Grading is off, and the Grading switch saves capability_grading; both survive a reload",
+          "status": "pending",
+          "note": "Needs the @iblai/iblai-js release with the capability switches; flip to covered once journey 107 runs green on it."
+        },
+        {
+          "id": "agc-06",
+          "description": "Issue #2838: the Support tab switch saves capability_human_support and survives a reload",
+          "status": "pending",
+          "note": "Needs the @iblai/iblai-js release with the capability switches; flip to covered once journey 107 runs green on it."
+        },
+        {
+          "id": "agc-07",
+          "description": "Issue #2838: the Screen tab switch saves capability_screen_share and survives a reload",
+          "status": "pending",
+          "note": "Needs the @iblai/iblai-js release with the capability switches; flip to covered once journey 107 runs green on it."
+        },
+        {
+          "id": "agc-08",
+          "description": "Issue #2838 (regression): an old link that opens Edit Agent on the removed Tools tab (?modal=[{name: edit_mentor, tab: tools}]) lands on the Settings tab, active with its panel shown, instead of a blank panel",
+          "status": "pending",
+          "note": "Not run yet; flip to covered once journey 107 runs green."
+        },
+        {
+          "id": "agc-09",
+          "description": "Issue #2838: a capability row's \"More info about {name}\" button shows its tooltip on hover (Web Search) and on keyboard focus (Plan), and the switch's accessible name is the capability label (\"Web Search\"); replaces tools-03 and tools-04 of the removed Tools tab",
+          "status": "pending",
+          "note": "Needs the @iblai/iblai-js release with the capability switches; flip to covered once journey 107 runs green on it."
+        },
+        {
+          "id": "agc-10",
+          "description": "Issue #2838: the MCP tab's header switch (mcp-capability-toggle, named \"MCP\") is off on a new agent with the connector list greyed (capability-gate-content data-enabled false); turning it on saves tool_slugs containing mcp with the toast \"MCP turned on\" and the list becomes usable; turning it off saves without mcp (\"MCP turned off\") and greys the list again",
+          "status": "pending",
+          "note": "Needs the @iblai/iblai-js release with the MCP header switch; flip to covered once journey 107 runs green on it."
+        },
+        {
+          "id": "agc-11",
+          "description": "Issue #2838: the Datasets tab shows an Enhanced Document Retrieval switch in a box under the info box and above the search row, named \"Enhanced Document Retrieval\"; turning it on saves capability_advanced_document_search and enable_multi_query_rag true in the same request with the toast \"Enhanced Document Retrieval turned on\", turning it off saves both false",
+          "status": "pending",
+          "note": "Needs the @iblai/iblai-js release with the capability switches; flip to covered once journey 107 runs green on it."
         }
       ]
     }

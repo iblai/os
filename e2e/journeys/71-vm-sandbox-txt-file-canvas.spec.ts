@@ -3,7 +3,7 @@
  *
  * End-to-end, LIVE-LLM coverage of the VM-sandbox file-sharing pipeline that
  * journey 44 (CLAW Advanced Sandbox) exercises only at the settings-toggle
- * level: select the "Virtual Machine Shell" sandbox kind on a mentor, ask
+ * level: select the "Ephemeral Virtual Machine" sandbox kind on a mentor, ask
  * the agent (over a real chat turn) to create and share a plain-text file,
  * and verify the agent replies with the file — the artifact chip appears in
  * chat and the canvas shows the file's content.
@@ -73,7 +73,7 @@ test.describe('Journey 71: VM Sandbox File Artifact — Canvas Preview', () => {
     const { mentorId } = await getPlatformContext(page);
     tracker.add(mentorId);
 
-    // Select the Virtual Machine Shell sandbox kind. `selectKind` delegates
+    // Select the Ephemeral Virtual Machine sandbox kind. `selectKind` delegates
     // to the page object's local toggle — the three kinds are mutually
     // exclusive and at least one is always active, so selecting VM
     // atomically deactivates whichever kind the fresh mentor defaulted to;
@@ -101,7 +101,7 @@ test.describe('Journey 71: VM Sandbox File Artifact — Canvas Preview', () => {
     const sandboxRecheck = new SandboxTab(page, editMentorPage.dialog);
     expect(
       await sandboxRecheck.isKindEnabled('virtual-machine'),
-      'Virtual Machine Shell did not persist server-side: the backend accepted the settings save but kept/restored a different sandbox kind — check that this deployment supports the sandbox-kind fields (enable_virtual_machine) on the mentor-settings endpoint',
+      'Ephemeral Virtual Machine did not persist server-side: the backend accepted the settings save but kept/restored a different sandbox kind — check that this deployment supports the sandbox-kind fields (enable_virtual_machine) on the mentor-settings endpoint',
     ).toBe(true);
     await editMentorPage.close();
   });

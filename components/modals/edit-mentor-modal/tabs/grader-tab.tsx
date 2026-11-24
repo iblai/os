@@ -60,6 +60,7 @@ export function GraderTab() {
       title: t('capabilityTitle'),
       description: t('capabilityDescription'),
       offHint: t('capabilityOffHint'),
+      needsCriterion: t('capabilityNeedsCriterion'),
     },
     subTabs: {
       setup: t('subTabSetup'),

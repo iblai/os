@@ -113,29 +113,34 @@ import {
  * ── Capability toggle ──────────────────────────────────────────────────────
  * The "Grading" master switch (`grader-capability-toggle`) lives inline at
  * the top of the tab via the shared `CapabilityGate` component, exactly like
- * Voice / Screen / Memory / Privacy / LTI. It attaches/detaches the
- * tenant's "Grading" TOOL on the mentor (`editMentor({ tool_slugs,
- * can_use_tools })`) rather than flipping a plain boolean settings field.
+ * Voice / Screen / Memory / Privacy / LTI. It saves the `capability_grading`
+ * flag on the agent's settings (one PUT per click, no Save button).
  * `setGradingEnabled` is optimistic (per its own doc: "the switch itself
  * flips optimistically and would roll back on failure") and additionally
  * waits for the SUCCESS toast before considering the toggle settled — so a
- * failed attach (see below) will make it time out rather than return
+ * refused save (see below) will make it time out rather than return
  * `false`.
  *
- * IMPORTANT — tenant catalogue dependency: turning the toggle ON only
- * succeeds if the tenant's tool catalogue actually contains a tool named
- * "Grading". If it doesn't, the SDK shows the `toggleError` toast
- * ("Couldn't update grading" — NOT exported on `GRADER_LABELS.toasts`,
- * which only carries `toggleOn`/`toggleOff`; hardcoded here against the
- * compiled bundle's `graderTabLabels.toasts.toggleError`, re-confirmed
- * unchanged in the RBAC-aware rebuild) and the switch never flips.
- * `tryEnableGrading` races both toasts directly instead of calling
- * `setGradingEnabled` for the ON direction, so a missing tool fails fast
+ * IMPORTANT — model dependency: when the agent's model cannot grade, the
+ * switch is locked (disabled) up front and the gate shows a
+ * `capability-gate-reason` line under its banner; `tryEnableGrading` then
+ * returns `false` without clicking. The fallback is for when the app cannot
+ * tell in advance (the agent's tool list is unreadable): the click goes
+ * through, the platform refuses the save, the switch reverts and the gate
+ * shows an inline `capability-gate-error` line (no toast).
+ * `tryEnableGrading` races the success toast against that line instead of
+ * calling `setGradingEnabled` for the ON direction, so a refusal fails fast
  * (surfaced as `false`) instead of burning `setGradingEnabled`'s full
  * timeout waiting on a success toast that will never come. The OFF
- * direction never depends on the catalogue, so it delegates straight to
+ * direction never refuses, so it delegates straight to
  * `setGradingEnabled` — a failure there is a genuine bug, not an
  * environment gap, and should throw.
+ *
+ * ── Lesson Completion row ──────────────────────────────────────────────────
+ * A second switch (`capability-toggle-lesson-completion`) sits in a box above
+ * the gated content, so it stays usable while Grading is off. It saves
+ * `capability_lesson_completion` on the click and toasts
+ * "Lesson Completion turned on" / "Lesson Completion turned off".
  *
  * Turning the capability OFF never touches the grader config/rubric — there
  * is no DELETE for either, so both survive a disable/re-enable cycle (see
@@ -153,8 +158,7 @@ export class GraderTab {
    * `@iblai/web-containers` bundle's `graderTabLabels` object) — pinned here
    * only because a couple of checkpoints want to assert on it specifically.
    * Prefer `GRADER_LABELS` wherever it has the string. Re-verified against
-   * the RBAC-aware rebuild: the header description and `toggleError` toast
-   * are byte-for-byte unchanged; the two warning strings picked up minor
+   * the RBAC-aware rebuild: the header description is byte-for-byte unchanged; the two warning strings picked up minor
    * wording tweaks ("...in Grading setup to finish." / "...in the Rubric
    * tab.") but the regexes below still match either wording. The Results
    * empty-state strings are new in this rebuild — also confirmed against
@@ -164,9 +168,6 @@ export class GraderTab {
     header: {
       description:
         'Set up how your agent grades work against a rubric you define.',
-    },
-    toasts: {
-      toggleError: "Couldn't update grading",
     },
     warnings: {
       // `noConfig` is only a transient flash on a fresh mentor: attaching
@@ -195,6 +196,11 @@ export class GraderTab {
   readonly capabilityContent: Locator;
   /** Hint shown next to the description while the capability is off — same gap as above. */
   readonly capabilityOffHint: Locator;
+  /** Inline line the gate shows under its banner after a refused Grading save. */
+  readonly capabilityError: Locator;
+  /** Lesson Completion row and its switch (rendered above the gated content). */
+  readonly lessonCompletionRow: Locator;
+  readonly lessonCompletionToggle: Locator;
   /** Spinner shown while mentor settings are still loading — no dedicated helper export. */
   readonly loadingSpinner: Locator;
   /** Friendly denied empty state (server 403 on config `read`, denied `read_grader_config`, or every view action denied at once) — no dedicated helper export. */
@@ -223,6 +229,13 @@ export class GraderTab {
     );
     this.capabilityOffHint = dialog.locator(
       '[data-testid="capability-gate-off-hint"]:visible',
+    );
+    this.capabilityError = dialog.getByTestId('capability-gate-error');
+    this.lessonCompletionRow = dialog.getByTestId(
+      'capability-row-lesson-completion',
+    );
+    this.lessonCompletionToggle = dialog.getByTestId(
+      'capability-toggle-lesson-completion',
     );
     this.loadingSpinner = dialog.getByTestId('grader-tab-loading');
     this.deniedState = dialog.getByTestId('grader-tab-denied');
@@ -324,10 +337,11 @@ export class GraderTab {
   }
 
   /**
-   * Attempts to turn Grading ON, tolerating a tenant whose tool catalogue
-   * has no "Grading" tool to attach. Returns `true` once the toggle and its
-   * gated-content wrapper confirm the ON state, `false` if the `toggleError`
-   * toast fired instead. Races the success/error toasts directly (rather
+   * Attempts to turn Grading ON, tolerating an agent whose model cannot
+   * grade. Returns `true` once the toggle and its gated-content wrapper
+   * confirm the ON state, `false` if the switch is locked with the gate's
+   * reason line or the gate's inline error showed instead.
+   * Races the success toast against that error line directly (rather
    * than calling the SDK's `setGradingEnabled`, which only waits on the
    * success toast and would otherwise burn its full timeout before this
    * could report failure) — see class doc.
@@ -338,6 +352,13 @@ export class GraderTab {
     await expect(toggle).toBeVisible({ timeout: 10_000 });
 
     if (await isGradingEnabled(this.page)) return true;
+
+    if (
+      (await toggle.isDisabled()) &&
+      (await body.getByTestId('capability-gate-reason').isVisible())
+    ) {
+      return false;
+    }
 
     await expect(toggle).toBeEnabled({ timeout: 10_000 });
     // Enabling refetches the config and rubric right after the settings PUT;
@@ -354,9 +375,7 @@ export class GraderTab {
     const successToast = this.page
       .getByText(GRADER_LABELS.toasts.toggleOn)
       .first();
-    const errorToast = this.page
-      .getByText(GraderTab.UNEXPORTED_LABELS.toasts.toggleError)
-      .first();
+    const errorLine = body.getByTestId('capability-gate-error');
 
     // Both waits are raced below, but Promise.race never cancels the loser —
     // it keeps polling in the background until ITS OWN 15s timeout elapses,
@@ -373,7 +392,7 @@ export class GraderTab {
     const successWait = successToast
       .waitFor({ state: 'visible', timeout: 15_000 })
       .then(() => 'ok' as const);
-    const errorWait = errorToast
+    const errorWait = errorLine
       .waitFor({ state: 'visible', timeout: 15_000 })
       .then(() => 'error' as const);
     successWait.catch(() => {});
@@ -395,6 +414,69 @@ export class GraderTab {
     );
     await refetched.catch(() => {});
     return true;
+  }
+
+  /** Saves the grading setup and adds one rubric criterion, which the Grading switch needs before it can be turned on. */
+  async prepareRubric(): Promise<void> {
+    await this.saveConfig({
+      instructions: 'E2E: grade for clarity and correctness.',
+    });
+    await this.addCriterion({
+      name: 'Clarity',
+      criteria: 'The argument is easy to follow.',
+      points: 10,
+    });
+  }
+
+  /** The Grading switch is locked and the gate says a rubric criterion comes first. */
+  async expectEnableLockedUntilCriterion(): Promise<void> {
+    const body = graderTabBody(this.page);
+    await expect(body.getByTestId('grader-capability-toggle')).toBeDisabled({
+      timeout: 10_000,
+    });
+    await expect(body.getByTestId('capability-gate-reason')).toContainText(
+      'Add at least one rubric criterion first',
+      { timeout: 10_000 },
+    );
+  }
+
+  /** Whether the Lesson Completion switch is currently on. */
+  async isLessonCompletionEnabled(): Promise<boolean> {
+    await expect(this.lessonCompletionToggle).toBeVisible({ timeout: 10_000 });
+    return (
+      (await this.lessonCompletionToggle.getAttribute('aria-checked')) ===
+      'true'
+    );
+  }
+
+  /**
+   * Sets the Lesson Completion switch and waits for the save: the settings
+   * PUT that carries `capability_lesson_completion` and the toast. Returns the
+   * PUT body, or null when the switch already had the target state.
+   */
+  async setLessonCompletionEnabled(target: boolean): Promise<string | null> {
+    if ((await this.isLessonCompletionEnabled()) === target) return null;
+    await expect(this.lessonCompletionToggle).toBeEnabled({ timeout: 10_000 });
+    const [request] = await Promise.all([
+      this.page.waitForRequest(
+        (req) =>
+          ['PUT', 'PATCH'].includes(req.method()) &&
+          (req.postData() ?? '').includes('capability_lesson_completion'),
+        { timeout: 30_000 },
+      ),
+      this.lessonCompletionToggle.click(),
+    ]);
+    await expect(
+      this.page
+        .getByText(`Lesson Completion turned ${target ? 'on' : 'off'}`)
+        .first(),
+    ).toBeVisible({ timeout: 15_000 });
+    await expect(this.lessonCompletionToggle).toHaveAttribute(
+      'aria-checked',
+      String(target),
+      { timeout: 10_000 },
+    );
+    return request.postData() ?? '';
   }
 
   /** Assert whether the CapabilityGate off-state hint is currently shown. */

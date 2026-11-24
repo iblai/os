@@ -1960,10 +1960,32 @@ describe('AppSidebar — Projects infinite scroll', () => {
 });
 
 describe('AppSidebar — Footer actions', () => {
-  it('clicking Invites opens the invite-user modal', () => {
+  it('clicking Invites opens the SDK account sheet on the invites tab, not the standalone invite dialog', async () => {
     renderSidebar();
     fireEvent.click(screen.getAllByRole('button', { name: 'Invites' })[0]);
-    expect(openInviteUserModalMock).toHaveBeenCalled();
+    expect(
+      await screen.findByRole('dialog', { name: 'Organization settings' }),
+    ).toHaveAttribute('data-tab', 'invites');
+    expect(openInviteUserModalMock).not.toHaveBeenCalled();
+  });
+
+  it('clicking Invites opens the account sheet on the invites tab for a non-admin who may invite and only watches groups (RBAC enabled)', async () => {
+    mockIsAdmin = false;
+    mockUserIsStudent = true;
+    mockEnableRBAC = true;
+    mockCurrentTenant = {
+      key: 'tenant-a',
+      is_admin: false,
+      is_advertising: false,
+    };
+    mockCheckRbacPermission = (_perms, resource) =>
+      resource.includes('can_invite') || resource === '/watchedgroups/#list';
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Invites' })[0]);
+    expect(
+      await screen.findByRole('dialog', { name: 'Organization settings' }),
+    ).toHaveAttribute('data-tab', 'invites');
+    expect(openInviteUserModalMock).not.toHaveBeenCalled();
   });
 
   it('clicking Notifications triggers the notifications nav', () => {
@@ -2318,6 +2340,24 @@ describe('AppSidebar — non-admin trial-gated full admin menu (main OR advertis
     expect(executeWithTrialCheckMock).toHaveBeenCalled();
     expect(redirectToAuthSpaJoinTenantMock).not.toHaveBeenCalled();
   });
+
+  it.each(['Invites', 'Management'])(
+    'sends a trial-gated %s click to the upgrade path and opens neither the account sheet nor the invite dialog',
+    (label) => {
+      setupMainTenantNonAdmin();
+      // `null` is what the trial check returns when it shows the upgrade
+      // dialog instead of running the action; the cast is needed because the
+      // spy's type comes from its pass-through default.
+      executeWithTrialCheckMock.mockImplementation((() => null) as any);
+      renderSidebar();
+      fireEvent.click(screen.getAllByRole('button', { name: label })[0]);
+      expect(executeWithTrialCheckMock).toHaveBeenCalledTimes(1);
+      expect(
+        screen.queryByRole('dialog', { name: 'Organization settings' }),
+      ).not.toBeInTheDocument();
+      expect(openInviteUserModalMock).not.toHaveBeenCalled();
+    },
+  );
 
   it('prompts LOGIN (not the upgrade dialog) when an ANONYMOUS user clicks a trial-gated admin item', () => {
     // Mirrors the original AuthPopover affordance: the admin cluster is

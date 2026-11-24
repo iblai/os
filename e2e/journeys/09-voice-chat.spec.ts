@@ -117,20 +117,17 @@ test.describe('Journey 9: Voice Chat', () => {
       // journey 47's assertions. New mentors default voice ON, so there is
       // still something to toggle off. Mirrors vc-07 + journey 37.
       //
-      // The "Enable Voice Calls" master toggle now lives in-tab on the Voice
-      // tab itself (feat/2040 — moved off Settings → Capabilities) and
-      // auto-saves on click — no footer Save button involved.
+      // The call button follows the Voice Calls In-App Chat switch on the
+      // Voice tab, which saves on click.
       await createMentorPage.openAndCreate();
       const { mentorId } = await getPlatformContext(page);
       tracker.add(mentorId);
       await editMentorPage.open('Voice');
       await waitForPageReady(page);
 
-      // A freshly admin-created mentor always renders the Voice tab's
-      // capability toggle (it's unconditionally mounted — see the VoiceTab
-      // docstring), so this must be a hard assertion rather than a
-      // conditional skip: a test that silently returns here would pass
-      // without ever exercising the toggle it's meant to cover.
+      // Hard assertion rather than a conditional skip: a test that silently
+      // returns here would pass without exercising the switch it covers.
+      await editMentorPage.voice.switchToCallConfigSubTab();
       await expect(editMentorPage.voice.capabilityToggle).toBeVisible({
         timeout: 5_000,
       });
@@ -161,18 +158,13 @@ test.describe('Journey 9: Voice Chat', () => {
       // Isolate onto a fresh, dedicated mentor (see the sibling test above) so
       // this re-enable flow never touches the shared default mentor that
       // journey 47 asserts against in parallel.
-      //
-      // The "Enable Voice Calls" master toggle now lives in-tab on the Voice
-      // tab itself (feat/2040 — moved off Settings → Capabilities) and
-      // auto-saves on click.
       await createMentorPage.openAndCreate();
       const { mentorId } = await getPlatformContext(page);
       tracker.add(mentorId);
       await editMentorPage.open('Voice');
       await waitForPageReady(page);
 
-      // Same reasoning as the sibling test above: a freshly created mentor
-      // always shows this toggle, so assert instead of silently bailing.
+      await editMentorPage.voice.switchToCallConfigSubTab();
       await expect(editMentorPage.voice.capabilityToggle).toBeVisible({
         timeout: 5_000,
       });

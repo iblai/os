@@ -184,9 +184,9 @@ describe('RoleAccessPanel', () => {
   it('renders the panel with role information', () => {
     render(<RoleAccessPanel {...defaultProps} />);
 
-    expect(screen.getByText('Assigned users')).toBeInTheDocument();
-    // There's both a heading and a label with "Add users" text
-    expect(screen.getAllByText('Add users').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText('Assigned Users')).toBeInTheDocument();
+    // There's both a heading and a label with "Add Users" text
+    expect(screen.getAllByText('Add Users').length).toBeGreaterThanOrEqual(1);
   });
 
   it('displays assigned users', () => {
@@ -1099,10 +1099,10 @@ describe('RoleAccessPanel', () => {
       mockCheckRbacPermission.mockImplementation(() => false);
     });
 
-    // The manual input is labelled "Add by" (htmlFor="manual-user-input"),
+    // The manual input is labelled "Add By" (htmlFor="manual-user-input"),
     // stable across both email and username input types.
     const getManualInput = () => screen.getByLabelText(/add by/i);
-    // Submit button text is an ICU plural: "Add" (0), "Add 1 user", "Add N users".
+    // Submit button text is an ICU plural: "Add" (0), "Add 1 User", "Add N Users".
     const getSubmitButton = () =>
       screen.getByRole('button', { name: /^add( \d+ users?| 1 user)?$/i });
 
@@ -1267,7 +1267,7 @@ describe('RoleAccessPanel', () => {
     it('shows the empty state when no groups are assigned', () => {
       render(<RoleAccessPanel {...defaultProps} />);
 
-      expect(screen.getByText('Assigned groups')).toBeInTheDocument();
+      expect(screen.getByText('Assigned Groups')).toBeInTheDocument();
       expect(
         screen.getByText('No groups have this role yet.'),
       ).toBeInTheDocument();
@@ -1465,7 +1465,7 @@ describe('RoleAccessPanel', () => {
     /**
      * The panel derives two independent flags from the permission tree:
      * `/users/#list` picks the directory-search variant of the add block over
-     * the manual "Add by" variant, and `/groups/#list` mounts the entire
+     * the manual "Add By" variant, and `/groups/#list` mounts the entire
      * groups section. They render *different DOM*, so each read-only assertion
      * has to be proven in every combination.
      */
@@ -1488,17 +1488,17 @@ describe('RoleAccessPanel', () => {
       // so an extra un-gated chip cannot slip through.
       expect(removeButtons()).toHaveLength(0);
       // directory-search variant of the add-users block
-      expect(screen.queryByLabelText('Add users')).not.toBeInTheDocument();
-      expect(screen.queryByText('Add users')).not.toBeInTheDocument();
+      expect(screen.queryByLabelText('Add Users')).not.toBeInTheDocument();
+      expect(screen.queryByText('Add Users')).not.toBeInTheDocument();
       expect(
         screen.queryByPlaceholderText('Search by name, username, or email'),
       ).not.toBeInTheDocument();
       expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
       expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
-      // manual-entry variant: the "Add by" Select, its input, the "+" stage
-      // button and the "Add"/"Add N users" submit
-      expect(screen.queryByText('Add by')).not.toBeInTheDocument();
-      expect(screen.queryByLabelText('Add by')).not.toBeInTheDocument();
+      // manual-entry variant: the "Add By" Select, its input, the "+" stage
+      // button and the "Add"/"Add N Users" submit
+      expect(screen.queryByText('Add By')).not.toBeInTheDocument();
+      expect(screen.queryByLabelText('Add By')).not.toBeInTheDocument();
       expect(
         screen.queryByLabelText('Select input type'),
       ).not.toBeInTheDocument();
@@ -1513,8 +1513,8 @@ describe('RoleAccessPanel', () => {
         screen.queryByRole('button', { name: /^Add( \d+ users?| 1 user)?$/i }),
       ).not.toBeInTheDocument();
       // group add block
-      expect(screen.queryByText('Add groups')).not.toBeInTheDocument();
-      expect(screen.queryByLabelText('Add groups')).not.toBeInTheDocument();
+      expect(screen.queryByText('Add Groups')).not.toBeInTheDocument();
+      expect(screen.queryByLabelText('Add Groups')).not.toBeInTheDocument();
       expect(
         screen.queryByPlaceholderText('Search groups by name'),
       ).not.toBeInTheDocument();
@@ -1530,7 +1530,7 @@ describe('RoleAccessPanel', () => {
     }: {
       groups: boolean;
     }) => {
-      expect(screen.getByText('Assigned users')).toBeInTheDocument();
+      expect(screen.getByText('Assigned Users')).toBeInTheDocument();
       expect(
         screen.getByText('Remove users who should no longer have this role.'),
       ).toBeInTheDocument();
@@ -1538,11 +1538,11 @@ describe('RoleAccessPanel', () => {
       expect(screen.getByText('user2@example.com')).toBeInTheDocument();
 
       if (groups) {
-        expect(screen.getByText('Assigned groups')).toBeInTheDocument();
+        expect(screen.getByText('Assigned Groups')).toBeInTheDocument();
         expect(screen.getByText('Sales')).toBeInTheDocument();
         expect(screen.getByText('Support')).toBeInTheDocument();
       } else {
-        expect(screen.queryByText('Assigned groups')).not.toBeInTheDocument();
+        expect(screen.queryByText('Assigned Groups')).not.toBeInTheDocument();
       }
     };
 
@@ -1598,9 +1598,9 @@ describe('RoleAccessPanel', () => {
           expect(
             screen.getByPlaceholderText('Search by name, username, or email'),
           ).toBeInTheDocument();
-          expect(screen.getByLabelText('Add users')).toBeInTheDocument();
+          expect(screen.getByLabelText('Add Users')).toBeInTheDocument();
         } else {
-          expect(screen.getByLabelText('Add by')).toBeInTheDocument();
+          expect(screen.getByLabelText('Add By')).toBeInTheDocument();
           expect(
             screen.getByLabelText('Select input type'),
           ).toBeInTheDocument();
@@ -1618,7 +1618,7 @@ describe('RoleAccessPanel', () => {
         }
 
         if (groups) {
-          expect(screen.getByLabelText('Add groups')).toBeInTheDocument();
+          expect(screen.getByLabelText('Add Groups')).toBeInTheDocument();
           expect(
             screen.getByPlaceholderText('Search groups by name'),
           ).toBeInTheDocument();

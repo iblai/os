@@ -25,7 +25,7 @@ test.describe('Journey 40: Mentor Access Tab', () => {
     await editMentorPage.close();
   });
 
-  // AC-02: "Access control" heading and description render correctly
+  // AC-02: "Access Control" heading and description render correctly
   test('admin goes to access tab and sees the Access control heading and description', async ({
     editMentorPage,
   }) => {
@@ -106,7 +106,7 @@ test.describe('Journey 40: Mentor Access Tab', () => {
     await editMentorPage.close();
   });
 
-  // AC-05: "Create role access" dialog opens, shows role selector, and can be cancelled
+  // AC-05: "Create Role Access" dialog opens, shows role selector, and can be cancelled
   test('admin goes to access tab and opens the Create role access dialog then cancels', async ({
     page,
     editMentorPage,
@@ -154,7 +154,7 @@ test.describe('Journey 40: Mentor Access Tab', () => {
     await editMentorPage.close();
   });
 
-  // AC-06: Pencil edit button opens "Manage <Role> access" dialog with RoleAccessPanel
+  // AC-06: Pencil edit button opens "Manage <Role> Access" dialog with RoleAccessPanel
   test('admin goes to access tab and clicks the edit button on a policy row to open the manage dialog', async ({
     editMentorPage,
   }) => {
@@ -167,13 +167,13 @@ test.describe('Journey 40: Mentor Access Tab', () => {
 
     const manageDialog = await editMentorPage.access.clickEditButton(0);
 
-    // Dialog title matches "Manage <Role> access"
+    // Dialog title matches "Manage <Role> Access"
     const titleLocator = manageDialog.getByRole('heading', {
       name: /Manage .+ access/i,
     });
     await expect(titleLocator).toBeVisible({ timeout: 5_000 });
 
-    // RoleAccessPanel "Assigned users" section heading should be present
+    // RoleAccessPanel "Assigned Users" section heading should be present
     await expect(manageDialog.getByText(/Assigned users/i)).toBeVisible({
       timeout: 5_000,
     });
@@ -185,7 +185,7 @@ test.describe('Journey 40: Mentor Access Tab', () => {
     await editMentorPage.close();
   });
 
-  // AC-07: "Create role access" dialog — selecting a role enables the Create button
+  // AC-07: "Create Role Access" dialog — selecting a role enables the Create button
   test('admin goes to access tab, opens Create role access dialog, selects a role and verifies Create button becomes enabled', async ({
     page,
     editMentorPage,
@@ -294,7 +294,7 @@ test.describe('Journey 40: Mentor Access Tab', () => {
     await editMentorPage.close();
   });
 
-  // AC-09: Error state — "Try again" button is present when the error banner renders
+  // AC-09: Error state — "Try Again" button is present when the error banner renders
   // This test is intentionally resilient: if the error state never appears in the
   // fixture environment, it exits without failure. A real error path can be
   // validated with a mocked API layer in unit tests (see access-tab/__tests__/).

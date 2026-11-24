@@ -11,7 +11,6 @@ import {
   Brain,
   Terminal,
   Plug,
-  Wrench,
   Shield,
   Network,
   Clock,
@@ -81,13 +80,6 @@ const menuItems = [
     labelKey: 'prompts',
     label: 'Prompts',
     tab: MODALS.EDIT_MENTOR.tabs.prompts,
-    isAdmin: true,
-  },
-  {
-    icon: Wrench,
-    labelKey: 'tools',
-    label: 'Tools',
-    tab: MODALS.EDIT_MENTOR.tabs.tools,
     isAdmin: true,
   },
   {

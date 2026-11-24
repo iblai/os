@@ -1947,7 +1947,7 @@ describe('NavBar - Menu Filtering Logic (filterMentorSegments)', () => {
       expect(labels).toContain('Analytics');
       expect(labels).toContain('LLM');
       expect(labels).toContain('Prompts');
-      expect(labels).toContain('Tools');
+      expect(labels).not.toContain('Tools');
     });
   });
 

@@ -17,7 +17,7 @@ export type { SandboxKind };
  * component always renders a "Sandbox Type" card with three kind switches
  * (`sandbox-kind-computational-runtime`, `sandbox-kind-virtual-machine`,
  * `sandbox-kind-claw`). The three kinds are MUTUALLY EXCLUSIVE and AT LEAST
- * ONE IS ALWAYS ACTIVE — "Only one sandbox type can be enabled at a time"
+ * ONE IS ALWAYS ACTIVE — "only one can be on at a time"
  * per the card's own subheading: kinds change ONLY by selecting a different
  * kind, which atomically deactivates whichever kind was previously active in
  * the same PATCH. There is no "disable" operation — toggling the
@@ -265,11 +265,11 @@ export class SandboxTab {
   private kindLabel(kind: SandboxKind): string {
     switch (kind) {
       case 'computational-runtime':
-        return 'Computing Runtime';
+        return 'Calculator';
       case 'virtual-machine':
-        return 'Virtual Machine Shell';
+        return 'Ephemeral Virtual Machine';
       case 'claw':
-        return 'Claw';
+        return 'Permanent Virtual Machine';
     }
   }
 
@@ -498,7 +498,7 @@ export class SandboxTab {
   }
 
   /**
-   * Opens the per-row three-dot "Actions" dropdown menu (Run checks / Edit /
+   * Opens the per-row three-dot "Actions" dropdown menu (Run Checks / Edit /
    * Delete). Connect is no longer a menu item — it's a dedicated button next
    * to this trigger (see `getConnectButton` / `clickConnect`).
    */

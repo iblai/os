@@ -197,7 +197,6 @@ vi.mock('./llm-tab', () => ({
 vi.mock('./tabs', () => ({
   PromptsTab: () => <div data-testid="prompts-tab">Prompts Tab</div>,
   McpTab: () => <div data-testid="mcp-tab">MCP Tab</div>,
-  ToolsTab: () => <div data-testid="tools-tab">Tools Tab</div>,
   SafetyTab: () => <div data-testid="safety-tab">Safety Tab</div>,
   SpendCapsTab: () => <div data-testid="spend-caps-tab">Spend Caps Tab</div>,
   PrivacyTab: () => <div data-testid="privacy-tab">Privacy Tab</div>,
@@ -377,6 +376,19 @@ describe('EditMentorModal', () => {
       await waitFor(() =>
         expect(screen.getByTestId('settings-tab')).toBeInTheDocument(),
       );
+    });
+
+    it('opens settings for a tab that no longer exists', async () => {
+      mockGetEditMentorTab = 'tools';
+      renderM();
+      await waitFor(() =>
+        expect(screen.getByTestId('settings-tab')).toBeInTheDocument(),
+      );
+      expect(
+        document
+          .getElementById(`desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`)
+          ?.getAttribute('data-state'),
+      ).toBe('active');
     });
   });
 
@@ -730,7 +742,6 @@ describe('EditMentorModal', () => {
       { t: MODALS.EDIT_MENTOR.tabs.privacy, id: 'privacy-tab' },
       { t: MODALS.EDIT_MENTOR.tabs.tasks, id: 'tasks-tab' },
       { t: MODALS.EDIT_MENTOR.tabs.disclaimer, id: 'disclaimers-tab' },
-      { t: MODALS.EDIT_MENTOR.tabs.tools, id: 'tools-tab' },
       { t: MODALS.EDIT_MENTOR.tabs.mcp, id: 'mcp-tab' },
       { t: MODALS.EDIT_MENTOR.tabs.memory, id: 'memory-tab' },
       { t: MODALS.EDIT_MENTOR.tabs.history, id: 'history-tab' },
@@ -879,13 +890,12 @@ describe('EditMentorModal', () => {
           MODALS.EDIT_MENTOR.tabs.disclaimer,
         ],
       },
-      // Integrations (Tools moved here in feat/2040)
+      // Integrations
       {
         tabs: [
           MODALS.EDIT_MENTOR.tabs.mcp,
           MODALS.EDIT_MENTOR.tabs.api,
           MODALS.EDIT_MENTOR.tabs.embed,
-          MODALS.EDIT_MENTOR.tabs.tools,
         ],
       },
       // Activity

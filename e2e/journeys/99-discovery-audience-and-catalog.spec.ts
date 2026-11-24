@@ -236,7 +236,7 @@ test.describe.serial('Journey 99: Discovery audience and catalog', () => {
     await settings.setAudience('Admins Only');
     await settings.saveButton.click();
     await expect(settings.adminVisibilityConfirm).toContainText(
-      'Limit this agent to administrators?',
+      'Limit this Agent to Administrators?',
       { timeout: 10_000 },
     );
     await settings.cancelAdminVisibility();

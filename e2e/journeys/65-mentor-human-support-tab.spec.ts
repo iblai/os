@@ -45,11 +45,12 @@ import {
  * (alongside Tasks / Memory / History / Audit), so `editMentorPage.open('Support')`
  * activates that category before the segment mounts.
  *
- * AVAILABILITY GUARD: the info-box toggle that mirrors the human-support
- * tool's on/off state is HIDDEN when the tenant's tool catalog has no
- * human-support tool. `HumanSupportTab.hasToggle()` guards this — the
- * chat-driven lifecycle test skips (rather than fails) when the toggle never
- * renders, since the agent has no tool to call in that case.
+ * AVAILABILITY GUARD: the info-box toggle saves the agent's
+ * `capability_human_support` flag. It is HIDDEN when the platform does not
+ * return that flag, and rendered but LOCKED (disabled) when the agent's model
+ * cannot use Human Support. `HumanSupportTab.hasToggle()` and `isLocked()`
+ * guard both — the chat-driven lifecycle test skips (rather than fails) in
+ * either case, since the agent has no tool to call then.
  *
  * ── Isolation ────────────────────────────────────────────────────────────
  *
@@ -194,14 +195,15 @@ test.describe('Journey 65: Mentor Human Support Tab', () => {
     await editMentorPage.open('Support');
     await waitForPageReady(page);
 
-    // support-03: ensure the support tool is available and enabled. The
-    // toggle is hidden entirely when the tenant's tool catalog has no
-    // human-support tool — skip the chat-driven lifecycle rather than fail,
-    // since the agent has no tool to call in that case.
+    // support-03: ensure Human Support is available and on. The toggle is
+    // hidden entirely when the platform does not return the
+    // `capability_human_support` flag, and locked when the agent's model
+    // cannot use Human Support — skip the chat-driven lifecycle rather than
+    // fail, since the agent has nothing to call in either case.
     const hasToggle = await editMentorPage.humanSupport.hasToggle();
     test.skip(
-      !hasToggle,
-      'human-support tool not available in this tenant catalog — Support toggle not rendered',
+      !hasToggle || (await editMentorPage.humanSupport.isLocked()),
+      'Human Support is not available for this agent — Support toggle not rendered or locked',
     );
     await editMentorPage.humanSupport.setEnabled(true);
     await editMentorPage.close();
@@ -352,7 +354,7 @@ test.describe('Journey 65: Mentor Human Support Tab', () => {
   });
 
   // support-10: phone view (< 768px) of a ticket-less agent — full-screen
-  // dialog, info sheet, Available to Users row, status filter sheet.
+  // dialog, info sheet, Human Support row, status filter sheet.
   test.describe('phone view', () => {
     test('on a phone the Support tab shows the info sheet, the availability row and the status filter sheet', async ({
       page,

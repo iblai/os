@@ -8,8 +8,7 @@ import { Page, Locator, expect } from '@playwright/test';
  * `labels` override, so these are exactly what renders (see the
  * `messages/en.json` diff on this branch removing OS's now-dead
  * `apiTabApiKeyModal` / `apiTabCreateApiModal` / `apiTabDeleteApiModal` /
- * `tabsApiTab` override keys — same story as the Tools tab, tracked in the
- * `project_settings_tab_label_override` / Tools-tab agent memory notes).
+ * `tabsApiTab` override keys).
  */
 const LABELS = {
   header: {

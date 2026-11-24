@@ -723,18 +723,12 @@ test.describe('Journey 82: Embed Mode Redesign — Conversation & Controls', () 
       await createMentorPage.openAndCreate(
         generateMentorName().replace('E2E', 'E2E Embed ScreenShare'),
       );
-      // The composer's Screen Sharing button is gated by `useMentorTools`'s
-      // `screenSharingIsEnabled` (`@iblai/web-utils`), which checks the
-      // mentor's TOOLS list (slug "screen-share") — the same mechanism as
-      // Web Search/Deep Research/etc, toggled on the Tools tab. The
-      // separate "Screen" top-level tab's `enable_video` capability toggle
-      // (`CapabilityGate`) is unrelated to button visibility — it only
-      // governs the screen-sharing prompt cards on that tab; confirmed via
-      // a debug run that enabling ONLY that capability left the button
-      // absent, while enabling the Tools-tab switch made it appear.
-      await editMentorPage.open('Tools');
+      // The composer's Screen Sharing button follows the agent's Screen Share
+      // capability, which the Screen tab's header switch now saves
+      // (`capability_screen_share`).
+      await editMentorPage.open('Screen');
       await waitForPageReady(page);
-      await editMentorPage.tools.enableTool('Screen Sharing');
+      await editMentorPage.screenshare.setCapabilityEnabled(true);
       await editMentorPage.close();
     });
 

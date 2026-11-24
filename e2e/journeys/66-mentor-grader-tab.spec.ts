@@ -6,7 +6,6 @@ import {
 } from '../utils/auth';
 import { waitForPageReady } from '../utils/resilient';
 import { MentorTracker } from '../utils/mentor-cleanup';
-import { GraderTab } from '../page-objects/edit-mentor/grader.tab';
 
 /**
  * Journey 66 — Mentor Grader Tab.
@@ -65,28 +64,30 @@ import { GraderTab } from '../page-objects/edit-mentor/grader.tab';
  * ── Isolation strategy ─────────────────────────────────────────────────────
  * Unlike Privacy (journey 45), which safely shares the account's
  * most-recently-accessed mentor because its toggle only flips a plain
- * boolean field restored in `afterEach`, the Grading toggle here MUTATES THE
- * MENTOR'S ATTACHED TOOLS (`tool_slugs` / `can_use_tools` via
- * `editMentor`) — the same fields journey 06's "Admin can toggle tools
- * on/off" (mgmt-04) and the Tools tab exercise. Running this destructively
- * against the shared mentor would risk racing (or being raced by) any other
- * suite touching that mentor's tool list. Mirrors journey 47's Voice tab
+ * boolean field restored in `afterEach`, the Grading toggle here saves the
+ * `capability_grading` flag, which also changes the agent's attached tools —
+ * the same state journey 107's capability switches exercise. Running this
+ * destructively against the shared mentor would risk racing (or being raced
+ * by) any other suite touching that agent's capabilities. Mirrors journey 47's Voice tab
  * isolation exactly: the whole file runs serially in a single worker
  * (`test.describe.configure({ mode: 'serial' })`) AND every test gets its own
  * freshly-created, disposable mentor via `createMentorPage.openAndCreate()`
  * in `beforeEach`, tracked and deleted in `afterAll` via `MentorTracker`.
  *
- * ── Tenant tool-catalogue dependency ───────────────────────────────────────
- * Turning the Grading capability ON only succeeds if the tenant's tool
- * catalogue actually contains a tool named "Grading" — if it doesn't, the
- * SDK shows the `toggleError` toast ("Couldn't update grading") and the
- * switch never flips. Every checkpoint that needs the capability ON attempts
- * it via `GraderTab.tryEnableGrading()` (which races the success/error toasts
- * rather than calling the SDK's `setGradingEnabled`, which only waits on the
- * success toast) and `test.skip`s gracefully — never fails — when it comes
- * back `false`, since that signals an environment without the tool seeded
- * rather than an app bug. Disabling never depends on the catalogue, so it
- * uses the plain `setGradingEnabled(false)` delegate directly.
+ * ── Model dependency ───────────────────────────────────────────────────────
+ * The Grading capability cannot be turned ON when the agent's model cannot
+ * grade — the SDK locks the switch up front and shows the reason under it
+ * (`capability-gate-reason`). When the SDK cannot tell in advance, the click
+ * goes through, the platform refuses the save, the switch reverts and an
+ * inline error shows instead (`capability-gate-error`). Every checkpoint that
+ * needs the capability ON attempts it via `GraderTab.tryEnableGrading()`
+ * (which returns early on a locked switch and otherwise races the success
+ * toast against that inline error rather than calling the SDK's
+ * `setGradingEnabled`, which only waits on the success toast) and
+ * `test.skip`s gracefully — never fails — when it comes back `false`, since
+ * that signals an environment whose model cannot grade rather than an app
+ * bug. Disabling never depends on the model, so it uses the plain
+ * `setGradingEnabled(false)` delegate directly.
  */
 
 test.describe.configure({ mode: 'serial' });
@@ -150,15 +151,10 @@ test.describe('Journey 66: Mentor Grader Tab', () => {
   // though `read_grader_config`/`view_grader_criteria` are, so the Results
   // pill never renders for this account — see GRD-04, which checks for it
   // explicitly and skips gracefully rather than assuming it.
-  test('admin sees the Grading setup and Rubric sub-tabs and can switch between them', async ({
+  test('admin sees the Grading setup and Rubric sub-tabs while Grading is off and can switch between them', async ({
     editMentorPage,
   }) => {
     const { grader } = editMentorPage;
-    const enabled = await grader.tryEnableGrading();
-    test.skip(
-      !enabled,
-      'Tenant tool catalogue has no "Grading" tool to attach — the sub-tabs only render once Grading is on.',
-    );
 
     await expect(grader.subTabs).toBeVisible({ timeout: 10_000 });
     await expect(grader.setupSubTab).toBeVisible({ timeout: 5_000 });
@@ -193,11 +189,6 @@ test.describe('Journey 66: Mentor Grader Tab', () => {
     editMentorPage,
   }) => {
     const { grader } = editMentorPage;
-    const enabled = await grader.tryEnableGrading();
-    test.skip(
-      !enabled,
-      'Tenant tool catalogue has no "Grading" tool to attach — the Results sub-tab only renders once Grading is on.',
-    );
 
     const resultsVisible = await grader.isResultsSubTabVisible();
     test.skip(
@@ -237,14 +228,15 @@ test.describe('Journey 66: Mentor Grader Tab', () => {
   // trace caught exactly that flash: "not set up yet" at the toast, "rubric
   // is empty" ~1s later. `toContainText` retries, so it rides out the flash
   // and asserts the settled wording — do NOT assert `noConfig` here.
-  test('admin enables Grading and sees the "rubric is empty" warning (config is auto-provisioned on attach)', async ({
+  test('admin sets up grading and a rubric criterion, enables Grading, and sees no warning', async ({
     editMentorPage,
   }) => {
     const { grader } = editMentorPage;
+    await grader.prepareRubric();
     const enabled = await grader.tryEnableGrading();
     test.skip(
       !enabled,
-      'Tenant tool catalogue has no "Grading" tool to attach — cannot exercise the ON state in this environment.',
+      'The agent model cannot use Grading — cannot exercise the ON state in this environment.',
     );
 
     await expect(grader.capabilityContent).toHaveAttribute(
@@ -252,37 +244,25 @@ test.describe('Journey 66: Mentor Grader Tab', () => {
       'true',
       { timeout: 10_000 },
     );
-    await grader.expectMisconfiguredWarning(true);
-    await expect(grader.misconfiguredWarning).toContainText(
-      GraderTab.UNEXPORTED_LABELS.warnings.noCriteria,
-      { timeout: 10_000 },
-    );
+    await grader.expectMisconfiguredWarning(false);
 
     await editMentorPage.close();
   });
 
-  // GRD-07: Filling in and saving the Grading setup form (a PATCH, since the
-  // config row was auto-provisioned on attach — see GRD-06) succeeds and
-  // leaves the "no criteria" warning in place: the rubric is still empty,
-  // so saving instructions alone must not clear the banner.
-  test('admin saves the grading setup and the "no criteria" warning stays until a criterion exists', async ({
+  // GRD-07: Saving the Grading setup alone is not enough to turn Grading on:
+  // the switch stays locked with the "add a rubric criterion first" reason
+  // until the rubric has a criterion, and nothing is saved by clicking it.
+  test('admin saves the grading setup and the Grading switch stays locked until a rubric criterion exists', async ({
     editMentorPage,
   }) => {
     const { grader } = editMentorPage;
-    const enabled = await grader.tryEnableGrading();
-    test.skip(
-      !enabled,
-      'Tenant tool catalogue has no "Grading" tool to attach.',
-    );
 
     await grader.saveConfig({
       instructions: 'E2E: grade the submission for clarity and correctness.',
     });
 
-    await grader.expectMisconfiguredWarning(true);
-    await expect(grader.misconfiguredWarning).toContainText(
-      GraderTab.UNEXPORTED_LABELS.warnings.noCriteria,
-    );
+    await grader.expectEnableLockedUntilCriterion();
+    expect(await grader.isGradingEnabled()).toBe(false);
 
     await editMentorPage.close();
   });
@@ -291,15 +271,10 @@ test.describe('Journey 66: Mentor Grader Tab', () => {
   // Add-criterion modal) — it appears in the criteria list, the
   // misconfigured warning clears, and the running total reflects its
   // points.
-  test('admin adds a rubric criterion and the misconfigured warning clears', async ({
+  test('admin adds a rubric criterion, which unlocks the Grading switch', async ({
     editMentorPage,
   }) => {
     const { grader } = editMentorPage;
-    const enabled = await grader.tryEnableGrading();
-    test.skip(
-      !enabled,
-      'Tenant tool catalogue has no "Grading" tool to attach.',
-    );
 
     await grader.saveConfig({
       instructions: 'E2E: grade for clarity and correctness.',
@@ -310,8 +285,11 @@ test.describe('Journey 66: Mentor Grader Tab', () => {
       points: 10,
     });
 
-    await grader.expectMisconfiguredWarning(false);
     await grader.expectTotalPoints(10);
+
+    const enabled = await grader.tryEnableGrading();
+    test.skip(!enabled, 'The agent model cannot use Grading.');
+    await grader.expectMisconfiguredWarning(false);
 
     await editMentorPage.close();
   });
@@ -323,12 +301,6 @@ test.describe('Journey 66: Mentor Grader Tab', () => {
     editMentorPage,
   }) => {
     const { grader } = editMentorPage;
-    const enabled = await grader.tryEnableGrading();
-    test.skip(
-      !enabled,
-      'Tenant tool catalogue has no "Grading" tool to attach.',
-    );
-
     await grader.saveConfig({
       instructions: 'E2E: grade for clarity and correctness.',
     });
@@ -352,6 +324,9 @@ test.describe('Journey 66: Mentor Grader Tab', () => {
     });
     await grader.expectTotalPoints(15);
 
+    const enabled = await grader.tryEnableGrading();
+    test.skip(!enabled, 'The agent model cannot use Grading.');
+
     await editMentorPage.close();
   });
 
@@ -362,12 +337,6 @@ test.describe('Journey 66: Mentor Grader Tab', () => {
     editMentorPage,
   }) => {
     const { grader } = editMentorPage;
-    const enabled = await grader.tryEnableGrading();
-    test.skip(
-      !enabled,
-      'Tenant tool catalogue has no "Grading" tool to attach.',
-    );
-
     await grader.saveConfig({
       instructions: 'E2E: grade for clarity and correctness.',
     });
@@ -382,6 +351,9 @@ test.describe('Journey 66: Mentor Grader Tab', () => {
       points: 5,
     });
     expect(await grader.criterionCount()).toBe(2);
+
+    const enabled = await grader.tryEnableGrading();
+    test.skip(!enabled, 'The agent model cannot use Grading.');
 
     await grader.cancelDeleteCriterion('Accuracy');
     await expect(await grader.criterionRowByName('Accuracy')).toBeVisible({
@@ -401,12 +373,6 @@ test.describe('Journey 66: Mentor Grader Tab', () => {
     editMentorPage,
   }) => {
     const { grader } = editMentorPage;
-    const enabled = await grader.tryEnableGrading();
-    test.skip(
-      !enabled,
-      'Tenant tool catalogue has no "Grading" tool to attach.',
-    );
-
     await grader.saveConfig({
       instructions: 'E2E: grade for clarity and correctness.',
     });
@@ -416,6 +382,9 @@ test.describe('Journey 66: Mentor Grader Tab', () => {
       points: 10,
     });
     expect(await grader.criterionCount()).toBe(1);
+
+    const enabled = await grader.tryEnableGrading();
+    test.skip(!enabled, 'The agent model cannot use Grading.');
 
     await grader.expectLastCriterionDeleteDisabled('Clarity');
 
@@ -430,12 +399,6 @@ test.describe('Journey 66: Mentor Grader Tab', () => {
     editMentorPage,
   }) => {
     const { grader } = editMentorPage;
-    const enabled = await grader.tryEnableGrading();
-    test.skip(
-      !enabled,
-      'Tenant tool catalogue has no "Grading" tool to attach.',
-    );
-
     await grader.saveConfig({
       instructions: 'E2E: grade for clarity and correctness.',
     });
@@ -445,7 +408,10 @@ test.describe('Journey 66: Mentor Grader Tab', () => {
       points: 10,
     });
 
-    // Disabling never depends on the tool catalogue — a genuine bug here
+    const enabled = await grader.tryEnableGrading();
+    test.skip(!enabled, 'The agent model cannot use Grading.');
+
+    // Disabling never depends on the model — a genuine bug here
     // should fail the test, not be swallowed, so this uses the plain
     // delegate rather than a "try" wrapper.
     await grader.setGradingEnabled(false);

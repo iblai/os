@@ -235,7 +235,6 @@ vi.mock('../tabs', () => ({
   LLMTab: () => <div data-testid="llm-tab">LLM Tab</div>,
   PromptsTab: () => <div data-testid="prompts-tab">Prompts Tab</div>,
   McpTab: () => <div data-testid="mcp-tab">MCP Tab</div>,
-  ToolsTab: () => <div data-testid="tools-tab">Tools Tab</div>,
   SafetyTab: () => <div data-testid="safety-tab">Safety Tab</div>,
   SpendCapsTab: () => <div data-testid="spend-caps-tab">Spend Caps Tab</div>,
   PrivacyTab: () => <div data-testid="privacy-tab">Privacy Tab</div>,
@@ -619,7 +618,7 @@ describe('EditMentorModal', () => {
         makeSegment(MODALS.EDIT_MENTOR.tabs.mcp, {
           navCategory: 'integrations',
         }),
-        makeSegment(MODALS.EDIT_MENTOR.tabs.tools, {
+        makeSegment(MODALS.EDIT_MENTOR.tabs.api, {
           navCategory: 'integrations',
         }),
       ];
