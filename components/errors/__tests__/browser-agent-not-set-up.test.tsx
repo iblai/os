@@ -83,18 +83,27 @@ describe('the way out', () => {
     metadata = { support_email: 'admins@acme.com' };
     render(<BrowserAgentNotSetUp />);
 
-    expect(screen.getByRole('link', { name: /set it up/ })).toHaveAttribute(
-      'href',
-      'mailto:admins@acme.com',
-    );
+    expect(
+      screen.getByRole('link', { name: 'admins@acme.com' }),
+    ).toHaveAttribute('href', 'mailto:admins@acme.com');
   });
 
   it('falls back to ibl.ai support when it has none', () => {
     render(<BrowserAgentNotSetUp />);
 
-    expect(screen.getByRole('link', { name: /set it up/ })).toHaveAttribute(
-      'href',
-      'mailto:support@ibl.ai',
-    );
+    expect(
+      screen.getByRole('link', { name: 'support@ibl.ai' }),
+    ).toHaveAttribute('href', 'mailto:support@ibl.ai');
+  });
+
+  // The panel has nowhere to go back to: a `mailto:` followed in place
+  // replaced this screen with the browser's broken-page icon.
+  it('opens the mail client away from the panel, and shows the address', () => {
+    render(<BrowserAgentNotSetUp />);
+
+    const link = screen.getByRole('link', { name: 'support@ibl.ai' });
+    expect(link).toHaveAttribute('target', '_blank');
+    expect(link).toHaveAttribute('rel', expect.stringContaining('noopener'));
+    expect(screen.getByText(/Ask someone to set it up/)).toBeInTheDocument();
   });
 });

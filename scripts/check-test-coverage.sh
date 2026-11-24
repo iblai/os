@@ -30,6 +30,9 @@ SKIP_COVERAGE_FILES=(
   "explore/_components/search-section.tsx"
   "job-scout/page.tsx"
   "stripe/callback/[launch_id]/page.tsx"
+  # Under app/platform/**, which vitest.config.ts excludes from coverage
+  # wholesale, so it can only ever read 0% here however well it is tested.
+  "projects/[projectId]/[mentorId]/page.tsx"
   # Thin client wrapper around the SDK's <SsoLogin>; the small inline
   # resolveRedirectPath glue is exercised via the SSO/login E2E flow.
   "app/sso-login-complete/page.tsx"

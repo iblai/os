@@ -275,3 +275,24 @@ describe('what is left', () => {
     expect(numbers).toEqual(['1', '2']);
   });
 });
+
+describe('a step that moves between tabs', () => {
+  it('reads as a move, not a click', () => {
+    recording = panel({
+      steps: [
+        {
+          tool: 'switch-tab',
+          target: { role: 'tab', name: 'Sheets' },
+          url: 'https://sheets.com/',
+        },
+      ],
+    });
+    render(<SkillReview />);
+
+    // The tab is what the step acts on, so it stands where a control would:
+    // "Switch to" + the tab's name, never "Click the tab".
+    expect(screen.getByText('Switch to')).toBeInTheDocument();
+    expect(screen.getByText('Sheets')).toBeInTheDocument();
+    expect(screen.queryByText('Click')).toBeNull();
+  });
+});

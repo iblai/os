@@ -4,7 +4,7 @@
 import type { RecordedEvent } from './page-scripts';
 
 export interface RecordedStep {
-  tool: 'click' | 'type' | 'select' | 'navigate';
+  tool: 'click' | 'type' | 'select' | 'navigate' | 'switch-tab';
   target: { role: string; name: string };
   /**
    * What was typed, for the review screen to offer back. Held for the session
@@ -18,6 +18,13 @@ export interface RecordedStep {
   frameUrl?: string;
   /** Set when the element could not be named, so review can ask. */
   unnamed?: boolean;
+}
+
+/** A tab the recording is following, named for the step that moves to it. */
+export interface RecordedTab {
+  id: number;
+  title?: string;
+  url?: string;
 }
 
 /** How long after a click a navigation still counts as that click's doing. */
@@ -42,6 +49,28 @@ export class Recording {
   private kept: RecordedStep[] = [];
   private typing: RecordedStep | null = null;
   private lastClickAt = 0;
+  private current: number | null = null;
+
+  /**
+   * The person moved to another tab, so the recording follows.
+   *
+   * A step for it only when something was recorded on the tab they left:
+   * opening a tab and coming straight back is not a step anyone would write
+   * down, and a skill that says "switch tabs" twice for nothing is noise.
+   */
+  switchedTo(tab: RecordedTab, at: number): void {
+    if (this.current === tab.id) return;
+    this.flushTyping();
+    const first = this.current === null;
+    this.current = tab.id;
+    if (first || !this.kept.length) return;
+    this.kept.push({
+      tool: 'switch-tab',
+      target: { role: 'tab', name: tab.title || hostOf(tab.url ?? '') },
+      url: tab.url ?? '',
+    });
+    this.lastClickAt = at;
+  }
 
   add(event: RecordedEvent, at: number): void {
     if (event.kind === 'input' || event.kind === 'change') {
@@ -141,6 +170,10 @@ export function describeStep(step: RecordedStep): string {
     ? `${step.target.role} "${step.target.name}"`
     : step.target.role;
   switch (step.tool) {
+    case 'switch-tab':
+      return step.target.name
+        ? `Switch to the tab showing ${step.target.name}`
+        : 'Switch to the other tab';
     case 'navigate':
       return `Go to ${step.url}`;
     case 'type':

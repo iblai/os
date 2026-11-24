@@ -1,15 +1,15 @@
 {
   "version": 2,
-  "lastUpdated": "2026-11-18",
+  "lastUpdated": "2026-11-23",
   "summary": {
-    "totalCheckpoints": 1182,
-    "coveredCheckpoints": 1101,
+    "totalCheckpoints": 1200,
+    "coveredCheckpoints": 1119,
     "deprecatedCheckpoints": 18,
     "notReproducibleCheckpoints": 17,
     "pendingCheckpoints": 46,
     "percent": 100,
-    "totalJourneys": 114,
-    "activeJourneys": 113
+    "totalJourneys": 115,
+    "activeJourneys": 114
   },
   "journeys": [
     {
@@ -7407,6 +7407,89 @@
         {
           "id": "rdp-03",
           "description": "Issue #2855: a YouTube source's preview shows an iframe on youtube-nocookie.com/embed/<id> with referrerpolicy strict-origin-when-cross-origin and no Open Page link",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "master-agent",
+      "name": "Assistant",
+      "spec": "106-master-agent.spec.ts",
+      "sourceFiles": [
+        "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx",
+        "lib/constants.ts",
+        "app/platform/[tenantKey]/layout.tsx",
+        "app/platform/_components/app-layout.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "ma-01",
+          "description": "The header shows an Assistant button (aria-expanded false) once the organization has an agent to open",
+          "status": "covered"
+        },
+        {
+          "id": "ma-02",
+          "description": "Tapping the button opens the side panel (data-view side) docked beside the page content (next sibling of main, flush to the window's right edge, right under the nav bar, main ending where the panel starts) with the agent-ai embed on /platform/<tenant>/..., embed, show-close-button and allow-fullscreen true; the embed's Full screen and Close chat buttons load",
+          "status": "covered"
+        },
+        {
+          "id": "ma-03",
+          "description": "Full screen in the embed turns the panel into a popup (data-view popup) with the dimmed backdrop; Exit full screen returns to the side view and removes the backdrop",
+          "status": "covered"
+        },
+        {
+          "id": "ma-04",
+          "description": "Close chat in the embed hides the panel; tapping the header button shows it again in the side view with the embed frame present",
+          "status": "covered"
+        },
+        {
+          "id": "ma-05",
+          "description": "Tapping the header button while the panel is open hides it (aria-expanded false)",
+          "status": "covered"
+        },
+        {
+          "id": "ma-06",
+          "description": "Dragging the Resize Assistant separator 120px left widens the docked panel and narrows the page content by about 120px; the width is kept after closing and reopening",
+          "status": "covered"
+        },
+        {
+          "id": "ma-07",
+          "description": "On a new agent embedded on another website (the harness's <agent-ai> page, a different origin), a message gets a real reply; the chat is saved under session_id (no session_id:framed) and the conversation comes back after a reload",
+          "status": "covered"
+        },
+        {
+          "id": "ma-08",
+          "description": "With a new agent as the Default Agent, the page and the Assistant each get a real reply; the page keeps session_id and the Assistant session_id:framed after New chat, neither shows the other's message, and both conversations come back after a reload",
+          "status": "covered"
+        },
+        {
+          "id": "ma-09",
+          "description": "From Explore (the organization's and an agent's), the Assistant opens on the Default Agent and a message gets a real reply, without leaving the page",
+          "status": "covered"
+        },
+        {
+          "id": "ma-10",
+          "description": "From every organization Analytics tab (Overview, Users, Topics, Transcripts, Financial, Reports, Audit, Memory), the Assistant opens on the Default Agent and a message gets a real reply, without leaving the page",
+          "status": "covered"
+        },
+        {
+          "id": "ma-11",
+          "description": "From every Analytics tab of an agent (Overview, Users, Topics, Transcripts, Financial, Reports, Audit, Memory), the Assistant opens on the Default Agent and a message gets a real reply, without leaving the page",
+          "status": "covered"
+        },
+        {
+          "id": "ma-12",
+          "description": "From Notifications (the organization's and an agent's), the Assistant opens on the Default Agent and a message gets a real reply, without leaving the page",
+          "status": "covered"
+        },
+        {
+          "id": "ma-13",
+          "description": "From Projects, the Assistant opens on the Default Agent and a message gets a real reply, without leaving the page",
+          "status": "covered"
+        },
+        {
+          "id": "ma-14",
+          "description": "From Workflows, the Assistant opens on the Default Agent and a message gets a real reply, without leaving the page",
           "status": "covered"
         }
       ]
