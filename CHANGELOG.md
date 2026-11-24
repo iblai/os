@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.207.3](https://github.com/iblai/os/compare/v0.207.2...v0.207.3) (2026-11-24)
+
+### Bug Fixes
+
+* **panel:** stop the support link replacing the panel with a broken page ([d8f2fd8](https://github.com/iblai/os/commit/d8f2fd874be85a6247f92363e81f857b4d94e8c3))
+
+### Chores
+
+* **deps:** take @iblai/iblai-js 2.86.1 for the panel's support links ([a28b40e](https://github.com/iblai/os/commit/a28b40ec40a0211232dafbd57dc9b2b271d19a9a)), closes [iblai/iblai-web-frontend#2272](https://github.com/iblai/iblai-web-frontend/issues/2272)
+
 ## [0.207.2](https://github.com/iblai/os/compare/v0.207.1...v0.207.2) (2026-11-24)
 
 ### Bug Fixes
