@@ -944,8 +944,18 @@ test.describe('Journey 82: Logged-out embed visitor', () => {
         .getByRole('button', { name: /save/i })
         .first();
       await expect(saveBtn).toBeEnabled({ timeout: 5_000 });
+      // Closing before this PUT is answered leaves the agent refusing
+      // logged-out visitors; on stg it can take longer than a fixed pause.
+      const saved = setupPage.waitForResponse(
+        async (res) =>
+          res.request().method() === 'PUT' &&
+          /\/settings\/$/.test(res.url().split('?')[0]) &&
+          res.ok() &&
+          (await res.json().catch(() => null))?.allow_anonymous === true,
+        { timeout: 60_000 },
+      );
       await saveBtn.click();
-      await setupPage.waitForTimeout(1_500);
+      await saved;
       await editMentorPage.close();
     } finally {
       await setupPage.close();
@@ -973,7 +983,7 @@ test.describe('Journey 82: Logged-out embed visitor', () => {
 
     await chatInput.fill('Hello from an anonymous embed visitor');
     await iframe.getByRole('button', { name: 'Send message' }).click();
-    const clientFrame = await ws.waitForClientMessage();
+    const clientFrame = await ws.waitForClientMessage(15_000);
     const sessionId = clientFrame.session_id;
     ws.send({
       generation_id: `e2e-er09-${Date.now()}`,

@@ -5,9 +5,8 @@
  * in the Edit Agent modal's Settings tab → Capabilities sub-tab → Advanced
  * section, labelled "Show Additional Agents"
  * (`data-testid="settings-show-explore-mentors-switch"`). It gates the
- * OS-specific "Explore Agents" section (`components/welcome-chat/
- * explore-mentors.tsx`) that renders on an agent's own (non-project)
- * welcome screen (`components/welcome-chat-new.tsx`).
+ * "Explore Agents" section that renders on an agent's own (non-project)
+ * welcome screen (the SDK chat, wired in `components/chat/sdk-chat.tsx`).
  *
  * ── Backend default is NOT what the issue text says ─────────────────────────
  * The issue asks for `show_explore_mentors` to default to `false` on newly
