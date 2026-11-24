@@ -1329,6 +1329,7 @@ describe('the overlay on the page', () => {
       dodged,
       say,
       thinking,
+      pressed,
       isAway: () => away > 0,
       awayCalls: () => awayCalls,
     };
@@ -1380,6 +1381,45 @@ describe('the overlay on the page', () => {
     expect(fake.said[0][2]).toEqual({ x: 5, y: 15, w: 80, h: 30 });
     // And back to a plain "working" once the action is over.
     expect(fake.said.at(-1)![0]).toBe('thinking');
+  });
+
+  // The press is what the user sees land on their page, so it must follow the
+  // action rather than the intent to act. `say` deliberately runs before the
+  // card; counting the press there animated a click the user then declined.
+  it('presses only after the action has landed', async () => {
+    const fake = fakeHud();
+    await rebuild({ hud: fake.hud });
+    const page = await current.snapshot();
+    const n = page.items.find((item) => item.name === 'Pay now')!.n;
+
+    await run('click', { element: n });
+
+    expect(fake.pressed).toHaveBeenCalledWith('click');
+    expect(fake.pressed.mock.invocationCallOrder[0]).toBeGreaterThan(
+      ctx.confirm.mock.invocationCallOrder[0],
+    );
+  });
+
+  it('does not press when the user declines', async () => {
+    const fake = fakeHud();
+    ctx.confirm.mockResolvedValueOnce(false);
+    await rebuild({ hud: fake.hud });
+    const page = await current.snapshot();
+    const n = page.items.find((item) => item.name === 'Pay now')!.n;
+
+    await run('click', { element: n });
+
+    expect(fake.say).toHaveBeenCalled();
+    expect(fake.pressed).not.toHaveBeenCalled();
+  });
+
+  it('does not press when the action fails', async () => {
+    const fake = fakeHud();
+    await rebuild({ hud: fake.hud });
+
+    await run('click', { element: 999 });
+
+    expect(fake.pressed).not.toHaveBeenCalled();
   });
 
   it('goes back to thinking even when the action fails', async () => {

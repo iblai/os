@@ -787,8 +787,20 @@ interface HudState {
   at: { x: number; y: number } | null;
   /** The last press this overlay has already shown. */
   pressed: number;
+  /** True while the pointer is still travelling to its target. */
+  moving: boolean;
+  /** A press that arrived mid-travel, waiting for the pointer to land. */
+  tapPending: boolean;
   beat: number;
   timer: number;
+}
+
+/** Rings the pointer where it stands. Restarting it matters: a second press in
+ * the same place would show nothing if the class were merely set again. */
+function tap(hud: HudState): void {
+  hud.arrow.classList.remove('tap');
+  void hud.arrow.offsetWidth;
+  hud.arrow.classList.add('tap');
 }
 
 /**
@@ -905,6 +917,16 @@ export function mountHud(options: HudOptions): void {
     });
     bar.append(dot, say, stop);
     shadow.append(style, ring, spot, arrow, bar);
+    // The pointer has landed: release a press that arrived while it travelled.
+    arrow.addEventListener('transitionend', () => {
+      const live = store.__iblHud;
+      if (!live) return;
+      live.moving = false;
+      if (live.tapPending) {
+        live.tapPending = false;
+        tap(live);
+      }
+    });
     hud = {
       host,
       bar,
@@ -913,6 +935,8 @@ export function mountHud(options: HudOptions): void {
       spot,
       arrow,
       at: null,
+      moving: false,
+      tapPending: false,
       // Seeded from what the worker already holds. A run's overlay is painted
       // before any action, so the first press still animates: it arrives as an
       // id this overlay has not seen. After a navigation the id is already
@@ -963,6 +987,8 @@ export function mountHud(options: HudOptions): void {
       if (!hud.at) hud.arrow.style.transition = 'none';
       hud.arrow.style.left = `${to.x}px`;
       hud.arrow.style.top = `${to.y}px`;
+      // Only a move that is actually animated has a landing to wait for.
+      hud.moving = hud.at !== null;
       if (!hud.at) {
         // Read back so the suppressed transition applies before it is restored.
         void hud.arrow.offsetWidth;
@@ -974,13 +1000,19 @@ export function mountHud(options: HudOptions): void {
     const press = options.pressId ?? 0;
     if (press !== hud.pressed) {
       hud.pressed = press;
-      // Restart the animation rather than just setting the class: a second
-      // press in the same place would otherwise show nothing at all.
-      hud.arrow.classList.remove('tap');
-      void hud.arrow.offsetWidth;
-      hud.arrow.classList.add('tap');
+      // A scripted click resolves in tens of milliseconds, well inside the
+      // pointer's 340ms travel. Ringing now would expand it from wherever the
+      // pointer had got to — empty space — rather than from what was pressed.
+      if (hud.moving) hud.tapPending = true;
+      else tap(hud);
     }
   } else {
+    // Keep the count level with the worker even when nothing is drawn. A
+    // clickable element can have a zero-sized box — `visible()` is not
+    // rect-based — and `Hud.pressed` counts it, so leaving the page behind
+    // here made the NEXT action's paint look like a press and ring an element
+    // nobody had touched yet.
+    hud.pressed = options.pressId ?? hud.pressed;
     hud.spot.classList.add('off');
     // The pointer stays where it last acted, and keeps `at` with it.
     //
