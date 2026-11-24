@@ -765,6 +765,15 @@ export interface HudOptions {
   watchdogMs: number;
   /** The element about to be acted on, in the tab's viewport (CSS px). */
   target?: { x: number; y: number; w: number; h: number } | null;
+  /**
+   * Counts presses, rather than flagging one.
+   *
+   * The overlay is re-painted on a heartbeat with whatever state the worker
+   * holds, so a boolean left standing would replay the click every beat for as
+   * long as the pointer rested on that element. The page animates only when
+   * this number changes.
+   */
+  pressId?: number;
 }
 
 interface HudState {
@@ -773,6 +782,15 @@ interface HudState {
   say: HTMLElement;
   stop: HTMLButtonElement;
   spot: HTMLElement;
+  /** The pointer that travels to each target, and its last resting place. */
+  arrow: HTMLElement;
+  at: { x: number; y: number } | null;
+  /** The last press this overlay has already shown. */
+  pressed: number;
+  /** True while the pointer is still travelling to its target. */
+  moving: boolean;
+  /** A press that arrived mid-travel, waiting for the pointer to land. */
+  tapPending: boolean;
   beat: number;
   timer: number;
 }
@@ -785,6 +803,14 @@ interface HudState {
 export function mountHud(options: HudOptions): void {
   const root = document.documentElement;
   if (!root) return;
+  // Declared in here, like everything else this function uses: Chrome
+  // re-evaluates it in the page with nothing around it, so a module-scope
+  // helper is a ReferenceError the paint swallows — and no ring ever shows.
+  const showTap = (state: HudState): void => {
+    state.arrow.classList.remove('tap');
+    void state.arrow.offsetWidth;
+    state.arrow.classList.add('tap');
+  };
   const store = globalThis as { __iblHud?: HudState };
   // A navigation takes the element but not this world's view of it.
   if (store.__iblHud && !store.__iblHud.host.isConnected) delete store.__iblHud;
@@ -809,7 +835,7 @@ export function mountHud(options: HudOptions): void {
     const style = document.createElement('style');
     style.textContent = `
 :host { all: initial; --c: ${options.color}; --rgb: ${rgb(options.color)}; }
-.ring, .bar, .spot { position: fixed; z-index: 2147483647; pointer-events: none; }
+.ring, .bar, .spot, .arrow { position: fixed; z-index: 2147483647; pointer-events: none; }
 .ring { inset: 0; border: 3px solid var(--c); border-radius: 12px;
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .5), inset 0 0 26px rgba(var(--rgb), .17);
   animation: iblBreathe 3.2s ease-in-out infinite; }
@@ -829,16 +855,44 @@ export function mountHud(options: HudOptions): void {
 .stop:disabled { opacity: .55; cursor: default; }
 .spot { border: 2px solid var(--c); border-radius: 6px;
   box-shadow: 0 0 0 4px rgba(var(--rgb), .2); transition: all .12s ease-out; }
+/* The pointer. Travelling is the whole point of it: a ring that simply moves
+   says a box lit up, while something crossing the page says someone is doing
+   this. Positioned with left/top rather than a transform so it reads in the
+   same viewport coordinates the worker already sends for the target.
+   (No backticks in here: this stylesheet is a template literal.) */
+.arrow { left: 0; top: 0; width: 22px; height: 22px; margin: -2px 0 0 -2px;
+  transition: left .34s cubic-bezier(.22, .61, .36, 1),
+    top .34s cubic-bezier(.22, .61, .36, 1); }
+.arrow svg { display: block; width: 100%; height: 100%;
+  filter: drop-shadow(0 2px 4px rgba(17, 24, 39, .35)); }
+/* The press. Scaled from the pointer's own tip, so it reads as that pointer
+   clicking rather than a mark appearing beside it. */
+.arrow::after { content: ''; position: absolute; left: 1px; top: 1px;
+  width: 16px; height: 16px; margin: -8px 0 0 -8px; border-radius: 50%;
+  border: 2px solid var(--c); opacity: 0; transform: scale(.3); }
+.arrow.tap::after { animation: iblTap .45s ease-out; }
+@keyframes iblTap { 0% { opacity: .9; transform: scale(.3); }
+  100% { opacity: 0; transform: scale(2.6); } }
 .off { display: none !important; }
 @keyframes iblPulse { 0%, 100% { opacity: 1; transform: scale(1); }
   50% { opacity: .35; transform: scale(.75); } }
 @keyframes iblBreathe { 0%, 100% { opacity: 1; } 50% { opacity: .7; } }
 @media (prefers-reduced-motion: reduce) {
-  .dot, .ring { animation: none; } .spot { transition: none; } }`;
+  .dot, .ring { animation: none; } .spot, .arrow { transition: none; }
+  .arrow.tap::after { animation: none; } }`;
     const ring = document.createElement('div');
     ring.className = 'ring';
     const spot = document.createElement('div');
     spot.className = 'spot off';
+    const arrow = document.createElement('div');
+    arrow.className = 'arrow off';
+    // Inline so the overlay stays one injected function with no fetch: the
+    // page's CSP governs what we can load, and an overlay that sometimes has
+    // no pointer is worse than one that always does.
+    arrow.innerHTML =
+      '<svg viewBox="0 0 24 24" aria-hidden="true">' +
+      '<path d="M5 2.5 19 12l-6.4 1.3L9.8 19.5Z" fill="var(--c)" ' +
+      'stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/></svg>';
     const bar = document.createElement('div');
     bar.className = 'bar';
     bar.setAttribute('role', 'status');
@@ -862,8 +916,44 @@ export function mountHud(options: HudOptions): void {
       }
     });
     bar.append(dot, say, stop);
-    shadow.append(style, ring, spot, bar);
-    hud = { host, bar, say, stop, spot, beat: Date.now(), timer: 0 };
+    shadow.append(style, ring, spot, arrow, bar);
+    // The pointer has landed: release a press that arrived while it travelled.
+    // `transitioncancel` as well: `dodge()` and `away()` hide the overlay
+    // mid-travel, which cancels the move. Without it `moving` stayed true for
+    // the rest of the run and the waiting ring was released at the NEXT
+    // action's landing — on an element nobody had pressed.
+    const landed = () => {
+      const live = store.__iblHud;
+      if (!live) return;
+      live.moving = false;
+      if (live.tapPending) {
+        live.tapPending = false;
+        showTap(live);
+      }
+    };
+    arrow.addEventListener('transitionend', landed);
+    arrow.addEventListener('transitioncancel', landed);
+    hud = {
+      host,
+      bar,
+      say,
+      stop,
+      spot,
+      arrow,
+      at: null,
+      moving: false,
+      tapPending: false,
+      // Seeded from what the worker already holds. A run's overlay is painted
+      // before any action, so the first press still animates: it arrives as an
+      // id this overlay has not seen. After a navigation the id is already
+      // ≥ 1, and seeding it is what stops the new page replaying a press that
+      // belonged to the old one — onto whatever the next action happens to be,
+      // including a `type`, which is the "click that never happened" the
+      // press list exists to prevent.
+      pressed: options.pressId ?? 0,
+      beat: Date.now(),
+      timer: 0,
+    };
     // Nothing else can take the overlay down — a worker killed mid-run cannot
     // reach back into the page — so it has to be able to take itself down.
     hud.timer = setInterval(() => {
@@ -891,8 +981,59 @@ export function mountHud(options: HudOptions): void {
     hud.spot.style.width = `${target.w}px`;
     hud.spot.style.height = `${target.h}px`;
     hud.spot.classList.remove('off');
+
+    const to = {
+      x: Math.round(target.x + target.w / 2),
+      y: Math.round(target.y + target.h / 2),
+    };
+    const moved = !hud.at || hud.at.x !== to.x || hud.at.y !== to.y;
+    if (moved) {
+      // First sight of a target: start at it rather than flying in from the
+      // page's corner, which looks like a bug on the first action of a run.
+      if (!hud.at) hud.arrow.style.transition = 'none';
+      hud.arrow.style.left = `${to.x}px`;
+      hud.arrow.style.top = `${to.y}px`;
+      // Only a move that is actually animated has a landing to wait for.
+      hud.moving = hud.at !== null;
+      // A ring still waiting belongs to where the pointer was, not where it
+      // is going.
+      hud.tapPending = false;
+      if (!hud.at) {
+        // Read back so the suppressed transition applies before it is restored.
+        void hud.arrow.offsetWidth;
+        hud.arrow.style.transition = '';
+      }
+      hud.at = to;
+    }
+    hud.arrow.classList.remove('off');
+    const press = options.pressId ?? 0;
+    // Greater than, not different from: `say`, `pressed` and `thinking` paint
+    // without awaiting, so one landing out of order would otherwise ring twice
+    // or swallow the ring entirely.
+    if (press > hud.pressed) {
+      hud.pressed = press;
+      // A scripted click resolves in tens of milliseconds, well inside the
+      // pointer's 340ms travel. Ringing now would expand it from wherever the
+      // pointer had got to — empty space — rather than from what was pressed.
+      if (hud.moving) hud.tapPending = true;
+      else showTap(hud);
+    }
   } else {
+    // Keep the count level with the worker even when nothing is drawn. A
+    // clickable element can have a zero-sized box — `visible()` is not
+    // rect-based — and `Hud.pressed` counts it, so leaving the page behind
+    // here made the NEXT action's paint look like a press and ring an element
+    // nobody had touched yet.
+    hud.pressed = Math.max(hud.pressed, options.pressId ?? 0);
     hud.spot.classList.add('off');
+    // The pointer stays where it last acted, and keeps `at` with it.
+    //
+    // `thinking()` paints a null target after EVERY action, so clearing the
+    // position here made every move a first sight — the arrow teleported and
+    // the travel transition never ran once. Leaving it in place is also what
+    // the thing is for: between actions there is still a pointer on the page,
+    // resting where it worked last, the way a real one would.
+    if (!hud.at) hud.arrow.classList.add('off');
   }
 }
 

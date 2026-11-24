@@ -3,6 +3,16 @@
 // switch away and still see which tab the agent has.
 import { t } from './i18n';
 
+/**
+ * How much of the run's goal the strip gets.
+ *
+ * Chrome shows a collapsed group by its title and elides what does not fit, so
+ * this is about what reaches the screen at all, not about fitting the strip: a
+ * goal is the user's own words, and the tab strip is read over shoulders and
+ * in screen shares. A few words are enough to tell two runs apart.
+ */
+export const TITLE_MAX = 32;
+
 /** Chrome's "not in a group" sentinel, named here so the worker can be tested without it. */
 export const NO_GROUP = -1;
 
@@ -45,6 +55,25 @@ async function writeMarks(next: TabMark[]): Promise<void> {
 }
 
 /** One tab, one mark: a re-grouped tab replaces its own record rather than adding to it. */
+/**
+ * The group's title: a few words of what the run was asked to do, so two runs
+ * are told apart in the strip instead of both reading "ibl.ai".
+ *
+ * Cut at a word boundary where there is one — a mid-word stub reads like a
+ * glitch — and falls back to the app's name for a goal that is empty, blank, or
+ * has no short form worth showing.
+ */
+export function groupTitle(goal?: string | null): string {
+  const text = (goal ?? '').replace(/\s+/g, ' ').trim();
+  if (!text) return t('appName');
+  if (text.length <= TITLE_MAX) return text;
+  const cut = text.slice(0, TITLE_MAX);
+  const lastSpace = cut.lastIndexOf(' ');
+  // Only honour a boundary that leaves something worth reading.
+  const stem = lastSpace > TITLE_MAX / 2 ? cut.slice(0, lastSpace) : cut;
+  return `${stem.trimEnd()}…`;
+}
+
 async function remember(mark: TabMark): Promise<void> {
   const others = (await marks()).filter((m) => m.tabId !== mark.tabId);
   await writeMarks([...others, mark]);
@@ -63,7 +92,10 @@ async function forget(tabId: number): Promise<void> {
  * group's position is not ours to restore). So that tab is left alone and the
  * run simply has no strip marker.
  */
-export async function markTab(tabId: number): Promise<TabMark | null> {
+export async function markTab(
+  tabId: number,
+  goal?: string | null,
+): Promise<TabMark | null> {
   if (!chrome.tabGroups || typeof chrome.tabs.group !== 'function') {
     // Said out loud because the alternative is indistinguishable from a run
     // that never started: an extension whose tabGroups permission was not
@@ -83,7 +115,7 @@ export async function markTab(tabId: number): Promise<TabMark | null> {
     }
     const groupId = await chrome.tabs.group({ tabIds: [tabId] });
     await chrome.tabGroups.update(groupId, {
-      title: t('appName'),
+      title: groupTitle(goal),
       color: 'blue',
     });
     const mark = { tabId, groupId };
