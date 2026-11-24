@@ -795,14 +795,6 @@ interface HudState {
   timer: number;
 }
 
-/** Rings the pointer where it stands. Restarting it matters: a second press in
- * the same place would show nothing if the class were merely set again. */
-function tap(hud: HudState): void {
-  hud.arrow.classList.remove('tap');
-  void hud.arrow.offsetWidth;
-  hud.arrow.classList.add('tap');
-}
-
 /**
  * Puts the overlay on the page, or brings the one already there up to date —
  * one call does both, so the worker can beat on it to keep it alive and to
@@ -811,6 +803,14 @@ function tap(hud: HudState): void {
 export function mountHud(options: HudOptions): void {
   const root = document.documentElement;
   if (!root) return;
+  // Declared in here, like everything else this function uses: Chrome
+  // re-evaluates it in the page with nothing around it, so a module-scope
+  // helper is a ReferenceError the paint swallows — and no ring ever shows.
+  const showTap = (state: HudState): void => {
+    state.arrow.classList.remove('tap');
+    void state.arrow.offsetWidth;
+    state.arrow.classList.add('tap');
+  };
   const store = globalThis as { __iblHud?: HudState };
   // A navigation takes the element but not this world's view of it.
   if (store.__iblHud && !store.__iblHud.host.isConnected) delete store.__iblHud;
@@ -918,15 +918,21 @@ export function mountHud(options: HudOptions): void {
     bar.append(dot, say, stop);
     shadow.append(style, ring, spot, arrow, bar);
     // The pointer has landed: release a press that arrived while it travelled.
-    arrow.addEventListener('transitionend', () => {
+    // `transitioncancel` as well: `dodge()` and `away()` hide the overlay
+    // mid-travel, which cancels the move. Without it `moving` stayed true for
+    // the rest of the run and the waiting ring was released at the NEXT
+    // action's landing — on an element nobody had pressed.
+    const landed = () => {
       const live = store.__iblHud;
       if (!live) return;
       live.moving = false;
       if (live.tapPending) {
         live.tapPending = false;
-        tap(live);
+        showTap(live);
       }
-    });
+    };
+    arrow.addEventListener('transitionend', landed);
+    arrow.addEventListener('transitioncancel', landed);
     hud = {
       host,
       bar,
@@ -989,6 +995,9 @@ export function mountHud(options: HudOptions): void {
       hud.arrow.style.top = `${to.y}px`;
       // Only a move that is actually animated has a landing to wait for.
       hud.moving = hud.at !== null;
+      // A ring still waiting belongs to where the pointer was, not where it
+      // is going.
+      hud.tapPending = false;
       if (!hud.at) {
         // Read back so the suppressed transition applies before it is restored.
         void hud.arrow.offsetWidth;
@@ -998,13 +1007,16 @@ export function mountHud(options: HudOptions): void {
     }
     hud.arrow.classList.remove('off');
     const press = options.pressId ?? 0;
-    if (press !== hud.pressed) {
+    // Greater than, not different from: `say`, `pressed` and `thinking` paint
+    // without awaiting, so one landing out of order would otherwise ring twice
+    // or swallow the ring entirely.
+    if (press > hud.pressed) {
       hud.pressed = press;
       // A scripted click resolves in tens of milliseconds, well inside the
       // pointer's 340ms travel. Ringing now would expand it from wherever the
       // pointer had got to — empty space — rather than from what was pressed.
       if (hud.moving) hud.tapPending = true;
-      else tap(hud);
+      else showTap(hud);
     }
   } else {
     // Keep the count level with the worker even when nothing is drawn. A
@@ -1012,7 +1024,7 @@ export function mountHud(options: HudOptions): void {
     // rect-based — and `Hud.pressed` counts it, so leaving the page behind
     // here made the NEXT action's paint look like a press and ring an element
     // nobody had touched yet.
-    hud.pressed = options.pressId ?? hud.pressed;
+    hud.pressed = Math.max(hud.pressed, options.pressId ?? 0);
     hud.spot.classList.add('off');
     // The pointer stays where it last acted, and keeps `at` with it.
     //

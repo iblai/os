@@ -82,6 +82,27 @@ describe('injected functions stay self-contained', () => {
       const snapshot = (rebuilt as typeof snapshotPage)(50, 100);
       expect(snapshot.items.length).toBeGreaterThan(0);
     }
+    // `typeof` alone cannot see a free identifier in the body — a module-scope
+    // helper called from inside shipped green that way, and in the page it was
+    // a ReferenceError the paint swallowed, so no press ring ever appeared.
+    // Running the rebuilt function is the only thing that catches it.
+    if (fn === mountHud) {
+      const run = rebuilt as typeof mountHud;
+      const options = {
+        color: '#2467eb',
+        status: 'Working on this page',
+        stop: 'Stop',
+        stopping: 'Stopping…',
+        label: 'ibl.ai is working on this page',
+        watchdogMs: 5000,
+      };
+      const target = { x: 10, y: 20, w: 30, h: 40 };
+      expect(() => run(options)).not.toThrow();
+      expect(() => run({ ...options, target })).not.toThrow();
+      // The press path, which is where the free identifier was.
+      expect(() => run({ ...options, target, pressId: 1 })).not.toThrow();
+      removeHud();
+    }
   });
 });
 
