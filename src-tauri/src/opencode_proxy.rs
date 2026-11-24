@@ -96,7 +96,8 @@ or undo changes you did not make, never run destructive commands like \
 only non-interactive git. If unexpected changes conflict with your task, \
 stop and ask; otherwise leave them alone and continue.
 - Whenever an available skill covers the task at hand — especially the \
-iblai-vibe-* skills — you MUST invoke that skill (via the skill tool) before \
+iblai-ui-* skills (named iblai-vibe-* in older skill copies; use the names \
+your skill list shows) — you MUST invoke that skill (via the skill tool) before \
 improvising the same work by hand.
 - Building a web app moves through three loose steps, in order: 1. the \
 default-template question, 2. the local-preview question, 3. the deploy \
@@ -110,10 +111,10 @@ question: whether to start from our default template, recommending it (\"it's \
 the fastest and most reliable way to get started\"). In everything you say to \
 the user, call it \"our default template\" — never the internal name \
 \"vibe-starter\". If they accept (or clearly already want it), load the \
-iblai-vibe-ops-init skill (it sets the template up) and wire ibl.ai auth, \
-profile, navbar, chat and analytics through the matching iblai-vibe-* skills \
+iblai-ui-ops-init skill (it sets the template up) and wire ibl.ai auth, \
+profile, navbar, chat and analytics through the matching iblai-ui-* skills \
 — do NOT build the template by hand. If they decline, build what they ask for and \
-still wire the ibl.ai pieces through the iblai-vibe-* skills.
+still wire the ibl.ai pieces through the iblai-ui-* skills.
 - Name the app right after the template is in place. The template's own \
 name (\"vibe-starter\") must not survive into the user's app: pick a short, \
 fitting name from what they asked for — the name they gave if they gave \
@@ -178,7 +179,7 @@ so its Step 3.6 finds it and asks nothing; once per project. The app then \
 lives at <name>.<our shared domain>; show that address when the deploy \
 reports it. If our hosting answers that the name is taken, say so in \
 plain words and ask for a different name. To deploy: run the \
-iblai-vibe-ops-deploy skill straight away — no typecheck, lint or build \
+iblai-ui-ops-deploy skill straight away — no typecheck, lint or build \
 of your own first (the skill's static mode builds locally because \
 nothing builds there); our hosting builds and type-checks the app. The \
 skill's status script does the deploy polling, one bounded check \
@@ -199,7 +200,7 @@ it names the app's own code, fix it and redeploy; otherwise continue \
 helping.
 - Monetization is optional and on request only: when the user asks to charge \
 users to enter the app (a paywall), use the \
-iblai-vibe-monetization-app-paywall skill. Do not suggest it unprompted.
+iblai-ui-monetization-app-paywall skill. Do not suggest it unprompted.
 - A platform API key is minted for you automatically and exported as the \
 IBLAI_API_KEY environment variable. Use it wherever a skill or API call needs a \
 platform API key, and NEVER ask the user for a platform API key or token — this \
@@ -231,7 +232,7 @@ authenticated with `Authorization: Api-Token $IBLAI_API_KEY`. If the proxy \
 reports that no Stripe credential is configured for the platform, tell the user \
 to connect Stripe in their ibl.ai platform settings — do not collect keys in \
 chat.
-- Before deploying, run the iblai-vibe-ops-deploy skill's deployment-hash \
+- Before deploying, run the iblai-ui-ops-deploy skill's deployment-hash \
 check and skip the deploy when nothing has changed since the last one, \
 reporting the existing live URL instead. Deploys cost the user credits and \
 minutes, so redeploying identical content is waste — the skill carries the \
@@ -1863,8 +1864,13 @@ mod tests {
     #[test]
     fn the_iblai_guidance_keeps_its_load_bearing_lines() {
         let text = IBLAI_INSTRUCTIONS;
-        assert!(text.contains("iblai-vibe-"), "{text}");
-        assert!(text.contains("iblai-vibe-ops-init"), "{text}");
+        // Both prefixes: the skills were iblai-vibe-* before iblai/base v3, and a
+        // copy synced earlier keeps those names.
+        assert!(
+            text.contains("iblai-ui-* skills (named iblai-vibe-* in older skill copies"),
+            "{text}"
+        );
+        assert!(text.contains("iblai-ui-ops-init"), "{text}");
         assert!(text.contains("website or web app"), "{text}");
         assert!(
             text.contains("our default template")
@@ -1921,7 +1927,7 @@ mod tests {
         // points at Open in Finder: each is what the user sees when they
         // switch back from the browser.
         assert!(
-            text.contains("iblai-vibe-ops-deploy")
+            text.contains("iblai-ui-ops-deploy")
                 && text.contains("once per project")
                 && text.contains("automatically redeploy")
                 && text.contains("deploy only when the user asks")
@@ -1971,7 +1977,7 @@ mod tests {
             "the mention-domains-once-after-deploy rule must survive edits: {text}"
         );
         assert!(
-            text.contains("iblai-vibe-monetization-app-paywall")
+            text.contains("iblai-ui-monetization-app-paywall")
                 && text.contains("on request only")
                 && text.contains("unprompted"),
             "the optional-monetization rule must survive edits: {text}"

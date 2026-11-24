@@ -51,7 +51,8 @@ const CONFIG_TEMPLATE: &str = r#"{
 }
 "#;
 
-/// iblai/vibe — the public dev-toolkit skills repo, synced for Coding Mode.
+/// iblai/base — the public dev-toolkit skills repo, synced for Coding Mode. It
+/// was iblai/vibe until 2026-11-21; the old URL's 301 names no tag, so it can't be probed.
 /// Every look resolves the LATEST GitHub Release and syncs to it — releases
 /// are what ship (the repo's release workflow cuts one on every landing),
 /// never the moving branch head, and no version is ever pinned here — the one
@@ -62,12 +63,12 @@ const CONFIG_TEMPLATE: &str = r#"{
 /// github.com, not api.github.com: this URL's redirect names the tag, the
 /// probe shares the tarball's host (one reachability question), and the
 /// unauthenticated API rate limit never applies.
-const VIBE_LATEST_RELEASE_URL: &str = "https://github.com/iblai/vibe/releases/latest";
+const VIBE_LATEST_RELEASE_URL: &str = "https://github.com/iblai/base/releases/latest";
 
 /// Source tarball for a release tag — github.com (not the API host), so no
 /// User-Agent requirement, same shape the branch download always had.
 fn vibe_tag_tarball_url(tag: &str) -> String {
-    format!("https://github.com/iblai/vibe/archive/refs/tags/{tag}.tar.gz")
+    format!("https://github.com/iblai/base/archive/refs/tags/{tag}.tar.gz")
 }
 
 fn create_command(program: &str) -> Command {
@@ -957,8 +958,10 @@ mod tests {
     fn the_tarball_url_is_the_tags_source_archive() {
         assert_eq!(
             vibe_tag_tarball_url("v1.18.0"),
-            "https://github.com/iblai/vibe/archive/refs/tags/v1.18.0.tar.gz"
+            "https://github.com/iblai/base/archive/refs/tags/v1.18.0.tar.gz"
         );
+        // The probe names the same repo: a renamed repo's 301 names no tag.
+        assert!(VIBE_LATEST_RELEASE_URL.starts_with("https://github.com/iblai/base/"));
     }
 
     /// Pinned-binary + end-to-end guidance tests. `#[cfg(unix)]` as one module
