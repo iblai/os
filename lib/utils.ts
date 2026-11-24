@@ -21,6 +21,7 @@ import {
   removeAuthItem,
   clearPerTabSession,
   isPerTabAuthEnabled,
+  PER_TAB_AUTH_KEYS,
 } from '@/lib/auth-storage';
 // NOTE: clearCurrentTenantCookie is imported dynamically inside handleTenantSwitch
 // (not statically) — the main web-utils entry pulls in React providers, which
@@ -721,13 +722,33 @@ function syncAuthDataToCookies(userObject: Record<string, any>): void {
   }
 }
 
+// A same-origin parent (the Assistant panel, the Embed tab's preview) reads
+// this same localStorage, so clearing all of it would erase the host app's own
+// settings (Code mode, the on-device model, ...).
+function sharesStorageWithParent(): boolean {
+  if (!isInIframe()) return false;
+  try {
+    const parentOrigin = window.parent.location.origin;
+    return !!parentOrigin && parentOrigin === window.location.origin;
+  } catch {
+    return false;
+  }
+}
+
 export function saveUserObjectToLocalStorage(userObject: object) {
   console.log('[saveUserObjectToLocalStorage] clearing local storage');
   // The host→iframe auth handoff (authrelyonhost) installs a full session here.
   // Under the per-tab flag this becomes this tab's sessionStorage session +
   // localStorage seed; with the flag off it is exactly today's localStorage.
   const perTab = isPerTabAuthEnabled();
+  const sharesStorage = sharesStorageWithParent();
+  // Per-tab sign-in already lives in the sessionStorage this frame shares with
+  // its parent; the copy agent-ai hands over comes from the shared localStorage
+  // seed and can be another tab's sign-in.
+  if (perTab && sharesStorage) return;
   if (perTab) clearPerTabSession();
+  else if (sharesStorage)
+    PER_TAB_AUTH_KEYS.forEach((key) => localStorage.removeItem(key));
   else localStorage.clear();
   for (const [key, value] of Object.entries(userObject)) {
     let toStore = value;

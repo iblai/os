@@ -385,6 +385,9 @@ export function createBrowserTools(ctx: BrowserToolsContext): BrowserTools {
         const at =
           p.element === undefined ? { frameId: 0, n: 0 } : ref(p.element);
         const result = await p.step(at);
+        // After the step, not before it: a press the user declined, or one the
+        // page refused, must not animate on their screen.
+        if (result.ok) hud?.pressed(p.tool);
         if (!result.ok) {
           const message = result.error ?? 'Action failed.';
           if (/^Refused:/.test(message))

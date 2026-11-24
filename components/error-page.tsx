@@ -64,6 +64,8 @@ export function ErrorPage({
       {supportEmail ? (
         <a
           href={`mailto:${supportEmail}`}
+          target="_blank"
+          rel="noopener noreferrer"
           className="text-muted-foreground hover:text-foreground text-xs underline underline-offset-4"
         >
           Contact support

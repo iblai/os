@@ -4061,3 +4061,108 @@ describe('markdownToHtml - issue #2441 repairs, canvas path', () => {
     );
   });
 });
+
+describe('saveUserObjectToLocalStorage - same-origin parent', () => {
+  const originalTop = window.top;
+  const originalParent = window.parent;
+  const originalLocation = window.location;
+
+  function embedUnder(parent: unknown) {
+    Object.defineProperty(window, 'top', {
+      value: {},
+      configurable: true,
+      writable: true,
+    });
+    Object.defineProperty(window, 'parent', {
+      value: parent,
+      configurable: true,
+      writable: true,
+    });
+  }
+
+  beforeEach(() => {
+    Object.defineProperty(window, 'localStorage', {
+      value: localStorageMock,
+      writable: true,
+    });
+    Object.defineProperty(window, 'location', {
+      value: { hostname: 'app.example.com', origin: 'https://app.example.com' },
+      writable: true,
+      configurable: true,
+    });
+    localStorageMock.clear();
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    Object.defineProperty(window, 'top', {
+      value: originalTop,
+      configurable: true,
+      writable: true,
+    });
+    Object.defineProperty(window, 'parent', {
+      value: originalParent,
+      configurable: true,
+      writable: true,
+    });
+    Object.defineProperty(window, 'location', {
+      value: originalLocation,
+      writable: true,
+      configurable: true,
+    });
+  });
+
+  it("keeps the host app's own settings when the parent is the same app", () => {
+    embedUnder({ location: { origin: 'https://app.example.com' } });
+    localStorageMock.setItem('ibl_coding_mode_model', 'claude/default');
+    localStorageMock.setItem('axd_token', 'old-token');
+    localStorageMock.setItem('visiting_tenant', 'other-org');
+
+    saveUserObjectToLocalStorage({ axd_token: 'new-token' });
+
+    expect(localStorageMock.getItem('ibl_coding_mode_model')).toBe(
+      'claude/default',
+    );
+    expect(localStorageMock.getItem('axd_token')).toBe('new-token');
+    expect(localStorageMock.getItem('visiting_tenant')).toBeNull();
+  });
+
+  it("keeps this tab's own per-tab sign-in under a same-origin parent", () => {
+    const env = globalThis as { __ENV__?: Record<string, unknown> };
+    const originalEnv = env.__ENV__;
+    env.__ENV__ = { ...originalEnv, NEXT_PUBLIC_IBL_PER_TAB_AUTH: 'true' };
+    try {
+      embedUnder({ location: { origin: 'https://app.example.com' } });
+      window.sessionStorage.clear();
+      localStorageMock.setItem('ibl_coding_mode_model', 'claude/default');
+
+      saveUserObjectToLocalStorage({
+        axd_token: 'other-tab-token',
+        tenant: 'other-org',
+      });
+
+      expect(window.sessionStorage.getItem('axd_token')).toBeNull();
+      expect(localStorageMock.getItem('axd_token')).toBeNull();
+      expect(localStorageMock.getItem('tenant')).toBeNull();
+      expect(localStorageMock.getItem('ibl_coding_mode_model')).toBe(
+        'claude/default',
+      );
+    } finally {
+      env.__ENV__ = originalEnv;
+    }
+  });
+
+  it('still clears everything under a parent on another origin', () => {
+    embedUnder({
+      get location(): Location {
+        throw new DOMException('Blocked a frame', 'SecurityError');
+      },
+    });
+    localStorageMock.setItem('ibl_coding_mode_model', 'claude/default');
+
+    saveUserObjectToLocalStorage({ axd_token: 'new-token' });
+
+    expect(localStorageMock.getItem('ibl_coding_mode_model')).toBeNull();
+    expect(localStorageMock.getItem('axd_token')).toBe('new-token');
+  });
+});

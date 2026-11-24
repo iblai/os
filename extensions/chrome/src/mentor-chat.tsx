@@ -9,6 +9,7 @@ import {
   watchAuthExpired,
   watchTenantSwitch,
 } from './mentor-frame';
+import { t } from './i18n';
 import { OrgPicker } from './org-picker';
 import { MENTOR_URL } from './settings';
 
@@ -17,7 +18,13 @@ import { MENTOR_URL } from './settings';
 export const AUTH_URL = 'https://login.iblai.app';
 export const LMS_URL = 'https://learn.iblai.app';
 
-export function MentorChat() {
+interface MentorChatProps {
+  onSignOut: () => void;
+  /** Who the session belongs to, shown so a sign-out is not a leap of faith. */
+  who: string | null;
+}
+
+export function MentorChat({ onSignOut, who }: MentorChatProps) {
   const ref = useRef<HTMLElement>(null);
   const [choosing, setChoosing] = useState(false);
   const [notice, setNotice] = useState<
@@ -105,6 +112,15 @@ export function MentorChat() {
         extraparams="client=chrome-extension"
         enablecowork=""
       />
+      {/* Below the chat, never above it: the panel is the chat, and the
+          account is the one thing it cannot offer from inside the iframe —
+          the session being signed out of is this page's, not the app's. */}
+      <div className="account">
+        {who && <span className="account-who">{who}</span>}
+        <button type="button" className="account-out" onClick={onSignOut}>
+          {t('signOut')}
+        </button>
+      </div>
     </>
   );
 }

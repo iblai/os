@@ -33,7 +33,7 @@ export function BrowserAgentNotSetUp() {
       </div>
       <h1 className="text-xl font-medium text-gray-900">Not Set Up Yet</h1>
       <p className="max-w-md text-sm text-gray-600">
-        The browser assistant has not been set up for{' '}
+        The browsing assistant has not been set up for{' '}
         <strong className="font-semibold text-gray-900">{organization}</strong>,
         so it cannot be used here. Someone who manages that organization can set
         it up by opening this panel once.
@@ -50,12 +50,20 @@ export function BrowserAgentNotSetUp() {
         >
           Change Organization
         </Button>
-        <a
-          href={`mailto:${supportEmail}`}
-          className="text-xs text-gray-500 underline hover:text-gray-700"
-        >
-          Ask someone to set it up
-        </a>
+        {/* Same reason as the sibling screen: in the side panel a `mailto:`
+            followed in place replaces the whole window with the browser's
+            broken-page icon, with no way back. */}
+        <p className="text-xs text-gray-500">
+          Ask someone to set it up:{' '}
+          <a
+            href={`mailto:${supportEmail}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline hover:text-gray-700"
+          >
+            {supportEmail}
+          </a>
+        </p>
       </div>
     </div>
   );

@@ -1,5 +1,126 @@
 # Changelog
 
+## [0.209.0](https://github.com/iblai/os/compare/v0.208.0...v0.209.0) (2026-11-24)
+
+### Features
+
+* **ext:** a pointer that travels, and a tab group named after the run ([7b964b4](https://github.com/iblai/os/commit/7b964b406b63a3fb192337a9dc177f765ca59f3f))
+
+### Bug Fixes
+
+* **ext:** keep the overlay self-contained, and the ring honest ([80c4dc5](https://github.com/iblai/os/commit/80c4dc5060abf415e753ba022258c8c612c3471b))
+* **ext:** keep the press count level, and ring where the pointer lands ([294cd5f](https://github.com/iblai/os/commit/294cd5ff7a41a2f35e7dd0a901bff83e15e52e6f))
+* **ext:** make the pointer actually travel, and press only once it lands ([bfdb2fb](https://github.com/iblai/os/commit/bfdb2fbd256a85236791f20e11d39a0668b797ac))
+
+### Tests
+
+* **ext:** cover the page recorder ([7b7913f](https://github.com/iblai/os/commit/7b7913f974cce8489f50dea5630a80df2c878f4d))
+
+## [0.208.0](https://github.com/iblai/os/compare/v0.207.3...v0.208.0) (2026-11-24)
+
+### Features
+
+* **panel:** name a tab switch in the review, not just in the skill ([b708968](https://github.com/iblai/os/commit/b708968389bdef14b2874f31b7cc62ee98fcb0ea))
+* **recorder:** let a recording follow the person across tabs ([184d788](https://github.com/iblai/os/commit/184d788a77e1b4b55656f58b090f559d7bfd0b89))
+
+### Tests
+
+* **recorder:** cover the seven lines the gate found bare ([754686c](https://github.com/iblai/os/commit/754686c896e4d357f9da5055fa00b18e418702a5))
+
+## [0.207.3](https://github.com/iblai/os/compare/v0.207.2...v0.207.3) (2026-11-24)
+
+### Bug Fixes
+
+* **panel:** stop the support link replacing the panel with a broken page ([d8f2fd8](https://github.com/iblai/os/commit/d8f2fd874be85a6247f92363e81f857b4d94e8c3))
+
+### Chores
+
+* **deps:** take @iblai/iblai-js 2.86.1 for the panel's support links ([a28b40e](https://github.com/iblai/os/commit/a28b40ec40a0211232dafbd57dc9b2b271d19a9a)), closes [iblai/iblai-web-frontend#2272](https://github.com/iblai/iblai-web-frontend/issues/2272)
+
+## [0.207.2](https://github.com/iblai/os/compare/v0.207.1...v0.207.2) (2026-11-24)
+
+### Bug Fixes
+
+* open every remaining support link away from the panel ([6d7e827](https://github.com/iblai/os/commit/6d7e8270e777862153d43fbf77a506f497d5013c)), closes [#583](https://github.com/iblai/os/issues/583)
+
+## [0.207.1](https://github.com/iblai/os/compare/v0.207.0...v0.207.1) (2026-11-23)
+
+### Documentation
+
+* lowercase demonstratives in UI Title Case ([cb5bb42](https://github.com/iblai/os/commit/cb5bb42dde77925ad51ae9bac60dcf63feaaa19e))
+
+## [0.207.0](https://github.com/iblai/os/compare/v0.206.3...v0.207.0) (2026-11-23)
+
+### Features
+
+* **os:** open the Default Agent as the Assistant beside the page ([6139c0d](https://github.com/iblai/os/commit/6139c0d64fe4a4ca92358d71eddbfc0a60b121b8))
+
+### Tests
+
+* **e2e:** chat with the Assistant from every page that shows the header ([e3bd927](https://github.com/iblai/os/commit/e3bd9274ae37d1e8f9b2ce0c13dadd22d9633345))
+
+## [0.206.3](https://github.com/iblai/os/compare/v0.206.2...v0.206.3) (2026-11-23)
+
+### Bug Fixes
+
+* **deps:** bump @iblai/iblai-js to 2.85.2 to recover from "Invalid session" ([990a851](https://github.com/iblai/os/commit/990a851773599fad98eb4cc117994031b0ea45b5))
+
+### Tests
+
+* **e2e:** cover the "Invalid session" recovery in journey 85 ([7845405](https://github.com/iblai/os/commit/78454051a6d715a45c561f533560da5e3c6f1f65))
+* **e2e:** retry Escape until the Account dialog closes in journey 28 ([9fcc62d](https://github.com/iblai/os/commit/9fcc62de583fdaa46335d81841317ca52dd85e56))
+* **e2e:** wait for the transcript, not the mic label, in voice-to-text ([0ba202a](https://github.com/iblai/os/commit/0ba202a9a5b4fd3648ad6fa17329c0b795c8f7fe))
+
+## [0.206.2](https://github.com/iblai/os/compare/v0.206.1...v0.206.2) (2026-11-23)
+
+### Bug Fixes
+
+* **panel:** tell an admin when the platform refuses the browsing agent ([e2ad1bf](https://github.com/iblai/os/commit/e2ad1bfd785f614c470ccbf876f9b359ba44c083))
+
+## [0.206.1](https://github.com/iblai/os/compare/v0.206.0...v0.206.1) (2026-11-23)
+
+### Bug Fixes
+
+* **panel:** correct what the unsupported screen claims, and measure the page ([6aea194](https://github.com/iblai/os/commit/6aea194fa992840f948219357e1a168e4bc8ede1)), closes [#699](https://github.com/iblai/os/issues/699)
+* **panel:** tell an organization the browsing assistant cannot run there ([4ae79c4](https://github.com/iblai/os/commit/4ae79c443aa982b0009c3551b9397f09d2500c26))
+
+### Tests
+
+* **e2e:** say where the unsupported screen is tested, and why not here ([8720354](https://github.com/iblai/os/commit/872035458d5ffaca0b05c46f86d1d271d9dcd8e2))
+* **panel:** measure the error page that picks between the panel screens ([d3d9ae0](https://github.com/iblai/os/commit/d3d9ae0da64127fb63d80bc1f162b31e002f089c))
+
+## [0.206.0](https://github.com/iblai/os/compare/v0.205.3...v0.206.0) (2026-11-22)
+
+### Features
+
+* **ext:** sign out of the panel, and offer the button when sign-in stalls ([fc4bcb1](https://github.com/iblai/os/commit/fc4bcb1fb25033ad8e786665976b406a6fe68486))
+
+### Bug Fixes
+
+* **ext:** stop an abandoned sign-in from undoing the sign-out ([d097b51](https://github.com/iblai/os/commit/d097b51d3ea5672e498be4bda7f4b02053cca773)), closes [#698](https://github.com/iblai/os/issues/698)
+
+### Tests
+
+* **ext:** cover the two sign-in failures that are not this attempt's news ([eef9c45](https://github.com/iblai/os/commit/eef9c45f37de6ec57c4a76b067f2c4481851ac2d))
+
+## [0.205.3](https://github.com/iblai/os/compare/v0.205.2...v0.205.3) (2026-11-22)
+
+### Bug Fixes
+
+* **panel:** give the review the app's own title and primary button ([989497f](https://github.com/iblai/os/commit/989497f0ba656a2b377c91889146b809a1e4194b))
+* **panel:** keep a recorded step inside the panel, and ask nothing of an empty value ([12f4da0](https://github.com/iblai/os/commit/12f4da044d7e8970b15432194c68ffcbfdbdd4b7))
+* **panel:** use the app's own checkbox, bin and heading casing in the review ([fefd417](https://github.com/iblai/os/commit/fefd4179170aa1ba61b08a93ae8d96d78e3950c3))
+
+## [0.205.2](https://github.com/iblai/os/compare/v0.205.1...v0.205.2) (2026-11-20)
+
+### Bug Fixes
+
+* **deps:** bump @iblai/iblai-js to 2.84.1 for even Capabilities spacing ([bf8ec8c](https://github.com/iblai/os/commit/bf8ec8c749c54f663be2a2504933f846dda94da5)), closes [iblai/iblai-web-frontend#2267](https://github.com/iblai/iblai-web-frontend/issues/2267)
+
+### Chores
+
+* **claude:** add ui-review skill for measured before/after UI previews ([b4f8e32](https://github.com/iblai/os/commit/b4f8e3229036d5de2cb1d6ce0748bef0e58e6afb))
+
 ## [0.205.1](https://github.com/iblai/os/compare/v0.205.0...v0.205.1) (2026-11-19)
 
 ### Bug Fixes

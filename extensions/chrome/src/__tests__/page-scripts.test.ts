@@ -9,6 +9,9 @@ import {
   setHudHidden,
   snapshotPage,
   waitForQuiet,
+  watchPage,
+  unwatchPage,
+  type RecordedEvent,
 } from '../page-scripts';
 import { SECRET_FIELDS } from '../secret-fields';
 
@@ -78,6 +81,27 @@ describe('injected functions stay self-contained', () => {
     if (fn === snapshotPage) {
       const snapshot = (rebuilt as typeof snapshotPage)(50, 100);
       expect(snapshot.items.length).toBeGreaterThan(0);
+    }
+    // `typeof` alone cannot see a free identifier in the body — a module-scope
+    // helper called from inside shipped green that way, and in the page it was
+    // a ReferenceError the paint swallowed, so no press ring ever appeared.
+    // Running the rebuilt function is the only thing that catches it.
+    if (fn === mountHud) {
+      const run = rebuilt as typeof mountHud;
+      const options = {
+        color: '#2467eb',
+        status: 'Working on this page',
+        stop: 'Stop',
+        stopping: 'Stopping…',
+        label: 'ibl.ai is working on this page',
+        watchdogMs: 5000,
+      };
+      const target = { x: 10, y: 20, w: 30, h: 40 };
+      expect(() => run(options)).not.toThrow();
+      expect(() => run({ ...options, target })).not.toThrow();
+      // The press path, which is where the free identifier was.
+      expect(() => run({ ...options, target, pressId: 1 })).not.toThrow();
+      removeHud();
     }
   });
 });
@@ -1129,6 +1153,123 @@ describe('the overlay is not part of the page', () => {
     expect(host()).not.toBeNull();
   });
 
+  describe('the pointer', () => {
+    // The overlay's root is closed, deliberately — the page it sits on has no
+    // business reaching into it. Catch the root as it is made instead of
+    // opening it up for the test.
+    let roots: ShadowRoot[] = [];
+    const attach = Element.prototype.attachShadow;
+
+    beforeEach(() => {
+      roots = [];
+      vi.spyOn(Element.prototype, 'attachShadow').mockImplementation(function (
+        this: Element,
+        init: ShadowRootInit,
+      ) {
+        const root = attach.call(this, init);
+        roots.push(root);
+        return root;
+      });
+    });
+
+    afterEach(() => {
+      vi.mocked(Element.prototype.attachShadow).mockRestore();
+    });
+
+    const arrow = () => {
+      const found = roots
+        .map((root) => root.querySelector<HTMLElement>('.arrow'))
+        .find(Boolean);
+      if (!found) throw new Error('the overlay has no pointer');
+      return found;
+    };
+    const target = { x: 100, y: 200, w: 40, h: 20 };
+
+    it('is not on the page until there is something to point at', () => {
+      mountHud(OPTIONS);
+      expect(arrow().classList.contains('off')).toBe(true);
+    });
+
+    it('sits at the middle of the element being acted on', () => {
+      mountHud({ ...OPTIONS, target });
+      expect(arrow().classList.contains('off')).toBe(false);
+      expect(arrow().style.left).toBe('120px');
+      expect(arrow().style.top).toBe('210px');
+    });
+
+    // The first target is jumped to rather than flown to from 0,0, which looks
+    // like a bug. The suppression is put back within the same call — only its
+    // restoration is observable here, and that is the part worth pinning: left
+    // off, nothing would ever travel again.
+    it('leaves travel enabled after arriving at the first target', () => {
+      mountHud({ ...OPTIONS, target });
+      expect(arrow().style.transition).toBe('');
+      mountHud({ ...OPTIONS, target: { ...target, x: 300 } });
+      expect(arrow().style.left).toBe('320px');
+      expect(arrow().style.transition).toBe('');
+    });
+
+    // `thinking()` paints a null target after every single action. Taking the
+    // pointer off here is what made every move a first sight, so the travel
+    // transition never ran once; it stays where it last acted instead.
+    it('stays where it last acted between actions', () => {
+      mountHud({ ...OPTIONS, target });
+      mountHud(OPTIONS);
+      expect(arrow().classList.contains('off')).toBe(false);
+      expect(arrow().style.left).toBe('120px');
+    });
+
+    it('travels to the next target rather than jumping', () => {
+      mountHud({ ...OPTIONS, target });
+      mountHud(OPTIONS); // between actions
+      mountHud({ ...OPTIONS, target: { ...target, x: 500 } });
+      expect(arrow().style.left).toBe('520px');
+      // Not suppressed: a suppressed transition here is the teleport.
+      expect(arrow().style.transition).toBe('');
+    });
+
+    // A run's overlay is painted before any action, so the first press is an
+    // id it has not seen.
+    it('shows a press where it lands', () => {
+      mountHud(OPTIONS);
+      mountHud({ ...OPTIONS, target, pressId: 1 });
+      expect(arrow().classList.contains('tap')).toBe(true);
+    });
+
+    // After a navigation the overlay is built afresh while the worker's count
+    // is already past zero. Replaying that press would put a click on whatever
+    // the next action happens to be — a `type`, say.
+    it('does not replay a press from before a navigation', () => {
+      mountHud({ ...OPTIONS, target, pressId: 4 });
+      expect(arrow().classList.contains('tap')).toBe(false);
+    });
+
+    // The overlay is re-painted on a heartbeat with the state the worker
+    // holds. A flag left standing would replay the click every beat for as
+    // long as the pointer rested there, which is why this is a count.
+    it('does not replay the press on every beat', () => {
+      mountHud(OPTIONS);
+      mountHud({ ...OPTIONS, target, pressId: 1 });
+      arrow().classList.remove('tap');
+      mountHud({ ...OPTIONS, target, pressId: 1 });
+      expect(arrow().classList.contains('tap')).toBe(false);
+    });
+
+    it('shows a second press in the same place', () => {
+      mountHud(OPTIONS);
+      mountHud({ ...OPTIONS, target, pressId: 1 });
+      arrow().classList.remove('tap');
+      mountHud({ ...OPTIONS, target, pressId: 2 });
+      expect(arrow().classList.contains('tap')).toBe(true);
+    });
+
+    it('points without pressing for an action that does not press', () => {
+      mountHud({ ...OPTIONS, target });
+      expect(arrow().classList.contains('off')).toBe(false);
+      expect(arrow().classList.contains('tap')).toBe(false);
+    });
+  });
+
   it('mounts once, however many times it is asked to', () => {
     mountHud(OPTIONS);
     mountHud(OPTIONS);
@@ -1163,5 +1304,322 @@ describe('the overlay is not part of the page', () => {
     document.documentElement.appendChild(stray);
     removeHud();
     expect(host()).toBeNull();
+  });
+});
+
+/**
+ * The recorder, which runs injected in the page: every click, change, submit
+ * and settled edit becomes a step the worker turns into a skill. It names
+ * elements by the same rules `snapshotPage` uses, and it is the one place a
+ * password could leak into a transcript.
+ */
+describe('watchPage', () => {
+  let sent: { type: string; step: RecordedEvent }[];
+
+  beforeEach(() => {
+    sent = [];
+    (globalThis as { chrome?: unknown }).chrome = {
+      runtime: {
+        sendMessage: (message: { type: string; step: RecordedEvent }) => {
+          sent.push(message);
+        },
+      },
+    };
+  });
+
+  afterEach(() => {
+    unwatchPage();
+    delete (globalThis as { chrome?: unknown }).chrome;
+  });
+
+  const steps = () => sent.map((message) => message.step);
+  const last = () => steps().at(-1)!;
+
+  const page = (html: string): HTMLElement => {
+    document.body.innerHTML = html;
+    watchPage(SECRET_FIELDS);
+    return document.body;
+  };
+
+  it('reports a click with the element it landed on', () => {
+    page('<button id="go">Continue</button>');
+    document.getElementById('go')!.click();
+
+    expect(sent).toHaveLength(1);
+    expect(sent[0].type).toBe('MENTOR:RECORDER_STEP');
+    expect(last()).toMatchObject({
+      kind: 'click',
+      role: 'button',
+      name: 'Continue',
+      secret: false,
+      url: location.href,
+    });
+  });
+
+  // The click lands on whatever is under the cursor; the step should name the
+  // control, not the span inside it.
+  it('climbs to the control the click was really on', () => {
+    page('<button><span id="inner">Save</span></button>');
+    document.getElementById('inner')!.click();
+
+    expect(last().role).toBe('button');
+  });
+
+  // No control to climb to: the element itself is the step, named by its tag.
+  // Pages put handlers on plain elements, and a click that went nowhere in the
+  // transcript would be a hole in the recording.
+  it('falls back to the element itself when it is not a control', () => {
+    page('<div id="el">plain</div>');
+    document
+      .getElementById('el')!
+      .dispatchEvent(new Event('click', { bubbles: true }));
+
+    expect(last()).toMatchObject({ kind: 'click', role: 'div', name: 'plain' });
+  });
+
+  it('says nothing at all for a click on no element', () => {
+    page('<button id="go">Go</button>');
+    document.dispatchEvent(new Event('click', { bubbles: true }));
+
+    expect(sent).toHaveLength(0);
+  });
+
+  describe('naming', () => {
+    const named = (html: string, id = 'el'): string => {
+      page(html);
+      document.getElementById(id)!.click();
+      return last().name;
+    };
+
+    it('prefers an aria-label', () => {
+      expect(named('<button id="el" aria-label="Close">x</button>')).toBe(
+        'Close',
+      );
+    });
+
+    it('falls back to aria-labelledby', () => {
+      expect(
+        named(
+          '<span id="l">Street</span><button id="el" aria-labelledby="l">x</button>',
+        ),
+      ).toBe('Street');
+    });
+
+    it('falls back to a label pointing at it', () => {
+      expect(named('<label for="el">Email</label><input id="el">')).toBe(
+        'Email',
+      );
+    });
+
+    it('falls back to a label wrapped around it', () => {
+      expect(named('<label>Phone <input id="el"></label>')).toBe('Phone');
+    });
+
+    it.each([
+      ['placeholder', '<input id="el" placeholder="Search">', 'Search'],
+      ['title', '<button id="el" title="Help">?</button>', 'Help'],
+      ['name', '<input id="el" name="city">', 'city'],
+    ])('falls back to %s', (_attr, html, expected) => {
+      expect(named(html)).toBe(expected);
+    });
+
+    it('uses its own text when nothing else names it', () => {
+      expect(named('<button id="el">Sign in</button>')).toBe('Sign in');
+    });
+
+    it('gives a select no name of its own', () => {
+      expect(named('<select id="el"><option>One</option></select>')).toBe('');
+    });
+
+    it('collapses the whitespace a page leaves in its markup', () => {
+      expect(named('<button id="el">  Sign \n  in  </button>')).toBe('Sign in');
+    });
+
+    it('cuts a very long name rather than carrying it whole', () => {
+      const name = named(`<button id="el">${'x'.repeat(200)}</button>`);
+      expect(name).toHaveLength(80);
+      expect(name.endsWith('…')).toBe(true);
+    });
+  });
+
+  describe('roles', () => {
+    const roleOf = (html: string): string => {
+      page(html);
+      document.getElementById('el')!.click();
+      return last().role;
+    };
+
+    it.each([
+      [
+        'an explicit role wins',
+        '<div id="el" role="Menu Item">x</div>',
+        'menu',
+      ],
+      ['a link', '<a id="el" href="#">x</a>', 'link'],
+      ['a button', '<button id="el">x</button>', 'button'],
+      [
+        'a summary',
+        '<details><summary id="el">x</summary></details>',
+        'button',
+      ],
+      ['a select', '<select id="el"></select>', 'combobox'],
+      ['a submit input', '<input id="el" type="submit">', 'button'],
+      ['a checkbox', '<input id="el" type="checkbox">', 'checkbox'],
+      ['a radio', '<input id="el" type="radio">', 'radio'],
+      ['a text input', '<input id="el">', 'textbox'],
+      ['a textarea', '<textarea id="el"></textarea>', 'textbox'],
+      [
+        'a contenteditable',
+        '<div id="el" contenteditable="true">x</div>',
+        'textbox',
+      ],
+      ['anything focusable', '<div id="el" tabindex="0">x</div>', 'focusable'],
+    ])('%s', (_label, html, expected) => {
+      expect(roleOf(html)).toBe(expected);
+    });
+  });
+
+  describe('values', () => {
+    it('carries what was typed once an edit settles', () => {
+      page('<input id="el" name="city">');
+      const input = document.getElementById('el') as HTMLInputElement;
+      input.value = 'Lagos';
+      input.dispatchEvent(new Event('blur', { bubbles: true }));
+
+      expect(last()).toMatchObject({ kind: 'input', value: 'Lagos' });
+    });
+
+    // Per keystroke the worker would coalesce a message per character.
+    it('reports an edit on Enter as well as on blur', () => {
+      page('<input id="el" name="city">');
+      const input = document.getElementById('el') as HTMLInputElement;
+      input.value = 'Lagos';
+      input.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }),
+      );
+
+      expect(last()).toMatchObject({ kind: 'input', value: 'Lagos' });
+    });
+
+    it('ignores any other key', () => {
+      page('<input id="el" name="city">');
+      document
+        .getElementById('el')!
+        .dispatchEvent(
+          new KeyboardEvent('keydown', { key: 'a', bubbles: true }),
+        );
+
+      expect(sent).toHaveLength(0);
+    });
+
+    it('carries the chosen option of a select', () => {
+      page('<select id="el"><option>One</option><option>Two</option></select>');
+      const select = document.getElementById('el') as HTMLSelectElement;
+      select.selectedIndex = 1;
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+
+      expect(last()).toMatchObject({ kind: 'change', value: 'Two' });
+    });
+
+    it('reports a submit, with no value to carry', () => {
+      page('<form id="f"><input name="q"></form>');
+      document
+        .getElementById('f')!
+        .dispatchEvent(new Event('submit', { bubbles: true }));
+
+      expect(last()).toMatchObject({ kind: 'submit' });
+      expect(last().value).toBeUndefined();
+    });
+
+    it('carries no value on a click', () => {
+      page('<input id="el" value="typed">');
+      document.getElementById('el')!.click();
+
+      expect(last().kind).toBe('click');
+      expect(last().value).toBeUndefined();
+    });
+  });
+
+  // The one place a password could reach a transcript.
+  describe('secrets', () => {
+    it('marks a password field and keeps what was typed out of the step', () => {
+      page('<input id="el" type="password" name="pw">');
+      const input = document.getElementById('el') as HTMLInputElement;
+      input.value = 'hunter2';
+      input.dispatchEvent(new Event('blur', { bubbles: true }));
+
+      expect(last().secret).toBe(true);
+      expect(last().value).toBeUndefined();
+      expect(JSON.stringify(sent)).not.toContain('hunter2');
+    });
+
+    it.each(SECRET_FIELDS.slice(0, 3))(
+      'treats autocomplete=%s as a secret',
+      (token) => {
+        page(`<input id="el" autocomplete="${token}">`);
+        const input = document.getElementById('el') as HTMLInputElement;
+        input.value = 'secret-value';
+        input.dispatchEvent(new Event('blur', { bubbles: true }));
+
+        expect(last().secret).toBe(true);
+        expect(last().value).toBeUndefined();
+      },
+    );
+
+    it('leaves an ordinary field alone', () => {
+      page('<input id="el" autocomplete="off" name="city">');
+      const input = document.getElementById('el') as HTMLInputElement;
+      input.value = 'Lagos';
+      input.dispatchEvent(new Event('blur', { bubbles: true }));
+
+      expect(last().secret).toBe(false);
+      expect(last().value).toBe('Lagos');
+    });
+  });
+
+  describe('its lifetime', () => {
+    it('watches once, however many times it is asked to', () => {
+      page('<button id="go">Go</button>');
+      watchPage(SECRET_FIELDS);
+      watchPage(SECRET_FIELDS);
+      document.getElementById('go')!.click();
+
+      expect(sent).toHaveLength(1);
+    });
+
+    it('stops reporting once it is taken off', () => {
+      page('<button id="go">Go</button>');
+      unwatchPage();
+      document.getElementById('go')!.click();
+
+      expect(sent).toHaveLength(0);
+    });
+
+    it('can be taken off where it was never put on', () => {
+      expect(() => unwatchPage()).not.toThrow();
+    });
+
+    it('can be put back after being taken off', () => {
+      page('<button id="go">Go</button>');
+      unwatchPage();
+      watchPage(SECRET_FIELDS);
+      document.getElementById('go')!.click();
+
+      expect(sent).toHaveLength(1);
+    });
+
+    // The worker dies and the page carries on; recording is over either way.
+    it('survives the worker being gone', () => {
+      page('<button id="go">Go</button>');
+      (globalThis as { chrome?: unknown }).chrome = {
+        runtime: {
+          sendMessage: () => {
+            throw new Error('Extension context invalidated');
+          },
+        },
+      };
+
+      expect(() => document.getElementById('go')!.click()).not.toThrow();
+    });
   });
 });

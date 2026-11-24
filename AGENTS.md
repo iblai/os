@@ -75,7 +75,7 @@ We moved from "student" to "user" and from "mentor" to "agent". This is a UI rul
 
 ## UI casing: match the screen you are extending
 
-The app has an established capitalization style per surface, and new UI must copy it — check the neighbouring labels before writing copy. Most labels a person clicks or scans (tab and dialog titles, section headings, field/toggle names, buttons, menu items) use Title Case, as in the agent settings tab: "User Models", "Search Providers", "Allow All OpenAI Models", "Save Anyway". Small joining words (a, an, the, of, to, in, on, for, and, or, with) stay lowercase unless first. Full sentences — descriptions, help text, errors, toasts, counts like "3 of 29 allowed" — stay in sentence case. Brand/model names keep their own casing (ibl.ai, GPT-4o mini). Where a surface already does it differently, follow that surface, not this default.
+The app has an established capitalization style per surface, and new UI must copy it — check the neighbouring labels before writing copy. Most labels a person clicks or scans (tab and dialog titles, section headings, field/toggle names, buttons, menu items) use Title Case, as in the agent settings tab: "User Models", "Search Providers", "Allow All OpenAI Models", "Save Anyway". Small joining words (a, an, the, of, to, in, on, for, and, or, with) and demonstratives (this, that, these, those) stay lowercase unless first — "Name this Skill", "Only this Agent". Full sentences — descriptions, help text, errors, toasts, counts like "3 of 29 allowed" — stay in sentence case. Brand/model names keep their own casing (ibl.ai, GPT-4o mini). Where a surface already does it differently, follow that surface, not this default.
 
 ## The user has never coded
 
@@ -97,6 +97,12 @@ Every screen is for someone who has never configured software. Apply these rules
 - **OAuth sign-in links.** Open an MCP connector's `auth_url` as given; never rewrite its `redirect_uri` on the client, since providers accept only the registered callback (`invalid redirect_uri`). To test a sign-in on localhost, register a provider app with the localhost callback.
 
 When a reviewer says a screen is confusing, remove controls and words before adding explanations.
+
+## UI changes: uniform spacing, shown before and after
+
+Every change to something a person sees ends with a measured visual review, unasked: render the screen at desktop (1440×900), tablet (834×1194) and mobile (390×844), overlay each row's height and the px gap to the next row, and show the before/after contact sheets. Spacing must be uniform — the same gap between rows of the same kind, and a clear step up from heading → row → group → section (e.g. rows 16px, groups 24px). A gap that differs from its siblings without a nameable reason means the change is not done. This came from the Capabilities tab (iblai/iblai-platform#2942), where Surface rows sat 16px apart and Global rows 12px.
+
+See `.claude/skills/ui-review.md` for how to run it (`.claude/skills/ui-review-kit.cjs`).
 
 ## Code mode: ibl.ai instruction layers
 
