@@ -1188,21 +1188,46 @@ describe('the overlay is not part of the page', () => {
       expect(arrow().style.transition).toBe('');
     });
 
-    it('leaves the page when there is nothing to point at', () => {
+    // `thinking()` paints a null target after every single action. Taking the
+    // pointer off here is what made every move a first sight, so the travel
+    // transition never ran once; it stays where it last acted instead.
+    it('stays where it last acted between actions', () => {
       mountHud({ ...OPTIONS, target });
       mountHud(OPTIONS);
-      expect(arrow().classList.contains('off')).toBe(true);
+      expect(arrow().classList.contains('off')).toBe(false);
+      expect(arrow().style.left).toBe('120px');
     });
 
+    it('travels to the next target rather than jumping', () => {
+      mountHud({ ...OPTIONS, target });
+      mountHud(OPTIONS); // between actions
+      mountHud({ ...OPTIONS, target: { ...target, x: 500 } });
+      expect(arrow().style.left).toBe('520px');
+      // Not suppressed: a suppressed transition here is the teleport.
+      expect(arrow().style.transition).toBe('');
+    });
+
+    // A run's overlay is painted before any action, so the first press is an
+    // id it has not seen.
     it('shows a press where it lands', () => {
+      mountHud(OPTIONS);
       mountHud({ ...OPTIONS, target, pressId: 1 });
       expect(arrow().classList.contains('tap')).toBe(true);
+    });
+
+    // After a navigation the overlay is built afresh while the worker's count
+    // is already past zero. Replaying that press would put a click on whatever
+    // the next action happens to be — a `type`, say.
+    it('does not replay a press from before a navigation', () => {
+      mountHud({ ...OPTIONS, target, pressId: 4 });
+      expect(arrow().classList.contains('tap')).toBe(false);
     });
 
     // The overlay is re-painted on a heartbeat with the state the worker
     // holds. A flag left standing would replay the click every beat for as
     // long as the pointer rested there, which is why this is a count.
     it('does not replay the press on every beat', () => {
+      mountHud(OPTIONS);
       mountHud({ ...OPTIONS, target, pressId: 1 });
       arrow().classList.remove('tap');
       mountHud({ ...OPTIONS, target, pressId: 1 });
@@ -1210,6 +1235,7 @@ describe('the overlay is not part of the page', () => {
     });
 
     it('shows a second press in the same place', () => {
+      mountHud(OPTIONS);
       mountHud({ ...OPTIONS, target, pressId: 1 });
       arrow().classList.remove('tap');
       mountHud({ ...OPTIONS, target, pressId: 2 });

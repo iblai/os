@@ -67,6 +67,14 @@ export function doingLine(tool: string, target: string): string {
 export interface Hud {
   /** The action about to run, and the element it is on. */
   say(tool: string, target: string, rect?: Rect | null): void;
+  /**
+   * The action landed: show a press where the pointer is, if that tool presses.
+   *
+   * Separate from `say` because `say` runs BEFORE the confirmation card and
+   * before the action executes — a declined, refused or failed click would
+   * otherwise leave a press animating on a page where nothing was clicked.
+   */
+  pressed(tool: string): void;
   /** Between actions, while the model decides what is next. */
   thinking(): void;
   /** Runs `fn` with the bar out of the way, but only if it covers `point`. */
@@ -170,9 +178,13 @@ export function startHud(tabId: number, goal?: string | null): Hud {
     say(tool, target, rect) {
       state.status = doingLine(tool, target);
       state.target = rect ?? null;
+      void paint();
+    },
+    pressed(tool) {
+      if (!state.target || !PRESSES.has(tool)) return;
       // Counted, not flagged: the heartbeat re-paints this same state, and a
-      // standing flag would replay the click every beat.
-      if (rect && PRESSES.has(tool)) state.pressId = (state.pressId ?? 0) + 1;
+      // standing flag would replay the press every beat.
+      state.pressId = (state.pressId ?? 0) + 1;
       void paint();
     },
     thinking() {

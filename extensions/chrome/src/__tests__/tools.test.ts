@@ -1301,9 +1301,13 @@ describe('the overlay on the page', () => {
     const thinking = vi.fn(() => {
       said.push(['thinking', '', null]);
     });
+    const pressed = vi.fn((tool: string) => {
+      said.push(['pressed', tool, null]);
+    });
     const hud: Hud = {
       say,
       thinking,
+      pressed,
       async dodge(point, fn) {
         dodged.push(point);
         return fn();

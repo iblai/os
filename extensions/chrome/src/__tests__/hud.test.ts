@@ -181,6 +181,64 @@ describe('startHud', () => {
     });
   });
 
+  describe('the press', () => {
+    const pressId = () => {
+      const [options] = injected('mountHud').at(-1)![0].args as [
+        { pressId?: number },
+      ];
+      return options.pressId ?? 0;
+    };
+    const rect = { x: 10, y: 20, w: 30, h: 40 };
+
+    // Separate from `say` on purpose: `say` runs before the confirmation card
+    // and before the action, so counting there would animate a press the user
+    // declined or the page refused.
+    it('counts a press for a tool that presses', async () => {
+      const hud = startHud(7);
+      await vi.waitFor(() => expect(host()).not.toBeNull());
+      hud.say('click', '[3] button "Pay"', rect);
+      await vi.waitFor(() => expect(pressId()).toBe(0));
+
+      hud.pressed('click');
+      await vi.waitFor(() => expect(pressId()).toBe(1));
+      await hud.stop();
+    });
+
+    it('counts each press, so a second one in the same place still shows', async () => {
+      const hud = startHud(7);
+      await vi.waitFor(() => expect(host()).not.toBeNull());
+      hud.say('click', '[3] button "Pay"', rect);
+      hud.pressed('click');
+      await vi.waitFor(() => expect(pressId()).toBe(1));
+
+      hud.pressed('click');
+      await vi.waitFor(() => expect(pressId()).toBe(2));
+      await hud.stop();
+    });
+
+    // The keyboard is not the pointer: a tap mark on a field being typed into
+    // reads as a click that never happened.
+    it('counts nothing for a tool that does not press', async () => {
+      const hud = startHud(7);
+      await vi.waitFor(() => expect(host()).not.toBeNull());
+      hud.say('type', '[3] textbox "Email"', rect);
+      hud.pressed('type');
+
+      await vi.waitFor(() => expect(pressId()).toBe(0));
+      await hud.stop();
+    });
+
+    it('counts nothing when there is nothing to press on', async () => {
+      const hud = startHud(7);
+      await vi.waitFor(() => expect(host()).not.toBeNull());
+      hud.say('click', 'somewhere', null);
+      hud.pressed('click');
+
+      await vi.waitFor(() => expect(pressId()).toBe(0));
+      await hud.stop();
+    });
+  });
+
   describe('the tab-strip marker', () => {
     it('groups the driven tab, named and in the brand colour', async () => {
       // No goal: the app's own name is what the strip gets.

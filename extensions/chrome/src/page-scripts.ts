@@ -913,11 +913,14 @@ export function mountHud(options: HudOptions): void {
       spot,
       arrow,
       at: null,
-      // Zero, not the incoming id: seeding from it would swallow the very
-      // first click of a run, which is the one most worth showing. A fresh
-      // overlay after a navigation replays the last press once, which is the
-      // right reading — that page has not shown it yet.
-      pressed: 0,
+      // Seeded from what the worker already holds. A run's overlay is painted
+      // before any action, so the first press still animates: it arrives as an
+      // id this overlay has not seen. After a navigation the id is already
+      // ≥ 1, and seeding it is what stops the new page replaying a press that
+      // belonged to the old one — onto whatever the next action happens to be,
+      // including a `type`, which is the "click that never happened" the
+      // press list exists to prevent.
+      pressed: options.pressId ?? 0,
       beat: Date.now(),
       timer: 0,
     };
@@ -979,8 +982,14 @@ export function mountHud(options: HudOptions): void {
     }
   } else {
     hud.spot.classList.add('off');
-    hud.arrow.classList.add('off');
-    hud.at = null;
+    // The pointer stays where it last acted, and keeps `at` with it.
+    //
+    // `thinking()` paints a null target after EVERY action, so clearing the
+    // position here made every move a first sight — the arrow teleported and
+    // the travel transition never ran once. Leaving it in place is also what
+    // the thing is for: between actions there is still a pointer on the page,
+    // resting where it worked last, the way a real one would.
+    if (!hud.at) hud.arrow.classList.add('off');
   }
 }
 
