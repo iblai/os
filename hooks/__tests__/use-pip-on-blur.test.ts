@@ -1,15 +1,15 @@
-import {
-  describe,
-  it,
-  expect,
-  vi,
-  beforeAll,
-  beforeEach,
-  afterEach,
-  Mock,
-} from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, Mock } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { Track, ParticipantEvent, RoomEvent } from 'livekit-client';
+
+// Imported at the top, not awaited inside a hook. The module pulls in React,
+// react-dom/client, livekit-client and PipChat, and compiling that took longer
+// than `hookTimeout` on a busy machine — a push would fail here with "Hook
+// timed out in 15000ms" while the file passed on its own. At the top the cost
+// lands in collection, which has no per-hook budget, and it is still evaluated
+// before any `beforeEach` installs fake timers, which is what the deferral was
+// for.
+import { usePipOnBlur } from '../use-pip-on-blur';
 
 // Create a complete mock PIP document that works with copyStyles
 const createMockPipDocument = (
@@ -206,11 +206,6 @@ let mockPipWindow: ReturnType<typeof createMockPipWindow> | null = null;
 const mockRequestWindow = vi.fn();
 
 describe('usePipOnBlur', () => {
-  // Pre-import the module before fake timers are active to avoid timeout
-  beforeAll(async () => {
-    await import('../use-pip-on-blur');
-  });
-
   let originalDocumentPictureInPicture: typeof window.documentPictureInPicture;
   let originalStyleSheets: StyleSheetList;
   let originalOpener: Window | null;
@@ -288,11 +283,9 @@ describe('usePipOnBlur', () => {
     mockPipWindow = null;
   });
 
-  // Import hook after mocks are set up
-  const getHook = async () => {
-    const module = await import('../use-pip-on-blur');
-    return module.usePipOnBlur;
-  };
+  // Kept async so every call site reads the same; the module is already
+  // imported at the top of this file, so there is nothing left to wait for.
+  const getHook = async () => usePipOnBlur;
 
   describe('initialization', () => {
     it('should return isPipOpen, openPip, and closePip', async () => {
