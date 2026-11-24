@@ -35,6 +35,10 @@ export function stepParts(step: RecordedStep): { verb: string; what: string } {
     ? `${step.target.role} “${step.target.name}”`
     : step.target.role;
   switch (step.tool) {
+    // A tab switch acts on the tab, not on a control in the page, so the name
+    // is the whole of what it acts on.
+    case 'switch-tab':
+      return { verb: 'Switch to', what: step.target.name || 'the other tab' };
     case 'navigate':
       return { verb: 'Go to', what: shortUrl(step.url) };
     case 'type':
