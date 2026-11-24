@@ -776,6 +776,8 @@ export function EmbedTab() {
                             </p>
                             <a
                               href={`mailto:${supportEmail}?subject=Request%20to%20Enable%20Custom%20JavaScript&body=Hello%2C%0A%0AI%20would%20like%20to%20request%20access%20to%20the%20Custom%20JavaScript%20feature%20for%20my%20agent.%0A%0AAgent%20ID%3A%20${mentorId}%0ATenant%3A%20${tenantKey}%0A%0AThank%20you.`}
+                              target="_blank"
+                              rel="noopener noreferrer"
                               className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-blue-700"
                             >
                               <Mail className="h-3.5 w-3.5" />
