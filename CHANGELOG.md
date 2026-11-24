@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.207.2](https://github.com/iblai/os/compare/v0.207.1...v0.207.2) (2026-11-24)
+
+### Bug Fixes
+
+* open every remaining support link away from the panel ([6d7e827](https://github.com/iblai/os/commit/6d7e8270e777862153d43fbf77a506f497d5013c)), closes [#583](https://github.com/iblai/os/issues/583)
+
 ## [0.207.1](https://github.com/iblai/os/compare/v0.207.0...v0.207.1) (2026-11-23)
 
 ### Documentation
