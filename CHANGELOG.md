@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.209.0](https://github.com/iblai/os/compare/v0.208.0...v0.209.0) (2026-11-24)
+
+### Features
+
+* **ext:** a pointer that travels, and a tab group named after the run ([7b964b4](https://github.com/iblai/os/commit/7b964b406b63a3fb192337a9dc177f765ca59f3f))
+
+### Bug Fixes
+
+* **ext:** keep the overlay self-contained, and the ring honest ([80c4dc5](https://github.com/iblai/os/commit/80c4dc5060abf415e753ba022258c8c612c3471b))
+* **ext:** keep the press count level, and ring where the pointer lands ([294cd5f](https://github.com/iblai/os/commit/294cd5ff7a41a2f35e7dd0a901bff83e15e52e6f))
+* **ext:** make the pointer actually travel, and press only once it lands ([bfdb2fb](https://github.com/iblai/os/commit/bfdb2fbd256a85236791f20e11d39a0668b797ac))
+
+### Tests
+
+* **ext:** cover the page recorder ([7b7913f](https://github.com/iblai/os/commit/7b7913f974cce8489f50dea5630a80df2c878f4d))
+
 ## [0.208.0](https://github.com/iblai/os/compare/v0.207.3...v0.208.0) (2026-11-24)
 
 ### Features
