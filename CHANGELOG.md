@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.210.0](https://github.com/iblai/os/compare/v0.209.2...v0.210.0) (2026-11-25)
+
+### Features
+
+* iblai-js bump to 3.1.0 ([88082f7](https://github.com/iblai/os/commit/88082f7829f6e9a7bd8ab6d95413a48acac65a5e))
+
 ## [0.209.2](https://github.com/iblai/os/compare/v0.209.1...v0.209.2) (2026-11-25)
 
 ### Chores
