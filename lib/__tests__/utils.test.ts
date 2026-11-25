@@ -323,7 +323,6 @@ describe('redirectToAuthSpa function', () => {
           tenant: QUERY_PARAMS.TENANT,
         },
         redirectPathStorageKey: LOCAL_STORAGE_KEYS.REDIRECT_TO,
-        preserveTokenKey: 'edx_jwt_token',
         authRedirectProxy: '/api/auth-redirect',
       }),
     );
@@ -2412,12 +2411,15 @@ describe('redirectToAuthSpa - SDK delegation with various options', () => {
     expect(callOptions.isNativeApp()).toBe(false);
   });
 
-  it('should pass preserveTokenKey for JWT token handling', async () => {
+  it('never asks the SDK to forward the edX JWT', async () => {
+    // The edX JWT belongs to the auth app, which exchanges it for the axd/dm
+    // pair. Forwarding it would put a credential in the URL, and so in
+    // history, logs and the Referer header.
     await redirectToAuthSpa();
 
     expect(sdkRedirectMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        preserveTokenKey: 'edx_jwt_token',
+      expect.not.objectContaining({
+        preserveTokenKey: expect.anything(),
       }),
     );
   });
