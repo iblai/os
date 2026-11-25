@@ -14,7 +14,6 @@ import {
 import {
   PromptsTab,
   McpTab,
-  ToolsTab,
   SafetyTab,
   SpendCapsTab,
   PrivacyTab,
@@ -80,7 +79,6 @@ export const EDIT_MENTOR_TAB_COMPONENTS: Record<string, ReactNode> = {
   [MODALS.EDIT_MENTOR.tabs.privacy]: <PrivacyTab />,
   [MODALS.EDIT_MENTOR.tabs.tasks]: <TasksTab />,
   [MODALS.EDIT_MENTOR.tabs.disclaimer]: <DisclaimersTab />,
-  [MODALS.EDIT_MENTOR.tabs.tools]: <ToolsTab />,
   [MODALS.EDIT_MENTOR.tabs.mcp]: <McpTab />,
   [MODALS.EDIT_MENTOR.tabs.memory]: <MemoryTab />,
   [MODALS.EDIT_MENTOR.tabs.history]: <HistoryTab />,

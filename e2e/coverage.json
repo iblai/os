@@ -3,13 +3,13 @@
   "lastUpdated": "2026-11-23",
   "summary": {
     "totalCheckpoints": 1200,
-    "coveredCheckpoints": 1119,
-    "deprecatedCheckpoints": 18,
-    "notReproducibleCheckpoints": 17,
+    "coveredCheckpoints": 1113,
+    "deprecatedCheckpoints": 26,
+    "notReproducibleCheckpoints": 15,
     "pendingCheckpoints": 46,
     "percent": 100,
     "totalJourneys": 115,
-    "activeJourneys": 114
+    "activeJourneys": 113
   },
   "journeys": [
     {
@@ -393,7 +393,9 @@
         {
           "id": "mgmt-04",
           "description": "Admin sees the Tools tab render with at least one tool (light smoke check on the shared account mentor; real toggle-on/off + persistence + a11y coverage moved to journey 77's tools-01..05 on disposable per-test mentors, to avoid mutating tool_slugs on a mentor other tests/suites share)",
-          "status": "covered"
+          "status": "deprecated",
+          "deprecatedIn": "iblai-js 3.0.3 upgrade",
+          "deprecatedReason": "The SDK removed AgentToolsTab in @iblai/iblai-js 3.0.0: each capability's activation switch now lives inside its own tab (Screen Share, Grader, LTI), so there is no Tools tab left to drive."
         },
         {
           "id": "mgmt-05",
@@ -501,7 +503,9 @@
       "id": "mentor-settings-tab-unique-id",
       "name": "Mentor Settings Tab — Unique ID",
       "spec": "07-mentor-settings-tab-unique-id.spec.ts",
-      "sourceFiles": ["components/modals/edit-mentor-modal/settings-tab.tsx"],
+      "sourceFiles": [
+        "components/modals/edit-mentor-modal/settings-tab.tsx"
+      ],
       "checkpoints": [
         {
           "id": "uid-01",
@@ -646,7 +650,9 @@
       "id": "voice-chat",
       "name": "Voice Chat",
       "spec": "09-voice-chat.spec.ts",
-      "sourceFiles": ["hooks/use-voice-chat.ts"],
+      "sourceFiles": [
+        "hooks/use-voice-chat.ts"
+      ],
       "checkpoints": [
         {
           "id": "vc-01",
@@ -783,7 +789,9 @@
       "id": "canvas-embed",
       "name": "Canvas — Embed",
       "spec": "11-canvas-embed.spec.ts",
-      "sourceFiles": ["components/modals/edit-mentor-modal/tabs/embed-tab.tsx"],
+      "sourceFiles": [
+        "components/modals/edit-mentor-modal/tabs/embed-tab.tsx"
+      ],
       "checkpoints": [
         {
           "id": "ce-01",
@@ -1083,7 +1091,9 @@
       "id": "my-mentors-modal",
       "name": "My Mentors Modal",
       "spec": "16-my-mentors-modal.spec.ts",
-      "sourceFiles": ["components/modals/my-mentors-modal.tsx"],
+      "sourceFiles": [
+        "components/modals/my-mentors-modal.tsx"
+      ],
       "status": "deprecated",
       "deprecatedIn": "#1431",
       "deprecatedReason": "Feature removed; agent discovery consolidated to the Explore sidebar. Spec file is a stub.",
@@ -1967,7 +1977,9 @@
       "id": "user-invitations-and-default-mentor",
       "name": "User Invitations & Default Mentor",
       "spec": "27-user-invitations-and-default-mentor.spec.ts",
-      "sourceFiles": ["components/modals/settings-modal.tsx"],
+      "sourceFiles": [
+        "components/modals/settings-modal.tsx"
+      ],
       "checkpoints": [
         {
           "id": "inv-01",
@@ -2255,7 +2267,9 @@
       "id": "advanced-css-js-customization",
       "name": "Advanced CSS / JS Customization",
       "spec": "30-advanced-css-js-customization.spec.ts",
-      "sourceFiles": ["components/modals/advanced-settings-modal.tsx"],
+      "sourceFiles": [
+        "components/modals/advanced-settings-modal.tsx"
+      ],
       "checkpoints": [
         {
           "id": "css-01",
@@ -2449,7 +2463,9 @@
       "id": "ui-render-console-errors",
       "name": "UI Render Console Errors",
       "spec": "33-ui-render-console-errors.spec.ts",
-      "sourceFiles": ["app/platform/[tenantKey]/[mentorId]/page.tsx"],
+      "sourceFiles": [
+        "app/platform/[tenantKey]/[mentorId]/page.tsx"
+      ],
       "checkpoints": [
         {
           "id": "ui-err-01",
@@ -2897,7 +2913,9 @@
       "id": "copy-mentor",
       "name": "Copy Mentor",
       "spec": "36-copy-mentor.spec.ts",
-      "sourceFiles": ["components/modals/edit-mentor-modal/settings-tab.tsx"],
+      "sourceFiles": [
+        "components/modals/edit-mentor-modal/settings-tab.tsx"
+      ],
       "checkpoints": [
         {
           "id": "cpm-01",
@@ -3017,7 +3035,9 @@
       "id": "tenant-memory-system-toggle",
       "name": "Tenant Memory System Toggle",
       "spec": "38-tenant-memory-system-toggle.spec.ts",
-      "sourceFiles": ["components/modals/settings-modal.tsx"],
+      "sourceFiles": [
+        "components/modals/settings-modal.tsx"
+      ],
       "checkpoints": [
         {
           "id": "tms-01",
@@ -3248,7 +3268,9 @@
       "id": "persistent-chat-input-label",
       "name": "Persistent Chat Input Label (WCAG 3.3.2)",
       "spec": "43-persistent-chat-input-label.spec.ts",
-      "sourceFiles": ["components/chat-input-form.tsx"],
+      "sourceFiles": [
+        "components/chat-input-form.tsx"
+      ],
       "checkpoints": [
         {
           "id": "pcil-01",
@@ -4654,7 +4676,9 @@
       "id": "shareable-link-rbac-bypass",
       "name": "Shareable Link RBAC Bypass",
       "spec": "64-shareable-link-rbac-bypass.spec.ts",
-      "sourceFiles": ["components/chat-input-form.tsx"],
+      "sourceFiles": [
+        "components/chat-input-form.tsx"
+      ],
       "checkpoints": [
         {
           "id": "shl-01",
@@ -5374,7 +5398,9 @@
       "id": "chat-url-prompt-injection",
       "name": "Chat URL ?prompt= Auto-Injection",
       "spec": "chat-url-prompt-injection.spec.ts",
-      "sourceFiles": ["components/chat/sdk-chat.tsx"],
+      "sourceFiles": [
+        "components/chat/sdk-chat.tsx"
+      ],
       "checkpoints": [
         {
           "id": "upi-01",
@@ -5665,42 +5691,58 @@
       "id": "mentor-tools-tab",
       "name": "Mentor Tools Tab",
       "spec": "77-mentor-tools-tab.spec.ts",
-      "sourceFiles": ["components/modals/edit-mentor-modal/tabs/tools-tab.tsx"],
+      "sourceFiles": [
+        "components/modals/edit-mentor-modal/tabs/tools-tab.tsx"
+      ],
       "checkpoints": [
         {
           "id": "tools-01",
           "description": "Admin opens the Tools tab and sees the header, description, and the tools-info-box copy",
-          "status": "covered"
+          "status": "deprecated",
+          "deprecatedIn": "iblai-js 3.0.3 upgrade",
+          "deprecatedReason": "The SDK removed AgentToolsTab in @iblai/iblai-js 3.0.0: each capability's activation switch now lives inside its own tab (Screen Share, Grader, LTI), so there is no Tools tab left to drive."
         },
         {
           "id": "tools-02",
           "description": "Admin toggles a tool on (aria-checked + success toast) and it persists across a close + full page reload + reopen; toggling it back off persists the same way; skips gracefully on an empty tenant tool catalogue",
-          "status": "covered"
+          "status": "deprecated",
+          "deprecatedIn": "iblai-js 3.0.3 upgrade",
+          "deprecatedReason": "The SDK removed AgentToolsTab in @iblai/iblai-js 3.0.0: each capability's activation switch now lives inside its own tab (Screen Share, Grader, LTI), so there is no Tools tab left to drive."
         },
         {
           "id": "tools-03",
           "description": "A tool's info icon exposes \"More info about {name}\" and its tooltip shows the description on both hover and keyboard focus",
-          "status": "covered"
+          "status": "deprecated",
+          "deprecatedIn": "iblai-js 3.0.3 upgrade",
+          "deprecatedReason": "The SDK removed AgentToolsTab in @iblai/iblai-js 3.0.0: each capability's activation switch now lives inside its own tab (Screen Share, Grader, LTI), so there is no Tools tab left to drive."
         },
         {
           "id": "tools-04",
           "description": "A tool switch's accessible name flips between \"{name} disabled\" and \"{name} enabled\" as it is toggled",
-          "status": "covered"
+          "status": "deprecated",
+          "deprecatedIn": "iblai-js 3.0.3 upgrade",
+          "deprecatedReason": "The SDK removed AgentToolsTab in @iblai/iblai-js 3.0.0: each capability's activation switch now lives inside its own tab (Screen Share, Grader, LTI), so there is no Tools tab left to drive."
         },
         {
           "id": "tools-05",
           "description": "Non-admin does not see the Tools tab in the Edit Mentor modal (dropdown has no Settings item; falls back to a direct tab-absence check)",
-          "status": "covered"
+          "status": "deprecated",
+          "deprecatedIn": "iblai-js 3.0.3 upgrade",
+          "deprecatedReason": "The SDK removed AgentToolsTab in @iblai/iblai-js 3.0.0: each capability's activation switch now lives inside its own tab (Screen Share, Grader, LTI), so there is no Tools tab left to drive."
         },
         {
           "id": "tools-06",
           "description": "Read-only mentor_tools field permission (WithFormPermissions) disables every tool switch; not reproducible in this environment — NEXT_PUBLIC_ENABLE_RBAC is unset (defaults false) and no fixture seeds a permissions.field.mentor_tools write:false response",
-          "status": "not-reproducible"
+          "status": "deprecated",
+          "deprecatedIn": "iblai-js 3.0.3 upgrade",
+          "deprecatedReason": "The SDK removed AgentToolsTab in @iblai/iblai-js 3.0.0: each capability's activation switch now lives inside its own tab (Screen Share, Grader, LTI), so there is no Tools tab left to drive."
         },
         {
           "id": "tools-07",
           "description": "Tools tab copy renders correctly in a non-English locale (e.g. es); not reproducible — no journey in this repo has an established, reliable mechanism to switch the live app locale and assert on translated text",
-          "status": "not-reproducible"
+          "status": "deprecated",
+          "deprecatedIn": "iblai-js 3.0.3 upgrade",
+          "deprecatedReason": "The SDK removed AgentToolsTab in @iblai/iblai-js 3.0.0: each capability's activation switch now lives inside its own tab (Screen Share, Grader, LTI), so there is no Tools tab left to drive."
         }
       ]
     },
@@ -5708,7 +5750,9 @@
       "id": "mentor-api-tab",
       "name": "Mentor API Tab",
       "spec": "78-mentor-api-tab.spec.ts",
-      "sourceFiles": ["components/modals/edit-mentor-modal/tabs/api-tab.tsx"],
+      "sourceFiles": [
+        "components/modals/edit-mentor-modal/tabs/api-tab.tsx"
+      ],
       "checkpoints": [
         {
           "id": "api-01",
@@ -6003,7 +6047,9 @@
       "id": "composer-redesign",
       "name": "Composer Redesign",
       "spec": "79-composer-redesign.spec.ts",
-      "sourceFiles": ["components/chat/sdk-chat.tsx"],
+      "sourceFiles": [
+        "components/chat/sdk-chat.tsx"
+      ],
       "checkpoints": [
         {
           "id": "cr-01",
@@ -6604,7 +6650,9 @@
       "id": "camera-dialog-pointer-events",
       "name": "Camera Dialog Leaves Page Clickable",
       "spec": "87-camera-dialog-pointer-events.spec.ts",
-      "sourceFiles": ["components/chat/sdk-chat.tsx"],
+      "sourceFiles": [
+        "components/chat/sdk-chat.tsx"
+      ],
       "checkpoints": [
         {
           "id": "camera-01",
@@ -6627,7 +6675,9 @@
       "id": "create-agent-category-wheel-scroll",
       "name": "Create Agent Category Wheel Scroll",
       "spec": "88-create-agent-category-wheel-scroll.spec.ts",
-      "sourceFiles": ["components/modals/create-mentor-modal.tsx"],
+      "sourceFiles": [
+        "components/modals/create-mentor-modal.tsx"
+      ],
       "checkpoints": [
         {
           "id": "promptsave-01",
@@ -6773,7 +6823,9 @@
       "id": "users-models",
       "name": "User Models",
       "spec": "92-users-models.spec.ts",
-      "sourceFiles": ["components/modals/edit-mentor-modal/llm-tab.tsx"],
+      "sourceFiles": [
+        "components/modals/edit-mentor-modal/llm-tab.tsx"
+      ],
       "checkpoints": [
         {
           "id": "um-01",
@@ -7191,7 +7243,9 @@
       "id": "org-logo-refresh",
       "name": "Sidebar Logo Refresh After Upload",
       "spec": "100-org-logo-refresh.spec.ts",
-      "sourceFiles": ["components/logo.tsx"],
+      "sourceFiles": [
+        "components/logo.tsx"
+      ],
       "checkpoints": [
         {
           "id": "logo-01",
@@ -7219,7 +7273,9 @@
       "id": "create-agent-field-permissions",
       "name": "Create Agent Field Permissions",
       "spec": "101-create-agent-field-permissions.spec.ts",
-      "sourceFiles": ["components/modals/create-mentor-modal.tsx"],
+      "sourceFiles": [
+        "components/modals/create-mentor-modal.tsx"
+      ],
       "checkpoints": [
         {
           "id": "cafp-01",
@@ -7384,7 +7440,9 @@
       "id": "retrieved-documents-preview",
       "name": "Retrieved Documents Preview",
       "spec": "102-retrieved-documents-preview.spec.ts",
-      "sourceFiles": ["middleware.ts"],
+      "sourceFiles": [
+        "middleware.ts"
+      ],
       "checkpoints": [
         {
           "id": "rdp-01",

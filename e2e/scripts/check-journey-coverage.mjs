@@ -148,16 +148,22 @@ function validateSpecFiles(coverage) {
 
 function getChangedFiles(baseBranch) {
   try {
+    // `--diff-filter=d` drops deletions: a file that no longer exists cannot
+    // be covered by a journey, and asking for coverage on one is a dead end.
+    // Without it every removal has to be hand-added to EXCLUDED_PATTERNS.
     const diff = execSync(
-      `git diff --name-only ${baseBranch}...HEAD -- app/ components/`,
+      `git diff --name-only --diff-filter=d ${baseBranch}...HEAD -- app/ components/`,
       { encoding: 'utf8' },
     ).trim();
     return diff ? diff.split('\n') : [];
   } catch {
     try {
-      const diff = execSync(`git diff --name-only HEAD~1 -- app/ components/`, {
-        encoding: 'utf8',
-      }).trim();
+      const diff = execSync(
+        `git diff --name-only --diff-filter=d HEAD~1 -- app/ components/`,
+        {
+          encoding: 'utf8',
+        },
+      ).trim();
       return diff ? diff.split('\n') : [];
     } catch {
       return [];

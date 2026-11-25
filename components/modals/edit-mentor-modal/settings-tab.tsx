@@ -101,7 +101,6 @@ export function SettingsTab() {
     sections: {
       chatExperience: t('chatExperienceHeading'),
       advanced: t('advancedHeading'),
-      perSurface: t('perSurfaceHeading'),
       globalSettings: t('globalSettingsHeading'),
       contextLimits: t('contextLimitsHeading'),
     },
@@ -110,7 +109,6 @@ export function SettingsTab() {
       embedWidget: t('embedWidgetSurfaceLabel'),
     },
     notes: {
-      perSurface: t('perSurfaceNote'),
       globalSettings: t('globalSettingsNote'),
       inAppChat: t('inAppChatNote'),
       embedWidget: t('embedWidgetNote'),
@@ -168,22 +166,8 @@ export function SettingsTab() {
         label: t('enableFileAttachmentsLabel'),
         tooltip: t('enableFileAttachmentsTooltip'),
       },
-      showVoiceRecord: {
-        label: t('enableVoiceRecordingsLabel'),
-        tooltip: t('enableVoiceRecordingsTooltip'),
-      },
-      showVoiceCall: {
-        label: t('enableVoiceCallsLabel'),
-        tooltip: t('enableVoiceCallsTooltip'),
-      },
       embedShowAttachment: {
         label: t('embedShowAttachmentLabel'),
-      },
-      embedShowVoiceRecord: {
-        label: t('embedShowVoiceRecordLabel'),
-      },
-      embedShowVoiceCall: {
-        label: t('embedShowVoiceCallLabel'),
       },
       allowCopies: {
         label: t('enableCopiesLabel'),
@@ -193,21 +177,9 @@ export function SettingsTab() {
         label: t('enableVerboseReasoningLabel'),
         tooltip: t('enableVerboseReasoningTooltip'),
       },
-      enhancedDocRetrieval: {
-        label: t('enhancedDocRetrievalLabel'),
-        tooltip: t('enhancedDocRetrievalTooltip'),
-      },
       showLastConversation: {
         label: t('showLastConversationLabel'),
         tooltip: t('showLastConversationTooltip'),
-      },
-      promptCaching: {
-        label: t('enablePromptCachingLabel'),
-        tooltip: t('enablePromptCachingTooltip'),
-      },
-      smartDocRetrieval: {
-        label: t('smartDocRetrievalLabel'),
-        tooltip: t('smartDocRetrievalTooltip'),
       },
       chatHistoryMessages: {
         label: t('chatHistoryMessagesLabel'),
@@ -227,6 +199,10 @@ export function SettingsTab() {
         placeholder: t('documentChunksPlaceholder'),
         minValueError: t('contextLimitMinValueError'),
       },
+      promptCaching: {
+        label: t('enablePromptCachingLabel'),
+        tooltip: t('enablePromptCachingTooltip'),
+      },
       image: {
         label: t('imageLabel'),
         altText: t('agentImageAlt'),
@@ -243,7 +219,6 @@ export function SettingsTab() {
     toasts: {
       saveSuccess: t('agentUpdatedSuccess'),
       saveError: t('agentUpdateError'),
-      voiceCallError: t('voiceCallSettingsError'),
     },
     allowedFileTypes: {
       heading: tFileTypes('heading'),

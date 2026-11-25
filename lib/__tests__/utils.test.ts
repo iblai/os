@@ -105,7 +105,6 @@ vi.mock('@/hooks/use-tauri-offline', () => ({
 }));
 
 vi.mock('@iblai/iblai-js/web-utils', () => ({
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ...(globalThis as any).__iblAuthStorageMock,
   clearCurrentTenantCookie: vi.fn(),
 }));

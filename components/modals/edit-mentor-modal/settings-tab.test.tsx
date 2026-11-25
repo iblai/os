@@ -306,7 +306,6 @@ describe('SettingsTab', () => {
       expect(labels.sections).toEqual({
         chatExperience: 'chatExperienceHeading',
         advanced: 'advancedHeading',
-        perSurface: 'perSurfaceHeading',
         globalSettings: 'globalSettingsHeading',
         contextLimits: 'contextLimitsHeading',
       });
@@ -319,37 +318,25 @@ describe('SettingsTab', () => {
       });
       // The two group banners and the per-column tooltips are host-supplied.
       expect(labels.notes).toEqual({
-        perSurface: 'perSurfaceNote',
         globalSettings: 'globalSettingsNote',
         inAppChat: 'inAppChatNote',
         embedWidget: 'embedWidgetNote',
       });
-      expect(labels.fields.showVoiceCall).toEqual({
-        label: 'enableVoiceCallsLabel',
-        tooltip: 'enableVoiceCallsTooltip',
-      });
       expect(labels.fields.embedShowAttachment.label).toBe(
         'embedShowAttachmentLabel',
       );
-      expect(labels.fields.embedShowVoiceRecord.label).toBe(
-        'embedShowVoiceRecordLabel',
-      );
-      expect(labels.fields.embedShowVoiceCall.label).toBe(
-        'embedShowVoiceCallLabel',
-      );
-      expect(labels.fields.enhancedDocRetrieval.label).toBe(
-        'enhancedDocRetrievalLabel',
-      );
       expect(labels.fields).not.toHaveProperty('inChatModelChange');
+      // Voice and document-retrieval settings moved to their own tabs in
+      // iblai-js 3.x, so this tab no longer overrides their copy.
+      expect(labels.fields).not.toHaveProperty('showVoiceRecord');
+      expect(labels.fields).not.toHaveProperty('showVoiceCall');
+      expect(labels.fields).not.toHaveProperty('enhancedDocRetrieval');
       expect(labels.fields.showLastConversation).toEqual({
         label: 'showLastConversationLabel',
         tooltip: 'showLastConversationTooltip',
       });
       expect(labels.fields.promptCaching.label).toBe(
         'enablePromptCachingLabel',
-      );
-      expect(labels.fields.smartDocRetrieval.label).toBe(
-        'smartDocRetrievalLabel',
       );
       expect(labels.fields.chatHistoryMessages).toEqual({
         label: 'chatHistoryMessagesLabel',
@@ -368,7 +355,6 @@ describe('SettingsTab', () => {
         removeAriaLabel: 'removeAriaLabel',
         done: 'done',
       });
-      expect(labels.toasts.voiceCallError).toBe('voiceCallSettingsError');
     });
 
     it('passes every Discovery label from its next-intl key', async () => {

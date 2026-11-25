@@ -115,14 +115,14 @@ When adding a new page or modifying an existing user flow:
 
 ## Journey 6: Mentor Management — Admin (24 checkpoints) — `journeys/06-mentor-management-admin.spec.ts`
 
-**Source files:** `components/modals/create-mentor-modal.tsx`, `components/modals/edit-mentor-modal/index.tsx`, `hooks/use-mentor-segments.ts`, `components/modals/edit-mentor-modal/tabs/settings-tab.tsx`, `components/modals/edit-mentor-modal/llm-tab.tsx`, `components/modals/edit-mentor-modal/tabs/tools-tab.tsx`, `components/modals/edit-mentor-modal/tabs/prompts-tab.tsx`, `components/modals/settings-modal.tsx`, `hooks/use-mentors.ts`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`, `lib/utils.ts`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`
+**Source files:** `components/modals/create-mentor-modal.tsx`, `components/modals/edit-mentor-modal/index.tsx`, `hooks/use-mentor-segments.ts`, `components/modals/edit-mentor-modal/tabs/settings-tab.tsx`, `components/modals/edit-mentor-modal/llm-tab.tsx`, `components/modals/edit-mentor-modal/tabs/prompts-tab.tsx`, `components/modals/settings-modal.tsx`, `hooks/use-mentors.ts`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`, `lib/utils.ts`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`
 
 _Note: the LLM tab is served by the SDK's `AgentLLMTab`; `components/modals/edit-mentor-modal/llm-tab.tsx` is the thin wrapper over it, and resolves the model label the nav-bar badge shows (see also Journey 28)._
 
+- [~] _(deprecated — iblai-js 3.0.3: the SDK removed the Tools tab; capability switches moved into their own tabs)_ Admin sees the Tools tab render with at least one tool
 - [x] Admin can update mentor profile (name, description, category, visibility), save, and close
 - [x] Non-admin does not see the Settings or Tools menu items
 - [x] Admin can change LLM provider and select a model
-- [x] Admin sees the Tools tab render with at least one tool _(light smoke check only, on the shared account mentor — real toggle-on/off, reload-persistence, tooltip and a11y coverage moved to Journey 77 on disposable per-test mentors, to avoid mutating `tool_slugs` on a mentor other tests/suites share)_
 - [x] Admin can apply custom CSS via the Advanced CSS editor (embed preview reflects change)
 - [x] Admin can reset custom CSS back to default
 - [x] Admin can apply valid custom JavaScript; invalid JS shows warnings
@@ -1490,7 +1490,7 @@ The tab's RBAC is real: the backend exposes grader permissions as flat actions o
 
 All interactions go through the `GraderTab` page object, which delegates to the official Grader-tab Playwright helpers exported from `@iblai/iblai-js/playwright` (`GRADER_LABELS`, `isGraderTabVisible`, `switchToGraderSubTab`, `isGradingEnabled`, `setGradingEnabled`, `saveGraderConfig`, `addGraderCriterion`, `editGraderCriterion`, `deleteGraderCriterion`, `expectLastCriterionDeleteDisabled`, `expectGraderMisconfiguredWarning`, `expectGraderTotalPoints`, `filterGradeResultsByEmail`, `expectGradeResultRow`, `overrideGradeResult`, `clearGradeResultOverride`) — mirrors the Voice/Evals tab pattern.
 
-Because the toggle mutates the mentor's attached tools — the same fields Journey 6's "Admin can toggle tools on/off" (mgmt-04) exercises — this journey mirrors Journey 47's Voice tab isolation: the whole file runs serially in one worker and every test gets its own freshly-created, disposable mentor (tracked and deleted via `MentorTracker` in `afterAll`). Checkpoints that require the capability ON attempt the toggle via `GraderTab.tryEnableGrading` and skip gracefully (not a failure) when the tenant's tool catalogue has no "Grading" tool to attach — an environment gap, not an app bug.
+Because the toggle mutates the mentor's attached tools — the same fields the agent's attached tools use — this journey mirrors Journey 47's Voice tab isolation: the whole file runs serially in one worker and every test gets its own freshly-created, disposable mentor (tracked and deleted via `MentorTracker` in `afterAll`). Checkpoints that require the capability ON attempt the toggle via `GraderTab.tryEnableGrading` and skip gracefully (not a failure) when the tenant's tool catalogue has no "Grading" tool to attach — an environment gap, not an app bug.
 
 - [x] grd-01: Grader tab is visible in the Edit Mentor modal sidebar (Setup category, always mounted for an admin with standard mentor-owner permissions)
 - [x] grd-02: Grader tab renders heading, description, and tab body without getting stuck on the loading spinner
@@ -2106,6 +2106,24 @@ Excludes issue #2536's session-recovery checkpoints — that fix has not yet bee
 
 ---
 
+## Journey 77: Mentor Tools Tab (7 checkpoints, all deprecated) — `journeys/77-mentor-tools-tab.spec.ts`
+
+**Retired in the `@iblai/iblai-js` 3.0.3 upgrade.** The SDK removed `AgentToolsTab` in 3.0.0 — a capability is now switched on from inside its own tab (Screen Share, Grader, LTI) instead of from one central Tools tab. Every checkpoint below is `deprecated` in `coverage.json`: kept so the coverage total still records what was tested, but no longer run. The spec file remains as a skipped tombstone because the coverage checker requires one per journey.
+
+**Source files:** `components/modals/edit-mentor-modal/tabs/tools-tab.tsx`
+
+The Tools tab was just moved onto the SDK: OS's `ToolsTab` wrapper now returns `null` until `tenantKey`/`agentId`/`username` are known, then renders the SDK's `AgentToolsTab` (`@iblai/iblai-js/web-containers/next`) inside an `AgentSettingsProvider`, passing no `labels` override — all copy (header, the new `data-testid="tools-info-box"` info box, per-tool info-icon/switch aria-labels, toggle toasts) comes straight from the SDK's i18n catalog. Toggling a tool mutates the mentor's `tool_slugs` — the same field Journey 6's mgmt-04 smoke test and the Grader tab's capability toggle (Journey 66) both touch — so, mirroring Journeys 47 and 66, this journey runs serially in one worker and every test gets its own freshly-created, disposable mentor (tracked and deleted via `MentorTracker` in `afterAll`), pinned to the cheap ibl.ai model. Checkpoints needing an existing tool row skip gracefully (not a failure) when the tenant's tool catalogue is empty.
+
+- [~] _(deprecated)_ tools-01: Admin opens the Tools tab and sees the header, description, and the `tools-info-box` copy
+- [~] _(deprecated)_ tools-02: Admin toggles a tool on (`aria-checked` flips + "Agent updated successfully" toast) and it persists across a close + full page reload + reopen; toggling it back off persists the same way
+- [~] _(deprecated)_ tools-03: A tool's info icon exposes `aria-label="More info about {name}"` and its Radix tooltip shows the tool's description on both hover and keyboard focus
+- [~] _(deprecated)_ tools-04: A tool switch's accessible name flips between `"{name} disabled"` and `"{name} enabled"` as it is toggled
+- [~] _(deprecated)_ tools-05: Non-admin does not see the Tools tab in the Edit Mentor modal
+- [ ] _(not-reproducible — RBAC off in default env)_ Read-only `mentor_tools` field permission (`WithFormPermissions`) disables every tool switch — `NEXT_PUBLIC_ENABLE_RBAC` is unset in this env (defaults `false`) and no fixture seeds a `permissions.field.mentor_tools` `write: false` response
+- [ ] _(not-reproducible — no e2e locale-switch mechanism)_ Tools tab copy renders correctly in a non-English locale (e.g. es) — no journey in this repo has an established, reliable way to switch the live app locale and assert on translated text (`ProfilePage.languageSelector`, Journey 4, only checks the selector is visible)
+
+---
+
 ## Journey 78: Embed Second-Origin Harness (2 checkpoints) — `journeys/78-embed-second-origin-harness.spec.ts`
 
 **Source files:** `hooks/use-embed-mode.ts`, `components/chat/sdk-chat.tsx`
@@ -2282,24 +2300,6 @@ Issue #2611. The floating accessibility button can be dragged (mouse + touch), n
 - [x] fab-11: Mobile (390x844, touch): tap opens the menu; a touch drag does not open it and a following tap does
 - [x] fab-12: Mobile (touch, CDP): touch drag snaps to the nearest edge, keeps height, and persists across reload
 - [x] fab-13: Mobile: default button position does not overlap the composer Send button
-
----
-
-## Journey 77: Mentor Tools Tab (7 checkpoints, 2 not-reproducible) — `journeys/77-mentor-tools-tab.spec.ts`
-
-**Source files:** `components/modals/edit-mentor-modal/tabs/tools-tab.tsx`
-
-The Tools tab was just moved onto the SDK: OS's `ToolsTab` wrapper now returns `null` until `tenantKey`/`agentId`/`username` are known, then renders the SDK's `AgentToolsTab` (`@iblai/iblai-js/web-containers/next`) inside an `AgentSettingsProvider`, passing no `labels` override — all copy (header, the new `data-testid="tools-info-box"` info box, per-tool info-icon/switch aria-labels, toggle toasts) comes straight from the SDK's i18n catalog. Toggling a tool mutates the mentor's `tool_slugs` — the same field Journey 6's mgmt-04 smoke test and the Grader tab's capability toggle (Journey 66) both touch — so, mirroring Journeys 47 and 66, this journey runs serially in one worker and every test gets its own freshly-created, disposable mentor (tracked and deleted via `MentorTracker` in `afterAll`), pinned to the cheap ibl.ai model. Checkpoints needing an existing tool row skip gracefully (not a failure) when the tenant's tool catalogue is empty.
-
-- [x] tools-01: Admin opens the Tools tab and sees the header, description, and the `tools-info-box` copy
-- [x] tools-02: Admin toggles a tool on (`aria-checked` flips + "Agent updated successfully" toast) and it persists across a close + full page reload + reopen; toggling it back off persists the same way
-- [x] tools-03: A tool's info icon exposes `aria-label="More info about {name}"` and its Radix tooltip shows the tool's description on both hover and keyboard focus
-- [x] tools-04: A tool switch's accessible name flips between `"{name} disabled"` and `"{name} enabled"` as it is toggled
-- [x] tools-05: Non-admin does not see the Tools tab in the Edit Mentor modal
-- [ ] _(not-reproducible — RBAC off in default env)_ Read-only `mentor_tools` field permission (`WithFormPermissions`) disables every tool switch — `NEXT_PUBLIC_ENABLE_RBAC` is unset in this env (defaults `false`) and no fixture seeds a `permissions.field.mentor_tools` `write: false` response
-- [ ] _(not-reproducible — no e2e locale-switch mechanism)_ Tools tab copy renders correctly in a non-English locale (e.g. es) — no journey in this repo has an established, reliable way to switch the live app locale and assert on translated text (`ProfilePage.languageSelector`, Journey 4, only checks the selector is visible)
-
----
 
 ## Journey 78: Mentor API Tab (10 checkpoints) — `journeys/78-mentor-api-tab.spec.ts`
 

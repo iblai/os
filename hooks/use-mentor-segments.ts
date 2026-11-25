@@ -7,7 +7,6 @@ import {
   Brain,
   Terminal,
   Plug,
-  Wrench,
   Shield,
   ShieldCheck,
   CalendarClock,
@@ -435,21 +434,6 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
     ],
     navCategory: 'policies',
-  },
-  {
-    value: MODALS.EDIT_MENTOR.tabs.tools,
-    label: 'Tools',
-    labelKey: 'tools',
-    icon: Wrench,
-    userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
-    rbacResource: (mentorDbId) =>
-      `/mentors/${mentorDbId}/tools/#list&/mentors/${mentorDbId}/#view_tools_menu`,
-    permissionFieldsCheck: ['mentor_tools'],
-    mentorVisibility: [
-      MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
-      MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
-    ],
-    navCategory: 'integrations',
   },
   {
     value: MODALS.EDIT_MENTOR.tabs.mcp,

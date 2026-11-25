@@ -4,7 +4,6 @@ import { SidebarPage } from '../sidebar.page';
 import { waitForPageReady, isVisibleWithin } from '../../utils/resilient';
 import { SettingsTab } from './settings.tab';
 import { LlmTab } from './llm.tab';
-import { ToolsTab } from './tools.tab';
 import { PromptsTab } from './prompts.tab';
 import { DisclaimersTab } from './disclaimers.tab';
 import { DatasetsTab } from './datasets.tab';
@@ -82,7 +81,6 @@ export class EditMentorPage {
   // Tab accessors (lazy-initialised on first access)
   readonly settings: SettingsTab;
   readonly llm: LlmTab;
-  readonly tools: ToolsTab;
   readonly prompts: PromptsTab;
   readonly disclaimers: DisclaimersTab;
   readonly datasets: DatasetsTab;
@@ -114,7 +112,6 @@ export class EditMentorPage {
 
     this.settings = new SettingsTab(page, this.dialog);
     this.llm = new LlmTab(page, this.dialog);
-    this.tools = new ToolsTab(page, this.dialog);
     this.prompts = new PromptsTab(page, this.dialog);
     this.disclaimers = new DisclaimersTab(page, this.dialog);
     this.datasets = new DatasetsTab(page, this.dialog);
