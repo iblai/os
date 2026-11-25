@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.211.0](https://github.com/iblai/os/compare/v0.210.1...v0.211.0) (2026-11-25)
+
+### Features
+
+* **os:** switch agent capabilities one by one and drop the Tools tab ([3bc1e73](https://github.com/iblai/os/commit/3bc1e73705c0802f6e500b967d1eb2c7f919375f)), closes [iblai/iblai-platform#2838](https://github.com/iblai/iblai-platform/issues/2838)
+
+### Chores
+
+* **deps:** take @iblai/iblai-js 3.0.0 for the agent capability switches ([869bc97](https://github.com/iblai/os/commit/869bc973ae1a996f735590105ff2d9032704d2fc)), closes [iblai/iblai-web-frontend#2274](https://github.com/iblai/iblai-web-frontend/issues/2274)
+
+### Tests
+
+* **e2e:** judge the MCP switch and grader setup saves by their responses ([d013a9c](https://github.com/iblai/os/commit/d013a9c1afd031d3cc67329c5d3f61decba06f2b))
+* **e2e:** make journeys 66, 98 and 107 pass on the capability switches ([280cbcc](https://github.com/iblai/os/commit/280cbcc4152bb3ec62dd1becb035e1031723ba22))
+
 ## [0.210.1](https://github.com/iblai/os/compare/v0.210.0...v0.210.1) (2026-11-25)
 
 ### Documentation
