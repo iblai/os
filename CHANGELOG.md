@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.210.0](https://github.com/iblai/os/compare/v0.209.2...v0.210.0) (2026-11-25)
+
+### Features
+
+* iblai-js bump to 3.1.0 ([88082f7](https://github.com/iblai/os/commit/88082f7829f6e9a7bd8ab6d95413a48acac65a5e))
+
+## [0.209.2](https://github.com/iblai/os/compare/v0.209.1...v0.209.2) (2026-11-25)
+
+### Chores
+
+* **deps:** take @iblai/iblai-js 2.87.1 so Retry re-asks the right question ([cb12123](https://github.com/iblai/os/commit/cb12123b9fa27f5b5562981f73be814d6964f204))
+
+## [0.209.1](https://github.com/iblai/os/compare/v0.209.0...v0.209.1) (2026-11-24)
+
+### Chores
+
+* remove OS chat files replaced by the SDK chat ([f5fda7a](https://github.com/iblai/os/commit/f5fda7a79dd78c5f6271ad30314a558a9f916951)), closes [#566](https://github.com/iblai/os/issues/566)
+
+### Tests
+
+* **e2e:** expect a finished turn's unfinished task to read "To do" ([1c3d42d](https://github.com/iblai/os/commit/1c3d42db0d60469f97f7c4eb0dcdbeef96d3c028))
+* **e2e:** wait for the anonymous-access save in journey 82's setup ([3a18158](https://github.com/iblai/os/commit/3a181583e28c0d20a2a817780a0d65108c066d43))
+
 ## [0.209.0](https://github.com/iblai/os/compare/v0.208.0...v0.209.0) (2026-11-24)
 
 ### Features
