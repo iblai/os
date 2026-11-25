@@ -111,7 +111,7 @@ export class PromptsTab {
     await closeButton.click();
   }
 
-  /** Returns all Edit buttons in the Suggested Prompts area (after the 4 system prompt Edit buttons). */
+  /** Returns all Edit buttons in the Suggested Prompts area (after the 3 system prompt Edit buttons). */
   getSuggestedPromptEditButtons(): Locator {
     return this.dialog.getByRole('button', {
       name: /^Delete suggested prompt/,
@@ -233,10 +233,10 @@ export class PromptsTab {
     index: number,
     newPromptText: string,
   ): Promise<void> {
-    // Suggested prompt Edit buttons come after the 4 system-prompt Edit buttons
+    // Suggested prompt Edit buttons come after the 3 system-prompt Edit buttons
     const editButton = this.dialog
       .getByRole('button', { name: 'Edit', exact: true })
-      .nth(4 + index);
+      .nth(3 + index);
     await expect(editButton).toBeVisible({ timeout: 10_000 });
     await editButton.click();
 
