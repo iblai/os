@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-11-25 | 1220 checkpoints (1111 covered, 66 pending/fixme, 16 not-reproducible in default env, 27 deprecated) | 116 journeys (114 active, 2 deprecated) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-11-25 | 1221 checkpoints (1112 covered, 66 pending/fixme, 16 not-reproducible in default env, 27 deprecated) | 117 journeys (115 active, 2 deprecated) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -122,7 +122,7 @@ _Note: the LLM tab is served by the SDK's `AgentLLMTab`; `components/modals/edit
 - [x] Admin can update mentor profile (name, description, category, visibility), save, and close
 - [x] Non-admin does not see the Settings or Tools menu items
 - [x] Admin can change LLM provider and select a model
-- [x] Admin sees the Agent Capabilities switches in Settings > Capabilities _(light smoke check only, on the shared account mentor — real toggle-on/off and reload-persistence coverage is Journey 107 on a disposable agent, to avoid mutating the capability flags of a mentor other tests/suites share)_
+- [x] Admin sees the Agent Capabilities switches in Settings > Capabilities _(light smoke check only, on the shared account mentor — real toggle-on/off and reload-persistence coverage is Journey 108 on a disposable agent, to avoid mutating the capability flags of a mentor other tests/suites share)_
 - [x] Admin can apply custom CSS via the Advanced CSS editor (embed preview reflects change)
 - [x] Admin can reset custom CSS back to default
 - [x] Admin can apply valid custom JavaScript; invalid JS shows warnings
@@ -156,8 +156,8 @@ _Note: the LLM tab is served by the SDK's `AgentLLMTab`; `components/modals/edit
 - [x] Visual feedback is shown after successful copy
 - [x] Tooltip info icons have `type="button"` and do not submit the settings form
 - [x] Settings > Capabilities no longer shows the Enhanced Document Retrieval or Smart Document Retrieval rows (they moved to the Datasets and Voice tabs)
-- [x] ~~Enhanced RAG tooltip contains wording about multiple search queries~~ _(deprecated in #2838; Enhanced Document Retrieval is the Datasets tab card, covered by agc-11 in Journey 107)_
-- [x] ~~Enhanced RAG toggle persists ON and OFF across save/reopen cycles~~ _(deprecated in #2838; covered by agc-11 in Journey 107)_
+- [x] ~~Enhanced RAG tooltip contains wording about multiple search queries~~ _(deprecated in #2838; Enhanced Document Retrieval is the Datasets tab card, covered by agc-11 in Journey 108)_
+- [x] ~~Enhanced RAG toggle persists ON and OFF across save/reopen cycles~~ _(deprecated in #2838; covered by agc-11 in Journey 108)_
 - [ ] _(not-reproducible — RBAC off in default env)_ Read-only settings fields (e.g. `mentor_visibility`) are gated in the UI and omitted from the settings PUT payload when the user lacks write access — unit-covered in `settings-tab.test.tsx` and `hoc/utils/__tests__/index.test.ts`
 
 **Journey 7B — Category Combobox (`iblai-platform#2289`):** the Basic-tab Category combobox rendered its options but was not hit-testable (inherited `pointer-events:none` from a duplicated `@radix-ui/react-dismissable-layer`). The `PopoverContent portalled={false}` fix landed and is reliable here — all 7 checkpoints below pass (2/2 full runs), including type-to-filter-by-name: the bundled SDK source still shows `CommandItem value={category.id.toString()}` (which would predict name search can't match), but it filters correctly in practice. Not specific to copied mentors — reproduced here on a plain, never-copied mentor, which is why the coverage lives in this journey rather than the copy one. Known gap: selecting an option, reopening the popover and then typing detaches the search input (the in-place content is unmounted by the re-render the selection triggers). That sequence is not covered below and needs a follow-up SDK fix.
@@ -2296,14 +2296,14 @@ Issue #2611. The floating accessibility button can be dragged (mouse + touch), n
 
 ## Journey 77: Mentor Tools Tab (7 checkpoints; deprecated in #2838) — `journeys/77-mentor-tools-tab.spec.ts`
 
-> **Deprecated in #2838.** The Tools tab was removed; each tool is now a capability switch (see Journey 107). The spec file is a stub (`test.describe.skip`) that exists only to satisfy `validateSpecFiles` in the journey-coverage script. The checkpoints below are kept in the ledger to preserve the pre-push regression baseline.
+> **Deprecated in #2838.** The Tools tab was removed; each tool is now a capability switch (see Journey 108). The spec file is a stub (`test.describe.skip`) that exists only to satisfy `validateSpecFiles` in the journey-coverage script. The checkpoints below are kept in the ledger to preserve the pre-push regression baseline.
 
 **Source files:** `components/modals/edit-mentor-modal/tabs/tools-tab.tsx` _(deleted)_
 
 - [x] ~~tools-01: Admin opens the Tools tab and sees the header, description, and the `tools-info-box` copy~~ _(deprecated in #2838)_
 - [x] ~~tools-02: Admin toggles a tool on and it persists across a close + full page reload + reopen; toggling it back off persists the same way~~ _(deprecated in #2838)_
-- [x] ~~tools-03: A tool's info icon exposes `aria-label="More info about {name}"` and its tooltip shows the description on hover and keyboard focus~~ _(deprecated in #2838; replaced by agc-09 in Journey 107)_
-- [x] ~~tools-04: A tool switch's accessible name flips between `"{name} disabled"` and `"{name} enabled"` as it is toggled~~ _(deprecated in #2838; replaced by agc-09 in Journey 107)_
+- [x] ~~tools-03: A tool's info icon exposes `aria-label="More info about {name}"` and its tooltip shows the description on hover and keyboard focus~~ _(deprecated in #2838; replaced by agc-09 in Journey 108)_
+- [x] ~~tools-04: A tool switch's accessible name flips between `"{name} disabled"` and `"{name} enabled"` as it is toggled~~ _(deprecated in #2838; replaced by agc-09 in Journey 108)_
 - [x] ~~tools-05: Non-admin does not see the Tools tab in the Edit Mentor modal~~ _(deprecated in #2838)_
 - [x] ~~Read-only `mentor_tools` field permission disables every tool switch~~ _(deprecated in #2838)_
 - [x] ~~Tools tab copy renders correctly in a non-English locale~~ _(deprecated in #2838)_
@@ -2684,20 +2684,30 @@ A Bot button in the header (`Assistant`) opens the organization's main agent (it
 
 ---
 
-## Journey 107: Agent Capabilities (11 checkpoints, 11 pending) — `journeys/107-agent-capabilities.spec.ts`
+## Journey 107: Retry Only On The Newest Answer (1 checkpoints) — `journeys/107-retry-latest-answer.spec.ts`
+
+**Source files:** `components/chat/index.tsx`
+
+Issue iblai-platform#2975. "Retry for a new response" used to render on every answer; on an earlier one it re-asked the newest question and appended the reply at the end. It now renders only on the latest answer and re-sends the question that answer replied to as a new pair at the bottom (SDK `@iblai/iblai-js` 2.87.1). Real chat on a throwaway ibl.ai Fast agent, tracked with `MentorTracker`.
+
+- [x] rla-01: With two Q/A pairs only one Retry button exists (on the newest answer); clicking it adds a new copy of the newest question and a new answer at the bottom, the first question is not re-asked, and only the newest answer then has Retry
+
+---
+
+## Journey 108: Agent Capabilities (11 checkpoints, 11 pending) — `journeys/108-agent-capabilities.spec.ts`
 
 **Source files:** `components/modals/edit-mentor-modal/index.tsx`, `components/modals/edit-mentor-modal/tabs/datasets-tab/agent-datasets-tab.tsx`, `components/modals/edit-mentor-modal/tabs/grader-tab.tsx`, `components/modals/edit-mentor-modal/tabs/human-support-tab.tsx`, `components/modals/edit-mentor-modal/tabs/mcp-tab/index.tsx`, `components/modals/edit-mentor-modal/tabs/screenshare-tab.tsx`, `hooks/use-mentor-segments.ts`
 
 Issue iblai-platform#2838. The Tools tab is gone; what an agent can do is a set of switches that each save one `capability_*` flag on the click: Settings > Capabilities > Agent Capabilities, the Grader tab (Grading and Lesson Completion), the Support tab, the Screen tab and the MCP tab's header switch (the connector list is inert while it is off). Runs serially on one agent the first test creates. Page objects: `page-objects/edit-mentor/capabilities.section.ts`, plus the Lesson Completion row on `grader.tab.ts` and the Advanced Document Search card on `datasets.tab.ts`.
 
-- [ ] agc-01: A new agent's Edit Agent dialog has no Tools tab, in Setup or in Integrations _(pending: in `@iblai/iblai-js` 3.0.0, which the app now uses; flip to covered once journey 107 runs green)_
-- [ ] agc-02: Settings > Capabilities opens on an Agent Capabilities block that is one flat list of five switches (Web Search, Image Generation, Video Generation, Code Interpreter, Plan, in that order) with no group headings and no Enhanced Document Retrieval _(pending: in `@iblai/iblai-js` 3.0.0, which the app now uses; flip to covered once journey 107 runs green)_
-- [ ] agc-03: Turning Web Search on saves `capability_web_search` true in the settings PUT with a "Web Search turned on" toast; the state survives a reload; turning it off saves false and also survives a reload _(pending: in `@iblai/iblai-js` 3.0.0, which the app now uses; flip to covered once journey 107 runs green)_
-- [ ] agc-04: Plan turns on and off from the same block, each saving `capability_subagents` _(pending: in `@iblai/iblai-js` 3.0.0, which the app now uses; flip to covered once journey 107 runs green)_
-- [ ] agc-05: The Grader tab's Lesson Completion row saves `capability_lesson_completion` while Grading is off, and the Grading switch saves `capability_grading`; both survive a reload _(pending: in `@iblai/iblai-js` 3.0.0, which the app now uses; flip to covered once journey 107 runs green)_
-- [ ] agc-06: The Support tab switch saves `capability_human_support` and survives a reload _(pending: in `@iblai/iblai-js` 3.0.0, which the app now uses; flip to covered once journey 107 runs green)_
-- [ ] agc-07: The Screen tab switch saves `capability_screen_share` and survives a reload _(pending: in `@iblai/iblai-js` 3.0.0, which the app now uses; flip to covered once journey 107 runs green)_
-- [ ] agc-08 (regression): An old link that opens Edit Agent on the removed Tools tab (`?modal=[{"name":"edit_mentor","tab":"tools"}]`) lands on the Settings tab, active with its panel shown, instead of a blank panel _(pending: not run yet; flip to covered once journey 107 runs green)_
-- [ ] agc-09: A capability row's "More info about {name}" button shows its tooltip on hover (Web Search) and on keyboard focus (Plan), and the switch's accessible name is the capability label ("Web Search") — replaces tools-03 and tools-04 of the removed Tools tab _(pending: in `@iblai/iblai-js` 3.0.0, which the app now uses; flip to covered once journey 107 runs green)_
-- [ ] agc-10: The MCP tab's header switch (`mcp-capability-toggle`, named "MCP") is off on a new agent with the connector list greyed; turning it on saves `tool_slugs` containing `mcp` with the toast "MCP turned on" and the list becomes usable; turning it off saves without `mcp` ("MCP turned off") and greys the list again _(pending: in `@iblai/iblai-js` 3.0.0, which the app now uses; flip to covered once journey 107 runs green)_
-- [ ] agc-11: The Datasets tab shows an Enhanced Document Retrieval switch in a box under the info box and above the search row, named "Enhanced Document Retrieval"; turning it on saves `capability_advanced_document_search` and `enable_multi_query_rag` true in the same request with the toast "Enhanced Document Retrieval turned on", turning it off saves both false _(pending: in `@iblai/iblai-js` 3.0.0, which the app now uses; flip to covered once journey 107 runs green)_
+- [ ] agc-01: A new agent's Edit Agent dialog has no Tools tab, in Setup or in Integrations _(pending: in `@iblai/iblai-js` 3.0.0, which the app now uses; flip to covered once journey 108 runs green)_
+- [ ] agc-02: Settings > Capabilities opens on an Agent Capabilities block that is one flat list of five switches (Web Search, Image Generation, Video Generation, Code Interpreter, Plan, in that order) with no group headings and no Enhanced Document Retrieval _(pending: in `@iblai/iblai-js` 3.0.0, which the app now uses; flip to covered once journey 108 runs green)_
+- [ ] agc-03: Turning Web Search on saves `capability_web_search` true in the settings PUT with a "Web Search turned on" toast; the state survives a reload; turning it off saves false and also survives a reload _(pending: in `@iblai/iblai-js` 3.0.0, which the app now uses; flip to covered once journey 108 runs green)_
+- [ ] agc-04: Plan turns on and off from the same block, each saving `capability_subagents` _(pending: in `@iblai/iblai-js` 3.0.0, which the app now uses; flip to covered once journey 108 runs green)_
+- [ ] agc-05: The Grader tab's Lesson Completion row saves `capability_lesson_completion` while Grading is off, and the Grading switch saves `capability_grading`; both survive a reload _(pending: in `@iblai/iblai-js` 3.0.0, which the app now uses; flip to covered once journey 108 runs green)_
+- [ ] agc-06: The Support tab switch saves `capability_human_support` and survives a reload _(pending: in `@iblai/iblai-js` 3.0.0, which the app now uses; flip to covered once journey 108 runs green)_
+- [ ] agc-07: The Screen tab switch saves `capability_screen_share` and survives a reload _(pending: in `@iblai/iblai-js` 3.0.0, which the app now uses; flip to covered once journey 108 runs green)_
+- [ ] agc-08 (regression): An old link that opens Edit Agent on the removed Tools tab (`?modal=[{"name":"edit_mentor","tab":"tools"}]`) lands on the Settings tab, active with its panel shown, instead of a blank panel _(pending: not run yet; flip to covered once journey 108 runs green)_
+- [ ] agc-09: A capability row's "More info about {name}" button shows its tooltip on hover (Web Search) and on keyboard focus (Plan), and the switch's accessible name is the capability label ("Web Search") — replaces tools-03 and tools-04 of the removed Tools tab _(pending: in `@iblai/iblai-js` 3.0.0, which the app now uses; flip to covered once journey 108 runs green)_
+- [ ] agc-10: The MCP tab's header switch (`mcp-capability-toggle`, named "MCP") is off on a new agent with the connector list greyed; turning it on saves `tool_slugs` containing `mcp` with the toast "MCP turned on" and the list becomes usable; turning it off saves without `mcp` ("MCP turned off") and greys the list again _(pending: in `@iblai/iblai-js` 3.0.0, which the app now uses; flip to covered once journey 108 runs green)_
+- [ ] agc-11: The Datasets tab shows an Enhanced Document Retrieval switch in a box under the info box and above the search row, named "Enhanced Document Retrieval"; turning it on saves `capability_advanced_document_search` and `enable_multi_query_rag` true in the same request with the toast "Enhanced Document Retrieval turned on", turning it off saves both false _(pending: in `@iblai/iblai-js` 3.0.0, which the app now uses; flip to covered once journey 108 runs green)_

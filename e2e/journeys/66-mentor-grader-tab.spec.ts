@@ -66,7 +66,7 @@ import { MentorTracker } from '../utils/mentor-cleanup';
  * most-recently-accessed mentor because its toggle only flips a plain
  * boolean field restored in `afterEach`, the Grading toggle here saves the
  * `capability_grading` flag, which also changes the agent's attached tools —
- * the same state journey 107's capability switches exercise. Running this
+ * the same state journey 108's capability switches exercise. Running this
  * destructively against the shared mentor would risk racing (or being raced
  * by) any other suite touching that agent's capabilities. Mirrors journey 47's Voice tab
  * isolation exactly: the whole file runs serially in a single worker

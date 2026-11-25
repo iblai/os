@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.210.1](https://github.com/iblai/os/compare/v0.210.0...v0.210.1) (2026-11-25)
+
+### Documentation
+
+* **e2e:** add journey 107 to the coverage map ([417b5e0](https://github.com/iblai/os/commit/417b5e019169b744726f70f66c32eb10b6f9c0c6))
+
+### Tests
+
+* **e2e:** show retry only on the newest answer, re-asking its question ([31c5bc3](https://github.com/iblai/os/commit/31c5bc309dfafcc1e1a7ca329365f88e215149ff))
+
 ## [0.210.0](https://github.com/iblai/os/compare/v0.209.2...v0.210.0) (2026-11-25)
 
 ### Features

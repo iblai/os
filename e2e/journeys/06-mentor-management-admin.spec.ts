@@ -724,7 +724,7 @@ test.describe('Journey 6: Mentor Management — Admin', () => {
   // shares one admin-account mentor (from navigateToMentorApp) across every
   // test in the file, and flipping a capability on it risks racing any
   // other test/suite touching that same shared mentor. The real toggle
-  // coverage lives in journey 107 (`107-agent-capabilities.spec.ts`), which
+  // coverage lives in journey 108 (`108-agent-capabilities.spec.ts`), which
   // gives every run its own disposable agent.
   test('admin goes to edit mentor settings capabilities and sees the agent capability switches', async ({
     page,

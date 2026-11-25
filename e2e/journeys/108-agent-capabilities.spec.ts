@@ -14,7 +14,7 @@ import {
 } from '../page-objects/edit-mentor/capabilities.section';
 
 /**
- * Journey 107: Agent Capabilities (iblai-platform#2838)
+ * Journey 108: Agent Capabilities (iblai-platform#2838)
  *
  * The Tools tab is gone; what an agent can do is a set of switches that each
  * save one `capability_*` flag on the agent's settings the moment they are
@@ -47,7 +47,7 @@ async function skipIfNotAdmin(page: Page): Promise<void> {
   if (!(await checkAdminStatus(page))) test.skip(true, 'Requires admin access');
 }
 
-test.describe.serial('Journey 107: Agent Capabilities', () => {
+test.describe.serial('Journey 108: Agent Capabilities', () => {
   test.setTimeout(240_000);
 
   const tracker = new MentorTracker();

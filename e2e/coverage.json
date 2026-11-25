@@ -2,14 +2,14 @@
   "version": 2,
   "lastUpdated": "2026-11-25",
   "summary": {
-    "totalCheckpoints": 1220,
-    "coveredCheckpoints": 1111,
+    "totalCheckpoints": 1221,
+    "coveredCheckpoints": 1112,
     "deprecatedCheckpoints": 27,
     "notReproducibleCheckpoints": 16,
     "pendingCheckpoints": 66,
     "percent": 100,
-    "totalJourneys": 116,
-    "activeJourneys": 114
+    "totalJourneys": 117,
+    "activeJourneys": 115
   },
   "journeys": [
     {
@@ -392,7 +392,7 @@
         },
         {
           "id": "mgmt-04",
-          "description": "Admin sees the Agent Capabilities switches in Settings > Capabilities (light smoke check on the shared account mentor; real toggle-on/off + persistence coverage is journey 107 on a disposable agent, to avoid mutating the capability flags of a mentor other tests/suites share)",
+          "description": "Admin sees the Agent Capabilities switches in Settings > Capabilities (light smoke check on the shared account mentor; real toggle-on/off + persistence coverage is journey 108 on a disposable agent, to avoid mutating the capability flags of a mentor other tests/suites share)",
           "status": "covered"
         },
         {
@@ -538,14 +538,14 @@
           "description": "Enhanced RAG tooltip contains wording about multiple search queries",
           "status": "deprecated",
           "deprecatedIn": "#2838",
-          "deprecatedReason": "The row left Settings; Enhanced Document Retrieval is the Datasets tab card, covered by agc-11 (journey 107)"
+          "deprecatedReason": "The row left Settings; Enhanced Document Retrieval is the Datasets tab card, covered by agc-11 (journey 108)"
         },
         {
           "id": "uid-08",
           "description": "Enhanced RAG toggle persists ON and OFF across save/reopen cycles",
           "status": "deprecated",
           "deprecatedIn": "#2838",
-          "deprecatedReason": "The row left Settings; Enhanced Document Retrieval is the Datasets tab card, covered by agc-11 (journey 107)"
+          "deprecatedReason": "The row left Settings; Enhanced Document Retrieval is the Datasets tab card, covered by agc-11 (journey 108)"
         },
         {
           "id": "uid-09",
@@ -5724,7 +5724,7 @@
       "sourceFiles": ["components/modals/edit-mentor-modal/tabs/tools-tab.tsx"],
       "status": "deprecated",
       "deprecatedIn": "#2838",
-      "deprecatedReason": "Tools tab removed; each tool is now a capability switch (journey 107). Spec file is a stub.",
+      "deprecatedReason": "Tools tab removed; each tool is now a capability switch (journey 108). Spec file is a stub.",
       "checkpoints": [
         {
           "id": "tools-01",
@@ -5745,14 +5745,14 @@
           "description": "A tool's info icon exposes \"More info about {name}\" and its tooltip shows the description on both hover and keyboard focus",
           "status": "deprecated",
           "deprecatedIn": "#2838",
-          "deprecatedReason": "Tools tab removed in #2838; the behaviour lives on in the capability rows, covered by agc-09 (journey 107)"
+          "deprecatedReason": "Tools tab removed in #2838; the behaviour lives on in the capability rows, covered by agc-09 (journey 108)"
         },
         {
           "id": "tools-04",
           "description": "A tool switch's accessible name flips between \"{name} disabled\" and \"{name} enabled\" as it is toggled",
           "status": "deprecated",
           "deprecatedIn": "#2838",
-          "deprecatedReason": "Tools tab removed in #2838; the behaviour lives on in the capability rows, covered by agc-09 (journey 107)"
+          "deprecatedReason": "Tools tab removed in #2838; the behaviour lives on in the capability rows, covered by agc-09 (journey 108)"
         },
         {
           "id": "tools-05",
@@ -7565,9 +7565,22 @@
       ]
     },
     {
+      "id": "retry-latest-answer",
+      "name": "Retry Only On The Newest Answer",
+      "spec": "107-retry-latest-answer.spec.ts",
+      "sourceFiles": ["components/chat/index.tsx"],
+      "checkpoints": [
+        {
+          "id": "rla-01",
+          "description": "Issue #2975: after two questions and answers only one \"Retry for a new response\" button exists (on the newest answer, none on the earlier one); clicking it re-sends the newest question as a new pair at the bottom, Q1 is not re-asked, and afterwards still only the newest answer has Retry",
+          "status": "covered"
+        }
+      ]
+    },
+    {
       "id": "agent-capabilities",
       "name": "Agent Capabilities",
-      "spec": "107-agent-capabilities.spec.ts",
+      "spec": "108-agent-capabilities.spec.ts",
       "sourceFiles": [
         "components/modals/edit-mentor-modal/index.tsx",
         "components/modals/edit-mentor-modal/tabs/datasets-tab/agent-datasets-tab.tsx",
@@ -7582,67 +7595,67 @@
           "id": "agc-01",
           "description": "Issue #2838: a new agent's Edit Agent dialog has no Tools tab, in Setup or in Integrations",
           "status": "pending",
-          "note": "In @iblai/iblai-js 3.0.0, which the app now uses; flip to covered once journey 107 runs green."
+          "note": "In @iblai/iblai-js 3.0.0, which the app now uses; flip to covered once journey 108 runs green."
         },
         {
           "id": "agc-02",
           "description": "Issue #2838: Settings > Capabilities opens on an Agent Capabilities block that is one flat list of five switches (Web Search, Image Generation, Video Generation, Code Interpreter, Plan, in that order) with no group headings and no Enhanced Document Retrieval",
           "status": "pending",
-          "note": "In @iblai/iblai-js 3.0.0, which the app now uses; flip to covered once journey 107 runs green."
+          "note": "In @iblai/iblai-js 3.0.0, which the app now uses; flip to covered once journey 108 runs green."
         },
         {
           "id": "agc-03",
           "description": "Issue #2838: turning Web Search on saves capability_web_search true in the settings PUT with a Web Search turned on toast; the state survives a reload; turning it off saves false and also survives a reload",
           "status": "pending",
-          "note": "In @iblai/iblai-js 3.0.0, which the app now uses; flip to covered once journey 107 runs green."
+          "note": "In @iblai/iblai-js 3.0.0, which the app now uses; flip to covered once journey 108 runs green."
         },
         {
           "id": "agc-04",
           "description": "Issue #2838: Plan turns on and off from the same block, each saving capability_subagents",
           "status": "pending",
-          "note": "In @iblai/iblai-js 3.0.0, which the app now uses; flip to covered once journey 107 runs green."
+          "note": "In @iblai/iblai-js 3.0.0, which the app now uses; flip to covered once journey 108 runs green."
         },
         {
           "id": "agc-05",
           "description": "Issue #2838: the Grader tab's Lesson Completion row saves capability_lesson_completion while Grading is off, and the Grading switch saves capability_grading; both survive a reload",
           "status": "pending",
-          "note": "In @iblai/iblai-js 3.0.0, which the app now uses; flip to covered once journey 107 runs green."
+          "note": "In @iblai/iblai-js 3.0.0, which the app now uses; flip to covered once journey 108 runs green."
         },
         {
           "id": "agc-06",
           "description": "Issue #2838: the Support tab switch saves capability_human_support and survives a reload",
           "status": "pending",
-          "note": "In @iblai/iblai-js 3.0.0, which the app now uses; flip to covered once journey 107 runs green."
+          "note": "In @iblai/iblai-js 3.0.0, which the app now uses; flip to covered once journey 108 runs green."
         },
         {
           "id": "agc-07",
           "description": "Issue #2838: the Screen tab switch saves capability_screen_share and survives a reload",
           "status": "pending",
-          "note": "In @iblai/iblai-js 3.0.0, which the app now uses; flip to covered once journey 107 runs green."
+          "note": "In @iblai/iblai-js 3.0.0, which the app now uses; flip to covered once journey 108 runs green."
         },
         {
           "id": "agc-08",
           "description": "Issue #2838 (regression): an old link that opens Edit Agent on the removed Tools tab (?modal=[{name: edit_mentor, tab: tools}]) lands on the Settings tab, active with its panel shown, instead of a blank panel",
           "status": "pending",
-          "note": "Not run yet; flip to covered once journey 107 runs green."
+          "note": "Not run yet; flip to covered once journey 108 runs green."
         },
         {
           "id": "agc-09",
           "description": "Issue #2838: a capability row's \"More info about {name}\" button shows its tooltip on hover (Web Search) and on keyboard focus (Plan), and the switch's accessible name is the capability label (\"Web Search\"); replaces tools-03 and tools-04 of the removed Tools tab",
           "status": "pending",
-          "note": "In @iblai/iblai-js 3.0.0, which the app now uses; flip to covered once journey 107 runs green."
+          "note": "In @iblai/iblai-js 3.0.0, which the app now uses; flip to covered once journey 108 runs green."
         },
         {
           "id": "agc-10",
           "description": "Issue #2838: the MCP tab's header switch (mcp-capability-toggle, named \"MCP\") is off on a new agent with the connector list greyed (capability-gate-content data-enabled false); turning it on saves tool_slugs containing mcp with the toast \"MCP turned on\" and the list becomes usable; turning it off saves without mcp (\"MCP turned off\") and greys the list again",
           "status": "pending",
-          "note": "In @iblai/iblai-js 3.0.0, which the app now uses; flip to covered once journey 107 runs green."
+          "note": "In @iblai/iblai-js 3.0.0, which the app now uses; flip to covered once journey 108 runs green."
         },
         {
           "id": "agc-11",
           "description": "Issue #2838: the Datasets tab shows an Enhanced Document Retrieval switch in a box under the info box and above the search row, named \"Enhanced Document Retrieval\"; turning it on saves capability_advanced_document_search and enable_multi_query_rag true in the same request with the toast \"Enhanced Document Retrieval turned on\", turning it off saves both false",
           "status": "pending",
-          "note": "In @iblai/iblai-js 3.0.0, which the app now uses; flip to covered once journey 107 runs green."
+          "note": "In @iblai/iblai-js 3.0.0, which the app now uses; flip to covered once journey 108 runs green."
         }
       ]
     }

@@ -195,7 +195,7 @@ test.describe('Journey 7: Mentor Settings Tab — Unique ID', () => {
     await editMentorPage.close();
   });
 
-  // uid-06: Enhanced Document Retrieval moved to the Datasets tab (journey 107
+  // uid-06: Enhanced Document Retrieval moved to the Datasets tab (journey 108
   // agc-11) and Smart Document Retrieval to the Voice tab (journey 47 VO-13),
   // so the Settings > Capabilities sub-tab shows neither row.
   test('admin goes to mentor settings tab and does not see the document retrieval rows in Capabilities', async ({

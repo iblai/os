@@ -2,7 +2,7 @@ import { test } from '@playwright/test';
 
 // Journey 77 (Mentor Tools Tab) was retired in #2838 when the Tools tab was
 // removed. What an agent can do is now a set of capability switches (Settings
-// > Capabilities, Grader, Support and Screen tabs), covered by journey 107.
+// > Capabilities, Grader, Support and Screen tabs), covered by journey 108.
 //
 // This stub exists so that
 //   - e2e/scripts/check-journey-coverage.mjs::validateSpecFiles passes
