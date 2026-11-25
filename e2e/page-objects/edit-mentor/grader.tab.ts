@@ -7,7 +7,6 @@ import {
   switchToGraderSubTab,
   isGradingEnabled,
   setGradingEnabled,
-  saveGraderConfig,
   addGraderCriterion,
   editGraderCriterion,
   deleteGraderCriterion,
@@ -19,8 +18,6 @@ import {
   overrideGradeResult,
   clearGradeResultOverride,
   type GraderSubTab,
-  type GraderGradingMode,
-  type GraderFeedbackMode,
   type GraderCriterionInput,
 } from '@iblai/iblai-js/playwright';
 
@@ -48,7 +45,7 @@ const RUBRIC_PATH = '/grader-config/criteria/';
  * form, `grader-sub-tab-setup` / `grader-setup-section`), "Rubric" (criteria
  * table, `grader-sub-tab-rubric` / `grader-criteria-section`), and "Results"
  * (grade-results table, `grader-sub-tab-results` / `grader-results-section`).
- * `saveGraderConfig` / `addGraderCriterion` / `editGraderCriterion` /
+ * `addGraderCriterion` / `editGraderCriterion` /
  * `deleteGraderCriterion` / `expectLastCriterionDeleteDisabled` /
  * `expectGraderTotalPoints` / `filterGradeResultsByEmail` /
  * `expectGradeResultRow` / `overrideGradeResult` / `clearGradeResultOverride`
@@ -526,17 +523,19 @@ export class GraderTab {
   // ── Grading-setup config form ────────────────────────────────────────────
 
   /**
-   * Fills and saves the grading-setup form (switches to the "Grading Setup"
-   * sub-tab first; only the provided fields are changed) and waits for the
-   * save to succeed. After an agent's first save it also waits until the tab
-   * shows the saved setup, so a criterion can be added straight away.
+   * Fills the instructions on the "Grading Setup" sub-tab, saves, and waits
+   * for the save to succeed. After an agent's first save it also waits until
+   * the tab shows the saved setup, so a criterion can be added straight away.
    */
-  async saveConfig(values: {
-    instructions?: string;
-    gradingMode?: GraderGradingMode;
-    feedbackMode?: GraderFeedbackMode;
-  }): Promise<void> {
+  async saveConfig(values: { instructions: string }): Promise<void> {
     await this.waitUntilLoaded();
+    await switchToGraderSubTab(this.page, 'setup');
+    const instructions = this.body().getByTestId(
+      'grader-instructions-textarea',
+    );
+    const saveButton = this.body().getByTestId('grader-save-button');
+    await instructions.fill(values.instructions);
+    await expect(saveButton).toBeEnabled({ timeout: 10_000 });
 
     // Counted from before the save: the rubric's last retry can answer 200
     // in the moment after it, and is not requested again once it has.
@@ -549,6 +548,10 @@ export class GraderTab {
     };
     this.page.on('response', noteRead);
     try {
+      // The SDK's saveGraderConfig waits for the Save button to go disabled.
+      // On an agent's first save that lasts only while the request is in
+      // flight, too short to catch reliably, so the save is judged by its
+      // own response.
       const [save] = await Promise.all([
         this.page.waitForResponse(
           (res) =>
@@ -556,7 +559,7 @@ export class GraderTab {
             new URL(res.url()).pathname.endsWith(SETUP_PATH),
           { timeout: 30_000 },
         ),
-        saveGraderConfig(this.page, values),
+        saveButton.click(),
       ]);
       expect(save.ok(), `Grading setup save answered ${save.status()}`).toBe(
         true,
@@ -577,12 +580,9 @@ export class GraderTab {
           timeout: 30_000,
         })
         .toBe(true);
-      const saved = save.request().postDataJSON() as {
-        grader_instructions: string;
-      };
-      await expect(
-        this.body().getByTestId('grader-instructions-textarea'),
-      ).toHaveValue(saved.grader_instructions, { timeout: 10_000 });
+      await expect(instructions).toHaveValue(values.instructions, {
+        timeout: 10_000,
+      });
     } finally {
       this.page.off('response', noteRead);
     }

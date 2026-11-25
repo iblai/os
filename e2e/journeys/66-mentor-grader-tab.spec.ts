@@ -27,16 +27,16 @@ import { MentorTracker } from '../utils/mentor-cleanup';
  * official Grader-tab Playwright helpers exported from
  * `@iblai/iblai-js/playwright` (`GRADER_LABELS`, `isGraderTabVisible`,
  * `switchToGraderSubTab`, `isGradingEnabled`, `setGradingEnabled`,
- * `saveGraderConfig`, `addGraderCriterion`, `editGraderCriterion`,
+ * `addGraderCriterion`, `editGraderCriterion`,
  * `deleteGraderCriterion`, `expectLastCriterionDeleteDisabled`,
  * `expectGraderMisconfiguredWarning`, `expectGraderTotalPoints`,
  * `filterGradeResultsByEmail`, `expectGradeResultRow`, `overrideGradeResult`,
  * `clearGradeResultOverride`, etc.) — mirrors the `VoiceTab` /
  * `EvaluationTab` pattern. Only the handful of concerns the helper package
  * doesn't cover (the shared `CapabilityGate` wrapper's `data-enabled`, the
- * sub-tab pills themselves, the cancel-delete path, row lookups by name, the
- * Results empty-state copy) stay hand-rolled in the page object, documented
- * there as such.
+ * sub-tab pills themselves, the setup save, the cancel-delete path, row
+ * lookups by name, the Results empty-state copy) stay hand-rolled in the page
+ * object, documented there as such.
  *
  * ── RBAC ────────────────────────────────────────────────────────────────
  * The backend now exposes grader permissions as flat actions on the mentor

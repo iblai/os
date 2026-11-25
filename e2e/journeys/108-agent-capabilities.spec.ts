@@ -423,24 +423,28 @@ test.describe.serial('Journey 108: Agent Capabilities', () => {
       ['PUT', 'PATCH'].includes(req.method()) &&
       readToolSlugs(req) !== undefined;
 
-    const onRequest = page.waitForRequest(toolSlugsPut, { timeout: 30_000 });
-    onRequest.catch(() => {});
-    await mcp.mcpToggle.click();
-    const refused = await mcp.mcpError
-      .waitFor({ state: 'visible', timeout: 5_000 })
-      .then(() => true)
-      .catch(() => false);
-    test.skip(refused, "The agent's model cannot use MCP");
-    expect(readToolSlugs(await onRequest)).toContain('mcp');
+    const [onRequest] = await Promise.all([
+      page.waitForRequest(toolSlugsPut, { timeout: 30_000 }),
+      mcp.mcpToggle.click(),
+    ]);
+    expect(readToolSlugs(onRequest)).toContain('mcp');
+    // Refused or saved is read off the save's own answer: waiting a fixed
+    // time for the error line outlasts the toast of a save that went through.
+    const onStatus = (await onRequest.response())?.status() ?? 0;
+    if (onStatus >= 400 && onStatus < 500) {
+      await expect(mcp.mcpError).toBeVisible({ timeout: 15_000 });
+      test.skip(true, "The agent's model cannot use MCP");
+    }
     await mcp.expectToast('MCP turned on');
     await expect(mcp.mcpToggle).toHaveAttribute('aria-checked', 'true');
     await expect(mcp.mcpContent).toHaveAttribute('data-enabled', 'true');
     await expect(mcp.addConnectorButton).toBeEnabled();
 
-    const offRequest = page.waitForRequest(toolSlugsPut, { timeout: 30_000 });
-    offRequest.catch(() => {});
-    await mcp.mcpToggle.click();
-    expect(readToolSlugs(await offRequest)).not.toContain('mcp');
+    const [offRequest] = await Promise.all([
+      page.waitForRequest(toolSlugsPut, { timeout: 30_000 }),
+      mcp.mcpToggle.click(),
+    ]);
+    expect(readToolSlugs(offRequest)).not.toContain('mcp');
     await mcp.expectToast('MCP turned off');
     await expect(mcp.mcpToggle).toHaveAttribute('aria-checked', 'false');
     await expect(mcp.mcpContent).toHaveAttribute('data-enabled', 'false');
