@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-11-23 | 1200 checkpoints (1119 covered, 46 pending/fixme, 17 not-reproducible in default env, 18 deprecated) | 115 journeys (114 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-11-25 | 1201 checkpoints (1120 covered, 46 pending/fixme, 17 not-reproducible in default env, 18 deprecated) | 116 journeys (115 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -2672,5 +2672,15 @@ A Bot button in the header (`Assistant`) opens the organization's main agent (it
 - [x] ma-12: From Notifications (the organization's and an agent's), the Assistant opens and a message gets a real reply, without leaving the page
 - [x] ma-13: From Projects, the Assistant opens and a message gets a real reply, without leaving the page
 - [x] ma-14: From Workflows, the Assistant opens and a message gets a real reply, without leaving the page
+
+---
+
+## Journey 107: Retry Only On The Newest Answer (1 checkpoints) — `journeys/107-retry-latest-answer.spec.ts`
+
+**Source files:** `components/chat/index.tsx`
+
+Issue iblai-platform#2975. "Retry for a new response" used to render on every answer; on an earlier one it re-asked the newest question and appended the reply at the end. It now renders only on the latest answer and re-sends the question that answer replied to as a new pair at the bottom (SDK `@iblai/iblai-js` 2.87.1). Real chat on a throwaway ibl.ai Fast agent, tracked with `MentorTracker`.
+
+- [x] rla-01: With two Q/A pairs only one Retry button exists (on the newest answer); clicking it adds a new copy of the newest question and a new answer at the bottom, the first question is not re-asked, and only the newest answer then has Retry
 
 ---

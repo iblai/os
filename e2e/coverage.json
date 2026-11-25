@@ -1,15 +1,15 @@
 {
   "version": 2,
-  "lastUpdated": "2026-11-23",
+  "lastUpdated": "2026-11-25",
   "summary": {
-    "totalCheckpoints": 1200,
-    "coveredCheckpoints": 1119,
+    "totalCheckpoints": 1201,
+    "coveredCheckpoints": 1120,
     "deprecatedCheckpoints": 18,
     "notReproducibleCheckpoints": 17,
     "pendingCheckpoints": 46,
     "percent": 100,
-    "totalJourneys": 115,
-    "activeJourneys": 114
+    "totalJourneys": 116,
+    "activeJourneys": 115
   },
   "journeys": [
     {
@@ -7482,6 +7482,19 @@
         {
           "id": "ma-14",
           "description": "From Workflows, the Assistant opens on the Default Agent and a message gets a real reply, without leaving the page",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "retry-latest-answer",
+      "name": "Retry Only On The Newest Answer",
+      "spec": "107-retry-latest-answer.spec.ts",
+      "sourceFiles": ["components/chat/index.tsx"],
+      "checkpoints": [
+        {
+          "id": "rla-01",
+          "description": "Issue #2975: after two questions and answers only one \"Retry for a new response\" button exists (on the newest answer, none on the earlier one); clicking it re-sends the newest question as a new pair at the bottom, Q1 is not re-asked, and afterwards still only the newest answer has Retry",
           "status": "covered"
         }
       ]
