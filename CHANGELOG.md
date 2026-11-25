@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.209.2](https://github.com/iblai/os/compare/v0.209.1...v0.209.2) (2026-11-25)
+
+### Chores
+
+* **deps:** take @iblai/iblai-js 2.87.1 so Retry re-asks the right question ([cb12123](https://github.com/iblai/os/commit/cb12123b9fa27f5b5562981f73be814d6964f204))
+
 ## [0.209.1](https://github.com/iblai/os/compare/v0.209.0...v0.209.1) (2026-11-24)
 
 ### Chores
