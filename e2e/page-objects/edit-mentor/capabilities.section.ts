@@ -136,6 +136,13 @@ export class CapabilitiesSection {
     const toggle = this.toggle(slug);
     await expect(toggle).toBeEnabled({ timeout: 10_000 });
     const field = capabilityField(slug);
+    // A toast with the same words from an earlier click would satisfy the
+    // wait below, so it has to go first.
+    const toast = this.page.getByText(
+      `${CAPABILITY_LABELS[slug]} turned ${target ? 'on' : 'off'}`,
+      { exact: true },
+    );
+    await expect(toast).toHaveCount(0, { timeout: 15_000 });
     const [request] = await Promise.all([
       this.page.waitForRequest(
         (req) =>
@@ -146,11 +153,7 @@ export class CapabilitiesSection {
       toggle.click(),
     ]);
     const response = await request.response();
-    await expect(
-      this.page
-        .getByText(`${CAPABILITY_LABELS[slug]} turned ${target ? 'on' : 'off'}`)
-        .first(),
-    ).toBeVisible({ timeout: 15_000 });
+    await expect(toast).toBeVisible({ timeout: 15_000 });
     await expect(toggle).toHaveAttribute('aria-checked', String(target), {
       timeout: 10_000,
     });

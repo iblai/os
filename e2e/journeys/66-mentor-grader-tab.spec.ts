@@ -4,7 +4,6 @@ import {
   checkAdminStatus,
   getPlatformContext,
 } from '../utils/auth';
-import { waitForPageReady } from '../utils/resilient';
 import { MentorTracker } from '../utils/mentor-cleanup';
 
 /**
@@ -16,11 +15,12 @@ import { MentorTracker } from '../utils/mentor-cleanup';
  * locally in `components/modals/edit-mentor-modal/tabs/grader-tab.tsx`. It
  * exposes an in-tab "Grading" capability toggle (via the shared
  * `CapabilityGate` component, same pattern as Voice / Screen / Memory /
- * Privacy / LTI) plus, once enabled, three gated sub-tabs: "Grading Setup"
- * (config form), "Rubric" (criteria table, modal-based add/edit/delete
- * behind each row's three-dots menu), and "Results" (grade-results table
- * with filters and a per-row Override affordance that pushes grade
- * overrides back to the LMS).
+ * Privacy / LTI) plus three sub-tabs that stay usable while Grading is off,
+ * because the switch only turns on once the rubric has a criterion:
+ * "Grading Setup" (config form), "Rubric" (criteria table, modal-based
+ * add/edit/delete behind each row's three-dots menu), and "Results"
+ * (grade-results table with filters and a per-row Override affordance that
+ * pushes grade overrides back to the LMS).
  *
  * All interactions go through the `GraderTab` page object
  * (`e2e/page-objects/edit-mentor/grader.tab.ts`), which delegates to the
@@ -80,19 +80,19 @@ import { MentorTracker } from '../utils/mentor-cleanup';
  * (`capability-gate-reason`). When the SDK cannot tell in advance, the click
  * goes through, the platform refuses the save, the switch reverts and an
  * inline error shows instead (`capability-gate-error`). Every checkpoint that
- * needs the capability ON attempts it via `GraderTab.tryEnableGrading()`
- * (which returns early on a locked switch and otherwise races the success
- * toast against that inline error rather than calling the SDK's
- * `setGradingEnabled`, which only waits on the success toast) and
+ * needs the capability ON attempts it via `GraderTab.tryEnableGrading()` and
  * `test.skip`s gracefully — never fails — when it comes back `false`, since
  * that signals an environment whose model cannot grade rather than an app
- * bug. Disabling never depends on the model, so it uses the plain
- * `setGradingEnabled(false)` delegate directly.
+ * bug. A switch still locked for an empty rubric fails there instead.
+ * Disabling never depends on the model, so it uses `setGradingEnabled(false)`.
  */
 
 test.describe.configure({ mode: 'serial' });
 
 test.describe('Journey 66: Mentor Grader Tab', () => {
+  // Creating the agent and opening its settings can alone take over a minute.
+  test.setTimeout(240_000);
+
   const tracker66 = new MentorTracker();
 
   test.beforeEach(async ({ page, editMentorPage, createMentorPage }) => {
@@ -109,7 +109,7 @@ test.describe('Journey 66: Mentor Grader Tab', () => {
     tracker66.add(mentorId);
 
     await editMentorPage.open('Grader');
-    await waitForPageReady(page);
+    await editMentorPage.grader.waitUntilLoaded();
   });
 
   // GRD-01: Grader tab is visible in the modal sidebar (Setup
@@ -218,16 +218,8 @@ test.describe('Journey 66: Mentor Grader Tab', () => {
     await editMentorPage.close();
   });
 
-  // GRD-06: Enabling the toggle flips it on and ungates the content, and the
-  // misconfigured warning settles on "rubric is empty". Attaching the
-  // Grading tool AUTO-PROVISIONS the grader config row server-side, and the
-  // SDK's `toggleGrading` (useGrader, iblai-js ≥ 2.8.1) refetches the config
-  // right after the settings PATCH succeeds — so the "not set up yet" (no
-  // config) wording is only a transient flash between the success toast and
-  // that refetch landing, never the settled state on a fresh mentor. A live
-  // trace caught exactly that flash: "not set up yet" at the toast, "rubric
-  // is empty" ~1s later. `toContainText` retries, so it rides out the flash
-  // and asserts the settled wording — do NOT assert `noConfig` here.
+  // GRD-06: With the setup saved and one rubric criterion, the toggle turns
+  // on, the content ungates and no misconfigured warning shows.
   test('admin sets up grading and a rubric criterion, enables Grading, and sees no warning', async ({
     editMentorPage,
   }) => {

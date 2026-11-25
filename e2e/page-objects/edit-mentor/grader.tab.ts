@@ -1,4 +1,4 @@
-import { Page, Locator, expect } from '@playwright/test';
+import { Page, Locator, Response, expect } from '@playwright/test';
 import {
   GRADER_LABELS,
   graderTabBody,
@@ -23,6 +23,9 @@ import {
   type GraderFeedbackMode,
   type GraderCriterionInput,
 } from '@iblai/iblai-js/playwright';
+
+const SETUP_PATH = '/grader-config/';
+const RUBRIC_PATH = '/grader-config/criteria/';
 
 /**
  * Page object for the "Grader" tab inside the Edit Mentor modal.
@@ -114,27 +117,19 @@ import {
  * The "Grading" master switch (`grader-capability-toggle`) lives inline at
  * the top of the tab via the shared `CapabilityGate` component, exactly like
  * Voice / Screen / Memory / Privacy / LTI. It saves the `capability_grading`
- * flag on the agent's settings (one PUT per click, no Save button).
- * `setGradingEnabled` is optimistic (per its own doc: "the switch itself
- * flips optimistically and would roll back on failure") and additionally
- * waits for the SUCCESS toast before considering the toggle settled — so a
- * refused save (see below) will make it time out rather than return
- * `false`.
+ * flag on the agent's settings (one PUT per click, no Save button). While
+ * the rubric the tab has read is empty the switch is locked, with the reason
+ * in a `capability-gate-reason` line under the banner.
  *
  * IMPORTANT — model dependency: when the agent's model cannot grade, the
- * switch is locked (disabled) up front and the gate shows a
- * `capability-gate-reason` line under its banner; `tryEnableGrading` then
- * returns `false` without clicking. The fallback is for when the app cannot
- * tell in advance (the agent's tool list is unreadable): the click goes
- * through, the platform refuses the save, the switch reverts and the gate
- * shows an inline `capability-gate-error` line (no toast).
- * `tryEnableGrading` races the success toast against that line instead of
- * calling `setGradingEnabled` for the ON direction, so a refusal fails fast
- * (surfaced as `false`) instead of burning `setGradingEnabled`'s full
- * timeout waiting on a success toast that will never come. The OFF
- * direction never refuses, so it delegates straight to
- * `setGradingEnabled` — a failure there is a genuine bug, not an
- * environment gap, and should throw.
+ * switch is locked the same way with the model's reason; `tryEnableGrading`
+ * then returns `false` without clicking. When the app cannot tell in advance
+ * (the agent's tool list is unreadable) the click goes through, the platform
+ * refuses the save, the switch reverts and the gate shows an inline
+ * `capability-gate-error` line (no toast); `tryEnableGrading` reads that
+ * refusal off the save's own response and returns `false`. The OFF direction
+ * never refuses, so `setGradingEnabled` treats a failed save as a genuine
+ * bug and throws.
  *
  * ── Lesson Completion row ──────────────────────────────────────────────────
  * A second switch (`capability-toggle-lesson-completion`) sits in a box above
@@ -176,6 +171,13 @@ export class GraderTab {
       // post-enable wording is `noCriteria` (journey 66 GRD-06).
       noConfig: /not set up yet/i,
       noCriteria: /rubric is empty/i,
+    },
+    capability: {
+      needsCriterion:
+        'Add at least one rubric criterion first, then turn Grading on.',
+    },
+    deleteModal: {
+      title: 'Delete Criterion',
     },
     results: {
       emptyState:
@@ -255,6 +257,54 @@ export class GraderTab {
     return graderTabBody(this.page);
   }
 
+  /**
+   * Waits for the tab's first read to finish. On an agent with no grading
+   * setup that read is a 404 the app retries for several seconds, which can
+   * outlast the 10s the SDK helpers give the sub-tabs to appear.
+   */
+  async waitUntilLoaded(): Promise<void> {
+    await expect(this.body()).toBeVisible({ timeout: 30_000 });
+    await expect(this.loadingSpinner).toBeHidden({ timeout: 30_000 });
+  }
+
+  /**
+   * Switches the dialog to one of its sidebar tabs (each is rendered twice,
+   * desktop and compact, with one visible). The switch is a page navigation,
+   * and on `next dev` a hot update that lands while it is pending drops it,
+   * so the click repeats until the tab is the active one.
+   */
+  private async openSidebarTab(name: string): Promise<void> {
+    const tab = this.dialog
+      .getByRole('tab', { name, exact: true })
+      .and(this.dialog.locator('[aria-controls^="panel-"]:visible'));
+    await expect(async () => {
+      await tab.click();
+      await expect(tab).toHaveAttribute('data-state', 'active', {
+        timeout: 10_000,
+      });
+    }).toPass({ timeout: 60_000 });
+  }
+
+  /** The settings save that carries `field`. Call it before the click that saves. */
+  private settingsSave(field: string): Promise<Response> {
+    return this.page.waitForResponse(
+      (res) =>
+        ['PUT', 'PATCH'].includes(res.request().method()) &&
+        (res.request().postData() ?? '').includes(field),
+      { timeout: 30_000 },
+    );
+  }
+
+  /**
+   * The toast an action is about to show. One left by an earlier action with
+   * the same words would satisfy the wait for it, so that one has to go first.
+   */
+  private async freshToast(text: string): Promise<Locator> {
+    const toast = this.page.getByText(text, { exact: true });
+    await expect(toast).toHaveCount(0, { timeout: 15_000 });
+    return toast;
+  }
+
   /** Whether the Grader tab is currently rendered in the Edit Agent dialog. */
   isTabVisible(): Promise<boolean> {
     return isGraderTabVisible(this.page);
@@ -326,84 +376,71 @@ export class GraderTab {
   }
 
   /**
-   * Idempotently sets Grading OFF (or ON in the common case where the tool
-   * is known to be available). Delegates straight to the SDK helper, which
-   * waits for the relevant toast + the gated content's `data-enabled`. A
-   * thrown error here is a genuine failure — use `tryEnableGrading` instead
-   * when the tenant's tool catalogue availability is unknown/untrusted.
+   * Idempotently sets Grading OFF (or ON when the agent is known to be able
+   * to grade) and waits for the settings save to succeed. A failure here is
+   * a genuine one — use `tryEnableGrading` when the model may not grade.
    */
-  setGradingEnabled(enabled: boolean): Promise<void> {
-    return setGradingEnabled(this.page, enabled);
+  async setGradingEnabled(enabled: boolean): Promise<void> {
+    if ((await this.isGradingEnabled()) === enabled) return;
+    // The SDK helper accepts the first toast with these words that it finds.
+    await this.freshToast(
+      enabled ? GRADER_LABELS.toasts.toggleOn : GRADER_LABELS.toasts.toggleOff,
+    );
+    const [save] = await Promise.all([
+      this.settingsSave('capability_grading'),
+      setGradingEnabled(this.page, enabled),
+    ]);
+    expect(save.ok(), `Grading save answered ${save.status()}`).toBe(true);
   }
 
   /**
    * Attempts to turn Grading ON, tolerating an agent whose model cannot
-   * grade. Returns `true` once the toggle and its gated-content wrapper
-   * confirm the ON state, `false` if the switch is locked with the gate's
-   * reason line or the gate's inline error showed instead.
-   * Races the success toast against that error line directly (rather
-   * than calling the SDK's `setGradingEnabled`, which only waits on the
-   * success toast and would otherwise burn its full timeout before this
-   * could report failure) — see class doc.
+   * grade. Returns `true` once the save succeeded and the toggle and its
+   * gated content show the ON state, `false` if the switch is locked because
+   * of the model or the platform refused the save.
    */
   async tryEnableGrading(): Promise<boolean> {
-    const body = graderTabBody(this.page);
+    const body = this.body();
     const toggle = body.getByTestId('grader-capability-toggle');
     await expect(toggle).toBeVisible({ timeout: 10_000 });
 
     if (await isGradingEnabled(this.page)) return true;
 
-    if (
-      (await toggle.isDisabled()) &&
-      (await body.getByTestId('capability-gate-reason').isVisible())
-    ) {
+    const reason = body.getByTestId('capability-gate-reason');
+    if ((await toggle.isDisabled()) && (await reason.isVisible())) {
+      // An empty rubric locks the switch too. That is a missing
+      // prepareRubric(), never a model that cannot grade.
+      await expect(reason).not.toHaveText(
+        GraderTab.UNEXPORTED_LABELS.capability.needsCriterion,
+      );
       return false;
     }
 
     await expect(toggle).toBeEnabled({ timeout: 10_000 });
-    // Enabling refetches the config and rubric right after the settings PUT;
-    // the config response resets the form, so edits made before it lands are wiped.
-    const refetched = this.page.waitForResponse(
+    const toast = await this.freshToast(GRADER_LABELS.toasts.toggleOn);
+    // Enabling re-reads the setup right after the settings save, and that
+    // response resets the form: edits made before it lands are wiped.
+    const reread = this.page.waitForResponse(
       (res) =>
         res.request().method() === 'GET' &&
-        /\/grader-config\/$/.test(new URL(res.url()).pathname),
+        new URL(res.url()).pathname.endsWith(SETUP_PATH),
       { timeout: 15_000 },
     );
-    refetched.catch(() => {});
-    await toggle.click();
+    reread.catch(() => {});
+    const [save] = await Promise.all([
+      this.settingsSave('capability_grading'),
+      toggle.click(),
+    ]);
 
-    const successToast = this.page
-      .getByText(GRADER_LABELS.toasts.toggleOn)
-      .first();
-    const errorLine = body.getByTestId('capability-gate-error');
+    if (save.status() >= 400 && save.status() < 500) {
+      await expect(body.getByTestId('capability-gate-error')).toBeVisible({
+        timeout: 15_000,
+      });
+      return false;
+    }
+    expect(save.ok(), `Grading save answered ${save.status()}`).toBe(true);
 
-    // Both waits are raced below, but Promise.race never cancels the loser —
-    // it keeps polling in the background until ITS OWN 15s timeout elapses,
-    // then rejects. A live run caught the fallout directly: on every test
-    // where the toggle succeeds (the common case), `errorWait` is always the
-    // loser, and its rejection ~12s later had no `.catch` anywhere, making it
-    // an unhandled promise rejection in the single long-lived worker process
-    // this whole serial file runs in. That measurably destabilized LATER,
-    // unrelated actions in the same file — e.g. a Save button observed stuck
-    // non-actionable for a full 30s several tests afterward, traced back via
-    // trace.zip timing to line up with one of these unhandled rejections.
-    // Attaching a no-op `.catch` directly to each branch marks it "handled"
-    // for Node's purposes regardless of which one loses the race.
-    const successWait = successToast
-      .waitFor({ state: 'visible', timeout: 15_000 })
-      .then(() => 'ok' as const);
-    const errorWait = errorLine
-      .waitFor({ state: 'visible', timeout: 15_000 })
-      .then(() => 'error' as const);
-    successWait.catch(() => {});
-    errorWait.catch(() => {});
-
-    const outcome = await Promise.race([successWait, errorWait]).catch(
-      () => 'timeout' as const,
-    );
-
-    if (outcome !== 'ok') return false;
-
+    await expect(toast).toBeVisible({ timeout: 15_000 });
     await expect(toggle).toHaveAttribute('aria-checked', 'true', {
       timeout: 10_000,
     });
@@ -412,11 +449,15 @@ export class GraderTab {
       'true',
       { timeout: 10_000 },
     );
-    await refetched.catch(() => {});
+    await reread.catch(() => {});
     return true;
   }
 
-  /** Saves the grading setup and adds one rubric criterion, which the Grading switch needs before it can be turned on. */
+  /**
+   * Leaves the tab with a saved grading setup and one rubric criterion
+   * ("Clarity", 10 points), which the Grading switch needs before it can be
+   * turned on. For an agent that has no grading setup yet.
+   */
   async prepareRubric(): Promise<void> {
     await this.saveConfig({
       instructions: 'E2E: grade for clarity and correctness.',
@@ -430,12 +471,12 @@ export class GraderTab {
 
   /** The Grading switch is locked and the gate says a rubric criterion comes first. */
   async expectEnableLockedUntilCriterion(): Promise<void> {
-    const body = graderTabBody(this.page);
+    const body = this.body();
     await expect(body.getByTestId('grader-capability-toggle')).toBeDisabled({
       timeout: 10_000,
     });
-    await expect(body.getByTestId('capability-gate-reason')).toContainText(
-      'Add at least one rubric criterion first',
+    await expect(body.getByTestId('capability-gate-reason')).toHaveText(
+      GraderTab.UNEXPORTED_LABELS.capability.needsCriterion,
       { timeout: 10_000 },
     );
   }
@@ -457,26 +498,20 @@ export class GraderTab {
   async setLessonCompletionEnabled(target: boolean): Promise<string | null> {
     if ((await this.isLessonCompletionEnabled()) === target) return null;
     await expect(this.lessonCompletionToggle).toBeEnabled({ timeout: 10_000 });
-    const [request] = await Promise.all([
-      this.page.waitForRequest(
-        (req) =>
-          ['PUT', 'PATCH'].includes(req.method()) &&
-          (req.postData() ?? '').includes('capability_lesson_completion'),
-        { timeout: 30_000 },
-      ),
+    const toast = await this.freshToast(
+      `Lesson Completion turned ${target ? 'on' : 'off'}`,
+    );
+    const [save] = await Promise.all([
+      this.settingsSave('capability_lesson_completion'),
       this.lessonCompletionToggle.click(),
     ]);
-    await expect(
-      this.page
-        .getByText(`Lesson Completion turned ${target ? 'on' : 'off'}`)
-        .first(),
-    ).toBeVisible({ timeout: 15_000 });
+    await expect(toast).toBeVisible({ timeout: 15_000 });
     await expect(this.lessonCompletionToggle).toHaveAttribute(
       'aria-checked',
       String(target),
       { timeout: 10_000 },
     );
-    return request.postData() ?? '';
+    return save.request().postData() ?? '';
   }
 
   /** Assert whether the CapabilityGate off-state hint is currently shown. */
@@ -491,18 +526,66 @@ export class GraderTab {
   // ── Grading-setup config form ────────────────────────────────────────────
 
   /**
-   * Fills and persists the grading-setup form (switches to the "Grading
-   * setup" sub-tab first; only the provided fields are changed) via the SDK
-   * helper. Completion is gated on the Save button returning to disabled
-   * once the config POST/PATCH resolves and the form rehydrates from the
-   * server copy.
+   * Fills and saves the grading-setup form (switches to the "Grading Setup"
+   * sub-tab first; only the provided fields are changed) and waits for the
+   * save to succeed. After an agent's first save it also waits until the tab
+   * shows the saved setup, so a criterion can be added straight away.
    */
-  saveConfig(values: {
+  async saveConfig(values: {
     instructions?: string;
     gradingMode?: GraderGradingMode;
     feedbackMode?: GraderFeedbackMode;
   }): Promise<void> {
-    return saveGraderConfig(this.page, values);
+    await this.waitUntilLoaded();
+
+    // Counted from before the save: the rubric's last retry can answer 200
+    // in the moment after it, and is not requested again once it has.
+    const read = { setup: false, rubric: false };
+    const noteRead = (res: Response) => {
+      if (res.request().method() !== 'GET' || res.status() !== 200) return;
+      const { pathname } = new URL(res.url());
+      if (pathname.endsWith(RUBRIC_PATH)) read.rubric = true;
+      else if (pathname.endsWith(SETUP_PATH)) read.setup = true;
+    };
+    this.page.on('response', noteRead);
+    try {
+      const [save] = await Promise.all([
+        this.page.waitForResponse(
+          (res) =>
+            ['POST', 'PATCH'].includes(res.request().method()) &&
+            new URL(res.url()).pathname.endsWith(SETUP_PATH),
+          { timeout: 30_000 },
+        ),
+        saveGraderConfig(this.page, values),
+      ]);
+      expect(save.ok(), `Grading setup save answered ${save.status()}`).toBe(
+        true,
+      );
+      if (save.request().method() !== 'POST') return;
+
+      // Works around the SDK (@iblai/iblai-js 3.0.0 to 3.1.0) not re-reading
+      // the setup and rubric after an agent's first save, which leaves Add
+      // Criterion disabled: leaving the tab and coming back makes it read
+      // them. Remove once the SDK re-reads them itself.
+      await this.openSidebarTab('Settings');
+      await expect(this.body()).toBeHidden({ timeout: 10_000 });
+      await this.openSidebarTab(GRADER_LABELS.tabName);
+      await this.waitUntilLoaded();
+      await expect
+        .poll(() => read.setup && read.rubric, {
+          message: 'the tab re-reads the saved setup and the rubric',
+          timeout: 30_000,
+        })
+        .toBe(true);
+      const saved = save.request().postDataJSON() as {
+        grader_instructions: string;
+      };
+      await expect(
+        this.body().getByTestId('grader-instructions-textarea'),
+      ).toHaveValue(saved.grader_instructions, { timeout: 10_000 });
+    } finally {
+      this.page.off('response', noteRead);
+    }
   }
 
   /** Assert whether the misconfigured-warning banner is shown. */
@@ -578,38 +661,31 @@ export class GraderTab {
   }
 
   /**
-   * Opens the delete-confirmation modal for `name` (via its row's
-   * three-dots menu → Delete) and clicks Cancel instead of confirming. No
-   * SDK helper covers the cancel path (only the confirm path, via
-   * `deleteGraderCriterion`). The menu trigger's aria-label comes from
-   * `GRADER_LABELS.menu.actionsAria(name)`; the modal's Cancel button is
-   * matched by `GRADER_LABELS.modal.cancel` (shared with the add/edit
-   * criterion modal) scoped to the delete modal's own testid so it can't be
-   * confused with any other open dialog's Cancel button.
+   * Opens the delete confirmation for `name` (its row's three-dots menu →
+   * Delete) and clicks Cancel instead of confirming. No SDK helper covers the
+   * cancel path. The open menu is named after its trigger and the
+   * confirmation by its title, so both are resolved by role and name before
+   * anything inside them is touched.
    */
   async cancelDeleteCriterion(name: string): Promise<void> {
-    await switchToGraderSubTab(this.page, 'rubric');
-
     const row = await this.criterionRowByName(name);
-    const trigger = row.getByRole('button', {
-      name: GRADER_LABELS.menu.actionsAria(name),
-    });
-    await expect(trigger).toBeVisible({ timeout: 10_000 });
-    await trigger.click();
+    const actions = GRADER_LABELS.menu.actionsAria(name);
+    await row.getByRole('button', { name: actions, exact: true }).click();
 
-    const deleteItem = this.page.getByRole('menuitem', {
-      name: GRADER_LABELS.menu.delete,
+    const menu = this.page.getByRole('menu', { name: actions, exact: true });
+    await menu
+      .getByRole('menuitem', { name: GRADER_LABELS.menu.delete, exact: true })
+      .click();
+
+    const confirmation = this.page.getByRole('dialog', {
+      name: GraderTab.UNEXPORTED_LABELS.deleteModal.title,
       exact: true,
     });
-    await expect(deleteItem).toBeVisible({ timeout: 10_000 });
-    await deleteItem.click();
-
-    const modal = this.page.getByTestId('grader-criterion-delete-modal');
-    await expect(modal).toBeVisible({ timeout: 10_000 });
-    await modal
+    await expect(confirmation).toBeVisible({ timeout: 10_000 });
+    await confirmation
       .getByRole('button', { name: GRADER_LABELS.modal.cancel, exact: true })
       .click();
-    await expect(modal).toBeHidden({ timeout: 10_000 });
+    await expect(confirmation).toBeHidden({ timeout: 10_000 });
 
     await expect(row).toBeVisible({ timeout: 5_000 });
   }

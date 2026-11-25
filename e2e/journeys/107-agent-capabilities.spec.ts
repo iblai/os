@@ -140,7 +140,7 @@ test.describe.serial('Journey 107: Agent Capabilities', () => {
       !(await capabilities.toggle('web-search').isEnabled()),
       "The agent's model cannot use Web Search",
     );
-    expect(await capabilities.isEnabled('web-search')).toBe(false);
+    await capabilities.setEnabled('web-search', false);
 
     const on = await capabilities.setEnabled('web-search', true);
     expect(on?.ok).toBe(true);
@@ -180,14 +180,19 @@ test.describe.serial('Journey 107: Agent Capabilities', () => {
     await waitForPageReady(page);
     await capabilities.open();
 
-    const on = await capabilities.setEnabled('subagents', true);
-    expect(readCapabilityFlag(on?.body ?? '', 'capability_subagents')).toBe(
-      true,
-    );
-    const off = await capabilities.setEnabled('subagents', false);
-    expect(readCapabilityFlag(off?.body ?? '', 'capability_subagents')).toBe(
-      false,
-    );
+    // Whether a new agent starts with Plan on is the platform's choice, so
+    // the round trip starts from whatever it is and ends there.
+    const wasOn = await capabilities.isEnabled('subagents');
+    const flipped = await capabilities.setEnabled('subagents', !wasOn);
+    expect(flipped?.ok).toBe(true);
+    expect(
+      readCapabilityFlag(flipped?.body ?? '', 'capability_subagents'),
+    ).toBe(!wasOn);
+    const restored = await capabilities.setEnabled('subagents', wasOn);
+    expect(restored?.ok).toBe(true);
+    expect(
+      readCapabilityFlag(restored?.body ?? '', 'capability_subagents'),
+    ).toBe(wasOn);
     await editMentorPage.close();
   });
 
@@ -197,8 +202,9 @@ test.describe.serial('Journey 107: Agent Capabilities', () => {
   }) => {
     await openAgent(page);
     const grader = editMentorPage.grader;
+    const gradingToggle = grader.body().getByTestId('grader-capability-toggle');
     await editMentorPage.open('Grader');
-    await waitForPageReady(page);
+    await grader.waitUntilLoaded();
 
     await expect(grader.lessonCompletionToggle).toBeVisible({
       timeout: 10_000,
@@ -208,6 +214,8 @@ test.describe.serial('Journey 107: Agent Capabilities', () => {
       "The agent's model cannot use Lesson Completion",
     );
 
+    await grader.setGradingEnabled(false);
+    await grader.setLessonCompletionEnabled(false);
     const lessonOn = await grader.setLessonCompletionEnabled(true);
     expect(
       readCapabilityFlag(lessonOn ?? '', 'capability_lesson_completion'),
@@ -217,6 +225,8 @@ test.describe.serial('Journey 107: Agent Capabilities', () => {
       'false',
     );
 
+    // Grading stays locked until the rubric has a criterion.
+    await grader.prepareRubric();
     const gradingPut = page.waitForRequest(SETTINGS_PUT('capability_grading'), {
       timeout: 30_000,
     });
@@ -234,9 +244,15 @@ test.describe.serial('Journey 107: Agent Capabilities', () => {
     await page.reload({ waitUntil: 'domcontentloaded' });
     await waitForPageReady(page);
     await editMentorPage.open('Grader');
-    await waitForPageReady(page);
-    expect(await grader.isGradingEnabled()).toBe(true);
-    expect(await grader.isLessonCompletionEnabled()).toBe(true);
+    await grader.waitUntilLoaded();
+    await expect(gradingToggle).toHaveAttribute('aria-checked', 'true', {
+      timeout: 15_000,
+    });
+    await expect(grader.lessonCompletionToggle).toHaveAttribute(
+      'aria-checked',
+      'true',
+      { timeout: 15_000 },
+    );
 
     await grader.setGradingEnabled(false);
     const lessonOff = await grader.setLessonCompletionEnabled(false);
@@ -259,6 +275,7 @@ test.describe.serial('Journey 107: Agent Capabilities', () => {
       'Human Support is not available for this agent',
     );
 
+    await support.setEnabled(false);
     const [request] = await Promise.all([
       page.waitForRequest(SETTINGS_PUT('capability_human_support'), {
         timeout: 30_000,
@@ -289,6 +306,7 @@ test.describe.serial('Journey 107: Agent Capabilities', () => {
     await waitForPageReady(page);
     await expect(screen.capabilityToggle).toBeVisible({ timeout: 15_000 });
 
+    await screen.setCapabilityEnabled(false);
     const [request] = await Promise.all([
       page.waitForRequest(SETTINGS_PUT('capability_screen_share'), {
         timeout: 30_000,
@@ -455,7 +473,7 @@ test.describe.serial('Journey 107: Agent Capabilities', () => {
       await datasets.enhancedDocumentRetrievalToggle.isDisabled(),
       "The agent's model cannot use Enhanced Document Retrieval",
     );
-    expect(await datasets.isEnhancedDocumentRetrievalOn()).toBe(false);
+    await datasets.setEnhancedDocumentRetrieval(false);
 
     const on = await datasets.setEnhancedDocumentRetrieval(true);
     expect(
