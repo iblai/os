@@ -94,6 +94,7 @@ test.describe('Journey 3: New User UI & Profile Dropdown', () => {
       nonadminSidebarPage.apiButton, // footer "API"
       nonadminSidebarPage.monetizationButton, // footer "Monetization"
       nonadminSidebarPage.memoryButton, // footer "Memory"
+      nonadminSidebarPage.appsButton, // footer "Apps"
       nonadminSidebarPage.settingsButton, // footer "Advanced"
     ];
 

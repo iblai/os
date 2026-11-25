@@ -1,15 +1,15 @@
 {
   "version": 2,
-  "lastUpdated": "2026-11-18",
+  "lastUpdated": "2026-11-24",
   "summary": {
-    "totalCheckpoints": 1182,
-    "coveredCheckpoints": 1101,
+    "totalCheckpoints": 1189,
+    "coveredCheckpoints": 1108,
     "deprecatedCheckpoints": 18,
     "notReproducibleCheckpoints": 17,
     "pendingCheckpoints": 46,
     "percent": 100,
-    "totalJourneys": 114,
-    "activeJourneys": 113
+    "totalJourneys": 115,
+    "activeJourneys": 114
   },
   "journeys": [
     {
@@ -7407,6 +7407,31 @@
         {
           "id": "rdp-03",
           "description": "Issue #2855: a YouTube source's preview shows an iframe on youtube-nocookie.com/embed/<id> with referrerpolicy strict-origin-when-cross-origin and no Open Page link",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "apps",
+      "name": "Apps",
+      "spec": "106-apps.spec.ts",
+      "sourceFiles": [
+        "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "apps-01",
+          "description": "Admin sees Apps between Memory and Advanced in the sidebar footer; it opens the organization Account dialog on the Apps page (heading, description, rail entry current), which lists the platform's apps or says No apps yet. Any other notice (no permission, not available on this instance, could not be loaded) fails",
+          "status": "covered"
+        },
+        {
+          "id": "apps-02",
+          "description": "The organization settings opened from the profile menu list Apps above Advanced under System, and Apps opens the Apps page",
+          "status": "covered"
+        },
+        {
+          "id": "apps-03",
+          "description": "Advanced > Domains > Add asks only for a domain for the sign-in site: one Domain field, no app or subdomain to choose",
           "status": "covered"
         }
       ]

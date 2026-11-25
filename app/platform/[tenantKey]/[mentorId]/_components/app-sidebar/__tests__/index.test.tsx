@@ -2005,7 +2005,7 @@ describe('AppSidebar — Footer actions', () => {
       screen.getAllByRole('button', { name: 'Management' }).length,
     ).toBeGreaterThan(0);
     // …but the items they DON'T hold a permission for stay hidden, and
-    // Secrets/API/Memory/Advanced (no dedicated permission) remain admin-only.
+    // Secrets/API/Memory/Apps/Advanced (no dedicated permission) remain admin-only.
     expect(
       screen.queryByRole('button', { name: 'Invites' }),
     ).not.toBeInTheDocument();
@@ -2022,6 +2022,9 @@ describe('AppSidebar — Footer actions', () => {
       within(screen.getByTestId('sidebar-footer')).queryByRole('button', {
         name: 'Memory',
       }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Apps' }),
     ).not.toBeInTheDocument();
     expect(
       screen.queryByRole('button', { name: 'Advanced' }),
@@ -2293,7 +2296,7 @@ describe('AppSidebar — non-admin trial-gated full admin menu (main OR advertis
     ).toBeGreaterThan(0);
   });
 
-  it('reveals the full footer admin cluster (Management / Secrets / API / Monetization / Memory / Advanced)', () => {
+  it('reveals the full footer admin cluster (Management / Secrets / API / Monetization / Memory / Apps / Advanced)', () => {
     setupMainTenantNonAdmin();
     renderSidebar();
     [
@@ -2302,6 +2305,7 @@ describe('AppSidebar — non-admin trial-gated full admin menu (main OR advertis
       'Secrets',
       'Monetization',
       'Memory',
+      'Apps',
       'Advanced',
     ].forEach((label) => {
       expect(
@@ -2357,6 +2361,7 @@ describe('AppSidebar — non-admin trial-gated full admin menu (main OR advertis
       'Secrets',
       'Monetization',
       'Memory',
+      'Apps',
       'Advanced',
     ].forEach((label) => {
       expect(
@@ -2401,6 +2406,7 @@ describe('AppSidebar — anonymous (not-logged-in) user sees the full menu, clic
       'Secrets',
       'Monetization',
       'Memory',
+      'Apps',
       'Advanced',
     ].forEach((label) => {
       expect(
@@ -2593,7 +2599,7 @@ describe('AppSidebar — account sheet tabs', () => {
     expect(sheet).toHaveAttribute('data-is-admin', 'true');
   });
 
-  it('admin footer lists Management, API, Secrets, Monetization, Memory and Advanced in that order', () => {
+  it('admin footer lists Management, API, Secrets, Monetization, Memory, Apps and Advanced in that order', () => {
     mockCurrentTenant = {
       key: 'tenant-a',
       is_admin: true,
@@ -2608,6 +2614,7 @@ describe('AppSidebar — account sheet tabs', () => {
       'Secrets',
       'Monetization',
       'Memory',
+      'Apps',
       'Advanced',
     ].map((name) => footer.getByRole('button', { name }));
     rows.slice(1).forEach((row, index) => {
@@ -2632,6 +2639,15 @@ describe('AppSidebar — account sheet tabs', () => {
     expect(sheet).toHaveAttribute('data-tab', 'memory');
     expect(sheet).toHaveAttribute('data-tenant-key', 'tenant-a');
     expect(sheet).toHaveAttribute('data-username', 'admin-user');
+  });
+
+  it('clicking Apps opens the sheet on the apps tab', async () => {
+    renderSidebar();
+    fireEvent.click(screen.getByRole('button', { name: 'Apps' }));
+    expect(await screen.findByTestId('platform-account-sheet')).toHaveAttribute(
+      'data-tab',
+      'apps',
+    );
   });
 
   it('clicking Monetization opens the sheet on the monetization tab (when tenant has it enabled)', async () => {

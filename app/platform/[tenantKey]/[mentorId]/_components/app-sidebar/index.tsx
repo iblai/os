@@ -10,6 +10,7 @@ import {
 } from 'next/navigation';
 import { useDispatch } from 'react-redux';
 import {
+  AppWindow,
   Bell,
   BookOpen,
   Brain,
@@ -1019,7 +1020,7 @@ export function AppSidebar() {
         });
       }
       // Memory mirrors the SDK `Account` rail exactly: it sits between
-      // Monetization and Advanced and, like Secrets/Advanced, has no
+      // Monetization and Apps and, like Secrets/Advanced, has no
       // dedicated RBAC permission — the rail filters it on `isAdmin`, so
       // here it follows the live-admin gate (and the trial/anonymous
       // cluster below). Non-admins never get it via RBAC alone.
@@ -1027,6 +1028,11 @@ export function AppSidebar() {
         id: 'footer-memory',
         label: t('memory'),
         icon: Brain,
+      });
+      actions.push({
+        id: 'footer-apps',
+        label: t('apps'),
+        icon: AppWindow,
       });
       actions.push({
         id: 'footer-settings',
@@ -1065,6 +1071,11 @@ export function AppSidebar() {
         icon: Brain,
       });
       actions.push({
+        id: 'footer-apps',
+        label: t('apps'),
+        icon: AppWindow,
+      });
+      actions.push({
         id: 'footer-settings',
         label: t('advanced'),
         icon: Settings,
@@ -1075,7 +1086,7 @@ export function AppSidebar() {
       // Analytics permission gate. We MUST guard on `config.enableRBAC()`
       // because `checkRbacPermission` returns true when RBAC is off, which
       // would otherwise expose these to every non-admin. `!isAdmin` keeps an
-      // admin-in-learner-mode excluded. Secrets, Memory and Advanced
+      // admin-in-learner-mode excluded. Secrets, Memory, Apps and Advanced
       // have no dedicated RBAC permission (the SDK `Account` rail filters
       // them on `isAdmin`), so they stay admin/trial/anonymous-only.
       if (hasInviteUserPermission) {
@@ -1144,6 +1155,9 @@ export function AppSidebar() {
           return;
         case 'footer-memory':
           openAccountTab('memory');
+          return;
+        case 'footer-apps':
+          openAccountTab('apps');
           return;
         case 'footer-settings':
           openAccountTab('advanced');

@@ -23,6 +23,7 @@ export class SidebarPage {
   readonly apiButton: Locator;
   readonly monetizationButton: Locator;
   readonly memoryButton: Locator;
+  readonly appsButton: Locator;
   readonly workflowsButton: Locator;
   readonly settingsButton: Locator;
   readonly helpButton: Locator;
@@ -132,6 +133,10 @@ export class SidebarPage {
     this.memoryButton = this.sidebar
       .getByTestId('sidebar-footer')
       .getByRole('button', { name: 'Memory', exact: true });
+    // "Apps" opens the Account dialog at the deployed apps page; admin-only.
+    this.appsButton = this.sidebar
+      .getByTestId('sidebar-footer')
+      .getByRole('button', { name: 'Apps', exact: true });
     this.workflowsButton = this.sidebar.getByRole('button', {
       name: 'Workflows',
       exact: true,

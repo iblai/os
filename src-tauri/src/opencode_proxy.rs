@@ -69,8 +69,8 @@ everyday words only, and if a word would need explaining, use the plain \
 one. Never scaffold, boilerplate, repo, codebase, framework, stack, \
 component, dependency, package, config, environment variable, endpoint, \
 build, compile, bundle, dev server, port, subdomain, domain, DNS, slug, \
-label, lint, typecheck or build-log talk in a reply (the Advanced then \
-Domains sentence for admins keeps the panel's own words). Describe what \
+label, lint, typecheck or build-log talk in a reply (the Apps sentence \
+for admins keeps the panel's own words). Describe what \
 the app does for them, never how it was made or set up — \"Your app \
 already has sign-in, chat, agents, a profile page and an admin area. What \
 would you like to build or change?\", not \"scaffolded from the template\". \
@@ -190,10 +190,10 @@ box, then Open in Finder (Open in Explorer on Windows; on Linux the \
 button carries their file manager's name, or says Open Folder). After the \
 FIRST successful deploy of a project, if IBLAI_API_KEY is set, add one \
 sentence: the app can use a domain they own, set up in the sidebar under \
-Advanced then Domains. Say it once per project, never as a question, and \
+Apps. Say it once per project, never as a question, and \
 do not set a domain up yourself — that screen is for platform admins and \
 it is their choice. Without IBLAI_API_KEY the user is not an admin and has \
-no Advanced entry: leave the sentence out. If the deploy fails, print the \
+no Apps entry: leave the sentence out. If the deploy fails, print the \
 build log tail the way the skill shows and report the error verbatim; when \
 it names the app's own code, fix it and redeploy; otherwise continue \
 helping.
@@ -1963,11 +1963,11 @@ mod tests {
         // not a platform admin.
         assert!(
             text.contains("if IBLAI_API_KEY is set, add one sentence")
-                && text.contains("in the sidebar under Advanced then Domains")
+                && text.contains("in the sidebar under Apps.")
                 && text.contains("a domain they own")
                 && text.contains("once per project")
                 && text.contains("do not set a domain up yourself")
-                && text.contains("has no Advanced entry: leave the sentence out"),
+                && text.contains("has no Apps entry: leave the sentence out"),
             "the mention-domains-once-after-deploy rule must survive edits: {text}"
         );
         assert!(

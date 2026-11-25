@@ -244,6 +244,7 @@ test.describe('Journey 28: App Overview & Navigation UI — Admin', () => {
       { name: 'Secrets', button: sidebarPage.secretsButton },
       { name: 'Monetization', button: sidebarPage.monetizationButton },
       { name: 'Memory', button: sidebarPage.memoryButton },
+      { name: 'Apps', button: sidebarPage.appsButton },
       { name: 'Advanced', button: sidebarPage.settingsButton },
     ];
     const visibleRows: string[] = [];
@@ -265,7 +266,7 @@ test.describe('Journey 28: App Overview & Navigation UI — Admin', () => {
       await closeWithEscape(page, dialog);
     }
     expect(visibleRows).toEqual(
-      expect.arrayContaining(['API', 'Secrets', 'Memory', 'Advanced']),
+      expect.arrayContaining(['API', 'Secrets', 'Memory', 'Apps', 'Advanced']),
     );
 
     // Every tab the footer offers is also in the rail, so moving between them

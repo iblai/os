@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-11-18 | 1182 checkpoints (1101 covered, 46 pending/fixme, 17 not-reproducible in default env, 18 deprecated) | 114 journeys (113 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-11-24 | 1189 checkpoints (1108 covered, 46 pending/fixme, 17 not-reproducible in default env, 18 deprecated) | 115 journeys (114 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -2651,3 +2651,15 @@ Issue iblai-platform#2853. Create Agent is a wizard (the only create flow); Fini
 - [x] caw-05: Skip on every step, including the last, opens the new agent's chat
 - [x] caw-06: No Back on step 2, Back from step 3 on, and Back returns to the previous step
 - [x] caw-07: The Skills step (between Prompts and Datasets) shows the agent and available skills tabs and the last step says Finish; the step count follows the tabs the admin may use
+
+---
+
+## Journey 106: Apps (3 checkpoints) — `journeys/106-apps.spec.ts`
+
+**Source files:** `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`
+
+The apps deployed on a platform have a settings page of their own, Apps: a sidebar footer row between Memory and Advanced and a rail entry above Advanced; the Advanced page's Domains card is left with the sign-in domain. Read-only: nothing is attached, detached, moved or deleted. The backend must serve `GET /v1/apps`: "Apps are not available on this instance yet." fails apps-01. Page objects: `page-objects/sidebar.page.ts` (`appsButton`) and `page-objects/virtual-machine-admin.page.ts` (`openTenantSettings`).
+
+- [x] apps-01: Admin sees Apps between Memory and Advanced in the sidebar footer and it opens the organization Account dialog on the Apps page, which lists the apps or says "No apps yet."
+- [x] apps-02: The organization settings opened from the profile menu list Apps above Advanced under System, and Apps opens the Apps page
+- [x] apps-03: Advanced > Domains > Add asks only for a domain for the sign-in site, with no app to choose

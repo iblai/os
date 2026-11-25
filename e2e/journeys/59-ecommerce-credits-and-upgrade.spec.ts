@@ -484,6 +484,9 @@ test.describe('Journey 59: Ecommerce Credits & Upgrade', () => {
           await expect(sidebarPage.memoryButton).toBeVisible({
             timeout: 10_000,
           });
+          await expect(sidebarPage.appsButton).toBeVisible({
+            timeout: 10_000,
+          });
           await expect(sidebarPage.settingsButton).toBeVisible({
             timeout: 10_000,
           });
@@ -546,6 +549,9 @@ test.describe('Journey 59: Ecommerce Credits & Upgrade', () => {
           await expectSubscribeModalAndClose(page);
 
           await sidebarPage.memoryButton.click();
+          await expectSubscribeModalAndClose(page);
+
+          await sidebarPage.appsButton.click();
           await expectSubscribeModalAndClose(page);
 
           await sidebarPage.settingsButton.click();
