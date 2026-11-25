@@ -213,9 +213,8 @@ test.describe.fixme('Journey 46: Prompt Caching Toggle', () => {
   // pc-03: Toggle OFF interaction and save
   // Verifies the toggle responds immediately when clicked OFF and that the Save
   // succeeds. Persistence of `false` via multipart form is not asserted here
-  // because it is a pre-existing infrastructure limitation shared with
-  // `enable_multi_query_rag` (see journey 07 uid-08) — not a regression of
-  // this feature.
+  // because it is a pre-existing infrastructure limitation of the multipart
+  // settings save — not a regression of this feature.
   test('admin toggles prompt caching from ON to OFF and the toggle responds and save succeeds', async ({
     page,
     editMentorPage,

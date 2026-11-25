@@ -80,6 +80,19 @@ describe('SandboxTab', () => {
       ).toBeInTheDocument();
     });
 
+    it('explains the tab in an info box above the sandbox settings', () => {
+      render(<SandboxTab />);
+
+      const box = screen.getByTestId('sandbox-info-box');
+      expect(box).toHaveTextContent(
+        'Give your agent somewhere to run code and work with files, from a calculator to a private computer that stays on between chats.',
+      );
+      expect(
+        box.compareDocumentPosition(screen.getByTestId('sandbox-config')) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+    });
+
     it('renders SandboxConfig with platformKey, mentorUniqueId and username', () => {
       render(<SandboxTab />);
 

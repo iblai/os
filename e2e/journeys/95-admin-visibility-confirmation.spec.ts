@@ -6,7 +6,7 @@
  *    (`discovery-audience-help`) says only admins can find and chat with it;
  *  - saving a change from All Members (catalog on or off) to Admins Only
  *    opens an alertdialog
- *    ("Limit this agent to administrators?") instead of saving at once.
+ *    ("Limit this Agent to Administrators?") instead of saving at once.
  *    Cancel saves nothing; "Limit to Administrators" saves as usual;
  *  - no prompt when the agent is already Admins Only or goes the other way.
  *
@@ -71,7 +71,7 @@ test.describe.serial('Journey 95: Admin visibility confirmation', () => {
       timeout: 10_000,
     });
     await expect(settings.adminVisibilityConfirm).toContainText(
-      'Limit this agent to administrators?',
+      'Limit this Agent to Administrators?',
     );
     await settings.cancelAdminVisibility();
     await editMentorPage.close();

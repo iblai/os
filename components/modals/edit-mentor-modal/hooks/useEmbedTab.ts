@@ -106,12 +106,13 @@ const defaultEmbedFormValues: EmbedFormValues = {
   strip_page_content_html: false,
 };
 
-// Fields the Settings tab owns (#2476): "Who can view" / "Who can chat" live
-// under Settings -> Discovery and the three embed capability toggles under
-// Settings -> Capabilities. They are no longer embed-form fields, but the embed
-// PUT sends the whole form, so a stray copy would silently overwrite whatever
-// the user just set in Settings. Strip them from the payload as well, so the
-// bug cannot come back by someone re-adding a field to the form.
+// Fields other tabs own (#2476): "Who can view" / "Who can chat" live under
+// Settings -> Discovery, the embed attachment toggle under Settings ->
+// Capabilities and the two embed voice toggles in the Voice tab. They are no
+// longer embed-form fields, but the embed PUT sends the whole form, so a stray
+// copy would silently overwrite whatever the user just set there. Strip them
+// from the payload as well, so the bug cannot come back by someone re-adding a
+// field to the form.
 const SETTINGS_OWNED_FIELDS = [
   'mentor_visibility',
   'allow_anonymous',

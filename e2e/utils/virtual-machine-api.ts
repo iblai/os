@@ -1,5 +1,5 @@
 /**
- * Direct DM API helpers for the Virtual Machine Shell network feature —
+ * Direct DM API helpers for the Ephemeral Virtual Machine network feature —
  * network policies, VM secrets and an agent's VM network settings.
  *
  * Journey 79 drives the UI for every checkpoint it covers, but it needs

@@ -12,8 +12,8 @@ import { isVisibleWithin } from '../../utils/resilient';
  * `screenshare-tab-helpers.ts` alone). Re-importing it re-breaks this locator.
  *
  * `exact` is load-bearing: the default substring match also catches the two
- * prompt-card headings ("Instructions during screen sharing", "What the agent
- * says when screen sharing starts") → 3 matches → strict-mode failure.
+ * prompt-card headings ("Instructions During Screen Sharing", "What the Agent
+ * Says When Screen Sharing Starts") → 3 matches → strict-mode failure.
  */
 const SCREENSHARE_HEADER_TITLE = 'Screen';
 
@@ -60,11 +60,12 @@ export class ScreenShareTab {
   /** Save button (SDK-rendered). */
   readonly saveButton: Locator;
   /**
-   * "Enable screen sharing" (`enable_video`) master toggle. Auto-saves on
-   * click (`AgentScreenShareTab`'s `handleToggleScreenShare` calls
-   * `updateCallConfig`/`createCallConfig` directly with optimistic local
-   * state) — no footer Save button involved for the toggle itself (the
-   * screensharing PROMPTS below still use the tab's own Save button).
+   * Screen Share master switch. Auto-saves on click: it writes the
+   * `capability_screen_share` flag (and clears the call configuration's
+   * `enable_video` when turned off), toasting "Screen Sharing turned on" /
+   * "Screen Sharing turned off". No footer Save button is involved for the
+   * switch itself (the screensharing PROMPTS below still use the tab's own
+   * Save button).
    */
   readonly capabilityToggle: Locator;
   /** Wrapper around the gated prompt cards — `data-enabled` mirrors the toggle. */
@@ -117,7 +118,7 @@ export class ScreenShareTab {
 
   // ── Capability gate ───────────────────────────────────────────────────────
 
-  /** Whether the "Enable screen sharing" capability toggle is currently on. */
+  /** Whether the Screen Sharing switch is currently on. */
   async isCapabilityEnabled(): Promise<boolean> {
     const attr = await this.capabilityToggle
       .getAttribute('aria-checked')
@@ -126,10 +127,12 @@ export class ScreenShareTab {
   }
 
   /**
-   * Idempotently set the "Enable screen sharing" capability toggle to the
-   * target state. Auto-saves on click (optimistic local state) — no footer
-   * Save button involved. Waits for both the toggle's `aria-checked` and the
-   * gated content's `data-enabled` attribute to reflect the target state.
+   * Idempotently set the Screen Sharing switch to the target state. Auto-saves
+   * on click — no footer Save button involved. The switch and the gated
+   * content flip on the click, before the save lands, so this waits for the
+   * save toast first and then for the switch's `aria-checked` and the gated
+   * content's `data-enabled` attribute to still reflect the target state (a
+   * refused save reverts both and shows no toast).
    */
   async setCapabilityEnabled(target: boolean): Promise<void> {
     await expect(this.capabilityToggle).toBeVisible({ timeout: 10_000 });
@@ -137,6 +140,11 @@ export class ScreenShareTab {
     if (isOn === target) return;
 
     await this.capabilityToggle.click();
+    await expect(
+      this.page
+        .getByText(`Screen Sharing turned ${target ? 'on' : 'off'}`)
+        .first(),
+    ).toBeVisible({ timeout: 15_000 });
     await expect(this.capabilityToggle).toHaveAttribute(
       'aria-checked',
       String(target),

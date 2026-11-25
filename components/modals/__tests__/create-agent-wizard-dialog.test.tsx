@@ -201,7 +201,7 @@ describe('CreateAgentWizardDialog', () => {
     expect(screen.getByTestId('llm-tab')).toBeInTheDocument();
   });
 
-  it.each(['llm', 'prompts', 'skills', 'mcp'])(
+  it.each(['llm', 'prompts', 'skills'])(
     'renders the OS %s tab pinned to the new agent',
     (step) => {
       render(<CreateAgentWizardDialog {...baseProps} />);
@@ -217,6 +217,20 @@ describe('CreateAgentWizardDialog', () => {
     },
   );
 
+  it('renders the OS mcp tab pinned to the new agent, without the header switch', () => {
+    render(<CreateAgentWizardDialog {...baseProps} />);
+    act(() => captured.props!.onCreated('new-agent'));
+
+    renderStep('mcp');
+
+    expect(screen.getByTestId('mcp-tab')).toBeInTheDocument();
+    expect(tabProps.mcp).toEqual({
+      mentorId: 'new-agent',
+      tenantKey: 'acme',
+      showCapabilitySwitch: false,
+    });
+  });
+
   it('renders the OS datasets tab pinned to the new agent, off the URL', () => {
     render(<CreateAgentWizardDialog {...baseProps} />);
     act(() => captured.props!.onCreated('new-agent'));
@@ -227,6 +241,7 @@ describe('CreateAgentWizardDialog', () => {
       mentorId: 'new-agent',
       tenantKey: 'acme',
       syncToUrl: false,
+      showCapabilitySwitch: false,
     });
   });
 });

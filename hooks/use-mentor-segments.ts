@@ -7,7 +7,6 @@ import {
   Brain,
   Terminal,
   Plug,
-  Wrench,
   Shield,
   ShieldCheck,
   CalendarClock,
@@ -67,9 +66,8 @@ export type MentorSegmentConfigFlags = {
    */
   isScreenshareEnabled: boolean;
   /**
-   * True when "Enable voice calls" (`show_voice_call`) is on in Settings.
-   * Gates the standalone Voice top-level tab — turning voice calls off
-   * removes the Voice tab from the sidebar entirely.
+   * True when Voice Calls is on for the in-app chat (`show_voice_call`). No
+   * tab is gated on it: the Voice tab always shows and holds the switch.
    */
   isVoiceCallEnabled: boolean;
   /**
@@ -315,7 +313,7 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
     ],
     // Always visible. The "Grading" capability toggle lives inline at the top
-    // of the Grader tab (it attaches/detaches the Grading tool on the agent);
+    // of the Grader tab (it saves the agent's `capability_grading` flag);
     // turning it off grays out the rubric configuration below instead of
     // hiding the tab, and the rubric is preserved across disable/re-enable.
     navCategory: 'setup',
@@ -334,9 +332,8 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
     ],
-    // Always visible. The "Enable voice calls" (`show_voice_call`) master
-    // toggle now lives inline at the top of the Voice tab; turning it off grays
-    // out the voice/call configuration below instead of hiding the whole tab.
+    // Always visible. The Voice Calls and Dictation switches live inside the
+    // tab, and each greys out only its own sub-tab.
     navCategory: 'setup',
   },
   {
@@ -350,8 +347,9 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
     ],
-    // Always visible. The "Enable screen sharing" (`enable_video`) master
-    // toggle now lives inline at the top of the Screen tab; turning it
+    // Always visible. The "Enable screen sharing" master toggle
+    // (`capability_screen_share`; `enable_video` where the platform has no
+    // such flag) lives inline at the top of the Screen tab; turning it
     // off grays out the screen-sharing prompts below instead of hiding the tab.
     navCategory: 'setup',
   },
@@ -435,21 +433,6 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
     ],
     navCategory: 'policies',
-  },
-  {
-    value: MODALS.EDIT_MENTOR.tabs.tools,
-    label: 'Tools',
-    labelKey: 'tools',
-    icon: Wrench,
-    userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
-    rbacResource: (mentorDbId) =>
-      `/mentors/${mentorDbId}/tools/#list&/mentors/${mentorDbId}/#view_tools_menu`,
-    permissionFieldsCheck: ['mentor_tools'],
-    mentorVisibility: [
-      MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
-      MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
-    ],
-    navCategory: 'integrations',
   },
   {
     value: MODALS.EDIT_MENTOR.tabs.mcp,
@@ -804,9 +787,7 @@ export function useMentorSegments(options: UseMentorSegmentsOptions = {}) {
     // @ts-ignore - call_configuration exists on API but not typed
     mentorSettings?.call_configuration?.enable_video ?? false;
 
-  // The Voice tab is gated on "Enable voice calls". Default to true to match
-  // the Settings form (`show_voice_call ?? true`) so a mentor that never
-  // explicitly set the flag still surfaces the tab.
+  // Defaults to true like the Voice tab's own switch (`show_voice_call ?? true`).
   const isVoiceCallEnabled: boolean =
     // @ts-ignore - show_voice_call exists on API but not typed
     mentorSettings?.show_voice_call ?? true;

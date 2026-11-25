@@ -195,91 +195,22 @@ test.describe('Journey 7: Mentor Settings Tab — Unique ID', () => {
     await editMentorPage.close();
   });
 
-  // uid-06: Enhanced RAG toggle is visible with correct label, default OFF
-  test('admin goes to mentor settings tab and sees the Enhanced RAG toggle defaulting to OFF', async ({
-    editMentorPage,
-  }) => {
-    // Renamed from "Enhanced RAG" → "Enhanced Document Retrieval" and moved
-    // into the Capabilities sub-tab when Settings was split.
-    await editMentorPage.settings.selectSubTab('Capabilities');
-    const label = editMentorPage.dialog.getByText(
-      'Enhanced Document Retrieval',
-      {
-        exact: true,
-      },
-    );
-    await expect(label).toBeVisible({ timeout: 10_000 });
-
-    const toggle = editMentorPage.settings.enhanceDocumentRetrievalToggle;
-    await expect(toggle).toBeVisible({ timeout: 10_000 });
-
-    // Default value is false (mentor?.enable_multi_query_rag ?? false)
-    const ariaChecked = await toggle.getAttribute('aria-checked');
-    expect(ariaChecked).toBe('false');
-    logger.info(`uid-06: Enhanced RAG toggle aria-checked=${ariaChecked}`);
-
-    await editMentorPage.close();
-  });
-
-  // uid-07: Enhanced RAG tooltip contains expected wording
-  test('admin goes to mentor settings tab and sees the Enhanced RAG tooltip text', async ({
-    page,
+  // uid-06: Enhanced Document Retrieval moved to the Datasets tab (journey 108
+  // agc-11) and Smart Document Retrieval to the Voice tab (journey 47 VO-13),
+  // so the Settings > Capabilities sub-tab shows neither row.
+  test('admin goes to mentor settings tab and does not see the document retrieval rows in Capabilities', async ({
     editMentorPage,
   }) => {
     await editMentorPage.settings.selectSubTab('Capabilities');
-    const tooltipTrigger =
-      editMentorPage.settings.enhanceDocumentRetrievalTooltipTrigger;
-    await expect(tooltipTrigger).toBeVisible({ timeout: 10_000 });
-    await tooltipTrigger.hover();
-
+    await expect(editMentorPage.settings.promptCachingToggle).toBeVisible({
+      timeout: 10_000,
+    });
     await expect(
-      page.getByRole('tooltip', {
-        name: /runs several search queries per question to pull more relevant documents/i,
-      }),
-    ).toBeVisible({ timeout: 5_000 });
-    logger.info('uid-07: Enhanced RAG tooltip content is visible');
-
-    await editMentorPage.close();
-  });
-
-  // uid-08: Enhanced RAG toggle persists ON then OFF across save/reopen cycles
-  test('admin goes to mentor settings tab and toggles Enhanced RAG ON then OFF with persistence', async ({
-    page,
-    editMentorPage,
-  }) => {
-    // --- Turn ON ---
-    await editMentorPage.settings.enableEnhanceDocumentRetrieval();
-    logger.info('uid-08: Saved Enhanced RAG = ON');
-
-    await editMentorPage.close();
-
-    // Reopen and verify ON persisted
-    await editMentorPage.open('Settings');
-    await waitForPageReady(page);
-
-    const isOn =
-      await editMentorPage.settings.isEnhanceDocumentRetrievalEnabled();
-    expect(isOn).toBe(true);
-    logger.info(
-      `uid-08: After reopen, toggle = ${isOn ? 'ON' : 'OFF'} (expected ON)`,
-    );
-
-    // --- Turn OFF ---
-    await editMentorPage.settings.disableEnhanceDocumentRetrieval();
-    logger.info('uid-08: Saved Enhanced RAG = OFF');
-
-    await editMentorPage.close();
-
-    // Reopen and verify OFF persisted
-    await editMentorPage.open('Settings');
-    await waitForPageReady(page);
-
-    const isOff =
-      await editMentorPage.settings.isEnhanceDocumentRetrievalEnabled();
-    expect(isOff).toBe(false);
-    logger.info(
-      `uid-08: After reopen, toggle = ${isOff ? 'ON' : 'OFF'} (expected OFF)`,
-    );
+      editMentorPage.dialog.getByText('Enhanced Document Retrieval'),
+    ).toHaveCount(0);
+    await expect(
+      editMentorPage.dialog.getByText('Smart Document Retrieval'),
+    ).toHaveCount(0);
 
     await editMentorPage.close();
   });

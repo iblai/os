@@ -169,13 +169,14 @@ describe('useMentorSegments', () => {
     setupDefaults();
   });
 
-  it('returns the canonical 26 mentor segments unfiltered', () => {
+  it('returns the canonical 25 mentor segments unfiltered', () => {
     const { result } = renderHook(() => useMentorSegments());
     expect(result.current.segments).toBe(MENTOR_SEGMENTS);
     // 17 original + Voice + Screen Share (feat/mentor/1763) + Tasks
     // (feat/mentor/715) + LTI + Analytics hub (feat/2040) + Human Support + Grader
-    // (feat/2081) + Evals (feat/1178) + Billing / spend caps (feat/2286).
-    expect(MENTOR_SEGMENTS).toHaveLength(26);
+    // (feat/2081) + Evals (feat/1178) + Billing / spend caps (feat/2286),
+    // minus Tools (its switches moved into the tabs they belong to).
+    expect(MENTOR_SEGMENTS).toHaveLength(25);
   });
 
   it('places the Billing (spend caps) segment right after Access in Policies', () => {
@@ -185,11 +186,11 @@ describe('useMentorSegments', () => {
     expect(policyLabels[policyLabels.indexOf('Access') + 1]).toBe('Billing');
   });
 
-  it('leads Integrations with Tools, then MCP, then Sandbox', () => {
+  it('leads Integrations with MCP, then Sandbox', () => {
     const integrationLabels = MENTOR_SEGMENTS.filter(
       (s) => s.navCategory === 'integrations',
     ).map((s) => s.label);
-    expect(integrationLabels.slice(0, 3)).toEqual(['Tools', 'MCP', 'Sandbox']);
+    expect(integrationLabels.slice(0, 2)).toEqual(['MCP', 'Sandbox']);
   });
 
   it('places the Skills segment right after Prompts', () => {
@@ -244,7 +245,6 @@ describe('useMentorSegments', () => {
       'Disclaimers',
     ]);
     expect(labelsIn('integrations')).toEqual([
-      'Tools',
       'MCP',
       'Sandbox',
       'Embed',

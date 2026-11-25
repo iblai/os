@@ -302,7 +302,7 @@ test.describe('Journey 75: Dataset Upload Types', () => {
   });
 
   // ── du-13/14: Web Crawler + optional User-Agent ───────────────────────────
-  // The Web Crawler create form's "User-Agent (optional)" field is sent as
+  // The Web Crawler create form's "User-Agent (Optional)" field is sent as
   // `crawler_extra_headers: { 'User-Agent': <value> }` on the POST to
   // `.../documents/train/` ONLY when non-blank (see
   // `useWebsiteCrawlerResource` in `@iblai/web-containers`). Assert both

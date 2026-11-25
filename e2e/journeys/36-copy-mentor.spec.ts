@@ -85,7 +85,7 @@ test.describe('Journey 36: Copy Mentor', () => {
     logger.info(`Name input pre-filled with: ${nameValue}`);
 
     await expect(
-      copyMentorDialog.dialog.getByText('Include training data'),
+      copyMentorDialog.dialog.getByText('Include Training Data'),
     ).toBeVisible();
     await expect(copyMentorDialog.cancelButton).toBeVisible();
     await expect(copyMentorDialog.copyButton).toBeVisible();

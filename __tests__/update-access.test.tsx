@@ -303,7 +303,7 @@ describe('RoleAccessPanel', () => {
       await user.type(input, 'alice@test.com{Enter}');
       await user.type(input, 'bob@test.com{Enter}');
 
-      // Click the "Add 2 users" button
+      // Click the "Add 2 Users" button
       const addButton = screen.getByRole('button', { name: /add 2 users/i });
       await user.click(addButton);
 
@@ -350,7 +350,7 @@ describe('RoleAccessPanel', () => {
       await user.type(input, 'bob@test.com');
       // Don't press Enter, click Add directly
 
-      // The "Add 1 user" button (not the "Add entry" plus button)
+      // The "Add 1 User" button (not the "Add entry" plus button)
       const addButton = screen.getByRole('button', { name: /add 1 user/i });
       await user.click(addButton);
 
@@ -428,7 +428,7 @@ describe('RoleAccessPanel', () => {
         }),
       });
 
-      expect(screen.getByText('Assigned groups')).toBeInTheDocument();
+      expect(screen.getByText('Assigned Groups')).toBeInTheDocument();
       expect(screen.getByText('Engineering')).toBeInTheDocument();
     });
 
@@ -511,7 +511,7 @@ describe('RoleAccessPanel', () => {
     it('does not render groups section', () => {
       setup();
 
-      expect(screen.queryByText('Assigned groups')).not.toBeInTheDocument();
+      expect(screen.queryByText('Assigned Groups')).not.toBeInTheDocument();
       expect(
         screen.queryByPlaceholderText('Search groups by name'),
       ).not.toBeInTheDocument();
@@ -546,7 +546,7 @@ describe('RoleAccessPanel', () => {
 
         // Readable.
         expect(screen.getByText('alice@test.com')).toBeInTheDocument();
-        expect(screen.getByText('Assigned groups')).toBeInTheDocument();
+        expect(screen.getByText('Assigned Groups')).toBeInTheDocument();
         expect(screen.getByText('Engineering')).toBeInTheDocument();
 
         // Not mutable — assert the COUNT of remove-X controls, not one node.
@@ -556,12 +556,12 @@ describe('RoleAccessPanel', () => {
         expect(
           screen.queryByPlaceholderText('Search by name, username, or email'),
         ).not.toBeInTheDocument();
-        expect(screen.queryByText('Add users')).not.toBeInTheDocument();
-        expect(screen.queryByText('Add by')).not.toBeInTheDocument();
+        expect(screen.queryByText('Add Users')).not.toBeInTheDocument();
+        expect(screen.queryByText('Add By')).not.toBeInTheDocument();
         expect(
           screen.queryByLabelText('Select input type'),
         ).not.toBeInTheDocument();
-        expect(screen.queryByText('Add groups')).not.toBeInTheDocument();
+        expect(screen.queryByText('Add Groups')).not.toBeInTheDocument();
         expect(
           screen.queryByPlaceholderText('Search groups by name'),
         ).not.toBeInTheDocument();

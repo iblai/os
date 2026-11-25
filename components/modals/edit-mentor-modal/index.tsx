@@ -14,7 +14,6 @@ import {
 import {
   PromptsTab,
   McpTab,
-  ToolsTab,
   SafetyTab,
   SpendCapsTab,
   PrivacyTab,
@@ -80,7 +79,6 @@ export const EDIT_MENTOR_TAB_COMPONENTS: Record<string, ReactNode> = {
   [MODALS.EDIT_MENTOR.tabs.privacy]: <PrivacyTab />,
   [MODALS.EDIT_MENTOR.tabs.tasks]: <TasksTab />,
   [MODALS.EDIT_MENTOR.tabs.disclaimer]: <DisclaimersTab />,
-  [MODALS.EDIT_MENTOR.tabs.tools]: <ToolsTab />,
   [MODALS.EDIT_MENTOR.tabs.mcp]: <McpTab />,
   [MODALS.EDIT_MENTOR.tabs.memory]: <MemoryTab />,
   [MODALS.EDIT_MENTOR.tabs.history]: <HistoryTab />,
@@ -109,7 +107,13 @@ export function EditMentorModal({ isOpen, onClose }: Props) {
   } = useMentorSegments({
     preferModalMentorId: true,
   });
-  const activeTab = getEditMentorTab() || MODALS.EDIT_MENTOR.tabs.settings;
+  const requestedTab = getEditMentorTab();
+  // An old link can still name a tab that no longer exists (the former Tools
+  // tab); with no panel behind it the modal would open blank.
+  const activeTab =
+    requestedTab && requestedTab in EDIT_MENTOR_TAB_COMPONENTS
+      ? requestedTab
+      : MODALS.EDIT_MENTOR.tabs.settings;
 
   // When the modal is opened for a mentor other than the one the page was
   // booted with (e.g. via "My Agents" in the sidebar), the RBAC cache lacks

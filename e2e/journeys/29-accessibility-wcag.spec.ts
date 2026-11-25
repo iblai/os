@@ -95,21 +95,36 @@ test.describe('Journey 29: Accessibility — WCAG 2.1 AA — Admin', () => {
     }
   });
 
-  test('admin goes to Invite Users modal and it meets accessibility guidelines', async ({
+  test('admin goes to Invites and the Invites tab of the settings dialog meets accessibility guidelines', async ({
     page,
+    sidebarPage,
   }) => {
     const isAdmin = await checkAdminStatus(page);
     test.skip(!isAdmin, 'Requires admin access');
-    const inviteBtn = page.getByRole('button', {
-      name: 'Invite Users',
-      exact: true,
-    });
-    if (await inviteBtn.isVisible({ timeout: 5_000 }).catch(() => false)) {
-      await inviteBtn.click();
-      await page.waitForTimeout(1_000);
-      await expectNoViolations(page, '[role="dialog"]');
-      await page.keyboard.press('Escape');
-    }
+    // Invites is RBAC-gated (`can_invite`), so skip rather than fail when the
+    // environment does not grant it to the admin user.
+    const invitesOffered = await sidebarPage.inviteUsersButton
+      .waitFor({ state: 'visible', timeout: 10_000 })
+      .then(
+        () => true,
+        () => false,
+      );
+    test.skip(
+      !invitesOffered,
+      'Invites sidebar entry is not available to this admin user',
+    );
+
+    const { dialog } = await sidebarPage.openInvites();
+    await expect(
+      dialog.getByRole('heading', { name: 'Invites', exact: true }),
+    ).toBeVisible({ timeout: 10_000 });
+    await expect(
+      dialog.getByPlaceholder('Enter email to invite...'),
+    ).toBeVisible({ timeout: 10_000 });
+    await waitForPageReady(page);
+
+    await expectNoViolations(page, '[role="dialog"]');
+    await page.keyboard.press('Escape');
   });
 
   // fixme: real accessibility violations in the app — not test bugs
@@ -187,13 +202,14 @@ test.describe('Journey 29: Accessibility — WCAG 2.1 AA — Admin', () => {
     await editMentorPage.close();
   });
 
-  test('admin goes to Tools dialog and it is accessible', async ({
+  test('admin goes to Agent Capabilities dialog and it is accessible', async ({
     page,
     editMentorPage,
   }) => {
     const isAdmin = await checkAdminStatus(page);
     test.skip(!isAdmin, 'Requires admin access');
-    await openEditMentorTab(page, editMentorPage, 'Tools');
+    await openEditMentorTab(page, editMentorPage, 'Settings');
+    await editMentorPage.capabilities.open();
     await expectNoViolations(page, '[role="dialog"]');
     await editMentorPage.close();
   });

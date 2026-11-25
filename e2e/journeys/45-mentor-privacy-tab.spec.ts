@@ -71,7 +71,9 @@ test.describe('Journey 45: Mentor Privacy Tab', () => {
           'false',
         );
         await expect(privacy.toggle(kind)).toHaveAttribute('title', 'Off');
-        await expect(privacy.summary(kind)).toHaveText('Off.');
+        await expect(privacy.summary(kind)).toContainText(
+          'reach the AI just as people type them',
+        );
       }
       await expect(privacy.toggle('pii')).toHaveAccessibleName('PII Filtering');
       await expect(privacy.toggle('phi')).toHaveAccessibleName('PHI Filtering');
@@ -111,7 +113,9 @@ test.describe('Journey 45: Mentor Privacy Tab', () => {
         'aria-expanded',
         'true',
       );
-      await expect(privacy.summary('pii')).toContainText(/^On\./);
+      await expect(privacy.summary('pii')).toContainText(
+        'other personal details are',
+      );
       await expect(privacy.toggle('phi')).toHaveAttribute(
         'aria-checked',
         'false',
@@ -135,7 +139,9 @@ test.describe('Journey 45: Mentor Privacy Tab', () => {
         timeout: 10_000,
       });
       await expect(privacy.blockMessage('pii')).toBeEnabled();
-      await expect(privacy.summary('pii')).toContainText('Block');
+      await expect(privacy.summary('pii')).toContainText(
+        'stopped before it reaches the AI',
+      );
       await privacy.selectAction('pii', 'Redact');
       await expect(privacy.blockMessage('pii')).toHaveCount(0);
 
@@ -143,7 +149,7 @@ test.describe('Journey 45: Mentor Privacy Tab', () => {
       await expect(privacy.entitiesHint('pii')).toBeVisible();
       await privacy.setEntitySelected('pii', 'EMAIL_ADDRESS', true);
       await expect(privacy.entitiesHint('pii')).toHaveCount(0);
-      await expect(privacy.summary('pii')).toContainText('1 kind selected');
+      await expect(privacy.summary('pii')).toContainText('(1 kind)');
       await privacy.setEntitySelected('pii', 'EMAIL_ADDRESS', false);
       await expect(privacy.entitiesHint('pii')).toBeVisible();
       await privacy.setEntitySelected('pii', 'EMAIL_ADDRESS', true);
@@ -157,12 +163,16 @@ test.describe('Journey 45: Mentor Privacy Tab', () => {
         'aria-checked',
         'true',
       );
-      await expect(privacy.summary('pii')).toContainText('Redact');
-      await expect(privacy.summary('pii')).toContainText('1 kind selected');
+      await expect(privacy.summary('pii')).toContainText(
+        'replaced with a label',
+      );
+      await expect(privacy.summary('pii')).toContainText('(1 kind)');
 
       // Turning the last kind off turns the whole filter off
       await privacy.setFilterEnabled('pii', false);
-      await expect(privacy.summary('pii')).toHaveText('Off.');
+      await expect(privacy.summary('pii')).toContainText(
+        'reach the AI just as people type them',
+      );
       await editMentorPage.close();
     } finally {
       await deleteMentorById(page, mentorId);
@@ -195,7 +205,9 @@ test.describe('Journey 45: Mentor Privacy Tab', () => {
       );
       await expect(privacy.entityChips('phi')).toHaveCount(12);
       await expect(privacy.entitiesHint('phi')).toBeVisible();
-      await expect(privacy.summary('phi')).toContainText('all 12 kinds');
+      await expect(privacy.summary('phi')).toContainText(
+        'other health details are',
+      );
 
       await privacy.selectAction('phi', 'Block');
       await expect(privacy.blockMessage('phi')).toBeVisible({
@@ -203,8 +215,10 @@ test.describe('Journey 45: Mentor Privacy Tab', () => {
       });
       await privacy.setEntitySelected('phi', 'DISEASE_DISORDER', true);
       await privacy.setEntitySelected('phi', 'MEDICATION', true);
-      await expect(privacy.summary('phi')).toContainText('2 kinds selected');
-      await expect(privacy.summary('phi')).toContainText('Block');
+      await expect(privacy.summary('phi')).toContainText('(2 kinds)');
+      await expect(privacy.summary('phi')).toContainText(
+        'stopped before it reaches the AI',
+      );
 
       // PR-11: one card open at a time; turning PII on opens PII, closes PHI
       await privacy.setFilterEnabled('pii', true);
@@ -244,9 +258,13 @@ test.describe('Journey 45: Mentor Privacy Tab', () => {
         'aria-checked',
         'true',
       );
-      await expect(privacy.summary('phi')).toHaveText('Off.');
+      await expect(privacy.summary('phi')).toContainText(
+        'reach the AI just as people type them',
+      );
       await privacy.setFilterEnabled('pii', false);
-      await expect(privacy.summary('pii')).toHaveText('Off.');
+      await expect(privacy.summary('pii')).toContainText(
+        'reach the AI just as people type them',
+      );
 
       await editMentorPage.close();
     } finally {
