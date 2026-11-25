@@ -87,6 +87,26 @@ describe('what a recording keeps', () => {
 
     expect(run.steps()[0]).toMatchObject({ tool: 'select', value: 'CSV' });
   });
+
+  it('keeps submitting a form as the click it was', () => {
+    const run = new Recording();
+    run.add(event({ kind: 'submit', role: 'button', name: 'Search' }), 0);
+
+    expect(run.steps()).toEqual([
+      { tool: 'click', target: { role: 'button', name: 'Search' }, url: URL_A },
+    ]);
+  });
+
+  it('remembers which frame a click happened in', () => {
+    const run = new Recording();
+    run.add(event({ frameUrl: 'https://embed.acme.com/widget' }), 0);
+
+    // Replay has to look inside the same frame; the page's own address would
+    // send it hunting for a control that is not there.
+    expect(run.steps()[0]).toMatchObject({
+      frameUrl: 'https://embed.acme.com/widget',
+    });
+  });
 });
 
 describe('what a recording never keeps', () => {
@@ -191,5 +211,123 @@ describe('how a step reads', () => {
         url: URL_A,
       }),
     ).toBe('Type "acme corp" into the textbox "Search"');
+  });
+
+  it('names the address a navigation goes to', () => {
+    expect(
+      describeStep({
+        tool: 'navigate',
+        target: { role: 'page', name: 'Reports' },
+        url: URL_A,
+      }),
+    ).toBe(`Go to ${URL_A}`);
+  });
+
+  it('reads a choice with the value only when review kept it', () => {
+    const chose = {
+      tool: 'select' as const,
+      target: { role: 'combobox', name: 'Range' },
+      url: URL_A,
+    };
+
+    expect(describeStep(chose)).toBe('Choose in the combobox "Range"');
+    expect(describeStep({ ...chose, value: 'Last 7 days' })).toBe(
+      'Choose "Last 7 days" in the combobox "Range"',
+    );
+  });
+});
+
+describe('a workflow that moves between tabs', () => {
+  const tab = (id: number, title: string, url = `https://${title}.com/`) => ({
+    id,
+    title,
+    url,
+  });
+
+  it('follows the person, and says so in the steps', () => {
+    const run = new Recording();
+    run.switchedTo(tab(1, 'reports'), 0);
+    run.add(event({ role: 'button', name: 'Export' }), 10);
+    run.switchedTo(tab(2, 'sheets'), 20);
+    run.add(event({ role: 'button', name: 'Paste' }), 30);
+
+    expect(run.steps().map((s) => s.tool)).toEqual([
+      'click',
+      'switch-tab',
+      'click',
+    ]);
+    expect(run.steps()[1].target.name).toBe('sheets');
+  });
+
+  it('does not open with a switch nobody made', () => {
+    const run = new Recording();
+    run.switchedTo(tab(1, 'reports'), 0);
+    run.add(event({ role: 'button', name: 'Export' }), 10);
+
+    // The first tab is where they already were.
+    expect(run.steps().map((s) => s.tool)).toEqual(['click']);
+  });
+
+  it('ignores a tab they looked at and left without doing anything', () => {
+    const run = new Recording();
+    run.switchedTo(tab(1, 'reports'), 0);
+    run.add(event({ role: 'button', name: 'Export' }), 10);
+    run.switchedTo(tab(2, 'sheets'), 20);
+    run.switchedTo(tab(1, 'reports'), 30);
+    run.add(event({ role: 'button', name: 'Download' }), 40);
+
+    // Two switches are recorded because they happened; what matters is that
+    // nothing invented a step on the tab nothing was done in.
+    const tools = run.steps().map((s) => s.tool);
+    expect(tools.filter((x) => x === 'click')).toHaveLength(2);
+  });
+
+  it('closes what was being typed before the person leaves the tab', () => {
+    const run = new Recording();
+    run.switchedTo(tab(1, 'reports'), 0);
+    run.add(
+      event({ kind: 'input', role: 'textbox', name: 'Search', value: 'acme' }),
+      10,
+    );
+    run.switchedTo(tab(2, 'sheets'), 20);
+
+    // Otherwise the half-typed field lands after the switch, in the wrong tab.
+    expect(run.steps().map((s) => s.tool)).toEqual(['type', 'switch-tab']);
+  });
+
+  it('reads as something a person could follow', () => {
+    expect(
+      describeStep({
+        tool: 'switch-tab',
+        target: { role: 'tab', name: 'Sheets' },
+        url: 'https://sheets.com/',
+      }),
+    ).toBe('Switch to the tab showing Sheets');
+  });
+
+  it('records nothing for a switch to the tab already in front', () => {
+    const run = new Recording();
+    run.switchedTo(tab(1, 'reports'), 0);
+    run.add(event({}), 5);
+    run.switchedTo(tab(1, 'reports'), 10);
+
+    expect(run.steps().filter((step) => step.tool === 'switch-tab')).toEqual(
+      [],
+    );
+  });
+
+  it('falls back to the address when a tab has no title, and to nothing when it has neither', () => {
+    const run = new Recording();
+    run.switchedTo(tab(1, 'reports'), 0);
+    run.add(event({}), 5);
+    run.switchedTo({ id: 2, url: 'https://sheets.acme.com/x' }, 10);
+    run.switchedTo({ id: 3 }, 20);
+
+    expect(
+      run
+        .steps()
+        .filter((step) => step.tool === 'switch-tab')
+        .map((step) => step.target.name),
+    ).toEqual(['sheets.acme.com', '']);
   });
 });

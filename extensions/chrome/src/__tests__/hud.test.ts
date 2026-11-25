@@ -4,7 +4,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { BEAT_MS, BRAND, doingLine, startHud, WATCHDOG_MS } from '../hud';
 import { OVERLAY_ATTR } from '../page-scripts';
 import {
+  groupTitle,
   markTab,
+  TITLE_MAX,
   sweepStaleMarks,
   unmarkTab,
   type TabMark,
@@ -179,8 +181,67 @@ describe('startHud', () => {
     });
   });
 
+  describe('the press', () => {
+    const pressId = () => {
+      const [options] = injected('mountHud').at(-1)![0].args as [
+        { pressId?: number },
+      ];
+      return options.pressId ?? 0;
+    };
+    const rect = { x: 10, y: 20, w: 30, h: 40 };
+
+    // Separate from `say` on purpose: `say` runs before the confirmation card
+    // and before the action, so counting there would animate a press the user
+    // declined or the page refused.
+    it('counts a press for a tool that presses', async () => {
+      const hud = startHud(7);
+      await vi.waitFor(() => expect(host()).not.toBeNull());
+      hud.say('click', '[3] button "Pay"', rect);
+      await vi.waitFor(() => expect(pressId()).toBe(0));
+
+      hud.pressed('click');
+      await vi.waitFor(() => expect(pressId()).toBe(1));
+      await hud.stop();
+    });
+
+    it('counts each press, so a second one in the same place still shows', async () => {
+      const hud = startHud(7);
+      await vi.waitFor(() => expect(host()).not.toBeNull());
+      hud.say('click', '[3] button "Pay"', rect);
+      hud.pressed('click');
+      await vi.waitFor(() => expect(pressId()).toBe(1));
+
+      hud.pressed('click');
+      await vi.waitFor(() => expect(pressId()).toBe(2));
+      await hud.stop();
+    });
+
+    // The keyboard is not the pointer: a tap mark on a field being typed into
+    // reads as a click that never happened.
+    it('counts nothing for a tool that does not press', async () => {
+      const hud = startHud(7);
+      await vi.waitFor(() => expect(host()).not.toBeNull());
+      hud.say('type', '[3] textbox "Email"', rect);
+      hud.pressed('type');
+
+      await vi.waitFor(() => expect(pressId()).toBe(0));
+      await hud.stop();
+    });
+
+    it('counts nothing when there is nothing to press on', async () => {
+      const hud = startHud(7);
+      await vi.waitFor(() => expect(host()).not.toBeNull());
+      hud.say('click', 'somewhere', null);
+      hud.pressed('click');
+
+      await vi.waitFor(() => expect(pressId()).toBe(0));
+      await hud.stop();
+    });
+  });
+
   describe('the tab-strip marker', () => {
     it('groups the driven tab, named and in the brand colour', async () => {
+      // No goal: the app's own name is what the strip gets.
       const hud = startHud(7);
       await vi.waitFor(() => expect(chromeStub.grouped.get(7)).toBeDefined());
       const groupId = chromeStub.grouped.get(7)!;
@@ -192,12 +253,57 @@ describe('startHud', () => {
       expect(chromeStub.grouped.has(7)).toBe(false);
     });
 
+    // Two runs both reading "ibl.ai" is the thing this replaces: the strip is
+    // where you look to tell them apart.
+    it('names the group after what the run was asked to do', async () => {
+      const hud = startHud(7, 'Find where monetization is enabled');
+      await vi.waitFor(() => expect(chromeStub.grouped.get(7)).toBeDefined());
+      const groupId = chromeStub.grouped.get(7)!;
+      expect(chromeStub.groups.get(groupId)).toEqual({
+        title: 'Find where monetization is…',
+        color: 'blue',
+      });
+      await hud.stop();
+    });
+
     it('ungroups a tab grouped while the run was already ending', async () => {
       const hud = startHud(7);
       // Nothing awaited: the marking is still in flight when the run ends.
       await hud.stop();
       await vi.waitFor(() => expect(chromeStub.grouped.has(7)).toBe(false));
     });
+  });
+});
+
+describe('groupTitle', () => {
+  it('uses the goal when it is short enough to read whole', () => {
+    expect(groupTitle('Book a flight')).toBe('Book a flight');
+  });
+
+  it('cuts a long goal at a word, not mid-word', () => {
+    expect(groupTitle('Find where monetization is enabled in this app')).toBe(
+      'Find where monetization is…',
+    );
+  });
+
+  // A goal whose first word runs past the limit has no boundary worth
+  // honouring; cutting at one would leave nothing.
+  it('cuts mid-word when there is no usable boundary', () => {
+    const title = groupTitle(`${'x'.repeat(40)} tail`);
+    expect(title).toBe(`${'x'.repeat(TITLE_MAX)}…`);
+  });
+
+  it('tidies the whitespace a chat box leaves behind', () => {
+    expect(groupTitle('  Book   a\n flight  ')).toBe('Book a flight');
+  });
+
+  it.each([
+    ['empty', ''],
+    ['blank', '   '],
+    ['null', null],
+    ['absent', undefined],
+  ])('falls back to the app name for a %s goal', (_label, goal) => {
+    expect(groupTitle(goal)).toBe('ibl.ai');
   });
 });
 

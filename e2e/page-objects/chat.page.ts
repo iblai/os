@@ -1081,7 +1081,9 @@ export class ChatPage {
    * version silently dropped every message after the first.
    */
   private async mockWebSocketRoute(urlPattern: string): Promise<{
-    waitForClientMessage: () => Promise<Record<string, unknown>>;
+    waitForClientMessage: (
+      timeoutMs?: number,
+    ) => Promise<Record<string, unknown>>;
     send: (frame: Record<string, unknown>) => void;
     close: () => void;
   }> {
@@ -1107,10 +1109,23 @@ export class ChatPage {
     });
 
     return {
-      waitForClientMessage: () =>
+      waitForClientMessage: (timeoutMs?: number) =>
         pendingMessages.length
           ? Promise.resolve(pendingMessages.shift() as Record<string, unknown>)
-          : new Promise((resolve) => pendingWaiters.push(resolve)),
+          : new Promise((resolve, reject) => {
+              pendingWaiters.push(resolve);
+              if (timeoutMs === undefined) return;
+              setTimeout(() => {
+                const at = pendingWaiters.indexOf(resolve);
+                if (at === -1) return;
+                pendingWaiters.splice(at, 1);
+                reject(
+                  new Error(
+                    `[mockWebSocketRoute] the page sent no message on ${urlPattern} within ${timeoutMs}ms`,
+                  ),
+                );
+              }, timeoutMs);
+            }),
       send: (frame: Record<string, unknown>) => {
         if (!capturedWs) {
           throw new Error(
@@ -1126,7 +1141,9 @@ export class ChatPage {
   }
 
   async mockChatWebSocket(): Promise<{
-    waitForClientMessage: () => Promise<Record<string, unknown>>;
+    waitForClientMessage: (
+      timeoutMs?: number,
+    ) => Promise<Record<string, unknown>>;
     send: (frame: Record<string, unknown>) => void;
     close: () => void;
   }> {
@@ -1151,7 +1168,9 @@ export class ChatPage {
    * before navigation, alongside `mockChatWebSocket()`.
    */
   async mockStopGenerationWebSocket(): Promise<{
-    waitForClientMessage: () => Promise<Record<string, unknown>>;
+    waitForClientMessage: (
+      timeoutMs?: number,
+    ) => Promise<Record<string, unknown>>;
     send: (frame: Record<string, unknown>) => void;
     close: () => void;
   }> {

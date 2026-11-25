@@ -198,7 +198,7 @@ export function handleBrowsePort(port: chrome.runtime.Port): void {
       // between the two the user can see on the page itself which tab is
       // being driven, what it is doing, and how to end it.
       drivenTab = tabId;
-      hud = startHud(tabId);
+      hud = startHud(tabId, goal);
       /**
        * Models this run has found it cannot call. A list that advertises a
        * provider with no key behind it is the ordinary shape of a
@@ -319,8 +319,9 @@ export function handleBrowsePort(port: chrome.runtime.Port): void {
    * the person did.
    */
   let recording: Recording | null = null;
-  let recordedTab: number | null = null;
-  let stopWatchingNavigation: (() => void) | undefined;
+  /** Every tab the recording has followed, so each gets a watcher and a cleanup. */
+  const recordedTabs = new Set<number>();
+  let stopWatchingTabs: (() => void) | undefined;
 
   const watch = async (tabId: number) => {
     try {
@@ -342,8 +343,21 @@ export function handleBrowsePort(port: chrome.runtime.Port): void {
     const frame = message as { type?: string; step?: RecordedEvent } | null;
     if (frame?.type !== RECORDER_STEP || !frame.step) return;
     if (sender.id !== chrome.runtime.id) return;
-    if (!recording || sender.tab?.id !== recordedTab) return;
+    const from = sender.tab?.id;
+    if (!recording || from === undefined || !recordedTabs.has(from)) return;
     recording.add(frame.step, Date.now());
+    send({ type: 'recording', steps: recording.steps().length });
+  };
+
+  const follow = async (tabId: number) => {
+    const tab = await chrome.tabs.get(tabId).catch(() => null);
+    if (!tab || !injectable(tab.url) || !recording) return;
+    recordedTabs.add(tabId);
+    recording.switchedTo(
+      { id: tabId, title: tab.title, url: tab.url },
+      Date.now(),
+    );
+    await watch(tabId);
     send({ type: 'recording', steps: recording.steps().length });
   };
 
@@ -359,42 +373,48 @@ export function handleBrowsePort(port: chrome.runtime.Port): void {
       return;
     }
     recording = new Recording();
-    recordedTab = tabId;
     chrome.runtime.onMessage.addListener(onRecorderStep);
-    await watch(tabId);
-    // An injected watcher dies with the page, so every navigation of the
-    // recorded tab gets a new one — without this everything after the first
-    // page is lost, silently.
+    await follow(tabId);
+
+    // A watcher dies with its page, so every navigation gets a new one; and a
+    // workflow may move between tabs, so the recording follows whichever is in
+    // front. A tab it cannot watch is simply not followed.
     const onUpdated = (
       updatedTabId: number,
       change: { url?: string; status?: string },
     ) => {
-      if (updatedTabId !== recordedTab || !recording) return;
-      if (change.url) recording.navigated(change.url, Date.now(), tab.title);
+      if (!recording || !recordedTabs.has(updatedTabId)) return;
+      if (change.url) recording.navigated(change.url, Date.now());
       if (change.status === 'complete') void watch(updatedTabId);
     };
+    const onActivated = ({ tabId: activeTab }: { tabId: number }) => {
+      if (!recording) return;
+      void follow(activeTab);
+    };
     chrome.tabs.onUpdated.addListener(onUpdated);
-    stopWatchingNavigation = () =>
+    chrome.tabs.onActivated.addListener(onActivated);
+    stopWatchingTabs = () => {
       chrome.tabs.onUpdated.removeListener(onUpdated);
-    send({ type: 'recording', steps: 0 });
+      chrome.tabs.onActivated.removeListener(onActivated);
+    };
   };
 
   const stopRecording = async () => {
     if (!recording) return;
     const steps = recording.steps();
     recording = null;
-    stopWatchingNavigation?.();
-    stopWatchingNavigation = undefined;
+    stopWatchingTabs?.();
+    stopWatchingTabs = undefined;
     chrome.runtime.onMessage.removeListener(onRecorderStep);
-    if (recordedTab !== null) {
+    for (const tabId of recordedTabs) {
       await chrome.scripting
         .executeScript({
-          target: { tabId: recordedTab, allFrames: true },
+          target: { tabId, allFrames: true },
           func: unwatchPage,
         })
         .catch(() => undefined);
     }
-    recordedTab = null;
+    recordedTabs.clear();
     send({ type: 'recorded', steps });
   };
 
@@ -423,7 +443,7 @@ export function handleBrowsePort(port: chrome.runtime.Port): void {
   port.onDisconnect.addListener(() => {
     chrome.runtime.onMessage.removeListener(onStopFromPage);
     chrome.runtime.onMessage.removeListener(onRecorderStep);
-    stopWatchingNavigation?.();
+    stopWatchingTabs?.();
     controller?.abort();
     for (const settle of [...pending.values()]) settle(false);
   });

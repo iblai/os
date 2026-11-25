@@ -1,5 +1,81 @@
 # Changelog
 
+## [0.209.2](https://github.com/iblai/os/compare/v0.209.1...v0.209.2) (2026-11-25)
+
+### Chores
+
+* **deps:** take @iblai/iblai-js 2.87.1 so Retry re-asks the right question ([cb12123](https://github.com/iblai/os/commit/cb12123b9fa27f5b5562981f73be814d6964f204))
+
+## [0.209.1](https://github.com/iblai/os/compare/v0.209.0...v0.209.1) (2026-11-24)
+
+### Chores
+
+* remove OS chat files replaced by the SDK chat ([f5fda7a](https://github.com/iblai/os/commit/f5fda7a79dd78c5f6271ad30314a558a9f916951)), closes [#566](https://github.com/iblai/os/issues/566)
+
+### Tests
+
+* **e2e:** expect a finished turn's unfinished task to read "To do" ([1c3d42d](https://github.com/iblai/os/commit/1c3d42db0d60469f97f7c4eb0dcdbeef96d3c028))
+* **e2e:** wait for the anonymous-access save in journey 82's setup ([3a18158](https://github.com/iblai/os/commit/3a181583e28c0d20a2a817780a0d65108c066d43))
+
+## [0.209.0](https://github.com/iblai/os/compare/v0.208.0...v0.209.0) (2026-11-24)
+
+### Features
+
+* **ext:** a pointer that travels, and a tab group named after the run ([7b964b4](https://github.com/iblai/os/commit/7b964b406b63a3fb192337a9dc177f765ca59f3f))
+
+### Bug Fixes
+
+* **ext:** keep the overlay self-contained, and the ring honest ([80c4dc5](https://github.com/iblai/os/commit/80c4dc5060abf415e753ba022258c8c612c3471b))
+* **ext:** keep the press count level, and ring where the pointer lands ([294cd5f](https://github.com/iblai/os/commit/294cd5ff7a41a2f35e7dd0a901bff83e15e52e6f))
+* **ext:** make the pointer actually travel, and press only once it lands ([bfdb2fb](https://github.com/iblai/os/commit/bfdb2fbd256a85236791f20e11d39a0668b797ac))
+
+### Tests
+
+* **ext:** cover the page recorder ([7b7913f](https://github.com/iblai/os/commit/7b7913f974cce8489f50dea5630a80df2c878f4d))
+
+## [0.208.0](https://github.com/iblai/os/compare/v0.207.3...v0.208.0) (2026-11-24)
+
+### Features
+
+* **panel:** name a tab switch in the review, not just in the skill ([b708968](https://github.com/iblai/os/commit/b708968389bdef14b2874f31b7cc62ee98fcb0ea))
+* **recorder:** let a recording follow the person across tabs ([184d788](https://github.com/iblai/os/commit/184d788a77e1b4b55656f58b090f559d7bfd0b89))
+
+### Tests
+
+* **recorder:** cover the seven lines the gate found bare ([754686c](https://github.com/iblai/os/commit/754686c896e4d357f9da5055fa00b18e418702a5))
+
+## [0.207.3](https://github.com/iblai/os/compare/v0.207.2...v0.207.3) (2026-11-24)
+
+### Bug Fixes
+
+* **panel:** stop the support link replacing the panel with a broken page ([d8f2fd8](https://github.com/iblai/os/commit/d8f2fd874be85a6247f92363e81f857b4d94e8c3))
+
+### Chores
+
+* **deps:** take @iblai/iblai-js 2.86.1 for the panel's support links ([a28b40e](https://github.com/iblai/os/commit/a28b40ec40a0211232dafbd57dc9b2b271d19a9a)), closes [iblai/iblai-web-frontend#2272](https://github.com/iblai/iblai-web-frontend/issues/2272)
+
+## [0.207.2](https://github.com/iblai/os/compare/v0.207.1...v0.207.2) (2026-11-24)
+
+### Bug Fixes
+
+* open every remaining support link away from the panel ([6d7e827](https://github.com/iblai/os/commit/6d7e8270e777862153d43fbf77a506f497d5013c)), closes [#583](https://github.com/iblai/os/issues/583)
+
+## [0.207.1](https://github.com/iblai/os/compare/v0.207.0...v0.207.1) (2026-11-23)
+
+### Documentation
+
+* lowercase demonstratives in UI Title Case ([cb5bb42](https://github.com/iblai/os/commit/cb5bb42dde77925ad51ae9bac60dcf63feaaa19e))
+
+## [0.207.0](https://github.com/iblai/os/compare/v0.206.3...v0.207.0) (2026-11-23)
+
+### Features
+
+* **os:** open the Default Agent as the Assistant beside the page ([6139c0d](https://github.com/iblai/os/commit/6139c0d64fe4a4ca92358d71eddbfc0a60b121b8))
+
+### Tests
+
+* **e2e:** chat with the Assistant from every page that shows the header ([e3bd927](https://github.com/iblai/os/commit/e3bd9274ae37d1e8f9b2ce0c13dadd22d9633345))
+
 ## [0.206.3](https://github.com/iblai/os/compare/v0.206.2...v0.206.3) (2026-11-23)
 
 ### Bug Fixes

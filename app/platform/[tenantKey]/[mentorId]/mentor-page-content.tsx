@@ -144,6 +144,8 @@ export default function MentorPageContent() {
                   enable it.{' '}
                   <a
                     href={`mailto:${metadata?.support_email || config.supportEmail()}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
                     style={{ color: '#2563eb', textDecoration: 'underline' }}
                   >
                     Contact Support

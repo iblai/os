@@ -49,6 +49,14 @@ const DOING: Record<string, string> = {
   wait: 'hudWait',
 };
 
+/**
+ * The tools that put something down on the page, so the pointer shows a press
+ * where it lands. Typing is left out on purpose: the keyboard is not the
+ * pointer, and a tap mark on a field the agent is typing into reads as a click
+ * that never happened.
+ */
+const PRESSES = new Set(['click', 'double_click', 'select']);
+
 /** `Clicking [12] button "Continue"`, or just the fallback when the tool has no wording of its own. */
 export function doingLine(tool: string, target: string): string {
   const label = DOING[tool];
@@ -59,6 +67,14 @@ export function doingLine(tool: string, target: string): string {
 export interface Hud {
   /** The action about to run, and the element it is on. */
   say(tool: string, target: string, rect?: Rect | null): void;
+  /**
+   * The action landed: show a press where the pointer is, if that tool presses.
+   *
+   * Separate from `say` because `say` runs BEFORE the confirmation card and
+   * before the action executes — a declined, refused or failed click would
+   * otherwise leave a press animating on a page where nothing was clicked.
+   */
+  pressed(tool: string): void;
   /** Between actions, while the model decides what is next. */
   thinking(): void;
   /** Runs `fn` with the bar out of the way, but only if it covers `point`. */
@@ -69,8 +85,12 @@ export interface Hud {
   stop(): Promise<void>;
 }
 
-/** Puts the overlay up on `tabId` and keeps it there until `stop()`. */
-export function startHud(tabId: number): Hud {
+/**
+ * Puts the overlay up on `tabId` and keeps it there until `stop()`.
+ *
+ * `goal` names the tab group in the strip, so two runs are told apart there.
+ */
+export function startHud(tabId: number, goal?: string | null): Hud {
   let stopped = false;
   let mark: TabMark | null = null;
   /** Whether the overlay has ever reached the page, and whether we have said why not. */
@@ -135,7 +155,7 @@ export function startHud(tabId: number): Hud {
   // makes a worker that dies mid-run leave no trace on the user's page.
   const beat = setInterval(() => void paint(), BEAT_MS);
   void paint();
-  void markTab(tabId).then((marked) => {
+  void markTab(tabId, goal).then((marked) => {
     // A run that ended while the marking was in flight must not leave the tab
     // grouped behind it.
     if (stopped) void unmarkTab(marked);
@@ -158,6 +178,13 @@ export function startHud(tabId: number): Hud {
     say(tool, target, rect) {
       state.status = doingLine(tool, target);
       state.target = rect ?? null;
+      void paint();
+    },
+    pressed(tool) {
+      if (!state.target || !PRESSES.has(tool)) return;
+      // Counted, not flagged: the heartbeat re-paints this same state, and a
+      // standing flag would replay the press every beat.
+      state.pressId = (state.pressId ?? 0) + 1;
       void paint();
     },
     thinking() {
