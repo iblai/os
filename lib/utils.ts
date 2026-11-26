@@ -151,7 +151,6 @@ export async function redirectToAuthSpa(
     hasNonExpiredAuthToken,
     isOffline: () =>
       isOfflineServerOrigin() || (isTauriApp() && isTauriOfflineMode()),
-    preserveTokenKey: 'edx_jwt_token',
     authRedirectProxy: '/api/auth-redirect',
     isNativeApp: () => isTauriApp(),
     scheme: 'iblai-mentor',
