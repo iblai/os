@@ -176,9 +176,25 @@ test.describe.serial('Journey 96: Allowed file types', () => {
     await settings.addAllowedFileType('.JSON');
     await settings.doneAllowedFileTypes();
 
+    // The form compares the list with the last loaded settings, so a save
+    // made before the reload after this one lands sends the list again.
+    const reloaded = page.waitForResponse(
+      async (res) => {
+        if (
+          res.request().method() !== 'GET' ||
+          !/\/settings\/$/.test(res.url().split('?')[0]) ||
+          !res.ok()
+        )
+          return false;
+        const body = await res.json().catch(() => null);
+        return !!body?.allowed_file_upload_extensions?.includes('json');
+      },
+      { timeout: 30_000 },
+    );
     const saved = await settings.saveAllowedFileTypes();
     expect(saved.ok).toBe(true);
     expect(saved.extensions).toEqual(['pdf', 'docx', 'png', 'json']);
+    await reloaded;
 
     // A save of something else must not resend the unchanged list.
     const resent: string[] = [];

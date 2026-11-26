@@ -269,7 +269,6 @@ const defaultMentorSettings = {
   mentor_name: 'Test Mentor',
   system_prompt: 'Test system prompt content',
   proactive_prompt: 'Test proactive prompt content',
-  study_mode_prompt: 'Test study mode prompt content',
   guided_prompt_instructions: 'Test guided prompt instructions',
   greeting_method: 'proactive_prompt',
   enable_guided_prompts: true,
@@ -277,7 +276,6 @@ const defaultMentorSettings = {
     field: {
       system_prompt: { read_only: false },
       proactive_prompt: { read_only: false },
-      study_mode_prompt: { read_only: false },
       enable_guided_prompts: { read_only: false },
       greeting_method: { read_only: false },
       suggested_prompts: { read_only: false },
@@ -389,13 +387,30 @@ describe('PromptsTab', () => {
       ).toBeInTheDocument();
     });
 
-    it('renders Study Prompt section with content', () => {
+    it('does not render a Study Prompt section, even when the agent has one', () => {
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: {
+          ...defaultMentorSettings,
+          study_mode_prompt: 'Test study mode prompt content',
+          permissions: {
+            field: {
+              ...defaultMentorSettings.permissions.field,
+              study_mode_prompt: { read_only: false },
+            },
+          },
+        },
+        isLoading: false,
+      });
+
       render(<PromptsTab />);
 
-      expect(screen.getByText('Study Prompt')).toBeInTheDocument();
+      expect(screen.queryByText('Study Prompt')).not.toBeInTheDocument();
       expect(
-        screen.getByText('Test study mode prompt content'),
-      ).toBeInTheDocument();
+        screen.queryByText('Test study mode prompt content'),
+      ).not.toBeInTheDocument();
+      expect(screen.getByText('System Prompt')).toBeInTheDocument();
+      expect(screen.getByText('Proactive Prompt')).toBeInTheDocument();
+      expect(screen.getByText('Guided Prompt')).toBeInTheDocument();
     });
 
     it('renders Guided Prompt section with content', () => {
@@ -423,17 +438,17 @@ describe('PromptsTab', () => {
     it('renders edit buttons for all prompt sections', () => {
       render(<PromptsTab />);
 
-      // 4 system prompts + 2 suggested prompts = 6 edit buttons
+      // 3 system prompts + 2 suggested prompts = 5 edit buttons
       const editButtons = screen.getAllByText('Edit');
-      expect(editButtons).toHaveLength(6);
+      expect(editButtons).toHaveLength(5);
     });
 
     it('renders copy buttons for all sections', () => {
       render(<PromptsTab />);
 
-      // 4 system prompts = 4 copy buttons (suggested prompts no longer have Copy)
+      // 3 system prompts = 3 copy buttons (suggested prompts no longer have Copy)
       const copyButtons = screen.getAllByText('Copy');
-      expect(copyButtons).toHaveLength(4);
+      expect(copyButtons).toHaveLength(3);
     });
 
     it('renders Add New Prompt button', () => {
@@ -450,9 +465,6 @@ describe('PromptsTab', () => {
       ).toBeInTheDocument();
       expect(
         screen.getByLabelText('More info about proactive prompt'),
-      ).toBeInTheDocument();
-      expect(
-        screen.getByLabelText('More info about study mode prompt'),
       ).toBeInTheDocument();
       expect(
         screen.getByLabelText('More info about guided prompt'),
@@ -472,9 +484,6 @@ describe('PromptsTab', () => {
         screen.getByText('Guide the conversation flow'),
       ).toBeInTheDocument();
       expect(
-        screen.getByText('Define behavior when Study Mode is active'),
-      ).toBeInTheDocument();
-      expect(
         screen.getByText('Guide the user interaction'),
       ).toBeInTheDocument();
       expect(
@@ -491,7 +500,6 @@ describe('PromptsTab', () => {
       expect(
         screen.getByLabelText('Proactive prompt content'),
       ).toBeInTheDocument();
-      expect(screen.getByLabelText('Study prompt content')).toBeInTheDocument();
       expect(
         screen.getByLabelText('Guided prompt content'),
       ).toBeInTheDocument();
@@ -806,28 +814,11 @@ describe('PromptsTab', () => {
       });
     });
 
-    it('opens edit modal for Study Prompt', async () => {
-      render(<PromptsTab />);
-
-      const editButtons = screen.getAllByText('Edit');
-      fireEvent.click(editButtons[2]); // Study Prompt edit button
-
-      await waitFor(() => {
-        expect(screen.getByTestId('edit-prompt-modal')).toBeInTheDocument();
-        expect(screen.getByTestId('prompt-label')).toHaveTextContent(
-          'Study Prompt',
-        );
-        expect(screen.getByTestId('prompt-name')).toHaveTextContent(
-          'study_mode_prompt',
-        );
-      });
-    });
-
     it('opens edit modal for Guided Prompt', async () => {
       render(<PromptsTab />);
 
       const editButtons = screen.getAllByText('Edit');
-      fireEvent.click(editButtons[3]); // Guided Prompt edit button
+      fireEvent.click(editButtons[2]); // Guided Prompt edit button
 
       await waitFor(() => {
         expect(screen.getByTestId('edit-prompt-modal')).toBeInTheDocument();
@@ -962,7 +953,7 @@ describe('PromptsTab', () => {
       render(<PromptsTab />);
 
       const editButtons = screen.getAllByText('Edit');
-      fireEvent.click(editButtons[4]); // First suggested prompt edit button
+      fireEvent.click(editButtons[3]); // First suggested prompt edit button
 
       await waitFor(() => {
         expect(screen.getByTestId('edit-prompt-modal')).toBeInTheDocument();
@@ -982,7 +973,7 @@ describe('PromptsTab', () => {
       render(<PromptsTab />);
 
       const editButtons = screen.getAllByText('Edit');
-      fireEvent.click(editButtons[4]); // First suggested prompt
+      fireEvent.click(editButtons[3]); // First suggested prompt
 
       await waitFor(() => {
         expect(screen.getByTestId('edit-prompt-modal')).toBeInTheDocument();
@@ -1009,7 +1000,7 @@ describe('PromptsTab', () => {
       render(<PromptsTab />);
 
       const editButtons = screen.getAllByText('Edit');
-      fireEvent.click(editButtons[4]);
+      fireEvent.click(editButtons[3]);
 
       await waitFor(() => {
         expect(screen.getByTestId('edit-prompt-modal')).toBeInTheDocument();
@@ -1035,7 +1026,7 @@ describe('PromptsTab', () => {
       render(<PromptsTab />);
 
       const editButtons = screen.getAllByText('Edit');
-      fireEvent.click(editButtons[4]);
+      fireEvent.click(editButtons[3]);
 
       await waitFor(() => {
         expect(screen.getByTestId('edit-prompt-modal')).toBeInTheDocument();
@@ -1069,7 +1060,7 @@ describe('PromptsTab', () => {
 
       const editButtons = screen.getAllByText('Edit');
       // Click the suggested prompt (5th edit button: 4 system + 1 suggested)
-      fireEvent.click(editButtons[4]);
+      fireEvent.click(editButtons[3]);
 
       await waitFor(() => {
         expect(screen.getByTestId('edit-prompt-modal')).toBeInTheDocument();
@@ -1101,7 +1092,7 @@ describe('PromptsTab', () => {
       render(<PromptsTab />);
 
       const editButtons = screen.getAllByText('Edit');
-      fireEvent.click(editButtons[4]);
+      fireEvent.click(editButtons[3]);
 
       await waitFor(() => {
         expect(screen.getByTestId('edit-prompt-modal')).toBeInTheDocument();
@@ -1126,7 +1117,7 @@ describe('PromptsTab', () => {
       render(<PromptsTab />);
 
       const editButtons = screen.getAllByText('Edit');
-      fireEvent.click(editButtons[4]);
+      fireEvent.click(editButtons[3]);
 
       await waitFor(() => {
         expect(screen.getByTestId('edit-prompt-modal')).toBeInTheDocument();
@@ -1623,9 +1614,9 @@ describe('PromptsTab', () => {
       // The edit button for the first suggested prompt should be disabled
       await waitFor(() => {
         const editTextNodes = screen.getAllByText('Edit');
-        // editTextNodes[4] is the first suggested prompt's edit text;
+        // editTextNodes[3] is the first suggested prompt's edit text;
         // walk up to the enclosing <button>
-        const editButton = editTextNodes[4].closest('button');
+        const editButton = editTextNodes[3].closest('button');
         expect(editButton).toBeDisabled();
       });
 
@@ -1850,17 +1841,6 @@ describe('PromptsTab', () => {
       expect(screen.getByText('Proactive Prompt')).toBeInTheDocument();
     });
 
-    it('handles empty study_mode_prompt gracefully', () => {
-      mockGetMentorSettingsQuery.mockReturnValue({
-        data: { ...defaultMentorSettings, study_mode_prompt: '' },
-        isLoading: false,
-      });
-
-      render(<PromptsTab />);
-
-      expect(screen.getByText('Study Prompt')).toBeInTheDocument();
-    });
-
     it('handles suggested prompt with null prompt text', () => {
       mockGetPromptsSearchQuery.mockReturnValue({
         data: {
@@ -2033,9 +2013,9 @@ describe('PromptsTab', () => {
 
       render(<PromptsTab />);
 
-      // Click the guided prompt edit button (4th edit button)
+      // Click the guided prompt edit button (3rd edit button)
       const editButtons = screen.getAllByText('Edit');
-      fireEvent.click(editButtons[3]);
+      fireEvent.click(editButtons[2]);
 
       await waitFor(() => {
         expect(screen.getByTestId('edit-prompt-modal')).toBeInTheDocument();
@@ -2062,7 +2042,7 @@ describe('PromptsTab', () => {
 
       // Click edit on the suggested prompt
       const editButtons = screen.getAllByText('Edit');
-      fireEvent.click(editButtons[4]);
+      fireEvent.click(editButtons[3]);
 
       await waitFor(() => {
         expect(screen.getByTestId('edit-prompt-modal')).toBeInTheDocument();
@@ -2090,7 +2070,7 @@ describe('PromptsTab', () => {
       render(<PromptsTab />);
 
       const editButtons = screen.getAllByText('Edit');
-      fireEvent.click(editButtons[4]);
+      fireEvent.click(editButtons[3]);
 
       await waitFor(() => {
         expect(screen.getByTestId('edit-prompt-modal')).toBeInTheDocument();
@@ -2115,7 +2095,7 @@ describe('PromptsTab', () => {
       render(<PromptsTab />);
 
       const editButtons = screen.getAllByText('Edit');
-      fireEvent.click(editButtons[4]);
+      fireEvent.click(editButtons[3]);
 
       await waitFor(() => {
         expect(screen.getByTestId('edit-prompt-modal')).toBeInTheDocument();
@@ -2140,7 +2120,7 @@ describe('PromptsTab', () => {
       render(<PromptsTab />);
 
       const editButtons = screen.getAllByText('Edit');
-      fireEvent.click(editButtons[4]);
+      fireEvent.click(editButtons[3]);
 
       await waitFor(() => {
         expect(screen.getByTestId('edit-prompt-modal')).toBeInTheDocument();
@@ -2173,22 +2153,6 @@ describe('PromptsTab', () => {
 
       const editButtons = screen.getAllByText('Edit');
       fireEvent.click(editButtons[1]); // Proactive Prompt
-
-      await waitFor(() => {
-        expect(screen.getByTestId('edit-prompt-modal')).toBeInTheDocument();
-      });
-    });
-
-    it('handles mentorSettings being undefined for study_mode_prompt edit', async () => {
-      mockGetMentorSettingsQuery.mockReturnValue({
-        data: undefined,
-        isLoading: false,
-      });
-
-      render(<PromptsTab />);
-
-      const editButtons = screen.getAllByText('Edit');
-      fireEvent.click(editButtons[2]); // Study Prompt
 
       await waitFor(() => {
         expect(screen.getByTestId('edit-prompt-modal')).toBeInTheDocument();
@@ -2303,20 +2267,6 @@ describe('PromptsTab', () => {
       expect(screen.getByText('Proactive Prompt')).toBeInTheDocument();
     });
 
-    it('handles mentorSettings with null study_mode_prompt', () => {
-      mockGetMentorSettingsQuery.mockReturnValue({
-        data: {
-          ...defaultMentorSettings,
-          study_mode_prompt: null,
-        },
-        isLoading: false,
-      });
-
-      render(<PromptsTab />);
-
-      expect(screen.getByText('Study Prompt')).toBeInTheDocument();
-    });
-
     it('handles suggested prompt with null prompt text for edit', async () => {
       mockGetPromptsSearchQuery.mockReturnValue({
         data: {
@@ -2335,7 +2285,7 @@ describe('PromptsTab', () => {
       render(<PromptsTab />);
 
       const editButtons = screen.getAllByText('Edit');
-      fireEvent.click(editButtons[4]);
+      fireEvent.click(editButtons[3]);
 
       await waitFor(() => {
         expect(screen.getByTestId('edit-prompt-modal')).toBeInTheDocument();
@@ -2425,7 +2375,7 @@ describe('PromptsTab', () => {
       render(<PromptsTab />);
 
       const editButtons = screen.getAllByText('Edit');
-      fireEvent.click(editButtons[4]); // First suggested prompt
+      fireEvent.click(editButtons[3]); // First suggested prompt
 
       await waitFor(() => {
         expect(screen.getByTestId('edit-prompt-modal')).toBeInTheDocument();
@@ -2540,7 +2490,7 @@ describe('PromptsTab', () => {
       });
     });
 
-    it('hides the System and Study prompts when the claw sandbox is connected', () => {
+    it('hides the System prompt when the claw sandbox is connected', () => {
       mockGetMentorSettingsQuery.mockReturnValue({
         data: { ...defaultMentorSettings, enable_claw: true },
         isLoading: false,
@@ -2549,15 +2499,14 @@ describe('PromptsTab', () => {
 
       render(<PromptsTab />);
 
-      // System / Study don't apply to claw-sandbox mentors.
+      // System doesn't apply to claw-sandbox mentors.
       expect(screen.queryByText('System Prompt')).not.toBeInTheDocument();
-      expect(screen.queryByText('Study Prompt')).not.toBeInTheDocument();
       // Proactive / Guided still render.
       expect(screen.getByText('Proactive Prompt')).toBeInTheDocument();
       expect(screen.getByText('Guided Prompt')).toBeInTheDocument();
     });
 
-    it('keeps the System and Study prompts when claw is enabled but no instance is wired', () => {
+    it('keeps the System prompt when claw is enabled but no instance is wired', () => {
       mockGetMentorSettingsQuery.mockReturnValue({
         data: { ...defaultMentorSettings, enable_claw: true },
         isLoading: false,
@@ -2567,7 +2516,6 @@ describe('PromptsTab', () => {
       render(<PromptsTab />);
 
       expect(screen.getByText('System Prompt')).toBeInTheDocument();
-      expect(screen.getByText('Study Prompt')).toBeInTheDocument();
     });
 
     it('does not render AgentConfigPrompts when tenantKey is missing', () => {

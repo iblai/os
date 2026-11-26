@@ -1,5 +1,5 @@
 import { APICallError } from 'ai';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AgentEvent } from '../agent';
 import {
   enablePanelOnActionClick,
@@ -40,8 +40,11 @@ vi.mock('../tools', async (importOriginal) => ({
 let chromeStub: ChromeStub;
 const creds = { dmToken: 'dm', org: 'acme', username: 'jane' };
 
+const openPorts: ReturnType<typeof fakePort>[] = [];
+
 const openPort = () => {
   const port = fakePort();
+  openPorts.push(port);
   handleBrowsePort(port as unknown as chrome.runtime.Port);
   return port;
 };
@@ -78,6 +81,15 @@ beforeEach(async () => {
   await chromeStub.stub.storage.local.set({
     browse: { model: 'openai/gpt-5', preference: 'anthropic/claude-sonnet-5' },
   });
+});
+
+// A run left going keeps redrawing its overlay every two seconds, into the
+// document every later test shares.
+afterEach(async () => {
+  for (const port of openPorts.splice(0)) port.close();
+  await vi.waitFor(() =>
+    expect(document.querySelector('[data-ibl-agent-overlay]')).toBeNull(),
+  );
 });
 
 describe('the browse port', () => {

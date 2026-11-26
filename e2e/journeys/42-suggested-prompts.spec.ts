@@ -94,7 +94,7 @@ test.describe('Journey 42: Suggested Prompts', () => {
     // Click the Edit button on the first suggested prompt
     const editButton = editMentorPage.dialog
       .getByRole('button', { name: 'Edit', exact: true })
-      .nth(4); // 4 system-prompt Edit buttons come first
+      .nth(3); // 3 system-prompt Edit buttons come first
     await expect(editButton).toBeVisible({ timeout: 10_000 });
     await editButton.click();
 

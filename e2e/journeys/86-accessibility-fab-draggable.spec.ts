@@ -286,6 +286,8 @@ test.describe('Journey 86: Draggable accessibility button — mobile', () => {
     const c = await fab.centre();
     await fab.touchDragTo(c.x - 60, c.y - 60);
     await expect(fab.menuHeading).toBeHidden();
+    // A tap sent while the button is still sliding back to the edge misses it.
+    await fab.waitForSettled();
     await fab.button.tap();
     await expect(fab.menuHeading).toBeVisible();
   });
