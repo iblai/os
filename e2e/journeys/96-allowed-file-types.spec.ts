@@ -2,9 +2,10 @@
  * Journey 96 — Allowed file types for chat uploads (iblai-platform#2528)
  *
  * Edit Agent → Settings → Capabilities ends with a "File Uploads" group. Its
- * single row opens the "Allowed File Types" dialog: 12 common types to tick
- * plus an "add your own" input. Done writes the form field; the tab's Save
- * stores it with a JSON PUT (`allowed_file_upload_extensions`) to the agent.
+ * "File Types Users Can Attach" row (below the File Attachments switches)
+ * opens the "Allowed File Types" dialog: 12 common types to tick plus an
+ * "add your own" input. Done writes the form field; the tab's Save stores it
+ * with a JSON PUT (`allowed_file_upload_extensions`) to the agent.
  * In chat the composer's file input `accept` follows the list, a refused file
  * shows an error toast (".exe files aren't accepted by this agent.", or
  * "<name> has no file type, so this agent can't accept it.", or "N files can't

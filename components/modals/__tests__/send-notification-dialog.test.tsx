@@ -203,7 +203,7 @@ describe('SendNotificationDialog', () => {
     render(<SendNotificationDialog open onOpenChange={vi.fn()} />);
 
     fillRequiredFields();
-    fireEvent.click(screen.getByLabelText('Schedule for later'));
+    fireEvent.click(screen.getByLabelText('Schedule for Later'));
 
     // Button label switches to the schedule variant.
     const scheduleButton = screen.getByRole('button', {
@@ -213,7 +213,7 @@ describe('SendNotificationDialog', () => {
     expect(scheduleButton).toBeDisabled();
 
     // The date trigger shows the placeholder until a date is chosen.
-    expect(screen.getByText('Pick a date')).toBeInTheDocument();
+    expect(screen.getByText('Pick a Date')).toBeInTheDocument();
   });
 
   it('schedules a notification with a chosen date and time', () => {
@@ -227,10 +227,10 @@ describe('SendNotificationDialog', () => {
     );
 
     fillRequiredFields();
-    fireEvent.click(screen.getByLabelText('Schedule for later'));
+    fireEvent.click(screen.getByLabelText('Schedule for Later'));
 
     // Open the date popover and pick the stubbed day.
-    fireEvent.click(screen.getByText('Pick a date'));
+    fireEvent.click(screen.getByText('Pick a Date'));
     fireEvent.click(screen.getByTestId('pick-day'));
 
     // Adjust the time input.

@@ -43,6 +43,8 @@ interface AgentDatasetsTabWrapperProps {
   onSelect?: (dataset: Dataset) => void;
   /** Picker mode: highlights the row with this id. */
   selectedDatasetId?: string;
+  /** False where the agent is still being set up (Create Agent). */
+  showCapabilitySwitch?: boolean;
   /**
    * Drive page/search from the URL (default). Pass `false` when embedded
    * outside the edit-mentor modal (e.g. a picker dialog) so the SDK keeps
@@ -71,6 +73,7 @@ export function AgentDatasetsTabWrapper({
   onSelect,
   selectedDatasetId,
   syncToUrl = true,
+  showCapabilitySwitch,
 }: AgentDatasetsTabWrapperProps = {}) {
   const params = useParams<TenantKeyMentorIdParams>();
   const tenantKey = tenantKeyOverride || params.tenantKey;
@@ -126,6 +129,7 @@ export function AgentDatasetsTabWrapper({
           : {})}
         onSelect={onSelect}
         selectedDatasetId={selectedDatasetId}
+        showCapabilitySwitch={showCapabilitySwitch}
         disabledResourceTypes={disabledDatasetResourceTypes()}
         maxUploadSizeMb={maxDatasetFileSizeInMegaBytes()}
       />

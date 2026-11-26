@@ -377,6 +377,19 @@ describe('EditMentorModal', () => {
         expect(screen.getByTestId('settings-tab')).toBeInTheDocument(),
       );
     });
+
+    it('opens settings for a tab that no longer exists', async () => {
+      mockGetEditMentorTab = 'tools';
+      renderM();
+      await waitFor(() =>
+        expect(screen.getByTestId('settings-tab')).toBeInTheDocument(),
+      );
+      expect(
+        document
+          .getElementById(`desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`)
+          ?.getAttribute('data-state'),
+      ).toBe('active');
+    });
   });
 
   describe('handleTabChange', () => {
@@ -877,7 +890,7 @@ describe('EditMentorModal', () => {
           MODALS.EDIT_MENTOR.tabs.disclaimer,
         ],
       },
-      // Integrations (Tools moved here in feat/2040)
+      // Integrations
       {
         tabs: [
           MODALS.EDIT_MENTOR.tabs.mcp,

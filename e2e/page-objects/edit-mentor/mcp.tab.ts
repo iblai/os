@@ -16,8 +16,8 @@ const isCall = (res: Response, method: string, path: RegExp) =>
  * confirmation are portal dialogs: each is resolved by its own role + name,
  * and every field is looked up inside it, never on the page, so the Edit
  * Agent modal behind it can never be matched by mistake. Toggling, adding
- * and deleting all write the agent's settings (`mcp_servers` plus the `mcp`
- * tool), so the helpers wait on those requests, not on time.
+ * and deleting all write the agent's settings (`mcp_servers`; the header
+ * switch owns the `mcp` tool and the list is inert while it is off), so the helpers wait on those requests, not on time.
  */
 export class McpTab {
   static readonly LABELS = {
@@ -56,6 +56,8 @@ export class McpTab {
     /** The card switch's accessible name: "{name} enabled" / "{name} disabled". */
     enabled: 'enabled',
     disabled: 'disabled',
+    mcpOnToast: 'MCP turned on',
+    mcpOffToast: 'MCP turned off',
     onToast: (name: string) => `${name} is on for this agent`,
     offToast: (name: string) => `${name} is off for this agent`,
     addedToast: (name: string) => `${name} connector added successfully`,
@@ -68,6 +70,11 @@ export class McpTab {
   readonly dialog: Locator;
   readonly title: Locator;
   readonly description: Locator;
+  /** The header switch: MCP is on while the agent has the `mcp` tool. */
+  readonly mcpToggle: Locator;
+  /** The connector list's wrapper; inert and greyed while MCP is off. */
+  readonly mcpContent: Locator;
+  readonly mcpError: Locator;
   readonly addConnectorButton: Locator;
   readonly searchInput: Locator;
   /** The Featured / Directory sub-tabs; absent when nothing is featured. */
@@ -91,6 +98,9 @@ export class McpTab {
       level: 3,
     });
     this.description = dialog.getByText(LABELS.description, { exact: true });
+    this.mcpToggle = dialog.getByTestId('mcp-capability-toggle');
+    this.mcpContent = dialog.getByTestId('capability-gate-content');
+    this.mcpError = dialog.getByTestId('capability-gate-error');
     this.addConnectorButton = dialog.getByRole('button', {
       name: LABELS.addConnector,
       exact: true,
@@ -120,6 +130,30 @@ export class McpTab {
       name: LABELS.removeDialog,
       exact: true,
     });
+  }
+
+  async isMcpOn(): Promise<boolean> {
+    await expect(this.mcpToggle).toBeEnabled({ timeout: 30_000 });
+    return (await this.mcpToggle.getAttribute('aria-checked')) === 'true';
+  }
+
+  /** Clicks the header switch only when needed, and waits for its save toast. */
+  async setMcpEnabled(on: boolean): Promise<void> {
+    const { LABELS } = McpTab;
+    if ((await this.isMcpOn()) === on) return;
+    await this.mcpToggle.click();
+    await this.expectToast(on ? LABELS.mcpOnToast : LABELS.mcpOffToast);
+    await expect(this.mcpToggle).toHaveAttribute('aria-checked', String(on), {
+      timeout: 15_000,
+    });
+    await expect(this.mcpContent).toHaveAttribute('data-enabled', String(on), {
+      timeout: 15_000,
+    });
+  }
+
+  /** The connector list is inert while MCP is off, so every list action starts here. */
+  async ensureMcpOn(): Promise<void> {
+    await this.setMcpEnabled(true);
   }
 
   /** A connector's card: a group named after the connector. */
@@ -164,6 +198,7 @@ export class McpTab {
    */
   async showDirectory(): Promise<void> {
     const { LABELS } = McpTab;
+    await this.ensureMcpOn();
     await expect(this.addConnectorButton).toBeVisible({ timeout: 30_000 });
     await expect(this.subTabs.or(this.connectorsHeading).first()).toBeVisible({
       timeout: 30_000,
@@ -199,6 +234,7 @@ export class McpTab {
     enabled: boolean,
   ): Promise<void> {
     const { LABELS } = McpTab;
+    await this.ensureMcpOn();
     const toggle = this.toggle(serverId);
     await expect(toggle).toHaveAttribute('aria-checked', String(!enabled));
     const saved = this.page.waitForResponse(
@@ -213,11 +249,9 @@ export class McpTab {
     ).toBe(true);
     const body = response.request().postDataJSON() as {
       mcp_servers?: number[];
-      tool_slugs?: string[];
     };
     if (enabled) {
       expect(body.mcp_servers).toContain(serverId);
-      expect(body.tool_slugs).toContain('mcp');
     } else {
       expect(body.mcp_servers ?? []).not.toContain(serverId);
     }
@@ -231,6 +265,7 @@ export class McpTab {
   }
 
   async openAdd(): Promise<Locator> {
+    await this.ensureMcpOn();
     await expect(this.addConnectorButton).toBeVisible({ timeout: 30_000 });
     await this.addConnectorButton.click();
     await expect(this.addDialog).toBeVisible({ timeout: 10_000 });
@@ -238,6 +273,7 @@ export class McpTab {
   }
 
   async openConfigure(serverId: number): Promise<Locator> {
+    await this.ensureMcpOn();
     const gear = this.configureButton(serverId);
     await expect(gear).toHaveAccessibleName(McpTab.LABELS.configure);
     await gear.click();
@@ -295,6 +331,7 @@ export class McpTab {
   /** Deletes the connector through its bin and the confirmation, and waits for the delete. */
   async remove(serverId: number, name: string): Promise<void> {
     const { LABELS } = McpTab;
+    await this.ensureMcpOn();
     const bin = this.deleteButton(serverId);
     await expect(bin).toHaveAccessibleName(LABELS.delete);
     await bin.click();

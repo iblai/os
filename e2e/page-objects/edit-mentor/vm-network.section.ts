@@ -34,7 +34,7 @@ export const VM_EGRESS_LABELS: Record<VmEgressProfile, string> = {
  *     are disabled and the `vm-secrets-locked` line says why;
  *   - the billing notice (`vm-billing-notice`).
  *
- * Nothing is sent until **Save Changes** (`vm-network-save`, disabled while
+ * Nothing is sent until **Save** (`vm-network-save`, disabled while
  * the draft is clean or invalid) — the SDK mirrors the backend's rules
  * before saving: Custom needs a policy; narrowing to None / Registries with
  * secrets bound opens the "Remove Environment Variables?" confirmation and
@@ -48,8 +48,8 @@ export const VM_EGRESS_LABELS: Record<VmEgressProfile, string> = {
  * The section lives inside the Edit Agent dialog, so its controls are
  * queried from that dialog locator. The layers it opens on top — the policy
  * form and the "Remove Environment Variables?" confirmation — portal to
- * `document.body` and repeat button names the Edit Agent dialog also has ("Cancel", "Save
- * Changes"). Each is therefore resolved first by ARIA role AND accessible
+ * `document.body` and repeat button names the Edit Agent dialog also has ("Cancel",
+ * "Save"). Each is therefore resolved first by ARIA role AND accessible
  * name (the SDK `DialogTitle`), and its buttons are queried from that
  * locator. Both are plain Radix dialogs (role `dialog`, not `alertdialog`).
  *
@@ -255,7 +255,7 @@ export class VmNetworkSection {
     );
   }
 
-  /** Clicks Save Changes; the caller asserts the outcome (toast / confirm / error). */
+  /** Clicks Save; the caller asserts the outcome (toast / confirm / error). */
   async save(): Promise<void> {
     await expect(this.saveButton).toBeEnabled({ timeout: 10_000 });
     // A "Network settings saved" toast left over from an earlier save in the

@@ -21,6 +21,8 @@ interface McpTabProps {
   mentorId?: string;
   /** Tenant of `mentorId`, for routes without a tenant param. */
   tenantKey?: string;
+  /** False where the agent is still being set up (Create Agent). */
+  showCapabilitySwitch?: boolean;
 }
 
 /**
@@ -33,6 +35,7 @@ export function McpTab({
   onSelect,
   mentorId: mentorIdOverride,
   tenantKey: tenantKeyOverride,
+  showCapabilitySwitch,
 }: McpTabProps = {}) {
   const params = useParams<TenantKeyMentorIdParams>();
   const tenantKey = tenantKeyOverride || params.tenantKey;
@@ -53,7 +56,10 @@ export function McpTab({
       rbacPermissions={rbacPermissions}
       executeGatedAction={(fn) => executeWithTrialCheck(fn)}
     >
-      <SdkMcpTab onSelect={onSelect} />
+      <SdkMcpTab
+        onSelect={onSelect}
+        showCapabilitySwitch={showCapabilitySwitch}
+      />
     </AgentSettingsProvider>
   );
 }

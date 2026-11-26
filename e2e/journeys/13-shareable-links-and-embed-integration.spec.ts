@@ -112,7 +112,8 @@ test.describe('Journey 13: Shareable Links & Embed Integration', () => {
 
   // emb-01's original title referenced the Embed tab's "voice call, voice
   // record, and attachment" toggles — those were removed entirely by issue
-  // #2476 (Settings -> Capabilities now owns them per-surface); this test's
+  // #2476 (attachments now sit in Settings -> Capabilities and the two voice
+  // toggles in the Voice tab, each per surface); this test's
   // body never exercised them directly, so it's left as a basic embed-code
   // smoke check. See coverage.json emb-01 (marked deprecated).
   //

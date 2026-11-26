@@ -686,7 +686,7 @@ describe('EmbedTab', () => {
       screen.getByRole('button', { name: 'Expand Advanced JavaScript' }),
     );
     expect(
-      screen.getByText('Custom JavaScript is Disabled'),
+      screen.getByText('Custom JavaScript Is Disabled'),
     ).toBeInTheDocument();
     expect(screen.getByText('support@ibl.ai')).toBeInTheDocument();
   });

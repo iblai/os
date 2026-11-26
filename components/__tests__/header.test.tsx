@@ -843,6 +843,13 @@ describe('Header component', () => {
       expect(mockOpenEditMentorModal).toHaveBeenCalledWith('prompts');
     });
 
+    it('should not offer a Tools item', () => {
+      mockUseIsAdmin.mockReturnValue(true);
+      render(<Header />);
+
+      expect(screen.queryByText('Tools')).not.toBeInTheDocument();
+    });
+
     it('should call openEditMentorModal with mcp tab when MCP is clicked', () => {
       mockUseIsAdmin.mockReturnValue(true);
       render(<Header />);

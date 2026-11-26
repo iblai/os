@@ -309,28 +309,34 @@ describe('SettingsTab', () => {
         globalSettings: 'globalSettingsHeading',
         contextLimits: 'contextLimitsHeading',
       });
-      // #2476: the Capabilities sub-tab renders a two-column surface matrix,
-      // so the wrapper must supply the column headings and the embed-column
-      // labels alongside the in-app ones.
+      // #2476: File Attachments has a switch per surface, so the wrapper must
+      // supply the two column headings and the embed-column label alongside
+      // the in-app one.
       expect(labels.surfaces).toEqual({
         inAppChat: 'inAppChatSurfaceLabel',
         embedWidget: 'embedWidgetSurfaceLabel',
       });
-      // The two group banners and the per-column tooltips are host-supplied.
+      // The Global Capabilities note and the per-column tooltips are
+      // host-supplied.
       expect(labels.notes).toEqual({
         globalSettings: 'globalSettingsNote',
         inAppChat: 'inAppChatNote',
         embedWidget: 'embedWidgetNote',
       });
+      expect(labels.fields.showAttachment).toEqual({
+        label: 'enableFileAttachmentsLabel',
+        tooltip: 'enableFileAttachmentsTooltip',
+      });
       expect(labels.fields.embedShowAttachment.label).toBe(
         'embedShowAttachmentLabel',
       );
-      expect(labels.fields).not.toHaveProperty('inChatModelChange');
-      // Voice and document-retrieval settings moved to their own tabs in
-      // iblai-js 3.x, so this tab no longer overrides their copy.
-      expect(labels.fields).not.toHaveProperty('showVoiceRecord');
       expect(labels.fields).not.toHaveProperty('showVoiceCall');
+      expect(labels.fields).not.toHaveProperty('showVoiceRecord');
+      expect(labels.fields).not.toHaveProperty('embedShowVoiceCall');
+      expect(labels.fields).not.toHaveProperty('embedShowVoiceRecord');
+      expect(labels.fields).not.toHaveProperty('inChatModelChange');
       expect(labels.fields).not.toHaveProperty('enhancedDocRetrieval');
+      expect(labels.fields).not.toHaveProperty('smartDocRetrieval');
       expect(labels.fields.showLastConversation).toEqual({
         label: 'showLastConversationLabel',
         tooltip: 'showLastConversationTooltip',

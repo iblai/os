@@ -174,8 +174,8 @@ describe('useMentorSegments', () => {
     expect(result.current.segments).toBe(MENTOR_SEGMENTS);
     // 17 original + Voice + Screen Share (feat/mentor/1763) + Tasks
     // (feat/mentor/715) + LTI + Analytics hub (feat/2040) + Human Support + Grader
-    // (feat/2081) + Evals (feat/1178) + Billing / spend caps (feat/2286), less
-    // Tools: the SDK moved each capability switch into the tab it belongs to.
+    // (feat/2081) + Evals (feat/1178) + Billing / spend caps (feat/2286),
+    // minus Tools (its switches moved into the tabs they belong to).
     expect(MENTOR_SEGMENTS).toHaveLength(25);
   });
 

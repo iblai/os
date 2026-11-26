@@ -618,6 +618,9 @@ describe('EditMentorModal', () => {
         makeSegment(MODALS.EDIT_MENTOR.tabs.mcp, {
           navCategory: 'integrations',
         }),
+        makeSegment(MODALS.EDIT_MENTOR.tabs.api, {
+          navCategory: 'integrations',
+        }),
       ];
 
       const user = userEvent.setup();

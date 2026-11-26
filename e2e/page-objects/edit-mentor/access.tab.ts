@@ -4,11 +4,11 @@ export class AccessTab {
   readonly page: Page;
   readonly dialog: Locator;
 
-  /** "Access control" heading rendered at the top of the tab panel. */
+  /** "Access Control" heading rendered at the top of the tab panel. */
   readonly heading: Locator;
   /** Description line below the heading. */
   readonly description: Locator;
-  /** "Create role access" trigger button (only visible when availableRoles.length > 0). */
+  /** "Create Role Access" trigger button (only visible when availableRoles.length > 0). */
   readonly createRoleAccessButton: Locator;
   /** The roles table rendered when policies exist. */
   readonly rolesTable: Locator;
@@ -18,7 +18,7 @@ export class AccessTab {
   readonly noPoliciesEmptyState: Locator;
   /** Error state shown when the RBAC fetch fails. */
   readonly errorState: Locator;
-  /** "Try again" button inside the error state. */
+  /** "Try Again" button inside the error state. */
   readonly tryAgainButton: Locator;
   /** "Access management is unavailable" state (canManageAccess === false). */
   readonly unavailableState: Locator;
@@ -26,7 +26,7 @@ export class AccessTab {
   constructor(page: Page, dialog: Locator) {
     this.page = page;
     this.dialog = dialog;
-    this.heading = dialog.getByRole('heading', { name: 'Access control' });
+    this.heading = dialog.getByRole('heading', { name: 'Access Control' });
     this.description = dialog.getByText(
       /Manage which users can view or edit this agent by role\./i,
     );
@@ -68,7 +68,7 @@ export class AccessTab {
   }
 
   /**
-   * Opens the "Create mentor role access" dialog by clicking the trigger button.
+   * Opens the "Create Agent Role Access" dialog by clicking the trigger button.
    * Resolves once the dialog is visible.
    */
   async openCreateRoleAccessDialog(): Promise<Locator> {
@@ -84,7 +84,7 @@ export class AccessTab {
 
   /**
    * Clicks the Pencil edit button on the row matching the given policy row index
-   * (0-based) and returns the resulting "Manage … access" dialog locator.
+   * (0-based) and returns the resulting "Manage … Access" dialog locator.
    */
   async clickEditButton(rowIndex = 0): Promise<Locator> {
     const row = this.policyRows.nth(rowIndex);

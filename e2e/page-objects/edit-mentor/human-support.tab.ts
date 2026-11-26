@@ -8,8 +8,6 @@ import {
   getSupportToggle,
   isSupportEnabled,
   setSupportEnabled,
-  enableSupport,
-  disableSupport,
   getTicketList,
   getTicketRow,
   getTicketRowByIndex,
@@ -69,10 +67,12 @@ export type { SupportTicketStatus };
  * predates the category strip and is category-blind).
  *
  * AVAILABILITY TOGGLE: `getSupportToggle`/`isSupportEnabled`/
- * `setSupportEnabled` resolve the info-box switch that mirrors the
- * human-support tool's on/off state (the same tool exposed on the Tools tab).
- * It is HIDDEN when the tenant's tool catalog has no human-support tool —
- * callers must guard with `hasToggle()` before calling `setEnabled`.
+ * `setSupportEnabled` resolve the info-box switch that saves the
+ * `capability_human_support` flag on the agent's settings. It is HIDDEN when
+ * the platform does not return that flag (older platform) or the user may not
+ * read it, and rendered but LOCKED (disabled) when the agent's model cannot
+ * use Human Support or the user may not change it — callers must guard with
+ * `hasToggle()` and `isLocked()` before calling `setEnabled`.
  *
  * The instance scopes every helper to the Edit Mentor `dialog` Locator so
  * other portaled dialogs in the same page (toasts, confirm dialogs, etc.)
@@ -88,9 +88,14 @@ export class HumanSupportTab {
 
   /** Phone-only strings the SDK's `SUPPORT_LABELS` does not export. */
   static readonly PHONE_LABELS = {
-    availableToUsers: 'Available to Users',
+    availableToUsers: 'Human Support',
     ticketTitle: 'Support Ticket',
   } as const;
+
+  /** The switch's save toast, which the SDK's `SUPPORT_LABELS` does not export. */
+  static savedToast(enabled: boolean): string {
+    return `Human Support turned ${enabled ? 'on' : 'off'}`;
+  }
 
   /**
    * Category-aware tab navigation injected by `EditMentorPage` (see
@@ -177,7 +182,7 @@ export class HumanSupportTab {
 
   /**
    * Whether the availability toggle is present at all. Hidden when the
-   * tenant's tool catalog has no human-support tool — callers must check
+   * platform does not return `capability_human_support` — callers must check
    * this before `setEnabled`/`enable`/`disable`, which otherwise hang
    * waiting for a control that will never render.
    */
@@ -192,20 +197,37 @@ export class HumanSupportTab {
     return visible;
   }
 
+  /**
+   * Whether the rendered toggle is disabled: the agent's model cannot use
+   * Human Support, or the user may not change it. `setEnabled` waits for an
+   * enabled switch, so it times out on a locked one. Call after `hasToggle()`.
+   */
+  isLocked(): Promise<boolean> {
+    return this.toggle().isDisabled();
+  }
+
   isEnabled(): Promise<boolean> {
     return isSupportEnabled(this.dialog);
   }
 
-  setEnabled(enabled: boolean): Promise<void> {
-    return setSupportEnabled(this.dialog, enabled);
+  /**
+   * The switch flips on the click, before the save lands, so this waits for
+   * the save toast too: callers close the dialog and reload right after.
+   */
+  async setEnabled(enabled: boolean): Promise<void> {
+    if ((await this.isEnabled()) === enabled) return;
+    await setSupportEnabled(this.dialog, enabled);
+    await expect(
+      this.page.getByText(HumanSupportTab.savedToast(enabled)).first(),
+    ).toBeVisible({ timeout: 15_000 });
   }
 
   enable(): Promise<void> {
-    return enableSupport(this.dialog);
+    return this.setEnabled(true);
   }
 
   disable(): Promise<void> {
-    return disableSupport(this.dialog);
+    return this.setEnabled(false);
   }
 
   // ---------------------------------------------------------------------------
@@ -349,7 +371,7 @@ export class HumanSupportTab {
   // Phone view (< 768px): ticket cards, ticket screen, filter sheets
   // ---------------------------------------------------------------------------
 
-  /** The "Available to Users" row that holds the switch on a phone. */
+  /** The "Human Support" row that holds the switch on a phone. */
   phoneAvailableToUsersRow(): Locator {
     return this.dialog.getByText(
       HumanSupportTab.PHONE_LABELS.availableToUsers,
@@ -361,11 +383,11 @@ export class HumanSupportTab {
 
   /** The status filter is a sheet trigger (`aria-haspopup="dialog"`). */
   phoneStatusFilterTrigger(): Locator {
-    return this.dialog.getByRole('button', { name: 'Filter by status' });
+    return this.dialog.getByRole('button', { name: 'Filter by Status' });
   }
 
   phoneStatusFilterSheet(): Locator {
-    return this.phone.sheet('Filter by status');
+    return this.phone.sheet('Filter by Status');
   }
 
   /** Open the status sheet, pick `label` (e.g. "Closed"); the sheet closes. */

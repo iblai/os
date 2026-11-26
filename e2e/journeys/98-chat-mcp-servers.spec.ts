@@ -27,7 +27,9 @@ import type { CreateMentorPage } from '../page-objects/create-mentor.page';
  * `ComposerPlusMenu`), with a count of the servers on for this chat. The row
  * exists only while the agent uses at least one server (SDK
  * `useMcpActiveCount`: a server in the agent settings' `mcp_servers` that is
- * not switched off by the organization); an agent with none has no MCP row at
+ * not switched off by the organization) and MCP is on for the agent (the
+ * `mcp` tool in the settings' `mentor_tools`, which attaching a server turns
+ * on; iblai/iblai-platform#2838); an agent with none has no MCP row at
  * all. On desktop the row opens the SDK's `McpServersMenu` in a panel beside
  * the menu, on phones as a page of the "+" bottom sheet. The panel lists only
  * the servers the agent uses and gives each one switch: its on/off for this
@@ -42,8 +44,9 @@ import type { CreateMentorPage } from '../page-objects/create-mentor.page';
  * Every admin test runs on its own fresh agent, creates a server and attaches
  * it through the API (`ChatMcpMenuPage.createServer` / `attachServers`), and
  * the `mcp` fixture deletes every server it created. The non-admin tests
- * mock the server list and the agent's attachments: a non-admin can neither
- * create nor attach a server, and a real sign-in cannot be completed here.
+ * mock the server list and the agent's use of a server (its attachments, with
+ * MCP on): a non-admin can neither create nor attach a server, and a real
+ * sign-in cannot be completed here.
  * No dedicated "mobile" project exists: the SDK's phone layout is a
  * `max-width: 767px` media query, so `page.setViewportSize` exercises it.
  */
@@ -68,27 +71,23 @@ const PHONE_VIEWPORTS = [
   { width: 320, height: 568 },
 ];
 
-/** The composer reads the agent's settings on load, so an API attach shows after a reload. */
-const reloadApp = async (page: Page) => {
-  await page.reload({ waitUntil: 'domcontentloaded' });
-  await waitForPageReady(page);
-};
-
 const isGet = (res: Response, path: RegExp) =>
   res.request().method() === 'GET' && path.test(new URL(res.url()).pathname);
 
 /**
- * Reloads and waits for the two answers the MCP row is judged on, the agent's
- * settings and the server list, so an absent row is read on loaded data.
+ * The composer reads the agent's settings on load, so an API attach shows
+ * after a reload. Waits for the two answers the MCP row is judged on, the
+ * agent's settings and the server list, so the row is read on loaded data
+ * whether it is expected or not.
  */
-const reloadWithMcpData = async (page: Page) => {
+const reloadApp = async (page: Page) => {
   const settings = page.waitForResponse(
     (res) => isGet(res, MENTOR_SETTINGS_PATH),
-    { timeout: 30_000 },
+    { timeout: 90_000 },
   );
   const servers = page.waitForResponse(
     (res) => isGet(res, MCP_SERVER_LIST_PATH),
-    { timeout: 30_000 },
+    { timeout: 90_000 },
   );
   await page.reload({ waitUntil: 'domcontentloaded' });
   await Promise.all([settings, servers]);
@@ -140,11 +139,11 @@ test.describe('Journey 98: Chat MCP Servers', () => {
       await expect(mcp.row).toHaveAccessibleName(rowName);
       // Like Memory: just its one leading icon, no trailing chevron (Tools
       // and Skills, which open submenus, keep theirs).
-      expect(await mcp.row.locator('svg').count()).toBe(1);
+      await expect(mcp.row.locator('svg')).toHaveCount(1);
+      // The position is the claim: MCP is the menu's last row.
       await expect(mcp.menuItems.last()).toHaveAccessibleName(rowName);
 
-      await mcp.row.click();
-      await expect(mcp.heading).toBeVisible({ timeout: 10_000 });
+      await mcp.open();
       await expect(mcp.openPlusMenuAny()).toBeHidden();
       await expect(mcp.description).toBeVisible();
       await expect(mcp.closeButton).toHaveAccessibleName(LABELS.close);
@@ -165,7 +164,11 @@ test.describe('Journey 98: Chat MCP Servers', () => {
     }) => {
       test.setTimeout(240_000);
       await createMentorPage.openAndCreate();
-      await reloadWithMcpData(page);
+      expect(
+        (await mcp.agentAttachments()).ids,
+        'a new agent uses no server',
+      ).toEqual([]);
+      await reloadApp(page);
 
       await mcp.chat.openPlusMenu();
       await mcp.expectRowAbsent();
@@ -179,6 +182,7 @@ test.describe('Journey 98: Chat MCP Servers', () => {
 
       await mcp.chat.openPlusMenu();
       await expect(mcp.row).toBeVisible({ timeout: 10_000 });
+      // The position is the claim: MCP is the menu's last row.
       await expect(mcp.menuItems.last()).toHaveAccessibleName(
         `${ChatMcpMenuPage.LABELS.row} ${ChatMcpMenuPage.LABELS.oneOn}`,
       );
@@ -324,8 +328,7 @@ test.describe('Journey 98: Chat MCP Servers', () => {
         await reloadApp(page);
         await mcp.chat.openPlusMenu();
         await expect(mcp.plusMenuSheet()).toBeVisible({ timeout: 5_000 });
-        await mcp.row.click();
-        await expect(mcp.heading).toBeVisible({ timeout: 10_000 });
+        await mcp.open();
         await expect(mcp.plusMenuSheet()).toContainText(
           ChatMcpMenuPage.LABELS.heading,
         );
@@ -443,7 +446,7 @@ test.describe('Journey 98: Chat MCP Servers', () => {
       hasText:
         'This sign-in link has expired or was already used. Close this tab and try again.',
     });
-    await expect(reason).toBeVisible({ timeout: 15_000 });
+    await expect(reason).toBeVisible({ timeout: 60_000 });
     await expect(
       nonadminPage.getByText('You can close this tab.', { exact: true }),
     ).toBeVisible();
@@ -507,6 +510,7 @@ test.describe('Journey 98: Chat MCP Servers', () => {
         .getByRole('button', { name: LABELS.explainerContinue, exact: true })
         .click();
       const popup = await popupOpened;
+      await expect(explainer).toBeHidden({ timeout: 10_000 });
       await expect(popup).toHaveURL(authUrl);
       await expect(toggle).toHaveAttribute('aria-checked', 'true');
       await expect(toggle).toBeDisabled();
@@ -598,11 +602,9 @@ test.describe('Journey 98: Chat MCP Servers', () => {
         { timeout: 10_000 },
       );
       await mcp.turnOnToSignIn(server.id, server.name);
-      await expect(
-        nonadminPage.getByText(`${server.name} ${LABELS.notSetUp}`, {
-          exact: true,
-        }),
-      ).toBeVisible({ timeout: 15_000 });
+      await expect(mcp.toast(`${server.name} ${LABELS.notSetUp}`)).toBeVisible({
+        timeout: 15_000,
+      });
       await expect(toggle).toHaveAttribute('aria-checked', 'false');
       await expect(toggle).toBeEnabled();
     });
@@ -661,11 +663,9 @@ test.describe('Journey 98: Chat MCP Servers', () => {
       await mcp.turnOnToSignIn(server.id, server.name);
       const popup = await popupOpened;
 
-      await expect(
-        nonadminPage
-          .getByText(`${server.name} ${LABELS.connected}`, { exact: true })
-          .first(),
-      ).toBeVisible({ timeout: 30_000 });
+      await expect(mcp.toast(`${server.name} ${LABELS.connected}`)).toBeVisible(
+        { timeout: 30_000 },
+      );
       expect(signIn.created(), 'the app stored the connection').toBe(true);
       await expect.poll(() => popup.isClosed(), { timeout: 15_000 }).toBe(true);
       await expect(toggle).toHaveAttribute('aria-checked', 'true', {

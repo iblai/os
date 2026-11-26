@@ -154,9 +154,6 @@ test.describe('Journey 91: Read Aloud across voice sources', () => {
     const softExpect = expect.configure({ soft: true });
 
     await editMentorPage.open('Voice');
-    if (!(await editMentorPage.voice.isCapabilityEnabled())) {
-      await editMentorPage.voice.setCapabilityEnabled(true);
-    }
     await editMentorPage.voice.switchToVoiceSubTab();
     await editMentorPage.voice.expectProviderSelected('browser');
     const serverVoices = (

@@ -173,3 +173,118 @@ test.describe('Journey 27: User Invitations & Default Mentor', () => {
     }
   });
 });
+
+// Kept out of the serial block above so neither can skip the other.
+test.describe('Journey 27: Invites in the Sidebar', () => {
+  test.beforeEach(async ({ page }) => {
+    await navigateToMentorApp(page);
+    const isAdmin = await checkAdminStatus(page);
+    if (!isAdmin) test.skip(true, 'Invitations require admin access');
+  });
+
+  // inv-06
+  test('admin goes to Invites in the sidebar and it opens the settings dialog on its own Invites tab, below Management in the menu', async ({
+    page,
+    sidebarPage,
+  }) => {
+    // Invites is RBAC-gated (`can_invite`), so skip rather than fail when the
+    // environment does not grant it to the admin user.
+    const invitesOffered = await sidebarPage.inviteUsersButton
+      .waitFor({ state: 'visible', timeout: 10_000 })
+      .then(
+        () => true,
+        () => false,
+      );
+    test.skip(
+      !invitesOffered,
+      'Invites sidebar entry is not available to this admin user',
+    );
+
+    const { dialog, rail } = await sidebarPage.openInvites();
+
+    const menu = await rail.getByRole('button').allTextContents();
+    const management = menu.indexOf('Management');
+    expect(menu.slice(management, management + 2)).toEqual([
+      'Management',
+      'Invites',
+    ]);
+
+    await expect(
+      dialog.getByRole('heading', { name: 'Invites', exact: true }),
+    ).toBeVisible({ timeout: 10_000 });
+    await expect(
+      dialog.getByPlaceholder('Enter email to invite...'),
+    ).toBeVisible({ timeout: 10_000 });
+    await expect(
+      dialog.getByRole('button', { name: 'Send Invite', exact: true }),
+    ).toBeVisible({ timeout: 5_000 });
+
+    // The SDK's invite content has an "Invite Users" title of its own, which
+    // this tab drops because the dialog already shows "Invites"; the small
+    // "Invite Users" dialog must not open on top either.
+    await expect(
+      dialog.getByRole('heading', { name: 'Invite Users', exact: true }),
+    ).toHaveCount(0);
+    await expect(
+      page.getByRole('dialog', { name: 'Invite Users', exact: true }),
+    ).toHaveCount(0);
+
+    await page.keyboard.press('Escape');
+    await expect(dialog).not.toBeVisible({ timeout: 10_000 });
+  });
+
+  // inv-07
+  test('admin goes to Invites in the sidebar and finds Onboarding as its own tab below Invites in the settings menu, with no Onboarding tab left in Management', async ({
+    page,
+    sidebarPage,
+  }) => {
+    const invitesOffered = await sidebarPage.inviteUsersButton
+      .waitFor({ state: 'visible', timeout: 10_000 })
+      .then(
+        () => true,
+        () => false,
+      );
+    test.skip(
+      !invitesOffered,
+      'Invites sidebar entry is not available to this admin user',
+    );
+
+    const { dialog, rail } = await sidebarPage.openInvites();
+
+    const menu = await rail.getByRole('button').allTextContents();
+    const management = menu.indexOf('Management');
+    expect(menu.slice(management, management + 3)).toEqual([
+      'Management',
+      'Invites',
+      'Onboarding',
+    ]);
+
+    const onboarding = rail.getByRole('button', {
+      name: 'Onboarding',
+      exact: true,
+    });
+    await onboarding.click();
+    await expect(onboarding).toHaveAttribute('aria-current', 'page', {
+      timeout: 10_000,
+    });
+    await expect(
+      dialog.getByRole('heading', { name: 'Onboarding', exact: true }),
+    ).toBeVisible({ timeout: 10_000 });
+    await expect(dialog.getByTestId('onboarding-agent-input')).toBeVisible({
+      timeout: 15_000,
+    });
+
+    await rail.getByRole('button', { name: 'Management', exact: true }).click();
+    // Applications sat beside Onboarding in Management and stays there, so
+    // seeing it means the sub-tabs have rendered before Onboarding is ruled out.
+    await expect(
+      dialog.getByRole('tab', { name: 'Applications', exact: true }),
+    ).toBeVisible({ timeout: 10_000 });
+    await expect(
+      dialog.getByRole('tab', { name: 'Onboarding', exact: true }),
+    ).toHaveCount(0);
+
+    await page.keyboard.press('Escape');
+    await expect(dialog).not.toBeVisible({ timeout: 10_000 });
+  });
+});

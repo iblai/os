@@ -181,6 +181,10 @@ export function SettingsTab() {
         label: t('showLastConversationLabel'),
         tooltip: t('showLastConversationTooltip'),
       },
+      promptCaching: {
+        label: t('enablePromptCachingLabel'),
+        tooltip: t('enablePromptCachingTooltip'),
+      },
       chatHistoryMessages: {
         label: t('chatHistoryMessagesLabel'),
         tooltip: t('chatHistoryMessagesTooltip'),
@@ -198,10 +202,6 @@ export function SettingsTab() {
         tooltip: t('documentChunksTooltip'),
         placeholder: t('documentChunksPlaceholder'),
         minValueError: t('contextLimitMinValueError'),
-      },
-      promptCaching: {
-        label: t('enablePromptCachingLabel'),
-        tooltip: t('enablePromptCachingTooltip'),
       },
       image: {
         label: t('imageLabel'),

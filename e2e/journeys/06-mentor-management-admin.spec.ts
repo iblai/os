@@ -720,6 +720,25 @@ test.describe('Journey 6: Mentor Management — Admin', () => {
     await editMentorPage.close();
   });
 
+  // mgmt-04: intentionally a light smoke check only — this describe block
+  // shares one admin-account mentor (from navigateToMentorApp) across every
+  // test in the file, and flipping a capability on it risks racing any
+  // other test/suite touching that same shared mentor. The real toggle
+  // coverage lives in journey 108 (`108-agent-capabilities.spec.ts`), which
+  // gives every run its own disposable agent.
+  test('admin goes to edit mentor settings capabilities and sees the agent capability switches', async ({
+    page,
+    editMentorPage,
+  }) => {
+    await editMentorPage.open('Settings');
+    await waitForPageReady(page);
+    await editMentorPage.capabilities.open();
+    await expect(editMentorPage.capabilities.toggle('web-search')).toBeVisible({
+      timeout: 10_000,
+    });
+    await editMentorPage.close();
+  });
+
   test('admin goes to edit mentor settings tab and applies custom CSS via the editor', async ({
     page,
     editMentorPage,
@@ -974,6 +993,9 @@ test.describe('Journey 6: Mentor Management — Non-Admin', () => {
     await nonadminNavbarPage.openMentorDropdown();
     await expect(
       nonadminPage.getByRole('menuitem', { name: /settings/i }),
+    ).not.toBeVisible();
+    await expect(
+      nonadminPage.getByRole('menuitem', { name: /tools/i }),
     ).not.toBeVisible();
   });
 });

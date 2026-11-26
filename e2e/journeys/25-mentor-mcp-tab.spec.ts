@@ -17,8 +17,9 @@ import type { EditMentorPage } from '../page-objects/edit-mentor/edit-mentor.pag
  * which opens the "Configure MCP Connector" form, and Delete (bin), which
  * asks in "Remove Connector" first. Add Connector opens the same form as
  * "Add MCP Connector"; a connector added there is turned on for the agent
- * at once. Turning a connector on adds the agent's `mcp` tool, and taking
- * the last one off removes it again.
+ * at once. The header switch "MCP" owns the agent's `mcp` tool and greys
+ * the list while it is off, so every list action starts by turning it on
+ * (`McpTab.ensureMcpOn`); taking the last connector off keeps the tool.
  *
  * Every test that changes anything runs on its own fresh agent (tests
  * otherwise share the most recently opened agent), with a connector created
@@ -78,10 +79,12 @@ test.describe('Journey 25: Mentor MCP Tab', () => {
     await waitForAdmin(page);
   });
 
-  test('mcp-01: admin opens the MCP tab of the Edit Agent modal and finds its heading, its one-line description, Add Connector and the connector list', async ({
+  test('mcp-01: admin opens the MCP tab of the Edit Agent modal on a fresh agent and finds its heading, its one-line description and, with MCP turned on, Add Connector and the connector list', async ({
+    createMentorPage,
     editMentorPage,
   }) => {
     test.setTimeout(240_000);
+    await createMentorPage.openAndCreate();
     await editMentorPage.open('MCP');
     const tab = editMentorPage.mcp;
 
@@ -90,9 +93,11 @@ test.describe('Journey 25: Mentor MCP Tab', () => {
     ).toBeVisible({ timeout: 10_000 });
     await expect(tab.title).toBeVisible({ timeout: 30_000 });
     await expect(tab.description).toBeVisible();
+    await tab.ensureMcpOn();
     await expect(tab.addConnectorButton).toBeVisible();
-    // Featured / Directory when something is featured, else the one list.
-    await tab.showDirectory();
+    await expect(tab.subTabs.or(tab.connectorsHeading).first()).toBeVisible({
+      timeout: 30_000,
+    });
 
     await editMentorPage.close();
   });
@@ -157,7 +162,7 @@ test.describe('Journey 25: Mentor MCP Tab', () => {
     await editMentorPage.close();
   });
 
-  test('mcp-04: the card switch turns the connector on for the agent (with the mcp tool) and off again (taking the mcp tool with it as the last one), saying so each time', async ({
+  test('mcp-04: the card switch turns the connector on for the agent (with the mcp tool) and off again (the mcp tool stays, since the header switch owns it), saying so each time', async ({
     page,
     mcp,
     createMentorPage,
@@ -180,7 +185,7 @@ test.describe('Journey 25: Mentor MCP Tab', () => {
     await tab.setEnabled(serverId, name, false);
     const off = await mcp.agentAttachments();
     expect(off.ids).not.toContain(serverId);
-    expect(off.toolSlugs).not.toContain('mcp');
+    expect(off.toolSlugs).toContain('mcp');
 
     await editMentorPage.close();
   });
@@ -270,9 +275,11 @@ test.describe('Journey 25: Mentor MCP Tab', () => {
 
   test('mcp-06: in the Add MCP Connector form Allow Users to Turn Off is on by default, and choosing OAuth shows Authentication Scope set to User with Organization, Agent and User to pick from', async ({
     page,
+    createMentorPage,
     editMentorPage,
   }) => {
     test.setTimeout(240_000);
+    await createMentorPage.openAndCreate();
     await editMentorPage.open('MCP');
     const tab = editMentorPage.mcp;
     const dialog = await tab.openAdd();
