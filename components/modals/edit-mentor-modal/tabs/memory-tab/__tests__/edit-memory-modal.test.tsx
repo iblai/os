@@ -106,7 +106,7 @@ describe('EditMemoryModal', () => {
     expect(screen.getByText('Edit Memory')).toBeInTheDocument();
     expect(screen.getByText('Category')).toBeInTheDocument();
     expect(screen.getByText('Memory')).toBeInTheDocument();
-    expect(screen.getByText('Select a memory category')).toBeInTheDocument();
+    expect(screen.getByText('Select a Memory Category')).toBeInTheDocument();
     expect(
       screen.getByPlaceholderText('Enter memory content...'),
     ).toBeInTheDocument();

@@ -26,16 +26,8 @@ export class SettingsTab {
   readonly verboseReasoningToggle: Locator;
   /** Capabilities sub-tab: "Reopen last conversation" (#2629), `show_last_conversation`. */
   readonly showLastConversationToggle: Locator;
-  readonly enhanceDocumentRetrievalToggle: Locator;
-  readonly enhanceDocumentRetrievalTooltipTrigger: Locator;
   readonly promptCachingToggle: Locator;
   readonly promptCachingTooltipTrigger: Locator;
-  /**
-   * Voice-call toggle: persists `use_function_calling_for_rag` on the
-   * mentor's CallConfiguration. Resolved via `data-testid` so the
-   * locator survives label rewrites in the host.
-   */
-  readonly useFunctionCallingForRagToggle: Locator;
   /** "Enable File Attachments" toggle (Capabilities sub-tab, feat/1902) */
   readonly allowFileAttachmentsToggle: Locator;
   /**
@@ -51,17 +43,14 @@ export class SettingsTab {
 
   /**
    * Capabilities sub-tab (issue #2476). The Embed tab's old "Show
-   * Attachment" / "Show Voice Record" / "Show Voice Call" toggles were
-   * removed entirely — Settings -> Capabilities is now the sole owner of
-   * those fields, split per-surface (in-app chat vs. embed widget) in a
-   * matrix instead of a single embed-only switch.
+   * Attachment" toggle was removed — Settings -> Capabilities owns it, with a
+   * switch per surface (in-app chat vs. embed widget). Its row is the first
+   * of the "File Uploads" group, whose heading row carries the two column
+   * labels. The voice switches live on the Voice tab.
    */
-  readonly capabilitiesPerSurfaceBanner: Locator;
   readonly capabilitiesGlobalSettingsBanner: Locator;
   readonly capabilityMatrixHeader: Locator;
   readonly capabilityMatrixRowAttachment: Locator;
-  readonly capabilityMatrixRowVoiceRecord: Locator;
-  readonly capabilityMatrixRowVoiceCall: Locator;
 
   /** Capabilities sub-tab: "File Uploads" group, last group (iblai-platform#2528). */
   readonly contextLimitsGroup: Locator;
@@ -170,17 +159,6 @@ export class SettingsTab {
     this.showLastConversationToggle = dialog.getByTestId(
       'settings-show-last-conversation-switch',
     );
-    // Capabilities sub-tab. Visible label "Enhanced Document Retrieval"
-    // (source: messages/en.json `enhancedDocRetrievalLabel`); the SDK switch
-    // appends the state, so the aria-label reads "Enhanced Document Retrieval
-    // enabled" / "... disabled". Anchored at the start so it does not also
-    // match the sibling "Smart Document Retrieval" switch.
-    this.enhanceDocumentRetrievalToggle = dialog.getByRole('switch', {
-      name: /^Enhanced Document Retrieval\b/i,
-    });
-    this.enhanceDocumentRetrievalTooltipTrigger = dialog.getByRole('button', {
-      name: 'More info about enhanced document retrieval',
-    });
     // Capabilities sub-tab. Label: "Enable Prompt Caching".
     this.promptCachingToggle = dialog.getByRole('switch', {
       name: /enable prompt caching/i,
@@ -188,9 +166,6 @@ export class SettingsTab {
     this.promptCachingTooltipTrigger = dialog.getByRole('button', {
       name: 'More info about enable prompt caching',
     });
-    this.useFunctionCallingForRagToggle = dialog.getByTestId(
-      'settings-use-function-calling-for-rag-switch',
-    );
     // Capabilities sub-tab. Labelled "Enable File Attachments" (feat/1902).
     this.allowFileAttachmentsToggle = dialog.getByRole('switch', {
       name: /^enable file attachments (enabled|disabled)$/i,
@@ -204,11 +179,8 @@ export class SettingsTab {
       name: 'More info about show additional agents',
     });
     // Capabilities sub-tab (issue #2476, @iblai/iblai-js 2.10.2). Resolved by
-    // `data-testid` — this whole banner/matrix block is SDK-rendered and has
-    // no stable accessible name of its own to key off.
-    this.capabilitiesPerSurfaceBanner = dialog.getByTestId(
-      'capabilities-per-surface-banner',
-    );
+    // `data-testid` — the banner and the File Attachments header and row are
+    // SDK-rendered and have no stable accessible name of their own to key off.
     this.capabilitiesGlobalSettingsBanner = dialog.getByTestId(
       'capabilities-global-settings-banner',
     );
@@ -217,12 +189,6 @@ export class SettingsTab {
     );
     this.capabilityMatrixRowAttachment = dialog.getByTestId(
       'capability-matrix-row-attachment',
-    );
-    this.capabilityMatrixRowVoiceRecord = dialog.getByTestId(
-      'capability-matrix-row-voice-record',
-    );
-    this.capabilityMatrixRowVoiceCall = dialog.getByTestId(
-      'capability-matrix-row-voice-call',
     );
     this.contextLimitsGroup = dialog.getByTestId('settings-context-limits');
     this.fileUploadsGroup = dialog.getByTestId('settings-file-uploads');
@@ -258,23 +224,17 @@ export class SettingsTab {
     });
   }
 
-  /** Visible label backing each Capabilities matrix row (issue #2476). */
-  private static readonly CAPABILITY_ROW_LABEL: Record<
-    'attachment' | 'voice-record' | 'voice-call',
-    string
-  > = {
+  /** Visible label backing each per-surface Capabilities row (issue #2476). */
+  private static readonly CAPABILITY_ROW_LABEL: Record<'attachment', string> = {
     attachment: 'Show Attachment',
-    'voice-record': 'Show Voice Record',
-    'voice-call': 'Show Voice Call',
   };
 
   /**
-   * The per-surface switch for one row of the Capabilities "Surface
-   * Capabilities" matrix (issue #2476). Each row exposes two independent
-   * switches — "In-app chat" (left) and "Embed widget" (right) — persisting
-   * the same per-surface field the removed Embed-tab "Show Attachment" /
-   * "Show Voice Record" / "Show Voice Call" toggles used to write only for
-   * the embed widget. The accessible name is always
+   * The per-surface switch for one Capabilities row that has a switch per
+   * surface (issue #2476) — today only File Attachments, in the "File
+   * Uploads" group. Each row exposes two independent switches — "In-app
+   * chat" (left) and "Embed widget" (right) — persisting the per-surface
+   * attachment field. The accessible name is always
    * "<Label> enabled"/"disabled"; the embed-widget column additionally
    * inserts "(embed widget)" before that suffix, so the "chat" pattern is
    * anchored end-to-end to avoid also matching its embed sibling.
@@ -283,7 +243,7 @@ export class SettingsTab {
    * `selectSubTab`) — this is a pure locator accessor, like `categoryOption`.
    */
   capabilitySurfaceToggle(
-    capability: 'attachment' | 'voice-record' | 'voice-call',
+    capability: 'attachment',
     surface: 'chat' | 'embed',
   ): Locator {
     const row = this.dialog.getByTestId(`capability-matrix-row-${capability}`);
@@ -293,46 +253,6 @@ export class SettingsTab {
         ? new RegExp(`^${label} \\(embed widget\\) (enabled|disabled)$`, 'i')
         : new RegExp(`^${label} (enabled|disabled)$`, 'i');
     return row.getByRole('switch', { name });
-  }
-
-  /**
-   * Reads the current on/off state of a Radix Switch via its
-   * `aria-checked` attribute. Defaults to `false` when the attribute is
-   * missing (e.g. the toggle isn't rendered yet) so callers can use this
-   * as a precondition probe without try/catch.
-   */
-  private async readSwitchState(toggle: Locator): Promise<boolean> {
-    const attr = await toggle.getAttribute('aria-checked').catch(() => null);
-    return attr === 'true';
-  }
-
-  /** Whether the "Enable smart document retrieval" toggle is currently on. */
-  async isUseFunctionCallingForRagEnabled(): Promise<boolean> {
-    return this.readSwitchState(this.useFunctionCallingForRagToggle);
-  }
-
-  /** Idempotently toggle "Enable smart document retrieval" + Save. */
-  async setUseFunctionCallingForRagAndSave(target: boolean): Promise<void> {
-    // Lives in the Capabilities sub-tab — switch there before interacting.
-    await this.selectSubTab('Capabilities');
-    await expect(this.useFunctionCallingForRagToggle).toBeVisible({
-      timeout: 10_000,
-    });
-    const isOn = await this.isUseFunctionCallingForRagEnabled();
-    if (isOn === target) return;
-
-    await this.useFunctionCallingForRagToggle.click();
-    await expect(this.useFunctionCallingForRagToggle).toHaveAttribute(
-      'aria-checked',
-      String(target),
-      { timeout: 10_000 },
-    );
-
-    await expect(this.saveButton).toBeEnabled({ timeout: 10_000 });
-    await this.saveButton.click();
-    await expect(
-      this.page.getByText(/agent updated successfully/i).first(),
-    ).toBeVisible({ timeout: 30_000 });
   }
 
   /**
@@ -653,56 +573,6 @@ export class SettingsTab {
     // Small buffer for RTK Query cache invalidation before the caller closes
     // or re-opens the dialog.
     await this.page.waitForTimeout(500);
-  }
-
-  async isEnhanceDocumentRetrievalEnabled(): Promise<boolean> {
-    await this.selectSubTab('Capabilities');
-    await expect(this.enhanceDocumentRetrievalToggle).toBeVisible({
-      timeout: 10_000,
-    });
-    return (
-      (await this.enhanceDocumentRetrievalToggle.getAttribute(
-        'aria-checked',
-      )) === 'true'
-    );
-  }
-
-  async enableEnhanceDocumentRetrieval(): Promise<void> {
-    await this.selectSubTab('Capabilities');
-    await expect(this.enhanceDocumentRetrievalToggle).toBeVisible({
-      timeout: 10_000,
-    });
-    const isChecked = await this.isEnhanceDocumentRetrievalEnabled();
-    if (!isChecked) {
-      await this.enhanceDocumentRetrievalToggle.click();
-    }
-    await expect(this.saveButton).toBeEnabled({ timeout: 5_000 });
-    await this.saveButton.click();
-    // Bounded + non-fatal: the periodic analytics heartbeat (~30s) means
-    // the network may never idle, so cap networkidle so it can't hang.
-    await this.page
-      .waitForLoadState('networkidle', { timeout: 15_000 })
-      .catch(() => {});
-    await this.page.waitForTimeout(1_000);
-  }
-
-  async disableEnhanceDocumentRetrieval(): Promise<void> {
-    await this.selectSubTab('Capabilities');
-    await expect(this.enhanceDocumentRetrievalToggle).toBeVisible({
-      timeout: 10_000,
-    });
-    const isChecked = await this.isEnhanceDocumentRetrievalEnabled();
-    if (isChecked) {
-      await this.enhanceDocumentRetrievalToggle.click();
-    }
-    await expect(this.saveButton).toBeEnabled({ timeout: 5_000 });
-    await this.saveButton.click();
-    // Bounded + non-fatal: the periodic analytics heartbeat (~30s) means
-    // the network may never idle, so cap networkidle so it can't hang.
-    await this.page
-      .waitForLoadState('networkidle', { timeout: 15_000 })
-      .catch(() => {});
-    await this.page.waitForTimeout(1_000);
   }
 
   async isPromptCachingEnabled(): Promise<boolean> {

@@ -1,5 +1,50 @@
 # Changelog
 
+## [1.0.0](https://github.com/iblai/os/compare/v0.211.0...v1.0.0) (2026-11-26)
+
+### ⚠ BREAKING CHANGES
+
+* **deps:** upgrade @iblai/iblai-js to 3.0.3 and drop the Tools tab
+
+### Features
+
+* **deps:** upgrade @iblai/iblai-js to 3.0.3 and drop the Tools tab ([c8e263b](https://github.com/iblai/os/commit/c8e263b3fc03451b299424a8c71c20f3d3add039))
+
+### Bug Fixes
+
+* **auth:** stop handing the edX JWT to the auth app on the URL ([7087403](https://github.com/iblai/os/commit/7087403640f8b6efa3bbc68121eeac69db20c25c))
+
+## [0.211.0](https://github.com/iblai/os/compare/v0.210.1...v0.211.0) (2026-11-25)
+
+### Features
+
+* **os:** switch agent capabilities one by one and drop the Tools tab ([3bc1e73](https://github.com/iblai/os/commit/3bc1e73705c0802f6e500b967d1eb2c7f919375f)), closes [iblai/iblai-platform#2838](https://github.com/iblai/iblai-platform/issues/2838)
+
+### Chores
+
+* **deps:** take @iblai/iblai-js 3.0.0 for the agent capability switches ([869bc97](https://github.com/iblai/os/commit/869bc973ae1a996f735590105ff2d9032704d2fc)), closes [iblai/iblai-web-frontend#2274](https://github.com/iblai/iblai-web-frontend/issues/2274)
+
+### Tests
+
+* **e2e:** judge the MCP switch and grader setup saves by their responses ([d013a9c](https://github.com/iblai/os/commit/d013a9c1afd031d3cc67329c5d3f61decba06f2b))
+* **e2e:** make journeys 66, 98 and 107 pass on the capability switches ([280cbcc](https://github.com/iblai/os/commit/280cbcc4152bb3ec62dd1becb035e1031723ba22))
+
+## [0.210.1](https://github.com/iblai/os/compare/v0.210.0...v0.210.1) (2026-11-25)
+
+### Documentation
+
+* **e2e:** add journey 107 to the coverage map ([417b5e0](https://github.com/iblai/os/commit/417b5e019169b744726f70f66c32eb10b6f9c0c6))
+
+### Tests
+
+* **e2e:** show retry only on the newest answer, re-asking its question ([31c5bc3](https://github.com/iblai/os/commit/31c5bc309dfafcc1e1a7ca329365f88e215149ff))
+
+## [0.210.0](https://github.com/iblai/os/compare/v0.209.2...v0.210.0) (2026-11-25)
+
+### Features
+
+* iblai-js bump to 3.1.0 ([88082f7](https://github.com/iblai/os/commit/88082f7829f6e9a7bd8ab6d95413a48acac65a5e))
+
 ## [0.209.2](https://github.com/iblai/os/compare/v0.209.1...v0.209.2) (2026-11-25)
 
 ### Chores

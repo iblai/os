@@ -838,7 +838,7 @@ test.describe('Journey 20: Deterministic row actions (self-seeded mentor)', () =
 
     await editMentorPage.datasets.trainingSwitchInRow(row).click();
     const modal = page.getByRole('dialog', {
-      name: 'What would you like to do?',
+      name: 'What Would You Like to Do?',
     });
     await expect(modal).toBeVisible({ timeout: 10_000 });
 
@@ -879,7 +879,7 @@ test.describe('Journey 20: Deterministic row actions (self-seeded mentor)', () =
 
     await editMentorPage.datasets.trainingSwitchInRow(row).click();
     const modal = page.getByRole('dialog', {
-      name: 'What would you like to do?',
+      name: 'What Would You Like to Do?',
     });
     await expect(modal).toBeVisible({ timeout: 10_000 });
     await modal.getByRole('button', { name: /^Train$/i }).click();
@@ -909,7 +909,7 @@ test.describe('Journey 20: Deterministic row actions (self-seeded mentor)', () =
 
     await editMentorPage.datasets.trainingSwitchInRow(row).click();
     const chooseModal = page.getByRole('dialog', {
-      name: 'What would you like to do?',
+      name: 'What Would You Like to Do?',
     });
     await expect(chooseModal).toBeVisible({ timeout: 10_000 });
     await chooseModal.getByRole('button', { name: /^Delete$/i }).click();
@@ -1061,7 +1061,7 @@ test.describe('Journey 20: Deterministic row actions (self-seeded mentor)', () =
     await untrainRowThenCancelDelete(page, editMentorPage, fileRow);
     await editMentorPage.datasets.trainingSwitchInRow(fileRow).click();
     const fileModal = page.getByRole('dialog', {
-      name: 'What would you like to do?',
+      name: 'What Would You Like to Do?',
     });
     await expect(fileModal).toBeVisible({ timeout: 10_000 });
     await expect(fileModal.getByLabel(/User-Agent/i)).toHaveCount(0);
@@ -1072,7 +1072,7 @@ test.describe('Journey 20: Deterministic row actions (self-seeded mentor)', () =
     await untrainRowThenCancelDelete(page, editMentorPage, crawlerRow);
     await editMentorPage.datasets.trainingSwitchInRow(crawlerRow).click();
     const crawlerModal = page.getByRole('dialog', {
-      name: 'What would you like to do?',
+      name: 'What Would You Like to Do?',
     });
     await expect(crawlerModal).toBeVisible({ timeout: 10_000 });
     const userAgentField = crawlerModal.getByLabel(/User-Agent/i);

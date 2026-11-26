@@ -722,26 +722,20 @@ test.describe('Journey 6: Mentor Management — Admin', () => {
 
   // mgmt-04: intentionally a light smoke check only — this describe block
   // shares one admin-account mentor (from navigateToMentorApp) across every
-  // test in the file, and mutating `tool_slugs` on it (a toggle's actual
-  // effect) risks racing any other test/suite touching that same shared
-  // mentor's tools mid-run. The real toggle-on/off + persistence-after-
-  // reload + accessible-name + tooltip coverage lives in journey 77
-  // (`77-mentor-tools-tab.spec.ts`), which — like the Grader (66) and Voice
-  // (47) tabs before it — gives every test its own disposable,
-  // MentorTracker-cleaned mentor specifically so destructive tool-list
-  // writes never touch a mentor another test depends on. See that journey's
-  // class doc for the full isolation rationale.
-  test('admin goes to edit mentor tools tab and sees at least one tool', async ({
+  // test in the file, and flipping a capability on it risks racing any
+  // other test/suite touching that same shared mentor. The real toggle
+  // coverage lives in journey 108 (`108-agent-capabilities.spec.ts`), which
+  // gives every run its own disposable agent.
+  test('admin goes to edit mentor settings capabilities and sees the agent capability switches', async ({
     page,
     editMentorPage,
   }) => {
-    await editMentorPage.open('Tools');
+    await editMentorPage.open('Settings');
     await waitForPageReady(page);
-    await expect(editMentorPage.tools.heading).toBeVisible({
+    await editMentorPage.capabilities.open();
+    await expect(editMentorPage.capabilities.toggle('web-search')).toBeVisible({
       timeout: 10_000,
     });
-    const count = await editMentorPage.tools.getToolCount();
-    expect(count).toBeGreaterThan(0);
     await editMentorPage.close();
   });
 

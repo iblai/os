@@ -2,6 +2,7 @@ import { test, expect } from '../fixtures/mentor-test';
 import { navigateToMentorApp, getPlatformContext } from '../utils/auth';
 import { waitForPageReady } from '../utils/resilient';
 import { MENTOR_NEXTJS_HOST } from '../fixtures/test-data';
+import type { CapabilitySlug } from '../page-objects/edit-mentor/capabilities.section';
 
 /**
  * Journey 79: Composer Redesign (issue #2586, Stages 2a-2c)
@@ -15,7 +16,7 @@ import { MENTOR_NEXTJS_HOST } from '../fixtures/test-data';
  * updated in place for the new menu location — see its slash-16 checkpoint).
  *
  * New ground here: the "+" menu's own contents/keyboard behaviour, the
- * Tools submenu's chip/overflow UI, mocked file-card states, confirming
+ * Tools submenu's chip UI, mocked file-card states, confirming
  * screen-share/dictate/voice-call/send stay independent controls, the
  * empty-state layout order, guided prompts hiding on typing, and (mobile
  * viewport) the accessibility button not overlapping Send. No dedicated
@@ -114,10 +115,10 @@ test.describe('Journey 79: Composer Redesign', () => {
     chatPage,
     editMentorPage,
   }) => {
-    // Enable at least one tool so the Tools row renders.
-    await editMentorPage.open('Tools');
+    // Turn on at least one capability so the Tools row renders.
+    await editMentorPage.open('Settings');
     await waitForPageReady(page);
-    await editMentorPage.tools.enableTool('Web Search');
+    await editMentorPage.capabilities.openAndSet('web-search', true);
     await editMentorPage.close();
     await page.reload({ waitUntil: 'domcontentloaded' });
     await waitForPageReady(page);
@@ -141,60 +142,53 @@ test.describe('Journey 79: Composer Redesign', () => {
     await expect(chatPage.plusMenuButton).toBeFocused({ timeout: 5_000 });
   });
 
-  // cr-05: the Tools submenu toggles a tool on/off, it appears as a chip once
-  // active, and "+N" collapses overflow into an openable active list.
-  test('admin toggles tools from the Tools submenu and sees chips collapse into "+N"', async ({
+  // cr-05: the Tools submenu toggles a tool on, it appears as a chip once
+  // active, and one click on the chip turns it off. The "+N" overflow needs
+  // four active tools and only three can be switched on from agent settings,
+  // so it is not driven here (cr-18).
+  test('admin toggles tools from the Tools submenu, sees them as chips and turns each off with one click', async ({
     page,
     chatPage,
     editMentorPage,
   }) => {
     // Generous budget: this test's own mentor setup (serial-suite first
-    // test only) can run ~95s, and toggling up to 4 tools through the Tools
+    // test only) can run ~95s, and toggling up to 3 tools through the Tools
     // submenu (editMentorPage + composer) adds real time on top — comfortably
     // fits within the default 120s test timeout when the shared mentor is
     // already cached, but running this test alone (e.g. via `-g`) forces a
     // fresh mentor creation inside its own budget.
     test.setTimeout(240_000);
 
-    // The composer only ever offers 7 fixed tools (Deep Research, Study
-    // Mode, Web Search, Code, Image, Google Slides, Google Docs), but which
-    // of those the mentor's Tools tab actually exposes as a switch depends
-    // on the backend's `/tools/` list for this tenant — not every tool is
-    // guaranteed available everywhere (e.g. Deep Research/Study Mode are
-    // absent in this environment). Discover what's really there rather than
-    // assuming specific names.
+    // The composer's tool list is fed by the agent's capabilities (Web
+    // Search, Code Interpreter, Image Generation). Which of them can be
+    // switched on depends on the agent's model and the tenant, so discover
+    // the switches that are actually available rather than assuming them.
     // Google Slides/Docs are excluded: toggling them in the composer opens a
     // Google OAuth popup instead of a plain session-tools PUT, which this
-    // checkpoint (chip rendering/overflow) has no need to drive.
-    const COMPOSER_TOOL_NAMES = [
-      'Deep Research',
-      'Study Mode',
-      'Web Search',
-      'Code',
-      'Image',
+    // checkpoint (chip rendering) has no need to drive.
+    const COMPOSER_TOOLS: { composerName: string; slug: CapabilitySlug }[] = [
+      { composerName: 'Web Search', slug: 'web-search' },
+      { composerName: 'Code', slug: 'code-interpreter' },
+      { composerName: 'Image', slug: 'image-generation' },
     ];
-    await editMentorPage.open('Tools');
+    await editMentorPage.open('Settings');
     await waitForPageReady(page);
-    await expect(editMentorPage.tools.toolToggles.first()).toBeVisible({
-      timeout: 15_000,
-    });
-    const switchLabels = await editMentorPage.tools.toolToggles.evaluateAll(
-      (nodes) => nodes.map((n) => n.getAttribute('aria-label') ?? ''),
-    );
-    // Exact name, as `enableTool` matches it: a prefix would let "Image"
-    // match "Image Generation".
-    const available = COMPOSER_TOOL_NAMES.filter((name) =>
-      switchLabels.some((label) =>
-        new RegExp(`^${name} (enabled|disabled)$`, 'i').test(label),
-      ),
-    );
+    const capabilities = editMentorPage.capabilities;
+    await capabilities.open();
+    const available: typeof COMPOSER_TOOLS = [];
+    for (const tool of COMPOSER_TOOLS) {
+      const toggle = capabilities.toggle(tool.slug);
+      if ((await toggle.count()) > 0 && (await toggle.isEnabled())) {
+        available.push(tool);
+      }
+    }
     test.skip(
       available.length < 2,
       `Only ${available.length} composer tool(s) available on this tenant — need at least 2 for this checkpoint`,
     );
-    const toEnable = available.slice(0, 4);
-    for (const name of toEnable) {
-      await editMentorPage.tools.enableTool(name);
+    const toEnable = available.map((tool) => tool.composerName);
+    for (const tool of available) {
+      await capabilities.setEnabled(tool.slug, true);
     }
     await editMentorPage.close();
     await page.reload({ waitUntil: 'domcontentloaded' });
@@ -204,34 +198,20 @@ test.describe('Journey 79: Composer Redesign', () => {
       await chatPage.enableTool(name);
     }
 
-    if (toEnable.length > 3) {
-      // With 4+ active tools, at most 2 render as direct chips; the rest
-      // collapse into a "+N" button (`composer-chips-more`).
-      const moreButton = page.getByTestId('composer-chips-more');
-      await expect(moreButton).toBeVisible({ timeout: 10_000 });
-      await moreButton.click();
-      const activeList = page.getByTestId('composer-active-list');
-      await expect(activeList).toBeVisible({ timeout: 10_000 });
-      await expect(activeList.getByTestId('composer-active-row')).toHaveCount(
-        toEnable.length,
-      );
-      await activeList.getByRole('button', { name: 'Clear all' }).click();
-    } else {
-      // Fewer than 4 tools: all render as direct chips with no overflow.
-      // A plain single click per chip (not the retry-safe `disableTool`
-      // helper, which drives the Tools submenu instead) — the bug that
-      // motivated retrying was a queued-tool-toggle getting lost on a brand
-      // new chat's session POST, now fixed in web-utils (exactly one PUT,
-      // queued and applied once the session exists; see cr-10's regression
-      // checkpoint below and scm-02 in journey 77). This checkpoint is about
-      // guarding that a single click reliably removes the chip, so it must
-      // NOT hide a regression behind a retry loop.
-      for (const name of toEnable) {
-        await chatPage.getToolChip(name).click();
-        await expect(chatPage.getToolChip(name)).toHaveCount(0, {
-          timeout: 10_000,
-        });
-      }
+    // At most three tools: all render as direct chips with no overflow.
+    // A plain single click per chip (not the retry-safe `disableTool`
+    // helper, which drives the Tools submenu instead) — the bug that
+    // motivated retrying was a queued-tool-toggle getting lost on a brand
+    // new chat's session POST, now fixed in web-utils (exactly one PUT,
+    // queued and applied once the session exists; see cr-10's regression
+    // checkpoint below and scm-02 in journey 77). This checkpoint is about
+    // guarding that a single click reliably removes the chip, so it must
+    // NOT hide a regression behind a retry loop.
+    for (const name of toEnable) {
+      await chatPage.getToolChip(name).click();
+      await expect(chatPage.getToolChip(name)).toHaveCount(0, {
+        timeout: 10_000,
+      });
     }
 
     for (const name of toEnable) {

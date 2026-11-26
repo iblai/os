@@ -46,6 +46,11 @@ export class DatasetsTab {
   readonly paginationNext: Locator;
   readonly trainingSwitch: Locator;
   readonly deleteButton: Locator;
+  readonly infoBox: Locator;
+  readonly enhancedDocumentRetrievalCard: Locator;
+  readonly enhancedDocumentRetrievalToggle: Locator;
+  readonly enhancedDocumentRetrievalError: Locator;
+  readonly enhancedDocumentRetrievalReason: Locator;
 
   constructor(page: Page, dialog: Locator) {
     this.page = page;
@@ -64,6 +69,19 @@ export class DatasetsTab {
       .getByRole('switch', { name: /training for document/i })
       .first();
     this.deleteButton = dialog.getByRole('button', { name: /delete/i }).first();
+    this.infoBox = dialog.getByTestId('datasets-info-box');
+    this.enhancedDocumentRetrievalCard = dialog.getByTestId(
+      'capability-card-advanced-document-search',
+    );
+    this.enhancedDocumentRetrievalToggle = dialog.getByTestId(
+      'capability-toggle-advanced-document-search',
+    );
+    this.enhancedDocumentRetrievalError = dialog.getByTestId(
+      'capability-error-advanced-document-search',
+    );
+    this.enhancedDocumentRetrievalReason = dialog.getByTestId(
+      'capability-reason-advanced-document-search',
+    );
   }
 
   // H22 fix: visibility toggle is an eye-icon button, not a switch
@@ -497,7 +515,7 @@ export class DatasetsTab {
 
   /**
    * Clicks a row's training switch and returns whichever modal it opens:
-   * `TrainOrDeleteModal` ("What would you like to do?") for an untrained row,
+   * `TrainOrDeleteModal` ("What Would You Like to Do?") for an untrained row,
    * or `DeleteDatasetModal` ("Delete Dataset") for a trained row (untraining
    * a trained row is immediate — no choice — and auto-opens the delete
    * confirmation).
@@ -528,5 +546,65 @@ export class DatasetsTab {
       isEmpty = false;
     }
     return !isEmpty;
+  }
+
+  async isEnhancedDocumentRetrievalOn(): Promise<boolean> {
+    await expect(this.enhancedDocumentRetrievalToggle).toBeVisible({
+      timeout: 10_000,
+    });
+    return (
+      (await this.enhancedDocumentRetrievalToggle.getAttribute(
+        'aria-checked',
+      )) === 'true'
+    );
+  }
+
+  /** Locked reason or inline error text, or null when neither is shown. */
+  async enhancedDocumentRetrievalNote(): Promise<string | null> {
+    for (const line of [
+      this.enhancedDocumentRetrievalError,
+      this.enhancedDocumentRetrievalReason,
+    ]) {
+      if ((await line.count()) > 0)
+        return (await line.first().innerText()).trim();
+    }
+    return null;
+  }
+
+  /**
+   * Sets the Enhanced Document Retrieval switch and waits for the save: the
+   * settings PUT that carries `capability_advanced_document_search` (and
+   * `enable_multi_query_rag` in the same body) and the toast. Returns the PUT body, or null when it already had the target state.
+   */
+  async setEnhancedDocumentRetrieval(target: boolean): Promise<string | null> {
+    if ((await this.isEnhancedDocumentRetrievalOn()) === target) return null;
+    await expect(this.enhancedDocumentRetrievalToggle).toBeEnabled({
+      timeout: 10_000,
+    });
+    // A toast with the same words from an earlier click would satisfy the
+    // wait below, so it has to go first.
+    const toast = this.page.getByText(
+      `Enhanced Document Retrieval turned ${target ? 'on' : 'off'}`,
+      { exact: true },
+    );
+    await expect(toast).toHaveCount(0, { timeout: 15_000 });
+    const [request] = await Promise.all([
+      this.page.waitForRequest(
+        (req) =>
+          ['PUT', 'PATCH'].includes(req.method()) &&
+          (req.postData() ?? '').includes(
+            'capability_advanced_document_search',
+          ),
+        { timeout: 30_000 },
+      ),
+      this.enhancedDocumentRetrievalToggle.click(),
+    ]);
+    await expect(toast).toBeVisible({ timeout: 15_000 });
+    await expect(this.enhancedDocumentRetrievalToggle).toHaveAttribute(
+      'aria-checked',
+      String(target),
+      { timeout: 10_000 },
+    );
+    return request.postData() ?? '';
   }
 }

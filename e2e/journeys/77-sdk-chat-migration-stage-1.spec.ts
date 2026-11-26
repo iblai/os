@@ -52,11 +52,11 @@ test.describe('Journey 77: SDK Chat Migration — Stage 1', () => {
       ({ tenantKey, mentorId } = await getPlatformContext(page));
 
       // The Web Search composer chip only renders when the mentor-level
-      // "Web Search" tool is enabled (Tools tab) — see journey 52's 1.5,
-      // which asserts the opposite (no tool enabled -> chip absent).
-      await editMentorPage.open('Tools');
+      // "Web Search" capability is on (Settings > Capabilities) — see journey
+      // 52's 1.5, which asserts the opposite (capability off -> chip absent).
+      await editMentorPage.open('Settings');
       await waitForPageReady(page);
-      await editMentorPage.tools.enableTool('Web Search');
+      await editMentorPage.capabilities.openAndSet('web-search', true);
       await editMentorPage.close();
     }
   });

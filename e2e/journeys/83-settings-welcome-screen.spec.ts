@@ -83,7 +83,7 @@ test.describe('Journey 83: Settings Welcome Screen Sub-Tab', () => {
     );
     // The default agent's saved heading style is real tenant data; pick Agent
     // name (unsaved) so the check doesn't depend on it.
-    await settings.pickWelcomeOption('heading', 'Agent name');
+    await settings.pickWelcomeOption('heading', 'Agent Name');
     await expect(settings.welcomePreviewHeading).toHaveText(agentName);
     await editMentorPage.close();
   });
@@ -94,7 +94,7 @@ test.describe('Journey 83: Settings Welcome Screen Sub-Tab', () => {
     const { settings, dialog } = editMentorPage;
     await settings.pickWelcomeOption(
       'prompt-source',
-      'Guided prompts (AI writes them)',
+      'Guided Prompts (AI Writes Them)',
     );
     await expect(
       dialog.getByTestId('welcome-prompt-count-select'),
@@ -102,7 +102,7 @@ test.describe('Journey 83: Settings Welcome Screen Sub-Tab', () => {
 
     await settings.pickWelcomeOption(
       'prompt-source',
-      'Suggested prompts (yours)',
+      'Suggested Prompts (Yours)',
     );
     await expect(dialog.getByTestId('welcome-prompt-count-select')).toHaveCount(
       0,
@@ -124,17 +124,17 @@ test.describe('Journey 83: Settings Welcome Screen Sub-Tab', () => {
     const { settings } = editMentorPage;
     await settings.pickWelcomeOption(
       'prompt-source',
-      'Guided prompts (AI writes them)',
+      'Guided Prompts (AI Writes Them)',
     );
     await settings.pickWelcomeOption('prompt-count', '10');
 
     const chips = settings.welcomePreview.getByTestId('starter-prompt-chip');
     await expect(chips).toHaveCount(4);
-    await expect(settings.welcomePreviewViewMore).toHaveText('View more (6)');
+    await expect(settings.welcomePreviewViewMore).toHaveText('View More (6)');
 
     await settings.welcomePreviewViewMore.click();
     await expect(chips).toHaveCount(10);
-    await expect(settings.welcomePreviewViewMore).toHaveText('Show less');
+    await expect(settings.welcomePreviewViewMore).toHaveText('Show Less');
 
     await settings.welcomePreviewViewMore.click();
     await expect(chips).toHaveCount(4);
@@ -147,7 +147,7 @@ test.describe('Journey 83: Settings Welcome Screen Sub-Tab', () => {
     const { settings } = editMentorPage;
     await settings.pickWelcomeOption(
       'prompt-source',
-      'Guided prompts (AI writes them)',
+      'Guided Prompts (AI Writes Them)',
     );
     await settings.pickWelcomeOption('prompt-count', '5');
 
@@ -174,13 +174,13 @@ test.describe('Journey 83: Settings Welcome Screen Sub-Tab', () => {
     editMentorPage,
   }) => {
     const { settings, dialog } = editMentorPage;
-    await settings.pickWelcomeOption('heading', 'Personal greeting');
+    await settings.pickWelcomeOption('heading', 'Personal Greeting');
     await expect(settings.welcomePreviewHeading).toHaveText(
       /^(Good (morning|afternoon|evening), \S+|Hi there)$/,
     );
 
     await dialog
-      .getByRole('checkbox', { name: 'Preview as a logged-out visitor' })
+      .getByRole('checkbox', { name: 'Preview as a Logged-Out Visitor' })
       .click();
     await expect(settings.welcomePreviewHeading).toHaveText('Hi there');
     await editMentorPage.close();
@@ -198,13 +198,13 @@ test.describe('Journey 83: Settings Welcome Screen Sub-Tab', () => {
       await dialog.getByTestId('welcome-heading-select').textContent()
     )?.trim();
     const heading =
-      savedHeading === 'Personal greeting'
-        ? { label: 'Agent name', value: 'agent_name' }
-        : { label: 'Personal greeting', value: 'personal_greeting' };
+      savedHeading === 'Personal Greeting'
+        ? { label: 'Agent Name', value: 'agent_name' }
+        : { label: 'Personal Greeting', value: 'personal_greeting' };
     await settings.pickWelcomeOption('heading', heading.label);
     await settings.pickWelcomeOption(
       'prompt-source',
-      'Guided prompts (AI writes them)',
+      'Guided Prompts (AI Writes Them)',
     );
     const savedCount = (
       await dialog.getByTestId('welcome-prompt-count-select').textContent()
@@ -248,16 +248,16 @@ test.describe('Journey 83: Settings Welcome Screen Sub-Tab', () => {
       .first()
       .inputValue();
 
-    await settings.pickWelcomeOption('heading', 'Personal greeting');
+    await settings.pickWelcomeOption('heading', 'Personal Greeting');
     await expect(settings.welcomePreviewHeading).toHaveText(
       /^(Good (morning|afternoon|evening)(, \S+)?|Hi there)$/,
     );
-    await settings.pickWelcomeOption('heading', 'Agent name');
+    await settings.pickWelcomeOption('heading', 'Agent Name');
     await expect(settings.welcomePreviewHeading).toHaveText(agentName);
 
     await settings.pickWelcomeOption(
       'prompt-source',
-      'Guided prompts (AI writes them)',
+      'Guided Prompts (AI Writes Them)',
     );
     const chips = settings.welcomePreview.getByTestId('starter-prompt-chip');
     for (const count of [1, 3, 4, 5, 10]) {
@@ -265,7 +265,7 @@ test.describe('Journey 83: Settings Welcome Screen Sub-Tab', () => {
       await expect(chips).toHaveCount(Math.min(count, 4));
       if (count > 4) {
         await expect(settings.welcomePreviewViewMore).toHaveText(
-          `View more (${count - 4})`,
+          `View More (${count - 4})`,
         );
       } else {
         await expect(settings.welcomePreviewViewMore).toHaveCount(0);
@@ -276,7 +276,7 @@ test.describe('Journey 83: Settings Welcome Screen Sub-Tab', () => {
     await expect(chips).toHaveCount(0);
     await settings.pickWelcomeOption(
       'prompt-source',
-      'Guided prompts (AI writes them)',
+      'Guided Prompts (AI Writes Them)',
     );
     await expect(chips).toHaveCount(4);
     await editMentorPage.close();
@@ -307,7 +307,7 @@ test.describe.serial('Journey 83: Personal greeting in the chat', () => {
     await editMentorPage.open('Settings');
     await waitForPageReady(page);
     const { settings, dialog } = editMentorPage;
-    await settings.pickWelcomeOption('heading', 'Personal greeting');
+    await settings.pickWelcomeOption('heading', 'Personal Greeting');
     const body = await settings.saveAndCaptureField('welcome_heading_style');
     expect(body).toMatch(
       /name="welcome_heading_style"\r?\n\r?\npersonal_greeting|"welcome_heading_style"\s*:\s*"personal_greeting"/,
@@ -325,7 +325,7 @@ test.describe.serial('Journey 83: Personal greeting in the chat', () => {
     await waitForPageReady(page);
     await settings.selectSubTab('Welcome Screen');
     await expect(dialog.getByTestId('welcome-heading-select')).toHaveText(
-      'Personal greeting',
+      'Personal Greeting',
       { timeout: 10_000 },
     );
     await editMentorPage.close();
@@ -382,7 +382,7 @@ test.describe
   .serial('Journey 83: Welcome screen choices reach the chat', () => {
   test.setTimeout(240_000);
 
-  const GUIDED = 'Guided prompts (AI writes them)';
+  const GUIDED = 'Guided Prompts (AI Writes Them)';
   const GUIDED_PROMPTS = /\/guided-prompts\//;
   let mentorUrl = '';
 
@@ -424,7 +424,7 @@ test.describe
 
     await reopenWelcomeScreen(page, editMentorPage);
     await expect(dialog.getByTestId('welcome-heading-select')).toHaveText(
-      'Agent name',
+      'Agent Name',
     );
     await expect(dialog.getByTestId('welcome-prompt-source-select')).toHaveText(
       GUIDED,
@@ -472,7 +472,7 @@ test.describe
     test.skip(!mentorUrl, 'wss-11 did not create the agent');
     await reopenWelcomeScreen(page, editMentorPage);
     const { settings, dialog } = editMentorPage;
-    await settings.pickWelcomeOption('heading', 'Personal greeting');
+    await settings.pickWelcomeOption('heading', 'Personal Greeting');
     await settings.pickWelcomeOption('prompt-source', 'Off');
     const body = await settings.saveAndCaptureField('welcome_heading_style');
     expect(body).toMatch(/personal_greeting/);
@@ -481,7 +481,7 @@ test.describe
 
     await reopenWelcomeScreen(page, editMentorPage);
     await expect(dialog.getByTestId('welcome-heading-select')).toHaveText(
-      'Personal greeting',
+      'Personal Greeting',
     );
     await expect(dialog.getByTestId('welcome-prompt-source-select')).toHaveText(
       'Off',
@@ -529,20 +529,20 @@ test.describe
     test.skip(!mentorUrl, 'wss-11 did not create the agent');
     await reopenWelcomeScreen(page, editMentorPage);
     const { settings, dialog } = editMentorPage;
-    await settings.pickWelcomeOption('heading', 'Agent name');
+    await settings.pickWelcomeOption('heading', 'Agent Name');
     await settings.pickWelcomeOption(
       'prompt-source',
-      'Suggested prompts (yours)',
+      'Suggested Prompts (Yours)',
     );
     await settings.saveAndCaptureField('starter_prompts');
     await editMentorPage.close();
 
     await reopenWelcomeScreen(page, editMentorPage);
     await expect(dialog.getByTestId('welcome-heading-select')).toHaveText(
-      'Agent name',
+      'Agent Name',
     );
     await expect(dialog.getByTestId('welcome-prompt-source-select')).toHaveText(
-      'Suggested prompts (yours)',
+      'Suggested Prompts (Yours)',
     );
     await expect(dialog.getByTestId('welcome-prompt-count-select')).toHaveCount(
       0,

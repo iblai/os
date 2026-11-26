@@ -30,6 +30,12 @@ export function SandboxTab() {
         className="flex-1 space-y-4 p-3 lg:p-4"
         style={{ overflowY: 'auto', overflowX: 'hidden' }}
       >
+        <div
+          className="rounded-md border border-gray-200 bg-gray-50 p-3 text-xs text-gray-600"
+          data-testid="sandbox-info-box"
+        >
+          {t('infoBox')}
+        </div>
         {/* The SDK component owns sandbox-kind selection (computational
             runtime / virtual machine / claw, with claw superseding the other
             two) and the claw connection flow, persisting flags itself. */}

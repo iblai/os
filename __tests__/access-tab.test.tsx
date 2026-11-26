@@ -281,7 +281,7 @@ describe('AccessTab', () => {
     render(<AccessTab />);
 
     expect(
-      screen.getByRole('heading', { name: 'Access control' }),
+      screen.getByRole('heading', { name: 'Access Control' }),
     ).toBeInTheDocument();
     expect(screen.getByText('Viewer')).toBeInTheDocument();
     expect(
@@ -829,7 +829,7 @@ describe('AccessTab', () => {
         render(<AccessTab />);
 
         expect(
-          screen.getByRole('heading', { name: 'Access control' }),
+          screen.getByRole('heading', { name: 'Access Control' }),
         ).toBeInTheDocument();
         expect(
           screen.getByText(
@@ -856,7 +856,7 @@ describe('AccessTab', () => {
           screen.getByText('Unable to load agent access.'),
         ).toBeInTheDocument();
         expect(
-          screen.getByRole('button', { name: 'Try again' }),
+          screen.getByRole('button', { name: 'Try Again' }),
         ).toBeInTheDocument();
       });
 

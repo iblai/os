@@ -74,7 +74,6 @@ export const MODALS = {
       spend_caps: 'spend_caps',
       prompts: 'prompts',
       mcp: 'mcp',
-      tools: 'tools',
       safety: 'safety',
       privacy: 'privacy',
       tasks: 'tasks',

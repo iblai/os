@@ -15,6 +15,14 @@ const isCall = (res: Response, method: string, path: RegExp) =>
 const isFocused = (locator: Locator) =>
   locator.evaluate((el) => el === document.activeElement).catch(() => false);
 
+/** The agent's `mcp` tool as the settings answer lists it in `mentor_tools`. */
+const MCP_TOOL = {
+  name: 'MCP',
+  slug: 'mcp',
+  metadata: { tool_type: 'provider' },
+  description: 'tool to connect to and use mcp servers',
+} as const;
+
 interface ApiContext {
   agentId: string;
   serversUrl: string;
@@ -31,11 +39,14 @@ interface ApiContext {
  * person's on/off for this chat or, on a sign-in (OAuth) server they have not
  * signed in to, an off switch that starts the sign-in when turned on; servers
  * are added and attached in the agent settings MCP tab, so the fixtures here
- * create and attach them through the API. The row is offered only while the
- * agent uses at least one server (`useMcpActiveCount`), and, like Memory,
- * only exists while the "+" menu is open, so every path here goes through
- * `ChatPage.openPlusMenu()`. Every panel element is resolved from the panel
- * root, never from the page.
+ * create and attach them through the API. The row is offered only while MCP
+ * is on for the agent (its `mcp` tool) and it uses at least one server
+ * (`useMcpActiveCount`), and, like Memory, only exists while the "+" menu is
+ * open, so every path here goes through `ChatPage.openPlusMenu()`. Every
+ * panel element is resolved from the panel's dialog, never from the page;
+ * the sign-in explainer is a dialog of its own above it, and while it is up
+ * the panel is hidden from the accessibility tree, so wait for the explainer
+ * to go before reading the panel again.
  */
 export class ChatMcpMenuPage {
   static readonly LABELS = {
@@ -79,9 +90,9 @@ export class ChatMcpMenuPage {
   readonly rowBadge: Locator;
   /** Every row of the OPEN desktop "+" menu, in order (MCP is the last one). */
   readonly menuItems: Locator;
-  readonly menu: Locator;
-  /** The popover (desktop) or sheet (phones) around the panel: what has to fit the viewport. */
+  /** The dialog holding the panel, a popover (desktop) or the "+" sheet (phones): what has to fit the viewport. */
   readonly panel: Locator;
+  readonly menu: Locator;
   readonly heading: Locator;
   readonly description: Locator;
   readonly closeButton: Locator;
@@ -102,8 +113,10 @@ export class ChatMcpMenuPage {
       .filter({ hasText: new RegExp(`^${LABELS.row}`) });
     this.rowBadge = this.row.getByTestId('composer-count-badge');
     this.menuItems = this.plusMenuContent().getByRole('menuitem');
-    this.menu = page.getByTestId('mcp-servers-menu');
-    this.panel = page.getByRole('dialog').filter({ has: this.menu });
+    this.panel = page
+      .getByRole('dialog')
+      .filter({ has: page.getByTestId('mcp-servers-menu') });
+    this.menu = this.panel.getByTestId('mcp-servers-menu');
     this.heading = this.menu.getByRole('heading', {
       name: LABELS.heading,
       exact: true,
@@ -170,10 +183,21 @@ export class ChatMcpMenuPage {
   }
 
   /**
+   * The toast reading exactly `text`. Left strict on purpose: these toasts
+   * name the test's own server, so a second match is a toast shown twice.
+   */
+  toast(text: string): Locator {
+    return this.page
+      .locator('[data-sonner-toast]')
+      .filter({ has: this.page.getByText(text, { exact: true }) });
+  }
+
+  /**
    * The OPEN "+" menu offers no MCP row: the agent uses no server. Judged
    * only once the menu has its rows, so a menu still painting cannot pass.
    */
   async expectRowAbsent(): Promise<void> {
+    // Any row will do, so the first one: it shows the menu has painted.
     await expect(this.menuItems.first()).toBeVisible({ timeout: 10_000 });
     await expect(
       this.menuItems.filter({
@@ -339,6 +363,7 @@ export class ChatMcpMenuPage {
         exact: true,
       })
       .click();
+    await expect(explainer).toBeHidden({ timeout: 10_000 });
   }
 
   /** The explainer is said once per user; this makes the next sign-in show it again. */
@@ -351,11 +376,12 @@ export class ChatMcpMenuPage {
   }
 
   /**
-   * Serves the agent's REAL settings with `servers` in `mcp_servers`, so a
-   * mocked server counts as one the agent uses: an id, which the composer
-   * resolves through the server list, or a row, which stands on its own when
-   * the list is down. A real entry with the same id is replaced, never
-   * doubled. Register before navigating (or reloading).
+   * Serves the agent's REAL settings as those of an agent that uses
+   * `servers`: they join `mcp_servers` (an id, which the composer resolves
+   * through the server list, or a row, which stands on its own when the list
+   * is down; a real entry with the same id is replaced, never doubled), and
+   * MCP is on for the agent the way attaching a server turns it on (the `mcp`
+   * tool, `can_use_tools`). Register before navigating (or reloading).
    */
   async mockAgentUsesServers(
     servers: Array<number | { id: number; name: string }>,
@@ -378,9 +404,18 @@ export class ChatMcpMenuPage {
         const attached = (
           Array.isArray(json.mcp_servers) ? json.mcp_servers : []
         ).filter((entry) => !given.has(idOf(entry)));
-        // The mocked attachments stand for ones this person may read. The
-        // real answer flags the field unreadable for a non-admin, and the
-        // composer then offers no MCP row at all.
+        // The composer offers no MCP row while the agent's tools are readable
+        // and `mcp` is not among them, whatever servers are attached, and the
+        // agent a non-admin lands on may have no tools at all.
+        const tools: Array<{ slug?: string }> = Array.isArray(json.mentor_tools)
+          ? json.mentor_tools
+          : [];
+        const mentorTools = tools.some((tool) => tool?.slug === MCP_TOOL.slug)
+          ? tools
+          : [...tools, MCP_TOOL];
+        // Both lists stand for ones this person may read, so the composer
+        // judges on them. The real answer flags `mcp_servers` unreadable for
+        // a non-admin, and the composer then offers no MCP row at all.
         const permissions = json.permissions as
           | { field?: Record<string, { read?: boolean }> }
           | undefined;
@@ -393,6 +428,10 @@ export class ChatMcpMenuPage {
                 ...(permissions.field?.mcp_servers ?? {}),
                 read: true,
               },
+              mentor_tools: {
+                ...(permissions.field?.mentor_tools ?? {}),
+                read: true,
+              },
             },
           },
         };
@@ -401,6 +440,8 @@ export class ChatMcpMenuPage {
           json: {
             ...json,
             mcp_servers: [...attached, ...servers],
+            mentor_tools: mentorTools,
+            can_use_tools: true,
             ...readable,
           },
         });

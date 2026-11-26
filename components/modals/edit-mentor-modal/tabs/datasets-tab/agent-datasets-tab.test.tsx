@@ -162,6 +162,20 @@ describe('AgentDatasetsTabWrapper', () => {
     });
   });
 
+  describe('capability switch', () => {
+    it('leaves the SDK default in place when no prop is passed', () => {
+      render(<AgentDatasetsTabWrapper />);
+
+      expect(lastTabProps()).toHaveProperty('showCapabilitySwitch', undefined);
+    });
+
+    it.each([true, false])('forwards showCapabilitySwitch=%s', (value) => {
+      render(<AgentDatasetsTabWrapper showCapabilitySwitch={value} />);
+
+      expect(lastTabProps().showCapabilitySwitch).toBe(value);
+    });
+  });
+
   describe('URL-sync mode (default)', () => {
     it('drives page and search from the URL', () => {
       mockSearchParamsGet.mockImplementation((key: string) =>

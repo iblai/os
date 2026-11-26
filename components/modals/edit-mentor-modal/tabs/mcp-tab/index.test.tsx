@@ -93,9 +93,22 @@ describe('McpTab', () => {
       rbacPermissions,
     });
     expect(mockSdkMcpTab).toHaveBeenCalledWith(
-      expect.objectContaining({ onSelect: undefined }),
+      expect.objectContaining({
+        onSelect: undefined,
+        showCapabilitySwitch: undefined,
+      }),
     );
   });
+
+  it.each([true, false])(
+    'forwards showCapabilitySwitch=%s to the SDK tab',
+    (showCapabilitySwitch) => {
+      render(<McpTab showCapabilitySwitch={showCapabilitySwitch} />);
+      expect(mockSdkMcpTab).toHaveBeenCalledWith(
+        expect.objectContaining({ showCapabilitySwitch }),
+      );
+    },
+  );
 
   it('prefers the navigated agent over the route param', () => {
     mockGetMentorId.mockReturnValue('nav-mentor');

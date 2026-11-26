@@ -21,7 +21,7 @@ import { Page, Locator, expect } from '@playwright/test';
  *
  * Up to three layers are stacked here at once: the User Profile dialog, a
  * policy dialog on top of it, and (for deletes) a confirmation. They share
- * field and button names ("Name", "Allowed Hosts", "Cancel", "Save Changes"),
+ * field and button names ("Name", "Allowed Hosts", "Cancel", "Save"),
  * so nothing is looked up from the page by test id or label alone. Each layer
  * is first resolved by its ARIA role AND its accessible name — the SDK
  * `DialogTitle` — and every inner element is then queried from that dialog

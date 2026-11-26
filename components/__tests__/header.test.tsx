@@ -27,7 +27,6 @@ vi.mock('@/lib/constants', () => ({
         settings: 'settings',
         llm: 'llm',
         prompts: 'prompts',
-        tools: 'tools',
         mcp: 'mcp',
         safety: 'safety',
         flow: 'flow',
@@ -844,14 +843,11 @@ describe('Header component', () => {
       expect(mockOpenEditMentorModal).toHaveBeenCalledWith('prompts');
     });
 
-    it('should call openEditMentorModal with tools tab when Tools is clicked', () => {
+    it('should not offer a Tools item', () => {
       mockUseIsAdmin.mockReturnValue(true);
       render(<Header />);
 
-      const toolsItem = screen.getByText('Tools');
-      fireEvent.click(toolsItem);
-
-      expect(mockOpenEditMentorModal).toHaveBeenCalledWith('tools');
+      expect(screen.queryByText('Tools')).not.toBeInTheDocument();
     });
 
     it('should call openEditMentorModal with mcp tab when MCP is clicked', () => {

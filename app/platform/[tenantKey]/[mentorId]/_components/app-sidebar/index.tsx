@@ -1127,8 +1127,7 @@ export function AppSidebar() {
           onAfterNav();
           return;
         case 'footer-invites':
-          runAdminAction(() => openInviteUserModal());
-          onAfterNav();
+          openAccountTab('invites');
           return;
         case 'footer-users':
           openAccountTab('management');
@@ -1150,13 +1149,7 @@ export function AppSidebar() {
           return;
       }
     },
-    [
-      runAdminAction,
-      navigateToNotifications,
-      openAccountTab,
-      openInviteUserModal,
-      onAfterNav,
-    ],
+    [navigateToNotifications, openAccountTab, onAfterNav],
   );
 
   const expandFromRail = React.useCallback(

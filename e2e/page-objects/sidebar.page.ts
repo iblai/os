@@ -99,7 +99,8 @@ export class SidebarPage {
       exact: true,
     });
     // Footer entries were renamed in the new sidebar:
-    //   "Invite Users" → "Invites"
+    //   "Invite Users" → "Invites"  (opens the Account dialog at its
+    //                    Invites tab; see `openInvites()`)
     //   "Settings"     → "Advanced" (opens the Account dialog at the
     //                    advanced tab; no longer a direct modal trigger)
     // Trial-gated footer items shown to main-tenant non-admins when
@@ -186,6 +187,32 @@ export class SidebarPage {
   async navigateToNotifications(): Promise<void> {
     await expect(this.notificationsLink).toBeVisible({ timeout: 10_000 });
     await this.notificationsLink.click();
+  }
+
+  /**
+   * Clicks the footer's "Invites" and returns the SDK's organization Account
+   * dialog ("Organization settings") it opens, with that dialog's menu. The
+   * dialog lands on its own Invites tab, the menu item below Management; the
+   * row no longer opens a small dialog of its own.
+   */
+  async openInvites(): Promise<{ dialog: Locator; rail: Locator }> {
+    await expect(this.inviteUsersButton).toBeVisible({ timeout: 10_000 });
+    await this.inviteUsersButton.click();
+
+    const dialog = this.page.getByRole('dialog', {
+      name: 'Organization settings',
+      exact: true,
+    });
+    await expect(dialog).toBeVisible({ timeout: 15_000 });
+
+    const rail = dialog.getByRole('navigation', {
+      name: 'Organization settings',
+      exact: true,
+    });
+    await expect(
+      rail.getByRole('button', { name: 'Invites', exact: true }),
+    ).toHaveAttribute('aria-current', 'page', { timeout: 10_000 });
+    return { dialog, rail };
   }
 
   async navigateToAnalytics(): Promise<void> {

@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-11-23 | 1200 checkpoints (1119 covered, 46 pending/fixme, 17 not-reproducible in default env, 18 deprecated) | 115 journeys (114 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-11-25 | 1221 checkpoints (1112 covered, 66 pending/fixme, 16 not-reproducible in default env, 27 deprecated) | 117 journeys (115 active, 2 deprecated) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -115,14 +115,14 @@ When adding a new page or modifying an existing user flow:
 
 ## Journey 6: Mentor Management — Admin (24 checkpoints) — `journeys/06-mentor-management-admin.spec.ts`
 
-**Source files:** `components/modals/create-mentor-modal.tsx`, `components/modals/edit-mentor-modal/index.tsx`, `hooks/use-mentor-segments.ts`, `components/modals/edit-mentor-modal/tabs/settings-tab.tsx`, `components/modals/edit-mentor-modal/llm-tab.tsx`, `components/modals/edit-mentor-modal/tabs/tools-tab.tsx`, `components/modals/edit-mentor-modal/tabs/prompts-tab.tsx`, `components/modals/settings-modal.tsx`, `hooks/use-mentors.ts`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`, `lib/utils.ts`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`
+**Source files:** `components/modals/create-mentor-modal.tsx`, `components/modals/edit-mentor-modal/index.tsx`, `hooks/use-mentor-segments.ts`, `components/modals/edit-mentor-modal/tabs/settings-tab.tsx`, `components/modals/edit-mentor-modal/llm-tab.tsx`, `components/modals/edit-mentor-modal/tabs/prompts-tab.tsx`, `components/modals/settings-modal.tsx`, `hooks/use-mentors.ts`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`, `lib/utils.ts`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`
 
 _Note: the LLM tab is served by the SDK's `AgentLLMTab`; `components/modals/edit-mentor-modal/llm-tab.tsx` is the thin wrapper over it, and resolves the model label the nav-bar badge shows (see also Journey 28)._
 
 - [x] Admin can update mentor profile (name, description, category, visibility), save, and close
 - [x] Non-admin does not see the Settings or Tools menu items
 - [x] Admin can change LLM provider and select a model
-- [x] Admin sees the Tools tab render with at least one tool _(light smoke check only, on the shared account mentor — real toggle-on/off, reload-persistence, tooltip and a11y coverage moved to Journey 77 on disposable per-test mentors, to avoid mutating `tool_slugs` on a mentor other tests/suites share)_
+- [x] Admin sees the Agent Capabilities switches in Settings > Capabilities _(light smoke check only, on the shared account mentor — real toggle-on/off and reload-persistence coverage is Journey 108 on a disposable agent, to avoid mutating the capability flags of a mentor other tests/suites share)_
 - [x] Admin can apply custom CSS via the Advanced CSS editor (embed preview reflects change)
 - [x] Admin can reset custom CSS back to default
 - [x] Admin can apply valid custom JavaScript; invalid JS shows warnings
@@ -146,7 +146,7 @@ _Note: the LLM tab is served by the SDK's `AgentLLMTab`; `components/modals/edit
 
 ---
 
-## Journey 7: Mentor Settings Tab — Unique ID (16 checkpoints) — `journeys/07-mentor-settings-tab-unique-id.spec.ts`
+## Journey 7: Mentor Settings Tab — Unique ID (16 checkpoints; 2 deprecated) — `journeys/07-mentor-settings-tab-unique-id.spec.ts`
 
 **Source files:** `components/modals/edit-mentor-modal/settings-tab.tsx`
 
@@ -155,9 +155,9 @@ _Note: the LLM tab is served by the SDK's `AgentLLMTab`; `components/modals/edit
 - [x] Copy button copies unique ID to clipboard
 - [x] Visual feedback is shown after successful copy
 - [x] Tooltip info icons have `type="button"` and do not submit the settings form
-- [x] Enhanced RAG toggle is visible with correct label and defaults to OFF
-- [x] Enhanced RAG tooltip contains wording about multiple search queries
-- [x] Enhanced RAG toggle persists ON and OFF across save/reopen cycles
+- [x] Settings > Capabilities no longer shows the Enhanced Document Retrieval or Smart Document Retrieval rows (they moved to the Datasets and Voice tabs)
+- [x] ~~Enhanced RAG tooltip contains wording about multiple search queries~~ _(deprecated in #2838; Enhanced Document Retrieval is the Datasets tab card, covered by agc-11 in Journey 108)_
+- [x] ~~Enhanced RAG toggle persists ON and OFF across save/reopen cycles~~ _(deprecated in #2838; covered by agc-11 in Journey 108)_
 - [ ] _(not-reproducible — RBAC off in default env)_ Read-only settings fields (e.g. `mentor_visibility`) are gated in the UI and omitted from the settings PUT payload when the user lacks write access — unit-covered in `settings-tab.test.tsx` and `hoc/utils/__tests__/index.test.ts`
 
 **Journey 7B — Category Combobox (`iblai-platform#2289`):** the Basic-tab Category combobox rendered its options but was not hit-testable (inherited `pointer-events:none` from a duplicated `@radix-ui/react-dismissable-layer`). The `PopoverContent portalled={false}` fix landed and is reliable here — all 7 checkpoints below pass (2/2 full runs), including type-to-filter-by-name: the bundled SDK source still shows `CommandItem value={category.id.toString()}` (which would predict name search can't match), but it filters correctly in practice. Not specific to copied mentors — reproduced here on a plain, never-copied mentor, which is why the coverage lives in this journey rather than the copy one. Known gap: selecting an option, reopening the popover and then typing detaches the search input (the in-place content is unmounted by the re-render the selection triggers). That sequence is not covered below and needs a follow-up SDK fix.
@@ -259,7 +259,7 @@ The **download-chat** checkpoints (sh-07 … sh-10, issue #2464) cover the "Down
 
 **Source files:** `components/modals/edit-mentor-modal/tabs/embed-tab.tsx`, `components/modals/edit-mentor-modal/hooks/useEmbedTab.ts`, `components/modals/edit-mentor-modal/utils.ts`, `components/logo.tsx`, `hooks/use-mentors/use-mentor-settings.ts`, `hooks/use-embed-mode.ts`, `components/chat-input-form/voice-call-button.tsx`, `components/chat-input-form/voice-chat-button.tsx`, `components/chat-input-form/screen-sharing-button.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`
 
-- [x] ~~Non-anonymous embed with voice call, voice record, and attachment buttons renders correctly~~ _(deprecated in #2476 — the Embed tab's Show Attachment / Show Voice Record / Show Voice Call toggles were removed entirely; owned per-surface by Settings -> Capabilities now)_
+- [x] ~~Non-anonymous embed with voice call, voice record, and attachment buttons renders correctly~~ _(deprecated in #2476 — the Embed tab's Show Attachment / Show Voice Record / Show Voice Call toggles were removed entirely; each is now set per surface elsewhere: File Attachments in Settings -> Capabilities (File Uploads group), voice calls and dictation on the Voice tab)_
 - [x] Authenticated flow in embed: user can send a message and receive an AI response _(runs against a real `EMBED_URL` when configured, otherwise against the local second-origin embed harness — issue #2586 — with the chat WebSocket mocked)_
 - [x] Advanced anonymous embed (Anyone visibility, no context awareness) renders and allows chatting
 - [x] Advanced anonymous embed with context awareness sends message with injected context
@@ -394,7 +394,7 @@ The **download-chat** checkpoints (sh-07 … sh-10, issue #2464) cover the "Down
 - [x] Markdown resource type is available in the Add Resources modal (TC30, issue #1117)
 - [x] Markdown (.md) file can be uploaded and appears in the dataset list (TC31, issue #1117)
 
-**Deterministic row actions (self-seeded mentor)** — TC10/13/24/25/26/27 used to scan whatever datasets happened to already exist on the shared tenant for "the first untrained switch" / "the first enabled schedule button", silently `return`ing when the tenant didn't happen to have a dataset in the right state. Rewritten so each test creates its own mentor and seeds exactly the row it needs through the real Add Resource UI (same pattern as journey 75), then hard-asserts the outcome. There is no dedicated per-row delete button any more — the training switch is the delete entry point: an untrained row's switch opens `TrainOrDeleteModal` ("What would you like to do?"); a trained row's switch untrains immediately (no choice) and auto-opens `DeleteDatasetModal` ("Delete Dataset"). TC22 (image upload, never asserted the row) and TC23 (TXT upload, never asserted the row) were vestigial soft checks with no unique assertion — removed, since journey 75's du-07/du-04 already hard-assert both file types' rows.
+**Deterministic row actions (self-seeded mentor)** — TC10/13/24/25/26/27 used to scan whatever datasets happened to already exist on the shared tenant for "the first untrained switch" / "the first enabled schedule button", silently `return`ing when the tenant didn't happen to have a dataset in the right state. Rewritten so each test creates its own mentor and seeds exactly the row it needs through the real Add Resource UI (same pattern as journey 75), then hard-asserts the outcome. There is no dedicated per-row delete button any more — the training switch is the delete entry point: an untrained row's switch opens `TrainOrDeleteModal` ("What Would You Like to Do?"); a trained row's switch untrains immediately (no choice) and auto-opens `DeleteDatasetModal` ("Delete Dataset"). TC22 (image upload, never asserted the row) and TC23 (TXT upload, never asserted the row) were vestigial soft checks with no unique assertion — removed, since journey 75's du-07/du-04 already hard-assert both file types' rows.
 
 - [x] Admin deletes a dataset by untraining a trained row and confirming Delete (TC10, rewritten)
 - [x] Train-or-Delete modal shows the Train/Delete choice, description, and (for an uploaded file) no User-Agent field, for an untrained dataset (TC13, rewritten)
@@ -551,15 +551,17 @@ The "Remember past conversations" (`enable_memory_component`) master toggle move
 
 ---
 
-## Journey 27: User Invitations & Default Mentor (5 checkpoints) — `journeys/27-user-invitations-and-default-mentor.spec.ts`
+## Journey 27: User Invitations & Default Mentor (7 checkpoints; 2 pending) — `journeys/27-user-invitations-and-default-mentor.spec.ts`
 
-**Source files:** `components/modals/settings-modal.tsx`, `app/platform/[tenantKey]/[mentorId]/page.tsx`
+**Source files:** `components/modals/settings-modal.tsx`, `app/platform/[tenantKey]/[mentorId]/page.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`
 
 - [x] Admin can invite a user via email from the Settings modal
 - [x] Invited user can sign up via the invite link (clean session)
 - [x] Accepted invite is reflected correctly for the admin
 - [x] Admin can set a default mentor in Advanced settings
 - [x] Newly invited and registered user lands on the configured default mentor
+- [ ] Invites in the sidebar opens the settings dialog on its own Invites tab, below Management in the menu: the "Organization settings" dialog opens with Invites current in its menu, directly below Management, the content shows the "Invites" heading, the email field and Send Invite with no "Invite Users" title of its own, and the small "Invite Users" dialog does not open on top _(pending: fails until the app moves to the `@iblai/iblai-js` release that adds the Invites tab to the Organization settings menu (`PlatformAccountSheet` tab `invites`); flip to covered once journey 27 runs green)_
+- [ ] Organization settings lists Onboarding as its own tab below Invites, and Management has no Onboarding tab: the menu reads Management, Invites, Onboarding in that order, opening Onboarding shows the "Onboarding" heading and the agent search box, and Management keeps Applications with no Onboarding tab beside it _(pending: fails until the app moves to the `@iblai/iblai-js` release that moves Onboarding out of Management into its own tab of the Organization settings menu (`PlatformAccountSheet` tab `onboarding`); flip to covered once journey 27 runs green)_
 
 ---
 
@@ -585,21 +587,21 @@ The "Remember past conversations" (`enable_memory_component`) master toggle move
 
 ---
 
-## Journey 29: Accessibility — WCAG 2.1 AA (28 checkpoints; 4 deprecated) — `journeys/29-accessibility-wcag.spec.ts`
+## Journey 29: Accessibility — WCAG 2.1 AA (28 checkpoints; 4 deprecated, 1 pending) — `journeys/29-accessibility-wcag.spec.ts`
 
 **Source files:** `components/accessibility/accessibility-toolbar.tsx`, `components/accessibility/floating-accessibility-button.tsx`, `components/chat/stop-streaming-button.tsx`, `components/chat/submit-message-button.tsx`, `components/auto-resize-text-area.tsx`, `components/chat/ai-message-copy.tsx`, `components/chat-input-form/voice-chat-button.tsx`, `components/chat-input-form/upload-menu.tsx`, all major modals and dialogs
 
 - [x] Homepage has no accessibility violations
 - [x] Mentors catalog (Explore page) has no accessibility violations
 - [x] Create Mentor modal meets accessibility guidelines
-- [x] Invite Users modal meets accessibility guidelines
+- [ ] Invites screen meets accessibility guidelines: Invites in the sidebar opens the "Organization settings" dialog on its own Invites tab, and the dialog (menu, "Invites" heading, invite form and list) has no violations _(pending: fails until the app moves to the `@iblai/iblai-js` release that adds the Invites tab to the Organization settings menu (`PlatformAccountSheet` tab `invites`); flip to covered once journey 29 runs green)_
 - [x] Settings modal meets accessibility guidelines
 - [x] Embed dialog is accessible
 - [x] Dataset dialog is accessible
 - [x] Mentor Settings dialog is accessible
 - [x] LLM provider dialog is accessible
 - [x] Prompts dialog is accessible
-- [x] Tools dialog is accessible
+- [x] Agent Capabilities (Settings > Capabilities) dialog is accessible
 - [x] Add Resources dialog is accessible
 - [x] History dialog is accessible
 - [x] Safety dialog is accessible
@@ -844,14 +846,14 @@ The "Remember past conversations" (`enable_memory_component`) master toggle move
 **Source files:** `components/modals/edit-mentor-modal/tabs/access-tab/index.tsx`, `components/modals/edit-mentor-modal/tabs/access-tab/add-access.tsx`, `components/modals/edit-mentor-modal/tabs/access-tab/update-access.tsx`, `components/modals/edit-mentor-modal/tabs/access-tab/shared.ts`
 
 - [x] AC-41.1: Access tab label is visible in the Edit Mentor modal sidebar
-- [x] AC-41.2: Access control heading and description render correctly
+- [x] AC-41.2: Access Control heading and description render correctly
 - [x] AC-41.3: Access tab shows roles table or empty state — never a blank crash screen
 - [x] AC-41.4: Each policy row shows role name, user count badge, and edit button
-- [x] AC-41.5: Create role access dialog opens with role selector and can be cancelled
-- [x] AC-41.6: Pencil edit button opens "Manage \<Role\> access" dialog with RoleAccessPanel
+- [x] AC-41.5: Create Role Access dialog opens with role selector and can be cancelled
+- [x] AC-41.6: Pencil edit button opens "Manage \<Role\> Access" dialog with RoleAccessPanel
 - [x] AC-41.7: Selecting a role in Create dialog enables the Create button
 - [x] AC-41.8: Manage access dialog shows assigned users section or no-users placeholder
-- [x] AC-41.9: Error state Try again button is present when the error banner renders
+- [x] AC-41.9: Error state Try Again button is present when the error banner renders
 - [x] AC-41.10: Closing the manage dialog via Escape or click-outside clears editing state
 
 ---
@@ -898,13 +900,13 @@ Requires `DM_URL` env var. Tests are skipped when `DM_URL` is unset.
 
 **Source files:** `components/modals/edit-mentor-modal/tabs/sandbox-tab.tsx`, `components/modals/edit-mentor-modal/tabs/prompts-tab.tsx`, `hooks/use-mentor-segments.ts`
 
-The Sandbox tab used to wrap the SDK's `SandboxConfig` component in an app-level `CapabilityGate` around a single "Dedicated sandbox" (`enable_claw`) master toggle. That gate is gone — the tab now renders only a header and `SandboxConfig` (from `@iblai/iblai-js/web-containers`) directly, and the SDK component owns kind selection itself. `SandboxConfig` always renders a "Sandbox Type" card with three switches (`sandbox-kind-computational-runtime`, `sandbox-kind-virtual-machine`, `sandbox-kind-claw`). The three kinds are **mutually exclusive AND AT LEAST ONE IS ALWAYS ACTIVE** — "Only one sandbox type can be enabled at a time" per the card's own subheading: kinds change ONLY by selecting a different kind, which atomically deactivates whichever kind was previously active in the same PATCH. There is no "disable" operation — toggling the currently-active kind's own switch off (leaving none active) is not a supported flow, so this journey never asserts an all-off state. No kind switch ever gets a persistent disabled state — each is only briefly disabled while its own save is in flight, regardless of which kind is active. The claw connected/not-connected sections (instance table, connect, auto-push, push config) render **only** while Claw is enabled — not merely grayed out, absent from the DOM entirely. The Sandbox top-level tab remains **always mounted** for admins regardless of any kind's state — `hooks/use-mentor-segments.ts` doesn't gate the segment (unaffected by this SDK rewrite, predates it from feat/2040). The instance table's per-row **Connect** action is a dedicated button (`data-testid="connect-instance-<id>"`) next to the "Actions" three-dot menu (Run checks / Edit / Delete) — no longer a dropdown menu item. Agent Skills is fully independent of the sandbox and is covered **exclusively** by Journey 67 — this journey carries no skills assertions.
+The Sandbox tab used to wrap the SDK's `SandboxConfig` component in an app-level `CapabilityGate` around a single "Dedicated sandbox" (`enable_claw`) master toggle. That gate is gone — the tab now renders only a header and `SandboxConfig` (from `@iblai/iblai-js/web-containers`) directly, and the SDK component owns kind selection itself. `SandboxConfig` always renders a "Sandbox Type" card with three switches (`sandbox-kind-computational-runtime`, `sandbox-kind-virtual-machine`, `sandbox-kind-claw`). The three kinds are **mutually exclusive AND AT LEAST ONE IS ALWAYS ACTIVE** — "Only one sandbox type can be enabled at a time" per the card's own subheading: kinds change ONLY by selecting a different kind, which atomically deactivates whichever kind was previously active in the same PATCH. There is no "disable" operation — toggling the currently-active kind's own switch off (leaving none active) is not a supported flow, so this journey never asserts an all-off state. No kind switch ever gets a persistent disabled state — each is only briefly disabled while its own save is in flight, regardless of which kind is active. The claw connected/not-connected sections (instance table, connect, auto-push, push config) render **only** while Claw is enabled — not merely grayed out, absent from the DOM entirely. The Sandbox top-level tab remains **always mounted** for admins regardless of any kind's state — `hooks/use-mentor-segments.ts` doesn't gate the segment (unaffected by this SDK rewrite, predates it from feat/2040). The instance table's per-row **Connect** action is a dedicated button (`data-testid="connect-instance-<id>"`) next to the "Actions" three-dot menu (Run Checks / Edit / Delete) — no longer a dropdown menu item. Agent Skills is fully independent of the sandbox and is covered **exclusively** by Journey 67 — this journey carries no skills assertions.
 
-- [x] Admin opens the Sandbox tab and the three sandbox-kind switches (Computing Runtime / Virtual Machine Shell / Claw) are visible
+- [x] Admin opens the Sandbox tab and the three sandbox-kind switches (Calculator / Ephemeral Virtual Machine / Permanent Virtual Machine) are visible
 - [x] Computational-runtime and virtual-machine switches are interactable for admins while claw is off
 - [x] Selecting a sandbox kind auto-saves instantly; the three kinds are mutually exclusive and at least one is always active, so selecting one kind turns off whichever kind was previously active (no "disable" operation), and selection never affects Sandbox tab visibility — the tab is unconditionally mounted
-- [x] Selecting claw turns off whichever kind (computational-runtime or virtual-machine) was previously active in the same PATCH (mutual exclusivity); Integrations opens on Tools and Sandbox follows MCP
-- [x] Sandbox follows Tools and MCP in the Integrations category unconditionally (the sidebar is grouped into Setup / Policies / Integrations / Activity)
+- [x] Selecting claw turns off whichever kind (computational-runtime or virtual-machine) was previously active in the same PATCH (mutual exclusivity); Sandbox follows MCP
+- [x] Sandbox follows MCP in the Integrations category unconditionally (the sidebar is grouped into Setup / Policies / Integrations / Activity)
 - [x] Switching to computational-runtime while claw is active deactivates claw and hides its instance section, leaving computational-runtime as the sole active kind — never an all-off state — while all three switches remain interactable and the Sandbox tab stays visible
 - [x] Admin navigates to Sandbox tab: the sandbox-kind card always renders; the claw connected/not-connected instance sections render only while claw is enabled
 - [x] Admin selects claw then switches away from it (to the mentor's original kind) in one session, and the claw connected/not-connected instance sections mount and unmount accordingly both times
@@ -926,13 +928,13 @@ The Privacy tab is a thin wrapper around the SDK's `AgentPrivacyTab` (`@iblai/ib
 - [x] PR-01: Privacy tab label is visible in the Edit Agent modal sidebar
 - [x] PR-02: Privacy tab heading and description render correctly
 - [x] PR-03: Removed `privacy-capability-toggle` / `privacy-sub-tab-pii` no longer exist; no unneeded sub-tab strip
-- [x] PR-04: New agent shows both cards off (aria-checked, title, accessible names, "Off." summary); an open off card shows only its off hint
+- [x] PR-04: New agent shows both cards off (aria-checked, title, accessible names, summary saying the details reach the AI as typed); an open off card shows only its off hint
 - [x] PR-05: Turning PII on saves, opens its card, leaves PHI off; summary starts "On."
 - [x] PR-06: PII action dropdown lists Allow, Redact, Mask, Block in order
 - [x] PR-07: Block Message shown/editable only while action is Block
-- [x] PR-08: PII entity chips flip; "none selected = all" hint and "N kind selected" summary track them
-- [x] PR-09: PII settings persist across modal close/reopen; last kind off returns to "Off."
-- [x] PR-10: PHI shows 12 entity chips, "all 12 kinds" by default, "2 kinds selected" + Block after configuring
+- [x] PR-08: PII entity chips flip; "none selected = all" hint and "(N kind)" summary track them
+- [x] PR-09: PII settings persist across modal close/reopen; last kind off returns to the off summary
+- [x] PR-10: PHI shows 12 entity chips, a summary of all health details by default, "(2 kinds)" + the Block sentence after configuring
 - [x] PR-11: One card open at a time (PII on opens PII/closes PHI; chevron swaps back)
 - [x] PR-12: "Also Filter AI Responses" switch named exactly that, toggles on/off
 - [x] PR-13: Turning one kind off leaves the other on; the last off switches filtering off
@@ -1005,18 +1007,18 @@ The journey needs `@iblai/iblai-js` 2.77.0 or later: the page object imports hel
 
 **Source files:** `components/modals/edit-mentor-modal/tabs/human-support-tab.tsx`, `components/modals/edit-mentor-modal/tabs/index.ts`, `components/modals/edit-mentor-modal/index.tsx`, `hooks/use-mentor-segments.ts`
 
-The Support tab (Activity category) wraps the SDK's `AgentHumanSupportTab`: an admin-only support-ticket inbox with a user and status filter, a ticket list, and a ticket detail with a status select and reply composer. Tickets are filed by the agent during chat through its support tool, so the lifecycle checkpoints chat with a dedicated agent per test (created fresh, deleted by the residue teardown). This file shares the number 65 with Journey 65: Analytics Navbar Parity above. Checkpoints support-03..support-09 sit in one chat-driven lifecycle test and skip when the tenant has no human-support tool.
+The Support tab (Activity category) wraps the SDK's `AgentHumanSupportTab`: an admin-only support-ticket inbox with a user and status filter, a ticket list, and a ticket detail with a status select and reply composer. Tickets are filed by the agent during chat through its support tool, so the lifecycle checkpoints chat with a dedicated agent per test (created fresh, deleted by the residue teardown). This file shares the number 65 with Journey 65: Analytics Navbar Parity above. Checkpoints support-03..support-09 sit in one chat-driven lifecycle test and skip when the Support switch is not shown (the platform has no Human Support capability) or is locked (the agent's model cannot use it).
 
 - [x] support-01: Admin opens the Support tab and the ticket surface renders (heading, description, and either the ticket list or the empty state)
 - [x] support-02: Admin round-trips the status filter (Open, In Progress, Closed, All) and the surface keeps rendering a valid state after every change
-- [x] support-03: The Support availability toggle is turned on and the setting persists across a reload (skips when the tenant tool catalog has no human-support tool)
+- [x] support-03: The Support availability toggle is turned on and the setting persists across a reload (skips when the switch is not shown, or is locked because the agent's model cannot use Human Support)
 - [x] support-04: Admin asks the agent in chat to open a ticket and it appears in the Support list as Open
 - [x] support-05: Admin opens the ticket and its agent-authored description renders
 - [x] support-06: Admin replies from the ticket detail and the reply appears in the conversation
 - [x] support-07: Admin moves the ticket to In Progress and the list status updates
 - [x] support-08: Admin closes the ticket, the closed notice replaces the composer and the list status reflects Closed
 - [x] support-09: Phone view (375x812, touch) of a ticket: it shows as a card, tapping it opens the full-screen Support Ticket screen with the reply composer, Back returns to the list, the status filter sheet hides it under Closed and brings it back under All Statuses, and the page never scrolls sideways
-- [x] support-10: Phone view (375x812, touch) of an agent with no tickets: the Edit Agent dialog fills the viewport, the info sheet opens and closes, the Available to Users row shows, the status filter sheet lists its options, closes on the backdrop and applies a picked option, and the page never scrolls sideways
+- [x] support-10: Phone view (375x812, touch) of an agent with no tickets: the Edit Agent dialog fills the viewport, the info sheet opens and closes, the Human Support row shows, the status filter sheet lists its options, closes on the backdrop and applies a picked option, and the page never scrolls sideways
 
 ---
 
@@ -1087,26 +1089,32 @@ CAM-08/09 fail on pre-fix code: the drop/paste handlers were gated only on `feat
 
 ---
 
-## Journey 47: Mentor Voice Tab (12 checkpoints) — `journeys/47-mentor-voice-tab.spec.ts`
+## Journey 47: Mentor Voice Tab (18 checkpoints) — `journeys/47-mentor-voice-tab.spec.ts`
 
 **Source files:** `components/modals/edit-mentor-modal/tabs/voice-tab.tsx`, `components/modals/edit-mentor-modal/tabs/settings-tab.tsx`, `components/modals/edit-mentor-modal/tabs/index.ts`, `components/modals/edit-mentor-modal/index.tsx`, `hooks/use-mentor-segments.ts`, `lib/constants.ts`
 
 The Voice tab is a thin wrapper around the SDK's `AgentVoiceTab` (`@iblai/web-containers/next`). The wrapper forwards `tenantKey` / `mentorId` / `username` from URL params + the navigate hook so the SDK's `useGetMentorSettingsQuery`, `useEditMentorMutation`, and the new `useGet/Create/UpdateCallConfigurationMutation` hooks resolve correctly. Selectors come from the SDK's official Playwright helpers (`@iblai/iblai-js/playwright`) — never patch a selector in the spec; if labels are overridden via the `labels` prop, update the helper imports in the page object.
 
-The Settings tab also surfaces the smart-document-retrieval voice-call toggle (`use_function_calling_for_rag`) so admins can flip it without leaving the main configuration panel — save routes it through the same `/call-configurations/` endpoint the SDK's Voice tab uses. The "Enable Voice Calls" (`show_voice_call`) master toggle moved off Settings → Capabilities into an in-tab `CapabilityGate` at the top of the Voice tab itself (feat/2040) and auto-saves on click (optimistic local state) — no footer Save button involved. The Voice tab is now always mounted — `hooks/use-mentor-segments.ts` no longer gates it — and both sub-tabs render inside a grayed + inert `capability-gate-content` wrapper while the toggle is off. ("Enable screen sharing" moved off Settings too — it now lives on the Screen tab's own capability toggle, see journey 48.)
+The Voice call sub-tab carries the Smart Document Retrieval switch (`use_function_calling_for_rag`), saved by that section's own Save button through the `/call-configurations/` endpoint (it moved out of Settings > Capabilities in #2838). The Voice tab owns all four voice switches (`show_voice_call`, `embed_show_voice_call`, `show_voice_record`, `embed_show_voice_record`); Settings > Capabilities keeps only File Attachments. The tab is always mounted and has three always-usable sub-tabs under an info box: "Voice" (voice source, no switch), "Calls" and "Dictation". The last two each start with an In-App Chat and an Embed Widget switch that save on click, and their content is grayed + inert (`capability-gate-content`) only while both of that sub-tab's switches are off. ("Enable screen sharing" moved off Settings too — it now lives on the Screen tab's own capability toggle, see journey 48.)
 
 - [x] VO-01: Voice tab label is visible in the Edit Mentor modal sidebar (always mounted)
 - [x] VO-02: Voice tab heading renders correctly
-- [x] VO-03: Voice and Voice call sub-tab pills are both visible
+- [x] VO-03: The Voice, Calls and Dictation sub-tab pills are all visible
 - [x] VO-04: All three provider cards (Browser, OpenAI, Google) render on the Voice sub-tab
 - [x] VO-05: Selecting the OpenAI provider marks the card active and reveals the voice picker trigger
 - [x] VO-06: Selecting the Browser provider hides the voice picker trigger
 - [x] VO-07: Switching to the Voice call sub-tab renders the call configuration form
 - [x] VO-08: Switching between Realtime and Step-by-step call modes keeps the Voice call configuration form rendered (SDK no longer surfaces standalone TTS/STT selects)
-- [x] VO-09: Settings tab surfaces the smart-document-retrieval voice-call toggle
-- [x] VO-10: Flipping the smart-document-retrieval voice-call toggle in Settings and clicking Save persists to the CallConfiguration endpoint and shows the success toast
-- [x] VO-11: Voice tab stays visible (always mounted) and its content grays (`data-enabled="false"`) when the in-tab "Enable Voice Calls" capability toggle is off
-- [x] VO-12: Re-enabling the in-tab "Enable Voice Calls" capability toggle ungates the Voice tab's sub-tab content
+- [x] VO-09: The Voice call sub-tab shows the Smart Document Retrieval switch
+- [x] VO-10: Flipping the Smart Document Retrieval switch in the Voice call settings and clicking that section's Save shows the "Voice call settings saved" toast
+- [x] VO-11: Voice Calls In-App Chat switch turns off and on and saves on click; the call settings gray out (`data-enabled="false"`) only when both the In-App Chat and Embed Widget switches are off
+- [x] VO-12: Turning either Voice Calls switch (In-App Chat or Embed Widget) back on ungates the call settings
+- [ ] VO-13: Smart Document Retrieval is absent from Settings > Capabilities and its state persists in the Voice call settings after Save and reopen _(pending: in `@iblai/iblai-js` 3.0.0, which the app now uses; flip to covered once journey 47 runs green)_
+- [ ] VO-14: The Voice sub-tab and the pills stay usable while Voice Calls is off for both surfaces _(pending: in `@iblai/iblai-js` 3.0.0, which the app now uses; flip to covered once journey 47 runs green)_
+- [ ] VO-15: Dictation In-App Chat switch saves on click and keeps its state after a reload _(pending: in `@iblai/iblai-js` 3.0.0, which the app now uses; flip to covered once journey 47 runs green)_
+- [ ] VO-16: Voice Calls Embed Widget switch saves on click and keeps its state after a reload, independently of the In-App Chat switch _(pending: in `@iblai/iblai-js` 3.0.0, which the app now uses; flip to covered once journey 47 runs green)_
+- [ ] VO-17: Settings > Capabilities shows the File Attachments row and no voice rows _(pending: in `@iblai/iblai-js` 3.0.0, which the app now uses; flip to covered once journey 47 runs green)_
+- [ ] VO-18: Voice tab shows the info box and the Voice, Calls and Dictation pills _(pending: in `@iblai/iblai-js` 3.0.0, which the app now uses; flip to covered once journey 47 runs green)_
 
 ---
 
@@ -1490,16 +1498,16 @@ The tab's RBAC is real: the backend exposes grader permissions as flat actions o
 
 All interactions go through the `GraderTab` page object, which delegates to the official Grader-tab Playwright helpers exported from `@iblai/iblai-js/playwright` (`GRADER_LABELS`, `isGraderTabVisible`, `switchToGraderSubTab`, `isGradingEnabled`, `setGradingEnabled`, `saveGraderConfig`, `addGraderCriterion`, `editGraderCriterion`, `deleteGraderCriterion`, `expectLastCriterionDeleteDisabled`, `expectGraderMisconfiguredWarning`, `expectGraderTotalPoints`, `filterGradeResultsByEmail`, `expectGradeResultRow`, `overrideGradeResult`, `clearGradeResultOverride`) — mirrors the Voice/Evals tab pattern.
 
-Because the toggle mutates the mentor's attached tools — the same fields Journey 6's "Admin can toggle tools on/off" (mgmt-04) exercises — this journey mirrors Journey 47's Voice tab isolation: the whole file runs serially in one worker and every test gets its own freshly-created, disposable mentor (tracked and deleted via `MentorTracker` in `afterAll`). Checkpoints that require the capability ON attempt the toggle via `GraderTab.tryEnableGrading` and skip gracefully (not a failure) when the tenant's tool catalogue has no "Grading" tool to attach — an environment gap, not an app bug.
+Because the toggle mutates the mentor's attached tools — the same fields Journey 6's "Admin can toggle tools on/off" (mgmt-04) exercises — this journey mirrors Journey 47's Voice tab isolation: the whole file runs serially in one worker and every test gets its own freshly-created, disposable mentor (tracked and deleted via `MentorTracker` in `afterAll`). Checkpoints that require the capability ON attempt the toggle via `GraderTab.tryEnableGrading` and skip gracefully (not a failure) when the agent's model cannot grade (the switch is locked, or the save is refused) — an environment gap, not an app bug.
 
 - [x] grd-01: Grader tab is visible in the Edit Mentor modal sidebar (Setup category, always mounted for an admin with standard mentor-owner permissions)
 - [x] grd-02: Grader tab renders heading, description, and tab body without getting stuck on the loading spinner
-- [x] grd-03: Gated content exposes the Grading Setup and Rubric sub-tabs — both consistently visible for the e2e admin — and switching between them renders the matching section (`grader-setup-section` / `grader-criteria-section`); the Results pill is checked separately in grd-04 since it's RBAC-gated (`view_grade_results`) and not granted to the e2e admin on the real tenant
+- [x] grd-03: Grading Setup and Rubric sub-tabs stay usable while Grading is off — both consistently visible for the e2e admin — and switching between them renders the matching section (`grader-setup-section` / `grader-criteria-section`); the Results pill is checked separately in grd-04 since it's RBAC-gated (`view_grade_results`) and not granted to the e2e admin on the real tenant
 - [x] grd-04: The Results sub-tab renders its own grade-results table and shows the zero-filters empty state ("No grades yet…") on a mentor with no graded submissions yet; independent of a saved config or rubric. Gracefully skips when the Results pill isn't granted — confirmed live that the e2e admin lacks `view_grade_results` on the real tenant
 - [x] grd-05: On a freshly created mentor, the Grading capability toggle defaults OFF and the gated config/rubric/results content is grayed (`capability-gate-content` `data-enabled="false"`) with the off-hint shown
-- [x] grd-06: Admin enables the Grading capability toggle and the misconfigured warning settles on "rubric is empty" (attaching the tool auto-provisions the grader config, which the SDK refetches after the toggle, so "not set up yet" is only a transient flash); gracefully skips if the tenant's tool catalogue has no "Grading" tool to attach
-- [x] grd-07: Admin fills in and saves the Grading setup form (instructions required for Save to enable; a PATCH since the config was auto-provisioned on attach); the "rubric is empty" misconfigured warning stays until a criterion exists
-- [x] grd-08: Admin adds a rubric criterion via the Add-criterion modal (name, criteria, points) — it appears in the criteria list, the misconfigured warning clears, and the running total reflects its points
+- [x] grd-06: Admin saves the Grading setup and adds a rubric criterion, then enables the Grading capability toggle and sees no misconfigured warning; gracefully skips if the agent's model cannot grade
+- [x] grd-07: Admin saves the Grading setup form; the Grading switch stays locked with "Add at least one rubric criterion first, then turn Grading on." until a criterion exists
+- [x] grd-08: Admin adds a rubric criterion via the Add-criterion modal (name, criteria, points) — it appears in the criteria list, the running total reflects its points, and the Grading switch can then be turned on with no warning
 - [x] grd-09: Admin edits an existing criterion's name and points via the row's three-dots menu → Edit modal, and the row + running total reflect the update
 - [x] grd-10: With two criteria present, admin cancels a delete confirmation modal (row untouched) then deletes a non-last criterion for real via the row menu → confirm modal
 - [x] grd-11: Deleting the last remaining criterion is refused — the row menu's Delete item is `aria-disabled` with an explanatory hint shown, rather than allowing the request to fail
@@ -1865,11 +1873,11 @@ affected; only the internal preview could reach our storage.
 
 **Source files:** `lib/canvas-markdown-engine.ts` (the canvas itself — `CanvasView`, `CanvasComponent`, the rich-text editor, controls, export handlers, the binary viewer and `binary-artifact-utils` — lives in the SDK at `packages/web-containers/src/components/canvas/` and is imported from `@iblai/iblai-js/web-containers`; this app hands it the chat's markdown engine), `components/chat/chat-messages/canvas-message-preview.tsx`, `components/chat/chat-messages/message-preview.tsx`, `components/chat/sdk-chat.tsx`, `components/modals/edit-mentor-modal/tabs/sandbox-tab.tsx`
 
-LIVE-LLM coverage of the VM-sandbox file-sharing pipeline that Journey 10 (Canvas) and Journey 44 (CLAW Advanced Sandbox) can only reach at the unit-test / settings-toggle level. On a dedicated per-test mentor (selecting a sandbox kind is a destructive settings mutation — never run against the shared admin mentor, per the project's shared-mentor-isolation convention), this journey selects the "Virtual Machine Shell" sandbox kind via `SandboxTab.selectKind('virtual-machine')` (mutually exclusive with the other two kinds, and at least one kind is always active — see Journey 44), asks the agent over a real chat turn to create and share **hello.txt** with a known marker line, and verifies the agent replies with the file: the chat chip appears and the canvas shows the file's content. A .txt file was chosen deliberately over a binary format (pdf/xlsx) — the VM produces it reliably with plain shell tooling, so the journey verifies the sandbox→share_files→artifact pipeline without gambling on the LLM assembling valid binary bytes; since .txt is a TEXT artifact, the expected surface is the text canvas and the binary canvas is asserted absent (text/binary routing). The whole file runs in `test.describe.configure({ mode: 'serial' })` and uses `MentorTracker` + `afterAll` to delete its mentor, mirroring Journey 44's pattern. `test.slow()` accounts for VM boot + real generation time; the chip wait carries a multi-minute budget while unrelated assertions keep normal timeouts.
+LIVE-LLM coverage of the VM-sandbox file-sharing pipeline that Journey 10 (Canvas) and Journey 44 (CLAW Advanced Sandbox) can only reach at the unit-test / settings-toggle level. On a dedicated per-test mentor (selecting a sandbox kind is a destructive settings mutation — never run against the shared admin mentor, per the project's shared-mentor-isolation convention), this journey selects the "Ephemeral Virtual Machine" sandbox kind via `SandboxTab.selectKind('virtual-machine')` (mutually exclusive with the other two kinds, and at least one kind is always active — see Journey 44), asks the agent over a real chat turn to create and share **hello.txt** with a known marker line, and verifies the agent replies with the file: the chat chip appears and the canvas shows the file's content. A .txt file was chosen deliberately over a binary format (pdf/xlsx) — the VM produces it reliably with plain shell tooling, so the journey verifies the sandbox→share_files→artifact pipeline without gambling on the LLM assembling valid binary bytes; since .txt is a TEXT artifact, the expected surface is the text canvas and the binary canvas is asserted absent (text/binary routing). The whole file runs in `test.describe.configure({ mode: 'serial' })` and uses `MentorTracker` + `afterAll` to delete its mentor, mirroring Journey 44's pattern. `test.slow()` accounts for VM boot + real generation time; the chip wait carries a multi-minute budget while unrelated assertions keep normal timeouts.
 
 The binary-artifact surfaces themselves (binary chip gating, pdf/image preview, fallback and preview-error panels, binary stream orchestration) remain unit-covered only — see Journey 10's `cvs-12`/`cvs-13`/`cvs-14`/`cvs-15` for the exact gap wording.
 
-- [x] vmc-01: Admin selects the Virtual Machine Shell sandbox kind on a dedicated mentor, enables the composer's Canvas tool (the artifact pipeline is inert without it), and asks the agent (live LLM) to create and share hello.txt with a known marker line (.txt chosen over pdf/xlsx so the VM produces it reliably with shell tooling); the agent replies with the file as an artifact and the chat chip (`canvas-message-preview`) appears with Open Canvas
+- [x] vmc-01: Admin selects the Ephemeral Virtual Machine sandbox kind on a dedicated mentor, enables the composer's Canvas tool (the artifact pipeline is inert without it), and asks the agent (live LLM) to create and share hello.txt with a known marker line (.txt chosen over pdf/xlsx so the VM produces it reliably with shell tooling); the agent replies with the file as an artifact and the chat chip (`canvas-message-preview`) appears with Open Canvas
 - [x] vmc-02: The canvas shows the shared file's content — the .txt artifact takes the TEXT canvas path (tolerant of auto-open at stream start vs. clicking `canvas-open-button`): the editable editor renders containing the marker line, and the binary canvas (`binary-canvas`) is asserted absent (text/binary routing picks the text path for text files)
 
 ## Journey 72: Sidebar Support Link & Help Center Resolution (#uat-9) (7 checkpoints; 4 deprecated) — `journeys/72-sidebar-support-link-and-help-center.spec.ts`
@@ -2117,7 +2125,7 @@ Covers issue #2586's test infrastructure: `e2e/utils/embed-harness-server.mjs`, 
 
 ---
 
-## Journey 79: Composer Redesign (16 checkpoints, 1 pending) — `journeys/79-composer-redesign.spec.ts`
+## Journey 79: Composer Redesign (17 checkpoints, 1 pending, 1 not-reproducible) — `journeys/79-composer-redesign.spec.ts`
 
 **Source files:** `components/chat/sdk-chat.tsx`
 
@@ -2127,7 +2135,7 @@ Covers issue #2586's composer rebuild: the classic UploadMenu + always-visible I
 - [x] cr-02: On a phone-width viewport the empty-state composer is pinned to the bottom of the screen instead of centred with the name/welcome block
 - [x] cr-03: The composer's single "+" menu opens and exposes Upload File, Camera and (when the mentor has tools enabled) a Tools submenu trigger
 - [x] cr-04: Escape closes the "+" menu and returns focus to its trigger
-- [x] cr-05: Toggling tools from the "+" menu's Tools submenu renders them as chips, with 4+ active tools collapsing the overflow into a "+N" button that opens an active list ("Clear all" included)
+- [x] cr-05: Toggling tools from the "+" menu's Tools submenu renders each as a chip, and one click on a chip turns that tool off
 - [x] cr-06: The composer's file card renders every upload state — uploading, done, failed (with Retry) and too-large — via mocked upload responses
 - [x] cr-07: Screen share, dictate, voice call and Send remain independent composer controls, never nested inside the "+" menu
 - [x] cr-08: Guided prompts on the main chat stay visible while the user types, including a "/" skill command
@@ -2139,6 +2147,7 @@ Covers issue #2586's composer rebuild: the classic UploadMenu + always-visible I
 - [x] cr-15 (issue #2586): The Memory row in the "+" menu never shows a trailing chevron (unlike Tools and Skills, both of which open a sub-page/submenu) on desktop or mobile, and clicking it opens the Memory panel ("Your Memory")
 - [x] cr-16 (issue #2586): The composer in CONVERSATION state (after a mocked reply) still shows an active tool chip, the Canvas "Turn off Canvas" × pill, and the "/" skill picker positioned above the composer; a 320-390px viewport in that state has no horizontal overflow with Send visible
 - [ ] cr-17: Below 520px the composer's tool pills keep one line: Canvas off shows only its icon (its name kept as the accessible name), Canvas on alone shows its name and its "Turn off Canvas" ×; from 520px up the name shows on or off _(pending: `test.fixme`, never run — needs an authenticated session (PLAYWRIGHT_USERNAME / PLAYWRIGHT_PASSWORD), which no env it has run in had; the pinned SDK (web-containers 1.48.0) has the tool row it tests, and the SDK measures the row rather than the window, so its 390px step still needs checking on the first run; the two-pills-on case needs the desktop app's Code or Cowork pill. Covered meanwhile by the SDK's `composer-tool-row` and `chat-input-form` "tool pills on phone widths" Vitest cases and the OS `coding-mode-button` "in the SDK composer's tool row" cases)_
+- [ ] _(not-reproducible)_ cr-18: With four or more active tools the composer keeps two chips and collapses the rest into a "+N" button that opens the active list ("Clear all" included) — unit-covered in the SDK's `composer-tool-chips.test.tsx`; not e2e-reproducible since #2838: the overflow needs four active tools and the agent's capability switches turn on at most three composer tools (Web Search, Code, Image); the Google tools open a sign-in popup instead
 
 ---
 
@@ -2203,23 +2212,23 @@ Journeys 78/80 cover the second-origin harness infrastructure and the embed head
 
 **Source files:** `components/modals/edit-mentor-modal/settings-tab.tsx`, `e2e/page-objects/edit-mentor/settings.tab.ts` (UI lives in the SDK `AgentSettingsTab` → `WelcomeScreenSubTab`)
 
-The Welcome screen sub-tab (#2586) saves heading style, starter-prompt source and guided-prompt count with the agent (iblai/iblai-platform#2626) and drives a live preview built from the chat's own prompt chips/rows. wss-01..06 run on the tenant's default agent and never save to it (wss-06 aborts its save); wss-07..09 save Personal greeting on a throw-away agent and check the chat's new-chat heading (`data-testid="welcome-heading"`, SDK `WelcomeHeading` + `greetingFirstName`), mocking the profile's full name for the `#` cases.
+The Welcome screen sub-tab (#2586) saves heading style, starter-prompt source and guided-prompt count with the agent (iblai/iblai-platform#2626) and drives a live preview built from the chat's own prompt chips/rows. wss-01..06 run on the tenant's default agent and never save to it (wss-06 aborts its save); wss-07..09 save Personal Greeting on a throw-away agent and check the chat's new-chat heading (`data-testid="welcome-heading"`, SDK `WelcomeHeading` + `greetingFirstName`), mocking the profile's full name for the `#` cases.
 
 - [x] wss-01: The Settings tab shows a fourth Welcome screen sub-tab after Basic, Discovery and Capabilities; it opens on the main-app live preview with the agent's name as the heading
-- [x] wss-02: The Number of guided prompts control shows only when Guided prompts is picked; Suggested hides it and Off also empties the preview's prompts
-- [x] wss-03: Picking 10 guided prompts shows the first 4 plus View more (6); View more expands to all 10 and Show less folds back to 4
-- [x] wss-04: The Embed and Mobile previews show the prompts as stacked full-width rows, with the same View more expansion
-- [x] wss-05: Picking Personal greeting switches the preview heading to a time-of-day greeting, and Preview as a logged-out visitor shows Hi there
+- [x] wss-02: The Number of Guided Prompts control shows only when Guided Prompts is picked; Suggested hides it and Off also empties the preview's prompts
+- [x] wss-03: Picking 10 guided prompts shows the first 4 plus View More (6); View More expands to all 10 and Show Less folds back to 4
+- [x] wss-04: The Embed and Mobile previews show the prompts as stacked full-width rows, with the same View More expansion
+- [x] wss-05: Picking Personal Greeting switches the preview heading to a time-of-day greeting, and Preview as a Logged-Out Visitor shows Hi there
 - [x] wss-06: Save sends the Welcome screen choices (welcome_heading_style, guided_prompts_count) now that the backend stores them (iblai-platform#2626); on the tenant's default agent the save request is intercepted and aborted so the real agent is untouched
-- [x] wss-07: On a throw-away agent, Save sends welcome_heading_style=personal_greeting, Settings reopens on Personal greeting, and the new-chat heading greets the signed-in user by first name ("Good morning|afternoon|evening, <First name>")
-- [x] wss-08: The embed view of an agent with Personal greeting shows the same first-name greeting as its new-chat heading
+- [x] wss-07: On a throw-away agent, Save sends welcome_heading_style=personal_greeting, Settings reopens on Personal Greeting, and the new-chat heading greets the signed-in user by first name ("Good morning|afternoon|evening, <First name>")
+- [x] wss-08: The embed view of an agent with Personal Greeting shows the same first-name greeting as its new-chat heading
 - [x] wss-09: A full name that fails the first-name rule ("#12345", "user_8812") gets the nameless greeting, and "john#4821 Doe" is greeted as "John"; the heading never shows a # tag
-- [x] wss-10: Every Welcome screen control changes the preview: heading Personal greeting then back to the agent name, guided count 1/3/4/5/10 shows min(count,4) chips with a "View more (count-4)" button only above 4, Off removes every chip and Guided brings 4 back
-- [x] wss-11: On a throw-away agent, Save sends guided_prompts_count=3 with Agent name + Guided prompts; after a reload the three controls still show them and the preview has 3 chips (needs the #2626 SDK rebuild)
-- [x] wss-12: With Agent name + 3 guided prompts saved, both the admin's and a student's new chat show the agent name (no greeting) and at most 3 prompt chips (needs the #2626 SDK rebuild)
-- [x] wss-13: Admin saves Personal greeting + Off: both persist after a reload, then the new chat greets by first name, shows no prompt chips and fires no guided-prompts request (needs the #2626 SDK rebuild)
-- [x] wss-14: A student opening the same agent sees the admin's Personal greeting with the student's own first name and no prompt chips (needs the #2626 SDK rebuild)
-- [x] wss-15: Admin saves Suggested prompts (yours) with Agent name: both persist after a reload and the guided-prompt count select is hidden (needs the #2626 SDK rebuild)
+- [x] wss-10: Every Welcome screen control changes the preview: heading Personal Greeting then back to the agent name, guided count 1/3/4/5/10 shows min(count,4) chips with a "View More (count-4)" button only above 4, Off removes every chip and Guided brings 4 back
+- [x] wss-11: On a throw-away agent, Save sends guided_prompts_count=3 with Agent Name + Guided Prompts; after a reload the three controls still show them and the preview has 3 chips (needs the #2626 SDK rebuild)
+- [x] wss-12: With Agent Name + 3 guided prompts saved, both the admin's and a student's new chat show the agent name (no greeting) and at most 3 prompt chips (needs the #2626 SDK rebuild)
+- [x] wss-13: Admin saves Personal Greeting + Off: both persist after a reload, then the new chat greets by first name, shows no prompt chips and fires no guided-prompts request (needs the #2626 SDK rebuild)
+- [x] wss-14: A student opening the same agent sees the admin's Personal Greeting with the student's own first name and no prompt chips (needs the #2626 SDK rebuild)
+- [x] wss-15: Admin saves Suggested Prompts (Yours) with Agent Name: both persist after a reload and the guided-prompt count select is hidden (needs the #2626 SDK rebuild)
 
 ## Journey 84: In-chat Model Picker (14 checkpoints) — `journeys/84-in-chat-model-picker.spec.ts`
 
@@ -2285,19 +2294,19 @@ Issue #2611. The floating accessibility button can be dragged (mouse + touch), n
 
 ---
 
-## Journey 77: Mentor Tools Tab (7 checkpoints, 2 not-reproducible) — `journeys/77-mentor-tools-tab.spec.ts`
+## Journey 77: Mentor Tools Tab (7 checkpoints; deprecated in #2838) — `journeys/77-mentor-tools-tab.spec.ts`
 
-**Source files:** `components/modals/edit-mentor-modal/tabs/tools-tab.tsx`
+> **Deprecated in #2838.** The Tools tab was removed; each tool is now a capability switch (see Journey 108). The spec file is a stub (`test.describe.skip`) that exists only to satisfy `validateSpecFiles` in the journey-coverage script. The checkpoints below are kept in the ledger to preserve the pre-push regression baseline.
 
-The Tools tab was just moved onto the SDK: OS's `ToolsTab` wrapper now returns `null` until `tenantKey`/`agentId`/`username` are known, then renders the SDK's `AgentToolsTab` (`@iblai/iblai-js/web-containers/next`) inside an `AgentSettingsProvider`, passing no `labels` override — all copy (header, the new `data-testid="tools-info-box"` info box, per-tool info-icon/switch aria-labels, toggle toasts) comes straight from the SDK's i18n catalog. Toggling a tool mutates the mentor's `tool_slugs` — the same field Journey 6's mgmt-04 smoke test and the Grader tab's capability toggle (Journey 66) both touch — so, mirroring Journeys 47 and 66, this journey runs serially in one worker and every test gets its own freshly-created, disposable mentor (tracked and deleted via `MentorTracker` in `afterAll`), pinned to the cheap ibl.ai model. Checkpoints needing an existing tool row skip gracefully (not a failure) when the tenant's tool catalogue is empty.
+**Source files:** `components/modals/edit-mentor-modal/tabs/tools-tab.tsx` _(deleted)_
 
-- [x] tools-01: Admin opens the Tools tab and sees the header, description, and the `tools-info-box` copy
-- [x] tools-02: Admin toggles a tool on (`aria-checked` flips + "Agent updated successfully" toast) and it persists across a close + full page reload + reopen; toggling it back off persists the same way
-- [x] tools-03: A tool's info icon exposes `aria-label="More info about {name}"` and its Radix tooltip shows the tool's description on both hover and keyboard focus
-- [x] tools-04: A tool switch's accessible name flips between `"{name} disabled"` and `"{name} enabled"` as it is toggled
-- [x] tools-05: Non-admin does not see the Tools tab in the Edit Mentor modal
-- [ ] _(not-reproducible — RBAC off in default env)_ Read-only `mentor_tools` field permission (`WithFormPermissions`) disables every tool switch — `NEXT_PUBLIC_ENABLE_RBAC` is unset in this env (defaults `false`) and no fixture seeds a `permissions.field.mentor_tools` `write: false` response
-- [ ] _(not-reproducible — no e2e locale-switch mechanism)_ Tools tab copy renders correctly in a non-English locale (e.g. es) — no journey in this repo has an established, reliable way to switch the live app locale and assert on translated text (`ProfilePage.languageSelector`, Journey 4, only checks the selector is visible)
+- [x] ~~tools-01: Admin opens the Tools tab and sees the header, description, and the `tools-info-box` copy~~ _(deprecated in #2838)_
+- [x] ~~tools-02: Admin toggles a tool on and it persists across a close + full page reload + reopen; toggling it back off persists the same way~~ _(deprecated in #2838)_
+- [x] ~~tools-03: A tool's info icon exposes `aria-label="More info about {name}"` and its tooltip shows the description on hover and keyboard focus~~ _(deprecated in #2838; replaced by agc-09 in Journey 108)_
+- [x] ~~tools-04: A tool switch's accessible name flips between `"{name} disabled"` and `"{name} enabled"` as it is toggled~~ _(deprecated in #2838; replaced by agc-09 in Journey 108)_
+- [x] ~~tools-05: Non-admin does not see the Tools tab in the Edit Mentor modal~~ _(deprecated in #2838)_
+- [x] ~~Read-only `mentor_tools` field permission disables every tool switch~~ _(deprecated in #2838)_
+- [x] ~~Tools tab copy renders correctly in a non-English locale~~ _(deprecated in #2838)_
 
 ---
 
@@ -2324,7 +2333,7 @@ The API tab is rendered by the SDK's `AgentApiTab` (`@iblai/iblai-js/web-contain
 
 **Source files:** `components/modals/edit-mentor-modal/tabs/sandbox-tab.tsx`
 
-An agent with Virtual Machine Shell turned on runs code in an isolated Linux VM. This journey covers the UI that lets an org admin decide what that VM can reach and which credentials it can use. Both surfaces are SDK-owned and reached through existing app entry points: the SDK `Account` rail of the User Profile dialog (More options → platform name, the route journey 38 takes to Advanced) lists an admin-only "Network" entry in its Integrations group, hosting the SDK `VirtualMachineAdminTab` (the policies table with its dialogs and the keyboard-driven chip input), the sidebar's Secrets footer row opens the SDK `SecretsTab` (one sub-tab per kind of key — LLMs, Services, Environment Variables — each with its own sentence, Add button and table, where Add LLM and Add Service start on a type-to-search box) and, inside Edit Agent → Sandbox while the Virtual Machine Shell kind is active, the SDK `VirtualMachineNetworkSection` (egress-profile radio group, policy picker, Environment Variables group, billing notice) which mirrors every backend rule before saving. Policies and secrets are org-level records that the run-level residue teardown does not reap, so every record the file creates carries a per-run stamp and is deleted again through the API in `afterEach` (`e2e/utils/virtual-machine-api.ts`); the agent-side flows use a dedicated mentor, and every test is self-contained, so the file is not serial.
+An agent with Ephemeral Virtual Machine turned on runs code in an isolated Linux VM. This journey covers the UI that lets an org admin decide what that VM can reach and which credentials it can use. Both surfaces are SDK-owned and reached through existing app entry points: the SDK `Account` rail of the User Profile dialog (More options → platform name, the route journey 38 takes to Advanced) lists an admin-only "Network" entry in its Integrations group, hosting the SDK `VirtualMachineAdminTab` (the policies table with its dialogs and the keyboard-driven chip input), the sidebar's Secrets footer row opens the SDK `SecretsTab` (one sub-tab per kind of key — LLMs, Services, Environment Variables — each with its own sentence, Add button and table, where Add LLM and Add Service start on a type-to-search box) and, inside Edit Agent → Sandbox while the Ephemeral Virtual Machine kind is active, the SDK `VirtualMachineNetworkSection` (egress-profile radio group, policy picker, Environment Variables group, billing notice) which mirrors every backend rule before saving. Policies and secrets are org-level records that the run-level residue teardown does not reap, so every record the file creates carries a per-run stamp and is deleted again through the API in `afterEach` (`e2e/utils/virtual-machine-api.ts`); the agent-side flows use a dedicated mentor, and every test is self-contained, so the file is not serial.
 
 - [x] vmn-01: Admin reaches Network through the User Profile dialog (More options → platform name → the admin-only "Network" entry in the SDK Account rail's Integrations group), which holds the info box and the policies table with its Add Network button and no sub-tabs; the group lists API, Secrets and Network Policies in that order and there is no Security group; the sidebar's Secrets footer row opens the Secrets page on its LLMs, Services and Environment Variables tabs, the last with Add Environment Variable
 - [x] vmn-02: Admin adds a network policy through the SDK dialog, whose title and save button read Add Network — hosts are entered with the keyboard-driven chip input (Enter commits, Backspace removes the last chip, every chip has a labelled Remove button, a pasted URL becomes its host) and the client-side check refuses a malformed entry and a reserved host inline via the `aria-live` line; saving shows "Network added" and the row lists the host without the standard port
@@ -2332,7 +2341,7 @@ An agent with Virtual Machine Shell turned on runs code in an isolated Linux VM.
 - [x] vmn-04: Admin adds an environment variable on the Secrets page's Environment Variables tab — Add Environment Variable opens straight on its form, with no search box, and asks Name, Key (password box, "Paste the key"), Allowed Hosts (an IP literal refused inline) and a Variable Name worked out from the name; the hidden copy of a key is refused before any request; saving shows "{name} added. Choose it on an agent's Sandbox tab to let that agent use it." and the row shows the name, the Variable Name and the Allowed Hosts, never the key
 - [x] vmn-05: Edit Environment Variable has the Variable Name locked, the Allowed Hosts listed and the Key box blank with the "Leave blank to keep the current key" hint, showing no masked value; Delete Environment Variable confirms every agent using it loses it, shows "Environment variable deleted" and removes the row
 - [x] vmn-06: Admin deletes a network policy they just created (bound to no agent) — the row is found on whichever page of the org-wide table it landed, the confirmation names the policy, Cancel keeps it, and confirming shows "Network deleted" and leaves no page listing it
-- [x] vmn-07: With the Virtual Machine Shell kind selected, the Sandbox tab renders the Network Access section with the billing notice ($1 per 10 minutes by default) and a labelled "Egress Profile" radio group of the four options; an agent set to No Network through the API shows it selected, with the policy picker hidden and Save disabled
+- [x] vmn-07: With the Ephemeral Virtual Machine kind selected, the Sandbox tab renders the Network Access section with the billing notice ($1 per 10 minutes by default) and a labelled "Egress Profile" radio group of the four options; an agent set to No Network through the API shows it selected, with the policy picker hidden and Save disabled
 - [x] vmn-08: The Environment Variables group renders under all four profiles with its Add Environment Variable button: under No Network and Package Registries its boxes are disabled with a line saying they need network access, under Public they can be ticked; adding one under No Network opens straight on its form, shows "Environment variable added" and leaves it unticked; the policy picker renders only under Custom
 - [x] vmn-09: Custom requires a policy — required message, Save disabled until one is chosen, the "Add Network" shortcut opens the SDK policy dialog in place, and picking a policy lists the hosts it allows
 - [x] vmn-10: Ticking an environment variable whose host the policy lacks lists the gap ("{name} is sent to {host}, which {policy} doesn't allow."), keeps Save disabled, and "Add Hosts to {policy} and Save" patches the policy and saves the settings in one go
@@ -2493,9 +2502,9 @@ The app half of the Chrome extension's Cowork mode, without loading the extensio
 
 **Source files:** `components/modals/edit-mentor-modal/settings-tab.tsx`, `messages/en.json`
 
-Issue #2731. Settings → Discovery → "Who Can Use This Agent?": the help line says only admins can use it while Admins Only is picked, and saving a change from All Members to Admins Only asks "Limit this agent to administrators?" first. One throwaway agent (auto-deleted) is walked through the states by the serial checkpoints. The existing specs that pick Admins Only then save (journeys 13 and 64) confirm the prompt through `saveConfirmingAdminVisibility()`.
+Issue #2731. Settings → Discovery → "Who Can Use This Agent?": the help line says only admins can use it while Admins Only is picked, and saving a change from All Members to Admins Only asks "Limit this Agent to Administrators?" first. One throwaway agent (auto-deleted) is walked through the states by the serial checkpoints. The existing specs that pick Admins Only then save (journeys 13 and 64) confirm the prompt through `saveConfirmingAdminVisibility()`.
 
-- [x] avs-01: Picking Admins Only on an All Members agent shows the "only admins" help line, and Save opens the "Limit this agent to administrators?" confirmation instead of saving
+- [x] avs-01: Picking Admins Only on an All Members agent shows the "only admins" help line, and Save opens the "Limit this Agent to Administrators?" confirmation instead of saving
 - [x] avs-02: Cancel on the confirmation closes it, sends no visibility save, keeps Admins Only in the form, and the server still holds All Members
 - [x] avs-03: "Limit to Administrators" saves mentor_visibility=viewable_by_tenant_admins with the success toast; reopening shows Admins Only
 - [x] avs-04: Switching away from Admins Only saves without a prompt, and All Members to the public catalog also saves without a prompt
@@ -2564,7 +2573,7 @@ Issue #2788. Settings → Discovery: "Who Can Use This Agent?" (All Members / Ad
 
 - [x] dac-01: All six audience / List in Public Catalog / Allow Chat Without Signing In combinations save the mapped mentor_visibility and allow_anonymous, show the matching summary, and a reload restores the controls and summary
 - [x] dac-02: Admins Only disables and clears List in Public Catalog; switching back to All Members lands with the catalog off
-- [x] dac-03: Narrowing a publicly listed agent to Admins Only opens the "Limit this agent to administrators?" confirmation, and Cancel saves nothing
+- [x] dac-03: Narrowing a publicly listed agent to Admins Only opens the "Limit this Agent to Administrators?" confirmation, and Cancel saves nothing
 - [x] dac-04: The Discovery sub-tab never shows the tenant name or key
 
 ---
@@ -2674,3 +2683,31 @@ A Bot button in the header (`Assistant`) opens the organization's main agent (it
 - [x] ma-14: From Workflows, the Assistant opens and a message gets a real reply, without leaving the page
 
 ---
+
+## Journey 107: Retry Only On The Newest Answer (1 checkpoints) — `journeys/107-retry-latest-answer.spec.ts`
+
+**Source files:** `components/chat/index.tsx`
+
+Issue iblai-platform#2975. "Retry for a new response" used to render on every answer; on an earlier one it re-asked the newest question and appended the reply at the end. It now renders only on the latest answer and re-sends the question that answer replied to as a new pair at the bottom (SDK `@iblai/iblai-js` 2.87.1). Real chat on a throwaway ibl.ai Fast agent, tracked with `MentorTracker`.
+
+- [x] rla-01: With two Q/A pairs only one Retry button exists (on the newest answer); clicking it adds a new copy of the newest question and a new answer at the bottom, the first question is not re-asked, and only the newest answer then has Retry
+
+---
+
+## Journey 108: Agent Capabilities (11 checkpoints, 11 pending) — `journeys/108-agent-capabilities.spec.ts`
+
+**Source files:** `components/modals/edit-mentor-modal/index.tsx`, `components/modals/edit-mentor-modal/tabs/datasets-tab/agent-datasets-tab.tsx`, `components/modals/edit-mentor-modal/tabs/grader-tab.tsx`, `components/modals/edit-mentor-modal/tabs/human-support-tab.tsx`, `components/modals/edit-mentor-modal/tabs/mcp-tab/index.tsx`, `components/modals/edit-mentor-modal/tabs/screenshare-tab.tsx`, `hooks/use-mentor-segments.ts`
+
+Issue iblai-platform#2838. The Tools tab is gone; what an agent can do is a set of switches that each save one `capability_*` flag on the click: Settings > Capabilities > Agent Capabilities, the Grader tab (Grading and Lesson Completion), the Support tab, the Screen tab and the MCP tab's header switch (the connector list is inert while it is off). Runs serially on one agent the first test creates. Page objects: `page-objects/edit-mentor/capabilities.section.ts`, plus the Lesson Completion row on `grader.tab.ts` and the Advanced Document Search card on `datasets.tab.ts`.
+
+- [ ] agc-01: A new agent's Edit Agent dialog has no Tools tab, in Setup or in Integrations _(pending: in `@iblai/iblai-js` 3.0.0, which the app now uses; flip to covered once journey 108 runs green)_
+- [ ] agc-02: Settings > Capabilities opens on an Agent Capabilities block that is one flat list of five switches (Web Search, Image Generation, Video Generation, Code Interpreter, Plan, in that order) with no group headings and no Enhanced Document Retrieval _(pending: in `@iblai/iblai-js` 3.0.0, which the app now uses; flip to covered once journey 108 runs green)_
+- [ ] agc-03: Turning Web Search on saves `capability_web_search` true in the settings PUT with a "Web Search turned on" toast; the state survives a reload; turning it off saves false and also survives a reload _(pending: in `@iblai/iblai-js` 3.0.0, which the app now uses; flip to covered once journey 108 runs green)_
+- [ ] agc-04: Plan turns on and off from the same block, each saving `capability_subagents` _(pending: in `@iblai/iblai-js` 3.0.0, which the app now uses; flip to covered once journey 108 runs green)_
+- [ ] agc-05: The Grader tab's Lesson Completion row saves `capability_lesson_completion` while Grading is off, and the Grading switch saves `capability_grading`; both survive a reload _(pending: in `@iblai/iblai-js` 3.0.0, which the app now uses; flip to covered once journey 108 runs green)_
+- [ ] agc-06: The Support tab switch saves `capability_human_support` and survives a reload _(pending: in `@iblai/iblai-js` 3.0.0, which the app now uses; flip to covered once journey 108 runs green)_
+- [ ] agc-07: The Screen tab switch saves `capability_screen_share` and survives a reload _(pending: in `@iblai/iblai-js` 3.0.0, which the app now uses; flip to covered once journey 108 runs green)_
+- [ ] agc-08 (regression): An old link that opens Edit Agent on the removed Tools tab (`?modal=[{"name":"edit_mentor","tab":"tools"}]`) lands on the Settings tab, active with its panel shown, instead of a blank panel _(pending: not run yet; flip to covered once journey 108 runs green)_
+- [ ] agc-09: A capability row's "More info about {name}" button shows its tooltip on hover (Web Search) and on keyboard focus (Plan), and the switch's accessible name is the capability label ("Web Search") — replaces tools-03 and tools-04 of the removed Tools tab _(pending: in `@iblai/iblai-js` 3.0.0, which the app now uses; flip to covered once journey 108 runs green)_
+- [ ] agc-10: The MCP tab's header switch (`mcp-capability-toggle`, named "MCP") is off on a new agent with the connector list greyed; turning it on saves `tool_slugs` containing `mcp` with the toast "MCP turned on" and the list becomes usable; turning it off saves without `mcp` ("MCP turned off") and greys the list again _(pending: in `@iblai/iblai-js` 3.0.0, which the app now uses; flip to covered once journey 108 runs green)_
+- [ ] agc-11: The Datasets tab shows an Enhanced Document Retrieval switch in a box under the info box and above the search row, named "Enhanced Document Retrieval"; turning it on saves `capability_advanced_document_search` and `enable_multi_query_rag` true in the same request with the toast "Enhanced Document Retrieval turned on", turning it off saves both false _(pending: in `@iblai/iblai-js` 3.0.0, which the app now uses; flip to covered once journey 108 runs green)_

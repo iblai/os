@@ -20,7 +20,7 @@
  * `SandboxConfig` always renders a "Sandbox Type" card with three switches
  * (`sandbox-kind-computational-runtime`, `sandbox-kind-virtual-machine`,
  * `sandbox-kind-claw`). The three kinds are MUTUALLY EXCLUSIVE and AT LEAST
- * ONE IS ALWAYS ACTIVE — "Only one sandbox type can be enabled at a time"
+ * ONE IS ALWAYS ACTIVE — "only one can be on at a time"
  * per the card's own subheading. Kinds change ONLY by selecting a different
  * kind, which atomically deactivates whichever kind was previously active in
  * the same PATCH; there is no "disable" operation, and toggling the
@@ -226,12 +226,10 @@ test.describe('Journey 44: CLAW Advanced Sandbox', () => {
       // save is in flight).
       await expect(sandbox.computationalRuntimeSwitch).toBeEnabled();
 
-      // Verify ordering while we're here: Integrations opens on Tools, and
-      // Sandbox follows MCP.
+      // Verify ordering while we're here: Sandbox follows MCP.
       const integrationTabs = await visibleSegmentTabLabels(
         editMentorPage.dialog,
       );
-      expect(integrationTabs.findIndex((t) => /tools/i.test(t))).toBe(0);
       expect(integrationTabs.findIndex((t) => /sandbox/i.test(t))).toBe(
         integrationTabs.findIndex((t) => /mcp/i.test(t)) + 1,
       );
@@ -246,11 +244,11 @@ test.describe('Journey 44: CLAW Advanced Sandbox', () => {
   // ── TC06: Sandbox sits in its fixed category position unconditionally ────
   //
   // The sidebar is grouped into Setup / Policies / Integrations / Activity
-  // categories. Integrations opens on Tools, and Sandbox follows MCP. Only
+  // categories. Sandbox follows MCP in Integrations. Only
   // the active category's segment tabs are mounted, so the Sandbox tab must
   // be navigated to first.
 
-  test('Sandbox follows Tools and MCP in the Integrations category unconditionally', async ({
+  test('Sandbox follows MCP in the Integrations category unconditionally', async ({
     page,
     editMentorPage,
   }) => {
@@ -264,7 +262,6 @@ test.describe('Journey 44: CLAW Advanced Sandbox', () => {
     const integrationTabs = await visibleSegmentTabLabels(
       editMentorPage.dialog,
     );
-    expect(integrationTabs.findIndex((t) => /tools/i.test(t))).toBe(0);
     expect(integrationTabs.findIndex((t) => /sandbox/i.test(t))).toBe(
       integrationTabs.findIndex((t) => /mcp/i.test(t)) + 1,
     );

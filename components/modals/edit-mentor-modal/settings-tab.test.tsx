@@ -306,50 +306,43 @@ describe('SettingsTab', () => {
       expect(labels.sections).toEqual({
         chatExperience: 'chatExperienceHeading',
         advanced: 'advancedHeading',
-        perSurface: 'perSurfaceHeading',
         globalSettings: 'globalSettingsHeading',
         contextLimits: 'contextLimitsHeading',
       });
-      // #2476: the Capabilities sub-tab renders a two-column surface matrix,
-      // so the wrapper must supply the column headings and the embed-column
-      // labels alongside the in-app ones.
+      // #2476: File Attachments has a switch per surface, so the wrapper must
+      // supply the two column headings and the embed-column label alongside
+      // the in-app one.
       expect(labels.surfaces).toEqual({
         inAppChat: 'inAppChatSurfaceLabel',
         embedWidget: 'embedWidgetSurfaceLabel',
       });
-      // The two group banners and the per-column tooltips are host-supplied.
+      // The Global Capabilities note and the per-column tooltips are
+      // host-supplied.
       expect(labels.notes).toEqual({
-        perSurface: 'perSurfaceNote',
         globalSettings: 'globalSettingsNote',
         inAppChat: 'inAppChatNote',
         embedWidget: 'embedWidgetNote',
       });
-      expect(labels.fields.showVoiceCall).toEqual({
-        label: 'enableVoiceCallsLabel',
-        tooltip: 'enableVoiceCallsTooltip',
+      expect(labels.fields.showAttachment).toEqual({
+        label: 'enableFileAttachmentsLabel',
+        tooltip: 'enableFileAttachmentsTooltip',
       });
       expect(labels.fields.embedShowAttachment.label).toBe(
         'embedShowAttachmentLabel',
       );
-      expect(labels.fields.embedShowVoiceRecord.label).toBe(
-        'embedShowVoiceRecordLabel',
-      );
-      expect(labels.fields.embedShowVoiceCall.label).toBe(
-        'embedShowVoiceCallLabel',
-      );
-      expect(labels.fields.enhancedDocRetrieval.label).toBe(
-        'enhancedDocRetrievalLabel',
-      );
+      expect(labels.fields).not.toHaveProperty('showVoiceCall');
+      expect(labels.fields).not.toHaveProperty('showVoiceRecord');
+      expect(labels.fields).not.toHaveProperty('embedShowVoiceCall');
+      expect(labels.fields).not.toHaveProperty('embedShowVoiceRecord');
       expect(labels.fields).not.toHaveProperty('inChatModelChange');
+      expect(labels.fields).not.toHaveProperty('enhancedDocRetrieval');
+      expect(labels.fields).not.toHaveProperty('smartDocRetrieval');
       expect(labels.fields.showLastConversation).toEqual({
         label: 'showLastConversationLabel',
         tooltip: 'showLastConversationTooltip',
       });
       expect(labels.fields.promptCaching.label).toBe(
         'enablePromptCachingLabel',
-      );
-      expect(labels.fields.smartDocRetrieval.label).toBe(
-        'smartDocRetrievalLabel',
       );
       expect(labels.fields.chatHistoryMessages).toEqual({
         label: 'chatHistoryMessagesLabel',
@@ -368,7 +361,6 @@ describe('SettingsTab', () => {
         removeAriaLabel: 'removeAriaLabel',
         done: 'done',
       });
-      expect(labels.toasts.voiceCallError).toBe('voiceCallSettingsError');
     });
 
     it('passes every Discovery label from its next-intl key', async () => {

@@ -56,10 +56,6 @@ test.describe('Journey 56: Navbar User Mode Dropdown Visibility', () => {
       name: 'Prompts',
       exact: true,
     });
-    const toolsItem = page.getByRole('menuitem', {
-      name: 'Tools',
-      exact: true,
-    });
     const modifyItem = page.getByRole('menuitem', {
       name: 'Modify',
       exact: true,
@@ -73,7 +69,6 @@ test.describe('Journey 56: Navbar User Mode Dropdown Visibility', () => {
     await expect(settingsItem).toBeVisible({ timeout: 10_000 });
     await expect(llmItem).toBeVisible({ timeout: 10_000 });
     await expect(promptsItem).toBeVisible({ timeout: 10_000 });
-    await expect(toolsItem).toBeVisible({ timeout: 10_000 });
     await page.keyboard.press('Escape');
 
     // ── 2. Toggle to User mode, then re-open the dropdown ───────────────────
@@ -84,7 +79,6 @@ test.describe('Journey 56: Navbar User Mode Dropdown Visibility', () => {
     await expect(settingsItem).not.toBeVisible();
     await expect(llmItem).not.toBeVisible();
     await expect(promptsItem).not.toBeVisible();
-    await expect(toolsItem).not.toBeVisible();
     await expect(modifyItem).not.toBeVisible();
 
     // Only "New Chat" remains — assert the full visible item list collapses
@@ -105,7 +99,6 @@ test.describe('Journey 56: Navbar User Mode Dropdown Visibility', () => {
     await expect(settingsItem).toBeVisible({ timeout: 10_000 });
     await expect(llmItem).toBeVisible({ timeout: 10_000 });
     await expect(promptsItem).toBeVisible({ timeout: 10_000 });
-    await expect(toolsItem).toBeVisible({ timeout: 10_000 });
     await page.keyboard.press('Escape');
 
     // ── 4. Toggle to User mode again: collapses back down ───────────────────
@@ -116,7 +109,6 @@ test.describe('Journey 56: Navbar User Mode Dropdown Visibility', () => {
     await expect(settingsItem).not.toBeVisible();
     await expect(llmItem).not.toBeVisible();
     await expect(promptsItem).not.toBeVisible();
-    await expect(toolsItem).not.toBeVisible();
 
     const userModeItemsAgain = await navbarPage.getDropdownItems();
     expect(userModeItemsAgain).toEqual(['New Chat']);

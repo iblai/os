@@ -1,7 +1,7 @@
 /**
  * Journey 79: Virtual Machine Network Policies & Secrets
  *
- * An agent with Virtual Machine Shell turned on runs code in an isolated
+ * An agent with Ephemeral Virtual Machine turned on runs code in an isolated
  * Linux VM. This journey covers the UI that lets an org admin decide what
  * that VM can reach and which credentials it can use:
  *
@@ -737,7 +737,7 @@ test.describe('Journey 79: Virtual Machine Network Policies & Secrets — agent 
       value: `e2e-agent-secret-${suffix}`,
     });
 
-    // Dedicated agent with the Virtual Machine Shell kind selected.
+    // Dedicated agent with the Ephemeral Virtual Machine kind selected.
     await createMentorPage.openAndCreate();
     const { mentorId } = await getPlatformContext(page);
 

@@ -84,10 +84,17 @@ function WizardTab({
           mentorId={mentorId}
           tenantKey={tenantKey}
           syncToUrl={false}
+          showCapabilitySwitch={false}
         />
       );
     case 'mcp':
-      return <McpTab mentorId={mentorId} tenantKey={tenantKey} />;
+      return (
+        <McpTab
+          mentorId={mentorId}
+          tenantKey={tenantKey}
+          showCapabilitySwitch={false}
+        />
+      );
   }
 }
 

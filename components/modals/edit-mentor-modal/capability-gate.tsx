@@ -6,7 +6,7 @@ import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 
 export interface CapabilityGateProps {
-  /** Short, human title for the capability (e.g. "Long-term memory"). */
+  /** Short, human title for the capability (e.g. "Long-Term Memory"). */
   title: string;
   /**
    * Plain-language explanation of what turning this on actually does — written

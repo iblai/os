@@ -60,12 +60,11 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
     );
     tracker52.add((await getPlatformContext(page)).mentorId);
 
-    // Enable Web Search via Tools tab
+    // Enable Web Search via Settings > Capabilities
     // Enable Verbose Reasoning gates the tool-call indicator — enable it first.
     await editMentorPage.open('Settings');
     await editMentorPage.settings.setVerboseReasoning(true);
-    await editMentorPage.navigateToTab('Tools');
-    await editMentorPage.tools.enableTool('Web Search');
+    await editMentorPage.capabilities.openAndSet('web-search', true);
     await editMentorPage.close();
 
     // Activate Web Search in session and send message. A direct current-info
@@ -144,8 +143,7 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
     // Enable Verbose Reasoning gates the tool-call indicator — enable it first.
     await editMentorPage.open('Settings');
     await editMentorPage.settings.setVerboseReasoning(true);
-    await editMentorPage.navigateToTab('Tools');
-    await editMentorPage.tools.enableTool('Web Search');
+    await editMentorPage.capabilities.openAndSet('web-search', true);
     await editMentorPage.close();
 
     await chatPage.activateWebSearch();
@@ -220,8 +218,7 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
     // Enable Verbose Reasoning gates the tool-call indicator — enable it first.
     await editMentorPage.open('Settings');
     await editMentorPage.settings.setVerboseReasoning(true);
-    await editMentorPage.navigateToTab('Tools');
-    await editMentorPage.tools.enableTool('Web Search');
+    await editMentorPage.capabilities.openAndSet('web-search', true);
     await editMentorPage.close();
 
     await chatPage.activateWebSearch();
@@ -286,12 +283,12 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
     // `isToolAvailable` opens/closes that menu itself to check).
     expect(await chatPage.isToolAvailable('Web Search')).toBe(false);
 
-    // Confirm Web Search is off in the Tools tab
-    await editMentorPage.open('Tools');
-    await expect(editMentorPage.tools.toolToggles.first()).toBeVisible({
-      timeout: 15_000,
-    });
-    expect(await editMentorPage.tools.isToolEnabled('Web Search')).toBe(false);
+    // Confirm Web Search is off in Settings > Capabilities
+    await editMentorPage.open('Settings');
+    await editMentorPage.capabilities.open();
+    expect(await editMentorPage.capabilities.isEnabled('web-search')).toBe(
+      false,
+    );
     await editMentorPage.close();
 
     // Web Search is still absent everywhere in the composer.
@@ -315,8 +312,7 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
     // Enable Verbose Reasoning gates the tool-call indicator — enable it first.
     await editMentorPage.open('Settings');
     await editMentorPage.settings.setVerboseReasoning(true);
-    await editMentorPage.navigateToTab('Tools');
-    await editMentorPage.tools.enableTool('Web Search');
+    await editMentorPage.capabilities.openAndSet('web-search', true);
     await editMentorPage.close();
 
     // Verify the tool is offered (enabled-but-inactive lives in the "+" menu's
@@ -512,8 +508,7 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
     await editMentorPage.llm.selectProviderAndModel('OpenAI', 'gpt-5');
 
     // Enable Web Search
-    await editMentorPage.navigateToTab('Tools');
-    await editMentorPage.tools.enableTool('Web Search');
+    await editMentorPage.capabilities.openAndSet('web-search', true);
     await editMentorPage.close();
 
     // Activate Web Search in session
@@ -611,8 +606,7 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
     expect(await editMentorPage.settings.isVerboseReasoningEnabled()).toBe(
       false,
     );
-    await editMentorPage.navigateToTab('Tools');
-    await editMentorPage.tools.enableTool('Web Search');
+    await editMentorPage.capabilities.openAndSet('web-search', true);
     await editMentorPage.close();
 
     await chatPage.activateWebSearch();

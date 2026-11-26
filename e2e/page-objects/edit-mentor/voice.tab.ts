@@ -14,21 +14,43 @@ import {
 } from '@iblai/iblai-js/playwright';
 
 export type VoiceProviderId = Parameters<typeof selectVoiceProvider>[1];
+export type VoiceCapability = 'voice-calls' | 'dictation';
+export type VoiceSurface = 'in-app' | 'embed';
+
+const SURFACE_SWITCH = {
+  'voice-calls': {
+    name: 'Voice Calls',
+    'in-app': 'voice-capability-toggle',
+    embed: 'voice-capability-toggle-embed',
+  },
+  dictation: {
+    name: 'Dictation',
+    'in-app': 'voice-record-capability-toggle',
+    embed: 'voice-record-capability-toggle-embed',
+  },
+} as const;
+
+const SURFACE_NAME: Record<VoiceSurface, string> = {
+  'in-app': 'In-App Chat',
+  embed: 'Embed Widget',
+};
 
 /**
  * Page object for the Voice tab inside the Edit Mentor dialog.
  *
  * The tab is rendered by the SDK's `AgentVoiceTab` component
- * (`@iblai/iblai-js/web-containers/next`). All selectors come from the official
- * Playwright helpers re-exported by `@iblai/iblai-js/playwright` —
- * keeping the labels and `data-testid` hooks in lock-step with the SDK.
+ * (`@iblai/iblai-js/web-containers/next`). Provider / call-config selectors
+ * come from the Playwright helpers re-exported by `@iblai/iblai-js/playwright`.
+ * The surface switches and the Dictation sub-tab are driven by test id here
+ * because the installed helpers predate them.
  *
- * The tab contains two sub-tabs:
- *   - "Voice"               — provider cards + voice picker (mentor settings)
- *   - "Voice call"          — full TTS/STT/LLM stack (call-configurations API)
+ * Three sub-tabs, all always usable:
+ *   - "Voice" — provider cards + voice picker; drives Read Aloud, no switch
+ *   - "Calls" — In-App Chat / Embed Widget switches + call configuration
+ *   - "Dictation"   — In-App Chat / Embed Widget switches + language and hints
  *
- * If the host overrides labels via the `labels` prop, update VOICE_LABELS
- * imports per spec; do NOT add ad-hoc selectors here.
+ * Each switch only exists while its own sub-tab is open, so every switch
+ * method opens that sub-tab itself.
  */
 export class VoiceTab {
   readonly page: Page;
@@ -38,26 +60,28 @@ export class VoiceTab {
   readonly tabLink: Locator;
   /** Heading at the top of the tab panel. */
   readonly heading: Locator;
-  /** The segmented sub-tab control (Voice / Voice call). */
+  /** The segmented sub-tab control. */
   readonly subTabs: Locator;
-  /** Sub-tab pill for the Voice (provider + picker) sub-tab. */
+  /** Info box above the sub-tabs. */
+  readonly infoBox: Locator;
+  /** Sub-tab pill "Voice" (provider + picker). */
   readonly voiceSubTab: Locator;
-  /** Sub-tab pill for the Voice call (call configuration) sub-tab. */
+  /** Sub-tab pill "Calls" (switches + call configuration). */
   readonly callConfigSubTab: Locator;
+  /** Sub-tab pill "Dictation" (switches + language and hints). */
+  readonly dictationSubTab: Locator;
   /**
-   * "Enable Voice Calls" (`show_voice_call`) master toggle. Used to live in
-   * Settings → Capabilities and gate the whole tab's visibility; it now lives
-   * inline at the top of this tab via the shared `CapabilityGate` and the
-   * Voice tab is always mounted (`hooks/use-mentor-segments.ts` no longer
-   * gates it). Toggling auto-saves (`AgentVoiceTab`'s `handleToggleVoiceCall`
-   * calls `editMentor` directly with optimistic local state) — no footer
-   * Save button involved.
+   * Voice Calls, In-App Chat switch (`show_voice_call`). Saves on click; only
+   * mounted while the Calls sub-tab is open.
    */
   readonly capabilityToggle: Locator;
-  /** Wrapper around the gated Voice/Voice-call sub-tabs — `data-enabled` mirrors the toggle. */
+  /** Gated content of the open Voice Calls / Dictation sub-tab; `data-enabled` is on while either surface is on. */
   readonly capabilityContent: Locator;
-  /** Hint shown next to the description while the capability is off. */
+  /** Hint shown while both surfaces of the open sub-tab are off. */
   readonly capabilityOffHint: Locator;
+  /** "Smart Document Retrieval" (`use_function_calling_for_rag`), saved by the Save button in the tab's bottom bar. */
+  readonly smartDocumentRetrievalToggle: Locator;
+  readonly callConfigSaveButton: Locator;
 
   constructor(page: Page, dialog: Locator) {
     this.page = page;
@@ -82,16 +106,23 @@ export class VoiceTab {
     this.subTabs = dialog.getByTestId('voice-sub-tabs');
     this.voiceSubTab = dialog.getByTestId('voice-sub-tab-voice');
     this.callConfigSubTab = dialog.getByTestId('voice-sub-tab-call-config');
+    this.dictationSubTab = dialog.getByTestId('voice-sub-tab-settings');
+    this.infoBox = dialog.getByTestId('voice-info-box');
     this.capabilityToggle = dialog.getByTestId('voice-capability-toggle');
-    // `:visible` scopes to the currently-active tab's gate — top-level tab
-    // panels can stay force-mounted (CSS-hidden) while inactive, and every
-    // gated tab renders its own `capability-gate-content` wrapper.
+    // `:visible` skips the gates of other top-level tabs, which can stay
+    // force-mounted (CSS-hidden) while inactive.
     this.capabilityContent = dialog.locator(
       '[data-testid="capability-gate-content"]:visible',
     );
     this.capabilityOffHint = dialog.locator(
       '[data-testid="capability-gate-off-hint"]:visible',
     );
+    this.smartDocumentRetrievalToggle = dialog.getByTestId(
+      'call-config-smart-document-retrieval-toggle',
+    );
+    this.callConfigSaveButton = dialog
+      .getByTestId('voice-tab-footer')
+      .getByRole('button', { name: 'Save', exact: true });
   }
 
   // ── Tab navigation ────────────────────────────────────────────────────────
@@ -100,38 +131,81 @@ export class VoiceTab {
     return isVoiceTabVisible(this.page);
   }
 
-  // ── Capability gate ───────────────────────────────────────────────────────
+  // ── Surface switches ──────────────────────────────────────────────────────
 
-  /** Whether the "Enable Voice Calls" capability toggle is currently on. */
-  async isCapabilityEnabled(): Promise<boolean> {
-    const attr = await this.capabilityToggle
-      .getAttribute('aria-checked')
-      .catch(() => null);
-    return attr === 'true';
+  /** One of the four In-App Chat / Embed Widget switches. */
+  surfaceSwitch(capability: VoiceCapability, surface: VoiceSurface): Locator {
+    return this.dialog.getByTestId(SURFACE_SWITCH[capability][surface]);
+  }
+
+  private async openSubTab(pill: Locator): Promise<void> {
+    await expect(pill).toBeVisible({ timeout: 10_000 });
+    if ((await pill.getAttribute('aria-selected')) !== 'true') {
+      await pill.click();
+    }
+    await expect(pill).toHaveAttribute('aria-selected', 'true', {
+      timeout: 10_000,
+    });
+  }
+
+  async switchToDictationSubTab(): Promise<void> {
+    await this.openSubTab(this.dictationSubTab);
+  }
+
+  /** Opens the sub-tab that owns the capability and returns its switch. */
+  private async openSurfaceSwitch(
+    capability: VoiceCapability,
+    surface: VoiceSurface,
+  ): Promise<Locator> {
+    await this.openSubTab(
+      capability === 'voice-calls'
+        ? this.callConfigSubTab
+        : this.dictationSubTab,
+    );
+    const toggle = this.surfaceSwitch(capability, surface);
+    await expect(toggle).toBeVisible({ timeout: 10_000 });
+    return toggle;
+  }
+
+  async isSurfaceSwitchOn(
+    capability: VoiceCapability,
+    surface: VoiceSurface,
+  ): Promise<boolean> {
+    const toggle = await this.openSurfaceSwitch(capability, surface);
+    return (await toggle.getAttribute('aria-checked')) === 'true';
   }
 
   /**
-   * Idempotently set the "Enable Voice Calls" capability toggle to the
-   * target state. Auto-saves on click (optimistic local state) — no footer
-   * Save button involved. Waits for both the toggle's `aria-checked` and the
-   * gated content's `data-enabled` attribute to reflect the target state.
+   * Idempotently sets one switch. It saves on click, so this waits for the
+   * switch state and the "<Name> turned on/off for <Surface>" toast.
    */
-  async setCapabilityEnabled(target: boolean): Promise<void> {
-    await expect(this.capabilityToggle).toBeVisible({ timeout: 10_000 });
-    const isOn = await this.isCapabilityEnabled();
-    if (isOn === target) return;
+  async setSurfaceSwitch(
+    capability: VoiceCapability,
+    surface: VoiceSurface,
+    target: boolean,
+  ): Promise<void> {
+    const toggle = await this.openSurfaceSwitch(capability, surface);
+    if (((await toggle.getAttribute('aria-checked')) === 'true') === target) {
+      return;
+    }
+    await toggle.click();
+    await expect(toggle).toHaveAttribute('aria-checked', String(target), {
+      timeout: 15_000,
+    });
+    const toast = `${SURFACE_SWITCH[capability].name} turned ${target ? 'on' : 'off'} for ${SURFACE_NAME[surface]}`;
+    await expect(this.page.getByText(toast).first()).toBeVisible({
+      timeout: 15_000,
+    });
+  }
 
-    await this.capabilityToggle.click();
-    await expect(this.capabilityToggle).toHaveAttribute(
-      'aria-checked',
-      String(target),
-      { timeout: 15_000 },
-    );
-    await expect(this.capabilityContent).toHaveAttribute(
-      'data-enabled',
-      String(target),
-      { timeout: 15_000 },
-    );
+  /** Whether Voice Calls is on for In-App Chat. */
+  async isCapabilityEnabled(): Promise<boolean> {
+    return this.isSurfaceSwitchOn('voice-calls', 'in-app');
+  }
+
+  /** Sets Voice Calls for In-App Chat; the Embed Widget switch is left alone. */
+  async setCapabilityEnabled(target: boolean): Promise<void> {
+    await this.setSurfaceSwitch('voice-calls', 'in-app', target);
   }
 
   async switchToVoiceTab(): Promise<void> {
@@ -189,7 +263,7 @@ export class VoiceTab {
   readonly mentorVoiceTriggerOpen = () =>
     this.dialog.getByTestId('mentor-voice-trigger-open');
 
-  // ── Call configuration sub-tab ────────────────────────────────────────────
+  // ── Calls sub-tab (call configuration) ────────────────────────────────────────────
 
   callConfigForm(): Locator {
     return getCallConfigForm(this.dialog);
@@ -201,6 +275,35 @@ export class VoiceTab {
 
   async selectCallMode(mode: 'realtime' | 'inference'): Promise<void> {
     await selectCallMode(this.dialog, mode);
+  }
+
+  async isSmartDocumentRetrievalOn(): Promise<boolean> {
+    await expect(this.smartDocumentRetrievalToggle).toBeVisible({
+      timeout: 10_000,
+    });
+    return (
+      (await this.smartDocumentRetrievalToggle.getAttribute('aria-checked')) ===
+      'true'
+    );
+  }
+
+  /**
+   * Sets the Smart Document Retrieval switch on the Calls sub-tab and
+   * saves it with the section's Save button. No-op when already at the target.
+   */
+  async setSmartDocumentRetrievalAndSave(target: boolean): Promise<void> {
+    if ((await this.isSmartDocumentRetrievalOn()) === target) return;
+    await this.smartDocumentRetrievalToggle.click();
+    await expect(this.smartDocumentRetrievalToggle).toHaveAttribute(
+      'aria-checked',
+      String(target),
+      { timeout: 10_000 },
+    );
+    await expect(this.callConfigSaveButton).toBeEnabled({ timeout: 10_000 });
+    await this.callConfigSaveButton.click();
+    await expect(
+      this.page.getByText('Voice call settings saved').first(),
+    ).toBeVisible({ timeout: 30_000 });
   }
 
   /**
