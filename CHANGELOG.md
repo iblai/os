@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.0.0](https://github.com/iblai/os/compare/v0.211.0...v1.0.0) (2026-11-26)
+
+### ⚠ BREAKING CHANGES
+
+* **deps:** upgrade @iblai/iblai-js to 3.0.3 and drop the Tools tab
+
+### Features
+
+* **deps:** upgrade @iblai/iblai-js to 3.0.3 and drop the Tools tab ([c8e263b](https://github.com/iblai/os/commit/c8e263b3fc03451b299424a8c71c20f3d3add039))
+
+### Bug Fixes
+
+* **auth:** stop handing the edX JWT to the auth app on the URL ([7087403](https://github.com/iblai/os/commit/7087403640f8b6efa3bbc68121eeac69db20c25c))
+
 ## [0.211.0](https://github.com/iblai/os/compare/v0.210.1...v0.211.0) (2026-11-25)
 
 ### Features
