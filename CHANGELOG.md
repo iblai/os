@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.1](https://github.com/iblai/os/compare/v1.0.0...v1.0.1) (2026-11-27)
+
+### CI
+
+* add a release-candidate tag and image build for a PR ([ea8fa9f](https://github.com/iblai/os/commit/ea8fa9f3fef6a374ff1624b97600b1ccbf7bd04d))
+* remove workflows unused for two months ([74efd57](https://github.com/iblai/os/commit/74efd57f31cec29330314c9ef2670a6cab4596bc))
+
 ## [1.0.0](https://github.com/iblai/os/compare/v0.211.0...v1.0.0) (2026-11-26)
 
 ### ⚠ BREAKING CHANGES
