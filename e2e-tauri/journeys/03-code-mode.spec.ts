@@ -459,11 +459,30 @@ describe('Journey 3: Code Mode (opencode)', () => {
       );
 
       expect(res.present).toBe(true);
+      // The release keeps its nested layout: <folder>/<name>/SKILL.md.
       const vibeDir = join(DATA_DIR, 'skills', 'vibe');
-      const packages = readdirSync(vibeDir).filter((entry) =>
-        existsSync(join(vibeDir, entry, 'SKILL.md')),
+      const packages = readdirSync(vibeDir, { recursive: true })
+        .map(String)
+        .filter((path) => path.endsWith('SKILL.md'));
+      // The skill the guidance names, under either prefix (iblai-ui-* from base v3).
+      expect(
+        packages.some((path) =>
+          /iblai-(ui|vibe)-ops-init[\\/]SKILL\.md$/.test(path),
+        ),
+      ).toBe(true);
+      // A stale cache must not pass: the copy is the tag the latest-release
+      // redirect names (a renamed repo's 301 names none).
+      const latest = await fetch(
+        'https://github.com/iblai/base/releases/latest',
+        {
+          redirect: 'manual',
+        },
       );
-      expect(packages.length).toBeGreaterThan(0);
+      const tag = latest.headers.get('location')?.split('/releases/tag/')[1];
+      expect(tag).toBeTruthy();
+      expect(
+        readFileSync(join(DATA_DIR, 'skills', 'vibe.sha'), 'utf8').trim(),
+      ).toBe(tag);
     });
 
     it('code-21: the approval mode round-trips through settings.json and rejects anything else', async () => {
