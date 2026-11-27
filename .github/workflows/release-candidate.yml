@@ -1,0 +1,149 @@
+name: Release Candidate
+
+# Tag a PR's head as a release candidate and build that exact code into an ECR
+# image, so a PR can be deployed somewhere without merging it first.
+#
+# The tag is <newest release tag>-rc.pr.<pr>.<variant>, e.g.
+# v0.211.0-rc.pr.123.1. The variant is the next unused number for that PR, so
+# every run produces a new immutable git tag and a new image tag.
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'PR number to tag and build (e.g. 505)'
+        type: string
+        required: true
+
+run-name: 'OS RC for PR #${{ inputs.pr_number }}'
+
+permissions:
+  contents: write
+  pull-requests: read
+
+concurrency:
+  # Two runs for one PR would read the same highest variant and race to push it.
+  group: release-candidate-${{ inputs.pr_number }}
+  cancel-in-progress: false
+
+jobs:
+  tag:
+    name: 'tag'
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.rc.outputs.tag }}
+      base: ${{ steps.rc.outputs.base }}
+      variant: ${{ steps.rc.outputs.variant }}
+      sha: ${{ steps.pr.outputs.sha }}
+    steps:
+      - name: Resolve the PR head
+        id: pr
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ inputs.pr_number }}
+        run: |
+          set -euo pipefail
+          DATA=$(gh pr view "$PR" --repo "${{ github.repository }}" \
+                   --json headRefOid,isCrossRepository,state,title)
+          field() { printf '%s' "$DATA" | python3 -c "import json,sys; print(json.load(sys.stdin)['$1'])"; }
+          # A fork's head is untrusted code and this workflow holds registry
+          # credentials and a tag-push token. The PR e2e gate refuses forks for
+          # the same reason; refusing here keeps one rule, not two.
+          if [ "$(field isCrossRepository)" = "True" ]; then
+            echo "::error::PR $PR is from a fork; not built here (untrusted code with registry credentials)."
+            exit 1
+          fi
+          SHA=$(field headRefOid)
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+          echo "PR $PR ($(field state)): $(field title)"
+          echo "head: $SHA"
+
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          # The release tags are the input to the version below, and a shallow
+          # clone carries none of them.
+          fetch-depth: 0
+          ref: ${{ steps.pr.outputs.sha }}
+
+      - name: Build the candidate tag
+        id: rc
+        env:
+          PR: ${{ inputs.pr_number }}
+        run: |
+          set -euo pipefail
+          git fetch --tags --force --quiet
+
+          # Candidates sort above the release they are based on under
+          # -v:refname, so they have to leave the list before head -1.
+          BASE=$(git tag -l 'v*' --sort=-v:refname | grep -v -- '-rc.pr.' | head -1)
+          if [ -z "$BASE" ]; then
+            echo "::error::No v* tag to base a candidate on."
+            exit 1
+          fi
+
+          PREFIX="${BASE}-rc.pr.${PR}."
+          PREFIX_RE=$(printf '%s' "$PREFIX" | sed 's/[.[\*^$]/\\&/g')
+
+          # Read the variants from the remote, not the local clone: a tag pushed
+          # by another run since the fetch above would otherwise be reused, and
+          # this push would be rejected on arrival.
+          HIGHEST=$(
+            git ls-remote --tags origin "refs/tags/${PREFIX}*" \
+              | awk '{print $2}' \
+              | grep -v '\^{}$' \
+              | sed "s#^refs/tags/${PREFIX_RE}##" \
+              | grep -xE '[0-9]+' \
+              | sort -n | tail -1 || true
+          )
+          VARIANT=$(( ${HIGHEST:-0} + 1 ))
+          TAG="${PREFIX}${VARIANT}"
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git tag -a "$TAG" -m "Release candidate ${VARIANT} for PR #${PR}, based on ${BASE}"
+          git push origin "refs/tags/${TAG}"
+
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "base=$BASE" >> "$GITHUB_OUTPUT"
+          echo "variant=$VARIANT" >> "$GITHUB_OUTPUT"
+          echo "Tagged $(git rev-parse HEAD) as $TAG"
+
+  build:
+    name: 'build'
+    needs: tag
+    # The PR-image reusable, not the release one: it takes an explicit image tag
+    # and pushes only that tag. The release build also overwrites `latest`,
+    # which is what a deploy pulls when given no tag, and this is unmerged code.
+    uses: ./.github/workflows/reusable-pr-docker-build.yml
+    secrets: inherit
+    with:
+      dockerfile-path: Dockerfile
+      build-context: .
+      image-name: iblai-os-spa
+      registry-type: ecr
+      image-tag: ${{ needs.tag.outputs.tag }}
+      pr-number: ${{ inputs.pr_number }}
+      # Build the candidate tag itself. Without a ref, checkout takes the
+      # default branch and the image carries code the tag does not name.
+      ref: ${{ needs.tag.outputs.tag }}
+
+  summary:
+    name: 'summary'
+    needs: [tag, build]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          {
+            echo "### OS release candidate"
+            echo ""
+            echo "| | |"
+            echo "|---|---|"
+            echo "| PR | \`#${{ inputs.pr_number }}\` |"
+            echo "| head | \`${{ needs.tag.outputs.sha }}\` |"
+            echo "| based on | \`${{ needs.tag.outputs.base }}\` |"
+            echo "| tag | \`${{ needs.tag.outputs.tag }}\` |"
+            echo "| variant | \`${{ needs.tag.outputs.variant }}\` |"
+            echo "| image | \`${{ needs.build.outputs.image-uri }}\` |"
+            echo "| build | **${{ needs.build.result }}** |"
+          } >> "$GITHUB_STEP_SUMMARY"
